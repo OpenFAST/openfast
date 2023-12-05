@@ -66,7 +66,7 @@ subroutine Current_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Current_CopyInitInput'
    ErrStat = ErrID_None
@@ -82,8 +82,8 @@ subroutine Current_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    DstInitInputData%CurrMod = SrcInitInputData%CurrMod
    DstInitInputData%EffWtrDpth = SrcInitInputData%EffWtrDpth
    if (allocated(SrcInitInputData%WaveKinGridzi)) then
-      LB(1:1) = lbound(SrcInitInputData%WaveKinGridzi)
-      UB(1:1) = ubound(SrcInitInputData%WaveKinGridzi)
+      LB(1:1) = lbound(SrcInitInputData%WaveKinGridzi, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%WaveKinGridzi, kind=B8Ki)
       if (.not. allocated(DstInitInputData%WaveKinGridzi)) then
          allocate(DstInitInputData%WaveKinGridzi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -126,7 +126,7 @@ subroutine Current_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%EffWtrDpth)
    call RegPack(Buf, allocated(InData%WaveKinGridzi))
    if (allocated(InData%WaveKinGridzi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridzi), ubound(InData%WaveKinGridzi))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridzi, kind=B8Ki), ubound(InData%WaveKinGridzi, kind=B8Ki))
       call RegPack(Buf, InData%WaveKinGridzi)
    end if
    call RegPack(Buf, InData%NGridPts)
@@ -138,7 +138,7 @@ subroutine Current_UnPackInitInput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Current_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Current_UnPackInitInput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -188,14 +188,14 @@ subroutine Current_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Current_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInitOutputData%CurrVxi)) then
-      LB(1:1) = lbound(SrcInitOutputData%CurrVxi)
-      UB(1:1) = ubound(SrcInitOutputData%CurrVxi)
+      LB(1:1) = lbound(SrcInitOutputData%CurrVxi, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%CurrVxi, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%CurrVxi)) then
          allocate(DstInitOutputData%CurrVxi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -206,8 +206,8 @@ subroutine Current_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%CurrVxi = SrcInitOutputData%CurrVxi
    end if
    if (allocated(SrcInitOutputData%CurrVyi)) then
-      LB(1:1) = lbound(SrcInitOutputData%CurrVyi)
-      UB(1:1) = ubound(SrcInitOutputData%CurrVyi)
+      LB(1:1) = lbound(SrcInitOutputData%CurrVyi, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%CurrVyi, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%CurrVyi)) then
          allocate(DstInitOutputData%CurrVyi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -243,12 +243,12 @@ subroutine Current_PackInitOutput(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%CurrVxi))
    if (allocated(InData%CurrVxi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%CurrVxi), ubound(InData%CurrVxi))
+      call RegPackBounds(Buf, 1, lbound(InData%CurrVxi, kind=B8Ki), ubound(InData%CurrVxi, kind=B8Ki))
       call RegPack(Buf, InData%CurrVxi)
    end if
    call RegPack(Buf, allocated(InData%CurrVyi))
    if (allocated(InData%CurrVyi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%CurrVyi), ubound(InData%CurrVyi))
+      call RegPackBounds(Buf, 1, lbound(InData%CurrVyi, kind=B8Ki), ubound(InData%CurrVyi, kind=B8Ki))
       call RegPack(Buf, InData%CurrVyi)
    end if
    call RegPack(Buf, InData%PCurrVxiPz0)
@@ -260,7 +260,7 @@ subroutine Current_UnPackInitOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Current_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Current_UnPackInitOutput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return

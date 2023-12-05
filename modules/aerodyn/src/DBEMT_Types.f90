@@ -125,7 +125,7 @@ subroutine DBEMT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'DBEMT_CopyInitInput'
    ErrStat = ErrID_None
@@ -135,8 +135,8 @@ subroutine DBEMT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%tau1_const = SrcInitInputData%tau1_const
    DstInitInputData%DBEMT_Mod = SrcInitInputData%DBEMT_Mod
    if (allocated(SrcInitInputData%rLocal)) then
-      LB(1:2) = lbound(SrcInitInputData%rLocal)
-      UB(1:2) = ubound(SrcInitInputData%rLocal)
+      LB(1:2) = lbound(SrcInitInputData%rLocal, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitInputData%rLocal, kind=B8Ki)
       if (.not. allocated(DstInitInputData%rLocal)) then
          allocate(DstInitInputData%rLocal(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -171,7 +171,7 @@ subroutine DBEMT_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%DBEMT_Mod)
    call RegPack(Buf, allocated(InData%rLocal))
    if (allocated(InData%rLocal)) then
-      call RegPackBounds(Buf, 2, lbound(InData%rLocal), ubound(InData%rLocal))
+      call RegPackBounds(Buf, 2, lbound(InData%rLocal, kind=B8Ki), ubound(InData%rLocal, kind=B8Ki))
       call RegPack(Buf, InData%rLocal)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -181,7 +181,7 @@ subroutine DBEMT_UnPackInitInput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(DBEMT_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DBEMT_UnPackInitInput'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -304,16 +304,16 @@ subroutine DBEMT_CopyContState(SrcContStateData, DstContStateData, CtrlCode, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'DBEMT_CopyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcContStateData%element)) then
-      LB(1:2) = lbound(SrcContStateData%element)
-      UB(1:2) = ubound(SrcContStateData%element)
+      LB(1:2) = lbound(SrcContStateData%element, kind=B8Ki)
+      UB(1:2) = ubound(SrcContStateData%element, kind=B8Ki)
       if (.not. allocated(DstContStateData%element)) then
          allocate(DstContStateData%element(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -335,16 +335,16 @@ subroutine DBEMT_DestroyContState(ContStateData, ErrStat, ErrMsg)
    type(DBEMT_ContinuousStateType), intent(inout) :: ContStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'DBEMT_DestroyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(ContStateData%element)) then
-      LB(1:2) = lbound(ContStateData%element)
-      UB(1:2) = ubound(ContStateData%element)
+      LB(1:2) = lbound(ContStateData%element, kind=B8Ki)
+      UB(1:2) = ubound(ContStateData%element, kind=B8Ki)
       do i2 = LB(2), UB(2)
          do i1 = LB(1), UB(1)
             call DBEMT_DestroyElementContinuousStateType(ContStateData%element(i1,i2), ErrStat2, ErrMsg2)
@@ -359,14 +359,14 @@ subroutine DBEMT_PackContState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(DBEMT_ContinuousStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'DBEMT_PackContState'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%element))
    if (allocated(InData%element)) then
-      call RegPackBounds(Buf, 2, lbound(InData%element), ubound(InData%element))
-      LB(1:2) = lbound(InData%element)
-      UB(1:2) = ubound(InData%element)
+      call RegPackBounds(Buf, 2, lbound(InData%element, kind=B8Ki), ubound(InData%element, kind=B8Ki))
+      LB(1:2) = lbound(InData%element, kind=B8Ki)
+      UB(1:2) = ubound(InData%element, kind=B8Ki)
       do i2 = LB(2), UB(2)
          do i1 = LB(1), UB(1)
             call DBEMT_PackElementContinuousStateType(Buf, InData%element(i1,i2)) 
@@ -380,8 +380,8 @@ subroutine DBEMT_UnPackContState(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(DBEMT_ContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DBEMT_UnPackContState'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -488,16 +488,16 @@ subroutine DBEMT_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'DBEMT_CopyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOtherStateData%areStatesInitialized)) then
-      LB(1:2) = lbound(SrcOtherStateData%areStatesInitialized)
-      UB(1:2) = ubound(SrcOtherStateData%areStatesInitialized)
+      LB(1:2) = lbound(SrcOtherStateData%areStatesInitialized, kind=B8Ki)
+      UB(1:2) = ubound(SrcOtherStateData%areStatesInitialized, kind=B8Ki)
       if (.not. allocated(DstOtherStateData%areStatesInitialized)) then
          allocate(DstOtherStateData%areStatesInitialized(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -510,8 +510,8 @@ subroutine DBEMT_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, 
    DstOtherStateData%tau1 = SrcOtherStateData%tau1
    DstOtherStateData%tau2 = SrcOtherStateData%tau2
    if (allocated(SrcOtherStateData%n)) then
-      LB(1:2) = lbound(SrcOtherStateData%n)
-      UB(1:2) = ubound(SrcOtherStateData%n)
+      LB(1:2) = lbound(SrcOtherStateData%n, kind=B8Ki)
+      UB(1:2) = ubound(SrcOtherStateData%n, kind=B8Ki)
       if (.not. allocated(DstOtherStateData%n)) then
          allocate(DstOtherStateData%n(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -521,8 +521,8 @@ subroutine DBEMT_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, 
       end if
       DstOtherStateData%n = SrcOtherStateData%n
    end if
-   LB(1:1) = lbound(SrcOtherStateData%xdot)
-   UB(1:1) = ubound(SrcOtherStateData%xdot)
+   LB(1:1) = lbound(SrcOtherStateData%xdot, kind=B8Ki)
+   UB(1:1) = ubound(SrcOtherStateData%xdot, kind=B8Ki)
    do i1 = LB(1), UB(1)
       call DBEMT_CopyContState(SrcOtherStateData%xdot(i1), DstOtherStateData%xdot(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -534,8 +534,8 @@ subroutine DBEMT_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    type(DBEMT_OtherStateType), intent(inout) :: OtherStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'DBEMT_DestroyOtherState'
@@ -547,8 +547,8 @@ subroutine DBEMT_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    if (allocated(OtherStateData%n)) then
       deallocate(OtherStateData%n)
    end if
-   LB(1:1) = lbound(OtherStateData%xdot)
-   UB(1:1) = ubound(OtherStateData%xdot)
+   LB(1:1) = lbound(OtherStateData%xdot, kind=B8Ki)
+   UB(1:1) = ubound(OtherStateData%xdot, kind=B8Ki)
    do i1 = LB(1), UB(1)
       call DBEMT_DestroyContState(OtherStateData%xdot(i1), ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -559,23 +559,23 @@ subroutine DBEMT_PackOtherState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(DBEMT_OtherStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'DBEMT_PackOtherState'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%areStatesInitialized))
    if (allocated(InData%areStatesInitialized)) then
-      call RegPackBounds(Buf, 2, lbound(InData%areStatesInitialized), ubound(InData%areStatesInitialized))
+      call RegPackBounds(Buf, 2, lbound(InData%areStatesInitialized, kind=B8Ki), ubound(InData%areStatesInitialized, kind=B8Ki))
       call RegPack(Buf, InData%areStatesInitialized)
    end if
    call RegPack(Buf, InData%tau1)
    call RegPack(Buf, InData%tau2)
    call RegPack(Buf, allocated(InData%n))
    if (allocated(InData%n)) then
-      call RegPackBounds(Buf, 2, lbound(InData%n), ubound(InData%n))
+      call RegPackBounds(Buf, 2, lbound(InData%n, kind=B8Ki), ubound(InData%n, kind=B8Ki))
       call RegPack(Buf, InData%n)
    end if
-   LB(1:1) = lbound(InData%xdot)
-   UB(1:1) = ubound(InData%xdot)
+   LB(1:1) = lbound(InData%xdot, kind=B8Ki)
+   UB(1:1) = ubound(InData%xdot, kind=B8Ki)
    do i1 = LB(1), UB(1)
       call DBEMT_PackContState(Buf, InData%xdot(i1)) 
    end do
@@ -586,8 +586,8 @@ subroutine DBEMT_UnPackOtherState(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(DBEMT_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DBEMT_UnPackOtherState'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -623,8 +623,8 @@ subroutine DBEMT_UnPackOtherState(Buf, OutData)
       call RegUnpack(Buf, OutData%n)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   LB(1:1) = lbound(OutData%xdot)
-   UB(1:1) = ubound(OutData%xdot)
+   LB(1:1) = lbound(OutData%xdot, kind=B8Ki)
+   UB(1:1) = ubound(OutData%xdot, kind=B8Ki)
    do i1 = LB(1), UB(1)
       call DBEMT_UnpackContState(Buf, OutData%xdot(i1)) ! xdot 
    end do
@@ -675,7 +675,7 @@ subroutine DBEMT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'DBEMT_CopyParam'
    ErrStat = ErrID_None
@@ -687,8 +687,8 @@ subroutine DBEMT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    DstParamData%k_0ye = SrcParamData%k_0ye
    DstParamData%tau1_const = SrcParamData%tau1_const
    if (allocated(SrcParamData%spanRatio)) then
-      LB(1:2) = lbound(SrcParamData%spanRatio)
-      UB(1:2) = ubound(SrcParamData%spanRatio)
+      LB(1:2) = lbound(SrcParamData%spanRatio, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%spanRatio, kind=B8Ki)
       if (.not. allocated(DstParamData%spanRatio)) then
          allocate(DstParamData%spanRatio(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -726,7 +726,7 @@ subroutine DBEMT_PackParam(Buf, Indata)
    call RegPack(Buf, InData%tau1_const)
    call RegPack(Buf, allocated(InData%spanRatio))
    if (allocated(InData%spanRatio)) then
-      call RegPackBounds(Buf, 2, lbound(InData%spanRatio), ubound(InData%spanRatio))
+      call RegPackBounds(Buf, 2, lbound(InData%spanRatio, kind=B8Ki), ubound(InData%spanRatio, kind=B8Ki))
       call RegPack(Buf, InData%spanRatio)
    end if
    call RegPack(Buf, InData%DBEMT_Mod)
@@ -737,7 +737,7 @@ subroutine DBEMT_UnPackParam(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(DBEMT_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DBEMT_UnPackParam'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -820,8 +820,8 @@ subroutine DBEMT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'DBEMT_CopyInput'
@@ -831,8 +831,8 @@ subroutine DBEMT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
    DstInputData%Un_disk = SrcInputData%Un_disk
    DstInputData%R_disk = SrcInputData%R_disk
    if (allocated(SrcInputData%element)) then
-      LB(1:2) = lbound(SrcInputData%element)
-      UB(1:2) = ubound(SrcInputData%element)
+      LB(1:2) = lbound(SrcInputData%element, kind=B8Ki)
+      UB(1:2) = ubound(SrcInputData%element, kind=B8Ki)
       if (.not. allocated(DstInputData%element)) then
          allocate(DstInputData%element(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -854,16 +854,16 @@ subroutine DBEMT_DestroyInput(InputData, ErrStat, ErrMsg)
    type(DBEMT_InputType), intent(inout) :: InputData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'DBEMT_DestroyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(InputData%element)) then
-      LB(1:2) = lbound(InputData%element)
-      UB(1:2) = ubound(InputData%element)
+      LB(1:2) = lbound(InputData%element, kind=B8Ki)
+      UB(1:2) = ubound(InputData%element, kind=B8Ki)
       do i2 = LB(2), UB(2)
          do i1 = LB(1), UB(1)
             call DBEMT_DestroyElementInputType(InputData%element(i1,i2), ErrStat2, ErrMsg2)
@@ -878,17 +878,17 @@ subroutine DBEMT_PackInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(DBEMT_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'DBEMT_PackInput'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%AxInd_disk)
    call RegPack(Buf, InData%Un_disk)
    call RegPack(Buf, InData%R_disk)
    call RegPack(Buf, allocated(InData%element))
    if (allocated(InData%element)) then
-      call RegPackBounds(Buf, 2, lbound(InData%element), ubound(InData%element))
-      LB(1:2) = lbound(InData%element)
-      UB(1:2) = ubound(InData%element)
+      call RegPackBounds(Buf, 2, lbound(InData%element, kind=B8Ki), ubound(InData%element, kind=B8Ki))
+      LB(1:2) = lbound(InData%element, kind=B8Ki)
+      UB(1:2) = ubound(InData%element, kind=B8Ki)
       do i2 = LB(2), UB(2)
          do i1 = LB(1), UB(1)
             call DBEMT_PackElementInputType(Buf, InData%element(i1,i2)) 
@@ -902,8 +902,8 @@ subroutine DBEMT_UnPackInput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(DBEMT_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DBEMT_UnPackInput'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -938,14 +938,14 @@ subroutine DBEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(3), UB(3)
+   integer(B8Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'DBEMT_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOutputData%vind)) then
-      LB(1:3) = lbound(SrcOutputData%vind)
-      UB(1:3) = ubound(SrcOutputData%vind)
+      LB(1:3) = lbound(SrcOutputData%vind, kind=B8Ki)
+      UB(1:3) = ubound(SrcOutputData%vind, kind=B8Ki)
       if (.not. allocated(DstOutputData%vind)) then
          allocate(DstOutputData%vind(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -976,7 +976,7 @@ subroutine DBEMT_PackOutput(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%vind))
    if (allocated(InData%vind)) then
-      call RegPackBounds(Buf, 3, lbound(InData%vind), ubound(InData%vind))
+      call RegPackBounds(Buf, 3, lbound(InData%vind, kind=B8Ki), ubound(InData%vind, kind=B8Ki))
       call RegPack(Buf, InData%vind)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -986,7 +986,7 @@ subroutine DBEMT_UnPackOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(DBEMT_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DBEMT_UnPackOutput'
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -1269,13 +1269,13 @@ SUBROUTINE DBEMT_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMs
    u_out%Un_disk = a1*u1%Un_disk + a2*u2%Un_disk
    u_out%R_disk = a1*u1%R_disk + a2*u2%R_disk
    IF (ALLOCATED(u_out%element) .AND. ALLOCATED(u1%element)) THEN
-      DO i02 = LBOUND(u_out%element,2),UBOUND(u_out%element,2)
-         DO i01 = LBOUND(u_out%element,1),UBOUND(u_out%element,1)
+      DO i02 = LBOUND(u_out%element,2, kind=B8Ki),UBOUND(u_out%element,2, kind=B8Ki)
+         DO i01 = LBOUND(u_out%element,1, kind=B8Ki),UBOUND(u_out%element,1, kind=B8Ki)
             u_out%element(i01,i02)%vind_s = a1*u1%element(i01,i02)%vind_s + a2*u2%element(i01,i02)%vind_s
          END DO
       END DO
-      DO i02 = LBOUND(u_out%element,2),UBOUND(u_out%element,2)
-         DO i01 = LBOUND(u_out%element,1),UBOUND(u_out%element,1)
+      DO i02 = LBOUND(u_out%element,2, kind=B8Ki),UBOUND(u_out%element,2, kind=B8Ki)
+         DO i01 = LBOUND(u_out%element,1, kind=B8Ki),UBOUND(u_out%element,1, kind=B8Ki)
             u_out%element(i01,i02)%spanRatio = a1*u1%element(i01,i02)%spanRatio + a2*u2%element(i01,i02)%spanRatio
          END DO
       END DO
@@ -1343,13 +1343,13 @@ SUBROUTINE DBEMT_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, E
    u_out%Un_disk = a1*u1%Un_disk + a2*u2%Un_disk + a3*u3%Un_disk
    u_out%R_disk = a1*u1%R_disk + a2*u2%R_disk + a3*u3%R_disk
    IF (ALLOCATED(u_out%element) .AND. ALLOCATED(u1%element)) THEN
-      DO i02 = LBOUND(u_out%element,2),UBOUND(u_out%element,2)
-         DO i01 = LBOUND(u_out%element,1),UBOUND(u_out%element,1)
+      DO i02 = LBOUND(u_out%element,2, kind=B8Ki),UBOUND(u_out%element,2, kind=B8Ki)
+         DO i01 = LBOUND(u_out%element,1, kind=B8Ki),UBOUND(u_out%element,1, kind=B8Ki)
             u_out%element(i01,i02)%vind_s = a1*u1%element(i01,i02)%vind_s + a2*u2%element(i01,i02)%vind_s + a3*u3%element(i01,i02)%vind_s
          END DO
       END DO
-      DO i02 = LBOUND(u_out%element,2),UBOUND(u_out%element,2)
-         DO i01 = LBOUND(u_out%element,1),UBOUND(u_out%element,1)
+      DO i02 = LBOUND(u_out%element,2, kind=B8Ki),UBOUND(u_out%element,2, kind=B8Ki)
+         DO i01 = LBOUND(u_out%element,1, kind=B8Ki),UBOUND(u_out%element,1, kind=B8Ki)
             u_out%element(i01,i02)%spanRatio = a1*u1%element(i01,i02)%spanRatio + a2*u2%element(i01,i02)%spanRatio + a3*u3%element(i01,i02)%spanRatio
          END DO
       END DO

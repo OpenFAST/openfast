@@ -11,9 +11,9 @@ module ModReg
 
    type :: PackBuffer
       integer(B1Ki), allocatable  :: Bytes(:)
-      integer(IntKi)              :: NB
+      integer(B8Ki)               :: NB
       type(c_ptr), allocatable    :: Pointers(:)
-      integer(IntKi)              :: NP
+      integer(B8Ki)               :: NP
       integer(IntKi)              :: ErrStat = ErrID_Fatal
       character(ErrMsgLen)        :: ErrMsg = 'PackBuffer not initialized'
    end type
@@ -23,10 +23,11 @@ module ModReg
       module procedure Pack_C1, Pack_C1_Rank1, Pack_C1_Rank2, Pack_C1_Rank3, &
          Pack_C1_Rank4, Pack_C1_Rank5, Pack_L1, Pack_L1_Rank1, Pack_L1_Rank2, &
          Pack_L1_Rank3, Pack_L1_Rank4, Pack_L1_Rank5, Pack_I4, Pack_I4_Rank1, &
-         Pack_I4_Rank2, Pack_I4_Rank3, Pack_I4_Rank4, Pack_I4_Rank5, Pack_R4, &
-         Pack_R4_Rank1, Pack_R4_Rank2, Pack_R4_Rank3, Pack_R4_Rank4, &
-         Pack_R4_Rank5, Pack_R8, Pack_R8_Rank1, Pack_R8_Rank2, Pack_R8_Rank3, &
-         Pack_R8_Rank4, Pack_R8_Rank5
+         Pack_I4_Rank2, Pack_I4_Rank3, Pack_I4_Rank4, Pack_I4_Rank5, Pack_I8, &
+         Pack_I8_Rank1, Pack_I8_Rank2, Pack_I8_Rank3, Pack_I8_Rank4, &
+         Pack_I8_Rank5, Pack_R4, Pack_R4_Rank1, Pack_R4_Rank2, Pack_R4_Rank3, &
+         Pack_R4_Rank4, Pack_R4_Rank5, Pack_R8, Pack_R8_Rank1, Pack_R8_Rank2, &
+         Pack_R8_Rank3, Pack_R8_Rank4, Pack_R8_Rank5
    end interface
 
    interface RegUnpack
@@ -34,10 +35,12 @@ module ModReg
          Unpack_C1_Rank3, Unpack_C1_Rank4, Unpack_C1_Rank5, Unpack_L1, &
          Unpack_L1_Rank1, Unpack_L1_Rank2, Unpack_L1_Rank3, Unpack_L1_Rank4, &
          Unpack_L1_Rank5, Unpack_I4, Unpack_I4_Rank1, Unpack_I4_Rank2, &
-         Unpack_I4_Rank3, Unpack_I4_Rank4, Unpack_I4_Rank5, Unpack_R4, &
-         Unpack_R4_Rank1, Unpack_R4_Rank2, Unpack_R4_Rank3, Unpack_R4_Rank4, &
-         Unpack_R4_Rank5, Unpack_R8, Unpack_R8_Rank1, Unpack_R8_Rank2, &
-         Unpack_R8_Rank3, Unpack_R8_Rank4, Unpack_R8_Rank5
+         Unpack_I4_Rank3, Unpack_I4_Rank4, Unpack_I4_Rank5, Unpack_I8, &
+         Unpack_I8_Rank1, Unpack_I8_Rank2, Unpack_I8_Rank3, Unpack_I8_Rank4, &
+         Unpack_I8_Rank5, Unpack_R4, Unpack_R4_Rank1, Unpack_R4_Rank2, &
+         Unpack_R4_Rank3, Unpack_R4_Rank4, Unpack_R4_Rank5, Unpack_R8, &
+         Unpack_R8_Rank1, Unpack_R8_Rank2, Unpack_R8_Rank3, Unpack_R8_Rank4, &
+         Unpack_R8_Rank5
    end interface
 
 contains
@@ -48,8 +51,8 @@ contains
       character(ErrMsgLen), intent(out) :: ErrMsg
 
       character(*), parameter           :: RoutineName = "InitPackBuffer"
-      integer(IntKi), parameter         :: NumPointersInit = 128
-      integer(IntKi), parameter         :: NumBytesInit = 1024
+      integer(B8Ki), parameter          :: NumPointersInit = 128
+      integer(B8Ki), parameter          :: NumBytesInit = 1024
       integer(IntKi)                    :: stat
 
       ErrStat = ErrID_None
@@ -230,8 +233,8 @@ contains
       logical, intent(out)              :: Found
 
       type(c_ptr), allocatable          :: PointersTmp(:)
-      integer(IntKi)                    :: NewSize
-      integer(B4Ki)                     :: i
+      integer(B8Ki)                     :: NewSize
+      integer(B8Ki)                     :: i
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -250,7 +253,7 @@ contains
 
       ! If pointer index is full, grow pointer index
       if (Buf%NP == size(Buf%Pointers)) then
-         NewSize = int(1.5_R4Ki * real(Buf%NP, R4Ki), IntKi)
+         NewSize = int(1.5_R8Ki * real(Buf%NP, R8Ki), B8Ki)
          call move_alloc(Buf%Pointers, PointersTmp)
          allocate (Buf%Pointers(NewSize), stat=Buf%ErrStat)
          if (Buf%ErrStat /= ErrID_None) then
@@ -274,7 +277,7 @@ contains
    subroutine RegUnpackPointer(Buf, Ptr, Idx)
       type(PackBuffer), intent(inout)   :: Buf
       type(c_ptr), intent(out)          :: Ptr
-      integer(B4Ki), intent(out)        :: Idx
+      integer(B8Ki), intent(out)        :: Idx
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -289,7 +292,8 @@ contains
 
    subroutine RegPackBounds(Buf, R, LB, UB)
       type(PackBuffer), intent(inout)  :: Buf
-      integer(B4Ki), intent(in)        :: R, LB(:), UB(:)
+      integer(B4Ki), intent(in)        :: R
+      integer(B8Ki), intent(in)        :: LB(:), UB(:)
       
       ! If buffer has an error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -303,7 +307,7 @@ contains
    subroutine RegUnpackBounds(Buf, R, LB, UB)
       type(PackBuffer), intent(inout)   :: Buf
       integer(B4Ki), intent(in)         :: R
-      integer(B4Ki), intent(out)        :: LB(:), UB(:)
+      integer(B8Ki), intent(out)        :: LB(:), UB(:)
 
       ! If buffer has an error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -316,10 +320,10 @@ contains
 
    subroutine GrowBuffer(Buf, N)
       type(PackBuffer), intent(inout)   :: Buf
-      integer(B4Ki), intent(in)         :: N
+      integer(B8Ki), intent(in)         :: N
 
       integer(B1Ki), allocatable        :: BytesTmp(:)
-      integer(B4Ki)                     :: NewSize
+      integer(B8Ki)                     :: NewSize
       integer(IntKi)                    :: stat
       
       ! Return if there is a buffer error
@@ -329,7 +333,7 @@ contains
       if (size(Buf%Bytes) > Buf%NB + N) return
 
       ! Calculate new size
-      NewSize = int(real(Buf%NB + N, R4Ki) * 1.8_R4Ki, IntKi)
+      NewSize = int(real(Buf%NB + N, R8Ki) * 1.8_R8Ki, B8Ki)
 
       ! Move allocation to temporary array and allocate buffer with new size
       call move_alloc(Buf%Bytes, BytesTmp)
@@ -349,7 +353,7 @@ contains
    subroutine Pack_C1(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       character(*), intent(in)                :: Data
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -370,7 +374,7 @@ contains
    subroutine Unpack_C1(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       character(*), intent(out)               :: Data
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -394,7 +398,7 @@ contains
    subroutine Pack_C1_Rank1(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       character(*), intent(in)                :: Data(:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -415,7 +419,7 @@ contains
    subroutine Unpack_C1_Rank1(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       character(*), intent(out)               :: Data(:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -439,7 +443,7 @@ contains
    subroutine Pack_C1_Rank2(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       character(*), intent(in)                :: Data(:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -460,7 +464,7 @@ contains
    subroutine Unpack_C1_Rank2(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       character(*), intent(out)               :: Data(:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -484,7 +488,7 @@ contains
    subroutine Pack_C1_Rank3(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       character(*), intent(in)                :: Data(:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -505,7 +509,7 @@ contains
    subroutine Unpack_C1_Rank3(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       character(*), intent(out)               :: Data(:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -529,7 +533,7 @@ contains
    subroutine Pack_C1_Rank4(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       character(*), intent(in)                :: Data(:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -550,7 +554,7 @@ contains
    subroutine Unpack_C1_Rank4(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       character(*), intent(out)               :: Data(:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -574,7 +578,7 @@ contains
    subroutine Pack_C1_Rank5(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       character(*), intent(in)                :: Data(:,:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -595,7 +599,7 @@ contains
    subroutine Unpack_C1_Rank5(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       character(*), intent(out)               :: Data(:,:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -619,7 +623,7 @@ contains
    subroutine Pack_L1(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       logical, intent(in)                     :: Data
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -640,7 +644,7 @@ contains
    subroutine Unpack_L1(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       logical, intent(out)                    :: Data
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -664,7 +668,7 @@ contains
    subroutine Pack_L1_Rank1(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       logical, intent(in)                     :: Data(:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -685,7 +689,7 @@ contains
    subroutine Unpack_L1_Rank1(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       logical, intent(out)                    :: Data(:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -709,7 +713,7 @@ contains
    subroutine Pack_L1_Rank2(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       logical, intent(in)                     :: Data(:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -730,7 +734,7 @@ contains
    subroutine Unpack_L1_Rank2(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       logical, intent(out)                    :: Data(:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -754,7 +758,7 @@ contains
    subroutine Pack_L1_Rank3(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       logical, intent(in)                     :: Data(:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -775,7 +779,7 @@ contains
    subroutine Unpack_L1_Rank3(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       logical, intent(out)                    :: Data(:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -799,7 +803,7 @@ contains
    subroutine Pack_L1_Rank4(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       logical, intent(in)                     :: Data(:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -820,7 +824,7 @@ contains
    subroutine Unpack_L1_Rank4(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       logical, intent(out)                    :: Data(:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -844,7 +848,7 @@ contains
    subroutine Pack_L1_Rank5(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       logical, intent(in)                     :: Data(:,:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -865,7 +869,7 @@ contains
    subroutine Unpack_L1_Rank5(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       logical, intent(out)                    :: Data(:,:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -889,7 +893,7 @@ contains
    subroutine Pack_I4(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       integer(B4Ki), intent(in)               :: Data
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -910,7 +914,7 @@ contains
    subroutine Unpack_I4(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       integer(B4Ki), intent(out)              :: Data
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -934,7 +938,7 @@ contains
    subroutine Pack_I4_Rank1(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       integer(B4Ki), intent(in)               :: Data(:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -955,7 +959,7 @@ contains
    subroutine Unpack_I4_Rank1(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       integer(B4Ki), intent(out)              :: Data(:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -979,7 +983,7 @@ contains
    subroutine Pack_I4_Rank2(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       integer(B4Ki), intent(in)               :: Data(:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1000,7 +1004,7 @@ contains
    subroutine Unpack_I4_Rank2(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       integer(B4Ki), intent(out)              :: Data(:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1024,7 +1028,7 @@ contains
    subroutine Pack_I4_Rank3(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       integer(B4Ki), intent(in)               :: Data(:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1045,7 +1049,7 @@ contains
    subroutine Unpack_I4_Rank3(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       integer(B4Ki), intent(out)              :: Data(:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1069,7 +1073,7 @@ contains
    subroutine Pack_I4_Rank4(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       integer(B4Ki), intent(in)               :: Data(:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1090,7 +1094,7 @@ contains
    subroutine Unpack_I4_Rank4(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       integer(B4Ki), intent(out)              :: Data(:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1114,7 +1118,7 @@ contains
    subroutine Pack_I4_Rank5(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       integer(B4Ki), intent(in)               :: Data(:,:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1135,7 +1139,7 @@ contains
    subroutine Unpack_I4_Rank5(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       integer(B4Ki), intent(out)              :: Data(:,:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1156,10 +1160,280 @@ contains
 
    end subroutine
 
+   subroutine Pack_I8(Buf, Data)
+      type(PackBuffer), intent(inout)         :: Buf
+      integer(B8Ki), intent(in)               :: Data
+      integer(B8Ki)                           :: DataSize
+
+      ! If buffer error, return
+      if (Buf%ErrStat /= ErrID_None) return
+
+      ! Get size of data in bytes
+      DataSize = 8
+
+      ! Grow buffer to accommodate Data
+      call GrowBuffer(Buf, DataSize)
+      if (RegCheckErr(Buf, "Pack_I8")) return
+
+      ! Transfer data to buffer
+      Buf%Bytes(Buf%NB+1:Buf%NB+DataSize) = transfer(Data, Buf%Bytes)
+      Buf%NB = Buf%NB + DataSize
+
+   end subroutine
+
+   subroutine Unpack_I8(Buf, Data)
+      type(PackBuffer), intent(inout)         :: Buf
+      integer(B8Ki), intent(out)              :: Data
+      integer(B8Ki)                           :: DataSize
+
+      ! If buffer error, return
+      if (Buf%ErrStat /= ErrID_None) return
+
+      ! Get size of data in bytes
+      DataSize = 8
+
+      ! Check that buffer has sufficient bytes remaining
+      if (size(Buf%Bytes) < Buf%NB + DataSize) then
+         Buf%ErrStat = ErrID_Fatal
+         write(Buf%ErrMsg,*) "Unpack_I8: buffer too small, requested", DataSize, "bytes"
+         return
+      end if
+
+      ! Transfer data from buffer
+      Data = transfer(Buf%Bytes(Buf%NB+1:Buf%NB+DataSize), Data)
+      Buf%NB = Buf%NB + DataSize
+
+   end subroutine
+
+   subroutine Pack_I8_Rank1(Buf, Data)
+      type(PackBuffer), intent(inout)         :: Buf
+      integer(B8Ki), intent(in)               :: Data(:)
+      integer(B8Ki)                           :: DataSize
+
+      ! If buffer error, return
+      if (Buf%ErrStat /= ErrID_None) return
+
+      ! Get size of data in bytes
+      DataSize = 8*size(Data)
+
+      ! Grow buffer to accommodate Data
+      call GrowBuffer(Buf, DataSize)
+      if (RegCheckErr(Buf, "Pack_I8_Rank1")) return
+
+      ! Transfer data to buffer
+      Buf%Bytes(Buf%NB+1:Buf%NB+DataSize) = transfer(Data, Buf%Bytes)
+      Buf%NB = Buf%NB + DataSize
+
+   end subroutine
+
+   subroutine Unpack_I8_Rank1(Buf, Data)
+      type(PackBuffer), intent(inout)         :: Buf
+      integer(B8Ki), intent(out)              :: Data(:)
+      integer(B8Ki)                           :: DataSize
+
+      ! If buffer error, return
+      if (Buf%ErrStat /= ErrID_None) return
+
+      ! Get size of data in bytes
+      DataSize = 8*size(Data)
+
+      ! Check that buffer has sufficient bytes remaining
+      if (size(Buf%Bytes) < Buf%NB + DataSize) then
+         Buf%ErrStat = ErrID_Fatal
+         write(Buf%ErrMsg,*) "Unpack_I8_Rank1: buffer too small, requested", DataSize, "bytes"
+         return
+      end if
+
+      ! Transfer data from buffer
+      Data = reshape(transfer(Buf%Bytes(Buf%NB+1:Buf%NB+DataSize), Data), shape(Data))
+      Buf%NB = Buf%NB + DataSize
+
+   end subroutine
+
+   subroutine Pack_I8_Rank2(Buf, Data)
+      type(PackBuffer), intent(inout)         :: Buf
+      integer(B8Ki), intent(in)               :: Data(:,:)
+      integer(B8Ki)                           :: DataSize
+
+      ! If buffer error, return
+      if (Buf%ErrStat /= ErrID_None) return
+
+      ! Get size of data in bytes
+      DataSize = 8*size(Data)
+
+      ! Grow buffer to accommodate Data
+      call GrowBuffer(Buf, DataSize)
+      if (RegCheckErr(Buf, "Pack_I8_Rank2")) return
+
+      ! Transfer data to buffer
+      Buf%Bytes(Buf%NB+1:Buf%NB+DataSize) = transfer(Data, Buf%Bytes)
+      Buf%NB = Buf%NB + DataSize
+
+   end subroutine
+
+   subroutine Unpack_I8_Rank2(Buf, Data)
+      type(PackBuffer), intent(inout)         :: Buf
+      integer(B8Ki), intent(out)              :: Data(:,:)
+      integer(B8Ki)                           :: DataSize
+
+      ! If buffer error, return
+      if (Buf%ErrStat /= ErrID_None) return
+
+      ! Get size of data in bytes
+      DataSize = 8*size(Data)
+
+      ! Check that buffer has sufficient bytes remaining
+      if (size(Buf%Bytes) < Buf%NB + DataSize) then
+         Buf%ErrStat = ErrID_Fatal
+         write(Buf%ErrMsg,*) "Unpack_I8_Rank2: buffer too small, requested", DataSize, "bytes"
+         return
+      end if
+
+      ! Transfer data from buffer
+      Data = reshape(transfer(Buf%Bytes(Buf%NB+1:Buf%NB+DataSize), Data), shape(Data))
+      Buf%NB = Buf%NB + DataSize
+
+   end subroutine
+
+   subroutine Pack_I8_Rank3(Buf, Data)
+      type(PackBuffer), intent(inout)         :: Buf
+      integer(B8Ki), intent(in)               :: Data(:,:,:)
+      integer(B8Ki)                           :: DataSize
+
+      ! If buffer error, return
+      if (Buf%ErrStat /= ErrID_None) return
+
+      ! Get size of data in bytes
+      DataSize = 8*size(Data)
+
+      ! Grow buffer to accommodate Data
+      call GrowBuffer(Buf, DataSize)
+      if (RegCheckErr(Buf, "Pack_I8_Rank3")) return
+
+      ! Transfer data to buffer
+      Buf%Bytes(Buf%NB+1:Buf%NB+DataSize) = transfer(Data, Buf%Bytes)
+      Buf%NB = Buf%NB + DataSize
+
+   end subroutine
+
+   subroutine Unpack_I8_Rank3(Buf, Data)
+      type(PackBuffer), intent(inout)         :: Buf
+      integer(B8Ki), intent(out)              :: Data(:,:,:)
+      integer(B8Ki)                           :: DataSize
+
+      ! If buffer error, return
+      if (Buf%ErrStat /= ErrID_None) return
+
+      ! Get size of data in bytes
+      DataSize = 8*size(Data)
+
+      ! Check that buffer has sufficient bytes remaining
+      if (size(Buf%Bytes) < Buf%NB + DataSize) then
+         Buf%ErrStat = ErrID_Fatal
+         write(Buf%ErrMsg,*) "Unpack_I8_Rank3: buffer too small, requested", DataSize, "bytes"
+         return
+      end if
+
+      ! Transfer data from buffer
+      Data = reshape(transfer(Buf%Bytes(Buf%NB+1:Buf%NB+DataSize), Data), shape(Data))
+      Buf%NB = Buf%NB + DataSize
+
+   end subroutine
+
+   subroutine Pack_I8_Rank4(Buf, Data)
+      type(PackBuffer), intent(inout)         :: Buf
+      integer(B8Ki), intent(in)               :: Data(:,:,:,:)
+      integer(B8Ki)                           :: DataSize
+
+      ! If buffer error, return
+      if (Buf%ErrStat /= ErrID_None) return
+
+      ! Get size of data in bytes
+      DataSize = 8*size(Data)
+
+      ! Grow buffer to accommodate Data
+      call GrowBuffer(Buf, DataSize)
+      if (RegCheckErr(Buf, "Pack_I8_Rank4")) return
+
+      ! Transfer data to buffer
+      Buf%Bytes(Buf%NB+1:Buf%NB+DataSize) = transfer(Data, Buf%Bytes)
+      Buf%NB = Buf%NB + DataSize
+
+   end subroutine
+
+   subroutine Unpack_I8_Rank4(Buf, Data)
+      type(PackBuffer), intent(inout)         :: Buf
+      integer(B8Ki), intent(out)              :: Data(:,:,:,:)
+      integer(B8Ki)                           :: DataSize
+
+      ! If buffer error, return
+      if (Buf%ErrStat /= ErrID_None) return
+
+      ! Get size of data in bytes
+      DataSize = 8*size(Data)
+
+      ! Check that buffer has sufficient bytes remaining
+      if (size(Buf%Bytes) < Buf%NB + DataSize) then
+         Buf%ErrStat = ErrID_Fatal
+         write(Buf%ErrMsg,*) "Unpack_I8_Rank4: buffer too small, requested", DataSize, "bytes"
+         return
+      end if
+
+      ! Transfer data from buffer
+      Data = reshape(transfer(Buf%Bytes(Buf%NB+1:Buf%NB+DataSize), Data), shape(Data))
+      Buf%NB = Buf%NB + DataSize
+
+   end subroutine
+
+   subroutine Pack_I8_Rank5(Buf, Data)
+      type(PackBuffer), intent(inout)         :: Buf
+      integer(B8Ki), intent(in)               :: Data(:,:,:,:,:)
+      integer(B8Ki)                           :: DataSize
+
+      ! If buffer error, return
+      if (Buf%ErrStat /= ErrID_None) return
+
+      ! Get size of data in bytes
+      DataSize = 8*size(Data)
+
+      ! Grow buffer to accommodate Data
+      call GrowBuffer(Buf, DataSize)
+      if (RegCheckErr(Buf, "Pack_I8_Rank5")) return
+
+      ! Transfer data to buffer
+      Buf%Bytes(Buf%NB+1:Buf%NB+DataSize) = transfer(Data, Buf%Bytes)
+      Buf%NB = Buf%NB + DataSize
+
+   end subroutine
+
+   subroutine Unpack_I8_Rank5(Buf, Data)
+      type(PackBuffer), intent(inout)         :: Buf
+      integer(B8Ki), intent(out)              :: Data(:,:,:,:,:)
+      integer(B8Ki)                           :: DataSize
+
+      ! If buffer error, return
+      if (Buf%ErrStat /= ErrID_None) return
+
+      ! Get size of data in bytes
+      DataSize = 8*size(Data)
+
+      ! Check that buffer has sufficient bytes remaining
+      if (size(Buf%Bytes) < Buf%NB + DataSize) then
+         Buf%ErrStat = ErrID_Fatal
+         write(Buf%ErrMsg,*) "Unpack_I8_Rank5: buffer too small, requested", DataSize, "bytes"
+         return
+      end if
+
+      ! Transfer data from buffer
+      Data = reshape(transfer(Buf%Bytes(Buf%NB+1:Buf%NB+DataSize), Data), shape(Data))
+      Buf%NB = Buf%NB + DataSize
+
+   end subroutine
+
    subroutine Pack_R4(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R4Ki), intent(in)                  :: Data
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1180,7 +1454,7 @@ contains
    subroutine Unpack_R4(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R4Ki), intent(out)                 :: Data
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1204,7 +1478,7 @@ contains
    subroutine Pack_R4_Rank1(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R4Ki), intent(in)                  :: Data(:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1225,7 +1499,7 @@ contains
    subroutine Unpack_R4_Rank1(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R4Ki), intent(out)                 :: Data(:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1249,7 +1523,7 @@ contains
    subroutine Pack_R4_Rank2(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R4Ki), intent(in)                  :: Data(:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1270,7 +1544,7 @@ contains
    subroutine Unpack_R4_Rank2(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R4Ki), intent(out)                 :: Data(:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1294,7 +1568,7 @@ contains
    subroutine Pack_R4_Rank3(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R4Ki), intent(in)                  :: Data(:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1315,7 +1589,7 @@ contains
    subroutine Unpack_R4_Rank3(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R4Ki), intent(out)                 :: Data(:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1339,7 +1613,7 @@ contains
    subroutine Pack_R4_Rank4(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R4Ki), intent(in)                  :: Data(:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1360,7 +1634,7 @@ contains
    subroutine Unpack_R4_Rank4(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R4Ki), intent(out)                 :: Data(:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1384,7 +1658,7 @@ contains
    subroutine Pack_R4_Rank5(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R4Ki), intent(in)                  :: Data(:,:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1405,7 +1679,7 @@ contains
    subroutine Unpack_R4_Rank5(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R4Ki), intent(out)                 :: Data(:,:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1429,7 +1703,7 @@ contains
    subroutine Pack_R8(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R8Ki), intent(in)                  :: Data
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1450,7 +1724,7 @@ contains
    subroutine Unpack_R8(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R8Ki), intent(out)                 :: Data
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1474,7 +1748,7 @@ contains
    subroutine Pack_R8_Rank1(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R8Ki), intent(in)                  :: Data(:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1495,7 +1769,7 @@ contains
    subroutine Unpack_R8_Rank1(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R8Ki), intent(out)                 :: Data(:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1519,7 +1793,7 @@ contains
    subroutine Pack_R8_Rank2(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R8Ki), intent(in)                  :: Data(:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1540,7 +1814,7 @@ contains
    subroutine Unpack_R8_Rank2(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R8Ki), intent(out)                 :: Data(:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1564,7 +1838,7 @@ contains
    subroutine Pack_R8_Rank3(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R8Ki), intent(in)                  :: Data(:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1585,7 +1859,7 @@ contains
    subroutine Unpack_R8_Rank3(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R8Ki), intent(out)                 :: Data(:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1609,7 +1883,7 @@ contains
    subroutine Pack_R8_Rank4(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R8Ki), intent(in)                  :: Data(:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1630,7 +1904,7 @@ contains
    subroutine Unpack_R8_Rank4(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R8Ki), intent(out)                 :: Data(:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1654,7 +1928,7 @@ contains
    subroutine Pack_R8_Rank5(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R8Ki), intent(in)                  :: Data(:,:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -1675,7 +1949,7 @@ contains
    subroutine Unpack_R8_Rank5(Buf, Data)
       type(PackBuffer), intent(inout)         :: Buf
       real(R8Ki), intent(out)                 :: Data(:,:,:,:,:)
-      integer(IntKi)                          :: DataSize
+      integer(B8Ki)                           :: DataSize
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return

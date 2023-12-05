@@ -84,7 +84,7 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Waves_CopyInitInput'
@@ -108,8 +108,8 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%NWaveElevGrid = SrcInitInputData%NWaveElevGrid
    DstInitInputData%NWaveKinGrid = SrcInitInputData%NWaveKinGrid
    if (allocated(SrcInitInputData%WaveKinGridxi)) then
-      LB(1:1) = lbound(SrcInitInputData%WaveKinGridxi)
-      UB(1:1) = ubound(SrcInitInputData%WaveKinGridxi)
+      LB(1:1) = lbound(SrcInitInputData%WaveKinGridxi, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%WaveKinGridxi, kind=B8Ki)
       if (.not. allocated(DstInitInputData%WaveKinGridxi)) then
          allocate(DstInitInputData%WaveKinGridxi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -120,8 +120,8 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       DstInitInputData%WaveKinGridxi = SrcInitInputData%WaveKinGridxi
    end if
    if (allocated(SrcInitInputData%WaveKinGridyi)) then
-      LB(1:1) = lbound(SrcInitInputData%WaveKinGridyi)
-      UB(1:1) = ubound(SrcInitInputData%WaveKinGridyi)
+      LB(1:1) = lbound(SrcInitInputData%WaveKinGridyi, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%WaveKinGridyi, kind=B8Ki)
       if (.not. allocated(DstInitInputData%WaveKinGridyi)) then
          allocate(DstInitInputData%WaveKinGridyi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -132,8 +132,8 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       DstInitInputData%WaveKinGridyi = SrcInitInputData%WaveKinGridyi
    end if
    if (allocated(SrcInitInputData%WaveKinGridzi)) then
-      LB(1:1) = lbound(SrcInitInputData%WaveKinGridzi)
-      UB(1:1) = ubound(SrcInitInputData%WaveKinGridzi)
+      LB(1:1) = lbound(SrcInitInputData%WaveKinGridzi, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%WaveKinGridzi, kind=B8Ki)
       if (.not. allocated(DstInitInputData%WaveKinGridzi)) then
          allocate(DstInitInputData%WaveKinGridzi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -144,8 +144,8 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       DstInitInputData%WaveKinGridzi = SrcInitInputData%WaveKinGridzi
    end if
    if (allocated(SrcInitInputData%CurrVxi)) then
-      LB(1:1) = lbound(SrcInitInputData%CurrVxi)
-      UB(1:1) = ubound(SrcInitInputData%CurrVxi)
+      LB(1:1) = lbound(SrcInitInputData%CurrVxi, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%CurrVxi, kind=B8Ki)
       if (.not. allocated(DstInitInputData%CurrVxi)) then
          allocate(DstInitInputData%CurrVxi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -156,8 +156,8 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       DstInitInputData%CurrVxi = SrcInitInputData%CurrVxi
    end if
    if (allocated(SrcInitInputData%CurrVyi)) then
-      LB(1:1) = lbound(SrcInitInputData%CurrVyi)
-      UB(1:1) = ubound(SrcInitInputData%CurrVyi)
+      LB(1:1) = lbound(SrcInitInputData%CurrVyi, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%CurrVyi, kind=B8Ki)
       if (.not. allocated(DstInitInputData%CurrVyi)) then
          allocate(DstInitInputData%CurrVyi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -234,27 +234,27 @@ subroutine Waves_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%NWaveKinGrid)
    call RegPack(Buf, allocated(InData%WaveKinGridxi))
    if (allocated(InData%WaveKinGridxi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridxi), ubound(InData%WaveKinGridxi))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridxi, kind=B8Ki), ubound(InData%WaveKinGridxi, kind=B8Ki))
       call RegPack(Buf, InData%WaveKinGridxi)
    end if
    call RegPack(Buf, allocated(InData%WaveKinGridyi))
    if (allocated(InData%WaveKinGridyi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridyi), ubound(InData%WaveKinGridyi))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridyi, kind=B8Ki), ubound(InData%WaveKinGridyi, kind=B8Ki))
       call RegPack(Buf, InData%WaveKinGridyi)
    end if
    call RegPack(Buf, allocated(InData%WaveKinGridzi))
    if (allocated(InData%WaveKinGridzi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridzi), ubound(InData%WaveKinGridzi))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridzi, kind=B8Ki), ubound(InData%WaveKinGridzi, kind=B8Ki))
       call RegPack(Buf, InData%WaveKinGridzi)
    end if
    call RegPack(Buf, allocated(InData%CurrVxi))
    if (allocated(InData%CurrVxi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%CurrVxi), ubound(InData%CurrVxi))
+      call RegPackBounds(Buf, 1, lbound(InData%CurrVxi, kind=B8Ki), ubound(InData%CurrVxi, kind=B8Ki))
       call RegPack(Buf, InData%CurrVxi)
    end if
    call RegPack(Buf, allocated(InData%CurrVyi))
    if (allocated(InData%CurrVyi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%CurrVyi), ubound(InData%CurrVyi))
+      call RegPackBounds(Buf, 1, lbound(InData%CurrVyi, kind=B8Ki), ubound(InData%CurrVyi, kind=B8Ki))
       call RegPack(Buf, InData%CurrVyi)
    end if
    call RegPack(Buf, InData%PCurrVxiPz0)
@@ -275,7 +275,7 @@ subroutine Waves_UnPackInitInput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Waves_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Waves_UnPackInitInput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return

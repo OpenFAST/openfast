@@ -171,15 +171,15 @@ subroutine IceFloe_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'IceFloe_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
          allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -190,8 +190,8 @@ subroutine IceFloe_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
          allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -232,12 +232,12 @@ subroutine IceFloe_PackInitOutput(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%WriteOutputHdr))
    if (allocated(InData%WriteOutputHdr)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr, kind=B8Ki), ubound(InData%WriteOutputHdr, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt, kind=B8Ki), ubound(InData%WriteOutputUnt, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
@@ -248,7 +248,7 @@ subroutine IceFloe_UnPackInitOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(IceFloe_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'IceFloe_UnPackInitOutput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -484,14 +484,14 @@ subroutine IceFloe_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'IceFloe_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcParamData%loadSeries)) then
-      LB(1:2) = lbound(SrcParamData%loadSeries)
-      UB(1:2) = ubound(SrcParamData%loadSeries)
+      LB(1:2) = lbound(SrcParamData%loadSeries, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%loadSeries, kind=B8Ki)
       if (.not. allocated(DstParamData%loadSeries)) then
          allocate(DstParamData%loadSeries(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -512,8 +512,8 @@ subroutine IceFloe_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    DstParamData%dt = SrcParamData%dt
    DstParamData%rampTime = SrcParamData%rampTime
    if (allocated(SrcParamData%legX)) then
-      LB(1:1) = lbound(SrcParamData%legX)
-      UB(1:1) = ubound(SrcParamData%legX)
+      LB(1:1) = lbound(SrcParamData%legX, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%legX, kind=B8Ki)
       if (.not. allocated(DstParamData%legX)) then
          allocate(DstParamData%legX(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -524,8 +524,8 @@ subroutine IceFloe_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%legX = SrcParamData%legX
    end if
    if (allocated(SrcParamData%legY)) then
-      LB(1:1) = lbound(SrcParamData%legY)
-      UB(1:1) = ubound(SrcParamData%legY)
+      LB(1:1) = lbound(SrcParamData%legY, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%legY, kind=B8Ki)
       if (.not. allocated(DstParamData%legY)) then
          allocate(DstParamData%legY(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -536,8 +536,8 @@ subroutine IceFloe_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%legY = SrcParamData%legY
    end if
    if (allocated(SrcParamData%ks)) then
-      LB(1:1) = lbound(SrcParamData%ks)
-      UB(1:1) = ubound(SrcParamData%ks)
+      LB(1:1) = lbound(SrcParamData%ks, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%ks, kind=B8Ki)
       if (.not. allocated(DstParamData%ks)) then
          allocate(DstParamData%ks(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -582,7 +582,7 @@ subroutine IceFloe_PackParam(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%loadSeries))
    if (allocated(InData%loadSeries)) then
-      call RegPackBounds(Buf, 2, lbound(InData%loadSeries), ubound(InData%loadSeries))
+      call RegPackBounds(Buf, 2, lbound(InData%loadSeries, kind=B8Ki), ubound(InData%loadSeries, kind=B8Ki))
       call RegPack(Buf, InData%loadSeries)
    end if
    call RegPack(Buf, InData%iceVel)
@@ -597,17 +597,17 @@ subroutine IceFloe_PackParam(Buf, Indata)
    call RegPack(Buf, InData%rampTime)
    call RegPack(Buf, allocated(InData%legX))
    if (allocated(InData%legX)) then
-      call RegPackBounds(Buf, 1, lbound(InData%legX), ubound(InData%legX))
+      call RegPackBounds(Buf, 1, lbound(InData%legX, kind=B8Ki), ubound(InData%legX, kind=B8Ki))
       call RegPack(Buf, InData%legX)
    end if
    call RegPack(Buf, allocated(InData%legY))
    if (allocated(InData%legY)) then
-      call RegPackBounds(Buf, 1, lbound(InData%legY), ubound(InData%legY))
+      call RegPackBounds(Buf, 1, lbound(InData%legY, kind=B8Ki), ubound(InData%legY, kind=B8Ki))
       call RegPack(Buf, InData%legY)
    end if
    call RegPack(Buf, allocated(InData%ks))
    if (allocated(InData%ks)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ks), ubound(InData%ks))
+      call RegPackBounds(Buf, 1, lbound(InData%ks, kind=B8Ki), ubound(InData%ks, kind=B8Ki))
       call RegPack(Buf, InData%ks)
    end if
    call RegPack(Buf, InData%numLegs)
@@ -622,7 +622,7 @@ subroutine IceFloe_UnPackParam(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(IceFloe_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'IceFloe_UnPackParam'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -766,7 +766,7 @@ subroutine IceFloe_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'IceFloe_CopyOutput'
@@ -776,8 +776,8 @@ subroutine IceFloe_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, E
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcOutputData%WriteOutput)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutput)
-      UB(1:1) = ubound(SrcOutputData%WriteOutput)
+      LB(1:1) = lbound(SrcOutputData%WriteOutput, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput, kind=B8Ki)
       if (.not. allocated(DstOutputData%WriteOutput)) then
          allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -813,7 +813,7 @@ subroutine IceFloe_PackOutput(Buf, Indata)
    call MeshPack(Buf, InData%iceMesh) 
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutput, kind=B8Ki), ubound(InData%WriteOutput, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutput)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -823,7 +823,7 @@ subroutine IceFloe_UnPackOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(IceFloe_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'IceFloe_UnPackOutput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return

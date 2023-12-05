@@ -337,13 +337,13 @@ void gen_copy(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
     w << indent << "character(*),    intent(  out) :: ErrMsg";
     if (has_ddt_arr)
     {
-        w << indent << "integer(IntKi)  :: ";
+        w << indent << "integer(B8Ki)   :: ";
         for (int i = 1; i <= ddt.max_rank; i++)
             w << (i > 1 ? ", " : "") << "i" << i;
         w << "";
     }
     if (has_ddt_arr || has_alloc)
-        w << indent << "integer(IntKi)                 :: LB(" << ddt.max_rank << "), UB(" << ddt.max_rank << ")";
+        w << indent << "integer(B8Ki)                  :: LB(" << ddt.max_rank << "), UB(" << ddt.max_rank << ")";
     if (has_ddt || has_alloc)
         w << indent << "integer(IntKi)                 :: ErrStat2";
     if (has_ddt)
@@ -378,8 +378,8 @@ void gen_copy(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
             std::string dims("");
             if (field.rank > 0)
             {
-                w << indent << "LB(1:" << field.rank << ") = lbound(" << src << ")";
-                w << indent << "UB(1:" << field.rank << ") = ubound(" << src << ")";
+                w << indent << "LB(1:" << field.rank << ") = lbound(" << src << ", kind=B8Ki)";
+                w << indent << "UB(1:" << field.rank << ") = ubound(" << src << ", kind=B8Ki)";
                 for (int d = 1; d <= field.rank; d++)
                     dims += ",LB(" + std::to_string(d) + "):UB(" + std::to_string(d) + ")";
                 dims = "(" + dims.substr(1) + ")";
@@ -420,8 +420,8 @@ void gen_copy(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
             // Get bounds for non-allocated field
             if (field.rank > 0 && !field.is_allocatable)
             {
-                w << indent << "LB(1:" << field.rank << ") = lbound(" << src << ")";
-                w << indent << "UB(1:" << field.rank << ") = ubound(" << src << ")";
+                w << indent << "LB(1:" << field.rank << ") = lbound(" << src << ", kind=B8Ki)";
+                w << indent << "UB(1:" << field.rank << ") = ubound(" << src << ", kind=B8Ki)";
             }
 
             for (int d = field.rank; d >= 1; d--)
@@ -505,10 +505,10 @@ void gen_destroy(std::ostream &w, const Module &mod, const DataType::Derived &dd
     w << indent << "character(*),    intent(  out) :: ErrMsg";
     if (has_ddt_arr)
     {
-        w << indent << "integer(IntKi)  :: ";
+        w << indent << "integer(B8Ki)   :: ";
         for (int i = 1; i <= ddt.max_rank; i++)
             w << (i > 1 ? ", " : "") << "i" << i;
-        w << indent << "integer(IntKi)  :: LB(" << ddt.max_rank << "), UB(" << ddt.max_rank << ")";
+        w << indent << "integer(B8Ki)   :: LB(" << ddt.max_rank << "), UB(" << ddt.max_rank << ")";
     }
     if (has_ddt)
     {
@@ -548,8 +548,8 @@ void gen_destroy(std::ostream &w, const Module &mod, const DataType::Derived &dd
 
             if (field.rank > 0)
             {
-                w << indent << "LB(1:" << field.rank << ") = lbound(" << var << ")";
-                w << indent << "UB(1:" << field.rank << ") = ubound(" << var << ")";
+                w << indent << "LB(1:" << field.rank << ") = lbound(" << var << ", kind=B8Ki)";
+                w << indent << "UB(1:" << field.rank << ") = ubound(" << var << ", kind=B8Ki)";
             }
             for (int d = field.rank; d >= 1; d--)
             {
@@ -628,10 +628,10 @@ void gen_pack(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
     w << indent << "character(*), parameter         :: RoutineName = '" << routine_name << "'";
     if (has_ddt_arr)
     {
-        w << indent << "integer(IntKi)  :: ";
+        w << indent << "integer(B8Ki)   :: ";
         for (int i = 1; i <= ddt.max_rank; i++)
             w << (i > 1 ? ", " : "") << "i" << i;
-        w << indent << "integer(IntKi)  :: LB(" << ddt.max_rank << "), UB(" << ddt.max_rank << ")";
+        w << indent << "integer(B8Ki)   :: LB(" << ddt.max_rank << "), UB(" << ddt.max_rank << ")";
     }
     if (has_ptr)
     {
@@ -663,7 +663,7 @@ void gen_pack(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
             indent += "   ";
             if (field.rank > 0)
             {
-                w << indent << "call RegPackBounds(Buf, " << field.rank << ", lbound(" << var << "), ubound(" << var << "))";
+                w << indent << "call RegPackBounds(Buf, " << field.rank << ", lbound(" << var << ", kind=B8Ki), ubound(" << var << ", kind=B8Ki))";
             }
         }
         if (field.is_pointer)
@@ -680,8 +680,8 @@ void gen_pack(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
 
             if (field.rank > 0)
             {
-                w << indent << "LB(1:" << field.rank << ") = lbound(" << var << ")";
-                w << indent << "UB(1:" << field.rank << ") = ubound(" << var << ")";
+                w << indent << "LB(1:" << field.rank << ") = lbound(" << var << ", kind=B8Ki)";
+                w << indent << "UB(1:" << field.rank << ") = ubound(" << var << ", kind=B8Ki)";
             }
 
             for (int d = field.rank; d >= 1; d--)
@@ -756,14 +756,14 @@ void gen_unpack(std::ostream &w, const Module &mod, const DataType::Derived &ddt
     w << indent << "character(*), parameter            :: RoutineName = '" << routine_name << "'";
     if (has_ddt_arr)
     {
-        w << indent << "integer(IntKi)  :: ";
+        w << indent << "integer(B8Ki)   :: ";
         for (int i = 1; i <= ddt.max_rank; i++)
             w << (i > 1 ? ", " : "") << "i" << i;
         w << "";
     }
     if (has_ddt_arr || has_alloc)
     {
-        w << indent << "integer(IntKi)  :: LB(" << ddt.max_rank << "), UB(" << ddt.max_rank << ")";
+        w << indent << "integer(B8Ki)   :: LB(" << ddt.max_rank << "), UB(" << ddt.max_rank << ")";
     }
     if (has_alloc)
     {
@@ -772,7 +772,7 @@ void gen_unpack(std::ostream &w, const Module &mod, const DataType::Derived &ddt
     }
     if (has_ptr)
     {
-        w << indent << "integer(IntKi)  :: PtrIdx";
+        w << indent << "integer(B8Ki)   :: PtrIdx";
         w << indent << "type(c_ptr)     :: Ptr";
     }
     w << indent << "if (Buf%ErrStat /= ErrID_None) return";
@@ -862,8 +862,8 @@ void gen_unpack(std::ostream &w, const Module &mod, const DataType::Derived &ddt
             // Get bounds for non-allocated field
             if (field.rank > 0 && !field.is_allocatable)
             {
-                w << indent << "LB(1:" << field.rank << ") = lbound(" << var << ")";
-                w << indent << "UB(1:" << field.rank << ") = ubound(" << var << ")";
+                w << indent << "LB(1:" << field.rank << ") = lbound(" << var << ", kind=B8Ki)";
+                w << indent << "UB(1:" << field.rank << ") = ubound(" << var << ", kind=B8Ki)";
             }
 
             for (int d = field.rank; d >= 1; d--)
@@ -978,7 +978,7 @@ void gen_extint_order(std::ostream &w, const Module &mod, std::string uy, const 
 
                 for (int j = field.rank; j > 0; j--)
                 {
-                    w << indent << "DO i" << recurse_level << j << " = LBOUND(" << uy << "_out" << field_var << "," << j << "),UBOUND(" << uy << "_out" << field_var << "," << j << ")";
+                    w << indent << "DO i" << recurse_level << j << " = LBOUND(" << uy << "_out" << field_var << "," << j << ", kind=B8Ki),UBOUND(" << uy << "_out" << field_var << "," << j << ", kind=B8Ki)";
                     indent += "   ";
                 }
 
@@ -1007,7 +1007,7 @@ void gen_extint_order(std::ostream &w, const Module &mod, std::string uy, const 
         {
             for (int j = field.rank; j > 0; j--)
             {
-                w << indent << "DO i" << j << " = LBOUND(" << vout << "," << j << "),UBOUND(" << vout << "," << j << ")";
+                w << indent << "DO i" << j << " = LBOUND(" << vout << "," << j << ", kind=B8Ki),UBOUND(" << vout << "," << j << ", kind=B8Ki)";
                 indent += "   ";
             }
 
@@ -1074,7 +1074,7 @@ void gen_extint_order(std::ostream &w, const Module &mod, std::string uy, const 
         {
             for (int j = field.rank; j > 0; j--)
             {
-                w << indent << "DO i" << j << " = LBOUND(" << vout << "," << j << "),UBOUND(" << vout << "," << j << ")";
+                w << indent << "DO i" << j << " = LBOUND(" << vout << "," << j << ", kind=B8Ki),UBOUND(" << vout << "," << j << ", kind=B8Ki)";
                 indent += "   ";
             }
         }
@@ -1539,7 +1539,7 @@ void gen_copy_f2c(std::ostream &w, const Module &mod, const DataType::Derived &d
         {
             std::string dims;
             for (int d = 1; d <= field.rank; d++)
-                dims += std::string(d > 1 ? "," : "") + "LBOUND(" + var_f + "," + std::to_string(d) + ")";
+                dims += std::string(d > 1 ? "," : "") + "LBOUND(" + var_f + "," + std::to_string(d) + ", kind=B8Ki)";
             w << indent;
             w << indent << "! -- " << field.name << " " << ddt.name_short << " Data fields";
             w << indent << "IF (.NOT. SkipPointers_local ) THEN";

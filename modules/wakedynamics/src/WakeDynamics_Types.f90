@@ -453,15 +453,15 @@ subroutine WD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'WD_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
          allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -472,8 +472,8 @@ subroutine WD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
          allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -514,12 +514,12 @@ subroutine WD_PackInitOutput(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%WriteOutputHdr))
    if (allocated(InData%WriteOutputHdr)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr, kind=B8Ki), ubound(InData%WriteOutputHdr, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt, kind=B8Ki), ubound(InData%WriteOutputUnt, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
@@ -530,7 +530,7 @@ subroutine WD_UnPackInitOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(WD_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WD_UnPackInitOutput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -610,14 +610,14 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(3), UB(3)
+   integer(B8Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'WD_CopyDiscState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcDiscStateData%xhat_plane)) then
-      LB(1:2) = lbound(SrcDiscStateData%xhat_plane)
-      UB(1:2) = ubound(SrcDiscStateData%xhat_plane)
+      LB(1:2) = lbound(SrcDiscStateData%xhat_plane, kind=B8Ki)
+      UB(1:2) = ubound(SrcDiscStateData%xhat_plane, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%xhat_plane)) then
          allocate(DstDiscStateData%xhat_plane(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -628,8 +628,8 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%xhat_plane = SrcDiscStateData%xhat_plane
    end if
    if (allocated(SrcDiscStateData%YawErr_filt)) then
-      LB(1:1) = lbound(SrcDiscStateData%YawErr_filt)
-      UB(1:1) = ubound(SrcDiscStateData%YawErr_filt)
+      LB(1:1) = lbound(SrcDiscStateData%YawErr_filt, kind=B8Ki)
+      UB(1:1) = ubound(SrcDiscStateData%YawErr_filt, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%YawErr_filt)) then
          allocate(DstDiscStateData%YawErr_filt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -642,8 +642,8 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
    DstDiscStateData%psi_skew_filt = SrcDiscStateData%psi_skew_filt
    DstDiscStateData%chi_skew_filt = SrcDiscStateData%chi_skew_filt
    if (allocated(SrcDiscStateData%V_plane_filt)) then
-      LB(1:2) = lbound(SrcDiscStateData%V_plane_filt)
-      UB(1:2) = ubound(SrcDiscStateData%V_plane_filt)
+      LB(1:2) = lbound(SrcDiscStateData%V_plane_filt, kind=B8Ki)
+      UB(1:2) = ubound(SrcDiscStateData%V_plane_filt, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%V_plane_filt)) then
          allocate(DstDiscStateData%V_plane_filt(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -654,8 +654,8 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%V_plane_filt = SrcDiscStateData%V_plane_filt
    end if
    if (allocated(SrcDiscStateData%p_plane)) then
-      LB(1:2) = lbound(SrcDiscStateData%p_plane)
-      UB(1:2) = ubound(SrcDiscStateData%p_plane)
+      LB(1:2) = lbound(SrcDiscStateData%p_plane, kind=B8Ki)
+      UB(1:2) = ubound(SrcDiscStateData%p_plane, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%p_plane)) then
          allocate(DstDiscStateData%p_plane(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -666,8 +666,8 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%p_plane = SrcDiscStateData%p_plane
    end if
    if (allocated(SrcDiscStateData%x_plane)) then
-      LB(1:1) = lbound(SrcDiscStateData%x_plane)
-      UB(1:1) = ubound(SrcDiscStateData%x_plane)
+      LB(1:1) = lbound(SrcDiscStateData%x_plane, kind=B8Ki)
+      UB(1:1) = ubound(SrcDiscStateData%x_plane, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%x_plane)) then
          allocate(DstDiscStateData%x_plane(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -678,8 +678,8 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%x_plane = SrcDiscStateData%x_plane
    end if
    if (allocated(SrcDiscStateData%Vx_wake)) then
-      LB(1:2) = lbound(SrcDiscStateData%Vx_wake)
-      UB(1:2) = ubound(SrcDiscStateData%Vx_wake)
+      LB(1:2) = lbound(SrcDiscStateData%Vx_wake, kind=B8Ki)
+      UB(1:2) = ubound(SrcDiscStateData%Vx_wake, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%Vx_wake)) then
          allocate(DstDiscStateData%Vx_wake(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -690,8 +690,8 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Vx_wake = SrcDiscStateData%Vx_wake
    end if
    if (allocated(SrcDiscStateData%Vr_wake)) then
-      LB(1:2) = lbound(SrcDiscStateData%Vr_wake)
-      UB(1:2) = ubound(SrcDiscStateData%Vr_wake)
+      LB(1:2) = lbound(SrcDiscStateData%Vr_wake, kind=B8Ki)
+      UB(1:2) = ubound(SrcDiscStateData%Vr_wake, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%Vr_wake)) then
          allocate(DstDiscStateData%Vr_wake(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -702,8 +702,8 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Vr_wake = SrcDiscStateData%Vr_wake
    end if
    if (allocated(SrcDiscStateData%Vx_wake2)) then
-      LB(1:3) = lbound(SrcDiscStateData%Vx_wake2)
-      UB(1:3) = ubound(SrcDiscStateData%Vx_wake2)
+      LB(1:3) = lbound(SrcDiscStateData%Vx_wake2, kind=B8Ki)
+      UB(1:3) = ubound(SrcDiscStateData%Vx_wake2, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%Vx_wake2)) then
          allocate(DstDiscStateData%Vx_wake2(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -714,8 +714,8 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Vx_wake2 = SrcDiscStateData%Vx_wake2
    end if
    if (allocated(SrcDiscStateData%Vy_wake2)) then
-      LB(1:3) = lbound(SrcDiscStateData%Vy_wake2)
-      UB(1:3) = ubound(SrcDiscStateData%Vy_wake2)
+      LB(1:3) = lbound(SrcDiscStateData%Vy_wake2, kind=B8Ki)
+      UB(1:3) = ubound(SrcDiscStateData%Vy_wake2, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%Vy_wake2)) then
          allocate(DstDiscStateData%Vy_wake2(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -726,8 +726,8 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Vy_wake2 = SrcDiscStateData%Vy_wake2
    end if
    if (allocated(SrcDiscStateData%Vz_wake2)) then
-      LB(1:3) = lbound(SrcDiscStateData%Vz_wake2)
-      UB(1:3) = ubound(SrcDiscStateData%Vz_wake2)
+      LB(1:3) = lbound(SrcDiscStateData%Vz_wake2, kind=B8Ki)
+      UB(1:3) = ubound(SrcDiscStateData%Vz_wake2, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%Vz_wake2)) then
          allocate(DstDiscStateData%Vz_wake2(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -738,8 +738,8 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Vz_wake2 = SrcDiscStateData%Vz_wake2
    end if
    if (allocated(SrcDiscStateData%Vx_wind_disk_filt)) then
-      LB(1:1) = lbound(SrcDiscStateData%Vx_wind_disk_filt)
-      UB(1:1) = ubound(SrcDiscStateData%Vx_wind_disk_filt)
+      LB(1:1) = lbound(SrcDiscStateData%Vx_wind_disk_filt, kind=B8Ki)
+      UB(1:1) = ubound(SrcDiscStateData%Vx_wind_disk_filt, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%Vx_wind_disk_filt)) then
          allocate(DstDiscStateData%Vx_wind_disk_filt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -750,8 +750,8 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Vx_wind_disk_filt = SrcDiscStateData%Vx_wind_disk_filt
    end if
    if (allocated(SrcDiscStateData%TI_amb_filt)) then
-      LB(1:1) = lbound(SrcDiscStateData%TI_amb_filt)
-      UB(1:1) = ubound(SrcDiscStateData%TI_amb_filt)
+      LB(1:1) = lbound(SrcDiscStateData%TI_amb_filt, kind=B8Ki)
+      UB(1:1) = ubound(SrcDiscStateData%TI_amb_filt, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%TI_amb_filt)) then
          allocate(DstDiscStateData%TI_amb_filt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -762,8 +762,8 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%TI_amb_filt = SrcDiscStateData%TI_amb_filt
    end if
    if (allocated(SrcDiscStateData%D_rotor_filt)) then
-      LB(1:1) = lbound(SrcDiscStateData%D_rotor_filt)
-      UB(1:1) = ubound(SrcDiscStateData%D_rotor_filt)
+      LB(1:1) = lbound(SrcDiscStateData%D_rotor_filt, kind=B8Ki)
+      UB(1:1) = ubound(SrcDiscStateData%D_rotor_filt, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%D_rotor_filt)) then
          allocate(DstDiscStateData%D_rotor_filt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -775,8 +775,8 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
    end if
    DstDiscStateData%Vx_rel_disk_filt = SrcDiscStateData%Vx_rel_disk_filt
    if (allocated(SrcDiscStateData%Ct_azavg_filt)) then
-      LB(1:1) = lbound(SrcDiscStateData%Ct_azavg_filt)
-      UB(1:1) = ubound(SrcDiscStateData%Ct_azavg_filt)
+      LB(1:1) = lbound(SrcDiscStateData%Ct_azavg_filt, kind=B8Ki)
+      UB(1:1) = ubound(SrcDiscStateData%Ct_azavg_filt, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%Ct_azavg_filt)) then
          allocate(DstDiscStateData%Ct_azavg_filt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -787,8 +787,8 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Ct_azavg_filt = SrcDiscStateData%Ct_azavg_filt
    end if
    if (allocated(SrcDiscStateData%Cq_azavg_filt)) then
-      LB(1:1) = lbound(SrcDiscStateData%Cq_azavg_filt)
-      UB(1:1) = ubound(SrcDiscStateData%Cq_azavg_filt)
+      LB(1:1) = lbound(SrcDiscStateData%Cq_azavg_filt, kind=B8Ki)
+      UB(1:1) = ubound(SrcDiscStateData%Cq_azavg_filt, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%Cq_azavg_filt)) then
          allocate(DstDiscStateData%Cq_azavg_filt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -861,80 +861,80 @@ subroutine WD_PackDiscState(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%xhat_plane))
    if (allocated(InData%xhat_plane)) then
-      call RegPackBounds(Buf, 2, lbound(InData%xhat_plane), ubound(InData%xhat_plane))
+      call RegPackBounds(Buf, 2, lbound(InData%xhat_plane, kind=B8Ki), ubound(InData%xhat_plane, kind=B8Ki))
       call RegPack(Buf, InData%xhat_plane)
    end if
    call RegPack(Buf, allocated(InData%YawErr_filt))
    if (allocated(InData%YawErr_filt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%YawErr_filt), ubound(InData%YawErr_filt))
+      call RegPackBounds(Buf, 1, lbound(InData%YawErr_filt, kind=B8Ki), ubound(InData%YawErr_filt, kind=B8Ki))
       call RegPack(Buf, InData%YawErr_filt)
    end if
    call RegPack(Buf, InData%psi_skew_filt)
    call RegPack(Buf, InData%chi_skew_filt)
    call RegPack(Buf, allocated(InData%V_plane_filt))
    if (allocated(InData%V_plane_filt)) then
-      call RegPackBounds(Buf, 2, lbound(InData%V_plane_filt), ubound(InData%V_plane_filt))
+      call RegPackBounds(Buf, 2, lbound(InData%V_plane_filt, kind=B8Ki), ubound(InData%V_plane_filt, kind=B8Ki))
       call RegPack(Buf, InData%V_plane_filt)
    end if
    call RegPack(Buf, allocated(InData%p_plane))
    if (allocated(InData%p_plane)) then
-      call RegPackBounds(Buf, 2, lbound(InData%p_plane), ubound(InData%p_plane))
+      call RegPackBounds(Buf, 2, lbound(InData%p_plane, kind=B8Ki), ubound(InData%p_plane, kind=B8Ki))
       call RegPack(Buf, InData%p_plane)
    end if
    call RegPack(Buf, allocated(InData%x_plane))
    if (allocated(InData%x_plane)) then
-      call RegPackBounds(Buf, 1, lbound(InData%x_plane), ubound(InData%x_plane))
+      call RegPackBounds(Buf, 1, lbound(InData%x_plane, kind=B8Ki), ubound(InData%x_plane, kind=B8Ki))
       call RegPack(Buf, InData%x_plane)
    end if
    call RegPack(Buf, allocated(InData%Vx_wake))
    if (allocated(InData%Vx_wake)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Vx_wake), ubound(InData%Vx_wake))
+      call RegPackBounds(Buf, 2, lbound(InData%Vx_wake, kind=B8Ki), ubound(InData%Vx_wake, kind=B8Ki))
       call RegPack(Buf, InData%Vx_wake)
    end if
    call RegPack(Buf, allocated(InData%Vr_wake))
    if (allocated(InData%Vr_wake)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Vr_wake), ubound(InData%Vr_wake))
+      call RegPackBounds(Buf, 2, lbound(InData%Vr_wake, kind=B8Ki), ubound(InData%Vr_wake, kind=B8Ki))
       call RegPack(Buf, InData%Vr_wake)
    end if
    call RegPack(Buf, allocated(InData%Vx_wake2))
    if (allocated(InData%Vx_wake2)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Vx_wake2), ubound(InData%Vx_wake2))
+      call RegPackBounds(Buf, 3, lbound(InData%Vx_wake2, kind=B8Ki), ubound(InData%Vx_wake2, kind=B8Ki))
       call RegPack(Buf, InData%Vx_wake2)
    end if
    call RegPack(Buf, allocated(InData%Vy_wake2))
    if (allocated(InData%Vy_wake2)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Vy_wake2), ubound(InData%Vy_wake2))
+      call RegPackBounds(Buf, 3, lbound(InData%Vy_wake2, kind=B8Ki), ubound(InData%Vy_wake2, kind=B8Ki))
       call RegPack(Buf, InData%Vy_wake2)
    end if
    call RegPack(Buf, allocated(InData%Vz_wake2))
    if (allocated(InData%Vz_wake2)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Vz_wake2), ubound(InData%Vz_wake2))
+      call RegPackBounds(Buf, 3, lbound(InData%Vz_wake2, kind=B8Ki), ubound(InData%Vz_wake2, kind=B8Ki))
       call RegPack(Buf, InData%Vz_wake2)
    end if
    call RegPack(Buf, allocated(InData%Vx_wind_disk_filt))
    if (allocated(InData%Vx_wind_disk_filt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Vx_wind_disk_filt), ubound(InData%Vx_wind_disk_filt))
+      call RegPackBounds(Buf, 1, lbound(InData%Vx_wind_disk_filt, kind=B8Ki), ubound(InData%Vx_wind_disk_filt, kind=B8Ki))
       call RegPack(Buf, InData%Vx_wind_disk_filt)
    end if
    call RegPack(Buf, allocated(InData%TI_amb_filt))
    if (allocated(InData%TI_amb_filt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%TI_amb_filt), ubound(InData%TI_amb_filt))
+      call RegPackBounds(Buf, 1, lbound(InData%TI_amb_filt, kind=B8Ki), ubound(InData%TI_amb_filt, kind=B8Ki))
       call RegPack(Buf, InData%TI_amb_filt)
    end if
    call RegPack(Buf, allocated(InData%D_rotor_filt))
    if (allocated(InData%D_rotor_filt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%D_rotor_filt), ubound(InData%D_rotor_filt))
+      call RegPackBounds(Buf, 1, lbound(InData%D_rotor_filt, kind=B8Ki), ubound(InData%D_rotor_filt, kind=B8Ki))
       call RegPack(Buf, InData%D_rotor_filt)
    end if
    call RegPack(Buf, InData%Vx_rel_disk_filt)
    call RegPack(Buf, allocated(InData%Ct_azavg_filt))
    if (allocated(InData%Ct_azavg_filt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Ct_azavg_filt), ubound(InData%Ct_azavg_filt))
+      call RegPackBounds(Buf, 1, lbound(InData%Ct_azavg_filt, kind=B8Ki), ubound(InData%Ct_azavg_filt, kind=B8Ki))
       call RegPack(Buf, InData%Ct_azavg_filt)
    end if
    call RegPack(Buf, allocated(InData%Cq_azavg_filt))
    if (allocated(InData%Cq_azavg_filt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Cq_azavg_filt), ubound(InData%Cq_azavg_filt))
+      call RegPackBounds(Buf, 1, lbound(InData%Cq_azavg_filt, kind=B8Ki), ubound(InData%Cq_azavg_filt, kind=B8Ki))
       call RegPack(Buf, InData%Cq_azavg_filt)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -944,7 +944,7 @@ subroutine WD_UnPackDiscState(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(WD_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WD_UnPackDiscState'
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -1250,14 +1250,14 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(3), UB(3)
+   integer(B8Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'WD_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcMiscData%dvtdr)) then
-      LB(1:1) = lbound(SrcMiscData%dvtdr)
-      UB(1:1) = ubound(SrcMiscData%dvtdr)
+      LB(1:1) = lbound(SrcMiscData%dvtdr, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%dvtdr, kind=B8Ki)
       if (.not. allocated(DstMiscData%dvtdr)) then
          allocate(DstMiscData%dvtdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1268,8 +1268,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%dvtdr = SrcMiscData%dvtdr
    end if
    if (allocated(SrcMiscData%vt_tot)) then
-      LB(1:2) = lbound(SrcMiscData%vt_tot)
-      UB(1:2) = ubound(SrcMiscData%vt_tot)
+      LB(1:2) = lbound(SrcMiscData%vt_tot, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%vt_tot, kind=B8Ki)
       if (.not. allocated(DstMiscData%vt_tot)) then
          allocate(DstMiscData%vt_tot(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1280,8 +1280,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%vt_tot = SrcMiscData%vt_tot
    end if
    if (allocated(SrcMiscData%vt_amb)) then
-      LB(1:2) = lbound(SrcMiscData%vt_amb)
-      UB(1:2) = ubound(SrcMiscData%vt_amb)
+      LB(1:2) = lbound(SrcMiscData%vt_amb, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%vt_amb, kind=B8Ki)
       if (.not. allocated(DstMiscData%vt_amb)) then
          allocate(DstMiscData%vt_amb(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1292,8 +1292,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%vt_amb = SrcMiscData%vt_amb
    end if
    if (allocated(SrcMiscData%vt_shr)) then
-      LB(1:2) = lbound(SrcMiscData%vt_shr)
-      UB(1:2) = ubound(SrcMiscData%vt_shr)
+      LB(1:2) = lbound(SrcMiscData%vt_shr, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%vt_shr, kind=B8Ki)
       if (.not. allocated(DstMiscData%vt_shr)) then
          allocate(DstMiscData%vt_shr(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1304,8 +1304,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%vt_shr = SrcMiscData%vt_shr
    end if
    if (allocated(SrcMiscData%vt_tot2)) then
-      LB(1:3) = lbound(SrcMiscData%vt_tot2)
-      UB(1:3) = ubound(SrcMiscData%vt_tot2)
+      LB(1:3) = lbound(SrcMiscData%vt_tot2, kind=B8Ki)
+      UB(1:3) = ubound(SrcMiscData%vt_tot2, kind=B8Ki)
       if (.not. allocated(DstMiscData%vt_tot2)) then
          allocate(DstMiscData%vt_tot2(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1316,8 +1316,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%vt_tot2 = SrcMiscData%vt_tot2
    end if
    if (allocated(SrcMiscData%vt_amb2)) then
-      LB(1:3) = lbound(SrcMiscData%vt_amb2)
-      UB(1:3) = ubound(SrcMiscData%vt_amb2)
+      LB(1:3) = lbound(SrcMiscData%vt_amb2, kind=B8Ki)
+      UB(1:3) = ubound(SrcMiscData%vt_amb2, kind=B8Ki)
       if (.not. allocated(DstMiscData%vt_amb2)) then
          allocate(DstMiscData%vt_amb2(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1328,8 +1328,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%vt_amb2 = SrcMiscData%vt_amb2
    end if
    if (allocated(SrcMiscData%vt_shr2)) then
-      LB(1:3) = lbound(SrcMiscData%vt_shr2)
-      UB(1:3) = ubound(SrcMiscData%vt_shr2)
+      LB(1:3) = lbound(SrcMiscData%vt_shr2, kind=B8Ki)
+      UB(1:3) = ubound(SrcMiscData%vt_shr2, kind=B8Ki)
       if (.not. allocated(DstMiscData%vt_shr2)) then
          allocate(DstMiscData%vt_shr2(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1340,8 +1340,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%vt_shr2 = SrcMiscData%vt_shr2
    end if
    if (allocated(SrcMiscData%dvx_dy)) then
-      LB(1:3) = lbound(SrcMiscData%dvx_dy)
-      UB(1:3) = ubound(SrcMiscData%dvx_dy)
+      LB(1:3) = lbound(SrcMiscData%dvx_dy, kind=B8Ki)
+      UB(1:3) = ubound(SrcMiscData%dvx_dy, kind=B8Ki)
       if (.not. allocated(DstMiscData%dvx_dy)) then
          allocate(DstMiscData%dvx_dy(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1352,8 +1352,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%dvx_dy = SrcMiscData%dvx_dy
    end if
    if (allocated(SrcMiscData%dvx_dz)) then
-      LB(1:3) = lbound(SrcMiscData%dvx_dz)
-      UB(1:3) = ubound(SrcMiscData%dvx_dz)
+      LB(1:3) = lbound(SrcMiscData%dvx_dz, kind=B8Ki)
+      UB(1:3) = ubound(SrcMiscData%dvx_dz, kind=B8Ki)
       if (.not. allocated(DstMiscData%dvx_dz)) then
          allocate(DstMiscData%dvx_dz(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1364,8 +1364,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%dvx_dz = SrcMiscData%dvx_dz
    end if
    if (allocated(SrcMiscData%nu_dvx_dy)) then
-      LB(1:2) = lbound(SrcMiscData%nu_dvx_dy)
-      UB(1:2) = ubound(SrcMiscData%nu_dvx_dy)
+      LB(1:2) = lbound(SrcMiscData%nu_dvx_dy, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%nu_dvx_dy, kind=B8Ki)
       if (.not. allocated(DstMiscData%nu_dvx_dy)) then
          allocate(DstMiscData%nu_dvx_dy(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1376,8 +1376,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%nu_dvx_dy = SrcMiscData%nu_dvx_dy
    end if
    if (allocated(SrcMiscData%nu_dvx_dz)) then
-      LB(1:2) = lbound(SrcMiscData%nu_dvx_dz)
-      UB(1:2) = ubound(SrcMiscData%nu_dvx_dz)
+      LB(1:2) = lbound(SrcMiscData%nu_dvx_dz, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%nu_dvx_dz, kind=B8Ki)
       if (.not. allocated(DstMiscData%nu_dvx_dz)) then
          allocate(DstMiscData%nu_dvx_dz(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1388,8 +1388,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%nu_dvx_dz = SrcMiscData%nu_dvx_dz
    end if
    if (allocated(SrcMiscData%dnuvx_dy)) then
-      LB(1:2) = lbound(SrcMiscData%dnuvx_dy)
-      UB(1:2) = ubound(SrcMiscData%dnuvx_dy)
+      LB(1:2) = lbound(SrcMiscData%dnuvx_dy, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%dnuvx_dy, kind=B8Ki)
       if (.not. allocated(DstMiscData%dnuvx_dy)) then
          allocate(DstMiscData%dnuvx_dy(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1400,8 +1400,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%dnuvx_dy = SrcMiscData%dnuvx_dy
    end if
    if (allocated(SrcMiscData%dnuvx_dz)) then
-      LB(1:2) = lbound(SrcMiscData%dnuvx_dz)
-      UB(1:2) = ubound(SrcMiscData%dnuvx_dz)
+      LB(1:2) = lbound(SrcMiscData%dnuvx_dz, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%dnuvx_dz, kind=B8Ki)
       if (.not. allocated(DstMiscData%dnuvx_dz)) then
          allocate(DstMiscData%dnuvx_dz(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1412,8 +1412,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%dnuvx_dz = SrcMiscData%dnuvx_dz
    end if
    if (allocated(SrcMiscData%a)) then
-      LB(1:1) = lbound(SrcMiscData%a)
-      UB(1:1) = ubound(SrcMiscData%a)
+      LB(1:1) = lbound(SrcMiscData%a, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%a, kind=B8Ki)
       if (.not. allocated(DstMiscData%a)) then
          allocate(DstMiscData%a(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1424,8 +1424,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%a = SrcMiscData%a
    end if
    if (allocated(SrcMiscData%b)) then
-      LB(1:1) = lbound(SrcMiscData%b)
-      UB(1:1) = ubound(SrcMiscData%b)
+      LB(1:1) = lbound(SrcMiscData%b, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%b, kind=B8Ki)
       if (.not. allocated(DstMiscData%b)) then
          allocate(DstMiscData%b(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1436,8 +1436,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%b = SrcMiscData%b
    end if
    if (allocated(SrcMiscData%c)) then
-      LB(1:1) = lbound(SrcMiscData%c)
-      UB(1:1) = ubound(SrcMiscData%c)
+      LB(1:1) = lbound(SrcMiscData%c, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%c, kind=B8Ki)
       if (.not. allocated(DstMiscData%c)) then
          allocate(DstMiscData%c(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1448,8 +1448,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%c = SrcMiscData%c
    end if
    if (allocated(SrcMiscData%d)) then
-      LB(1:1) = lbound(SrcMiscData%d)
-      UB(1:1) = ubound(SrcMiscData%d)
+      LB(1:1) = lbound(SrcMiscData%d, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%d, kind=B8Ki)
       if (.not. allocated(DstMiscData%d)) then
          allocate(DstMiscData%d(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1460,8 +1460,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%d = SrcMiscData%d
    end if
    if (allocated(SrcMiscData%r_wake)) then
-      LB(1:1) = lbound(SrcMiscData%r_wake)
-      UB(1:1) = ubound(SrcMiscData%r_wake)
+      LB(1:1) = lbound(SrcMiscData%r_wake, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%r_wake, kind=B8Ki)
       if (.not. allocated(DstMiscData%r_wake)) then
          allocate(DstMiscData%r_wake(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1472,8 +1472,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%r_wake = SrcMiscData%r_wake
    end if
    if (allocated(SrcMiscData%Vx_high)) then
-      LB(1:1) = lbound(SrcMiscData%Vx_high)
-      UB(1:1) = ubound(SrcMiscData%Vx_high)
+      LB(1:1) = lbound(SrcMiscData%Vx_high, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%Vx_high, kind=B8Ki)
       if (.not. allocated(DstMiscData%Vx_high)) then
          allocate(DstMiscData%Vx_high(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1484,8 +1484,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%Vx_high = SrcMiscData%Vx_high
    end if
    if (allocated(SrcMiscData%Vx_polar)) then
-      LB(1:1) = lbound(SrcMiscData%Vx_polar)
-      UB(1:1) = ubound(SrcMiscData%Vx_polar)
+      LB(1:1) = lbound(SrcMiscData%Vx_polar, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%Vx_polar, kind=B8Ki)
       if (.not. allocated(DstMiscData%Vx_polar)) then
          allocate(DstMiscData%Vx_polar(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1496,8 +1496,8 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%Vx_polar = SrcMiscData%Vx_polar
    end if
    if (allocated(SrcMiscData%Vt_wake)) then
-      LB(1:1) = lbound(SrcMiscData%Vt_wake)
-      UB(1:1) = ubound(SrcMiscData%Vt_wake)
+      LB(1:1) = lbound(SrcMiscData%Vt_wake, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%Vt_wake, kind=B8Ki)
       if (.not. allocated(DstMiscData%Vt_wake)) then
          allocate(DstMiscData%Vt_wake(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1590,107 +1590,107 @@ subroutine WD_PackMisc(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%dvtdr))
    if (allocated(InData%dvtdr)) then
-      call RegPackBounds(Buf, 1, lbound(InData%dvtdr), ubound(InData%dvtdr))
+      call RegPackBounds(Buf, 1, lbound(InData%dvtdr, kind=B8Ki), ubound(InData%dvtdr, kind=B8Ki))
       call RegPack(Buf, InData%dvtdr)
    end if
    call RegPack(Buf, allocated(InData%vt_tot))
    if (allocated(InData%vt_tot)) then
-      call RegPackBounds(Buf, 2, lbound(InData%vt_tot), ubound(InData%vt_tot))
+      call RegPackBounds(Buf, 2, lbound(InData%vt_tot, kind=B8Ki), ubound(InData%vt_tot, kind=B8Ki))
       call RegPack(Buf, InData%vt_tot)
    end if
    call RegPack(Buf, allocated(InData%vt_amb))
    if (allocated(InData%vt_amb)) then
-      call RegPackBounds(Buf, 2, lbound(InData%vt_amb), ubound(InData%vt_amb))
+      call RegPackBounds(Buf, 2, lbound(InData%vt_amb, kind=B8Ki), ubound(InData%vt_amb, kind=B8Ki))
       call RegPack(Buf, InData%vt_amb)
    end if
    call RegPack(Buf, allocated(InData%vt_shr))
    if (allocated(InData%vt_shr)) then
-      call RegPackBounds(Buf, 2, lbound(InData%vt_shr), ubound(InData%vt_shr))
+      call RegPackBounds(Buf, 2, lbound(InData%vt_shr, kind=B8Ki), ubound(InData%vt_shr, kind=B8Ki))
       call RegPack(Buf, InData%vt_shr)
    end if
    call RegPack(Buf, allocated(InData%vt_tot2))
    if (allocated(InData%vt_tot2)) then
-      call RegPackBounds(Buf, 3, lbound(InData%vt_tot2), ubound(InData%vt_tot2))
+      call RegPackBounds(Buf, 3, lbound(InData%vt_tot2, kind=B8Ki), ubound(InData%vt_tot2, kind=B8Ki))
       call RegPack(Buf, InData%vt_tot2)
    end if
    call RegPack(Buf, allocated(InData%vt_amb2))
    if (allocated(InData%vt_amb2)) then
-      call RegPackBounds(Buf, 3, lbound(InData%vt_amb2), ubound(InData%vt_amb2))
+      call RegPackBounds(Buf, 3, lbound(InData%vt_amb2, kind=B8Ki), ubound(InData%vt_amb2, kind=B8Ki))
       call RegPack(Buf, InData%vt_amb2)
    end if
    call RegPack(Buf, allocated(InData%vt_shr2))
    if (allocated(InData%vt_shr2)) then
-      call RegPackBounds(Buf, 3, lbound(InData%vt_shr2), ubound(InData%vt_shr2))
+      call RegPackBounds(Buf, 3, lbound(InData%vt_shr2, kind=B8Ki), ubound(InData%vt_shr2, kind=B8Ki))
       call RegPack(Buf, InData%vt_shr2)
    end if
    call RegPack(Buf, allocated(InData%dvx_dy))
    if (allocated(InData%dvx_dy)) then
-      call RegPackBounds(Buf, 3, lbound(InData%dvx_dy), ubound(InData%dvx_dy))
+      call RegPackBounds(Buf, 3, lbound(InData%dvx_dy, kind=B8Ki), ubound(InData%dvx_dy, kind=B8Ki))
       call RegPack(Buf, InData%dvx_dy)
    end if
    call RegPack(Buf, allocated(InData%dvx_dz))
    if (allocated(InData%dvx_dz)) then
-      call RegPackBounds(Buf, 3, lbound(InData%dvx_dz), ubound(InData%dvx_dz))
+      call RegPackBounds(Buf, 3, lbound(InData%dvx_dz, kind=B8Ki), ubound(InData%dvx_dz, kind=B8Ki))
       call RegPack(Buf, InData%dvx_dz)
    end if
    call RegPack(Buf, allocated(InData%nu_dvx_dy))
    if (allocated(InData%nu_dvx_dy)) then
-      call RegPackBounds(Buf, 2, lbound(InData%nu_dvx_dy), ubound(InData%nu_dvx_dy))
+      call RegPackBounds(Buf, 2, lbound(InData%nu_dvx_dy, kind=B8Ki), ubound(InData%nu_dvx_dy, kind=B8Ki))
       call RegPack(Buf, InData%nu_dvx_dy)
    end if
    call RegPack(Buf, allocated(InData%nu_dvx_dz))
    if (allocated(InData%nu_dvx_dz)) then
-      call RegPackBounds(Buf, 2, lbound(InData%nu_dvx_dz), ubound(InData%nu_dvx_dz))
+      call RegPackBounds(Buf, 2, lbound(InData%nu_dvx_dz, kind=B8Ki), ubound(InData%nu_dvx_dz, kind=B8Ki))
       call RegPack(Buf, InData%nu_dvx_dz)
    end if
    call RegPack(Buf, allocated(InData%dnuvx_dy))
    if (allocated(InData%dnuvx_dy)) then
-      call RegPackBounds(Buf, 2, lbound(InData%dnuvx_dy), ubound(InData%dnuvx_dy))
+      call RegPackBounds(Buf, 2, lbound(InData%dnuvx_dy, kind=B8Ki), ubound(InData%dnuvx_dy, kind=B8Ki))
       call RegPack(Buf, InData%dnuvx_dy)
    end if
    call RegPack(Buf, allocated(InData%dnuvx_dz))
    if (allocated(InData%dnuvx_dz)) then
-      call RegPackBounds(Buf, 2, lbound(InData%dnuvx_dz), ubound(InData%dnuvx_dz))
+      call RegPackBounds(Buf, 2, lbound(InData%dnuvx_dz, kind=B8Ki), ubound(InData%dnuvx_dz, kind=B8Ki))
       call RegPack(Buf, InData%dnuvx_dz)
    end if
    call RegPack(Buf, allocated(InData%a))
    if (allocated(InData%a)) then
-      call RegPackBounds(Buf, 1, lbound(InData%a), ubound(InData%a))
+      call RegPackBounds(Buf, 1, lbound(InData%a, kind=B8Ki), ubound(InData%a, kind=B8Ki))
       call RegPack(Buf, InData%a)
    end if
    call RegPack(Buf, allocated(InData%b))
    if (allocated(InData%b)) then
-      call RegPackBounds(Buf, 1, lbound(InData%b), ubound(InData%b))
+      call RegPackBounds(Buf, 1, lbound(InData%b, kind=B8Ki), ubound(InData%b, kind=B8Ki))
       call RegPack(Buf, InData%b)
    end if
    call RegPack(Buf, allocated(InData%c))
    if (allocated(InData%c)) then
-      call RegPackBounds(Buf, 1, lbound(InData%c), ubound(InData%c))
+      call RegPackBounds(Buf, 1, lbound(InData%c, kind=B8Ki), ubound(InData%c, kind=B8Ki))
       call RegPack(Buf, InData%c)
    end if
    call RegPack(Buf, allocated(InData%d))
    if (allocated(InData%d)) then
-      call RegPackBounds(Buf, 1, lbound(InData%d), ubound(InData%d))
+      call RegPackBounds(Buf, 1, lbound(InData%d, kind=B8Ki), ubound(InData%d, kind=B8Ki))
       call RegPack(Buf, InData%d)
    end if
    call RegPack(Buf, allocated(InData%r_wake))
    if (allocated(InData%r_wake)) then
-      call RegPackBounds(Buf, 1, lbound(InData%r_wake), ubound(InData%r_wake))
+      call RegPackBounds(Buf, 1, lbound(InData%r_wake, kind=B8Ki), ubound(InData%r_wake, kind=B8Ki))
       call RegPack(Buf, InData%r_wake)
    end if
    call RegPack(Buf, allocated(InData%Vx_high))
    if (allocated(InData%Vx_high)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Vx_high), ubound(InData%Vx_high))
+      call RegPackBounds(Buf, 1, lbound(InData%Vx_high, kind=B8Ki), ubound(InData%Vx_high, kind=B8Ki))
       call RegPack(Buf, InData%Vx_high)
    end if
    call RegPack(Buf, allocated(InData%Vx_polar))
    if (allocated(InData%Vx_polar)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Vx_polar), ubound(InData%Vx_polar))
+      call RegPackBounds(Buf, 1, lbound(InData%Vx_polar, kind=B8Ki), ubound(InData%Vx_polar, kind=B8Ki))
       call RegPack(Buf, InData%Vx_polar)
    end if
    call RegPack(Buf, allocated(InData%Vt_wake))
    if (allocated(InData%Vt_wake)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Vt_wake), ubound(InData%Vt_wake))
+      call RegPackBounds(Buf, 1, lbound(InData%Vt_wake, kind=B8Ki), ubound(InData%Vt_wake, kind=B8Ki))
       call RegPack(Buf, InData%Vt_wake)
    end if
    call RegPack(Buf, InData%GammaCurl)
@@ -1702,7 +1702,7 @@ subroutine WD_UnPackMisc(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(WD_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WD_UnPackMisc'
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -2012,7 +2012,7 @@ subroutine WD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'WD_CopyParam'
    ErrStat = ErrID_None
@@ -2022,8 +2022,8 @@ subroutine WD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%NumRadii = SrcParamData%NumRadii
    DstParamData%dr = SrcParamData%dr
    if (allocated(SrcParamData%r)) then
-      LB(1:1) = lbound(SrcParamData%r)
-      UB(1:1) = ubound(SrcParamData%r)
+      LB(1:1) = lbound(SrcParamData%r, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%r, kind=B8Ki)
       if (.not. allocated(DstParamData%r)) then
          allocate(DstParamData%r(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2034,8 +2034,8 @@ subroutine WD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%r = SrcParamData%r
    end if
    if (allocated(SrcParamData%y)) then
-      LB(1:1) = lbound(SrcParamData%y)
-      UB(1:1) = ubound(SrcParamData%y)
+      LB(1:1) = lbound(SrcParamData%y, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%y, kind=B8Ki)
       if (.not. allocated(DstParamData%y)) then
          allocate(DstParamData%y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2046,8 +2046,8 @@ subroutine WD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%y = SrcParamData%y
    end if
    if (allocated(SrcParamData%z)) then
-      LB(1:1) = lbound(SrcParamData%z)
-      UB(1:1) = ubound(SrcParamData%z)
+      LB(1:1) = lbound(SrcParamData%z, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%z, kind=B8Ki)
       if (.not. allocated(DstParamData%z)) then
          allocate(DstParamData%z(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2121,17 +2121,17 @@ subroutine WD_PackParam(Buf, Indata)
    call RegPack(Buf, InData%dr)
    call RegPack(Buf, allocated(InData%r))
    if (allocated(InData%r)) then
-      call RegPackBounds(Buf, 1, lbound(InData%r), ubound(InData%r))
+      call RegPackBounds(Buf, 1, lbound(InData%r, kind=B8Ki), ubound(InData%r, kind=B8Ki))
       call RegPack(Buf, InData%r)
    end if
    call RegPack(Buf, allocated(InData%y))
    if (allocated(InData%y)) then
-      call RegPackBounds(Buf, 1, lbound(InData%y), ubound(InData%y))
+      call RegPackBounds(Buf, 1, lbound(InData%y, kind=B8Ki), ubound(InData%y, kind=B8Ki))
       call RegPack(Buf, InData%y)
    end if
    call RegPack(Buf, allocated(InData%z))
    if (allocated(InData%z)) then
-      call RegPackBounds(Buf, 1, lbound(InData%z), ubound(InData%z))
+      call RegPackBounds(Buf, 1, lbound(InData%z, kind=B8Ki), ubound(InData%z, kind=B8Ki))
       call RegPack(Buf, InData%z)
    end if
    call RegPack(Buf, InData%Mod_Wake)
@@ -2174,7 +2174,7 @@ subroutine WD_UnPackParam(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(WD_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WD_UnPackParam'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -2302,7 +2302,7 @@ subroutine WD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'WD_CopyInput'
    ErrStat = ErrID_None
@@ -2313,8 +2313,8 @@ subroutine WD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
    DstInputData%chi_skew = SrcInputData%chi_skew
    DstInputData%p_hub = SrcInputData%p_hub
    if (allocated(SrcInputData%V_plane)) then
-      LB(1:2) = lbound(SrcInputData%V_plane)
-      UB(1:2) = ubound(SrcInputData%V_plane)
+      LB(1:2) = lbound(SrcInputData%V_plane, kind=B8Ki)
+      UB(1:2) = ubound(SrcInputData%V_plane, kind=B8Ki)
       if (.not. allocated(DstInputData%V_plane)) then
          allocate(DstInputData%V_plane(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2329,8 +2329,8 @@ subroutine WD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
    DstInputData%D_rotor = SrcInputData%D_rotor
    DstInputData%Vx_rel_disk = SrcInputData%Vx_rel_disk
    if (allocated(SrcInputData%Ct_azavg)) then
-      LB(1:1) = lbound(SrcInputData%Ct_azavg)
-      UB(1:1) = ubound(SrcInputData%Ct_azavg)
+      LB(1:1) = lbound(SrcInputData%Ct_azavg, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputData%Ct_azavg, kind=B8Ki)
       if (.not. allocated(DstInputData%Ct_azavg)) then
          allocate(DstInputData%Ct_azavg(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2341,8 +2341,8 @@ subroutine WD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%Ct_azavg = SrcInputData%Ct_azavg
    end if
    if (allocated(SrcInputData%Cq_azavg)) then
-      LB(1:1) = lbound(SrcInputData%Cq_azavg)
-      UB(1:1) = ubound(SrcInputData%Cq_azavg)
+      LB(1:1) = lbound(SrcInputData%Cq_azavg, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputData%Cq_azavg, kind=B8Ki)
       if (.not. allocated(DstInputData%Cq_azavg)) then
          allocate(DstInputData%Cq_azavg(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2384,7 +2384,7 @@ subroutine WD_PackInput(Buf, Indata)
    call RegPack(Buf, InData%p_hub)
    call RegPack(Buf, allocated(InData%V_plane))
    if (allocated(InData%V_plane)) then
-      call RegPackBounds(Buf, 2, lbound(InData%V_plane), ubound(InData%V_plane))
+      call RegPackBounds(Buf, 2, lbound(InData%V_plane, kind=B8Ki), ubound(InData%V_plane, kind=B8Ki))
       call RegPack(Buf, InData%V_plane)
    end if
    call RegPack(Buf, InData%Vx_wind_disk)
@@ -2393,12 +2393,12 @@ subroutine WD_PackInput(Buf, Indata)
    call RegPack(Buf, InData%Vx_rel_disk)
    call RegPack(Buf, allocated(InData%Ct_azavg))
    if (allocated(InData%Ct_azavg)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Ct_azavg), ubound(InData%Ct_azavg))
+      call RegPackBounds(Buf, 1, lbound(InData%Ct_azavg, kind=B8Ki), ubound(InData%Ct_azavg, kind=B8Ki))
       call RegPack(Buf, InData%Ct_azavg)
    end if
    call RegPack(Buf, allocated(InData%Cq_azavg))
    if (allocated(InData%Cq_azavg)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Cq_azavg), ubound(InData%Cq_azavg))
+      call RegPackBounds(Buf, 1, lbound(InData%Cq_azavg, kind=B8Ki), ubound(InData%Cq_azavg, kind=B8Ki))
       call RegPack(Buf, InData%Cq_azavg)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2408,7 +2408,7 @@ subroutine WD_UnPackInput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(WD_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WD_UnPackInput'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -2480,14 +2480,14 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(3), UB(3)
+   integer(B8Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'WD_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOutputData%xhat_plane)) then
-      LB(1:2) = lbound(SrcOutputData%xhat_plane)
-      UB(1:2) = ubound(SrcOutputData%xhat_plane)
+      LB(1:2) = lbound(SrcOutputData%xhat_plane, kind=B8Ki)
+      UB(1:2) = ubound(SrcOutputData%xhat_plane, kind=B8Ki)
       if (.not. allocated(DstOutputData%xhat_plane)) then
          allocate(DstOutputData%xhat_plane(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2498,8 +2498,8 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%xhat_plane = SrcOutputData%xhat_plane
    end if
    if (allocated(SrcOutputData%p_plane)) then
-      LB(1:2) = lbound(SrcOutputData%p_plane)
-      UB(1:2) = ubound(SrcOutputData%p_plane)
+      LB(1:2) = lbound(SrcOutputData%p_plane, kind=B8Ki)
+      UB(1:2) = ubound(SrcOutputData%p_plane, kind=B8Ki)
       if (.not. allocated(DstOutputData%p_plane)) then
          allocate(DstOutputData%p_plane(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2510,8 +2510,8 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%p_plane = SrcOutputData%p_plane
    end if
    if (allocated(SrcOutputData%Vx_wake)) then
-      LB(1:2) = lbound(SrcOutputData%Vx_wake)
-      UB(1:2) = ubound(SrcOutputData%Vx_wake)
+      LB(1:2) = lbound(SrcOutputData%Vx_wake, kind=B8Ki)
+      UB(1:2) = ubound(SrcOutputData%Vx_wake, kind=B8Ki)
       if (.not. allocated(DstOutputData%Vx_wake)) then
          allocate(DstOutputData%Vx_wake(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2522,8 +2522,8 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%Vx_wake = SrcOutputData%Vx_wake
    end if
    if (allocated(SrcOutputData%Vr_wake)) then
-      LB(1:2) = lbound(SrcOutputData%Vr_wake)
-      UB(1:2) = ubound(SrcOutputData%Vr_wake)
+      LB(1:2) = lbound(SrcOutputData%Vr_wake, kind=B8Ki)
+      UB(1:2) = ubound(SrcOutputData%Vr_wake, kind=B8Ki)
       if (.not. allocated(DstOutputData%Vr_wake)) then
          allocate(DstOutputData%Vr_wake(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2534,8 +2534,8 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%Vr_wake = SrcOutputData%Vr_wake
    end if
    if (allocated(SrcOutputData%Vx_wake2)) then
-      LB(1:3) = lbound(SrcOutputData%Vx_wake2)
-      UB(1:3) = ubound(SrcOutputData%Vx_wake2)
+      LB(1:3) = lbound(SrcOutputData%Vx_wake2, kind=B8Ki)
+      UB(1:3) = ubound(SrcOutputData%Vx_wake2, kind=B8Ki)
       if (.not. allocated(DstOutputData%Vx_wake2)) then
          allocate(DstOutputData%Vx_wake2(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2546,8 +2546,8 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%Vx_wake2 = SrcOutputData%Vx_wake2
    end if
    if (allocated(SrcOutputData%Vy_wake2)) then
-      LB(1:3) = lbound(SrcOutputData%Vy_wake2)
-      UB(1:3) = ubound(SrcOutputData%Vy_wake2)
+      LB(1:3) = lbound(SrcOutputData%Vy_wake2, kind=B8Ki)
+      UB(1:3) = ubound(SrcOutputData%Vy_wake2, kind=B8Ki)
       if (.not. allocated(DstOutputData%Vy_wake2)) then
          allocate(DstOutputData%Vy_wake2(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2558,8 +2558,8 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%Vy_wake2 = SrcOutputData%Vy_wake2
    end if
    if (allocated(SrcOutputData%Vz_wake2)) then
-      LB(1:3) = lbound(SrcOutputData%Vz_wake2)
-      UB(1:3) = ubound(SrcOutputData%Vz_wake2)
+      LB(1:3) = lbound(SrcOutputData%Vz_wake2, kind=B8Ki)
+      UB(1:3) = ubound(SrcOutputData%Vz_wake2, kind=B8Ki)
       if (.not. allocated(DstOutputData%Vz_wake2)) then
          allocate(DstOutputData%Vz_wake2(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2570,8 +2570,8 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%Vz_wake2 = SrcOutputData%Vz_wake2
    end if
    if (allocated(SrcOutputData%D_wake)) then
-      LB(1:1) = lbound(SrcOutputData%D_wake)
-      UB(1:1) = ubound(SrcOutputData%D_wake)
+      LB(1:1) = lbound(SrcOutputData%D_wake, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%D_wake, kind=B8Ki)
       if (.not. allocated(DstOutputData%D_wake)) then
          allocate(DstOutputData%D_wake(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2582,8 +2582,8 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%D_wake = SrcOutputData%D_wake
    end if
    if (allocated(SrcOutputData%x_plane)) then
-      LB(1:1) = lbound(SrcOutputData%x_plane)
-      UB(1:1) = ubound(SrcOutputData%x_plane)
+      LB(1:1) = lbound(SrcOutputData%x_plane, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%x_plane, kind=B8Ki)
       if (.not. allocated(DstOutputData%x_plane)) then
          allocate(DstOutputData%x_plane(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2594,8 +2594,8 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%x_plane = SrcOutputData%x_plane
    end if
    if (allocated(SrcOutputData%WAT_k_mt)) then
-      LB(1:3) = lbound(SrcOutputData%WAT_k_mt)
-      UB(1:3) = ubound(SrcOutputData%WAT_k_mt)
+      LB(1:3) = lbound(SrcOutputData%WAT_k_mt, kind=B8Ki)
+      UB(1:3) = ubound(SrcOutputData%WAT_k_mt, kind=B8Ki)
       if (.not. allocated(DstOutputData%WAT_k_mt)) then
          allocate(DstOutputData%WAT_k_mt(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2653,52 +2653,52 @@ subroutine WD_PackOutput(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%xhat_plane))
    if (allocated(InData%xhat_plane)) then
-      call RegPackBounds(Buf, 2, lbound(InData%xhat_plane), ubound(InData%xhat_plane))
+      call RegPackBounds(Buf, 2, lbound(InData%xhat_plane, kind=B8Ki), ubound(InData%xhat_plane, kind=B8Ki))
       call RegPack(Buf, InData%xhat_plane)
    end if
    call RegPack(Buf, allocated(InData%p_plane))
    if (allocated(InData%p_plane)) then
-      call RegPackBounds(Buf, 2, lbound(InData%p_plane), ubound(InData%p_plane))
+      call RegPackBounds(Buf, 2, lbound(InData%p_plane, kind=B8Ki), ubound(InData%p_plane, kind=B8Ki))
       call RegPack(Buf, InData%p_plane)
    end if
    call RegPack(Buf, allocated(InData%Vx_wake))
    if (allocated(InData%Vx_wake)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Vx_wake), ubound(InData%Vx_wake))
+      call RegPackBounds(Buf, 2, lbound(InData%Vx_wake, kind=B8Ki), ubound(InData%Vx_wake, kind=B8Ki))
       call RegPack(Buf, InData%Vx_wake)
    end if
    call RegPack(Buf, allocated(InData%Vr_wake))
    if (allocated(InData%Vr_wake)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Vr_wake), ubound(InData%Vr_wake))
+      call RegPackBounds(Buf, 2, lbound(InData%Vr_wake, kind=B8Ki), ubound(InData%Vr_wake, kind=B8Ki))
       call RegPack(Buf, InData%Vr_wake)
    end if
    call RegPack(Buf, allocated(InData%Vx_wake2))
    if (allocated(InData%Vx_wake2)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Vx_wake2), ubound(InData%Vx_wake2))
+      call RegPackBounds(Buf, 3, lbound(InData%Vx_wake2, kind=B8Ki), ubound(InData%Vx_wake2, kind=B8Ki))
       call RegPack(Buf, InData%Vx_wake2)
    end if
    call RegPack(Buf, allocated(InData%Vy_wake2))
    if (allocated(InData%Vy_wake2)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Vy_wake2), ubound(InData%Vy_wake2))
+      call RegPackBounds(Buf, 3, lbound(InData%Vy_wake2, kind=B8Ki), ubound(InData%Vy_wake2, kind=B8Ki))
       call RegPack(Buf, InData%Vy_wake2)
    end if
    call RegPack(Buf, allocated(InData%Vz_wake2))
    if (allocated(InData%Vz_wake2)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Vz_wake2), ubound(InData%Vz_wake2))
+      call RegPackBounds(Buf, 3, lbound(InData%Vz_wake2, kind=B8Ki), ubound(InData%Vz_wake2, kind=B8Ki))
       call RegPack(Buf, InData%Vz_wake2)
    end if
    call RegPack(Buf, allocated(InData%D_wake))
    if (allocated(InData%D_wake)) then
-      call RegPackBounds(Buf, 1, lbound(InData%D_wake), ubound(InData%D_wake))
+      call RegPackBounds(Buf, 1, lbound(InData%D_wake, kind=B8Ki), ubound(InData%D_wake, kind=B8Ki))
       call RegPack(Buf, InData%D_wake)
    end if
    call RegPack(Buf, allocated(InData%x_plane))
    if (allocated(InData%x_plane)) then
-      call RegPackBounds(Buf, 1, lbound(InData%x_plane), ubound(InData%x_plane))
+      call RegPackBounds(Buf, 1, lbound(InData%x_plane, kind=B8Ki), ubound(InData%x_plane, kind=B8Ki))
       call RegPack(Buf, InData%x_plane)
    end if
    call RegPack(Buf, allocated(InData%WAT_k_mt))
    if (allocated(InData%WAT_k_mt)) then
-      call RegPackBounds(Buf, 3, lbound(InData%WAT_k_mt), ubound(InData%WAT_k_mt))
+      call RegPackBounds(Buf, 3, lbound(InData%WAT_k_mt, kind=B8Ki), ubound(InData%WAT_k_mt, kind=B8Ki))
       call RegPack(Buf, InData%WAT_k_mt)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2708,7 +2708,7 @@ subroutine WD_UnPackOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(WD_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WD_UnPackOutput'
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
