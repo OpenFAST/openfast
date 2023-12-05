@@ -695,18 +695,16 @@ subroutine FAST_ExtInfw_Init(iTurb, TMax, InputFileName_c, TurbID, OutFileRoot_c
    CALL FAST_InitializeAll_T( t_initial, iTurb, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
 
       ! set values for return to ExternalInflow
-   AbortErrLev_c = AbortErrLev
-   dt_c          = Turbine(iTurb)%p_FAST%dt
-   ErrStat_c     = ErrStat
-   ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
-   ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
+   if (ErrStat .ne. ErrID_None) then
+      AbortErrLev_c = AbortErrLev
+      ErrStat_c     = ErrStat
+      ErrMsg_c  = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+      return
+   end if
+
+   dt_c = Turbine(iTurb)%p_FAST%dt
 
    InflowType = Turbine(iTurb)%p_FAST%CompInflow
-
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL WrScr( "Error in FAST_ExtInfw_Init:FAST_InitializeAll_T" // TRIM(ErrMsg) )
-      RETURN
-   END IF
 
    if ( (InflowType == 3) .and. (NumActForcePtsBlade .eq. 0) .and. (NumActForcePtsTower .eq. 0) ) then
       CALL SetErrStat(ErrID_Warn, "Number of actuator points is zero when inflow type is 2. Mapping of loads may not work. ", ErrStat, ErrMsg, RoutineName )
@@ -722,11 +720,12 @@ subroutine FAST_ExtInfw_Init(iTurb, TMax, InputFileName_c, TurbID, OutFileRoot_c
 
    call SetExternalInflow_pointers(iTurb, ExtInfw_Input_from_FAST, ExtInfw_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST)
 
-   ! 7-Sep-2015: Sang wants these integers for the ExternalInflow mapping, which is tied to the AeroDyn nodes. FAST doesn't restrict the number of nodes on each
-   ! blade mesh to be the same, so if this DOES ever change, we'll need to make ExternalInflow less tied to the AeroDyn mapping.
+   ! 7-Sep-2015: OpenFAST doesn't restrict the number of nodes on each blade mesh to be the same, so if this DOES ever change,
+   ! we'll need to make ExternalInflow less tied to the AeroDyn mapping.
    IF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD14) THEN
       NumBl_c     = SIZE(Turbine(iTurb)%AD14%Input(1)%InputMarkers)
       NumBlElem_c = Turbine(iTurb)%AD14%Input(1)%InputMarkers(1)%Nnodes
+      NumTwrElem_c = 0 ! Don't care about Aerodyn14 anymore
    ELSEIF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD) THEN
       IF (ALLOCATED(Turbine(iTurb)%AD%Input(1)%rotors)) THEN
          IF (ALLOCATED(Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion)) THEN
@@ -736,6 +735,7 @@ subroutine FAST_ExtInfw_Init(iTurb, TMax, InputFileName_c, TurbID, OutFileRoot_c
       IF (NumBl_c > 0) THEN
          NumBlElem_c = Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion(1)%Nnodes
       END IF
+!FIXME: need some checks on this.  If the Tower mesh is not initialized, this will be garbage
       NumTwrElem_c = Turbine(iTurb)%AD%y%rotors(1)%TowerLoad%Nnodes
    ELSE
       NumBl_c     = 0
@@ -743,12 +743,12 @@ subroutine FAST_ExtInfw_Init(iTurb, TMax, InputFileName_c, TurbID, OutFileRoot_c
       NumTwrElem_c = 0
    END IF
 
+   OutFileRoot_c = TRANSFER( trim(Turbine(iTurb)%p_FAST%OutFileRoot)//C_NULL_CHAR, OutFileRoot_c )
+
    ErrStat_c = ErrStat
    ErrMsg_c = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
 
-   OutFileRoot_c = TRANSFER( trim(Turbine(iTurb)%p_FAST%OutFileRoot)//C_NULL_CHAR, OutFileRoot_c )
-
-contains
+ contains
    LOGICAL FUNCTION FAILED()
 
       FAILED = ErrStat >= AbortErrLev
