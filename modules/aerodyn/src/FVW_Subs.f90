@@ -462,7 +462,6 @@ logical function have_nan(p, m, x, z, u, label)
    character(len=*),                intent(in) :: label !< label for print
    integer :: iW
    have_nan=.False.
-!bjj: If we used Is_NaN (or a version of it for this data type) instead of isnan, I'd get fewer compiler warnings that "Fortran 2003 does not allow this intrinsic procedure."
    do iW = 1,size(p%W)
       if (any(isnan(x%W(iW)%r_NW))) then
          print*,trim(label),'NaN in W(iW)%r_NW'//trim(num2lstr(iW))
@@ -481,11 +480,11 @@ logical function have_nan(p, m, x, z, u, label)
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Eps_NW))) then
-         print*,trim(label),'NaN in E_NW'
+         print*,trim(label),'NaN in E_NW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Eps_FW))) then
-         print*,trim(label),'NaN in E_FW'
+         print*,trim(label),'NaN in E_FW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(z%W(iW)%Gamma_LL))) then
@@ -1621,6 +1620,7 @@ subroutine FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
    character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
    integer(IntKi) :: iAge, iW, iSpan
    integer(IntKi) :: nBelow
+   integer(IntKi) :: nBelowFW
    real(ReKi) :: GROUND
    real(ReKi) :: ABOVE_GROUND
    ErrStat = ErrID_None
@@ -1635,6 +1635,7 @@ subroutine FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
    endif
 
    nBelow=0
+   nBelowFW=0
    do iW = 1,p%nWings
       do iAge = 1,m%nNW+1
          do iSpan = 1,p%W(iW)%nSpan+1
@@ -1648,10 +1649,11 @@ subroutine FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
    if (m%nFW>0) then
       do iW = 1,p%nWings
          do iAge = 1,m%nFW+1
-            do iSpan = 1,FWnSpan
+            do iSpan = 1,FWnSpan+1
                if (x%W(iW)%r_FW(3, iSpan, iAge) < GROUND) then
                   x%W(iW)%r_FW(3, iSpan, iAge) = ABOVE_GROUND ! could use m%dxdt
                   nBelow=nBelow+1
+                  nBelowFW=nBelowFW+1
                endif
             enddo
          enddo
@@ -1659,6 +1661,9 @@ subroutine FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
    endif
    if (nBelow>0) then
       print*,'[WARN] Check the simulation, some vortices were found below the ground: ',nBelow
+   endif
+   if (nBelowFW>0) then
+      print*,'[WARN] Check the simulation, some far-wake vortices were found below the ground: ',nBelowFW
    endif
 end subroutine FakeGroundEffect
 

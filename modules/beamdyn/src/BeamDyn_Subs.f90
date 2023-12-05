@@ -623,10 +623,11 @@ END SUBROUTINE BD_TrapezoidalPointWeight
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calculates y%BldMotion%TranslationDisp, y%BldMotion%Orientation, y%BldMotion%TranslationVel, and
 !! y%BldMotion%RotationVel, which depend only on states (and indirectly, u%RootMotion), and parameters.
-SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
+SUBROUTINE Set_BldMotion_NoAcc(p, x, OtherState, m, y)
 
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
    TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
+   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
    TYPE(BD_MiscVarType),         INTENT(IN   )  :: m           !< misc/optimization variables
    TYPE(BD_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at t (Input only so that mesh con-
                                                                !!   nectivity information does not have to be recalculated)
@@ -655,14 +656,15 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
 
                ! Calculate the translational displacement of each GLL node in the FAST coordinate system,
                ! referenced against the DCM of the blade root at T=0.
-            y%BldMotion%TranslationDisp(1:3,temp_id2) = MATMUL(p%GlbRot,x%q(1:3,temp_id))
+            y%BldMotion%TranslationDisp(1:3,temp_id2) = OtherState%GlbPos + matmul(OtherState%GlbRot, p%uuN0(1:3, j, i) + x%q(1:3, temp_id)) - &
+                                                        y%BldMotion%Position(1:3,temp_id2)
 
 !bjj: note differences here compared to BDrot_to_FASTdcm
 !adp: in BDrot_to_FASTdcm we are assuming that x%q(4:6,:) is zero because there is no rotatinoal displacement yet
                ! Find the rotation parameter in global coordinates (initial orientation + rotation parameters)
                ! referenced against the DCM of the blade root at T=0.
             CALL BD_CrvCompose( cc, x%q(4:6,temp_id), p%uuN0(4:6,j,i), FLAG_R1R2 )
-            CALL BD_CrvCompose( cc0, p%Glb_crv, cc, FLAG_R1R2 )
+            CALL BD_CrvCompose( cc0, OtherState%Glb_crv, cc, FLAG_R1R2 )
 
                ! Create the DCM from the rotation parameters
             CALL BD_CrvMatrixR(cc0,temp_R)  ! returns temp_R (the transpose of the DCM orientation matrix)
@@ -672,11 +674,11 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
 
                ! Calculate the translation velocity and store in FAST coordinate system
                ! referenced against the DCM of the blade root at T=0.
-            y%BldMotion%TranslationVel(1:3,temp_id2) = MATMUL(p%GlbRot,x%dqdt(1:3,temp_id))
+            y%BldMotion%TranslationVel(1:3,temp_id2) = MATMUL(OtherState%GlbRot,x%dqdt(1:3,temp_id))
 
                ! Calculate the rotational velocity and store in FAST coordinate system
                ! referenced against the DCM of the blade root at T=0.
-            y%BldMotion%RotationVel(1:3,temp_id2) = MATMUL(p%GlbRot,x%dqdt(4:6,temp_id))
+            y%BldMotion%RotationVel(1:3,temp_id2) = MATMUL(OtherState%GlbRot,x%dqdt(4:6,temp_id))
             
          ENDDO
       ENDDO
@@ -689,7 +691,8 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
 
                ! Calculate the translational displacement of each quadrature node in the FAST coordinate system,
                ! referenced against the DCM of the blade root at T=0.
-            y%BldMotion%TranslationDisp(1:3,temp_id2) = MATMUL(p%GlbRot,m%qp%uuu(1:3,j,i) )
+            y%BldMotion%TranslationDisp(1:3,temp_id2) = OtherState%GlbPos + matmul(OtherState%GlbRot, p%uu0(1:3, j, i) + m%qp%uuu(1:3,j,i)) - &
+                                                        y%BldMotion%Position(1:3,temp_id2)
 
 
 !bjj: note differences here compared to BDrot_to_FASTdcm
@@ -697,7 +700,7 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
                ! Find the rotation parameter in global coordinates (initial orientation + rotation parameters)
                ! referenced against the DCM of the blade root at T=0.
             CALL BD_CrvCompose( cc, m%qp%uuu(4:6,j,i), p%uu0(4:6,j,i), FLAG_R1R2 )
-            CALL BD_CrvCompose( cc0, p%Glb_crv, cc, FLAG_R1R2 )
+            CALL BD_CrvCompose( cc0, OtherState%Glb_crv, cc, FLAG_R1R2 )
 
             CALL BD_CrvMatrixR(cc0,temp_R)  ! returns temp_R (the transpose of the DCM orientation matrix)
                ! Store the DCM for the j'th node of the i'th element (in FAST coordinate system)
@@ -705,11 +708,11 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
 
                ! Calculate the translation velocity and store in FAST coordinate system
                ! referenced against the DCM of the blade root at T=0.
-            y%BldMotion%TranslationVel(1:3,temp_id2) = MATMUL(p%GlbRot,m%qp%vvv(1:3,j,i))
+            y%BldMotion%TranslationVel(1:3,temp_id2) = MATMUL(OtherState%GlbRot,m%qp%vvv(1:3,j,i))
 
                ! Calculate the rotational velocity and store in FAST coordinate system
                ! referenced against the DCM of the blade root at T=0.
-            y%BldMotion%RotationVel(1:3,temp_id2) = MATMUL(p%GlbRot,m%qp%vvv(4:6,j,i))
+            y%BldMotion%RotationVel(1:3,temp_id2) = MATMUL(OtherState%GlbRot,m%qp%vvv(4:6,j,i))
             
          ENDDO
       ENDDO
@@ -723,11 +726,12 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
 END SUBROUTINE Set_BldMotion_NoAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calculates values for the y%BldMotion mesh.
-SUBROUTINE Set_BldMotion_Mesh(p, u, x, m, y)
+SUBROUTINE Set_BldMotion_Mesh(p, u, x, OtherState, m, y)
 
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
    TYPE(BD_InputType),           INTENT(IN   )  :: u           !< Inputs at t - in the FAST coordinate system (NOT BD)
    TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
+   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< misc/optimization variables ! intent(out) so that we can update the accelerations here...
    TYPE(BD_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at t (Input only so that mesh con-
                                                                !!   nectivity information does not have to be recalculated)
@@ -741,7 +745,7 @@ SUBROUTINE Set_BldMotion_Mesh(p, u, x, m, y)
 
 
       ! set positions and velocities (not accelerations)
-   call Set_BldMotion_NoAcc(p, x, m, y)
+   call Set_BldMotion_NoAcc(p, x, OtherState, m, y)
 
    ! Only need this bit for dynamic cases
    IF ( p%analysis_type /= BD_STATIC_ANALYSIS ) THEN
@@ -762,9 +766,9 @@ SUBROUTINE Set_BldMotion_Mesh(p, u, x, m, y)
                 temp_id = (i-1)*(p%nodes_per_elem-1)+j
                 temp_id2= (i-1)*p%nodes_per_elem+j
                
-                y%BldMotion%TranslationAcc(1:3,temp_id2) = MATMUL(p%GlbRot, m%RHS(1:3,temp_id) )
+                y%BldMotion%TranslationAcc(1:3,temp_id2) = MATMUL(OtherState%GlbRot, m%RHS(1:3,temp_id) )
 
-                y%BldMotion%RotationAcc(1:3,temp_id2) = MATMUL(p%GlbRot, m%RHS(4:6,temp_id) )
+                y%BldMotion%RotationAcc(1:3,temp_id2) = MATMUL(OtherState%GlbRot, m%RHS(4:6,temp_id) )
              ENDDO
              j_start = 1
           ENDDO
@@ -790,9 +794,9 @@ SUBROUTINE Set_BldMotion_Mesh(p, u, x, m, y)
 
                     ! Calculate the translational acceleration of each quadrature node in the FAST coordinate system,
                     ! referenced against the DCM of the blade root at T=0.
-                y%BldMotion%TranslationAcc(1:3,temp_id2) = MATMUL(p%GlbRot,m%qp%aaa(1:3,j,i) )
+                y%BldMotion%TranslationAcc(1:3,temp_id2) = MATMUL(OtherState%GlbRot,m%qp%aaa(1:3,j,i) )
 
-                y%BldMotion%RotationAcc(1:3,temp_id2) = MATMUL(p%GlbRot, m%qp%aaa(4:6,j,i) )
+                y%BldMotion%RotationAcc(1:3,temp_id2) = MATMUL(OtherState%GlbRot, m%qp%aaa(4:6,j,i) )
                 ENDDO
                 j_start = 1
             ENDDO
@@ -835,9 +839,9 @@ SUBROUTINE Set_BldMotion_InitAcc(p, u, OtherState, m, y)
                temp_id = (i-1)*(p%nodes_per_elem-1)+j
                temp_id2= (i-1)*p%nodes_per_elem+j
                
-               y%BldMotion%TranslationAcc(1:3,temp_id2) = MATMUL(p%GlbRot, OtherState%Acc(1:3,temp_id) )
+               y%BldMotion%TranslationAcc(1:3,temp_id2) = MATMUL(OtherState%GlbRot, OtherState%Acc(1:3,temp_id) )
 
-               y%BldMotion%RotationAcc(1:3,temp_id2) = MATMUL(p%GlbRot, OtherState%Acc(4:6,temp_id) )
+               y%BldMotion%RotationAcc(1:3,temp_id2) = MATMUL(OtherState%GlbRot, OtherState%Acc(4:6,temp_id) )
             ENDDO
             j_start = 1
          ENDDO
@@ -853,9 +857,9 @@ SUBROUTINE Set_BldMotion_InitAcc(p, u, OtherState, m, y)
 
                   ! Calculate the translational acceleration of each quadrature node in the FAST coordinate system,
                   ! referenced against the DCM of the blade root at T=0.
-               y%BldMotion%TranslationAcc(1:3,temp_id2) = MATMUL(p%GlbRot,m%qp%aaa(1:3,j,i) )
+               y%BldMotion%TranslationAcc(1:3,temp_id2) = MATMUL(OtherState%GlbRot,m%qp%aaa(1:3,j,i) )
 
-               y%BldMotion%RotationAcc(1:3,temp_id2) = MATMUL(p%GlbRot, m%qp%aaa(4:6,j,i) )
+               y%BldMotion%RotationAcc(1:3,temp_id2) = MATMUL(OtherState%GlbRot, m%qp%aaa(4:6,j,i) )
             ENDDO
             j_start = 1
          ENDDO
@@ -1096,9 +1100,10 @@ SUBROUTINE BD_ComputeIniNodalCrv(e3, phi, cc, ErrStat, ErrMsg)
 
 END SUBROUTINE BD_ComputeIniNodalCrv
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
+SUBROUTINE ExtractRelativeRotation(R, p, OtherState, rr, ErrStat, ErrMsg)
    real(R8Ki),             INTENT(in   )     :: R(3,3)       !< input rotation matrix (transpose of DCM; in BD coords)
    type(BD_ParameterType), INTENT(in   )     :: p            !< Parameters
+   TYPE(BD_OtherStateType),INTENT(IN   )     :: OtherState   !< Other states at t
    real(BDKi),             INTENT(  OUT)     :: rr(3)        !< W-M parameters of relative rotation
    INTEGER(IntKi),         INTENT(  OUT)     :: ErrStat      !< Error status of the operation
    CHARACTER(*),           INTENT(  OUT)     :: ErrMsg       !< Error message if ErrStat /= ErrID_None
@@ -1118,7 +1123,7 @@ SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
 !  which is the same as operation as
 !     R(rr) = R(Glb_crv)^T R
    
-   ! note that the u%RootMotion mesh does not contain the initial twist, but p%Glb_crv does not have this twist, either.
+   ! note that the u%RootMotion mesh does not contain the initial twist, but OtherState%Glb_crv does not have this twist, either.
    ! The relative rotation will be the same in this case.
    
    R_BD = R ! possible type conversion (only if BDKi /= R8Ki)
@@ -1126,7 +1131,7 @@ SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
    CALL BD_CrvExtractCrv(R_BD,R_WM, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
-   CALL BD_CrvCompose(rr,p%Glb_crv,R_WM,FLAG_R1TR2)         ! rr = p%Glb_crv^- composed with R_WM
+   CALL BD_CrvCompose(rr,OtherState%Glb_crv,R_WM,FLAG_R1TR2)         ! rr = OtherState%Glb_crv^- composed with R_WM
 
    ! NOTE: the above calculation is not the inverse of what is in Set_BldMotion_NoAcc.  The reason is that this
    !       routine is only looking at RootMotion.  The Set_BldMotion_NoAcc routine is looking at the blade motion
@@ -1134,9 +1139,10 @@ SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
       
 END SUBROUTINE ExtractRelativeRotation
 !-----------------------------------------------------------------------------------------------------------------------------------
-FUNCTION BDrot_to_FASTdcm(rr,p) RESULT(dcm)
+FUNCTION BDrot_to_FASTdcm(rr,p,OtherState) RESULT(dcm)
    real(BDKi),             intent(in) :: rr(3)        !< W-M parameters of relative rotation 
    type(BD_ParameterType), intent(in) :: p            !< Parameters
+   type(BD_OtherStateType),intent(in) :: OtherState   !< Other states at t
    real(BDKi)                         :: dcm(3,3)     !< input rotation matrix (transpose of DCM; in BD coords)
    
 
@@ -1148,7 +1154,7 @@ FUNCTION BDrot_to_FASTdcm(rr,p) RESULT(dcm)
 !     are zero, and the expression in Set_BldMotion_NoAcc simplifies to this expression.
    
       ! rotate relative W-M rotations to global system?
-   CALL BD_CrvCompose(temp_CRV2,p%Glb_crv,rr,FLAG_R1R2) !temp_CRV2 = p%Glb_crv composed with rr
+   CALL BD_CrvCompose(temp_CRV2,OtherState%Glb_crv,rr,FLAG_R1R2) !temp_CRV2 = OtherState%Glb_crv composed with rr
    
       ! create rotation matrix from W-M parameters:
    CALL BD_CrvMatrixR(temp_CRV2,R) ! returns R (rotation matrix, the transpose of the DCM orientation matrix)

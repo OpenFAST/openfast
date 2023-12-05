@@ -181,8 +181,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: BEMT_InputType
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: theta      !< Twist angle (includes all sources of twist)  [Array of size (NumBlNds,numBlades)] [rad]
     REAL(ReKi)  :: chi0      !< Angle between the vector normal to the rotor plane and the wind vector (e.g., the yaw angle in the case of no tilt) [rad]
-    REAL(ReKi)  :: psiSkewOffset      !< Azimuth angle offset (relative to 90 deg) of the most downwind blade when chi0 is non-zero [rad]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: psi      !< Azimuth angle [rad]
+    REAL(ReKi)  :: psiSkewOffset      !< Skew azimuth angle offset (relative to 90 deg) of the most downwind blade when chi0 is non-zero [rad]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: psi_s      !< Skew azimuth angle [rad]
     REAL(ReKi)  :: omega      !< Angular velocity of rotor [rad/s]
     REAL(ReKi)  :: TSR      !< Tip-speed ratio (to check if BEM should be turned off) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vx      !< Local axial velocity at node [m/s]
@@ -206,6 +206,11 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: phi      !< angle between the plane of rotation and the direction of the local wind [rad]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: axInduction      !< axial induction [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: tanInduction      !< tangential induction [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: axInduction_qs      !< axial induction quasi steady [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: tanInduction_qs      !< tangential induction quasi steady [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: k      !< Factor k in blade element theory thrust coefficient [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: k_p      !< Factor kp in blade element theory torque coefficient [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F      !< Tip/hub loss factor [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Re      !< Reynold's number [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AOA      !< angle of attack [rad]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Cx      !< normal force coefficient (normal to the plane, not chord) of the jth node in the kth blade [-]
@@ -4912,17 +4917,17 @@ IF (ALLOCATED(SrcInputData%theta)) THEN
 ENDIF
     DstInputData%chi0 = SrcInputData%chi0
     DstInputData%psiSkewOffset = SrcInputData%psiSkewOffset
-IF (ALLOCATED(SrcInputData%psi)) THEN
-  i1_l = LBOUND(SrcInputData%psi,1)
-  i1_u = UBOUND(SrcInputData%psi,1)
-  IF (.NOT. ALLOCATED(DstInputData%psi)) THEN 
-    ALLOCATE(DstInputData%psi(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcInputData%psi_s)) THEN
+  i1_l = LBOUND(SrcInputData%psi_s,1)
+  i1_u = UBOUND(SrcInputData%psi_s,1)
+  IF (.NOT. ALLOCATED(DstInputData%psi_s)) THEN 
+    ALLOCATE(DstInputData%psi_s(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%psi.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%psi_s.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInputData%psi = SrcInputData%psi
+    DstInputData%psi_s = SrcInputData%psi_s
 ENDIF
     DstInputData%omega = SrcInputData%omega
     DstInputData%TSR = SrcInputData%TSR
@@ -5095,8 +5100,8 @@ ENDIF
 IF (ALLOCATED(InputData%theta)) THEN
   DEALLOCATE(InputData%theta)
 ENDIF
-IF (ALLOCATED(InputData%psi)) THEN
-  DEALLOCATE(InputData%psi)
+IF (ALLOCATED(InputData%psi_s)) THEN
+  DEALLOCATE(InputData%psi_s)
 ENDIF
 IF (ALLOCATED(InputData%Vx)) THEN
   DEALLOCATE(InputData%Vx)
@@ -5172,10 +5177,10 @@ ENDIF
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! chi0
       Re_BufSz   = Re_BufSz   + 1  ! psiSkewOffset
-  Int_BufSz   = Int_BufSz   + 1     ! psi allocated yes/no
-  IF ( ALLOCATED(InData%psi) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! psi upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%psi)  ! psi
+  Int_BufSz   = Int_BufSz   + 1     ! psi_s allocated yes/no
+  IF ( ALLOCATED(InData%psi_s) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! psi_s upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%psi_s)  ! psi_s
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! omega
       Re_BufSz   = Re_BufSz   + 1  ! TSR
@@ -5283,18 +5288,18 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%psiSkewOffset
     Re_Xferred = Re_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%psi) ) THEN
+  IF ( .NOT. ALLOCATED(InData%psi_s) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%psi,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%psi,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%psi_s,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%psi_s,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%psi,1), UBOUND(InData%psi,1)
-        ReKiBuf(Re_Xferred) = InData%psi(i1)
+      DO i1 = LBOUND(InData%psi_s,1), UBOUND(InData%psi_s,1)
+        ReKiBuf(Re_Xferred) = InData%psi_s(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -5569,21 +5574,21 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%psiSkewOffset = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! psi not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! psi_s not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%psi)) DEALLOCATE(OutData%psi)
-    ALLOCATE(OutData%psi(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%psi_s)) DEALLOCATE(OutData%psi_s)
+    ALLOCATE(OutData%psi_s(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%psi.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%psi_s.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%psi,1), UBOUND(OutData%psi,1)
-        OutData%psi(i1) = ReKiBuf(Re_Xferred)
+      DO i1 = LBOUND(OutData%psi_s,1), UBOUND(OutData%psi_s,1)
+        OutData%psi_s(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -5909,6 +5914,76 @@ IF (ALLOCATED(SrcOutputData%tanInduction)) THEN
   END IF
     DstOutputData%tanInduction = SrcOutputData%tanInduction
 ENDIF
+IF (ALLOCATED(SrcOutputData%axInduction_qs)) THEN
+  i1_l = LBOUND(SrcOutputData%axInduction_qs,1)
+  i1_u = UBOUND(SrcOutputData%axInduction_qs,1)
+  i2_l = LBOUND(SrcOutputData%axInduction_qs,2)
+  i2_u = UBOUND(SrcOutputData%axInduction_qs,2)
+  IF (.NOT. ALLOCATED(DstOutputData%axInduction_qs)) THEN 
+    ALLOCATE(DstOutputData%axInduction_qs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%axInduction_qs.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstOutputData%axInduction_qs = SrcOutputData%axInduction_qs
+ENDIF
+IF (ALLOCATED(SrcOutputData%tanInduction_qs)) THEN
+  i1_l = LBOUND(SrcOutputData%tanInduction_qs,1)
+  i1_u = UBOUND(SrcOutputData%tanInduction_qs,1)
+  i2_l = LBOUND(SrcOutputData%tanInduction_qs,2)
+  i2_u = UBOUND(SrcOutputData%tanInduction_qs,2)
+  IF (.NOT. ALLOCATED(DstOutputData%tanInduction_qs)) THEN 
+    ALLOCATE(DstOutputData%tanInduction_qs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%tanInduction_qs.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstOutputData%tanInduction_qs = SrcOutputData%tanInduction_qs
+ENDIF
+IF (ALLOCATED(SrcOutputData%k)) THEN
+  i1_l = LBOUND(SrcOutputData%k,1)
+  i1_u = UBOUND(SrcOutputData%k,1)
+  i2_l = LBOUND(SrcOutputData%k,2)
+  i2_u = UBOUND(SrcOutputData%k,2)
+  IF (.NOT. ALLOCATED(DstOutputData%k)) THEN 
+    ALLOCATE(DstOutputData%k(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%k.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstOutputData%k = SrcOutputData%k
+ENDIF
+IF (ALLOCATED(SrcOutputData%k_p)) THEN
+  i1_l = LBOUND(SrcOutputData%k_p,1)
+  i1_u = UBOUND(SrcOutputData%k_p,1)
+  i2_l = LBOUND(SrcOutputData%k_p,2)
+  i2_u = UBOUND(SrcOutputData%k_p,2)
+  IF (.NOT. ALLOCATED(DstOutputData%k_p)) THEN 
+    ALLOCATE(DstOutputData%k_p(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%k_p.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstOutputData%k_p = SrcOutputData%k_p
+ENDIF
+IF (ALLOCATED(SrcOutputData%F)) THEN
+  i1_l = LBOUND(SrcOutputData%F,1)
+  i1_u = UBOUND(SrcOutputData%F,1)
+  i2_l = LBOUND(SrcOutputData%F,2)
+  i2_u = UBOUND(SrcOutputData%F,2)
+  IF (.NOT. ALLOCATED(DstOutputData%F)) THEN 
+    ALLOCATE(DstOutputData%F(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%F.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstOutputData%F = SrcOutputData%F
+ENDIF
 IF (ALLOCATED(SrcOutputData%Re)) THEN
   i1_l = LBOUND(SrcOutputData%Re,1)
   i1_u = UBOUND(SrcOutputData%Re,1)
@@ -6126,6 +6201,21 @@ ENDIF
 IF (ALLOCATED(OutputData%tanInduction)) THEN
   DEALLOCATE(OutputData%tanInduction)
 ENDIF
+IF (ALLOCATED(OutputData%axInduction_qs)) THEN
+  DEALLOCATE(OutputData%axInduction_qs)
+ENDIF
+IF (ALLOCATED(OutputData%tanInduction_qs)) THEN
+  DEALLOCATE(OutputData%tanInduction_qs)
+ENDIF
+IF (ALLOCATED(OutputData%k)) THEN
+  DEALLOCATE(OutputData%k)
+ENDIF
+IF (ALLOCATED(OutputData%k_p)) THEN
+  DEALLOCATE(OutputData%k_p)
+ENDIF
+IF (ALLOCATED(OutputData%F)) THEN
+  DEALLOCATE(OutputData%F)
+ENDIF
 IF (ALLOCATED(OutputData%Re)) THEN
   DEALLOCATE(OutputData%Re)
 ENDIF
@@ -6221,6 +6311,31 @@ ENDIF
   IF ( ALLOCATED(InData%tanInduction) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! tanInduction upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%tanInduction)  ! tanInduction
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! axInduction_qs allocated yes/no
+  IF ( ALLOCATED(InData%axInduction_qs) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! axInduction_qs upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%axInduction_qs)  ! axInduction_qs
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! tanInduction_qs allocated yes/no
+  IF ( ALLOCATED(InData%tanInduction_qs) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! tanInduction_qs upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%tanInduction_qs)  ! tanInduction_qs
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! k allocated yes/no
+  IF ( ALLOCATED(InData%k) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! k upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%k)  ! k
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! k_p allocated yes/no
+  IF ( ALLOCATED(InData%k_p) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! k_p upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%k_p)  ! k_p
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! F allocated yes/no
+  IF ( ALLOCATED(InData%F) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! F upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%F)  ! F
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! Re allocated yes/no
   IF ( ALLOCATED(InData%Re) ) THEN
@@ -6390,6 +6505,106 @@ ENDIF
       DO i2 = LBOUND(InData%tanInduction,2), UBOUND(InData%tanInduction,2)
         DO i1 = LBOUND(InData%tanInduction,1), UBOUND(InData%tanInduction,1)
           ReKiBuf(Re_Xferred) = InData%tanInduction(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%axInduction_qs) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%axInduction_qs,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%axInduction_qs,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%axInduction_qs,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%axInduction_qs,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%axInduction_qs,2), UBOUND(InData%axInduction_qs,2)
+        DO i1 = LBOUND(InData%axInduction_qs,1), UBOUND(InData%axInduction_qs,1)
+          ReKiBuf(Re_Xferred) = InData%axInduction_qs(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%tanInduction_qs) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%tanInduction_qs,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%tanInduction_qs,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%tanInduction_qs,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%tanInduction_qs,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%tanInduction_qs,2), UBOUND(InData%tanInduction_qs,2)
+        DO i1 = LBOUND(InData%tanInduction_qs,1), UBOUND(InData%tanInduction_qs,1)
+          ReKiBuf(Re_Xferred) = InData%tanInduction_qs(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%k) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%k,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%k,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%k,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%k,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%k,2), UBOUND(InData%k,2)
+        DO i1 = LBOUND(InData%k,1), UBOUND(InData%k,1)
+          ReKiBuf(Re_Xferred) = InData%k(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%k_p) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%k_p,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%k_p,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%k_p,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%k_p,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%k_p,2), UBOUND(InData%k_p,2)
+        DO i1 = LBOUND(InData%k_p,1), UBOUND(InData%k_p,1)
+          ReKiBuf(Re_Xferred) = InData%k_p(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%F) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%F,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%F,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%F,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%F,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%F,2), UBOUND(InData%F,2)
+        DO i1 = LBOUND(InData%F,1), UBOUND(InData%F,1)
+          ReKiBuf(Re_Xferred) = InData%F(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -6772,6 +6987,121 @@ ENDIF
       DO i2 = LBOUND(OutData%tanInduction,2), UBOUND(OutData%tanInduction,2)
         DO i1 = LBOUND(OutData%tanInduction,1), UBOUND(OutData%tanInduction,1)
           OutData%tanInduction(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! axInduction_qs not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%axInduction_qs)) DEALLOCATE(OutData%axInduction_qs)
+    ALLOCATE(OutData%axInduction_qs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%axInduction_qs.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%axInduction_qs,2), UBOUND(OutData%axInduction_qs,2)
+        DO i1 = LBOUND(OutData%axInduction_qs,1), UBOUND(OutData%axInduction_qs,1)
+          OutData%axInduction_qs(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! tanInduction_qs not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%tanInduction_qs)) DEALLOCATE(OutData%tanInduction_qs)
+    ALLOCATE(OutData%tanInduction_qs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%tanInduction_qs.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%tanInduction_qs,2), UBOUND(OutData%tanInduction_qs,2)
+        DO i1 = LBOUND(OutData%tanInduction_qs,1), UBOUND(OutData%tanInduction_qs,1)
+          OutData%tanInduction_qs(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! k not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%k)) DEALLOCATE(OutData%k)
+    ALLOCATE(OutData%k(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%k.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%k,2), UBOUND(OutData%k,2)
+        DO i1 = LBOUND(OutData%k,1), UBOUND(OutData%k,1)
+          OutData%k(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! k_p not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%k_p)) DEALLOCATE(OutData%k_p)
+    ALLOCATE(OutData%k_p(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%k_p.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%k_p,2), UBOUND(OutData%k_p,2)
+        DO i1 = LBOUND(OutData%k_p,1), UBOUND(OutData%k_p,1)
+          OutData%k_p(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! F not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%F)) DEALLOCATE(OutData%F)
+    ALLOCATE(OutData%F(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%F.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%F,2), UBOUND(OutData%F,2)
+        DO i1 = LBOUND(OutData%F,1), UBOUND(OutData%F,1)
+          OutData%F(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -7186,10 +7516,10 @@ END IF ! check if allocated
   u_out%chi0 = u1%chi0 + b * ScaleFactor
   b = -(u1%psiSkewOffset - u2%psiSkewOffset)
   u_out%psiSkewOffset = u1%psiSkewOffset + b * ScaleFactor
-IF (ALLOCATED(u_out%psi) .AND. ALLOCATED(u1%psi)) THEN
-  DO i1 = LBOUND(u_out%psi,1),UBOUND(u_out%psi,1)
-    b = -(u1%psi(i1) - u2%psi(i1))
-    u_out%psi(i1) = u1%psi(i1) + b * ScaleFactor
+IF (ALLOCATED(u_out%psi_s) .AND. ALLOCATED(u1%psi_s)) THEN
+  DO i1 = LBOUND(u_out%psi_s,1),UBOUND(u_out%psi_s,1)
+    b = -(u1%psi_s(i1) - u2%psi_s(i1))
+    u_out%psi_s(i1) = u1%psi_s(i1) + b * ScaleFactor
   END DO
 END IF ! check if allocated
   b = -(u1%omega - u2%omega)
@@ -7360,11 +7690,11 @@ END IF ! check if allocated
   b = (t(3)**2*(u1%psiSkewOffset - u2%psiSkewOffset) + t(2)**2*(-u1%psiSkewOffset + u3%psiSkewOffset))* scaleFactor
   c = ( (t(2)-t(3))*u1%psiSkewOffset + t(3)*u2%psiSkewOffset - t(2)*u3%psiSkewOffset ) * scaleFactor
   u_out%psiSkewOffset = u1%psiSkewOffset + b  + c * t_out
-IF (ALLOCATED(u_out%psi) .AND. ALLOCATED(u1%psi)) THEN
-  DO i1 = LBOUND(u_out%psi,1),UBOUND(u_out%psi,1)
-    b = (t(3)**2*(u1%psi(i1) - u2%psi(i1)) + t(2)**2*(-u1%psi(i1) + u3%psi(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*u1%psi(i1) + t(3)*u2%psi(i1) - t(2)*u3%psi(i1) ) * scaleFactor
-    u_out%psi(i1) = u1%psi(i1) + b  + c * t_out
+IF (ALLOCATED(u_out%psi_s) .AND. ALLOCATED(u1%psi_s)) THEN
+  DO i1 = LBOUND(u_out%psi_s,1),UBOUND(u_out%psi_s,1)
+    b = (t(3)**2*(u1%psi_s(i1) - u2%psi_s(i1)) + t(2)**2*(-u1%psi_s(i1) + u3%psi_s(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%psi_s(i1) + t(3)*u2%psi_s(i1) - t(2)*u3%psi_s(i1) ) * scaleFactor
+    u_out%psi_s(i1) = u1%psi_s(i1) + b  + c * t_out
   END DO
 END IF ! check if allocated
   b = (t(3)**2*(u1%omega - u2%omega) + t(2)**2*(-u1%omega + u3%omega))* scaleFactor
@@ -7607,6 +7937,46 @@ IF (ALLOCATED(y_out%tanInduction) .AND. ALLOCATED(y1%tanInduction)) THEN
     END DO
   END DO
 END IF ! check if allocated
+IF (ALLOCATED(y_out%axInduction_qs) .AND. ALLOCATED(y1%axInduction_qs)) THEN
+  DO i2 = LBOUND(y_out%axInduction_qs,2),UBOUND(y_out%axInduction_qs,2)
+    DO i1 = LBOUND(y_out%axInduction_qs,1),UBOUND(y_out%axInduction_qs,1)
+      b = -(y1%axInduction_qs(i1,i2) - y2%axInduction_qs(i1,i2))
+      y_out%axInduction_qs(i1,i2) = y1%axInduction_qs(i1,i2) + b * ScaleFactor
+    END DO
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(y_out%tanInduction_qs) .AND. ALLOCATED(y1%tanInduction_qs)) THEN
+  DO i2 = LBOUND(y_out%tanInduction_qs,2),UBOUND(y_out%tanInduction_qs,2)
+    DO i1 = LBOUND(y_out%tanInduction_qs,1),UBOUND(y_out%tanInduction_qs,1)
+      b = -(y1%tanInduction_qs(i1,i2) - y2%tanInduction_qs(i1,i2))
+      y_out%tanInduction_qs(i1,i2) = y1%tanInduction_qs(i1,i2) + b * ScaleFactor
+    END DO
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(y_out%k) .AND. ALLOCATED(y1%k)) THEN
+  DO i2 = LBOUND(y_out%k,2),UBOUND(y_out%k,2)
+    DO i1 = LBOUND(y_out%k,1),UBOUND(y_out%k,1)
+      b = -(y1%k(i1,i2) - y2%k(i1,i2))
+      y_out%k(i1,i2) = y1%k(i1,i2) + b * ScaleFactor
+    END DO
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(y_out%k_p) .AND. ALLOCATED(y1%k_p)) THEN
+  DO i2 = LBOUND(y_out%k_p,2),UBOUND(y_out%k_p,2)
+    DO i1 = LBOUND(y_out%k_p,1),UBOUND(y_out%k_p,1)
+      b = -(y1%k_p(i1,i2) - y2%k_p(i1,i2))
+      y_out%k_p(i1,i2) = y1%k_p(i1,i2) + b * ScaleFactor
+    END DO
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(y_out%F) .AND. ALLOCATED(y1%F)) THEN
+  DO i2 = LBOUND(y_out%F,2),UBOUND(y_out%F,2)
+    DO i1 = LBOUND(y_out%F,1),UBOUND(y_out%F,1)
+      b = -(y1%F(i1,i2) - y2%F(i1,i2))
+      y_out%F(i1,i2) = y1%F(i1,i2) + b * ScaleFactor
+    END DO
+  END DO
+END IF ! check if allocated
 IF (ALLOCATED(y_out%Re) .AND. ALLOCATED(y1%Re)) THEN
   DO i2 = LBOUND(y_out%Re,2),UBOUND(y_out%Re,2)
     DO i1 = LBOUND(y_out%Re,1),UBOUND(y_out%Re,1)
@@ -7803,6 +8173,51 @@ IF (ALLOCATED(y_out%tanInduction) .AND. ALLOCATED(y1%tanInduction)) THEN
       b = (t(3)**2*(y1%tanInduction(i1,i2) - y2%tanInduction(i1,i2)) + t(2)**2*(-y1%tanInduction(i1,i2) + y3%tanInduction(i1,i2)))* scaleFactor
       c = ( (t(2)-t(3))*y1%tanInduction(i1,i2) + t(3)*y2%tanInduction(i1,i2) - t(2)*y3%tanInduction(i1,i2) ) * scaleFactor
       y_out%tanInduction(i1,i2) = y1%tanInduction(i1,i2) + b  + c * t_out
+    END DO
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(y_out%axInduction_qs) .AND. ALLOCATED(y1%axInduction_qs)) THEN
+  DO i2 = LBOUND(y_out%axInduction_qs,2),UBOUND(y_out%axInduction_qs,2)
+    DO i1 = LBOUND(y_out%axInduction_qs,1),UBOUND(y_out%axInduction_qs,1)
+      b = (t(3)**2*(y1%axInduction_qs(i1,i2) - y2%axInduction_qs(i1,i2)) + t(2)**2*(-y1%axInduction_qs(i1,i2) + y3%axInduction_qs(i1,i2)))* scaleFactor
+      c = ( (t(2)-t(3))*y1%axInduction_qs(i1,i2) + t(3)*y2%axInduction_qs(i1,i2) - t(2)*y3%axInduction_qs(i1,i2) ) * scaleFactor
+      y_out%axInduction_qs(i1,i2) = y1%axInduction_qs(i1,i2) + b  + c * t_out
+    END DO
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(y_out%tanInduction_qs) .AND. ALLOCATED(y1%tanInduction_qs)) THEN
+  DO i2 = LBOUND(y_out%tanInduction_qs,2),UBOUND(y_out%tanInduction_qs,2)
+    DO i1 = LBOUND(y_out%tanInduction_qs,1),UBOUND(y_out%tanInduction_qs,1)
+      b = (t(3)**2*(y1%tanInduction_qs(i1,i2) - y2%tanInduction_qs(i1,i2)) + t(2)**2*(-y1%tanInduction_qs(i1,i2) + y3%tanInduction_qs(i1,i2)))* scaleFactor
+      c = ( (t(2)-t(3))*y1%tanInduction_qs(i1,i2) + t(3)*y2%tanInduction_qs(i1,i2) - t(2)*y3%tanInduction_qs(i1,i2) ) * scaleFactor
+      y_out%tanInduction_qs(i1,i2) = y1%tanInduction_qs(i1,i2) + b  + c * t_out
+    END DO
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(y_out%k) .AND. ALLOCATED(y1%k)) THEN
+  DO i2 = LBOUND(y_out%k,2),UBOUND(y_out%k,2)
+    DO i1 = LBOUND(y_out%k,1),UBOUND(y_out%k,1)
+      b = (t(3)**2*(y1%k(i1,i2) - y2%k(i1,i2)) + t(2)**2*(-y1%k(i1,i2) + y3%k(i1,i2)))* scaleFactor
+      c = ( (t(2)-t(3))*y1%k(i1,i2) + t(3)*y2%k(i1,i2) - t(2)*y3%k(i1,i2) ) * scaleFactor
+      y_out%k(i1,i2) = y1%k(i1,i2) + b  + c * t_out
+    END DO
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(y_out%k_p) .AND. ALLOCATED(y1%k_p)) THEN
+  DO i2 = LBOUND(y_out%k_p,2),UBOUND(y_out%k_p,2)
+    DO i1 = LBOUND(y_out%k_p,1),UBOUND(y_out%k_p,1)
+      b = (t(3)**2*(y1%k_p(i1,i2) - y2%k_p(i1,i2)) + t(2)**2*(-y1%k_p(i1,i2) + y3%k_p(i1,i2)))* scaleFactor
+      c = ( (t(2)-t(3))*y1%k_p(i1,i2) + t(3)*y2%k_p(i1,i2) - t(2)*y3%k_p(i1,i2) ) * scaleFactor
+      y_out%k_p(i1,i2) = y1%k_p(i1,i2) + b  + c * t_out
+    END DO
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(y_out%F) .AND. ALLOCATED(y1%F)) THEN
+  DO i2 = LBOUND(y_out%F,2),UBOUND(y_out%F,2)
+    DO i1 = LBOUND(y_out%F,1),UBOUND(y_out%F,1)
+      b = (t(3)**2*(y1%F(i1,i2) - y2%F(i1,i2)) + t(2)**2*(-y1%F(i1,i2) + y3%F(i1,i2)))* scaleFactor
+      c = ( (t(2)-t(3))*y1%F(i1,i2) + t(3)*y2%F(i1,i2) - t(2)*y3%F(i1,i2) ) * scaleFactor
+      y_out%F(i1,i2) = y1%F(i1,i2) + b  + c * t_out
     END DO
   END DO
 END IF ! check if allocated

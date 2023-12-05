@@ -128,8 +128,6 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    Type(User_InitInputType)                              :: User_InitInput
    Type(Grid4D_InitInputType)                            :: Grid4D_InitInput
    Type(Points_InitInputType)                            :: Points_InitInput
-
-   Type(WindFileDat)                                     :: FileDat
    
 
    ! TYPE(InflowWind_IO_InitInputType)                      :: FlowField_InitData     !< initialization info
@@ -301,7 +299,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       Steady_InitInput%PLExp = InputFileData%Steady_PLexp
 
       p%FlowField%FieldType = Uniform_FieldType
-      call IfW_SteadyWind_Init(Steady_InitInput, SumFileUnit, p%FlowField%Uniform, FileDat, TmpErrStat, TmpErrMsg)
+      call IfW_SteadyWind_Init(Steady_InitInput, SumFileUnit, p%FlowField%Uniform, InitOutData%WindFileInfo, TmpErrStat, TmpErrMsg)
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
@@ -321,7 +319,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       Uniform_InitInput%PassedFileData = InitInp%WindType2Data
 
       p%FlowField%FieldType = Uniform_FieldType
-      call IfW_UniformWind_Init(Uniform_InitInput, SumFileUnit, p%FlowField%Uniform, FileDat, TmpErrStat, TmpErrMsg)
+      call IfW_UniformWind_Init(Uniform_InitInput, SumFileUnit, p%FlowField%Uniform, InitOutData%WindFileInfo, TmpErrStat, TmpErrMsg)
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
@@ -336,7 +334,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       TurbSim_InitInput%WindFileName = InputFileData%TSFF_FileName
 
       p%FlowField%FieldType = Grid3D_FieldType
-      call IfW_TurbSim_Init(TurbSim_InitInput, SumFileUnit, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)
+      call IfW_TurbSim_Init(TurbSim_InitInput, SumFileUnit, p%FlowField%Grid3D, InitOutData%WindFileInfo, TmpErrStat, TmpErrMsg)
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
@@ -362,7 +360,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       Bladed_InitInput%NativeBladedFmt    = .false.
 
       p%FlowField%FieldType = Grid3D_FieldType
-      call IfW_Bladed_Init(Bladed_InitInput, SumFileUnit, Bladed_InitOutput, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)   
+      call IfW_Bladed_Init(Bladed_InitInput, SumFileUnit, Bladed_InitOutput, p%FlowField%Grid3D, InitOutData%WindFileInfo, TmpErrStat, TmpErrMsg)   
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
@@ -371,7 +369,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
 
       ! Set reference position for wind rotation
       p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid3D%RefHeight]
-      
+
    case (BladedFF_Shr_WindNumber)
 
       Bladed_InitInput%WindType           = BladedFF_Shr_WindNumber
@@ -381,7 +379,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       Bladed_InitInput%NativeBladedFmt    = .true.
 
       p%FlowField%FieldType = Grid3D_FieldType
-      call IfW_Bladed_Init(Bladed_InitInput, SumFileUnit, Bladed_InitOutput, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)   
+      call IfW_Bladed_Init(Bladed_InitInput, SumFileUnit, Bladed_InitOutput, p%FlowField%Grid3D, InitOutData%WindFileInfo, TmpErrStat, TmpErrMsg)   
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
@@ -417,7 +415,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       HAWC_InitInput%G3D%XOffset = InputFileData%FF%XOffset
 
       p%FlowField%FieldType = Grid3D_FieldType
-      call IfW_HAWC_Init(HAWC_InitInput, SumFileUnit, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)
+      call IfW_HAWC_Init(HAWC_InitInput, SumFileUnit, p%FlowField%Grid3D, InitOutData%WindFileInfo, TmpErrStat, TmpErrMsg)
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
@@ -430,7 +428,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    case (User_WindNumber)
 
       p%FlowField%FieldType = User_FieldType
-      call IfW_User_Init(User_InitInput, SumFileUnit, p%FlowField%User, FileDat, TmpErrStat, TmpErrMsg)
+      call IfW_User_Init(User_InitInput, SumFileUnit, p%FlowField%User, InitOutData%WindFileInfo, TmpErrStat, TmpErrMsg)
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
@@ -518,7 +516,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       end if
 
       ! Calculate field average if box is allowed to be exceeded
-      if (p%FlowField%Grid3D%BoxExceedAllowF .and. p%FlowField%Grid3D%BoxExceedAllowIdx > 0) then
+      if (p%FlowField%Grid3D%BoxExceedAllowF) then 
          call IfW_Grid3DField_CalcVelAvgProfile(p%FlowField%Grid3D, p%FlowField%AccFieldValid, TmpErrStat, TmpErrMsg)
          call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return

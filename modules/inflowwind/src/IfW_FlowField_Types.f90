@@ -130,10 +130,10 @@ IMPLICIT NONE
 ! =========  Grid4DFieldType  =======
   TYPE, PUBLIC :: Grid4DFieldType
     INTEGER(IntKi) , DIMENSION(1:4)  :: n      !< number of evenly-spaced grid points in the x, y, z, and t directions [-]
-    REAL(ReKi) , DIMENSION(1:4)  :: delta      !< size between 2 consecutive grid points in each grid direction [m,m,m,s]
+    REAL(DbKi) , DIMENSION(1:4)  :: delta      !< size between 2 consecutive grid points in each grid direction [m,m,m,s]
     REAL(ReKi) , DIMENSION(1:3)  :: pZero      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: Vel      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt] [-]
-    REAL(ReKi)  :: TimeStart      !< this is the time where the first time grid in m%V starts (i.e, the time associated with m%V(:,:,:,:,1)) [s]
+    REAL(DbKi)  :: TimeStart      !< this is the time where the first time grid in m%V starts (i.e, the time associated with m%V(:,:,:,:,1)) [s]
     REAL(ReKi)  :: RefHeight      !< reference height; used to center the wind [meters]
   END TYPE Grid4DFieldType
 ! =======================
@@ -2390,14 +2390,14 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + SIZE(InData%n)  ! n
-      Re_BufSz   = Re_BufSz   + SIZE(InData%delta)  ! delta
+      Db_BufSz   = Db_BufSz   + SIZE(InData%delta)  ! delta
       Re_BufSz   = Re_BufSz   + SIZE(InData%pZero)  ! pZero
   Int_BufSz   = Int_BufSz   + 1     ! Vel allocated yes/no
   IF ( ALLOCATED(InData%Vel) ) THEN
     Int_BufSz   = Int_BufSz   + 2*5  ! Vel upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%Vel)  ! Vel
   END IF
-      Re_BufSz   = Re_BufSz   + 1  ! TimeStart
+      Db_BufSz   = Db_BufSz   + 1  ! TimeStart
       Re_BufSz   = Re_BufSz   + 1  ! RefHeight
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -2431,8 +2431,8 @@ ENDIF
       Int_Xferred = Int_Xferred + 1
     END DO
     DO i1 = LBOUND(InData%delta,1), UBOUND(InData%delta,1)
-      ReKiBuf(Re_Xferred) = InData%delta(i1)
-      Re_Xferred = Re_Xferred + 1
+      DbKiBuf(Db_Xferred) = InData%delta(i1)
+      Db_Xferred = Db_Xferred + 1
     END DO
     DO i1 = LBOUND(InData%pZero,1), UBOUND(InData%pZero,1)
       ReKiBuf(Re_Xferred) = InData%pZero(i1)
@@ -2473,8 +2473,8 @@ ENDIF
         END DO
       END DO
   END IF
-    ReKiBuf(Re_Xferred) = InData%TimeStart
-    Re_Xferred = Re_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%TimeStart
+    Db_Xferred = Db_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%RefHeight
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE IfW_FlowField_PackGrid4DFieldType
@@ -2519,8 +2519,8 @@ ENDIF
     i1_l = LBOUND(OutData%delta,1)
     i1_u = UBOUND(OutData%delta,1)
     DO i1 = LBOUND(OutData%delta,1), UBOUND(OutData%delta,1)
-      OutData%delta(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
+      OutData%delta(i1) = DbKiBuf(Db_Xferred)
+      Db_Xferred = Db_Xferred + 1
     END DO
     i1_l = LBOUND(OutData%pZero,1)
     i1_u = UBOUND(OutData%pZero,1)
@@ -2566,8 +2566,8 @@ ENDIF
         END DO
       END DO
   END IF
-    OutData%TimeStart = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
+    OutData%TimeStart = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
     OutData%RefHeight = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE IfW_FlowField_UnPackGrid4DFieldType

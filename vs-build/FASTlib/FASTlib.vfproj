@@ -679,6 +679,9 @@
 		<File RelativePath="..\..\modules\extptfm\src\ExtPtfm_MCKF.f90"/>
 		<File RelativePath="..\..\modules\extptfm\src\ExtPtfm_MCKF_IO.f90"/></Filter>
 		<Filter Name="FAST">
+		<Filter Name="SteadyStateSolver">
+		<File RelativePath="..\..\modules\openfast-library\src\FAST_SS_Solver.f90"/>
+		<File RelativePath="..\..\modules\openfast-library\src\FAST_SS_Subs.f90"/></Filter>
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\openfast-library\src\FAST_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -1303,33 +1306,33 @@
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\map\src\MAP_Fortran_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP_Fortran" Description="Running Registry for MAP_Fortran" Outputs="..\..\modules\map\src\MAP_Fortran_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP_Fortran" Description="Running Registry for MAP_Fortran" Outputs="..\..\modules\map\src\MAP_Fortran_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP_Fortran" Description="Running Registry for MAP_Fortran" Outputs="..\..\modules\map\src\MAP_Fortran_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP_Fortran" Description="Running Registry for MAP_Fortran" Outputs="..\..\modules\map\src\MAP_Fortran_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP_Fortran" Description="Running Registry for MAP_Fortran" Outputs="..\..\modules\map\src\MAP_Fortran_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP_Fortran" Description="Running Registry for MAP_Fortran" Outputs="..\..\modules\map\src\MAP_Fortran_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP_Fortran" Description="Running Registry for MAP_Fortran" Outputs="..\..\modules\map\src\MAP_Fortran_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP_Fortran" Description="Running Registry for MAP_Fortran" Outputs="..\..\modules\map\src\MAP_Fortran_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_OpenMP|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP_Fortran" Description="Running Registry for MAP_Fortran" Outputs="..\..\modules\map\src\MAP_Fortran_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP_Fortran" Description="Running Registry for MAP_Fortran" Outputs="..\..\modules\map\src\MAP_Fortran_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP_Fortran" Description="Running Registry for MAP_Fortran" Outputs="..\..\modules\map\src\MAP_Fortran_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP_Fortran" Description="Running Registry for MAP_Fortran" Outputs="..\..\modules\map\src\MAP_Fortran_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP_Fortran" Description="Running Registry for MAP_Fortran" Outputs="..\..\modules\map\src\MAP_Fortran_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Fortran_Types.f90"/></FileConfiguration></File>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP_Fortran" Description="Running Registry for MAP_Fortran" Outputs="..\..\modules\map\src\MAP_Fortran_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\map\src\MAP_Fortran_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
@@ -1341,34 +1344,34 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\map\src\MAP_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP" Description="Running Registry for MAP" Outputs="..\..\modules\map\src\MAP_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP" Description="Running Registry for MAP" Outputs="..\..\modules\map\src\MAP_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP" Description="Running Registry for MAP" Outputs="..\..\modules\map\src\MAP_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="" Description="" Outputs=""/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP" Description="Running Registry for MAP" Outputs="..\..\modules\map\src\MAP_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP" Description="Running Registry for MAP" Outputs="..\..\modules\map\src\MAP_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP" Description="Running Registry for MAP" Outputs="..\..\modules\map\src\MAP_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP" Description="Running Registry for MAP" Outputs="..\..\modules\map\src\MAP_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP" Description="Running Registry for MAP" Outputs="..\..\modules\map\src\MAP_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_OpenMP|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP" Description="Running Registry for MAP" Outputs="..\..\modules\map\src\MAP_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP" Description="Running Registry for MAP" Outputs="..\..\modules\map\src\MAP_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP" Description="Running Registry for MAP" Outputs="..\..\modules\map\src\MAP_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP" Description="Running Registry for MAP" Outputs="..\..\modules\map\src\MAP_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP" Description="Running Registry for MAP" Outputs="..\..\modules\map\src\MAP_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\map\src\Map_Types.f90">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MAP" Description="Running Registry for MAP" Outputs="..\..\modules\map\src\MAP_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\map\src\MAP_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -1982,38 +1985,38 @@
 			<FileConfiguration Name="Release_Double|x64" ExcludedFromBuild="true"/></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\YAML.f90"/></Filter>
-		<Filter Name="OpenFOAM Integration">
+		<Filter Name="ExternalInflow Integration">
 		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules\openfoam\src\OpenFOAM_Registry.txt">
+		<File RelativePath="..\..\modules\externalinflow\src\ExternalInflow_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\modules\openfoam\src\OpenFOAM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\modules\openfoam\src\OpenFOAM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\modules\openfoam\src\OpenFOAM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\modules\openfoam\src\OpenFOAM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\modules\openfoam\src\OpenFOAM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\modules\openfoam\src\OpenFOAM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\modules\openfoam\src\OpenFOAM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\modules\openfoam\src\OpenFOAM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_OpenMP|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\modules\openfoam\src\OpenFOAM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\modules\openfoam\src\OpenFOAM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\modules\openfoam\src\OpenFOAM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\modules\openfoam\src\OpenFOAM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\modules\openfoam\src\OpenFOAM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\modules\openfoam\src\OpenFOAM_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\openfoam\src\OpenFOAM_Types.f90">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\externalinflow\src\ExternalInflow_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -2022,7 +2025,7 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
-		<File RelativePath="..\..\modules\openfoam\src\OpenFOAM.f90"/></Filter>
+		<File RelativePath="..\..\modules\externalinflow\src\ExternalInflow.f90"/></Filter>
 		<Filter Name="SeaState">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\seastate\src\Current.txt">

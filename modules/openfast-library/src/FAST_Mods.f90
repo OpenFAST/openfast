@@ -24,8 +24,7 @@ MODULE FAST_ModTypes
    USE NWTC_Library
    USE FAST_Types
 
-   TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'OpenFAST', '', '' ) !< The version number of this module
+   TYPE(ProgDesc) :: FAST_Ver  = ProgDesc( 'OpenFAST', '', '' ) !< The version number of this module
          
    !..................................................................
    
