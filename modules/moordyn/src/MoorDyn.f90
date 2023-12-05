@@ -1788,14 +1788,13 @@ CONTAINS
             ! set absolute initial positions in MoorDyn
             IF (p%Standalone /= 1) THEN 
                !TODO: >>> should also maybe set reference orientation (which might make part of a couple lines down redundant) <<<
-               OrMat2 = MATMUL(OrMat, TRANSPOSE( EulerConstruct( rRef(4:6))))  ! combine the Body's relative orientation with the turbine's initial orientation
+               OrMat2 = MATMUL(OrMat, ( EulerConstruct( rRef(4:6))))  ! combine the Body's relative orientation with the turbine's initial orientation
                u%CoupledKinematics(iTurb)%Orientation(:,:,J) = OrMat2          ! set the result as the current orientation of the body <<<
 
                ! calculate initial point relative position, adjusted due to initial platform translations
                u%CoupledKinematics(iTurb)%TranslationDisp(:,J) = InitInp%PtfmInit(1:3,iTurb) - rRef(1:3)
                m%BodyList(m%CpldBodyIs(l,iTurb))%r6(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
-
-               m%BodyList(m%CpldBodyIs(l,iTurb))%r6(4:6) = EulerExtract(MATMUL(OrMat, TRANSPOSE( EulerConstruct( rRef(4:6)))))     ! apply rotation from PtfmInit onto input file's body orientation to get its true initial orientation
+               m%BodyList(m%CpldBodyIs(l,iTurb))%r6(4:6) = EulerExtract(OrMat2)     ! apply rotation from PtfmInit onto input file's body orientation to get its true initial orientation
             ENDIF
 
             CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)      ! set node as point element
