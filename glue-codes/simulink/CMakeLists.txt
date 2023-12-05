@@ -34,6 +34,7 @@ set(MEX_LIBS
   $<TARGET_FILE:servodynlib-matlab> # MATLAB Specific
   $<TARGET_FILE:subdynlib>
   $<TARGET_FILE:extinflowlib>
+  $<TARGET_FILE:extloadslib>
   $<TARGET_FILE:ifwlib>
   $<TARGET_FILE:scfastlib>
   $<TARGET_FILE:extinflowtypeslib>
