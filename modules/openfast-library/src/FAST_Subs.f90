@@ -2036,7 +2036,9 @@ SUBROUTINE FAST_Init( p, m_FAST, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, 
    END IF
 
    IF (PRESENT(DTdriver)) THEN
-      IF (  ABS( NINT(DTdriver/p%DT) * p%DT - DTdriver ) .lt. 0.001 ) THEN
+      IF (DTdriver == -1.0_DbKi) THEN
+         ! DTdriver wasn't set, so don't use it
+      ELSE IF (  ABS( NINT(DTdriver/p%DT) * p%DT - DTdriver ) .lt. 0.001 ) THEN
          p%DT_Out = NINT(DTdriver/p%DT) * p%DT
          p%n_DT_Out = NINT(DTdriver/p%DT)
       ELSE
