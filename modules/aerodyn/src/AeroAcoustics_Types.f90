@@ -328,8 +328,8 @@ subroutine AA_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AA_CopyInitInput'
@@ -340,8 +340,8 @@ subroutine AA_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    DstInitInputData%NumBlNds = SrcInitInputData%NumBlNds
    DstInitInputData%RootName = SrcInitInputData%RootName
    if (allocated(SrcInitInputData%BlSpn)) then
-      LB(1:2) = lbound(SrcInitInputData%BlSpn)
-      UB(1:2) = ubound(SrcInitInputData%BlSpn)
+      LB(1:2) = lbound(SrcInitInputData%BlSpn, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitInputData%BlSpn, kind=B8Ki)
       if (.not. allocated(DstInitInputData%BlSpn)) then
          allocate(DstInitInputData%BlSpn(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -352,8 +352,8 @@ subroutine AA_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
       DstInitInputData%BlSpn = SrcInitInputData%BlSpn
    end if
    if (allocated(SrcInitInputData%BlChord)) then
-      LB(1:2) = lbound(SrcInitInputData%BlChord)
-      UB(1:2) = ubound(SrcInitInputData%BlChord)
+      LB(1:2) = lbound(SrcInitInputData%BlChord, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitInputData%BlChord, kind=B8Ki)
       if (.not. allocated(DstInitInputData%BlChord)) then
          allocate(DstInitInputData%BlChord(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -368,8 +368,8 @@ subroutine AA_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    DstInitInputData%SpdSound = SrcInitInputData%SpdSound
    DstInitInputData%HubHeight = SrcInitInputData%HubHeight
    if (allocated(SrcInitInputData%BlAFID)) then
-      LB(1:2) = lbound(SrcInitInputData%BlAFID)
-      UB(1:2) = ubound(SrcInitInputData%BlAFID)
+      LB(1:2) = lbound(SrcInitInputData%BlAFID, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitInputData%BlAFID, kind=B8Ki)
       if (.not. allocated(DstInitInputData%BlAFID)) then
          allocate(DstInitInputData%BlAFID(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -380,8 +380,8 @@ subroutine AA_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
       DstInitInputData%BlAFID = SrcInitInputData%BlAFID
    end if
    if (allocated(SrcInitInputData%AFInfo)) then
-      LB(1:1) = lbound(SrcInitInputData%AFInfo)
-      UB(1:1) = ubound(SrcInitInputData%AFInfo)
+      LB(1:1) = lbound(SrcInitInputData%AFInfo, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%AFInfo, kind=B8Ki)
       if (.not. allocated(DstInitInputData%AFInfo)) then
          allocate(DstInitInputData%AFInfo(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -401,8 +401,8 @@ subroutine AA_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    type(AA_InitInputType), intent(inout) :: InitInputData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AA_DestroyInitInput'
@@ -418,8 +418,8 @@ subroutine AA_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
       deallocate(InitInputData%BlAFID)
    end if
    if (allocated(InitInputData%AFInfo)) then
-      LB(1:1) = lbound(InitInputData%AFInfo)
-      UB(1:1) = ubound(InitInputData%AFInfo)
+      LB(1:1) = lbound(InitInputData%AFInfo, kind=B8Ki)
+      UB(1:1) = ubound(InitInputData%AFInfo, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call AFI_DestroyParam(InitInputData%AFInfo(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -432,8 +432,8 @@ subroutine AA_PackInitInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(AA_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AA_PackInitInput'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%InputFile)
    call RegPack(Buf, InData%NumBlades)
@@ -441,12 +441,12 @@ subroutine AA_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%RootName)
    call RegPack(Buf, allocated(InData%BlSpn))
    if (allocated(InData%BlSpn)) then
-      call RegPackBounds(Buf, 2, lbound(InData%BlSpn), ubound(InData%BlSpn))
+      call RegPackBounds(Buf, 2, lbound(InData%BlSpn, kind=B8Ki), ubound(InData%BlSpn, kind=B8Ki))
       call RegPack(Buf, InData%BlSpn)
    end if
    call RegPack(Buf, allocated(InData%BlChord))
    if (allocated(InData%BlChord)) then
-      call RegPackBounds(Buf, 2, lbound(InData%BlChord), ubound(InData%BlChord))
+      call RegPackBounds(Buf, 2, lbound(InData%BlChord, kind=B8Ki), ubound(InData%BlChord, kind=B8Ki))
       call RegPack(Buf, InData%BlChord)
    end if
    call RegPack(Buf, InData%AirDens)
@@ -455,14 +455,14 @@ subroutine AA_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%HubHeight)
    call RegPack(Buf, allocated(InData%BlAFID))
    if (allocated(InData%BlAFID)) then
-      call RegPackBounds(Buf, 2, lbound(InData%BlAFID), ubound(InData%BlAFID))
+      call RegPackBounds(Buf, 2, lbound(InData%BlAFID, kind=B8Ki), ubound(InData%BlAFID, kind=B8Ki))
       call RegPack(Buf, InData%BlAFID)
    end if
    call RegPack(Buf, allocated(InData%AFInfo))
    if (allocated(InData%AFInfo)) then
-      call RegPackBounds(Buf, 1, lbound(InData%AFInfo), ubound(InData%AFInfo))
-      LB(1:1) = lbound(InData%AFInfo)
-      UB(1:1) = ubound(InData%AFInfo)
+      call RegPackBounds(Buf, 1, lbound(InData%AFInfo, kind=B8Ki), ubound(InData%AFInfo, kind=B8Ki))
+      LB(1:1) = lbound(InData%AFInfo, kind=B8Ki)
+      UB(1:1) = ubound(InData%AFInfo, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call AFI_PackParam(Buf, InData%AFInfo(i1)) 
       end do
@@ -474,8 +474,8 @@ subroutine AA_UnPackInitInput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(AA_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AA_UnPackInitInput'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -560,15 +560,15 @@ subroutine AA_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AA_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
          allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -579,8 +579,8 @@ subroutine AA_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
          allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -591,8 +591,8 @@ subroutine AA_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
    end if
    if (allocated(SrcInitOutputData%WriteOutputHdrforPE)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdrforPE)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdrforPE)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdrforPE, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdrforPE, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%WriteOutputHdrforPE)) then
          allocate(DstInitOutputData%WriteOutputHdrforPE(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -603,8 +603,8 @@ subroutine AA_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%WriteOutputHdrforPE = SrcInitOutputData%WriteOutputHdrforPE
    end if
    if (allocated(SrcInitOutputData%WriteOutputUntforPE)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUntforPE)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUntforPE)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUntforPE, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUntforPE, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%WriteOutputUntforPE)) then
          allocate(DstInitOutputData%WriteOutputUntforPE(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -615,8 +615,8 @@ subroutine AA_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%WriteOutputUntforPE = SrcInitOutputData%WriteOutputUntforPE
    end if
    if (allocated(SrcInitOutputData%WriteOutputHdrSep)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdrSep)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdrSep)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdrSep, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdrSep, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%WriteOutputHdrSep)) then
          allocate(DstInitOutputData%WriteOutputHdrSep(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -627,8 +627,8 @@ subroutine AA_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%WriteOutputHdrSep = SrcInitOutputData%WriteOutputHdrSep
    end if
    if (allocated(SrcInitOutputData%WriteOutputUntSep)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUntSep)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUntSep)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUntSep, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUntSep, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%WriteOutputUntSep)) then
          allocate(DstInitOutputData%WriteOutputUntSep(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -639,8 +639,8 @@ subroutine AA_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%WriteOutputUntSep = SrcInitOutputData%WriteOutputUntSep
    end if
    if (allocated(SrcInitOutputData%WriteOutputHdrNodes)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdrNodes)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdrNodes)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdrNodes, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdrNodes, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%WriteOutputHdrNodes)) then
          allocate(DstInitOutputData%WriteOutputHdrNodes(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -651,8 +651,8 @@ subroutine AA_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%WriteOutputHdrNodes = SrcInitOutputData%WriteOutputHdrNodes
    end if
    if (allocated(SrcInitOutputData%WriteOutputUntNodes)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUntNodes)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUntNodes)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUntNodes, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUntNodes, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%WriteOutputUntNodes)) then
          allocate(DstInitOutputData%WriteOutputUntNodes(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -713,42 +713,42 @@ subroutine AA_PackInitOutput(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%WriteOutputHdr))
    if (allocated(InData%WriteOutputHdr)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr, kind=B8Ki), ubound(InData%WriteOutputHdr, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt, kind=B8Ki), ubound(InData%WriteOutputUnt, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
    call RegPack(Buf, allocated(InData%WriteOutputHdrforPE))
    if (allocated(InData%WriteOutputHdrforPE)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdrforPE), ubound(InData%WriteOutputHdrforPE))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdrforPE, kind=B8Ki), ubound(InData%WriteOutputHdrforPE, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputHdrforPE)
    end if
    call RegPack(Buf, allocated(InData%WriteOutputUntforPE))
    if (allocated(InData%WriteOutputUntforPE)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUntforPE), ubound(InData%WriteOutputUntforPE))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUntforPE, kind=B8Ki), ubound(InData%WriteOutputUntforPE, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputUntforPE)
    end if
    call RegPack(Buf, allocated(InData%WriteOutputHdrSep))
    if (allocated(InData%WriteOutputHdrSep)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdrSep), ubound(InData%WriteOutputHdrSep))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdrSep, kind=B8Ki), ubound(InData%WriteOutputHdrSep, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputHdrSep)
    end if
    call RegPack(Buf, allocated(InData%WriteOutputUntSep))
    if (allocated(InData%WriteOutputUntSep)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUntSep), ubound(InData%WriteOutputUntSep))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUntSep, kind=B8Ki), ubound(InData%WriteOutputUntSep, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputUntSep)
    end if
    call RegPack(Buf, allocated(InData%WriteOutputHdrNodes))
    if (allocated(InData%WriteOutputHdrNodes)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdrNodes), ubound(InData%WriteOutputHdrNodes))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdrNodes, kind=B8Ki), ubound(InData%WriteOutputHdrNodes, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputHdrNodes)
    end if
    call RegPack(Buf, allocated(InData%WriteOutputUntNodes))
    if (allocated(InData%WriteOutputUntNodes)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUntNodes), ubound(InData%WriteOutputUntNodes))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUntNodes, kind=B8Ki), ubound(InData%WriteOutputUntNodes, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputUntNodes)
    end if
    call RegPack(Buf, InData%delim)
@@ -761,7 +761,7 @@ subroutine AA_UnPackInitOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(AA_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AA_UnPackInitOutput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -890,8 +890,8 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2, i3
-   integer(IntKi)                 :: LB(3), UB(3)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AA_CopyInputFile'
@@ -913,8 +913,8 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%AA_Bl_Prcntge = SrcInputFileData%AA_Bl_Prcntge
    DstInputFileData%NrObsLoc = SrcInputFileData%NrObsLoc
    if (allocated(SrcInputFileData%ObsX)) then
-      LB(1:1) = lbound(SrcInputFileData%ObsX)
-      UB(1:1) = ubound(SrcInputFileData%ObsX)
+      LB(1:1) = lbound(SrcInputFileData%ObsX, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputFileData%ObsX, kind=B8Ki)
       if (.not. allocated(DstInputFileData%ObsX)) then
          allocate(DstInputFileData%ObsX(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -925,8 +925,8 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
       DstInputFileData%ObsX = SrcInputFileData%ObsX
    end if
    if (allocated(SrcInputFileData%ObsY)) then
-      LB(1:1) = lbound(SrcInputFileData%ObsY)
-      UB(1:1) = ubound(SrcInputFileData%ObsY)
+      LB(1:1) = lbound(SrcInputFileData%ObsY, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputFileData%ObsY, kind=B8Ki)
       if (.not. allocated(DstInputFileData%ObsY)) then
          allocate(DstInputFileData%ObsY(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -937,8 +937,8 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
       DstInputFileData%ObsY = SrcInputFileData%ObsY
    end if
    if (allocated(SrcInputFileData%ObsZ)) then
-      LB(1:1) = lbound(SrcInputFileData%ObsZ)
-      UB(1:1) = ubound(SrcInputFileData%ObsZ)
+      LB(1:1) = lbound(SrcInputFileData%ObsZ, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputFileData%ObsZ, kind=B8Ki)
       if (.not. allocated(DstInputFileData%ObsZ)) then
          allocate(DstInputFileData%ObsZ(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -949,8 +949,8 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
       DstInputFileData%ObsZ = SrcInputFileData%ObsZ
    end if
    if (allocated(SrcInputFileData%BladeProps)) then
-      LB(1:1) = lbound(SrcInputFileData%BladeProps)
-      UB(1:1) = ubound(SrcInputFileData%BladeProps)
+      LB(1:1) = lbound(SrcInputFileData%BladeProps, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputFileData%BladeProps, kind=B8Ki)
       if (.not. allocated(DstInputFileData%BladeProps)) then
          allocate(DstInputFileData%BladeProps(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -966,8 +966,8 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    end if
    DstInputFileData%NrOutFile = SrcInputFileData%NrOutFile
    if (allocated(SrcInputFileData%AAoutfile)) then
-      LB(1:1) = lbound(SrcInputFileData%AAoutfile)
-      UB(1:1) = ubound(SrcInputFileData%AAoutfile)
+      LB(1:1) = lbound(SrcInputFileData%AAoutfile, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputFileData%AAoutfile, kind=B8Ki)
       if (.not. allocated(DstInputFileData%AAoutfile)) then
          allocate(DstInputFileData%AAoutfile(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -983,8 +983,8 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%Lturb = SrcInputFileData%Lturb
    DstInputFileData%AvgV = SrcInputFileData%AvgV
    if (allocated(SrcInputFileData%ReListBL)) then
-      LB(1:1) = lbound(SrcInputFileData%ReListBL)
-      UB(1:1) = ubound(SrcInputFileData%ReListBL)
+      LB(1:1) = lbound(SrcInputFileData%ReListBL, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputFileData%ReListBL, kind=B8Ki)
       if (.not. allocated(DstInputFileData%ReListBL)) then
          allocate(DstInputFileData%ReListBL(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -995,8 +995,8 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
       DstInputFileData%ReListBL = SrcInputFileData%ReListBL
    end if
    if (allocated(SrcInputFileData%AoAListBL)) then
-      LB(1:1) = lbound(SrcInputFileData%AoAListBL)
-      UB(1:1) = ubound(SrcInputFileData%AoAListBL)
+      LB(1:1) = lbound(SrcInputFileData%AoAListBL, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputFileData%AoAListBL, kind=B8Ki)
       if (.not. allocated(DstInputFileData%AoAListBL)) then
          allocate(DstInputFileData%AoAListBL(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1007,8 +1007,8 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
       DstInputFileData%AoAListBL = SrcInputFileData%AoAListBL
    end if
    if (allocated(SrcInputFileData%Pres_DispThick)) then
-      LB(1:3) = lbound(SrcInputFileData%Pres_DispThick)
-      UB(1:3) = ubound(SrcInputFileData%Pres_DispThick)
+      LB(1:3) = lbound(SrcInputFileData%Pres_DispThick, kind=B8Ki)
+      UB(1:3) = ubound(SrcInputFileData%Pres_DispThick, kind=B8Ki)
       if (.not. allocated(DstInputFileData%Pres_DispThick)) then
          allocate(DstInputFileData%Pres_DispThick(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1019,8 +1019,8 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
       DstInputFileData%Pres_DispThick = SrcInputFileData%Pres_DispThick
    end if
    if (allocated(SrcInputFileData%Suct_DispThick)) then
-      LB(1:3) = lbound(SrcInputFileData%Suct_DispThick)
-      UB(1:3) = ubound(SrcInputFileData%Suct_DispThick)
+      LB(1:3) = lbound(SrcInputFileData%Suct_DispThick, kind=B8Ki)
+      UB(1:3) = ubound(SrcInputFileData%Suct_DispThick, kind=B8Ki)
       if (.not. allocated(DstInputFileData%Suct_DispThick)) then
          allocate(DstInputFileData%Suct_DispThick(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1031,8 +1031,8 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
       DstInputFileData%Suct_DispThick = SrcInputFileData%Suct_DispThick
    end if
    if (allocated(SrcInputFileData%Pres_BLThick)) then
-      LB(1:3) = lbound(SrcInputFileData%Pres_BLThick)
-      UB(1:3) = ubound(SrcInputFileData%Pres_BLThick)
+      LB(1:3) = lbound(SrcInputFileData%Pres_BLThick, kind=B8Ki)
+      UB(1:3) = ubound(SrcInputFileData%Pres_BLThick, kind=B8Ki)
       if (.not. allocated(DstInputFileData%Pres_BLThick)) then
          allocate(DstInputFileData%Pres_BLThick(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1043,8 +1043,8 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
       DstInputFileData%Pres_BLThick = SrcInputFileData%Pres_BLThick
    end if
    if (allocated(SrcInputFileData%Suct_BLThick)) then
-      LB(1:3) = lbound(SrcInputFileData%Suct_BLThick)
-      UB(1:3) = ubound(SrcInputFileData%Suct_BLThick)
+      LB(1:3) = lbound(SrcInputFileData%Suct_BLThick, kind=B8Ki)
+      UB(1:3) = ubound(SrcInputFileData%Suct_BLThick, kind=B8Ki)
       if (.not. allocated(DstInputFileData%Suct_BLThick)) then
          allocate(DstInputFileData%Suct_BLThick(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1055,8 +1055,8 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
       DstInputFileData%Suct_BLThick = SrcInputFileData%Suct_BLThick
    end if
    if (allocated(SrcInputFileData%Pres_Cf)) then
-      LB(1:3) = lbound(SrcInputFileData%Pres_Cf)
-      UB(1:3) = ubound(SrcInputFileData%Pres_Cf)
+      LB(1:3) = lbound(SrcInputFileData%Pres_Cf, kind=B8Ki)
+      UB(1:3) = ubound(SrcInputFileData%Pres_Cf, kind=B8Ki)
       if (.not. allocated(DstInputFileData%Pres_Cf)) then
          allocate(DstInputFileData%Pres_Cf(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1067,8 +1067,8 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
       DstInputFileData%Pres_Cf = SrcInputFileData%Pres_Cf
    end if
    if (allocated(SrcInputFileData%Suct_Cf)) then
-      LB(1:3) = lbound(SrcInputFileData%Suct_Cf)
-      UB(1:3) = ubound(SrcInputFileData%Suct_Cf)
+      LB(1:3) = lbound(SrcInputFileData%Suct_Cf, kind=B8Ki)
+      UB(1:3) = ubound(SrcInputFileData%Suct_Cf, kind=B8Ki)
       if (.not. allocated(DstInputFileData%Suct_Cf)) then
          allocate(DstInputFileData%Suct_Cf(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1079,8 +1079,8 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
       DstInputFileData%Suct_Cf = SrcInputFileData%Suct_Cf
    end if
    if (allocated(SrcInputFileData%Pres_EdgeVelRat)) then
-      LB(1:3) = lbound(SrcInputFileData%Pres_EdgeVelRat)
-      UB(1:3) = ubound(SrcInputFileData%Pres_EdgeVelRat)
+      LB(1:3) = lbound(SrcInputFileData%Pres_EdgeVelRat, kind=B8Ki)
+      UB(1:3) = ubound(SrcInputFileData%Pres_EdgeVelRat, kind=B8Ki)
       if (.not. allocated(DstInputFileData%Pres_EdgeVelRat)) then
          allocate(DstInputFileData%Pres_EdgeVelRat(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1091,8 +1091,8 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
       DstInputFileData%Pres_EdgeVelRat = SrcInputFileData%Pres_EdgeVelRat
    end if
    if (allocated(SrcInputFileData%Suct_EdgeVelRat)) then
-      LB(1:3) = lbound(SrcInputFileData%Suct_EdgeVelRat)
-      UB(1:3) = ubound(SrcInputFileData%Suct_EdgeVelRat)
+      LB(1:3) = lbound(SrcInputFileData%Suct_EdgeVelRat, kind=B8Ki)
+      UB(1:3) = ubound(SrcInputFileData%Suct_EdgeVelRat, kind=B8Ki)
       if (.not. allocated(DstInputFileData%Suct_EdgeVelRat)) then
          allocate(DstInputFileData%Suct_EdgeVelRat(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1103,8 +1103,8 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
       DstInputFileData%Suct_EdgeVelRat = SrcInputFileData%Suct_EdgeVelRat
    end if
    if (allocated(SrcInputFileData%TI_Grid_In)) then
-      LB(1:2) = lbound(SrcInputFileData%TI_Grid_In)
-      UB(1:2) = ubound(SrcInputFileData%TI_Grid_In)
+      LB(1:2) = lbound(SrcInputFileData%TI_Grid_In, kind=B8Ki)
+      UB(1:2) = ubound(SrcInputFileData%TI_Grid_In, kind=B8Ki)
       if (.not. allocated(DstInputFileData%TI_Grid_In)) then
          allocate(DstInputFileData%TI_Grid_In(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1122,8 +1122,8 @@ subroutine AA_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
    type(AA_InputFile), intent(inout) :: InputFileData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2, i3
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AA_DestroyInputFile'
@@ -1139,8 +1139,8 @@ subroutine AA_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
       deallocate(InputFileData%ObsZ)
    end if
    if (allocated(InputFileData%BladeProps)) then
-      LB(1:1) = lbound(InputFileData%BladeProps)
-      UB(1:1) = ubound(InputFileData%BladeProps)
+      LB(1:1) = lbound(InputFileData%BladeProps, kind=B8Ki)
+      UB(1:1) = ubound(InputFileData%BladeProps, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call AA_DestroyBladePropsType(InputFileData%BladeProps(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1189,8 +1189,8 @@ subroutine AA_PackInputFile(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(AA_InputFile), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AA_PackInputFile'
-   integer(IntKi)  :: i1, i2, i3
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)   :: LB(3), UB(3)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%DT_AA)
    call RegPack(Buf, InData%IBLUNT)
@@ -1209,24 +1209,24 @@ subroutine AA_PackInputFile(Buf, Indata)
    call RegPack(Buf, InData%NrObsLoc)
    call RegPack(Buf, allocated(InData%ObsX))
    if (allocated(InData%ObsX)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ObsX), ubound(InData%ObsX))
+      call RegPackBounds(Buf, 1, lbound(InData%ObsX, kind=B8Ki), ubound(InData%ObsX, kind=B8Ki))
       call RegPack(Buf, InData%ObsX)
    end if
    call RegPack(Buf, allocated(InData%ObsY))
    if (allocated(InData%ObsY)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ObsY), ubound(InData%ObsY))
+      call RegPackBounds(Buf, 1, lbound(InData%ObsY, kind=B8Ki), ubound(InData%ObsY, kind=B8Ki))
       call RegPack(Buf, InData%ObsY)
    end if
    call RegPack(Buf, allocated(InData%ObsZ))
    if (allocated(InData%ObsZ)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ObsZ), ubound(InData%ObsZ))
+      call RegPackBounds(Buf, 1, lbound(InData%ObsZ, kind=B8Ki), ubound(InData%ObsZ, kind=B8Ki))
       call RegPack(Buf, InData%ObsZ)
    end if
    call RegPack(Buf, allocated(InData%BladeProps))
    if (allocated(InData%BladeProps)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BladeProps), ubound(InData%BladeProps))
-      LB(1:1) = lbound(InData%BladeProps)
-      UB(1:1) = ubound(InData%BladeProps)
+      call RegPackBounds(Buf, 1, lbound(InData%BladeProps, kind=B8Ki), ubound(InData%BladeProps, kind=B8Ki))
+      LB(1:1) = lbound(InData%BladeProps, kind=B8Ki)
+      UB(1:1) = ubound(InData%BladeProps, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call AA_PackBladePropsType(Buf, InData%BladeProps(i1)) 
       end do
@@ -1234,7 +1234,7 @@ subroutine AA_PackInputFile(Buf, Indata)
    call RegPack(Buf, InData%NrOutFile)
    call RegPack(Buf, allocated(InData%AAoutfile))
    if (allocated(InData%AAoutfile)) then
-      call RegPackBounds(Buf, 1, lbound(InData%AAoutfile), ubound(InData%AAoutfile))
+      call RegPackBounds(Buf, 1, lbound(InData%AAoutfile, kind=B8Ki), ubound(InData%AAoutfile, kind=B8Ki))
       call RegPack(Buf, InData%AAoutfile)
    end if
    call RegPack(Buf, InData%TICalcTabFile)
@@ -1244,57 +1244,57 @@ subroutine AA_PackInputFile(Buf, Indata)
    call RegPack(Buf, InData%AvgV)
    call RegPack(Buf, allocated(InData%ReListBL))
    if (allocated(InData%ReListBL)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ReListBL), ubound(InData%ReListBL))
+      call RegPackBounds(Buf, 1, lbound(InData%ReListBL, kind=B8Ki), ubound(InData%ReListBL, kind=B8Ki))
       call RegPack(Buf, InData%ReListBL)
    end if
    call RegPack(Buf, allocated(InData%AoAListBL))
    if (allocated(InData%AoAListBL)) then
-      call RegPackBounds(Buf, 1, lbound(InData%AoAListBL), ubound(InData%AoAListBL))
+      call RegPackBounds(Buf, 1, lbound(InData%AoAListBL, kind=B8Ki), ubound(InData%AoAListBL, kind=B8Ki))
       call RegPack(Buf, InData%AoAListBL)
    end if
    call RegPack(Buf, allocated(InData%Pres_DispThick))
    if (allocated(InData%Pres_DispThick)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Pres_DispThick), ubound(InData%Pres_DispThick))
+      call RegPackBounds(Buf, 3, lbound(InData%Pres_DispThick, kind=B8Ki), ubound(InData%Pres_DispThick, kind=B8Ki))
       call RegPack(Buf, InData%Pres_DispThick)
    end if
    call RegPack(Buf, allocated(InData%Suct_DispThick))
    if (allocated(InData%Suct_DispThick)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Suct_DispThick), ubound(InData%Suct_DispThick))
+      call RegPackBounds(Buf, 3, lbound(InData%Suct_DispThick, kind=B8Ki), ubound(InData%Suct_DispThick, kind=B8Ki))
       call RegPack(Buf, InData%Suct_DispThick)
    end if
    call RegPack(Buf, allocated(InData%Pres_BLThick))
    if (allocated(InData%Pres_BLThick)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Pres_BLThick), ubound(InData%Pres_BLThick))
+      call RegPackBounds(Buf, 3, lbound(InData%Pres_BLThick, kind=B8Ki), ubound(InData%Pres_BLThick, kind=B8Ki))
       call RegPack(Buf, InData%Pres_BLThick)
    end if
    call RegPack(Buf, allocated(InData%Suct_BLThick))
    if (allocated(InData%Suct_BLThick)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Suct_BLThick), ubound(InData%Suct_BLThick))
+      call RegPackBounds(Buf, 3, lbound(InData%Suct_BLThick, kind=B8Ki), ubound(InData%Suct_BLThick, kind=B8Ki))
       call RegPack(Buf, InData%Suct_BLThick)
    end if
    call RegPack(Buf, allocated(InData%Pres_Cf))
    if (allocated(InData%Pres_Cf)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Pres_Cf), ubound(InData%Pres_Cf))
+      call RegPackBounds(Buf, 3, lbound(InData%Pres_Cf, kind=B8Ki), ubound(InData%Pres_Cf, kind=B8Ki))
       call RegPack(Buf, InData%Pres_Cf)
    end if
    call RegPack(Buf, allocated(InData%Suct_Cf))
    if (allocated(InData%Suct_Cf)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Suct_Cf), ubound(InData%Suct_Cf))
+      call RegPackBounds(Buf, 3, lbound(InData%Suct_Cf, kind=B8Ki), ubound(InData%Suct_Cf, kind=B8Ki))
       call RegPack(Buf, InData%Suct_Cf)
    end if
    call RegPack(Buf, allocated(InData%Pres_EdgeVelRat))
    if (allocated(InData%Pres_EdgeVelRat)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Pres_EdgeVelRat), ubound(InData%Pres_EdgeVelRat))
+      call RegPackBounds(Buf, 3, lbound(InData%Pres_EdgeVelRat, kind=B8Ki), ubound(InData%Pres_EdgeVelRat, kind=B8Ki))
       call RegPack(Buf, InData%Pres_EdgeVelRat)
    end if
    call RegPack(Buf, allocated(InData%Suct_EdgeVelRat))
    if (allocated(InData%Suct_EdgeVelRat)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Suct_EdgeVelRat), ubound(InData%Suct_EdgeVelRat))
+      call RegPackBounds(Buf, 3, lbound(InData%Suct_EdgeVelRat, kind=B8Ki), ubound(InData%Suct_EdgeVelRat, kind=B8Ki))
       call RegPack(Buf, InData%Suct_EdgeVelRat)
    end if
    call RegPack(Buf, allocated(InData%TI_Grid_In))
    if (allocated(InData%TI_Grid_In)) then
-      call RegPackBounds(Buf, 2, lbound(InData%TI_Grid_In), ubound(InData%TI_Grid_In))
+      call RegPackBounds(Buf, 2, lbound(InData%TI_Grid_In, kind=B8Ki), ubound(InData%TI_Grid_In, kind=B8Ki))
       call RegPack(Buf, InData%TI_Grid_In)
    end if
    call RegPack(Buf, InData%dz_turb_in)
@@ -1306,8 +1306,8 @@ subroutine AA_UnPackInputFile(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(AA_InputFile), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AA_UnPackInputFile'
-   integer(IntKi)  :: i1, i2, i3
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -1629,14 +1629,14 @@ subroutine AA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(3), UB(3)
+   integer(B8Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'AA_CopyDiscState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcDiscStateData%MeanVrel)) then
-      LB(1:2) = lbound(SrcDiscStateData%MeanVrel)
-      UB(1:2) = ubound(SrcDiscStateData%MeanVrel)
+      LB(1:2) = lbound(SrcDiscStateData%MeanVrel, kind=B8Ki)
+      UB(1:2) = ubound(SrcDiscStateData%MeanVrel, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%MeanVrel)) then
          allocate(DstDiscStateData%MeanVrel(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1647,8 +1647,8 @@ subroutine AA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%MeanVrel = SrcDiscStateData%MeanVrel
    end if
    if (allocated(SrcDiscStateData%VrelSq)) then
-      LB(1:2) = lbound(SrcDiscStateData%VrelSq)
-      UB(1:2) = ubound(SrcDiscStateData%VrelSq)
+      LB(1:2) = lbound(SrcDiscStateData%VrelSq, kind=B8Ki)
+      UB(1:2) = ubound(SrcDiscStateData%VrelSq, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%VrelSq)) then
          allocate(DstDiscStateData%VrelSq(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1659,8 +1659,8 @@ subroutine AA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%VrelSq = SrcDiscStateData%VrelSq
    end if
    if (allocated(SrcDiscStateData%TIVrel)) then
-      LB(1:2) = lbound(SrcDiscStateData%TIVrel)
-      UB(1:2) = ubound(SrcDiscStateData%TIVrel)
+      LB(1:2) = lbound(SrcDiscStateData%TIVrel, kind=B8Ki)
+      UB(1:2) = ubound(SrcDiscStateData%TIVrel, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%TIVrel)) then
          allocate(DstDiscStateData%TIVrel(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1671,8 +1671,8 @@ subroutine AA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%TIVrel = SrcDiscStateData%TIVrel
    end if
    if (allocated(SrcDiscStateData%VrelStore)) then
-      LB(1:3) = lbound(SrcDiscStateData%VrelStore)
-      UB(1:3) = ubound(SrcDiscStateData%VrelStore)
+      LB(1:3) = lbound(SrcDiscStateData%VrelStore, kind=B8Ki)
+      UB(1:3) = ubound(SrcDiscStateData%VrelStore, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%VrelStore)) then
          allocate(DstDiscStateData%VrelStore(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1683,8 +1683,8 @@ subroutine AA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%VrelStore = SrcDiscStateData%VrelStore
    end if
    if (allocated(SrcDiscStateData%TIVx)) then
-      LB(1:2) = lbound(SrcDiscStateData%TIVx)
-      UB(1:2) = ubound(SrcDiscStateData%TIVx)
+      LB(1:2) = lbound(SrcDiscStateData%TIVx, kind=B8Ki)
+      UB(1:2) = ubound(SrcDiscStateData%TIVx, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%TIVx)) then
          allocate(DstDiscStateData%TIVx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1695,8 +1695,8 @@ subroutine AA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%TIVx = SrcDiscStateData%TIVx
    end if
    if (allocated(SrcDiscStateData%MeanVxVyVz)) then
-      LB(1:2) = lbound(SrcDiscStateData%MeanVxVyVz)
-      UB(1:2) = ubound(SrcDiscStateData%MeanVxVyVz)
+      LB(1:2) = lbound(SrcDiscStateData%MeanVxVyVz, kind=B8Ki)
+      UB(1:2) = ubound(SrcDiscStateData%MeanVxVyVz, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%MeanVxVyVz)) then
          allocate(DstDiscStateData%MeanVxVyVz(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1707,8 +1707,8 @@ subroutine AA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%MeanVxVyVz = SrcDiscStateData%MeanVxVyVz
    end if
    if (allocated(SrcDiscStateData%VxSq)) then
-      LB(1:2) = lbound(SrcDiscStateData%VxSq)
-      UB(1:2) = ubound(SrcDiscStateData%VxSq)
+      LB(1:2) = lbound(SrcDiscStateData%VxSq, kind=B8Ki)
+      UB(1:2) = ubound(SrcDiscStateData%VxSq, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%VxSq)) then
          allocate(DstDiscStateData%VxSq(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1719,8 +1719,8 @@ subroutine AA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%VxSq = SrcDiscStateData%VxSq
    end if
    if (allocated(SrcDiscStateData%allregcounter)) then
-      LB(1:2) = lbound(SrcDiscStateData%allregcounter)
-      UB(1:2) = ubound(SrcDiscStateData%allregcounter)
+      LB(1:2) = lbound(SrcDiscStateData%allregcounter, kind=B8Ki)
+      UB(1:2) = ubound(SrcDiscStateData%allregcounter, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%allregcounter)) then
          allocate(DstDiscStateData%allregcounter(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1731,8 +1731,8 @@ subroutine AA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%allregcounter = SrcDiscStateData%allregcounter
    end if
    if (allocated(SrcDiscStateData%VxSqRegion)) then
-      LB(1:2) = lbound(SrcDiscStateData%VxSqRegion)
-      UB(1:2) = ubound(SrcDiscStateData%VxSqRegion)
+      LB(1:2) = lbound(SrcDiscStateData%VxSqRegion, kind=B8Ki)
+      UB(1:2) = ubound(SrcDiscStateData%VxSqRegion, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%VxSqRegion)) then
          allocate(DstDiscStateData%VxSqRegion(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1743,8 +1743,8 @@ subroutine AA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%VxSqRegion = SrcDiscStateData%VxSqRegion
    end if
    if (allocated(SrcDiscStateData%RegVxStor)) then
-      LB(1:3) = lbound(SrcDiscStateData%RegVxStor)
-      UB(1:3) = ubound(SrcDiscStateData%RegVxStor)
+      LB(1:3) = lbound(SrcDiscStateData%RegVxStor, kind=B8Ki)
+      UB(1:3) = ubound(SrcDiscStateData%RegVxStor, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%RegVxStor)) then
          allocate(DstDiscStateData%RegVxStor(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1755,8 +1755,8 @@ subroutine AA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%RegVxStor = SrcDiscStateData%RegVxStor
    end if
    if (allocated(SrcDiscStateData%RegionTIDelete)) then
-      LB(1:2) = lbound(SrcDiscStateData%RegionTIDelete)
-      UB(1:2) = ubound(SrcDiscStateData%RegionTIDelete)
+      LB(1:2) = lbound(SrcDiscStateData%RegionTIDelete, kind=B8Ki)
+      UB(1:2) = ubound(SrcDiscStateData%RegionTIDelete, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%RegionTIDelete)) then
          allocate(DstDiscStateData%RegionTIDelete(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1817,57 +1817,57 @@ subroutine AA_PackDiscState(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%MeanVrel))
    if (allocated(InData%MeanVrel)) then
-      call RegPackBounds(Buf, 2, lbound(InData%MeanVrel), ubound(InData%MeanVrel))
+      call RegPackBounds(Buf, 2, lbound(InData%MeanVrel, kind=B8Ki), ubound(InData%MeanVrel, kind=B8Ki))
       call RegPack(Buf, InData%MeanVrel)
    end if
    call RegPack(Buf, allocated(InData%VrelSq))
    if (allocated(InData%VrelSq)) then
-      call RegPackBounds(Buf, 2, lbound(InData%VrelSq), ubound(InData%VrelSq))
+      call RegPackBounds(Buf, 2, lbound(InData%VrelSq, kind=B8Ki), ubound(InData%VrelSq, kind=B8Ki))
       call RegPack(Buf, InData%VrelSq)
    end if
    call RegPack(Buf, allocated(InData%TIVrel))
    if (allocated(InData%TIVrel)) then
-      call RegPackBounds(Buf, 2, lbound(InData%TIVrel), ubound(InData%TIVrel))
+      call RegPackBounds(Buf, 2, lbound(InData%TIVrel, kind=B8Ki), ubound(InData%TIVrel, kind=B8Ki))
       call RegPack(Buf, InData%TIVrel)
    end if
    call RegPack(Buf, allocated(InData%VrelStore))
    if (allocated(InData%VrelStore)) then
-      call RegPackBounds(Buf, 3, lbound(InData%VrelStore), ubound(InData%VrelStore))
+      call RegPackBounds(Buf, 3, lbound(InData%VrelStore, kind=B8Ki), ubound(InData%VrelStore, kind=B8Ki))
       call RegPack(Buf, InData%VrelStore)
    end if
    call RegPack(Buf, allocated(InData%TIVx))
    if (allocated(InData%TIVx)) then
-      call RegPackBounds(Buf, 2, lbound(InData%TIVx), ubound(InData%TIVx))
+      call RegPackBounds(Buf, 2, lbound(InData%TIVx, kind=B8Ki), ubound(InData%TIVx, kind=B8Ki))
       call RegPack(Buf, InData%TIVx)
    end if
    call RegPack(Buf, allocated(InData%MeanVxVyVz))
    if (allocated(InData%MeanVxVyVz)) then
-      call RegPackBounds(Buf, 2, lbound(InData%MeanVxVyVz), ubound(InData%MeanVxVyVz))
+      call RegPackBounds(Buf, 2, lbound(InData%MeanVxVyVz, kind=B8Ki), ubound(InData%MeanVxVyVz, kind=B8Ki))
       call RegPack(Buf, InData%MeanVxVyVz)
    end if
    call RegPack(Buf, allocated(InData%VxSq))
    if (allocated(InData%VxSq)) then
-      call RegPackBounds(Buf, 2, lbound(InData%VxSq), ubound(InData%VxSq))
+      call RegPackBounds(Buf, 2, lbound(InData%VxSq, kind=B8Ki), ubound(InData%VxSq, kind=B8Ki))
       call RegPack(Buf, InData%VxSq)
    end if
    call RegPack(Buf, allocated(InData%allregcounter))
    if (allocated(InData%allregcounter)) then
-      call RegPackBounds(Buf, 2, lbound(InData%allregcounter), ubound(InData%allregcounter))
+      call RegPackBounds(Buf, 2, lbound(InData%allregcounter, kind=B8Ki), ubound(InData%allregcounter, kind=B8Ki))
       call RegPack(Buf, InData%allregcounter)
    end if
    call RegPack(Buf, allocated(InData%VxSqRegion))
    if (allocated(InData%VxSqRegion)) then
-      call RegPackBounds(Buf, 2, lbound(InData%VxSqRegion), ubound(InData%VxSqRegion))
+      call RegPackBounds(Buf, 2, lbound(InData%VxSqRegion, kind=B8Ki), ubound(InData%VxSqRegion, kind=B8Ki))
       call RegPack(Buf, InData%VxSqRegion)
    end if
    call RegPack(Buf, allocated(InData%RegVxStor))
    if (allocated(InData%RegVxStor)) then
-      call RegPackBounds(Buf, 3, lbound(InData%RegVxStor), ubound(InData%RegVxStor))
+      call RegPackBounds(Buf, 3, lbound(InData%RegVxStor, kind=B8Ki), ubound(InData%RegVxStor, kind=B8Ki))
       call RegPack(Buf, InData%RegVxStor)
    end if
    call RegPack(Buf, allocated(InData%RegionTIDelete))
    if (allocated(InData%RegionTIDelete)) then
-      call RegPackBounds(Buf, 2, lbound(InData%RegionTIDelete), ubound(InData%RegionTIDelete))
+      call RegPackBounds(Buf, 2, lbound(InData%RegionTIDelete, kind=B8Ki), ubound(InData%RegionTIDelete, kind=B8Ki))
       call RegPack(Buf, InData%RegionTIDelete)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1877,7 +1877,7 @@ subroutine AA_UnPackDiscState(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(AA_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AA_UnPackDiscState'
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -2121,14 +2121,14 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(3), UB(3)
+   integer(B8Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'AA_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcMiscData%AllOuts)) then
-      LB(1:1) = lbound(SrcMiscData%AllOuts)
-      UB(1:1) = ubound(SrcMiscData%AllOuts)
+      LB(1:1) = lbound(SrcMiscData%AllOuts, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%AllOuts, kind=B8Ki)
       if (.not. allocated(DstMiscData%AllOuts)) then
          allocate(DstMiscData%AllOuts(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2139,8 +2139,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%AllOuts = SrcMiscData%AllOuts
    end if
    if (allocated(SrcMiscData%ChordAngleTE)) then
-      LB(1:3) = lbound(SrcMiscData%ChordAngleTE)
-      UB(1:3) = ubound(SrcMiscData%ChordAngleTE)
+      LB(1:3) = lbound(SrcMiscData%ChordAngleTE, kind=B8Ki)
+      UB(1:3) = ubound(SrcMiscData%ChordAngleTE, kind=B8Ki)
       if (.not. allocated(DstMiscData%ChordAngleTE)) then
          allocate(DstMiscData%ChordAngleTE(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2151,8 +2151,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%ChordAngleTE = SrcMiscData%ChordAngleTE
    end if
    if (allocated(SrcMiscData%SpanAngleTE)) then
-      LB(1:3) = lbound(SrcMiscData%SpanAngleTE)
-      UB(1:3) = ubound(SrcMiscData%SpanAngleTE)
+      LB(1:3) = lbound(SrcMiscData%SpanAngleTE, kind=B8Ki)
+      UB(1:3) = ubound(SrcMiscData%SpanAngleTE, kind=B8Ki)
       if (.not. allocated(DstMiscData%SpanAngleTE)) then
          allocate(DstMiscData%SpanAngleTE(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2163,8 +2163,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%SpanAngleTE = SrcMiscData%SpanAngleTE
    end if
    if (allocated(SrcMiscData%ChordAngleLE)) then
-      LB(1:3) = lbound(SrcMiscData%ChordAngleLE)
-      UB(1:3) = ubound(SrcMiscData%ChordAngleLE)
+      LB(1:3) = lbound(SrcMiscData%ChordAngleLE, kind=B8Ki)
+      UB(1:3) = ubound(SrcMiscData%ChordAngleLE, kind=B8Ki)
       if (.not. allocated(DstMiscData%ChordAngleLE)) then
          allocate(DstMiscData%ChordAngleLE(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2175,8 +2175,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%ChordAngleLE = SrcMiscData%ChordAngleLE
    end if
    if (allocated(SrcMiscData%SpanAngleLE)) then
-      LB(1:3) = lbound(SrcMiscData%SpanAngleLE)
-      UB(1:3) = ubound(SrcMiscData%SpanAngleLE)
+      LB(1:3) = lbound(SrcMiscData%SpanAngleLE, kind=B8Ki)
+      UB(1:3) = ubound(SrcMiscData%SpanAngleLE, kind=B8Ki)
       if (.not. allocated(DstMiscData%SpanAngleLE)) then
          allocate(DstMiscData%SpanAngleLE(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2187,8 +2187,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%SpanAngleLE = SrcMiscData%SpanAngleLE
    end if
    if (allocated(SrcMiscData%rTEtoObserve)) then
-      LB(1:3) = lbound(SrcMiscData%rTEtoObserve)
-      UB(1:3) = ubound(SrcMiscData%rTEtoObserve)
+      LB(1:3) = lbound(SrcMiscData%rTEtoObserve, kind=B8Ki)
+      UB(1:3) = ubound(SrcMiscData%rTEtoObserve, kind=B8Ki)
       if (.not. allocated(DstMiscData%rTEtoObserve)) then
          allocate(DstMiscData%rTEtoObserve(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2199,8 +2199,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%rTEtoObserve = SrcMiscData%rTEtoObserve
    end if
    if (allocated(SrcMiscData%rLEtoObserve)) then
-      LB(1:3) = lbound(SrcMiscData%rLEtoObserve)
-      UB(1:3) = ubound(SrcMiscData%rLEtoObserve)
+      LB(1:3) = lbound(SrcMiscData%rLEtoObserve, kind=B8Ki)
+      UB(1:3) = ubound(SrcMiscData%rLEtoObserve, kind=B8Ki)
       if (.not. allocated(DstMiscData%rLEtoObserve)) then
          allocate(DstMiscData%rLEtoObserve(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2211,8 +2211,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%rLEtoObserve = SrcMiscData%rLEtoObserve
    end if
    if (allocated(SrcMiscData%LE_Location)) then
-      LB(1:3) = lbound(SrcMiscData%LE_Location)
-      UB(1:3) = ubound(SrcMiscData%LE_Location)
+      LB(1:3) = lbound(SrcMiscData%LE_Location, kind=B8Ki)
+      UB(1:3) = ubound(SrcMiscData%LE_Location, kind=B8Ki)
       if (.not. allocated(DstMiscData%LE_Location)) then
          allocate(DstMiscData%LE_Location(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2224,8 +2224,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    end if
    DstMiscData%RotSpeedAoA = SrcMiscData%RotSpeedAoA
    if (allocated(SrcMiscData%SPLLBL)) then
-      LB(1:1) = lbound(SrcMiscData%SPLLBL)
-      UB(1:1) = ubound(SrcMiscData%SPLLBL)
+      LB(1:1) = lbound(SrcMiscData%SPLLBL, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%SPLLBL, kind=B8Ki)
       if (.not. allocated(DstMiscData%SPLLBL)) then
          allocate(DstMiscData%SPLLBL(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2236,8 +2236,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%SPLLBL = SrcMiscData%SPLLBL
    end if
    if (allocated(SrcMiscData%SPLP)) then
-      LB(1:1) = lbound(SrcMiscData%SPLP)
-      UB(1:1) = ubound(SrcMiscData%SPLP)
+      LB(1:1) = lbound(SrcMiscData%SPLP, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%SPLP, kind=B8Ki)
       if (.not. allocated(DstMiscData%SPLP)) then
          allocate(DstMiscData%SPLP(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2248,8 +2248,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%SPLP = SrcMiscData%SPLP
    end if
    if (allocated(SrcMiscData%SPLS)) then
-      LB(1:1) = lbound(SrcMiscData%SPLS)
-      UB(1:1) = ubound(SrcMiscData%SPLS)
+      LB(1:1) = lbound(SrcMiscData%SPLS, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%SPLS, kind=B8Ki)
       if (.not. allocated(DstMiscData%SPLS)) then
          allocate(DstMiscData%SPLS(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2260,8 +2260,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%SPLS = SrcMiscData%SPLS
    end if
    if (allocated(SrcMiscData%SPLALPH)) then
-      LB(1:1) = lbound(SrcMiscData%SPLALPH)
-      UB(1:1) = ubound(SrcMiscData%SPLALPH)
+      LB(1:1) = lbound(SrcMiscData%SPLALPH, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%SPLALPH, kind=B8Ki)
       if (.not. allocated(DstMiscData%SPLALPH)) then
          allocate(DstMiscData%SPLALPH(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2272,8 +2272,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%SPLALPH = SrcMiscData%SPLALPH
    end if
    if (allocated(SrcMiscData%SPLTBL)) then
-      LB(1:1) = lbound(SrcMiscData%SPLTBL)
-      UB(1:1) = ubound(SrcMiscData%SPLTBL)
+      LB(1:1) = lbound(SrcMiscData%SPLTBL, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%SPLTBL, kind=B8Ki)
       if (.not. allocated(DstMiscData%SPLTBL)) then
          allocate(DstMiscData%SPLTBL(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2284,8 +2284,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%SPLTBL = SrcMiscData%SPLTBL
    end if
    if (allocated(SrcMiscData%SPLTIP)) then
-      LB(1:1) = lbound(SrcMiscData%SPLTIP)
-      UB(1:1) = ubound(SrcMiscData%SPLTIP)
+      LB(1:1) = lbound(SrcMiscData%SPLTIP, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%SPLTIP, kind=B8Ki)
       if (.not. allocated(DstMiscData%SPLTIP)) then
          allocate(DstMiscData%SPLTIP(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2296,8 +2296,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%SPLTIP = SrcMiscData%SPLTIP
    end if
    if (allocated(SrcMiscData%SPLTI)) then
-      LB(1:1) = lbound(SrcMiscData%SPLTI)
-      UB(1:1) = ubound(SrcMiscData%SPLTI)
+      LB(1:1) = lbound(SrcMiscData%SPLTI, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%SPLTI, kind=B8Ki)
       if (.not. allocated(DstMiscData%SPLTI)) then
          allocate(DstMiscData%SPLTI(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2308,8 +2308,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%SPLTI = SrcMiscData%SPLTI
    end if
    if (allocated(SrcMiscData%SPLTIGui)) then
-      LB(1:1) = lbound(SrcMiscData%SPLTIGui)
-      UB(1:1) = ubound(SrcMiscData%SPLTIGui)
+      LB(1:1) = lbound(SrcMiscData%SPLTIGui, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%SPLTIGui, kind=B8Ki)
       if (.not. allocated(DstMiscData%SPLTIGui)) then
          allocate(DstMiscData%SPLTIGui(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2320,8 +2320,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%SPLTIGui = SrcMiscData%SPLTIGui
    end if
    if (allocated(SrcMiscData%SPLBLUNT)) then
-      LB(1:1) = lbound(SrcMiscData%SPLBLUNT)
-      UB(1:1) = ubound(SrcMiscData%SPLBLUNT)
+      LB(1:1) = lbound(SrcMiscData%SPLBLUNT, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%SPLBLUNT, kind=B8Ki)
       if (.not. allocated(DstMiscData%SPLBLUNT)) then
          allocate(DstMiscData%SPLBLUNT(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2332,8 +2332,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%SPLBLUNT = SrcMiscData%SPLBLUNT
    end if
    if (allocated(SrcMiscData%CfVar)) then
-      LB(1:1) = lbound(SrcMiscData%CfVar)
-      UB(1:1) = ubound(SrcMiscData%CfVar)
+      LB(1:1) = lbound(SrcMiscData%CfVar, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%CfVar, kind=B8Ki)
       if (.not. allocated(DstMiscData%CfVar)) then
          allocate(DstMiscData%CfVar(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2344,8 +2344,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%CfVar = SrcMiscData%CfVar
    end if
    if (allocated(SrcMiscData%d99Var)) then
-      LB(1:1) = lbound(SrcMiscData%d99Var)
-      UB(1:1) = ubound(SrcMiscData%d99Var)
+      LB(1:1) = lbound(SrcMiscData%d99Var, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%d99Var, kind=B8Ki)
       if (.not. allocated(DstMiscData%d99Var)) then
          allocate(DstMiscData%d99Var(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2356,8 +2356,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%d99Var = SrcMiscData%d99Var
    end if
    if (allocated(SrcMiscData%dStarVar)) then
-      LB(1:1) = lbound(SrcMiscData%dStarVar)
-      UB(1:1) = ubound(SrcMiscData%dStarVar)
+      LB(1:1) = lbound(SrcMiscData%dStarVar, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%dStarVar, kind=B8Ki)
       if (.not. allocated(DstMiscData%dStarVar)) then
          allocate(DstMiscData%dStarVar(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2368,8 +2368,8 @@ subroutine AA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%dStarVar = SrcMiscData%dStarVar
    end if
    if (allocated(SrcMiscData%EdgeVelVar)) then
-      LB(1:1) = lbound(SrcMiscData%EdgeVelVar)
-      UB(1:1) = ubound(SrcMiscData%EdgeVelVar)
+      LB(1:1) = lbound(SrcMiscData%EdgeVelVar, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%EdgeVelVar, kind=B8Ki)
       if (.not. allocated(DstMiscData%EdgeVelVar)) then
          allocate(DstMiscData%EdgeVelVar(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2462,108 +2462,108 @@ subroutine AA_PackMisc(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%AllOuts))
    if (allocated(InData%AllOuts)) then
-      call RegPackBounds(Buf, 1, lbound(InData%AllOuts), ubound(InData%AllOuts))
+      call RegPackBounds(Buf, 1, lbound(InData%AllOuts, kind=B8Ki), ubound(InData%AllOuts, kind=B8Ki))
       call RegPack(Buf, InData%AllOuts)
    end if
    call RegPack(Buf, allocated(InData%ChordAngleTE))
    if (allocated(InData%ChordAngleTE)) then
-      call RegPackBounds(Buf, 3, lbound(InData%ChordAngleTE), ubound(InData%ChordAngleTE))
+      call RegPackBounds(Buf, 3, lbound(InData%ChordAngleTE, kind=B8Ki), ubound(InData%ChordAngleTE, kind=B8Ki))
       call RegPack(Buf, InData%ChordAngleTE)
    end if
    call RegPack(Buf, allocated(InData%SpanAngleTE))
    if (allocated(InData%SpanAngleTE)) then
-      call RegPackBounds(Buf, 3, lbound(InData%SpanAngleTE), ubound(InData%SpanAngleTE))
+      call RegPackBounds(Buf, 3, lbound(InData%SpanAngleTE, kind=B8Ki), ubound(InData%SpanAngleTE, kind=B8Ki))
       call RegPack(Buf, InData%SpanAngleTE)
    end if
    call RegPack(Buf, allocated(InData%ChordAngleLE))
    if (allocated(InData%ChordAngleLE)) then
-      call RegPackBounds(Buf, 3, lbound(InData%ChordAngleLE), ubound(InData%ChordAngleLE))
+      call RegPackBounds(Buf, 3, lbound(InData%ChordAngleLE, kind=B8Ki), ubound(InData%ChordAngleLE, kind=B8Ki))
       call RegPack(Buf, InData%ChordAngleLE)
    end if
    call RegPack(Buf, allocated(InData%SpanAngleLE))
    if (allocated(InData%SpanAngleLE)) then
-      call RegPackBounds(Buf, 3, lbound(InData%SpanAngleLE), ubound(InData%SpanAngleLE))
+      call RegPackBounds(Buf, 3, lbound(InData%SpanAngleLE, kind=B8Ki), ubound(InData%SpanAngleLE, kind=B8Ki))
       call RegPack(Buf, InData%SpanAngleLE)
    end if
    call RegPack(Buf, allocated(InData%rTEtoObserve))
    if (allocated(InData%rTEtoObserve)) then
-      call RegPackBounds(Buf, 3, lbound(InData%rTEtoObserve), ubound(InData%rTEtoObserve))
+      call RegPackBounds(Buf, 3, lbound(InData%rTEtoObserve, kind=B8Ki), ubound(InData%rTEtoObserve, kind=B8Ki))
       call RegPack(Buf, InData%rTEtoObserve)
    end if
    call RegPack(Buf, allocated(InData%rLEtoObserve))
    if (allocated(InData%rLEtoObserve)) then
-      call RegPackBounds(Buf, 3, lbound(InData%rLEtoObserve), ubound(InData%rLEtoObserve))
+      call RegPackBounds(Buf, 3, lbound(InData%rLEtoObserve, kind=B8Ki), ubound(InData%rLEtoObserve, kind=B8Ki))
       call RegPack(Buf, InData%rLEtoObserve)
    end if
    call RegPack(Buf, allocated(InData%LE_Location))
    if (allocated(InData%LE_Location)) then
-      call RegPackBounds(Buf, 3, lbound(InData%LE_Location), ubound(InData%LE_Location))
+      call RegPackBounds(Buf, 3, lbound(InData%LE_Location, kind=B8Ki), ubound(InData%LE_Location, kind=B8Ki))
       call RegPack(Buf, InData%LE_Location)
    end if
    call RegPack(Buf, InData%RotSpeedAoA)
    call RegPack(Buf, allocated(InData%SPLLBL))
    if (allocated(InData%SPLLBL)) then
-      call RegPackBounds(Buf, 1, lbound(InData%SPLLBL), ubound(InData%SPLLBL))
+      call RegPackBounds(Buf, 1, lbound(InData%SPLLBL, kind=B8Ki), ubound(InData%SPLLBL, kind=B8Ki))
       call RegPack(Buf, InData%SPLLBL)
    end if
    call RegPack(Buf, allocated(InData%SPLP))
    if (allocated(InData%SPLP)) then
-      call RegPackBounds(Buf, 1, lbound(InData%SPLP), ubound(InData%SPLP))
+      call RegPackBounds(Buf, 1, lbound(InData%SPLP, kind=B8Ki), ubound(InData%SPLP, kind=B8Ki))
       call RegPack(Buf, InData%SPLP)
    end if
    call RegPack(Buf, allocated(InData%SPLS))
    if (allocated(InData%SPLS)) then
-      call RegPackBounds(Buf, 1, lbound(InData%SPLS), ubound(InData%SPLS))
+      call RegPackBounds(Buf, 1, lbound(InData%SPLS, kind=B8Ki), ubound(InData%SPLS, kind=B8Ki))
       call RegPack(Buf, InData%SPLS)
    end if
    call RegPack(Buf, allocated(InData%SPLALPH))
    if (allocated(InData%SPLALPH)) then
-      call RegPackBounds(Buf, 1, lbound(InData%SPLALPH), ubound(InData%SPLALPH))
+      call RegPackBounds(Buf, 1, lbound(InData%SPLALPH, kind=B8Ki), ubound(InData%SPLALPH, kind=B8Ki))
       call RegPack(Buf, InData%SPLALPH)
    end if
    call RegPack(Buf, allocated(InData%SPLTBL))
    if (allocated(InData%SPLTBL)) then
-      call RegPackBounds(Buf, 1, lbound(InData%SPLTBL), ubound(InData%SPLTBL))
+      call RegPackBounds(Buf, 1, lbound(InData%SPLTBL, kind=B8Ki), ubound(InData%SPLTBL, kind=B8Ki))
       call RegPack(Buf, InData%SPLTBL)
    end if
    call RegPack(Buf, allocated(InData%SPLTIP))
    if (allocated(InData%SPLTIP)) then
-      call RegPackBounds(Buf, 1, lbound(InData%SPLTIP), ubound(InData%SPLTIP))
+      call RegPackBounds(Buf, 1, lbound(InData%SPLTIP, kind=B8Ki), ubound(InData%SPLTIP, kind=B8Ki))
       call RegPack(Buf, InData%SPLTIP)
    end if
    call RegPack(Buf, allocated(InData%SPLTI))
    if (allocated(InData%SPLTI)) then
-      call RegPackBounds(Buf, 1, lbound(InData%SPLTI), ubound(InData%SPLTI))
+      call RegPackBounds(Buf, 1, lbound(InData%SPLTI, kind=B8Ki), ubound(InData%SPLTI, kind=B8Ki))
       call RegPack(Buf, InData%SPLTI)
    end if
    call RegPack(Buf, allocated(InData%SPLTIGui))
    if (allocated(InData%SPLTIGui)) then
-      call RegPackBounds(Buf, 1, lbound(InData%SPLTIGui), ubound(InData%SPLTIGui))
+      call RegPackBounds(Buf, 1, lbound(InData%SPLTIGui, kind=B8Ki), ubound(InData%SPLTIGui, kind=B8Ki))
       call RegPack(Buf, InData%SPLTIGui)
    end if
    call RegPack(Buf, allocated(InData%SPLBLUNT))
    if (allocated(InData%SPLBLUNT)) then
-      call RegPackBounds(Buf, 1, lbound(InData%SPLBLUNT), ubound(InData%SPLBLUNT))
+      call RegPackBounds(Buf, 1, lbound(InData%SPLBLUNT, kind=B8Ki), ubound(InData%SPLBLUNT, kind=B8Ki))
       call RegPack(Buf, InData%SPLBLUNT)
    end if
    call RegPack(Buf, allocated(InData%CfVar))
    if (allocated(InData%CfVar)) then
-      call RegPackBounds(Buf, 1, lbound(InData%CfVar), ubound(InData%CfVar))
+      call RegPackBounds(Buf, 1, lbound(InData%CfVar, kind=B8Ki), ubound(InData%CfVar, kind=B8Ki))
       call RegPack(Buf, InData%CfVar)
    end if
    call RegPack(Buf, allocated(InData%d99Var))
    if (allocated(InData%d99Var)) then
-      call RegPackBounds(Buf, 1, lbound(InData%d99Var), ubound(InData%d99Var))
+      call RegPackBounds(Buf, 1, lbound(InData%d99Var, kind=B8Ki), ubound(InData%d99Var, kind=B8Ki))
       call RegPack(Buf, InData%d99Var)
    end if
    call RegPack(Buf, allocated(InData%dStarVar))
    if (allocated(InData%dStarVar)) then
-      call RegPackBounds(Buf, 1, lbound(InData%dStarVar), ubound(InData%dStarVar))
+      call RegPackBounds(Buf, 1, lbound(InData%dStarVar, kind=B8Ki), ubound(InData%dStarVar, kind=B8Ki))
       call RegPack(Buf, InData%dStarVar)
    end if
    call RegPack(Buf, allocated(InData%EdgeVelVar))
    if (allocated(InData%EdgeVelVar)) then
-      call RegPackBounds(Buf, 1, lbound(InData%EdgeVelVar), ubound(InData%EdgeVelVar))
+      call RegPackBounds(Buf, 1, lbound(InData%EdgeVelVar, kind=B8Ki), ubound(InData%EdgeVelVar, kind=B8Ki))
       call RegPack(Buf, InData%EdgeVelVar)
    end if
    call RegPack(Buf, InData%speccou)
@@ -2575,7 +2575,7 @@ subroutine AA_UnPackMisc(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(AA_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AA_UnPackMisc'
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -2887,8 +2887,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2, i3
-   integer(IntKi)                 :: LB(3), UB(3)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AA_CopyParam'
@@ -2914,8 +2914,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%toptip = SrcParamData%toptip
    DstParamData%bottip = SrcParamData%bottip
    if (allocated(SrcParamData%rotorregionlimitsVert)) then
-      LB(1:1) = lbound(SrcParamData%rotorregionlimitsVert)
-      UB(1:1) = ubound(SrcParamData%rotorregionlimitsVert)
+      LB(1:1) = lbound(SrcParamData%rotorregionlimitsVert, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%rotorregionlimitsVert, kind=B8Ki)
       if (.not. allocated(DstParamData%rotorregionlimitsVert)) then
          allocate(DstParamData%rotorregionlimitsVert(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2926,8 +2926,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%rotorregionlimitsVert = SrcParamData%rotorregionlimitsVert
    end if
    if (allocated(SrcParamData%rotorregionlimitsHorz)) then
-      LB(1:1) = lbound(SrcParamData%rotorregionlimitsHorz)
-      UB(1:1) = ubound(SrcParamData%rotorregionlimitsHorz)
+      LB(1:1) = lbound(SrcParamData%rotorregionlimitsHorz, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%rotorregionlimitsHorz, kind=B8Ki)
       if (.not. allocated(DstParamData%rotorregionlimitsHorz)) then
          allocate(DstParamData%rotorregionlimitsHorz(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2938,8 +2938,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%rotorregionlimitsHorz = SrcParamData%rotorregionlimitsHorz
    end if
    if (allocated(SrcParamData%rotorregionlimitsalph)) then
-      LB(1:1) = lbound(SrcParamData%rotorregionlimitsalph)
-      UB(1:1) = ubound(SrcParamData%rotorregionlimitsalph)
+      LB(1:1) = lbound(SrcParamData%rotorregionlimitsalph, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%rotorregionlimitsalph, kind=B8Ki)
       if (.not. allocated(DstParamData%rotorregionlimitsalph)) then
          allocate(DstParamData%rotorregionlimitsalph(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2950,8 +2950,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%rotorregionlimitsalph = SrcParamData%rotorregionlimitsalph
    end if
    if (allocated(SrcParamData%rotorregionlimitsrad)) then
-      LB(1:1) = lbound(SrcParamData%rotorregionlimitsrad)
-      UB(1:1) = ubound(SrcParamData%rotorregionlimitsrad)
+      LB(1:1) = lbound(SrcParamData%rotorregionlimitsrad, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%rotorregionlimitsrad, kind=B8Ki)
       if (.not. allocated(DstParamData%rotorregionlimitsrad)) then
          allocate(DstParamData%rotorregionlimitsrad(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2966,8 +2966,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%TxtFileOutput = SrcParamData%TxtFileOutput
    DstParamData%AAStart = SrcParamData%AAStart
    if (allocated(SrcParamData%ObsX)) then
-      LB(1:1) = lbound(SrcParamData%ObsX)
-      UB(1:1) = ubound(SrcParamData%ObsX)
+      LB(1:1) = lbound(SrcParamData%ObsX, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%ObsX, kind=B8Ki)
       if (.not. allocated(DstParamData%ObsX)) then
          allocate(DstParamData%ObsX(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2978,8 +2978,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%ObsX = SrcParamData%ObsX
    end if
    if (allocated(SrcParamData%ObsY)) then
-      LB(1:1) = lbound(SrcParamData%ObsY)
-      UB(1:1) = ubound(SrcParamData%ObsY)
+      LB(1:1) = lbound(SrcParamData%ObsY, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%ObsY, kind=B8Ki)
       if (.not. allocated(DstParamData%ObsY)) then
          allocate(DstParamData%ObsY(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2990,8 +2990,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%ObsY = SrcParamData%ObsY
    end if
    if (allocated(SrcParamData%ObsZ)) then
-      LB(1:1) = lbound(SrcParamData%ObsZ)
-      UB(1:1) = ubound(SrcParamData%ObsZ)
+      LB(1:1) = lbound(SrcParamData%ObsZ, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%ObsZ, kind=B8Ki)
       if (.not. allocated(DstParamData%ObsZ)) then
          allocate(DstParamData%ObsZ(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3002,8 +3002,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%ObsZ = SrcParamData%ObsZ
    end if
    if (allocated(SrcParamData%FreqList)) then
-      LB(1:1) = lbound(SrcParamData%FreqList)
-      UB(1:1) = ubound(SrcParamData%FreqList)
+      LB(1:1) = lbound(SrcParamData%FreqList, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%FreqList, kind=B8Ki)
       if (.not. allocated(DstParamData%FreqList)) then
          allocate(DstParamData%FreqList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3014,8 +3014,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%FreqList = SrcParamData%FreqList
    end if
    if (allocated(SrcParamData%Aweight)) then
-      LB(1:1) = lbound(SrcParamData%Aweight)
-      UB(1:1) = ubound(SrcParamData%Aweight)
+      LB(1:1) = lbound(SrcParamData%Aweight, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%Aweight, kind=B8Ki)
       if (.not. allocated(DstParamData%Aweight)) then
          allocate(DstParamData%Aweight(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3035,8 +3035,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%dz_turb_in = SrcParamData%dz_turb_in
    DstParamData%dy_turb_in = SrcParamData%dy_turb_in
    if (allocated(SrcParamData%TI_Grid_In)) then
-      LB(1:2) = lbound(SrcParamData%TI_Grid_In)
-      UB(1:2) = ubound(SrcParamData%TI_Grid_In)
+      LB(1:2) = lbound(SrcParamData%TI_Grid_In, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%TI_Grid_In, kind=B8Ki)
       if (.not. allocated(DstParamData%TI_Grid_In)) then
          allocate(DstParamData%TI_Grid_In(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3060,8 +3060,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%unOutFile4 = SrcParamData%unOutFile4
    DstParamData%RootName = SrcParamData%RootName
    if (allocated(SrcParamData%OutParam)) then
-      LB(1:1) = lbound(SrcParamData%OutParam)
-      UB(1:1) = ubound(SrcParamData%OutParam)
+      LB(1:1) = lbound(SrcParamData%OutParam, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%OutParam, kind=B8Ki)
       if (.not. allocated(DstParamData%OutParam)) then
          allocate(DstParamData%OutParam(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3076,8 +3076,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcParamData%StallStart)) then
-      LB(1:2) = lbound(SrcParamData%StallStart)
-      UB(1:2) = ubound(SrcParamData%StallStart)
+      LB(1:2) = lbound(SrcParamData%StallStart, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%StallStart, kind=B8Ki)
       if (.not. allocated(DstParamData%StallStart)) then
          allocate(DstParamData%StallStart(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3088,8 +3088,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%StallStart = SrcParamData%StallStart
    end if
    if (allocated(SrcParamData%TEThick)) then
-      LB(1:2) = lbound(SrcParamData%TEThick)
-      UB(1:2) = ubound(SrcParamData%TEThick)
+      LB(1:2) = lbound(SrcParamData%TEThick, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%TEThick, kind=B8Ki)
       if (.not. allocated(DstParamData%TEThick)) then
          allocate(DstParamData%TEThick(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3100,8 +3100,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%TEThick = SrcParamData%TEThick
    end if
    if (allocated(SrcParamData%TEAngle)) then
-      LB(1:2) = lbound(SrcParamData%TEAngle)
-      UB(1:2) = ubound(SrcParamData%TEAngle)
+      LB(1:2) = lbound(SrcParamData%TEAngle, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%TEAngle, kind=B8Ki)
       if (.not. allocated(DstParamData%TEAngle)) then
          allocate(DstParamData%TEAngle(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3112,8 +3112,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%TEAngle = SrcParamData%TEAngle
    end if
    if (allocated(SrcParamData%AerCent)) then
-      LB(1:3) = lbound(SrcParamData%AerCent)
-      UB(1:3) = ubound(SrcParamData%AerCent)
+      LB(1:3) = lbound(SrcParamData%AerCent, kind=B8Ki)
+      UB(1:3) = ubound(SrcParamData%AerCent, kind=B8Ki)
       if (.not. allocated(DstParamData%AerCent)) then
          allocate(DstParamData%AerCent(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3124,8 +3124,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%AerCent = SrcParamData%AerCent
    end if
    if (allocated(SrcParamData%BlAFID)) then
-      LB(1:2) = lbound(SrcParamData%BlAFID)
-      UB(1:2) = ubound(SrcParamData%BlAFID)
+      LB(1:2) = lbound(SrcParamData%BlAFID, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%BlAFID, kind=B8Ki)
       if (.not. allocated(DstParamData%BlAFID)) then
          allocate(DstParamData%BlAFID(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3136,8 +3136,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%BlAFID = SrcParamData%BlAFID
    end if
    if (allocated(SrcParamData%AFInfo)) then
-      LB(1:1) = lbound(SrcParamData%AFInfo)
-      UB(1:1) = ubound(SrcParamData%AFInfo)
+      LB(1:1) = lbound(SrcParamData%AFInfo, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%AFInfo, kind=B8Ki)
       if (.not. allocated(DstParamData%AFInfo)) then
          allocate(DstParamData%AFInfo(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3152,8 +3152,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcParamData%AFLECo)) then
-      LB(1:3) = lbound(SrcParamData%AFLECo)
-      UB(1:3) = ubound(SrcParamData%AFLECo)
+      LB(1:3) = lbound(SrcParamData%AFLECo, kind=B8Ki)
+      UB(1:3) = ubound(SrcParamData%AFLECo, kind=B8Ki)
       if (.not. allocated(DstParamData%AFLECo)) then
          allocate(DstParamData%AFLECo(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3164,8 +3164,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%AFLECo = SrcParamData%AFLECo
    end if
    if (allocated(SrcParamData%AFTECo)) then
-      LB(1:3) = lbound(SrcParamData%AFTECo)
-      UB(1:3) = ubound(SrcParamData%AFTECo)
+      LB(1:3) = lbound(SrcParamData%AFTECo, kind=B8Ki)
+      UB(1:3) = ubound(SrcParamData%AFTECo, kind=B8Ki)
       if (.not. allocated(DstParamData%AFTECo)) then
          allocate(DstParamData%AFTECo(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3176,8 +3176,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%AFTECo = SrcParamData%AFTECo
    end if
    if (allocated(SrcParamData%BlSpn)) then
-      LB(1:2) = lbound(SrcParamData%BlSpn)
-      UB(1:2) = ubound(SrcParamData%BlSpn)
+      LB(1:2) = lbound(SrcParamData%BlSpn, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%BlSpn, kind=B8Ki)
       if (.not. allocated(DstParamData%BlSpn)) then
          allocate(DstParamData%BlSpn(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3188,8 +3188,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%BlSpn = SrcParamData%BlSpn
    end if
    if (allocated(SrcParamData%BlChord)) then
-      LB(1:2) = lbound(SrcParamData%BlChord)
-      UB(1:2) = ubound(SrcParamData%BlChord)
+      LB(1:2) = lbound(SrcParamData%BlChord, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%BlChord, kind=B8Ki)
       if (.not. allocated(DstParamData%BlChord)) then
          allocate(DstParamData%BlChord(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3200,8 +3200,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%BlChord = SrcParamData%BlChord
    end if
    if (allocated(SrcParamData%ReListBL)) then
-      LB(1:1) = lbound(SrcParamData%ReListBL)
-      UB(1:1) = ubound(SrcParamData%ReListBL)
+      LB(1:1) = lbound(SrcParamData%ReListBL, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%ReListBL, kind=B8Ki)
       if (.not. allocated(DstParamData%ReListBL)) then
          allocate(DstParamData%ReListBL(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3212,8 +3212,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%ReListBL = SrcParamData%ReListBL
    end if
    if (allocated(SrcParamData%AOAListBL)) then
-      LB(1:1) = lbound(SrcParamData%AOAListBL)
-      UB(1:1) = ubound(SrcParamData%AOAListBL)
+      LB(1:1) = lbound(SrcParamData%AOAListBL, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%AOAListBL, kind=B8Ki)
       if (.not. allocated(DstParamData%AOAListBL)) then
          allocate(DstParamData%AOAListBL(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3224,8 +3224,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%AOAListBL = SrcParamData%AOAListBL
    end if
    if (allocated(SrcParamData%dStarAll1)) then
-      LB(1:3) = lbound(SrcParamData%dStarAll1)
-      UB(1:3) = ubound(SrcParamData%dStarAll1)
+      LB(1:3) = lbound(SrcParamData%dStarAll1, kind=B8Ki)
+      UB(1:3) = ubound(SrcParamData%dStarAll1, kind=B8Ki)
       if (.not. allocated(DstParamData%dStarAll1)) then
          allocate(DstParamData%dStarAll1(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3236,8 +3236,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%dStarAll1 = SrcParamData%dStarAll1
    end if
    if (allocated(SrcParamData%dStarAll2)) then
-      LB(1:3) = lbound(SrcParamData%dStarAll2)
-      UB(1:3) = ubound(SrcParamData%dStarAll2)
+      LB(1:3) = lbound(SrcParamData%dStarAll2, kind=B8Ki)
+      UB(1:3) = ubound(SrcParamData%dStarAll2, kind=B8Ki)
       if (.not. allocated(DstParamData%dStarAll2)) then
          allocate(DstParamData%dStarAll2(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3248,8 +3248,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%dStarAll2 = SrcParamData%dStarAll2
    end if
    if (allocated(SrcParamData%d99All1)) then
-      LB(1:3) = lbound(SrcParamData%d99All1)
-      UB(1:3) = ubound(SrcParamData%d99All1)
+      LB(1:3) = lbound(SrcParamData%d99All1, kind=B8Ki)
+      UB(1:3) = ubound(SrcParamData%d99All1, kind=B8Ki)
       if (.not. allocated(DstParamData%d99All1)) then
          allocate(DstParamData%d99All1(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3260,8 +3260,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%d99All1 = SrcParamData%d99All1
    end if
    if (allocated(SrcParamData%d99All2)) then
-      LB(1:3) = lbound(SrcParamData%d99All2)
-      UB(1:3) = ubound(SrcParamData%d99All2)
+      LB(1:3) = lbound(SrcParamData%d99All2, kind=B8Ki)
+      UB(1:3) = ubound(SrcParamData%d99All2, kind=B8Ki)
       if (.not. allocated(DstParamData%d99All2)) then
          allocate(DstParamData%d99All2(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3272,8 +3272,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%d99All2 = SrcParamData%d99All2
    end if
    if (allocated(SrcParamData%CfAll1)) then
-      LB(1:3) = lbound(SrcParamData%CfAll1)
-      UB(1:3) = ubound(SrcParamData%CfAll1)
+      LB(1:3) = lbound(SrcParamData%CfAll1, kind=B8Ki)
+      UB(1:3) = ubound(SrcParamData%CfAll1, kind=B8Ki)
       if (.not. allocated(DstParamData%CfAll1)) then
          allocate(DstParamData%CfAll1(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3284,8 +3284,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%CfAll1 = SrcParamData%CfAll1
    end if
    if (allocated(SrcParamData%CfAll2)) then
-      LB(1:3) = lbound(SrcParamData%CfAll2)
-      UB(1:3) = ubound(SrcParamData%CfAll2)
+      LB(1:3) = lbound(SrcParamData%CfAll2, kind=B8Ki)
+      UB(1:3) = ubound(SrcParamData%CfAll2, kind=B8Ki)
       if (.not. allocated(DstParamData%CfAll2)) then
          allocate(DstParamData%CfAll2(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3296,8 +3296,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%CfAll2 = SrcParamData%CfAll2
    end if
    if (allocated(SrcParamData%EdgeVelRat1)) then
-      LB(1:3) = lbound(SrcParamData%EdgeVelRat1)
-      UB(1:3) = ubound(SrcParamData%EdgeVelRat1)
+      LB(1:3) = lbound(SrcParamData%EdgeVelRat1, kind=B8Ki)
+      UB(1:3) = ubound(SrcParamData%EdgeVelRat1, kind=B8Ki)
       if (.not. allocated(DstParamData%EdgeVelRat1)) then
          allocate(DstParamData%EdgeVelRat1(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3308,8 +3308,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%EdgeVelRat1 = SrcParamData%EdgeVelRat1
    end if
    if (allocated(SrcParamData%EdgeVelRat2)) then
-      LB(1:3) = lbound(SrcParamData%EdgeVelRat2)
-      UB(1:3) = ubound(SrcParamData%EdgeVelRat2)
+      LB(1:3) = lbound(SrcParamData%EdgeVelRat2, kind=B8Ki)
+      UB(1:3) = ubound(SrcParamData%EdgeVelRat2, kind=B8Ki)
       if (.not. allocated(DstParamData%EdgeVelRat2)) then
          allocate(DstParamData%EdgeVelRat2(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3320,8 +3320,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%EdgeVelRat2 = SrcParamData%EdgeVelRat2
    end if
    if (allocated(SrcParamData%AFThickGuida)) then
-      LB(1:2) = lbound(SrcParamData%AFThickGuida)
-      UB(1:2) = ubound(SrcParamData%AFThickGuida)
+      LB(1:2) = lbound(SrcParamData%AFThickGuida, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%AFThickGuida, kind=B8Ki)
       if (.not. allocated(DstParamData%AFThickGuida)) then
          allocate(DstParamData%AFThickGuida(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3337,8 +3337,8 @@ subroutine AA_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(AA_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2, i3
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AA_DestroyParam'
@@ -3375,8 +3375,8 @@ subroutine AA_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%TI_Grid_In)
    end if
    if (allocated(ParamData%OutParam)) then
-      LB(1:1) = lbound(ParamData%OutParam)
-      UB(1:1) = ubound(ParamData%OutParam)
+      LB(1:1) = lbound(ParamData%OutParam, kind=B8Ki)
+      UB(1:1) = ubound(ParamData%OutParam, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyOutParmType(ParamData%OutParam(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3399,8 +3399,8 @@ subroutine AA_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%BlAFID)
    end if
    if (allocated(ParamData%AFInfo)) then
-      LB(1:1) = lbound(ParamData%AFInfo)
-      UB(1:1) = ubound(ParamData%AFInfo)
+      LB(1:1) = lbound(ParamData%AFInfo, kind=B8Ki)
+      UB(1:1) = ubound(ParamData%AFInfo, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call AFI_DestroyParam(ParamData%AFInfo(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3458,8 +3458,8 @@ subroutine AA_PackParam(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(AA_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AA_PackParam'
-   integer(IntKi)  :: i1, i2, i3
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)   :: LB(3), UB(3)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%DT)
    call RegPack(Buf, InData%IBLUNT)
@@ -3482,22 +3482,22 @@ subroutine AA_PackParam(Buf, Indata)
    call RegPack(Buf, InData%bottip)
    call RegPack(Buf, allocated(InData%rotorregionlimitsVert))
    if (allocated(InData%rotorregionlimitsVert)) then
-      call RegPackBounds(Buf, 1, lbound(InData%rotorregionlimitsVert), ubound(InData%rotorregionlimitsVert))
+      call RegPackBounds(Buf, 1, lbound(InData%rotorregionlimitsVert, kind=B8Ki), ubound(InData%rotorregionlimitsVert, kind=B8Ki))
       call RegPack(Buf, InData%rotorregionlimitsVert)
    end if
    call RegPack(Buf, allocated(InData%rotorregionlimitsHorz))
    if (allocated(InData%rotorregionlimitsHorz)) then
-      call RegPackBounds(Buf, 1, lbound(InData%rotorregionlimitsHorz), ubound(InData%rotorregionlimitsHorz))
+      call RegPackBounds(Buf, 1, lbound(InData%rotorregionlimitsHorz, kind=B8Ki), ubound(InData%rotorregionlimitsHorz, kind=B8Ki))
       call RegPack(Buf, InData%rotorregionlimitsHorz)
    end if
    call RegPack(Buf, allocated(InData%rotorregionlimitsalph))
    if (allocated(InData%rotorregionlimitsalph)) then
-      call RegPackBounds(Buf, 1, lbound(InData%rotorregionlimitsalph), ubound(InData%rotorregionlimitsalph))
+      call RegPackBounds(Buf, 1, lbound(InData%rotorregionlimitsalph, kind=B8Ki), ubound(InData%rotorregionlimitsalph, kind=B8Ki))
       call RegPack(Buf, InData%rotorregionlimitsalph)
    end if
    call RegPack(Buf, allocated(InData%rotorregionlimitsrad))
    if (allocated(InData%rotorregionlimitsrad)) then
-      call RegPackBounds(Buf, 1, lbound(InData%rotorregionlimitsrad), ubound(InData%rotorregionlimitsrad))
+      call RegPackBounds(Buf, 1, lbound(InData%rotorregionlimitsrad, kind=B8Ki), ubound(InData%rotorregionlimitsrad, kind=B8Ki))
       call RegPack(Buf, InData%rotorregionlimitsrad)
    end if
    call RegPack(Buf, InData%NrObsLoc)
@@ -3506,27 +3506,27 @@ subroutine AA_PackParam(Buf, Indata)
    call RegPack(Buf, InData%AAStart)
    call RegPack(Buf, allocated(InData%ObsX))
    if (allocated(InData%ObsX)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ObsX), ubound(InData%ObsX))
+      call RegPackBounds(Buf, 1, lbound(InData%ObsX, kind=B8Ki), ubound(InData%ObsX, kind=B8Ki))
       call RegPack(Buf, InData%ObsX)
    end if
    call RegPack(Buf, allocated(InData%ObsY))
    if (allocated(InData%ObsY)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ObsY), ubound(InData%ObsY))
+      call RegPackBounds(Buf, 1, lbound(InData%ObsY, kind=B8Ki), ubound(InData%ObsY, kind=B8Ki))
       call RegPack(Buf, InData%ObsY)
    end if
    call RegPack(Buf, allocated(InData%ObsZ))
    if (allocated(InData%ObsZ)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ObsZ), ubound(InData%ObsZ))
+      call RegPackBounds(Buf, 1, lbound(InData%ObsZ, kind=B8Ki), ubound(InData%ObsZ, kind=B8Ki))
       call RegPack(Buf, InData%ObsZ)
    end if
    call RegPack(Buf, allocated(InData%FreqList))
    if (allocated(InData%FreqList)) then
-      call RegPackBounds(Buf, 1, lbound(InData%FreqList), ubound(InData%FreqList))
+      call RegPackBounds(Buf, 1, lbound(InData%FreqList, kind=B8Ki), ubound(InData%FreqList, kind=B8Ki))
       call RegPack(Buf, InData%FreqList)
    end if
    call RegPack(Buf, allocated(InData%Aweight))
    if (allocated(InData%Aweight)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Aweight), ubound(InData%Aweight))
+      call RegPackBounds(Buf, 1, lbound(InData%Aweight, kind=B8Ki), ubound(InData%Aweight, kind=B8Ki))
       call RegPack(Buf, InData%Aweight)
    end if
    call RegPack(Buf, InData%Fsample)
@@ -3540,7 +3540,7 @@ subroutine AA_PackParam(Buf, Indata)
    call RegPack(Buf, InData%dy_turb_in)
    call RegPack(Buf, allocated(InData%TI_Grid_In))
    if (allocated(InData%TI_Grid_In)) then
-      call RegPackBounds(Buf, 2, lbound(InData%TI_Grid_In), ubound(InData%TI_Grid_In))
+      call RegPackBounds(Buf, 2, lbound(InData%TI_Grid_In, kind=B8Ki), ubound(InData%TI_Grid_In, kind=B8Ki))
       call RegPack(Buf, InData%TI_Grid_In)
    end if
    call RegPack(Buf, InData%FTitle)
@@ -3558,120 +3558,120 @@ subroutine AA_PackParam(Buf, Indata)
    call RegPack(Buf, InData%RootName)
    call RegPack(Buf, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
-      call RegPackBounds(Buf, 1, lbound(InData%OutParam), ubound(InData%OutParam))
-      LB(1:1) = lbound(InData%OutParam)
-      UB(1:1) = ubound(InData%OutParam)
+      call RegPackBounds(Buf, 1, lbound(InData%OutParam, kind=B8Ki), ubound(InData%OutParam, kind=B8Ki))
+      LB(1:1) = lbound(InData%OutParam, kind=B8Ki)
+      UB(1:1) = ubound(InData%OutParam, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackOutParmType(Buf, InData%OutParam(i1)) 
       end do
    end if
    call RegPack(Buf, allocated(InData%StallStart))
    if (allocated(InData%StallStart)) then
-      call RegPackBounds(Buf, 2, lbound(InData%StallStart), ubound(InData%StallStart))
+      call RegPackBounds(Buf, 2, lbound(InData%StallStart, kind=B8Ki), ubound(InData%StallStart, kind=B8Ki))
       call RegPack(Buf, InData%StallStart)
    end if
    call RegPack(Buf, allocated(InData%TEThick))
    if (allocated(InData%TEThick)) then
-      call RegPackBounds(Buf, 2, lbound(InData%TEThick), ubound(InData%TEThick))
+      call RegPackBounds(Buf, 2, lbound(InData%TEThick, kind=B8Ki), ubound(InData%TEThick, kind=B8Ki))
       call RegPack(Buf, InData%TEThick)
    end if
    call RegPack(Buf, allocated(InData%TEAngle))
    if (allocated(InData%TEAngle)) then
-      call RegPackBounds(Buf, 2, lbound(InData%TEAngle), ubound(InData%TEAngle))
+      call RegPackBounds(Buf, 2, lbound(InData%TEAngle, kind=B8Ki), ubound(InData%TEAngle, kind=B8Ki))
       call RegPack(Buf, InData%TEAngle)
    end if
    call RegPack(Buf, allocated(InData%AerCent))
    if (allocated(InData%AerCent)) then
-      call RegPackBounds(Buf, 3, lbound(InData%AerCent), ubound(InData%AerCent))
+      call RegPackBounds(Buf, 3, lbound(InData%AerCent, kind=B8Ki), ubound(InData%AerCent, kind=B8Ki))
       call RegPack(Buf, InData%AerCent)
    end if
    call RegPack(Buf, allocated(InData%BlAFID))
    if (allocated(InData%BlAFID)) then
-      call RegPackBounds(Buf, 2, lbound(InData%BlAFID), ubound(InData%BlAFID))
+      call RegPackBounds(Buf, 2, lbound(InData%BlAFID, kind=B8Ki), ubound(InData%BlAFID, kind=B8Ki))
       call RegPack(Buf, InData%BlAFID)
    end if
    call RegPack(Buf, allocated(InData%AFInfo))
    if (allocated(InData%AFInfo)) then
-      call RegPackBounds(Buf, 1, lbound(InData%AFInfo), ubound(InData%AFInfo))
-      LB(1:1) = lbound(InData%AFInfo)
-      UB(1:1) = ubound(InData%AFInfo)
+      call RegPackBounds(Buf, 1, lbound(InData%AFInfo, kind=B8Ki), ubound(InData%AFInfo, kind=B8Ki))
+      LB(1:1) = lbound(InData%AFInfo, kind=B8Ki)
+      UB(1:1) = ubound(InData%AFInfo, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call AFI_PackParam(Buf, InData%AFInfo(i1)) 
       end do
    end if
    call RegPack(Buf, allocated(InData%AFLECo))
    if (allocated(InData%AFLECo)) then
-      call RegPackBounds(Buf, 3, lbound(InData%AFLECo), ubound(InData%AFLECo))
+      call RegPackBounds(Buf, 3, lbound(InData%AFLECo, kind=B8Ki), ubound(InData%AFLECo, kind=B8Ki))
       call RegPack(Buf, InData%AFLECo)
    end if
    call RegPack(Buf, allocated(InData%AFTECo))
    if (allocated(InData%AFTECo)) then
-      call RegPackBounds(Buf, 3, lbound(InData%AFTECo), ubound(InData%AFTECo))
+      call RegPackBounds(Buf, 3, lbound(InData%AFTECo, kind=B8Ki), ubound(InData%AFTECo, kind=B8Ki))
       call RegPack(Buf, InData%AFTECo)
    end if
    call RegPack(Buf, allocated(InData%BlSpn))
    if (allocated(InData%BlSpn)) then
-      call RegPackBounds(Buf, 2, lbound(InData%BlSpn), ubound(InData%BlSpn))
+      call RegPackBounds(Buf, 2, lbound(InData%BlSpn, kind=B8Ki), ubound(InData%BlSpn, kind=B8Ki))
       call RegPack(Buf, InData%BlSpn)
    end if
    call RegPack(Buf, allocated(InData%BlChord))
    if (allocated(InData%BlChord)) then
-      call RegPackBounds(Buf, 2, lbound(InData%BlChord), ubound(InData%BlChord))
+      call RegPackBounds(Buf, 2, lbound(InData%BlChord, kind=B8Ki), ubound(InData%BlChord, kind=B8Ki))
       call RegPack(Buf, InData%BlChord)
    end if
    call RegPack(Buf, allocated(InData%ReListBL))
    if (allocated(InData%ReListBL)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ReListBL), ubound(InData%ReListBL))
+      call RegPackBounds(Buf, 1, lbound(InData%ReListBL, kind=B8Ki), ubound(InData%ReListBL, kind=B8Ki))
       call RegPack(Buf, InData%ReListBL)
    end if
    call RegPack(Buf, allocated(InData%AOAListBL))
    if (allocated(InData%AOAListBL)) then
-      call RegPackBounds(Buf, 1, lbound(InData%AOAListBL), ubound(InData%AOAListBL))
+      call RegPackBounds(Buf, 1, lbound(InData%AOAListBL, kind=B8Ki), ubound(InData%AOAListBL, kind=B8Ki))
       call RegPack(Buf, InData%AOAListBL)
    end if
    call RegPack(Buf, allocated(InData%dStarAll1))
    if (allocated(InData%dStarAll1)) then
-      call RegPackBounds(Buf, 3, lbound(InData%dStarAll1), ubound(InData%dStarAll1))
+      call RegPackBounds(Buf, 3, lbound(InData%dStarAll1, kind=B8Ki), ubound(InData%dStarAll1, kind=B8Ki))
       call RegPack(Buf, InData%dStarAll1)
    end if
    call RegPack(Buf, allocated(InData%dStarAll2))
    if (allocated(InData%dStarAll2)) then
-      call RegPackBounds(Buf, 3, lbound(InData%dStarAll2), ubound(InData%dStarAll2))
+      call RegPackBounds(Buf, 3, lbound(InData%dStarAll2, kind=B8Ki), ubound(InData%dStarAll2, kind=B8Ki))
       call RegPack(Buf, InData%dStarAll2)
    end if
    call RegPack(Buf, allocated(InData%d99All1))
    if (allocated(InData%d99All1)) then
-      call RegPackBounds(Buf, 3, lbound(InData%d99All1), ubound(InData%d99All1))
+      call RegPackBounds(Buf, 3, lbound(InData%d99All1, kind=B8Ki), ubound(InData%d99All1, kind=B8Ki))
       call RegPack(Buf, InData%d99All1)
    end if
    call RegPack(Buf, allocated(InData%d99All2))
    if (allocated(InData%d99All2)) then
-      call RegPackBounds(Buf, 3, lbound(InData%d99All2), ubound(InData%d99All2))
+      call RegPackBounds(Buf, 3, lbound(InData%d99All2, kind=B8Ki), ubound(InData%d99All2, kind=B8Ki))
       call RegPack(Buf, InData%d99All2)
    end if
    call RegPack(Buf, allocated(InData%CfAll1))
    if (allocated(InData%CfAll1)) then
-      call RegPackBounds(Buf, 3, lbound(InData%CfAll1), ubound(InData%CfAll1))
+      call RegPackBounds(Buf, 3, lbound(InData%CfAll1, kind=B8Ki), ubound(InData%CfAll1, kind=B8Ki))
       call RegPack(Buf, InData%CfAll1)
    end if
    call RegPack(Buf, allocated(InData%CfAll2))
    if (allocated(InData%CfAll2)) then
-      call RegPackBounds(Buf, 3, lbound(InData%CfAll2), ubound(InData%CfAll2))
+      call RegPackBounds(Buf, 3, lbound(InData%CfAll2, kind=B8Ki), ubound(InData%CfAll2, kind=B8Ki))
       call RegPack(Buf, InData%CfAll2)
    end if
    call RegPack(Buf, allocated(InData%EdgeVelRat1))
    if (allocated(InData%EdgeVelRat1)) then
-      call RegPackBounds(Buf, 3, lbound(InData%EdgeVelRat1), ubound(InData%EdgeVelRat1))
+      call RegPackBounds(Buf, 3, lbound(InData%EdgeVelRat1, kind=B8Ki), ubound(InData%EdgeVelRat1, kind=B8Ki))
       call RegPack(Buf, InData%EdgeVelRat1)
    end if
    call RegPack(Buf, allocated(InData%EdgeVelRat2))
    if (allocated(InData%EdgeVelRat2)) then
-      call RegPackBounds(Buf, 3, lbound(InData%EdgeVelRat2), ubound(InData%EdgeVelRat2))
+      call RegPackBounds(Buf, 3, lbound(InData%EdgeVelRat2, kind=B8Ki), ubound(InData%EdgeVelRat2, kind=B8Ki))
       call RegPack(Buf, InData%EdgeVelRat2)
    end if
    call RegPack(Buf, allocated(InData%AFThickGuida))
    if (allocated(InData%AFThickGuida)) then
-      call RegPackBounds(Buf, 2, lbound(InData%AFThickGuida), ubound(InData%AFThickGuida))
+      call RegPackBounds(Buf, 2, lbound(InData%AFThickGuida, kind=B8Ki), ubound(InData%AFThickGuida, kind=B8Ki))
       call RegPack(Buf, InData%AFThickGuida)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3681,8 +3681,8 @@ subroutine AA_UnPackParam(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(AA_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AA_UnPackParam'
-   integer(IntKi)  :: i1, i2, i3
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -4234,14 +4234,14 @@ subroutine AA_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(4), UB(4)
+   integer(B8Ki)                  :: LB(4), UB(4)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'AA_CopyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInputData%RotGtoL)) then
-      LB(1:4) = lbound(SrcInputData%RotGtoL)
-      UB(1:4) = ubound(SrcInputData%RotGtoL)
+      LB(1:4) = lbound(SrcInputData%RotGtoL, kind=B8Ki)
+      UB(1:4) = ubound(SrcInputData%RotGtoL, kind=B8Ki)
       if (.not. allocated(DstInputData%RotGtoL)) then
          allocate(DstInputData%RotGtoL(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4252,8 +4252,8 @@ subroutine AA_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%RotGtoL = SrcInputData%RotGtoL
    end if
    if (allocated(SrcInputData%AeroCent_G)) then
-      LB(1:3) = lbound(SrcInputData%AeroCent_G)
-      UB(1:3) = ubound(SrcInputData%AeroCent_G)
+      LB(1:3) = lbound(SrcInputData%AeroCent_G, kind=B8Ki)
+      UB(1:3) = ubound(SrcInputData%AeroCent_G, kind=B8Ki)
       if (.not. allocated(DstInputData%AeroCent_G)) then
          allocate(DstInputData%AeroCent_G(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4264,8 +4264,8 @@ subroutine AA_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%AeroCent_G = SrcInputData%AeroCent_G
    end if
    if (allocated(SrcInputData%Vrel)) then
-      LB(1:2) = lbound(SrcInputData%Vrel)
-      UB(1:2) = ubound(SrcInputData%Vrel)
+      LB(1:2) = lbound(SrcInputData%Vrel, kind=B8Ki)
+      UB(1:2) = ubound(SrcInputData%Vrel, kind=B8Ki)
       if (.not. allocated(DstInputData%Vrel)) then
          allocate(DstInputData%Vrel(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4276,8 +4276,8 @@ subroutine AA_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%Vrel = SrcInputData%Vrel
    end if
    if (allocated(SrcInputData%AoANoise)) then
-      LB(1:2) = lbound(SrcInputData%AoANoise)
-      UB(1:2) = ubound(SrcInputData%AoANoise)
+      LB(1:2) = lbound(SrcInputData%AoANoise, kind=B8Ki)
+      UB(1:2) = ubound(SrcInputData%AoANoise, kind=B8Ki)
       if (.not. allocated(DstInputData%AoANoise)) then
          allocate(DstInputData%AoANoise(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4288,8 +4288,8 @@ subroutine AA_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%AoANoise = SrcInputData%AoANoise
    end if
    if (allocated(SrcInputData%Inflow)) then
-      LB(1:3) = lbound(SrcInputData%Inflow)
-      UB(1:3) = ubound(SrcInputData%Inflow)
+      LB(1:3) = lbound(SrcInputData%Inflow, kind=B8Ki)
+      UB(1:3) = ubound(SrcInputData%Inflow, kind=B8Ki)
       if (.not. allocated(DstInputData%Inflow)) then
          allocate(DstInputData%Inflow(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4332,27 +4332,27 @@ subroutine AA_PackInput(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%RotGtoL))
    if (allocated(InData%RotGtoL)) then
-      call RegPackBounds(Buf, 4, lbound(InData%RotGtoL), ubound(InData%RotGtoL))
+      call RegPackBounds(Buf, 4, lbound(InData%RotGtoL, kind=B8Ki), ubound(InData%RotGtoL, kind=B8Ki))
       call RegPack(Buf, InData%RotGtoL)
    end if
    call RegPack(Buf, allocated(InData%AeroCent_G))
    if (allocated(InData%AeroCent_G)) then
-      call RegPackBounds(Buf, 3, lbound(InData%AeroCent_G), ubound(InData%AeroCent_G))
+      call RegPackBounds(Buf, 3, lbound(InData%AeroCent_G, kind=B8Ki), ubound(InData%AeroCent_G, kind=B8Ki))
       call RegPack(Buf, InData%AeroCent_G)
    end if
    call RegPack(Buf, allocated(InData%Vrel))
    if (allocated(InData%Vrel)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Vrel), ubound(InData%Vrel))
+      call RegPackBounds(Buf, 2, lbound(InData%Vrel, kind=B8Ki), ubound(InData%Vrel, kind=B8Ki))
       call RegPack(Buf, InData%Vrel)
    end if
    call RegPack(Buf, allocated(InData%AoANoise))
    if (allocated(InData%AoANoise)) then
-      call RegPackBounds(Buf, 2, lbound(InData%AoANoise), ubound(InData%AoANoise))
+      call RegPackBounds(Buf, 2, lbound(InData%AoANoise, kind=B8Ki), ubound(InData%AoANoise, kind=B8Ki))
       call RegPack(Buf, InData%AoANoise)
    end if
    call RegPack(Buf, allocated(InData%Inflow))
    if (allocated(InData%Inflow)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Inflow), ubound(InData%Inflow))
+      call RegPackBounds(Buf, 3, lbound(InData%Inflow, kind=B8Ki), ubound(InData%Inflow, kind=B8Ki))
       call RegPack(Buf, InData%Inflow)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4362,7 +4362,7 @@ subroutine AA_UnPackInput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(AA_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AA_UnPackInput'
-   integer(IntKi)  :: LB(4), UB(4)
+   integer(B8Ki)   :: LB(4), UB(4)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -4444,14 +4444,14 @@ subroutine AA_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(4), UB(4)
+   integer(B8Ki)                  :: LB(4), UB(4)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'AA_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOutputData%SumSpecNoise)) then
-      LB(1:3) = lbound(SrcOutputData%SumSpecNoise)
-      UB(1:3) = ubound(SrcOutputData%SumSpecNoise)
+      LB(1:3) = lbound(SrcOutputData%SumSpecNoise, kind=B8Ki)
+      UB(1:3) = ubound(SrcOutputData%SumSpecNoise, kind=B8Ki)
       if (.not. allocated(DstOutputData%SumSpecNoise)) then
          allocate(DstOutputData%SumSpecNoise(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4462,8 +4462,8 @@ subroutine AA_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%SumSpecNoise = SrcOutputData%SumSpecNoise
    end if
    if (allocated(SrcOutputData%SumSpecNoiseSep)) then
-      LB(1:3) = lbound(SrcOutputData%SumSpecNoiseSep)
-      UB(1:3) = ubound(SrcOutputData%SumSpecNoiseSep)
+      LB(1:3) = lbound(SrcOutputData%SumSpecNoiseSep, kind=B8Ki)
+      UB(1:3) = ubound(SrcOutputData%SumSpecNoiseSep, kind=B8Ki)
       if (.not. allocated(DstOutputData%SumSpecNoiseSep)) then
          allocate(DstOutputData%SumSpecNoiseSep(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4474,8 +4474,8 @@ subroutine AA_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%SumSpecNoiseSep = SrcOutputData%SumSpecNoiseSep
    end if
    if (allocated(SrcOutputData%OASPL)) then
-      LB(1:3) = lbound(SrcOutputData%OASPL)
-      UB(1:3) = ubound(SrcOutputData%OASPL)
+      LB(1:3) = lbound(SrcOutputData%OASPL, kind=B8Ki)
+      UB(1:3) = ubound(SrcOutputData%OASPL, kind=B8Ki)
       if (.not. allocated(DstOutputData%OASPL)) then
          allocate(DstOutputData%OASPL(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4486,8 +4486,8 @@ subroutine AA_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%OASPL = SrcOutputData%OASPL
    end if
    if (allocated(SrcOutputData%OASPL_Mech)) then
-      LB(1:4) = lbound(SrcOutputData%OASPL_Mech)
-      UB(1:4) = ubound(SrcOutputData%OASPL_Mech)
+      LB(1:4) = lbound(SrcOutputData%OASPL_Mech, kind=B8Ki)
+      UB(1:4) = ubound(SrcOutputData%OASPL_Mech, kind=B8Ki)
       if (.not. allocated(DstOutputData%OASPL_Mech)) then
          allocate(DstOutputData%OASPL_Mech(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4498,8 +4498,8 @@ subroutine AA_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%OASPL_Mech = SrcOutputData%OASPL_Mech
    end if
    if (allocated(SrcOutputData%DirectiviOutput)) then
-      LB(1:1) = lbound(SrcOutputData%DirectiviOutput)
-      UB(1:1) = ubound(SrcOutputData%DirectiviOutput)
+      LB(1:1) = lbound(SrcOutputData%DirectiviOutput, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%DirectiviOutput, kind=B8Ki)
       if (.not. allocated(DstOutputData%DirectiviOutput)) then
          allocate(DstOutputData%DirectiviOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4510,8 +4510,8 @@ subroutine AA_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%DirectiviOutput = SrcOutputData%DirectiviOutput
    end if
    if (allocated(SrcOutputData%OutLECoords)) then
-      LB(1:4) = lbound(SrcOutputData%OutLECoords)
-      UB(1:4) = ubound(SrcOutputData%OutLECoords)
+      LB(1:4) = lbound(SrcOutputData%OutLECoords, kind=B8Ki)
+      UB(1:4) = ubound(SrcOutputData%OutLECoords, kind=B8Ki)
       if (.not. allocated(DstOutputData%OutLECoords)) then
          allocate(DstOutputData%OutLECoords(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4522,8 +4522,8 @@ subroutine AA_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%OutLECoords = SrcOutputData%OutLECoords
    end if
    if (allocated(SrcOutputData%PtotalFreq)) then
-      LB(1:2) = lbound(SrcOutputData%PtotalFreq)
-      UB(1:2) = ubound(SrcOutputData%PtotalFreq)
+      LB(1:2) = lbound(SrcOutputData%PtotalFreq, kind=B8Ki)
+      UB(1:2) = ubound(SrcOutputData%PtotalFreq, kind=B8Ki)
       if (.not. allocated(DstOutputData%PtotalFreq)) then
          allocate(DstOutputData%PtotalFreq(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4534,8 +4534,8 @@ subroutine AA_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%PtotalFreq = SrcOutputData%PtotalFreq
    end if
    if (allocated(SrcOutputData%WriteOutputForPE)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutputForPE)
-      UB(1:1) = ubound(SrcOutputData%WriteOutputForPE)
+      LB(1:1) = lbound(SrcOutputData%WriteOutputForPE, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%WriteOutputForPE, kind=B8Ki)
       if (.not. allocated(DstOutputData%WriteOutputForPE)) then
          allocate(DstOutputData%WriteOutputForPE(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4546,8 +4546,8 @@ subroutine AA_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%WriteOutputForPE = SrcOutputData%WriteOutputForPE
    end if
    if (allocated(SrcOutputData%WriteOutput)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutput)
-      UB(1:1) = ubound(SrcOutputData%WriteOutput)
+      LB(1:1) = lbound(SrcOutputData%WriteOutput, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput, kind=B8Ki)
       if (.not. allocated(DstOutputData%WriteOutput)) then
          allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4558,8 +4558,8 @@ subroutine AA_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%WriteOutput = SrcOutputData%WriteOutput
    end if
    if (allocated(SrcOutputData%WriteOutputSep)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutputSep)
-      UB(1:1) = ubound(SrcOutputData%WriteOutputSep)
+      LB(1:1) = lbound(SrcOutputData%WriteOutputSep, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%WriteOutputSep, kind=B8Ki)
       if (.not. allocated(DstOutputData%WriteOutputSep)) then
          allocate(DstOutputData%WriteOutputSep(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4570,8 +4570,8 @@ subroutine AA_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%WriteOutputSep = SrcOutputData%WriteOutputSep
    end if
    if (allocated(SrcOutputData%WriteOutputNode)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutputNode)
-      UB(1:1) = ubound(SrcOutputData%WriteOutputNode)
+      LB(1:1) = lbound(SrcOutputData%WriteOutputNode, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%WriteOutputNode, kind=B8Ki)
       if (.not. allocated(DstOutputData%WriteOutputNode)) then
          allocate(DstOutputData%WriteOutputNode(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4632,57 +4632,57 @@ subroutine AA_PackOutput(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%SumSpecNoise))
    if (allocated(InData%SumSpecNoise)) then
-      call RegPackBounds(Buf, 3, lbound(InData%SumSpecNoise), ubound(InData%SumSpecNoise))
+      call RegPackBounds(Buf, 3, lbound(InData%SumSpecNoise, kind=B8Ki), ubound(InData%SumSpecNoise, kind=B8Ki))
       call RegPack(Buf, InData%SumSpecNoise)
    end if
    call RegPack(Buf, allocated(InData%SumSpecNoiseSep))
    if (allocated(InData%SumSpecNoiseSep)) then
-      call RegPackBounds(Buf, 3, lbound(InData%SumSpecNoiseSep), ubound(InData%SumSpecNoiseSep))
+      call RegPackBounds(Buf, 3, lbound(InData%SumSpecNoiseSep, kind=B8Ki), ubound(InData%SumSpecNoiseSep, kind=B8Ki))
       call RegPack(Buf, InData%SumSpecNoiseSep)
    end if
    call RegPack(Buf, allocated(InData%OASPL))
    if (allocated(InData%OASPL)) then
-      call RegPackBounds(Buf, 3, lbound(InData%OASPL), ubound(InData%OASPL))
+      call RegPackBounds(Buf, 3, lbound(InData%OASPL, kind=B8Ki), ubound(InData%OASPL, kind=B8Ki))
       call RegPack(Buf, InData%OASPL)
    end if
    call RegPack(Buf, allocated(InData%OASPL_Mech))
    if (allocated(InData%OASPL_Mech)) then
-      call RegPackBounds(Buf, 4, lbound(InData%OASPL_Mech), ubound(InData%OASPL_Mech))
+      call RegPackBounds(Buf, 4, lbound(InData%OASPL_Mech, kind=B8Ki), ubound(InData%OASPL_Mech, kind=B8Ki))
       call RegPack(Buf, InData%OASPL_Mech)
    end if
    call RegPack(Buf, allocated(InData%DirectiviOutput))
    if (allocated(InData%DirectiviOutput)) then
-      call RegPackBounds(Buf, 1, lbound(InData%DirectiviOutput), ubound(InData%DirectiviOutput))
+      call RegPackBounds(Buf, 1, lbound(InData%DirectiviOutput, kind=B8Ki), ubound(InData%DirectiviOutput, kind=B8Ki))
       call RegPack(Buf, InData%DirectiviOutput)
    end if
    call RegPack(Buf, allocated(InData%OutLECoords))
    if (allocated(InData%OutLECoords)) then
-      call RegPackBounds(Buf, 4, lbound(InData%OutLECoords), ubound(InData%OutLECoords))
+      call RegPackBounds(Buf, 4, lbound(InData%OutLECoords, kind=B8Ki), ubound(InData%OutLECoords, kind=B8Ki))
       call RegPack(Buf, InData%OutLECoords)
    end if
    call RegPack(Buf, allocated(InData%PtotalFreq))
    if (allocated(InData%PtotalFreq)) then
-      call RegPackBounds(Buf, 2, lbound(InData%PtotalFreq), ubound(InData%PtotalFreq))
+      call RegPackBounds(Buf, 2, lbound(InData%PtotalFreq, kind=B8Ki), ubound(InData%PtotalFreq, kind=B8Ki))
       call RegPack(Buf, InData%PtotalFreq)
    end if
    call RegPack(Buf, allocated(InData%WriteOutputForPE))
    if (allocated(InData%WriteOutputForPE)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputForPE), ubound(InData%WriteOutputForPE))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputForPE, kind=B8Ki), ubound(InData%WriteOutputForPE, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputForPE)
    end if
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutput, kind=B8Ki), ubound(InData%WriteOutput, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutput)
    end if
    call RegPack(Buf, allocated(InData%WriteOutputSep))
    if (allocated(InData%WriteOutputSep)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputSep), ubound(InData%WriteOutputSep))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputSep, kind=B8Ki), ubound(InData%WriteOutputSep, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputSep)
    end if
    call RegPack(Buf, allocated(InData%WriteOutputNode))
    if (allocated(InData%WriteOutputNode)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputNode), ubound(InData%WriteOutputNode))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputNode, kind=B8Ki), ubound(InData%WriteOutputNode, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputNode)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4692,7 +4692,7 @@ subroutine AA_UnPackOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(AA_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AA_UnPackOutput'
-   integer(IntKi)  :: LB(4), UB(4)
+   integer(B8Ki)   :: LB(4), UB(4)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return

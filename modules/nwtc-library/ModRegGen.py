@@ -7,6 +7,7 @@ type_map = {
     'C1': 'character(*)',
     'L1': 'logical',
     'I4': 'integer(B4Ki)',
+    'I8': 'integer(B8Ki)',
     'R4': 'real(R4Ki)',
     'R8': 'real(R8Ki)',
 }
@@ -20,15 +21,15 @@ module ModReg
 
    private
    public :: PackBuffer
-   public :: WritePackBuffer, ReadPackBuffer, InitPackBuffer, RegCheckErr
+   public :: WritePackBuffer, ReadPackBuffer, InitPackBuffer, DestroyPackBuffer, RegCheckErr
    public :: RegPack, RegPackBounds, RegPackPointer
    public :: RegUnpack, RegUnpackBounds, RegUnpackPointer
 
    type :: PackBuffer
       integer(B1Ki), allocatable  :: Bytes(:)
-      integer(IntKi)              :: NB
+      integer(B8Ki)               :: NB
       type(c_ptr), allocatable    :: Pointers(:)
-      integer(IntKi)              :: NP
+      integer(B8Ki)               :: NP
       integer(IntKi)              :: ErrStat = ErrID_Fatal
       character(ErrMsgLen)        :: ErrMsg = 'PackBuffer not initialized'
    end type
@@ -42,8 +43,8 @@ contains
       character(ErrMsgLen), intent(out) :: ErrMsg
 
       character(*), parameter           :: RoutineName = "InitPackBuffer"
-      integer(IntKi), parameter         :: NumPointersInit = 128
-      integer(IntKi), parameter         :: NumBytesInit = 1024
+      integer(B8Ki), parameter          :: NumPointersInit = 128
+      integer(B8Ki), parameter          :: NumBytesInit = 1024
       integer(IntKi)                    :: stat
 
       ErrStat = ErrID_None
@@ -77,6 +78,25 @@ contains
          end if
       end if
 
+   end subroutine
+
+   subroutine DestroyPackBuffer(Buf, ErrStat, ErrMsg)
+      type(PackBuffer), intent(inout)   :: Buf
+      integer(IntKi), intent(out)       :: ErrStat
+      character(ErrMsgLen), intent(out) :: ErrMsg
+
+      character(*), parameter           :: RoutineName = "DestroyPackBuffer"
+
+      ErrStat = ErrID_None
+      ErrMsg = ""
+
+      Buf%ErrStat = ErrID_None
+      Buf%ErrMsg = ""
+      Buf%NP = 0
+      Buf%NB = 0
+      
+      if (allocated(Buf%Pointers)) deallocate (Buf%Pointers)
+      if (allocated(Buf%Bytes   )) deallocate (Buf%Bytes)
    end subroutine
 
    subroutine WritePackBuffer(Buf, Unit, ErrStat, ErrMsg)
@@ -205,8 +225,8 @@ contains
       logical, intent(out)              :: Found
 
       type(c_ptr), allocatable          :: PointersTmp(:)
-      integer(IntKi)                    :: NewSize
-      integer(B4Ki)                     :: i
+      integer(B8Ki)                     :: NewSize
+      integer(B8Ki)                     :: i
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -225,7 +245,7 @@ contains
 
       ! If pointer index is full, grow pointer index
       if (Buf%NP == size(Buf%Pointers)) then
-         NewSize = int(1.5_R4Ki * real(Buf%NP, R4Ki), IntKi)
+         NewSize = int(1.5_R8Ki * real(Buf%NP, R8Ki), B8Ki)
          call move_alloc(Buf%Pointers, PointersTmp)
          allocate (Buf%Pointers(NewSize), stat=Buf%ErrStat)
          if (Buf%ErrStat /= ErrID_None) then
@@ -249,7 +269,7 @@ contains
    subroutine RegUnpackPointer(Buf, Ptr, Idx)
       type(PackBuffer), intent(inout)   :: Buf
       type(c_ptr), intent(out)          :: Ptr
-      integer(B4Ki), intent(out)        :: Idx
+      integer(B8Ki), intent(out)        :: Idx
 
       ! If buffer error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -264,7 +284,8 @@ contains
 
    subroutine RegPackBounds(Buf, R, LB, UB)
       type(PackBuffer), intent(inout)  :: Buf
-      integer(B4Ki), intent(in)        :: R, LB(:), UB(:)
+      integer(B4Ki), intent(in)        :: R
+      integer(B8Ki), intent(in)        :: LB(:), UB(:)
       
       ! If buffer has an error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -278,7 +299,7 @@ contains
    subroutine RegUnpackBounds(Buf, R, LB, UB)
       type(PackBuffer), intent(inout)   :: Buf
       integer(B4Ki), intent(in)         :: R
-      integer(B4Ki), intent(out)        :: LB(:), UB(:)
+      integer(B8Ki), intent(out)        :: LB(:), UB(:)
 
       ! If buffer has an error, return
       if (Buf%ErrStat /= ErrID_None) return
@@ -291,10 +312,10 @@ contains
 
    subroutine GrowBuffer(Buf, N)
       type(PackBuffer), intent(inout)   :: Buf
-      integer(B4Ki), intent(in)         :: N
+      integer(B8Ki), intent(in)         :: N
 
       integer(B1Ki), allocatable        :: BytesTmp(:)
-      integer(B4Ki)                     :: NewSize
+      integer(B8Ki)                     :: NewSize
       integer(IntKi)                    :: stat
       
       ! Return if there is a buffer error
@@ -304,7 +325,7 @@ contains
       if (size(Buf%Bytes) > Buf%NB + N) return
 
       ! Calculate new size
-      NewSize = int(real(Buf%NB + N, R4Ki) * 1.8_R4Ki, IntKi)
+      NewSize = int(real(Buf%NB + N, R8Ki) * 1.8_R8Ki, B8Ki)
 
       ! Move allocation to temporary array and allocate buffer with new size
       call move_alloc(Buf%Bytes, BytesTmp)
@@ -329,7 +350,7 @@ def gen_pack(w, dt, decl, rank):
    w.write(f'\n\n   subroutine {name}(Buf, Data)')
    w.write(f'\n      type(PackBuffer), intent(inout)         :: Buf')
    w.write(f'\n      {decl+", intent(in)":<38s}  :: Data{dims}')
-   w.write(f'\n      integer(IntKi)                          :: DataSize')
+   w.write(f'\n      integer(B8Ki)                           :: DataSize')
    w.write(f'\n')
    w.write(f'\n      ! If buffer error, return')
    w.write(f'\n      if (Buf%ErrStat /= ErrID_None) return')
@@ -368,7 +389,7 @@ def gen_unpack(w, dt, decl, rank):
    w.write(f'\n   subroutine {name}(Buf, Data)')
    w.write(f'\n      type(PackBuffer), intent(inout)         :: Buf')
    w.write(f'\n      {decl+", intent(out)":<38s}  :: Data{dims}')
-   w.write(f'\n      integer(IntKi)                          :: DataSize')
+   w.write(f'\n      integer(B8Ki)                           :: DataSize')
    w.write(f'\n')
    w.write(f'\n      ! If buffer error, return')
    w.write(f'\n      if (Buf%ErrStat /= ErrID_None) return')
@@ -424,7 +445,7 @@ def gen_pack_alloc(w, dt, decl, rank):
    w.write(f'\n')
    if rank > 0:
       w.write(f'\n      ! Write array bounds')
-      w.write(f'\n      call RegPackBounds(Buf, {rank}, lbound(Data), ubound(Data))')
+      w.write(f'\n      call RegPackBounds(Buf, {rank}, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))')
    w.write(f'\n')
    w.write(f'\n      ! Write data to buffer')
    w.write(f'\n      call RegPack(Buf, Data)')
@@ -444,7 +465,7 @@ def gen_unpack_alloc(w, dt, decl, rank):
    w.write(f'\n      integer(IntKi)                          :: stat')
    w.write(f'\n      logical                               :: IsAllocated')
    if rank > 0:
-      w.write(f'\n      integer(IntKi)                        :: LB({rank}), UB({rank})')
+      w.write(f'\n      integer(B8Ki)                          :: LB({rank}), UB({rank})')
    w.write(f'\n')
    w.write(f'\n      ! If buffer error, return')
    w.write(f'\n      if (Buf%ErrStat /= ErrID_None) return')
@@ -499,7 +520,7 @@ def gen_pack_ptr(w, dt, decl, rank):
    if rank > 0:
       w.write(f'\n')
       w.write(f'\n      ! Write array bounds')
-      w.write(f'\n      call RegPackBounds(Buf, {rank}, lbound(Data), ubound(Data))')
+      w.write(f'\n      call RegPackBounds(Buf, {rank}, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))')
    w.write(f'\n')
    w.write(f'\n      ! Write pointer info')
    w.write(f'\n      call RegPackPointer(Buf, c_loc(Data), PtrInIndex)')
@@ -520,11 +541,11 @@ def gen_unpack_ptr(w, dt, decl, rank):
    w.write(f'\n   subroutine {name}(Buf, Data)')
    w.write(f'\n      type(PackBuffer), intent(inout)         :: Buf')
    w.write(f'\n      {decl+", pointer, intent(out)":<38s}  :: Data{dims}')
-   w.write(f'\n      integer(IntKi)                          :: PtrIdx, stat')
+   w.write(f'\n      integer(B8Ki)                           :: PtrIdx, stat')
    w.write(f'\n      logical                               :: IsAssociated')
    w.write(f'\n      type(c_ptr)                           :: Ptr')
    if rank > 0:
-      w.write(f'\n      integer(IntKi)                        :: LB({rank}), UB({rank})')
+      w.write(f'\n      integer(B8Ki)                         :: LB({rank}), UB({rank})')
    w.write(f'\n')
    w.write(f'\n      ! If buffer error, return')
    w.write(f'\n      if (Buf%ErrStat /= ErrID_None) return')
@@ -593,11 +614,5 @@ with open('src/ModReg.f90', 'w') as w:
     for (dt,decl), rank in product(type_map.items(), range(num_ranks+1)):
         gen_pack(w, dt, decl, rank)
         gen_unpack(w, dt, decl, rank)
-
-      #   gen_pack_alloc(w, dt, decl, rank)
-      #   gen_unpack_alloc(w, dt, decl, rank)
-
-      #   gen_pack_ptr(w, dt, decl, rank)
-      #   gen_unpack_ptr(w, dt, decl, rank)
 
     w.write('\nend module')

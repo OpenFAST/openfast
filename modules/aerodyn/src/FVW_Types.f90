@@ -363,7 +363,7 @@ subroutine FVW_CopyGridOutType(SrcGridOutTypeData, DstGridOutTypeData, CtrlCode,
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(4), UB(4)
+   integer(B8Ki)                  :: LB(4), UB(4)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'FVW_CopyGridOutType'
    ErrStat = ErrID_None
@@ -383,8 +383,8 @@ subroutine FVW_CopyGridOutType(SrcGridOutTypeData, DstGridOutTypeData, CtrlCode,
    DstGridOutTypeData%ny = SrcGridOutTypeData%ny
    DstGridOutTypeData%nz = SrcGridOutTypeData%nz
    if (allocated(SrcGridOutTypeData%uGrid)) then
-      LB(1:4) = lbound(SrcGridOutTypeData%uGrid)
-      UB(1:4) = ubound(SrcGridOutTypeData%uGrid)
+      LB(1:4) = lbound(SrcGridOutTypeData%uGrid, kind=B8Ki)
+      UB(1:4) = ubound(SrcGridOutTypeData%uGrid, kind=B8Ki)
       if (.not. allocated(DstGridOutTypeData%uGrid)) then
          allocate(DstGridOutTypeData%uGrid(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -395,8 +395,8 @@ subroutine FVW_CopyGridOutType(SrcGridOutTypeData, DstGridOutTypeData, CtrlCode,
       DstGridOutTypeData%uGrid = SrcGridOutTypeData%uGrid
    end if
    if (allocated(SrcGridOutTypeData%omGrid)) then
-      LB(1:4) = lbound(SrcGridOutTypeData%omGrid)
-      UB(1:4) = ubound(SrcGridOutTypeData%omGrid)
+      LB(1:4) = lbound(SrcGridOutTypeData%omGrid, kind=B8Ki)
+      UB(1:4) = ubound(SrcGridOutTypeData%omGrid, kind=B8Ki)
       if (.not. allocated(DstGridOutTypeData%omGrid)) then
          allocate(DstGridOutTypeData%omGrid(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -445,12 +445,12 @@ subroutine FVW_PackGridOutType(Buf, Indata)
    call RegPack(Buf, InData%nz)
    call RegPack(Buf, allocated(InData%uGrid))
    if (allocated(InData%uGrid)) then
-      call RegPackBounds(Buf, 4, lbound(InData%uGrid), ubound(InData%uGrid))
+      call RegPackBounds(Buf, 4, lbound(InData%uGrid, kind=B8Ki), ubound(InData%uGrid, kind=B8Ki))
       call RegPack(Buf, InData%uGrid)
    end if
    call RegPack(Buf, allocated(InData%omGrid))
    if (allocated(InData%omGrid)) then
-      call RegPackBounds(Buf, 4, lbound(InData%omGrid), ubound(InData%omGrid))
+      call RegPackBounds(Buf, 4, lbound(InData%omGrid, kind=B8Ki), ubound(InData%omGrid, kind=B8Ki))
       call RegPack(Buf, InData%omGrid)
    end if
    call RegPack(Buf, InData%tLastOutput)
@@ -461,7 +461,7 @@ subroutine FVW_UnPackGridOutType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(GridOutType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FVW_UnPackGridOutType'
-   integer(IntKi)  :: LB(4), UB(4)
+   integer(B8Ki)   :: LB(4), UB(4)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -531,14 +531,14 @@ subroutine FVW_CopyT_Sgmt(SrcT_SgmtData, DstT_SgmtData, CtrlCode, ErrStat, ErrMs
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'FVW_CopyT_Sgmt'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcT_SgmtData%Points)) then
-      LB(1:2) = lbound(SrcT_SgmtData%Points)
-      UB(1:2) = ubound(SrcT_SgmtData%Points)
+      LB(1:2) = lbound(SrcT_SgmtData%Points, kind=B8Ki)
+      UB(1:2) = ubound(SrcT_SgmtData%Points, kind=B8Ki)
       if (.not. allocated(DstT_SgmtData%Points)) then
          allocate(DstT_SgmtData%Points(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -549,8 +549,8 @@ subroutine FVW_CopyT_Sgmt(SrcT_SgmtData, DstT_SgmtData, CtrlCode, ErrStat, ErrMs
       DstT_SgmtData%Points = SrcT_SgmtData%Points
    end if
    if (allocated(SrcT_SgmtData%Connct)) then
-      LB(1:2) = lbound(SrcT_SgmtData%Connct)
-      UB(1:2) = ubound(SrcT_SgmtData%Connct)
+      LB(1:2) = lbound(SrcT_SgmtData%Connct, kind=B8Ki)
+      UB(1:2) = ubound(SrcT_SgmtData%Connct, kind=B8Ki)
       if (.not. allocated(DstT_SgmtData%Connct)) then
          allocate(DstT_SgmtData%Connct(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -561,8 +561,8 @@ subroutine FVW_CopyT_Sgmt(SrcT_SgmtData, DstT_SgmtData, CtrlCode, ErrStat, ErrMs
       DstT_SgmtData%Connct = SrcT_SgmtData%Connct
    end if
    if (allocated(SrcT_SgmtData%Gamma)) then
-      LB(1:1) = lbound(SrcT_SgmtData%Gamma)
-      UB(1:1) = ubound(SrcT_SgmtData%Gamma)
+      LB(1:1) = lbound(SrcT_SgmtData%Gamma, kind=B8Ki)
+      UB(1:1) = ubound(SrcT_SgmtData%Gamma, kind=B8Ki)
       if (.not. allocated(DstT_SgmtData%Gamma)) then
          allocate(DstT_SgmtData%Gamma(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -573,8 +573,8 @@ subroutine FVW_CopyT_Sgmt(SrcT_SgmtData, DstT_SgmtData, CtrlCode, ErrStat, ErrMs
       DstT_SgmtData%Gamma = SrcT_SgmtData%Gamma
    end if
    if (allocated(SrcT_SgmtData%Epsilon)) then
-      LB(1:1) = lbound(SrcT_SgmtData%Epsilon)
-      UB(1:1) = ubound(SrcT_SgmtData%Epsilon)
+      LB(1:1) = lbound(SrcT_SgmtData%Epsilon, kind=B8Ki)
+      UB(1:1) = ubound(SrcT_SgmtData%Epsilon, kind=B8Ki)
       if (.not. allocated(DstT_SgmtData%Epsilon)) then
          allocate(DstT_SgmtData%Epsilon(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -617,22 +617,22 @@ subroutine FVW_PackT_Sgmt(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%Points))
    if (allocated(InData%Points)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Points), ubound(InData%Points))
+      call RegPackBounds(Buf, 2, lbound(InData%Points, kind=B8Ki), ubound(InData%Points, kind=B8Ki))
       call RegPack(Buf, InData%Points)
    end if
    call RegPack(Buf, allocated(InData%Connct))
    if (allocated(InData%Connct)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Connct), ubound(InData%Connct))
+      call RegPackBounds(Buf, 2, lbound(InData%Connct, kind=B8Ki), ubound(InData%Connct, kind=B8Ki))
       call RegPack(Buf, InData%Connct)
    end if
    call RegPack(Buf, allocated(InData%Gamma))
    if (allocated(InData%Gamma)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Gamma), ubound(InData%Gamma))
+      call RegPackBounds(Buf, 1, lbound(InData%Gamma, kind=B8Ki), ubound(InData%Gamma, kind=B8Ki))
       call RegPack(Buf, InData%Gamma)
    end if
    call RegPack(Buf, allocated(InData%Epsilon))
    if (allocated(InData%Epsilon)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Epsilon), ubound(InData%Epsilon))
+      call RegPackBounds(Buf, 1, lbound(InData%Epsilon, kind=B8Ki), ubound(InData%Epsilon, kind=B8Ki))
       call RegPack(Buf, InData%Epsilon)
    end if
    call RegPack(Buf, InData%RegFunction)
@@ -645,7 +645,7 @@ subroutine FVW_UnPackT_Sgmt(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(T_Sgmt), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FVW_UnPackT_Sgmt'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -719,14 +719,14 @@ subroutine FVW_CopyT_Part(SrcT_PartData, DstT_PartData, CtrlCode, ErrStat, ErrMs
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'FVW_CopyT_Part'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcT_PartData%P)) then
-      LB(1:2) = lbound(SrcT_PartData%P)
-      UB(1:2) = ubound(SrcT_PartData%P)
+      LB(1:2) = lbound(SrcT_PartData%P, kind=B8Ki)
+      UB(1:2) = ubound(SrcT_PartData%P, kind=B8Ki)
       if (.not. allocated(DstT_PartData%P)) then
          allocate(DstT_PartData%P(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -737,8 +737,8 @@ subroutine FVW_CopyT_Part(SrcT_PartData, DstT_PartData, CtrlCode, ErrStat, ErrMs
       DstT_PartData%P = SrcT_PartData%P
    end if
    if (allocated(SrcT_PartData%Alpha)) then
-      LB(1:2) = lbound(SrcT_PartData%Alpha)
-      UB(1:2) = ubound(SrcT_PartData%Alpha)
+      LB(1:2) = lbound(SrcT_PartData%Alpha, kind=B8Ki)
+      UB(1:2) = ubound(SrcT_PartData%Alpha, kind=B8Ki)
       if (.not. allocated(DstT_PartData%Alpha)) then
          allocate(DstT_PartData%Alpha(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -749,8 +749,8 @@ subroutine FVW_CopyT_Part(SrcT_PartData, DstT_PartData, CtrlCode, ErrStat, ErrMs
       DstT_PartData%Alpha = SrcT_PartData%Alpha
    end if
    if (allocated(SrcT_PartData%RegParam)) then
-      LB(1:1) = lbound(SrcT_PartData%RegParam)
-      UB(1:1) = ubound(SrcT_PartData%RegParam)
+      LB(1:1) = lbound(SrcT_PartData%RegParam, kind=B8Ki)
+      UB(1:1) = ubound(SrcT_PartData%RegParam, kind=B8Ki)
       if (.not. allocated(DstT_PartData%RegParam)) then
          allocate(DstT_PartData%RegParam(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -789,17 +789,17 @@ subroutine FVW_PackT_Part(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%P))
    if (allocated(InData%P)) then
-      call RegPackBounds(Buf, 2, lbound(InData%P), ubound(InData%P))
+      call RegPackBounds(Buf, 2, lbound(InData%P, kind=B8Ki), ubound(InData%P, kind=B8Ki))
       call RegPack(Buf, InData%P)
    end if
    call RegPack(Buf, allocated(InData%Alpha))
    if (allocated(InData%Alpha)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Alpha), ubound(InData%Alpha))
+      call RegPackBounds(Buf, 2, lbound(InData%Alpha, kind=B8Ki), ubound(InData%Alpha, kind=B8Ki))
       call RegPack(Buf, InData%Alpha)
    end if
    call RegPack(Buf, allocated(InData%RegParam))
    if (allocated(InData%RegParam)) then
-      call RegPackBounds(Buf, 1, lbound(InData%RegParam), ubound(InData%RegParam))
+      call RegPackBounds(Buf, 1, lbound(InData%RegParam, kind=B8Ki), ubound(InData%RegParam, kind=B8Ki))
       call RegPack(Buf, InData%RegParam)
    end if
    call RegPack(Buf, InData%RegFunction)
@@ -811,7 +811,7 @@ subroutine FVW_UnPackT_Part(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(T_Part), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FVW_UnPackT_Part'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -869,14 +869,14 @@ subroutine FVW_CopyWng_ParameterType(SrcWng_ParameterTypeData, DstWng_ParameterT
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'FVW_CopyWng_ParameterType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcWng_ParameterTypeData%chord_LL)) then
-      LB(1:1) = lbound(SrcWng_ParameterTypeData%chord_LL)
-      UB(1:1) = ubound(SrcWng_ParameterTypeData%chord_LL)
+      LB(1:1) = lbound(SrcWng_ParameterTypeData%chord_LL, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_ParameterTypeData%chord_LL, kind=B8Ki)
       if (.not. allocated(DstWng_ParameterTypeData%chord_LL)) then
          allocate(DstWng_ParameterTypeData%chord_LL(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -887,8 +887,8 @@ subroutine FVW_CopyWng_ParameterType(SrcWng_ParameterTypeData, DstWng_ParameterT
       DstWng_ParameterTypeData%chord_LL = SrcWng_ParameterTypeData%chord_LL
    end if
    if (allocated(SrcWng_ParameterTypeData%chord_CP)) then
-      LB(1:1) = lbound(SrcWng_ParameterTypeData%chord_CP)
-      UB(1:1) = ubound(SrcWng_ParameterTypeData%chord_CP)
+      LB(1:1) = lbound(SrcWng_ParameterTypeData%chord_CP, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_ParameterTypeData%chord_CP, kind=B8Ki)
       if (.not. allocated(DstWng_ParameterTypeData%chord_CP)) then
          allocate(DstWng_ParameterTypeData%chord_CP(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -899,8 +899,8 @@ subroutine FVW_CopyWng_ParameterType(SrcWng_ParameterTypeData, DstWng_ParameterT
       DstWng_ParameterTypeData%chord_CP = SrcWng_ParameterTypeData%chord_CP
    end if
    if (allocated(SrcWng_ParameterTypeData%s_LL)) then
-      LB(1:1) = lbound(SrcWng_ParameterTypeData%s_LL)
-      UB(1:1) = ubound(SrcWng_ParameterTypeData%s_LL)
+      LB(1:1) = lbound(SrcWng_ParameterTypeData%s_LL, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_ParameterTypeData%s_LL, kind=B8Ki)
       if (.not. allocated(DstWng_ParameterTypeData%s_LL)) then
          allocate(DstWng_ParameterTypeData%s_LL(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -911,8 +911,8 @@ subroutine FVW_CopyWng_ParameterType(SrcWng_ParameterTypeData, DstWng_ParameterT
       DstWng_ParameterTypeData%s_LL = SrcWng_ParameterTypeData%s_LL
    end if
    if (allocated(SrcWng_ParameterTypeData%s_CP)) then
-      LB(1:1) = lbound(SrcWng_ParameterTypeData%s_CP)
-      UB(1:1) = ubound(SrcWng_ParameterTypeData%s_CP)
+      LB(1:1) = lbound(SrcWng_ParameterTypeData%s_CP, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_ParameterTypeData%s_CP, kind=B8Ki)
       if (.not. allocated(DstWng_ParameterTypeData%s_CP)) then
          allocate(DstWng_ParameterTypeData%s_CP(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -924,8 +924,8 @@ subroutine FVW_CopyWng_ParameterType(SrcWng_ParameterTypeData, DstWng_ParameterT
    end if
    DstWng_ParameterTypeData%iRotor = SrcWng_ParameterTypeData%iRotor
    if (allocated(SrcWng_ParameterTypeData%AFindx)) then
-      LB(1:2) = lbound(SrcWng_ParameterTypeData%AFindx)
-      UB(1:2) = ubound(SrcWng_ParameterTypeData%AFindx)
+      LB(1:2) = lbound(SrcWng_ParameterTypeData%AFindx, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_ParameterTypeData%AFindx, kind=B8Ki)
       if (.not. allocated(DstWng_ParameterTypeData%AFindx)) then
          allocate(DstWng_ParameterTypeData%AFindx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -937,8 +937,8 @@ subroutine FVW_CopyWng_ParameterType(SrcWng_ParameterTypeData, DstWng_ParameterT
    end if
    DstWng_ParameterTypeData%nSpan = SrcWng_ParameterTypeData%nSpan
    if (allocated(SrcWng_ParameterTypeData%PrescribedCirculation)) then
-      LB(1:1) = lbound(SrcWng_ParameterTypeData%PrescribedCirculation)
-      UB(1:1) = ubound(SrcWng_ParameterTypeData%PrescribedCirculation)
+      LB(1:1) = lbound(SrcWng_ParameterTypeData%PrescribedCirculation, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_ParameterTypeData%PrescribedCirculation, kind=B8Ki)
       if (.not. allocated(DstWng_ParameterTypeData%PrescribedCirculation)) then
          allocate(DstWng_ParameterTypeData%PrescribedCirculation(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -984,34 +984,34 @@ subroutine FVW_PackWng_ParameterType(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%chord_LL))
    if (allocated(InData%chord_LL)) then
-      call RegPackBounds(Buf, 1, lbound(InData%chord_LL), ubound(InData%chord_LL))
+      call RegPackBounds(Buf, 1, lbound(InData%chord_LL, kind=B8Ki), ubound(InData%chord_LL, kind=B8Ki))
       call RegPack(Buf, InData%chord_LL)
    end if
    call RegPack(Buf, allocated(InData%chord_CP))
    if (allocated(InData%chord_CP)) then
-      call RegPackBounds(Buf, 1, lbound(InData%chord_CP), ubound(InData%chord_CP))
+      call RegPackBounds(Buf, 1, lbound(InData%chord_CP, kind=B8Ki), ubound(InData%chord_CP, kind=B8Ki))
       call RegPack(Buf, InData%chord_CP)
    end if
    call RegPack(Buf, allocated(InData%s_LL))
    if (allocated(InData%s_LL)) then
-      call RegPackBounds(Buf, 1, lbound(InData%s_LL), ubound(InData%s_LL))
+      call RegPackBounds(Buf, 1, lbound(InData%s_LL, kind=B8Ki), ubound(InData%s_LL, kind=B8Ki))
       call RegPack(Buf, InData%s_LL)
    end if
    call RegPack(Buf, allocated(InData%s_CP))
    if (allocated(InData%s_CP)) then
-      call RegPackBounds(Buf, 1, lbound(InData%s_CP), ubound(InData%s_CP))
+      call RegPackBounds(Buf, 1, lbound(InData%s_CP, kind=B8Ki), ubound(InData%s_CP, kind=B8Ki))
       call RegPack(Buf, InData%s_CP)
    end if
    call RegPack(Buf, InData%iRotor)
    call RegPack(Buf, allocated(InData%AFindx))
    if (allocated(InData%AFindx)) then
-      call RegPackBounds(Buf, 2, lbound(InData%AFindx), ubound(InData%AFindx))
+      call RegPackBounds(Buf, 2, lbound(InData%AFindx, kind=B8Ki), ubound(InData%AFindx, kind=B8Ki))
       call RegPack(Buf, InData%AFindx)
    end if
    call RegPack(Buf, InData%nSpan)
    call RegPack(Buf, allocated(InData%PrescribedCirculation))
    if (allocated(InData%PrescribedCirculation)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PrescribedCirculation), ubound(InData%PrescribedCirculation))
+      call RegPackBounds(Buf, 1, lbound(InData%PrescribedCirculation, kind=B8Ki), ubound(InData%PrescribedCirculation, kind=B8Ki))
       call RegPack(Buf, InData%PrescribedCirculation)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1021,7 +1021,7 @@ subroutine FVW_UnPackWng_ParameterType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Wng_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FVW_UnPackWng_ParameterType'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -1121,8 +1121,8 @@ subroutine FVW_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_CopyParam'
@@ -1131,8 +1131,8 @@ subroutine FVW_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%nRotors = SrcParamData%nRotors
    DstParamData%nWings = SrcParamData%nWings
    if (allocated(SrcParamData%W)) then
-      LB(1:1) = lbound(SrcParamData%W)
-      UB(1:1) = ubound(SrcParamData%W)
+      LB(1:1) = lbound(SrcParamData%W, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%W, kind=B8Ki)
       if (.not. allocated(DstParamData%W)) then
          allocate(DstParamData%W(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1147,8 +1147,8 @@ subroutine FVW_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcParamData%Bld2Wings)) then
-      LB(1:2) = lbound(SrcParamData%Bld2Wings)
-      UB(1:2) = ubound(SrcParamData%Bld2Wings)
+      LB(1:2) = lbound(SrcParamData%Bld2Wings, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%Bld2Wings, kind=B8Ki)
       if (.not. allocated(DstParamData%Bld2Wings)) then
          allocate(DstParamData%Bld2Wings(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1209,16 +1209,16 @@ subroutine FVW_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(FVW_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(ParamData%W)) then
-      LB(1:1) = lbound(ParamData%W)
-      UB(1:1) = ubound(ParamData%W)
+      LB(1:1) = lbound(ParamData%W, kind=B8Ki)
+      UB(1:1) = ubound(ParamData%W, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call FVW_DestroyWng_ParameterType(ParamData%W(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1234,23 +1234,23 @@ subroutine FVW_PackParam(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(FVW_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FVW_PackParam'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%nRotors)
    call RegPack(Buf, InData%nWings)
    call RegPack(Buf, allocated(InData%W))
    if (allocated(InData%W)) then
-      call RegPackBounds(Buf, 1, lbound(InData%W), ubound(InData%W))
-      LB(1:1) = lbound(InData%W)
-      UB(1:1) = ubound(InData%W)
+      call RegPackBounds(Buf, 1, lbound(InData%W, kind=B8Ki), ubound(InData%W, kind=B8Ki))
+      LB(1:1) = lbound(InData%W, kind=B8Ki)
+      UB(1:1) = ubound(InData%W, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call FVW_PackWng_ParameterType(Buf, InData%W(i1)) 
       end do
    end if
    call RegPack(Buf, allocated(InData%Bld2Wings))
    if (allocated(InData%Bld2Wings)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Bld2Wings), ubound(InData%Bld2Wings))
+      call RegPackBounds(Buf, 2, lbound(InData%Bld2Wings, kind=B8Ki), ubound(InData%Bld2Wings, kind=B8Ki))
       call RegPack(Buf, InData%Bld2Wings)
    end if
    call RegPack(Buf, InData%iNWStart)
@@ -1305,8 +1305,8 @@ subroutine FVW_UnPackParam(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(FVW_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FVW_UnPackParam'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -1441,14 +1441,14 @@ subroutine FVW_CopyWng_ContinuousStateType(SrcWng_ContinuousStateTypeData, DstWn
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(3), UB(3)
+   integer(B8Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'FVW_CopyWng_ContinuousStateType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcWng_ContinuousStateTypeData%Gamma_NW)) then
-      LB(1:2) = lbound(SrcWng_ContinuousStateTypeData%Gamma_NW)
-      UB(1:2) = ubound(SrcWng_ContinuousStateTypeData%Gamma_NW)
+      LB(1:2) = lbound(SrcWng_ContinuousStateTypeData%Gamma_NW, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_ContinuousStateTypeData%Gamma_NW, kind=B8Ki)
       if (.not. allocated(DstWng_ContinuousStateTypeData%Gamma_NW)) then
          allocate(DstWng_ContinuousStateTypeData%Gamma_NW(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1459,8 +1459,8 @@ subroutine FVW_CopyWng_ContinuousStateType(SrcWng_ContinuousStateTypeData, DstWn
       DstWng_ContinuousStateTypeData%Gamma_NW = SrcWng_ContinuousStateTypeData%Gamma_NW
    end if
    if (allocated(SrcWng_ContinuousStateTypeData%Gamma_FW)) then
-      LB(1:2) = lbound(SrcWng_ContinuousStateTypeData%Gamma_FW)
-      UB(1:2) = ubound(SrcWng_ContinuousStateTypeData%Gamma_FW)
+      LB(1:2) = lbound(SrcWng_ContinuousStateTypeData%Gamma_FW, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_ContinuousStateTypeData%Gamma_FW, kind=B8Ki)
       if (.not. allocated(DstWng_ContinuousStateTypeData%Gamma_FW)) then
          allocate(DstWng_ContinuousStateTypeData%Gamma_FW(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1471,8 +1471,8 @@ subroutine FVW_CopyWng_ContinuousStateType(SrcWng_ContinuousStateTypeData, DstWn
       DstWng_ContinuousStateTypeData%Gamma_FW = SrcWng_ContinuousStateTypeData%Gamma_FW
    end if
    if (allocated(SrcWng_ContinuousStateTypeData%Eps_NW)) then
-      LB(1:3) = lbound(SrcWng_ContinuousStateTypeData%Eps_NW)
-      UB(1:3) = ubound(SrcWng_ContinuousStateTypeData%Eps_NW)
+      LB(1:3) = lbound(SrcWng_ContinuousStateTypeData%Eps_NW, kind=B8Ki)
+      UB(1:3) = ubound(SrcWng_ContinuousStateTypeData%Eps_NW, kind=B8Ki)
       if (.not. allocated(DstWng_ContinuousStateTypeData%Eps_NW)) then
          allocate(DstWng_ContinuousStateTypeData%Eps_NW(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1483,8 +1483,8 @@ subroutine FVW_CopyWng_ContinuousStateType(SrcWng_ContinuousStateTypeData, DstWn
       DstWng_ContinuousStateTypeData%Eps_NW = SrcWng_ContinuousStateTypeData%Eps_NW
    end if
    if (allocated(SrcWng_ContinuousStateTypeData%Eps_FW)) then
-      LB(1:3) = lbound(SrcWng_ContinuousStateTypeData%Eps_FW)
-      UB(1:3) = ubound(SrcWng_ContinuousStateTypeData%Eps_FW)
+      LB(1:3) = lbound(SrcWng_ContinuousStateTypeData%Eps_FW, kind=B8Ki)
+      UB(1:3) = ubound(SrcWng_ContinuousStateTypeData%Eps_FW, kind=B8Ki)
       if (.not. allocated(DstWng_ContinuousStateTypeData%Eps_FW)) then
          allocate(DstWng_ContinuousStateTypeData%Eps_FW(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1495,8 +1495,8 @@ subroutine FVW_CopyWng_ContinuousStateType(SrcWng_ContinuousStateTypeData, DstWn
       DstWng_ContinuousStateTypeData%Eps_FW = SrcWng_ContinuousStateTypeData%Eps_FW
    end if
    if (allocated(SrcWng_ContinuousStateTypeData%r_NW)) then
-      LB(1:3) = lbound(SrcWng_ContinuousStateTypeData%r_NW)
-      UB(1:3) = ubound(SrcWng_ContinuousStateTypeData%r_NW)
+      LB(1:3) = lbound(SrcWng_ContinuousStateTypeData%r_NW, kind=B8Ki)
+      UB(1:3) = ubound(SrcWng_ContinuousStateTypeData%r_NW, kind=B8Ki)
       if (.not. allocated(DstWng_ContinuousStateTypeData%r_NW)) then
          allocate(DstWng_ContinuousStateTypeData%r_NW(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1507,8 +1507,8 @@ subroutine FVW_CopyWng_ContinuousStateType(SrcWng_ContinuousStateTypeData, DstWn
       DstWng_ContinuousStateTypeData%r_NW = SrcWng_ContinuousStateTypeData%r_NW
    end if
    if (allocated(SrcWng_ContinuousStateTypeData%r_FW)) then
-      LB(1:3) = lbound(SrcWng_ContinuousStateTypeData%r_FW)
-      UB(1:3) = ubound(SrcWng_ContinuousStateTypeData%r_FW)
+      LB(1:3) = lbound(SrcWng_ContinuousStateTypeData%r_FW, kind=B8Ki)
+      UB(1:3) = ubound(SrcWng_ContinuousStateTypeData%r_FW, kind=B8Ki)
       if (.not. allocated(DstWng_ContinuousStateTypeData%r_FW)) then
          allocate(DstWng_ContinuousStateTypeData%r_FW(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1554,32 +1554,32 @@ subroutine FVW_PackWng_ContinuousStateType(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%Gamma_NW))
    if (allocated(InData%Gamma_NW)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Gamma_NW), ubound(InData%Gamma_NW))
+      call RegPackBounds(Buf, 2, lbound(InData%Gamma_NW, kind=B8Ki), ubound(InData%Gamma_NW, kind=B8Ki))
       call RegPack(Buf, InData%Gamma_NW)
    end if
    call RegPack(Buf, allocated(InData%Gamma_FW))
    if (allocated(InData%Gamma_FW)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Gamma_FW), ubound(InData%Gamma_FW))
+      call RegPackBounds(Buf, 2, lbound(InData%Gamma_FW, kind=B8Ki), ubound(InData%Gamma_FW, kind=B8Ki))
       call RegPack(Buf, InData%Gamma_FW)
    end if
    call RegPack(Buf, allocated(InData%Eps_NW))
    if (allocated(InData%Eps_NW)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Eps_NW), ubound(InData%Eps_NW))
+      call RegPackBounds(Buf, 3, lbound(InData%Eps_NW, kind=B8Ki), ubound(InData%Eps_NW, kind=B8Ki))
       call RegPack(Buf, InData%Eps_NW)
    end if
    call RegPack(Buf, allocated(InData%Eps_FW))
    if (allocated(InData%Eps_FW)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Eps_FW), ubound(InData%Eps_FW))
+      call RegPackBounds(Buf, 3, lbound(InData%Eps_FW, kind=B8Ki), ubound(InData%Eps_FW, kind=B8Ki))
       call RegPack(Buf, InData%Eps_FW)
    end if
    call RegPack(Buf, allocated(InData%r_NW))
    if (allocated(InData%r_NW)) then
-      call RegPackBounds(Buf, 3, lbound(InData%r_NW), ubound(InData%r_NW))
+      call RegPackBounds(Buf, 3, lbound(InData%r_NW, kind=B8Ki), ubound(InData%r_NW, kind=B8Ki))
       call RegPack(Buf, InData%r_NW)
    end if
    call RegPack(Buf, allocated(InData%r_FW))
    if (allocated(InData%r_FW)) then
-      call RegPackBounds(Buf, 3, lbound(InData%r_FW), ubound(InData%r_FW))
+      call RegPackBounds(Buf, 3, lbound(InData%r_FW, kind=B8Ki), ubound(InData%r_FW, kind=B8Ki))
       call RegPack(Buf, InData%r_FW)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1589,7 +1589,7 @@ subroutine FVW_UnPackWng_ContinuousStateType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Wng_ContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FVW_UnPackWng_ContinuousStateType'
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -1685,16 +1685,16 @@ subroutine FVW_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrSt
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_CopyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcContStateData%W)) then
-      LB(1:1) = lbound(SrcContStateData%W)
-      UB(1:1) = ubound(SrcContStateData%W)
+      LB(1:1) = lbound(SrcContStateData%W, kind=B8Ki)
+      UB(1:1) = ubound(SrcContStateData%W, kind=B8Ki)
       if (.not. allocated(DstContStateData%W)) then
          allocate(DstContStateData%W(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1709,8 +1709,8 @@ subroutine FVW_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrSt
       end do
    end if
    if (allocated(SrcContStateData%UA)) then
-      LB(1:1) = lbound(SrcContStateData%UA)
-      UB(1:1) = ubound(SrcContStateData%UA)
+      LB(1:1) = lbound(SrcContStateData%UA, kind=B8Ki)
+      UB(1:1) = ubound(SrcContStateData%UA, kind=B8Ki)
       if (.not. allocated(DstContStateData%UA)) then
          allocate(DstContStateData%UA(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1730,16 +1730,16 @@ subroutine FVW_DestroyContState(ContStateData, ErrStat, ErrMsg)
    type(FVW_ContinuousStateType), intent(inout) :: ContStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_DestroyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(ContStateData%W)) then
-      LB(1:1) = lbound(ContStateData%W)
-      UB(1:1) = ubound(ContStateData%W)
+      LB(1:1) = lbound(ContStateData%W, kind=B8Ki)
+      UB(1:1) = ubound(ContStateData%W, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call FVW_DestroyWng_ContinuousStateType(ContStateData%W(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1747,8 +1747,8 @@ subroutine FVW_DestroyContState(ContStateData, ErrStat, ErrMsg)
       deallocate(ContStateData%W)
    end if
    if (allocated(ContStateData%UA)) then
-      LB(1:1) = lbound(ContStateData%UA)
-      UB(1:1) = ubound(ContStateData%UA)
+      LB(1:1) = lbound(ContStateData%UA, kind=B8Ki)
+      UB(1:1) = ubound(ContStateData%UA, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call UA_DestroyContState(ContStateData%UA(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1761,23 +1761,23 @@ subroutine FVW_PackContState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(FVW_ContinuousStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FVW_PackContState'
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%W))
    if (allocated(InData%W)) then
-      call RegPackBounds(Buf, 1, lbound(InData%W), ubound(InData%W))
-      LB(1:1) = lbound(InData%W)
-      UB(1:1) = ubound(InData%W)
+      call RegPackBounds(Buf, 1, lbound(InData%W, kind=B8Ki), ubound(InData%W, kind=B8Ki))
+      LB(1:1) = lbound(InData%W, kind=B8Ki)
+      UB(1:1) = ubound(InData%W, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call FVW_PackWng_ContinuousStateType(Buf, InData%W(i1)) 
       end do
    end if
    call RegPack(Buf, allocated(InData%UA))
    if (allocated(InData%UA)) then
-      call RegPackBounds(Buf, 1, lbound(InData%UA), ubound(InData%UA))
-      LB(1:1) = lbound(InData%UA)
-      UB(1:1) = ubound(InData%UA)
+      call RegPackBounds(Buf, 1, lbound(InData%UA, kind=B8Ki), ubound(InData%UA, kind=B8Ki))
+      LB(1:1) = lbound(InData%UA, kind=B8Ki)
+      UB(1:1) = ubound(InData%UA, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call UA_PackContState(Buf, InData%UA(i1)) 
       end do
@@ -1789,8 +1789,8 @@ subroutine FVW_UnPackContState(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(FVW_ContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FVW_UnPackContState'
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -1832,14 +1832,14 @@ subroutine FVW_CopyWng_OutputType(SrcWng_OutputTypeData, DstWng_OutputTypeData, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'FVW_CopyWng_OutputType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcWng_OutputTypeData%Vind)) then
-      LB(1:2) = lbound(SrcWng_OutputTypeData%Vind)
-      UB(1:2) = ubound(SrcWng_OutputTypeData%Vind)
+      LB(1:2) = lbound(SrcWng_OutputTypeData%Vind, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_OutputTypeData%Vind, kind=B8Ki)
       if (.not. allocated(DstWng_OutputTypeData%Vind)) then
          allocate(DstWng_OutputTypeData%Vind(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1870,7 +1870,7 @@ subroutine FVW_PackWng_OutputType(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%Vind))
    if (allocated(InData%Vind)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Vind), ubound(InData%Vind))
+      call RegPackBounds(Buf, 2, lbound(InData%Vind, kind=B8Ki), ubound(InData%Vind, kind=B8Ki))
       call RegPack(Buf, InData%Vind)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1880,7 +1880,7 @@ subroutine FVW_UnPackWng_OutputType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Wng_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FVW_UnPackWng_OutputType'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -1906,16 +1906,16 @@ subroutine FVW_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOutputData%W)) then
-      LB(1:1) = lbound(SrcOutputData%W)
-      UB(1:1) = ubound(SrcOutputData%W)
+      LB(1:1) = lbound(SrcOutputData%W, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%W, kind=B8Ki)
       if (.not. allocated(DstOutputData%W)) then
          allocate(DstOutputData%W(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1935,16 +1935,16 @@ subroutine FVW_DestroyOutput(OutputData, ErrStat, ErrMsg)
    type(FVW_OutputType), intent(inout) :: OutputData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_DestroyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(OutputData%W)) then
-      LB(1:1) = lbound(OutputData%W)
-      UB(1:1) = ubound(OutputData%W)
+      LB(1:1) = lbound(OutputData%W, kind=B8Ki)
+      UB(1:1) = ubound(OutputData%W, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call FVW_DestroyWng_OutputType(OutputData%W(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1957,14 +1957,14 @@ subroutine FVW_PackOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(FVW_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FVW_PackOutput'
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%W))
    if (allocated(InData%W)) then
-      call RegPackBounds(Buf, 1, lbound(InData%W), ubound(InData%W))
-      LB(1:1) = lbound(InData%W)
-      UB(1:1) = ubound(InData%W)
+      call RegPackBounds(Buf, 1, lbound(InData%W, kind=B8Ki), ubound(InData%W, kind=B8Ki))
+      LB(1:1) = lbound(InData%W, kind=B8Ki)
+      UB(1:1) = ubound(InData%W, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call FVW_PackWng_OutputType(Buf, InData%W(i1)) 
       end do
@@ -1976,8 +1976,8 @@ subroutine FVW_UnPackOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(FVW_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FVW_UnPackOutput'
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -2004,16 +2004,16 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2, i3
-   integer(IntKi)                 :: LB(3), UB(3)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_CopyWng_MiscVarType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcWng_MiscVarTypeData%LE)) then
-      LB(1:2) = lbound(SrcWng_MiscVarTypeData%LE)
-      UB(1:2) = ubound(SrcWng_MiscVarTypeData%LE)
+      LB(1:2) = lbound(SrcWng_MiscVarTypeData%LE, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_MiscVarTypeData%LE, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%LE)) then
          allocate(DstWng_MiscVarTypeData%LE(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2024,8 +2024,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%LE = SrcWng_MiscVarTypeData%LE
    end if
    if (allocated(SrcWng_MiscVarTypeData%TE)) then
-      LB(1:2) = lbound(SrcWng_MiscVarTypeData%TE)
-      UB(1:2) = ubound(SrcWng_MiscVarTypeData%TE)
+      LB(1:2) = lbound(SrcWng_MiscVarTypeData%TE, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_MiscVarTypeData%TE, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%TE)) then
          allocate(DstWng_MiscVarTypeData%TE(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2036,8 +2036,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%TE = SrcWng_MiscVarTypeData%TE
    end if
    if (allocated(SrcWng_MiscVarTypeData%r_LL)) then
-      LB(1:3) = lbound(SrcWng_MiscVarTypeData%r_LL)
-      UB(1:3) = ubound(SrcWng_MiscVarTypeData%r_LL)
+      LB(1:3) = lbound(SrcWng_MiscVarTypeData%r_LL, kind=B8Ki)
+      UB(1:3) = ubound(SrcWng_MiscVarTypeData%r_LL, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%r_LL)) then
          allocate(DstWng_MiscVarTypeData%r_LL(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2048,8 +2048,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%r_LL = SrcWng_MiscVarTypeData%r_LL
    end if
    if (allocated(SrcWng_MiscVarTypeData%CP)) then
-      LB(1:2) = lbound(SrcWng_MiscVarTypeData%CP)
-      UB(1:2) = ubound(SrcWng_MiscVarTypeData%CP)
+      LB(1:2) = lbound(SrcWng_MiscVarTypeData%CP, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_MiscVarTypeData%CP, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%CP)) then
          allocate(DstWng_MiscVarTypeData%CP(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2060,8 +2060,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%CP = SrcWng_MiscVarTypeData%CP
    end if
    if (allocated(SrcWng_MiscVarTypeData%Tang)) then
-      LB(1:2) = lbound(SrcWng_MiscVarTypeData%Tang)
-      UB(1:2) = ubound(SrcWng_MiscVarTypeData%Tang)
+      LB(1:2) = lbound(SrcWng_MiscVarTypeData%Tang, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_MiscVarTypeData%Tang, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%Tang)) then
          allocate(DstWng_MiscVarTypeData%Tang(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2072,8 +2072,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%Tang = SrcWng_MiscVarTypeData%Tang
    end if
    if (allocated(SrcWng_MiscVarTypeData%Norm)) then
-      LB(1:2) = lbound(SrcWng_MiscVarTypeData%Norm)
-      UB(1:2) = ubound(SrcWng_MiscVarTypeData%Norm)
+      LB(1:2) = lbound(SrcWng_MiscVarTypeData%Norm, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_MiscVarTypeData%Norm, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%Norm)) then
          allocate(DstWng_MiscVarTypeData%Norm(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2084,8 +2084,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%Norm = SrcWng_MiscVarTypeData%Norm
    end if
    if (allocated(SrcWng_MiscVarTypeData%Orth)) then
-      LB(1:2) = lbound(SrcWng_MiscVarTypeData%Orth)
-      UB(1:2) = ubound(SrcWng_MiscVarTypeData%Orth)
+      LB(1:2) = lbound(SrcWng_MiscVarTypeData%Orth, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_MiscVarTypeData%Orth, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%Orth)) then
          allocate(DstWng_MiscVarTypeData%Orth(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2096,8 +2096,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%Orth = SrcWng_MiscVarTypeData%Orth
    end if
    if (allocated(SrcWng_MiscVarTypeData%dl)) then
-      LB(1:2) = lbound(SrcWng_MiscVarTypeData%dl)
-      UB(1:2) = ubound(SrcWng_MiscVarTypeData%dl)
+      LB(1:2) = lbound(SrcWng_MiscVarTypeData%dl, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_MiscVarTypeData%dl, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%dl)) then
          allocate(DstWng_MiscVarTypeData%dl(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2108,8 +2108,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%dl = SrcWng_MiscVarTypeData%dl
    end if
    if (allocated(SrcWng_MiscVarTypeData%Area)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%Area)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%Area)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%Area, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%Area, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%Area)) then
          allocate(DstWng_MiscVarTypeData%Area(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2120,8 +2120,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%Area = SrcWng_MiscVarTypeData%Area
    end if
    if (allocated(SrcWng_MiscVarTypeData%diag_LL)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%diag_LL)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%diag_LL)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%diag_LL, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%diag_LL, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%diag_LL)) then
          allocate(DstWng_MiscVarTypeData%diag_LL(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2132,8 +2132,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%diag_LL = SrcWng_MiscVarTypeData%diag_LL
    end if
    if (allocated(SrcWng_MiscVarTypeData%Vind_CP)) then
-      LB(1:2) = lbound(SrcWng_MiscVarTypeData%Vind_CP)
-      UB(1:2) = ubound(SrcWng_MiscVarTypeData%Vind_CP)
+      LB(1:2) = lbound(SrcWng_MiscVarTypeData%Vind_CP, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_MiscVarTypeData%Vind_CP, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%Vind_CP)) then
          allocate(DstWng_MiscVarTypeData%Vind_CP(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2144,8 +2144,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%Vind_CP = SrcWng_MiscVarTypeData%Vind_CP
    end if
    if (allocated(SrcWng_MiscVarTypeData%Vtot_CP)) then
-      LB(1:2) = lbound(SrcWng_MiscVarTypeData%Vtot_CP)
-      UB(1:2) = ubound(SrcWng_MiscVarTypeData%Vtot_CP)
+      LB(1:2) = lbound(SrcWng_MiscVarTypeData%Vtot_CP, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_MiscVarTypeData%Vtot_CP, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%Vtot_CP)) then
          allocate(DstWng_MiscVarTypeData%Vtot_CP(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2156,8 +2156,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%Vtot_CP = SrcWng_MiscVarTypeData%Vtot_CP
    end if
    if (allocated(SrcWng_MiscVarTypeData%Vstr_CP)) then
-      LB(1:2) = lbound(SrcWng_MiscVarTypeData%Vstr_CP)
-      UB(1:2) = ubound(SrcWng_MiscVarTypeData%Vstr_CP)
+      LB(1:2) = lbound(SrcWng_MiscVarTypeData%Vstr_CP, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_MiscVarTypeData%Vstr_CP, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%Vstr_CP)) then
          allocate(DstWng_MiscVarTypeData%Vstr_CP(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2168,8 +2168,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%Vstr_CP = SrcWng_MiscVarTypeData%Vstr_CP
    end if
    if (allocated(SrcWng_MiscVarTypeData%Vwnd_CP)) then
-      LB(1:2) = lbound(SrcWng_MiscVarTypeData%Vwnd_CP)
-      UB(1:2) = ubound(SrcWng_MiscVarTypeData%Vwnd_CP)
+      LB(1:2) = lbound(SrcWng_MiscVarTypeData%Vwnd_CP, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_MiscVarTypeData%Vwnd_CP, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%Vwnd_CP)) then
          allocate(DstWng_MiscVarTypeData%Vwnd_CP(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2180,8 +2180,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%Vwnd_CP = SrcWng_MiscVarTypeData%Vwnd_CP
    end if
    if (allocated(SrcWng_MiscVarTypeData%Vwnd_NW)) then
-      LB(1:3) = lbound(SrcWng_MiscVarTypeData%Vwnd_NW)
-      UB(1:3) = ubound(SrcWng_MiscVarTypeData%Vwnd_NW)
+      LB(1:3) = lbound(SrcWng_MiscVarTypeData%Vwnd_NW, kind=B8Ki)
+      UB(1:3) = ubound(SrcWng_MiscVarTypeData%Vwnd_NW, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%Vwnd_NW)) then
          allocate(DstWng_MiscVarTypeData%Vwnd_NW(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2192,8 +2192,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%Vwnd_NW = SrcWng_MiscVarTypeData%Vwnd_NW
    end if
    if (allocated(SrcWng_MiscVarTypeData%Vwnd_FW)) then
-      LB(1:3) = lbound(SrcWng_MiscVarTypeData%Vwnd_FW)
-      UB(1:3) = ubound(SrcWng_MiscVarTypeData%Vwnd_FW)
+      LB(1:3) = lbound(SrcWng_MiscVarTypeData%Vwnd_FW, kind=B8Ki)
+      UB(1:3) = ubound(SrcWng_MiscVarTypeData%Vwnd_FW, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%Vwnd_FW)) then
          allocate(DstWng_MiscVarTypeData%Vwnd_FW(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2204,8 +2204,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%Vwnd_FW = SrcWng_MiscVarTypeData%Vwnd_FW
    end if
    if (allocated(SrcWng_MiscVarTypeData%Vind_NW)) then
-      LB(1:3) = lbound(SrcWng_MiscVarTypeData%Vind_NW)
-      UB(1:3) = ubound(SrcWng_MiscVarTypeData%Vind_NW)
+      LB(1:3) = lbound(SrcWng_MiscVarTypeData%Vind_NW, kind=B8Ki)
+      UB(1:3) = ubound(SrcWng_MiscVarTypeData%Vind_NW, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%Vind_NW)) then
          allocate(DstWng_MiscVarTypeData%Vind_NW(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2216,8 +2216,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%Vind_NW = SrcWng_MiscVarTypeData%Vind_NW
    end if
    if (allocated(SrcWng_MiscVarTypeData%Vind_FW)) then
-      LB(1:3) = lbound(SrcWng_MiscVarTypeData%Vind_FW)
-      UB(1:3) = ubound(SrcWng_MiscVarTypeData%Vind_FW)
+      LB(1:3) = lbound(SrcWng_MiscVarTypeData%Vind_FW, kind=B8Ki)
+      UB(1:3) = ubound(SrcWng_MiscVarTypeData%Vind_FW, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%Vind_FW)) then
          allocate(DstWng_MiscVarTypeData%Vind_FW(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2228,8 +2228,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%Vind_FW = SrcWng_MiscVarTypeData%Vind_FW
    end if
    if (allocated(SrcWng_MiscVarTypeData%PitchAndTwist)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%PitchAndTwist)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%PitchAndTwist)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%PitchAndTwist, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%PitchAndTwist, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%PitchAndTwist)) then
          allocate(DstWng_MiscVarTypeData%PitchAndTwist(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2242,8 +2242,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
    DstWng_MiscVarTypeData%iTip = SrcWng_MiscVarTypeData%iTip
    DstWng_MiscVarTypeData%iRoot = SrcWng_MiscVarTypeData%iRoot
    if (allocated(SrcWng_MiscVarTypeData%alpha_LL)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%alpha_LL)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%alpha_LL)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%alpha_LL, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%alpha_LL, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%alpha_LL)) then
          allocate(DstWng_MiscVarTypeData%alpha_LL(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2254,8 +2254,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%alpha_LL = SrcWng_MiscVarTypeData%alpha_LL
    end if
    if (allocated(SrcWng_MiscVarTypeData%Vreln_LL)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%Vreln_LL)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%Vreln_LL)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%Vreln_LL, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%Vreln_LL, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%Vreln_LL)) then
          allocate(DstWng_MiscVarTypeData%Vreln_LL(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2266,8 +2266,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%Vreln_LL = SrcWng_MiscVarTypeData%Vreln_LL
    end if
    if (allocated(SrcWng_MiscVarTypeData%u_UA)) then
-      LB(1:2) = lbound(SrcWng_MiscVarTypeData%u_UA)
-      UB(1:2) = ubound(SrcWng_MiscVarTypeData%u_UA)
+      LB(1:2) = lbound(SrcWng_MiscVarTypeData%u_UA, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_MiscVarTypeData%u_UA, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%u_UA)) then
          allocate(DstWng_MiscVarTypeData%u_UA(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2293,8 +2293,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcWng_MiscVarTypeData%Vind_LL)) then
-      LB(1:2) = lbound(SrcWng_MiscVarTypeData%Vind_LL)
-      UB(1:2) = ubound(SrcWng_MiscVarTypeData%Vind_LL)
+      LB(1:2) = lbound(SrcWng_MiscVarTypeData%Vind_LL, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_MiscVarTypeData%Vind_LL, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%Vind_LL)) then
          allocate(DstWng_MiscVarTypeData%Vind_LL(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2305,8 +2305,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%Vind_LL = SrcWng_MiscVarTypeData%Vind_LL
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_AxInd)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_AxInd)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_AxInd)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_AxInd, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_AxInd, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%BN_AxInd)) then
          allocate(DstWng_MiscVarTypeData%BN_AxInd(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2317,8 +2317,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%BN_AxInd = SrcWng_MiscVarTypeData%BN_AxInd
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_TanInd)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_TanInd)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_TanInd)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_TanInd, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_TanInd, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%BN_TanInd)) then
          allocate(DstWng_MiscVarTypeData%BN_TanInd(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2329,8 +2329,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%BN_TanInd = SrcWng_MiscVarTypeData%BN_TanInd
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Vrel)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Vrel)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Vrel)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Vrel, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Vrel, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%BN_Vrel)) then
          allocate(DstWng_MiscVarTypeData%BN_Vrel(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2341,8 +2341,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%BN_Vrel = SrcWng_MiscVarTypeData%BN_Vrel
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_alpha)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_alpha)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_alpha)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_alpha, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_alpha, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%BN_alpha)) then
          allocate(DstWng_MiscVarTypeData%BN_alpha(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2353,8 +2353,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%BN_alpha = SrcWng_MiscVarTypeData%BN_alpha
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_phi)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_phi)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_phi)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_phi, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_phi, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%BN_phi)) then
          allocate(DstWng_MiscVarTypeData%BN_phi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2365,8 +2365,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%BN_phi = SrcWng_MiscVarTypeData%BN_phi
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Re)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Re)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Re)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Re, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Re, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%BN_Re)) then
          allocate(DstWng_MiscVarTypeData%BN_Re(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2377,8 +2377,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%BN_Re = SrcWng_MiscVarTypeData%BN_Re
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_URelWind_s)) then
-      LB(1:2) = lbound(SrcWng_MiscVarTypeData%BN_URelWind_s)
-      UB(1:2) = ubound(SrcWng_MiscVarTypeData%BN_URelWind_s)
+      LB(1:2) = lbound(SrcWng_MiscVarTypeData%BN_URelWind_s, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_MiscVarTypeData%BN_URelWind_s, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%BN_URelWind_s)) then
          allocate(DstWng_MiscVarTypeData%BN_URelWind_s(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2389,8 +2389,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%BN_URelWind_s = SrcWng_MiscVarTypeData%BN_URelWind_s
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Cl_Static)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cl_Static)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Cl_Static)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cl_Static, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Cl_Static, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%BN_Cl_Static)) then
          allocate(DstWng_MiscVarTypeData%BN_Cl_Static(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2401,8 +2401,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%BN_Cl_Static = SrcWng_MiscVarTypeData%BN_Cl_Static
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Cd_Static)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cd_Static)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Cd_Static)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cd_Static, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Cd_Static, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%BN_Cd_Static)) then
          allocate(DstWng_MiscVarTypeData%BN_Cd_Static(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2413,8 +2413,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%BN_Cd_Static = SrcWng_MiscVarTypeData%BN_Cd_Static
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Cm_Static)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cm_Static)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Cm_Static)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cm_Static, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Cm_Static, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%BN_Cm_Static)) then
          allocate(DstWng_MiscVarTypeData%BN_Cm_Static(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2425,8 +2425,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%BN_Cm_Static = SrcWng_MiscVarTypeData%BN_Cm_Static
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Cpmin)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cpmin)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Cpmin)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cpmin, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Cpmin, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%BN_Cpmin)) then
          allocate(DstWng_MiscVarTypeData%BN_Cpmin(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2437,8 +2437,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%BN_Cpmin = SrcWng_MiscVarTypeData%BN_Cpmin
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Cl)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cl)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Cl)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cl, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Cl, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%BN_Cl)) then
          allocate(DstWng_MiscVarTypeData%BN_Cl(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2449,8 +2449,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%BN_Cl = SrcWng_MiscVarTypeData%BN_Cl
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Cd)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cd)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Cd)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cd, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Cd, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%BN_Cd)) then
          allocate(DstWng_MiscVarTypeData%BN_Cd(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2461,8 +2461,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%BN_Cd = SrcWng_MiscVarTypeData%BN_Cd
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Cm)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cm)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Cm)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cm, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Cm, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%BN_Cm)) then
          allocate(DstWng_MiscVarTypeData%BN_Cm(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2473,8 +2473,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%BN_Cm = SrcWng_MiscVarTypeData%BN_Cm
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Cx)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cx)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Cx)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cx, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Cx, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%BN_Cx)) then
          allocate(DstWng_MiscVarTypeData%BN_Cx(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2485,8 +2485,8 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
       DstWng_MiscVarTypeData%BN_Cx = SrcWng_MiscVarTypeData%BN_Cx
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Cy)) then
-      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cy)
-      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Cy)
+      LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cy, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_MiscVarTypeData%BN_Cy, kind=B8Ki)
       if (.not. allocated(DstWng_MiscVarTypeData%BN_Cy)) then
          allocate(DstWng_MiscVarTypeData%BN_Cy(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2502,8 +2502,8 @@ subroutine FVW_DestroyWng_MiscVarType(Wng_MiscVarTypeData, ErrStat, ErrMsg)
    type(Wng_MiscVarType), intent(inout) :: Wng_MiscVarTypeData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2, i3
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_DestroyWng_MiscVarType'
@@ -2573,8 +2573,8 @@ subroutine FVW_DestroyWng_MiscVarType(Wng_MiscVarTypeData, ErrStat, ErrMsg)
       deallocate(Wng_MiscVarTypeData%Vreln_LL)
    end if
    if (allocated(Wng_MiscVarTypeData%u_UA)) then
-      LB(1:2) = lbound(Wng_MiscVarTypeData%u_UA)
-      UB(1:2) = ubound(Wng_MiscVarTypeData%u_UA)
+      LB(1:2) = lbound(Wng_MiscVarTypeData%u_UA, kind=B8Ki)
+      UB(1:2) = ubound(Wng_MiscVarTypeData%u_UA, kind=B8Ki)
       do i2 = LB(2), UB(2)
          do i1 = LB(1), UB(1)
             call UA_DestroyInput(Wng_MiscVarTypeData%u_UA(i1,i2), ErrStat2, ErrMsg2)
@@ -2646,121 +2646,121 @@ subroutine FVW_PackWng_MiscVarType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Wng_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FVW_PackWng_MiscVarType'
-   integer(IntKi)  :: i1, i2, i3
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)   :: LB(3), UB(3)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%LE))
    if (allocated(InData%LE)) then
-      call RegPackBounds(Buf, 2, lbound(InData%LE), ubound(InData%LE))
+      call RegPackBounds(Buf, 2, lbound(InData%LE, kind=B8Ki), ubound(InData%LE, kind=B8Ki))
       call RegPack(Buf, InData%LE)
    end if
    call RegPack(Buf, allocated(InData%TE))
    if (allocated(InData%TE)) then
-      call RegPackBounds(Buf, 2, lbound(InData%TE), ubound(InData%TE))
+      call RegPackBounds(Buf, 2, lbound(InData%TE, kind=B8Ki), ubound(InData%TE, kind=B8Ki))
       call RegPack(Buf, InData%TE)
    end if
    call RegPack(Buf, allocated(InData%r_LL))
    if (allocated(InData%r_LL)) then
-      call RegPackBounds(Buf, 3, lbound(InData%r_LL), ubound(InData%r_LL))
+      call RegPackBounds(Buf, 3, lbound(InData%r_LL, kind=B8Ki), ubound(InData%r_LL, kind=B8Ki))
       call RegPack(Buf, InData%r_LL)
    end if
    call RegPack(Buf, allocated(InData%CP))
    if (allocated(InData%CP)) then
-      call RegPackBounds(Buf, 2, lbound(InData%CP), ubound(InData%CP))
+      call RegPackBounds(Buf, 2, lbound(InData%CP, kind=B8Ki), ubound(InData%CP, kind=B8Ki))
       call RegPack(Buf, InData%CP)
    end if
    call RegPack(Buf, allocated(InData%Tang))
    if (allocated(InData%Tang)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Tang), ubound(InData%Tang))
+      call RegPackBounds(Buf, 2, lbound(InData%Tang, kind=B8Ki), ubound(InData%Tang, kind=B8Ki))
       call RegPack(Buf, InData%Tang)
    end if
    call RegPack(Buf, allocated(InData%Norm))
    if (allocated(InData%Norm)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Norm), ubound(InData%Norm))
+      call RegPackBounds(Buf, 2, lbound(InData%Norm, kind=B8Ki), ubound(InData%Norm, kind=B8Ki))
       call RegPack(Buf, InData%Norm)
    end if
    call RegPack(Buf, allocated(InData%Orth))
    if (allocated(InData%Orth)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Orth), ubound(InData%Orth))
+      call RegPackBounds(Buf, 2, lbound(InData%Orth, kind=B8Ki), ubound(InData%Orth, kind=B8Ki))
       call RegPack(Buf, InData%Orth)
    end if
    call RegPack(Buf, allocated(InData%dl))
    if (allocated(InData%dl)) then
-      call RegPackBounds(Buf, 2, lbound(InData%dl), ubound(InData%dl))
+      call RegPackBounds(Buf, 2, lbound(InData%dl, kind=B8Ki), ubound(InData%dl, kind=B8Ki))
       call RegPack(Buf, InData%dl)
    end if
    call RegPack(Buf, allocated(InData%Area))
    if (allocated(InData%Area)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Area), ubound(InData%Area))
+      call RegPackBounds(Buf, 1, lbound(InData%Area, kind=B8Ki), ubound(InData%Area, kind=B8Ki))
       call RegPack(Buf, InData%Area)
    end if
    call RegPack(Buf, allocated(InData%diag_LL))
    if (allocated(InData%diag_LL)) then
-      call RegPackBounds(Buf, 1, lbound(InData%diag_LL), ubound(InData%diag_LL))
+      call RegPackBounds(Buf, 1, lbound(InData%diag_LL, kind=B8Ki), ubound(InData%diag_LL, kind=B8Ki))
       call RegPack(Buf, InData%diag_LL)
    end if
    call RegPack(Buf, allocated(InData%Vind_CP))
    if (allocated(InData%Vind_CP)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Vind_CP), ubound(InData%Vind_CP))
+      call RegPackBounds(Buf, 2, lbound(InData%Vind_CP, kind=B8Ki), ubound(InData%Vind_CP, kind=B8Ki))
       call RegPack(Buf, InData%Vind_CP)
    end if
    call RegPack(Buf, allocated(InData%Vtot_CP))
    if (allocated(InData%Vtot_CP)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Vtot_CP), ubound(InData%Vtot_CP))
+      call RegPackBounds(Buf, 2, lbound(InData%Vtot_CP, kind=B8Ki), ubound(InData%Vtot_CP, kind=B8Ki))
       call RegPack(Buf, InData%Vtot_CP)
    end if
    call RegPack(Buf, allocated(InData%Vstr_CP))
    if (allocated(InData%Vstr_CP)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Vstr_CP), ubound(InData%Vstr_CP))
+      call RegPackBounds(Buf, 2, lbound(InData%Vstr_CP, kind=B8Ki), ubound(InData%Vstr_CP, kind=B8Ki))
       call RegPack(Buf, InData%Vstr_CP)
    end if
    call RegPack(Buf, allocated(InData%Vwnd_CP))
    if (allocated(InData%Vwnd_CP)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Vwnd_CP), ubound(InData%Vwnd_CP))
+      call RegPackBounds(Buf, 2, lbound(InData%Vwnd_CP, kind=B8Ki), ubound(InData%Vwnd_CP, kind=B8Ki))
       call RegPack(Buf, InData%Vwnd_CP)
    end if
    call RegPack(Buf, allocated(InData%Vwnd_NW))
    if (allocated(InData%Vwnd_NW)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Vwnd_NW), ubound(InData%Vwnd_NW))
+      call RegPackBounds(Buf, 3, lbound(InData%Vwnd_NW, kind=B8Ki), ubound(InData%Vwnd_NW, kind=B8Ki))
       call RegPack(Buf, InData%Vwnd_NW)
    end if
    call RegPack(Buf, allocated(InData%Vwnd_FW))
    if (allocated(InData%Vwnd_FW)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Vwnd_FW), ubound(InData%Vwnd_FW))
+      call RegPackBounds(Buf, 3, lbound(InData%Vwnd_FW, kind=B8Ki), ubound(InData%Vwnd_FW, kind=B8Ki))
       call RegPack(Buf, InData%Vwnd_FW)
    end if
    call RegPack(Buf, allocated(InData%Vind_NW))
    if (allocated(InData%Vind_NW)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Vind_NW), ubound(InData%Vind_NW))
+      call RegPackBounds(Buf, 3, lbound(InData%Vind_NW, kind=B8Ki), ubound(InData%Vind_NW, kind=B8Ki))
       call RegPack(Buf, InData%Vind_NW)
    end if
    call RegPack(Buf, allocated(InData%Vind_FW))
    if (allocated(InData%Vind_FW)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Vind_FW), ubound(InData%Vind_FW))
+      call RegPackBounds(Buf, 3, lbound(InData%Vind_FW, kind=B8Ki), ubound(InData%Vind_FW, kind=B8Ki))
       call RegPack(Buf, InData%Vind_FW)
    end if
    call RegPack(Buf, allocated(InData%PitchAndTwist))
    if (allocated(InData%PitchAndTwist)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PitchAndTwist), ubound(InData%PitchAndTwist))
+      call RegPackBounds(Buf, 1, lbound(InData%PitchAndTwist, kind=B8Ki), ubound(InData%PitchAndTwist, kind=B8Ki))
       call RegPack(Buf, InData%PitchAndTwist)
    end if
    call RegPack(Buf, InData%iTip)
    call RegPack(Buf, InData%iRoot)
    call RegPack(Buf, allocated(InData%alpha_LL))
    if (allocated(InData%alpha_LL)) then
-      call RegPackBounds(Buf, 1, lbound(InData%alpha_LL), ubound(InData%alpha_LL))
+      call RegPackBounds(Buf, 1, lbound(InData%alpha_LL, kind=B8Ki), ubound(InData%alpha_LL, kind=B8Ki))
       call RegPack(Buf, InData%alpha_LL)
    end if
    call RegPack(Buf, allocated(InData%Vreln_LL))
    if (allocated(InData%Vreln_LL)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Vreln_LL), ubound(InData%Vreln_LL))
+      call RegPackBounds(Buf, 1, lbound(InData%Vreln_LL, kind=B8Ki), ubound(InData%Vreln_LL, kind=B8Ki))
       call RegPack(Buf, InData%Vreln_LL)
    end if
    call RegPack(Buf, allocated(InData%u_UA))
    if (allocated(InData%u_UA)) then
-      call RegPackBounds(Buf, 2, lbound(InData%u_UA), ubound(InData%u_UA))
-      LB(1:2) = lbound(InData%u_UA)
-      UB(1:2) = ubound(InData%u_UA)
+      call RegPackBounds(Buf, 2, lbound(InData%u_UA, kind=B8Ki), ubound(InData%u_UA, kind=B8Ki))
+      LB(1:2) = lbound(InData%u_UA, kind=B8Ki)
+      UB(1:2) = ubound(InData%u_UA, kind=B8Ki)
       do i2 = LB(2), UB(2)
          do i1 = LB(1), UB(1)
             call UA_PackInput(Buf, InData%u_UA(i1,i2)) 
@@ -2772,87 +2772,87 @@ subroutine FVW_PackWng_MiscVarType(Buf, Indata)
    call UA_PackParam(Buf, InData%p_UA) 
    call RegPack(Buf, allocated(InData%Vind_LL))
    if (allocated(InData%Vind_LL)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Vind_LL), ubound(InData%Vind_LL))
+      call RegPackBounds(Buf, 2, lbound(InData%Vind_LL, kind=B8Ki), ubound(InData%Vind_LL, kind=B8Ki))
       call RegPack(Buf, InData%Vind_LL)
    end if
    call RegPack(Buf, allocated(InData%BN_AxInd))
    if (allocated(InData%BN_AxInd)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BN_AxInd), ubound(InData%BN_AxInd))
+      call RegPackBounds(Buf, 1, lbound(InData%BN_AxInd, kind=B8Ki), ubound(InData%BN_AxInd, kind=B8Ki))
       call RegPack(Buf, InData%BN_AxInd)
    end if
    call RegPack(Buf, allocated(InData%BN_TanInd))
    if (allocated(InData%BN_TanInd)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BN_TanInd), ubound(InData%BN_TanInd))
+      call RegPackBounds(Buf, 1, lbound(InData%BN_TanInd, kind=B8Ki), ubound(InData%BN_TanInd, kind=B8Ki))
       call RegPack(Buf, InData%BN_TanInd)
    end if
    call RegPack(Buf, allocated(InData%BN_Vrel))
    if (allocated(InData%BN_Vrel)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BN_Vrel), ubound(InData%BN_Vrel))
+      call RegPackBounds(Buf, 1, lbound(InData%BN_Vrel, kind=B8Ki), ubound(InData%BN_Vrel, kind=B8Ki))
       call RegPack(Buf, InData%BN_Vrel)
    end if
    call RegPack(Buf, allocated(InData%BN_alpha))
    if (allocated(InData%BN_alpha)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BN_alpha), ubound(InData%BN_alpha))
+      call RegPackBounds(Buf, 1, lbound(InData%BN_alpha, kind=B8Ki), ubound(InData%BN_alpha, kind=B8Ki))
       call RegPack(Buf, InData%BN_alpha)
    end if
    call RegPack(Buf, allocated(InData%BN_phi))
    if (allocated(InData%BN_phi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BN_phi), ubound(InData%BN_phi))
+      call RegPackBounds(Buf, 1, lbound(InData%BN_phi, kind=B8Ki), ubound(InData%BN_phi, kind=B8Ki))
       call RegPack(Buf, InData%BN_phi)
    end if
    call RegPack(Buf, allocated(InData%BN_Re))
    if (allocated(InData%BN_Re)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BN_Re), ubound(InData%BN_Re))
+      call RegPackBounds(Buf, 1, lbound(InData%BN_Re, kind=B8Ki), ubound(InData%BN_Re, kind=B8Ki))
       call RegPack(Buf, InData%BN_Re)
    end if
    call RegPack(Buf, allocated(InData%BN_URelWind_s))
    if (allocated(InData%BN_URelWind_s)) then
-      call RegPackBounds(Buf, 2, lbound(InData%BN_URelWind_s), ubound(InData%BN_URelWind_s))
+      call RegPackBounds(Buf, 2, lbound(InData%BN_URelWind_s, kind=B8Ki), ubound(InData%BN_URelWind_s, kind=B8Ki))
       call RegPack(Buf, InData%BN_URelWind_s)
    end if
    call RegPack(Buf, allocated(InData%BN_Cl_Static))
    if (allocated(InData%BN_Cl_Static)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BN_Cl_Static), ubound(InData%BN_Cl_Static))
+      call RegPackBounds(Buf, 1, lbound(InData%BN_Cl_Static, kind=B8Ki), ubound(InData%BN_Cl_Static, kind=B8Ki))
       call RegPack(Buf, InData%BN_Cl_Static)
    end if
    call RegPack(Buf, allocated(InData%BN_Cd_Static))
    if (allocated(InData%BN_Cd_Static)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BN_Cd_Static), ubound(InData%BN_Cd_Static))
+      call RegPackBounds(Buf, 1, lbound(InData%BN_Cd_Static, kind=B8Ki), ubound(InData%BN_Cd_Static, kind=B8Ki))
       call RegPack(Buf, InData%BN_Cd_Static)
    end if
    call RegPack(Buf, allocated(InData%BN_Cm_Static))
    if (allocated(InData%BN_Cm_Static)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BN_Cm_Static), ubound(InData%BN_Cm_Static))
+      call RegPackBounds(Buf, 1, lbound(InData%BN_Cm_Static, kind=B8Ki), ubound(InData%BN_Cm_Static, kind=B8Ki))
       call RegPack(Buf, InData%BN_Cm_Static)
    end if
    call RegPack(Buf, allocated(InData%BN_Cpmin))
    if (allocated(InData%BN_Cpmin)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BN_Cpmin), ubound(InData%BN_Cpmin))
+      call RegPackBounds(Buf, 1, lbound(InData%BN_Cpmin, kind=B8Ki), ubound(InData%BN_Cpmin, kind=B8Ki))
       call RegPack(Buf, InData%BN_Cpmin)
    end if
    call RegPack(Buf, allocated(InData%BN_Cl))
    if (allocated(InData%BN_Cl)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BN_Cl), ubound(InData%BN_Cl))
+      call RegPackBounds(Buf, 1, lbound(InData%BN_Cl, kind=B8Ki), ubound(InData%BN_Cl, kind=B8Ki))
       call RegPack(Buf, InData%BN_Cl)
    end if
    call RegPack(Buf, allocated(InData%BN_Cd))
    if (allocated(InData%BN_Cd)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BN_Cd), ubound(InData%BN_Cd))
+      call RegPackBounds(Buf, 1, lbound(InData%BN_Cd, kind=B8Ki), ubound(InData%BN_Cd, kind=B8Ki))
       call RegPack(Buf, InData%BN_Cd)
    end if
    call RegPack(Buf, allocated(InData%BN_Cm))
    if (allocated(InData%BN_Cm)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BN_Cm), ubound(InData%BN_Cm))
+      call RegPackBounds(Buf, 1, lbound(InData%BN_Cm, kind=B8Ki), ubound(InData%BN_Cm, kind=B8Ki))
       call RegPack(Buf, InData%BN_Cm)
    end if
    call RegPack(Buf, allocated(InData%BN_Cx))
    if (allocated(InData%BN_Cx)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BN_Cx), ubound(InData%BN_Cx))
+      call RegPackBounds(Buf, 1, lbound(InData%BN_Cx, kind=B8Ki), ubound(InData%BN_Cx, kind=B8Ki))
       call RegPack(Buf, InData%BN_Cx)
    end if
    call RegPack(Buf, allocated(InData%BN_Cy))
    if (allocated(InData%BN_Cy)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BN_Cy), ubound(InData%BN_Cy))
+      call RegPackBounds(Buf, 1, lbound(InData%BN_Cy, kind=B8Ki), ubound(InData%BN_Cy, kind=B8Ki))
       call RegPack(Buf, InData%BN_Cy)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2862,8 +2862,8 @@ subroutine FVW_UnPackWng_MiscVarType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Wng_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FVW_UnPackWng_MiscVarType'
-   integer(IntKi)  :: i1, i2, i3
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -3431,16 +3431,16 @@ subroutine FVW_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcMiscData%W)) then
-      LB(1:1) = lbound(SrcMiscData%W)
-      UB(1:1) = ubound(SrcMiscData%W)
+      LB(1:1) = lbound(SrcMiscData%W, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%W, kind=B8Ki)
       if (.not. allocated(DstMiscData%W)) then
          allocate(DstMiscData%W(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3461,8 +3461,8 @@ subroutine FVW_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    DstMiscData%VTKstep = SrcMiscData%VTKstep
    DstMiscData%VTKlastTime = SrcMiscData%VTKlastTime
    if (allocated(SrcMiscData%r_wind)) then
-      LB(1:2) = lbound(SrcMiscData%r_wind)
-      UB(1:2) = ubound(SrcMiscData%r_wind)
+      LB(1:2) = lbound(SrcMiscData%r_wind, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%r_wind, kind=B8Ki)
       if (.not. allocated(DstMiscData%r_wind)) then
          allocate(DstMiscData%r_wind(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3493,8 +3493,8 @@ subroutine FVW_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcMiscData%CPs)) then
-      LB(1:2) = lbound(SrcMiscData%CPs)
-      UB(1:2) = ubound(SrcMiscData%CPs)
+      LB(1:2) = lbound(SrcMiscData%CPs, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%CPs, kind=B8Ki)
       if (.not. allocated(DstMiscData%CPs)) then
          allocate(DstMiscData%CPs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3505,8 +3505,8 @@ subroutine FVW_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%CPs = SrcMiscData%CPs
    end if
    if (allocated(SrcMiscData%Uind)) then
-      LB(1:2) = lbound(SrcMiscData%Uind)
-      UB(1:2) = ubound(SrcMiscData%Uind)
+      LB(1:2) = lbound(SrcMiscData%Uind, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%Uind, kind=B8Ki)
       if (.not. allocated(DstMiscData%Uind)) then
          allocate(DstMiscData%Uind(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3517,8 +3517,8 @@ subroutine FVW_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%Uind = SrcMiscData%Uind
    end if
    if (allocated(SrcMiscData%GridOutputs)) then
-      LB(1:1) = lbound(SrcMiscData%GridOutputs)
-      UB(1:1) = ubound(SrcMiscData%GridOutputs)
+      LB(1:1) = lbound(SrcMiscData%GridOutputs, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%GridOutputs, kind=B8Ki)
       if (.not. allocated(DstMiscData%GridOutputs)) then
          allocate(DstMiscData%GridOutputs(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3539,16 +3539,16 @@ subroutine FVW_DestroyMisc(MiscData, ErrStat, ErrMsg)
    type(FVW_MiscVarType), intent(inout) :: MiscData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(MiscData%W)) then
-      LB(1:1) = lbound(MiscData%W)
-      UB(1:1) = ubound(MiscData%W)
+      LB(1:1) = lbound(MiscData%W, kind=B8Ki)
+      UB(1:1) = ubound(MiscData%W, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call FVW_DestroyWng_MiscVarType(MiscData%W(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3575,8 +3575,8 @@ subroutine FVW_DestroyMisc(MiscData, ErrStat, ErrMsg)
       deallocate(MiscData%Uind)
    end if
    if (allocated(MiscData%GridOutputs)) then
-      LB(1:1) = lbound(MiscData%GridOutputs)
-      UB(1:1) = ubound(MiscData%GridOutputs)
+      LB(1:1) = lbound(MiscData%GridOutputs, kind=B8Ki)
+      UB(1:1) = ubound(MiscData%GridOutputs, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call FVW_DestroyGridOutType(MiscData%GridOutputs(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3589,14 +3589,14 @@ subroutine FVW_PackMisc(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(FVW_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FVW_PackMisc'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%W))
    if (allocated(InData%W)) then
-      call RegPackBounds(Buf, 1, lbound(InData%W), ubound(InData%W))
-      LB(1:1) = lbound(InData%W)
-      UB(1:1) = ubound(InData%W)
+      call RegPackBounds(Buf, 1, lbound(InData%W, kind=B8Ki), ubound(InData%W, kind=B8Ki))
+      LB(1:1) = lbound(InData%W, kind=B8Ki)
+      UB(1:1) = ubound(InData%W, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call FVW_PackWng_MiscVarType(Buf, InData%W(i1)) 
       end do
@@ -3609,7 +3609,7 @@ subroutine FVW_PackMisc(Buf, Indata)
    call RegPack(Buf, InData%VTKlastTime)
    call RegPack(Buf, allocated(InData%r_wind))
    if (allocated(InData%r_wind)) then
-      call RegPackBounds(Buf, 2, lbound(InData%r_wind), ubound(InData%r_wind))
+      call RegPackBounds(Buf, 2, lbound(InData%r_wind, kind=B8Ki), ubound(InData%r_wind, kind=B8Ki))
       call RegPack(Buf, InData%r_wind)
    end if
    call RegPack(Buf, InData%ComputeWakeInduced)
@@ -3624,19 +3624,19 @@ subroutine FVW_PackMisc(Buf, Indata)
    call FVW_PackT_Part(Buf, InData%Part) 
    call RegPack(Buf, allocated(InData%CPs))
    if (allocated(InData%CPs)) then
-      call RegPackBounds(Buf, 2, lbound(InData%CPs), ubound(InData%CPs))
+      call RegPackBounds(Buf, 2, lbound(InData%CPs, kind=B8Ki), ubound(InData%CPs, kind=B8Ki))
       call RegPack(Buf, InData%CPs)
    end if
    call RegPack(Buf, allocated(InData%Uind))
    if (allocated(InData%Uind)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Uind), ubound(InData%Uind))
+      call RegPackBounds(Buf, 2, lbound(InData%Uind, kind=B8Ki), ubound(InData%Uind, kind=B8Ki))
       call RegPack(Buf, InData%Uind)
    end if
    call RegPack(Buf, allocated(InData%GridOutputs))
    if (allocated(InData%GridOutputs)) then
-      call RegPackBounds(Buf, 1, lbound(InData%GridOutputs), ubound(InData%GridOutputs))
-      LB(1:1) = lbound(InData%GridOutputs)
-      UB(1:1) = ubound(InData%GridOutputs)
+      call RegPackBounds(Buf, 1, lbound(InData%GridOutputs, kind=B8Ki), ubound(InData%GridOutputs, kind=B8Ki))
+      LB(1:1) = lbound(InData%GridOutputs, kind=B8Ki)
+      UB(1:1) = ubound(InData%GridOutputs, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call FVW_PackGridOutType(Buf, InData%GridOutputs(i1)) 
       end do
@@ -3649,8 +3649,8 @@ subroutine FVW_UnPackMisc(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(FVW_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FVW_UnPackMisc'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -3806,14 +3806,14 @@ subroutine FVW_CopyWng_InputType(SrcWng_InputTypeData, DstWng_InputTypeData, Ctr
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'FVW_CopyWng_InputType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcWng_InputTypeData%Vwnd_LL)) then
-      LB(1:2) = lbound(SrcWng_InputTypeData%Vwnd_LL)
-      UB(1:2) = ubound(SrcWng_InputTypeData%Vwnd_LL)
+      LB(1:2) = lbound(SrcWng_InputTypeData%Vwnd_LL, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_InputTypeData%Vwnd_LL, kind=B8Ki)
       if (.not. allocated(DstWng_InputTypeData%Vwnd_LL)) then
          allocate(DstWng_InputTypeData%Vwnd_LL(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3824,8 +3824,8 @@ subroutine FVW_CopyWng_InputType(SrcWng_InputTypeData, DstWng_InputTypeData, Ctr
       DstWng_InputTypeData%Vwnd_LL = SrcWng_InputTypeData%Vwnd_LL
    end if
    if (allocated(SrcWng_InputTypeData%omega_z)) then
-      LB(1:1) = lbound(SrcWng_InputTypeData%omega_z)
-      UB(1:1) = ubound(SrcWng_InputTypeData%omega_z)
+      LB(1:1) = lbound(SrcWng_InputTypeData%omega_z, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_InputTypeData%omega_z, kind=B8Ki)
       if (.not. allocated(DstWng_InputTypeData%omega_z)) then
          allocate(DstWng_InputTypeData%omega_z(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3859,12 +3859,12 @@ subroutine FVW_PackWng_InputType(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%Vwnd_LL))
    if (allocated(InData%Vwnd_LL)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Vwnd_LL), ubound(InData%Vwnd_LL))
+      call RegPackBounds(Buf, 2, lbound(InData%Vwnd_LL, kind=B8Ki), ubound(InData%Vwnd_LL, kind=B8Ki))
       call RegPack(Buf, InData%Vwnd_LL)
    end if
    call RegPack(Buf, allocated(InData%omega_z))
    if (allocated(InData%omega_z)) then
-      call RegPackBounds(Buf, 1, lbound(InData%omega_z), ubound(InData%omega_z))
+      call RegPackBounds(Buf, 1, lbound(InData%omega_z, kind=B8Ki), ubound(InData%omega_z, kind=B8Ki))
       call RegPack(Buf, InData%omega_z)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3874,7 +3874,7 @@ subroutine FVW_UnPackWng_InputType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Wng_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FVW_UnPackWng_InputType'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -3914,16 +3914,16 @@ subroutine FVW_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_CopyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInputData%rotors)) then
-      LB(1:1) = lbound(SrcInputData%rotors)
-      UB(1:1) = ubound(SrcInputData%rotors)
+      LB(1:1) = lbound(SrcInputData%rotors, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputData%rotors, kind=B8Ki)
       if (.not. allocated(DstInputData%rotors)) then
          allocate(DstInputData%rotors(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3938,8 +3938,8 @@ subroutine FVW_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcInputData%W)) then
-      LB(1:1) = lbound(SrcInputData%W)
-      UB(1:1) = ubound(SrcInputData%W)
+      LB(1:1) = lbound(SrcInputData%W, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputData%W, kind=B8Ki)
       if (.not. allocated(DstInputData%W)) then
          allocate(DstInputData%W(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3954,8 +3954,8 @@ subroutine FVW_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcInputData%WingsMesh)) then
-      LB(1:1) = lbound(SrcInputData%WingsMesh)
-      UB(1:1) = ubound(SrcInputData%WingsMesh)
+      LB(1:1) = lbound(SrcInputData%WingsMesh, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputData%WingsMesh, kind=B8Ki)
       if (.not. allocated(DstInputData%WingsMesh)) then
          allocate(DstInputData%WingsMesh(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3970,8 +3970,8 @@ subroutine FVW_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcInputData%V_wind)) then
-      LB(1:2) = lbound(SrcInputData%V_wind)
-      UB(1:2) = ubound(SrcInputData%V_wind)
+      LB(1:2) = lbound(SrcInputData%V_wind, kind=B8Ki)
+      UB(1:2) = ubound(SrcInputData%V_wind, kind=B8Ki)
       if (.not. allocated(DstInputData%V_wind)) then
          allocate(DstInputData%V_wind(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3987,16 +3987,16 @@ subroutine FVW_DestroyInput(InputData, ErrStat, ErrMsg)
    type(FVW_InputType), intent(inout) :: InputData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_DestroyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(InputData%rotors)) then
-      LB(1:1) = lbound(InputData%rotors)
-      UB(1:1) = ubound(InputData%rotors)
+      LB(1:1) = lbound(InputData%rotors, kind=B8Ki)
+      UB(1:1) = ubound(InputData%rotors, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call FVW_DestroyRot_InputType(InputData%rotors(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4004,8 +4004,8 @@ subroutine FVW_DestroyInput(InputData, ErrStat, ErrMsg)
       deallocate(InputData%rotors)
    end if
    if (allocated(InputData%W)) then
-      LB(1:1) = lbound(InputData%W)
-      UB(1:1) = ubound(InputData%W)
+      LB(1:1) = lbound(InputData%W, kind=B8Ki)
+      UB(1:1) = ubound(InputData%W, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call FVW_DestroyWng_InputType(InputData%W(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4013,8 +4013,8 @@ subroutine FVW_DestroyInput(InputData, ErrStat, ErrMsg)
       deallocate(InputData%W)
    end if
    if (allocated(InputData%WingsMesh)) then
-      LB(1:1) = lbound(InputData%WingsMesh)
-      UB(1:1) = ubound(InputData%WingsMesh)
+      LB(1:1) = lbound(InputData%WingsMesh, kind=B8Ki)
+      UB(1:1) = ubound(InputData%WingsMesh, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call MeshDestroy( InputData%WingsMesh(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4030,39 +4030,39 @@ subroutine FVW_PackInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(FVW_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FVW_PackInput'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%rotors))
    if (allocated(InData%rotors)) then
-      call RegPackBounds(Buf, 1, lbound(InData%rotors), ubound(InData%rotors))
-      LB(1:1) = lbound(InData%rotors)
-      UB(1:1) = ubound(InData%rotors)
+      call RegPackBounds(Buf, 1, lbound(InData%rotors, kind=B8Ki), ubound(InData%rotors, kind=B8Ki))
+      LB(1:1) = lbound(InData%rotors, kind=B8Ki)
+      UB(1:1) = ubound(InData%rotors, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call FVW_PackRot_InputType(Buf, InData%rotors(i1)) 
       end do
    end if
    call RegPack(Buf, allocated(InData%W))
    if (allocated(InData%W)) then
-      call RegPackBounds(Buf, 1, lbound(InData%W), ubound(InData%W))
-      LB(1:1) = lbound(InData%W)
-      UB(1:1) = ubound(InData%W)
+      call RegPackBounds(Buf, 1, lbound(InData%W, kind=B8Ki), ubound(InData%W, kind=B8Ki))
+      LB(1:1) = lbound(InData%W, kind=B8Ki)
+      UB(1:1) = ubound(InData%W, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call FVW_PackWng_InputType(Buf, InData%W(i1)) 
       end do
    end if
    call RegPack(Buf, allocated(InData%WingsMesh))
    if (allocated(InData%WingsMesh)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WingsMesh), ubound(InData%WingsMesh))
-      LB(1:1) = lbound(InData%WingsMesh)
-      UB(1:1) = ubound(InData%WingsMesh)
+      call RegPackBounds(Buf, 1, lbound(InData%WingsMesh, kind=B8Ki), ubound(InData%WingsMesh, kind=B8Ki))
+      LB(1:1) = lbound(InData%WingsMesh, kind=B8Ki)
+      UB(1:1) = ubound(InData%WingsMesh, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call MeshPack(Buf, InData%WingsMesh(i1)) 
       end do
    end if
    call RegPack(Buf, allocated(InData%V_wind))
    if (allocated(InData%V_wind)) then
-      call RegPackBounds(Buf, 2, lbound(InData%V_wind), ubound(InData%V_wind))
+      call RegPackBounds(Buf, 2, lbound(InData%V_wind, kind=B8Ki), ubound(InData%V_wind, kind=B8Ki))
       call RegPack(Buf, InData%V_wind)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4072,8 +4072,8 @@ subroutine FVW_UnPackInput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(FVW_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FVW_UnPackInput'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -4144,8 +4144,8 @@ subroutine FVW_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSt
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_CopyDiscState'
@@ -4153,8 +4153,8 @@ subroutine FVW_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSt
    ErrMsg  = ''
    DstDiscStateData%Dummy = SrcDiscStateData%Dummy
    if (allocated(SrcDiscStateData%UA)) then
-      LB(1:1) = lbound(SrcDiscStateData%UA)
-      UB(1:1) = ubound(SrcDiscStateData%UA)
+      LB(1:1) = lbound(SrcDiscStateData%UA, kind=B8Ki)
+      UB(1:1) = ubound(SrcDiscStateData%UA, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%UA)) then
          allocate(DstDiscStateData%UA(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4174,16 +4174,16 @@ subroutine FVW_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
    type(FVW_DiscreteStateType), intent(inout) :: DiscStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_DestroyDiscState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(DiscStateData%UA)) then
-      LB(1:1) = lbound(DiscStateData%UA)
-      UB(1:1) = ubound(DiscStateData%UA)
+      LB(1:1) = lbound(DiscStateData%UA, kind=B8Ki)
+      UB(1:1) = ubound(DiscStateData%UA, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call UA_DestroyDiscState(DiscStateData%UA(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4196,15 +4196,15 @@ subroutine FVW_PackDiscState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(FVW_DiscreteStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FVW_PackDiscState'
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%Dummy)
    call RegPack(Buf, allocated(InData%UA))
    if (allocated(InData%UA)) then
-      call RegPackBounds(Buf, 1, lbound(InData%UA), ubound(InData%UA))
-      LB(1:1) = lbound(InData%UA)
-      UB(1:1) = ubound(InData%UA)
+      call RegPackBounds(Buf, 1, lbound(InData%UA, kind=B8Ki), ubound(InData%UA, kind=B8Ki))
+      LB(1:1) = lbound(InData%UA, kind=B8Ki)
+      UB(1:1) = ubound(InData%UA, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call UA_PackDiscState(Buf, InData%UA(i1)) 
       end do
@@ -4216,8 +4216,8 @@ subroutine FVW_UnPackDiscState(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(FVW_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FVW_UnPackDiscState'
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -4246,14 +4246,14 @@ subroutine FVW_CopyWng_ConstraintStateType(SrcWng_ConstraintStateTypeData, DstWn
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'FVW_CopyWng_ConstraintStateType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcWng_ConstraintStateTypeData%Gamma_LL)) then
-      LB(1:1) = lbound(SrcWng_ConstraintStateTypeData%Gamma_LL)
-      UB(1:1) = ubound(SrcWng_ConstraintStateTypeData%Gamma_LL)
+      LB(1:1) = lbound(SrcWng_ConstraintStateTypeData%Gamma_LL, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_ConstraintStateTypeData%Gamma_LL, kind=B8Ki)
       if (.not. allocated(DstWng_ConstraintStateTypeData%Gamma_LL)) then
          allocate(DstWng_ConstraintStateTypeData%Gamma_LL(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4284,7 +4284,7 @@ subroutine FVW_PackWng_ConstraintStateType(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%Gamma_LL))
    if (allocated(InData%Gamma_LL)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Gamma_LL), ubound(InData%Gamma_LL))
+      call RegPackBounds(Buf, 1, lbound(InData%Gamma_LL, kind=B8Ki), ubound(InData%Gamma_LL, kind=B8Ki))
       call RegPack(Buf, InData%Gamma_LL)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4294,7 +4294,7 @@ subroutine FVW_UnPackWng_ConstraintStateType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Wng_ConstraintStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FVW_UnPackWng_ConstraintStateType'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -4320,16 +4320,16 @@ subroutine FVW_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode,
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_CopyConstrState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcConstrStateData%W)) then
-      LB(1:1) = lbound(SrcConstrStateData%W)
-      UB(1:1) = ubound(SrcConstrStateData%W)
+      LB(1:1) = lbound(SrcConstrStateData%W, kind=B8Ki)
+      UB(1:1) = ubound(SrcConstrStateData%W, kind=B8Ki)
       if (.not. allocated(DstConstrStateData%W)) then
          allocate(DstConstrStateData%W(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4350,16 +4350,16 @@ subroutine FVW_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
    type(FVW_ConstraintStateType), intent(inout) :: ConstrStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_DestroyConstrState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(ConstrStateData%W)) then
-      LB(1:1) = lbound(ConstrStateData%W)
-      UB(1:1) = ubound(ConstrStateData%W)
+      LB(1:1) = lbound(ConstrStateData%W, kind=B8Ki)
+      UB(1:1) = ubound(ConstrStateData%W, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call FVW_DestroyWng_ConstraintStateType(ConstrStateData%W(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4372,14 +4372,14 @@ subroutine FVW_PackConstrState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(FVW_ConstraintStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FVW_PackConstrState'
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%W))
    if (allocated(InData%W)) then
-      call RegPackBounds(Buf, 1, lbound(InData%W), ubound(InData%W))
-      LB(1:1) = lbound(InData%W)
-      UB(1:1) = ubound(InData%W)
+      call RegPackBounds(Buf, 1, lbound(InData%W, kind=B8Ki), ubound(InData%W, kind=B8Ki))
+      LB(1:1) = lbound(InData%W, kind=B8Ki)
+      UB(1:1) = ubound(InData%W, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call FVW_PackWng_ConstraintStateType(Buf, InData%W(i1)) 
       end do
@@ -4392,8 +4392,8 @@ subroutine FVW_UnPackConstrState(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(FVW_ConstraintStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FVW_UnPackConstrState'
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -4422,8 +4422,8 @@ subroutine FVW_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_CopyOtherState'
@@ -4431,8 +4431,8 @@ subroutine FVW_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
    ErrMsg  = ''
    DstOtherStateData%Dummy = SrcOtherStateData%Dummy
    if (allocated(SrcOtherStateData%UA)) then
-      LB(1:1) = lbound(SrcOtherStateData%UA)
-      UB(1:1) = ubound(SrcOtherStateData%UA)
+      LB(1:1) = lbound(SrcOtherStateData%UA, kind=B8Ki)
+      UB(1:1) = ubound(SrcOtherStateData%UA, kind=B8Ki)
       if (.not. allocated(DstOtherStateData%UA)) then
          allocate(DstOtherStateData%UA(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4452,16 +4452,16 @@ subroutine FVW_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    type(FVW_OtherStateType), intent(inout) :: OtherStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_DestroyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(OtherStateData%UA)) then
-      LB(1:1) = lbound(OtherStateData%UA)
-      UB(1:1) = ubound(OtherStateData%UA)
+      LB(1:1) = lbound(OtherStateData%UA, kind=B8Ki)
+      UB(1:1) = ubound(OtherStateData%UA, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call UA_DestroyOtherState(OtherStateData%UA(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4474,15 +4474,15 @@ subroutine FVW_PackOtherState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(FVW_OtherStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FVW_PackOtherState'
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%Dummy)
    call RegPack(Buf, allocated(InData%UA))
    if (allocated(InData%UA)) then
-      call RegPackBounds(Buf, 1, lbound(InData%UA), ubound(InData%UA))
-      LB(1:1) = lbound(InData%UA)
-      UB(1:1) = ubound(InData%UA)
+      call RegPackBounds(Buf, 1, lbound(InData%UA, kind=B8Ki), ubound(InData%UA, kind=B8Ki))
+      LB(1:1) = lbound(InData%UA, kind=B8Ki)
+      UB(1:1) = ubound(InData%UA, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call UA_PackOtherState(Buf, InData%UA(i1)) 
       end do
@@ -4494,8 +4494,8 @@ subroutine FVW_UnPackOtherState(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(FVW_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FVW_UnPackOtherState'
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -4524,14 +4524,14 @@ subroutine FVW_CopyWng_InitInputType(SrcWng_InitInputTypeData, DstWng_InitInputT
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'FVW_CopyWng_InitInputType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcWng_InitInputTypeData%AFindx)) then
-      LB(1:2) = lbound(SrcWng_InitInputTypeData%AFindx)
-      UB(1:2) = ubound(SrcWng_InitInputTypeData%AFindx)
+      LB(1:2) = lbound(SrcWng_InitInputTypeData%AFindx, kind=B8Ki)
+      UB(1:2) = ubound(SrcWng_InitInputTypeData%AFindx, kind=B8Ki)
       if (.not. allocated(DstWng_InitInputTypeData%AFindx)) then
          allocate(DstWng_InitInputTypeData%AFindx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4542,8 +4542,8 @@ subroutine FVW_CopyWng_InitInputType(SrcWng_InitInputTypeData, DstWng_InitInputT
       DstWng_InitInputTypeData%AFindx = SrcWng_InitInputTypeData%AFindx
    end if
    if (allocated(SrcWng_InitInputTypeData%chord)) then
-      LB(1:1) = lbound(SrcWng_InitInputTypeData%chord)
-      UB(1:1) = ubound(SrcWng_InitInputTypeData%chord)
+      LB(1:1) = lbound(SrcWng_InitInputTypeData%chord, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_InitInputTypeData%chord, kind=B8Ki)
       if (.not. allocated(DstWng_InitInputTypeData%chord)) then
          allocate(DstWng_InitInputTypeData%chord(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4554,8 +4554,8 @@ subroutine FVW_CopyWng_InitInputType(SrcWng_InitInputTypeData, DstWng_InitInputT
       DstWng_InitInputTypeData%chord = SrcWng_InitInputTypeData%chord
    end if
    if (allocated(SrcWng_InitInputTypeData%RElm)) then
-      LB(1:1) = lbound(SrcWng_InitInputTypeData%RElm)
-      UB(1:1) = ubound(SrcWng_InitInputTypeData%RElm)
+      LB(1:1) = lbound(SrcWng_InitInputTypeData%RElm, kind=B8Ki)
+      UB(1:1) = ubound(SrcWng_InitInputTypeData%RElm, kind=B8Ki)
       if (.not. allocated(DstWng_InitInputTypeData%RElm)) then
          allocate(DstWng_InitInputTypeData%RElm(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4595,17 +4595,17 @@ subroutine FVW_PackWng_InitInputType(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%AFindx))
    if (allocated(InData%AFindx)) then
-      call RegPackBounds(Buf, 2, lbound(InData%AFindx), ubound(InData%AFindx))
+      call RegPackBounds(Buf, 2, lbound(InData%AFindx, kind=B8Ki), ubound(InData%AFindx, kind=B8Ki))
       call RegPack(Buf, InData%AFindx)
    end if
    call RegPack(Buf, allocated(InData%chord))
    if (allocated(InData%chord)) then
-      call RegPackBounds(Buf, 1, lbound(InData%chord), ubound(InData%chord))
+      call RegPackBounds(Buf, 1, lbound(InData%chord, kind=B8Ki), ubound(InData%chord, kind=B8Ki))
       call RegPack(Buf, InData%chord)
    end if
    call RegPack(Buf, allocated(InData%RElm))
    if (allocated(InData%RElm)) then
-      call RegPackBounds(Buf, 1, lbound(InData%RElm), ubound(InData%RElm))
+      call RegPackBounds(Buf, 1, lbound(InData%RElm, kind=B8Ki), ubound(InData%RElm, kind=B8Ki))
       call RegPack(Buf, InData%RElm)
    end if
    call RegPack(Buf, InData%iRotor)
@@ -4618,7 +4618,7 @@ subroutine FVW_UnPackWng_InitInputType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Wng_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FVW_UnPackWng_InitInputType'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -4678,8 +4678,8 @@ subroutine FVW_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSt
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_CopyInitInput'
@@ -4688,8 +4688,8 @@ subroutine FVW_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSt
    DstInitInputData%FVWFileName = SrcInitInputData%FVWFileName
    DstInitInputData%RootName = SrcInitInputData%RootName
    if (allocated(SrcInitInputData%W)) then
-      LB(1:1) = lbound(SrcInitInputData%W)
-      UB(1:1) = ubound(SrcInitInputData%W)
+      LB(1:1) = lbound(SrcInitInputData%W, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%W, kind=B8Ki)
       if (.not. allocated(DstInitInputData%W)) then
          allocate(DstInitInputData%W(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4704,8 +4704,8 @@ subroutine FVW_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSt
       end do
    end if
    if (allocated(SrcInitInputData%WingsMesh)) then
-      LB(1:1) = lbound(SrcInitInputData%WingsMesh)
-      UB(1:1) = ubound(SrcInitInputData%WingsMesh)
+      LB(1:1) = lbound(SrcInitInputData%WingsMesh, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%WingsMesh, kind=B8Ki)
       if (.not. allocated(DstInitInputData%WingsMesh)) then
          allocate(DstInitInputData%WingsMesh(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4735,16 +4735,16 @@ subroutine FVW_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    type(FVW_InitInputType), intent(inout) :: InitInputData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FVW_DestroyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(InitInputData%W)) then
-      LB(1:1) = lbound(InitInputData%W)
-      UB(1:1) = ubound(InitInputData%W)
+      LB(1:1) = lbound(InitInputData%W, kind=B8Ki)
+      UB(1:1) = ubound(InitInputData%W, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call FVW_DestroyWng_InitInputType(InitInputData%W(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4752,8 +4752,8 @@ subroutine FVW_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
       deallocate(InitInputData%W)
    end if
    if (allocated(InitInputData%WingsMesh)) then
-      LB(1:1) = lbound(InitInputData%WingsMesh)
-      UB(1:1) = ubound(InitInputData%WingsMesh)
+      LB(1:1) = lbound(InitInputData%WingsMesh, kind=B8Ki)
+      UB(1:1) = ubound(InitInputData%WingsMesh, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call MeshDestroy( InitInputData%WingsMesh(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4766,25 +4766,25 @@ subroutine FVW_PackInitInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(FVW_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FVW_PackInitInput'
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%FVWFileName)
    call RegPack(Buf, InData%RootName)
    call RegPack(Buf, allocated(InData%W))
    if (allocated(InData%W)) then
-      call RegPackBounds(Buf, 1, lbound(InData%W), ubound(InData%W))
-      LB(1:1) = lbound(InData%W)
-      UB(1:1) = ubound(InData%W)
+      call RegPackBounds(Buf, 1, lbound(InData%W, kind=B8Ki), ubound(InData%W, kind=B8Ki))
+      LB(1:1) = lbound(InData%W, kind=B8Ki)
+      UB(1:1) = ubound(InData%W, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call FVW_PackWng_InitInputType(Buf, InData%W(i1)) 
       end do
    end if
    call RegPack(Buf, allocated(InData%WingsMesh))
    if (allocated(InData%WingsMesh)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WingsMesh), ubound(InData%WingsMesh))
-      LB(1:1) = lbound(InData%WingsMesh)
-      UB(1:1) = ubound(InData%WingsMesh)
+      call RegPackBounds(Buf, 1, lbound(InData%WingsMesh, kind=B8Ki), ubound(InData%WingsMesh, kind=B8Ki))
+      LB(1:1) = lbound(InData%WingsMesh, kind=B8Ki)
+      UB(1:1) = ubound(InData%WingsMesh, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call MeshPack(Buf, InData%WingsMesh(i1)) 
       end do
@@ -4806,8 +4806,8 @@ subroutine FVW_UnPackInitInput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(FVW_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FVW_UnPackInitInput'
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -5169,27 +5169,27 @@ SUBROUTINE FVW_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg 
    a2 = t_out/t(2)
    
    IF (ALLOCATED(u_out%rotors) .AND. ALLOCATED(u1%rotors)) THEN
-      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+      DO i01 = LBOUND(u_out%rotors,1, kind=B8Ki),UBOUND(u_out%rotors,1, kind=B8Ki)
          u_out%rotors(i01)%HubOrientation = a1*u1%rotors(i01)%HubOrientation + a2*u2%rotors(i01)%HubOrientation
       END DO
-      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+      DO i01 = LBOUND(u_out%rotors,1, kind=B8Ki),UBOUND(u_out%rotors,1, kind=B8Ki)
          u_out%rotors(i01)%HubPosition = a1*u1%rotors(i01)%HubPosition + a2*u2%rotors(i01)%HubPosition
       END DO
    END IF ! check if allocated
    IF (ALLOCATED(u_out%W) .AND. ALLOCATED(u1%W)) THEN
-      DO i01 = LBOUND(u_out%W,1),UBOUND(u_out%W,1)
+      DO i01 = LBOUND(u_out%W,1, kind=B8Ki),UBOUND(u_out%W,1, kind=B8Ki)
          IF (ALLOCATED(u_out%W(i01)%Vwnd_LL) .AND. ALLOCATED(u1%W(i01)%Vwnd_LL)) THEN
             u_out%W(i01)%Vwnd_LL = a1*u1%W(i01)%Vwnd_LL + a2*u2%W(i01)%Vwnd_LL
          END IF ! check if allocated
       END DO
-      DO i01 = LBOUND(u_out%W,1),UBOUND(u_out%W,1)
+      DO i01 = LBOUND(u_out%W,1, kind=B8Ki),UBOUND(u_out%W,1, kind=B8Ki)
          IF (ALLOCATED(u_out%W(i01)%omega_z) .AND. ALLOCATED(u1%W(i01)%omega_z)) THEN
             u_out%W(i01)%omega_z = a1*u1%W(i01)%omega_z + a2*u2%W(i01)%omega_z
          END IF ! check if allocated
       END DO
    END IF ! check if allocated
    IF (ALLOCATED(u_out%WingsMesh) .AND. ALLOCATED(u1%WingsMesh)) THEN
-      DO i1 = LBOUND(u_out%WingsMesh,1),UBOUND(u_out%WingsMesh,1)
+      DO i1 = LBOUND(u_out%WingsMesh,1, kind=B8Ki),UBOUND(u_out%WingsMesh,1, kind=B8Ki)
          CALL MeshExtrapInterp1(u1%WingsMesh(i1), u2%WingsMesh(i1), tin, u_out%WingsMesh(i1), tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
@@ -5257,27 +5257,27 @@ SUBROUTINE FVW_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, Err
    a2 = (t_out - t(1))*(t_out - t(3))/((t(2) - t(1))*(t(2) - t(3)))
    a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
    IF (ALLOCATED(u_out%rotors) .AND. ALLOCATED(u1%rotors)) THEN
-      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+      DO i01 = LBOUND(u_out%rotors,1, kind=B8Ki),UBOUND(u_out%rotors,1, kind=B8Ki)
          u_out%rotors(i01)%HubOrientation = a1*u1%rotors(i01)%HubOrientation + a2*u2%rotors(i01)%HubOrientation + a3*u3%rotors(i01)%HubOrientation
       END DO
-      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+      DO i01 = LBOUND(u_out%rotors,1, kind=B8Ki),UBOUND(u_out%rotors,1, kind=B8Ki)
          u_out%rotors(i01)%HubPosition = a1*u1%rotors(i01)%HubPosition + a2*u2%rotors(i01)%HubPosition + a3*u3%rotors(i01)%HubPosition
       END DO
    END IF ! check if allocated
    IF (ALLOCATED(u_out%W) .AND. ALLOCATED(u1%W)) THEN
-      DO i01 = LBOUND(u_out%W,1),UBOUND(u_out%W,1)
+      DO i01 = LBOUND(u_out%W,1, kind=B8Ki),UBOUND(u_out%W,1, kind=B8Ki)
          IF (ALLOCATED(u_out%W(i01)%Vwnd_LL) .AND. ALLOCATED(u1%W(i01)%Vwnd_LL)) THEN
             u_out%W(i01)%Vwnd_LL = a1*u1%W(i01)%Vwnd_LL + a2*u2%W(i01)%Vwnd_LL + a3*u3%W(i01)%Vwnd_LL
          END IF ! check if allocated
       END DO
-      DO i01 = LBOUND(u_out%W,1),UBOUND(u_out%W,1)
+      DO i01 = LBOUND(u_out%W,1, kind=B8Ki),UBOUND(u_out%W,1, kind=B8Ki)
          IF (ALLOCATED(u_out%W(i01)%omega_z) .AND. ALLOCATED(u1%W(i01)%omega_z)) THEN
             u_out%W(i01)%omega_z = a1*u1%W(i01)%omega_z + a2*u2%W(i01)%omega_z + a3*u3%W(i01)%omega_z
          END IF ! check if allocated
       END DO
    END IF ! check if allocated
    IF (ALLOCATED(u_out%WingsMesh) .AND. ALLOCATED(u1%WingsMesh)) THEN
-      DO i1 = LBOUND(u_out%WingsMesh,1),UBOUND(u_out%WingsMesh,1)
+      DO i1 = LBOUND(u_out%WingsMesh,1, kind=B8Ki),UBOUND(u_out%WingsMesh,1, kind=B8Ki)
          CALL MeshExtrapInterp2(u1%WingsMesh(i1), u2%WingsMesh(i1), u3%WingsMesh(i1), tin, u_out%WingsMesh(i1), tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
@@ -5387,7 +5387,7 @@ SUBROUTINE FVW_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg
    a2 = t_out/t(2)
    
    IF (ALLOCATED(y_out%W) .AND. ALLOCATED(y1%W)) THEN
-      DO i01 = LBOUND(y_out%W,1),UBOUND(y_out%W,1)
+      DO i01 = LBOUND(y_out%W,1, kind=B8Ki),UBOUND(y_out%W,1, kind=B8Ki)
          IF (ALLOCATED(y_out%W(i01)%Vind) .AND. ALLOCATED(y1%W(i01)%Vind)) THEN
             y_out%W(i01)%Vind = a1*y1%W(i01)%Vind + a2*y2%W(i01)%Vind
          END IF ! check if allocated
@@ -5453,7 +5453,7 @@ SUBROUTINE FVW_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Er
    a2 = (t_out - t(1))*(t_out - t(3))/((t(2) - t(1))*(t(2) - t(3)))
    a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
    IF (ALLOCATED(y_out%W) .AND. ALLOCATED(y1%W)) THEN
-      DO i01 = LBOUND(y_out%W,1),UBOUND(y_out%W,1)
+      DO i01 = LBOUND(y_out%W,1, kind=B8Ki),UBOUND(y_out%W,1, kind=B8Ki)
          IF (ALLOCATED(y_out%W(i01)%Vind) .AND. ALLOCATED(y1%W(i01)%Vind)) THEN
             y_out%W(i01)%Vind = a1*y1%W(i01)%Vind + a2*y2%W(i01)%Vind + a3*y3%W(i01)%Vind
          END IF ! check if allocated

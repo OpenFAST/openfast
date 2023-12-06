@@ -140,7 +140,7 @@ subroutine NWTC_Library_CopyFASTdataType(SrcFASTdataTypeData, DstFASTdataTypeDat
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'NWTC_Library_CopyFASTdataType'
    ErrStat = ErrID_None
@@ -151,8 +151,8 @@ subroutine NWTC_Library_CopyFASTdataType(SrcFASTdataTypeData, DstFASTdataTypeDat
    DstFASTdataTypeData%NumRecs = SrcFASTdataTypeData%NumRecs
    DstFASTdataTypeData%TimeStep = SrcFASTdataTypeData%TimeStep
    if (allocated(SrcFASTdataTypeData%ChanNames)) then
-      LB(1:1) = lbound(SrcFASTdataTypeData%ChanNames)
-      UB(1:1) = ubound(SrcFASTdataTypeData%ChanNames)
+      LB(1:1) = lbound(SrcFASTdataTypeData%ChanNames, kind=B8Ki)
+      UB(1:1) = ubound(SrcFASTdataTypeData%ChanNames, kind=B8Ki)
       if (.not. allocated(DstFASTdataTypeData%ChanNames)) then
          allocate(DstFASTdataTypeData%ChanNames(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -163,8 +163,8 @@ subroutine NWTC_Library_CopyFASTdataType(SrcFASTdataTypeData, DstFASTdataTypeDat
       DstFASTdataTypeData%ChanNames = SrcFASTdataTypeData%ChanNames
    end if
    if (allocated(SrcFASTdataTypeData%ChanUnits)) then
-      LB(1:1) = lbound(SrcFASTdataTypeData%ChanUnits)
-      UB(1:1) = ubound(SrcFASTdataTypeData%ChanUnits)
+      LB(1:1) = lbound(SrcFASTdataTypeData%ChanUnits, kind=B8Ki)
+      UB(1:1) = ubound(SrcFASTdataTypeData%ChanUnits, kind=B8Ki)
       if (.not. allocated(DstFASTdataTypeData%ChanUnits)) then
          allocate(DstFASTdataTypeData%ChanUnits(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -175,8 +175,8 @@ subroutine NWTC_Library_CopyFASTdataType(SrcFASTdataTypeData, DstFASTdataTypeDat
       DstFASTdataTypeData%ChanUnits = SrcFASTdataTypeData%ChanUnits
    end if
    if (allocated(SrcFASTdataTypeData%Data)) then
-      LB(1:2) = lbound(SrcFASTdataTypeData%Data)
-      UB(1:2) = ubound(SrcFASTdataTypeData%Data)
+      LB(1:2) = lbound(SrcFASTdataTypeData%Data, kind=B8Ki)
+      UB(1:2) = ubound(SrcFASTdataTypeData%Data, kind=B8Ki)
       if (.not. allocated(DstFASTdataTypeData%Data)) then
          allocate(DstFASTdataTypeData%Data(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -218,17 +218,17 @@ subroutine NWTC_Library_PackFASTdataType(Buf, Indata)
    call RegPack(Buf, InData%TimeStep)
    call RegPack(Buf, allocated(InData%ChanNames))
    if (allocated(InData%ChanNames)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ChanNames), ubound(InData%ChanNames))
+      call RegPackBounds(Buf, 1, lbound(InData%ChanNames, kind=B8Ki), ubound(InData%ChanNames, kind=B8Ki))
       call RegPack(Buf, InData%ChanNames)
    end if
    call RegPack(Buf, allocated(InData%ChanUnits))
    if (allocated(InData%ChanUnits)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ChanUnits), ubound(InData%ChanUnits))
+      call RegPackBounds(Buf, 1, lbound(InData%ChanUnits, kind=B8Ki), ubound(InData%ChanUnits, kind=B8Ki))
       call RegPack(Buf, InData%ChanUnits)
    end if
    call RegPack(Buf, allocated(InData%Data))
    if (allocated(InData%Data)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Data), ubound(InData%Data))
+      call RegPackBounds(Buf, 2, lbound(InData%Data, kind=B8Ki), ubound(InData%Data, kind=B8Ki))
       call RegPack(Buf, InData%Data)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -238,7 +238,7 @@ subroutine NWTC_Library_UnPackFASTdataType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(FASTdataType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackFASTdataType'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -353,7 +353,7 @@ subroutine NWTC_Library_CopyFileInfoType(SrcFileInfoTypeData, DstFileInfoTypeDat
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'NWTC_Library_CopyFileInfoType'
    ErrStat = ErrID_None
@@ -361,8 +361,8 @@ subroutine NWTC_Library_CopyFileInfoType(SrcFileInfoTypeData, DstFileInfoTypeDat
    DstFileInfoTypeData%NumLines = SrcFileInfoTypeData%NumLines
    DstFileInfoTypeData%NumFiles = SrcFileInfoTypeData%NumFiles
    if (allocated(SrcFileInfoTypeData%FileLine)) then
-      LB(1:1) = lbound(SrcFileInfoTypeData%FileLine)
-      UB(1:1) = ubound(SrcFileInfoTypeData%FileLine)
+      LB(1:1) = lbound(SrcFileInfoTypeData%FileLine, kind=B8Ki)
+      UB(1:1) = ubound(SrcFileInfoTypeData%FileLine, kind=B8Ki)
       if (.not. allocated(DstFileInfoTypeData%FileLine)) then
          allocate(DstFileInfoTypeData%FileLine(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -373,8 +373,8 @@ subroutine NWTC_Library_CopyFileInfoType(SrcFileInfoTypeData, DstFileInfoTypeDat
       DstFileInfoTypeData%FileLine = SrcFileInfoTypeData%FileLine
    end if
    if (allocated(SrcFileInfoTypeData%FileIndx)) then
-      LB(1:1) = lbound(SrcFileInfoTypeData%FileIndx)
-      UB(1:1) = ubound(SrcFileInfoTypeData%FileIndx)
+      LB(1:1) = lbound(SrcFileInfoTypeData%FileIndx, kind=B8Ki)
+      UB(1:1) = ubound(SrcFileInfoTypeData%FileIndx, kind=B8Ki)
       if (.not. allocated(DstFileInfoTypeData%FileIndx)) then
          allocate(DstFileInfoTypeData%FileIndx(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -385,8 +385,8 @@ subroutine NWTC_Library_CopyFileInfoType(SrcFileInfoTypeData, DstFileInfoTypeDat
       DstFileInfoTypeData%FileIndx = SrcFileInfoTypeData%FileIndx
    end if
    if (allocated(SrcFileInfoTypeData%FileList)) then
-      LB(1:1) = lbound(SrcFileInfoTypeData%FileList)
-      UB(1:1) = ubound(SrcFileInfoTypeData%FileList)
+      LB(1:1) = lbound(SrcFileInfoTypeData%FileList, kind=B8Ki)
+      UB(1:1) = ubound(SrcFileInfoTypeData%FileList, kind=B8Ki)
       if (.not. allocated(DstFileInfoTypeData%FileList)) then
          allocate(DstFileInfoTypeData%FileList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -397,8 +397,8 @@ subroutine NWTC_Library_CopyFileInfoType(SrcFileInfoTypeData, DstFileInfoTypeDat
       DstFileInfoTypeData%FileList = SrcFileInfoTypeData%FileList
    end if
    if (allocated(SrcFileInfoTypeData%Lines)) then
-      LB(1:1) = lbound(SrcFileInfoTypeData%Lines)
-      UB(1:1) = ubound(SrcFileInfoTypeData%Lines)
+      LB(1:1) = lbound(SrcFileInfoTypeData%Lines, kind=B8Ki)
+      UB(1:1) = ubound(SrcFileInfoTypeData%Lines, kind=B8Ki)
       if (.not. allocated(DstFileInfoTypeData%Lines)) then
          allocate(DstFileInfoTypeData%Lines(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -440,22 +440,22 @@ subroutine NWTC_Library_PackFileInfoType(Buf, Indata)
    call RegPack(Buf, InData%NumFiles)
    call RegPack(Buf, allocated(InData%FileLine))
    if (allocated(InData%FileLine)) then
-      call RegPackBounds(Buf, 1, lbound(InData%FileLine), ubound(InData%FileLine))
+      call RegPackBounds(Buf, 1, lbound(InData%FileLine, kind=B8Ki), ubound(InData%FileLine, kind=B8Ki))
       call RegPack(Buf, InData%FileLine)
    end if
    call RegPack(Buf, allocated(InData%FileIndx))
    if (allocated(InData%FileIndx)) then
-      call RegPackBounds(Buf, 1, lbound(InData%FileIndx), ubound(InData%FileIndx))
+      call RegPackBounds(Buf, 1, lbound(InData%FileIndx, kind=B8Ki), ubound(InData%FileIndx, kind=B8Ki))
       call RegPack(Buf, InData%FileIndx)
    end if
    call RegPack(Buf, allocated(InData%FileList))
    if (allocated(InData%FileList)) then
-      call RegPackBounds(Buf, 1, lbound(InData%FileList), ubound(InData%FileList))
+      call RegPackBounds(Buf, 1, lbound(InData%FileList, kind=B8Ki), ubound(InData%FileList, kind=B8Ki))
       call RegPack(Buf, InData%FileList)
    end if
    call RegPack(Buf, allocated(InData%Lines))
    if (allocated(InData%Lines)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Lines), ubound(InData%Lines))
+      call RegPackBounds(Buf, 1, lbound(InData%Lines, kind=B8Ki), ubound(InData%Lines, kind=B8Ki))
       call RegPack(Buf, InData%Lines)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -465,7 +465,7 @@ subroutine NWTC_Library_UnPackFileInfoType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(FileInfoType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackFileInfoType'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -580,7 +580,7 @@ subroutine NWTC_Library_CopyNWTC_RandomNumber_ParameterType(SrcNWTC_RandomNumber
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'NWTC_Library_CopyNWTC_RandomNumber_ParameterType'
    ErrStat = ErrID_None
@@ -588,8 +588,8 @@ subroutine NWTC_Library_CopyNWTC_RandomNumber_ParameterType(SrcNWTC_RandomNumber
    DstNWTC_RandomNumber_ParameterTypeData%pRNG = SrcNWTC_RandomNumber_ParameterTypeData%pRNG
    DstNWTC_RandomNumber_ParameterTypeData%RandSeed = SrcNWTC_RandomNumber_ParameterTypeData%RandSeed
    if (allocated(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry)) then
-      LB(1:1) = lbound(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry)
-      UB(1:1) = ubound(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry)
+      LB(1:1) = lbound(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry, kind=B8Ki)
+      UB(1:1) = ubound(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry, kind=B8Ki)
       if (.not. allocated(DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry)) then
          allocate(DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -623,7 +623,7 @@ subroutine NWTC_Library_PackNWTC_RandomNumber_ParameterType(Buf, Indata)
    call RegPack(Buf, InData%RandSeed)
    call RegPack(Buf, allocated(InData%RandSeedAry))
    if (allocated(InData%RandSeedAry)) then
-      call RegPackBounds(Buf, 1, lbound(InData%RandSeedAry), ubound(InData%RandSeedAry))
+      call RegPackBounds(Buf, 1, lbound(InData%RandSeedAry, kind=B8Ki), ubound(InData%RandSeedAry, kind=B8Ki))
       call RegPack(Buf, InData%RandSeedAry)
    end if
    call RegPack(Buf, InData%RNG_type)
@@ -634,7 +634,7 @@ subroutine NWTC_Library_UnPackNWTC_RandomNumber_ParameterType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(NWTC_RandomNumber_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackNWTC_RandomNumber_ParameterType'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return

@@ -13,11 +13,11 @@ REM ---------------- RUN THE REGISTRY TO AUTO-GENERATE FILES -------------------
 REM ----------------------------------------------------------------------------
 ECHO on
 :mesh
-%REGISTRY% Registry_NWTC_Library_typedef_mesh.txt  -noextrap
+%REGISTRY% Registry_NWTC_Library_mesh.txt  -noextrap
 goto end
 
 :nomesh
-%REGISTRY% Registry_NWTC_Library_typedef_nomesh.txt  -noextrap
+%REGISTRY% Registry_NWTC_Library_base.txt  -noextrap
 
 
 :end

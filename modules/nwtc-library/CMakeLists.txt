@@ -14,8 +14,19 @@
 # limitations under the License.
 #
 
+# if (GENERATE_TYPES)
+#   generate_f90_types(src/Registry_NWTC_Library_typedef_nomesh.txt ${CMAKE_CURRENT_LIST_DIR}/src/NWTC_Library_Types.f90 -noextrap)
+# endif()
+ 
 if (GENERATE_TYPES)
-  generate_f90_types(src/Registry_NWTC_Library_typedef_nomesh.txt ${CMAKE_CURRENT_LIST_DIR}/src/NWTC_Library_Types.f90 -noextrap)
+  # Generate Registry_NWTC_Library.txt by concatenating _base.txt and _mesh.txt
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS 
+    src/Registry_NWTC_Library_mesh.txt 
+    src/Registry_NWTC_Library_base.txt) # if these files change, rerun configure
+  file(READ src/Registry_NWTC_Library_base.txt BASE_CONTENTS)
+  file(READ src/Registry_NWTC_Library_mesh.txt MESH_CONTENTS)
+  file(WRITE src/Registry_NWTC_Library.txt "${BASE_CONTENTS}\n${MESH_CONTENTS}")
+  generate_f90_types(src/Registry_NWTC_Library_base.txt ${CMAKE_CURRENT_LIST_DIR}/src/NWTC_Library_Types.f90 -noextrap)
 endif()
 
 #-------------------------------------------------------------------------------

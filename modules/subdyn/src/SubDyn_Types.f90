@@ -349,14 +349,14 @@ subroutine SD_CopyIList(SrcIListData, DstIListData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'SD_CopyIList'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcIListData%List)) then
-      LB(1:1) = lbound(SrcIListData%List)
-      UB(1:1) = ubound(SrcIListData%List)
+      LB(1:1) = lbound(SrcIListData%List, kind=B8Ki)
+      UB(1:1) = ubound(SrcIListData%List, kind=B8Ki)
       if (.not. allocated(DstIListData%List)) then
          allocate(DstIListData%List(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -387,7 +387,7 @@ subroutine SD_PackIList(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%List))
    if (allocated(InData%List)) then
-      call RegPackBounds(Buf, 1, lbound(InData%List), ubound(InData%List))
+      call RegPackBounds(Buf, 1, lbound(InData%List, kind=B8Ki), ubound(InData%List, kind=B8Ki))
       call RegPack(Buf, InData%List)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -397,7 +397,7 @@ subroutine SD_UnPackIList(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(IList), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SD_UnPackIList'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -423,7 +423,7 @@ subroutine SD_CopyMeshAuxDataType(SrcMeshAuxDataTypeData, DstMeshAuxDataTypeData
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(4), UB(4)
+   integer(B8Ki)                  :: LB(4), UB(4)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'SD_CopyMeshAuxDataType'
    ErrStat = ErrID_None
@@ -431,8 +431,8 @@ subroutine SD_CopyMeshAuxDataType(SrcMeshAuxDataTypeData, DstMeshAuxDataTypeData
    DstMeshAuxDataTypeData%MemberID = SrcMeshAuxDataTypeData%MemberID
    DstMeshAuxDataTypeData%NOutCnt = SrcMeshAuxDataTypeData%NOutCnt
    if (allocated(SrcMeshAuxDataTypeData%NodeCnt)) then
-      LB(1:1) = lbound(SrcMeshAuxDataTypeData%NodeCnt)
-      UB(1:1) = ubound(SrcMeshAuxDataTypeData%NodeCnt)
+      LB(1:1) = lbound(SrcMeshAuxDataTypeData%NodeCnt, kind=B8Ki)
+      UB(1:1) = ubound(SrcMeshAuxDataTypeData%NodeCnt, kind=B8Ki)
       if (.not. allocated(DstMeshAuxDataTypeData%NodeCnt)) then
          allocate(DstMeshAuxDataTypeData%NodeCnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -443,8 +443,8 @@ subroutine SD_CopyMeshAuxDataType(SrcMeshAuxDataTypeData, DstMeshAuxDataTypeData
       DstMeshAuxDataTypeData%NodeCnt = SrcMeshAuxDataTypeData%NodeCnt
    end if
    if (allocated(SrcMeshAuxDataTypeData%NodeIDs)) then
-      LB(1:1) = lbound(SrcMeshAuxDataTypeData%NodeIDs)
-      UB(1:1) = ubound(SrcMeshAuxDataTypeData%NodeIDs)
+      LB(1:1) = lbound(SrcMeshAuxDataTypeData%NodeIDs, kind=B8Ki)
+      UB(1:1) = ubound(SrcMeshAuxDataTypeData%NodeIDs, kind=B8Ki)
       if (.not. allocated(DstMeshAuxDataTypeData%NodeIDs)) then
          allocate(DstMeshAuxDataTypeData%NodeIDs(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -455,8 +455,8 @@ subroutine SD_CopyMeshAuxDataType(SrcMeshAuxDataTypeData, DstMeshAuxDataTypeData
       DstMeshAuxDataTypeData%NodeIDs = SrcMeshAuxDataTypeData%NodeIDs
    end if
    if (allocated(SrcMeshAuxDataTypeData%ElmIDs)) then
-      LB(1:2) = lbound(SrcMeshAuxDataTypeData%ElmIDs)
-      UB(1:2) = ubound(SrcMeshAuxDataTypeData%ElmIDs)
+      LB(1:2) = lbound(SrcMeshAuxDataTypeData%ElmIDs, kind=B8Ki)
+      UB(1:2) = ubound(SrcMeshAuxDataTypeData%ElmIDs, kind=B8Ki)
       if (.not. allocated(DstMeshAuxDataTypeData%ElmIDs)) then
          allocate(DstMeshAuxDataTypeData%ElmIDs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -467,8 +467,8 @@ subroutine SD_CopyMeshAuxDataType(SrcMeshAuxDataTypeData, DstMeshAuxDataTypeData
       DstMeshAuxDataTypeData%ElmIDs = SrcMeshAuxDataTypeData%ElmIDs
    end if
    if (allocated(SrcMeshAuxDataTypeData%ElmNds)) then
-      LB(1:2) = lbound(SrcMeshAuxDataTypeData%ElmNds)
-      UB(1:2) = ubound(SrcMeshAuxDataTypeData%ElmNds)
+      LB(1:2) = lbound(SrcMeshAuxDataTypeData%ElmNds, kind=B8Ki)
+      UB(1:2) = ubound(SrcMeshAuxDataTypeData%ElmNds, kind=B8Ki)
       if (.not. allocated(DstMeshAuxDataTypeData%ElmNds)) then
          allocate(DstMeshAuxDataTypeData%ElmNds(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -479,8 +479,8 @@ subroutine SD_CopyMeshAuxDataType(SrcMeshAuxDataTypeData, DstMeshAuxDataTypeData
       DstMeshAuxDataTypeData%ElmNds = SrcMeshAuxDataTypeData%ElmNds
    end if
    if (allocated(SrcMeshAuxDataTypeData%Me)) then
-      LB(1:4) = lbound(SrcMeshAuxDataTypeData%Me)
-      UB(1:4) = ubound(SrcMeshAuxDataTypeData%Me)
+      LB(1:4) = lbound(SrcMeshAuxDataTypeData%Me, kind=B8Ki)
+      UB(1:4) = ubound(SrcMeshAuxDataTypeData%Me, kind=B8Ki)
       if (.not. allocated(DstMeshAuxDataTypeData%Me)) then
          allocate(DstMeshAuxDataTypeData%Me(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -491,8 +491,8 @@ subroutine SD_CopyMeshAuxDataType(SrcMeshAuxDataTypeData, DstMeshAuxDataTypeData
       DstMeshAuxDataTypeData%Me = SrcMeshAuxDataTypeData%Me
    end if
    if (allocated(SrcMeshAuxDataTypeData%Ke)) then
-      LB(1:4) = lbound(SrcMeshAuxDataTypeData%Ke)
-      UB(1:4) = ubound(SrcMeshAuxDataTypeData%Ke)
+      LB(1:4) = lbound(SrcMeshAuxDataTypeData%Ke, kind=B8Ki)
+      UB(1:4) = ubound(SrcMeshAuxDataTypeData%Ke, kind=B8Ki)
       if (.not. allocated(DstMeshAuxDataTypeData%Ke)) then
          allocate(DstMeshAuxDataTypeData%Ke(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -503,8 +503,8 @@ subroutine SD_CopyMeshAuxDataType(SrcMeshAuxDataTypeData, DstMeshAuxDataTypeData
       DstMeshAuxDataTypeData%Ke = SrcMeshAuxDataTypeData%Ke
    end if
    if (allocated(SrcMeshAuxDataTypeData%Fg)) then
-      LB(1:3) = lbound(SrcMeshAuxDataTypeData%Fg)
-      UB(1:3) = ubound(SrcMeshAuxDataTypeData%Fg)
+      LB(1:3) = lbound(SrcMeshAuxDataTypeData%Fg, kind=B8Ki)
+      UB(1:3) = ubound(SrcMeshAuxDataTypeData%Fg, kind=B8Ki)
       if (.not. allocated(DstMeshAuxDataTypeData%Fg)) then
          allocate(DstMeshAuxDataTypeData%Fg(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -555,37 +555,37 @@ subroutine SD_PackMeshAuxDataType(Buf, Indata)
    call RegPack(Buf, InData%NOutCnt)
    call RegPack(Buf, allocated(InData%NodeCnt))
    if (allocated(InData%NodeCnt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%NodeCnt), ubound(InData%NodeCnt))
+      call RegPackBounds(Buf, 1, lbound(InData%NodeCnt, kind=B8Ki), ubound(InData%NodeCnt, kind=B8Ki))
       call RegPack(Buf, InData%NodeCnt)
    end if
    call RegPack(Buf, allocated(InData%NodeIDs))
    if (allocated(InData%NodeIDs)) then
-      call RegPackBounds(Buf, 1, lbound(InData%NodeIDs), ubound(InData%NodeIDs))
+      call RegPackBounds(Buf, 1, lbound(InData%NodeIDs, kind=B8Ki), ubound(InData%NodeIDs, kind=B8Ki))
       call RegPack(Buf, InData%NodeIDs)
    end if
    call RegPack(Buf, allocated(InData%ElmIDs))
    if (allocated(InData%ElmIDs)) then
-      call RegPackBounds(Buf, 2, lbound(InData%ElmIDs), ubound(InData%ElmIDs))
+      call RegPackBounds(Buf, 2, lbound(InData%ElmIDs, kind=B8Ki), ubound(InData%ElmIDs, kind=B8Ki))
       call RegPack(Buf, InData%ElmIDs)
    end if
    call RegPack(Buf, allocated(InData%ElmNds))
    if (allocated(InData%ElmNds)) then
-      call RegPackBounds(Buf, 2, lbound(InData%ElmNds), ubound(InData%ElmNds))
+      call RegPackBounds(Buf, 2, lbound(InData%ElmNds, kind=B8Ki), ubound(InData%ElmNds, kind=B8Ki))
       call RegPack(Buf, InData%ElmNds)
    end if
    call RegPack(Buf, allocated(InData%Me))
    if (allocated(InData%Me)) then
-      call RegPackBounds(Buf, 4, lbound(InData%Me), ubound(InData%Me))
+      call RegPackBounds(Buf, 4, lbound(InData%Me, kind=B8Ki), ubound(InData%Me, kind=B8Ki))
       call RegPack(Buf, InData%Me)
    end if
    call RegPack(Buf, allocated(InData%Ke))
    if (allocated(InData%Ke)) then
-      call RegPackBounds(Buf, 4, lbound(InData%Ke), ubound(InData%Ke))
+      call RegPackBounds(Buf, 4, lbound(InData%Ke, kind=B8Ki), ubound(InData%Ke, kind=B8Ki))
       call RegPack(Buf, InData%Ke)
    end if
    call RegPack(Buf, allocated(InData%Fg))
    if (allocated(InData%Fg)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Fg), ubound(InData%Fg))
+      call RegPackBounds(Buf, 3, lbound(InData%Fg, kind=B8Ki), ubound(InData%Fg, kind=B8Ki))
       call RegPack(Buf, InData%Fg)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -595,7 +595,7 @@ subroutine SD_UnPackMeshAuxDataType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(MeshAuxDataType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SD_UnPackMeshAuxDataType'
-   integer(IntKi)  :: LB(4), UB(4)
+   integer(B8Ki)   :: LB(4), UB(4)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -709,14 +709,14 @@ subroutine SD_CopyCB_MatArrays(SrcCB_MatArraysData, DstCB_MatArraysData, CtrlCod
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'SD_CopyCB_MatArrays'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcCB_MatArraysData%MBB)) then
-      LB(1:2) = lbound(SrcCB_MatArraysData%MBB)
-      UB(1:2) = ubound(SrcCB_MatArraysData%MBB)
+      LB(1:2) = lbound(SrcCB_MatArraysData%MBB, kind=B8Ki)
+      UB(1:2) = ubound(SrcCB_MatArraysData%MBB, kind=B8Ki)
       if (.not. allocated(DstCB_MatArraysData%MBB)) then
          allocate(DstCB_MatArraysData%MBB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -727,8 +727,8 @@ subroutine SD_CopyCB_MatArrays(SrcCB_MatArraysData, DstCB_MatArraysData, CtrlCod
       DstCB_MatArraysData%MBB = SrcCB_MatArraysData%MBB
    end if
    if (allocated(SrcCB_MatArraysData%MBM)) then
-      LB(1:2) = lbound(SrcCB_MatArraysData%MBM)
-      UB(1:2) = ubound(SrcCB_MatArraysData%MBM)
+      LB(1:2) = lbound(SrcCB_MatArraysData%MBM, kind=B8Ki)
+      UB(1:2) = ubound(SrcCB_MatArraysData%MBM, kind=B8Ki)
       if (.not. allocated(DstCB_MatArraysData%MBM)) then
          allocate(DstCB_MatArraysData%MBM(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -739,8 +739,8 @@ subroutine SD_CopyCB_MatArrays(SrcCB_MatArraysData, DstCB_MatArraysData, CtrlCod
       DstCB_MatArraysData%MBM = SrcCB_MatArraysData%MBM
    end if
    if (allocated(SrcCB_MatArraysData%KBB)) then
-      LB(1:2) = lbound(SrcCB_MatArraysData%KBB)
-      UB(1:2) = ubound(SrcCB_MatArraysData%KBB)
+      LB(1:2) = lbound(SrcCB_MatArraysData%KBB, kind=B8Ki)
+      UB(1:2) = ubound(SrcCB_MatArraysData%KBB, kind=B8Ki)
       if (.not. allocated(DstCB_MatArraysData%KBB)) then
          allocate(DstCB_MatArraysData%KBB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -751,8 +751,8 @@ subroutine SD_CopyCB_MatArrays(SrcCB_MatArraysData, DstCB_MatArraysData, CtrlCod
       DstCB_MatArraysData%KBB = SrcCB_MatArraysData%KBB
    end if
    if (allocated(SrcCB_MatArraysData%PhiL)) then
-      LB(1:2) = lbound(SrcCB_MatArraysData%PhiL)
-      UB(1:2) = ubound(SrcCB_MatArraysData%PhiL)
+      LB(1:2) = lbound(SrcCB_MatArraysData%PhiL, kind=B8Ki)
+      UB(1:2) = ubound(SrcCB_MatArraysData%PhiL, kind=B8Ki)
       if (.not. allocated(DstCB_MatArraysData%PhiL)) then
          allocate(DstCB_MatArraysData%PhiL(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -763,8 +763,8 @@ subroutine SD_CopyCB_MatArrays(SrcCB_MatArraysData, DstCB_MatArraysData, CtrlCod
       DstCB_MatArraysData%PhiL = SrcCB_MatArraysData%PhiL
    end if
    if (allocated(SrcCB_MatArraysData%PhiR)) then
-      LB(1:2) = lbound(SrcCB_MatArraysData%PhiR)
-      UB(1:2) = ubound(SrcCB_MatArraysData%PhiR)
+      LB(1:2) = lbound(SrcCB_MatArraysData%PhiR, kind=B8Ki)
+      UB(1:2) = ubound(SrcCB_MatArraysData%PhiR, kind=B8Ki)
       if (.not. allocated(DstCB_MatArraysData%PhiR)) then
          allocate(DstCB_MatArraysData%PhiR(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -775,8 +775,8 @@ subroutine SD_CopyCB_MatArrays(SrcCB_MatArraysData, DstCB_MatArraysData, CtrlCod
       DstCB_MatArraysData%PhiR = SrcCB_MatArraysData%PhiR
    end if
    if (allocated(SrcCB_MatArraysData%OmegaL)) then
-      LB(1:1) = lbound(SrcCB_MatArraysData%OmegaL)
-      UB(1:1) = ubound(SrcCB_MatArraysData%OmegaL)
+      LB(1:1) = lbound(SrcCB_MatArraysData%OmegaL, kind=B8Ki)
+      UB(1:1) = ubound(SrcCB_MatArraysData%OmegaL, kind=B8Ki)
       if (.not. allocated(DstCB_MatArraysData%OmegaL)) then
          allocate(DstCB_MatArraysData%OmegaL(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -822,32 +822,32 @@ subroutine SD_PackCB_MatArrays(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%MBB))
    if (allocated(InData%MBB)) then
-      call RegPackBounds(Buf, 2, lbound(InData%MBB), ubound(InData%MBB))
+      call RegPackBounds(Buf, 2, lbound(InData%MBB, kind=B8Ki), ubound(InData%MBB, kind=B8Ki))
       call RegPack(Buf, InData%MBB)
    end if
    call RegPack(Buf, allocated(InData%MBM))
    if (allocated(InData%MBM)) then
-      call RegPackBounds(Buf, 2, lbound(InData%MBM), ubound(InData%MBM))
+      call RegPackBounds(Buf, 2, lbound(InData%MBM, kind=B8Ki), ubound(InData%MBM, kind=B8Ki))
       call RegPack(Buf, InData%MBM)
    end if
    call RegPack(Buf, allocated(InData%KBB))
    if (allocated(InData%KBB)) then
-      call RegPackBounds(Buf, 2, lbound(InData%KBB), ubound(InData%KBB))
+      call RegPackBounds(Buf, 2, lbound(InData%KBB, kind=B8Ki), ubound(InData%KBB, kind=B8Ki))
       call RegPack(Buf, InData%KBB)
    end if
    call RegPack(Buf, allocated(InData%PhiL))
    if (allocated(InData%PhiL)) then
-      call RegPackBounds(Buf, 2, lbound(InData%PhiL), ubound(InData%PhiL))
+      call RegPackBounds(Buf, 2, lbound(InData%PhiL, kind=B8Ki), ubound(InData%PhiL, kind=B8Ki))
       call RegPack(Buf, InData%PhiL)
    end if
    call RegPack(Buf, allocated(InData%PhiR))
    if (allocated(InData%PhiR)) then
-      call RegPackBounds(Buf, 2, lbound(InData%PhiR), ubound(InData%PhiR))
+      call RegPackBounds(Buf, 2, lbound(InData%PhiR, kind=B8Ki), ubound(InData%PhiR, kind=B8Ki))
       call RegPack(Buf, InData%PhiR)
    end if
    call RegPack(Buf, allocated(InData%OmegaL))
    if (allocated(InData%OmegaL)) then
-      call RegPackBounds(Buf, 1, lbound(InData%OmegaL), ubound(InData%OmegaL))
+      call RegPackBounds(Buf, 1, lbound(InData%OmegaL, kind=B8Ki), ubound(InData%OmegaL, kind=B8Ki))
       call RegPack(Buf, InData%OmegaL)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -857,7 +857,7 @@ subroutine SD_UnPackCB_MatArrays(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(CB_MatArrays), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SD_UnPackCB_MatArrays'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -1048,7 +1048,7 @@ subroutine SD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(3), UB(3)
+   integer(B8Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SD_CopyInitInput'
@@ -1061,8 +1061,8 @@ subroutine SD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    DstInitInputData%TP_RefPoint = SrcInitInputData%TP_RefPoint
    DstInitInputData%SubRotateZ = SrcInitInputData%SubRotateZ
    if (allocated(SrcInitInputData%SoilStiffness)) then
-      LB(1:3) = lbound(SrcInitInputData%SoilStiffness)
-      UB(1:3) = ubound(SrcInitInputData%SoilStiffness)
+      LB(1:3) = lbound(SrcInitInputData%SoilStiffness, kind=B8Ki)
+      UB(1:3) = ubound(SrcInitInputData%SoilStiffness, kind=B8Ki)
       if (.not. allocated(DstInitInputData%SoilStiffness)) then
          allocate(DstInitInputData%SoilStiffness(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1107,7 +1107,7 @@ subroutine SD_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%SubRotateZ)
    call RegPack(Buf, allocated(InData%SoilStiffness))
    if (allocated(InData%SoilStiffness)) then
-      call RegPackBounds(Buf, 3, lbound(InData%SoilStiffness), ubound(InData%SoilStiffness))
+      call RegPackBounds(Buf, 3, lbound(InData%SoilStiffness, kind=B8Ki), ubound(InData%SoilStiffness, kind=B8Ki))
       call RegPack(Buf, InData%SoilStiffness)
    end if
    call MeshPack(Buf, InData%SoilMesh) 
@@ -1119,7 +1119,7 @@ subroutine SD_UnPackInitInput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(SD_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SD_UnPackInitInput'
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -1160,15 +1160,15 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SD_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
          allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1179,8 +1179,8 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
          allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1194,8 +1194,8 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcInitOutputData%LinNames_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_y)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_y)
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_y, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_y, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%LinNames_y)) then
          allocate(DstInitOutputData%LinNames_y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1206,8 +1206,8 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
    end if
    if (allocated(SrcInitOutputData%LinNames_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_x)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_x)
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_x, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_x, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%LinNames_x)) then
          allocate(DstInitOutputData%LinNames_x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1218,8 +1218,8 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%LinNames_x = SrcInitOutputData%LinNames_x
    end if
    if (allocated(SrcInitOutputData%LinNames_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_u)
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_u, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_u, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%LinNames_u)) then
          allocate(DstInitOutputData%LinNames_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1230,8 +1230,8 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
    end if
    if (allocated(SrcInitOutputData%RotFrame_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_y)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_y)
+      LB(1:1) = lbound(SrcInitOutputData%RotFrame_y, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%RotFrame_y, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%RotFrame_y)) then
          allocate(DstInitOutputData%RotFrame_y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1242,8 +1242,8 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%RotFrame_y = SrcInitOutputData%RotFrame_y
    end if
    if (allocated(SrcInitOutputData%RotFrame_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_x)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_x)
+      LB(1:1) = lbound(SrcInitOutputData%RotFrame_x, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%RotFrame_x, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%RotFrame_x)) then
          allocate(DstInitOutputData%RotFrame_x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1254,8 +1254,8 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%RotFrame_x = SrcInitOutputData%RotFrame_x
    end if
    if (allocated(SrcInitOutputData%RotFrame_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_u)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_u)
+      LB(1:1) = lbound(SrcInitOutputData%RotFrame_u, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%RotFrame_u, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%RotFrame_u)) then
          allocate(DstInitOutputData%RotFrame_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1266,8 +1266,8 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%RotFrame_u = SrcInitOutputData%RotFrame_u
    end if
    if (allocated(SrcInitOutputData%IsLoad_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
-      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u)
+      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%IsLoad_u)) then
          allocate(DstInitOutputData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1278,8 +1278,8 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
    end if
    if (allocated(SrcInitOutputData%DerivOrder_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x)
-      UB(1:1) = ubound(SrcInitOutputData%DerivOrder_x)
+      LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%DerivOrder_x, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%DerivOrder_x)) then
          allocate(DstInitOutputData%DerivOrder_x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1290,8 +1290,8 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
    end if
    if (allocated(SrcInitOutputData%CableCChanRqst)) then
-      LB(1:1) = lbound(SrcInitOutputData%CableCChanRqst)
-      UB(1:1) = ubound(SrcInitOutputData%CableCChanRqst)
+      LB(1:1) = lbound(SrcInitOutputData%CableCChanRqst, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%CableCChanRqst, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%CableCChanRqst)) then
          allocate(DstInitOutputData%CableCChanRqst(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1356,58 +1356,58 @@ subroutine SD_PackInitOutput(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%WriteOutputHdr))
    if (allocated(InData%WriteOutputHdr)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr, kind=B8Ki), ubound(InData%WriteOutputHdr, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt, kind=B8Ki), ubound(InData%WriteOutputUnt, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
    call RegPack(Buf, allocated(InData%LinNames_y))
    if (allocated(InData%LinNames_y)) then
-      call RegPackBounds(Buf, 1, lbound(InData%LinNames_y), ubound(InData%LinNames_y))
+      call RegPackBounds(Buf, 1, lbound(InData%LinNames_y, kind=B8Ki), ubound(InData%LinNames_y, kind=B8Ki))
       call RegPack(Buf, InData%LinNames_y)
    end if
    call RegPack(Buf, allocated(InData%LinNames_x))
    if (allocated(InData%LinNames_x)) then
-      call RegPackBounds(Buf, 1, lbound(InData%LinNames_x), ubound(InData%LinNames_x))
+      call RegPackBounds(Buf, 1, lbound(InData%LinNames_x, kind=B8Ki), ubound(InData%LinNames_x, kind=B8Ki))
       call RegPack(Buf, InData%LinNames_x)
    end if
    call RegPack(Buf, allocated(InData%LinNames_u))
    if (allocated(InData%LinNames_u)) then
-      call RegPackBounds(Buf, 1, lbound(InData%LinNames_u), ubound(InData%LinNames_u))
+      call RegPackBounds(Buf, 1, lbound(InData%LinNames_u, kind=B8Ki), ubound(InData%LinNames_u, kind=B8Ki))
       call RegPack(Buf, InData%LinNames_u)
    end if
    call RegPack(Buf, allocated(InData%RotFrame_y))
    if (allocated(InData%RotFrame_y)) then
-      call RegPackBounds(Buf, 1, lbound(InData%RotFrame_y), ubound(InData%RotFrame_y))
+      call RegPackBounds(Buf, 1, lbound(InData%RotFrame_y, kind=B8Ki), ubound(InData%RotFrame_y, kind=B8Ki))
       call RegPack(Buf, InData%RotFrame_y)
    end if
    call RegPack(Buf, allocated(InData%RotFrame_x))
    if (allocated(InData%RotFrame_x)) then
-      call RegPackBounds(Buf, 1, lbound(InData%RotFrame_x), ubound(InData%RotFrame_x))
+      call RegPackBounds(Buf, 1, lbound(InData%RotFrame_x, kind=B8Ki), ubound(InData%RotFrame_x, kind=B8Ki))
       call RegPack(Buf, InData%RotFrame_x)
    end if
    call RegPack(Buf, allocated(InData%RotFrame_u))
    if (allocated(InData%RotFrame_u)) then
-      call RegPackBounds(Buf, 1, lbound(InData%RotFrame_u), ubound(InData%RotFrame_u))
+      call RegPackBounds(Buf, 1, lbound(InData%RotFrame_u, kind=B8Ki), ubound(InData%RotFrame_u, kind=B8Ki))
       call RegPack(Buf, InData%RotFrame_u)
    end if
    call RegPack(Buf, allocated(InData%IsLoad_u))
    if (allocated(InData%IsLoad_u)) then
-      call RegPackBounds(Buf, 1, lbound(InData%IsLoad_u), ubound(InData%IsLoad_u))
+      call RegPackBounds(Buf, 1, lbound(InData%IsLoad_u, kind=B8Ki), ubound(InData%IsLoad_u, kind=B8Ki))
       call RegPack(Buf, InData%IsLoad_u)
    end if
    call RegPack(Buf, allocated(InData%DerivOrder_x))
    if (allocated(InData%DerivOrder_x)) then
-      call RegPackBounds(Buf, 1, lbound(InData%DerivOrder_x), ubound(InData%DerivOrder_x))
+      call RegPackBounds(Buf, 1, lbound(InData%DerivOrder_x, kind=B8Ki), ubound(InData%DerivOrder_x, kind=B8Ki))
       call RegPack(Buf, InData%DerivOrder_x)
    end if
    call RegPack(Buf, allocated(InData%CableCChanRqst))
    if (allocated(InData%CableCChanRqst)) then
-      call RegPackBounds(Buf, 1, lbound(InData%CableCChanRqst), ubound(InData%CableCChanRqst))
+      call RegPackBounds(Buf, 1, lbound(InData%CableCChanRqst, kind=B8Ki), ubound(InData%CableCChanRqst, kind=B8Ki))
       call RegPack(Buf, InData%CableCChanRqst)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1417,7 +1417,7 @@ subroutine SD_UnPackInitOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(SD_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SD_UnPackInitOutput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -1584,7 +1584,7 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(3), UB(3)
+   integer(B8Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'SD_CopyInitType'
    ErrStat = ErrID_None
@@ -1605,8 +1605,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
    DstInitTypeData%NDiv = SrcInitTypeData%NDiv
    DstInitTypeData%CBMod = SrcInitTypeData%CBMod
    if (allocated(SrcInitTypeData%Joints)) then
-      LB(1:2) = lbound(SrcInitTypeData%Joints)
-      UB(1:2) = ubound(SrcInitTypeData%Joints)
+      LB(1:2) = lbound(SrcInitTypeData%Joints, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%Joints, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%Joints)) then
          allocate(DstInitTypeData%Joints(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1617,8 +1617,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%Joints = SrcInitTypeData%Joints
    end if
    if (allocated(SrcInitTypeData%PropSetsB)) then
-      LB(1:2) = lbound(SrcInitTypeData%PropSetsB)
-      UB(1:2) = ubound(SrcInitTypeData%PropSetsB)
+      LB(1:2) = lbound(SrcInitTypeData%PropSetsB, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%PropSetsB, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%PropSetsB)) then
          allocate(DstInitTypeData%PropSetsB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1629,8 +1629,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%PropSetsB = SrcInitTypeData%PropSetsB
    end if
    if (allocated(SrcInitTypeData%PropSetsC)) then
-      LB(1:2) = lbound(SrcInitTypeData%PropSetsC)
-      UB(1:2) = ubound(SrcInitTypeData%PropSetsC)
+      LB(1:2) = lbound(SrcInitTypeData%PropSetsC, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%PropSetsC, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%PropSetsC)) then
          allocate(DstInitTypeData%PropSetsC(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1641,8 +1641,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%PropSetsC = SrcInitTypeData%PropSetsC
    end if
    if (allocated(SrcInitTypeData%PropSetsR)) then
-      LB(1:2) = lbound(SrcInitTypeData%PropSetsR)
-      UB(1:2) = ubound(SrcInitTypeData%PropSetsR)
+      LB(1:2) = lbound(SrcInitTypeData%PropSetsR, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%PropSetsR, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%PropSetsR)) then
          allocate(DstInitTypeData%PropSetsR(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1653,8 +1653,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%PropSetsR = SrcInitTypeData%PropSetsR
    end if
    if (allocated(SrcInitTypeData%PropSetsX)) then
-      LB(1:2) = lbound(SrcInitTypeData%PropSetsX)
-      UB(1:2) = ubound(SrcInitTypeData%PropSetsX)
+      LB(1:2) = lbound(SrcInitTypeData%PropSetsX, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%PropSetsX, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%PropSetsX)) then
          allocate(DstInitTypeData%PropSetsX(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1665,8 +1665,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%PropSetsX = SrcInitTypeData%PropSetsX
    end if
    if (allocated(SrcInitTypeData%COSMs)) then
-      LB(1:2) = lbound(SrcInitTypeData%COSMs)
-      UB(1:2) = ubound(SrcInitTypeData%COSMs)
+      LB(1:2) = lbound(SrcInitTypeData%COSMs, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%COSMs, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%COSMs)) then
          allocate(DstInitTypeData%COSMs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1677,8 +1677,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%COSMs = SrcInitTypeData%COSMs
    end if
    if (allocated(SrcInitTypeData%CMass)) then
-      LB(1:2) = lbound(SrcInitTypeData%CMass)
-      UB(1:2) = ubound(SrcInitTypeData%CMass)
+      LB(1:2) = lbound(SrcInitTypeData%CMass, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%CMass, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%CMass)) then
          allocate(DstInitTypeData%CMass(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1689,8 +1689,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%CMass = SrcInitTypeData%CMass
    end if
    if (allocated(SrcInitTypeData%JDampings)) then
-      LB(1:1) = lbound(SrcInitTypeData%JDampings)
-      UB(1:1) = ubound(SrcInitTypeData%JDampings)
+      LB(1:1) = lbound(SrcInitTypeData%JDampings, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitTypeData%JDampings, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%JDampings)) then
          allocate(DstInitTypeData%JDampings(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1704,8 +1704,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
    DstInitTypeData%RayleighDamp = SrcInitTypeData%RayleighDamp
    DstInitTypeData%GuyanDampMat = SrcInitTypeData%GuyanDampMat
    if (allocated(SrcInitTypeData%Members)) then
-      LB(1:2) = lbound(SrcInitTypeData%Members)
-      UB(1:2) = ubound(SrcInitTypeData%Members)
+      LB(1:2) = lbound(SrcInitTypeData%Members, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%Members, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%Members)) then
          allocate(DstInitTypeData%Members(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1716,8 +1716,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%Members = SrcInitTypeData%Members
    end if
    if (allocated(SrcInitTypeData%SSOutList)) then
-      LB(1:1) = lbound(SrcInitTypeData%SSOutList)
-      UB(1:1) = ubound(SrcInitTypeData%SSOutList)
+      LB(1:1) = lbound(SrcInitTypeData%SSOutList, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitTypeData%SSOutList, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%SSOutList)) then
          allocate(DstInitTypeData%SSOutList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1730,8 +1730,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
    DstInitTypeData%OutCOSM = SrcInitTypeData%OutCOSM
    DstInitTypeData%TabDelim = SrcInitTypeData%TabDelim
    if (allocated(SrcInitTypeData%SSIK)) then
-      LB(1:2) = lbound(SrcInitTypeData%SSIK)
-      UB(1:2) = ubound(SrcInitTypeData%SSIK)
+      LB(1:2) = lbound(SrcInitTypeData%SSIK, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%SSIK, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%SSIK)) then
          allocate(DstInitTypeData%SSIK(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1742,8 +1742,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%SSIK = SrcInitTypeData%SSIK
    end if
    if (allocated(SrcInitTypeData%SSIM)) then
-      LB(1:2) = lbound(SrcInitTypeData%SSIM)
-      UB(1:2) = ubound(SrcInitTypeData%SSIM)
+      LB(1:2) = lbound(SrcInitTypeData%SSIM, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%SSIM, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%SSIM)) then
          allocate(DstInitTypeData%SSIM(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1754,8 +1754,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%SSIM = SrcInitTypeData%SSIM
    end if
    if (allocated(SrcInitTypeData%SSIfile)) then
-      LB(1:1) = lbound(SrcInitTypeData%SSIfile)
-      UB(1:1) = ubound(SrcInitTypeData%SSIfile)
+      LB(1:1) = lbound(SrcInitTypeData%SSIfile, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitTypeData%SSIfile, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%SSIfile)) then
          allocate(DstInitTypeData%SSIfile(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1766,8 +1766,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%SSIfile = SrcInitTypeData%SSIfile
    end if
    if (allocated(SrcInitTypeData%Soil_K)) then
-      LB(1:3) = lbound(SrcInitTypeData%Soil_K)
-      UB(1:3) = ubound(SrcInitTypeData%Soil_K)
+      LB(1:3) = lbound(SrcInitTypeData%Soil_K, kind=B8Ki)
+      UB(1:3) = ubound(SrcInitTypeData%Soil_K, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%Soil_K)) then
          allocate(DstInitTypeData%Soil_K(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1778,8 +1778,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%Soil_K = SrcInitTypeData%Soil_K
    end if
    if (allocated(SrcInitTypeData%Soil_Points)) then
-      LB(1:2) = lbound(SrcInitTypeData%Soil_Points)
-      UB(1:2) = ubound(SrcInitTypeData%Soil_Points)
+      LB(1:2) = lbound(SrcInitTypeData%Soil_Points, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%Soil_Points, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%Soil_Points)) then
          allocate(DstInitTypeData%Soil_Points(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1790,8 +1790,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%Soil_Points = SrcInitTypeData%Soil_Points
    end if
    if (allocated(SrcInitTypeData%Soil_Nodes)) then
-      LB(1:1) = lbound(SrcInitTypeData%Soil_Nodes)
-      UB(1:1) = ubound(SrcInitTypeData%Soil_Nodes)
+      LB(1:1) = lbound(SrcInitTypeData%Soil_Nodes, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitTypeData%Soil_Nodes, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%Soil_Nodes)) then
          allocate(DstInitTypeData%Soil_Nodes(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1806,8 +1806,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
    DstInitTypeData%NPropC = SrcInitTypeData%NPropC
    DstInitTypeData%NPropR = SrcInitTypeData%NPropR
    if (allocated(SrcInitTypeData%Nodes)) then
-      LB(1:2) = lbound(SrcInitTypeData%Nodes)
-      UB(1:2) = ubound(SrcInitTypeData%Nodes)
+      LB(1:2) = lbound(SrcInitTypeData%Nodes, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%Nodes, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%Nodes)) then
          allocate(DstInitTypeData%Nodes(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1818,8 +1818,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%Nodes = SrcInitTypeData%Nodes
    end if
    if (allocated(SrcInitTypeData%PropsB)) then
-      LB(1:2) = lbound(SrcInitTypeData%PropsB)
-      UB(1:2) = ubound(SrcInitTypeData%PropsB)
+      LB(1:2) = lbound(SrcInitTypeData%PropsB, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%PropsB, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%PropsB)) then
          allocate(DstInitTypeData%PropsB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1830,8 +1830,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%PropsB = SrcInitTypeData%PropsB
    end if
    if (allocated(SrcInitTypeData%PropsC)) then
-      LB(1:2) = lbound(SrcInitTypeData%PropsC)
-      UB(1:2) = ubound(SrcInitTypeData%PropsC)
+      LB(1:2) = lbound(SrcInitTypeData%PropsC, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%PropsC, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%PropsC)) then
          allocate(DstInitTypeData%PropsC(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1842,8 +1842,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%PropsC = SrcInitTypeData%PropsC
    end if
    if (allocated(SrcInitTypeData%PropsR)) then
-      LB(1:2) = lbound(SrcInitTypeData%PropsR)
-      UB(1:2) = ubound(SrcInitTypeData%PropsR)
+      LB(1:2) = lbound(SrcInitTypeData%PropsR, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%PropsR, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%PropsR)) then
          allocate(DstInitTypeData%PropsR(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1854,8 +1854,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%PropsR = SrcInitTypeData%PropsR
    end if
    if (allocated(SrcInitTypeData%K)) then
-      LB(1:2) = lbound(SrcInitTypeData%K)
-      UB(1:2) = ubound(SrcInitTypeData%K)
+      LB(1:2) = lbound(SrcInitTypeData%K, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%K, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%K)) then
          allocate(DstInitTypeData%K(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1866,8 +1866,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%K = SrcInitTypeData%K
    end if
    if (allocated(SrcInitTypeData%M)) then
-      LB(1:2) = lbound(SrcInitTypeData%M)
-      UB(1:2) = ubound(SrcInitTypeData%M)
+      LB(1:2) = lbound(SrcInitTypeData%M, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%M, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%M)) then
          allocate(DstInitTypeData%M(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1878,8 +1878,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%M = SrcInitTypeData%M
    end if
    if (allocated(SrcInitTypeData%ElemProps)) then
-      LB(1:2) = lbound(SrcInitTypeData%ElemProps)
-      UB(1:2) = ubound(SrcInitTypeData%ElemProps)
+      LB(1:2) = lbound(SrcInitTypeData%ElemProps, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%ElemProps, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%ElemProps)) then
          allocate(DstInitTypeData%ElemProps(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1890,8 +1890,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%ElemProps = SrcInitTypeData%ElemProps
    end if
    if (allocated(SrcInitTypeData%MemberNodes)) then
-      LB(1:2) = lbound(SrcInitTypeData%MemberNodes)
-      UB(1:2) = ubound(SrcInitTypeData%MemberNodes)
+      LB(1:2) = lbound(SrcInitTypeData%MemberNodes, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%MemberNodes, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%MemberNodes)) then
          allocate(DstInitTypeData%MemberNodes(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1902,8 +1902,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%MemberNodes = SrcInitTypeData%MemberNodes
    end if
    if (allocated(SrcInitTypeData%NodesConnN)) then
-      LB(1:2) = lbound(SrcInitTypeData%NodesConnN)
-      UB(1:2) = ubound(SrcInitTypeData%NodesConnN)
+      LB(1:2) = lbound(SrcInitTypeData%NodesConnN, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%NodesConnN, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%NodesConnN)) then
          allocate(DstInitTypeData%NodesConnN(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1914,8 +1914,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%NodesConnN = SrcInitTypeData%NodesConnN
    end if
    if (allocated(SrcInitTypeData%NodesConnE)) then
-      LB(1:2) = lbound(SrcInitTypeData%NodesConnE)
-      UB(1:2) = ubound(SrcInitTypeData%NodesConnE)
+      LB(1:2) = lbound(SrcInitTypeData%NodesConnE, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%NodesConnE, kind=B8Ki)
       if (.not. allocated(DstInitTypeData%NodesConnE)) then
          allocate(DstInitTypeData%NodesConnE(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2037,42 +2037,42 @@ subroutine SD_PackInitType(Buf, Indata)
    call RegPack(Buf, InData%CBMod)
    call RegPack(Buf, allocated(InData%Joints))
    if (allocated(InData%Joints)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Joints), ubound(InData%Joints))
+      call RegPackBounds(Buf, 2, lbound(InData%Joints, kind=B8Ki), ubound(InData%Joints, kind=B8Ki))
       call RegPack(Buf, InData%Joints)
    end if
    call RegPack(Buf, allocated(InData%PropSetsB))
    if (allocated(InData%PropSetsB)) then
-      call RegPackBounds(Buf, 2, lbound(InData%PropSetsB), ubound(InData%PropSetsB))
+      call RegPackBounds(Buf, 2, lbound(InData%PropSetsB, kind=B8Ki), ubound(InData%PropSetsB, kind=B8Ki))
       call RegPack(Buf, InData%PropSetsB)
    end if
    call RegPack(Buf, allocated(InData%PropSetsC))
    if (allocated(InData%PropSetsC)) then
-      call RegPackBounds(Buf, 2, lbound(InData%PropSetsC), ubound(InData%PropSetsC))
+      call RegPackBounds(Buf, 2, lbound(InData%PropSetsC, kind=B8Ki), ubound(InData%PropSetsC, kind=B8Ki))
       call RegPack(Buf, InData%PropSetsC)
    end if
    call RegPack(Buf, allocated(InData%PropSetsR))
    if (allocated(InData%PropSetsR)) then
-      call RegPackBounds(Buf, 2, lbound(InData%PropSetsR), ubound(InData%PropSetsR))
+      call RegPackBounds(Buf, 2, lbound(InData%PropSetsR, kind=B8Ki), ubound(InData%PropSetsR, kind=B8Ki))
       call RegPack(Buf, InData%PropSetsR)
    end if
    call RegPack(Buf, allocated(InData%PropSetsX))
    if (allocated(InData%PropSetsX)) then
-      call RegPackBounds(Buf, 2, lbound(InData%PropSetsX), ubound(InData%PropSetsX))
+      call RegPackBounds(Buf, 2, lbound(InData%PropSetsX, kind=B8Ki), ubound(InData%PropSetsX, kind=B8Ki))
       call RegPack(Buf, InData%PropSetsX)
    end if
    call RegPack(Buf, allocated(InData%COSMs))
    if (allocated(InData%COSMs)) then
-      call RegPackBounds(Buf, 2, lbound(InData%COSMs), ubound(InData%COSMs))
+      call RegPackBounds(Buf, 2, lbound(InData%COSMs, kind=B8Ki), ubound(InData%COSMs, kind=B8Ki))
       call RegPack(Buf, InData%COSMs)
    end if
    call RegPack(Buf, allocated(InData%CMass))
    if (allocated(InData%CMass)) then
-      call RegPackBounds(Buf, 2, lbound(InData%CMass), ubound(InData%CMass))
+      call RegPackBounds(Buf, 2, lbound(InData%CMass, kind=B8Ki), ubound(InData%CMass, kind=B8Ki))
       call RegPack(Buf, InData%CMass)
    end if
    call RegPack(Buf, allocated(InData%JDampings))
    if (allocated(InData%JDampings)) then
-      call RegPackBounds(Buf, 1, lbound(InData%JDampings), ubound(InData%JDampings))
+      call RegPackBounds(Buf, 1, lbound(InData%JDampings, kind=B8Ki), ubound(InData%JDampings, kind=B8Ki))
       call RegPack(Buf, InData%JDampings)
    end if
    call RegPack(Buf, InData%GuyanDampMod)
@@ -2080,44 +2080,44 @@ subroutine SD_PackInitType(Buf, Indata)
    call RegPack(Buf, InData%GuyanDampMat)
    call RegPack(Buf, allocated(InData%Members))
    if (allocated(InData%Members)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Members), ubound(InData%Members))
+      call RegPackBounds(Buf, 2, lbound(InData%Members, kind=B8Ki), ubound(InData%Members, kind=B8Ki))
       call RegPack(Buf, InData%Members)
    end if
    call RegPack(Buf, allocated(InData%SSOutList))
    if (allocated(InData%SSOutList)) then
-      call RegPackBounds(Buf, 1, lbound(InData%SSOutList), ubound(InData%SSOutList))
+      call RegPackBounds(Buf, 1, lbound(InData%SSOutList, kind=B8Ki), ubound(InData%SSOutList, kind=B8Ki))
       call RegPack(Buf, InData%SSOutList)
    end if
    call RegPack(Buf, InData%OutCOSM)
    call RegPack(Buf, InData%TabDelim)
    call RegPack(Buf, allocated(InData%SSIK))
    if (allocated(InData%SSIK)) then
-      call RegPackBounds(Buf, 2, lbound(InData%SSIK), ubound(InData%SSIK))
+      call RegPackBounds(Buf, 2, lbound(InData%SSIK, kind=B8Ki), ubound(InData%SSIK, kind=B8Ki))
       call RegPack(Buf, InData%SSIK)
    end if
    call RegPack(Buf, allocated(InData%SSIM))
    if (allocated(InData%SSIM)) then
-      call RegPackBounds(Buf, 2, lbound(InData%SSIM), ubound(InData%SSIM))
+      call RegPackBounds(Buf, 2, lbound(InData%SSIM, kind=B8Ki), ubound(InData%SSIM, kind=B8Ki))
       call RegPack(Buf, InData%SSIM)
    end if
    call RegPack(Buf, allocated(InData%SSIfile))
    if (allocated(InData%SSIfile)) then
-      call RegPackBounds(Buf, 1, lbound(InData%SSIfile), ubound(InData%SSIfile))
+      call RegPackBounds(Buf, 1, lbound(InData%SSIfile, kind=B8Ki), ubound(InData%SSIfile, kind=B8Ki))
       call RegPack(Buf, InData%SSIfile)
    end if
    call RegPack(Buf, allocated(InData%Soil_K))
    if (allocated(InData%Soil_K)) then
-      call RegPackBounds(Buf, 3, lbound(InData%Soil_K), ubound(InData%Soil_K))
+      call RegPackBounds(Buf, 3, lbound(InData%Soil_K, kind=B8Ki), ubound(InData%Soil_K, kind=B8Ki))
       call RegPack(Buf, InData%Soil_K)
    end if
    call RegPack(Buf, allocated(InData%Soil_Points))
    if (allocated(InData%Soil_Points)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Soil_Points), ubound(InData%Soil_Points))
+      call RegPackBounds(Buf, 2, lbound(InData%Soil_Points, kind=B8Ki), ubound(InData%Soil_Points, kind=B8Ki))
       call RegPack(Buf, InData%Soil_Points)
    end if
    call RegPack(Buf, allocated(InData%Soil_Nodes))
    if (allocated(InData%Soil_Nodes)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Soil_Nodes), ubound(InData%Soil_Nodes))
+      call RegPackBounds(Buf, 1, lbound(InData%Soil_Nodes, kind=B8Ki), ubound(InData%Soil_Nodes, kind=B8Ki))
       call RegPack(Buf, InData%Soil_Nodes)
    end if
    call RegPack(Buf, InData%NElem)
@@ -2126,52 +2126,52 @@ subroutine SD_PackInitType(Buf, Indata)
    call RegPack(Buf, InData%NPropR)
    call RegPack(Buf, allocated(InData%Nodes))
    if (allocated(InData%Nodes)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Nodes), ubound(InData%Nodes))
+      call RegPackBounds(Buf, 2, lbound(InData%Nodes, kind=B8Ki), ubound(InData%Nodes, kind=B8Ki))
       call RegPack(Buf, InData%Nodes)
    end if
    call RegPack(Buf, allocated(InData%PropsB))
    if (allocated(InData%PropsB)) then
-      call RegPackBounds(Buf, 2, lbound(InData%PropsB), ubound(InData%PropsB))
+      call RegPackBounds(Buf, 2, lbound(InData%PropsB, kind=B8Ki), ubound(InData%PropsB, kind=B8Ki))
       call RegPack(Buf, InData%PropsB)
    end if
    call RegPack(Buf, allocated(InData%PropsC))
    if (allocated(InData%PropsC)) then
-      call RegPackBounds(Buf, 2, lbound(InData%PropsC), ubound(InData%PropsC))
+      call RegPackBounds(Buf, 2, lbound(InData%PropsC, kind=B8Ki), ubound(InData%PropsC, kind=B8Ki))
       call RegPack(Buf, InData%PropsC)
    end if
    call RegPack(Buf, allocated(InData%PropsR))
    if (allocated(InData%PropsR)) then
-      call RegPackBounds(Buf, 2, lbound(InData%PropsR), ubound(InData%PropsR))
+      call RegPackBounds(Buf, 2, lbound(InData%PropsR, kind=B8Ki), ubound(InData%PropsR, kind=B8Ki))
       call RegPack(Buf, InData%PropsR)
    end if
    call RegPack(Buf, allocated(InData%K))
    if (allocated(InData%K)) then
-      call RegPackBounds(Buf, 2, lbound(InData%K), ubound(InData%K))
+      call RegPackBounds(Buf, 2, lbound(InData%K, kind=B8Ki), ubound(InData%K, kind=B8Ki))
       call RegPack(Buf, InData%K)
    end if
    call RegPack(Buf, allocated(InData%M))
    if (allocated(InData%M)) then
-      call RegPackBounds(Buf, 2, lbound(InData%M), ubound(InData%M))
+      call RegPackBounds(Buf, 2, lbound(InData%M, kind=B8Ki), ubound(InData%M, kind=B8Ki))
       call RegPack(Buf, InData%M)
    end if
    call RegPack(Buf, allocated(InData%ElemProps))
    if (allocated(InData%ElemProps)) then
-      call RegPackBounds(Buf, 2, lbound(InData%ElemProps), ubound(InData%ElemProps))
+      call RegPackBounds(Buf, 2, lbound(InData%ElemProps, kind=B8Ki), ubound(InData%ElemProps, kind=B8Ki))
       call RegPack(Buf, InData%ElemProps)
    end if
    call RegPack(Buf, allocated(InData%MemberNodes))
    if (allocated(InData%MemberNodes)) then
-      call RegPackBounds(Buf, 2, lbound(InData%MemberNodes), ubound(InData%MemberNodes))
+      call RegPackBounds(Buf, 2, lbound(InData%MemberNodes, kind=B8Ki), ubound(InData%MemberNodes, kind=B8Ki))
       call RegPack(Buf, InData%MemberNodes)
    end if
    call RegPack(Buf, allocated(InData%NodesConnN))
    if (allocated(InData%NodesConnN)) then
-      call RegPackBounds(Buf, 2, lbound(InData%NodesConnN), ubound(InData%NodesConnN))
+      call RegPackBounds(Buf, 2, lbound(InData%NodesConnN, kind=B8Ki), ubound(InData%NodesConnN, kind=B8Ki))
       call RegPack(Buf, InData%NodesConnN)
    end if
    call RegPack(Buf, allocated(InData%NodesConnE))
    if (allocated(InData%NodesConnE)) then
-      call RegPackBounds(Buf, 2, lbound(InData%NodesConnE), ubound(InData%NodesConnE))
+      call RegPackBounds(Buf, 2, lbound(InData%NodesConnE, kind=B8Ki), ubound(InData%NodesConnE, kind=B8Ki))
       call RegPack(Buf, InData%NodesConnE)
    end if
    call RegPack(Buf, InData%SSSum)
@@ -2182,7 +2182,7 @@ subroutine SD_UnPackInitType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(SD_InitType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SD_UnPackInitType'
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -2608,14 +2608,14 @@ subroutine SD_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrSta
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'SD_CopyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcContStateData%qm)) then
-      LB(1:1) = lbound(SrcContStateData%qm)
-      UB(1:1) = ubound(SrcContStateData%qm)
+      LB(1:1) = lbound(SrcContStateData%qm, kind=B8Ki)
+      UB(1:1) = ubound(SrcContStateData%qm, kind=B8Ki)
       if (.not. allocated(DstContStateData%qm)) then
          allocate(DstContStateData%qm(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2626,8 +2626,8 @@ subroutine SD_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrSta
       DstContStateData%qm = SrcContStateData%qm
    end if
    if (allocated(SrcContStateData%qmdot)) then
-      LB(1:1) = lbound(SrcContStateData%qmdot)
-      UB(1:1) = ubound(SrcContStateData%qmdot)
+      LB(1:1) = lbound(SrcContStateData%qmdot, kind=B8Ki)
+      UB(1:1) = ubound(SrcContStateData%qmdot, kind=B8Ki)
       if (.not. allocated(DstContStateData%qmdot)) then
          allocate(DstContStateData%qmdot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2661,12 +2661,12 @@ subroutine SD_PackContState(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%qm))
    if (allocated(InData%qm)) then
-      call RegPackBounds(Buf, 1, lbound(InData%qm), ubound(InData%qm))
+      call RegPackBounds(Buf, 1, lbound(InData%qm, kind=B8Ki), ubound(InData%qm, kind=B8Ki))
       call RegPack(Buf, InData%qm)
    end if
    call RegPack(Buf, allocated(InData%qmdot))
    if (allocated(InData%qmdot)) then
-      call RegPackBounds(Buf, 1, lbound(InData%qmdot), ubound(InData%qmdot))
+      call RegPackBounds(Buf, 1, lbound(InData%qmdot, kind=B8Ki), ubound(InData%qmdot, kind=B8Ki))
       call RegPack(Buf, InData%qmdot)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2676,7 +2676,7 @@ subroutine SD_UnPackContState(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(SD_ContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SD_UnPackContState'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -2794,16 +2794,16 @@ subroutine SD_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SD_CopyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOtherStateData%xdot)) then
-      LB(1:1) = lbound(SrcOtherStateData%xdot)
-      UB(1:1) = ubound(SrcOtherStateData%xdot)
+      LB(1:1) = lbound(SrcOtherStateData%xdot, kind=B8Ki)
+      UB(1:1) = ubound(SrcOtherStateData%xdot, kind=B8Ki)
       if (.not. allocated(DstOtherStateData%xdot)) then
          allocate(DstOtherStateData%xdot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2824,16 +2824,16 @@ subroutine SD_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    type(SD_OtherStateType), intent(inout) :: OtherStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SD_DestroyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(OtherStateData%xdot)) then
-      LB(1:1) = lbound(OtherStateData%xdot)
-      UB(1:1) = ubound(OtherStateData%xdot)
+      LB(1:1) = lbound(OtherStateData%xdot, kind=B8Ki)
+      UB(1:1) = ubound(OtherStateData%xdot, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call SD_DestroyContState(OtherStateData%xdot(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2846,14 +2846,14 @@ subroutine SD_PackOtherState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SD_OtherStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SD_PackOtherState'
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%xdot))
    if (allocated(InData%xdot)) then
-      call RegPackBounds(Buf, 1, lbound(InData%xdot), ubound(InData%xdot))
-      LB(1:1) = lbound(InData%xdot)
-      UB(1:1) = ubound(InData%xdot)
+      call RegPackBounds(Buf, 1, lbound(InData%xdot, kind=B8Ki), ubound(InData%xdot, kind=B8Ki))
+      LB(1:1) = lbound(InData%xdot, kind=B8Ki)
+      UB(1:1) = ubound(InData%xdot, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call SD_PackContState(Buf, InData%xdot(i1)) 
       end do
@@ -2866,8 +2866,8 @@ subroutine SD_UnPackOtherState(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(SD_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SD_UnPackOtherState'
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -2896,14 +2896,14 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'SD_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcMiscData%qmdotdot)) then
-      LB(1:1) = lbound(SrcMiscData%qmdotdot)
-      UB(1:1) = ubound(SrcMiscData%qmdotdot)
+      LB(1:1) = lbound(SrcMiscData%qmdotdot, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%qmdotdot, kind=B8Ki)
       if (.not. allocated(DstMiscData%qmdotdot)) then
          allocate(DstMiscData%qmdotdot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2917,8 +2917,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    DstMiscData%udot_TP = SrcMiscData%udot_TP
    DstMiscData%udotdot_TP = SrcMiscData%udotdot_TP
    if (allocated(SrcMiscData%F_L)) then
-      LB(1:1) = lbound(SrcMiscData%F_L)
-      UB(1:1) = ubound(SrcMiscData%F_L)
+      LB(1:1) = lbound(SrcMiscData%F_L, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%F_L, kind=B8Ki)
       if (.not. allocated(DstMiscData%F_L)) then
          allocate(DstMiscData%F_L(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2929,8 +2929,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%F_L = SrcMiscData%F_L
    end if
    if (allocated(SrcMiscData%F_L2)) then
-      LB(1:1) = lbound(SrcMiscData%F_L2)
-      UB(1:1) = ubound(SrcMiscData%F_L2)
+      LB(1:1) = lbound(SrcMiscData%F_L2, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%F_L2, kind=B8Ki)
       if (.not. allocated(DstMiscData%F_L2)) then
          allocate(DstMiscData%F_L2(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2941,8 +2941,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%F_L2 = SrcMiscData%F_L2
    end if
    if (allocated(SrcMiscData%UR_bar)) then
-      LB(1:1) = lbound(SrcMiscData%UR_bar)
-      UB(1:1) = ubound(SrcMiscData%UR_bar)
+      LB(1:1) = lbound(SrcMiscData%UR_bar, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%UR_bar, kind=B8Ki)
       if (.not. allocated(DstMiscData%UR_bar)) then
          allocate(DstMiscData%UR_bar(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2953,8 +2953,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%UR_bar = SrcMiscData%UR_bar
    end if
    if (allocated(SrcMiscData%UR_bar_dot)) then
-      LB(1:1) = lbound(SrcMiscData%UR_bar_dot)
-      UB(1:1) = ubound(SrcMiscData%UR_bar_dot)
+      LB(1:1) = lbound(SrcMiscData%UR_bar_dot, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%UR_bar_dot, kind=B8Ki)
       if (.not. allocated(DstMiscData%UR_bar_dot)) then
          allocate(DstMiscData%UR_bar_dot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2965,8 +2965,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%UR_bar_dot = SrcMiscData%UR_bar_dot
    end if
    if (allocated(SrcMiscData%UR_bar_dotdot)) then
-      LB(1:1) = lbound(SrcMiscData%UR_bar_dotdot)
-      UB(1:1) = ubound(SrcMiscData%UR_bar_dotdot)
+      LB(1:1) = lbound(SrcMiscData%UR_bar_dotdot, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%UR_bar_dotdot, kind=B8Ki)
       if (.not. allocated(DstMiscData%UR_bar_dotdot)) then
          allocate(DstMiscData%UR_bar_dotdot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2977,8 +2977,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%UR_bar_dotdot = SrcMiscData%UR_bar_dotdot
    end if
    if (allocated(SrcMiscData%UL)) then
-      LB(1:1) = lbound(SrcMiscData%UL)
-      UB(1:1) = ubound(SrcMiscData%UL)
+      LB(1:1) = lbound(SrcMiscData%UL, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%UL, kind=B8Ki)
       if (.not. allocated(DstMiscData%UL)) then
          allocate(DstMiscData%UL(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2989,8 +2989,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%UL = SrcMiscData%UL
    end if
    if (allocated(SrcMiscData%UL_NS)) then
-      LB(1:1) = lbound(SrcMiscData%UL_NS)
-      UB(1:1) = ubound(SrcMiscData%UL_NS)
+      LB(1:1) = lbound(SrcMiscData%UL_NS, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%UL_NS, kind=B8Ki)
       if (.not. allocated(DstMiscData%UL_NS)) then
          allocate(DstMiscData%UL_NS(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3001,8 +3001,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%UL_NS = SrcMiscData%UL_NS
    end if
    if (allocated(SrcMiscData%UL_dot)) then
-      LB(1:1) = lbound(SrcMiscData%UL_dot)
-      UB(1:1) = ubound(SrcMiscData%UL_dot)
+      LB(1:1) = lbound(SrcMiscData%UL_dot, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%UL_dot, kind=B8Ki)
       if (.not. allocated(DstMiscData%UL_dot)) then
          allocate(DstMiscData%UL_dot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3013,8 +3013,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%UL_dot = SrcMiscData%UL_dot
    end if
    if (allocated(SrcMiscData%UL_dotdot)) then
-      LB(1:1) = lbound(SrcMiscData%UL_dotdot)
-      UB(1:1) = ubound(SrcMiscData%UL_dotdot)
+      LB(1:1) = lbound(SrcMiscData%UL_dotdot, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%UL_dotdot, kind=B8Ki)
       if (.not. allocated(DstMiscData%UL_dotdot)) then
          allocate(DstMiscData%UL_dotdot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3025,8 +3025,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%UL_dotdot = SrcMiscData%UL_dotdot
    end if
    if (allocated(SrcMiscData%DU_full)) then
-      LB(1:1) = lbound(SrcMiscData%DU_full)
-      UB(1:1) = ubound(SrcMiscData%DU_full)
+      LB(1:1) = lbound(SrcMiscData%DU_full, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%DU_full, kind=B8Ki)
       if (.not. allocated(DstMiscData%DU_full)) then
          allocate(DstMiscData%DU_full(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3037,8 +3037,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%DU_full = SrcMiscData%DU_full
    end if
    if (allocated(SrcMiscData%U_full)) then
-      LB(1:1) = lbound(SrcMiscData%U_full)
-      UB(1:1) = ubound(SrcMiscData%U_full)
+      LB(1:1) = lbound(SrcMiscData%U_full, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%U_full, kind=B8Ki)
       if (.not. allocated(DstMiscData%U_full)) then
          allocate(DstMiscData%U_full(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3049,8 +3049,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%U_full = SrcMiscData%U_full
    end if
    if (allocated(SrcMiscData%U_full_NS)) then
-      LB(1:1) = lbound(SrcMiscData%U_full_NS)
-      UB(1:1) = ubound(SrcMiscData%U_full_NS)
+      LB(1:1) = lbound(SrcMiscData%U_full_NS, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%U_full_NS, kind=B8Ki)
       if (.not. allocated(DstMiscData%U_full_NS)) then
          allocate(DstMiscData%U_full_NS(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3061,8 +3061,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%U_full_NS = SrcMiscData%U_full_NS
    end if
    if (allocated(SrcMiscData%U_full_dot)) then
-      LB(1:1) = lbound(SrcMiscData%U_full_dot)
-      UB(1:1) = ubound(SrcMiscData%U_full_dot)
+      LB(1:1) = lbound(SrcMiscData%U_full_dot, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%U_full_dot, kind=B8Ki)
       if (.not. allocated(DstMiscData%U_full_dot)) then
          allocate(DstMiscData%U_full_dot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3073,8 +3073,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%U_full_dot = SrcMiscData%U_full_dot
    end if
    if (allocated(SrcMiscData%U_full_dotdot)) then
-      LB(1:1) = lbound(SrcMiscData%U_full_dotdot)
-      UB(1:1) = ubound(SrcMiscData%U_full_dotdot)
+      LB(1:1) = lbound(SrcMiscData%U_full_dotdot, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%U_full_dotdot, kind=B8Ki)
       if (.not. allocated(DstMiscData%U_full_dotdot)) then
          allocate(DstMiscData%U_full_dotdot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3085,8 +3085,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%U_full_dotdot = SrcMiscData%U_full_dotdot
    end if
    if (allocated(SrcMiscData%U_full_elast)) then
-      LB(1:1) = lbound(SrcMiscData%U_full_elast)
-      UB(1:1) = ubound(SrcMiscData%U_full_elast)
+      LB(1:1) = lbound(SrcMiscData%U_full_elast, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%U_full_elast, kind=B8Ki)
       if (.not. allocated(DstMiscData%U_full_elast)) then
          allocate(DstMiscData%U_full_elast(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3097,8 +3097,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%U_full_elast = SrcMiscData%U_full_elast
    end if
    if (allocated(SrcMiscData%U_red)) then
-      LB(1:1) = lbound(SrcMiscData%U_red)
-      UB(1:1) = ubound(SrcMiscData%U_red)
+      LB(1:1) = lbound(SrcMiscData%U_red, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%U_red, kind=B8Ki)
       if (.not. allocated(DstMiscData%U_red)) then
          allocate(DstMiscData%U_red(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3109,8 +3109,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%U_red = SrcMiscData%U_red
    end if
    if (allocated(SrcMiscData%FC_unit)) then
-      LB(1:1) = lbound(SrcMiscData%FC_unit)
-      UB(1:1) = ubound(SrcMiscData%FC_unit)
+      LB(1:1) = lbound(SrcMiscData%FC_unit, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%FC_unit, kind=B8Ki)
       if (.not. allocated(DstMiscData%FC_unit)) then
          allocate(DstMiscData%FC_unit(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3121,8 +3121,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%FC_unit = SrcMiscData%FC_unit
    end if
    if (allocated(SrcMiscData%SDWrOutput)) then
-      LB(1:1) = lbound(SrcMiscData%SDWrOutput)
-      UB(1:1) = ubound(SrcMiscData%SDWrOutput)
+      LB(1:1) = lbound(SrcMiscData%SDWrOutput, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%SDWrOutput, kind=B8Ki)
       if (.not. allocated(DstMiscData%SDWrOutput)) then
          allocate(DstMiscData%SDWrOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3133,8 +3133,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%SDWrOutput = SrcMiscData%SDWrOutput
    end if
    if (allocated(SrcMiscData%AllOuts)) then
-      LB(1:1) = lbound(SrcMiscData%AllOuts)
-      UB(1:1) = ubound(SrcMiscData%AllOuts)
+      LB(1:1) = lbound(SrcMiscData%AllOuts, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%AllOuts, kind=B8Ki)
       if (.not. allocated(DstMiscData%AllOuts)) then
          allocate(DstMiscData%AllOuts(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3147,8 +3147,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    DstMiscData%LastOutTime = SrcMiscData%LastOutTime
    DstMiscData%Decimat = SrcMiscData%Decimat
    if (allocated(SrcMiscData%Fext)) then
-      LB(1:1) = lbound(SrcMiscData%Fext)
-      UB(1:1) = ubound(SrcMiscData%Fext)
+      LB(1:1) = lbound(SrcMiscData%Fext, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%Fext, kind=B8Ki)
       if (.not. allocated(DstMiscData%Fext)) then
          allocate(DstMiscData%Fext(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3159,8 +3159,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%Fext = SrcMiscData%Fext
    end if
    if (allocated(SrcMiscData%Fext_red)) then
-      LB(1:1) = lbound(SrcMiscData%Fext_red)
-      UB(1:1) = ubound(SrcMiscData%Fext_red)
+      LB(1:1) = lbound(SrcMiscData%Fext_red, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%Fext_red, kind=B8Ki)
       if (.not. allocated(DstMiscData%Fext_red)) then
          allocate(DstMiscData%Fext_red(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3171,8 +3171,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%Fext_red = SrcMiscData%Fext_red
    end if
    if (allocated(SrcMiscData%UL_SIM)) then
-      LB(1:1) = lbound(SrcMiscData%UL_SIM)
-      UB(1:1) = ubound(SrcMiscData%UL_SIM)
+      LB(1:1) = lbound(SrcMiscData%UL_SIM, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%UL_SIM, kind=B8Ki)
       if (.not. allocated(DstMiscData%UL_SIM)) then
          allocate(DstMiscData%UL_SIM(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3183,8 +3183,8 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%UL_SIM = SrcMiscData%UL_SIM
    end if
    if (allocated(SrcMiscData%UL_0m)) then
-      LB(1:1) = lbound(SrcMiscData%UL_0m)
-      UB(1:1) = ubound(SrcMiscData%UL_0m)
+      LB(1:1) = lbound(SrcMiscData%UL_0m, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%UL_0m, kind=B8Ki)
       if (.not. allocated(DstMiscData%UL_0m)) then
          allocate(DstMiscData%UL_0m(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3284,7 +3284,7 @@ subroutine SD_PackMisc(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%qmdotdot))
    if (allocated(InData%qmdotdot)) then
-      call RegPackBounds(Buf, 1, lbound(InData%qmdotdot), ubound(InData%qmdotdot))
+      call RegPackBounds(Buf, 1, lbound(InData%qmdotdot, kind=B8Ki), ubound(InData%qmdotdot, kind=B8Ki))
       call RegPack(Buf, InData%qmdotdot)
    end if
    call RegPack(Buf, InData%u_TP)
@@ -3292,119 +3292,119 @@ subroutine SD_PackMisc(Buf, Indata)
    call RegPack(Buf, InData%udotdot_TP)
    call RegPack(Buf, allocated(InData%F_L))
    if (allocated(InData%F_L)) then
-      call RegPackBounds(Buf, 1, lbound(InData%F_L), ubound(InData%F_L))
+      call RegPackBounds(Buf, 1, lbound(InData%F_L, kind=B8Ki), ubound(InData%F_L, kind=B8Ki))
       call RegPack(Buf, InData%F_L)
    end if
    call RegPack(Buf, allocated(InData%F_L2))
    if (allocated(InData%F_L2)) then
-      call RegPackBounds(Buf, 1, lbound(InData%F_L2), ubound(InData%F_L2))
+      call RegPackBounds(Buf, 1, lbound(InData%F_L2, kind=B8Ki), ubound(InData%F_L2, kind=B8Ki))
       call RegPack(Buf, InData%F_L2)
    end if
    call RegPack(Buf, allocated(InData%UR_bar))
    if (allocated(InData%UR_bar)) then
-      call RegPackBounds(Buf, 1, lbound(InData%UR_bar), ubound(InData%UR_bar))
+      call RegPackBounds(Buf, 1, lbound(InData%UR_bar, kind=B8Ki), ubound(InData%UR_bar, kind=B8Ki))
       call RegPack(Buf, InData%UR_bar)
    end if
    call RegPack(Buf, allocated(InData%UR_bar_dot))
    if (allocated(InData%UR_bar_dot)) then
-      call RegPackBounds(Buf, 1, lbound(InData%UR_bar_dot), ubound(InData%UR_bar_dot))
+      call RegPackBounds(Buf, 1, lbound(InData%UR_bar_dot, kind=B8Ki), ubound(InData%UR_bar_dot, kind=B8Ki))
       call RegPack(Buf, InData%UR_bar_dot)
    end if
    call RegPack(Buf, allocated(InData%UR_bar_dotdot))
    if (allocated(InData%UR_bar_dotdot)) then
-      call RegPackBounds(Buf, 1, lbound(InData%UR_bar_dotdot), ubound(InData%UR_bar_dotdot))
+      call RegPackBounds(Buf, 1, lbound(InData%UR_bar_dotdot, kind=B8Ki), ubound(InData%UR_bar_dotdot, kind=B8Ki))
       call RegPack(Buf, InData%UR_bar_dotdot)
    end if
    call RegPack(Buf, allocated(InData%UL))
    if (allocated(InData%UL)) then
-      call RegPackBounds(Buf, 1, lbound(InData%UL), ubound(InData%UL))
+      call RegPackBounds(Buf, 1, lbound(InData%UL, kind=B8Ki), ubound(InData%UL, kind=B8Ki))
       call RegPack(Buf, InData%UL)
    end if
    call RegPack(Buf, allocated(InData%UL_NS))
    if (allocated(InData%UL_NS)) then
-      call RegPackBounds(Buf, 1, lbound(InData%UL_NS), ubound(InData%UL_NS))
+      call RegPackBounds(Buf, 1, lbound(InData%UL_NS, kind=B8Ki), ubound(InData%UL_NS, kind=B8Ki))
       call RegPack(Buf, InData%UL_NS)
    end if
    call RegPack(Buf, allocated(InData%UL_dot))
    if (allocated(InData%UL_dot)) then
-      call RegPackBounds(Buf, 1, lbound(InData%UL_dot), ubound(InData%UL_dot))
+      call RegPackBounds(Buf, 1, lbound(InData%UL_dot, kind=B8Ki), ubound(InData%UL_dot, kind=B8Ki))
       call RegPack(Buf, InData%UL_dot)
    end if
    call RegPack(Buf, allocated(InData%UL_dotdot))
    if (allocated(InData%UL_dotdot)) then
-      call RegPackBounds(Buf, 1, lbound(InData%UL_dotdot), ubound(InData%UL_dotdot))
+      call RegPackBounds(Buf, 1, lbound(InData%UL_dotdot, kind=B8Ki), ubound(InData%UL_dotdot, kind=B8Ki))
       call RegPack(Buf, InData%UL_dotdot)
    end if
    call RegPack(Buf, allocated(InData%DU_full))
    if (allocated(InData%DU_full)) then
-      call RegPackBounds(Buf, 1, lbound(InData%DU_full), ubound(InData%DU_full))
+      call RegPackBounds(Buf, 1, lbound(InData%DU_full, kind=B8Ki), ubound(InData%DU_full, kind=B8Ki))
       call RegPack(Buf, InData%DU_full)
    end if
    call RegPack(Buf, allocated(InData%U_full))
    if (allocated(InData%U_full)) then
-      call RegPackBounds(Buf, 1, lbound(InData%U_full), ubound(InData%U_full))
+      call RegPackBounds(Buf, 1, lbound(InData%U_full, kind=B8Ki), ubound(InData%U_full, kind=B8Ki))
       call RegPack(Buf, InData%U_full)
    end if
    call RegPack(Buf, allocated(InData%U_full_NS))
    if (allocated(InData%U_full_NS)) then
-      call RegPackBounds(Buf, 1, lbound(InData%U_full_NS), ubound(InData%U_full_NS))
+      call RegPackBounds(Buf, 1, lbound(InData%U_full_NS, kind=B8Ki), ubound(InData%U_full_NS, kind=B8Ki))
       call RegPack(Buf, InData%U_full_NS)
    end if
    call RegPack(Buf, allocated(InData%U_full_dot))
    if (allocated(InData%U_full_dot)) then
-      call RegPackBounds(Buf, 1, lbound(InData%U_full_dot), ubound(InData%U_full_dot))
+      call RegPackBounds(Buf, 1, lbound(InData%U_full_dot, kind=B8Ki), ubound(InData%U_full_dot, kind=B8Ki))
       call RegPack(Buf, InData%U_full_dot)
    end if
    call RegPack(Buf, allocated(InData%U_full_dotdot))
    if (allocated(InData%U_full_dotdot)) then
-      call RegPackBounds(Buf, 1, lbound(InData%U_full_dotdot), ubound(InData%U_full_dotdot))
+      call RegPackBounds(Buf, 1, lbound(InData%U_full_dotdot, kind=B8Ki), ubound(InData%U_full_dotdot, kind=B8Ki))
       call RegPack(Buf, InData%U_full_dotdot)
    end if
    call RegPack(Buf, allocated(InData%U_full_elast))
    if (allocated(InData%U_full_elast)) then
-      call RegPackBounds(Buf, 1, lbound(InData%U_full_elast), ubound(InData%U_full_elast))
+      call RegPackBounds(Buf, 1, lbound(InData%U_full_elast, kind=B8Ki), ubound(InData%U_full_elast, kind=B8Ki))
       call RegPack(Buf, InData%U_full_elast)
    end if
    call RegPack(Buf, allocated(InData%U_red))
    if (allocated(InData%U_red)) then
-      call RegPackBounds(Buf, 1, lbound(InData%U_red), ubound(InData%U_red))
+      call RegPackBounds(Buf, 1, lbound(InData%U_red, kind=B8Ki), ubound(InData%U_red, kind=B8Ki))
       call RegPack(Buf, InData%U_red)
    end if
    call RegPack(Buf, allocated(InData%FC_unit))
    if (allocated(InData%FC_unit)) then
-      call RegPackBounds(Buf, 1, lbound(InData%FC_unit), ubound(InData%FC_unit))
+      call RegPackBounds(Buf, 1, lbound(InData%FC_unit, kind=B8Ki), ubound(InData%FC_unit, kind=B8Ki))
       call RegPack(Buf, InData%FC_unit)
    end if
    call RegPack(Buf, allocated(InData%SDWrOutput))
    if (allocated(InData%SDWrOutput)) then
-      call RegPackBounds(Buf, 1, lbound(InData%SDWrOutput), ubound(InData%SDWrOutput))
+      call RegPackBounds(Buf, 1, lbound(InData%SDWrOutput, kind=B8Ki), ubound(InData%SDWrOutput, kind=B8Ki))
       call RegPack(Buf, InData%SDWrOutput)
    end if
    call RegPack(Buf, allocated(InData%AllOuts))
    if (allocated(InData%AllOuts)) then
-      call RegPackBounds(Buf, 1, lbound(InData%AllOuts), ubound(InData%AllOuts))
+      call RegPackBounds(Buf, 1, lbound(InData%AllOuts, kind=B8Ki), ubound(InData%AllOuts, kind=B8Ki))
       call RegPack(Buf, InData%AllOuts)
    end if
    call RegPack(Buf, InData%LastOutTime)
    call RegPack(Buf, InData%Decimat)
    call RegPack(Buf, allocated(InData%Fext))
    if (allocated(InData%Fext)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Fext), ubound(InData%Fext))
+      call RegPackBounds(Buf, 1, lbound(InData%Fext, kind=B8Ki), ubound(InData%Fext, kind=B8Ki))
       call RegPack(Buf, InData%Fext)
    end if
    call RegPack(Buf, allocated(InData%Fext_red))
    if (allocated(InData%Fext_red)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Fext_red), ubound(InData%Fext_red))
+      call RegPackBounds(Buf, 1, lbound(InData%Fext_red, kind=B8Ki), ubound(InData%Fext_red, kind=B8Ki))
       call RegPack(Buf, InData%Fext_red)
    end if
    call RegPack(Buf, allocated(InData%UL_SIM))
    if (allocated(InData%UL_SIM)) then
-      call RegPackBounds(Buf, 1, lbound(InData%UL_SIM), ubound(InData%UL_SIM))
+      call RegPackBounds(Buf, 1, lbound(InData%UL_SIM, kind=B8Ki), ubound(InData%UL_SIM, kind=B8Ki))
       call RegPack(Buf, InData%UL_SIM)
    end if
    call RegPack(Buf, allocated(InData%UL_0m))
    if (allocated(InData%UL_0m)) then
-      call RegPackBounds(Buf, 1, lbound(InData%UL_0m), ubound(InData%UL_0m))
+      call RegPackBounds(Buf, 1, lbound(InData%UL_0m, kind=B8Ki), ubound(InData%UL_0m, kind=B8Ki))
       call RegPack(Buf, InData%UL_0m)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3414,7 +3414,7 @@ subroutine SD_UnPackMisc(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(SD_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SD_UnPackMisc'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -3772,8 +3772,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SD_CopyParam'
@@ -3785,8 +3785,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%nDOF_red = SrcParamData%nDOF_red
    DstParamData%Nmembers = SrcParamData%Nmembers
    if (allocated(SrcParamData%Elems)) then
-      LB(1:2) = lbound(SrcParamData%Elems)
-      UB(1:2) = ubound(SrcParamData%Elems)
+      LB(1:2) = lbound(SrcParamData%Elems, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%Elems, kind=B8Ki)
       if (.not. allocated(DstParamData%Elems)) then
          allocate(DstParamData%Elems(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3797,8 +3797,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%Elems = SrcParamData%Elems
    end if
    if (allocated(SrcParamData%ElemProps)) then
-      LB(1:1) = lbound(SrcParamData%ElemProps)
-      UB(1:1) = ubound(SrcParamData%ElemProps)
+      LB(1:1) = lbound(SrcParamData%ElemProps, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%ElemProps, kind=B8Ki)
       if (.not. allocated(DstParamData%ElemProps)) then
          allocate(DstParamData%ElemProps(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3813,8 +3813,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcParamData%FG)) then
-      LB(1:1) = lbound(SrcParamData%FG)
-      UB(1:1) = ubound(SrcParamData%FG)
+      LB(1:1) = lbound(SrcParamData%FG, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%FG, kind=B8Ki)
       if (.not. allocated(DstParamData%FG)) then
          allocate(DstParamData%FG(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3825,8 +3825,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%FG = SrcParamData%FG
    end if
    if (allocated(SrcParamData%DP0)) then
-      LB(1:2) = lbound(SrcParamData%DP0)
-      UB(1:2) = ubound(SrcParamData%DP0)
+      LB(1:2) = lbound(SrcParamData%DP0, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%DP0, kind=B8Ki)
       if (.not. allocated(DstParamData%DP0)) then
          allocate(DstParamData%DP0(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3837,8 +3837,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%DP0 = SrcParamData%DP0
    end if
    if (allocated(SrcParamData%NodeID2JointID)) then
-      LB(1:1) = lbound(SrcParamData%NodeID2JointID)
-      UB(1:1) = ubound(SrcParamData%NodeID2JointID)
+      LB(1:1) = lbound(SrcParamData%NodeID2JointID, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%NodeID2JointID, kind=B8Ki)
       if (.not. allocated(DstParamData%NodeID2JointID)) then
          allocate(DstParamData%NodeID2JointID(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3850,8 +3850,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    end if
    DstParamData%reduced = SrcParamData%reduced
    if (allocated(SrcParamData%T_red)) then
-      LB(1:2) = lbound(SrcParamData%T_red)
-      UB(1:2) = ubound(SrcParamData%T_red)
+      LB(1:2) = lbound(SrcParamData%T_red, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%T_red, kind=B8Ki)
       if (.not. allocated(DstParamData%T_red)) then
          allocate(DstParamData%T_red(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3862,8 +3862,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%T_red = SrcParamData%T_red
    end if
    if (allocated(SrcParamData%T_red_T)) then
-      LB(1:2) = lbound(SrcParamData%T_red_T)
-      UB(1:2) = ubound(SrcParamData%T_red_T)
+      LB(1:2) = lbound(SrcParamData%T_red_T, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%T_red_T, kind=B8Ki)
       if (.not. allocated(DstParamData%T_red_T)) then
          allocate(DstParamData%T_red_T(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3874,8 +3874,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%T_red_T = SrcParamData%T_red_T
    end if
    if (allocated(SrcParamData%NodesDOF)) then
-      LB(1:1) = lbound(SrcParamData%NodesDOF)
-      UB(1:1) = ubound(SrcParamData%NodesDOF)
+      LB(1:1) = lbound(SrcParamData%NodesDOF, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%NodesDOF, kind=B8Ki)
       if (.not. allocated(DstParamData%NodesDOF)) then
          allocate(DstParamData%NodesDOF(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3890,8 +3890,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcParamData%NodesDOFred)) then
-      LB(1:1) = lbound(SrcParamData%NodesDOFred)
-      UB(1:1) = ubound(SrcParamData%NodesDOFred)
+      LB(1:1) = lbound(SrcParamData%NodesDOFred, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%NodesDOFred, kind=B8Ki)
       if (.not. allocated(DstParamData%NodesDOFred)) then
          allocate(DstParamData%NodesDOFred(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3906,8 +3906,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcParamData%ElemsDOF)) then
-      LB(1:2) = lbound(SrcParamData%ElemsDOF)
-      UB(1:2) = ubound(SrcParamData%ElemsDOF)
+      LB(1:2) = lbound(SrcParamData%ElemsDOF, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%ElemsDOF, kind=B8Ki)
       if (.not. allocated(DstParamData%ElemsDOF)) then
          allocate(DstParamData%ElemsDOF(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3918,8 +3918,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%ElemsDOF = SrcParamData%ElemsDOF
    end if
    if (allocated(SrcParamData%DOFred2Nodes)) then
-      LB(1:2) = lbound(SrcParamData%DOFred2Nodes)
-      UB(1:2) = ubound(SrcParamData%DOFred2Nodes)
+      LB(1:2) = lbound(SrcParamData%DOFred2Nodes, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%DOFred2Nodes, kind=B8Ki)
       if (.not. allocated(DstParamData%DOFred2Nodes)) then
          allocate(DstParamData%DOFred2Nodes(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3930,8 +3930,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%DOFred2Nodes = SrcParamData%DOFred2Nodes
    end if
    if (allocated(SrcParamData%CtrlElem2Channel)) then
-      LB(1:2) = lbound(SrcParamData%CtrlElem2Channel)
-      UB(1:2) = ubound(SrcParamData%CtrlElem2Channel)
+      LB(1:2) = lbound(SrcParamData%CtrlElem2Channel, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%CtrlElem2Channel, kind=B8Ki)
       if (.not. allocated(DstParamData%CtrlElem2Channel)) then
          allocate(DstParamData%CtrlElem2Channel(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3946,8 +3946,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%GuyanLoadCorrection = SrcParamData%GuyanLoadCorrection
    DstParamData%Floating = SrcParamData%Floating
    if (allocated(SrcParamData%KMMDiag)) then
-      LB(1:1) = lbound(SrcParamData%KMMDiag)
-      UB(1:1) = ubound(SrcParamData%KMMDiag)
+      LB(1:1) = lbound(SrcParamData%KMMDiag, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%KMMDiag, kind=B8Ki)
       if (.not. allocated(DstParamData%KMMDiag)) then
          allocate(DstParamData%KMMDiag(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3958,8 +3958,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%KMMDiag = SrcParamData%KMMDiag
    end if
    if (allocated(SrcParamData%CMMDiag)) then
-      LB(1:1) = lbound(SrcParamData%CMMDiag)
-      UB(1:1) = ubound(SrcParamData%CMMDiag)
+      LB(1:1) = lbound(SrcParamData%CMMDiag, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%CMMDiag, kind=B8Ki)
       if (.not. allocated(DstParamData%CMMDiag)) then
          allocate(DstParamData%CMMDiag(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3970,8 +3970,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%CMMDiag = SrcParamData%CMMDiag
    end if
    if (allocated(SrcParamData%MMB)) then
-      LB(1:2) = lbound(SrcParamData%MMB)
-      UB(1:2) = ubound(SrcParamData%MMB)
+      LB(1:2) = lbound(SrcParamData%MMB, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%MMB, kind=B8Ki)
       if (.not. allocated(DstParamData%MMB)) then
          allocate(DstParamData%MMB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3982,8 +3982,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%MMB = SrcParamData%MMB
    end if
    if (allocated(SrcParamData%MBmmB)) then
-      LB(1:2) = lbound(SrcParamData%MBmmB)
-      UB(1:2) = ubound(SrcParamData%MBmmB)
+      LB(1:2) = lbound(SrcParamData%MBmmB, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%MBmmB, kind=B8Ki)
       if (.not. allocated(DstParamData%MBmmB)) then
          allocate(DstParamData%MBmmB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3994,8 +3994,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%MBmmB = SrcParamData%MBmmB
    end if
    if (allocated(SrcParamData%C1_11)) then
-      LB(1:2) = lbound(SrcParamData%C1_11)
-      UB(1:2) = ubound(SrcParamData%C1_11)
+      LB(1:2) = lbound(SrcParamData%C1_11, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%C1_11, kind=B8Ki)
       if (.not. allocated(DstParamData%C1_11)) then
          allocate(DstParamData%C1_11(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4006,8 +4006,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%C1_11 = SrcParamData%C1_11
    end if
    if (allocated(SrcParamData%C1_12)) then
-      LB(1:2) = lbound(SrcParamData%C1_12)
-      UB(1:2) = ubound(SrcParamData%C1_12)
+      LB(1:2) = lbound(SrcParamData%C1_12, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%C1_12, kind=B8Ki)
       if (.not. allocated(DstParamData%C1_12)) then
          allocate(DstParamData%C1_12(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4018,8 +4018,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%C1_12 = SrcParamData%C1_12
    end if
    if (allocated(SrcParamData%D1_141)) then
-      LB(1:2) = lbound(SrcParamData%D1_141)
-      UB(1:2) = ubound(SrcParamData%D1_141)
+      LB(1:2) = lbound(SrcParamData%D1_141, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%D1_141, kind=B8Ki)
       if (.not. allocated(DstParamData%D1_141)) then
          allocate(DstParamData%D1_141(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4030,8 +4030,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%D1_141 = SrcParamData%D1_141
    end if
    if (allocated(SrcParamData%D1_142)) then
-      LB(1:2) = lbound(SrcParamData%D1_142)
-      UB(1:2) = ubound(SrcParamData%D1_142)
+      LB(1:2) = lbound(SrcParamData%D1_142, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%D1_142, kind=B8Ki)
       if (.not. allocated(DstParamData%D1_142)) then
          allocate(DstParamData%D1_142(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4042,8 +4042,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%D1_142 = SrcParamData%D1_142
    end if
    if (allocated(SrcParamData%PhiM)) then
-      LB(1:2) = lbound(SrcParamData%PhiM)
-      UB(1:2) = ubound(SrcParamData%PhiM)
+      LB(1:2) = lbound(SrcParamData%PhiM, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%PhiM, kind=B8Ki)
       if (.not. allocated(DstParamData%PhiM)) then
          allocate(DstParamData%PhiM(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4054,8 +4054,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%PhiM = SrcParamData%PhiM
    end if
    if (allocated(SrcParamData%C2_61)) then
-      LB(1:2) = lbound(SrcParamData%C2_61)
-      UB(1:2) = ubound(SrcParamData%C2_61)
+      LB(1:2) = lbound(SrcParamData%C2_61, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%C2_61, kind=B8Ki)
       if (.not. allocated(DstParamData%C2_61)) then
          allocate(DstParamData%C2_61(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4066,8 +4066,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%C2_61 = SrcParamData%C2_61
    end if
    if (allocated(SrcParamData%C2_62)) then
-      LB(1:2) = lbound(SrcParamData%C2_62)
-      UB(1:2) = ubound(SrcParamData%C2_62)
+      LB(1:2) = lbound(SrcParamData%C2_62, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%C2_62, kind=B8Ki)
       if (.not. allocated(DstParamData%C2_62)) then
          allocate(DstParamData%C2_62(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4078,8 +4078,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%C2_62 = SrcParamData%C2_62
    end if
    if (allocated(SrcParamData%PhiRb_TI)) then
-      LB(1:2) = lbound(SrcParamData%PhiRb_TI)
-      UB(1:2) = ubound(SrcParamData%PhiRb_TI)
+      LB(1:2) = lbound(SrcParamData%PhiRb_TI, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%PhiRb_TI, kind=B8Ki)
       if (.not. allocated(DstParamData%PhiRb_TI)) then
          allocate(DstParamData%PhiRb_TI(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4090,8 +4090,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%PhiRb_TI = SrcParamData%PhiRb_TI
    end if
    if (allocated(SrcParamData%D2_63)) then
-      LB(1:2) = lbound(SrcParamData%D2_63)
-      UB(1:2) = ubound(SrcParamData%D2_63)
+      LB(1:2) = lbound(SrcParamData%D2_63, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%D2_63, kind=B8Ki)
       if (.not. allocated(DstParamData%D2_63)) then
          allocate(DstParamData%D2_63(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4102,8 +4102,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%D2_63 = SrcParamData%D2_63
    end if
    if (allocated(SrcParamData%D2_64)) then
-      LB(1:2) = lbound(SrcParamData%D2_64)
-      UB(1:2) = ubound(SrcParamData%D2_64)
+      LB(1:2) = lbound(SrcParamData%D2_64, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%D2_64, kind=B8Ki)
       if (.not. allocated(DstParamData%D2_64)) then
          allocate(DstParamData%D2_64(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4114,8 +4114,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%D2_64 = SrcParamData%D2_64
    end if
    if (allocated(SrcParamData%MBB)) then
-      LB(1:2) = lbound(SrcParamData%MBB)
-      UB(1:2) = ubound(SrcParamData%MBB)
+      LB(1:2) = lbound(SrcParamData%MBB, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%MBB, kind=B8Ki)
       if (.not. allocated(DstParamData%MBB)) then
          allocate(DstParamData%MBB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4126,8 +4126,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%MBB = SrcParamData%MBB
    end if
    if (allocated(SrcParamData%KBB)) then
-      LB(1:2) = lbound(SrcParamData%KBB)
-      UB(1:2) = ubound(SrcParamData%KBB)
+      LB(1:2) = lbound(SrcParamData%KBB, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%KBB, kind=B8Ki)
       if (.not. allocated(DstParamData%KBB)) then
          allocate(DstParamData%KBB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4138,8 +4138,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%KBB = SrcParamData%KBB
    end if
    if (allocated(SrcParamData%CBB)) then
-      LB(1:2) = lbound(SrcParamData%CBB)
-      UB(1:2) = ubound(SrcParamData%CBB)
+      LB(1:2) = lbound(SrcParamData%CBB, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%CBB, kind=B8Ki)
       if (.not. allocated(DstParamData%CBB)) then
          allocate(DstParamData%CBB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4150,8 +4150,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%CBB = SrcParamData%CBB
    end if
    if (allocated(SrcParamData%CMM)) then
-      LB(1:2) = lbound(SrcParamData%CMM)
-      UB(1:2) = ubound(SrcParamData%CMM)
+      LB(1:2) = lbound(SrcParamData%CMM, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%CMM, kind=B8Ki)
       if (.not. allocated(DstParamData%CMM)) then
          allocate(DstParamData%CMM(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4162,8 +4162,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%CMM = SrcParamData%CMM
    end if
    if (allocated(SrcParamData%MBM)) then
-      LB(1:2) = lbound(SrcParamData%MBM)
-      UB(1:2) = ubound(SrcParamData%MBM)
+      LB(1:2) = lbound(SrcParamData%MBM, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%MBM, kind=B8Ki)
       if (.not. allocated(DstParamData%MBM)) then
          allocate(DstParamData%MBM(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4174,8 +4174,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%MBM = SrcParamData%MBM
    end if
    if (allocated(SrcParamData%PhiL_T)) then
-      LB(1:2) = lbound(SrcParamData%PhiL_T)
-      UB(1:2) = ubound(SrcParamData%PhiL_T)
+      LB(1:2) = lbound(SrcParamData%PhiL_T, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%PhiL_T, kind=B8Ki)
       if (.not. allocated(DstParamData%PhiL_T)) then
          allocate(DstParamData%PhiL_T(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4186,8 +4186,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%PhiL_T = SrcParamData%PhiL_T
    end if
    if (allocated(SrcParamData%PhiLInvOmgL2)) then
-      LB(1:2) = lbound(SrcParamData%PhiLInvOmgL2)
-      UB(1:2) = ubound(SrcParamData%PhiLInvOmgL2)
+      LB(1:2) = lbound(SrcParamData%PhiLInvOmgL2, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%PhiLInvOmgL2, kind=B8Ki)
       if (.not. allocated(DstParamData%PhiLInvOmgL2)) then
          allocate(DstParamData%PhiLInvOmgL2(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4198,8 +4198,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%PhiLInvOmgL2 = SrcParamData%PhiLInvOmgL2
    end if
    if (allocated(SrcParamData%KLLm1)) then
-      LB(1:2) = lbound(SrcParamData%KLLm1)
-      UB(1:2) = ubound(SrcParamData%KLLm1)
+      LB(1:2) = lbound(SrcParamData%KLLm1, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%KLLm1, kind=B8Ki)
       if (.not. allocated(DstParamData%KLLm1)) then
          allocate(DstParamData%KLLm1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4210,8 +4210,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%KLLm1 = SrcParamData%KLLm1
    end if
    if (allocated(SrcParamData%AM2Jac)) then
-      LB(1:2) = lbound(SrcParamData%AM2Jac)
-      UB(1:2) = ubound(SrcParamData%AM2Jac)
+      LB(1:2) = lbound(SrcParamData%AM2Jac, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%AM2Jac, kind=B8Ki)
       if (.not. allocated(DstParamData%AM2Jac)) then
          allocate(DstParamData%AM2Jac(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4222,8 +4222,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%AM2Jac = SrcParamData%AM2Jac
    end if
    if (allocated(SrcParamData%AM2JacPiv)) then
-      LB(1:1) = lbound(SrcParamData%AM2JacPiv)
-      UB(1:1) = ubound(SrcParamData%AM2JacPiv)
+      LB(1:1) = lbound(SrcParamData%AM2JacPiv, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%AM2JacPiv, kind=B8Ki)
       if (.not. allocated(DstParamData%AM2JacPiv)) then
          allocate(DstParamData%AM2JacPiv(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4234,8 +4234,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%AM2JacPiv = SrcParamData%AM2JacPiv
    end if
    if (allocated(SrcParamData%TI)) then
-      LB(1:2) = lbound(SrcParamData%TI)
-      UB(1:2) = ubound(SrcParamData%TI)
+      LB(1:2) = lbound(SrcParamData%TI, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%TI, kind=B8Ki)
       if (.not. allocated(DstParamData%TI)) then
          allocate(DstParamData%TI(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4246,8 +4246,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%TI = SrcParamData%TI
    end if
    if (allocated(SrcParamData%TIreact)) then
-      LB(1:2) = lbound(SrcParamData%TIreact)
-      UB(1:2) = ubound(SrcParamData%TIreact)
+      LB(1:2) = lbound(SrcParamData%TIreact, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%TIreact, kind=B8Ki)
       if (.not. allocated(DstParamData%TIreact)) then
          allocate(DstParamData%TIreact(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4262,8 +4262,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%nNodes_L = SrcParamData%nNodes_L
    DstParamData%nNodes_C = SrcParamData%nNodes_C
    if (allocated(SrcParamData%Nodes_I)) then
-      LB(1:2) = lbound(SrcParamData%Nodes_I)
-      UB(1:2) = ubound(SrcParamData%Nodes_I)
+      LB(1:2) = lbound(SrcParamData%Nodes_I, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%Nodes_I, kind=B8Ki)
       if (.not. allocated(DstParamData%Nodes_I)) then
          allocate(DstParamData%Nodes_I(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4274,8 +4274,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%Nodes_I = SrcParamData%Nodes_I
    end if
    if (allocated(SrcParamData%Nodes_L)) then
-      LB(1:2) = lbound(SrcParamData%Nodes_L)
-      UB(1:2) = ubound(SrcParamData%Nodes_L)
+      LB(1:2) = lbound(SrcParamData%Nodes_L, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%Nodes_L, kind=B8Ki)
       if (.not. allocated(DstParamData%Nodes_L)) then
          allocate(DstParamData%Nodes_L(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4286,8 +4286,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%Nodes_L = SrcParamData%Nodes_L
    end if
    if (allocated(SrcParamData%Nodes_C)) then
-      LB(1:2) = lbound(SrcParamData%Nodes_C)
-      UB(1:2) = ubound(SrcParamData%Nodes_C)
+      LB(1:2) = lbound(SrcParamData%Nodes_C, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%Nodes_C, kind=B8Ki)
       if (.not. allocated(DstParamData%Nodes_C)) then
          allocate(DstParamData%Nodes_C(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4310,8 +4310,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%nDOF__L = SrcParamData%nDOF__L
    DstParamData%nDOF__F = SrcParamData%nDOF__F
    if (allocated(SrcParamData%IDI__)) then
-      LB(1:1) = lbound(SrcParamData%IDI__)
-      UB(1:1) = ubound(SrcParamData%IDI__)
+      LB(1:1) = lbound(SrcParamData%IDI__, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%IDI__, kind=B8Ki)
       if (.not. allocated(DstParamData%IDI__)) then
          allocate(DstParamData%IDI__(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4322,8 +4322,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%IDI__ = SrcParamData%IDI__
    end if
    if (allocated(SrcParamData%IDI_Rb)) then
-      LB(1:1) = lbound(SrcParamData%IDI_Rb)
-      UB(1:1) = ubound(SrcParamData%IDI_Rb)
+      LB(1:1) = lbound(SrcParamData%IDI_Rb, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%IDI_Rb, kind=B8Ki)
       if (.not. allocated(DstParamData%IDI_Rb)) then
          allocate(DstParamData%IDI_Rb(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4334,8 +4334,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%IDI_Rb = SrcParamData%IDI_Rb
    end if
    if (allocated(SrcParamData%IDI_F)) then
-      LB(1:1) = lbound(SrcParamData%IDI_F)
-      UB(1:1) = ubound(SrcParamData%IDI_F)
+      LB(1:1) = lbound(SrcParamData%IDI_F, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%IDI_F, kind=B8Ki)
       if (.not. allocated(DstParamData%IDI_F)) then
          allocate(DstParamData%IDI_F(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4346,8 +4346,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%IDI_F = SrcParamData%IDI_F
    end if
    if (allocated(SrcParamData%IDL_L)) then
-      LB(1:1) = lbound(SrcParamData%IDL_L)
-      UB(1:1) = ubound(SrcParamData%IDL_L)
+      LB(1:1) = lbound(SrcParamData%IDL_L, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%IDL_L, kind=B8Ki)
       if (.not. allocated(DstParamData%IDL_L)) then
          allocate(DstParamData%IDL_L(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4358,8 +4358,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%IDL_L = SrcParamData%IDL_L
    end if
    if (allocated(SrcParamData%IDC__)) then
-      LB(1:1) = lbound(SrcParamData%IDC__)
-      UB(1:1) = ubound(SrcParamData%IDC__)
+      LB(1:1) = lbound(SrcParamData%IDC__, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%IDC__, kind=B8Ki)
       if (.not. allocated(DstParamData%IDC__)) then
          allocate(DstParamData%IDC__(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4370,8 +4370,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%IDC__ = SrcParamData%IDC__
    end if
    if (allocated(SrcParamData%IDC_Rb)) then
-      LB(1:1) = lbound(SrcParamData%IDC_Rb)
-      UB(1:1) = ubound(SrcParamData%IDC_Rb)
+      LB(1:1) = lbound(SrcParamData%IDC_Rb, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%IDC_Rb, kind=B8Ki)
       if (.not. allocated(DstParamData%IDC_Rb)) then
          allocate(DstParamData%IDC_Rb(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4382,8 +4382,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%IDC_Rb = SrcParamData%IDC_Rb
    end if
    if (allocated(SrcParamData%IDC_L)) then
-      LB(1:1) = lbound(SrcParamData%IDC_L)
-      UB(1:1) = ubound(SrcParamData%IDC_L)
+      LB(1:1) = lbound(SrcParamData%IDC_L, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%IDC_L, kind=B8Ki)
       if (.not. allocated(DstParamData%IDC_L)) then
          allocate(DstParamData%IDC_L(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4394,8 +4394,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%IDC_L = SrcParamData%IDC_L
    end if
    if (allocated(SrcParamData%IDC_F)) then
-      LB(1:1) = lbound(SrcParamData%IDC_F)
-      UB(1:1) = ubound(SrcParamData%IDC_F)
+      LB(1:1) = lbound(SrcParamData%IDC_F, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%IDC_F, kind=B8Ki)
       if (.not. allocated(DstParamData%IDC_F)) then
          allocate(DstParamData%IDC_F(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4406,8 +4406,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%IDC_F = SrcParamData%IDC_F
    end if
    if (allocated(SrcParamData%IDR__)) then
-      LB(1:1) = lbound(SrcParamData%IDR__)
-      UB(1:1) = ubound(SrcParamData%IDR__)
+      LB(1:1) = lbound(SrcParamData%IDR__, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%IDR__, kind=B8Ki)
       if (.not. allocated(DstParamData%IDR__)) then
          allocate(DstParamData%IDR__(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4418,8 +4418,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%IDR__ = SrcParamData%IDR__
    end if
    if (allocated(SrcParamData%ID__Rb)) then
-      LB(1:1) = lbound(SrcParamData%ID__Rb)
-      UB(1:1) = ubound(SrcParamData%ID__Rb)
+      LB(1:1) = lbound(SrcParamData%ID__Rb, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%ID__Rb, kind=B8Ki)
       if (.not. allocated(DstParamData%ID__Rb)) then
          allocate(DstParamData%ID__Rb(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4430,8 +4430,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%ID__Rb = SrcParamData%ID__Rb
    end if
    if (allocated(SrcParamData%ID__L)) then
-      LB(1:1) = lbound(SrcParamData%ID__L)
-      UB(1:1) = ubound(SrcParamData%ID__L)
+      LB(1:1) = lbound(SrcParamData%ID__L, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%ID__L, kind=B8Ki)
       if (.not. allocated(DstParamData%ID__L)) then
          allocate(DstParamData%ID__L(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4442,8 +4442,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%ID__L = SrcParamData%ID__L
    end if
    if (allocated(SrcParamData%ID__F)) then
-      LB(1:1) = lbound(SrcParamData%ID__F)
-      UB(1:1) = ubound(SrcParamData%ID__F)
+      LB(1:1) = lbound(SrcParamData%ID__F, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%ID__F, kind=B8Ki)
       if (.not. allocated(DstParamData%ID__F)) then
          allocate(DstParamData%ID__F(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4461,8 +4461,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%OutFmt = SrcParamData%OutFmt
    DstParamData%OutSFmt = SrcParamData%OutSFmt
    if (allocated(SrcParamData%MoutLst)) then
-      LB(1:1) = lbound(SrcParamData%MoutLst)
-      UB(1:1) = ubound(SrcParamData%MoutLst)
+      LB(1:1) = lbound(SrcParamData%MoutLst, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%MoutLst, kind=B8Ki)
       if (.not. allocated(DstParamData%MoutLst)) then
          allocate(DstParamData%MoutLst(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4477,8 +4477,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcParamData%MoutLst2)) then
-      LB(1:1) = lbound(SrcParamData%MoutLst2)
-      UB(1:1) = ubound(SrcParamData%MoutLst2)
+      LB(1:1) = lbound(SrcParamData%MoutLst2, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%MoutLst2, kind=B8Ki)
       if (.not. allocated(DstParamData%MoutLst2)) then
          allocate(DstParamData%MoutLst2(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4493,8 +4493,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcParamData%MoutLst3)) then
-      LB(1:1) = lbound(SrcParamData%MoutLst3)
-      UB(1:1) = ubound(SrcParamData%MoutLst3)
+      LB(1:1) = lbound(SrcParamData%MoutLst3, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%MoutLst3, kind=B8Ki)
       if (.not. allocated(DstParamData%MoutLst3)) then
          allocate(DstParamData%MoutLst3(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4509,8 +4509,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcParamData%OutParam)) then
-      LB(1:1) = lbound(SrcParamData%OutParam)
-      UB(1:1) = ubound(SrcParamData%OutParam)
+      LB(1:1) = lbound(SrcParamData%OutParam, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%OutParam, kind=B8Ki)
       if (.not. allocated(DstParamData%OutParam)) then
          allocate(DstParamData%OutParam(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4532,8 +4532,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%OutAllDims = SrcParamData%OutAllDims
    DstParamData%OutDec = SrcParamData%OutDec
    if (allocated(SrcParamData%Jac_u_indx)) then
-      LB(1:2) = lbound(SrcParamData%Jac_u_indx)
-      UB(1:2) = ubound(SrcParamData%Jac_u_indx)
+      LB(1:2) = lbound(SrcParamData%Jac_u_indx, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%Jac_u_indx, kind=B8Ki)
       if (.not. allocated(DstParamData%Jac_u_indx)) then
          allocate(DstParamData%Jac_u_indx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4544,8 +4544,8 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%Jac_u_indx = SrcParamData%Jac_u_indx
    end if
    if (allocated(SrcParamData%du)) then
-      LB(1:1) = lbound(SrcParamData%du)
-      UB(1:1) = ubound(SrcParamData%du)
+      LB(1:1) = lbound(SrcParamData%du, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%du, kind=B8Ki)
       if (.not. allocated(DstParamData%du)) then
          allocate(DstParamData%du(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4565,8 +4565,8 @@ subroutine SD_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(SD_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SD_DestroyParam'
@@ -4576,8 +4576,8 @@ subroutine SD_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%Elems)
    end if
    if (allocated(ParamData%ElemProps)) then
-      LB(1:1) = lbound(ParamData%ElemProps)
-      UB(1:1) = ubound(ParamData%ElemProps)
+      LB(1:1) = lbound(ParamData%ElemProps, kind=B8Ki)
+      UB(1:1) = ubound(ParamData%ElemProps, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call SD_DestroyElemPropType(ParamData%ElemProps(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4600,8 +4600,8 @@ subroutine SD_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%T_red_T)
    end if
    if (allocated(ParamData%NodesDOF)) then
-      LB(1:1) = lbound(ParamData%NodesDOF)
-      UB(1:1) = ubound(ParamData%NodesDOF)
+      LB(1:1) = lbound(ParamData%NodesDOF, kind=B8Ki)
+      UB(1:1) = ubound(ParamData%NodesDOF, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call SD_DestroyIList(ParamData%NodesDOF(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4609,8 +4609,8 @@ subroutine SD_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%NodesDOF)
    end if
    if (allocated(ParamData%NodesDOFred)) then
-      LB(1:1) = lbound(ParamData%NodesDOFred)
-      UB(1:1) = ubound(ParamData%NodesDOFred)
+      LB(1:1) = lbound(ParamData%NodesDOFred, kind=B8Ki)
+      UB(1:1) = ubound(ParamData%NodesDOFred, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call SD_DestroyIList(ParamData%NodesDOFred(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4750,8 +4750,8 @@ subroutine SD_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%ID__F)
    end if
    if (allocated(ParamData%MoutLst)) then
-      LB(1:1) = lbound(ParamData%MoutLst)
-      UB(1:1) = ubound(ParamData%MoutLst)
+      LB(1:1) = lbound(ParamData%MoutLst, kind=B8Ki)
+      UB(1:1) = ubound(ParamData%MoutLst, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call SD_DestroyMeshAuxDataType(ParamData%MoutLst(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4759,8 +4759,8 @@ subroutine SD_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%MoutLst)
    end if
    if (allocated(ParamData%MoutLst2)) then
-      LB(1:1) = lbound(ParamData%MoutLst2)
-      UB(1:1) = ubound(ParamData%MoutLst2)
+      LB(1:1) = lbound(ParamData%MoutLst2, kind=B8Ki)
+      UB(1:1) = ubound(ParamData%MoutLst2, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call SD_DestroyMeshAuxDataType(ParamData%MoutLst2(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4768,8 +4768,8 @@ subroutine SD_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%MoutLst2)
    end if
    if (allocated(ParamData%MoutLst3)) then
-      LB(1:1) = lbound(ParamData%MoutLst3)
-      UB(1:1) = ubound(ParamData%MoutLst3)
+      LB(1:1) = lbound(ParamData%MoutLst3, kind=B8Ki)
+      UB(1:1) = ubound(ParamData%MoutLst3, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call SD_DestroyMeshAuxDataType(ParamData%MoutLst3(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4777,8 +4777,8 @@ subroutine SD_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%MoutLst3)
    end if
    if (allocated(ParamData%OutParam)) then
-      LB(1:1) = lbound(ParamData%OutParam)
-      UB(1:1) = ubound(ParamData%OutParam)
+      LB(1:1) = lbound(ParamData%OutParam, kind=B8Ki)
+      UB(1:1) = ubound(ParamData%OutParam, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyOutParmType(ParamData%OutParam(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4797,8 +4797,8 @@ subroutine SD_PackParam(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SD_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SD_PackParam'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%SDDeltaT)
    call RegPack(Buf, InData%IntMethod)
@@ -4807,75 +4807,75 @@ subroutine SD_PackParam(Buf, Indata)
    call RegPack(Buf, InData%Nmembers)
    call RegPack(Buf, allocated(InData%Elems))
    if (allocated(InData%Elems)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Elems), ubound(InData%Elems))
+      call RegPackBounds(Buf, 2, lbound(InData%Elems, kind=B8Ki), ubound(InData%Elems, kind=B8Ki))
       call RegPack(Buf, InData%Elems)
    end if
    call RegPack(Buf, allocated(InData%ElemProps))
    if (allocated(InData%ElemProps)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ElemProps), ubound(InData%ElemProps))
-      LB(1:1) = lbound(InData%ElemProps)
-      UB(1:1) = ubound(InData%ElemProps)
+      call RegPackBounds(Buf, 1, lbound(InData%ElemProps, kind=B8Ki), ubound(InData%ElemProps, kind=B8Ki))
+      LB(1:1) = lbound(InData%ElemProps, kind=B8Ki)
+      UB(1:1) = ubound(InData%ElemProps, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call SD_PackElemPropType(Buf, InData%ElemProps(i1)) 
       end do
    end if
    call RegPack(Buf, allocated(InData%FG))
    if (allocated(InData%FG)) then
-      call RegPackBounds(Buf, 1, lbound(InData%FG), ubound(InData%FG))
+      call RegPackBounds(Buf, 1, lbound(InData%FG, kind=B8Ki), ubound(InData%FG, kind=B8Ki))
       call RegPack(Buf, InData%FG)
    end if
    call RegPack(Buf, allocated(InData%DP0))
    if (allocated(InData%DP0)) then
-      call RegPackBounds(Buf, 2, lbound(InData%DP0), ubound(InData%DP0))
+      call RegPackBounds(Buf, 2, lbound(InData%DP0, kind=B8Ki), ubound(InData%DP0, kind=B8Ki))
       call RegPack(Buf, InData%DP0)
    end if
    call RegPack(Buf, allocated(InData%NodeID2JointID))
    if (allocated(InData%NodeID2JointID)) then
-      call RegPackBounds(Buf, 1, lbound(InData%NodeID2JointID), ubound(InData%NodeID2JointID))
+      call RegPackBounds(Buf, 1, lbound(InData%NodeID2JointID, kind=B8Ki), ubound(InData%NodeID2JointID, kind=B8Ki))
       call RegPack(Buf, InData%NodeID2JointID)
    end if
    call RegPack(Buf, InData%reduced)
    call RegPack(Buf, allocated(InData%T_red))
    if (allocated(InData%T_red)) then
-      call RegPackBounds(Buf, 2, lbound(InData%T_red), ubound(InData%T_red))
+      call RegPackBounds(Buf, 2, lbound(InData%T_red, kind=B8Ki), ubound(InData%T_red, kind=B8Ki))
       call RegPack(Buf, InData%T_red)
    end if
    call RegPack(Buf, allocated(InData%T_red_T))
    if (allocated(InData%T_red_T)) then
-      call RegPackBounds(Buf, 2, lbound(InData%T_red_T), ubound(InData%T_red_T))
+      call RegPackBounds(Buf, 2, lbound(InData%T_red_T, kind=B8Ki), ubound(InData%T_red_T, kind=B8Ki))
       call RegPack(Buf, InData%T_red_T)
    end if
    call RegPack(Buf, allocated(InData%NodesDOF))
    if (allocated(InData%NodesDOF)) then
-      call RegPackBounds(Buf, 1, lbound(InData%NodesDOF), ubound(InData%NodesDOF))
-      LB(1:1) = lbound(InData%NodesDOF)
-      UB(1:1) = ubound(InData%NodesDOF)
+      call RegPackBounds(Buf, 1, lbound(InData%NodesDOF, kind=B8Ki), ubound(InData%NodesDOF, kind=B8Ki))
+      LB(1:1) = lbound(InData%NodesDOF, kind=B8Ki)
+      UB(1:1) = ubound(InData%NodesDOF, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call SD_PackIList(Buf, InData%NodesDOF(i1)) 
       end do
    end if
    call RegPack(Buf, allocated(InData%NodesDOFred))
    if (allocated(InData%NodesDOFred)) then
-      call RegPackBounds(Buf, 1, lbound(InData%NodesDOFred), ubound(InData%NodesDOFred))
-      LB(1:1) = lbound(InData%NodesDOFred)
-      UB(1:1) = ubound(InData%NodesDOFred)
+      call RegPackBounds(Buf, 1, lbound(InData%NodesDOFred, kind=B8Ki), ubound(InData%NodesDOFred, kind=B8Ki))
+      LB(1:1) = lbound(InData%NodesDOFred, kind=B8Ki)
+      UB(1:1) = ubound(InData%NodesDOFred, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call SD_PackIList(Buf, InData%NodesDOFred(i1)) 
       end do
    end if
    call RegPack(Buf, allocated(InData%ElemsDOF))
    if (allocated(InData%ElemsDOF)) then
-      call RegPackBounds(Buf, 2, lbound(InData%ElemsDOF), ubound(InData%ElemsDOF))
+      call RegPackBounds(Buf, 2, lbound(InData%ElemsDOF, kind=B8Ki), ubound(InData%ElemsDOF, kind=B8Ki))
       call RegPack(Buf, InData%ElemsDOF)
    end if
    call RegPack(Buf, allocated(InData%DOFred2Nodes))
    if (allocated(InData%DOFred2Nodes)) then
-      call RegPackBounds(Buf, 2, lbound(InData%DOFred2Nodes), ubound(InData%DOFred2Nodes))
+      call RegPackBounds(Buf, 2, lbound(InData%DOFred2Nodes, kind=B8Ki), ubound(InData%DOFred2Nodes, kind=B8Ki))
       call RegPack(Buf, InData%DOFred2Nodes)
    end if
    call RegPack(Buf, allocated(InData%CtrlElem2Channel))
    if (allocated(InData%CtrlElem2Channel)) then
-      call RegPackBounds(Buf, 2, lbound(InData%CtrlElem2Channel), ubound(InData%CtrlElem2Channel))
+      call RegPackBounds(Buf, 2, lbound(InData%CtrlElem2Channel, kind=B8Ki), ubound(InData%CtrlElem2Channel, kind=B8Ki))
       call RegPack(Buf, InData%CtrlElem2Channel)
    end if
    call RegPack(Buf, InData%nDOFM)
@@ -4884,132 +4884,132 @@ subroutine SD_PackParam(Buf, Indata)
    call RegPack(Buf, InData%Floating)
    call RegPack(Buf, allocated(InData%KMMDiag))
    if (allocated(InData%KMMDiag)) then
-      call RegPackBounds(Buf, 1, lbound(InData%KMMDiag), ubound(InData%KMMDiag))
+      call RegPackBounds(Buf, 1, lbound(InData%KMMDiag, kind=B8Ki), ubound(InData%KMMDiag, kind=B8Ki))
       call RegPack(Buf, InData%KMMDiag)
    end if
    call RegPack(Buf, allocated(InData%CMMDiag))
    if (allocated(InData%CMMDiag)) then
-      call RegPackBounds(Buf, 1, lbound(InData%CMMDiag), ubound(InData%CMMDiag))
+      call RegPackBounds(Buf, 1, lbound(InData%CMMDiag, kind=B8Ki), ubound(InData%CMMDiag, kind=B8Ki))
       call RegPack(Buf, InData%CMMDiag)
    end if
    call RegPack(Buf, allocated(InData%MMB))
    if (allocated(InData%MMB)) then
-      call RegPackBounds(Buf, 2, lbound(InData%MMB), ubound(InData%MMB))
+      call RegPackBounds(Buf, 2, lbound(InData%MMB, kind=B8Ki), ubound(InData%MMB, kind=B8Ki))
       call RegPack(Buf, InData%MMB)
    end if
    call RegPack(Buf, allocated(InData%MBmmB))
    if (allocated(InData%MBmmB)) then
-      call RegPackBounds(Buf, 2, lbound(InData%MBmmB), ubound(InData%MBmmB))
+      call RegPackBounds(Buf, 2, lbound(InData%MBmmB, kind=B8Ki), ubound(InData%MBmmB, kind=B8Ki))
       call RegPack(Buf, InData%MBmmB)
    end if
    call RegPack(Buf, allocated(InData%C1_11))
    if (allocated(InData%C1_11)) then
-      call RegPackBounds(Buf, 2, lbound(InData%C1_11), ubound(InData%C1_11))
+      call RegPackBounds(Buf, 2, lbound(InData%C1_11, kind=B8Ki), ubound(InData%C1_11, kind=B8Ki))
       call RegPack(Buf, InData%C1_11)
    end if
    call RegPack(Buf, allocated(InData%C1_12))
    if (allocated(InData%C1_12)) then
-      call RegPackBounds(Buf, 2, lbound(InData%C1_12), ubound(InData%C1_12))
+      call RegPackBounds(Buf, 2, lbound(InData%C1_12, kind=B8Ki), ubound(InData%C1_12, kind=B8Ki))
       call RegPack(Buf, InData%C1_12)
    end if
    call RegPack(Buf, allocated(InData%D1_141))
    if (allocated(InData%D1_141)) then
-      call RegPackBounds(Buf, 2, lbound(InData%D1_141), ubound(InData%D1_141))
+      call RegPackBounds(Buf, 2, lbound(InData%D1_141, kind=B8Ki), ubound(InData%D1_141, kind=B8Ki))
       call RegPack(Buf, InData%D1_141)
    end if
    call RegPack(Buf, allocated(InData%D1_142))
    if (allocated(InData%D1_142)) then
-      call RegPackBounds(Buf, 2, lbound(InData%D1_142), ubound(InData%D1_142))
+      call RegPackBounds(Buf, 2, lbound(InData%D1_142, kind=B8Ki), ubound(InData%D1_142, kind=B8Ki))
       call RegPack(Buf, InData%D1_142)
    end if
    call RegPack(Buf, allocated(InData%PhiM))
    if (allocated(InData%PhiM)) then
-      call RegPackBounds(Buf, 2, lbound(InData%PhiM), ubound(InData%PhiM))
+      call RegPackBounds(Buf, 2, lbound(InData%PhiM, kind=B8Ki), ubound(InData%PhiM, kind=B8Ki))
       call RegPack(Buf, InData%PhiM)
    end if
    call RegPack(Buf, allocated(InData%C2_61))
    if (allocated(InData%C2_61)) then
-      call RegPackBounds(Buf, 2, lbound(InData%C2_61), ubound(InData%C2_61))
+      call RegPackBounds(Buf, 2, lbound(InData%C2_61, kind=B8Ki), ubound(InData%C2_61, kind=B8Ki))
       call RegPack(Buf, InData%C2_61)
    end if
    call RegPack(Buf, allocated(InData%C2_62))
    if (allocated(InData%C2_62)) then
-      call RegPackBounds(Buf, 2, lbound(InData%C2_62), ubound(InData%C2_62))
+      call RegPackBounds(Buf, 2, lbound(InData%C2_62, kind=B8Ki), ubound(InData%C2_62, kind=B8Ki))
       call RegPack(Buf, InData%C2_62)
    end if
    call RegPack(Buf, allocated(InData%PhiRb_TI))
    if (allocated(InData%PhiRb_TI)) then
-      call RegPackBounds(Buf, 2, lbound(InData%PhiRb_TI), ubound(InData%PhiRb_TI))
+      call RegPackBounds(Buf, 2, lbound(InData%PhiRb_TI, kind=B8Ki), ubound(InData%PhiRb_TI, kind=B8Ki))
       call RegPack(Buf, InData%PhiRb_TI)
    end if
    call RegPack(Buf, allocated(InData%D2_63))
    if (allocated(InData%D2_63)) then
-      call RegPackBounds(Buf, 2, lbound(InData%D2_63), ubound(InData%D2_63))
+      call RegPackBounds(Buf, 2, lbound(InData%D2_63, kind=B8Ki), ubound(InData%D2_63, kind=B8Ki))
       call RegPack(Buf, InData%D2_63)
    end if
    call RegPack(Buf, allocated(InData%D2_64))
    if (allocated(InData%D2_64)) then
-      call RegPackBounds(Buf, 2, lbound(InData%D2_64), ubound(InData%D2_64))
+      call RegPackBounds(Buf, 2, lbound(InData%D2_64, kind=B8Ki), ubound(InData%D2_64, kind=B8Ki))
       call RegPack(Buf, InData%D2_64)
    end if
    call RegPack(Buf, allocated(InData%MBB))
    if (allocated(InData%MBB)) then
-      call RegPackBounds(Buf, 2, lbound(InData%MBB), ubound(InData%MBB))
+      call RegPackBounds(Buf, 2, lbound(InData%MBB, kind=B8Ki), ubound(InData%MBB, kind=B8Ki))
       call RegPack(Buf, InData%MBB)
    end if
    call RegPack(Buf, allocated(InData%KBB))
    if (allocated(InData%KBB)) then
-      call RegPackBounds(Buf, 2, lbound(InData%KBB), ubound(InData%KBB))
+      call RegPackBounds(Buf, 2, lbound(InData%KBB, kind=B8Ki), ubound(InData%KBB, kind=B8Ki))
       call RegPack(Buf, InData%KBB)
    end if
    call RegPack(Buf, allocated(InData%CBB))
    if (allocated(InData%CBB)) then
-      call RegPackBounds(Buf, 2, lbound(InData%CBB), ubound(InData%CBB))
+      call RegPackBounds(Buf, 2, lbound(InData%CBB, kind=B8Ki), ubound(InData%CBB, kind=B8Ki))
       call RegPack(Buf, InData%CBB)
    end if
    call RegPack(Buf, allocated(InData%CMM))
    if (allocated(InData%CMM)) then
-      call RegPackBounds(Buf, 2, lbound(InData%CMM), ubound(InData%CMM))
+      call RegPackBounds(Buf, 2, lbound(InData%CMM, kind=B8Ki), ubound(InData%CMM, kind=B8Ki))
       call RegPack(Buf, InData%CMM)
    end if
    call RegPack(Buf, allocated(InData%MBM))
    if (allocated(InData%MBM)) then
-      call RegPackBounds(Buf, 2, lbound(InData%MBM), ubound(InData%MBM))
+      call RegPackBounds(Buf, 2, lbound(InData%MBM, kind=B8Ki), ubound(InData%MBM, kind=B8Ki))
       call RegPack(Buf, InData%MBM)
    end if
    call RegPack(Buf, allocated(InData%PhiL_T))
    if (allocated(InData%PhiL_T)) then
-      call RegPackBounds(Buf, 2, lbound(InData%PhiL_T), ubound(InData%PhiL_T))
+      call RegPackBounds(Buf, 2, lbound(InData%PhiL_T, kind=B8Ki), ubound(InData%PhiL_T, kind=B8Ki))
       call RegPack(Buf, InData%PhiL_T)
    end if
    call RegPack(Buf, allocated(InData%PhiLInvOmgL2))
    if (allocated(InData%PhiLInvOmgL2)) then
-      call RegPackBounds(Buf, 2, lbound(InData%PhiLInvOmgL2), ubound(InData%PhiLInvOmgL2))
+      call RegPackBounds(Buf, 2, lbound(InData%PhiLInvOmgL2, kind=B8Ki), ubound(InData%PhiLInvOmgL2, kind=B8Ki))
       call RegPack(Buf, InData%PhiLInvOmgL2)
    end if
    call RegPack(Buf, allocated(InData%KLLm1))
    if (allocated(InData%KLLm1)) then
-      call RegPackBounds(Buf, 2, lbound(InData%KLLm1), ubound(InData%KLLm1))
+      call RegPackBounds(Buf, 2, lbound(InData%KLLm1, kind=B8Ki), ubound(InData%KLLm1, kind=B8Ki))
       call RegPack(Buf, InData%KLLm1)
    end if
    call RegPack(Buf, allocated(InData%AM2Jac))
    if (allocated(InData%AM2Jac)) then
-      call RegPackBounds(Buf, 2, lbound(InData%AM2Jac), ubound(InData%AM2Jac))
+      call RegPackBounds(Buf, 2, lbound(InData%AM2Jac, kind=B8Ki), ubound(InData%AM2Jac, kind=B8Ki))
       call RegPack(Buf, InData%AM2Jac)
    end if
    call RegPack(Buf, allocated(InData%AM2JacPiv))
    if (allocated(InData%AM2JacPiv)) then
-      call RegPackBounds(Buf, 1, lbound(InData%AM2JacPiv), ubound(InData%AM2JacPiv))
+      call RegPackBounds(Buf, 1, lbound(InData%AM2JacPiv, kind=B8Ki), ubound(InData%AM2JacPiv, kind=B8Ki))
       call RegPack(Buf, InData%AM2JacPiv)
    end if
    call RegPack(Buf, allocated(InData%TI))
    if (allocated(InData%TI)) then
-      call RegPackBounds(Buf, 2, lbound(InData%TI), ubound(InData%TI))
+      call RegPackBounds(Buf, 2, lbound(InData%TI, kind=B8Ki), ubound(InData%TI, kind=B8Ki))
       call RegPack(Buf, InData%TI)
    end if
    call RegPack(Buf, allocated(InData%TIreact))
    if (allocated(InData%TIreact)) then
-      call RegPackBounds(Buf, 2, lbound(InData%TIreact), ubound(InData%TIreact))
+      call RegPackBounds(Buf, 2, lbound(InData%TIreact, kind=B8Ki), ubound(InData%TIreact, kind=B8Ki))
       call RegPack(Buf, InData%TIreact)
    end if
    call RegPack(Buf, InData%nNodes)
@@ -5018,17 +5018,17 @@ subroutine SD_PackParam(Buf, Indata)
    call RegPack(Buf, InData%nNodes_C)
    call RegPack(Buf, allocated(InData%Nodes_I))
    if (allocated(InData%Nodes_I)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Nodes_I), ubound(InData%Nodes_I))
+      call RegPackBounds(Buf, 2, lbound(InData%Nodes_I, kind=B8Ki), ubound(InData%Nodes_I, kind=B8Ki))
       call RegPack(Buf, InData%Nodes_I)
    end if
    call RegPack(Buf, allocated(InData%Nodes_L))
    if (allocated(InData%Nodes_L)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Nodes_L), ubound(InData%Nodes_L))
+      call RegPackBounds(Buf, 2, lbound(InData%Nodes_L, kind=B8Ki), ubound(InData%Nodes_L, kind=B8Ki))
       call RegPack(Buf, InData%Nodes_L)
    end if
    call RegPack(Buf, allocated(InData%Nodes_C))
    if (allocated(InData%Nodes_C)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Nodes_C), ubound(InData%Nodes_C))
+      call RegPackBounds(Buf, 2, lbound(InData%Nodes_C, kind=B8Ki), ubound(InData%Nodes_C, kind=B8Ki))
       call RegPack(Buf, InData%Nodes_C)
    end if
    call RegPack(Buf, InData%nDOFI__)
@@ -5045,62 +5045,62 @@ subroutine SD_PackParam(Buf, Indata)
    call RegPack(Buf, InData%nDOF__F)
    call RegPack(Buf, allocated(InData%IDI__))
    if (allocated(InData%IDI__)) then
-      call RegPackBounds(Buf, 1, lbound(InData%IDI__), ubound(InData%IDI__))
+      call RegPackBounds(Buf, 1, lbound(InData%IDI__, kind=B8Ki), ubound(InData%IDI__, kind=B8Ki))
       call RegPack(Buf, InData%IDI__)
    end if
    call RegPack(Buf, allocated(InData%IDI_Rb))
    if (allocated(InData%IDI_Rb)) then
-      call RegPackBounds(Buf, 1, lbound(InData%IDI_Rb), ubound(InData%IDI_Rb))
+      call RegPackBounds(Buf, 1, lbound(InData%IDI_Rb, kind=B8Ki), ubound(InData%IDI_Rb, kind=B8Ki))
       call RegPack(Buf, InData%IDI_Rb)
    end if
    call RegPack(Buf, allocated(InData%IDI_F))
    if (allocated(InData%IDI_F)) then
-      call RegPackBounds(Buf, 1, lbound(InData%IDI_F), ubound(InData%IDI_F))
+      call RegPackBounds(Buf, 1, lbound(InData%IDI_F, kind=B8Ki), ubound(InData%IDI_F, kind=B8Ki))
       call RegPack(Buf, InData%IDI_F)
    end if
    call RegPack(Buf, allocated(InData%IDL_L))
    if (allocated(InData%IDL_L)) then
-      call RegPackBounds(Buf, 1, lbound(InData%IDL_L), ubound(InData%IDL_L))
+      call RegPackBounds(Buf, 1, lbound(InData%IDL_L, kind=B8Ki), ubound(InData%IDL_L, kind=B8Ki))
       call RegPack(Buf, InData%IDL_L)
    end if
    call RegPack(Buf, allocated(InData%IDC__))
    if (allocated(InData%IDC__)) then
-      call RegPackBounds(Buf, 1, lbound(InData%IDC__), ubound(InData%IDC__))
+      call RegPackBounds(Buf, 1, lbound(InData%IDC__, kind=B8Ki), ubound(InData%IDC__, kind=B8Ki))
       call RegPack(Buf, InData%IDC__)
    end if
    call RegPack(Buf, allocated(InData%IDC_Rb))
    if (allocated(InData%IDC_Rb)) then
-      call RegPackBounds(Buf, 1, lbound(InData%IDC_Rb), ubound(InData%IDC_Rb))
+      call RegPackBounds(Buf, 1, lbound(InData%IDC_Rb, kind=B8Ki), ubound(InData%IDC_Rb, kind=B8Ki))
       call RegPack(Buf, InData%IDC_Rb)
    end if
    call RegPack(Buf, allocated(InData%IDC_L))
    if (allocated(InData%IDC_L)) then
-      call RegPackBounds(Buf, 1, lbound(InData%IDC_L), ubound(InData%IDC_L))
+      call RegPackBounds(Buf, 1, lbound(InData%IDC_L, kind=B8Ki), ubound(InData%IDC_L, kind=B8Ki))
       call RegPack(Buf, InData%IDC_L)
    end if
    call RegPack(Buf, allocated(InData%IDC_F))
    if (allocated(InData%IDC_F)) then
-      call RegPackBounds(Buf, 1, lbound(InData%IDC_F), ubound(InData%IDC_F))
+      call RegPackBounds(Buf, 1, lbound(InData%IDC_F, kind=B8Ki), ubound(InData%IDC_F, kind=B8Ki))
       call RegPack(Buf, InData%IDC_F)
    end if
    call RegPack(Buf, allocated(InData%IDR__))
    if (allocated(InData%IDR__)) then
-      call RegPackBounds(Buf, 1, lbound(InData%IDR__), ubound(InData%IDR__))
+      call RegPackBounds(Buf, 1, lbound(InData%IDR__, kind=B8Ki), ubound(InData%IDR__, kind=B8Ki))
       call RegPack(Buf, InData%IDR__)
    end if
    call RegPack(Buf, allocated(InData%ID__Rb))
    if (allocated(InData%ID__Rb)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ID__Rb), ubound(InData%ID__Rb))
+      call RegPackBounds(Buf, 1, lbound(InData%ID__Rb, kind=B8Ki), ubound(InData%ID__Rb, kind=B8Ki))
       call RegPack(Buf, InData%ID__Rb)
    end if
    call RegPack(Buf, allocated(InData%ID__L))
    if (allocated(InData%ID__L)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ID__L), ubound(InData%ID__L))
+      call RegPackBounds(Buf, 1, lbound(InData%ID__L, kind=B8Ki), ubound(InData%ID__L, kind=B8Ki))
       call RegPack(Buf, InData%ID__L)
    end if
    call RegPack(Buf, allocated(InData%ID__F))
    if (allocated(InData%ID__F)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ID__F), ubound(InData%ID__F))
+      call RegPackBounds(Buf, 1, lbound(InData%ID__F, kind=B8Ki), ubound(InData%ID__F, kind=B8Ki))
       call RegPack(Buf, InData%ID__F)
    end if
    call RegPack(Buf, InData%NMOutputs)
@@ -5112,36 +5112,36 @@ subroutine SD_PackParam(Buf, Indata)
    call RegPack(Buf, InData%OutSFmt)
    call RegPack(Buf, allocated(InData%MoutLst))
    if (allocated(InData%MoutLst)) then
-      call RegPackBounds(Buf, 1, lbound(InData%MoutLst), ubound(InData%MoutLst))
-      LB(1:1) = lbound(InData%MoutLst)
-      UB(1:1) = ubound(InData%MoutLst)
+      call RegPackBounds(Buf, 1, lbound(InData%MoutLst, kind=B8Ki), ubound(InData%MoutLst, kind=B8Ki))
+      LB(1:1) = lbound(InData%MoutLst, kind=B8Ki)
+      UB(1:1) = ubound(InData%MoutLst, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call SD_PackMeshAuxDataType(Buf, InData%MoutLst(i1)) 
       end do
    end if
    call RegPack(Buf, allocated(InData%MoutLst2))
    if (allocated(InData%MoutLst2)) then
-      call RegPackBounds(Buf, 1, lbound(InData%MoutLst2), ubound(InData%MoutLst2))
-      LB(1:1) = lbound(InData%MoutLst2)
-      UB(1:1) = ubound(InData%MoutLst2)
+      call RegPackBounds(Buf, 1, lbound(InData%MoutLst2, kind=B8Ki), ubound(InData%MoutLst2, kind=B8Ki))
+      LB(1:1) = lbound(InData%MoutLst2, kind=B8Ki)
+      UB(1:1) = ubound(InData%MoutLst2, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call SD_PackMeshAuxDataType(Buf, InData%MoutLst2(i1)) 
       end do
    end if
    call RegPack(Buf, allocated(InData%MoutLst3))
    if (allocated(InData%MoutLst3)) then
-      call RegPackBounds(Buf, 1, lbound(InData%MoutLst3), ubound(InData%MoutLst3))
-      LB(1:1) = lbound(InData%MoutLst3)
-      UB(1:1) = ubound(InData%MoutLst3)
+      call RegPackBounds(Buf, 1, lbound(InData%MoutLst3, kind=B8Ki), ubound(InData%MoutLst3, kind=B8Ki))
+      LB(1:1) = lbound(InData%MoutLst3, kind=B8Ki)
+      UB(1:1) = ubound(InData%MoutLst3, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call SD_PackMeshAuxDataType(Buf, InData%MoutLst3(i1)) 
       end do
    end if
    call RegPack(Buf, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
-      call RegPackBounds(Buf, 1, lbound(InData%OutParam), ubound(InData%OutParam))
-      LB(1:1) = lbound(InData%OutParam)
-      UB(1:1) = ubound(InData%OutParam)
+      call RegPackBounds(Buf, 1, lbound(InData%OutParam, kind=B8Ki), ubound(InData%OutParam, kind=B8Ki))
+      LB(1:1) = lbound(InData%OutParam, kind=B8Ki)
+      UB(1:1) = ubound(InData%OutParam, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackOutParmType(Buf, InData%OutParam(i1)) 
       end do
@@ -5155,12 +5155,12 @@ subroutine SD_PackParam(Buf, Indata)
    call RegPack(Buf, InData%OutDec)
    call RegPack(Buf, allocated(InData%Jac_u_indx))
    if (allocated(InData%Jac_u_indx)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Jac_u_indx), ubound(InData%Jac_u_indx))
+      call RegPackBounds(Buf, 2, lbound(InData%Jac_u_indx, kind=B8Ki), ubound(InData%Jac_u_indx, kind=B8Ki))
       call RegPack(Buf, InData%Jac_u_indx)
    end if
    call RegPack(Buf, allocated(InData%du))
    if (allocated(InData%du)) then
-      call RegPackBounds(Buf, 1, lbound(InData%du), ubound(InData%du))
+      call RegPackBounds(Buf, 1, lbound(InData%du, kind=B8Ki), ubound(InData%du, kind=B8Ki))
       call RegPack(Buf, InData%du)
    end if
    call RegPack(Buf, InData%dx)
@@ -5174,8 +5174,8 @@ subroutine SD_UnPackParam(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(SD_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SD_UnPackParam'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -6108,7 +6108,7 @@ subroutine SD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SD_CopyInput'
@@ -6121,8 +6121,8 @@ subroutine SD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcInputData%CableDeltaL)) then
-      LB(1:1) = lbound(SrcInputData%CableDeltaL)
-      UB(1:1) = ubound(SrcInputData%CableDeltaL)
+      LB(1:1) = lbound(SrcInputData%CableDeltaL, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputData%CableDeltaL, kind=B8Ki)
       if (.not. allocated(DstInputData%CableDeltaL)) then
          allocate(DstInputData%CableDeltaL(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -6161,7 +6161,7 @@ subroutine SD_PackInput(Buf, Indata)
    call MeshPack(Buf, InData%LMesh) 
    call RegPack(Buf, allocated(InData%CableDeltaL))
    if (allocated(InData%CableDeltaL)) then
-      call RegPackBounds(Buf, 1, lbound(InData%CableDeltaL), ubound(InData%CableDeltaL))
+      call RegPackBounds(Buf, 1, lbound(InData%CableDeltaL, kind=B8Ki), ubound(InData%CableDeltaL, kind=B8Ki))
       call RegPack(Buf, InData%CableDeltaL)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -6171,7 +6171,7 @@ subroutine SD_UnPackInput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(SD_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SD_UnPackInput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -6199,7 +6199,7 @@ subroutine SD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SD_CopyOutput'
@@ -6215,8 +6215,8 @@ subroutine SD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcOutputData%WriteOutput)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutput)
-      UB(1:1) = ubound(SrcOutputData%WriteOutput)
+      LB(1:1) = lbound(SrcOutputData%WriteOutput, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput, kind=B8Ki)
       if (.not. allocated(DstOutputData%WriteOutput)) then
          allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -6258,7 +6258,7 @@ subroutine SD_PackOutput(Buf, Indata)
    call MeshPack(Buf, InData%Y3Mesh) 
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutput, kind=B8Ki), ubound(InData%WriteOutput, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutput)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -6268,7 +6268,7 @@ subroutine SD_UnPackOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(SD_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SD_UnPackOutput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return

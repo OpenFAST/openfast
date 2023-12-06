@@ -92,7 +92,7 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'WAMIT2_CopyInitInput'
@@ -103,8 +103,8 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    DstInitInputData%NBody = SrcInitInputData%NBody
    DstInitInputData%NBodyMod = SrcInitInputData%NBodyMod
    if (allocated(SrcInitInputData%PtfmRefxt)) then
-      LB(1:1) = lbound(SrcInitInputData%PtfmRefxt)
-      UB(1:1) = ubound(SrcInitInputData%PtfmRefxt)
+      LB(1:1) = lbound(SrcInitInputData%PtfmRefxt, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%PtfmRefxt, kind=B8Ki)
       if (.not. allocated(DstInitInputData%PtfmRefxt)) then
          allocate(DstInitInputData%PtfmRefxt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -115,8 +115,8 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
       DstInitInputData%PtfmRefxt = SrcInitInputData%PtfmRefxt
    end if
    if (allocated(SrcInitInputData%PtfmRefyt)) then
-      LB(1:1) = lbound(SrcInitInputData%PtfmRefyt)
-      UB(1:1) = ubound(SrcInitInputData%PtfmRefyt)
+      LB(1:1) = lbound(SrcInitInputData%PtfmRefyt, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%PtfmRefyt, kind=B8Ki)
       if (.not. allocated(DstInitInputData%PtfmRefyt)) then
          allocate(DstInitInputData%PtfmRefyt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -127,8 +127,8 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
       DstInitInputData%PtfmRefyt = SrcInitInputData%PtfmRefyt
    end if
    if (allocated(SrcInitInputData%PtfmRefzt)) then
-      LB(1:1) = lbound(SrcInitInputData%PtfmRefzt)
-      UB(1:1) = ubound(SrcInitInputData%PtfmRefzt)
+      LB(1:1) = lbound(SrcInitInputData%PtfmRefzt, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%PtfmRefzt, kind=B8Ki)
       if (.not. allocated(DstInitInputData%PtfmRefzt)) then
          allocate(DstInitInputData%PtfmRefzt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -139,8 +139,8 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
       DstInitInputData%PtfmRefzt = SrcInitInputData%PtfmRefzt
    end if
    if (allocated(SrcInitInputData%PtfmRefztRot)) then
-      LB(1:1) = lbound(SrcInitInputData%PtfmRefztRot)
-      UB(1:1) = ubound(SrcInitInputData%PtfmRefztRot)
+      LB(1:1) = lbound(SrcInitInputData%PtfmRefztRot, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%PtfmRefztRot, kind=B8Ki)
       if (.not. allocated(DstInitInputData%PtfmRefztRot)) then
          allocate(DstInitInputData%PtfmRefztRot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -199,22 +199,22 @@ subroutine WAMIT2_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%NBodyMod)
    call RegPack(Buf, allocated(InData%PtfmRefxt))
    if (allocated(InData%PtfmRefxt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefxt), ubound(InData%PtfmRefxt))
+      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefxt, kind=B8Ki), ubound(InData%PtfmRefxt, kind=B8Ki))
       call RegPack(Buf, InData%PtfmRefxt)
    end if
    call RegPack(Buf, allocated(InData%PtfmRefyt))
    if (allocated(InData%PtfmRefyt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefyt), ubound(InData%PtfmRefyt))
+      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefyt, kind=B8Ki), ubound(InData%PtfmRefyt, kind=B8Ki))
       call RegPack(Buf, InData%PtfmRefyt)
    end if
    call RegPack(Buf, allocated(InData%PtfmRefzt))
    if (allocated(InData%PtfmRefzt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefzt), ubound(InData%PtfmRefzt))
+      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefzt, kind=B8Ki), ubound(InData%PtfmRefzt, kind=B8Ki))
       call RegPack(Buf, InData%PtfmRefzt)
    end if
    call RegPack(Buf, allocated(InData%PtfmRefztRot))
    if (allocated(InData%PtfmRefztRot)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefztRot), ubound(InData%PtfmRefztRot))
+      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefztRot, kind=B8Ki), ubound(InData%PtfmRefztRot, kind=B8Ki))
       call RegPack(Buf, InData%PtfmRefztRot)
    end if
    call RegPack(Buf, InData%WAMITULEN)
@@ -241,10 +241,10 @@ subroutine WAMIT2_UnPackInitInput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(WAMIT2_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT2_UnPackInitInput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(IntKi)  :: PtrIdx
+   integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    call RegUnpack(Buf, OutData%HasWAMIT)
@@ -359,14 +359,14 @@ subroutine WAMIT2_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'WAMIT2_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcMiscData%LastIndWave)) then
-      LB(1:1) = lbound(SrcMiscData%LastIndWave)
-      UB(1:1) = ubound(SrcMiscData%LastIndWave)
+      LB(1:1) = lbound(SrcMiscData%LastIndWave, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%LastIndWave, kind=B8Ki)
       if (.not. allocated(DstMiscData%LastIndWave)) then
          allocate(DstMiscData%LastIndWave(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -377,8 +377,8 @@ subroutine WAMIT2_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%LastIndWave = SrcMiscData%LastIndWave
    end if
    if (allocated(SrcMiscData%F_Waves2)) then
-      LB(1:1) = lbound(SrcMiscData%F_Waves2)
-      UB(1:1) = ubound(SrcMiscData%F_Waves2)
+      LB(1:1) = lbound(SrcMiscData%F_Waves2, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%F_Waves2, kind=B8Ki)
       if (.not. allocated(DstMiscData%F_Waves2)) then
          allocate(DstMiscData%F_Waves2(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -412,12 +412,12 @@ subroutine WAMIT2_PackMisc(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%LastIndWave))
    if (allocated(InData%LastIndWave)) then
-      call RegPackBounds(Buf, 1, lbound(InData%LastIndWave), ubound(InData%LastIndWave))
+      call RegPackBounds(Buf, 1, lbound(InData%LastIndWave, kind=B8Ki), ubound(InData%LastIndWave, kind=B8Ki))
       call RegPack(Buf, InData%LastIndWave)
    end if
    call RegPack(Buf, allocated(InData%F_Waves2))
    if (allocated(InData%F_Waves2)) then
-      call RegPackBounds(Buf, 1, lbound(InData%F_Waves2), ubound(InData%F_Waves2))
+      call RegPackBounds(Buf, 1, lbound(InData%F_Waves2, kind=B8Ki), ubound(InData%F_Waves2, kind=B8Ki))
       call RegPack(Buf, InData%F_Waves2)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -427,7 +427,7 @@ subroutine WAMIT2_UnPackMisc(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(WAMIT2_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT2_UnPackMisc'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -467,7 +467,7 @@ subroutine WAMIT2_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'WAMIT2_CopyParam'
    ErrStat = ErrID_None
@@ -475,8 +475,8 @@ subroutine WAMIT2_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
    DstParamData%NBody = SrcParamData%NBody
    DstParamData%NBodyMod = SrcParamData%NBodyMod
    if (allocated(SrcParamData%WaveExctn2)) then
-      LB(1:2) = lbound(SrcParamData%WaveExctn2)
-      UB(1:2) = ubound(SrcParamData%WaveExctn2)
+      LB(1:2) = lbound(SrcParamData%WaveExctn2, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%WaveExctn2, kind=B8Ki)
       if (.not. allocated(DstParamData%WaveExctn2)) then
          allocate(DstParamData%WaveExctn2(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -517,7 +517,7 @@ subroutine WAMIT2_PackParam(Buf, Indata)
    call RegPack(Buf, InData%NBodyMod)
    call RegPack(Buf, allocated(InData%WaveExctn2))
    if (allocated(InData%WaveExctn2)) then
-      call RegPackBounds(Buf, 2, lbound(InData%WaveExctn2), ubound(InData%WaveExctn2))
+      call RegPackBounds(Buf, 2, lbound(InData%WaveExctn2, kind=B8Ki), ubound(InData%WaveExctn2, kind=B8Ki))
       call RegPack(Buf, InData%WaveExctn2)
    end if
    call RegPack(Buf, InData%MnDriftDims)
@@ -535,7 +535,7 @@ subroutine WAMIT2_UnPackParam(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(WAMIT2_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT2_UnPackParam'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
