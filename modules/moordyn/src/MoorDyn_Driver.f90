@@ -28,7 +28,7 @@ PROGRAM MoorDyn_Driver
    IMPLICIT NONE 
 
    TYPE MD_Drvr_InitInput
-      LOGICAL                 :: Echo
+      ! LOGICAL                 :: Echo
       REAL(DbKi)              :: Gravity
       REAL(DbKi)              :: rhoW
       REAL(DbKi)              :: WtrDepth
@@ -120,7 +120,7 @@ PROGRAM MoorDyn_Driver
   
    ErrMsg  = ""
    ErrStat = ErrID_None
-   UnEcho=-1
+   UnEcho=-1 ! set to -1 as echo is no longer used by MD
    UnIn  =-1
   
    ! TODO: Sort out error handling (two sets of flags currently used)
@@ -162,7 +162,7 @@ PROGRAM MoorDyn_Driver
    MD_InitInp%RootName                = drvrInitInp%OutRootName
    MD_InitInp%UsePrimaryInputFile     = .TRUE.
    !MD_InitInp%PassedPrimaryInputData  = 
-   MD_InitInp%Echo                    = drvrInitInp%Echo
+   ! MD_InitInp%Echo                    = drvrInitInp%Echo
    !MD_InitInp%OutList                 = <<<< never used?
    MD_InitInp%Linearize               = .FALSE.
    
@@ -738,7 +738,7 @@ CONTAINS
       ! Local variables  
       INTEGER                                          :: J                    ! generic integer for counting
 
-      CHARACTER(1024)                                  :: EchoFile             ! Name of MoorDyn echo file  
+      ! CHARACTER(1024)                                  :: EchoFile             ! Name of MoorDyn echo file  
       CHARACTER(1024)                                  :: FileName             ! Name of MoorDyn input file  
       CHARACTER(1024)                                  :: FilePath             ! Name of path to MoorDyn input file
    
@@ -756,17 +756,17 @@ CONTAINS
       ! Read until "echo"
       CALL ReadCom( UnIn, FileName, 'MoorDyn Driver input file header line 1', ErrStat2, ErrMsg2); call AbortIfFailed()
       CALL ReadCom( UnIn, FileName, 'MoorDyn Driver input file header line 2', ErrStat2, ErrMsg2); call AbortIfFailed()
-      CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo Input', ErrStat2, ErrMsg2); call AbortIfFailed()
-      ! If we echo, we rewind
-      IF ( InitInp%Echo ) THEN
-         EchoFile = TRIM(FileName)//'.echo'
-         CALL GetNewUnit( UnEcho )   
-         CALL OpenEcho ( UnEcho, EchoFile, ErrStat2, ErrMsg2 ); call AbortIfFailed()
-         REWIND(UnIn)
-         CALL ReadCom( UnIn, FileName, 'MoorDyn Driver input file header line 1', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-         CALL ReadCom( UnIn, FileName, 'MoorDyn Driver input file header line 2', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-         CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo the input file data', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-      END IF
+      ! CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo Input', ErrStat2, ErrMsg2); call AbortIfFailed()
+      ! ! If we echo, we rewind
+      ! IF ( InitInp%Echo ) THEN
+      !    EchoFile = TRIM(FileName)//'.echo'
+      !    CALL GetNewUnit( UnEcho )   
+      !    CALL OpenEcho ( UnEcho, EchoFile, ErrStat2, ErrMsg2 ); call AbortIfFailed()
+      !    REWIND(UnIn)
+      !    CALL ReadCom( UnIn, FileName, 'MoorDyn Driver input file header line 1', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+      !    CALL ReadCom( UnIn, FileName, 'MoorDyn Driver input file header line 2', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+      !    CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo the input file data', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+      ! END IF
       !---------------------- ENVIRONMENTAL CONDITIONS -------------------------------------------------
       CALL ReadCom( UnIn, FileName, 'Environmental conditions header', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       CALL ReadVar( UnIn, FileName, InitInp%Gravity, 'Gravity', 'Gravity', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
