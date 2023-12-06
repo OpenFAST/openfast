@@ -1736,9 +1736,9 @@ CONTAINS
          else if (coordtype==2) then  
             coordarray(1) = tempArray(1)
             coordarray(n) = tempArray(2)
-            dx = (coordarray(n)-coordarray(0))/REAL(n-1)
-            do i=2,n-1
-               coordarray(i) = coordarray(1) + REAL(i)*dx
+            dx = (coordarray(n)-coordarray(1))/REAL(n-1)
+            do i=2,n
+               coordarray(i) = coordarray(i-1) + dx
             end do
          
          else
