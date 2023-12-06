@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.40629.0
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.33529.622
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "AeroDyn_Inflow_c_binding", "AeroDyn_Inflow_c_binding.vfproj", "{5D991B19-D4F1-4F29-8A9D-FC36DFF07290}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -18,8 +18,6 @@ Global
 		Debug|x64 = Debug|x64
 		Release_Double|Win32 = Release_Double|Win32
 		Release_Double|x64 = Release_Double|x64
-		Release_OpenMP_Double|Win32 = Release_OpenMP_Double|Win32
-		Release_OpenMP_Double|x64 = Release_OpenMP_Double|x64
 		Release_OpenMP|Win32 = Release_OpenMP|Win32
 		Release_OpenMP|x64 = Release_OpenMP|x64
 		Release|Win32 = Release|Win32
@@ -38,10 +36,6 @@ Global
 		{5D991B19-D4F1-4F29-8A9D-FC36DFF07290}.Release_Double|Win32.Build.0 = Release_Double|Win32
 		{5D991B19-D4F1-4F29-8A9D-FC36DFF07290}.Release_Double|x64.ActiveCfg = Release_Double|x64
 		{5D991B19-D4F1-4F29-8A9D-FC36DFF07290}.Release_Double|x64.Build.0 = Release_Double|x64
-		{5D991B19-D4F1-4F29-8A9D-FC36DFF07290}.Release_OpenMP_Double|Win32.ActiveCfg = Release_OpenMP_Double|Win32
-		{5D991B19-D4F1-4F29-8A9D-FC36DFF07290}.Release_OpenMP_Double|Win32.Build.0 = Release_OpenMP_Double|Win32
-		{5D991B19-D4F1-4F29-8A9D-FC36DFF07290}.Release_OpenMP_Double|x64.ActiveCfg = Release_OpenMP_Double|x64
-		{5D991B19-D4F1-4F29-8A9D-FC36DFF07290}.Release_OpenMP_Double|x64.Build.0 = Release_OpenMP_Double|x64
 		{5D991B19-D4F1-4F29-8A9D-FC36DFF07290}.Release_OpenMP|Win32.ActiveCfg = Release_OpenMP|Win32
 		{5D991B19-D4F1-4F29-8A9D-FC36DFF07290}.Release_OpenMP|Win32.Build.0 = Release_OpenMP|Win32
 		{5D991B19-D4F1-4F29-8A9D-FC36DFF07290}.Release_OpenMP|x64.ActiveCfg = Release_OpenMP|x64
@@ -62,14 +56,10 @@ Global
 		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_Double|Win32.Build.0 = Release|Win32
 		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_Double|x64.ActiveCfg = Release|Win32
 		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_Double|x64.Build.0 = Release|Win32
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP_Double|Win32.ActiveCfg = Release_OpenMP_Double|Win32
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP_Double|Win32.Build.0 = Release_OpenMP_Double|Win32
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP_Double|x64.ActiveCfg = Release_OpenMP_Double|x64
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP_Double|x64.Build.0 = Release_OpenMP_Double|x64
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|Win32.ActiveCfg = Release_OpenMP|Win32
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|Win32.Build.0 = Release_OpenMP|Win32
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|x64.ActiveCfg = Release_OpenMP|x64
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|x64.Build.0 = Release_OpenMP|x64
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|Win32.ActiveCfg = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|Win32.Build.0 = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|x64.ActiveCfg = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|x64.Build.0 = Release|Win32
 		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release|Win32.ActiveCfg = Release|Win32
 		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release|Win32.Build.0 = Release|Win32
 		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release|x64.ActiveCfg = Release|Win32

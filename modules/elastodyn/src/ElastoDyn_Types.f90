@@ -44,6 +44,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravitational acceleration [m/s^2]
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK turbine type switch [-]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [m]
+    LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if ElastoDyn is computing aero maps (true) or running a normal simulation (false) [-]
+    REAL(ReKi)  :: RotSpeed = 0.0_ReKi      !< Rotor speed used when ElastoDyn is computing aero maps [rad/s]
   END TYPE ED_InitInputType
 ! =======================
 ! =========  ED_InitOutputType  =======
@@ -75,6 +77,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DerivOrder_x      !< Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
+    INTEGER(IntKi)  :: GearBox_index = 0_IntKi      !< Index to gearbox rotation in state array (for steady-state calculations) [-]
   END TYPE ED_InitOutputType
 ! =======================
 ! =========  BladeInputData  =======
@@ -752,6 +755,12 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
     INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix [-]
+    LOGICAL  :: CompAeroMaps = .false.      !< number of outputs in jacobian matrix [-]
+    INTEGER(IntKi)  :: NumExtendedInputs = 0_IntKi      !< number of extended inputs for linearization [-]
+    INTEGER(IntKi)  :: NumBl_Lin = 0_IntKi      !< number of blades in the jacobian [-]
+    INTEGER(IntKi)  :: NActvVelDOF_Lin = 0_IntKi      !< number of velocity states in the jacobian [-]
+    INTEGER(IntKi)  :: NActvDOF_Lin = 0_IntKi      !< number of active DOFs to use in the jacobian [-]
+    INTEGER(IntKi)  :: NActvDOF_Stride = 0_IntKi      !< stride for active DOFs to use in the jacobian [-]
   END TYPE ED_ParameterType
 ! =======================
 ! =========  ED_InputType  =======
@@ -832,6 +841,8 @@ subroutine ED_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%MHK = SrcInitInputData%MHK
    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
+   DstInitInputData%CompAeroMaps = SrcInitInputData%CompAeroMaps
+   DstInitInputData%RotSpeed = SrcInitInputData%RotSpeed
 end subroutine
 
 subroutine ED_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -856,6 +867,8 @@ subroutine ED_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%Gravity)
    call RegPack(Buf, InData%MHK)
    call RegPack(Buf, InData%WtrDpth)
+   call RegPack(Buf, InData%CompAeroMaps)
+   call RegPack(Buf, InData%RotSpeed)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -879,6 +892,10 @@ subroutine ED_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%MHK)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WtrDpth)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%CompAeroMaps)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%RotSpeed)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -1066,6 +1083,7 @@ subroutine ED_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       end if
       DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
    end if
+   DstInitOutputData%GearBox_index = SrcInitOutputData%GearBox_index
 end subroutine
 
 subroutine ED_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -1204,6 +1222,7 @@ subroutine ED_PackInitOutput(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%IsLoad_u), ubound(InData%IsLoad_u))
       call RegPack(Buf, InData%IsLoad_u)
    end if
+   call RegPack(Buf, InData%GearBox_index)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -1424,6 +1443,8 @@ subroutine ED_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%IsLoad_u)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
+   call RegUnpack(Buf, OutData%GearBox_index)
+   if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
 subroutine ED_CopyBladeInputData(SrcBladeInputDataData, DstBladeInputDataData, CtrlCode, ErrStat, ErrMsg)
@@ -8625,6 +8646,12 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%dx = SrcParamData%dx
    end if
    DstParamData%Jac_ny = SrcParamData%Jac_ny
+   DstParamData%CompAeroMaps = SrcParamData%CompAeroMaps
+   DstParamData%NumExtendedInputs = SrcParamData%NumExtendedInputs
+   DstParamData%NumBl_Lin = SrcParamData%NumBl_Lin
+   DstParamData%NActvVelDOF_Lin = SrcParamData%NActvVelDOF_Lin
+   DstParamData%NActvDOF_Lin = SrcParamData%NActvDOF_Lin
+   DstParamData%NActvDOF_Stride = SrcParamData%NActvDOF_Stride
 end subroutine
 
 subroutine ED_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -9293,6 +9320,12 @@ subroutine ED_PackParam(Buf, Indata)
       call RegPack(Buf, InData%dx)
    end if
    call RegPack(Buf, InData%Jac_ny)
+   call RegPack(Buf, InData%CompAeroMaps)
+   call RegPack(Buf, InData%NumExtendedInputs)
+   call RegPack(Buf, InData%NumBl_Lin)
+   call RegPack(Buf, InData%NActvVelDOF_Lin)
+   call RegPack(Buf, InData%NActvDOF_Lin)
+   call RegPack(Buf, InData%NActvDOF_Stride)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -10437,6 +10470,18 @@ subroutine ED_UnPackParam(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    call RegUnpack(Buf, OutData%Jac_ny)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%CompAeroMaps)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%NumExtendedInputs)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%NumBl_Lin)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%NActvVelDOF_Lin)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%NActvDOF_Lin)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%NActvDOF_Stride)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 

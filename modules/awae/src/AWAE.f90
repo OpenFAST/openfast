@@ -1040,6 +1040,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          IfW_InitInp%FixedWindFileRootName = .true.
          IfW_InitInp%NumWindPoints         = p%NumGrid_low
          IfW_InitInp%TurbineID             = 0
+         IfW_InitInp%MHK                   = MHK_None
       
          call InflowWind_Init( IfW_InitInp, m%u_IfW_Low, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_Low, m%IfW(0), Interval, IfW_InitOut, ErrStat2, ErrMsg2 )
             call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
@@ -1462,7 +1463,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
             end do
             do n_hl=0, n_high_low
                   ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel)
-               m%u_IfW_High%HubPosition =  (/ p%X0_high(nt) + 0.5*p%nX_high*p%dX_high(nt), p%Y0_high(nt) + 0.5*p%nY_high*p%dY_high(nt), p%Z0_high(nt) + 0.5*p%nZ_high*p%dZ_high(nt) /)
+               m%u_IfW_High%HubPosition =  (/ p%X0_high(nt) + 0.5*p%nX_high*p%dX_high(nt), p%Y0_high(nt) + 0.5*p%nY_high*p%dY_high(nt), p%Z0_high(nt) + 0.5*p%nZ_high*p%dZ_high(nt) /) - p%WT_Position(:,nt)
                call Eye(m%u_IfW_High%HubOrientation,ErrStat2,ErrMsg2)
                call InflowWind_CalcOutput(t+p%dt_low+n_hl*p%DT_high, m%u_IfW_High, p%IfW(nt), x%IfW(nt), xd%IfW(nt), z%IfW(nt), OtherState%IfW(nt), m%y_IfW_High, m%IfW(nt), errStat2, errMsg2)
                   call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )

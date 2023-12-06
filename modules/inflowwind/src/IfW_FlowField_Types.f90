@@ -129,7 +129,7 @@ IMPLICIT NONE
 ! =========  Grid4DFieldType  =======
   TYPE, PUBLIC :: Grid4DFieldType
     INTEGER(IntKi) , DIMENSION(1:4)  :: n = 0_IntKi      !< number of evenly-spaced grid points in the x, y, z, and t directions [-]
-    REAL(ReKi) , DIMENSION(1:4)  :: delta = 0.0_ReKi      !< size between 2 consecutive grid points in each grid direction [m,m,m,s]
+    REAL(DbKi) , DIMENSION(1:4)  :: delta = 0.0_R8Ki      !< size between 2 consecutive grid points in each grid direction [m,m,m,s]
     REAL(ReKi) , DIMENSION(1:3)  :: pZero = 0.0_ReKi      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: Vel => NULL()      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt] [-]
     REAL(ReKi)  :: TimeStart = 0.0_ReKi      !< this is the time where the first time grid in m%V starts (i.e, the time associated with m%V(:,:,:,:,1)) [s]

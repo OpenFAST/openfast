@@ -813,7 +813,7 @@ END SUBROUTINE WAMIT2_Init
          !> 1. Check the data to see if low cutoff on the difference frequency is 0.  If it is above zero, that implies no mean drift
          !!    term since \f$ \omega_1=\omega_2 \f$
 
-      IF ( InitInp%WvLowCOffD > 0.0_SiKi )  THEN
+      IF ( InitInp%WaveField%WvLowCOffD > 0.0_SiKi )  THEN
          CALL SetErrStat( ErrID_Warn, ' WvLowCOffD > 0.0, so no mean drift term is calculated (the mean drift uses only the equal '//&
                         'frequency terms of the QTF).  Setting the mean drift force to 0.',ErrStat,ErrMsg,RoutineName)
          RETURN
@@ -828,7 +828,7 @@ END SUBROUTINE WAMIT2_Init
       IF ( MnDriftData%DataIs3D ) THEN
 
             ! Check the low frequency cutoff
-         IF ( MINVAL( MnDriftData%Data3D%WvFreq1 ) > InitInp%WvLowCOffD ) THEN
+         IF ( MINVAL( MnDriftData%Data3D%WvFreq1 ) > InitInp%WaveField%WvLowCOffD ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(MnDriftData%Data3D%WvFreq1)))// &
                            ' rad/s for first wave period) data in '//TRIM(MnDriftData%Filename)// &
                            ' is above the low frequency cutoff set by WvLowCOffD.',ErrStat,ErrMsg,RoutineName)
@@ -836,7 +836,7 @@ END SUBROUTINE WAMIT2_Init
 
             ! Check the high frequency cutoff -- using the Difference high frequency cutoff.  The first order high frequency
             ! cutoff is typically too high for this in most cases.
-         IF ( (MAXVAL(MnDriftData%Data3D%WvFreq1 ) < InitInp%WvHiCOffD) ) THEN
+         IF ( (MAXVAL(MnDriftData%Data3D%WvFreq1 ) < InitInp%WaveField%WvHiCOffD) ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(MnDriftData%Data3D%WvFreq1)))// &
                            ' rad/s for first wave period) data in '//TRIM(MnDriftData%Filename)// &
                            ' is below the high frequency cutoff set by WvHiCOffD.',ErrStat,ErrMsg,RoutineName)
@@ -845,12 +845,12 @@ END SUBROUTINE WAMIT2_Init
       ELSE IF ( MnDriftData%DataIs4D ) THEN   ! only check if not 3D data. If there is 3D data, we default to using it for calculations
 
              ! Check the low frequency cutoff
-         IF ( MINVAL( MnDriftData%Data4D%WvFreq1 ) > InitInp%WvLowCOffD ) THEN
+         IF ( MINVAL( MnDriftData%Data4D%WvFreq1 ) > InitInp%WaveField%WvLowCOffD ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(MnDriftData%Data4D%WvFreq1)))// &
                            ' rad/s first wave period) data in '//TRIM(MnDriftData%Filename)// &
-                           ' is above the low frequency cutoff set by WvLowCOff.',ErrStat,ErrMsg,RoutineName)
+                           ' is above the low frequency cutoff set by WvLowCOffD.',ErrStat,ErrMsg,RoutineName)
          ENDIF
-         IF ( MINVAL( MnDriftData%Data4D%WvFreq2 ) > InitInp%WvLowCOff ) THEN
+         IF ( MINVAL( MnDriftData%Data4D%WvFreq2 ) > InitInp%WaveField%WvLowCOffD ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(MnDriftData%Data4D%WvFreq2)))// &
                            ' rad/s for second wave period) data in '//TRIM(MnDriftData%Filename)// &
                            ' is above the low frequency cutoff set by WvLowCOffD.',ErrStat,ErrMsg,RoutineName)
@@ -858,12 +858,12 @@ END SUBROUTINE WAMIT2_Init
 
             ! Check the high frequency cutoff -- using the Difference high frequency cutoff.  The first order high frequency
             ! cutoff is typically too high for this in most cases.
-         IF ( (MAXVAL(MnDriftData%Data4D%WvFreq1) < InitInp%WvHiCOffD) ) THEN
+         IF ( (MAXVAL(MnDriftData%Data4D%WvFreq1) < InitInp%WaveField%WvHiCOffD) ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(MnDriftData%Data4D%WvFreq1)))// &
                            ' rad/s for first wave period) data in '//TRIM(MnDriftData%Filename)// &
                            ' is below the high frequency cutoff set by WvHiCOffD.',ErrStat,ErrMsg,RoutineName)
          ENDIF
-         IF ( (MAXVAL(MnDriftData%Data4D%WvFreq2) < InitInp%WvHiCOffD) ) THEN
+         IF ( (MAXVAL(MnDriftData%Data4D%WvFreq2) < InitInp%WaveField%WvHiCOffD) ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(MnDriftData%Data4D%WvFreq1)))// &
                            ' rad/s second wave period) data in '//TRIM(MnDriftData%Filename)// &
                            ' is below the high frequency cutoff set by WvHiCOffD.',ErrStat,ErrMsg,RoutineName)
@@ -882,12 +882,12 @@ END SUBROUTINE WAMIT2_Init
       IF ( MnDriftData%DataIs3D ) THEN
 
             ! If we are using multidirectional waves, then we should have more than 1 wave direction in the WAMIT file.
-         IF ( InitInp%WaveMultiDir .AND. (MnDriftData%Data3D%NumWvDir1 == 1) ) THEN
+         IF ( InitInp%WaveField%WaveMultiDir .AND. (MnDriftData%Data3D%NumWvDir1 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(MnDriftData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(MnDriftData%Data3D%WvDir1(1)))//' degrees (first wave direction). '// &
                         'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
-         ELSE IF ( InitInp%WaveMultiDir .AND. (MnDriftData%Data3D%NumWvDir2 == 1) ) THEN
+         ELSE IF ( InitInp%WaveField%WaveMultiDir .AND. (MnDriftData%Data3D%NumWvDir2 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(MnDriftData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(MnDriftData%Data3D%WvDir2(1)))//' degrees (second wave direction). '// &
                         'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
@@ -898,7 +898,7 @@ END SUBROUTINE WAMIT2_Init
                ! now (since time is limited) we will issue a warning if any of the wave directions for multidirectional waves
                ! or data from the WAMIT file for the wavedirections is close to the +/-pi boundary (>150 degrees, <-150 degrees),
                ! we will issue a warning.
-            IF ( (InitInp%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveDirMax < -150.0_SiKi) .OR. &
+            IF ( (InitInp%WaveField%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveField%WaveDirMax < -150.0_SiKi) .OR. &
                  (minval(MnDriftData%data3d%WvDir1) > 150.0_SiKi) .OR.  (maxval(MnDriftData%data3d%WvDir1) < -150.0_SiKi) .OR. &
                  (minval(MnDriftData%data3d%WvDir2) > 150.0_SiKi) .OR.  (maxval(MnDriftData%data3d%WvDir2) < -150.0_SiKi) ) THEN
                CALL SetErrStat( ErrID_Warn,' There may be issues with how the wave direction data is handled when the wave '// &
@@ -908,13 +908,13 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now check the limits for the first wave direction
                !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-            IF ( InitInp%WaveDirMin < MINVAL(MnDriftData%Data3D%WvDir1) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMin < MINVAL(MnDriftData%Data3D%WvDir1) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax > MAXVAL(MnDriftData%Data3D%WvDir1) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(MnDriftData%Data3D%WvDir1) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
@@ -922,13 +922,13 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now check the limits for the second wave direction
                !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-            IF ( InitInp%WaveDirMin < MINVAL(MnDriftData%Data3D%WvDir2) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMin < MINVAL(MnDriftData%Data3D%WvDir2) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax > MAXVAL(MnDriftData%Data3D%WvDir2) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(MnDriftData%Data3D%WvDir2) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
@@ -938,12 +938,12 @@ END SUBROUTINE WAMIT2_Init
       ELSEIF ( MnDriftData%DataIs4D ) THEN
 
             ! If we are using multidirectional waves, then we should have more than 1 wave direction in the WAMIT file.
-         IF ( InitInp%WaveMultiDir .AND. (MnDriftData%Data4D%NumWvDir1 == 1) ) THEN
+         IF ( InitInp%WaveField%WaveMultiDir .AND. (MnDriftData%Data4D%NumWvDir1 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(MnDriftData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(MnDriftData%Data4D%WvDir1(1)))//' degrees (first wave direction). '// &
                         'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
-         ELSE IF ( InitInp%WaveMultiDir .AND. (MnDriftData%Data4D%NumWvDir2 == 1) ) THEN
+         ELSE IF ( InitInp%WaveField%WaveMultiDir .AND. (MnDriftData%Data4D%NumWvDir2 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(MnDriftData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(MnDriftData%Data4D%WvDir2(1)))//' degrees (second wave direction). '// &
                         'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
@@ -954,7 +954,7 @@ END SUBROUTINE WAMIT2_Init
                ! now (since time is limited) we will issue a warning if any of the wave directions for multidirectional waves
                ! or data from the WAMIT file for the wavedirections is close to the +/-pi boundary (>150 degrees, <-150 degrees),
                ! we will issue a warning.
-            IF ( (InitInp%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveDirMax < -150.0_SiKi) .OR. &
+            IF ( (InitInp%WaveField%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveField%WaveDirMax < -150.0_SiKi) .OR. &
                  (MINVAL(MnDriftData%Data4D%WvDir1) > 150.0_SiKi) .OR.  (MAXVAL(MnDriftData%Data4D%WvDir1) < -150.0_SiKi) .OR. &
                  (MINVAL(MnDriftData%Data4D%WvDir2) > 150.0_SiKi) .OR.  (MAXVAL(MnDriftData%Data4D%WvDir2) < -150.0_SiKi) ) THEN
                CALL SetErrStat( ErrID_Warn,' There may be issues with how the wave direction data is handled when the wave '// &
@@ -965,13 +965,13 @@ END SUBROUTINE WAMIT2_Init
                ! Now check the limits for the first wave direction
                !  --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
                !  --> FIXME: modify to allow shifting values by TwoPi before comparing
-            IF ( InitInp%WaveDirMin < MINVAL(MnDriftData%Data4D%WvDir1) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMin < MINVAL(MnDriftData%Data4D%WvDir1) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax > MAXVAL(MnDriftData%Data4D%WvDir1) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(MnDriftData%Data4D%WvDir1) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
@@ -979,13 +979,13 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now check the limits for the second wave direction
                !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-            IF ( InitInp%WaveDirMin < MINVAL(MnDriftData%Data4D%WvDir2) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMin < MINVAL(MnDriftData%Data4D%WvDir2) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax > MAXVAL(MnDriftData%Data4D%WvDir2) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(MnDriftData%Data4D%WvDir2) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
@@ -1137,31 +1137,28 @@ END SUBROUTINE WAMIT2_Init
                END IF
 
 
-               DO J=1,InitInp%NStepWave2
+               DO J=1,InitInp%WaveField%NStepWave2
 
                      ! NOTE: since the Mean Drift only returns a static time independent average value for the drift force, we do not
                      !        need to account for any offset in the location of the WAMIT body (this term vanishes).
                      ! First get the wave amplitude -- must be reconstructed from the WaveElevC0 array.  First index is the real (1) or
                      ! imaginary (2) part.  Divide by NStepWave2 to remove the built in normalization in WaveElevC0.
-                  aWaveElevC = CMPLX( InitInp%WaveElevC0(1,J), InitInp%WaveElevC0(2,J), SiKi) / InitInp%NStepWave2
+                  aWaveElevC = CMPLX( InitInp%WaveField%WaveElevC0(1,J), InitInp%WaveField%WaveElevC0(2,J), SiKi) / InitInp%WaveField%NStepWave2
 
                      ! Calculate the frequency
-                  Omega1 = J * InitInp%WaveDOmega
+                  Omega1 = J * InitInp%WaveField%WaveDOmega
 
 
                      ! Only get a QTF value if within the range of frequencies we have wave amplitudes for (first order cutoffs).  This
                      ! is done only for efficiency. 
                   
-                  !BJJ: If WaveMod==1, this could result in zeroing out the wrong values... 
-                  !InitInp%WvLowCOff and InitInp%WvHiCOff are not used in SeaState when WaveMod = 0,1, or 6
-                  ! Probably could just remove this IF statement????
-                  IF ( (Omega1 >= InitInp%WvLowCOff) .AND. (Omega1 <= InitInp%WvHiCOff) ) THEN
+                  IF ( (Omega1 >= InitInp%WaveField%WvLowCOff) .AND. (Omega1 <= InitInp%WaveField%WvHiCOff) ) THEN
 
                         ! Now get the QTF value that corresponds to this frequency and wavedirection pair.
                      IF ( MnDriftData%DataIs3D ) THEN
 
                            ! Set the (omega1,beta1,beta2) point we are looking for. (angles in degrees here)
-                        Coord3 = (/ REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
+                        Coord3 = (/ REAL(Omega1,SiKi), InitInp%WaveField%WaveDirArr(J), InitInp%WaveField%WaveDirArr(J) /)
 
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
                         Coord3(2) = Coord3(2) - RotateZdegOffset
@@ -1175,7 +1172,7 @@ END SUBROUTINE WAMIT2_Init
                      ELSE
 
                            ! Set the (omega1,omega2,beta1,beta2) point we are looking for. (angles in degrees here)
-                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
+                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveField%WaveDirArr(J), InitInp%WaveField%WaveDirArr(J) /)
 
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
                         Coord4(3) = Coord4(3) - RotateZdegOffset
@@ -1352,12 +1349,10 @@ END SUBROUTINE WAMIT2_Init
          !> 1. Check the data to see if the wave frequencies are present in the QTF data.  Since Newman's approximation only uses
          !!    frequencies where \f$ \omega_1=\omega_2 \f$, the data read in from the files must contain the full range of frequencies
          !!    present in the waves.
-!bjj: InitInp%WvLowCOff and InitInp%WvHiCOff aren't supposed to be used when WaveMod=0, 1, or 6, but they are used here regardless of those conditions.
-!     Can we get rid of these checks????
       IF ( NewmanAppData%DataIs3D ) THEN
 
             ! Check the low frequency cutoff
-         IF ( MINVAL( NewmanAppData%Data3D%WvFreq1 ) > InitInp%WvLowCOff ) THEN
+         IF ( MINVAL( NewmanAppData%Data3D%WvFreq1 ) > InitInp%WaveField%WvLowCOff ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(NewmanAppData%Data3D%WvFreq1)))// &
                            ' rad/s for first wave period) data in '//TRIM(NewmanAppData%Filename)// &
                            ' is above the low frequency cutoff set by WvLowCOff.', &
@@ -1366,7 +1361,7 @@ END SUBROUTINE WAMIT2_Init
 
             ! Check the high frequency cutoff -- using the Difference high frequency cutoff.  The first order high frequency
             ! cutoff is typically too high for this in most cases.
-         IF ( MAXVAL(NewmanAppData%Data3D%WvFreq1 ) < InitInp%WvHiCOff ) THEN
+         IF ( MAXVAL(NewmanAppData%Data3D%WvFreq1 ) < InitInp%WaveField%WvHiCOff ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(NewmanAppData%Data3D%WvFreq1)))// &
                            ' rad/s for first wave period) data in '//TRIM(NewmanAppData%Filename)// &
                            ' is below the high frequency cutoff set by WvHiCOff.', &
@@ -1376,13 +1371,13 @@ END SUBROUTINE WAMIT2_Init
       ELSE IF ( NewmanAppData%DataIs4D ) THEN   ! only check if not 3D data. If there is 3D data, we default to using it for calculations
 
              ! Check the low frequency cutoff
-         IF ( MINVAL( NewmanAppData%Data4D%WvFreq1 ) > InitInp%WvLowCOff ) THEN
+         IF ( MINVAL( NewmanAppData%Data4D%WvFreq1 ) > InitInp%WaveField%WvLowCOff ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(NewmanAppData%Data4D%WvFreq1)))// &
                            ' rad/s first wave period) data in '//TRIM(NewmanAppData%Filename)// &
                            ' is above the low frequency cutoff set by WvLowCOff.', &
                            ErrStat,ErrMsg,RoutineName)
          ENDIF
-         IF ( MINVAL( NewmanAppData%Data4D%WvFreq2 ) > InitInp%WvLowCOff ) THEN
+         IF ( MINVAL( NewmanAppData%Data4D%WvFreq2 ) > InitInp%WaveField%WvLowCOff ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(NewmanAppData%Data4D%WvFreq2)))// &
                            ' rad/s for second wave period) data in '//TRIM(NewmanAppData%Filename)// &
                            ' is above the low frequency cutoff set by WvLowCOff.', &
@@ -1391,13 +1386,13 @@ END SUBROUTINE WAMIT2_Init
 
             ! Check the high frequency cutoff -- using the Difference high frequency cutoff.  The first order high frequency
             ! cutoff is typically too high for this in most cases.
-         IF ( MAXVAL(NewmanAppData%Data4D%WvFreq1) < InitInp%WvHiCOff ) THEN
+         IF ( MAXVAL(NewmanAppData%Data4D%WvFreq1) < InitInp%WaveField%WvHiCOff ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(NewmanAppData%Data4D%WvFreq1)))// &
                            ' rad/s for first wave period) data in '//TRIM(NewmanAppData%Filename)// &
                            ' is below the high frequency cutoff set by WvHiCOff.', &
                            ErrStat,ErrMsg,RoutineName)
          ENDIF
-         IF ( MAXVAL(NewmanAppData%Data4D%WvFreq2) < InitInp%WvHiCOff ) THEN
+         IF ( MAXVAL(NewmanAppData%Data4D%WvFreq2) < InitInp%WaveField%WvHiCOff ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(NewmanAppData%Data4D%WvFreq1)))// &
                            ' rad/s second wave period) data in '//TRIM(NewmanAppData%Filename)// &
                            ' is below the high frequency cutoff set by WvHiCOff.', &
@@ -1417,12 +1412,12 @@ END SUBROUTINE WAMIT2_Init
       IF ( NewmanAppData%DataIs3D ) THEN
 
             ! If we are using multidirectional waves, then we should have more than 1 wave direction in the WAMIT file.
-         IF ( InitInp%WaveMultiDir .AND. (NewmanAppData%Data3D%NumWvDir1 == 1) ) THEN
+         IF ( InitInp%WaveField%WaveMultiDir .AND. (NewmanAppData%Data3D%NumWvDir1 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(NewmanAppData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(NewmanAppData%Data3D%WvDir1(1)))//' degrees (first wave direction). '// &
                         'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
-         ELSE IF ( InitInp%WaveMultiDir .AND. (NewmanAppData%Data3D%NumWvDir2 == 1) ) THEN
+         ELSE IF ( InitInp%WaveField%WaveMultiDir .AND. (NewmanAppData%Data3D%NumWvDir2 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(NewmanAppData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(NewmanAppData%Data3D%WvDir2(1)))//' degrees (second wave direction). '// &
                         'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
@@ -1433,7 +1428,7 @@ END SUBROUTINE WAMIT2_Init
                ! now (since time is limited) we will issue a warning if any of the wave directions for multidirectional waves
                ! or data from the WAMIT file for the wavedirections is close to the +/-pi boundary (>150 degrees, <-150 degrees),
                ! we will issue a warning.
-            IF ( (InitInp%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveDirMax < -150.0_SiKi) .OR. &
+            IF ( (InitInp%WaveField%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveField%WaveDirMax < -150.0_SiKi) .OR. &
                  (minval(NewmanAppData%data3d%WvDir1) > 150.0_SiKi) .OR.  (maxval(NewmanAppData%data3d%WvDir1) < -150.0_SiKi) .OR. &
                  (minval(NewmanAppData%data3d%WvDir2) > 150.0_SiKi) .OR.  (maxval(NewmanAppData%data3d%WvDir2) < -150.0_SiKi) ) THEN
                CALL SetErrStat( ErrID_Warn,' There may be issues with how the wave direction data is handled when the wave '// &
@@ -1443,13 +1438,13 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now check the limits for the first wave direction
                !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-            IF ( InitInp%WaveDirMin < MINVAL(NewmanAppData%Data3D%WvDir1) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMin < MINVAL(NewmanAppData%Data3D%WvDir1) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax > MAXVAL(NewmanAppData%Data3D%WvDir1) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(NewmanAppData%Data3D%WvDir1) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
            ENDIF
@@ -1457,13 +1452,13 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now check the limits for the second wave direction
                !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-            IF ( InitInp%WaveDirMin < MINVAL(NewmanAppData%Data3D%WvDir2) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMin < MINVAL(NewmanAppData%Data3D%WvDir2) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax > MAXVAL(NewmanAppData%Data3D%WvDir2) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(NewmanAppData%Data3D%WvDir2) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
@@ -1473,12 +1468,12 @@ END SUBROUTINE WAMIT2_Init
       ELSEIF ( NewmanAppData%DataIs4D ) THEN
 
             ! If we are using multidirectional waves, then we should have more than 1 wave direction in the WAMIT file.
-         IF ( InitInp%WaveMultiDir .AND. (NewmanAppData%Data4D%NumWvDir1 == 1) ) THEN
+         IF ( InitInp%WaveField%WaveMultiDir .AND. (NewmanAppData%Data4D%NumWvDir1 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(NewmanAppData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(NewmanAppData%Data4D%WvDir1(1)))//' degrees (first wave direction). '// &
                         'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
-         ELSE IF ( InitInp%WaveMultiDir .AND. (NewmanAppData%Data4D%NumWvDir2 == 1) ) THEN
+         ELSE IF ( InitInp%WaveField%WaveMultiDir .AND. (NewmanAppData%Data4D%NumWvDir2 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(NewmanAppData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(NewmanAppData%Data4D%WvDir2(1)))//' degrees (second wave direction). '// &
                         'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
@@ -1489,7 +1484,7 @@ END SUBROUTINE WAMIT2_Init
                ! now (since time is limited) we will issue a warning if any of the wave directions for multidirectional waves
                ! or data from the WAMIT file for the wavedirections is close to the +/-pi boundary (>150 degrees, <-150 degrees),
                ! we will issue a warning.
-            IF ( (InitInp%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveDirMax < -150.0_SiKi) .OR. &
+            IF ( (InitInp%WaveField%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveField%WaveDirMax < -150.0_SiKi) .OR. &
                  (MINVAL(NewmanAppData%Data4D%WvDir1) > 150.0_SiKi) .OR.  (MAXVAL(NewmanAppData%Data4D%WvDir1) < -150.0_SiKi) .OR. &
                  (MINVAL(NewmanAppData%Data4D%WvDir2) > 150.0_SiKi) .OR.  (MAXVAL(NewmanAppData%Data4D%WvDir2) < -150.0_SiKi) ) THEN
                CALL SetErrStat( ErrID_Warn,' There may be issues with how the wave direction data is handled when the wave '// &
@@ -1500,13 +1495,13 @@ END SUBROUTINE WAMIT2_Init
                ! Now check the limits for the first wave direction
                !  --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
                !  --> FIXME: modify to allow shifting values by TwoPi before comparing
-            IF ( InitInp%WaveDirMin < MINVAL(NewmanAppData%Data4D%WvDir1) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMin < MINVAL(NewmanAppData%Data4D%WvDir1) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax > MAXVAL(NewmanAppData%Data4D%WvDir1) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(NewmanAppData%Data4D%WvDir1) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
@@ -1514,13 +1509,13 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now check the limits for the second wave direction
                !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-            IF ( InitInp%WaveDirMin < MINVAL(NewmanAppData%Data4D%WvDir2) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMin < MINVAL(NewmanAppData%Data4D%WvDir2) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax > MAXVAL(NewmanAppData%Data4D%WvDir2) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(NewmanAppData%Data4D%WvDir2) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
@@ -1615,19 +1610,19 @@ END SUBROUTINE WAMIT2_Init
 
 
          ! Setup the arrays holding the Newman terms, both the complex frequency domain and real time domain pieces
-      ALLOCATE( NewmanTerm1t( 0:InitInp%NStepWave  ), STAT=ErrStatTmp )
+      ALLOCATE( NewmanTerm1t( 0:InitInp%WaveField%NStepWave  ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for calculating the first term of the Newmans '// &
                                              'approximation in the time domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( NewmanTerm2t( 0:InitInp%NStepWave  ), STAT=ErrStatTmp )
+      ALLOCATE( NewmanTerm2t( 0:InitInp%WaveField%NStepWave  ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for calculating the second term of the Newmans '// &
                                              'approximation in the time domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( NewmanTerm1C( 0:InitInp%NStepWave2, 6 ), STAT=ErrStatTmp )
+      ALLOCATE( NewmanTerm1C( 0:InitInp%WaveField%NStepWave2, 6 ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for calculating the first term of the Newmans '// &
                                              'approximation in the frequency domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( NewmanTerm2C( 0:InitInp%NStepWave2, 6 ), STAT=ErrStatTmp )
+      ALLOCATE( NewmanTerm2C( 0:InitInp%WaveField%NStepWave2, 6 ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for calculating the second term of the Newmans '// &
                                              'approximation in the frequency domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( NewmanAppForce( 0:InitInp%NStepWave, 6*p%NBody), STAT=ErrStatTmp )
+      ALLOCATE( NewmanAppForce( 0:InitInp%WaveField%NStepWave, 6*p%NBody), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the resulting Newmans '// &
                                              'approximation of the 2nd order force.',ErrStat, ErrMsg, RoutineName)
 
@@ -1651,7 +1646,7 @@ END SUBROUTINE WAMIT2_Init
 
 
          ! Initialize the FFT library
-      CALL InitCFFT ( InitInp%NStepWave, FFT_Data, .FALSE., ErrStatTmp )      ! Complex result FFT initialize
+      CALL InitCFFT ( InitInp%WaveField%NStepWave, FFT_Data, .FALSE., ErrStatTmp )      ! Complex result FFT initialize
       CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpData3D))        DEALLOCATE(TmpData3D,STAT=ErrStatTmp)
@@ -1709,24 +1704,24 @@ END SUBROUTINE WAMIT2_Init
                END IF
 
 
-               DO J=1,InitInp%NStepWave2
+               DO J=1,InitInp%WaveField%NStepWave2
 
                      ! First get the wave amplitude -- must be reconstructed from the WaveElevC array.  First index is the real (1) or
                      ! imaginary (2) part.  Divide by NStepWave2 so that the wave amplitude is of the same form as the paper.
-                  aWaveElevC = CMPLX( InitInp%WaveElevC0(1,J), InitInp%WaveElevC0(2,J), SiKi) / InitInp%NStepWave2
+                  aWaveElevC = CMPLX( InitInp%WaveField%WaveElevC0(1,J), InitInp%WaveField%WaveElevC0(2,J), SiKi) / InitInp%WaveField%NStepWave2
 
                      ! Calculate the frequency
-                  Omega1 = J * InitInp%WaveDOmega
+                  Omega1 = J * InitInp%WaveField%WaveDOmega
 
 
                      ! Only get a QTF value if within the range of frequencies between the cutoffs for the difference frequency
-                  IF ( (Omega1 >= InitInp%WvLowCOff) .AND. (Omega1 <= InitInp%WvHiCOff) ) THEN
+                  IF ( (Omega1 >= InitInp%WaveField%WvLowCOff) .AND. (Omega1 <= InitInp%WaveField%WvHiCOff) ) THEN
 
                         ! Now get the QTF value that corresponds to this frequency and wavedirection pair.
                      IF ( NewmanAppData%DataIs3D ) THEN
 
                            ! Set the (omega1,beta1,beta2) point we are looking for.
-                        Coord3 = (/ REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
+                        Coord3 = (/ REAL(Omega1,SiKi), InitInp%WaveField%WaveDirArr(J), InitInp%WaveField%WaveDirArr(J) /)
 
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
                         Coord3(2) = Coord3(2) - RotateZdegOffset
@@ -1739,7 +1734,7 @@ END SUBROUTINE WAMIT2_Init
                      ELSE
 
                            ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
-                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
+                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveField%WaveDirArr(J), InitInp%WaveField%WaveDirArr(J) /)
 
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
                         Coord4(3) = Coord4(3) - RotateZdegOffset
@@ -1796,7 +1791,7 @@ END SUBROUTINE WAMIT2_Init
                   ENDIF
 
 
-               ENDDO    ! J=1,InitInp%NStepWave2
+               ENDDO    ! J=1,InitInp%WaveField%NStepWave2
 
             ENDIF    ! Load component to calculate
 
@@ -1813,10 +1808,10 @@ END SUBROUTINE WAMIT2_Init
          RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
 
             ! Loop through all the frequencies
-         DO J=1,InitInp%NStepWave2
+         DO J=1,InitInp%WaveField%NStepWave2
 
                ! Frequency
-            Omega1 = J * InitInp%WaveDOmega
+            Omega1 = J * InitInp%WaveField%WaveDOmega
 
             !> Phase shift due to offset in location, only for NBodyMod==2
             if (p%NBodyMod == 2) then
@@ -1827,8 +1822,8 @@ END SUBROUTINE WAMIT2_Init
                !        of above is mathematically equivalent, but only because each frequency has only one wave
                !        direction associated with it through the equal energy approach used in multidirectional waves.
 
-               WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
-               TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveDirArr(J)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveDirArr(J)*D2R) )
+               WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WaveField%EffWtrDpth )    ! SiKi returned
+               TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveField%WaveDirArr(J)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveField%WaveDirArr(J)*D2R) )
                PhaseShiftXY = CMPLX( cos(TmpReal1), -sin(TmpReal1) )
 
                ! Apply the phase shift
@@ -1847,7 +1842,7 @@ END SUBROUTINE WAMIT2_Init
             NewmanTerm2C(J,1:2) = MATMUL(RotateZMatrixT, NewmanTerm2C(J,1:2))
             NewmanTerm2C(J,4:5) = MATMUL(RotateZMatrixT, NewmanTerm2C(J,4:5))
 
-         ENDDO    ! J=1,InitInp%NStepWave2
+         ENDDO    ! J=1,InitInp%WaveField%NStepWave2
 
 
 
@@ -1889,12 +1884,12 @@ END SUBROUTINE WAMIT2_Init
 
 
                ! Now square the real part of the resulting time domain pieces and add them together to get the final force time series.
-            DO J=0,InitInp%NStepWave-1
+            DO J=0,InitInp%WaveField%NStepWave-1
                NewmanAppForce(J,Idx) = (abs(NewmanTerm1t(J)))**2 - (abs(NewmanTerm2t(J)))**2
             ENDDO
 
                ! Copy the last first term to the last so that it is cyclic
-            NewmanAppForce(InitInp%NStepWave,Idx) = NewmanAppForce(0,Idx)
+            NewmanAppForce(InitInp%WaveField%NStepWave,Idx) = NewmanAppForce(0,Idx)
 
          ENDDO ! ThisDim -- index to current dimension
 
@@ -2028,13 +2023,13 @@ END SUBROUTINE WAMIT2_Init
       IF ( DiffQTFData%DataIs4D ) THEN   ! We must have a 4D data set
 
              ! Check the low frequency cutoff
-         IF ( MINVAL( DiffQTFData%Data4D%WvFreq1 ) > InitInp%WvLowCOffD ) THEN
+         IF ( MINVAL( DiffQTFData%Data4D%WvFreq1 ) > InitInp%WaveField%WvLowCOffD ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(DiffQTFData%Data4D%WvFreq1)))// &
                            ' rad/s first wave period) data in '//TRIM(DiffQTFData%Filename)// &
                            ' is above the low frequency cutoff set by WvLowCOffD.', &
                            ErrStat,ErrMsg,RoutineName)
          ENDIF
-         IF ( MINVAL( DiffQTFData%Data4D%WvFreq2 ) > InitInp%WvLowCOffD ) THEN
+         IF ( MINVAL( DiffQTFData%Data4D%WvFreq2 ) > InitInp%WaveField%WvLowCOffD ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(DiffQTFData%Data4D%WvFreq2)))// &
                            ' rad/s for second wave period) data in '//TRIM(DiffQTFData%Filename)// &
                            ' is above the low frequency cutoff set by WvLowCOffD.', &
@@ -2043,13 +2038,13 @@ END SUBROUTINE WAMIT2_Init
 
             ! Check the high frequency cutoff -- using the Difference high frequency cutoff.  The first order high frequency
             ! cutoff is typically too high for this in most cases.
-         IF ( MAXVAL(DiffQTFData%Data4D%WvFreq1) < InitInp%WvHiCOffD ) THEN
+         IF ( MAXVAL(DiffQTFData%Data4D%WvFreq1) < InitInp%WaveField%WvHiCOffD ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(DiffQTFData%Data4D%WvFreq1)))// &
                            ' rad/s for first wave period) data in '//TRIM(DiffQTFData%Filename)// &
                            ' is below the high frequency cutoff set by WvHiCOffD.', &
                            ErrStat,ErrMsg,RoutineName)
          ENDIF
-         IF ( MAXVAL(DiffQTFData%Data4D%WvFreq2) < InitInp%WvHiCOffD ) THEN
+         IF ( MAXVAL(DiffQTFData%Data4D%WvFreq2) < InitInp%WaveField%WvHiCOffD ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(DiffQTFData%Data4D%WvFreq1)))// &
                            ' rad/s second wave period) data in '//TRIM(DiffQTFData%Filename)// &
                            ' is below the high frequency cutoff set by WvHiCOffD.', &
@@ -2067,12 +2062,12 @@ END SUBROUTINE WAMIT2_Init
 
 
          ! If we are using multidirectional waves, then we should have more than 1 wave direction in the WAMIT file.
-      IF ( InitInp%WaveMultiDir .AND. (DiffQTFData%Data4D%NumWvDir1 == 1) ) THEN
+      IF ( InitInp%WaveField%WaveMultiDir .AND. (DiffQTFData%Data4D%NumWvDir1 == 1) ) THEN
          CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(DiffQTFData%Filename)//' only contains one wave '// &
                      'direction at '//TRIM(Num2LStr(DiffQTFData%Data4D%WvDir1(1)))//' degrees (first wave direction). '// &
                      'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                      ErrStat,ErrMsg,RoutineName)
-      ELSE IF ( InitInp%WaveMultiDir .AND. (DiffQTFData%Data4D%NumWvDir2 == 1) ) THEN
+      ELSE IF ( InitInp%WaveField%WaveMultiDir .AND. (DiffQTFData%Data4D%NumWvDir2 == 1) ) THEN
          CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(DiffQTFData%Filename)//' only contains one wave '// &
                      'direction at '//TRIM(Num2LStr(DiffQTFData%Data4D%WvDir2(1)))//' degrees (second wave direction). '// &
                      'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
@@ -2083,7 +2078,7 @@ END SUBROUTINE WAMIT2_Init
             ! now (since time is limited) we will issue a warning if any of the wave directions for multidirectional waves
             ! or data from the WAMIT file for the wavedirections is close to the +/-pi boundary (>150 degrees, <-150 degrees),
             ! we will issue a warning.
-         IF ( (InitInp%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveDirMax < -150.0_SiKi) .OR. &
+         IF ( (InitInp%WaveField%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveField%WaveDirMax < -150.0_SiKi) .OR. &
               (MINVAL(DiffQTFData%Data4D%WvDir1) > 150.0_SiKi) .OR.  (MAXVAL(DiffQTFData%Data4D%WvDir1) < -150.0_SiKi) .OR. &
               (MINVAL(DiffQTFData%Data4D%WvDir2) > 150.0_SiKi) .OR.  (MAXVAL(DiffQTFData%Data4D%WvDir2) < -150.0_SiKi) ) THEN
             CALL SetErrStat( ErrID_Warn,' There may be issues with how the wave direction data is handled when the wave '// &
@@ -2094,13 +2089,13 @@ END SUBROUTINE WAMIT2_Init
             ! Now check the limits for the first wave direction
             !  --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
             !  --> FIXME: modify to allow shifting values by TwoPi before comparing
-         IF ( InitInp%WaveDirMin < MINVAL(DiffQTFData%Data4D%WvDir1) ) THEN
-            CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+         IF ( InitInp%WaveField%WaveDirMin < MINVAL(DiffQTFData%Data4D%WvDir1) ) THEN
+            CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                   'found in the WAMIT data file '//TRIM(DiffQTFData%Filename)//' for the first wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
-         IF ( InitInp%WaveDirMax > MAXVAL(DiffQTFData%Data4D%WvDir1) ) THEN
-            CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+         IF ( InitInp%WaveField%WaveDirMax > MAXVAL(DiffQTFData%Data4D%WvDir1) ) THEN
+            CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                   'found in the WAMIT data file '//TRIM(DiffQTFData%Filename)//' for the first wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
@@ -2108,13 +2103,13 @@ END SUBROUTINE WAMIT2_Init
 
             ! Now check the limits for the second wave direction
             !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-         IF ( InitInp%WaveDirMin < MINVAL(DiffQTFData%Data4D%WvDir2) ) THEN
-            CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+         IF ( InitInp%WaveField%WaveDirMin < MINVAL(DiffQTFData%Data4D%WvDir2) ) THEN
+            CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                   'found in the WAMIT data file '//TRIM(DiffQTFData%Filename)//' for the second wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
-         IF ( InitInp%WaveDirMax > MAXVAL(DiffQTFData%Data4D%WvDir2) ) THEN
-            CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+         IF ( InitInp%WaveField%WaveDirMax > MAXVAL(DiffQTFData%Data4D%WvDir2) ) THEN
+            CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                   'found in the WAMIT data file '//TRIM(DiffQTFData%Filename)//' for the second wave direction.', &
                     ErrStat, ErrMsg, RoutineName)
          ENDIF
@@ -2156,13 +2151,13 @@ END SUBROUTINE WAMIT2_Init
 
 
          ! Setup the arrays holding the DiffQTF terms, both the complex frequency domain and real time domain pieces
-      ALLOCATE( TmpDiffQTFForce( 0:InitInp%NStepWave), STAT=ErrStatTmp )
+      ALLOCATE( TmpDiffQTFForce( 0:InitInp%WaveField%NStepWave), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for one load component of the full difference '// &
                                              'QTF 2nd order force time series.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( TmpComplexArr( 0:InitInp%NStepWave2, 6), STAT=ErrStatTmp )
+      ALLOCATE( TmpComplexArr( 0:InitInp%WaveField%NStepWave2, 6), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for one load component of the full difference '// &
                                              'QTF 2nd order force in the frequency domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( DiffQTFForce( 0:InitInp%NStepWave, 6*p%NBody), STAT=ErrStatTmp )
+      ALLOCATE( DiffQTFForce( 0:InitInp%WaveField%NStepWave, 6*p%NBody), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the full difference '// &
                                              'QTF 2nd order force time series.',ErrStat, ErrMsg, RoutineName)
 
@@ -2178,7 +2173,7 @@ END SUBROUTINE WAMIT2_Init
 
 
          ! Initialize the FFT library.  Do not apply normalization.
-      CALL InitFFT ( InitInp%NStepWave, FFT_Data, .FALSE., ErrStatTmp )
+      CALL InitFFT ( InitInp%WaveField%NStepWave, FFT_Data, .FALSE., ErrStatTmp )
       CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          call cleanup()
@@ -2245,32 +2240,32 @@ END SUBROUTINE WAMIT2_Init
                TmpData4D = DiffQTFData%Data4D%DataSet(:,:,:,:,Idx)
 
                   ! Outer loop to create the TmpComplexArr
-               DO J=1,InitInp%NStepWave2-1
+               DO J=1,InitInp%WaveField%NStepWave2-1
 
                      ! Calculate the frequency  -- This is the difference frequency.
-                  OmegaDiff = J * InitInp%WaveDOmega
+                  OmegaDiff = J * InitInp%WaveField%WaveDOmega
 
 
                      ! Only perform calculations if the difference frequency is in the right range
-                  IF ( (OmegaDiff >= InitInp%WvLowCOffD) .AND. (OmegaDiff <= InitInp%WvHiCOffD) ) THEN
+                  IF ( (OmegaDiff >= InitInp%WaveField%WvLowCOffD) .AND. (OmegaDiff <= InitInp%WaveField%WvHiCOffD) ) THEN
 
                         ! Set the \f$ H^- \f$ term to zero before we start
                      TmpHMinusC = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
 
 
                        ! Do the sum over H^-
-                     DO K=1,InitInp%NStepWave2-J        ! note the funny upper limit.  This is because we are doing a summation on a triangular area.
+                     DO K=1,InitInp%WaveField%NStepWave2-J        ! note the funny upper limit.  This is because we are doing a summation on a triangular area.
 
                            ! set the two frequencies that the difference frequency comes from
-                        Omega1 = (J + K) * InitInp%WaveDOmega        ! the mth frequency -- \mu^- + n = m
-                        Omega2 = K * InitInp%WaveDOmega              ! the nth frequency
+                        Omega1 = (J + K) * InitInp%WaveField%WaveDOmega        ! the mth frequency -- \mu^- + n = m
+                        Omega2 = K * InitInp%WaveField%WaveDOmega              ! the nth frequency
 
                            ! Find the Wave amplitudes 1 and 2
-                        aWaveElevC1 = CMPLX( InitInp%WaveElevC0(1,J+K), InitInp%WaveElevC0(2,J+K), SiKi)  / InitInp%NStepWave2
-                        aWaveElevC2 = CMPLX( InitInp%WaveElevC0(1,K),   InitInp%WaveElevC0(2,K),   SiKi)  / InitInp%NStepWave2
+                        aWaveElevC1 = CMPLX( InitInp%WaveField%WaveElevC0(1,J+K), InitInp%WaveField%WaveElevC0(2,J+K), SiKi)  / InitInp%WaveField%NStepWave2
+                        aWaveElevC2 = CMPLX( InitInp%WaveField%WaveElevC0(1,K),   InitInp%WaveField%WaveElevC0(2,K),   SiKi)  / InitInp%WaveField%NStepWave2
 
                            ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
-                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega2,SiKi), InitInp%WaveDirArr(J+K), InitInp%WaveDirArr(K) /)
+                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega2,SiKi), InitInp%WaveField%WaveDirArr(J+K), InitInp%WaveField%WaveDirArr(K) /)
 
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
                         Coord4(3) = Coord4(3) - RotateZdegOffset
@@ -2296,10 +2291,10 @@ END SUBROUTINE WAMIT2_Init
                            !        of above is mathematically equivalent, but only because each frequency has only one wave
                            !        direction associated with it through the equal energy approach used in multidirectional waves.
 
-                           WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
-                           WaveNmbr2   = WaveNumber ( REAL(Omega2,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
-                           TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveDirArr(J+K)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveDirArr(J+K)*D2R) )
-                           TmpReal2    = WaveNmbr2 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveDirArr(K)*D2R)   + InitInp%PtfmRefyt(1)*sin(InitInp%WaveDirArr(K)*D2R)   )
+                           WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WaveField%EffWtrDpth )    ! SiKi returned
+                           WaveNmbr2   = WaveNumber ( REAL(Omega2,SiKi), InitInp%Gravity, InitInp%WaveField%EffWtrDpth )    ! SiKi returned
+                           TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveField%WaveDirArr(J+K)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveField%WaveDirArr(J+K)*D2R) )
+                           TmpReal2    = WaveNmbr2 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveField%WaveDirArr(K)*D2R)   + InitInp%PtfmRefyt(1)*sin(InitInp%WaveField%WaveDirArr(K)*D2R)   )
 
                            ! Set the phase shift for the set of difference frequencies
                            PhaseShiftXY = CMPLX( cos(TmpReal1 - TmpReal2), -sin(TmpReal1 - TmpReal2) )
@@ -2340,13 +2335,13 @@ END SUBROUTINE WAMIT2_Init
          RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
 
             ! Loop through all the frequencies
-         DO J=1,InitInp%NStepWave2
+         DO J=1,InitInp%WaveField%NStepWave2
 
                ! Apply the rotation to get back to global frame
             TmpComplexArr(J,1:2) = MATMUL(RotateZMatrixT, TmpComplexArr(J,1:2))
             TmpComplexArr(J,4:5) = MATMUL(RotateZMatrixT, TmpComplexArr(J,4:5))
 
-         ENDDO    ! J=1,InitInp%NStepWave2
+         ENDDO    ! J=1,InitInp%WaveField%NStepWave2
 
 
 
@@ -2369,13 +2364,13 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now we multiply the result by 2 and save it to the DiffQTFForce array and add the MnDrift term
                ! NOTE: phase shift and orientations on the MnDriftForce term have already been applied
-               ! NOTE: the "-1" since TmpDiffQTFForce(InitInp%NStepWave) is not set and DiffQTFForce(InitInp%NStepWave,Idx) gets overwritten
-            DO K=0,InitInp%NStepWave-1
+               ! NOTE: the "-1" since TmpDiffQTFForce(InitInp%WaveField%NStepWave) is not set and DiffQTFForce(InitInp%WaveField%NStepWave,Idx) gets overwritten
+            DO K=0,InitInp%WaveField%NStepWave-1
                DiffQTFForce(K,Idx) = 2.0_SiKi * TmpDiffQTFForce(K) + MnDriftForce(Idx)
             ENDDO
 
                ! Copy the last first term to the first so that it is cyclic
-            DiffQTFForce(InitInp%NStepWave,Idx) = DiffQTFForce(0,Idx)
+            DiffQTFForce(InitInp%WaveField%NStepWave,Idx) = DiffQTFForce(0,Idx)
 
          ENDDO ! ThisDim -- The current dimension
       ENDDO    ! IBody -- This WAMIT body
@@ -2534,13 +2529,13 @@ END SUBROUTINE WAMIT2_Init
       IF ( SumQTFData%DataIs4D ) THEN   ! We must have a 4D data set
 
              ! Check the low frequency cutoff
-         IF ( MINVAL( SumQTFData%Data4D%WvFreq1 ) > InitInp%WvLowCOffS ) THEN
+         IF ( MINVAL( SumQTFData%Data4D%WvFreq1 ) > InitInp%WaveField%WvLowCOffS ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(SumQTFData%Data4D%WvFreq1)))// &
                            ' rad/s first wave period) data in '//TRIM(SumQTFData%Filename)// &
                            ' is above the low frequency cutoff set by WvLowCOffS.', &
                            ErrStat,ErrMsg,RoutineName)
          ENDIF
-         IF ( MINVAL( SumQTFData%Data4D%WvFreq2 ) > InitInp%WvLowCOffS ) THEN
+         IF ( MINVAL( SumQTFData%Data4D%WvFreq2 ) > InitInp%WaveField%WvLowCOffS ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(SumQTFData%Data4D%WvFreq2)))// &
                            ' rad/s for second wave period) data in '//TRIM(SumQTFData%Filename)// &
                            ' is above the low frequency cutoff set by WvLowCOffS.', &
@@ -2549,13 +2544,13 @@ END SUBROUTINE WAMIT2_Init
 
             ! Check the high frequency cutoff -- using the Difference high frequency cutoff.  The first order high frequency
             ! cutoff is typically too high for this in most cases.
-         IF ( MAXVAL(SumQTFData%Data4D%WvFreq1) < InitInp%WvHiCOffS ) THEN
+         IF ( MAXVAL(SumQTFData%Data4D%WvFreq1) < InitInp%WaveField%WvHiCOffS ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(SumQTFData%Data4D%WvFreq1)))// &
                            ' rad/s for first wave period) data in '//TRIM(SumQTFData%Filename)// &
                            ' is below the high frequency cutoff set by WvHiCOffS.', &
                            ErrStat,ErrMsg,RoutineName)
          ENDIF
-         IF ( MAXVAL(SumQTFData%Data4D%WvFreq2) < InitInp%WvHiCOffS ) THEN
+         IF ( MAXVAL(SumQTFData%Data4D%WvFreq2) < InitInp%WaveField%WvHiCOffS ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(SumQTFData%Data4D%WvFreq1)))// &
                            ' rad/s second wave period) data in '//TRIM(SumQTFData%Filename)// &
                            ' is below the high frequency cutoff set by WvHiCOffS.', &
@@ -2573,12 +2568,12 @@ END SUBROUTINE WAMIT2_Init
 
 
          ! If we are using multidirectional waves, then we should have more than 1 wave direction in the WAMIT file.
-      IF ( InitInp%WaveMultiDir .AND. (SumQTFData%Data4D%NumWvDir1 == 1) ) THEN
+      IF ( InitInp%WaveField%WaveMultiDir .AND. (SumQTFData%Data4D%NumWvDir1 == 1) ) THEN
          CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(SumQTFData%Filename)//' only contains one wave '// &
                      'direction at '//TRIM(Num2LStr(SumQTFData%Data4D%WvDir1(1)))//' degrees (first wave direction). '// &
                      'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                      ErrStat,ErrMsg,RoutineName)
-      ELSE IF ( InitInp%WaveMultiDir .AND. (SumQTFData%Data4D%NumWvDir2 == 1) ) THEN
+      ELSE IF ( InitInp%WaveField%WaveMultiDir .AND. (SumQTFData%Data4D%NumWvDir2 == 1) ) THEN
          CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(SumQTFData%Filename)//' only contains one wave '// &
                      'direction at '//TRIM(Num2LStr(SumQTFData%Data4D%WvDir2(1)))//' degrees (second wave direction). '// &
                      'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
@@ -2589,7 +2584,7 @@ END SUBROUTINE WAMIT2_Init
             ! now (since time is limited) we will issue a warning if any of the wave directions for multidirectional waves
             ! or data from the WAMIT file for the wavedirections is close to the +/-pi boundary (>150 degrees, <-150 degrees),
             ! we will issue a warning.
-         IF ( (InitInp%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveDirMax < -150.0_SiKi) .OR. &
+         IF ( (InitInp%WaveField%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveField%WaveDirMax < -150.0_SiKi) .OR. &
               (MINVAL(SumQTFData%Data4D%WvDir1) > 150.0_SiKi) .OR.  (MAXVAL(SumQTFData%Data4D%WvDir1) < -150.0_SiKi) .OR. &
               (MINVAL(SumQTFData%Data4D%WvDir2) > 150.0_SiKi) .OR.  (MAXVAL(SumQTFData%Data4D%WvDir2) < -150.0_SiKi) ) THEN
             CALL SetErrStat( ErrID_Warn,' There may be issues with how the wave direction data is handled when the wave '// &
@@ -2600,13 +2595,13 @@ END SUBROUTINE WAMIT2_Init
             ! Now check the limits for the first wave direction
             !  --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
             !  --> FIXME: modify to allow shifting values by TwoPi before comparing
-         IF ( InitInp%WaveDirMin < MINVAL(SumQTFData%Data4D%WvDir1) ) THEN
-            CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+         IF ( InitInp%WaveField%WaveDirMin < MINVAL(SumQTFData%Data4D%WvDir1) ) THEN
+            CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                   'found in the WAMIT data file '//TRIM(SumQTFData%Filename)//' for the first wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
-         IF ( InitInp%WaveDirMax > MAXVAL(SumQTFData%Data4D%WvDir1) ) THEN
-            CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+         IF ( InitInp%WaveField%WaveDirMax > MAXVAL(SumQTFData%Data4D%WvDir1) ) THEN
+            CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                   'found in the WAMIT data file '//TRIM(SumQTFData%Filename)//' for the first wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
@@ -2614,13 +2609,13 @@ END SUBROUTINE WAMIT2_Init
 
             ! Now check the limits for the second wave direction
             !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-         IF ( InitInp%WaveDirMin < MINVAL(SumQTFData%Data4D%WvDir2) ) THEN
-            CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+         IF ( InitInp%WaveField%WaveDirMin < MINVAL(SumQTFData%Data4D%WvDir2) ) THEN
+            CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                   'found in the WAMIT data file '//TRIM(SumQTFData%Filename)//' for the second wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
-         IF ( InitInp%WaveDirMax > MAXVAL(SumQTFData%Data4D%WvDir2) ) THEN
-            CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+         IF ( InitInp%WaveField%WaveDirMax > MAXVAL(SumQTFData%Data4D%WvDir2) ) THEN
+            CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                   'found in the WAMIT data file '//TRIM(SumQTFData%Filename)//' for the second wave direction.', &
                     ErrStat, ErrMsg, RoutineName)
          ENDIF
@@ -2662,19 +2657,19 @@ END SUBROUTINE WAMIT2_Init
 
 
          ! Setup the arrays holding the SumQTF terms, both the complex frequency domain and real time domain pieces
-      ALLOCATE( Term1ArrayC( 0:InitInp%NStepWave2, 6), STAT=ErrStatTmp )
+      ALLOCATE( Term1ArrayC( 0:InitInp%WaveField%NStepWave2, 6), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the first term of one load component of the full sum '// &
                                              'QTF 2nd order force in the frequency domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( Term2ArrayC( 0:InitInp%NStepWave2, 6), STAT=ErrStatTmp )
+      ALLOCATE( Term2ArrayC( 0:InitInp%WaveField%NStepWave2, 6), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the second term of one load component of the full sum '// &
                                              'QTF 2nd order force in the frequency domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( Term1Array( 0:InitInp%NStepWave), STAT=ErrStatTmp )
+      ALLOCATE( Term1Array( 0:InitInp%WaveField%NStepWave), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the first term of one load component of the full sum '// &
                                              'QTF 2nd order force in the time domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( Term2Array( 0:InitInp%NStepWave), STAT=ErrStatTmp )
+      ALLOCATE( Term2Array( 0:InitInp%WaveField%NStepWave), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the second term of one load component of the full sum '// &
                                              'QTF 2nd order force in the time domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( SumQTFForce( 0:InitInp%NStepWave, 6*p%NBody), STAT=ErrStatTmp )
+      ALLOCATE( SumQTFForce( 0:InitInp%WaveField%NStepWave, 6*p%NBody), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the full difference '// &
                                              'QTF 2nd order force time series.',ErrStat, ErrMsg, RoutineName)
 
@@ -2694,7 +2689,7 @@ END SUBROUTINE WAMIT2_Init
 
 
          ! Initialize the FFT library.  Normalization not required in this formulation.
-      CALL InitFFT ( InitInp%NStepWave, FFT_Data, .FALSE., ErrStatTmp )        ! FIXME:
+      CALL InitFFT ( InitInp%WaveField%NStepWave, FFT_Data, .FALSE., ErrStatTmp )        ! FIXME:
       CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
@@ -2749,21 +2744,21 @@ END SUBROUTINE WAMIT2_Init
                   ! The limits look a little funny.  But remember we are placing the value in the 2*J location,
                   ! so we cannot overun the end of the array, and the highest frequency must be zero.  The
                   ! floor function is just in case (NStepWave2 - 1) is an odd number
-               DO J=1,FLOOR(REAL(InitInp%NStepWave2-1)/2.0_SiKi)
+               DO J=1,FLOOR(REAL(InitInp%WaveField%NStepWave2-1)/2.0_SiKi)
 
                      ! The frequency
-                  Omega1   = REAL(J,ReKi) * InitInp%WaveDOmega
+                  Omega1   = REAL(J,ReKi) * InitInp%WaveField%WaveDOmega
                   OmegaSum = 2.0_SiKi * Omega1           ! the sum frequency
 
                      ! Only perform calculations if the difference frequency is in the right range
-                  IF ( (OmegaSum >= InitInp%WvLowCOffS) .AND. (OmegaSum <= InitInp%WvHiCOffS) ) THEN
+                  IF ( (OmegaSum >= InitInp%WaveField%WvLowCOffS) .AND. (OmegaSum <= InitInp%WaveField%WvHiCOffS) ) THEN
 
 
                         ! Find the wave amplitude at frequency omega
-                     aWaveElevC1 = CMPLX( InitInp%WaveElevC0(1,J), InitInp%WaveElevC0(2,J), SiKi )  / InitInp%NStepWave2
+                     aWaveElevC1 = CMPLX( InitInp%WaveField%WaveElevC0(1,J), InitInp%WaveField%WaveElevC0(2,J), SiKi )  / InitInp%WaveField%NStepWave2
 
                         ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
-                     Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
+                     Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveField%WaveDirArr(J), InitInp%WaveField%WaveDirArr(J) /)
 
                         ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
                      Coord4(3) = Coord4(3) - RotateZdegOffset
@@ -2790,8 +2785,8 @@ END SUBROUTINE WAMIT2_Init
                         !        of above is mathematically equivalent, but only because each frequency has only one wave
                         !        direction associated with it through the equal energy approach used in multidirectional waves.
 
-                        WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
-                        TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveDirArr(J)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveDirArr(J)*D2R) )
+                        WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WaveField%EffWtrDpth )    ! SiKi returned
+                        TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveField%WaveDirArr(J)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveField%WaveDirArr(J)*D2R) )
 
                         ! Set the phase shift for the set of sum frequencies
                         PhaseShiftXY = CMPLX( cos(TmpReal1 + TmpReal1), -sin(TmpReal1 + TmpReal1) )
@@ -2832,11 +2827,11 @@ END SUBROUTINE WAMIT2_Init
                   ! so, we don't need a really small WaveDT
 
          !This section has been removed since it is kind of annoying.
-         !      IF ( InitInp%WvHiCOffS > InitInp%NStepWave2*InitInp%WaveDOmega ) THEN
+         !      IF ( InitInp%WvHiCOffS > InitInp%WaveField%NStepWave2*InitInp%WaveField%WaveDOmega ) THEN
          !         CALL SetErrStat( ErrID_Warn,' The high frequency cutoff for second order wave forces, WvHiCOffS, '// &
          !                  'is larger than the Nyquist frequency for the given time step of WaveDT. The Nyquist frequency '// &
          !                  '(highest frequency) that can be computed is OmegaMax = PI/WaveDT = '// &
-         !                  TRIM(Num2LStr(InitInp%NStepWave2*InitInp%WaveDOmega))// &
+         !                  TRIM(Num2LStr(InitInp%WaveField%NStepWave2*InitInp%WaveField%WaveDOmega))// &
          !                  ' radians/second.  If you need those frequencies, decrease WaveDT.  For reference, 2*PI '// &
          !                  'radians/second corresponds to a wavelength of ~1 meter.',&
          !                  ErrStat,ErrMsg,RoutineName)
@@ -2845,10 +2840,10 @@ END SUBROUTINE WAMIT2_Init
 
 
                   ! Outer loop to create the Term2ArrayC. This is stepwise through the sum frequencies.
-               DO J=1,InitInp%NStepWave2
+               DO J=1,InitInp%WaveField%NStepWave2
 
                      ! Calculate the frequency  -- This is the sum frequency.
-                  OmegaSum = J * InitInp%WaveDOmega
+                  OmegaSum = J * InitInp%WaveField%WaveDOmega
 
 
 
@@ -2857,7 +2852,7 @@ END SUBROUTINE WAMIT2_Init
 
 
                      ! Only perform calculations if the difference frequency is in the right range
-                  IF ( (OmegaSum >= InitInp%WvLowCOffS) .AND. (OmegaSum <= InitInp%WvHiCOffS) ) THEN
+                  IF ( (OmegaSum >= InitInp%WaveField%WvLowCOffS) .AND. (OmegaSum <= InitInp%WaveField%WvHiCOffS) ) THEN
 
                      !> Now do the inner sum.  We are going to perform a sum up to the maximum frequency that we
                      !! can support (Nyquist frequency) for the given WaveDOmega and NStepWave2 (WaveOmegaMax =
@@ -2869,15 +2864,15 @@ END SUBROUTINE WAMIT2_Init
                      DO K=0,FLOOR(Real(J-1)/2.0_SiKi)
 
                            ! Calculate the frequency pair
-                        Omega1 =    K  * InitInp%WaveDOmega
-                        Omega2 = (J-K) * InitInp%WaveDOmega
+                        Omega1 =    K  * InitInp%WaveField%WaveDOmega
+                        Omega2 = (J-K) * InitInp%WaveField%WaveDOmega
 
                            ! Find the wave amplitude at frequency omega.  Remove the NStepWave2 normalization built into WaveElevC0 from Waves module
-                        aWaveElevC1 = CMPLX( InitInp%WaveElevC0(1,  K), InitInp%WaveElevC0(2,  K), SiKi )    / InitInp%NStepWave2
-                        aWaveElevC2 = CMPLX( InitInp%WaveElevC0(1,J-K), InitInp%WaveElevC0(2,J-K), SiKi )    / InitInp%NStepWave2
+                        aWaveElevC1 = CMPLX( InitInp%WaveField%WaveElevC0(1,  K), InitInp%WaveField%WaveElevC0(2,  K), SiKi )    / InitInp%WaveField%NStepWave2
+                        aWaveElevC2 = CMPLX( InitInp%WaveField%WaveElevC0(1,J-K), InitInp%WaveField%WaveElevC0(2,J-K), SiKi )    / InitInp%WaveField%NStepWave2
 
                            ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
-                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega2,SiKi), InitInp%WaveDirArr(K), InitInp%WaveDirArr(J-K) /)
+                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega2,SiKi), InitInp%WaveField%WaveDirArr(K), InitInp%WaveField%WaveDirArr(J-K) /)
 
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
                         Coord4(3) = Coord4(3) - RotateZdegOffset
@@ -2903,10 +2898,10 @@ END SUBROUTINE WAMIT2_Init
                            !        of above is mathematically equivalent, but only because each frequency has only one wave
                            !        direction associated with it through the equal energy approach used in multidirectional waves.
 
-                           WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
-                           WaveNmbr2   = WaveNumber ( REAL(Omega2,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
-                           TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveDirArr(K)*D2R)   + InitInp%PtfmRefyt(1)*sin(InitInp%WaveDirArr(K)*D2R)   )
-                           TmpReal2    = WaveNmbr2 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveDirArr(J-K)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveDirArr(J-K)*D2R) )
+                           WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WaveField%EffWtrDpth )    ! SiKi returned
+                           WaveNmbr2   = WaveNumber ( REAL(Omega2,SiKi), InitInp%Gravity, InitInp%WaveField%EffWtrDpth )    ! SiKi returned
+                           TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveField%WaveDirArr(K)*D2R)   + InitInp%PtfmRefyt(1)*sin(InitInp%WaveField%WaveDirArr(K)*D2R)   )
+                           TmpReal2    = WaveNmbr2 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveField%WaveDirArr(J-K)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveField%WaveDirArr(J-K)*D2R) )
 
                            ! Set the phase shift for the set of sum frequencies
                            PhaseShiftXY = CMPLX( cos(TmpReal1 + TmpReal2), -sin(TmpReal1 + TmpReal2) )
@@ -2940,7 +2935,7 @@ END SUBROUTINE WAMIT2_Init
          RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
 
             ! Loop through all the frequencies
-         DO J=1,InitInp%NStepWave2
+         DO J=1,InitInp%WaveField%NStepWave2
 
                ! Apply the rotation to get back to global frame -- term 1
             Term1ArrayC(J,1:2) = MATMUL(RotateZMatrixT, Term1ArrayC(J,1:2))
@@ -2950,7 +2945,7 @@ END SUBROUTINE WAMIT2_Init
             Term2ArrayC(J,1:2) = MATMUL(RotateZMatrixT, Term2ArrayC(J,1:2))
             Term2ArrayC(J,4:5) = MATMUL(RotateZMatrixT, Term2ArrayC(J,4:5))
 
-         ENDDO    ! J=1,InitInp%NStepWave2
+         ENDDO    ! J=1,InitInp%WaveField%NStepWave2
 
 
 
@@ -2980,12 +2975,12 @@ END SUBROUTINE WAMIT2_Init
             ENDIF
 
                ! Now we add the two terms together.  The 0.5 multiplier on is because the double sided FFT was used.
-            DO J=0,InitInp%NStepWave-1  !bjj: Term1Array and Term2Array don't set the last element, so we can get over-flow errors here. SumQTFForce(InitInp%NStepWave,Idx) gets overwritten later, so Idx'm setting the array bounds to be -1.
+            DO J=0,InitInp%WaveField%NStepWave-1  !bjj: Term1Array and Term2Array don't set the last element, so we can get overflow errors here. SumQTFForce(InitInp%WaveField%NStepWave,Idx) gets overwritten later, so I'm setting the array bounds to be InitInp%WaveField%NStepWave-1.
                SumQTFForce(J,Idx) = 0.5_SiKi*(REAL(Term1Array(J) + 2*Term2Array(J), SiKi))
             ENDDO
 
                ! Copy the last first term to the first so that it is cyclic
-            SumQTFForce(InitInp%NStepWave,Idx) = SumQTFForce(0,Idx)
+            SumQTFForce(InitInp%WaveField%NStepWave,Idx) = SumQTFForce(0,Idx)
 
 
          ENDDO ! ThisDim -- current dimension
@@ -3196,39 +3191,6 @@ END SUBROUTINE WAMIT2_Init
       END IF
       IF ( ErrStat >= AbortErrLev ) RETURN
 
-
-         !--------------------------------------------------------------------------------
-         !> ### Check the Min and Max frequencies for the full QTF cases
-         !!
-         !!  -- these checks are performed based on the DiffQTFF and SumQTFF flags
-         !--------------------------------------------------------------------------------
-
-
-         !> 1. Check that the min / max diff frequencies make sense if using DiffQTF
-
-      IF ( InitInp%DiffQTFF .eqv. .TRUE. ) THEN
-         IF ( ( InitInp%WvHiCOffD < InitInp%WvLowCOffD ) .OR. ( InitInp%WvLowCOffD < 0.0 ) ) THEN
-            CALL SetErrStat( ErrID_Fatal, ' Programming Error in call to WAMIT2_Init: '//NewLine// &
-                  '           WvHiCOffD must be larger than WvLowCOffD. Both must be positive.'// &
-                  '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, RoutineName)
-            RETURN
-         END IF
-      END IF
-
-
-         !> 2. Check that the min / max diff frequencies make sense if using SumQTF
-
-      IF ( InitInp%SumQTFF .eqv. .TRUE. ) THEN
-         IF ( ( InitInp%WvHiCOffS < InitInp%WvLowCOffS ) .OR. ( InitInp%WvLowCOffS < 0.0 ) ) THEN
-            CALL SetErrStat( ErrID_Fatal, ' Programming Error in call to WAMIT2_Init: '//NewLine// &
-                  '           WvHiCOffS must be larger than WvLowCOffS. Both must be positive.'// &
-                  '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, RoutineName)
-            RETURN
-         END IF
-      END IF
-
-
-
          !--------------------------------------------------------------------------------
          !> ### Assemble the names of the WAMIT data files we are using and verify existence
          !--------------------------------------------------------------------------------
@@ -3319,11 +3281,11 @@ END SUBROUTINE WAMIT2_Init
 
          !> 1. Check that WaveElevC0 is a 2x(NStepWave2+1) sized array (0 index start)
 
-      IF ( SIZE( InitInp%WaveElevC0, 2 ) /= (InitInp%NStepWave2 + 1) ) THEN    ! Expect a 2x(0:NStepWave2) array
+      IF ( SIZE( InitInp%WaveField%WaveElevC0, 2 ) /= (InitInp%WaveField%NStepWave2 + 1) ) THEN    ! Expect a 2x(0:NStepWave2) array
          CALL SetErrStat( ErrID_Fatal, ' Programming error in call to WAMIT2_Init:'//NewLine// &
-                     '        --> Expected array for WaveElevC0 to be of size 2x'//TRIM(Num2LStr(InitInp%NStepWave2 + 1))// &
+                     '        --> Expected array for WaveElevC0 to be of size 2x'//TRIM(Num2LStr(InitInp%WaveField%NStepWave2 + 1))// &
                      ' (2x(NStepWave2+1)), but instead received array of size '// &
-                     TRIM(Num2LStr(SIZE(InitInp%WaveElevC0,1)))//'x'//TRIM(Num2LStr(SIZE(InitInp%WaveElevC0,2)))//'.', ErrStat, ErrMsg, RoutineName)
+                     TRIM(Num2LStr(SIZE(InitInp%WaveField%WaveElevC0,1)))//'x'//TRIM(Num2LStr(SIZE(InitInp%WaveField%WaveElevC0,2)))//'.', ErrStat, ErrMsg, RoutineName)
          RETURN
       END IF
 
@@ -3333,13 +3295,9 @@ END SUBROUTINE WAMIT2_Init
       !--------------------------------------------------------------------------------
       !> ### Now copy over things to parameters...
       !--------------------------------------------------------------------------------
-      !> 1. Wave information we need to keep
-      !--------------------------------------------------------------------------------
-      p%NStepWave = InitInp%NStepWave
-
 
       !--------------------------------------------------------------------------------
-      !> 3. WAMIT body related information
+      !> WAMIT body related information
       !--------------------------------------------------------------------------------
 
       p%NBody                 =  InitInp%NBody              ! Number of bodies WAMIT2 sees
@@ -3456,7 +3414,7 @@ END SUBROUTINE WAMIT2_Init
       !--------------------------------------------------------------------------------
 
          ! Allocate array for the WaveExtcn2.
-      ALLOCATE( p%WaveExctn2(0:InitInp%NStepWave,6*p%NBody), STAT=ErrStatTmp)
+      ALLOCATE( p%WaveExctn2(0:InitInp%WaveField%NStepWave,6*p%NBody), STAT=ErrStatTmp)
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveExctn2 to store '// &
                               'the 2nd order force data.',  ErrStat,ErrMsg,'CheckInitInp')
       IF (ErrStat >= AbortErrLev ) RETURN
@@ -3996,9 +3954,9 @@ END SUBROUTINE WAMIT2_Init
 
          IF ( Data3D%DataMask( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4) ) ) THEN
             IF ( .NOT. EqualRealNos(REAL(Data3D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4) ),SiKi), &
-                                    REAL(InitInp%RhoXg * InitInp%WAMITULEN**K * RawData3D(I,7)               ,SiKi)) .AND. &
+                                REAL(InitInp%WaveField%RhoXg * InitInp%WAMITULEN**K * RawData3D(I,7)               ,SiKi)) .AND. &
                  .NOT. EqualRealNos( AIMAG(Data3D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4) ) ), &
-                                    REAL(InitInp%RhoXg * InitInp%WAMITULEN**K * RawData3D(I,8)               ,SiKi)) ) THEN
+                                REAL(InitInp%WaveField%RhoXg * InitInp%WAMITULEN**K * RawData3D(I,8)               ,SiKi)) ) THEN
                CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Num2Lstr(NumHeaderLines+I))//' of '//TRIM(Filename3D)// &
                         ' contains different values for the real and imaginary part (columns 7 and 8) than was '// &
                         'given earlier in the file for the same values of wave frequency and wave direction '// &
@@ -4011,7 +3969,7 @@ END SUBROUTINE WAMIT2_Init
 
                ! Store the data after dimensionalizing
             Data3D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4) ) = &
-                      REAL(InitInp%RhoXg * InitInp%WAMITULEN**K,SiKi) * CMPLX(RawData3D(I,7),RawData3D(I,8),SiKi)
+                      REAL(InitInp%WaveField%RhoXg * InitInp%WAMITULEN**K,SiKi) * CMPLX(RawData3D(I,7),RawData3D(I,8),SiKi)
 
                ! Set flag indicating that this value has been inserted.
             Data3D%DataMask( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4) ) = .TRUE.
@@ -4760,9 +4718,9 @@ END SUBROUTINE WAMIT2_Init
 
          IF ( Data4D%DataMask( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) ) ) THEN
             IF ( .NOT. EqualRealNos( REAL(Data4D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) ),SiKi), &
-                                     REAL(InitInp%RhoXg * InitInp%WAMITULEN**K * RawData4D(I,8)                            ,SiKi)) .AND. &
+                                     REAL(InitInp%WaveField%RhoXg * InitInp%WAMITULEN**K * RawData4D(I,8)                            ,SiKi)) .AND. &
                  .NOT. EqualRealNos(AIMAG(Data4D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) )), &
-                                     REAL(InitInp%RhoXg * InitInp%WAMITULEN**K * RawData4D(I,9)                            ,SiKi))) THEN
+                                     REAL(InitInp%WaveField%RhoXg * InitInp%WAMITULEN**K * RawData4D(I,9)                            ,SiKi))) THEN
                CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Num2Lstr(NumHeaderLines+I))//' of '//TRIM(Filename4D)// &
                         ' contains different values for the real and imaginary part (columns 8 and 9) than was '// &
                         'given earlier in the file for the same values of wave frequency and wave direction '// &
@@ -4775,7 +4733,7 @@ END SUBROUTINE WAMIT2_Init
 
                ! Store the data after dimensionalizing
             Data4D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) ) = &
-                      REAL(InitInp%RhoXg * InitInp%WAMITULEN**K,SiKi) * CMPLX(RawData4D(I,8),RawData4D(I,9),SiKi)
+                      REAL(InitInp%WaveField%RhoXg * InitInp%WAMITULEN**K,SiKi) * CMPLX(RawData4D(I,8),RawData4D(I,9),SiKi)
 
                ! Set flag indicating that this value has been inserted.
             Data4D%DataMask( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) ) = .TRUE.
@@ -5397,11 +5355,11 @@ END SUBROUTINE WAMIT2_Init
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
-SUBROUTINE WAMIT2_CalcOutput( Time, WaveTime, p, y, m, ErrStat, ErrMsg )
+SUBROUTINE WAMIT2_CalcOutput( Time, WaveField, p, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       REAL(DbKi),                         INTENT(IN   )  :: Time           !< Current simulation time in seconds
-      real(SiKi),                         intent(in   )  :: WaveTime(:)    !< Array of wave kinematic time samples, (sec)
+      TYPE(SeaSt_WaveFieldType),          INTENT(IN   )  :: WaveField      !< Wave data
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p              !< Parameters
       TYPE(WAMIT2_OutputType),            INTENT(INOUT)  :: y              !< Outputs computed at Time (Input only so that mesh
                                                                            !!   connectivity information does not have to be recalculated)
@@ -5423,26 +5381,15 @@ SUBROUTINE WAMIT2_CalcOutput( Time, WaveTime, p, y, m, ErrStat, ErrMsg )
       ErrMsg  = ""
 
 
-
-
-         ! Abort if the wave excitation loads have not been computed yet:
-
-      IF ( .NOT. ALLOCATED ( p%WaveExctn2 ) )  THEN
-         CALL SetErrStat(ErrID_Fatal,' Routine WAMIT2_Init() must be called before routine WAMIT2_CalcOutput().',ErrStat,ErrMsg,'WAMIT2_CalcOutput')
-         RETURN
-      END IF
-
-
          ! Compute the 2nd order load contribution from incident waves:
 
       do iBody = 1, p%NBody
          indxStart = (iBody-1)*6
 
          DO I = 1,6     ! Loop through all wave excitation forces and moments
-            m%F_Waves2(indxStart+I) = InterpWrappedStpReal ( REAL(Time, SiKi), WaveTime(:), p%WaveExctn2(:,indxStart+I), &
-                                                  m%LastIndWave(IBody), p%NStepWave + 1       )
+            m%F_Waves2(indxStart+I) = InterpWrappedStpReal ( REAL(Time, SiKi), WaveField%WaveTime, p%WaveExctn2(:,indxStart+I), &
+                                                  m%LastIndWave(IBody), WaveField%NStepWave + 1       )
          END DO          ! I - All wave excitation forces and moments
-
 
 
          ! Copy results to the output point mesh

@@ -1256,34 +1256,32 @@ contains
       ! In distance, X: InputInfo%PosX - p%InitXPosition - TIME*p%MeanWS
       TimeShifted = real(Time, ReKi) + (G3D%InitXPosition - PosX)*G3D%InvMWS
 
+      ! Get position on T grid
+      T_GRID = TimeShifted*G3D%Rate
+
       ! If field is periodic
       if (G3D%Periodic) then
-         TimeShifted = MODULO(TimeShifted, G3D%TotalTime)
-         ! If TimeShifted is a very small negative number,
-         ! modulo returns the incorrect value due to internal rounding errors.
-         ! See bug report #471
-         if (TimeShifted == G3D%TotalTime) TimeShifted = 0.0_ReKi
+         ! Take modulus of negative grid to get positive value between 0 and NSteps
+         T_GRID = MODULO(T_GRID, real(G3D%NSteps, ReKi))
+         ! For very small negative numbers, the above modulus will return exactly NSteps
+         ! so take modulus again to ensure that T_GRID is less than NSteps
+         T_GRID = MODULO(T_GRID, real(G3D%NSteps, ReKi))
       end if
-
-      ! Get position on T grid
-      T_GRID = TimeShifted*G3D%Rate + 1
-
+      
       ! Calculate bounding grid indices
-      IT_LO = floor(T_GRID, IntKi)
-      IT_HI = ceiling(T_GRID, IntKi)
+      IT_LO = floor(T_GRID, IntKi) + 1
+      IT_HI = IT_LO + 1
 
       ! Position location within interval [0,1]
-      DT = T_GRID - aint(T_GRID)
+      DT = 2.0_ReKi*(T_GRID - aint(T_GRID)) - 1.0_ReKi
 
       ! Adjust indices and interpolant
       if (IT_LO >= 1 .and. IT_HI <= G3D%NSteps) then
          ! Point is within grid
-         DT = 2.0_ReKi*DT - 1.0_ReKi
       else if (IT_LO == G3D%NSteps) then
          if (G3D%Periodic) then
             ! Time wraps back to beginning
             IT_HI = 1
-            DT = 2.0_ReKi*DT - 1.0_ReKi
          else if (DT <= GridTol) then
             ! Within tolerance of last time
             IT_HI = IT_LO
@@ -1292,13 +1290,13 @@ contains
             ! Extrapolate
             IT_LO = G3D%NSteps - 1
             IT_HI = G3D%NSteps
-            DT = DT + 1.0_ReKi
          end if
       else
          ! Time exceeds array bounds
          call SetErrStat(ErrID_Fatal, ' Error: GF wind array was exhausted at '// &
                          TRIM(Num2LStr(TIME))//' seconds (trying to access data at '// &
-                         TRIM(Num2LStr(TimeShifted))//' seconds).', &
+                         TRIM(Num2LStr(TimeShifted))//' seconds). IT_Lo='//TRIM(Num2LStr(IT_Lo))// &
+                         ', IT_HI='//TRIM(Num2LStr(IT_Hi)), &
                          ErrStat, ErrMsg, RoutineName)
       end if
 
@@ -1553,6 +1551,7 @@ subroutine IfW_Grid3DField_CalcVelAvgProfile(G3D, CalcAccel, ErrStat, ErrMsg)
    character(*), parameter    :: RoutineName = 'IfW_Grid3DField_CalcVelAvgProfile'
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
+   integer(IntKi)             :: it, iz, ic
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -1567,7 +1566,13 @@ subroutine IfW_Grid3DField_CalcVelAvgProfile(G3D, CalcAccel, ErrStat, ErrMsg)
    end if
 
    ! Calculate average velocity for each component across grid (Y)
-   G3D%VelAvg = sum(G3D%Vel, dim=2)/G3D%NYGrids
+   do it = 1, G3D%NSteps
+      do iz = 1, G3D%NZGrids
+         do ic = 1, G3D%NComp
+            G3D%VelAvg(ic,iz,it) = sum(G3D%Vel(ic,:,iz,it))/real(G3D%NYGrids, SiKi)
+         end do
+      end do
+   end do
 
    ! If acceleration calculation not requested, return
    if (.not. CalcAccel) return
@@ -1580,9 +1585,15 @@ subroutine IfW_Grid3DField_CalcVelAvgProfile(G3D, CalcAccel, ErrStat, ErrMsg)
       if (ErrStat >= AbortErrLev) return
       G3D%AccAvg = 0.0_SiKi
    end if
-
+   
    ! Calculate average acceleration for each component across grid (Y)
-   G3D%AccAvg = sum(G3D%Acc, dim=2)/G3D%NYGrids
+   do it = 1, G3D%NSteps
+      do iz = 1, G3D%NZGrids
+         do ic = 1, G3D%NComp
+            G3D%AccAvg(ic,iz,it) = sum(G3D%Acc(ic,:,iz,it))/real(G3D%NYGrids, SiKi)
+         end do
+      end do
+   end do
 
 end subroutine
 
@@ -1613,7 +1624,7 @@ subroutine Grid4DField_GetVel(G4D, Time, Position, Velocity, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    do i = 1, 3
-      tmp = (Position(i) - G4D%pZero(i))/G4D%delta(i)
+      tmp = (Position(i) - G4D%pZero(i))/real(G4D%delta(i),Reki)
       Indx_Lo(i) = INT(tmp) + 1                          ! convert REAL to INTEGER, then add one since our grid indices start at 1, not 0
       xi(i) = 2.0_ReKi*(tmp - aint(tmp)) - 1.0_ReKi   ! convert to value between -1 and 1
    end do

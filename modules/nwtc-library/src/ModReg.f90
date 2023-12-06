@@ -5,7 +5,7 @@ module ModReg
 
    private
    public :: PackBuffer
-   public :: WritePackBuffer, ReadPackBuffer, InitPackBuffer, RegCheckErr
+   public :: WritePackBuffer, ReadPackBuffer, InitPackBuffer, DestroyPackBuffer, RegCheckErr
    public :: RegPack, RegPackBounds, RegPackPointer
    public :: RegUnpack, RegUnpackBounds, RegUnpackPointer
 
@@ -83,6 +83,25 @@ contains
          end if
       end if
 
+   end subroutine
+
+   subroutine DestroyPackBuffer(Buf, ErrStat, ErrMsg)
+      type(PackBuffer), intent(inout)   :: Buf
+      integer(IntKi), intent(out)       :: ErrStat
+      character(ErrMsgLen), intent(out) :: ErrMsg
+
+      character(*), parameter           :: RoutineName = "DestroyPackBuffer"
+
+      ErrStat = ErrID_None
+      ErrMsg = ""
+
+      Buf%ErrStat = ErrID_None
+      Buf%ErrMsg = ""
+      Buf%NP = 0
+      Buf%NB = 0
+      
+      if (allocated(Buf%Pointers)) deallocate (Buf%Pointers)
+      if (allocated(Buf%Bytes   )) deallocate (Buf%Bytes)
    end subroutine
 
    subroutine WritePackBuffer(Buf, Unit, ErrStat, ErrMsg)

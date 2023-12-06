@@ -49,7 +49,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AddCLin      !< Additional stiffness matrix [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AddBLin      !< Additional linear damping matrix [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AddBQuad      !< Additional quadratic damping (drag) matrix [-]
-    TYPE(SeaSt_InitInputType)  :: SeaState      !< Initialization data for SeaState module [-]
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: PotFile      !< The name of the root potential flow file (without extension for WAMIT, complete name for FIT) [-]
     INTEGER(IntKi)  :: nWAMITObj = 0_IntKi      !< number of WAMIT input files.  If NBodyMod = 1 then nPotFiles will be 1 even if NBody > 1 [-]
     INTEGER(IntKi)  :: vecMultiplier = 0_IntKi      !< multiplier for the WAMIT vectors and matrices.  If NBodyMod=1 then this = NBody, else 1 [-]
@@ -89,33 +88,9 @@ IMPLICIT NONE
     CHARACTER(1024)  :: OutRootName      !< Supplied by Driver:  The name of the root file (without extension) including the full path [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
-    REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density from the driver; may be overwritten                       [(kg/m^3)]
-    REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth from the driver; may be overwritten                         [m]
-    REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Mean sea level to still water level from the driver; may be overwritten [m]
     REAL(DbKi)  :: TMax = 0.0_R8Ki      !< Supplied by Driver:  The total simulation time [(sec)]
-    REAL(ReKi)  :: PtfmLocationX = 0.0_ReKi      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
-    REAL(ReKi)  :: PtfmLocationY = 0.0_ReKi      !< Supplied by Driver:  Y coordinate of platform location in the wave field [m]
-    INTEGER(IntKi)  :: NStepWave = 0      !< Total number of frequency components = total number of time steps in the incident wave [-]
-    INTEGER(IntKi)  :: NStepWave2 = 0      !< NStepWave / 2 [-]
-    REAL(SiKi)  :: RhoXg = 0.0_R4Ki      !< = WtrDens*Gravity [-]
-    INTEGER(IntKi)  :: WaveMod = 0_IntKi      !< Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: white-noise spectrum, 4: user-defind spectrum from routine UserWaveSpctrm (irregular), 5: GH BLADED } [-]
-    INTEGER(IntKi)  :: WaveStMod = 0_IntKi      !< Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching} [-]
-    INTEGER(IntKi)  :: WaveDirMod = 0_IntKi      !< Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6] [-]
-    REAL(SiKi)  :: WvLowCOff = 0.0_R4Ki      !< Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
-    REAL(SiKi)  :: WvHiCOff = 0.0_R4Ki      !< High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
-    REAL(SiKi)  :: WvLowCOffD = 0.0_R4Ki      !< Minimum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
-    REAL(SiKi)  :: WvHiCOffD = 0.0_R4Ki      !< Maximum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
-    REAL(SiKi)  :: WvLowCOffS = 0.0_R4Ki      !< Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
-    REAL(SiKi)  :: WvHiCOffS = 0.0_R4Ki      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
+    LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
     LOGICAL  :: InvalidWithSSExctn = .false.      !< Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2) [(-)]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Instantaneous elevation time-series of incident waves at the platform reference point [(meters)]
-    REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElevC      !< Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part [(meters)]
-    REAL(SiKi)  :: WaveDirMin = 0.0_R4Ki      !< Minimum wave direction. [(degrees)]
-    REAL(SiKi)  :: WaveDirMax = 0.0_R4Ki      !< Maximum wave direction. [(degrees)]
-    REAL(SiKi)  :: WaveDir = 0.0_R4Ki      !< Incident wave propagation heading direction [(degrees)]
-    LOGICAL  :: WaveMultiDir = .false.      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
-    REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
-    REAL(SiKi)  :: MCFD = 0.0_R4Ki      !< Diameter of MacCamy-Fuchs members [(meters)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
   END TYPE HydroDyn_InitInputType
 ! =======================
@@ -169,7 +144,6 @@ IMPLICIT NONE
     TYPE(HD_ModuleMapType)  :: HD_MeshMap 
     INTEGER(IntKi)  :: Decimate = 0_IntKi      !< The output decimation counter [-]
     REAL(DbKi)  :: LastOutTime = 0.0_R8Ki      !< Last time step which was written to the output file (sec) [-]
-    INTEGER(IntKi)  :: LastIndWave = 0_IntKi      !< The last index used in the wave kinematics arrays, used to optimize interpolation [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_PtfmAdd      !< The total forces and moments due to additional pre-load, stiffness, and damping [-]
     REAL(ReKi) , DIMENSION(1:6)  :: F_Hydro = 0.0_ReKi      !< The total hydrodynamic forces and moments integrated about the (0,0,0) platform reference point [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_Waves      !< The total waves forces on a WAMIT body calculated by first and second order methods (WAMIT and WAMIT2 modules) [-]
@@ -193,9 +167,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: totalStates = 0_IntKi      !< Number of excitation and radiation states for all WAMIT bodies [-]
     INTEGER(IntKi)  :: totalExctnStates = 0_IntKi      !< Number of excitation states for all WAMIT bodies [-]
     INTEGER(IntKi)  :: totalRdtnStates = 0_IntKi      !< Number of radiation states for all WAMIT bodies [-]
-    REAL(SiKi) , DIMENSION(:), POINTER  :: WaveTime => NULL()      !< Array of time samples, (sec) [-]
-    INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Number of data points in the wave kinematics arrays [-]
-    REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [(m)]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AddF0      !< Additional pre-load forces and moments (N,N,N,N-m,N-m,N-m) [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AddCLin      !< Additional stiffness matrix [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AddBLin      !< Additional linear damping matrix [-]
@@ -214,7 +185,8 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
     INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix [-]
-    LOGICAL  :: PointsToSeaState = .TRUE.      !< Flag that determines if the data contains pointers to SeaState module or if new copies (from restart) [-]
+    LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
+    TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
   END TYPE HydroDyn_ParameterType
 ! =======================
 ! =========  HydroDyn_InputType  =======
@@ -296,9 +268,6 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
       end if
       DstInputFileData%AddBQuad = SrcInputFileData%AddBQuad
    end if
-   call SeaSt_CopyInitInput(SrcInputFileData%SeaState, DstInputFileData%SeaState, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcInputFileData%PotFile)) then
       LB(1:1) = lbound(SrcInputFileData%PotFile)
       UB(1:1) = ubound(SrcInputFileData%PotFile)
@@ -478,8 +447,6 @@ subroutine HydroDyn_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
    if (allocated(InputFileData%AddBQuad)) then
       deallocate(InputFileData%AddBQuad)
    end if
-   call SeaSt_DestroyInitInput(InputFileData%SeaState, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InputFileData%PotFile)) then
       deallocate(InputFileData%PotFile)
    end if
@@ -547,7 +514,6 @@ subroutine HydroDyn_PackInputFile(Buf, Indata)
       call RegPackBounds(Buf, 3, lbound(InData%AddBQuad), ubound(InData%AddBQuad))
       call RegPack(Buf, InData%AddBQuad)
    end if
-   call SeaSt_PackInitInput(Buf, InData%SeaState) 
    call RegPack(Buf, allocated(InData%PotFile))
    if (allocated(InData%PotFile)) then
       call RegPackBounds(Buf, 1, lbound(InData%PotFile), ubound(InData%PotFile))
@@ -690,7 +656,6 @@ subroutine HydroDyn_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%AddBQuad)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   call SeaSt_UnpackInitInput(Buf, OutData%SeaState) ! SeaState 
    if (allocated(OutData%PotFile)) deallocate(OutData%PotFile)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -886,7 +851,7 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(3), UB(3)
+   integer(IntKi)                 :: LB(0), UB(0)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_CopyInitInput'
@@ -900,55 +865,9 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
    DstInitInputData%OutRootName = SrcInitInputData%OutRootName
    DstInitInputData%Linearize = SrcInitInputData%Linearize
    DstInitInputData%Gravity = SrcInitInputData%Gravity
-   DstInitInputData%WtrDens = SrcInitInputData%WtrDens
-   DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
-   DstInitInputData%MSL2SWL = SrcInitInputData%MSL2SWL
    DstInitInputData%TMax = SrcInitInputData%TMax
-   DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
-   DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
-   DstInitInputData%NStepWave = SrcInitInputData%NStepWave
-   DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
-   DstInitInputData%RhoXg = SrcInitInputData%RhoXg
-   DstInitInputData%WaveMod = SrcInitInputData%WaveMod
-   DstInitInputData%WaveStMod = SrcInitInputData%WaveStMod
-   DstInitInputData%WaveDirMod = SrcInitInputData%WaveDirMod
-   DstInitInputData%WvLowCOff = SrcInitInputData%WvLowCOff
-   DstInitInputData%WvHiCOff = SrcInitInputData%WvHiCOff
-   DstInitInputData%WvLowCOffD = SrcInitInputData%WvLowCOffD
-   DstInitInputData%WvHiCOffD = SrcInitInputData%WvHiCOffD
-   DstInitInputData%WvLowCOffS = SrcInitInputData%WvLowCOffS
-   DstInitInputData%WvHiCOffS = SrcInitInputData%WvHiCOffS
+   DstInitInputData%VisMeshes = SrcInitInputData%VisMeshes
    DstInitInputData%InvalidWithSSExctn = SrcInitInputData%InvalidWithSSExctn
-   if (allocated(SrcInitInputData%WaveElev0)) then
-      LB(1:1) = lbound(SrcInitInputData%WaveElev0)
-      UB(1:1) = ubound(SrcInitInputData%WaveElev0)
-      if (.not. allocated(DstInitInputData%WaveElev0)) then
-         allocate(DstInitInputData%WaveElev0(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveElev0.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitInputData%WaveElev0 = SrcInitInputData%WaveElev0
-   end if
-   if (allocated(SrcInitInputData%WaveElevC)) then
-      LB(1:3) = lbound(SrcInitInputData%WaveElevC)
-      UB(1:3) = ubound(SrcInitInputData%WaveElevC)
-      if (.not. allocated(DstInitInputData%WaveElevC)) then
-         allocate(DstInitInputData%WaveElevC(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveElevC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitInputData%WaveElevC = SrcInitInputData%WaveElevC
-   end if
-   DstInitInputData%WaveDirMin = SrcInitInputData%WaveDirMin
-   DstInitInputData%WaveDirMax = SrcInitInputData%WaveDirMax
-   DstInitInputData%WaveDir = SrcInitInputData%WaveDir
-   DstInitInputData%WaveMultiDir = SrcInitInputData%WaveMultiDir
-   DstInitInputData%WaveDOmega = SrcInitInputData%WaveDOmega
-   DstInitInputData%MCFD = SrcInitInputData%MCFD
    DstInitInputData%WaveField => SrcInitInputData%WaveField
 end subroutine
 
@@ -963,12 +882,6 @@ subroutine HydroDyn_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    ErrMsg  = ''
    call NWTC_Library_DestroyFileInfoType(InitInputData%PassedFileData, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(InitInputData%WaveElev0)) then
-      deallocate(InitInputData%WaveElev0)
-   end if
-   if (allocated(InitInputData%WaveElevC)) then
-      deallocate(InitInputData%WaveElevC)
-   end if
    nullify(InitInputData%WaveField)
 end subroutine
 
@@ -984,41 +897,9 @@ subroutine HydroDyn_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%OutRootName)
    call RegPack(Buf, InData%Linearize)
    call RegPack(Buf, InData%Gravity)
-   call RegPack(Buf, InData%WtrDens)
-   call RegPack(Buf, InData%WtrDpth)
-   call RegPack(Buf, InData%MSL2SWL)
    call RegPack(Buf, InData%TMax)
-   call RegPack(Buf, InData%PtfmLocationX)
-   call RegPack(Buf, InData%PtfmLocationY)
-   call RegPack(Buf, InData%NStepWave)
-   call RegPack(Buf, InData%NStepWave2)
-   call RegPack(Buf, InData%RhoXg)
-   call RegPack(Buf, InData%WaveMod)
-   call RegPack(Buf, InData%WaveStMod)
-   call RegPack(Buf, InData%WaveDirMod)
-   call RegPack(Buf, InData%WvLowCOff)
-   call RegPack(Buf, InData%WvHiCOff)
-   call RegPack(Buf, InData%WvLowCOffD)
-   call RegPack(Buf, InData%WvHiCOffD)
-   call RegPack(Buf, InData%WvLowCOffS)
-   call RegPack(Buf, InData%WvHiCOffS)
+   call RegPack(Buf, InData%VisMeshes)
    call RegPack(Buf, InData%InvalidWithSSExctn)
-   call RegPack(Buf, allocated(InData%WaveElev0))
-   if (allocated(InData%WaveElev0)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveElev0), ubound(InData%WaveElev0))
-      call RegPack(Buf, InData%WaveElev0)
-   end if
-   call RegPack(Buf, allocated(InData%WaveElevC))
-   if (allocated(InData%WaveElevC)) then
-      call RegPackBounds(Buf, 3, lbound(InData%WaveElevC), ubound(InData%WaveElevC))
-      call RegPack(Buf, InData%WaveElevC)
-   end if
-   call RegPack(Buf, InData%WaveDirMin)
-   call RegPack(Buf, InData%WaveDirMax)
-   call RegPack(Buf, InData%WaveDir)
-   call RegPack(Buf, InData%WaveMultiDir)
-   call RegPack(Buf, InData%WaveDOmega)
-   call RegPack(Buf, InData%MCFD)
    call RegPack(Buf, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
       call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
@@ -1033,7 +914,7 @@ subroutine HydroDyn_UnPackInitInput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(HydroDyn_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'HydroDyn_UnPackInitInput'
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(IntKi)  :: LB(0), UB(0)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(IntKi)  :: PtrIdx
@@ -1050,83 +931,11 @@ subroutine HydroDyn_UnPackInitInput(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%Gravity)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WtrDens)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WtrDpth)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%MSL2SWL)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%TMax)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%PtfmLocationX)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%PtfmLocationY)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NStepWave)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NStepWave2)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%RhoXg)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveStMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDirMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvLowCOff)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvHiCOff)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvLowCOffD)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvHiCOffD)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvLowCOffS)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvHiCOffS)
+   call RegUnpack(Buf, OutData%VisMeshes)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%InvalidWithSSExctn)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%WaveElev0)) deallocate(OutData%WaveElev0)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveElev0(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElev0.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveElev0)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%WaveElevC)) deallocate(OutData%WaveElevC)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 3, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveElevC(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElevC.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveElevC)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%WaveDirMin)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDirMax)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDir)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveMultiDir)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDOmega)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%MCFD)
    if (RegCheckErr(Buf, RoutineName)) return
    if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
    call RegUnpack(Buf, IsAllocAssoc)
@@ -1894,7 +1703,6 @@ subroutine HydroDyn_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg
    if (ErrStat >= AbortErrLev) return
    DstMiscData%Decimate = SrcMiscData%Decimate
    DstMiscData%LastOutTime = SrcMiscData%LastOutTime
-   DstMiscData%LastIndWave = SrcMiscData%LastIndWave
    if (allocated(SrcMiscData%F_PtfmAdd)) then
       LB(1:1) = lbound(SrcMiscData%F_PtfmAdd)
       UB(1:1) = ubound(SrcMiscData%F_PtfmAdd)
@@ -2036,7 +1844,6 @@ subroutine HydroDyn_PackMisc(Buf, Indata)
    call HydroDyn_PackHD_ModuleMapType(Buf, InData%HD_MeshMap) 
    call RegPack(Buf, InData%Decimate)
    call RegPack(Buf, InData%LastOutTime)
-   call RegPack(Buf, InData%LastIndWave)
    call RegPack(Buf, allocated(InData%F_PtfmAdd))
    if (allocated(InData%F_PtfmAdd)) then
       call RegPackBounds(Buf, 1, lbound(InData%F_PtfmAdd), ubound(InData%F_PtfmAdd))
@@ -2093,8 +1900,6 @@ subroutine HydroDyn_UnPackMisc(Buf, OutData)
    call RegUnpack(Buf, OutData%Decimate)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%LastOutTime)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%LastIndWave)
    if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%F_PtfmAdd)) deallocate(OutData%F_PtfmAdd)
    call RegUnpack(Buf, IsAllocAssoc)
@@ -2231,9 +2036,6 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
    DstParamData%totalStates = SrcParamData%totalStates
    DstParamData%totalExctnStates = SrcParamData%totalExctnStates
    DstParamData%totalRdtnStates = SrcParamData%totalRdtnStates
-   DstParamData%WaveTime => SrcParamData%WaveTime
-   DstParamData%NStepWave = SrcParamData%NStepWave
-   DstParamData%WtrDpth = SrcParamData%WtrDpth
    if (allocated(SrcParamData%AddF0)) then
       LB(1:2) = lbound(SrcParamData%AddF0)
       UB(1:2) = ubound(SrcParamData%AddF0)
@@ -2344,7 +2146,8 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
       DstParamData%dx = SrcParamData%dx
    end if
    DstParamData%Jac_ny = SrcParamData%Jac_ny
-   DstParamData%PointsToSeaState = SrcParamData%PointsToSeaState
+   DstParamData%VisMeshes = SrcParamData%VisMeshes
+   DstParamData%WaveField => SrcParamData%WaveField
 end subroutine
 
 subroutine HydroDyn_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -2378,7 +2181,6 @@ subroutine HydroDyn_DestroyParam(ParamData, ErrStat, ErrMsg)
    end if
    call Morison_DestroyParam(ParamData%Morison, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   nullify(ParamData%WaveTime)
    if (allocated(ParamData%AddF0)) then
       deallocate(ParamData%AddF0)
    end if
@@ -2409,6 +2211,7 @@ subroutine HydroDyn_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%dx)) then
       deallocate(ParamData%dx)
    end if
+   nullify(ParamData%WaveField)
 end subroutine
 
 subroutine HydroDyn_PackParam(Buf, Indata)
@@ -2447,16 +2250,6 @@ subroutine HydroDyn_PackParam(Buf, Indata)
    call RegPack(Buf, InData%totalStates)
    call RegPack(Buf, InData%totalExctnStates)
    call RegPack(Buf, InData%totalRdtnStates)
-   call RegPack(Buf, associated(InData%WaveTime))
-   if (associated(InData%WaveTime)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveTime), ubound(InData%WaveTime))
-      call RegPackPointer(Buf, c_loc(InData%WaveTime), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%WaveTime)
-      end if
-   end if
-   call RegPack(Buf, InData%NStepWave)
-   call RegPack(Buf, InData%WtrDpth)
    call RegPack(Buf, allocated(InData%AddF0))
    if (allocated(InData%AddF0)) then
       call RegPackBounds(Buf, 2, lbound(InData%AddF0), ubound(InData%AddF0))
@@ -2511,7 +2304,14 @@ subroutine HydroDyn_PackParam(Buf, Indata)
       call RegPack(Buf, InData%dx)
    end if
    call RegPack(Buf, InData%Jac_ny)
-   call RegPack(Buf, InData%PointsToSeaState)
+   call RegPack(Buf, InData%VisMeshes)
+   call RegPack(Buf, associated(InData%WaveField))
+   if (associated(InData%WaveField)) then
+      call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, InData%WaveField) 
+      end if
+   end if
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -2574,34 +2374,6 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%totalExctnStates)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%totalRdtnStates)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (associated(OutData%WaveTime)) deallocate(OutData%WaveTime)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%WaveTime, UB(1:1)-LB(1:1))
-         OutData%WaveTime(LB(1):) => OutData%WaveTime
-      else
-         allocate(OutData%WaveTime(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveTime.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%WaveTime)
-         call RegUnpack(Buf, OutData%WaveTime)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%WaveTime => null()
-   end if
-   call RegUnpack(Buf, OutData%NStepWave)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%AddF0)) deallocate(OutData%AddF0)
    call RegUnpack(Buf, IsAllocAssoc)
@@ -2736,8 +2508,28 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
    end if
    call RegUnpack(Buf, OutData%Jac_ny)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%PointsToSeaState)
+   call RegUnpack(Buf, OutData%VisMeshes)
    if (RegCheckErr(Buf, RoutineName)) return
+   if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%WaveField)
+      else
+         allocate(OutData%WaveField,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveField.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%WaveField)
+         call SeaSt_WaveField_UnpackSeaSt_WaveFieldType(Buf, OutData%WaveField) ! WaveField 
+      end if
+   else
+      OutData%WaveField => null()
+   end if
 end subroutine
 
 subroutine HydroDyn_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)

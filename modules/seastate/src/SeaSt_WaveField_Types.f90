@@ -35,6 +35,17 @@ USE SeaState_Interp_Types
 USE IfW_FlowField_Types
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveDirMod_None = 0      ! WaveDirMod = 0 [Directional spreading function is NONE] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveDirMod_COS2S = 1      ! WaveDirMod = 1 [Directional spreading function is COS2S] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_None = 0      ! WaveMod = 0   [Incident wave kinematics model: NONE (still water)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_Regular = 1      ! WaveMod = 1   [Incident wave kinematics model: Regular (periodic)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_RegularUsrPh = 10      ! WaveMod = 1P# [Incident wave kinematics model: Regular (user specified phase)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_JONSWAP = 2      ! WaveMod = 2   [Incident wave kinematics model: JONSWAP/Pierson-Moskowitz spectrum (irregular)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_WhiteNoise = 3      ! WaveMod = 3   [Incident wave kinematics model: White noise spectrum (irregular)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_UserSpctrm = 4      ! WaveMod = 4   [Incident wave kinematics model: user-defined spectrum from routine UserWaveSpctrm (irregular)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtElev = 5      ! WaveMod = 5   [Incident wave kinematics model: Externally generated wave-elevation time series] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtFull = 6      ! WaveMod = 6   [Incident wave kinematics model: Externally generated full wave-kinematics time series (invalid for PotMod/=0)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_UserFreq = 7      ! WaveMod = 7   [Incident wave kinematics model: user-defined wave frequency components] [-]
 ! =========  SeaSt_WaveFieldType  =======
   TYPE, PUBLIC :: SeaSt_WaveFieldType
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveTime      !< Time array [(s)]
@@ -46,18 +57,36 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: PWaveAcc0      !< Partial derivative of incident wave acceleration in the vertical direction at the still water level [(m/s^2/m)]
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: PWaveAccMCF0      !< Partial derivative of scaled wave acceleration in the vertical direction at the still water level for MacCamy-Fuchs members [(m/s^2/m)]
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: PWaveVel0      !< Partial derivative of incident wave velocity in the vertical direction at the still water level [(m/s/m)]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Instantaneous elevation time-series of incident waves at the platform reference point [(m)]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Instantaneous elevation time-series of incident waves at the platform reference point (NOTE THAT THIS CAN GET MODIFIED IN WAMIT) [(m)]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElev1      !< First order wave elevation [(m)]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElev2      !< Second order wave elevation [(m)]
     TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< Parameter information from the SeaState Interpolation module [(-)]
     INTEGER(IntKi)  :: WaveStMod = 0_IntKi      !< Wave stretching model [-]
-    REAL(ReKi)  :: EffWtrDpth = 0.0_ReKi      !< Effective water depth from the seabed to SWL [(-)]
+    REAL(ReKi)  :: EffWtrDpth = 0.0_ReKi      !< Water depth [(-)]
     REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Vertical distance from mean sea level to still water level [(m)]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElevC      !< Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part [(m)]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevC0      !< Fourier components of the incident wave elevation at the platform reference point. First column is the real part; second column is the imaginary part [(m)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveDirArr      !< Wave direction array. Each frequency has a unique direction of WaveNDir > 1 [(degrees)]
     LOGICAL  :: hasCurrField = .false.      !< True if CurrField is populated for MHK simulations [(-)]
     TYPE(FlowFieldType) , POINTER :: CurrField => NULL()      !< Pointer to FlowField type from InflowWind containing the dynamic current information [(-)]
+    REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth, this is necessary to inform glue-code what the module is using for WtrDpth (may not be the glue-code's default) [(m)]
+    REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default) [(kg/m^3)]
+    REAL(SiKi)  :: RhoXg = 0.0_R4Ki      !< = WtrDens*Gravity [-]
+    REAL(SiKi)  :: WaveDirMin = 0.0_R4Ki      !< Minimum wave direction. [(degrees)]
+    REAL(SiKi)  :: WaveDirMax = 0.0_R4Ki      !< Maximum wave direction. [(degrees)]
+    REAL(SiKi)  :: WaveDir = 0.0_R4Ki      !< Incident wave propagation heading direction [(degrees)]
+    LOGICAL  :: WaveMultiDir = .false.      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
+    REAL(SiKi)  :: MCFD = 0.0_R4Ki      !< Diameter of members that will use the MacCamy-Fuchs diffraction model [-]
+    REAL(SiKi)  :: WvLowCOff = 0.0_R4Ki      !< Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
+    REAL(SiKi)  :: WvHiCOff = 0.0_R4Ki      !< High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
+    REAL(SiKi)  :: WvLowCOffD = 0.0_R4Ki      !< Minimum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
+    REAL(SiKi)  :: WvHiCOffD = 0.0_R4Ki      !< Maximum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
+    REAL(SiKi)  :: WvLowCOffS = 0.0_R4Ki      !< Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
+    REAL(SiKi)  :: WvHiCOffS = 0.0_R4Ki      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
+    REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
+    INTEGER(IntKi)  :: WaveMod = 0_IntKi      !< Incident wave kinematics model: See valid values in SeaSt_WaveField module parameters. [-]
+    INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Total number of frequency components = total number of time steps in the incident wave [-]
+    INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
   END TYPE SeaSt_WaveFieldType
 ! =======================
 CONTAINS
@@ -262,6 +291,24 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
    end if
    DstSeaSt_WaveFieldTypeData%hasCurrField = SrcSeaSt_WaveFieldTypeData%hasCurrField
    DstSeaSt_WaveFieldTypeData%CurrField => SrcSeaSt_WaveFieldTypeData%CurrField
+   DstSeaSt_WaveFieldTypeData%WtrDpth = SrcSeaSt_WaveFieldTypeData%WtrDpth
+   DstSeaSt_WaveFieldTypeData%WtrDens = SrcSeaSt_WaveFieldTypeData%WtrDens
+   DstSeaSt_WaveFieldTypeData%RhoXg = SrcSeaSt_WaveFieldTypeData%RhoXg
+   DstSeaSt_WaveFieldTypeData%WaveDirMin = SrcSeaSt_WaveFieldTypeData%WaveDirMin
+   DstSeaSt_WaveFieldTypeData%WaveDirMax = SrcSeaSt_WaveFieldTypeData%WaveDirMax
+   DstSeaSt_WaveFieldTypeData%WaveDir = SrcSeaSt_WaveFieldTypeData%WaveDir
+   DstSeaSt_WaveFieldTypeData%WaveMultiDir = SrcSeaSt_WaveFieldTypeData%WaveMultiDir
+   DstSeaSt_WaveFieldTypeData%MCFD = SrcSeaSt_WaveFieldTypeData%MCFD
+   DstSeaSt_WaveFieldTypeData%WvLowCOff = SrcSeaSt_WaveFieldTypeData%WvLowCOff
+   DstSeaSt_WaveFieldTypeData%WvHiCOff = SrcSeaSt_WaveFieldTypeData%WvHiCOff
+   DstSeaSt_WaveFieldTypeData%WvLowCOffD = SrcSeaSt_WaveFieldTypeData%WvLowCOffD
+   DstSeaSt_WaveFieldTypeData%WvHiCOffD = SrcSeaSt_WaveFieldTypeData%WvHiCOffD
+   DstSeaSt_WaveFieldTypeData%WvLowCOffS = SrcSeaSt_WaveFieldTypeData%WvLowCOffS
+   DstSeaSt_WaveFieldTypeData%WvHiCOffS = SrcSeaSt_WaveFieldTypeData%WvHiCOffS
+   DstSeaSt_WaveFieldTypeData%WaveDOmega = SrcSeaSt_WaveFieldTypeData%WaveDOmega
+   DstSeaSt_WaveFieldTypeData%WaveMod = SrcSeaSt_WaveFieldTypeData%WaveMod
+   DstSeaSt_WaveFieldTypeData%NStepWave = SrcSeaSt_WaveFieldTypeData%NStepWave
+   DstSeaSt_WaveFieldTypeData%NStepWave2 = SrcSeaSt_WaveFieldTypeData%NStepWave2
 end subroutine
 
 subroutine SeaSt_WaveField_DestroySeaSt_WaveFieldType(SeaSt_WaveFieldTypeData, ErrStat, ErrMsg)
@@ -416,6 +463,24 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, Indata)
          call IfW_FlowField_PackFlowFieldType(Buf, InData%CurrField) 
       end if
    end if
+   call RegPack(Buf, InData%WtrDpth)
+   call RegPack(Buf, InData%WtrDens)
+   call RegPack(Buf, InData%RhoXg)
+   call RegPack(Buf, InData%WaveDirMin)
+   call RegPack(Buf, InData%WaveDirMax)
+   call RegPack(Buf, InData%WaveDir)
+   call RegPack(Buf, InData%WaveMultiDir)
+   call RegPack(Buf, InData%MCFD)
+   call RegPack(Buf, InData%WvLowCOff)
+   call RegPack(Buf, InData%WvHiCOff)
+   call RegPack(Buf, InData%WvLowCOffD)
+   call RegPack(Buf, InData%WvHiCOffD)
+   call RegPack(Buf, InData%WvLowCOffS)
+   call RegPack(Buf, InData%WvHiCOffS)
+   call RegPack(Buf, InData%WaveDOmega)
+   call RegPack(Buf, InData%WaveMod)
+   call RegPack(Buf, InData%NStepWave)
+   call RegPack(Buf, InData%NStepWave2)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -668,6 +733,42 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
    else
       OutData%CurrField => null()
    end if
+   call RegUnpack(Buf, OutData%WtrDpth)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WtrDens)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%RhoXg)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WaveDirMin)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WaveDirMax)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WaveDir)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WaveMultiDir)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%MCFD)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WvLowCOff)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WvHiCOff)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WvLowCOffD)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WvHiCOffD)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WvLowCOffS)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WvHiCOffS)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WaveDOmega)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WaveMod)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%NStepWave)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%NStepWave2)
+   if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 END MODULE SeaSt_WaveField_Types
 !ENDOFREGISTRYGENERATEDFILE

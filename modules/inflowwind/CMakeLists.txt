@@ -22,7 +22,7 @@ if (GENERATE_TYPES)
 endif()
 
 # InflowWind object library
-add_library(ifwlib 
+add_library(ifwlib STATIC
   src/IfW_FlowField_Types.f90
   src/IfW_FlowField.f90
   src/InflowWind_IO_Types.f90

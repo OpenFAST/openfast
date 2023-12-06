@@ -53,6 +53,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: HubRot = 0.0_R8Ki      !< Initial Hub direction cosine matrix [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     LOGICAL  :: DynamicSolve = .TRUE.      !< Use dynamic solve option.  Set to False for static solving (handled by glue code or driver code). [-]
+    LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false) [-]
   END TYPE BD_InitInputType
 ! =======================
 ! =========  BD_InitOutputType  =======
@@ -147,6 +148,9 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: xcc      !< Algorithm acceleration in GA2: (1-alpha_m)*xcc_(n+1) = (1-alpha_f)*Acc_(n+1) + alpha_f*Acc_n - alpha_m*xcc_n [-]
     LOGICAL  :: InitAcc = .false.      !< flag to determine if accerlerations have been initialized in updateStates [-]
     LOGICAL  :: RunQuasiStaticInit = .false.      !< flag to determine if quasi-static solution initialization should be run again (with load inputs) [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: GlbPos = 0.0_R8Ki      !< Position Vector between origins of Global (moving frame) and blade frames (BD coordinates)  Follows the RootMotion mesh [-]
+    REAL(R8Ki) , DIMENSION(1:3,1:3)  :: GlbRot = 0.0_R8Ki      !< Rotation Tensor between Global (moving frame) and Blade frames (BD coordinates; transfers local to global).  Follows the RootMotion mesh [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: Glb_crv = 0.0_R8Ki      !< CRV parameters of GlbRot.  Follows the RootMotion mesh [-]
   END TYPE BD_OtherStateType
 ! =======================
 ! =========  qpParam  =======
@@ -160,10 +164,11 @@ IMPLICIT NONE
     REAL(DbKi)  :: dt = 0.0_R8Ki      !< module dt [s]
     REAL(DbKi) , DIMENSION(1:9)  :: coef = 0.0_R8Ki      !< GA2 Coefficient [-]
     REAL(DbKi)  :: rhoinf = 0.0_R8Ki      !< Numerical Damping Coefficient for GA2 [-]
-    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: uuN0      !< Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element) [-]
+    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: uuN0      !< Initial Position Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element) [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: twN0      !< Initial Twist of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: Stif0_QP      !< Sectional Stiffness Properties at quadrature points (6x6xqp) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: Mass0_QP      !< Sectional Mass Properties at quadrature points (6x6xqp) [-]
-    REAL(R8Ki) , DIMENSION(1:3)  :: gravity = 0.0_R8Ki      !< Gravitational acceleration [m/s^2]
+    REAL(R8Ki) , DIMENSION(1:3)  :: gravity = 0.0_R8Ki      !< Gravitational acceleration -- intertial frame!!! [m/s^2]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: segment_eta      !< Array stored length ratio of each segment w.r.t. member it lies in [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: member_eta      !< Array stored length ratio of each member  w.r.t. entire blade [-]
     REAL(R8Ki)  :: blade_length = 0.0_R8Ki      !< Blade Length [-]
@@ -172,16 +177,12 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: blade_IN = 0.0_R8Ki      !< Blade Length [-]
     REAL(R8Ki) , DIMENSION(1:6)  :: beta = 0.0_R8Ki      !< Damping Coefficient [-]
     REAL(R8Ki)  :: tol = 0.0_R8Ki      !< Tolerance used in stopping criterion [-]
-    REAL(R8Ki) , DIMENSION(1:3)  :: GlbPos = 0.0_R8Ki      !< Initial Position Vector between origins of Global and blade frames (BD coordinates) [-]
-    REAL(R8Ki) , DIMENSION(1:3,1:3)  :: GlbRot = 0.0_R8Ki      !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global) [-]
-    REAL(R8Ki) , DIMENSION(1:3)  :: Glb_crv = 0.0_R8Ki      !< CRV parameters of GlbRot [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QPtN      !< Quadrature (QuadPt) point locations in natural frame [-1, 1] [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QPtWeight      !< Weights at each quadrature point (QuadPt) [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Shp      !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points) [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: ShpDer      !< Derivative of shape function matrix (index 1 = FE nodes; index 2=quadrature points) [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Jacobian      !< Jacobian value at each quadrature point [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: uu0      !< Initial Disp/Rot value at quadrature point (at T=0) [-]
-    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: rrN0      !< Initial relative rotation array, relative to root (at T=0) (index 1=rot DOF; index 2=FE nodes; index 3=element) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: E10      !< Initial E10 at quadrature point [-]
     INTEGER(IntKi)  :: nodes_per_elem = 0_IntKi      !< Finite element (GLL) nodes per element [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: node_elem_idx      !< Index to first and last nodes of element in p%node_total sized arrays [-]
@@ -237,6 +238,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Jac_nx = 0_IntKi      !< half the number of continuous states in jacobian matrix [-]
     LOGICAL  :: RotStates = .false.      !< Orient states in rotating frame during linearization? (flag) [-]
     LOGICAL  :: RelStates = .false.      !< Define states relative to root motion during linearization? (flag) [-]
+    LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false) [-]
   END TYPE BD_ParameterType
 ! =======================
 ! =========  BD_InputType  =======
@@ -356,6 +358,7 @@ subroutine BD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    DstInitInputData%HubRot = SrcInitInputData%HubRot
    DstInitInputData%Linearize = SrcInitInputData%Linearize
    DstInitInputData%DynamicSolve = SrcInitInputData%DynamicSolve
+   DstInitInputData%CompAeroMaps = SrcInitInputData%CompAeroMaps
 end subroutine
 
 subroutine BD_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -384,6 +387,7 @@ subroutine BD_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%HubRot)
    call RegPack(Buf, InData%Linearize)
    call RegPack(Buf, InData%DynamicSolve)
+   call RegPack(Buf, InData%CompAeroMaps)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -415,6 +419,8 @@ subroutine BD_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%Linearize)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%DynamicSolve)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%CompAeroMaps)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -1575,6 +1581,9 @@ subroutine BD_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
    end if
    DstOtherStateData%InitAcc = SrcOtherStateData%InitAcc
    DstOtherStateData%RunQuasiStaticInit = SrcOtherStateData%RunQuasiStaticInit
+   DstOtherStateData%GlbPos = SrcOtherStateData%GlbPos
+   DstOtherStateData%GlbRot = SrcOtherStateData%GlbRot
+   DstOtherStateData%Glb_crv = SrcOtherStateData%Glb_crv
 end subroutine
 
 subroutine BD_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
@@ -1609,6 +1618,9 @@ subroutine BD_PackOtherState(Buf, Indata)
    end if
    call RegPack(Buf, InData%InitAcc)
    call RegPack(Buf, InData%RunQuasiStaticInit)
+   call RegPack(Buf, InData%GlbPos)
+   call RegPack(Buf, InData%GlbRot)
+   call RegPack(Buf, InData%Glb_crv)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -1651,6 +1663,12 @@ subroutine BD_UnPackOtherState(Buf, OutData)
    call RegUnpack(Buf, OutData%InitAcc)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%RunQuasiStaticInit)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%GlbPos)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%GlbRot)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%Glb_crv)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -1790,6 +1808,18 @@ subroutine BD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstParamData%uuN0 = SrcParamData%uuN0
    end if
+   if (allocated(SrcParamData%twN0)) then
+      LB(1:2) = lbound(SrcParamData%twN0)
+      UB(1:2) = ubound(SrcParamData%twN0)
+      if (.not. allocated(DstParamData%twN0)) then
+         allocate(DstParamData%twN0(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%twN0.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%twN0 = SrcParamData%twN0
+   end if
    if (allocated(SrcParamData%Stif0_QP)) then
       LB(1:3) = lbound(SrcParamData%Stif0_QP)
       UB(1:3) = ubound(SrcParamData%Stif0_QP)
@@ -1845,9 +1875,6 @@ subroutine BD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%blade_IN = SrcParamData%blade_IN
    DstParamData%beta = SrcParamData%beta
    DstParamData%tol = SrcParamData%tol
-   DstParamData%GlbPos = SrcParamData%GlbPos
-   DstParamData%GlbRot = SrcParamData%GlbRot
-   DstParamData%Glb_crv = SrcParamData%Glb_crv
    if (allocated(SrcParamData%QPtN)) then
       LB(1:1) = lbound(SrcParamData%QPtN)
       UB(1:1) = ubound(SrcParamData%QPtN)
@@ -1919,18 +1946,6 @@ subroutine BD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%uu0 = SrcParamData%uu0
-   end if
-   if (allocated(SrcParamData%rrN0)) then
-      LB(1:3) = lbound(SrcParamData%rrN0)
-      UB(1:3) = ubound(SrcParamData%rrN0)
-      if (.not. allocated(DstParamData%rrN0)) then
-         allocate(DstParamData%rrN0(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%rrN0.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%rrN0 = SrcParamData%rrN0
    end if
    if (allocated(SrcParamData%E10)) then
       LB(1:3) = lbound(SrcParamData%E10)
@@ -2173,6 +2188,7 @@ subroutine BD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%Jac_nx = SrcParamData%Jac_nx
    DstParamData%RotStates = SrcParamData%RotStates
    DstParamData%RelStates = SrcParamData%RelStates
+   DstParamData%CompAeroMaps = SrcParamData%CompAeroMaps
 end subroutine
 
 subroutine BD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -2188,6 +2204,9 @@ subroutine BD_DestroyParam(ParamData, ErrStat, ErrMsg)
    ErrMsg  = ''
    if (allocated(ParamData%uuN0)) then
       deallocate(ParamData%uuN0)
+   end if
+   if (allocated(ParamData%twN0)) then
+      deallocate(ParamData%twN0)
    end if
    if (allocated(ParamData%Stif0_QP)) then
       deallocate(ParamData%Stif0_QP)
@@ -2218,9 +2237,6 @@ subroutine BD_DestroyParam(ParamData, ErrStat, ErrMsg)
    end if
    if (allocated(ParamData%uu0)) then
       deallocate(ParamData%uu0)
-   end if
-   if (allocated(ParamData%rrN0)) then
-      deallocate(ParamData%rrN0)
    end if
    if (allocated(ParamData%E10)) then
       deallocate(ParamData%E10)
@@ -2301,6 +2317,11 @@ subroutine BD_PackParam(Buf, Indata)
       call RegPackBounds(Buf, 3, lbound(InData%uuN0), ubound(InData%uuN0))
       call RegPack(Buf, InData%uuN0)
    end if
+   call RegPack(Buf, allocated(InData%twN0))
+   if (allocated(InData%twN0)) then
+      call RegPackBounds(Buf, 2, lbound(InData%twN0), ubound(InData%twN0))
+      call RegPack(Buf, InData%twN0)
+   end if
    call RegPack(Buf, allocated(InData%Stif0_QP))
    if (allocated(InData%Stif0_QP)) then
       call RegPackBounds(Buf, 3, lbound(InData%Stif0_QP), ubound(InData%Stif0_QP))
@@ -2328,9 +2349,6 @@ subroutine BD_PackParam(Buf, Indata)
    call RegPack(Buf, InData%blade_IN)
    call RegPack(Buf, InData%beta)
    call RegPack(Buf, InData%tol)
-   call RegPack(Buf, InData%GlbPos)
-   call RegPack(Buf, InData%GlbRot)
-   call RegPack(Buf, InData%Glb_crv)
    call RegPack(Buf, allocated(InData%QPtN))
    if (allocated(InData%QPtN)) then
       call RegPackBounds(Buf, 1, lbound(InData%QPtN), ubound(InData%QPtN))
@@ -2360,11 +2378,6 @@ subroutine BD_PackParam(Buf, Indata)
    if (allocated(InData%uu0)) then
       call RegPackBounds(Buf, 3, lbound(InData%uu0), ubound(InData%uu0))
       call RegPack(Buf, InData%uu0)
-   end if
-   call RegPack(Buf, allocated(InData%rrN0))
-   if (allocated(InData%rrN0)) then
-      call RegPackBounds(Buf, 3, lbound(InData%rrN0), ubound(InData%rrN0))
-      call RegPack(Buf, InData%rrN0)
    end if
    call RegPack(Buf, allocated(InData%E10))
    if (allocated(InData%E10)) then
@@ -2493,6 +2506,7 @@ subroutine BD_PackParam(Buf, Indata)
    call RegPack(Buf, InData%Jac_nx)
    call RegPack(Buf, InData%RotStates)
    call RegPack(Buf, InData%RelStates)
+   call RegPack(Buf, InData%CompAeroMaps)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -2523,6 +2537,20 @@ subroutine BD_UnPackParam(Buf, OutData)
          return
       end if
       call RegUnpack(Buf, OutData%uuN0)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   if (allocated(OutData%twN0)) deallocate(OutData%twN0)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 2, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%twN0(LB(1):UB(1),LB(2):UB(2)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%twN0.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%twN0)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    if (allocated(OutData%Stif0_QP)) deallocate(OutData%Stif0_QP)
@@ -2594,12 +2622,6 @@ subroutine BD_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%beta)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%tol)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%GlbPos)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%GlbRot)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Glb_crv)
    if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%QPtN)) deallocate(OutData%QPtN)
    call RegUnpack(Buf, IsAllocAssoc)
@@ -2683,20 +2705,6 @@ subroutine BD_UnPackParam(Buf, OutData)
          return
       end if
       call RegUnpack(Buf, OutData%uu0)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%rrN0)) deallocate(OutData%rrN0)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 3, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%rrN0(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%rrN0.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%rrN0)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    if (allocated(OutData%E10)) deallocate(OutData%E10)
@@ -3001,6 +3009,8 @@ subroutine BD_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%RotStates)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%RelStates)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%CompAeroMaps)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 

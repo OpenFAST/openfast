@@ -15,17 +15,15 @@
 # URL: $HeadURL$
 ###################################################################################################################################
 usefrom   SeaState_Interp.txt
+usefrom   SeaSt_WaveField.txt
 
 typedef SS_Excitation/SS_Exc   InitInputType       CHARACTER(1024)              InputFile        -  - -   "Name of the input file" -
 typedef ^                      ^                   IntKi                        NBody            -  - -   "Number of WAMIT bodies for this State Space model" -
 typedef ^                      ^                   IntKi                        ExctnDisp        -  - -   "0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0]" -
-typedef ^                      ^                   ReKi                         WaveDir          -  - -   "Wave direction" rad
-typedef ^                      ^                   INTEGER                      NStepWave        -  - -   "Number of timesteps in the WaveTime array" -
 typedef ^                      ^                   R8Ki                         PtfmRefztRot    {:} - -   "The rotation about zt of the body reference frame(s) from xt/yt" radians 
-typedef ^                      ^                   SiKi                         WaveElev0       {*} - -   "Wave elevation time history at origin" m
-typedef ^                      ^                   SiKi                         WaveElev1 {*}{*}{*} - -   "First order wave elevation (points to SeaState module data)"        -
-typedef ^                      ^                   SiKi                         WaveTime        {*} - -   "Times where wave elevation is known (points to SeaState module data)" s
-typedef ^                      ^            SeaSt_Interp_ParameterType       SeaSt_Interp_p     -  - -   "parameter information from the SeaState Interpolation module"   -
+typedef ^                      ^                   SeaSt_WaveFieldType         *WaveField       -  - -    "Pointer to SeaState wave field" -
+
+
 																                
 typedef ^                      InitOutputType      CHARACTER(10)                WriteOutputHdr  {:} - -   "Header of the output" -
 typedef ^                      InitOutputType      CHARACTER(10)                WriteOutputUnt  {:} - -   "Units of the output" -
@@ -56,17 +54,13 @@ typedef   ^                      ^                 SeaSt_Interp_MiscVarType     
 typedef ^                      ParameterType       DbKi                         DT               -     - -   "Time step" s
 typedef ^                      ^                   IntKi                        NBody            -     - -   "Number of WAMIT bodies for this State Space model" -
 typedef ^                      ^                   IntKi                        ExctnDisp        -     - -   "0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0]" -
-typedef ^                      ^                   INTEGER                      NStepWave        -     - -   "Number of timesteps in the WaveTime array" -
 typedef ^                      ^                   IntKi                        spDOF           {:}    - -   "States per DOF" -
 typedef ^                      ^                   ReKi                         A               {:}{:} - -   "A matrix" -
 typedef ^                      ^                   ReKi                         B               {:}    - -   "B matrix" -
 typedef ^                      ^                   ReKi                         C               {:}{:} - -   "C matrix" -
 typedef ^                      ^                   INTEGER                      numStates        -     0 -   "Number of states" -
 typedef ^                      ^                   DbKi                         Tc               -     - -   "Time shift" s
-typedef ^                      ^                   SiKi                         WaveElev0       {*}    - -   "Wave elevation time history at origin" m
-typedef ^                      ^                   SiKi                         WaveElev1 {*}{*}{*}    - -   "First order wave elevation (points to SeaState module data)"        -
-typedef ^                      ^                   SiKi                         WaveTime        {*}    - -   "Times where wave elevation is known (points to SeaState module data)" s
-typedef     ^                 ^                 SeaSt_Interp_ParameterType       SeaSt_Interp_p           -       -      -  "parameter information from the SeaState Interpolation module"   -
+typedef ^                      ^                   SeaSt_WaveFieldType         *WaveField       -   -   -    "Pointer to SeaState wave field" -
 
 # ..... Inputs .............................
 # Define inputs that are contained on the mesh here:

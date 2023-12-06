@@ -57,6 +57,7 @@ IMPLICIT NONE
     LOGICAL  :: Echo = .false.      !< echo parameter - do we want to echo the header line describing the input file? [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< string containing list of output channels requested in input file [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
+    LOGICAL  :: VisMeshes = .FALSE.      !< Glue code requesting visualization meshes [-]
   END TYPE MD_InitInputType
 ! =======================
 ! =========  MD_LineProp  =======
@@ -102,19 +103,19 @@ IMPLICIT NONE
 ! =======================
 ! =========  MD_Body  =======
   TYPE, PUBLIC :: MD_Body
-    INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this Connection [-]
-    INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  0=fixed, 1=vessel, 2=connect [-]
-    INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedC = 0_IntKi      !< list of IdNums of connections attached to this body [-]
+    INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this Point [-]
+    INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  0=free, 1=fixed, -1=vessel [-]
+    INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedC = 0_IntKi      !< list of IdNums of points attached to this body [-]
     INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedR = 0_IntKi      !< list of IdNums of rods attached to this body [-]
-    INTEGER(IntKi)  :: nAttachedC = 0      !< number of attached connections [-]
+    INTEGER(IntKi)  :: nAttachedC = 0      !< number of attached points [-]
     INTEGER(IntKi)  :: nAttachedR = 0      !< number of attached rods [-]
-    REAL(DbKi) , DIMENSION(1:3,1:30)  :: rConnectRel = 0.0_R8Ki      !< relative position of connection on body [-]
+    REAL(DbKi) , DIMENSION(1:3,1:30)  :: rPointRel = 0.0_R8Ki      !< relative position of point on body [-]
     REAL(DbKi) , DIMENSION(1:6,1:30)  :: r6RodRel = 0.0_R8Ki      !< relative position and orientation of rod on body [-]
-    REAL(DbKi)  :: bodyM = 0.0_R8Ki      !<  [-]
-    REAL(DbKi)  :: bodyV = 0.0_R8Ki      !<  [-]
-    REAL(DbKi) , DIMENSION(1:3)  :: bodyI = 0.0_R8Ki      !<  [-]
-    REAL(DbKi) , DIMENSION(1:6)  :: bodyCdA = 0.0_R8Ki      !< product of drag force and frontal area of connection point [[m^2]]
-    REAL(DbKi) , DIMENSION(1:6)  :: bodyCa = 0.0_R8Ki      !< added mass coefficient of connection point [-]
+    REAL(DbKi)  :: bodyM = 0.0_R8Ki      !< body mass (seperate from attached objects) [[kg]]
+    REAL(DbKi)  :: bodyV = 0.0_R8Ki      !< body volume (for buoyancy calculation) [[m^3]]
+    REAL(DbKi) , DIMENSION(1:3)  :: bodyI = 0.0_R8Ki      !< body 3x3 inertia matrix diagonals [[kg-m^2]]
+    REAL(DbKi) , DIMENSION(1:6)  :: bodyCdA = 0.0_R8Ki      !< product of drag force and frontal area of body [[m^2]]
+    REAL(DbKi) , DIMENSION(1:6)  :: bodyCa = 0.0_R8Ki      !< added mass coefficient of body [-]
     REAL(DbKi)  :: time = 0.0_R8Ki      !< current time [[s]]
     REAL(DbKi) , DIMENSION(1:6)  :: r6 = 0.0_R8Ki      !< position [-]
     REAL(DbKi) , DIMENSION(1:6)  :: v6 = 0.0_R8Ki      !< velocity [-]
@@ -130,21 +131,21 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(1:3)  :: rCG = 0.0_R8Ki      !< vector in body frame from ref point to CG (before rods etc..) [-]
   END TYPE MD_Body
 ! =======================
-! =========  MD_Connect  =======
-  TYPE, PUBLIC :: MD_Connect
-    INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this Connection [-]
-    CHARACTER(10)  :: type      !< type of Connect: fix, vessel, connect [-]
-    INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  0=fixed, 1=vessel, 2=connect [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: Attached = 0_IntKi      !< list of IdNums of lines attached to this connection node [-]
+! =========  MD_Point  =======
+  TYPE, PUBLIC :: MD_Point
+    INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this point [-]
+    CHARACTER(10)  :: type      !< type of point: fix, vessel, point [-]
+    INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  1=fixed, -1=vessel, 0=free [-]
+    INTEGER(IntKi) , DIMENSION(1:10)  :: Attached = 0_IntKi      !< list of IdNums of lines attached to this point node [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: Top = 0_IntKi      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
     INTEGER(IntKi)  :: nAttached = 0      !< number of attached lines [-]
-    REAL(DbKi)  :: conM = 0.0_R8Ki      !<  [-]
-    REAL(DbKi)  :: conV = 0.0_R8Ki      !<  [-]
-    REAL(DbKi)  :: conFX = 0.0_R8Ki      !<  [-]
-    REAL(DbKi)  :: conFY = 0.0_R8Ki      !<  [-]
-    REAL(DbKi)  :: conFZ = 0.0_R8Ki      !<  [-]
-    REAL(DbKi)  :: conCa = 0.0_R8Ki      !< added mass coefficient of connection point [-]
-    REAL(DbKi)  :: conCdA = 0.0_R8Ki      !< product of drag force and frontal area of connection point [[m^2]]
+    REAL(DbKi)  :: pointM = 0.0_R8Ki      !< point mass [[kg]]
+    REAL(DbKi)  :: pointV = 0.0_R8Ki      !< point volume [[m^3]]
+    REAL(DbKi)  :: pointFX = 0.0_R8Ki      !<  [-]
+    REAL(DbKi)  :: pointFY = 0.0_R8Ki      !<  [-]
+    REAL(DbKi)  :: pointFZ = 0.0_R8Ki      !<  [-]
+    REAL(DbKi)  :: pointCa = 0.0_R8Ki      !< added mass coefficient of point [-]
+    REAL(DbKi)  :: pointCdA = 0.0_R8Ki      !< product of drag force and frontal area of point [[m^2]]
     REAL(DbKi)  :: time = 0.0_R8Ki      !< current time [[s]]
     REAL(DbKi) , DIMENSION(1:3)  :: r = 0.0_R8Ki      !< position [-]
     REAL(DbKi) , DIMENSION(1:3)  :: rd = 0.0_R8Ki      !< velocity [-]
@@ -155,14 +156,14 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: PDyn      !< water dynamic pressure at node [[Pa]]
     REAL(DbKi) , DIMENSION(1:3)  :: Fnet = 0.0_R8Ki      !< total force on node (excluding inertial loads) [-]
     REAL(DbKi) , DIMENSION(1:3,1:3)  :: M = 0.0_R8Ki      !< node mass matrix, from attached lines [-]
-  END TYPE MD_Connect
+  END TYPE MD_Point
 ! =======================
 ! =========  MD_Rod  =======
   TYPE, PUBLIC :: MD_Rod
     INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this Line [-]
     CHARACTER(10)  :: type      !< type of Rod.  should match one of RodProp names [-]
     INTEGER(IntKi)  :: PropsIdNum = 0_IntKi      !< the IdNum of the associated rod properties [-]
-    INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  0=fixed, 1=vessel, 2=connect [-]
+    INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  0=fixed, 1=vessel, 2=point [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedA = 0_IntKi      !< list of IdNums of lines attached to end A [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedB = 0_IntKi      !< list of IdNums of lines attached to end B [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: TopA = 0_IntKi      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
@@ -171,8 +172,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nAttachedB = 0      !< number of attached lines to Rod end B [-]
     INTEGER(IntKi) , DIMENSION(1:20)  :: OutFlagList = 0_IntKi      !< array specifying what line quantities should be output (1 vs 0) [-]
     INTEGER(IntKi)  :: N = 0_IntKi      !< The number of elements in the line [-]
-    INTEGER(IntKi)  :: endTypeA = 0_IntKi      !< type of connection at end A: 0=pinned to Connection, 1=cantilevered to Rod. [-]
-    INTEGER(IntKi)  :: endTypeB = 0_IntKi      !< type of connection at end B: 0=pinned to Connection, 1=cantilevered to Rod. [-]
+    INTEGER(IntKi)  :: endTypeA = 0_IntKi      !< type of point at end A: 0=pinned to Point, 1=cantilevered to Rod. [-]
+    INTEGER(IntKi)  :: endTypeB = 0_IntKi      !< type of point at end B: 0=pinned to Point, 1=cantilevered to Rod. [-]
     REAL(DbKi)  :: UnstrLen = 0.0_R8Ki      !< length of the rod [[m]]
     REAL(DbKi)  :: mass = 0.0_R8Ki      !< mass of the rod [[kg]]
     REAL(DbKi)  :: rho = 0.0_R8Ki      !< density [[kg/m3]]
@@ -184,8 +185,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: CdEnd = 0.0_R8Ki      !< drag coefficient for rod end [[-]]
     REAL(DbKi)  :: CaEnd = 0.0_R8Ki      !< added mass coefficient for rod end [[-]]
     REAL(DbKi)  :: time = 0.0_R8Ki      !< current time [[s]]
-    REAL(DbKi)  :: roll = 0.0_R8Ki      !< roll relative to vertical [deg]
-    REAL(DbKi)  :: pitch = 0.0_R8Ki      !< pitch relative to vertical [deg]
+    REAL(DbKi)  :: roll = 0.0_R8Ki      !< roll relative to vertical [[rad]]
+    REAL(DbKi)  :: pitch = 0.0_R8Ki      !< pitch relative to vertical [[rad]]
     REAL(DbKi)  :: h0 = 0.0_R8Ki      !< submerged length of rod axis, distance along rod centerline from end A to the waterplane (0 <= h0 <= L) [m]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: r      !< node positions [-]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: rd      !< node velocities [-]
@@ -226,11 +227,11 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: ElasticMod = 0_IntKi      !< Which elasticity model to use: {0 basic, 1 viscoelastic, 2 future SYCOM}  [-]
     INTEGER(IntKi) , DIMENSION(1:20)  :: OutFlagList = 0_IntKi      !< array specifying what line quantities should be output (1 vs 0) [-]
     INTEGER(IntKi)  :: CtrlChan = 0      !< index of control channel that will drive line active tensioning (0 for none) [-]
-    INTEGER(IntKi)  :: FairConnect = 0_IntKi      !< IdNum of Connection at fairlead [-]
-    INTEGER(IntKi)  :: AnchConnect = 0_IntKi      !< IdNum of Connection at anchor [-]
+    INTEGER(IntKi)  :: FairPoint = 0_IntKi      !< IdNum of Point at fairlead [-]
+    INTEGER(IntKi)  :: AnchPoint = 0_IntKi      !< IdNum of Point at anchor [-]
     INTEGER(IntKi)  :: N = 0_IntKi      !< The number of elements in the line [-]
-    INTEGER(IntKi)  :: endTypeA = 0_IntKi      !< type of connection at end A: 0=pinned to Connection, 1=cantilevered to Rod. [-]
-    INTEGER(IntKi)  :: endTypeB = 0_IntKi      !< type of connection at end B: 0=pinned to Connection, 1=cantilevered to Rod. [-]
+    INTEGER(IntKi)  :: endTypeA = 0_IntKi      !< type of connection at end A: 0=pinned to Point, 1=cantilevered to Rod. [-]
+    INTEGER(IntKi)  :: endTypeB = 0_IntKi      !< type of connection at end B: 0=pinned to Point, 1=cantilevered to Rod. [-]
     REAL(DbKi)  :: UnstrLen = 0.0_R8Ki      !< unstretched length of the line [-]
     REAL(DbKi)  :: rho = 0.0_R8Ki      !< density [[kg/m3]]
     REAL(DbKi)  :: d = 0.0_R8Ki      !< volume-equivalent diameter [[m]]
@@ -296,10 +297,15 @@ IMPLICIT NONE
     CHARACTER(10)  :: Name      !< name of output channel [-]
     CHARACTER(10)  :: Units      !< units string [-]
     INTEGER(IntKi)  :: QType = 0_IntKi      !< type of quantity - 0=tension, 1=x, 2=y, 3=z... [-]
-    INTEGER(IntKi)  :: OType = 0_IntKi      !< type of object - 0=line, 1=connect [-]
-    INTEGER(IntKi)  :: NodeID = 0_IntKi      !< node number if OType=0.  0=anchor, -1=N=Fairlead [-]
-    INTEGER(IntKi)  :: ObjID = 0_IntKi      !< number of Connect or Line object [-]
+    INTEGER(IntKi)  :: OType = 0_IntKi      !< type of object - 0=line, 1=point [-]
+    INTEGER(IntKi)  :: NodeID = 0_IntKi      !< node number if OType=0.  0=anchor, -1=whole object [-]
+    INTEGER(IntKi)  :: ObjID = 0_IntKi      !< number of Point or Line object [-]
   END TYPE MD_OutParmType
+! =======================
+! =========  VisDiam  =======
+  TYPE, PUBLIC :: VisDiam
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: Diam      !< Diameter for visualization [-]
+  END TYPE VisDiam
 ! =======================
 ! =========  MD_InitOutputType  =======
   TYPE, PUBLIC :: MD_InitOutputType
@@ -341,22 +347,22 @@ IMPLICIT NONE
   TYPE, PUBLIC :: MD_MiscVarType
     TYPE(MD_LineProp) , DIMENSION(:), ALLOCATABLE  :: LineTypeList      !< array of properties for each line type [-]
     TYPE(MD_RodProp) , DIMENSION(:), ALLOCATABLE  :: RodTypeList      !< array of properties for each rod type [-]
-    TYPE(MD_Body)  :: GroundBody      !< the single ground body which is the parent of all stationary connections [-]
+    TYPE(MD_Body)  :: GroundBody      !< the single ground body which is the parent of all stationary points [-]
     TYPE(MD_Body) , DIMENSION(:), ALLOCATABLE  :: BodyList      !< array of body objects [-]
     TYPE(MD_Rod) , DIMENSION(:), ALLOCATABLE  :: RodList      !< array of rod objects [-]
-    TYPE(MD_Connect) , DIMENSION(:), ALLOCATABLE  :: ConnectList      !< array of connection objects [-]
+    TYPE(MD_Point) , DIMENSION(:), ALLOCATABLE  :: PointList      !< array of point objects [-]
     TYPE(MD_Line) , DIMENSION(:), ALLOCATABLE  :: LineList      !< array of line objects [-]
     TYPE(MD_Fail) , DIMENSION(:), ALLOCATABLE  :: FailList      !< array of line objects [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FreeConIs      !< array of free connection indices in ConnectList vector []
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: CpldConIs      !< array of coupled/fairlead connection indices in ConnectList vector []
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FreePointIs      !< array of free point indices in PointList vector []
+    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: CpldPointIs      !< array of coupled/fairlead point indices in PointList vector []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FreeRodIs      !< array of free rod indices in RodList vector []
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: CpldRodIs      !< array of coupled/fairlead rod indices in RodList vector []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FreeBodyIs      !< array of free body indices in BodyList vector []
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: CpldBodyIs      !< array of coupled body indices in BodyList vector []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: LineStateIs1      !< starting index of each line's states in state vector []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: LineStateIsN      !< ending index of each line's states in state vector []
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ConStateIs1      !< starting index of each line's states in state vector []
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ConStateIsN      !< ending index of each line's states in state vector []
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: PointStateIs1      !< starting index of each point's states in state vector []
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: PointStateIsN      !< ending index of each point's states in state vector []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: RodStateIs1      !< starting index of each rod's states in state vector []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: RodStateIsN      !< ending index of each rod's states in state vector []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BodyStateIs1      !< starting index of each body's states in state vector []
@@ -379,8 +385,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: MD_ParameterType
     INTEGER(IntKi)  :: nLineTypes = 0      !< number of line types []
     INTEGER(IntKi)  :: nRodTypes = 0      !< number of rod types []
-    INTEGER(IntKi)  :: nConnects = 0      !< number of Connection objects []
-    INTEGER(IntKi)  :: nConnectsExtra = 0      !< number of Connection objects including space for extra ones that could arise from line failures []
+    INTEGER(IntKi)  :: nPoints = 0      !< number of Point objects []
+    INTEGER(IntKi)  :: nPointsExtra = 0      !< number of Point objects including space for extra ones that could arise from line failures []
     INTEGER(IntKi)  :: nBodies = 0      !< number of Body objects []
     INTEGER(IntKi)  :: nRods = 0      !< number of Rod objects []
     INTEGER(IntKi)  :: nLines = 0      !< number of Line objects []
@@ -388,12 +394,12 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nFails = 0      !< number of failure conditions []
     INTEGER(IntKi)  :: nFreeBodies = 0      !<  []
     INTEGER(IntKi)  :: nFreeRods = 0      !<  []
-    INTEGER(IntKi)  :: nFreeCons = 0      !<  []
+    INTEGER(IntKi)  :: nFreePoints = 0      !<  []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: nCpldBodies      !< number of coupled bodies (for FAST.Farm, size>1 with an entry for each turbine) []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: nCpldRods      !< number of coupled rods (for FAST.Farm, size>1 with an entry for each turbine) []
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: nCpldCons      !< number of coupled points (for FAST.Farm, size>1 with an entry for each turbine) []
-    INTEGER(IntKi)  :: NConns = 0      !< number of Connect type Connections - not to be confused with NConnects []
-    INTEGER(IntKi)  :: NAnchs = 0      !< number of Anchor type Connections []
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: nCpldPoints      !< number of coupled points (for FAST.Farm, size>1 with an entry for each turbine) []
+    INTEGER(IntKi)  :: NConns = 0      !< number of Connect type Points - not to be confused with NPoints []
+    INTEGER(IntKi)  :: NAnchs = 0      !< number of Anchor type Points []
     REAL(DbKi)  :: Tmax = 0.0_R8Ki      !< simulation duration [[s]]
     REAL(DbKi)  :: g = 9.81      !< gravitational constant (positive) [[m/s^2]]
     REAL(DbKi)  :: rhoW = 1025      !< density of seawater [[kg/m^3]]
@@ -446,6 +452,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix [-]
     INTEGER(IntKi)  :: Jac_nx = 0_IntKi      !< number of continuous states in jacobian matrix [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: dxIdx_map2_xStateIdx      !< Mapping array from index of dX array to corresponding state index [-]
+    LOGICAL  :: VisMeshes = .false.      !< Using visualization meshes as requested by glue code [-]
+    TYPE(VisDiam) , DIMENSION(:), ALLOCATABLE  :: VisRodsDiam      !< Diameters for visualization of rods [-]
   END TYPE MD_ParameterType
 ! =======================
 ! =========  MD_InputType  =======
@@ -459,6 +467,10 @@ IMPLICIT NONE
   TYPE, PUBLIC :: MD_OutputType
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: CoupledLoads      !< array of point meshes for mooring reaction forces (and moments) at coupling points [[N]]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< output vector returned to glue code []
+    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: VisLinesMesh      !< Line2 mesh for visualizing mooring lines [-]
+    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: VisRodsMesh      !< Line2 mesh for visualizing mooring rods [-]
+    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: VisBodiesMesh      !< Point mesh for visualizing mooring bodies [-]
+    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: VisAnchsMesh      !< Point mesh for visualizing mooring anchors [-]
   END TYPE MD_OutputType
 ! =======================
 CONTAINS
@@ -575,6 +587,7 @@ subroutine MD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
       DstInitInputData%OutList = SrcInitInputData%OutList
    end if
    DstInitInputData%Linearize = SrcInitInputData%Linearize
+   DstInitInputData%VisMeshes = SrcInitInputData%VisMeshes
 end subroutine
 
 subroutine MD_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -630,6 +643,7 @@ subroutine MD_PackInitInput(Buf, Indata)
       call RegPack(Buf, InData%OutList)
    end if
    call RegPack(Buf, InData%Linearize)
+   call RegPack(Buf, InData%VisMeshes)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -703,6 +717,8 @@ subroutine MD_UnPackInitInput(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    call RegUnpack(Buf, OutData%Linearize)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%VisMeshes)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -923,7 +939,7 @@ subroutine MD_CopyBody(SrcBodyData, DstBodyData, CtrlCode, ErrStat, ErrMsg)
    DstBodyData%AttachedR = SrcBodyData%AttachedR
    DstBodyData%nAttachedC = SrcBodyData%nAttachedC
    DstBodyData%nAttachedR = SrcBodyData%nAttachedR
-   DstBodyData%rConnectRel = SrcBodyData%rConnectRel
+   DstBodyData%rPointRel = SrcBodyData%rPointRel
    DstBodyData%r6RodRel = SrcBodyData%r6RodRel
    DstBodyData%bodyM = SrcBodyData%bodyM
    DstBodyData%bodyV = SrcBodyData%bodyV
@@ -965,7 +981,7 @@ subroutine MD_PackBody(Buf, Indata)
    call RegPack(Buf, InData%AttachedR)
    call RegPack(Buf, InData%nAttachedC)
    call RegPack(Buf, InData%nAttachedR)
-   call RegPack(Buf, InData%rConnectRel)
+   call RegPack(Buf, InData%rPointRel)
    call RegPack(Buf, InData%r6RodRel)
    call RegPack(Buf, InData%bodyM)
    call RegPack(Buf, InData%bodyV)
@@ -1005,7 +1021,7 @@ subroutine MD_UnPackBody(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%nAttachedR)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%rConnectRel)
+   call RegUnpack(Buf, OutData%rPointRel)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%r6RodRel)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1047,69 +1063,69 @@ subroutine MD_UnPackBody(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
-subroutine MD_CopyConnect(SrcConnectData, DstConnectData, CtrlCode, ErrStat, ErrMsg)
-   type(MD_Connect), intent(in) :: SrcConnectData
-   type(MD_Connect), intent(inout) :: DstConnectData
+subroutine MD_CopyPoint(SrcPointData, DstPointData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_Point), intent(in) :: SrcPointData
+   type(MD_Point), intent(inout) :: DstPointData
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
    integer(IntKi)                 :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
-   character(*), parameter        :: RoutineName = 'MD_CopyConnect'
+   character(*), parameter        :: RoutineName = 'MD_CopyPoint'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   DstConnectData%IdNum = SrcConnectData%IdNum
-   DstConnectData%type = SrcConnectData%type
-   DstConnectData%typeNum = SrcConnectData%typeNum
-   DstConnectData%Attached = SrcConnectData%Attached
-   DstConnectData%Top = SrcConnectData%Top
-   DstConnectData%nAttached = SrcConnectData%nAttached
-   DstConnectData%conM = SrcConnectData%conM
-   DstConnectData%conV = SrcConnectData%conV
-   DstConnectData%conFX = SrcConnectData%conFX
-   DstConnectData%conFY = SrcConnectData%conFY
-   DstConnectData%conFZ = SrcConnectData%conFZ
-   DstConnectData%conCa = SrcConnectData%conCa
-   DstConnectData%conCdA = SrcConnectData%conCdA
-   DstConnectData%time = SrcConnectData%time
-   DstConnectData%r = SrcConnectData%r
-   DstConnectData%rd = SrcConnectData%rd
-   DstConnectData%a = SrcConnectData%a
-   DstConnectData%U = SrcConnectData%U
-   DstConnectData%Ud = SrcConnectData%Ud
-   DstConnectData%zeta = SrcConnectData%zeta
-   if (allocated(SrcConnectData%PDyn)) then
-      LB(1:1) = lbound(SrcConnectData%PDyn)
-      UB(1:1) = ubound(SrcConnectData%PDyn)
-      if (.not. allocated(DstConnectData%PDyn)) then
-         allocate(DstConnectData%PDyn(LB(1):UB(1)), stat=ErrStat2)
+   DstPointData%IdNum = SrcPointData%IdNum
+   DstPointData%type = SrcPointData%type
+   DstPointData%typeNum = SrcPointData%typeNum
+   DstPointData%Attached = SrcPointData%Attached
+   DstPointData%Top = SrcPointData%Top
+   DstPointData%nAttached = SrcPointData%nAttached
+   DstPointData%pointM = SrcPointData%pointM
+   DstPointData%pointV = SrcPointData%pointV
+   DstPointData%pointFX = SrcPointData%pointFX
+   DstPointData%pointFY = SrcPointData%pointFY
+   DstPointData%pointFZ = SrcPointData%pointFZ
+   DstPointData%pointCa = SrcPointData%pointCa
+   DstPointData%pointCdA = SrcPointData%pointCdA
+   DstPointData%time = SrcPointData%time
+   DstPointData%r = SrcPointData%r
+   DstPointData%rd = SrcPointData%rd
+   DstPointData%a = SrcPointData%a
+   DstPointData%U = SrcPointData%U
+   DstPointData%Ud = SrcPointData%Ud
+   DstPointData%zeta = SrcPointData%zeta
+   if (allocated(SrcPointData%PDyn)) then
+      LB(1:1) = lbound(SrcPointData%PDyn)
+      UB(1:1) = ubound(SrcPointData%PDyn)
+      if (.not. allocated(DstPointData%PDyn)) then
+         allocate(DstPointData%PDyn(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstConnectData%PDyn.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstPointData%PDyn.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstConnectData%PDyn = SrcConnectData%PDyn
+      DstPointData%PDyn = SrcPointData%PDyn
    end if
-   DstConnectData%Fnet = SrcConnectData%Fnet
-   DstConnectData%M = SrcConnectData%M
+   DstPointData%Fnet = SrcPointData%Fnet
+   DstPointData%M = SrcPointData%M
 end subroutine
 
-subroutine MD_DestroyConnect(ConnectData, ErrStat, ErrMsg)
-   type(MD_Connect), intent(inout) :: ConnectData
+subroutine MD_DestroyPoint(PointData, ErrStat, ErrMsg)
+   type(MD_Point), intent(inout) :: PointData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'MD_DestroyConnect'
+   character(*), parameter        :: RoutineName = 'MD_DestroyPoint'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(ConnectData%PDyn)) then
-      deallocate(ConnectData%PDyn)
+   if (allocated(PointData%PDyn)) then
+      deallocate(PointData%PDyn)
    end if
 end subroutine
 
-subroutine MD_PackConnect(Buf, Indata)
+subroutine MD_PackPoint(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
-   type(MD_Connect), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'MD_PackConnect'
+   type(MD_Point), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'MD_PackPoint'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%IdNum)
    call RegPack(Buf, InData%type)
@@ -1117,13 +1133,13 @@ subroutine MD_PackConnect(Buf, Indata)
    call RegPack(Buf, InData%Attached)
    call RegPack(Buf, InData%Top)
    call RegPack(Buf, InData%nAttached)
-   call RegPack(Buf, InData%conM)
-   call RegPack(Buf, InData%conV)
-   call RegPack(Buf, InData%conFX)
-   call RegPack(Buf, InData%conFY)
-   call RegPack(Buf, InData%conFZ)
-   call RegPack(Buf, InData%conCa)
-   call RegPack(Buf, InData%conCdA)
+   call RegPack(Buf, InData%pointM)
+   call RegPack(Buf, InData%pointV)
+   call RegPack(Buf, InData%pointFX)
+   call RegPack(Buf, InData%pointFY)
+   call RegPack(Buf, InData%pointFZ)
+   call RegPack(Buf, InData%pointCa)
+   call RegPack(Buf, InData%pointCdA)
    call RegPack(Buf, InData%time)
    call RegPack(Buf, InData%r)
    call RegPack(Buf, InData%rd)
@@ -1141,10 +1157,10 @@ subroutine MD_PackConnect(Buf, Indata)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
-subroutine MD_UnPackConnect(Buf, OutData)
+subroutine MD_UnPackPoint(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
-   type(MD_Connect), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'MD_UnPackConnect'
+   type(MD_Point), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'MD_UnPackPoint'
    integer(IntKi)  :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
@@ -1161,19 +1177,19 @@ subroutine MD_UnPackConnect(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%nAttached)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%conM)
+   call RegUnpack(Buf, OutData%pointM)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%conV)
+   call RegUnpack(Buf, OutData%pointV)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%conFX)
+   call RegUnpack(Buf, OutData%pointFX)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%conFY)
+   call RegUnpack(Buf, OutData%pointFY)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%conFZ)
+   call RegUnpack(Buf, OutData%pointFZ)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%conCa)
+   call RegUnpack(Buf, OutData%pointCa)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%conCdA)
+   call RegUnpack(Buf, OutData%pointCdA)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%time)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2067,8 +2083,8 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
    DstLineData%ElasticMod = SrcLineData%ElasticMod
    DstLineData%OutFlagList = SrcLineData%OutFlagList
    DstLineData%CtrlChan = SrcLineData%CtrlChan
-   DstLineData%FairConnect = SrcLineData%FairConnect
-   DstLineData%AnchConnect = SrcLineData%AnchConnect
+   DstLineData%FairPoint = SrcLineData%FairPoint
+   DstLineData%AnchPoint = SrcLineData%AnchPoint
    DstLineData%N = SrcLineData%N
    DstLineData%endTypeA = SrcLineData%endTypeA
    DstLineData%endTypeB = SrcLineData%endTypeB
@@ -2538,8 +2554,8 @@ subroutine MD_PackLine(Buf, Indata)
    call RegPack(Buf, InData%ElasticMod)
    call RegPack(Buf, InData%OutFlagList)
    call RegPack(Buf, InData%CtrlChan)
-   call RegPack(Buf, InData%FairConnect)
-   call RegPack(Buf, InData%AnchConnect)
+   call RegPack(Buf, InData%FairPoint)
+   call RegPack(Buf, InData%AnchPoint)
    call RegPack(Buf, InData%N)
    call RegPack(Buf, InData%endTypeA)
    call RegPack(Buf, InData%endTypeB)
@@ -2729,9 +2745,9 @@ subroutine MD_UnPackLine(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%CtrlChan)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%FairConnect)
+   call RegUnpack(Buf, OutData%FairPoint)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%AnchConnect)
+   call RegUnpack(Buf, OutData%AnchPoint)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%N)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3279,6 +3295,80 @@ subroutine MD_UnPackOutParmType(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%ObjID)
    if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
+
+subroutine MD_CopyVisDiam(SrcVisDiamData, DstVisDiamData, CtrlCode, ErrStat, ErrMsg)
+   type(VisDiam), intent(in) :: SrcVisDiamData
+   type(VisDiam), intent(inout) :: DstVisDiamData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'MD_CopyVisDiam'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(SrcVisDiamData%Diam)) then
+      LB(1:1) = lbound(SrcVisDiamData%Diam)
+      UB(1:1) = ubound(SrcVisDiamData%Diam)
+      if (.not. allocated(DstVisDiamData%Diam)) then
+         allocate(DstVisDiamData%Diam(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstVisDiamData%Diam.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstVisDiamData%Diam = SrcVisDiamData%Diam
+   end if
+end subroutine
+
+subroutine MD_DestroyVisDiam(VisDiamData, ErrStat, ErrMsg)
+   type(VisDiam), intent(inout) :: VisDiamData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_DestroyVisDiam'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(VisDiamData%Diam)) then
+      deallocate(VisDiamData%Diam)
+   end if
+end subroutine
+
+subroutine MD_PackVisDiam(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(VisDiam), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'MD_PackVisDiam'
+   if (Buf%ErrStat >= AbortErrLev) return
+   call RegPack(Buf, allocated(InData%Diam))
+   if (allocated(InData%Diam)) then
+      call RegPackBounds(Buf, 1, lbound(InData%Diam), ubound(InData%Diam))
+      call RegPack(Buf, InData%Diam)
+   end if
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
+
+subroutine MD_UnPackVisDiam(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(VisDiam), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'MD_UnPackVisDiam'
+   integer(IntKi)  :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (Buf%ErrStat /= ErrID_None) return
+   if (allocated(OutData%Diam)) deallocate(OutData%Diam)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%Diam(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Diam.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%Diam)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
 end subroutine
 
 subroutine MD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -3976,18 +4066,18 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          if (ErrStat >= AbortErrLev) return
       end do
    end if
-   if (allocated(SrcMiscData%ConnectList)) then
-      LB(1:1) = lbound(SrcMiscData%ConnectList)
-      UB(1:1) = ubound(SrcMiscData%ConnectList)
-      if (.not. allocated(DstMiscData%ConnectList)) then
-         allocate(DstMiscData%ConnectList(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcMiscData%PointList)) then
+      LB(1:1) = lbound(SrcMiscData%PointList)
+      UB(1:1) = ubound(SrcMiscData%PointList)
+      if (.not. allocated(DstMiscData%PointList)) then
+         allocate(DstMiscData%PointList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ConnectList.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%PointList.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
       do i1 = LB(1), UB(1)
-         call MD_CopyConnect(SrcMiscData%ConnectList(i1), DstMiscData%ConnectList(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call MD_CopyPoint(SrcMiscData%PointList(i1), DstMiscData%PointList(i1), CtrlCode, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
@@ -4024,29 +4114,29 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          if (ErrStat >= AbortErrLev) return
       end do
    end if
-   if (allocated(SrcMiscData%FreeConIs)) then
-      LB(1:1) = lbound(SrcMiscData%FreeConIs)
-      UB(1:1) = ubound(SrcMiscData%FreeConIs)
-      if (.not. allocated(DstMiscData%FreeConIs)) then
-         allocate(DstMiscData%FreeConIs(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcMiscData%FreePointIs)) then
+      LB(1:1) = lbound(SrcMiscData%FreePointIs)
+      UB(1:1) = ubound(SrcMiscData%FreePointIs)
+      if (.not. allocated(DstMiscData%FreePointIs)) then
+         allocate(DstMiscData%FreePointIs(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FreeConIs.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FreePointIs.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstMiscData%FreeConIs = SrcMiscData%FreeConIs
+      DstMiscData%FreePointIs = SrcMiscData%FreePointIs
    end if
-   if (allocated(SrcMiscData%CpldConIs)) then
-      LB(1:2) = lbound(SrcMiscData%CpldConIs)
-      UB(1:2) = ubound(SrcMiscData%CpldConIs)
-      if (.not. allocated(DstMiscData%CpldConIs)) then
-         allocate(DstMiscData%CpldConIs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcMiscData%CpldPointIs)) then
+      LB(1:2) = lbound(SrcMiscData%CpldPointIs)
+      UB(1:2) = ubound(SrcMiscData%CpldPointIs)
+      if (.not. allocated(DstMiscData%CpldPointIs)) then
+         allocate(DstMiscData%CpldPointIs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%CpldConIs.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%CpldPointIs.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstMiscData%CpldConIs = SrcMiscData%CpldConIs
+      DstMiscData%CpldPointIs = SrcMiscData%CpldPointIs
    end if
    if (allocated(SrcMiscData%FreeRodIs)) then
       LB(1:1) = lbound(SrcMiscData%FreeRodIs)
@@ -4120,29 +4210,29 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%LineStateIsN = SrcMiscData%LineStateIsN
    end if
-   if (allocated(SrcMiscData%ConStateIs1)) then
-      LB(1:1) = lbound(SrcMiscData%ConStateIs1)
-      UB(1:1) = ubound(SrcMiscData%ConStateIs1)
-      if (.not. allocated(DstMiscData%ConStateIs1)) then
-         allocate(DstMiscData%ConStateIs1(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcMiscData%PointStateIs1)) then
+      LB(1:1) = lbound(SrcMiscData%PointStateIs1)
+      UB(1:1) = ubound(SrcMiscData%PointStateIs1)
+      if (.not. allocated(DstMiscData%PointStateIs1)) then
+         allocate(DstMiscData%PointStateIs1(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ConStateIs1.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%PointStateIs1.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstMiscData%ConStateIs1 = SrcMiscData%ConStateIs1
+      DstMiscData%PointStateIs1 = SrcMiscData%PointStateIs1
    end if
-   if (allocated(SrcMiscData%ConStateIsN)) then
-      LB(1:1) = lbound(SrcMiscData%ConStateIsN)
-      UB(1:1) = ubound(SrcMiscData%ConStateIsN)
-      if (.not. allocated(DstMiscData%ConStateIsN)) then
-         allocate(DstMiscData%ConStateIsN(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcMiscData%PointStateIsN)) then
+      LB(1:1) = lbound(SrcMiscData%PointStateIsN)
+      UB(1:1) = ubound(SrcMiscData%PointStateIsN)
+      if (.not. allocated(DstMiscData%PointStateIsN)) then
+         allocate(DstMiscData%PointStateIsN(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ConStateIsN.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%PointStateIsN.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstMiscData%ConStateIsN = SrcMiscData%ConStateIsN
+      DstMiscData%PointStateIsN = SrcMiscData%PointStateIsN
    end if
    if (allocated(SrcMiscData%RodStateIs1)) then
       LB(1:1) = lbound(SrcMiscData%RodStateIs1)
@@ -4314,14 +4404,14 @@ subroutine MD_DestroyMisc(MiscData, ErrStat, ErrMsg)
       end do
       deallocate(MiscData%RodList)
    end if
-   if (allocated(MiscData%ConnectList)) then
-      LB(1:1) = lbound(MiscData%ConnectList)
-      UB(1:1) = ubound(MiscData%ConnectList)
+   if (allocated(MiscData%PointList)) then
+      LB(1:1) = lbound(MiscData%PointList)
+      UB(1:1) = ubound(MiscData%PointList)
       do i1 = LB(1), UB(1)
-         call MD_DestroyConnect(MiscData%ConnectList(i1), ErrStat2, ErrMsg2)
+         call MD_DestroyPoint(MiscData%PointList(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end do
-      deallocate(MiscData%ConnectList)
+      deallocate(MiscData%PointList)
    end if
    if (allocated(MiscData%LineList)) then
       LB(1:1) = lbound(MiscData%LineList)
@@ -4341,11 +4431,11 @@ subroutine MD_DestroyMisc(MiscData, ErrStat, ErrMsg)
       end do
       deallocate(MiscData%FailList)
    end if
-   if (allocated(MiscData%FreeConIs)) then
-      deallocate(MiscData%FreeConIs)
+   if (allocated(MiscData%FreePointIs)) then
+      deallocate(MiscData%FreePointIs)
    end if
-   if (allocated(MiscData%CpldConIs)) then
-      deallocate(MiscData%CpldConIs)
+   if (allocated(MiscData%CpldPointIs)) then
+      deallocate(MiscData%CpldPointIs)
    end if
    if (allocated(MiscData%FreeRodIs)) then
       deallocate(MiscData%FreeRodIs)
@@ -4365,11 +4455,11 @@ subroutine MD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%LineStateIsN)) then
       deallocate(MiscData%LineStateIsN)
    end if
-   if (allocated(MiscData%ConStateIs1)) then
-      deallocate(MiscData%ConStateIs1)
+   if (allocated(MiscData%PointStateIs1)) then
+      deallocate(MiscData%PointStateIs1)
    end if
-   if (allocated(MiscData%ConStateIsN)) then
-      deallocate(MiscData%ConStateIsN)
+   if (allocated(MiscData%PointStateIsN)) then
+      deallocate(MiscData%PointStateIsN)
    end if
    if (allocated(MiscData%RodStateIs1)) then
       deallocate(MiscData%RodStateIs1)
@@ -4448,13 +4538,13 @@ subroutine MD_PackMisc(Buf, Indata)
          call MD_PackRod(Buf, InData%RodList(i1)) 
       end do
    end if
-   call RegPack(Buf, allocated(InData%ConnectList))
-   if (allocated(InData%ConnectList)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ConnectList), ubound(InData%ConnectList))
-      LB(1:1) = lbound(InData%ConnectList)
-      UB(1:1) = ubound(InData%ConnectList)
+   call RegPack(Buf, allocated(InData%PointList))
+   if (allocated(InData%PointList)) then
+      call RegPackBounds(Buf, 1, lbound(InData%PointList), ubound(InData%PointList))
+      LB(1:1) = lbound(InData%PointList)
+      UB(1:1) = ubound(InData%PointList)
       do i1 = LB(1), UB(1)
-         call MD_PackConnect(Buf, InData%ConnectList(i1)) 
+         call MD_PackPoint(Buf, InData%PointList(i1)) 
       end do
    end if
    call RegPack(Buf, allocated(InData%LineList))
@@ -4475,15 +4565,15 @@ subroutine MD_PackMisc(Buf, Indata)
          call MD_PackFail(Buf, InData%FailList(i1)) 
       end do
    end if
-   call RegPack(Buf, allocated(InData%FreeConIs))
-   if (allocated(InData%FreeConIs)) then
-      call RegPackBounds(Buf, 1, lbound(InData%FreeConIs), ubound(InData%FreeConIs))
-      call RegPack(Buf, InData%FreeConIs)
+   call RegPack(Buf, allocated(InData%FreePointIs))
+   if (allocated(InData%FreePointIs)) then
+      call RegPackBounds(Buf, 1, lbound(InData%FreePointIs), ubound(InData%FreePointIs))
+      call RegPack(Buf, InData%FreePointIs)
    end if
-   call RegPack(Buf, allocated(InData%CpldConIs))
-   if (allocated(InData%CpldConIs)) then
-      call RegPackBounds(Buf, 2, lbound(InData%CpldConIs), ubound(InData%CpldConIs))
-      call RegPack(Buf, InData%CpldConIs)
+   call RegPack(Buf, allocated(InData%CpldPointIs))
+   if (allocated(InData%CpldPointIs)) then
+      call RegPackBounds(Buf, 2, lbound(InData%CpldPointIs), ubound(InData%CpldPointIs))
+      call RegPack(Buf, InData%CpldPointIs)
    end if
    call RegPack(Buf, allocated(InData%FreeRodIs))
    if (allocated(InData%FreeRodIs)) then
@@ -4515,15 +4605,15 @@ subroutine MD_PackMisc(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%LineStateIsN), ubound(InData%LineStateIsN))
       call RegPack(Buf, InData%LineStateIsN)
    end if
-   call RegPack(Buf, allocated(InData%ConStateIs1))
-   if (allocated(InData%ConStateIs1)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ConStateIs1), ubound(InData%ConStateIs1))
-      call RegPack(Buf, InData%ConStateIs1)
+   call RegPack(Buf, allocated(InData%PointStateIs1))
+   if (allocated(InData%PointStateIs1)) then
+      call RegPackBounds(Buf, 1, lbound(InData%PointStateIs1), ubound(InData%PointStateIs1))
+      call RegPack(Buf, InData%PointStateIs1)
    end if
-   call RegPack(Buf, allocated(InData%ConStateIsN))
-   if (allocated(InData%ConStateIsN)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ConStateIsN), ubound(InData%ConStateIsN))
-      call RegPack(Buf, InData%ConStateIsN)
+   call RegPack(Buf, allocated(InData%PointStateIsN))
+   if (allocated(InData%PointStateIsN)) then
+      call RegPackBounds(Buf, 1, lbound(InData%PointStateIsN), ubound(InData%PointStateIsN))
+      call RegPack(Buf, InData%PointStateIsN)
    end if
    call RegPack(Buf, allocated(InData%RodStateIs1))
    if (allocated(InData%RodStateIs1)) then
@@ -4650,19 +4740,19 @@ subroutine MD_UnPackMisc(Buf, OutData)
          call MD_UnpackRod(Buf, OutData%RodList(i1)) ! RodList 
       end do
    end if
-   if (allocated(OutData%ConnectList)) deallocate(OutData%ConnectList)
+   if (allocated(OutData%PointList)) deallocate(OutData%PointList)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
    if (IsAllocAssoc) then
       call RegUnpackBounds(Buf, 1, LB, UB)
       if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%ConnectList(LB(1):UB(1)),stat=stat)
+      allocate(OutData%PointList(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ConnectList.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PointList.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call MD_UnpackConnect(Buf, OutData%ConnectList(i1)) ! ConnectList 
+         call MD_UnpackPoint(Buf, OutData%PointList(i1)) ! PointList 
       end do
    end if
    if (allocated(OutData%LineList)) deallocate(OutData%LineList)
@@ -4695,32 +4785,32 @@ subroutine MD_UnPackMisc(Buf, OutData)
          call MD_UnpackFail(Buf, OutData%FailList(i1)) ! FailList 
       end do
    end if
-   if (allocated(OutData%FreeConIs)) deallocate(OutData%FreeConIs)
+   if (allocated(OutData%FreePointIs)) deallocate(OutData%FreePointIs)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
    if (IsAllocAssoc) then
       call RegUnpackBounds(Buf, 1, LB, UB)
       if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%FreeConIs(LB(1):UB(1)),stat=stat)
+      allocate(OutData%FreePointIs(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%FreeConIs.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%FreePointIs.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
          return
       end if
-      call RegUnpack(Buf, OutData%FreeConIs)
+      call RegUnpack(Buf, OutData%FreePointIs)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   if (allocated(OutData%CpldConIs)) deallocate(OutData%CpldConIs)
+   if (allocated(OutData%CpldPointIs)) deallocate(OutData%CpldPointIs)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
    if (IsAllocAssoc) then
       call RegUnpackBounds(Buf, 2, LB, UB)
       if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%CpldConIs(LB(1):UB(1),LB(2):UB(2)),stat=stat)
+      allocate(OutData%CpldPointIs(LB(1):UB(1),LB(2):UB(2)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%CpldConIs.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%CpldPointIs.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
          return
       end if
-      call RegUnpack(Buf, OutData%CpldConIs)
+      call RegUnpack(Buf, OutData%CpldPointIs)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    if (allocated(OutData%FreeRodIs)) deallocate(OutData%FreeRodIs)
@@ -4807,32 +4897,32 @@ subroutine MD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%LineStateIsN)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   if (allocated(OutData%ConStateIs1)) deallocate(OutData%ConStateIs1)
+   if (allocated(OutData%PointStateIs1)) deallocate(OutData%PointStateIs1)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
    if (IsAllocAssoc) then
       call RegUnpackBounds(Buf, 1, LB, UB)
       if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%ConStateIs1(LB(1):UB(1)),stat=stat)
+      allocate(OutData%PointStateIs1(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ConStateIs1.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PointStateIs1.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
          return
       end if
-      call RegUnpack(Buf, OutData%ConStateIs1)
+      call RegUnpack(Buf, OutData%PointStateIs1)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   if (allocated(OutData%ConStateIsN)) deallocate(OutData%ConStateIsN)
+   if (allocated(OutData%PointStateIsN)) deallocate(OutData%PointStateIsN)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
    if (IsAllocAssoc) then
       call RegUnpackBounds(Buf, 1, LB, UB)
       if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%ConStateIsN(LB(1):UB(1)),stat=stat)
+      allocate(OutData%PointStateIsN(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ConStateIsN.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PointStateIsN.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
          return
       end if
-      call RegUnpack(Buf, OutData%ConStateIsN)
+      call RegUnpack(Buf, OutData%PointStateIsN)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    if (allocated(OutData%RodStateIs1)) deallocate(OutData%RodStateIs1)
@@ -4990,8 +5080,8 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    ErrMsg  = ''
    DstParamData%nLineTypes = SrcParamData%nLineTypes
    DstParamData%nRodTypes = SrcParamData%nRodTypes
-   DstParamData%nConnects = SrcParamData%nConnects
-   DstParamData%nConnectsExtra = SrcParamData%nConnectsExtra
+   DstParamData%nPoints = SrcParamData%nPoints
+   DstParamData%nPointsExtra = SrcParamData%nPointsExtra
    DstParamData%nBodies = SrcParamData%nBodies
    DstParamData%nRods = SrcParamData%nRods
    DstParamData%nLines = SrcParamData%nLines
@@ -4999,7 +5089,7 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%nFails = SrcParamData%nFails
    DstParamData%nFreeBodies = SrcParamData%nFreeBodies
    DstParamData%nFreeRods = SrcParamData%nFreeRods
-   DstParamData%nFreeCons = SrcParamData%nFreeCons
+   DstParamData%nFreePoints = SrcParamData%nFreePoints
    if (allocated(SrcParamData%nCpldBodies)) then
       LB(1:1) = lbound(SrcParamData%nCpldBodies)
       UB(1:1) = ubound(SrcParamData%nCpldBodies)
@@ -5024,17 +5114,17 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstParamData%nCpldRods = SrcParamData%nCpldRods
    end if
-   if (allocated(SrcParamData%nCpldCons)) then
-      LB(1:1) = lbound(SrcParamData%nCpldCons)
-      UB(1:1) = ubound(SrcParamData%nCpldCons)
-      if (.not. allocated(DstParamData%nCpldCons)) then
-         allocate(DstParamData%nCpldCons(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcParamData%nCpldPoints)) then
+      LB(1:1) = lbound(SrcParamData%nCpldPoints)
+      UB(1:1) = ubound(SrcParamData%nCpldPoints)
+      if (.not. allocated(DstParamData%nCpldPoints)) then
+         allocate(DstParamData%nCpldPoints(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%nCpldCons.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%nCpldPoints.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstParamData%nCpldCons = SrcParamData%nCpldCons
+      DstParamData%nCpldPoints = SrcParamData%nCpldPoints
    end if
    DstParamData%NConns = SrcParamData%NConns
    DstParamData%NAnchs = SrcParamData%NAnchs
@@ -5314,6 +5404,23 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstParamData%dxIdx_map2_xStateIdx = SrcParamData%dxIdx_map2_xStateIdx
    end if
+   DstParamData%VisMeshes = SrcParamData%VisMeshes
+   if (allocated(SrcParamData%VisRodsDiam)) then
+      LB(1:1) = lbound(SrcParamData%VisRodsDiam)
+      UB(1:1) = ubound(SrcParamData%VisRodsDiam)
+      if (.not. allocated(DstParamData%VisRodsDiam)) then
+         allocate(DstParamData%VisRodsDiam(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%VisRodsDiam.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MD_CopyVisDiam(SrcParamData%VisRodsDiam(i1), DstParamData%VisRodsDiam(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
 end subroutine
 
 subroutine MD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -5333,8 +5440,8 @@ subroutine MD_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%nCpldRods)) then
       deallocate(ParamData%nCpldRods)
    end if
-   if (allocated(ParamData%nCpldCons)) then
-      deallocate(ParamData%nCpldCons)
+   if (allocated(ParamData%nCpldPoints)) then
+      deallocate(ParamData%nCpldPoints)
    end if
    if (allocated(ParamData%OutParam)) then
       LB(1:1) = lbound(ParamData%OutParam)
@@ -5402,6 +5509,15 @@ subroutine MD_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%dxIdx_map2_xStateIdx)) then
       deallocate(ParamData%dxIdx_map2_xStateIdx)
    end if
+   if (allocated(ParamData%VisRodsDiam)) then
+      LB(1:1) = lbound(ParamData%VisRodsDiam)
+      UB(1:1) = ubound(ParamData%VisRodsDiam)
+      do i1 = LB(1), UB(1)
+         call MD_DestroyVisDiam(ParamData%VisRodsDiam(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ParamData%VisRodsDiam)
+   end if
 end subroutine
 
 subroutine MD_PackParam(Buf, Indata)
@@ -5413,8 +5529,8 @@ subroutine MD_PackParam(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%nLineTypes)
    call RegPack(Buf, InData%nRodTypes)
-   call RegPack(Buf, InData%nConnects)
-   call RegPack(Buf, InData%nConnectsExtra)
+   call RegPack(Buf, InData%nPoints)
+   call RegPack(Buf, InData%nPointsExtra)
    call RegPack(Buf, InData%nBodies)
    call RegPack(Buf, InData%nRods)
    call RegPack(Buf, InData%nLines)
@@ -5422,7 +5538,7 @@ subroutine MD_PackParam(Buf, Indata)
    call RegPack(Buf, InData%nFails)
    call RegPack(Buf, InData%nFreeBodies)
    call RegPack(Buf, InData%nFreeRods)
-   call RegPack(Buf, InData%nFreeCons)
+   call RegPack(Buf, InData%nFreePoints)
    call RegPack(Buf, allocated(InData%nCpldBodies))
    if (allocated(InData%nCpldBodies)) then
       call RegPackBounds(Buf, 1, lbound(InData%nCpldBodies), ubound(InData%nCpldBodies))
@@ -5433,10 +5549,10 @@ subroutine MD_PackParam(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%nCpldRods), ubound(InData%nCpldRods))
       call RegPack(Buf, InData%nCpldRods)
    end if
-   call RegPack(Buf, allocated(InData%nCpldCons))
-   if (allocated(InData%nCpldCons)) then
-      call RegPackBounds(Buf, 1, lbound(InData%nCpldCons), ubound(InData%nCpldCons))
-      call RegPack(Buf, InData%nCpldCons)
+   call RegPack(Buf, allocated(InData%nCpldPoints))
+   if (allocated(InData%nCpldPoints)) then
+      call RegPackBounds(Buf, 1, lbound(InData%nCpldPoints), ubound(InData%nCpldPoints))
+      call RegPack(Buf, InData%nCpldPoints)
    end if
    call RegPack(Buf, InData%NConns)
    call RegPack(Buf, InData%NAnchs)
@@ -5576,6 +5692,16 @@ subroutine MD_PackParam(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%dxIdx_map2_xStateIdx), ubound(InData%dxIdx_map2_xStateIdx))
       call RegPack(Buf, InData%dxIdx_map2_xStateIdx)
    end if
+   call RegPack(Buf, InData%VisMeshes)
+   call RegPack(Buf, allocated(InData%VisRodsDiam))
+   if (allocated(InData%VisRodsDiam)) then
+      call RegPackBounds(Buf, 1, lbound(InData%VisRodsDiam), ubound(InData%VisRodsDiam))
+      LB(1:1) = lbound(InData%VisRodsDiam)
+      UB(1:1) = ubound(InData%VisRodsDiam)
+      do i1 = LB(1), UB(1)
+         call MD_PackVisDiam(Buf, InData%VisRodsDiam(i1)) 
+      end do
+   end if
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -5592,9 +5718,9 @@ subroutine MD_UnPackParam(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%nRodTypes)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%nConnects)
+   call RegUnpack(Buf, OutData%nPoints)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%nConnectsExtra)
+   call RegUnpack(Buf, OutData%nPointsExtra)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%nBodies)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5610,7 +5736,7 @@ subroutine MD_UnPackParam(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%nFreeRods)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%nFreeCons)
+   call RegUnpack(Buf, OutData%nFreePoints)
    if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%nCpldBodies)) deallocate(OutData%nCpldBodies)
    call RegUnpack(Buf, IsAllocAssoc)
@@ -5640,18 +5766,18 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%nCpldRods)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   if (allocated(OutData%nCpldCons)) deallocate(OutData%nCpldCons)
+   if (allocated(OutData%nCpldPoints)) deallocate(OutData%nCpldPoints)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
    if (IsAllocAssoc) then
       call RegUnpackBounds(Buf, 1, LB, UB)
       if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%nCpldCons(LB(1):UB(1)),stat=stat)
+      allocate(OutData%nCpldPoints(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%nCpldCons.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%nCpldPoints.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
          return
       end if
-      call RegUnpack(Buf, OutData%nCpldCons)
+      call RegUnpack(Buf, OutData%nCpldPoints)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    call RegUnpack(Buf, OutData%NConns)
@@ -6003,6 +6129,23 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%dxIdx_map2_xStateIdx)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
+   call RegUnpack(Buf, OutData%VisMeshes)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (allocated(OutData%VisRodsDiam)) deallocate(OutData%VisRodsDiam)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%VisRodsDiam(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%VisRodsDiam.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call MD_UnpackVisDiam(Buf, OutData%VisRodsDiam(i1)) ! VisRodsDiam 
+      end do
+   end if
 end subroutine
 
 subroutine MD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -6212,6 +6355,70 @@ subroutine MD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       end if
       DstOutputData%WriteOutput = SrcOutputData%WriteOutput
    end if
+   if (allocated(SrcOutputData%VisLinesMesh)) then
+      LB(1:1) = lbound(SrcOutputData%VisLinesMesh)
+      UB(1:1) = ubound(SrcOutputData%VisLinesMesh)
+      if (.not. allocated(DstOutputData%VisLinesMesh)) then
+         allocate(DstOutputData%VisLinesMesh(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%VisLinesMesh.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshCopy(SrcOutputData%VisLinesMesh(i1), DstOutputData%VisLinesMesh(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcOutputData%VisRodsMesh)) then
+      LB(1:1) = lbound(SrcOutputData%VisRodsMesh)
+      UB(1:1) = ubound(SrcOutputData%VisRodsMesh)
+      if (.not. allocated(DstOutputData%VisRodsMesh)) then
+         allocate(DstOutputData%VisRodsMesh(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%VisRodsMesh.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshCopy(SrcOutputData%VisRodsMesh(i1), DstOutputData%VisRodsMesh(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcOutputData%VisBodiesMesh)) then
+      LB(1:1) = lbound(SrcOutputData%VisBodiesMesh)
+      UB(1:1) = ubound(SrcOutputData%VisBodiesMesh)
+      if (.not. allocated(DstOutputData%VisBodiesMesh)) then
+         allocate(DstOutputData%VisBodiesMesh(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%VisBodiesMesh.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshCopy(SrcOutputData%VisBodiesMesh(i1), DstOutputData%VisBodiesMesh(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcOutputData%VisAnchsMesh)) then
+      LB(1:1) = lbound(SrcOutputData%VisAnchsMesh)
+      UB(1:1) = ubound(SrcOutputData%VisAnchsMesh)
+      if (.not. allocated(DstOutputData%VisAnchsMesh)) then
+         allocate(DstOutputData%VisAnchsMesh(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%VisAnchsMesh.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshCopy(SrcOutputData%VisAnchsMesh(i1), DstOutputData%VisAnchsMesh(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
 end subroutine
 
 subroutine MD_DestroyOutput(OutputData, ErrStat, ErrMsg)
@@ -6237,6 +6444,42 @@ subroutine MD_DestroyOutput(OutputData, ErrStat, ErrMsg)
    if (allocated(OutputData%WriteOutput)) then
       deallocate(OutputData%WriteOutput)
    end if
+   if (allocated(OutputData%VisLinesMesh)) then
+      LB(1:1) = lbound(OutputData%VisLinesMesh)
+      UB(1:1) = ubound(OutputData%VisLinesMesh)
+      do i1 = LB(1), UB(1)
+         call MeshDestroy( OutputData%VisLinesMesh(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(OutputData%VisLinesMesh)
+   end if
+   if (allocated(OutputData%VisRodsMesh)) then
+      LB(1:1) = lbound(OutputData%VisRodsMesh)
+      UB(1:1) = ubound(OutputData%VisRodsMesh)
+      do i1 = LB(1), UB(1)
+         call MeshDestroy( OutputData%VisRodsMesh(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(OutputData%VisRodsMesh)
+   end if
+   if (allocated(OutputData%VisBodiesMesh)) then
+      LB(1:1) = lbound(OutputData%VisBodiesMesh)
+      UB(1:1) = ubound(OutputData%VisBodiesMesh)
+      do i1 = LB(1), UB(1)
+         call MeshDestroy( OutputData%VisBodiesMesh(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(OutputData%VisBodiesMesh)
+   end if
+   if (allocated(OutputData%VisAnchsMesh)) then
+      LB(1:1) = lbound(OutputData%VisAnchsMesh)
+      UB(1:1) = ubound(OutputData%VisAnchsMesh)
+      do i1 = LB(1), UB(1)
+         call MeshDestroy( OutputData%VisAnchsMesh(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(OutputData%VisAnchsMesh)
+   end if
 end subroutine
 
 subroutine MD_PackOutput(Buf, Indata)
@@ -6259,6 +6502,42 @@ subroutine MD_PackOutput(Buf, Indata)
    if (allocated(InData%WriteOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
       call RegPack(Buf, InData%WriteOutput)
+   end if
+   call RegPack(Buf, allocated(InData%VisLinesMesh))
+   if (allocated(InData%VisLinesMesh)) then
+      call RegPackBounds(Buf, 1, lbound(InData%VisLinesMesh), ubound(InData%VisLinesMesh))
+      LB(1:1) = lbound(InData%VisLinesMesh)
+      UB(1:1) = ubound(InData%VisLinesMesh)
+      do i1 = LB(1), UB(1)
+         call MeshPack(Buf, InData%VisLinesMesh(i1)) 
+      end do
+   end if
+   call RegPack(Buf, allocated(InData%VisRodsMesh))
+   if (allocated(InData%VisRodsMesh)) then
+      call RegPackBounds(Buf, 1, lbound(InData%VisRodsMesh), ubound(InData%VisRodsMesh))
+      LB(1:1) = lbound(InData%VisRodsMesh)
+      UB(1:1) = ubound(InData%VisRodsMesh)
+      do i1 = LB(1), UB(1)
+         call MeshPack(Buf, InData%VisRodsMesh(i1)) 
+      end do
+   end if
+   call RegPack(Buf, allocated(InData%VisBodiesMesh))
+   if (allocated(InData%VisBodiesMesh)) then
+      call RegPackBounds(Buf, 1, lbound(InData%VisBodiesMesh), ubound(InData%VisBodiesMesh))
+      LB(1:1) = lbound(InData%VisBodiesMesh)
+      UB(1:1) = ubound(InData%VisBodiesMesh)
+      do i1 = LB(1), UB(1)
+         call MeshPack(Buf, InData%VisBodiesMesh(i1)) 
+      end do
+   end if
+   call RegPack(Buf, allocated(InData%VisAnchsMesh))
+   if (allocated(InData%VisAnchsMesh)) then
+      call RegPackBounds(Buf, 1, lbound(InData%VisAnchsMesh), ubound(InData%VisAnchsMesh))
+      LB(1:1) = lbound(InData%VisAnchsMesh)
+      UB(1:1) = ubound(InData%VisAnchsMesh)
+      do i1 = LB(1), UB(1)
+         call MeshPack(Buf, InData%VisAnchsMesh(i1)) 
+      end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -6300,6 +6579,66 @@ subroutine MD_UnPackOutput(Buf, OutData)
       end if
       call RegUnpack(Buf, OutData%WriteOutput)
       if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   if (allocated(OutData%VisLinesMesh)) deallocate(OutData%VisLinesMesh)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%VisLinesMesh(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%VisLinesMesh.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshUnpack(Buf, OutData%VisLinesMesh(i1)) ! VisLinesMesh 
+      end do
+   end if
+   if (allocated(OutData%VisRodsMesh)) deallocate(OutData%VisRodsMesh)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%VisRodsMesh(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%VisRodsMesh.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshUnpack(Buf, OutData%VisRodsMesh(i1)) ! VisRodsMesh 
+      end do
+   end if
+   if (allocated(OutData%VisBodiesMesh)) deallocate(OutData%VisBodiesMesh)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%VisBodiesMesh(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%VisBodiesMesh.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshUnpack(Buf, OutData%VisBodiesMesh(i1)) ! VisBodiesMesh 
+      end do
+   end if
+   if (allocated(OutData%VisAnchsMesh)) deallocate(OutData%VisAnchsMesh)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%VisAnchsMesh(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%VisAnchsMesh.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshUnpack(Buf, OutData%VisAnchsMesh(i1)) ! VisAnchsMesh 
+      end do
    end if
 end subroutine
 
@@ -6589,6 +6928,30 @@ SUBROUTINE MD_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg 
    IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput
    END IF ! check if allocated
+   IF (ALLOCATED(y_out%VisLinesMesh) .AND. ALLOCATED(y1%VisLinesMesh)) THEN
+      DO i1 = LBOUND(y_out%VisLinesMesh,1),UBOUND(y_out%VisLinesMesh,1)
+         CALL MeshExtrapInterp1(y1%VisLinesMesh(i1), y2%VisLinesMesh(i1), tin, y_out%VisLinesMesh(i1), tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%VisRodsMesh) .AND. ALLOCATED(y1%VisRodsMesh)) THEN
+      DO i1 = LBOUND(y_out%VisRodsMesh,1),UBOUND(y_out%VisRodsMesh,1)
+         CALL MeshExtrapInterp1(y1%VisRodsMesh(i1), y2%VisRodsMesh(i1), tin, y_out%VisRodsMesh(i1), tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%VisBodiesMesh) .AND. ALLOCATED(y1%VisBodiesMesh)) THEN
+      DO i1 = LBOUND(y_out%VisBodiesMesh,1),UBOUND(y_out%VisBodiesMesh,1)
+         CALL MeshExtrapInterp1(y1%VisBodiesMesh(i1), y2%VisBodiesMesh(i1), tin, y_out%VisBodiesMesh(i1), tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%VisAnchsMesh) .AND. ALLOCATED(y1%VisAnchsMesh)) THEN
+      DO i1 = LBOUND(y_out%VisAnchsMesh,1),UBOUND(y_out%VisAnchsMesh,1)
+         CALL MeshExtrapInterp1(y1%VisAnchsMesh(i1), y2%VisAnchsMesh(i1), tin, y_out%VisAnchsMesh(i1), tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+   END IF ! check if allocated
 END SUBROUTINE
 
 SUBROUTINE MD_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, ErrMsg )
@@ -6654,6 +7017,30 @@ SUBROUTINE MD_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Err
    END IF ! check if allocated
    IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%VisLinesMesh) .AND. ALLOCATED(y1%VisLinesMesh)) THEN
+      DO i1 = LBOUND(y_out%VisLinesMesh,1),UBOUND(y_out%VisLinesMesh,1)
+         CALL MeshExtrapInterp2(y1%VisLinesMesh(i1), y2%VisLinesMesh(i1), y3%VisLinesMesh(i1), tin, y_out%VisLinesMesh(i1), tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%VisRodsMesh) .AND. ALLOCATED(y1%VisRodsMesh)) THEN
+      DO i1 = LBOUND(y_out%VisRodsMesh,1),UBOUND(y_out%VisRodsMesh,1)
+         CALL MeshExtrapInterp2(y1%VisRodsMesh(i1), y2%VisRodsMesh(i1), y3%VisRodsMesh(i1), tin, y_out%VisRodsMesh(i1), tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%VisBodiesMesh) .AND. ALLOCATED(y1%VisBodiesMesh)) THEN
+      DO i1 = LBOUND(y_out%VisBodiesMesh,1),UBOUND(y_out%VisBodiesMesh,1)
+         CALL MeshExtrapInterp2(y1%VisBodiesMesh(i1), y2%VisBodiesMesh(i1), y3%VisBodiesMesh(i1), tin, y_out%VisBodiesMesh(i1), tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%VisAnchsMesh) .AND. ALLOCATED(y1%VisAnchsMesh)) THEN
+      DO i1 = LBOUND(y_out%VisAnchsMesh,1),UBOUND(y_out%VisAnchsMesh,1)
+         CALL MeshExtrapInterp2(y1%VisAnchsMesh(i1), y2%VisAnchsMesh(i1), y3%VisAnchsMesh(i1), tin, y_out%VisAnchsMesh(i1), tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
    END IF ! check if allocated
 END SUBROUTINE
 END MODULE MoorDyn_Types

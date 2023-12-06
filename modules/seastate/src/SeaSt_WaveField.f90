@@ -103,9 +103,10 @@ FUNCTION WaveField_GetNodeTotalWaveElev( WaveField, Time, pos, ErrStat, ErrMsg )
    
 END FUNCTION WaveField_GetNodeTotalWaveElev
 
-SUBROUTINE WaveField_GetNodeWaveNormal( WaveField, Time, pos, r, n, ErrStat, ErrMsg )
+SUBROUTINE WaveField_GetNodeWaveNormal( WaveField, SeaSt_Interp_m, Time, pos, r, n, ErrStat, ErrMsg )
 
    TYPE(SeaSt_WaveFieldType), INTENT( IN    ) :: WaveField
+   TYPE(SeaSt_Interp_MiscVarType), INTENT(INOUT) :: SeaSt_Interp_m
    REAL(DbKi),                INTENT( IN    ) :: Time
    REAL(ReKi),                INTENT( IN    ) :: pos(*)  ! Position at which free-surface normal is to be calculated. Third entry ignored if present.
    REAL(ReKi),                INTENT( IN    ) :: r       ! Distance for central differencing
@@ -120,7 +121,7 @@ SUBROUTINE WaveField_GetNodeWaveNormal( WaveField, Time, pos, r, n, ErrStat, Err
    ErrStat   = ErrID_None
    ErrMsg    = ""
 
-   r1 = MAX(r,1.0e-6) ! In case r is zero
+   r1 = MAX(r,real(1.0e-6,ReKi)) ! In case r is zero
 
    ZetaP = WaveField_GetNodeTotalWaveElev( WaveField, Time, (/pos(1)+r1,pos(2)/), ErrStat2, ErrMsg2 )
      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -140,7 +141,7 @@ SUBROUTINE WaveField_GetNodeWaveNormal( WaveField, Time, pos, r, n, ErrStat, Err
 END SUBROUTINE WaveField_GetNodeWaveNormal
 
 !-------------------- Subroutine for full wave field kinematics --------------------!
-SUBROUTINE WaveField_GetNodeWaveKin( WaveField, Time, pos, forceNodeInWater, fetchDynCurrent, nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat, ErrMsg )
+SUBROUTINE WaveField_GetNodeWaveKin( WaveField, SeaSt_Interp_m, Time, pos, forceNodeInWater, fetchDynCurrent, nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat, ErrMsg )
    TYPE(SeaSt_WaveFieldType), INTENT( IN    ) :: WaveField
    REAL(DbKi),                INTENT( IN    ) :: Time
    REAL(ReKi),                INTENT( IN    ) :: pos(3)
@@ -186,16 +187,16 @@ SUBROUTINE WaveField_GetNodeWaveKin( WaveField, Time, pos, forceNodeInWater, fet
       IF ( pos(3) <= 0.0_ReKi) THEN ! Node is at or below the SWL
          nodeInWater = 1_IntKi
          ! Use location to obtain interpolated values of kinematics         
-         CALL SeaSt_Interp_Setup( Time, pos, WaveField%seast_interp_p, seast_interp_m, ErrStat2, ErrMsg2 ) 
+         CALL SeaSt_Interp_Setup( Time, pos, WaveField%seast_interp_p, SeaSt_Interp_m, ErrStat2, ErrMsg2 ) 
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         FV(:) = SeaSt_Interp_4D_Vec( WaveField%WaveVel,  seast_interp_m, ErrStat2, ErrMsg2 )
+         FV(:) = SeaSt_Interp_4D_Vec( WaveField%WaveVel,  SeaSt_Interp_m, ErrStat2, ErrMsg2 )
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         FA(:) = SeaSt_Interp_4D_Vec( WaveField%WaveAcc,  seast_interp_m, ErrStat2, ErrMsg2 )
+         FA(:) = SeaSt_Interp_4D_Vec( WaveField%WaveAcc,  SeaSt_Interp_m, ErrStat2, ErrMsg2 )
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         FDynP = SeaSt_Interp_4D    ( WaveField%WaveDynP, seast_interp_m, ErrStat2, ErrMsg2 )
+         FDynP = SeaSt_Interp_4D    ( WaveField%WaveDynP, SeaSt_Interp_m, ErrStat2, ErrMsg2 )
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          IF ( ALLOCATED(WaveField%WaveAccMCF) ) THEN
-            FAMCF(:) = SeaSt_Interp_4D_Vec( WaveField%WaveAccMCF, seast_interp_m, ErrStat2, ErrMsg2 )
+            FAMCF(:) = SeaSt_Interp_4D_Vec( WaveField%WaveAccMCF, SeaSt_Interp_m, ErrStat2, ErrMsg2 )
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END IF
       ELSE ! Node is above the SWL
@@ -217,23 +218,23 @@ SUBROUTINE WaveField_GetNodeWaveKin( WaveField, Time, pos, forceNodeInWater, fet
             IF ( pos(3) <= 0.0_SiKi) THEN ! Node is below the SWL - evaluate wave dynamics as usual
           
                ! Use location to obtain interpolated values of kinematics         
-               CALL SeaSt_Interp_Setup( Time, pos, WaveField%seast_interp_p, seast_interp_m, ErrStat2, ErrMsg2 ) 
+               CALL SeaSt_Interp_Setup( Time, pos, WaveField%seast_interp_p, SeaSt_Interp_m, ErrStat2, ErrMsg2 ) 
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               FV(:) = SeaSt_Interp_4D_Vec( WaveField%WaveVel,  seast_interp_m, ErrStat2, ErrMsg2 )
+               FV(:) = SeaSt_Interp_4D_Vec( WaveField%WaveVel,  SeaSt_Interp_m, ErrStat2, ErrMsg2 )
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               FA(:) = SeaSt_Interp_4D_Vec( WaveField%WaveAcc,  seast_interp_m, ErrStat2, ErrMsg2 )
+               FA(:) = SeaSt_Interp_4D_Vec( WaveField%WaveAcc,  SeaSt_Interp_m, ErrStat2, ErrMsg2 )
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               FDynP = SeaSt_Interp_4D    ( WaveField%WaveDynP, seast_interp_m, ErrStat2, ErrMsg2 )
+               FDynP = SeaSt_Interp_4D    ( WaveField%WaveDynP, SeaSt_Interp_m, ErrStat2, ErrMsg2 )
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                IF ( ALLOCATED(WaveField%WaveAccMCF) ) THEN
-                  FAMCF(:) = SeaSt_Interp_4D_Vec( WaveField%WaveAccMCF, seast_interp_m, ErrStat2, ErrMsg2 )
+                  FAMCF(:) = SeaSt_Interp_4D_Vec( WaveField%WaveAccMCF, SeaSt_Interp_m, ErrStat2, ErrMsg2 )
                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                END IF
 
             ELSE ! Node is above SWL - need wave stretching
           
                ! Vertical wave stretching
-               CALL SeaSt_Interp_Setup( Time, posXY0, WaveField%seast_interp_p, seast_interp_m, ErrStat2, ErrMsg2 ) 
+               CALL SeaSt_Interp_Setup( Time, posXY0, WaveField%seast_interp_p, SeaSt_Interp_m, ErrStat2, ErrMsg2 ) 
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                FV(:) = SeaSt_Interp_4D_vec( WaveField%WaveVel,  seast_interp_m, ErrStat2, ErrMsg2 )
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -445,7 +446,6 @@ SUBROUTINE WaveField_GetNodeWaveVelAcc( WaveField, Time, pos, forceNodeInWater, 
    REAL(SiKi),                INTENT(   OUT ) :: FV(3)
    REAL(SiKi),                INTENT(   OUT ) :: FA(3)
    INTEGER(IntKi),            INTENT(   OUT ) :: nodeInWater
-
    INTEGER(IntKi),            INTENT(   OUT ) :: ErrStat ! Error status of the operation
    CHARACTER(*),              INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
 
@@ -573,8 +573,9 @@ SUBROUTINE WaveField_GetNodeWaveVelAcc( WaveField, Time, pos, forceNodeInWater, 
 END SUBROUTINE WaveField_GetNodeWaveVelAcc
 
 
-SUBROUTINE WaveField_GetWaveKin( WaveField, Time, pos, forceNodeInWater, fetchDynCurrent, nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat, ErrMsg )
+SUBROUTINE WaveField_GetWaveKin( WaveField, SeaSt_Interp_m, Time, pos, forceNodeInWater, fetchDynCurrent, nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat, ErrMsg )
    TYPE(SeaSt_WaveFieldType), INTENT( IN    ) :: WaveField
+   TYPE(SeaSt_Interp_MiscVarType), INTENT(INOUT) :: SeaSt_Interp_m
    REAL(DbKi),                INTENT( IN    ) :: Time
    REAL(ReKi),                INTENT( IN    ) :: pos(:,:)
    LOGICAL,                   INTENT( IN    ) :: forceNodeInWater
@@ -605,7 +606,7 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, Time, pos, forceNodeInWater, fetchDy
 
    NumPoints = size(pos, dim=2)
    DO i = 1, NumPoints
-      CALL WaveField_GetNodeWaveKin( WaveField, Time, pos(:,i), forceNodeInWater, .FALSE., nodeInWater(i), WaveElev1(i), WaveElev2(i), WaveElev(i), FDynP_node, FV_node, FA_node, FAMCF_node, ErrStat2, ErrMsg2 )
+      CALL WaveField_GetNodeWaveKin( WaveField, SeaSt_Interp_m, Time, pos(:,i), forceNodeInWater, .FALSE., nodeInWater(i), WaveElev1(i), WaveElev2(i), WaveElev(i), FDynP_node, FV_node, FA_node, FAMCF_node, ErrStat2, ErrMsg2 )
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       FDynP(i) = REAL(FDynP_node,ReKi)
       FV(:, i) = REAL(FV_node,   ReKi)
