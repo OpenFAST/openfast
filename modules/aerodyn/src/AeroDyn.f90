@@ -393,7 +393,6 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       p%rotors(iR)%TFin%TFinIndMod  = InputFileData%rotors(iR)%TFin%TFinIndMod
       p%rotors(iR)%TFin%TFinAFID    = InputFileData%rotors(iR)%TFin%TFinAFID
       p%rotors(iR)%TFin%TFinKp      = InputFileData%rotors(iR)%TFin%TFinKp
-      p%rotors(iR)%TFin%TFinCp      = InputFileData%rotors(iR)%TFin%TFinCp
       p%rotors(iR)%TFin%TFinSigma      = InputFileData%rotors(iR)%TFin%TFinSigma
       p%rotors(iR)%TFin%TFinAStar      = InputFileData%rotors(iR)%TFin%TFinAStar
       p%rotors(iR)%TFin%TFinKv      = InputFileData%rotors(iR)%TFin%TFinKv
@@ -4362,11 +4361,11 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
    real(ReKi)              :: V_wnd(3)          ! wind velocity
    real(ReKi)              :: V_ind(3)          ! induced velocity
    real(ReKi)              :: V_str(3)          ! structural velocity
+   real(ReKi)              :: V_wnd_tf(3)          ! wind velocity
    real(ReKi)              :: force_tf(3)       ! force in tf system
    real(ReKi)              :: moment_tf(3)      ! moment in tf system
-   real(ReKi)              :: alpha, Re, Cx, Cy, q, tfingamma ! Cl, Cd, Cm, 
-   ! USB variables
-   real(ReKi)              :: x1, x2, x3    ! scaling functions for different contributions on CN
+   real(ReKi)              :: alpha, Re, Cx, Cy, q ! Cl, Cd, Cm, 
+   real(ReKi)              :: x1, x2, x3,gamma_tf! scaling functions, gamma for unsteady modeling
 
    type(AFI_OutputType)    :: AFI_interp  ! Resulting values from lookup table
    integer(intKi)          :: ErrStat2
@@ -4383,29 +4382,33 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
 
    if (p%TFin%TFinIndMod==TFinIndMod_none) then
       V_ind = 0.0_ReKi
+
    elseif(p%TFin%TFinIndMod==TFinIndMod_rotavg) then
       ! TODO TODO
       print*,'TODO TailFin: compute rotor average induced velocity'
       V_ind = 0.0_ReKi 
+
    else
       STOP ! Will never happen
+
    endif
-   V_rel       = V_wnd - V_str + V_ind
-   print *,'V_wnd'
-   print *,V_wnd
+   
+   V_rel       = V_wnd - V_str + V_ind                          ! relative wind on tail fin
    V_rel_tf    = matmul(u%TFinMotion%Orientation(:,:,1), V_rel) ! from inertial to tf system
-   alpha       = atan2( V_rel_tf(2), V_rel_tf(1))               ! angle of attack
+   alpha       = atan2(V_rel_tf(2), V_rel_tf(1))                ! angle of attack
+   v_wnd_tf    = matmul(u%TFinMotion%Orientation(:,:,1), V_wnd) ! only used for calculation of x1,x2,x3
+   gamma_tf = atan2(v_wnd_tf(2), v_wnd_tf(1))                   ! only used for calculation of x1,x2,x3
    V_rel_orth2 = V_rel_tf(1)**2 + V_rel_tf(2)**2                ! square norm of Vrel in tf system
 
-
+   ! Initialize the tail fin forces to zero
    force_tf(:)    = 0.0_ReKi
-   moment_tf(:)    = 0.0_ReKi
+   moment_tf(:)   = 0.0_ReKi
 
    if (p%TFin%TFinMod==TFinAero_none) then
       ! Do nothing
 
    elseif (p%TFin%TFinMod==TFinAero_polar) then
-      ! Airfoil coefficients
+      ! Airfoil coefficients based model
       Re  = sqrt(V_rel_orth2) * p%TFin%TFinChord/p%KinVisc
       call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p_AD%AFI(p%TFin%TFinAFID), AFI_interp, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4419,24 +4422,17 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
       moment_tf(3)   = AFI_interp%Cm * q * p%TFin%TFinChord
 
    elseif (p%TFin%TFinMod==TFinAero_USB) then
-      !Calculate separation functions
-      !x1 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(1)*((ABS(alpha)*180.0_ReKi/pi)-p%TFin%TFinAStar(1)))) 
-      !x2 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(2)*((ABS(alpha)*180.0_ReKi/pi)-p%TFin%TFinAStar(2)))) 
-      !x3 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(3)*((ABS(alpha)*180.0_ReKi/pi)-p%TFin%TFinAStar(3))))
+      ! Unsteady aerodynamic model
 
-      tfingamma = atan2(u%TFinMotion%orientation(2,1,1),u%TFinMotion%orientation(1,1,1))
-      x1 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(1)*((ABS(tfingamma)*180.0_ReKi/pi)-p%TFin%TFinAStar(1)))) 
-      x2 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(2)*((ABS(tfingamma)*180.0_ReKi/pi)-p%TFin%TFinAStar(2)))) 
-      x3 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(3)*((ABS(tfingamma)*180.0_ReKi/pi)-p%TFin%TFinAStar(3))))
-      
-      ! print *,alpha*180.0_ReKi/pi
-      ! print *,alpha
+      ! Calculate separation function (quasi-steady)
+      x1 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(1)*((ABS(gamma_tf)*180.0_ReKi/pi)-p%TFin%TFinAStar(1)))) 
+      x2 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(2)*((ABS(gamma_tf)*180.0_ReKi/pi)-p%TFin%TFinAStar(2)))) 
+      x3 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(3)*((ABS(gamma_tf)*180.0_ReKi/pi)-p%TFin%TFinAStar(3))))
    
+      ! Calculate unsteady force on tain fin
       force_tf(2) = 0.5_ReKi * p%AirDens * p%TFin%TFinArea * &
          (p%TFin%TFinKp * x1 * V_rel_tf(1) * V_rel_tf(2) + &
          (x2 * p%TFin%TFinKv + (1-x3)*p%TFin%TFinCDc) * V_rel_tf(2) * ABS(V_rel_tf(2)))
-      ! moment_tf(3) =  force_tf(2) * p%Tfin%TFinCp * p%TFin%TFinChord
-
    endif
    
    ! Transfer to global

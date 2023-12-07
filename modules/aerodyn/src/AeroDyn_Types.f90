@@ -66,8 +66,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: TFinArea      !< Tail fin planform area [used only when TFinMod=1] [m^2]
     INTEGER(IntKi)  :: TFinIndMod      !< Model for induced velocity calculation {0=none, 1=rotor-average} [(switch)]
     INTEGER(IntKi)  :: TFinAFID      !< Index of Tail fin airfoil number [1 to NumAFfiles] [-]
-    REAL(ReKi)  :: TFinKp      !< Tail fin emperical constant for vortex separation functions [used only when TFMod=2] [-]
-    REAL(ReKi)  :: TFinCp      !< Tail fin emperical constant for vortex separation functions [used only when TFMod=2] [-]
+    REAL(ReKi)  :: TFinKp      !< Tail fin potential flow constant [used only when TFMod=2] [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TFinSigma      !< Tail fin emperical constants for vortex separation functions [used only when TFMod=2] [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TFinAStar      !< Tail fin initial angles for vortex separation functions [used only when TFMod=2] [deg]
     REAL(ReKi)  :: TFinKv      !< Tail fin vortex lift coefficient [used only when TFMod=2] [-]
@@ -83,8 +82,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: TFinAngles      !< Tail fin chordline skew, tilt, and bank angles about the reference point [(deg)]
     INTEGER(IntKi)  :: TFinIndMod      !< Model for induced velocity calculation {0=none, 1=rotor-average} [(switch)]
     INTEGER(IntKi)  :: TFinAFID      !< Index of Tail fin airfoil number [1 to NumAFfiles] [-]
-    REAL(ReKi)  :: TFinKp      !< Tail fin emperical constant for vortex separation functions [used only when TFMod=2] [-]
-    REAL(ReKi)  :: TFinCp      !< Tail fin emperical constant for vortex separation functions [used only when TFMod=2] [-]
+    REAL(ReKi)  :: TFinKp      !< Tail fin potential flow constant [used only when TFMod=2] [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TFinSigma      !< Tail fin emperical constants for vortex separation functions [used only when TFMod=2] [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TFinAStar      !< Tail fin initial angles for vortex separation functions [used only when TFMod=2] [deg]
     REAL(ReKi)  :: TFinKv      !< Tail fin vortex lift coefficient [used only when TFMod=2] [-]
@@ -521,7 +519,6 @@ CONTAINS
     DstTFinParameterTypeData%TFinIndMod = SrcTFinParameterTypeData%TFinIndMod
     DstTFinParameterTypeData%TFinAFID = SrcTFinParameterTypeData%TFinAFID
     DstTFinParameterTypeData%TFinKp = SrcTFinParameterTypeData%TFinKp
-    DstTFinParameterTypeData%TFinCp = SrcTFinParameterTypeData%TFinCp
     DstTFinParameterTypeData%TFinSigma = SrcTFinParameterTypeData%TFinSigma
     DstTFinParameterTypeData%TFinAStar = SrcTFinParameterTypeData%TFinAStar
     DstTFinParameterTypeData%TFinKv = SrcTFinParameterTypeData%TFinKv
@@ -592,7 +589,6 @@ CONTAINS
       Int_BufSz  = Int_BufSz  + 1  ! TFinIndMod
       Int_BufSz  = Int_BufSz  + 1  ! TFinAFID
       Re_BufSz   = Re_BufSz   + 1  ! TFinKp
-      Re_BufSz   = Re_BufSz   + 1  ! TFinCp
       Re_BufSz   = Re_BufSz   + SIZE(InData%TFinSigma)  ! TFinSigma
       Re_BufSz   = Re_BufSz   + SIZE(InData%TFinAStar)  ! TFinAStar
       Re_BufSz   = Re_BufSz   + 1  ! TFinKv
@@ -635,8 +631,6 @@ CONTAINS
     IntKiBuf(Int_Xferred) = InData%TFinAFID
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%TFinKp
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TFinCp
     Re_Xferred = Re_Xferred + 1
     DO i1 = LBOUND(InData%TFinSigma,1), UBOUND(InData%TFinSigma,1)
       ReKiBuf(Re_Xferred) = InData%TFinSigma(i1)
@@ -694,8 +688,6 @@ CONTAINS
     Int_Xferred = Int_Xferred + 1
     OutData%TFinKp = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%TFinCp = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
     i1_l = LBOUND(OutData%TFinSigma,1)
     i1_u = UBOUND(OutData%TFinSigma,1)
     DO i1 = LBOUND(OutData%TFinSigma,1), UBOUND(OutData%TFinSigma,1)
@@ -737,7 +729,6 @@ CONTAINS
     DstTFinInputFileTypeData%TFinIndMod = SrcTFinInputFileTypeData%TFinIndMod
     DstTFinInputFileTypeData%TFinAFID = SrcTFinInputFileTypeData%TFinAFID
     DstTFinInputFileTypeData%TFinKp = SrcTFinInputFileTypeData%TFinKp
-    DstTFinInputFileTypeData%TFinCp = SrcTFinInputFileTypeData%TFinCp
     DstTFinInputFileTypeData%TFinSigma = SrcTFinInputFileTypeData%TFinSigma
     DstTFinInputFileTypeData%TFinAStar = SrcTFinInputFileTypeData%TFinAStar
     DstTFinInputFileTypeData%TFinKv = SrcTFinInputFileTypeData%TFinKv
@@ -810,7 +801,6 @@ CONTAINS
       Int_BufSz  = Int_BufSz  + 1  ! TFinIndMod
       Int_BufSz  = Int_BufSz  + 1  ! TFinAFID
       Re_BufSz   = Re_BufSz   + 1  ! TFinKp
-      Re_BufSz   = Re_BufSz   + 1  ! TFinCp
       Re_BufSz   = Re_BufSz   + SIZE(InData%TFinSigma)  ! TFinSigma
       Re_BufSz   = Re_BufSz   + SIZE(InData%TFinAStar)  ! TFinAStar
       Re_BufSz   = Re_BufSz   + 1  ! TFinKv
@@ -861,8 +851,6 @@ CONTAINS
     IntKiBuf(Int_Xferred) = InData%TFinAFID
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%TFinKp
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TFinCp
     Re_Xferred = Re_Xferred + 1
     DO i1 = LBOUND(InData%TFinSigma,1), UBOUND(InData%TFinSigma,1)
       ReKiBuf(Re_Xferred) = InData%TFinSigma(i1)
@@ -928,8 +916,6 @@ CONTAINS
     OutData%TFinAFID = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%TFinKp = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%TFinCp = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     i1_l = LBOUND(OutData%TFinSigma,1)
     i1_u = UBOUND(OutData%TFinSigma,1)

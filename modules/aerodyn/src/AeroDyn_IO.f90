@@ -1267,7 +1267,6 @@ SUBROUTINE ReadTailFinInputs(FileName, TFData, UnEc, ErrStat, ErrMsg)
    !====== Unsteady slender body model ===================== [used only when TFinMod=2]
    call ParseCom(FileInfo_in, iLine, DummyLine                          , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseVar(FileInfo_In, iLine, 'TFinKp'  , TFData%TFinKp      , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_In, iLine, 'TFinCp'  , TFData%TFinCp      , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseAry(FileInfo_In, iLine, 'TFinSigma'  , TFData%TFinSigma, 3 , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseAry(FileInfo_In, iLine, 'TFinAStar', TFData%TFinAStar, 3 , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseVar(FileInfo_In, iLine, 'TFinKv'    , TFData%TFinKv       , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
