@@ -6934,7 +6934,7 @@ END SUBROUTINE Init_Jacobian
 !! Do not change this without making sure subroutine aerodyn::init_jacobian is consistant with this routine!
 SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    TYPE(RotParameterType)              , INTENT(IN   ) :: p                      !< parameters
-   INTEGER( IntKi )                    , INTENT(IN   ) :: n                      !< number of array element to use 
+   INTEGER( IntKi )                    , INTENT(IN   ) :: n                      !< number of array element to use
    INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign           !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
    TYPE(RotInputType)                  , INTENT(INOUT) :: u                      !< perturbed AD inputs
    REAL( R8Ki )                        , INTENT(  OUT) :: du                     !< amount that specific input was perturbed
@@ -6942,95 +6942,114 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    ! local variables
    INTEGER                                             :: fieldIndx
    INTEGER                                             :: node
-      
-   fieldIndx = p%Jac_u_indx(n,2) 
-   node      = p%Jac_u_indx(n,3) 
-   
+
+   fieldIndx = p%Jac_u_indx(n,2)
+   node      = p%Jac_u_indx(n,3)
+
    du = p%du(  p%Jac_u_indx(n,1) )
-   
+
       ! determine which mesh we're trying to perturb and perturb the input:
    SELECT CASE( p%Jac_u_indx(n,1) )
-      
-   CASE ( 1) !Module/Mesh/Field: u%TowerMotion%TranslationDisp = 1;
-      u%TowerMotion%TranslationDisp( fieldIndx,node) = u%TowerMotion%TranslationDisp( fieldIndx,node) + du * perturb_sign
-   CASE ( 2) !Module/Mesh/Field: u%TowerMotion%Orientation = 2;
-      CALL PerturbOrientationMatrix( u%TowerMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
-   CASE ( 3) !Module/Mesh/Field: u%TowerMotion%TranslationVel = 3;
-      u%TowerMotion%TranslationVel( fieldIndx,node ) = u%TowerMotion%TranslationVel( fieldIndx,node) + du * perturb_sign
-      
-   CASE ( 4) !Module/Mesh/Field: u%HubMotion%TranslationDisp = 4;
-      u%HubMotion%TranslationDisp(fieldIndx,node) = u%HubMotion%TranslationDisp(fieldIndx,node) + du * perturb_sign
-   CASE ( 5) !Module/Mesh/Field: u%HubMotion%Orientation = 5;
-      CALL PerturbOrientationMatrix( u%HubMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx )
-   CASE ( 6) !Module/Mesh/Field: u%HubMotion%RotationVel = 6;
-      u%HubMotion%RotationVel(fieldIndx,node) = u%HubMotion%RotationVel(fieldIndx,node) + du * perturb_sign
-   
-   CASE ( 7) !Module/Mesh/Field: u%BladeRootMotion(1)%Orientation = 7;
-      CALL PerturbOrientationMatrix( u%BladeRootMotion(1)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
 
-   CASE ( 8) !Module/Mesh/Field: u%BladeRootMotion(2)%Orientation = 8;
-      CALL PerturbOrientationMatrix( u%BladeRootMotion(2)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
-      
-   CASE ( 9) !Module/Mesh/Field: u%BladeRootMotion(3)%Orientation = 9;
-      CALL PerturbOrientationMatrix( u%BladeRootMotion(3)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
-      
-   CASE (10) !Module/Mesh/Field: u%BladeMotion(1)%TranslationDisp = 10;
-      u%BladeMotion(1)%TranslationDisp(fieldIndx,node) = u%BladeMotion(1)%TranslationDisp(fieldIndx,node) + du * perturb_sign
-   CASE (11) !Module/Mesh/Field: u%BladeMotion(1)%Orientation = 11;
-      CALL PerturbOrientationMatrix( u%BladeMotion(1)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
-   CASE (12) !Module/Mesh/Field: u%BladeMotion(1)%TranslationVel = 12;
-      u%BladeMotion(1)%TranslationVel(fieldIndx,node) = u%BladeMotion(1)%TranslationVel(fieldIndx,node) + du * perturb_sign
-   CASE (13) !Module/Mesh/Field: u%BladeMotion(1)%RotationVel = 13;
-      u%BladeMotion(1)%RotationVel(fieldIndx,node) = u%BladeMotion(1)%RotationVel(fieldIndx,node) + du * perturb_sign
-   CASE (14) !Module/Mesh/Field: u%BladeMotion(1)%TranslationAcc = 14;
-      u%BladeMotion(1)%TranslationAcc(fieldIndx,node) = u%BladeMotion(1)%TranslationAcc(fieldIndx,node) + du * perturb_sign
-      
-   CASE (15) !Module/Mesh/Field: u%BladeMotion(2)%TranslationDisp = 15;
-      u%BladeMotion(2)%TranslationDisp( fieldIndx,node) = u%BladeMotion(2)%TranslationDisp( fieldIndx,node) + du * perturb_sign
-   CASE (16) !Module/Mesh/Field: u%BladeMotion(2)%Orientation = 16;
-      CALL PerturbOrientationMatrix( u%BladeMotion(2)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
-   CASE (17) !Module/Mesh/Field: u%BladeMotion(2)%TranslationVel = 17;
-      u%BladeMotion(2)%TranslationVel(fieldIndx,node) = u%BladeMotion(2)%TranslationVel(fieldIndx,node) + du * perturb_sign
-   CASE (18) !Module/Mesh/Field: u%BladeMotion(2)%RotationVel = 18;
-      u%BladeMotion(2)%RotationVel(fieldIndx,node) = u%BladeMotion(2)%RotationVel(fieldIndx,node) + du * perturb_sign
-   CASE (19) !Module/Mesh/Field: u%BladeMotion(2)%TranslationAcc = 19;
-      u%BladeMotion(2)%TranslationAcc(fieldIndx,node) = u%BladeMotion(2)%TranslationAcc(fieldIndx,node) + du * perturb_sign
-      
-   CASE (20) !Module/Mesh/Field: u%BladeMotion(3)%TranslationDisp = 20;
-      u%BladeMotion(3)%TranslationDisp( fieldIndx,node) = u%BladeMotion(3)%TranslationDisp( fieldIndx,node) + du * perturb_sign
-   CASE (21) !Module/Mesh/Field: u%BladeMotion(3)%Orientation = 21;
-      CALL PerturbOrientationMatrix( u%BladeMotion(3)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
-   CASE (22) !Module/Mesh/Field: u%BladeMotion(3)%TranslationVel = 22;
-      u%BladeMotion(3)%TranslationVel(fieldIndx,node) = u%BladeMotion(3)%TranslationVel(fieldIndx,node) + du * perturb_sign
-   CASE (23) !Module/Mesh/Field: u%BladeMotion(3)%RotationVel = 23;
-      u%BladeMotion(3)%RotationVel(fieldIndx,node) = u%BladeMotion(3)%RotationVel(fieldIndx,node) + du * perturb_sign
-   CASE (24) !Module/Mesh/Field: u%BladeMotion(3)%TranslationAcc = 24;
-      u%BladeMotion(3)%TranslationAcc(fieldIndx,node) = u%BladeMotion(3)%TranslationAcc(fieldIndx,node) + du * perturb_sign
+      ! Nacelle
+      !     Module/Mesh/Field: u%NacelleMotion%TranslationDisp = 1;
+      !     Module/Mesh/Field: u%NacelleMotion%Orientation     = 2;
+      case( 1);   u%NacelleMotion%TranslationDisp(fieldIndx,node) = u%NacelleMotion%TranslationDisp(fieldIndx,node) + du * perturb_sign
+      case( 2);   call PerturbOrientationMatrix( u%NacelleMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx )
 
-!FIXME: move these to extended inputs
-!   CASE (25) !Module/Mesh/Field: u%Bld(1)%InflowOnBlade(:,:) = 25;
-!      RotInflow%Bld(1)%InflowOnBlade(fieldIndx,node) = u%Bld(1)%InflowOnBlade(fieldIndx,node) + du * perturb_sign
-!   CASE (26) !Module/Mesh/Field: u%Bld(2)%InflowOnBlade(:,:) = 26;
-!      RotInflow%Bld(2)%InflowOnBlade(fieldIndx,node) = u%Bld(2)%InflowOnBlade(fieldIndx,node) + du * perturb_sign
-!   CASE (27) !Module/Mesh/Field: u%Bld(3)%InflowOnBlade(:,:) = 27;
-!      RotInflow%Bld(3)%InflowOnBlade(fieldIndx,node) = u%Bld(3)%InflowOnBlade(fieldIndx,node) + du * perturb_sign
-!      
-!FIXME: move to extended inputs
-!   CASE (28) !Module/Mesh/Field: u%InflowOnTower(:,:)   = 28;
-!      u%InflowOnTower(fieldIndx,node) = u%InflowOnTower(fieldIndx,node) + du * perturb_sign
+      ! Hub
+      !     Module/Mesh/Field: u%HubMotion%TranslationDisp = 3;
+      !     Module/Mesh/Field: u%HubMotion%Orientation     = 4;
+      !     Module/Mesh/Field: u%HubMotion%RotationVel     = 5;
+      case( 3);   u%HubMotion%TranslationDisp(fieldIndx,node) = u%HubMotion%TranslationDisp(fieldIndx,node) + du * perturb_sign
+      case( 4);   call PerturbOrientationMatrix( u%HubMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+      case( 5);   u%HubMotion%RotationVel(    fieldIndx,node) = u%HubMotion%RotationVel(fieldIndx,node) + du * perturb_sign
 
-   CASE (29) !Module/Mesh/Field: u%UserProp(:,1)   = 29; 
-      u%UserProp(node,1) = u%UserProp(node,1) + du * perturb_sign
-   CASE (30) !Module/Mesh/Field: u%UserProp(:,2)   = 30; 
-      u%UserProp(node,2) = u%UserProp(node,2) + du * perturb_sign
-   CASE (31) !Module/Mesh/Field: u%UserProp(:,3)   = 31; 
-      u%UserProp(node,3) = u%UserProp(node,3) + du * perturb_sign
+      ! Tower
+      !     Module/Mesh/Field: u%TowerMotion%TranslationDisp = 6;
+      !     Module/Mesh/Field: u%TowerMotion%Orientation     = 7;
+      !     Module/Mesh/Field: u%TowerMotion%TranslationVel  = 8;
+      !     Module/Mesh/Field: u%TowerMotion%TranslationAcc  = 9;
+      case( 6);   u%TowerMotion%TranslationDisp(fieldIndx,node) = u%TowerMotion%TranslationDisp( fieldIndx,node) + du * perturb_sign
+      case( 7);   CALL PerturbOrientationMatrix( u%TowerMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
+      case( 8);   u%TowerMotion%TranslationVel( fieldIndx,node) = u%TowerMotion%TranslationVel( fieldIndx,node) + du * perturb_sign
+      case( 9);   u%TowerMotion%TranslationAcc( fieldIndx,node)  = u%TowerMotion%TranslationAcc(fieldIndx,node) + du * perturb_sign
 
-   !CASE (32) !Module/Mesh/Field: u%AvgDiskVel(:) = 32;
-   !   u%AvgDiskVel(fieldIndx) = u%AvgDiskVel(fieldIndx) + du * perturb_sign
-      
+      ! BladeRoot
+      !     Module/Mesh/Field: u%BladeRootMotion(1)%Orientation = 10;
+      !     Module/Mesh/Field: u%BladeRootMotion(2)%Orientation = 11;
+      !     Module/Mesh/Field: u%BladeRootMotion(3)%Orientation = 12;
+      case(10);      call PerturbOrientationMatrix( u%BladeRootMotion(1)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+      case(11);      call PerturbOrientationMatrix( u%BladeRootMotion(2)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+      case(12);      call PerturbOrientationMatrix( u%BladeRootMotion(3)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+
+      ! Blade 1
+      !     Module/Mesh/Field: u%BladeMotion(1)%TranslationDisp = 13;
+      !     Module/Mesh/Field: u%BladeMotion(1)%Orientation     = 14;
+      !     Module/Mesh/Field: u%BladeMotion(1)%TranslationVel  = 15;
+      !     Module/Mesh/Field: u%BladeMotion(1)%RotationVel     = 16;
+      !     Module/Mesh/Field: u%BladeMotion(1)%TranslationAcc  = 17;
+      !     Module/Mesh/Field: u%BladeMotion(1)%RotationalAcc   = 18;
+      case(13);      u%BladeMotion(1)%TranslationDisp(fieldIndx,node) = u%BladeMotion(1)%TranslationDisp(fieldIndx,node) + du * perturb_sign
+      case(14);      call PerturbOrientationMatrix( u%BladeMotion(1)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+      case(15);      u%BladeMotion(1)%TranslationVel( fieldIndx,node)  = u%BladeMotion(1)%TranslationVel(fieldIndx,node) + du * perturb_sign
+      case(16);      u%BladeMotion(1)%RotationVel(    fieldIndx,node)  = u%BladeMotion(1)%RotationVel(fieldIndx,node) + du * perturb_sign
+      case(17);      u%BladeMotion(1)%TranslationAcc( fieldIndx,node)  = u%BladeMotion(1)%TranslationAcc(fieldIndx,node) + du * perturb_sign
+      case(18);      u%BladeMotion(1)%RotationAcc(    fieldIndx,node)  = u%BladeMotion(1)%TranslationAcc(fieldIndx,node) + du * perturb_sign
+
+      ! Blade 2
+      !     Module/Mesh/Field: u%BladeMotion(2)%TranslationDisp = 19;
+      !     Module/Mesh/Field: u%BladeMotion(2)%Orientation     = 20;
+      !     Module/Mesh/Field: u%BladeMotion(2)%TranslationVel  = 21;
+      !     Module/Mesh/Field: u%BladeMotion(2)%RotationVel     = 22;
+      !     Module/Mesh/Field: u%BladeMotion(2)%TranslationAcc  = 23;
+      !     Module/Mesh/Field: u%BladeMotion(2)%RotationalAcc   = 24;
+      case(19);      u%BladeMotion(2)%TranslationDisp(fieldIndx,node) = u%BladeMotion(2)%TranslationDisp(fieldIndx,node) + du * perturb_sign
+      case(20);      call PerturbOrientationMatrix( u%BladeMotion(2)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+      case(21);      u%BladeMotion(2)%TranslationVel( fieldIndx,node)  = u%BladeMotion(2)%TranslationVel(fieldIndx,node) + du * perturb_sign
+      case(22);      u%BladeMotion(2)%RotationVel(    fieldIndx,node)  = u%BladeMotion(2)%RotationVel(fieldIndx,node) + du * perturb_sign
+      case(23);      u%BladeMotion(2)%TranslationAcc( fieldIndx,node)  = u%BladeMotion(2)%TranslationAcc(fieldIndx,node) + du * perturb_sign
+      case(24);      u%BladeMotion(2)%RotationAcc(    fieldIndx,node)  = u%BladeMotion(2)%TranslationAcc(fieldIndx,node) + du * perturb_sign
+
+      ! Blade 3
+      !     Module/Mesh/Field: u%BladeMotion(3)%TranslationDisp = 25;
+      !     Module/Mesh/Field: u%BladeMotion(3)%Orientation     = 26;
+      !     Module/Mesh/Field: u%BladeMotion(3)%TranslationVel  = 27;
+      !     Module/Mesh/Field: u%BladeMotion(3)%RotationVel     = 28;
+      !     Module/Mesh/Field: u%BladeMotion(3)%TranslationAcc  = 29;
+      !     Module/Mesh/Field: u%BladeMotion(3)%RotationalAcc   = 30;
+      case(25);      u%BladeMotion(3)%TranslationDisp(fieldIndx,node) = u%BladeMotion(3)%TranslationDisp(fieldIndx,node) + du * perturb_sign
+      case(26);      call PerturbOrientationMatrix( u%BladeMotion(3)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+      case(27);      u%BladeMotion(3)%TranslationVel( fieldIndx,node)  = u%BladeMotion(3)%TranslationVel(fieldIndx,node) + du * perturb_sign
+      case(28);      u%BladeMotion(3)%RotationVel(    fieldIndx,node)  = u%BladeMotion(3)%RotationVel(fieldIndx,node) + du * perturb_sign
+      case(29);      u%BladeMotion(3)%TranslationAcc( fieldIndx,node)  = u%BladeMotion(3)%TranslationAcc(fieldIndx,node) + du * perturb_sign
+      case(30);      u%BladeMotion(3)%RotationAcc(    fieldIndx,node)  = u%BladeMotion(3)%TranslationAcc(fieldIndx,node) + du * perturb_sign
+
+      ! TailFin
+      !     Module/Mesh/Field: u%TFinMotion%TranslationDisp = 31;
+      !     Module/Mesh/Field: u%TFinMotion%Orientation     = 32;
+      !     Module/Mesh/Field: u%TFinMotion%TranslationVel  = 33;
+      case(31);   u%TFinMotion%TranslationDisp(fieldIndx,node) = u%TFinMotion%TranslationDisp(fieldIndx,node) + du * perturb_sign
+      case(32);   call PerturbOrientationMatrix( u%TFinMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+      case(33);   u%TFinMotion%RotationVel(    fieldIndx,node) = u%TFinMotion%RotationVel(fieldIndx,node) + du * perturb_sign
+
+      ! UserProp
+      !     Module/Mesh/Field: u%UserProp(:,:) = 34,35,36;
+      case(34);      u%UserProp(node,1) = u%UserProp(node,1) + du * perturb_sign
+      case(35);      u%UserProp(node,2) = u%UserProp(node,2) + du * perturb_sign
+      case(36);      u%UserProp(node,3) = u%UserProp(node,3) + du * perturb_sign
+
+      ! Extended inputs
+      !     Module/Mesh/Field:  HWindSpeed      = 37
+      !     Module/Mesh/Field:  PLexp           = 38
+      !     Module/Mesh/Field:  PropagationDir  = 39
+!FIXME add perturbs here!!!!
+!     case (37);     call
+!     case (38);     call
+!     case (39);     call
+
    END SELECT
-      
+
 END SUBROUTINE Perturb_u
 
 
