@@ -17,6 +17,7 @@ usefrom  FVW_Registry.txt
 usefrom	UnsteadyAero_Registry.txt
 usefrom AeroAcoustics_Registry.txt
 usefrom InflowWind.txt
+usefrom SeaState_Interp.txt
 usefrom SeaSt_WaveField.txt
 
 param    AeroDyn/AD     -  IntKi    ModelUnknown            - -1  -  "" -
@@ -340,6 +341,7 @@ typedef	^	MiscVarType	FVW_MiscVarType	FVW	-	-	-	"MiscVars from the FVW module"	-
 typedef	^	MiscVarType	ReKi            WindPos	{:}{:} - -	"XYZ coordinates to query for wind velocity/acceleration"	-
 typedef	^	MiscVarType	ReKi            WindVel	{:}{:} - -	"XYZ components of wind velocity"	-
 typedef	^	MiscVarType	ReKi            WindAcc	{:}{:} - -	"XYZ components of wind acceleration"	-
+typedef ^   MiscVarType SeaSt_Interp_MiscVarType SeaSt_Interp_m - - - "MiscVars from the SeaState Interpolation module"   -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:

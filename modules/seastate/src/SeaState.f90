@@ -714,9 +714,9 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
    
       DO i = 1, p%NWaveElev
          positionXY = (/p%WaveElevxi(i),p%WaveElevyi(i)/)
-         WaveElev1(i) = WaveField_GetNodeWaveElev1( p%WaveField, Time, positionXY, ErrStat2, ErrMsg2 )
+         WaveElev1(i) = WaveField_GetNodeWaveElev1( p%WaveField, m%SeaSt_Interp_m, Time, positionXY, ErrStat2, ErrMsg2 )
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         WaveElev2(i) = WaveField_GetNodeWaveElev2( p%WaveField, Time, positionXY, ErrStat2, ErrMsg2 )
+         WaveElev2(i) = WaveField_GetNodeWaveElev2( p%WaveField, m%SeaSt_Interp_m, Time, positionXY, ErrStat2, ErrMsg2 )
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          WaveElev(i)  = WaveElev1(i) + WaveElev2(i)            
       END DO

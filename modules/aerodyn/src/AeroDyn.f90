@@ -32,6 +32,7 @@ module AeroDyn
    use FVW
    use FVW_Subs, only: FVW_AeroOuts
    use IfW_FlowField, only: IfW_FlowField_GetVelAcc
+   USE SeaState_Interp
    use SeaSt_WaveField, only: WaveField_GetWaveVelAcc_AD
    
    implicit none
@@ -1882,7 +1883,7 @@ subroutine AD_CalcWind(t, u, p, o, m, ErrStat, ErrMsg)
       else ! MHK turbines
          ! Hub
          if (u%rotors(iWT)%HubMotion%Committed) then
-            call WaveField_GetWaveVelAcc_AD(p%WaveField, StartNode, t, &
+            call WaveField_GetWaveVelAcc_AD(p%WaveField, m%SeaSt_Interp_m, StartNode, t, &
                real(u%rotors(iWT)%HubMotion%TranslationDisp + u%rotors(iWT)%HubMotion%Position, ReKi), &
                u%rotors(iWT)%InflowOnHub, NoAcc, ErrStat2, ErrMsg2)
             if(Failed()) return 
@@ -1893,7 +1894,7 @@ subroutine AD_CalcWind(t, u, p, o, m, ErrStat, ErrMsg)
 
          ! Blade
          do k = 1, p%rotors(iWT)%NumBlades
-            call WaveField_GetWaveVelAcc_AD(p%WaveField, StartNode, t, &
+            call WaveField_GetWaveVelAcc_AD(p%WaveField, m%SeaSt_Interp_m, StartNode, t, &
                real(u%rotors(iWT)%BladeMotion(k)%TranslationDisp + u%rotors(iWT)%BladeMotion(k)%Position, ReKi), &
                u%rotors(iWT)%Bld(k)%InflowOnBlade, u%rotors(iWT)%Bld(k)%AccelOnBlade, ErrStat2, ErrMsg2)
             if(Failed()) return
@@ -1902,7 +1903,7 @@ subroutine AD_CalcWind(t, u, p, o, m, ErrStat, ErrMsg)
 
          ! Tower
          if (u%rotors(iWT)%TowerMotion%Nnodes > 0) then
-            call WaveField_GetWaveVelAcc_AD(p%WaveField, StartNode, t, &
+            call WaveField_GetWaveVelAcc_AD(p%WaveField, m%SeaSt_Interp_m, StartNode, t, &
                real(u%rotors(iWT)%TowerMotion%TranslationDisp + u%rotors(iWT)%TowerMotion%Position, ReKi), &
                u%rotors(iWT)%InflowOnTower, u%rotors(iWT)%AccelOnTower, ErrStat2, ErrMsg2)
             if(Failed()) return
@@ -1911,7 +1912,7 @@ subroutine AD_CalcWind(t, u, p, o, m, ErrStat, ErrMsg)
 
          ! Nacelle
          if (u%rotors(iWT)%NacelleMotion%Committed) then   
-            call WaveField_GetWaveVelAcc_AD(p%WaveField, StartNode, t, &
+            call WaveField_GetWaveVelAcc_AD(p%WaveField, m%SeaSt_Interp_m, StartNode, t, &
                real(u%rotors(iWT)%NacelleMotion%TranslationDisp + u%rotors(iWT)%NacelleMotion%Position, ReKi), &
                u%rotors(iWT)%InflowOnNacelle, NoAcc, ErrStat2, ErrMsg2)
             if(Failed()) return
@@ -1922,7 +1923,7 @@ subroutine AD_CalcWind(t, u, p, o, m, ErrStat, ErrMsg)
 
          ! TailFin
          if (u%rotors(iWT)%TFinMotion%Committed) then
-            call WaveField_GetWaveVelAcc_AD(p%WaveField, StartNode, t, &
+            call WaveField_GetWaveVelAcc_AD(p%WaveField, m%SeaSt_Interp_m, StartNode, t, &
                real(u%rotors(iWT)%TFinMotion%TranslationDisp + u%rotors(iWT)%TFinMotion%Position, ReKi), &
                u%rotors(iWT)%InflowOnTailFin, NoAcc, ErrStat2, ErrMsg2)
             if(Failed()) return

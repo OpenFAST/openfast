@@ -3579,7 +3579,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ErrStat   = ErrID_None
       ErrMsg    = ""
 
-      Zeta = WaveField_GetNodeTotalWaveElev( p%WaveField, Time, pos, ErrStat2, ErrMsg2 )
+      Zeta = WaveField_GetNodeTotalWaveElev( p%WaveField, m%SeaSt_Interp_m, Time, pos, ErrStat2, ErrMsg2 )
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END SUBROUTINE GetTotalWaveElev
@@ -4212,7 +4212,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
       END IF
 
       ! Get fluid velocity at the joint
-      CALL WaveField_GetNodeWaveVel( p%WaveField, Time, pos, .FALSE., .TRUE., nodeInWater, FVTmp, ErrStat2, ErrMsg2 )
+      CALL WaveField_GetNodeWaveVel( p%WaveField, m%SeaSt_Interp_m, Time, pos, .FALSE., .TRUE., nodeInWater, FVTmp, ErrStat2, ErrMsg2 )
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       FV   = REAL(FVTmp, ReKi)
       vrel = ( FV - u%Mesh%TranslationVel(:,J) ) * nodeInWater

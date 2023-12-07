@@ -36,6 +36,7 @@ USE BEMT_Types
 USE FVW_Types
 USE AeroAcoustics_Types
 USE InflowWind_Types
+USE SeaState_Interp_Types
 USE SeaSt_WaveField_Types
 USE NWTC_Library
 IMPLICIT NONE
@@ -382,6 +383,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindPos      !< XYZ coordinates to query for wind velocity/acceleration [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindVel      !< XYZ components of wind velocity [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindAcc      !< XYZ components of wind acceleration [-]
+    TYPE(SeaSt_Interp_MiscVarType)  :: SeaSt_Interp_m      !< MiscVars from the SeaState Interpolation module [-]
   END TYPE AD_MiscVarType
 ! =======================
 ! =========  RotParameterType  =======
@@ -5611,6 +5613,9 @@ subroutine AD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%WindAcc = SrcMiscData%WindAcc
    end if
+   call SeaSt_Interp_CopyMisc(SrcMiscData%SeaSt_Interp_m, DstMiscData%SeaSt_Interp_m, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine AD_DestroyMisc(MiscData, ErrStat, ErrMsg)
@@ -5655,6 +5660,8 @@ subroutine AD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%WindAcc)) then
       deallocate(MiscData%WindAcc)
    end if
+   call SeaSt_Interp_DestroyMisc(MiscData%SeaSt_Interp_m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackMisc(Buf, Indata)
@@ -5699,6 +5706,7 @@ subroutine AD_PackMisc(Buf, Indata)
       call RegPackBounds(Buf, 2, lbound(InData%WindAcc), ubound(InData%WindAcc))
       call RegPack(Buf, InData%WindAcc)
    end if
+   call SeaSt_Interp_PackMisc(Buf, InData%SeaSt_Interp_m) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -5785,6 +5793,7 @@ subroutine AD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%WindAcc)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
+   call SeaSt_Interp_UnpackMisc(Buf, OutData%SeaSt_Interp_m) ! SeaSt_Interp_m 
 end subroutine
 
 subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeData, CtrlCode, ErrStat, ErrMsg)
