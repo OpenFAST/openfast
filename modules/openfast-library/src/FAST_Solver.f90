@@ -537,13 +537,6 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_A
       
    END IF
    
-   
-   u_IfW%HubPosition    = y_ED%HubPtMotion%Position(:,1) + y_ED%HubPtMotion%TranslationDisp(:,1)
-   u_IfW%HubOrientation = y_ED%HubPtMotion%Orientation(:,:,1)
-   
-               
-
-
    IF ( p_FAST%MHK /= MHK_None ) THEN
       u_IfW%PositionXYZ(3,:) = u_IfW%PositionXYZ(3,:) + p_FAST%WtrDpth
    ENDIF
@@ -693,7 +686,7 @@ SUBROUTINE AD_InputSolve_NoIfW( p_FAST, u_AD, y_SrvD, y_ED, BD, MeshMapData, Err
 
    
    
-      ! Set Conrol parameter (i.e. flaps) if using ServoDyn
+      ! Set Control parameter (i.e. flaps) if using ServoDyn
       ! bem:   This takes in flap deflection for each blade (only one flap deflection angle per blade),
       !        from ServoDyn (which comes from Bladed style DLL controller)
       !  Commanded Airfoil UserProp for blade (must be same units as given in AD15 airfoil tables)
@@ -747,9 +740,6 @@ SUBROUTINE AD14_InputSolve_IfW( p_FAST, u_AD14, y_IfW, ErrStat, ErrMsg )
       u_AD14%InflowVelocity = 0.0_ReKi           ! whole array
    END IF
       
-   u_AD14%AvgInfVel = y_IfW%DiskVel
-  
-   
 END SUBROUTINE AD14_InputSolve_IfW
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets all the AeroDyn14 inputs, except for the wind inflow values.

@@ -384,52 +384,6 @@ SUBROUTINE Init_Lin_IfW( p_FAST, y_FAST, u_AD )
          end do    
       end if
                   
-      ! BJJ: SINCE INFLOWWIND NOW DOES NOT GET INITIALIZED WITH THE NUMBER OF POINTS, THIS CODE DOES NOT APPLY:
-      !IF (p_FAST%CompAero == MODULE_AD) THEN 
-      !                     
-      !   DO K = 1,SIZE(u_AD%rotors(1)%BladeMotion)
-      !      DO J = 1,u_AD%rotors(1)%BladeMotion(k)%Nnodes
-      !         Node = Node + 1 ! InflowWind node
-      !         NodeDesc = ' (blade '//trim(num2lstr(k))//', node '//trim(num2lstr(j))//')'
-      !         
-      !         do i=1,3 !XYZ components of this node
-      !            i2 = (Node-1)*3 + i
-      !            position = index(y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2), ',') - 1
-      !            y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2) = y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2)(1:position)//trim(NodeDesc)//&
-      !                                                                     y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2)(position+1:)
-      !                                                 
-      !            position = index(y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2), ',') - 1
-      !            y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2) = y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2)(1:position)//trim(NodeDesc)//&
-      !                                                                     y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2)(position+1:)
-      !            
-      !            ! IfW has inputs and outputs in the global frame
-      !            !y_FAST%Lin%Modules(Module_IfW)%Instance(1)%RotFrame_u(i2) = .true.
-      !            !y_FAST%Lin%Modules(Module_IfW)%Instance(1)%RotFrame_y(i2) = .true.
-      !            
-      !         end do            
-      !      END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
-      !   END DO !K = 1,p%NumBl     
-      !   
-      !      ! tower:
-      !   DO J=1,u_AD%rotors(1)%TowerMotion%nnodes
-      !      Node = Node + 1  
-      !      NodeDesc = ' (Tower node '//trim(num2lstr(j))//')'
-      !
-      !      do i=1,3 !XYZ components of this node
-      !         i2 = (Node-1)*3 + i
-      !                              
-      !         position = index(y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2), ',') - 1
-      !         y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2) = y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2)(1:position)//trim(NodeDesc)//&
-      !                                                                  y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2)(position+1:)
-      !                               
-      !         position = index(y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2), ',') - 1
-      !         y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2) = y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2)(1:position)//trim(NodeDesc)//&
-      !                                                                  y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2)(position+1:)
-      !      end do            
-      !   END DO              
-      !   
-      !END IF     
-   
 END SUBROUTINE Init_Lin_IfW
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that initializes some use_u and use_y, which determine which, if any, inputs and outputs are output in the linearization file.
@@ -3409,14 +3363,10 @@ END SUBROUTINE Linear_BD_InputSolve_dy
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine forms the dU^{AD}/dy^{IfW} block of dUdy. (i.e., how do changes in the IfW outputs affect the AD inputs?)
 SUBROUTINE Linear_AD_InputSolve_IfW_dy( p_FAST, y_FAST, u_AD, dUdy )
-
-      ! Passed variables
    TYPE(FAST_ParameterType),       INTENT(IN   )  :: p_FAST         !< FAST parameter data    
    TYPE(FAST_OutputFileType),      INTENT(IN   )  :: y_FAST         !< FAST output file data (for linearization)
    TYPE(AD_InputType),             INTENT(INOUT)  :: u_AD           !< The inputs to AeroDyn
    REAL(R8Ki),                     INTENT(INOUT)  :: dUdy(:,:)      !< Jacobian matrix of which we are computing the dU^{AD}/dy^{IfW} block
-
-      ! Local variables:
 
    INTEGER(IntKi)                               :: I           ! Loops through components
    INTEGER(IntKi)                               :: J           ! Loops through nodes / elements
@@ -3424,11 +3374,9 @@ SUBROUTINE Linear_AD_InputSolve_IfW_dy( p_FAST, y_FAST, u_AD, dUdy )
    INTEGER(IntKi)                               :: node
    INTEGER(IntKi)                               :: AD_Start   ! starting index of dUdy (row) where AD input equations (for specific fields) are located   
 
-                  
    !-------------------------------------------------------------------------------------------------
    ! Set the inputs from inflow wind:
    !-------------------------------------------------------------------------------------------------
-   !IF (p_FAST%CompInflow == MODULE_IfW) THEN !already checked in calling routine
 
       if (p_FAST%CompServo == MODULE_SrvD) then
          node = 2
@@ -3438,36 +3386,8 @@ SUBROUTINE Linear_AD_InputSolve_IfW_dy( p_FAST, y_FAST, u_AD, dUdy )
       
       
       AD_Start = Indx_u_AD_BladeInflow_Start(u_AD, y_FAST) ! start of u_AD%rotors(1)%InflowOnBlade array
-      
-!FIXME: move these to extended inputs!
-!      do k=1,size(o_AD%RotInflow(1)%Bld) ! blades
-!         do j=1,size(o_AD%RotInflow(1)%Bld(k)%InflowOnBlade,2) ! nodes
-!            do i=1,3 !velocity component
-!               dUdy( AD_Start + i - 1, y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + (node-1)*3 + i - 1 ) = -1.0_R8Ki
-!            end do
-!            node = node + 1
-!            AD_Start = AD_Start + 3
-!         end do         
-!      end do
-!                  
-!      if ( allocated(o_AD%RotInflow(1)%InflowOnTower) ) then         
-!         do j=1,size(o_AD%RotInflow(1)%InflowOnTower,2) !nodes
-!            do i=1,3 !velocity component
-!               dUdy( AD_Start + i - 1, y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + (node-1)*3 + i - 1 ) = -1.0_R8Ki
-!            end do
-!            node = node + 1
-!            AD_Start = AD_Start + 3
-!         end do      
-!      end if
-!
-!      do i=1,3 !rotor-disk velocity component (DiskVel)
-!         dUdy( AD_Start + i - 1, y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + (node-1)*3 + i - 1 ) = -1.0_R8Ki
-!      end do
-!      node = node + 1
-!      AD_Start = AD_Start + 3
 
-   !END IF
-   
+!FIXME: extended inputs!
    
 END SUBROUTINE Linear_AD_InputSolve_IfW_dy
 !----------------------------------------------------------------------------------------------------------------------------------
