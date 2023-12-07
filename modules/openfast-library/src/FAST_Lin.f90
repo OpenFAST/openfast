@@ -4997,6 +4997,7 @@ SUBROUTINE AllocateOP(p_FAST, y_FAST, ErrStat, ErrMsg )
 
    ! local variables
    INTEGER(IntKi)                          :: ErrStat2
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'AllocateOP'
 
 
@@ -5008,28 +5009,18 @@ SUBROUTINE AllocateOP(p_FAST, y_FAST, ErrStat, ErrMsg )
    !----------------------------------------------------------------------------------------
    
 
-      ALLOCATE(       y_FAST%op%x_ED(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(      y_FAST%op%xd_ED(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%z_ED(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( y_FAST%op%OtherSt_ED(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%u_ED(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
+      ALLOCATE(       y_FAST%op%x_ED(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("ElastoDyn operating point data")) return;
+      ALLOCATE(      y_FAST%op%xd_ED(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("ElastoDyn operating point data")) return;
+      ALLOCATE(       y_FAST%op%z_ED(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("ElastoDyn operating point data")) return;
+      ALLOCATE( y_FAST%op%OtherSt_ED(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("ElastoDyn operating point data")) return;
+      ALLOCATE(       y_FAST%op%u_ED(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("ElastoDyn operating point data")) return;
       
       IF ( p_FAST%CompElast == Module_BD ) THEN
-         ALLOCATE(       y_FAST%op%x_BD(p_FAST%nBeams, p_FAST%NLinTimes), STAT=ErrStat2 )
-            if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-         ALLOCATE(      y_FAST%op%xd_BD(p_FAST%nBeams, p_FAST%NLinTimes), STAT=ErrStat2 )
-            if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-         ALLOCATE(       y_FAST%op%z_BD(p_FAST%nBeams, p_FAST%NLinTimes), STAT=ErrStat2 )
-            if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-         ALLOCATE( y_FAST%op%OtherSt_BD(p_FAST%nBeams, p_FAST%NLinTimes), STAT=ErrStat2 )
-            if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-         ALLOCATE(       y_FAST%op%u_BD(p_FAST%nBeams, p_FAST%NLinTimes), STAT=ErrStat2 )
-            if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
+         ALLOCATE(       y_FAST%op%x_BD(p_FAST%nBeams, p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("BeamDyn operating point data")) return;
+         ALLOCATE(      y_FAST%op%xd_BD(p_FAST%nBeams, p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("BeamDyn operating point data")) return;
+         ALLOCATE(       y_FAST%op%z_BD(p_FAST%nBeams, p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("BeamDyn operating point data")) return;
+         ALLOCATE( y_FAST%op%OtherSt_BD(p_FAST%nBeams, p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("BeamDyn operating point data")) return;
+         ALLOCATE(       y_FAST%op%u_BD(p_FAST%nBeams, p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("BeamDyn operating point data")) return;
       END IF
 
    
@@ -5037,148 +5028,104 @@ SUBROUTINE AllocateOP(p_FAST, y_FAST, ErrStat, ErrMsg )
    !IF ( p_FAST%CompAero == Module_AD14 ) THEN
    !ELSE
    IF ( p_FAST%CompAero == Module_AD ) THEN
-      ALLOCATE(       y_FAST%op%x_AD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(      y_FAST%op%xd_AD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%z_AD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( y_FAST%op%OtherSt_AD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%u_AD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
+      ALLOCATE(       y_FAST%op%x_AD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("AeroDyn operating point data")) return;
+      ALLOCATE(      y_FAST%op%xd_AD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("AeroDyn operating point data")) return;
+      ALLOCATE(       y_FAST%op%z_AD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("AeroDyn operating point data")) return;
+      ALLOCATE( y_FAST%op%OtherSt_AD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("AeroDyn operating point data")) return;
+      ALLOCATE(       y_FAST%op%u_AD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("AeroDyn operating point data")) return;
    END IF
          
    IF ( p_FAST%CompInflow == Module_IfW ) THEN
-      ALLOCATE(       y_FAST%op%x_IfW(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(      y_FAST%op%xd_IfW(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%z_IfW(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( y_FAST%op%OtherSt_IfW(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%u_IfW(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
+      ALLOCATE(       y_FAST%op%x_IfW(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("InflowWind operating point data")) return;
+      ALLOCATE(      y_FAST%op%xd_IfW(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("InflowWind operating point data")) return;
+      ALLOCATE(       y_FAST%op%z_IfW(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("InflowWind operating point data")) return;
+      ALLOCATE( y_FAST%op%OtherSt_IfW(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("InflowWind operating point data")) return;
+      ALLOCATE(       y_FAST%op%u_IfW(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("InflowWind operating point data")) return;
    END IF
             
       
    IF ( p_FAST%CompServo == Module_SrvD ) THEN
-      ALLOCATE(       y_FAST%op%x_SrvD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(      y_FAST%op%xd_SrvD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%z_SrvD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( y_FAST%op%OtherSt_SrvD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%u_SrvD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
+      ALLOCATE(       y_FAST%op%x_SrvD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("ServoDyn operating point data")) return;
+      ALLOCATE(      y_FAST%op%xd_SrvD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("ServoDyn operating point data")) return;
+      ALLOCATE(       y_FAST%op%z_SrvD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("ServoDyn operating point data")) return;
+      ALLOCATE( y_FAST%op%OtherSt_SrvD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("ServoDyn operating point data")) return;
+      ALLOCATE(       y_FAST%op%u_SrvD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("ServoDyn operating point data")) return;
    END IF
       
       
    IF ( p_FAST%CompHydro == Module_HD ) THEN
-      ALLOCATE(       y_FAST%op%x_HD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(      y_FAST%op%xd_HD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%z_HD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( y_FAST%op%OtherSt_HD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%u_HD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
+      ALLOCATE(       y_FAST%op%x_HD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("HydroDyn operating point data")) return;
+      ALLOCATE(      y_FAST%op%xd_HD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("HydroDyn operating point data")) return;
+      ALLOCATE(       y_FAST%op%z_HD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("HydroDyn operating point data")) return;
+      ALLOCATE( y_FAST%op%OtherSt_HD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("HydroDyn operating point data")) return;
+      ALLOCATE(       y_FAST%op%u_HD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("HydroDyn operating point data")) return;
    END IF
             
             
    ! SubDyn: copy final predictions to actual states
    IF ( p_FAST%CompSub == Module_SD ) THEN
-      ALLOCATE(       y_FAST%op%x_SD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(      y_FAST%op%xd_SD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%z_SD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( y_FAST%op%OtherSt_SD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%u_SD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
+      ALLOCATE(       y_FAST%op%x_SD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("SubDyn operating point data")) return;
+      ALLOCATE(      y_FAST%op%xd_SD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("SubDyn operating point data")) return;
+      ALLOCATE(       y_FAST%op%z_SD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("SubDyn operating point data")) return;
+      ALLOCATE( y_FAST%op%OtherSt_SD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("SubDyn operating point data")) return;
+      ALLOCATE(       y_FAST%op%u_SD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("SubDyn operating point data")) return;
    ELSE IF ( p_FAST%CompSub == Module_ExtPtfm ) THEN
-      ALLOCATE(       y_FAST%op%x_ExtPtfm(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(      y_FAST%op%xd_ExtPtfm(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%z_ExtPtfm(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( y_FAST%op%OtherSt_ExtPtfm(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%u_ExtPtfm(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
+      ALLOCATE(       y_FAST%op%x_ExtPtfm(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("ExtPtfm operating point data")) return;
+      ALLOCATE(      y_FAST%op%xd_ExtPtfm(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("ExtPtfm operating point data")) return;
+      ALLOCATE(       y_FAST%op%z_ExtPtfm(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("ExtPtfm operating point data")) return;
+      ALLOCATE( y_FAST%op%OtherSt_ExtPtfm(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("ExtPtfm operating point data")) return;
+      ALLOCATE(       y_FAST%op%u_ExtPtfm(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("ExtPtfm operating point data")) return;
    END IF
          
       
    ! MAP/MoorDyn/FEAM: copy states and inputs to OP array
    IF (p_FAST%CompMooring == Module_MAP) THEN
-      ALLOCATE(       y_FAST%op%x_MAP(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(      y_FAST%op%xd_MAP(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%z_MAP(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      !ALLOCATE( y_FAST%op%OtherSt_MAP(p_FAST%NLinTimes), STAT=ErrStat2 )
-      !   if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%u_MAP(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
+      ALLOCATE(       y_FAST%op%x_MAP(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("MAP operating point data")) return;
+      ALLOCATE(      y_FAST%op%xd_MAP(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("MAP operating point data")) return;
+      ALLOCATE(       y_FAST%op%z_MAP(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("MAP operating point data")) return;
+      !ALLOCATE( y_FAST%op%OtherSt_MAP(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("MAP operating point data")) return;
+      ALLOCATE(       y_FAST%op%u_MAP(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("MAP operating point data")) return;
    ELSEIF (p_FAST%CompMooring == Module_MD) THEN
-      ALLOCATE(       y_FAST%op%x_MD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(      y_FAST%op%xd_MD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%z_MD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( y_FAST%op%OtherSt_MD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%u_MD(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
+      ALLOCATE(       y_FAST%op%x_MD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("MoorDyn operating point data")) return;
+      ALLOCATE(      y_FAST%op%xd_MD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("MoorDyn operating point data")) return;
+      ALLOCATE(       y_FAST%op%z_MD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("MoorDyn operating point data")) return;
+      ALLOCATE( y_FAST%op%OtherSt_MD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("MoorDyn operating point data")) return;
+      ALLOCATE(       y_FAST%op%u_MD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("MoorDyn operating point data")) return;
    ELSEIF (p_FAST%CompMooring == Module_FEAM) THEN
-      ALLOCATE(       y_FAST%op%x_FEAM(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(      y_FAST%op%xd_FEAM(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%z_FEAM(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( y_FAST%op%OtherSt_FEAM(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%u_FEAM(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
+      ALLOCATE(       y_FAST%op%x_FEAM(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("FEAM operating point data")) return;
+      ALLOCATE(      y_FAST%op%xd_FEAM(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("FEAM operating point data")) return;
+      ALLOCATE(       y_FAST%op%z_FEAM(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("FEAM operating point data")) return;
+      ALLOCATE( y_FAST%op%OtherSt_FEAM(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("FEAM operating point data")) return;
+      ALLOCATE(       y_FAST%op%u_FEAM(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("FEAM operating point data")) return;
    !ELSEIF (p_FAST%CompMooring == Module_Orca) THEN
    END IF
              
          ! IceFloe/IceDyn: copy states and inputs to OP array
    IF ( p_FAST%CompIce == Module_IceF ) THEN
-      ALLOCATE(       y_FAST%op%x_IceF(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(      y_FAST%op%xd_IceF(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%z_IceF(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( y_FAST%op%OtherSt_IceF(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%u_IceF(p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
+      ALLOCATE(       y_FAST%op%x_IceF(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("IceFloe operating point data")) return;
+      ALLOCATE(      y_FAST%op%xd_IceF(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("IceFloe operating point data")) return;
+      ALLOCATE(       y_FAST%op%z_IceF(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("IceFloe operating point data")) return;
+      ALLOCATE( y_FAST%op%OtherSt_IceF(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("IceFloe operating point data")) return;
+      ALLOCATE(       y_FAST%op%u_IceF(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("IceFloe operating point data")) return;
    ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN
-      ALLOCATE(       y_FAST%op%x_IceD(p_FAST%numIceLegs, p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(      y_FAST%op%xd_IceD(p_FAST%numIceLegs, p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%z_IceD(p_FAST%numIceLegs, p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( y_FAST%op%OtherSt_IceD(p_FAST%numIceLegs, p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE(       y_FAST%op%u_IceD(p_FAST%numIceLegs, p_FAST%NLinTimes), STAT=ErrStat2 )
-         if (ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, 'Error allocating arrays for VTK operating points.', ErrStat, ErrMsg, RoutineName)
+      ALLOCATE(       y_FAST%op%x_IceD(p_FAST%numIceLegs, p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("IceDyn operating point data")) return;
+      ALLOCATE(      y_FAST%op%xd_IceD(p_FAST%numIceLegs, p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("IceDyn operating point data")) return;
+      ALLOCATE(       y_FAST%op%z_IceD(p_FAST%numIceLegs, p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("IceDyn operating point data")) return;
+      ALLOCATE( y_FAST%op%OtherSt_IceD(p_FAST%numIceLegs, p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("IceDyn operating point data")) return;
+      ALLOCATE(       y_FAST%op%u_IceD(p_FAST%numIceLegs, p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("IceDyn operating point data")) return;
    END IF
-   
+
+contains
+   ! check for failed where /= 0 is fatal
+   logical function Failed0(txt)
+      character(*), intent(in) :: txt
+      if (errStat /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate "//trim(txt)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      endif
+      Failed0 = ErrStat >= AbortErrLev
+   end function Failed0
 END SUBROUTINE AllocateOP
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine is the inverse of SetOperatingPoint(). It saves the current operating points so they can be retrieved 
