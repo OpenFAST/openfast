@@ -34,9 +34,10 @@ module AeroDyn
    use IfW_FlowField, only: IfW_FlowField_GetVelAcc
    
    implicit none
-
    private
-         
+
+   integer, parameter :: NumExtendedInputs = 3 ! Number of extended inputs (from InflowWind): HWindSpeed, PlExp, PropDir
+
 
    ! ..... Public Subroutines ...................................................................................................
 
@@ -6044,6 +6045,7 @@ END SUBROUTINE AD_GetOP
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
+!! NOTE: the order here needs to exactly match the order in Init_Jacobian_u.
 SUBROUTINE RotGetOP( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(RotInputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
@@ -6092,7 +6094,7 @@ SUBROUTINE RotGetOP( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, ErrSt
             nu = nu + u%BladeRootMotion(i)%NNodes * 6   ! Jac_u_indx has 3 orientation angles, but the OP needs the full 9 elements of the DCM
          end do      
       end if
-                        
+
       if (.not. allocated(u_op)) then
          call AllocAry(u_op, nu, 'u_op', ErrStat2, ErrMsg2); if (Failed()) return
       end if
@@ -6491,12 +6493,11 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
    TYPE(AD_ParameterType)            , INTENT(INOUT) :: p_AD                  !< parameters
    TYPE(RotInputType)                , INTENT(IN   ) :: u                     !< inputs
    TYPE(RotInitOutputType)           , INTENT(INOUT) :: InitOut               !< Initialization output data (for Jacobian row/column names)
-   
    INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat               !< Error status of the operation
    CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
-   
+
       ! local variables:
-   INTEGER(IntKi)                :: i, j, k, index, index_last, nu, i_meshField
+   INTEGER(IntKi)                :: i, j, k, index, indexNames, index_last, nu, i_meshField
    INTEGER(IntKi)                :: NumFieldsForLinearization
    REAL(ReKi)                    :: perturb, perturb_t, perturb_b(MaxBl)
    LOGICAL                       :: FieldMask(FIELDMASK_SIZE)
@@ -6504,308 +6505,264 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'Init_Jacobian_u'
-   
+
    ErrStat = ErrID_None
    ErrMsg  = ""
-   
-   
+
+
       ! determine how many inputs there are in the Jacobians
    if (p_AD%CompAeroMaps) then
       nu = 0
-      
+
       NumFieldsForLinearization = 3 ! Translation Displacements + orientations + Translation velocities at each node on the blade mesh
    else
-      nu = u%TowerMotion%NNodes * 9            & ! 3 Translation Displacements + 3 orientations + 3 Translation velocities at each node
-         + u%hubMotion%NNodes   * 9            & ! 3 Translation Displacements + 3 orientations + 3 Rotation velocities at each node
-!         + size( RotInflow%InflowOnTower)              & !note that we are not passing the inflow on nacelle or hub here
-         + size( u%UserProp)                    
-         !+ 3                                     ! 3 velocity components in AvgDiskVel; note that we are not passing the inflow on nacelle or hub here
+      nu = u%NacelleMotion%NNodes * 6        & ! 3 Translation Displacements + 3 orientations
+         + u%hubMotion%NNodes     * 9        & ! 3 Translation Displacements + 3 orientations + 3 Rotation    velocities
+         + u%TowerMotion%NNodes   * 12       & ! 3 Translation Displacements + 3 orientations + 3 Translation velocities + 3 Translation Accelerations
+         + u%TFinMotion%NNodes    * 9        & ! 3 Translation Displacements + 3 orientations + 3 Translation velocities
+         + size( u%UserProp)                 & ! typically number of blades
+         + NumExtendedInputs                   ! Extended inputs from InflowWind: HWindSpeed, PLexp, PropagationDir
 
-!      do k=1,size(RotInflow%Bld) ! hopefully this is allocated
-!         nu = nu + size(RotInflow%Bld(k)%InflowOnBlade)
-!      end do
-      
-      NumFieldsForLinearization = 5 ! Translation Displacements + orientations + Translation velocities + Rotation velocities + TranslationAcc at each node on the blade mesh
+      NumFieldsForLinearization = 6 ! Translation Displacements + orientations + Translation velocities + Rotation velocities + TranslationAcc + RotationAcc at each node on the blade mesh
       do i=1,p%NumBlades
          nu = nu + u%BladeRootMotion(i)%NNodes * 3   ! 3 orientations at each node
       end do
    end if
 
    do i=1,p%NumBl_Lin
-      nu = nu + u%BladeMotion(i)%NNodes * 3*NumFieldsForLinearization  ! 3 components per field
+      nu = nu + u%BladeMotion(i)%NNodes * 3*NumFieldsForLinearization  ! 3 components per additional field
    end do
 
    ! all other inputs ignored
 
-      
-   !............................                     
+
+   !............................
    ! fill matrix to store index to help us figure out what the ith value of the u vector really means
    ! (see aerodyn::perturb_u ... these MUST match )
    ! column 1 indicates module's mesh and field
    ! column 2 indicates the first index (x-y-z component) of the field
    ! column 3 is the node
-   !............................                     
-   
+   !............................
+
    call allocAry( p%Jac_u_indx, nu, 3, 'p%Jac_u_indx', ErrStat2, ErrMsg2); if (Failed()) return
-            
-   !...............
-   ! AD input mappings stored in p%Jac_u_indx:   
-   !...............
-   index = 1
-   
-   if (.not. p_AD%CompAeroMaps) then 
-   
-      !Module/Mesh/Field: u%TowerMotion%TranslationDisp  = 1;
-      !Module/Mesh/Field: u%TowerMotion%Orientation      = 2;
-      !Module/Mesh/Field: u%TowerMotion%TranslationVel   = 3;
-      do i_meshField = 1,3
-         do i=1,u%TowerMotion%NNodes
-            do j=1,3
-               p%Jac_u_indx(index,1) =  i_meshField
-               p%Jac_u_indx(index,2) =  j !component index:  j
-               p%Jac_u_indx(index,3) =  i !Node:   i
-               index = index + 1
-            end do !j      
-         end do !i
-      end do
-   
-      !Module/Mesh/Field: u%HubMotion%TranslationDisp = 4;
-      !Module/Mesh/Field: u%HubMotion%Orientation     = 5;
-      !Module/Mesh/Field: u%HubMotion%RotationVel     = 6;
-      do i_meshField = 4,6
-         do i=1,u%HubMotion%NNodes
-            do j=1,3
-               p%Jac_u_indx(index,1) =  i_meshField
-               p%Jac_u_indx(index,2) =  j !component index:  j
-               p%Jac_u_indx(index,3) =  i !Node:   i
-               index = index + 1
-            end do !j      
-         end do !i
-      end do
-   
-      !bjj: if MaxBl (max blades) changes, we need to modify this
-      !Module/Mesh/Field: u%BladeRootMotion(1)%Orientation = 7;
-      !Module/Mesh/Field: u%BladeRootMotion(2)%Orientation = 8;
-      !Module/Mesh/Field: u%BladeRootMotion(3)%Orientation = 9;   
-      do k=1,p%NumBlades         
-         do i_meshField = 6,6
-            do i=1,u%BladeRootMotion(k)%NNodes
-               do j=1,3
-                  p%Jac_u_indx(index,1) =  i_meshField + k
-                  p%Jac_u_indx(index,2) =  j !component index:  j
-                  p%Jac_u_indx(index,3) =  i !Node:   i
-                  index = index + 1
-               end do !j      
-            end do !i
-            
-         end do !i_meshField                            
-      end do !k
-      
-   end if ! .not. compAeroMaps
-   
-   !bjj: if MaxBl (max blades) changes, we need to modify this
-   !Module/Mesh/Field: u%BladeMotion(1)%TranslationDisp = 10;
-   !Module/Mesh/Field: u%BladeMotion(1)%Orientation     = 11;
-   !Module/Mesh/Field: u%BladeMotion(1)%TranslationVel  = 12;
-   !Module/Mesh/Field: u%BladeMotion(1)%RotationVel     = 13;
-   !Module/Mesh/Field: u%BladeMotion(1)%TranslationAcc  = 14;
-
-   !Module/Mesh/Field: u%BladeMotion(2)%TranslationDisp = 15;
-   !Module/Mesh/Field: u%BladeMotion(2)%Orientation     = 16;
-   !Module/Mesh/Field: u%BladeMotion(2)%TranslationVel  = 17;
-   !Module/Mesh/Field: u%BladeMotion(2)%RotationVel     = 18;
-   !Module/Mesh/Field: u%BladeMotion(2)%TranslationAcc  = 19;
-   
-   !Module/Mesh/Field: u%BladeMotion(3)%TranslationDisp = 20;
-   !Module/Mesh/Field: u%BladeMotion(3)%Orientation     = 21;
-   !Module/Mesh/Field: u%BladeMotion(3)%TranslationVel  = 22;
-   !Module/Mesh/Field: u%BladeMotion(3)%RotationVel     = 23;
-   !Module/Mesh/Field: u%BladeMotion(3)%TranslationAcc  = 24;
-   do k=1,p%NumBl_Lin
-      do i_meshField = 1,NumFieldsForLinearization
-         do i=1,u%BladeMotion(k)%NNodes
-            do j=1,3
-               p%Jac_u_indx(index,1) =  9 + i_meshField + (k-1)*5 ! this should use the MAX possible NumFieldsForLinearization = 5 (so that it's consistent for all cases)
-               p%Jac_u_indx(index,2) =  j !component index:  j
-               p%Jac_u_indx(index,3) =  i !Node:   i
-               index = index + 1
-            end do !j      
-         end do !i
-            
-      end do !i_meshField
-   end do !k
-   
-   if (.not. p_AD%CompAeroMaps) then
-   
-!FIXME: move to extended inputs
-!      !Module/Mesh/Field: u%InflowOnBlade(:,:,1) = 25;
-!      !Module/Mesh/Field: u%InflowOnBlade(:,:,2) = 26;
-!      !Module/Mesh/Field: u%InflowOnBlade(:,:,3) = 27;
-!      do k=1,size(RotInflow%Bld)    ! p%NumBlades
-!         do i=1,size(RotInflow%Bld(k)%InflowOnBlade,2) ! numNodes
-!            do j=1,3
-!               p%Jac_u_indx(index,1) =  24 + k
-!               p%Jac_u_indx(index,2) =  j !component index:  j
-!               p%Jac_u_indx(index,3) =  i !Node:   i
-!               index = index + 1
-!            end do !j
-!         end do !i
-!      end do !k
-!   
-!      !Module/Mesh/Field: u%InflowOnTower(:,:) = 28;
-!      do i=1,size(RotInflow%InflowOnTower,2) ! numNodes
-!         do j=1,3
-!            p%Jac_u_indx(index,1) =  28
-!            p%Jac_u_indx(index,2) =  j !component index:  j
-!            p%Jac_u_indx(index,3) =  i !Node:   i
-!            index = index + 1
-!         end do !j
-!      end do !i
-!          
-!      !Module/Mesh/Field: u%UserProp(:,:) = 29,30,31;
-!      do k=1,size(u%UserProp,2) ! p%NumBlades         
-!         do i=1,size(u%UserProp,1) ! numNodes
-!               p%Jac_u_indx(index,1) =  28 + k
-!               p%Jac_u_indx(index,2) =  1 !component index:  this is a scalar, so 1, but is never used
-!               p%Jac_u_indx(index,3) =  i !Node:   i
-!               index = index + 1     
-!         end do !i
-!      end do !k
-!      
-!      !Module/Mesh/Field: u%AvgDiskVel(:,:) = 32;
-      !do j=1,3
-      !   p%Jac_u_indx(index,1) =  32
-      !   p%Jac_u_indx(index,2) =  j !component index:  j
-      !   p%Jac_u_indx(index,3) =  1 !Node:   1 (not really necessary here, since we have only a 1 dimensional array)
-      !   index = index + 1
-      !end do !j
-      
-      
-   end if ! .not. compAeroMaps
-   
-      !......................................
-      ! default perturbations, p%du:
-      !......................................
-!FIXME: this isn't the right number
-   call allocAry( p%du, 31, 'p%du', ErrStat2, ErrMsg2); if (Failed()) return ! 31 = number of unique values in p%Jac_u_indx(:,1)
-
-   perturb = 2*D2R
-   
-   do k=1,p%NumBlades
-      perturb_b(k) = 0.2_ReKi*D2R * InputFileData%BladeProps(k)%BlSpn( InputFileData%BladeProps(k)%NumBlNds )
-   end do
-
-   if ( u%TowerMotion%NNodes > 0) then
-      perturb_t = 0.2_ReKi*D2R * u%TowerMotion%Position( 3, u%TowerMotion%NNodes )
-   else
-      perturb_t = 0.0_ReKi
-   end if   
-   
-   p%du(1) = perturb_t                    ! u%TowerMotion%TranslationDisp  = 1
-   p%du(2) = perturb                      ! u%TowerMotion%Orientation      = 2
-   p%du(3) = perturb_t                    ! u%TowerMotion%TranslationVel   = 3
-   p%du(4) = perturb_b(1)                 ! u%HubMotion%TranslationDisp    = 4
-   p%du(5) = perturb                      ! u%HubMotion%Orientation        = 5
-   p%du(6) = perturb                      ! u%HubMotion%RotationVel        = 6
-   do i_meshField = 7,9   
-      p%du(i_meshField) = perturb         ! u%BladeRootMotion(k)%Orientation = 6+k, for k in [1, 3]
-   end do
-   do k=1,p%NumBlades         
-      p%du(10 + (k-1)*5) = perturb_b(k)   ! u%BladeMotion(k)%TranslationDisp = 10 + (k-1)*5
-      p%du(11 + (k-1)*5) = perturb        ! u%BladeMotion(k)%Orientation     = 11 + (k-1)*5
-      p%du(12 + (k-1)*5) = perturb_b(k)   ! u%BladeMotion(k)%TranslationVel  = 12 + (k-1)*5
-      p%du(13 + (k-1)*5) = perturb        ! u%BladeMotion(k)%RotationVel     = 13 + (k-1)*5
-      p%du(14 + (k-1)*5) = perturb_b(k)   ! u%BladeMotion(k)%TranslationAcc  = 14 + (k-1)*5 !bjj: is the correct????
-   end do
-   do k=1,p%NumBlades
-      p%du(24 + k) = perturb_b(k)         ! u%InflowOnBlade(:,:,k) = 24 + k
-   end do      
-   p%du(28) = perturb_t                   ! u%InflowOnTower(:,:) = 28
-   do k=1,p%NumBl_Lin 
-      p%du(28+k) = perturb                ! u%UserProp(:,:) = 29,30,31
-   end do      
-   !p%du(32) = minval(perturb_b(1:p%numBlades)) ! u%AvgDiskVel(:) = 32
-  
-         
-      !.....................
-      ! get names of linearized inputs
-      !.....................
    call AllocAry(InitOut%LinNames_u, nu, 'LinNames_u', ErrStat2, ErrMsg2); if (Failed()) return
    call AllocAry(InitOut%RotFrame_u, nu, 'RotFrame_u', ErrStat2, ErrMsg2); if (Failed()) return
    call AllocAry(InitOut%IsLoad_u,   nu, 'IsLoad_u',   ErrStat2, ErrMsg2); if (Failed()) return
 
+   ! perturbations
+   call allocAry( p%du, 39, 'p%du', ErrStat2, ErrMsg2); if (Failed()) return ! number of unique values in p%Jac_u_indx(:,1) (check below)
+   perturb = 2*D2R
+   do k=1,p%NumBl_Lin
+      perturb_b(k) = 0.2_ReKi*D2R * InputFileData%BladeProps(k)%BlSpn( InputFileData%BladeProps(k)%NumBlNds )
+   end do
+   if ( u%TowerMotion%NNodes > 0) then
+      perturb_t = 0.2_ReKi*D2R * u%TowerMotion%Position( 3, u%TowerMotion%NNodes )
+   else
+      perturb_t = 0.0_ReKi
+   end if
+
+   ! initialize
+   p%Jac_u_indx = 0
+   p%du = 0.0_R8Ki
    InitOut%IsLoad_u   = .false. ! None of AeroDyn's inputs are loads
    InitOut%RotFrame_u = .false.
-   if (.not. p_AD%CompAeroMaps) then
-      do k=0,p%NumBl_Lin*p%NumBlNds-1
-         InitOut%RotFrame_u(nu - k ) = .true.   ! UserProp(:,:) ! TODO TODO TODO add -3 due to DiskAvgVel       
-      end do  
-   endif
 
+
+   !===========================================================================
+   ! AD input mappings stored in p%Jac_u_indx, perturbations in p%du
+   !===========================================================================
    index = 1
-   FieldMask = .false.
-   FieldMask(MASKID_TRANSLATIONDISP) = .true.
-   FieldMask(MASKID_Orientation) = .true.
-   FieldMask(MASKID_TRANSLATIONVel) = .true.
-   if (.not. p_AD%CompAeroMaps) call PackMotionMesh_Names(u%TowerMotion, 'Tower', InitOut%LinNames_u, index, FieldMask=FieldMask)
-   
-   FieldMask(MASKID_TRANSLATIONVel) = .false.
-   FieldMask(MASKID_RotationVel) = .true.
-   if (.not. p_AD%CompAeroMaps) call PackMotionMesh_Names(u%HubMotion, 'Hub', InitOut%LinNames_u, index, FieldMask=FieldMask)
 
-   index_last = index
-   FieldMask = .false.
-   FieldMask(MASKID_Orientation) = .true.
    if (.not. p_AD%CompAeroMaps) then
-      do k = 1,p%NumBlades
-         call PackMotionMesh_Names(u%BladeRootMotion(k), 'Blade root '//trim(num2lstr(k)), InitOut%LinNames_u, index, FieldMask=FieldMask)
+      !------------------------------
+      ! Nacelle
+      !     Module/Mesh/Field: u%NacelleMotion%TranslationDisp = 1;
+      !     Module/Mesh/Field: u%NacelleMotion%Orientation     = 2;
+      indexNames=index
+      call SetJac_u_idx(1,2,u%NacelleMotion%NNodes,index)
+      !     Perturbations
+      p%du(1) = perturb_b(1)
+      p%du(2) = perturb
+      !     Names
+      FieldMask = .false.
+      FieldMask(MASKID_TRANSLATIONDISP) = .true.
+      FieldMask(MASKID_ORIENTATION)     = .true.
+      call PackMotionMesh_Names(u%NacelleMotion, 'Nacelle', InitOut%LinNames_u, indexNames, FieldMask=FieldMask)
+
+      !------------------------------
+      ! Hub
+      !     Module/Mesh/Field: u%HubMotion%TranslationDisp = 3;
+      !     Module/Mesh/Field: u%HubMotion%Orientation     = 4;
+      !     Module/Mesh/Field: u%HubMotion%RotationVel     = 5;
+      indexNames=index
+      call SetJac_u_idx(3,5,u%HubMotion%NNodes,index)
+      !     Perturbations
+      p%du(3) = perturb_b(1)
+      p%du(4) = perturb
+      p%du(5) = perturb
+      !     Names
+      FieldMask = .false.
+      FieldMask(MASKID_TRANSLATIONDISP) = .true.
+      FieldMask(MASKID_ORIENTATION)     = .true.
+      FieldMask(MASKID_TRANSLATIONVEL)  = .true.
+      call PackMotionMesh_Names(u%HubMotion, 'Hub', InitOut%LinNames_u, indexNames, FieldMask=FieldMask)
+
+
+      !------------------------------
+      ! Tower
+      !     Module/Mesh/Field: u%TowerMotion%TranslationDisp = 6;
+      !     Module/Mesh/Field: u%TowerMotion%Orientation     = 7;
+      !     Module/Mesh/Field: u%TowerMotion%TranslationVel  = 8;
+      !     Module/Mesh/Field: u%TowerMotion%TranslationAcc  = 9;
+      indexNames=index
+      call SetJac_u_idx(6,9,u%TowerMotion%NNodes,index)
+      !     Perturbations
+      p%du(5) = perturb_t
+      p%du(7) = perturb
+      p%du(8) = perturb_t
+      p%du(9) = perturb_t
+      !     Names
+      FieldMask = .false.
+      FieldMask(MASKID_TRANSLATIONDISP) = .true.
+      FieldMask(MASKID_ORIENTATION)     = .true.
+      FieldMask(MASKID_TRANSLATIONVEL)  = .true.
+      FieldMask(MASKID_ROTATIONVEL)     = .true.
+      call PackMotionMesh_Names(u%TowerMotion, 'Tower', InitOut%LinNames_u, indexNames, FieldMask=FieldMask)
+
+
+      !------------------------------
+      ! Blade root      (3 blade limit!!!!)
+      !     Module/Mesh/Field: u%BladeRootMotion(1)%Orientation = 10;
+      !     Module/Mesh/Field: u%BladeRootMotion(2)%Orientation = 11;
+      !     Module/Mesh/Field: u%BladeRootMotion(3)%Orientation = 12;
+      indexNames=index
+      do k = 1,p%NumBl_Lin
+         call SetJac_u_idx(10+k-1,10+k-1,u%BladeRootMotion(k)%NNodes,index)
       end do
-      
-      FieldMask(MASKID_RotationVel) = .true.
-      FieldMask(MASKID_TRANSLATIONAcc)  = .true.
-   end if
-   
-   FieldMask(MASKID_TRANSLATIONDISP) = .true.
-   FieldMask(MASKID_TRANSLATIONVel)  = .true.
+      !     Perturbations
+      p%du(10) = perturb
+      p%du(11) = perturb
+      p%du(12) = perturb
+      !     Names
+      FieldMask = .false.
+      FieldMask(MASKID_Orientation) = .true.
+      do k = 1,p%NumBl_Lin
+         call PackMotionMesh_Names(u%BladeRootMotion(k), 'Blade root '//trim(num2lstr(k)), InitOut%LinNames_u, indexNames, FieldMask=FieldMask)
+      end do
+   end if ! .not. compAeroMaps
+
+
+   !------------------------------
+   ! Blades    (3 blade limit!!!!!)
+   !     Module/Mesh/Field: u%BladeMotion(1)%TranslationDisp = 13 + (bladenum-1)*6;
+   !     Module/Mesh/Field: u%BladeMotion(1)%Orientation     = 14 + (bladenum-1)*6;
+   !     Module/Mesh/Field: u%BladeMotion(1)%TranslationVel  = 15 + (bladenum-1)*6;
+   !     Module/Mesh/Field: u%BladeMotion(1)%RotationVel     = 16 + (bladenum-1)*6;
+   !     Module/Mesh/Field: u%BladeMotion(1)%TranslationAcc  = 17 + (bladenum-1)*6;
+   !     Module/Mesh/Field: u%BladeMotion(1)%RotationalAcc   = 18 + (bladenum-1)*6;
+   indexNames=index
+   call SetJac_u_idx(13,18,u%BladeMotion(1)%NNodes,index)
+   if (p%NumBl_Lin > 1)   call SetJac_u_idx(19,24,u%BladeMotion(2)%NNodes,index)
+   if (p%NumBl_Lin > 2)   call SetJac_u_idx(15,30,u%BladeMotion(3)%NNodes,index)
+   !     Perturbations
    do k=1,p%NumBl_Lin
-      call PackMotionMesh_Names(u%BladeMotion(k), 'Blade '//trim(num2lstr(k)), InitOut%LinNames_u, index, FieldMask=FieldMask)
+      p%du(13 + (k-1)*6) = perturb_b(k)
+      p%du(14 + (k-1)*6) = perturb
+      p%du(15 + (k-1)*6) = perturb_b(k)
+      p%du(16 + (k-1)*6) = perturb
+      p%du(17 + (k-1)*6) = perturb_b(k)
+      p%du(18 + (k-1)*6) = perturb
    end do
-   
-   if (.not. p_AD%CompAeroMaps) then
-      do k=1,p%NumBlades
-         do i=1,p%NumBlNds
-            do j=1,3
-               InitOut%LinNames_u(index) = UVW(j)//'-component inflow on blade '//trim(num2lstr(k))//', node '//trim(num2lstr(i))//', m/s'
-               index = index + 1
-            end do
-         end do
-      end do
-      !InitOut%RotFrame_u(index_last:index-1) = .true. ! values on the mesh (and from IfW) are in global coordinates, thus not in the rotating frame
+   !     Names
+   FieldMask = .false.
+   FieldMask(MASKID_TRANSLATIONDISP) = .true.
+   FieldMask(MASKID_ORIENTATION)     = .true.
+   FieldMask(MASKID_TRANSLATIONVEL)  = .true.
+   FieldMask(MASKID_ROTATIONVEL)     = .true.
+   FieldMask(MASKID_TRANSLATIONACC)  = .true.
+   FieldMask(MASKID_ROTATIONACC)     = .true.
+   do k=1,p%NumBl_Lin
+      call PackMotionMesh_Names(u%BladeMotion(k), 'Blade '//trim(num2lstr(k)), InitOut%LinNames_u, indexNames, FieldMask=FieldMask)
+   end do
 
-      do i=1,p%NumTwrNds
-         do j=1,3
-            InitOut%LinNames_u(index) = UVW(j)//'-component inflow on tower node '//trim(num2lstr(i))//', m/s'
-            index = index + 1
-         end do
-      end do
-      
+
+   if (.not. p_AD%CompAeroMaps) then
+      !------------------------------
+      ! TailFin
+      !     Module/Mesh/Field: u%TFinMotion%TranslationDisp = 31;
+      !     Module/Mesh/Field: u%TFinMotion%Orientation     = 32;
+      !     Module/Mesh/Field: u%TFinMotion%TranslationVel  = 33;
+      indexNames=index
+      call SetJac_u_idx(31,33,u%TFinMotion%NNodes,index)
+      !     Perturbations
+      p%du(31) = perturb
+      p%du(32) = perturb
+      p%du(33) = perturb
+      !     Names
+      FieldMask = .false.
+      FieldMask(MASKID_TRANSLATIONDISP) = .true.
+      FieldMask(MASKID_ORIENTATION)     = .true.
+      FieldMask(MASKID_TRANSLATIONVEL)  = .true.
+      call PackMotionMesh_Names(u%TFinMotion, 'TailFin', InitOut%LinNames_u, indexNames, FieldMask=FieldMask)
+
+
+      !------------------------------
       ! UserProp
-      do k=1,p%NumBl_Lin
-         do i=1,p%NumBlNds
-            InitOut%LinNames_u(index) = 'User property on blade '//trim(num2lstr(k))//', node '//trim(num2lstr(i))//', -'
-            index = index + 1
-         end do
-      end do
-                     
-      ! AvgDiskVel
-      !do j=1,3
-      !   InitOut%LinNames_u(index) = UVW(j)//'-component inflow of average disk velocity, m/s'
-      !   index = index + 1
-      !end do
-         
-   end if
-   
+      !     Module/Mesh/Field: u%UserProp(:,:) = 34,35,36;
+      do k=1,size(u%UserProp,2) ! p%NumBlades
+         do i=1,size(u%UserProp,1) ! numNodes
+               p%Jac_u_indx(index,1) =  34 + k-1
+               p%Jac_u_indx(index,2) =  1 !component index:  this is a scalar, so 1, but is never used
+               p%Jac_u_indx(index,3) =  i !Node:   i
+               ! Names
+               InitOut%LinNames_u(index) = 'User property on blade '//trim(num2lstr(k))//', node '//trim(num2lstr(i))//', -'
+               ! RotFrame
+               InitOut%RotFrame_u(index) = .true.
+               index = index + 1
+         end do !i
+         !  Perturbations
+         p%du(34 + k-1) = perturb
+      end do !
+
+
+      !------------------------------
+      ! Extended inputs (number of these must be exactly NumExtendedInputs)
+      !     Module/Mesh/Field:  HWindSpeed      = 37
+      !     Module/Mesh/Field:  PLexp           = 38
+      !     Module/Mesh/Field:  PropagationDir  = 39
+      p%Jac_u_indx(index,1)=37;  p%Jac_u_indx(index,2)=1;   p%Jac_u_indx(index,3)=1;    index = index + 1
+      p%Jac_u_indx(index,1)=38;  p%Jac_u_indx(index,2)=1;   p%Jac_u_indx(index,3)=1;    index = index + 1
+      p%Jac_u_indx(index,1)=39;  p%Jac_u_indx(index,2)=1;   p%Jac_u_indx(index,3)=1;    index = index + 1
+      !     Perturbations
+      p%du(37) = perturb
+      p%du(38) = perturb
+      p%du(39) = perturb
+      !     Names
+      InitOut%LinNames_u(index) = 'Extended input: horizontal wind speed (steady/uniform wind), m/s'; index=index+1
+      InitOut%LinNames_u(index) = 'Extended input: vertical power-law shear exponent, -';             index=index+1
+      InitOut%LinNames_u(index) = 'Extended input: propagation direction, rad';                       index=index+1
+
+   end if ! .not. compAeroMaps
+
 contains
+   subroutine SetJac_u_idx(FieldIdxStart,FieldIdxEnd,nNodes,idx)
+      integer, intent(in   ) :: FieldIdxStart
+      integer, intent(in   ) :: FieldIdxEnd
+      integer, intent(in   ) :: nNodes
+      integer, intent(inout) :: idx
+      integer :: i_meshField,i,j
+      do i_meshField = FieldIdxStart,FieldIdxEnd
+         do i=1,nNodes
+            do j=1,3
+               p%Jac_u_indx(idx,1) =  i_meshField
+               p%Jac_u_indx(idx,2) =  j !component index:  j
+               p%Jac_u_indx(idx,3) =  i !Node:   i
+               idx = idx + 1
+            end do !j
+         end do !i
+      end do
+   end subroutine
+
    logical function Failed()
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
