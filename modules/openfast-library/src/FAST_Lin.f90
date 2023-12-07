@@ -567,16 +567,13 @@ SUBROUTINE Init_Lin_InputOutput(p_FAST, y_FAST, NumBl, NumBlNodes, ErrStat, ErrM
    
 END SUBROUTINE Init_Lin_InputOutput
 !----------------------------------------------------------------------------------------------------------------------------------
-!> Routine that performs lineaization at current operating point for a turbine. 
+!> Routine that performs lineaization at current operating point for a turbine.
 SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                          IceF, IceD, MeshMapData, ErrStat, ErrMsg )
-
    REAL(DbKi),               INTENT(IN   ) :: t_global            !< current (global) simulation time
-
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              !< Output variables for the glue code
    TYPE(FAST_MiscVarType),   INTENT(INOUT) :: m_FAST              !< Miscellaneous variables
-     
    TYPE(ElastoDyn_Data),     INTENT(INOUT) :: ED                  !< ElastoDyn data
    TYPE(BeamDyn_Data),       INTENT(INOUT) :: BD                  !< BeamDyn data
    TYPE(ServoDyn_Data),      INTENT(INOUT) :: SrvD                !< ServoDyn data
@@ -592,9 +589,7 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
    TYPE(OrcaFlex_Data),      INTENT(INOUT) :: Orca                !< OrcaFlex interface data
    TYPE(IceFloe_Data),       INTENT(INOUT) :: IceF                !< IceFloe data
    TYPE(IceDyn_Data),        INTENT(INOUT) :: IceD                !< All the IceDyn data used in time-step loop
-
    TYPE(FAST_ModuleMapType), INTENT(INOUT) :: MeshMapData         !< Data for mapping between modules
-      
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
@@ -602,8 +597,8 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
    INTEGER(IntKi)                          :: Un                  ! unit number for linearization output file (written in two parts)
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
    CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
-   CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_Linearize_OP' 
-   
+   CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_Linearize_OP'
+
    REAL(R8Ki), ALLOCATABLE                 :: dUdu(:,:), dUdy(:,:) ! variables for glue-code linearization
    integer(intki)                          :: NumBl
    integer(intki)                          :: k
@@ -612,13 +607,13 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
    CHARACTER(200)                          :: SimStr
    CHARACTER(MaxWrScrLen)                  :: BlankLine
    CHARACTER(*), PARAMETER                 :: Fmt = 'F10.2'
-   
-   
-   
+
+
+
    ErrStat = ErrID_None
    ErrMsg = ""
    Un = -1
-   
+
    !.....................
       SimStr = '(RotSpeed='//trim(num2lstr(ED%y%RotSpeed*RPS2RPM,Fmt))//' rpm, BldPitch1='//trim(num2lstr(ED%y%BlPitch(1)*R2D,Fmt))//' deg)'
 
@@ -626,98 +621,99 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
    CALL WrOver( BlankLine )  ! BlankLine contains MaxWrScrLen spaces
    CALL WrOver ( ' Performing linearization '//trim(num2lstr(m_FAST%Lin%NextLinTimeIndx))//' at simulation time '//TRIM( Num2LStr(t_global) )//' s. '//trim(SimStr) )
    CALL WrScr('')
-   
+
    !.....................
-   
+
    LinRootName = TRIM(p_FAST%OutFileRoot)//'.'//trim(num2lstr(m_FAST%Lin%NextLinTimeIndx))
-   
+
    if (p_FAST%WrVTK == VTK_ModeShapes .and. .not. p_FAST%CalcSteady) then ! we already saved these for the CalcSteady case
       call SaveOP(m_FAST%Lin%NextLinTimeIndx, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                             IceF, IceD, ErrStat, ErrMsg, m_FAST%Lin%CopyOP_CtrlCode )
       !m_FAST%Lin%CopyOP_CtrlCode = MESH_UPDATECOPY ! we need a new copy for each LinTime
    end if
 
-   
-      NumBl = size(ED%Input(1)%BlPitchCom) 
-      y_FAST%Lin%RotSpeed = ED%y%RotSpeed
-      y_FAST%Lin%Azimuth  = ED%y%LSSTipPxa
-      !.....................
-      ! ElastoDyn
-      !.....................
+
+   NumBl = size(ED%Input(1)%BlPitchCom)
+   y_FAST%Lin%RotSpeed = ED%y%RotSpeed
+   y_FAST%Lin%Azimuth  = ED%y%LSSTipPxa
+
+   !.....................
+   ! ElastoDyn
+   !.....................
+      ! get the jacobians
+   call ED_JacobianPInput( t_global, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt(STATE_CURR), &
+                              ED%y, ED%m, ErrStat2, ErrMsg2, dYdu=y_FAST%Lin%Modules(Module_ED)%Instance(1)%D, dXdu=y_FAST%Lin%Modules(Module_ED)%Instance(1)%B )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+   call ED_JacobianPContState( t_global, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt(STATE_CURR), &
+                                  ED%y, ED%m, ErrStat2, ErrMsg2, dYdx=y_FAST%Lin%Modules(Module_ED)%Instance(1)%C, dXdx=y_FAST%Lin%Modules(Module_ED)%Instance(1)%A )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      ! get the operating point
+   call ED_GetOP( t_global, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt(STATE_CURR), &
+                     ED%y, ED%m, ErrStat2, ErrMsg2, u_op=y_FAST%Lin%Modules(Module_ED)%Instance(1)%op_u, &
+                                                    y_op=y_FAST%Lin%Modules(Module_ED)%Instance(1)%op_y, &
+                                                    x_op=y_FAST%Lin%Modules(Module_ED)%Instance(1)%op_x, &
+                                                   dx_op=y_FAST%Lin%Modules(Module_ED)%Instance(1)%op_dx )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >=AbortErrLev) then
+         call cleanup()
+         return
+      end if
+
+
+      ! write the module matrices:
+   call WriteModuleLinearMatrices(Module_ED, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
+   if(Failed()) return;
+
+   !.....................
+   ! BeamDyn
+   !.....................
+   if ( p_FAST%CompElast  == Module_BD ) then
+      do k=1,p_FAST%nBeams
+
          ! get the jacobians
-      call ED_JacobianPInput( t_global, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt(STATE_CURR), &
-                                 ED%y, ED%m, ErrStat2, ErrMsg2, dYdu=y_FAST%Lin%Modules(Module_ED)%Instance(1)%D, dXdu=y_FAST%Lin%Modules(Module_ED)%Instance(1)%B )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      
-      call ED_JacobianPContState( t_global, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt(STATE_CURR), &
-                                     ED%y, ED%m, ErrStat2, ErrMsg2, dYdx=y_FAST%Lin%Modules(Module_ED)%Instance(1)%C, dXdx=y_FAST%Lin%Modules(Module_ED)%Instance(1)%A )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   
-         ! get the operating point
-      call ED_GetOP( t_global, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt(STATE_CURR), &
-                        ED%y, ED%m, ErrStat2, ErrMsg2, u_op=y_FAST%Lin%Modules(Module_ED)%Instance(1)%op_u, &
-                                                       y_op=y_FAST%Lin%Modules(Module_ED)%Instance(1)%op_y, &
-                                                       x_op=y_FAST%Lin%Modules(Module_ED)%Instance(1)%op_x, &
-                                                      dx_op=y_FAST%Lin%Modules(Module_ED)%Instance(1)%op_dx )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat >=AbortErrLev) then
-            call cleanup()
-            return
-         end if
-      
-      
-         ! write the module matrices:
-      call WriteModuleLinearMatrices(Module_ED, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
-      if(Failed()) return;
-   
-      !.....................
-      ! BeamDyn
-      !.....................
-      if ( p_FAST%CompElast  == Module_BD ) then
-         do k=1,p_FAST%nBeams
+         call BD_JacobianPInput( t_global, BD%Input(1,k), BD%p(k), BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), BD%OtherSt(k,STATE_CURR), &
+                                    BD%y(k), BD%m(k), ErrStat2, ErrMsg2, dYdu=y_FAST%Lin%Modules(Module_BD)%Instance(k)%D, &
+                                    dXdu=y_FAST%Lin%Modules(Module_BD)%Instance(k)%B, &
+                                    StateRel_x   =y_FAST%Lin%Modules(Module_BD)%Instance(k)%StateRel_x, &
+                                    StateRel_xdot=y_FAST%Lin%Modules(Module_BD)%Instance(k)%StateRel_xdot )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-            ! get the jacobians
-            call BD_JacobianPInput( t_global, BD%Input(1,k), BD%p(k), BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), BD%OtherSt(k,STATE_CURR), &
-                                       BD%y(k), BD%m(k), ErrStat2, ErrMsg2, dYdu=y_FAST%Lin%Modules(Module_BD)%Instance(k)%D, &
-                                       dXdu=y_FAST%Lin%Modules(Module_BD)%Instance(k)%B, &
-                                       StateRel_x   =y_FAST%Lin%Modules(Module_BD)%Instance(k)%StateRel_x, &
-                                       StateRel_xdot=y_FAST%Lin%Modules(Module_BD)%Instance(k)%StateRel_xdot )
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      
-            call BD_JacobianPContState( t_global, BD%Input(1,k), BD%p(k), BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), BD%OtherSt(k,STATE_CURR), &
-                                       BD%y(k), BD%m(k), ErrStat2, ErrMsg2, dYdx=y_FAST%Lin%Modules(Module_BD)%Instance(k)%C, dXdx=y_FAST%Lin%Modules(Module_BD)%Instance(k)%A, &
-                                       StateRotation=y_FAST%Lin%Modules(Module_BD)%Instance(k)%StateRotation)
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   
-               ! get the operating point
-            call BD_GetOP( t_global, BD%Input(1,k), BD%p(k), BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), BD%OtherSt(k,STATE_CURR), &
-                           BD%y(k), BD%m(k), ErrStat2, ErrMsg2, u_op=y_FAST%Lin%Modules(Module_BD)%Instance(k)%op_u,  y_op=y_FAST%Lin%Modules(Module_BD)%Instance(k)%op_y, &
-                                                                x_op=y_FAST%Lin%Modules(Module_BD)%Instance(k)%op_x, dx_op=y_FAST%Lin%Modules(Module_BD)%Instance(k)%op_dx )
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-               if (ErrStat >=AbortErrLev) then
-                  call cleanup()
-                  return
-               end if
-      
-      
-               ! write the module matrices:
-            call WriteModuleLinearMatrices(Module_BD, k, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
-            if(Failed()) return;
+         call BD_JacobianPContState( t_global, BD%Input(1,k), BD%p(k), BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), BD%OtherSt(k,STATE_CURR), &
+                                    BD%y(k), BD%m(k), ErrStat2, ErrMsg2, dYdx=y_FAST%Lin%Modules(Module_BD)%Instance(k)%C, dXdx=y_FAST%Lin%Modules(Module_BD)%Instance(k)%A, &
+                                    StateRotation=y_FAST%Lin%Modules(Module_BD)%Instance(k)%StateRotation)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-         end do
-      end if !BeamDyn
-      
+            ! get the operating point
+         call BD_GetOP( t_global, BD%Input(1,k), BD%p(k), BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), BD%OtherSt(k,STATE_CURR), &
+                        BD%y(k), BD%m(k), ErrStat2, ErrMsg2, u_op=y_FAST%Lin%Modules(Module_BD)%Instance(k)%op_u,  y_op=y_FAST%Lin%Modules(Module_BD)%Instance(k)%op_y, &
+                                                             x_op=y_FAST%Lin%Modules(Module_BD)%Instance(k)%op_x, dx_op=y_FAST%Lin%Modules(Module_BD)%Instance(k)%op_dx )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            if (ErrStat >=AbortErrLev) then
+               call cleanup()
+               return
+            end if
+
+
+            ! write the module matrices:
+         call WriteModuleLinearMatrices(Module_BD, k, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
+         if(Failed()) return;
+
+      end do
+   end if !BeamDyn
+
 
    !.....................
    ! InflowWind
-   !.....................      
-   if ( p_FAST%CompInflow  == Module_IfW ) then 
-      
+   !.....................
+   if ( p_FAST%CompInflow  == Module_IfW ) then
+
          ! get the jacobians
       call InflowWind_JacobianPInput( t_global, IfW%Input(1), IfW%p, IfW%x(STATE_CURR), IfW%xd(STATE_CURR), IfW%z(STATE_CURR), &
                                    IfW%OtherSt(STATE_CURR), IfW%y, IfW%m, ErrStat2, ErrMsg2, dYdu=y_FAST%Lin%Modules(Module_IfW)%Instance(1)%D )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      
+
       ! get the operating point
       call InflowWind_GetOP( t_global, IfW%Input(1), IfW%p, IfW%x(STATE_CURR), IfW%xd(STATE_CURR), IfW%z(STATE_CURR), &
                              IfW%OtherSt(STATE_CURR), IfW%y, IfW%m, ErrStat2, ErrMsg2, u_op=y_FAST%Lin%Modules(Module_IfW)%Instance(1)%op_u, &
@@ -727,25 +723,25 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
             call cleanup()
             return
          end if
-                      
-      
+
+
          ! write the module matrices:
       call WriteModuleLinearMatrices(Module_IfW, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
       if(Failed()) return;
-            
+
    end if
-   
+
    !.....................
    ! ServoDyn
-   !.....................   
-   if ( p_FAST%CompServo  == Module_SrvD ) then 
+   !.....................
+   if ( p_FAST%CompServo  == Module_SrvD ) then
          ! get the jacobians
       call SrvD_JacobianPInput( t_global, SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), &
                                    SrvD%OtherSt(STATE_CURR), SrvD%y, SrvD%m, ErrStat2, ErrMsg2,    &
                                    dXdu=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%B, &
                                    dYdu=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%D )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      
+
       call SrvD_JacobianPContState( t_global, SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), &
                                        SrvD%OtherSt(STATE_CURR), SrvD%y, SrvD%m, ErrStat2, ErrMsg2, &
                                        dYdx=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%C, &
@@ -764,7 +760,7 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
             call cleanup()
             return
          end if
-            
+
       call WriteModuleLinearMatrices(Module_SrvD, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
       if(Failed()) return;
    end if
@@ -772,7 +768,7 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
    !.....................
    ! AeroDyn
    !.....................
-   if ( p_FAST%CompAero  == Module_AD ) then 
+   if ( p_FAST%CompAero  == Module_AD ) then
          ! get the jacobians
       call AD_JacobianPInput( t_global, AD%Input(1), AD%p, AD%x(STATE_CURR), AD%xd(STATE_CURR), AD%z(STATE_CURR), &
                                    AD%OtherSt(STATE_CURR), AD%y, AD%m, ErrStat2, ErrMsg2, &
@@ -785,7 +781,7 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
                                    dXdx=y_FAST%Lin%Modules(Module_AD)%Instance(1)%A, &
                                    dYdx=y_FAST%Lin%Modules(Module_AD)%Instance(1)%C )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         
+
       ! get the operating point
       call AD_GetOP( t_global, AD%Input(1), AD%p, AD%x(STATE_CURR), AD%xd(STATE_CURR), AD%z(STATE_CURR), &
                        AD%OtherSt(STATE_CURR), AD%y, AD%m, ErrStat2, ErrMsg2, &
@@ -798,26 +794,26 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
             call cleanup()
             return
          end if
-      
+
          ! write the module matrices:
       call WriteModuleLinearMatrices(Module_AD, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
       if(Failed()) return;
 
    end if
-   
+
    !.....................
    ! HydroDyn
    !.....................
-   if ( p_FAST%CompHydro  == Module_HD ) then 
+   if ( p_FAST%CompHydro  == Module_HD ) then
          ! get the jacobians
       call HD_JacobianPInput( t_global, HD%Input(1), HD%p, HD%x(STATE_CURR), HD%xd(STATE_CURR), HD%z(STATE_CURR), HD%OtherSt(STATE_CURR), &
                                  HD%y, HD%m, ErrStat2, ErrMsg2, dYdu=y_FAST%Lin%Modules(Module_HD)%Instance(1)%D, dXdu=y_FAST%Lin%Modules(Module_HD)%Instance(1)%B )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      
+
       call HD_JacobianPContState( t_global, HD%Input(1), HD%p, HD%x(STATE_CURR), HD%xd(STATE_CURR), HD%z(STATE_CURR), HD%OtherSt(STATE_CURR), &
                                      HD%y, HD%m, ErrStat2, ErrMsg2, dYdx=y_FAST%Lin%Modules(Module_HD)%Instance(1)%C, dXdx=y_FAST%Lin%Modules(Module_HD)%Instance(1)%A )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   
+
          ! get the operating point
       call HD_GetOP( t_global, HD%Input(1), HD%p, HD%x(STATE_CURR), HD%xd(STATE_CURR), HD%z(STATE_CURR), HD%OtherSt(STATE_CURR), &
                         HD%y, HD%m, ErrStat2, ErrMsg2, u_op=y_FAST%Lin%Modules(Module_HD)%Instance(1)%op_u, y_op=y_FAST%Lin%Modules(Module_HD)%Instance(1)%op_y, &
@@ -827,18 +823,18 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
             call cleanup()
             return
          end if
-         
-      
-      
+
+
+
          ! write the module matrices:
       call WriteModuleLinearMatrices(Module_HD, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
       if(Failed()) return;
    end if
+
    !.....................
    ! SubDyn / ExtPtfm
    !.....................
-
-   if ( p_FAST%CompSub == Module_SD ) then 
+   if ( p_FAST%CompSub == Module_SD ) then
       ! get the jacobians
       call SD_JacobianPInput( t_global, SD%Input(1), SD%p, SD%x(STATE_CURR), SD%xd(STATE_CURR), &
               SD%z(STATE_CURR), SD%OtherSt(STATE_CURR),  SD%y, SD%m, ErrStat2, ErrMsg2, &
@@ -861,7 +857,7 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
       call WriteModuleLinearMatrices(Module_SD, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
       if(Failed()) return;
 
-   elseif ( p_FAST%CompSub == Module_ExtPtfm ) then 
+   elseif ( p_FAST%CompSub == Module_ExtPtfm ) then
       ! get the jacobians
       call ExtPtfm_JacobianPInput( t_global, ExtPtfm%Input(1), ExtPtfm%p, ExtPtfm%x(STATE_CURR), ExtPtfm%xd(STATE_CURR), &
               ExtPtfm%z(STATE_CURR), ExtPtfm%OtherSt(STATE_CURR),  ExtPtfm%y, ExtPtfm%m, ErrStat2, ErrMsg2, &
@@ -885,8 +881,8 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
       if(Failed()) return;
 
    end if ! SubDyn/ExtPtfm
-   
-   
+
+
    !.....................
    ! MAP
    !.....................
@@ -895,7 +891,7 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
       call MAP_JacobianPInput( t_global, MAPp%Input(1), MAPp%p, MAPp%x(STATE_CURR), MAPp%xd(STATE_CURR), MAPp%z(STATE_CURR), &
                                    MAPp%OtherSt, MAPp%y, ErrStat2, ErrMsg2, y_FAST%Lin%Modules(Module_MAP)%Instance(1)%D )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      
+
       ! get the operating point
       !LIN-TODO: template uses OtherSt(STATE_CURR), but the FAST MAP DATA has OtherSt as a scalar
       !          email bonnie for a discussion on this.
@@ -907,50 +903,50 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
          call cleanup()
          return
       end if
-      
+
       ! write the module matrices:
       call WriteModuleLinearMatrices(Module_MAP, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
          if(Failed()) return;
    end if     ! if ( p_FAST%CompMooring  == Module_MAP )
-   
-   
+
+
    !.....................
    ! MoorDyn
    !.....................
    if ( p_FAST%CompMooring  == Module_MD ) then
-      
+
       call MD_JacobianPInput( t_global, MD%Input(1), MD%p, MD%x(STATE_CURR), MD%xd(STATE_CURR), MD%z(STATE_CURR), &
                                    MD%OtherSt(STATE_CURR), MD%y, MD%m, ErrStat2, ErrMsg2, &
                                    dXdu=y_FAST%Lin%Modules(Module_MD)%Instance(1)%B, &
                                    dYdu=y_FAST%Lin%Modules(Module_MD)%Instance(1)%D )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      
+
       call MD_JacobianPContState( t_global, MD%Input(1), MD%p, MD%x(STATE_CURR), MD%xd(STATE_CURR), MD%z(STATE_CURR), MD%OtherSt(STATE_CURR), &
                                      MD%y, MD%m, ErrStat2, ErrMsg2, dYdx=y_FAST%Lin%Modules(Module_MD)%Instance(1)%C, &
                                                                     dXdx=y_FAST%Lin%Modules(Module_MD)%Instance(1)%A )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         
+
       ! get the operating point
       call MD_GetOP( t_global, MD%Input(1), MD%p, MD%x(STATE_CURR), MD%xd(STATE_CURR), MD%z(STATE_CURR), &
                              MD%OtherSt(STATE_CURR), MD%y, MD%m, ErrStat2, ErrMsg2,  &
                               u_op=y_FAST%Lin%Modules(Module_MD)%Instance(1)%op_u, &
                               y_op=y_FAST%Lin%Modules(Module_MD)%Instance(1)%op_y, &
                               x_op=y_FAST%Lin%Modules(Module_MD)%Instance(1)%op_x, &
-                             dx_op=y_FAST%Lin%Modules(Module_MD)%Instance(1)%op_dx )                       
+                             dx_op=y_FAST%Lin%Modules(Module_MD)%Instance(1)%op_dx )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >=AbortErrLev) then
          call cleanup()
          return
       end if
-      
+
       ! write the module matrices:
       call WriteModuleLinearMatrices(Module_MD, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
          if(Failed()) return;   end if     ! if ( p_FAST%CompMooring  == Module_MD )
-   
+
    !.....................
    ! Linearization of glue code Input/Output solve:
    !.....................
-   
+
    !.....................
    ! Glue code (currently a linearization of SolveOption2):
    ! Make sure we avoid any case where the operating point values change earlier in this routine (e.g., by calling the module Jacobian routines).
@@ -962,7 +958,7 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
          call cleanup()
          return
       end if
-   
+
       ! get the dUdu and dUdy matrices, which linearize SolveOption2 for the modules we've included in linearization
    call Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, MAPp, FEAM, MD, Orca, &
                          IceF, IceD, MeshMapData, dUdu, dUdy, ErrStat2, ErrMsg2 )
@@ -971,24 +967,24 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
          call cleanup()
          return
       end if
-      
-      
-         
-   call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Glue, LinRootName, Un, ErrStat2, ErrMsg2 )       
+
+
+
+   call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Glue, LinRootName, Un, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >=AbortErrLev) then
          call cleanup()
          return
       end if
-      
-   
+
+
    if (p_FAST%LinOutJac) then
       ! Jacobians
       call WrPartialMatrix( dUdu, Un, p_FAST%OutFmt, 'dUdu', UseRow=y_FAST%Lin%Glue%use_u, UseCol=y_FAST%Lin%Glue%use_u )
       call WrPartialMatrix( dUdy, Un, p_FAST%OutFmt, 'dUdy', UseRow=y_FAST%Lin%Glue%use_u, UseCol=y_FAST%Lin%Glue%use_y )
    end if
-   
-   
+
+
       ! calculate the glue-code state matrices
    call Glue_StateMatrices( p_FAST, y_FAST, dUdu, dUdy, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -996,9 +992,9 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
          call cleanup()
          return
       end if
-      
+
       ! Write the results to the file:
-   call WrLinFile_txt_End(Un, p_FAST, y_FAST%Lin%Glue )            
+   call WrLinFile_txt_End(Un, p_FAST, y_FAST%Lin%Glue )
 
    m_FAST%Lin%NextLinTimeIndx = m_FAST%Lin%NextLinTimeIndx + 1
 
@@ -1009,14 +1005,14 @@ contains
       if(Failed) call cleanup()
    end function Failed
    subroutine cleanup()
-      
+
       if (allocated(dUdu)) deallocate(dUdu)
       if (allocated(dUdy)) deallocate(dUdy)
-      
+
       if (Un > 0) close(Un)
-      
+
    end subroutine cleanup
-END SUBROUTINE FAST_Linearize_OP   
+END SUBROUTINE FAST_Linearize_OP
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that writes the A,B,C,D matrices from linearization to a text file. 
 SUBROUTINE WrLinFile_txt_Head(t_global, p_FAST, y_FAST, LinData, FileName, Un, ErrStat, ErrMsg)
@@ -6056,7 +6052,7 @@ SUBROUTINE FAST_InitSteadyOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, H
    REAL(DbKi),               INTENT(IN   ) :: psi                 !< psi (rotor azimuth) at which the outputs are defined
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_MiscVarType),   INTENT(INOUT) :: m_FAST              !< Miscellaneous variables
-     
+
    TYPE(ElastoDyn_Data),     INTENT(INOUT) :: ED                  !< ElastoDyn data
    TYPE(BeamDyn_Data),       INTENT(INOUT) :: BD                  !< BeamDyn data
    TYPE(ServoDyn_Data),      INTENT(INOUT) :: SrvD                !< ServoDyn data
@@ -6079,75 +6075,75 @@ SUBROUTINE FAST_InitSteadyOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, H
    INTEGER(IntKi)                          :: j, k                ! loop counters
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
-   
+
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_InitSteadyOutputs'
-   
-    
+
+
       ErrStat = ErrID_None
       ErrMsg  = ""
-      
+
       do j=1,p_FAST%NLinTimes
          m_FAST%Lin%AzimTarget(j) = (j-1) * p_FAST%AzimDelta + psi
          call Zero2TwoPi( m_FAST%Lin%AzimTarget(j) )
       end do
-      ! this is circular, so I am going to add points at the beginning and end to avoid 
+      ! this is circular, so I am going to add points at the beginning and end to avoid
       ! more IF statements later
       m_FAST%Lin%AzimTarget(0) = m_FAST%Lin%AzimTarget(p_FAST%NLinTimes)
       m_FAST%Lin%AzimTarget(p_FAST%NLinTimes+1) = m_FAST%Lin%AzimTarget(1)
-      
+
 
          ! Azimuth angles that correspond to Output arrays for interpolation:
       !m_FAST%Lin%Psi  = psi ! initialize entire array (note that we won't be able to interpolate with a constant array
       DO j = 1, p_FAST%LinInterpOrder + 1
          m_FAST%Lin%Psi(j) = psi - (j - 1) * D2R_D  ! arbitrarily say azimuth is one degree different
       END DO
-      
-      
-         ! ElastoDyn
-         allocate( ED%Output( p_FAST%LinInterpOrder+1 ), STAT = ErrStat2 )
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, "Error allocating ED%Output.", ErrStat, ErrMsg, RoutineName )
-         else
-            do j = 1, p_FAST%LinInterpOrder + 1
-               call ED_CopyOutput(ED%y, ED%Output(j), MESH_NEWCOPY, ErrStat2, ErrMsg2)
-                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-            end do
-            
-            call ED_CopyOutput(ED%y, ED%y_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+
+
+      ! ElastoDyn
+      allocate( ED%Output( p_FAST%LinInterpOrder+1 ), STAT = ErrStat2 )
+      if (ErrStat2 /= 0) then
+         call SetErrStat(ErrID_Fatal, "Error allocating ED%Output.", ErrStat, ErrMsg, RoutineName )
+      else
+         do j = 1, p_FAST%LinInterpOrder + 1
+            call ED_CopyOutput(ED%y, ED%Output(j), MESH_NEWCOPY, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-         end if
-      
-         ! BeamDyn
-         IF (p_FAST%CompElast == Module_BD) THEN
-         
-            allocate( BD%Output( p_FAST%LinInterpOrder+1, p_FAST%nBeams ), STAT = ErrStat2 )
+         end do
+
+         call ED_CopyOutput(ED%y, ED%y_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+      end if
+
+      ! BeamDyn
+      IF (p_FAST%CompElast == Module_BD) THEN
+
+         allocate( BD%Output( p_FAST%LinInterpOrder+1, p_FAST%nBeams ), STAT = ErrStat2 )
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, "Error allocating BD%Output.", ErrStat, ErrMsg, RoutineName )
+         else
+            do k=1,p_FAST%nBeams
+               do j = 1, p_FAST%LinInterpOrder + 1
+                  call BD_CopyOutput(BD%y(k), BD%Output(j,k), MESH_NEWCOPY, ErrStat2, ErrMsg2)
+                     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+               end do
+            end do
+
+            allocate( BD%y_interp( p_FAST%nBeams ), STAT = ErrStat2 )
             if (ErrStat2 /= 0) then
                call SetErrStat(ErrID_Fatal, "Error allocating BD%Output.", ErrStat, ErrMsg, RoutineName )
             else
                do k=1,p_FAST%nBeams
-                  do j = 1, p_FAST%LinInterpOrder + 1
-                     call BD_CopyOutput(BD%y(k), BD%Output(j,k), MESH_NEWCOPY, ErrStat2, ErrMsg2)
-                        call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-                  end do
+                  call BD_CopyOutput(BD%y(k), BD%y_interp(k), MESH_NEWCOPY, ErrStat2, ErrMsg2)
+                     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
                end do
-
-               allocate( BD%y_interp( p_FAST%nBeams ), STAT = ErrStat2 )
-               if (ErrStat2 /= 0) then
-                  call SetErrStat(ErrID_Fatal, "Error allocating BD%Output.", ErrStat, ErrMsg, RoutineName )
-               else
-                  do k=1,p_FAST%nBeams
-                     call BD_CopyOutput(BD%y(k), BD%y_interp(k), MESH_NEWCOPY, ErrStat2, ErrMsg2)
-                        call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-                  end do
-               end if
-               
             end if
-            
-         END IF  ! BeamDyn 
-         
+
+         end if
+
+      END IF  ! BeamDyn
+
       ! AeroDyn
       IF ( p_FAST%CompAero == Module_AD ) THEN
-         
+
          allocate( AD%Output( p_FAST%LinInterpOrder+1 ), STAT = ErrStat2 )
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, "Error allocating AD%Output.", ErrStat, ErrMsg, RoutineName )
@@ -6156,17 +6152,17 @@ SUBROUTINE FAST_InitSteadyOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, H
                call AD_CopyOutput(AD%y, AD%Output(j), MESH_NEWCOPY, ErrStat2, ErrMsg2)
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             end do
-            
+
             call AD_CopyOutput(AD%y, AD%y_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
          end if
-         
+
       END IF  ! CompAero
-      
-         
+
+
       ! InflowWind
       IF ( p_FAST%CompInflow == Module_IfW ) THEN
-         
+
          allocate( IfW%Output( p_FAST%LinInterpOrder+1 ), STAT = ErrStat2 )
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, "Error allocating IfW%Output.", ErrStat, ErrMsg, RoutineName )
@@ -6175,17 +6171,17 @@ SUBROUTINE FAST_InitSteadyOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, H
                call InflowWind_CopyOutput(IfW%y, IfW%Output(j), MESH_NEWCOPY, ErrStat2, ErrMsg2)
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             end do
-            
+
             call InflowWind_CopyOutput(IfW%y, IfW%y_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
          end if
-            
+
       END IF  ! CompInflow
-      
-      
+
+
       ! ServoDyn
       IF ( p_FAST%CompServo == Module_SrvD ) THEN
-         
+
          allocate( SrvD%Output( p_FAST%LinInterpOrder+1 ), STAT = ErrStat2 )
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, "Error allocating SrvD%Output.", ErrStat, ErrMsg, RoutineName )
@@ -6194,13 +6190,13 @@ SUBROUTINE FAST_InitSteadyOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, H
                call SrvD_CopyOutput(SrvD%y, SrvD%Output(j), MESH_NEWCOPY, ErrStat2, ErrMsg2)
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             end do
-            
+
             call SrvD_CopyOutput(SrvD%y, SrvD%y_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
          end if
-            
+
       END IF  ! ServoDyn
-      
+
       ! HydroDyn
       IF ( p_FAST%CompHydro == Module_HD ) THEN
 
@@ -6212,13 +6208,13 @@ SUBROUTINE FAST_InitSteadyOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, H
                call HydroDyn_CopyOutput(HD%y, HD%Output(j), MESH_NEWCOPY, ErrStat2, ErrMsg2)
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             end do
-            
+
             call HydroDyn_CopyOutput(HD%y, HD%y_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
          end if
-            
+
       END IF  ! HydroDyn
-      
+
       !! SubDyn/ExtPtfm_MCKF
       IF ( p_FAST%CompSub == Module_SD ) THEN
          allocate( SD%Output( p_FAST%LinInterpOrder+1 ), STAT = ErrStat2 )
@@ -6229,18 +6225,18 @@ SUBROUTINE FAST_InitSteadyOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, H
                call SD_CopyOutput(SD%y, SD%Output(j), MESH_NEWCOPY, ErrStat2, ErrMsg2)
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             end do
-            
+
             call SD_CopyOutput(SD%y, SD%y_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-         end if   
+         end if
       ELSE IF ( p_FAST%CompSub == Module_ExtPtfm ) THEN
       END IF  ! SubDyn/ExtPtfm_MCKF
-      
-      
+
+
       ! Mooring (MAP , FEAM , MoorDyn)
       ! MAP
       IF ( p_FAST%CompMooring == Module_MAP ) THEN
-         
+
          allocate( MAPp%Output( p_FAST%LinInterpOrder+1 ), STAT = ErrStat2 )
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, "Error allocating MAPp%Output.", ErrStat, ErrMsg, RoutineName )
@@ -6249,14 +6245,14 @@ SUBROUTINE FAST_InitSteadyOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, H
                call MAP_CopyOutput(MAPp%y, MAPp%Output(j), MESH_NEWCOPY, ErrStat2, ErrMsg2)
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             end do
-            
+
             call MAP_CopyOutput(MAPp%y, MAPp%y_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
          end if
-            
+
       ! MoorDyn
       ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
-      
+
          allocate( MD%Output( p_FAST%LinInterpOrder+1 ), STAT = ErrStat2 )
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, "Error allocating MD%Output.", ErrStat, ErrMsg, RoutineName )
@@ -6265,34 +6261,29 @@ SUBROUTINE FAST_InitSteadyOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, H
                call MD_CopyOutput(MD%y, MD%Output(j), MESH_NEWCOPY, ErrStat2, ErrMsg2)
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             end do
-            
+
             call MD_CopyOutput(MD%y, MD%y_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
          end if
-      
-      
-      
-      
+
       !! FEAM
       !ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
       !! OrcaFlex
       !ELSEIF ( p_FAST%CompMooring == Module_Orca ) THEN
-         
+
       END IF  ! MAP/FEAM/MoorDyn/OrcaFlex
-      
-           
-            
+
       !! Ice (IceFloe or IceDyn)
       !! IceFloe
       !IF ( p_FAST%CompIce == Module_IceF ) THEN
-      !   
+      !
       !! IceDyn
       !ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN
       !
       !END IF  ! IceFloe/IceDyn
-
-
 END SUBROUTINE FAST_InitSteadyOutputs
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine saves outputs for future interpolation at a desired azimuth.
 SUBROUTINE FAST_SaveOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
@@ -6341,31 +6332,31 @@ SUBROUTINE FAST_SaveOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SD,
       end if
       m_FAST%Lin%Psi(1)  = psi
 
-         ! ElastoDyn
-         DO j = p_FAST%LinInterpOrder, 1, -1
-            CALL ED_CopyOutput(ED%Output(j), ED%Output(j+1), MESH_UPDATECOPY, Errstat2, ErrMsg2)
-               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-         END DO
-  
-         CALL ED_CopyOutput (ED%y,  ED%Output(1),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      ! ElastoDyn
+      DO j = p_FAST%LinInterpOrder, 1, -1
+         CALL ED_CopyOutput(ED%Output(j), ED%Output(j+1), MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-      
-         ! BeamDyn
-         IF (p_FAST%CompElast == Module_BD) THEN
-         
-            DO k = 1,p_FAST%nBeams
-         
-               DO j = p_FAST%LinInterpOrder, 1, -1
-                  CALL BD_CopyOutput (BD%Output(j,k),  BD%Output(j+1,k),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
-                     CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-               END DO
-  
-               CALL BD_CopyOutput (BD%y(k),  BD%Output(1,k),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      END DO
+
+      CALL ED_CopyOutput (ED%y,  ED%Output(1),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+
+      ! BeamDyn
+      IF (p_FAST%CompElast == Module_BD) THEN
+
+         DO k = 1,p_FAST%nBeams
+
+            DO j = p_FAST%LinInterpOrder, 1, -1
+               CALL BD_CopyOutput (BD%Output(j,k),  BD%Output(j+1,k),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
                   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-            
-            END DO ! k=p_FAST%nBeams
-         
-         END IF  ! BeamDyn 
+            END DO
+
+            CALL BD_CopyOutput (BD%y(k),  BD%Output(1,k),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+
+         END DO ! k=p_FAST%nBeams
+
+      END IF  ! BeamDyn
          
       
       ! AeroDyn
@@ -6480,7 +6471,7 @@ SUBROUTINE FAST_SaveOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SD,
 
 END SUBROUTINE FAST_SaveOutputs
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine interpolates the outputs at the target azimuths, computes the compared to the previous rotation, and stores 
+!> This routine interpolates the outputs at the target azimuths, computes the compared to the previous rotation, and stores
 !! them for future rotation .
 SUBROUTINE FAST_DiffInterpOutputs( psi_target, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                    IceF, IceD, ErrStat, ErrMsg )
@@ -6489,7 +6480,7 @@ SUBROUTINE FAST_DiffInterpOutputs( psi_target, p_FAST, y_FAST, m_FAST, ED, BD, S
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              !< Output variables for the glue code
    TYPE(FAST_MiscVarType),   INTENT(INOUT) :: m_FAST              !< Miscellaneous variables
-     
+
    TYPE(ElastoDyn_Data),     INTENT(INOUT) :: ED                  !< ElastoDyn data
    TYPE(BeamDyn_Data),       INTENT(INOUT) :: BD                  !< BeamDyn data
    TYPE(ServoDyn_Data),      INTENT(INOUT) :: SrvD                !< ServoDyn data
@@ -6514,9 +6505,9 @@ SUBROUTINE FAST_DiffInterpOutputs( psi_target, p_FAST, y_FAST, m_FAST, ED, BD, S
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    REAL(DbKi)                              :: t_global
    REAL(ReKi)                              :: eps_squared
-   
+
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_DiffInterpOutputs'
-    
+
       ErrStat = ErrID_None
       ErrMsg  = ""
       t_global = 0.0_DbKi ! we don't really need this to get the output OPs
@@ -6525,140 +6516,140 @@ SUBROUTINE FAST_DiffInterpOutputs( psi_target, p_FAST, y_FAST, m_FAST, ED, BD, S
       ! Extrapolate outputs to the target azimuth and pack into OP arrays
       !................................................................................................
 
-         ! ElastoDyn
-         CALL ED_Output_ExtrapInterp (ED%Output, m_FAST%Lin%Psi,  ED%y_interp, psi_target, ErrStat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-      
-         call ED_GetOP( t_global, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt(STATE_CURR), &
-                           ED%y_interp, ED%m, ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_ED)%Instance(1)%op_y, NeedTrimOP=.true.)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            
-         ! BeamDyn
-         IF (p_FAST%CompElast == Module_BD) THEN
-         
-            DO k = 1,p_FAST%nBeams
-         
-               CALL BD_Output_ExtrapInterp (BD%Output(:,k), m_FAST%Lin%Psi,  BD%y_interp(k), psi_target, ErrStat2, ErrMsg2)
-                  CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-            
-               call BD_GetOP( t_global, BD%Input(1,k), BD%p(k), BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), BD%OtherSt(k,STATE_CURR), &
-                           BD%y_interp(k), BD%m(k), ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_BD)%Instance(k)%op_y, NeedTrimOP=.true.)
-                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            END DO ! k=p_FAST%nBeams
-         
-         END IF  ! BeamDyn 
-         
-      
+      ! ElastoDyn
+      CALL ED_Output_ExtrapInterp (ED%Output, m_FAST%Lin%Psi,  ED%y_interp, psi_target, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+
+      call ED_GetOP( t_global, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt(STATE_CURR), &
+                        ED%y_interp, ED%m, ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_ED)%Instance(1)%op_y, NeedTrimOP=.true.)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      ! BeamDyn
+      IF (p_FAST%CompElast == Module_BD) THEN
+
+         DO k = 1,p_FAST%nBeams
+
+            CALL BD_Output_ExtrapInterp (BD%Output(:,k), m_FAST%Lin%Psi,  BD%y_interp(k), psi_target, ErrStat2, ErrMsg2)
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+
+            call BD_GetOP( t_global, BD%Input(1,k), BD%p(k), BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), BD%OtherSt(k,STATE_CURR), &
+                        BD%y_interp(k), BD%m(k), ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_BD)%Instance(k)%op_y, NeedTrimOP=.true.)
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         END DO ! k=p_FAST%nBeams
+
+      END IF  ! BeamDyn
+
+
       ! AeroDyn
       IF ( p_FAST%CompAero == Module_AD ) THEN
-         
+
          CALL AD_Output_ExtrapInterp (AD%Output, m_FAST%Lin%Psi,  AD%y_interp, psi_target, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-         
+
          call AD_GetOP( t_global, AD%Input(1), AD%p, AD%x(STATE_CURR), AD%xd(STATE_CURR), AD%z(STATE_CURR), AD%OtherSt(STATE_CURR), &
                            AD%y_interp, AD%m, ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_AD)%Instance(1)%op_y)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       END IF  ! CompAero
-      
-         
+
+
       ! InflowWind
       IF ( p_FAST%CompInflow == Module_IfW ) THEN
-         
+
          CALL InflowWind_Output_ExtrapInterp (IfW%Output, m_FAST%Lin%Psi,  IfW%y_interp, psi_target, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-            
+
          call InflowWind_GetOP( t_global, IfW%Input(1), IfW%p, IfW%x(STATE_CURR), IfW%xd(STATE_CURR), IfW%z(STATE_CURR), IfW%OtherSt(STATE_CURR), &
                            IfW%y_interp, IfW%m, ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_IfW)%Instance(1)%op_y)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       END IF  ! CompInflow
-      
-      
+
+
       ! ServoDyn
       IF ( p_FAST%CompServo == Module_SrvD ) THEN
-         
+
          CALL SrvD_Output_ExtrapInterp (SrvD%Output, m_FAST%Lin%Psi,  SrvD%y_interp, psi_target, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-            
+
          call SrvD_GetOP( t_global, SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), SrvD%OtherSt(STATE_CURR), &
                            SrvD%y_interp, SrvD%m, ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%op_y)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       END IF  ! ServoDyn
-      
+
       ! HydroDyn
       IF ( p_FAST%CompHydro == Module_HD ) THEN
 
          CALL HydroDyn_Output_ExtrapInterp (HD%Output, m_FAST%Lin%Psi,  HD%y_interp, psi_target, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-            
+
          call HD_GetOP( t_global, HD%Input(1), HD%p, HD%x(STATE_CURR), HD%xd(STATE_CURR), HD%z(STATE_CURR), HD%OtherSt(STATE_CURR), &
                            HD%y_interp, HD%m, ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_HD)%Instance(1)%op_y)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       END IF  ! HydroDyn
 
-  
+
       !! SubDyn/ExtPtfm_MCKF
       IF ( p_FAST%CompSub == Module_SD ) THEN
-      
+
          CALL SD_Output_ExtrapInterp (SD%Output, m_FAST%Lin%Psi,  SD%y_interp, psi_target, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-            
+
          call SD_GetOP( t_global, SD%Input(1), SD%p, SD%x(STATE_CURR), SD%xd(STATE_CURR), SD%z(STATE_CURR), SD%OtherSt(STATE_CURR), &
                            SD%y_interp, SD%m, ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_SD)%Instance(1)%op_y, NeedTrimOP=.true.)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       ELSE IF ( p_FAST%CompSub == Module_ExtPtfm ) THEN
       END IF  ! SubDyn/ExtPtfm_MCKF
-      
-      
+
+
       ! Mooring (MAP , FEAM , MoorDyn)
       ! MAP
       IF ( p_FAST%CompMooring == Module_MAP ) THEN
-         
+
          CALL MAP_Output_ExtrapInterp (MAPp%Output, m_FAST%Lin%Psi,  MAPp%y_interp, psi_target, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-            
+
          call MAP_GetOP( t_global, MAPp%Input(1), MAPp%p, MAPp%x(STATE_CURR), MAPp%xd(STATE_CURR), MAPp%z(STATE_CURR), MAPp%OtherSt, &
                            MAPp%y_interp, ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_MAP)%Instance(1)%op_y)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       ! MoorDyn
       ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
-      
+
          CALL MD_Output_ExtrapInterp (MD%Output, m_FAST%Lin%Psi,  MD%y_interp, psi_target, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-            
+
          call MD_GetOP( t_global, MD%Input(1), MD%p, MD%x(STATE_CURR), MD%xd(STATE_CURR), MD%z(STATE_CURR), MD%OtherSt(STATE_CURR), &
                            MD%y_interp, MD%m, ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_MD)%Instance(1)%op_y)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      
+
       !! FEAM
       !ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
       !! OrcaFlex
       !ELSEIF ( p_FAST%CompMooring == Module_Orca ) THEN
-         
+
       END IF  ! MAP/FEAM/MoorDyn/OrcaFlex
-      
-           
-            
+
+
+
       !! Ice (IceFloe or IceDyn)
       !! IceFloe
       !IF ( p_FAST%CompIce == Module_IceF ) THEN
-      !   
+      !
       !! IceDyn
       !ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN
       !
       !END IF  ! IceFloe/IceDyn
 
-      
+
       call pack_in_array(p_FAST, y_FAST, m_FAST)
-      
+
       if (m_FAST%Lin%IsConverged) then ! if Forced Linearization, the error may be large due to a different azimuth, so printing it here isn't very helpful
          ! check that error equation is less than TrimTol
          call calc_error(p_FAST, y_FAST, m_FAST, SrvD%y, eps_squared)
          m_FAST%Lin%IsConverged = eps_squared < p_FAST%TrimTol
       end if
-      
-      
+
+
       m_FAST%Lin%Y_prevRot(:,m_FAST%Lin%AzimIndx) = m_FAST%Lin%y_interp
-      
+
 END SUBROUTINE FAST_DiffInterpOutputs
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE pack_in_array(p_FAST, y_FAST, m_FAST)
