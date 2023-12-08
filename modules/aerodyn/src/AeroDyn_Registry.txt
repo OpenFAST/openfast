@@ -348,6 +348,14 @@ typedef	^	MiscVarType	AD_InflowType	Inflow	{:}	-	-	"Inflow storage (size of u fo
 
 
 # Parameters for each rotor
+typedef	^	Jac_u_idxStarts	IntKi	Nacelle	-	1	-	"Index to first point in u jacobian for Nacelle" -
+typedef	^	Jac_u_idxStarts	IntKi	Hub	-	1	-	"Index to first point in u jacobian for Hub" -
+typedef	^	Jac_u_idxStarts	IntKi	Tower	-	1	-	"Index to first point in u jacobian for Tower" -
+typedef	^	Jac_u_idxStarts	IntKi	BladeRoot	-	1	-	"Index to first point in u jacobian for BladeRoot" -
+typedef	^	Jac_u_idxStarts	IntKi	Blade	-	1	-	"Index to first point in u jacobian for Blade" -
+typedef	^	Jac_u_idxStarts	IntKi	TFin	-	1	-	"Index to first point in u jacobian for TFin" -
+typedef	^	Jac_u_idxStarts	IntKi	UserProp	-	1	-	"Index to first point in u jacobian for UserProp" -
+typedef	^	Jac_u_idxStarts	IntKi	Extended	-	1	-	"Index to first point in u jacobian for Extended" -
 typedef	^	RotParameterType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"	-
 typedef	^	RotParameterType	IntKi	NumBlNds	-	-	-	"Number of nodes on each blade"	-
 typedef	^	RotParameterType	IntKi	NumTwrNds	-	-	-	"Number of nodes on the tower"	-
@@ -375,6 +383,8 @@ typedef ^   RotParameterType	ReKi	TwrAxCent {:}	    -	-	"Array of tower element 
 typedef	^	RotParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
 typedef	^	RotParameterType	AA_ParameterType	AA	-	-	-	"Parameters for AA module"
 typedef	^	RotParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
+typedef	^	RotParameterType	Jac_u_idxStarts Jac_u_idxStartList	-	-	-	"Starting indices for all Jac_u compenents" -
+typedef	^	RotParameterType	Integer	NumExtendedInputs	-	-	-	"number of extended inputs" -
 typedef	^	RotParameterType	ReKi	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
 typedef	^	RotParameterType	ReKi	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states)"
 typedef	^	RotParameterType	Integer	Jac_ny	-	-	-	"number of outputs in jacobian matrix"	-

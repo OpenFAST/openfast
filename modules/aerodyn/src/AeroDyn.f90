@@ -36,8 +36,6 @@ module AeroDyn
    implicit none
    private
 
-   integer, parameter :: NumExtendedInputs = 3 ! Number of extended inputs (from InflowWind): HWindSpeed, PlExp, PropDir
-
 
    ! ..... Public Subroutines ...................................................................................................
 
@@ -6548,6 +6546,7 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+   p%NumExtendedInputs = 3    ! Extended inputs from InflowWind: HWindSpeed, PLexp, PropagationDir
 
       ! determine how many inputs there are in the Jacobians
    if (p_AD%CompAeroMaps) then
@@ -6560,7 +6559,7 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
          + u%TowerMotion%NNodes   * 12       & ! 3 Translation Displacements + 3 orientations + 3 Translation velocities + 3 Translation Accelerations
          + u%TFinMotion%NNodes    * 9        & ! 3 Translation Displacements + 3 orientations + 3 Translation velocities
          + size( u%UserProp)                 & ! typically number of blades
-         + NumExtendedInputs                   ! Extended inputs from InflowWind: HWindSpeed, PLexp, PropagationDir
+         + p%NumExtendedInputs
 
       NumFieldsForLinearization = 6 ! Translation Displacements + orientations + Translation velocities + Rotation velocities + TranslationAcc + RotationAcc at each node on the blade mesh
       do i=1,p%NumBlades
@@ -6618,6 +6617,7 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
       !     Module/Mesh/Field: u%NacelleMotion%TranslationDisp = 1;
       !     Module/Mesh/Field: u%NacelleMotion%Orientation     = 2;
       indexNames=index
+      p%Jac_u_idxStartList%Nacelle = index
       call SetJac_u_idx(1,2,u%NacelleMotion%NNodes,index)
       !     Perturbations
       p%du(1) = perturb_b(1)
@@ -6634,6 +6634,7 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
       !     Module/Mesh/Field: u%HubMotion%Orientation     = 4;
       !     Module/Mesh/Field: u%HubMotion%RotationVel     = 5;
       indexNames=index
+      p%Jac_u_idxStartList%Hub = index
       call SetJac_u_idx(3,5,u%HubMotion%NNodes,index)
       !     Perturbations
       p%du(3) = perturb_b(1)
@@ -6654,6 +6655,7 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
       !     Module/Mesh/Field: u%TowerMotion%TranslationVel  = 8;
       !     Module/Mesh/Field: u%TowerMotion%TranslationAcc  = 9;
       indexNames=index
+      p%Jac_u_idxStartList%Tower = index
       call SetJac_u_idx(6,9,u%TowerMotion%NNodes,index)
       !     Perturbations
       p%du(5) = perturb_t
@@ -6675,6 +6677,7 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
       !     Module/Mesh/Field: u%BladeRootMotion(2)%Orientation = 11;
       !     Module/Mesh/Field: u%BladeRootMotion(3)%Orientation = 12;
       indexNames=index
+      p%Jac_u_idxStartList%BladeRoot = index
       do k = 1,p%NumBl_Lin
          call SetJac_u_idx(10+k-1,10+k-1,u%BladeRootMotion(k)%NNodes,index)
       end do
@@ -6701,6 +6704,7 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
    !     Module/Mesh/Field: u%BladeMotion(1)%RotationalAcc   = 18 + (bladenum-1)*6; full lin only
    if (.not. p_AD%CompAeroMaps) then      ! full linearization
       indexNames=index
+      p%Jac_u_idxStartList%Blade = index
       call SetJac_u_idx(13,18,u%BladeMotion(1)%NNodes,index)
       if (p%NumBl_Lin > 1)   call SetJac_u_idx(19,24,u%BladeMotion(2)%NNodes,index)
       if (p%NumBl_Lin > 2)   call SetJac_u_idx(15,30,u%BladeMotion(3)%NNodes,index)
@@ -6726,6 +6730,7 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
       end do
    else
       indexNames=index
+      p%Jac_u_idxStartList%Blade = index
       call SetJac_u_idx(13,15,u%BladeMotion(1)%NNodes,index)
       if (p%NumBl_Lin > 1)   call SetJac_u_idx(19,21,u%BladeMotion(2)%NNodes,index)
       if (p%NumBl_Lin > 2)   call SetJac_u_idx(15,27,u%BladeMotion(3)%NNodes,index)
@@ -6753,6 +6758,7 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
       !     Module/Mesh/Field: u%TFinMotion%Orientation     = 32;
       !     Module/Mesh/Field: u%TFinMotion%TranslationVel  = 33;
       indexNames=index
+      p%Jac_u_idxStartList%TFin = index
       call SetJac_u_idx(31,33,u%TFinMotion%NNodes,index)
       !     Perturbations
       p%du(31) = perturb
@@ -6769,6 +6775,7 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
       !------------------------------
       ! UserProp
       !     Module/Mesh/Field: u%UserProp(:,:) = 34,35,36;
+      p%Jac_u_idxStartList%UserProp = index
       do k=1,size(u%UserProp,2) ! p%NumBlades
          do i=1,size(u%UserProp,1) ! numNodes
                p%Jac_u_indx(index,1) =  34 + k-1
@@ -6786,10 +6793,11 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
 
 
       !------------------------------
-      ! Extended inputs (number of these must be exactly NumExtendedInputs)
+      ! Extended inputs (number of these must be exactly p%NumExtendedInputs)
       !     Module/Mesh/Field:  HWindSpeed      = 37
       !     Module/Mesh/Field:  PLexp           = 38
       !     Module/Mesh/Field:  PropagationDir  = 39
+      p%Jac_u_idxStartList%Extended = index
       p%Jac_u_indx(index,1)=37;  p%Jac_u_indx(index,2)=1;   p%Jac_u_indx(index,3)=1;    index = index + 1
       p%Jac_u_indx(index,1)=38;  p%Jac_u_indx(index,2)=1;   p%Jac_u_indx(index,3)=1;    index = index + 1
       p%Jac_u_indx(index,1)=39;  p%Jac_u_indx(index,2)=1;   p%Jac_u_indx(index,3)=1;    index = index + 1
