@@ -158,7 +158,7 @@ The tabulated data are provided as part of the list of airfoils given with `AFNa
 The user only needs to indicate the index `TFinAFIndex` within the list `AFNames` to indicate which polar to use for the tail fin.
 
 
-Unsteady model
+Unsteady slender body model
 ---------------------------
 
 The unsteady aerodynamics of the tail fin is modeled based on Unsteady Slender Body Theory.
@@ -168,13 +168,17 @@ The normal force on the tail fin can be described as
 
 .. math::  :label: TFUSBForce
 
-    N = \frac{\rho}{2} A_{tf}  K_p x_1 V_x V_y + \frac{\rho}{2} A_{tf}  \Big[x_2 K_v+(1- x_3)C_{Dc} \Big] V_y|V_y|.
+    N = \frac{\rho}{2} A_{tf} \bigg(  K_p x_1 V_{\text{rel},x} V_{\text{rel},y} +  \Big[x_2 K_v+(1- x_3)C_{Dc} \Big] V_{\text{rel},y}\big|V_{\text{rel},y}\big|\bigg)
 
 
-And the moment on the tail fin about the apex can be described as:
+where :math:`\rho` is the density of air, :math:`A_{tf}` is the tail fin area, :math:`K_p` is the potential lift coefficient and :math:`K_v` is the vortex lift coefficient, and :math:`C_{Dc}` is the drag coefficient.
+:math:`x_i` are the separation functions calculated using a quasi-steady approximation as:
 
-.. math::  :label: TFUSBMoment
+.. math::  :label: TFUSBxiEquation
 
-    M_a = \frac{\rho}{2}A_{tf}x_{cp}x_1 K_p V_x V_y + \frac{\rho}{2}A_{tf}x_{cp}\Big[x_2K_v + (1-x_3)C_{Dc}\Big]V_y|V_y|
+    x_i = (1+exp{[\sigma_i (|\gamma_{tf}|-\alpha^*_i)]})^{-1}
 
-where :math:`A_{tf}` is the tail fin area, :math:`K_p` is the potential flow constant and :math:`K_v` is the vortex flow cosntant, :math:`x_i` are the separation function, and :math:`C_{Dc}` is the drag coefficient.
+
+where :math:`\sigma_i` are emperical constants characterizing the decay of separation functions, :math:`\gamma_{tf}` is the yaw angle of the tail fin with respect to the free-stream wind (:math:`V_{\text{wind}}`), :math:`\alpha^*_i` are the characteristics angles for separation functions.
+
+The normal force is assumed to act at the user defined reference point on the tail fin and the moment of the normal force is calculated accordingly.
