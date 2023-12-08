@@ -1129,7 +1129,9 @@ subroutine Init_u( u, p, p_AD, InputFileData, MHK, WtrDpth, InitInp, errStat, er
    if (p%NumTwrNds > 0) then
       
       u%InflowOnTower = 0.0_ReKi
-      u%AccelOnTower  = 0.0_ReKi  
+      if (p%MHK > 0) then
+         u%AccelOnTower  = 0.0_ReKi  
+      end if
       
       call MeshCreate ( BlankMesh = u%TowerMotion   &
                        ,IOS       = COMPONENT_INPUT &
