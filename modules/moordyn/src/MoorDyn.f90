@@ -1811,9 +1811,9 @@ CONTAINS
 
             ! set absolute initial positions in MoorDyn
             IF (p%Standalone /= 1) THEN
-               OrMatRef = TRANSPOSE( m%RodList(m%CpldRodIs(l,iTurb))%OrMat )  ! for now set reference orientation as per input file <<< 
+               OrMatRef = ( m%RodList(m%CpldRodIs(l,iTurb))%OrMat )  ! for now set reference orientation as per input file <<< 
                CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef(1:3), ErrStat2, ErrMsg2, OrMatRef)  ! assign the reference position and orientation
-               OrMat2 = MATMUL(OrMat, TRANSPOSE( EulerConstruct( rRef(4:6))))  ! combine the Rod's relative orientation with the turbine's initial orientation
+               OrMat2 = MATMUL(OrMat, OrMatRef)  ! combine the Rod's relative orientation with the turbine's initial orientation
                u%CoupledKinematics(iTurb)%Orientation(:,:,J) = OrMat2          ! set the result as the current orientation of the rod <<<
                
                ! calculate initial point relative position, adjusted due to initial platform rotations and translations  <<< could convert to array math
@@ -1821,7 +1821,7 @@ CONTAINS
                u%CoupledKinematics(iTurb)%TranslationDisp(2,J) = InitInp%PtfmInit(2,iTurb) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
                u%CoupledKinematics(iTurb)%TranslationDisp(3,J) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
                m%RodList(m%CpldRodIs(l,iTurb))%r6(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
-               m%RodList(m%CpldRodIs(l,iTurb))%r6(4:6) = EulerExtract(MATMUL(OrMat, OrMatRef))     ! apply rotation from PtfmInit onto input file's rod orientation to get its true initial orientation
+               m%RodList(m%CpldRodIs(l,iTurb))%r6(4:6) = MATMUL(OrMat2 , (/0.0, 0.0, 1.0/) )     ! apply rotation from PtfmInit onto input file's rod orientation to get its true initial orientation
             ENDIF
             
             ! >>> still need to set Rod initial orientations accounting for PtfmInit rotation <<<
