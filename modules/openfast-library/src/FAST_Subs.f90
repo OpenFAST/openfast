@@ -5616,9 +5616,9 @@ SUBROUTINE FAST_InitIOarrays( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, A
 
 END SUBROUTINE FAST_InitIOarrays
 !----------------------------------------------------------------------------------------------------------------------------------
-!> Routine that calls FAST_InitIOarrays_SS for one instance of a Turbine data structure. This is a separate subroutine so that the FAST
+!> Routine that calls FAST_InitIOarrays_SubStep for one instance of a Turbine data structure. This is a separate subroutine so that the FAST
 !! driver programs do not need to change or operate on the individual module level.
-SUBROUTINE FAST_InitIOarrays_SS_T(t_initial, Turbine, ErrStat, ErrMsg )
+SUBROUTINE FAST_InitIOarrays_SubStep_T(t_initial, Turbine, ErrStat, ErrMsg )
 
   REAL(DbKi),               INTENT(IN   ) :: t_initial           !< start time of the simulation
   TYPE(FAST_TurbineType),   INTENT(INOUT) :: Turbine             !< all data for one instance of a turbine
@@ -5627,9 +5627,9 @@ SUBROUTINE FAST_InitIOarrays_SS_T(t_initial, Turbine, ErrStat, ErrMsg )
 
   INTEGER(IntKi)                          :: ErrStat2
   CHARACTER(ErrMsgLen)                    :: ErrMsg2
-  CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_InitIOarrays_SS_T'
+  CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_InitIOarrays_SubStep_T'
 
-  CALL FAST_InitIOarrays_SS(t_initial, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
+  CALL FAST_InitIOarrays_SubStep(t_initial, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
        Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%ExtLd, Turbine%IfW, &
        Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
        Turbine%IceF, Turbine%IceD, ErrStat2, ErrMsg2 )
@@ -5637,12 +5637,12 @@ SUBROUTINE FAST_InitIOarrays_SS_T(t_initial, Turbine, ErrStat, ErrMsg )
   CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
-END SUBROUTINE FAST_InitIOarrays_SS_T
+END SUBROUTINE FAST_InitIOarrays_SubStep_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes the input and output arrays stored for extrapolation when used in a sub-timestepping mode with an external driver program. They are initialized after the first input-output solve so that the first
 !! extrapolations are used with values from the solution, not just initial guesses. It also creates new copies of the state variables, which need to
 !! be stored for the predictor-corrector loop.
-SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, ExtLd, IfW, HD, SD, ExtPtfm, &
+SUBROUTINE FAST_InitIOarrays_SubStep( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, ExtLd, IfW, HD, SD, ExtPtfm, &
                               MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat, ErrMsg )
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           !< start time of the simulation
@@ -5674,7 +5674,7 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
    INTEGER(IntKi)                          :: i, j, k             ! loop counters
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
-   CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_InitIOarrays_SS'
+   CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_InitIOarrays_SubStep'
 
 
    ErrStat = ErrID_None
@@ -5698,22 +5698,22 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    END DO
 
-   CALL ED_CopyContState   (ED%x( STATE_CURR), ED%x( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyContState   (ED%x( STATE_CURR), ED%x( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
       CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ED_CopyDiscState   (ED%xd(STATE_CURR), ED%xd(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyDiscState   (ED%xd(STATE_CURR), ED%xd(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
       CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ED_CopyConstrState (ED%z( STATE_CURR), ED%z( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyConstrState (ED%z( STATE_CURR), ED%z( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
       CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ED_CopyOtherState (ED%OtherSt( STATE_CURR), ED%OtherSt( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyOtherState (ED%OtherSt( STATE_CURR), ED%OtherSt( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
       CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   CALL ED_CopyContState   (ED%x( STATE_PRED), ED%x( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyContState   (ED%x( STATE_PRED), ED%x( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
       CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ED_CopyDiscState   (ED%xd(STATE_PRED), ED%xd(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyDiscState   (ED%xd(STATE_PRED), ED%xd(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
       CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ED_CopyConstrState (ED%z( STATE_PRED), ED%z( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyConstrState (ED%z( STATE_PRED), ED%z( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
       CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ED_CopyOtherState (ED%OtherSt( STATE_PRED), ED%OtherSt( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyOtherState (ED%OtherSt( STATE_PRED), ED%OtherSt( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
       CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    IF  (p_FAST%CompElast == Module_BD ) THEN
@@ -5731,23 +5731,23 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
          END DO
 
             ! Initialize predicted states for j_pc loop:
-         CALL BD_CopyContState   (BD%x( k,STATE_CURR), BD%x( k,STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyContState   (BD%x( k,STATE_CURR), BD%x( k,STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL BD_CopyDiscState   (BD%xd(k,STATE_CURR), BD%xd(k,STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyDiscState   (BD%xd(k,STATE_CURR), BD%xd(k,STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL BD_CopyConstrState (BD%z( k,STATE_CURR), BD%z( k,STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyConstrState (BD%z( k,STATE_CURR), BD%z( k,STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL BD_CopyOtherState (BD%OtherSt( k,STATE_CURR), BD%OtherSt( k,STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyOtherState (BD%OtherSt( k,STATE_CURR), BD%OtherSt( k,STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
             ! Initialize predicted states for j_pc loop:
-         CALL BD_CopyContState   (BD%x( k,STATE_PRED), BD%x( k,STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyContState   (BD%x( k,STATE_PRED), BD%x( k,STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL BD_CopyDiscState   (BD%xd(k,STATE_PRED), BD%xd(k,STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyDiscState   (BD%xd(k,STATE_PRED), BD%xd(k,STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL BD_CopyConstrState (BD%z( k,STATE_PRED), BD%z( k,STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyConstrState (BD%z( k,STATE_PRED), BD%z( k,STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL BD_CopyOtherState (BD%OtherSt( k,STATE_PRED), BD%OtherSt( k,STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyOtherState (BD%OtherSt( k,STATE_PRED), BD%OtherSt( k,STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       END DO ! nBeams
@@ -5769,23 +5769,23 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
       END DO
 
          ! Initialize predicted states for j_pc loop:
-      CALL SrvD_CopyContState   (SrvD%x( STATE_CURR), SrvD%x( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyContState   (SrvD%x( STATE_CURR), SrvD%x( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SrvD_CopyDiscState   (SrvD%xd(STATE_CURR), SrvD%xd(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyDiscState   (SrvD%xd(STATE_CURR), SrvD%xd(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SrvD_CopyConstrState (SrvD%z( STATE_CURR), SrvD%z( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyConstrState (SrvD%z( STATE_CURR), SrvD%z( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SrvD_CopyOtherState( SrvD%OtherSt(STATE_CURR), SrvD%OtherSt(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyOtherState( SrvD%OtherSt(STATE_CURR), SrvD%OtherSt(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          ! Initialize predicted states for j_pc loop:
-      CALL SrvD_CopyContState   (SrvD%x( STATE_PRED), SrvD%x( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyContState   (SrvD%x( STATE_PRED), SrvD%x( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SrvD_CopyDiscState   (SrvD%xd(STATE_PRED), SrvD%xd(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyDiscState   (SrvD%xd(STATE_PRED), SrvD%xd(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SrvD_CopyConstrState (SrvD%z( STATE_PRED), SrvD%z( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyConstrState (SrvD%z( STATE_PRED), SrvD%z( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SrvD_CopyOtherState( SrvD%OtherSt(STATE_PRED), SrvD%OtherSt(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyOtherState( SrvD%OtherSt(STATE_PRED), SrvD%OtherSt(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       CALL SrvD_CopyMisc( SrvD%m, SrvD%m_bak, MESH_NEWCOPY, Errstat2, ErrMsg2)
@@ -5807,23 +5807,23 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
       END DO
 
          ! Initialize predicted states for j_pc loop:
-      CALL AD14_CopyContState   (AD14%x( STATE_CURR), AD14%x( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyContState   (AD14%x( STATE_CURR), AD14%x( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD14_CopyDiscState   (AD14%xd(STATE_CURR), AD14%xd(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyDiscState   (AD14%xd(STATE_CURR), AD14%xd(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD14_CopyConstrState (AD14%z( STATE_CURR), AD14%z( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyConstrState (AD14%z( STATE_CURR), AD14%z( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD14_CopyOtherState( AD14%OtherSt(STATE_CURR), AD14%OtherSt(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyOtherState( AD14%OtherSt(STATE_CURR), AD14%OtherSt(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          ! Initialize predicted states for j_pc loop:
-      CALL AD14_CopyContState   (AD14%x( STATE_PRED), AD14%x( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyContState   (AD14%x( STATE_PRED), AD14%x( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD14_CopyDiscState   (AD14%xd(STATE_PRED), AD14%xd(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyDiscState   (AD14%xd(STATE_PRED), AD14%xd(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD14_CopyConstrState (AD14%z( STATE_PRED), AD14%z( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyConstrState (AD14%z( STATE_PRED), AD14%z( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD14_CopyOtherState( AD14%OtherSt(STATE_PRED), AD14%OtherSt(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyOtherState( AD14%OtherSt(STATE_PRED), AD14%OtherSt(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ELSEIF ( (p_FAST%CompAero == Module_AD) .or. (p_FAST%CompAero == Module_ExtLd) ) THEN
@@ -5839,23 +5839,23 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
       END DO
 
          ! Initialize predicted states for j_pc loop:
-      CALL AD_CopyContState(AD%x(STATE_CURR), AD%x(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyContState(AD%x(STATE_CURR), AD%x(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD_CopyDiscState(AD%xd(STATE_CURR), AD%xd(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyDiscState(AD%xd(STATE_CURR), AD%xd(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD_CopyConstrState(AD%z(STATE_CURR), AD%z(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyConstrState(AD%z(STATE_CURR), AD%z(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD_CopyOtherState(AD%OtherSt(STATE_CURR), AD%OtherSt(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyOtherState(AD%OtherSt(STATE_CURR), AD%OtherSt(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          ! Initialize predicted states for j_pc loop:
-      CALL AD_CopyContState(AD%x(STATE_PRED), AD%x(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyContState(AD%x(STATE_PRED), AD%x(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD_CopyDiscState(AD%xd(STATE_PRED), AD%xd(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyDiscState(AD%xd(STATE_PRED), AD%xd(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD_CopyConstrState(AD%z(STATE_PRED), AD%z(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyConstrState(AD%z(STATE_PRED), AD%z(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD_CopyOtherState(AD%OtherSt(STATE_PRED), AD%OtherSt(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyOtherState(AD%OtherSt(STATE_PRED), AD%OtherSt(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END IF ! CompAero == Module_AD
@@ -5876,23 +5876,23 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
       END DO
 
          ! Initialize predicted states for j_pc loop:
-      CALL InflowWind_CopyContState   (IfW%x( STATE_CURR), IfW%x( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyContState   (IfW%x( STATE_CURR), IfW%x( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyDiscState   (IfW%xd(STATE_CURR), IfW%xd(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyDiscState   (IfW%xd(STATE_CURR), IfW%xd(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyConstrState (IfW%z( STATE_CURR), IfW%z( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyConstrState (IfW%z( STATE_CURR), IfW%z( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyOtherState( IfW%OtherSt(STATE_CURR), IfW%OtherSt(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyOtherState( IfW%OtherSt(STATE_CURR), IfW%OtherSt(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          ! Initialize predicted states for j_pc loop:
-      CALL InflowWind_CopyContState   (IfW%x( STATE_PRED), IfW%x( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyContState   (IfW%x( STATE_PRED), IfW%x( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyDiscState   (IfW%xd(STATE_PRED), IfW%xd(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyDiscState   (IfW%xd(STATE_PRED), IfW%xd(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyConstrState (IfW%z( STATE_PRED), IfW%z( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyConstrState (IfW%z( STATE_PRED), IfW%z( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyOtherState( IfW%OtherSt(STATE_PRED), IfW%OtherSt(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyOtherState( IfW%OtherSt(STATE_PRED), IfW%OtherSt(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END IF ! CompInflow == Module_IfW
@@ -5911,23 +5911,23 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
       END DO
 
          ! Initialize predicted states for j_pc loop:
-      CALL HydroDyn_CopyContState   (HD%x( STATE_CURR), HD%x( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyContState   (HD%x( STATE_CURR), HD%x( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL HydroDyn_CopyDiscState   (HD%xd(STATE_CURR), HD%xd(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyDiscState   (HD%xd(STATE_CURR), HD%xd(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL HydroDyn_CopyConstrState (HD%z( STATE_CURR), HD%z( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyConstrState (HD%z( STATE_CURR), HD%z( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL HydroDyn_CopyOtherState( HD%OtherSt(STATE_CURR), HD%OtherSt(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyOtherState( HD%OtherSt(STATE_CURR), HD%OtherSt(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          ! Initialize predicted states for j_pc loop:
-      CALL HydroDyn_CopyContState   (HD%x( STATE_PRED), HD%x( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyContState   (HD%x( STATE_PRED), HD%x( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL HydroDyn_CopyDiscState   (HD%xd(STATE_PRED), HD%xd(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyDiscState   (HD%xd(STATE_PRED), HD%xd(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL HydroDyn_CopyConstrState (HD%z( STATE_PRED), HD%z( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyConstrState (HD%z( STATE_PRED), HD%z( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL HydroDyn_CopyOtherState( HD%OtherSt(STATE_PRED), HD%OtherSt(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyOtherState( HD%OtherSt(STATE_PRED), HD%OtherSt(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END IF !CompHydro
@@ -5947,23 +5947,23 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
       END DO
 
          ! Initialize predicted states for j_pc loop:
-      CALL SD_CopyContState   (SD%x( STATE_CURR), SD%x( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyContState   (SD%x( STATE_CURR), SD%x( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SD_CopyDiscState   (SD%xd(STATE_CURR), SD%xd(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyDiscState   (SD%xd(STATE_CURR), SD%xd(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SD_CopyConstrState (SD%z( STATE_CURR), SD%z( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyConstrState (SD%z( STATE_CURR), SD%z( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SD_CopyOtherState( SD%OtherSt(STATE_CURR), SD%OtherSt(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyOtherState( SD%OtherSt(STATE_CURR), SD%OtherSt(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          ! Initialize predicted states for j_pc loop:
-      CALL SD_CopyContState   (SD%x( STATE_PRED), SD%x( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyContState   (SD%x( STATE_PRED), SD%x( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SD_CopyDiscState   (SD%xd(STATE_PRED), SD%xd(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyDiscState   (SD%xd(STATE_PRED), SD%xd(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SD_CopyConstrState (SD%z( STATE_PRED), SD%z( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyConstrState (SD%z( STATE_PRED), SD%z( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SD_CopyOtherState( SD%OtherSt(STATE_PRED), SD%OtherSt(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyOtherState( SD%OtherSt(STATE_PRED), SD%OtherSt(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ELSE IF (p_FAST%CompSub == Module_ExtPtfm ) THEN
@@ -5979,23 +5979,23 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
       END DO
 
          ! Initialize predicted states for j_pc loop:
-      CALL ExtPtfm_CopyContState   (ExtPtfm%x( STATE_CURR), ExtPtfm%x( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyContState   (ExtPtfm%x( STATE_CURR), ExtPtfm%x( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyDiscState   (ExtPtfm%xd(STATE_CURR), ExtPtfm%xd(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyDiscState   (ExtPtfm%xd(STATE_CURR), ExtPtfm%xd(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyConstrState (ExtPtfm%z( STATE_CURR), ExtPtfm%z( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyConstrState (ExtPtfm%z( STATE_CURR), ExtPtfm%z( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyOtherState( ExtPtfm%OtherSt(STATE_CURR), ExtPtfm%OtherSt(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyOtherState( ExtPtfm%OtherSt(STATE_CURR), ExtPtfm%OtherSt(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       ! Initialize predicted states for j_pc loop:
-      CALL ExtPtfm_CopyContState   (ExtPtfm%x( STATE_PRED), ExtPtfm%x( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyContState   (ExtPtfm%x( STATE_PRED), ExtPtfm%x( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyDiscState   (ExtPtfm%xd(STATE_PRED), ExtPtfm%xd(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyDiscState   (ExtPtfm%xd(STATE_PRED), ExtPtfm%xd(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyConstrState (ExtPtfm%z( STATE_PRED), ExtPtfm%z( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyConstrState (ExtPtfm%z( STATE_PRED), ExtPtfm%z( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyOtherState( ExtPtfm%OtherSt(STATE_PRED), ExtPtfm%OtherSt(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyOtherState( ExtPtfm%OtherSt(STATE_PRED), ExtPtfm%OtherSt(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END IF ! CompSub
@@ -6015,11 +6015,11 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
       END DO
 
          ! Initialize predicted states for j_pc loop:
-      CALL MAP_CopyContState   (MAPp%x( STATE_CURR), MAPp%x( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL MAP_CopyContState   (MAPp%x( STATE_CURR), MAPp%x( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MAP_CopyDiscState   (MAPp%xd(STATE_CURR), MAPp%xd(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL MAP_CopyDiscState   (MAPp%xd(STATE_CURR), MAPp%xd(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MAP_CopyConstrState (MAPp%z( STATE_CURR), MAPp%z( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL MAP_CopyConstrState (MAPp%z( STATE_CURR), MAPp%z( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( p_FAST%n_substeps( MODULE_MAP ) > 1 ) THEN
          CALL MAP_CopyOtherState( MAPp%OtherSt, MAPp%OtherSt_old, MESH_NEWCOPY, Errstat2, ErrMsg2)
@@ -6027,11 +6027,11 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
       END IF
 
          ! Initialize predicted states for j_pc loop:
-      CALL MAP_CopyContState   (MAPp%x( STATE_PRED), MAPp%x( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL MAP_CopyContState   (MAPp%x( STATE_PRED), MAPp%x( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MAP_CopyDiscState   (MAPp%xd(STATE_PRED), MAPp%xd(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL MAP_CopyDiscState   (MAPp%xd(STATE_PRED), MAPp%xd(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MAP_CopyConstrState (MAPp%z( STATE_PRED), MAPp%z( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL MAP_CopyConstrState (MAPp%z( STATE_PRED), MAPp%z( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( p_FAST%n_substeps( MODULE_MAP ) > 1 ) THEN
          CALL MAP_CopyOtherState( MAPp%OtherSt, MAPp%OtherSt_old, MESH_NEWCOPY, Errstat2, ErrMsg2)
@@ -6052,23 +6052,23 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
       END DO
 
          ! Initialize predicted states for j_pc loop:
-      CALL MD_CopyContState   (MD%x( STATE_CURR), MD%x( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyContState   (MD%x( STATE_CURR), MD%x( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MD_CopyDiscState   (MD%xd(STATE_CURR), MD%xd(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyDiscState   (MD%xd(STATE_CURR), MD%xd(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MD_CopyConstrState (MD%z( STATE_CURR), MD%z( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyConstrState (MD%z( STATE_CURR), MD%z( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MD_CopyOtherState( MD%OtherSt(STATE_CURR), MD%OtherSt(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyOtherState( MD%OtherSt(STATE_CURR), MD%OtherSt(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          ! Initialize predicted states for j_pc loop:
-      CALL MD_CopyContState   (MD%x( STATE_PRED), MD%x( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyContState   (MD%x( STATE_PRED), MD%x( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MD_CopyDiscState   (MD%xd(STATE_PRED), MD%xd(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyDiscState   (MD%xd(STATE_PRED), MD%xd(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MD_CopyConstrState (MD%z( STATE_PRED), MD%z( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyConstrState (MD%z( STATE_PRED), MD%z( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MD_CopyOtherState( MD%OtherSt(STATE_PRED), MD%OtherSt(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyOtherState( MD%OtherSt(STATE_PRED), MD%OtherSt(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
@@ -6087,23 +6087,23 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
       END DO
 
          ! Initialize predicted states for j_pc loop:
-      CALL FEAM_CopyContState   (FEAM%x( STATE_CURR), FEAM%x( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyContState   (FEAM%x( STATE_CURR), FEAM%x( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL FEAM_CopyDiscState   (FEAM%xd(STATE_CURR), FEAM%xd(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyDiscState   (FEAM%xd(STATE_CURR), FEAM%xd(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL FEAM_CopyConstrState (FEAM%z( STATE_CURR), FEAM%z( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyConstrState (FEAM%z( STATE_CURR), FEAM%z( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL FEAM_CopyOtherState( FEAM%OtherSt(STATE_CURR), FEAM%OtherSt(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyOtherState( FEAM%OtherSt(STATE_CURR), FEAM%OtherSt(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          ! Initialize predicted states for j_pc loop:
-      CALL FEAM_CopyContState   (FEAM%x( STATE_PRED), FEAM%x( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyContState   (FEAM%x( STATE_PRED), FEAM%x( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL FEAM_CopyDiscState   (FEAM%xd(STATE_PRED), FEAM%xd(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyDiscState   (FEAM%xd(STATE_PRED), FEAM%xd(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL FEAM_CopyConstrState (FEAM%z( STATE_PRED), FEAM%z( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyConstrState (FEAM%z( STATE_PRED), FEAM%z( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL FEAM_CopyOtherState( FEAM%OtherSt(STATE_PRED), FEAM%OtherSt(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyOtherState( FEAM%OtherSt(STATE_PRED), FEAM%OtherSt(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ELSEIF (p_FAST%CompMooring == Module_Orca) THEN
@@ -6119,23 +6119,23 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
       END DO
 
          ! Initialize predicted states for j_pc loop:
-      CALL Orca_CopyContState   (Orca%x( STATE_CURR), Orca%x( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyContState   (Orca%x( STATE_CURR), Orca%x( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL Orca_CopyDiscState   (Orca%xd(STATE_CURR), Orca%xd(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyDiscState   (Orca%xd(STATE_CURR), Orca%xd(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL Orca_CopyConstrState (Orca%z( STATE_CURR), Orca%z( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyConstrState (Orca%z( STATE_CURR), Orca%z( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL Orca_CopyOtherState( Orca%OtherSt(STATE_CURR), Orca%OtherSt(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyOtherState( Orca%OtherSt(STATE_CURR), Orca%OtherSt(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          ! Initialize predicted states for j_pc loop:
-      CALL Orca_CopyContState   (Orca%x( STATE_PRED), Orca%x( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyContState   (Orca%x( STATE_PRED), Orca%x( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL Orca_CopyDiscState   (Orca%xd(STATE_PRED), Orca%xd(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyDiscState   (Orca%xd(STATE_PRED), Orca%xd(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL Orca_CopyConstrState (Orca%z( STATE_PRED), Orca%z( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyConstrState (Orca%z( STATE_PRED), Orca%z( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL Orca_CopyOtherState( Orca%OtherSt(STATE_PRED), Orca%OtherSt(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyOtherState( Orca%OtherSt(STATE_PRED), Orca%OtherSt(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END IF ! CompMooring
@@ -6155,23 +6155,23 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
       END DO
 
          ! Initialize predicted states for j_pc loop:
-      CALL IceFloe_CopyContState   (IceF%x( STATE_CURR), IceF%x( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyContState   (IceF%x( STATE_CURR), IceF%x( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL IceFloe_CopyDiscState   (IceF%xd(STATE_CURR), IceF%xd(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyDiscState   (IceF%xd(STATE_CURR), IceF%xd(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL IceFloe_CopyConstrState (IceF%z( STATE_CURR), IceF%z( STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyConstrState (IceF%z( STATE_CURR), IceF%z( STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL IceFloe_CopyOtherState( IceF%OtherSt(STATE_CURR), IceF%OtherSt(STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyOtherState( IceF%OtherSt(STATE_CURR), IceF%OtherSt(STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          ! Initialize predicted states for j_pc loop:
-      CALL IceFloe_CopyContState   (IceF%x( STATE_PRED), IceF%x( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyContState   (IceF%x( STATE_PRED), IceF%x( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL IceFloe_CopyDiscState   (IceF%xd(STATE_PRED), IceF%xd(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyDiscState   (IceF%xd(STATE_PRED), IceF%xd(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL IceFloe_CopyConstrState (IceF%z( STATE_PRED), IceF%z( STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyConstrState (IceF%z( STATE_PRED), IceF%z( STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL IceFloe_CopyOtherState( IceF%OtherSt(STATE_PRED), IceF%OtherSt(STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyOtherState( IceF%OtherSt(STATE_PRED), IceF%OtherSt(STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ELSEIF  (p_FAST%CompIce == Module_IceD ) THEN
@@ -6190,23 +6190,23 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
          END DO
 
             ! Initialize predicted states for j_pc loop:
-         CALL IceD_CopyContState   (IceD%x( i,STATE_CURR), IceD%x( i,STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyContState   (IceD%x( i,STATE_CURR), IceD%x( i,STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL IceD_CopyDiscState   (IceD%xd(i,STATE_CURR), IceD%xd(i,STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyDiscState   (IceD%xd(i,STATE_CURR), IceD%xd(i,STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL IceD_CopyConstrState (IceD%z( i,STATE_CURR), IceD%z( i,STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyConstrState (IceD%z( i,STATE_CURR), IceD%z( i,STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL IceD_CopyOtherState( IceD%OtherSt(i,STATE_CURR), IceD%OtherSt(i,STATE_SS_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyOtherState( IceD%OtherSt(i,STATE_CURR), IceD%OtherSt(i,STATE_SAVED_CURR), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
             ! Initialize predicted states for j_pc loop:
-         CALL IceD_CopyContState   (IceD%x( i,STATE_PRED), IceD%x( i,STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyContState   (IceD%x( i,STATE_PRED), IceD%x( i,STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL IceD_CopyDiscState   (IceD%xd(i,STATE_PRED), IceD%xd(i,STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyDiscState   (IceD%xd(i,STATE_PRED), IceD%xd(i,STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL IceD_CopyConstrState (IceD%z( i,STATE_PRED), IceD%z( i,STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyConstrState (IceD%z( i,STATE_PRED), IceD%z( i,STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL IceD_CopyOtherState( IceD%OtherSt(i,STATE_PRED), IceD%OtherSt(i,STATE_SS_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyOtherState( IceD%OtherSt(i,STATE_PRED), IceD%OtherSt(i,STATE_SAVED_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       END DO ! numIceLegs
@@ -6214,11 +6214,11 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
    END IF ! CompIce
 
 
-END SUBROUTINE FAST_InitIOarrays_SS
+END SUBROUTINE FAST_InitIOarrays_SubStep
 !----------------------------------------------------------------------------------------------------------------------------------
-!> Routine that calls FAST_Reset_SS for one instance of a Turbine data structure. This is a separate subroutine so that the FAST
+!> Routine that calls FAST_Reset_SubStep for one instance of a Turbine data structure. This is a separate subroutine so that the FAST
 !! driver programs do not need to change or operate on the individual module level.
-SUBROUTINE FAST_Reset_SS_T(t_initial, n_t_global, n_timesteps, Turbine, ErrStat, ErrMsg )
+SUBROUTINE FAST_Reset_SubStep_T(t_initial, n_t_global, n_timesteps, Turbine, ErrStat, ErrMsg )
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           !< initial time
    INTEGER(IntKi),           INTENT(IN   ) :: n_t_global          !< loop counter
@@ -6227,15 +6227,15 @@ SUBROUTINE FAST_Reset_SS_T(t_initial, n_t_global, n_timesteps, Turbine, ErrStat,
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
-      CALL FAST_Reset_SS(t_initial, n_t_global, n_timesteps, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
+      CALL FAST_Reset_SubStep(t_initial, n_t_global, n_timesteps, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                   Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%ExtInfw, &
                   Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                   Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )
 
-END SUBROUTINE FAST_Reset_SS_T
+END SUBROUTINE FAST_Reset_SubStep_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine resets the states, inputs and output data from n_t_global to n_t_global - 1
-SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, ExtInfw, HD, SD, ExtPtfm, &
+SUBROUTINE FAST_Reset_SubStep(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, ExtInfw, HD, SD, ExtPtfm, &
                          MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
 
    USE BladedInterface, ONLY: CallBladedDLL  ! Hack for Bladed-style DLL
@@ -6306,22 +6306,22 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
    CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ! ElastoDyn: copy final predictions to actual states
-   CALL ED_CopyContState   (ED%x( STATE_SS_PRED), ED%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyContState   (ED%x( STATE_SAVED_PRED), ED%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ED_CopyDiscState   (ED%xd(STATE_SS_PRED), ED%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyDiscState   (ED%xd(STATE_SAVED_PRED), ED%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ED_CopyConstrState (ED%z( STATE_SS_PRED), ED%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyConstrState (ED%z( STATE_SAVED_PRED), ED%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ED_CopyOtherState (ED%OtherSt( STATE_SS_PRED), ED%OtherSt( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyOtherState (ED%OtherSt( STATE_SAVED_PRED), ED%OtherSt( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   CALL ED_CopyContState   (ED%x( STATE_SS_CURR), ED%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyContState   (ED%x( STATE_SAVED_CURR), ED%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ED_CopyDiscState   (ED%xd(STATE_SS_CURR), ED%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyDiscState   (ED%xd(STATE_SAVED_CURR), ED%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ED_CopyConstrState (ED%z( STATE_SS_CURR), ED%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyConstrState (ED%z( STATE_SAVED_CURR), ED%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ED_CopyOtherState (ED%OtherSt( STATE_SS_CURR), ED%OtherSt( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyOtherState (ED%OtherSt( STATE_SAVED_CURR), ED%OtherSt( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
@@ -6339,22 +6339,22 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END DO
 
-         CALL BD_CopyContState   (BD%x( k,STATE_SS_PRED), BD%x( k,STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyContState   (BD%x( k,STATE_SAVED_PRED), BD%x( k,STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL BD_CopyDiscState   (BD%xd(k,STATE_SS_PRED), BD%xd(k,STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyDiscState   (BD%xd(k,STATE_SAVED_PRED), BD%xd(k,STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL BD_CopyConstrState (BD%z( k,STATE_SS_PRED), BD%z( k,STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyConstrState (BD%z( k,STATE_SAVED_PRED), BD%z( k,STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL BD_CopyOtherState (BD%OtherSt( k,STATE_SS_PRED), BD%OtherSt( k,STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyOtherState (BD%OtherSt( k,STATE_SAVED_PRED), BD%OtherSt( k,STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-         CALL BD_CopyContState   (BD%x( k,STATE_SS_CURR), BD%x( k,STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyContState   (BD%x( k,STATE_SAVED_CURR), BD%x( k,STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL BD_CopyDiscState   (BD%xd(k,STATE_SS_CURR), BD%xd(k,STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyDiscState   (BD%xd(k,STATE_SAVED_CURR), BD%xd(k,STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL BD_CopyConstrState (BD%z( k,STATE_SS_CURR), BD%z( k,STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyConstrState (BD%z( k,STATE_SAVED_CURR), BD%z( k,STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL BD_CopyOtherState (BD%OtherSt( k,STATE_SS_CURR), BD%OtherSt( k,STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyOtherState (BD%OtherSt( k,STATE_SAVED_CURR), BD%OtherSt( k,STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6386,22 +6386,22 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL SrvD_CopyContState   (SrvD%x( STATE_SS_PRED), SrvD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyContState   (SrvD%x( STATE_SAVED_PRED), SrvD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SrvD_CopyDiscState   (SrvD%xd(STATE_SS_PRED), SrvD%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyDiscState   (SrvD%xd(STATE_SAVED_PRED), SrvD%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SrvD_CopyConstrState (SrvD%z( STATE_SS_PRED), SrvD%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyConstrState (SrvD%z( STATE_SAVED_PRED), SrvD%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SrvD_CopyOtherState (SrvD%OtherSt( STATE_SS_PRED), SrvD%OtherSt( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyOtherState (SrvD%OtherSt( STATE_SAVED_PRED), SrvD%OtherSt( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL SrvD_CopyContState   (SrvD%x( STATE_SS_CURR), SrvD%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyContState   (SrvD%x( STATE_SAVED_CURR), SrvD%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SrvD_CopyDiscState   (SrvD%xd(STATE_SS_CURR), SrvD%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyDiscState   (SrvD%xd(STATE_SAVED_CURR), SrvD%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SrvD_CopyConstrState (SrvD%z( STATE_SS_CURR), SrvD%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyConstrState (SrvD%z( STATE_SAVED_CURR), SrvD%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SrvD_CopyOtherState (SrvD%OtherSt( STATE_SS_CURR), SrvD%OtherSt( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyOtherState (SrvD%OtherSt( STATE_SAVED_CURR), SrvD%OtherSt( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       CALL SrvD_CopyMisc( SrvD%m_bak, SrvD%m, MESH_UPDATECOPY, Errstat2, ErrMsg2)
@@ -6421,22 +6421,22 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL AD14_CopyContState   (AD14%x( STATE_SS_PRED), AD14%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyContState   (AD14%x( STATE_SAVED_PRED), AD14%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD14_CopyDiscState   (AD14%xd(STATE_SS_PRED), AD14%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyDiscState   (AD14%xd(STATE_SAVED_PRED), AD14%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD14_CopyConstrState (AD14%z( STATE_SS_PRED), AD14%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyConstrState (AD14%z( STATE_SAVED_PRED), AD14%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD14_CopyOtherState (AD14%OtherSt(STATE_SS_PRED), AD14%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyOtherState (AD14%OtherSt(STATE_SAVED_PRED), AD14%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL AD14_CopyContState   (AD14%x( STATE_SS_CURR), AD14%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyContState   (AD14%x( STATE_SAVED_CURR), AD14%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD14_CopyDiscState   (AD14%xd(STATE_SS_CURR), AD14%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyDiscState   (AD14%xd(STATE_SAVED_CURR), AD14%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD14_CopyConstrState (AD14%z( STATE_SS_CURR), AD14%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyConstrState (AD14%z( STATE_SAVED_CURR), AD14%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD14_CopyOtherState (AD14%OtherSt(STATE_SS_CURR), AD14%OtherSt(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyOtherState (AD14%OtherSt(STATE_SAVED_CURR), AD14%OtherSt(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ELSEIF ( (p_FAST%CompAero == Module_AD) .or. (p_FAST%CompAero == Module_ExtLd) ) THEN
@@ -6451,22 +6451,22 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL AD_CopyContState   (AD%x( STATE_SS_PRED), AD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyContState   (AD%x( STATE_SAVED_PRED), AD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD_CopyDiscState   (AD%xd(STATE_SS_PRED), AD%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyDiscState   (AD%xd(STATE_SAVED_PRED), AD%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD_CopyConstrState (AD%z( STATE_SS_PRED), AD%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyConstrState (AD%z( STATE_SAVED_PRED), AD%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD_CopyOtherState (AD%OtherSt(STATE_SS_PRED), AD%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyOtherState (AD%OtherSt(STATE_SAVED_PRED), AD%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL AD_CopyContState   (AD%x( STATE_SS_CURR), AD%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyContState   (AD%x( STATE_SAVED_CURR), AD%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD_CopyDiscState   (AD%xd(STATE_SS_CURR), AD%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyDiscState   (AD%xd(STATE_SAVED_CURR), AD%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD_CopyConstrState (AD%z( STATE_SS_CURR), AD%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyConstrState (AD%z( STATE_SAVED_CURR), AD%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD_CopyOtherState (AD%OtherSt(STATE_SS_CURR), AD%OtherSt(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyOtherState (AD%OtherSt(STATE_SAVED_CURR), AD%OtherSt(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END IF ! CompAero == Module_AD
@@ -6484,22 +6484,22 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL InflowWind_CopyContState   (IfW%x( STATE_SS_PRED), IfW%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyContState   (IfW%x( STATE_SAVED_PRED), IfW%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyDiscState   (IfW%xd(STATE_SS_PRED), IfW%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyDiscState   (IfW%xd(STATE_SAVED_PRED), IfW%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyConstrState (IfW%z( STATE_SS_PRED), IfW%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyConstrState (IfW%z( STATE_SAVED_PRED), IfW%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyOtherState (IfW%OtherSt( STATE_SS_PRED), IfW%OtherSt( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyOtherState (IfW%OtherSt( STATE_SAVED_PRED), IfW%OtherSt( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL InflowWind_CopyContState   (IfW%x( STATE_SS_CURR), IfW%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyContState   (IfW%x( STATE_SAVED_CURR), IfW%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyDiscState   (IfW%xd(STATE_SS_CURR), IfW%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyDiscState   (IfW%xd(STATE_SAVED_CURR), IfW%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyConstrState (IfW%z( STATE_SS_CURR), IfW%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyConstrState (IfW%z( STATE_SAVED_CURR), IfW%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyOtherState (IfW%OtherSt( STATE_SS_CURR), IfW%OtherSt( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyOtherState (IfW%OtherSt( STATE_SAVED_CURR), IfW%OtherSt( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END IF ! CompInflow == Module_IfW
@@ -6517,22 +6517,22 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL HydroDyn_CopyContState   (HD%x( STATE_SS_PRED), HD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyContState   (HD%x( STATE_SAVED_PRED), HD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL HydroDyn_CopyDiscState   (HD%xd(STATE_SS_PRED), HD%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyDiscState   (HD%xd(STATE_SAVED_PRED), HD%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL HydroDyn_CopyConstrState (HD%z( STATE_SS_PRED), HD%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyConstrState (HD%z( STATE_SAVED_PRED), HD%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL HydroDyn_CopyOtherState (HD%OtherSt(STATE_SS_PRED), HD%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyOtherState (HD%OtherSt(STATE_SAVED_PRED), HD%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL HydroDyn_CopyContState   (HD%x( STATE_SS_CURR), HD%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyContState   (HD%x( STATE_SAVED_CURR), HD%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL HydroDyn_CopyDiscState   (HD%xd(STATE_SS_CURR), HD%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyDiscState   (HD%xd(STATE_SAVED_CURR), HD%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL HydroDyn_CopyConstrState (HD%z( STATE_SS_CURR), HD%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyConstrState (HD%z( STATE_SAVED_CURR), HD%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL HydroDyn_CopyOtherState (HD%OtherSt(STATE_SS_CURR), HD%OtherSt(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyOtherState (HD%OtherSt(STATE_SAVED_CURR), HD%OtherSt(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END IF !CompHydro
@@ -6551,22 +6551,22 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL SD_CopyContState   (SD%x( STATE_SS_PRED), SD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyContState   (SD%x( STATE_SAVED_PRED), SD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SD_CopyDiscState   (SD%xd(STATE_SS_PRED), SD%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyDiscState   (SD%xd(STATE_SAVED_PRED), SD%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SD_CopyConstrState (SD%z( STATE_SS_PRED), SD%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyConstrState (SD%z( STATE_SAVED_PRED), SD%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SD_CopyOtherState (SD%OtherSt(STATE_SS_PRED), SD%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyOtherState (SD%OtherSt(STATE_SAVED_PRED), SD%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL SD_CopyContState   (SD%x( STATE_SS_CURR), SD%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyContState   (SD%x( STATE_SAVED_CURR), SD%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SD_CopyDiscState   (SD%xd(STATE_SS_CURR), SD%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyDiscState   (SD%xd(STATE_SAVED_CURR), SD%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SD_CopyConstrState (SD%z( STATE_SS_CURR), SD%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyConstrState (SD%z( STATE_SAVED_CURR), SD%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SD_CopyOtherState (SD%OtherSt(STATE_SS_CURR), SD%OtherSt(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyOtherState (SD%OtherSt(STATE_SAVED_CURR), SD%OtherSt(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ELSE IF (p_FAST%CompSub == Module_ExtPtfm ) THEN
@@ -6581,22 +6581,22 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL ExtPtfm_CopyContState   (ExtPtfm%x( STATE_SS_PRED), ExtPtfm%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyContState   (ExtPtfm%x( STATE_SAVED_PRED), ExtPtfm%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyDiscState   (ExtPtfm%xd(STATE_SS_PRED), ExtPtfm%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyDiscState   (ExtPtfm%xd(STATE_SAVED_PRED), ExtPtfm%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyConstrState (ExtPtfm%z( STATE_SS_PRED), ExtPtfm%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyConstrState (ExtPtfm%z( STATE_SAVED_PRED), ExtPtfm%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyOtherState (ExtPtfm%OtherSt(STATE_SS_PRED), ExtPtfm%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyOtherState (ExtPtfm%OtherSt(STATE_SAVED_PRED), ExtPtfm%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL ExtPtfm_CopyContState   (ExtPtfm%x( STATE_SS_CURR), ExtPtfm%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyContState   (ExtPtfm%x( STATE_SAVED_CURR), ExtPtfm%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyDiscState   (ExtPtfm%xd(STATE_SS_CURR), ExtPtfm%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyDiscState   (ExtPtfm%xd(STATE_SAVED_CURR), ExtPtfm%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyConstrState (ExtPtfm%z( STATE_SS_CURR), ExtPtfm%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyConstrState (ExtPtfm%z( STATE_SAVED_CURR), ExtPtfm%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyOtherState (ExtPtfm%OtherSt(STATE_SS_CURR), ExtPtfm%OtherSt(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyOtherState (ExtPtfm%OtherSt(STATE_SAVED_CURR), ExtPtfm%OtherSt(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END IF ! CompSub
@@ -6615,22 +6615,22 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL MAP_CopyContState   (MAPp%x( STATE_SS_PRED), MAPp%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MAP_CopyContState   (MAPp%x( STATE_SAVED_PRED), MAPp%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MAP_CopyDiscState   (MAPp%xd(STATE_SS_PRED), MAPp%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MAP_CopyDiscState   (MAPp%xd(STATE_SAVED_PRED), MAPp%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MAP_CopyConstrState (MAPp%z( STATE_SS_PRED), MAPp%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MAP_CopyConstrState (MAPp%z( STATE_SAVED_PRED), MAPp%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      !CALL MAP_CopyOtherState (MAPp%OtherSt(STATE_SS_PRED), MAPp%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      !CALL MAP_CopyOtherState (MAPp%OtherSt(STATE_SAVED_PRED), MAPp%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       !   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL MAP_CopyContState   (MAPp%x( STATE_SS_CURR), MAPp%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MAP_CopyContState   (MAPp%x( STATE_SAVED_CURR), MAPp%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MAP_CopyDiscState   (MAPp%xd(STATE_SS_CURR), MAPp%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MAP_CopyDiscState   (MAPp%xd(STATE_SAVED_CURR), MAPp%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MAP_CopyConstrState (MAPp%z( STATE_SS_CURR), MAPp%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MAP_CopyConstrState (MAPp%z( STATE_SAVED_CURR), MAPp%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      !CALL MAP_CopyOtherState (MAPp%OtherSt(STATE_SS_CURR), MAPp%OtherSt(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      !CALL MAP_CopyOtherState (MAPp%OtherSt(STATE_SAVED_CURR), MAPp%OtherSt(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       !   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ELSEIF (p_FAST%CompMooring == Module_MD) THEN
@@ -6646,22 +6646,22 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL MD_CopyContState   (MD%x( STATE_SS_PRED), MD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyContState   (MD%x( STATE_SAVED_PRED), MD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MD_CopyDiscState   (MD%xd(STATE_SS_PRED), MD%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyDiscState   (MD%xd(STATE_SAVED_PRED), MD%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MD_CopyConstrState (MD%z( STATE_SS_PRED), MD%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyConstrState (MD%z( STATE_SAVED_PRED), MD%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MD_CopyOtherState (MD%OtherSt(STATE_SS_PRED), MD%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyOtherState (MD%OtherSt(STATE_SAVED_PRED), MD%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL MD_CopyContState   (MD%x( STATE_SS_CURR), MD%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyContState   (MD%x( STATE_SAVED_CURR), MD%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MD_CopyDiscState   (MD%xd(STATE_SS_CURR), MD%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyDiscState   (MD%xd(STATE_SAVED_CURR), MD%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MD_CopyConstrState (MD%z( STATE_SS_CURR), MD%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyConstrState (MD%z( STATE_SAVED_CURR), MD%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MD_CopyOtherState (MD%OtherSt(STATE_SS_CURR), MD%OtherSt(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyOtherState (MD%OtherSt(STATE_SAVED_CURR), MD%OtherSt(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ELSEIF (p_FAST%CompMooring == Module_FEAM) THEN
@@ -6677,22 +6677,22 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL FEAM_CopyContState   (FEAM%x( STATE_SS_PRED), FEAM%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyContState   (FEAM%x( STATE_SAVED_PRED), FEAM%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL FEAM_CopyDiscState   (FEAM%xd(STATE_SS_PRED), FEAM%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyDiscState   (FEAM%xd(STATE_SAVED_PRED), FEAM%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL FEAM_CopyConstrState (FEAM%z( STATE_SS_PRED), FEAM%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyConstrState (FEAM%z( STATE_SAVED_PRED), FEAM%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL FEAM_CopyOtherState (FEAM%OtherSt( STATE_SS_PRED), FEAM%OtherSt( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyOtherState (FEAM%OtherSt( STATE_SAVED_PRED), FEAM%OtherSt( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL FEAM_CopyContState   (FEAM%x( STATE_SS_CURR), FEAM%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyContState   (FEAM%x( STATE_SAVED_CURR), FEAM%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL FEAM_CopyDiscState   (FEAM%xd(STATE_SS_CURR), FEAM%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyDiscState   (FEAM%xd(STATE_SAVED_CURR), FEAM%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL FEAM_CopyConstrState (FEAM%z( STATE_SS_CURR), FEAM%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyConstrState (FEAM%z( STATE_SAVED_CURR), FEAM%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL FEAM_CopyOtherState (FEAM%OtherSt( STATE_SS_CURR), FEAM%OtherSt( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyOtherState (FEAM%OtherSt( STATE_SAVED_CURR), FEAM%OtherSt( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ELSEIF (p_FAST%CompMooring == Module_Orca) THEN
@@ -6707,22 +6707,22 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL Orca_CopyContState   (Orca%x( STATE_SS_PRED), Orca%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyContState   (Orca%x( STATE_SAVED_PRED), Orca%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL Orca_CopyDiscState   (Orca%xd(STATE_SS_PRED), Orca%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyDiscState   (Orca%xd(STATE_SAVED_PRED), Orca%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL Orca_CopyConstrState (Orca%z( STATE_SS_PRED), Orca%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyConstrState (Orca%z( STATE_SAVED_PRED), Orca%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL Orca_CopyOtherState (Orca%OtherSt( STATE_SS_PRED), Orca%OtherSt( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyOtherState (Orca%OtherSt( STATE_SAVED_PRED), Orca%OtherSt( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL Orca_CopyContState   (Orca%x( STATE_SS_CURR), Orca%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyContState   (Orca%x( STATE_SAVED_CURR), Orca%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL Orca_CopyDiscState   (Orca%xd(STATE_SS_CURR), Orca%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyDiscState   (Orca%xd(STATE_SAVED_CURR), Orca%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL Orca_CopyConstrState (Orca%z( STATE_SS_CURR), Orca%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyConstrState (Orca%z( STATE_SAVED_CURR), Orca%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL Orca_CopyOtherState (Orca%OtherSt( STATE_SS_CURR), Orca%OtherSt( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyOtherState (Orca%OtherSt( STATE_SAVED_CURR), Orca%OtherSt( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END IF ! CompMooring
@@ -6741,22 +6741,22 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL IceFloe_CopyContState   (IceF%x( STATE_SS_PRED), IceF%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyContState   (IceF%x( STATE_SAVED_PRED), IceF%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL IceFloe_CopyDiscState   (IceF%xd(STATE_SS_PRED), IceF%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyDiscState   (IceF%xd(STATE_SAVED_PRED), IceF%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL IceFloe_CopyConstrState (IceF%z( STATE_SS_PRED), IceF%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyConstrState (IceF%z( STATE_SAVED_PRED), IceF%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL IceFloe_CopyOtherState (IceF%OtherSt(STATE_SS_PRED), IceF%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyOtherState (IceF%OtherSt(STATE_SAVED_PRED), IceF%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL IceFloe_CopyContState   (IceF%x( STATE_SS_CURR), IceF%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyContState   (IceF%x( STATE_SAVED_CURR), IceF%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL IceFloe_CopyDiscState   (IceF%xd(STATE_SS_CURR), IceF%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyDiscState   (IceF%xd(STATE_SAVED_CURR), IceF%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL IceFloe_CopyConstrState (IceF%z( STATE_SS_CURR), IceF%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyConstrState (IceF%z( STATE_SAVED_CURR), IceF%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL IceFloe_CopyOtherState (IceF%OtherSt(STATE_SS_CURR), IceF%OtherSt(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyOtherState (IceF%OtherSt(STATE_SAVED_CURR), IceF%OtherSt(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ELSEIF  (p_FAST%CompIce == Module_IceD ) THEN
@@ -6774,22 +6774,22 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
                CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END DO
 
-         CALL IceD_CopyContState   (IceD%x( i,STATE_SS_PRED), IceD%x( i,STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyContState   (IceD%x( i,STATE_SAVED_PRED), IceD%x( i,STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL IceD_CopyDiscState   (IceD%xd(i,STATE_SS_PRED), IceD%xd(i,STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyDiscState   (IceD%xd(i,STATE_SAVED_PRED), IceD%xd(i,STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL IceD_CopyConstrState (IceD%z( i,STATE_SS_PRED), IceD%z( i,STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyConstrState (IceD%z( i,STATE_SAVED_PRED), IceD%z( i,STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL IceD_CopyOtherState (IceD%OtherSt( i,STATE_SS_PRED), IceD%OtherSt( i,STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyOtherState (IceD%OtherSt( i,STATE_SAVED_PRED), IceD%OtherSt( i,STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-         CALL IceD_CopyContState   (IceD%x( i,STATE_SS_CURR), IceD%x( i,STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyContState   (IceD%x( i,STATE_SAVED_CURR), IceD%x( i,STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL IceD_CopyDiscState   (IceD%xd(i,STATE_SS_CURR), IceD%xd(i,STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyDiscState   (IceD%xd(i,STATE_SAVED_CURR), IceD%xd(i,STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL IceD_CopyConstrState (IceD%z( i,STATE_SS_CURR), IceD%z( i,STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyConstrState (IceD%z( i,STATE_SAVED_CURR), IceD%z( i,STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL IceD_CopyOtherState (IceD%OtherSt( i,STATE_SS_CURR), IceD%OtherSt( i,STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyOtherState (IceD%OtherSt( i,STATE_SAVED_CURR), IceD%OtherSt( i,STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       END DO ! numIceLegs
@@ -6804,11 +6804,11 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
    m_FAST%t_global = t_global
 !   y_FAST%n_Out = y_FAST%n_Out - n_timesteps
 
-END SUBROUTINE FAST_Reset_SS
+END SUBROUTINE FAST_Reset_SubStep
 !----------------------------------------------------------------------------------------------------------------------------------
-!> Routine that calls FAST_Store_SS for one instance of a Turbine data structure. This is a separate subroutine so that the FAST
+!> Routine that calls FAST_Store_SubStep for one instance of a Turbine data structure. This is a separate subroutine so that the FAST
 !! driver programs do not need to change or operate on the individual module level.
-SUBROUTINE FAST_Store_SS_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg )
+SUBROUTINE FAST_Store_SubStep_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg )
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           !< initial time
    INTEGER(IntKi),           INTENT(IN   ) :: n_t_global          !< loop counter
@@ -6816,15 +6816,15 @@ SUBROUTINE FAST_Store_SS_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg )
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
-      CALL FAST_Store_SS(t_initial, n_t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
+      CALL FAST_Store_SubStep(t_initial, n_t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                   Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%ExtInfw, &
                   Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                   Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )
 
-END SUBROUTINE FAST_Store_SS_T
+END SUBROUTINE FAST_Store_SubStep_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine resets the states, inputs and output data from n_t_global to n_t_global - 1
-SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, ExtInfw, HD, SD, ExtPtfm, &
+SUBROUTINE FAST_Store_SubStep(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, ExtInfw, HD, SD, ExtPtfm, &
                          MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
 
    USE BladedInterface, ONLY: CallBladedDLL  ! Hack for Bladed-style DLL
@@ -6868,7 +6868,7 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
 
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
-   CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_Solution'
+   CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_Store_SubStep'
 
 
    ErrStat = ErrID_None
@@ -6894,22 +6894,22 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
 
 
    ! ElastoDyn: copy final predictions to actual states
-   CALL ED_CopyContState   (ED%x( STATE_PRED), ED%x( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyContState   (ED%x( STATE_PRED), ED%x( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ED_CopyDiscState   (ED%xd(STATE_PRED), ED%xd(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyDiscState   (ED%xd(STATE_PRED), ED%xd(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ED_CopyConstrState (ED%z( STATE_PRED), ED%z( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyConstrState (ED%z( STATE_PRED), ED%z( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ED_CopyOtherState (ED%OtherSt( STATE_PRED), ED%OtherSt( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyOtherState (ED%OtherSt( STATE_PRED), ED%OtherSt( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   CALL ED_CopyContState   (ED%x( STATE_CURR), ED%x( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyContState   (ED%x( STATE_CURR), ED%x( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ED_CopyDiscState   (ED%xd(STATE_CURR), ED%xd(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyDiscState   (ED%xd(STATE_CURR), ED%xd(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ED_CopyConstrState (ED%z( STATE_CURR), ED%z( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyConstrState (ED%z( STATE_CURR), ED%z( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ED_CopyOtherState (ED%OtherSt( STATE_CURR), ED%OtherSt( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL ED_CopyOtherState (ED%OtherSt( STATE_CURR), ED%OtherSt( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    IF  (p_FAST%CompElast == Module_BD ) THEN
@@ -6926,22 +6926,22 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END DO
 
-         CALL BD_CopyContState   (BD%x( k,STATE_PRED), BD%x( k,STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyContState   (BD%x( k,STATE_PRED), BD%x( k,STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL BD_CopyDiscState   (BD%xd(k,STATE_PRED), BD%xd(k,STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyDiscState   (BD%xd(k,STATE_PRED), BD%xd(k,STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL BD_CopyConstrState (BD%z( k,STATE_PRED), BD%z( k,STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyConstrState (BD%z( k,STATE_PRED), BD%z( k,STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL BD_CopyOtherState (BD%OtherSt( k,STATE_PRED), BD%OtherSt( k,STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyOtherState (BD%OtherSt( k,STATE_PRED), BD%OtherSt( k,STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-         CALL BD_CopyContState   (BD%x( k,STATE_CURR), BD%x( k,STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyContState   (BD%x( k,STATE_CURR), BD%x( k,STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL BD_CopyDiscState   (BD%xd(k,STATE_CURR), BD%xd(k,STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyDiscState   (BD%xd(k,STATE_CURR), BD%xd(k,STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL BD_CopyConstrState (BD%z( k,STATE_CURR), BD%z( k,STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyConstrState (BD%z( k,STATE_CURR), BD%z( k,STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL BD_CopyOtherState (BD%OtherSt( k,STATE_CURR), BD%OtherSt( k,STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL BD_CopyOtherState (BD%OtherSt( k,STATE_CURR), BD%OtherSt( k,STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6959,22 +6959,22 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL SrvD_CopyContState   (SrvD%x( STATE_PRED), SrvD%x( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyContState   (SrvD%x( STATE_PRED), SrvD%x( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SrvD_CopyDiscState   (SrvD%xd(STATE_PRED), SrvD%xd(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyDiscState   (SrvD%xd(STATE_PRED), SrvD%xd(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SrvD_CopyConstrState (SrvD%z( STATE_PRED), SrvD%z( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyConstrState (SrvD%z( STATE_PRED), SrvD%z( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SrvD_CopyOtherState (SrvD%OtherSt( STATE_PRED), SrvD%OtherSt( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyOtherState (SrvD%OtherSt( STATE_PRED), SrvD%OtherSt( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL SrvD_CopyContState   (SrvD%x( STATE_CURR), SrvD%x( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyContState   (SrvD%x( STATE_CURR), SrvD%x( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SrvD_CopyDiscState   (SrvD%xd(STATE_CURR), SrvD%xd(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyDiscState   (SrvD%xd(STATE_CURR), SrvD%xd(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SrvD_CopyConstrState (SrvD%z( STATE_CURR), SrvD%z( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyConstrState (SrvD%z( STATE_CURR), SrvD%z( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SrvD_CopyOtherState (SrvD%OtherSt( STATE_CURR), SrvD%OtherSt( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyOtherState (SrvD%OtherSt( STATE_CURR), SrvD%OtherSt( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       CALL SrvD_CopyMisc( SrvD%m, SrvD%m_bak, MESH_UPDATECOPY, Errstat2, ErrMsg2)
@@ -6994,22 +6994,22 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL AD14_CopyContState   (AD14%x( STATE_PRED), AD14%x( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyContState   (AD14%x( STATE_PRED), AD14%x( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD14_CopyDiscState   (AD14%xd(STATE_PRED), AD14%xd(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyDiscState   (AD14%xd(STATE_PRED), AD14%xd(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD14_CopyConstrState (AD14%z( STATE_PRED), AD14%z( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyConstrState (AD14%z( STATE_PRED), AD14%z( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD14_CopyOtherState (AD14%OtherSt(STATE_PRED), AD14%OtherSt(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyOtherState (AD14%OtherSt(STATE_PRED), AD14%OtherSt(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL AD14_CopyContState   (AD14%x( STATE_CURR), AD14%x( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyContState   (AD14%x( STATE_CURR), AD14%x( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD14_CopyDiscState   (AD14%xd(STATE_CURR), AD14%xd(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyDiscState   (AD14%xd(STATE_CURR), AD14%xd(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD14_CopyConstrState (AD14%z( STATE_CURR), AD14%z( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyConstrState (AD14%z( STATE_CURR), AD14%z( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD14_CopyOtherState (AD14%OtherSt(STATE_CURR), AD14%OtherSt(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD14_CopyOtherState (AD14%OtherSt(STATE_CURR), AD14%OtherSt(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ELSEIF ( (p_FAST%CompAero == Module_AD) .or. (p_FAST%CompAero == Module_ExtLd) ) THEN
@@ -7024,22 +7024,22 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL AD_CopyContState   (AD%x( STATE_PRED), AD%x( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyContState   (AD%x( STATE_PRED), AD%x( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD_CopyDiscState   (AD%xd(STATE_PRED), AD%xd(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyDiscState   (AD%xd(STATE_PRED), AD%xd(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD_CopyConstrState (AD%z( STATE_PRED), AD%z( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyConstrState (AD%z( STATE_PRED), AD%z( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD_CopyOtherState (AD%OtherSt(STATE_PRED), AD%OtherSt(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyOtherState (AD%OtherSt(STATE_PRED), AD%OtherSt(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL AD_CopyContState   (AD%x( STATE_CURR), AD%x( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyContState   (AD%x( STATE_CURR), AD%x( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD_CopyDiscState   (AD%xd(STATE_CURR), AD%xd(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyDiscState   (AD%xd(STATE_CURR), AD%xd(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD_CopyConstrState (AD%z( STATE_CURR), AD%z( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyConstrState (AD%z( STATE_CURR), AD%z( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AD_CopyOtherState (AD%OtherSt(STATE_CURR), AD%OtherSt(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL AD_CopyOtherState (AD%OtherSt(STATE_CURR), AD%OtherSt(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END IF ! CompAero == Module_AD
@@ -7057,22 +7057,22 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL InflowWind_CopyContState   (IfW%x( STATE_PRED), IfW%x( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyContState   (IfW%x( STATE_PRED), IfW%x( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyDiscState   (IfW%xd(STATE_PRED), IfW%xd(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyDiscState   (IfW%xd(STATE_PRED), IfW%xd(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyConstrState (IfW%z( STATE_PRED), IfW%z( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyConstrState (IfW%z( STATE_PRED), IfW%z( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyOtherState (IfW%OtherSt( STATE_PRED), IfW%OtherSt( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyOtherState (IfW%OtherSt( STATE_PRED), IfW%OtherSt( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL InflowWind_CopyContState   (IfW%x( STATE_CURR), IfW%x( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyContState   (IfW%x( STATE_CURR), IfW%x( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyDiscState   (IfW%xd(STATE_CURR), IfW%xd(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyDiscState   (IfW%xd(STATE_CURR), IfW%xd(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyConstrState (IfW%z( STATE_CURR), IfW%z( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyConstrState (IfW%z( STATE_CURR), IfW%z( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyOtherState (IfW%OtherSt( STATE_CURR), IfW%OtherSt( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyOtherState (IfW%OtherSt( STATE_CURR), IfW%OtherSt( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END IF ! CompInflow == Module_IfW
@@ -7090,22 +7090,22 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL HydroDyn_CopyContState   (HD%x( STATE_PRED), HD%x( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyContState   (HD%x( STATE_PRED), HD%x( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL HydroDyn_CopyDiscState   (HD%xd(STATE_PRED), HD%xd(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyDiscState   (HD%xd(STATE_PRED), HD%xd(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL HydroDyn_CopyConstrState (HD%z( STATE_PRED), HD%z( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyConstrState (HD%z( STATE_PRED), HD%z( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL HydroDyn_CopyOtherState (HD%OtherSt(STATE_PRED), HD%OtherSt(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyOtherState (HD%OtherSt(STATE_PRED), HD%OtherSt(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL HydroDyn_CopyContState   (HD%x( STATE_CURR), HD%x( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyContState   (HD%x( STATE_CURR), HD%x( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL HydroDyn_CopyDiscState   (HD%xd(STATE_CURR), HD%xd(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyDiscState   (HD%xd(STATE_CURR), HD%xd(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL HydroDyn_CopyConstrState (HD%z( STATE_CURR), HD%z( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyConstrState (HD%z( STATE_CURR), HD%z( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL HydroDyn_CopyOtherState (HD%OtherSt(STATE_CURR), HD%OtherSt(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL HydroDyn_CopyOtherState (HD%OtherSt(STATE_CURR), HD%OtherSt(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END IF !CompHydro
@@ -7124,22 +7124,22 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL SD_CopyContState   (SD%x( STATE_PRED), SD%x( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyContState   (SD%x( STATE_PRED), SD%x( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SD_CopyDiscState   (SD%xd(STATE_PRED), SD%xd(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyDiscState   (SD%xd(STATE_PRED), SD%xd(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SD_CopyConstrState (SD%z( STATE_PRED), SD%z( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyConstrState (SD%z( STATE_PRED), SD%z( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SD_CopyOtherState (SD%OtherSt(STATE_PRED), SD%OtherSt(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyOtherState (SD%OtherSt(STATE_PRED), SD%OtherSt(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL SD_CopyContState   (SD%x( STATE_CURR), SD%x( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyContState   (SD%x( STATE_CURR), SD%x( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SD_CopyDiscState   (SD%xd(STATE_CURR), SD%xd(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyDiscState   (SD%xd(STATE_CURR), SD%xd(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SD_CopyConstrState (SD%z( STATE_CURR), SD%z( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyConstrState (SD%z( STATE_CURR), SD%z( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL SD_CopyOtherState (SD%OtherSt(STATE_CURR), SD%OtherSt(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL SD_CopyOtherState (SD%OtherSt(STATE_CURR), SD%OtherSt(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ELSE IF (p_FAST%CompSub == Module_ExtPtfm ) THEN
@@ -7154,22 +7154,22 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL ExtPtfm_CopyContState   (ExtPtfm%x( STATE_PRED), ExtPtfm%x( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyContState   (ExtPtfm%x( STATE_PRED), ExtPtfm%x( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyDiscState   (ExtPtfm%xd(STATE_PRED), ExtPtfm%xd(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyDiscState   (ExtPtfm%xd(STATE_PRED), ExtPtfm%xd(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyConstrState (ExtPtfm%z( STATE_PRED), ExtPtfm%z( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyConstrState (ExtPtfm%z( STATE_PRED), ExtPtfm%z( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyOtherState (ExtPtfm%OtherSt(STATE_PRED), ExtPtfm%OtherSt(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyOtherState (ExtPtfm%OtherSt(STATE_PRED), ExtPtfm%OtherSt(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL ExtPtfm_CopyContState   (ExtPtfm%x( STATE_CURR), ExtPtfm%x( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyContState   (ExtPtfm%x( STATE_CURR), ExtPtfm%x( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyDiscState   (ExtPtfm%xd(STATE_CURR), ExtPtfm%xd(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyDiscState   (ExtPtfm%xd(STATE_CURR), ExtPtfm%xd(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyConstrState (ExtPtfm%z( STATE_CURR), ExtPtfm%z( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyConstrState (ExtPtfm%z( STATE_CURR), ExtPtfm%z( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyOtherState (ExtPtfm%OtherSt(STATE_CURR), ExtPtfm%OtherSt(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL ExtPtfm_CopyOtherState (ExtPtfm%OtherSt(STATE_CURR), ExtPtfm%OtherSt(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END IF ! CompSub
@@ -7188,22 +7188,22 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL MAP_CopyContState   (MAPp%x( STATE_PRED), MAPp%x( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MAP_CopyContState   (MAPp%x( STATE_PRED), MAPp%x( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MAP_CopyDiscState   (MAPp%xd(STATE_PRED), MAPp%xd(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MAP_CopyDiscState   (MAPp%xd(STATE_PRED), MAPp%xd(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MAP_CopyConstrState (MAPp%z( STATE_PRED), MAPp%z( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MAP_CopyConstrState (MAPp%z( STATE_PRED), MAPp%z( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      !CALL MAP_CopyOtherState (MAPp%OtherSt(STATE_PRED), MAPp%OtherSt(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      !CALL MAP_CopyOtherState (MAPp%OtherSt(STATE_PRED), MAPp%OtherSt(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       !   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL MAP_CopyContState   (MAPp%x( STATE_CURR), MAPp%x( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MAP_CopyContState   (MAPp%x( STATE_CURR), MAPp%x( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MAP_CopyDiscState   (MAPp%xd(STATE_CURR), MAPp%xd(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MAP_CopyDiscState   (MAPp%xd(STATE_CURR), MAPp%xd(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MAP_CopyConstrState (MAPp%z( STATE_CURR), MAPp%z( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MAP_CopyConstrState (MAPp%z( STATE_CURR), MAPp%z( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      !CALL MAP_CopyOtherState (MAPp%OtherSt(STATE_CURR), MAPp%OtherSt(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      !CALL MAP_CopyOtherState (MAPp%OtherSt(STATE_CURR), MAPp%OtherSt(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       !   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ELSEIF (p_FAST%CompMooring == Module_MD) THEN
@@ -7219,22 +7219,22 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL MD_CopyContState   (MD%x( STATE_PRED), MD%x( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyContState   (MD%x( STATE_PRED), MD%x( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MD_CopyDiscState   (MD%xd(STATE_PRED), MD%xd(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyDiscState   (MD%xd(STATE_PRED), MD%xd(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MD_CopyConstrState (MD%z( STATE_PRED), MD%z( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyConstrState (MD%z( STATE_PRED), MD%z( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MD_CopyOtherState (MD%OtherSt(STATE_PRED), MD%OtherSt(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyOtherState (MD%OtherSt(STATE_PRED), MD%OtherSt(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL MD_CopyContState   (MD%x( STATE_CURR), MD%x( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyContState   (MD%x( STATE_CURR), MD%x( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MD_CopyDiscState   (MD%xd(STATE_CURR), MD%xd(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyDiscState   (MD%xd(STATE_CURR), MD%xd(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MD_CopyConstrState (MD%z( STATE_CURR), MD%z( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyConstrState (MD%z( STATE_CURR), MD%z( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MD_CopyOtherState (MD%OtherSt(STATE_CURR), MD%OtherSt(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL MD_CopyOtherState (MD%OtherSt(STATE_CURR), MD%OtherSt(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ELSEIF (p_FAST%CompMooring == Module_FEAM) THEN
@@ -7250,22 +7250,22 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL FEAM_CopyContState   (FEAM%x( STATE_PRED), FEAM%x( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyContState   (FEAM%x( STATE_PRED), FEAM%x( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL FEAM_CopyDiscState   (FEAM%xd(STATE_PRED), FEAM%xd(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyDiscState   (FEAM%xd(STATE_PRED), FEAM%xd(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL FEAM_CopyConstrState (FEAM%z( STATE_PRED), FEAM%z( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyConstrState (FEAM%z( STATE_PRED), FEAM%z( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL FEAM_CopyOtherState (FEAM%OtherSt( STATE_PRED), FEAM%OtherSt( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyOtherState (FEAM%OtherSt( STATE_PRED), FEAM%OtherSt( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL FEAM_CopyContState   (FEAM%x( STATE_CURR), FEAM%x( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyContState   (FEAM%x( STATE_CURR), FEAM%x( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL FEAM_CopyDiscState   (FEAM%xd(STATE_CURR), FEAM%xd(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyDiscState   (FEAM%xd(STATE_CURR), FEAM%xd(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL FEAM_CopyConstrState (FEAM%z( STATE_CURR), FEAM%z( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyConstrState (FEAM%z( STATE_CURR), FEAM%z( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL FEAM_CopyOtherState (FEAM%OtherSt( STATE_CURR), FEAM%OtherSt( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL FEAM_CopyOtherState (FEAM%OtherSt( STATE_CURR), FEAM%OtherSt( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ELSEIF (p_FAST%CompMooring == Module_Orca) THEN
@@ -7280,22 +7280,22 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL Orca_CopyContState   (Orca%x( STATE_PRED), Orca%x( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyContState   (Orca%x( STATE_PRED), Orca%x( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL Orca_CopyDiscState   (Orca%xd(STATE_PRED), Orca%xd(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyDiscState   (Orca%xd(STATE_PRED), Orca%xd(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL Orca_CopyConstrState (Orca%z( STATE_PRED), Orca%z( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyConstrState (Orca%z( STATE_PRED), Orca%z( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL Orca_CopyOtherState (Orca%OtherSt( STATE_PRED), Orca%OtherSt( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyOtherState (Orca%OtherSt( STATE_PRED), Orca%OtherSt( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL Orca_CopyContState   (Orca%x( STATE_CURR), Orca%x( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyContState   (Orca%x( STATE_CURR), Orca%x( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL Orca_CopyDiscState   (Orca%xd(STATE_CURR), Orca%xd(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyDiscState   (Orca%xd(STATE_CURR), Orca%xd(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL Orca_CopyConstrState (Orca%z( STATE_CURR), Orca%z( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyConstrState (Orca%z( STATE_CURR), Orca%z( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL Orca_CopyOtherState (Orca%OtherSt( STATE_CURR), Orca%OtherSt( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL Orca_CopyOtherState (Orca%OtherSt( STATE_CURR), Orca%OtherSt( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END IF ! CompMooring
@@ -7314,22 +7314,22 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
-      CALL IceFloe_CopyContState   (IceF%x( STATE_PRED), IceF%x( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyContState   (IceF%x( STATE_PRED), IceF%x( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL IceFloe_CopyDiscState   (IceF%xd(STATE_PRED), IceF%xd(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyDiscState   (IceF%xd(STATE_PRED), IceF%xd(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL IceFloe_CopyConstrState (IceF%z( STATE_PRED), IceF%z( STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyConstrState (IceF%z( STATE_PRED), IceF%z( STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL IceFloe_CopyOtherState (IceF%OtherSt(STATE_PRED), IceF%OtherSt(STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyOtherState (IceF%OtherSt(STATE_PRED), IceF%OtherSt(STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL IceFloe_CopyContState   (IceF%x( STATE_CURR), IceF%x( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyContState   (IceF%x( STATE_CURR), IceF%x( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL IceFloe_CopyDiscState   (IceF%xd(STATE_CURR), IceF%xd(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyDiscState   (IceF%xd(STATE_CURR), IceF%xd(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL IceFloe_CopyConstrState (IceF%z( STATE_CURR), IceF%z( STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyConstrState (IceF%z( STATE_CURR), IceF%z( STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL IceFloe_CopyOtherState (IceF%OtherSt(STATE_CURR), IceF%OtherSt(STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL IceFloe_CopyOtherState (IceF%OtherSt(STATE_CURR), IceF%OtherSt(STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ELSEIF  (p_FAST%CompIce == Module_IceD ) THEN
@@ -7347,22 +7347,22 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
                CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END DO
 
-         CALL IceD_CopyContState   (IceD%x( i,STATE_PRED), IceD%x( i,STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyContState   (IceD%x( i,STATE_PRED), IceD%x( i,STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL IceD_CopyDiscState   (IceD%xd(i,STATE_PRED), IceD%xd(i,STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyDiscState   (IceD%xd(i,STATE_PRED), IceD%xd(i,STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL IceD_CopyConstrState (IceD%z( i,STATE_PRED), IceD%z( i,STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyConstrState (IceD%z( i,STATE_PRED), IceD%z( i,STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL IceD_CopyOtherState (IceD%OtherSt( i,STATE_PRED), IceD%OtherSt( i,STATE_SS_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyOtherState (IceD%OtherSt( i,STATE_PRED), IceD%OtherSt( i,STATE_SAVED_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-         CALL IceD_CopyContState   (IceD%x( i,STATE_CURR), IceD%x( i,STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyContState   (IceD%x( i,STATE_CURR), IceD%x( i,STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL IceD_CopyDiscState   (IceD%xd(i,STATE_CURR), IceD%xd(i,STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyDiscState   (IceD%xd(i,STATE_CURR), IceD%xd(i,STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL IceD_CopyConstrState (IceD%z( i,STATE_CURR), IceD%z( i,STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyConstrState (IceD%z( i,STATE_CURR), IceD%z( i,STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL IceD_CopyOtherState (IceD%OtherSt( i,STATE_CURR), IceD%OtherSt( i,STATE_SS_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL IceD_CopyOtherState (IceD%OtherSt( i,STATE_CURR), IceD%OtherSt( i,STATE_SAVED_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       END DO ! numIceLegs
@@ -7382,7 +7382,7 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
       end if
    end if
 
-END SUBROUTINE FAST_Store_SS
+END SUBROUTINE FAST_Store_SubStep
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that calls FAST_Prework for one instance of a Turbine data structure. This is a separate subroutine so that the FAST
 !! driver programs do not need to change or operate on the individual module level.

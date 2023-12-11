@@ -944,7 +944,7 @@ void fast::OpenFAST::solution0(bool writeFiles) {
             FAST_CFD_Solution0(&iTurb, &ErrStat, ErrMsg);
             checkError(ErrStat, ErrMsg);
 
-            FAST_CFD_InitIOarrays_SS(&iTurb, &ErrStat, ErrMsg);
+            FAST_CFD_InitIOarrays_SubStep(&iTurb, &ErrStat, ErrMsg);
             checkError(ErrStat, ErrMsg);
         }
 
@@ -1177,7 +1177,7 @@ void fast::OpenFAST::prework() {
     if (nSubsteps_ > 1) {
 
         for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-            FAST_CFD_Store_SS(&iTurb, &nt_global, &ErrStat, ErrMsg) ;
+            FAST_CFD_Store_SubStep(&iTurb, &nt_global, &ErrStat, ErrMsg) ;
             checkError(ErrStat, ErrMsg);
         }
 
@@ -1203,7 +1203,7 @@ void fast::OpenFAST::update_states_driver_time_step(bool writeFiles) {
 
         if (!firstPass_) {
             for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-                FAST_CFD_Reset_SS(&iTurb, &nSubsteps_, &ErrStat, ErrMsg);
+                FAST_CFD_Reset_SubStep(&iTurb, &nSubsteps_, &ErrStat, ErrMsg);
                 checkError(ErrStat, ErrMsg);
             }
         }

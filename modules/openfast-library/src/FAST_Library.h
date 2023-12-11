@@ -30,14 +30,14 @@ EXTERNAL_ROUTINE void FAST_ExtInfw_Init(int * iTurb, double *TMax, const char *I
 EXTERNAL_ROUTINE void FAST_ExtLoads_Restart(int * iTurb, const char *CheckpointRootName, int *AbortErrLev, double * dt, int * NumBl, int * n_t_global, ExtLdDX_InputType_t* ExtLdDX_Input, ExtLdDX_OutputType_t* ExtLdDX_Output, SC_DX_InputType_t* SC_DX_Input, SC_DX_OutputType_t* SC_DX_Output, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_ExtLoads_Init(int * iTurb, double *TMax, const char *InputFileName, int * TurbineID, char *OutFileRoot, float * TurbinePosition, int *AbortErrLev, double * dtDriver, double * dt, int * NumBl, double * az_blend_mean, double * az_blend_delta, double * vel_mean, double * wind_dir, double * z_ref, double * shear_exp, ExtLdDX_InputType_t* ExtLdDX_Input, ExtLdDX_OutputType_t* ExtLdDX_Output, SC_DX_InputType_t* SC_DX_Input, SC_DX_OutputType_t* SC_DX_Output, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_CFD_Solution0(int * iTurb, int *ErrStat, char *ErrMsg);
-EXTERNAL_ROUTINE void FAST_CFD_InitIOarrays_SS(int * iTurb, int *ErrStat, char *ErrMsg);
+EXTERNAL_ROUTINE void FAST_CFD_InitIOarrays_SubStep(int * iTurb, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_CFD_Prework(int * iTurb, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_CFD_UpdateStates(int * iTurb, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_CFD_AdvanceToNextTimeStep(int * iTurb, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_CFD_WriteOutput(int * iTurb, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_CFD_Step(int * iTurb, int *ErrStat, char *ErrMsg);
-EXTERNAL_ROUTINE void FAST_CFD_Reset_SS(int * iTurb, int * n_timesteps, int *ErrStat, char *ErrMsg);
-EXTERNAL_ROUTINE void FAST_CFD_Store_SS(int * iTurb, int * n_t_global,  int *ErrStat, char *ErrMsg);
+EXTERNAL_ROUTINE void FAST_CFD_Reset_SubStep(int * iTurb, int * n_timesteps, int *ErrStat, char *ErrMsg);
+EXTERNAL_ROUTINE void FAST_CFD_Store_SubStep(int * iTurb, int * n_t_global,  int *ErrStat, char *ErrMsg);
 
 EXTERNAL_ROUTINE void FAST_HubPosition(int * iTurb, float * absolute_position, float * rotation_veocity, double * orientation_dcm, int *ErrStat, char *ErrMsg);
 
