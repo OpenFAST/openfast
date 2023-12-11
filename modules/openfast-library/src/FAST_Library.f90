@@ -704,13 +704,19 @@ subroutine FAST_ExtInfw_Init(iTurb, TMax, InputFileName_c, TurbID, OutFileRoot_c
 
    dt_c = Turbine(iTurb)%p_FAST%dt
 
-   InflowType = Turbine(iTurb)%p_FAST%CompInflow
+   if (Turbine(iTurb)%p_FAST%CompInflow == Module_ExtInfw) then
+      InflowType = 2
+   else if (Turbine(iTurb)%p_FAST%CompInflow == Module_IfW) then
+      InflowType = 1
+   else
+      InflowType = 0
+   end if
 
-   if ( (InflowType == 3) .and. (NumActForcePtsBlade .eq. 0) .and. (NumActForcePtsTower .eq. 0) ) then
+   if ( (Turbine(iTurb)%p_FAST%CompInflow == Module_ExtInfw) .and. (NumActForcePtsBlade .eq. 0) .and. (NumActForcePtsTower .eq. 0) ) then
       CALL SetErrStat(ErrID_Warn, "Number of actuator points is zero when inflow type is 2. Mapping of loads may not work. ", ErrStat, ErrMsg, RoutineName )
    end if
 
-   if ( (InflowType .ne. 3) .and. ((NumActForcePtsBlade .ne. 0) .or. (NumActForcePtsTower .ne. 0)) ) then
+   if ( (Turbine(iTurb)%p_FAST%CompInflow .ne. Module_ExtInfw) .and. ((NumActForcePtsBlade .ne. 0) .or. (NumActForcePtsTower .ne. 0)) ) then
       !!FAST reassigns CompInflow after reading it to a module number based on an internal list in the FAST_Registry. So 2 in input file becomes 3 inside the code.
       CALL SetErrStat(ErrID_Fatal, "Number of requested actuator points is non-zero when inflow type is not 2. Please set number of actuator points to zero when induction is turned on.", ErrStat, ErrMsg, RoutineName )
       ErrStat_c = ErrStat

@@ -71,6 +71,9 @@ void readTurbineData(int iTurb, fast::fastInputs & fi, YAML::Node turbNode) {
 
   get_if_present(turbNode, "num_force_pts_blade", fi.globTurbineData[iTurb].numForcePtsBlade, 0);
   get_if_present(turbNode, "num_force_pts_tower", fi.globTurbineData[iTurb].numForcePtsTwr, 0);
+  fi.globTurbineData[iTurb].numForcePts =
+      fi.globTurbineData[iTurb].numForcePtsBlade +
+      fi.globTurbineData[iTurb].numForcePtsTwr;
 
   float fZero = 0.0;
   get_if_present(turbNode, "nacelle_cd", fi.globTurbineData[iTurb].nacelle_cd, fZero);
@@ -145,7 +148,7 @@ void readInputFile(fast::fastInputs & fi, std::string cInterfaceInputFile, doubl
         get_if_present(cDriverInp, "set_exp_law_wind", *setExpLawWind, false);
         get_if_present(cDriverInp, "set_uniform_x_blade_forces", *setUniformXBladeForces, false);
         if (setUniformXBladeForces)
-            get_required(cDriverInp, "x_blade_force", *xBladeForce);
+            get_if_present(cDriverInp, "x_blade_force", *xBladeForce, 0.0);
 
         get_if_present(cDriverInp, "super_controller", fi.scStatus, false);
         if(fi.scStatus) {
@@ -197,7 +200,7 @@ int main(int argc, char** argv) {
     bool setUniformXBladeForces; // Set uniform X blade forces on all blade nodes
     int nIter;
     double xBladeForce = 0.0;
-    
+
     std::string cDriverInputFile=argv[1];
     fast::OpenFAST FAST;
     fast::fastInputs fi ;
