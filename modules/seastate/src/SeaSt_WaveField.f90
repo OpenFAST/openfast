@@ -648,7 +648,7 @@ SUBROUTINE WaveField_GetWaveVelAcc_AD( WaveField, SeaSt_Interp_m, StartNode, Tim
    REAL(DbKi),                INTENT( IN    ) :: Time
    REAL(ReKi),                INTENT( IN    ) :: pos(:,:) ! z=0 at MSL
    REAL(ReKi),                INTENT(   OUT ) :: FV(:,:)
-   REAL(ReKi), ALLOCATABLE,   INTENT(   OUT ) :: FA(:,:)
+   REAL(ReKi), ALLOCATABLE,   INTENT( INOUT ) :: FA(:,:)
    INTEGER(IntKi),            INTENT(   OUT ) :: ErrStat ! Error status of the operation
    CHARACTER(*),              INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
    INTEGER(IntKi), ALLOCATABLE                :: nodeInWater(:)
