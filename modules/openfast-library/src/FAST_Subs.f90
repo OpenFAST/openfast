@@ -242,9 +242,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          RETURN
       END IF
 
-   ALLOCATE( ED%Input_bak( p_FAST%InterpOrder+1 ), ED%InputTimes_bak( p_FAST%InterpOrder+1 ), ED%Output_bak( p_FAST%InterpOrder+1 ),STAT = ErrStat2 )
+   ALLOCATE( ED%Input_Saved( p_FAST%InterpOrder+1 ), ED%InputTimes_Saved( p_FAST%InterpOrder+1 ), ED%Output_bak( p_FAST%InterpOrder+1 ),STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating ED%Input_bak, ED%Output_bak, and ED%InputTimes_bak.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Fatal,"Error allocating ED%Input_Saved, ED%Output_bak, and ED%InputTimes_Saved.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF
@@ -332,9 +332,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          RETURN
       END IF
 
-   ALLOCATE( BD%Input_bak( p_FAST%InterpOrder+1, p_FAST%nBeams ), BD%InputTimes_bak( p_FAST%InterpOrder+1, p_FAST%nBeams ), STAT = ErrStat2 )
+   ALLOCATE( BD%Input_Saved( p_FAST%InterpOrder+1, p_FAST%nBeams ), BD%InputTimes_Saved( p_FAST%InterpOrder+1, p_FAST%nBeams ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating BD%Input_bak and BD%InputTimes_bak.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Fatal,"Error allocating BD%Input_Saved and BD%InputTimes_Saved.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF
@@ -448,9 +448,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          RETURN
       END IF
 
-   ALLOCATE( AD14%Input_bak( p_FAST%InterpOrder+1 ), AD14%InputTimes_bak( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+   ALLOCATE( AD14%Input_Saved( p_FAST%InterpOrder+1 ), AD14%InputTimes_Saved( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating AD14%Input_bak and AD14%InputTimes_bak.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Fatal,"Error allocating AD14%Input_Saved and AD14%InputTimes_Saved.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF
@@ -462,7 +462,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          RETURN
       END IF
 
-   ALLOCATE( AD%Input_bak( p_FAST%InterpOrder+1 ), AD%InputTimes_bak( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+   ALLOCATE( AD%Input_Saved( p_FAST%InterpOrder+1 ), AD%InputTimes_Saved( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
          CALL SetErrStat(ErrID_Fatal,"Error allocating AD%Input and AD%InputTimes.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
@@ -627,9 +627,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          RETURN
       END IF
 
-   ALLOCATE( IfW%Input_bak( p_FAST%InterpOrder+1 ), IfW%InputTimes_bak( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+   ALLOCATE( IfW%Input_Saved( p_FAST%InterpOrder+1 ), IfW%InputTimes_Saved( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating IfW%Input_bak and IfW%InputTimes_bak.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Fatal,"Error allocating IfW%Input_Saved and IfW%InputTimes_Saved.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF
@@ -848,9 +848,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          RETURN
       END IF
 
-   ALLOCATE( SeaSt%Input_bak( p_FAST%InterpOrder+1 ), SeaSt%InputTimes_bak( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+   ALLOCATE( SeaSt%Input_Saved( p_FAST%InterpOrder+1 ), SeaSt%InputTimes_Saved( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating SeaSt%Input_bak and SeaSt%InputTimes_bak.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Fatal,"Error allocating SeaSt%Input_Saved and SeaSt%InputTimes_Saved.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF
@@ -944,9 +944,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          RETURN
       END IF
 
-   ALLOCATE( HD%Input_bak( p_FAST%InterpOrder+1 ), HD%InputTimes_bak( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+   ALLOCATE( HD%Input_Saved( p_FAST%InterpOrder+1 ), HD%InputTimes_Saved( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating HD%Input_bak and HD%InputTimes_bak.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Fatal,"Error allocating HD%Input_Saved and HD%InputTimes_Saved.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF
@@ -1006,9 +1006,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          RETURN
       END IF
 
-   ALLOCATE( SD%Input_bak( p_FAST%InterpOrder+1 ), SD%InputTimes_bak( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+   ALLOCATE( SD%Input_Saved( p_FAST%InterpOrder+1 ), SD%InputTimes_Saved( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating SD%Input_bak and SD%InputTimes_bak.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Fatal,"Error allocating SD%Input_Saved and SD%InputTimes_Saved.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF
@@ -1020,9 +1020,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          RETURN
       END IF
 
-   ALLOCATE( ExtPtfm%Input_bak( p_FAST%InterpOrder+1 ), ExtPtfm%InputTimes_bak( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+   ALLOCATE( ExtPtfm%Input_Saved( p_FAST%InterpOrder+1 ), ExtPtfm%InputTimes_Saved( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating ExtPtfm%Input_bak and ExtPtfm%InputTimes_bak.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Fatal,"Error allocating ExtPtfm%Input_Saved and ExtPtfm%InputTimes_Saved.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF
@@ -1118,9 +1118,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          CALL Cleanup()
          RETURN
       END IF
-   ALLOCATE( MAPp%Input_bak( p_FAST%InterpOrder+1 ), MAPp%InputTimes_bak( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+   ALLOCATE( MAPp%Input_Saved( p_FAST%InterpOrder+1 ), MAPp%InputTimes_Saved( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating MAPp%Input_bak and MAPp%InputTimes_bak.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Fatal,"Error allocating MAPp%Input_Saved and MAPp%InputTimes_Saved.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF
@@ -1130,9 +1130,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          CALL Cleanup()
          RETURN
       END IF
-   ALLOCATE( MD%Input_bak( p_FAST%InterpOrder+1 ), MD%InputTimes_bak( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+   ALLOCATE( MD%Input_Saved( p_FAST%InterpOrder+1 ), MD%InputTimes_Saved( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating MD%Input_bak and MD%InputTimes_bak.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Fatal,"Error allocating MD%Input_Saved and MD%InputTimes_Saved.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF
@@ -1142,9 +1142,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          CALL Cleanup()
          RETURN
       END IF
-   ALLOCATE( FEAM%Input_bak( p_FAST%InterpOrder+1 ), FEAM%InputTimes_bak( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+   ALLOCATE( FEAM%Input_Saved( p_FAST%InterpOrder+1 ), FEAM%InputTimes_Saved( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating FEAM%Input_bak and FEAM%InputTimes_bak.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Fatal,"Error allocating FEAM%Input_Saved and FEAM%InputTimes_Saved.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF
@@ -1154,9 +1154,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          CALL Cleanup()
          RETURN
       END IF
-   ALLOCATE( Orca%Input_bak( p_FAST%InterpOrder+1 ), Orca%InputTimes_bak( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+   ALLOCATE( Orca%Input_Saved( p_FAST%InterpOrder+1 ), Orca%InputTimes_Saved( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating Orca%Input_bak and Orca%InputTimes_bak.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Fatal,"Error allocating Orca%Input_Saved and Orca%InputTimes_Saved.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF
@@ -1317,9 +1317,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          RETURN
       END IF
 
-   ALLOCATE( IceF%Input_bak( p_FAST%InterpOrder+1 ), IceF%InputTimes_bak( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+   ALLOCATE( IceF%Input_Saved( p_FAST%InterpOrder+1 ), IceF%InputTimes_Saved( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating IceF%Input_bak and IceF%InputTimes_bak.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Fatal,"Error allocating IceF%Input_Saved and IceF%InputTimes_Saved.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF
@@ -1341,9 +1341,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          RETURN
       END IF
 
-   ALLOCATE( IceD%Input_bak( p_FAST%InterpOrder+1, IceDim ), IceD%InputTimes_bak( p_FAST%InterpOrder+1, IceDim ), STAT = ErrStat2 )
+   ALLOCATE( IceD%Input_Saved( p_FAST%InterpOrder+1, IceDim ), IceD%InputTimes_Saved( p_FAST%InterpOrder+1, IceDim ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating IceD%Input_bak and IceD%InputTimes_bak.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Fatal,"Error allocating IceD%Input_Saved and IceD%InputTimes_Saved.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF
@@ -1450,9 +1450,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          RETURN
       END IF
       
-   ALLOCATE( SrvD%Input_bak( p_FAST%InterpOrder+1 ), SrvD%InputTimes_bak( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+   ALLOCATE( SrvD%Input_Saved( p_FAST%InterpOrder+1 ), SrvD%InputTimes_Saved( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating SrvD%Input_bak and SrvD%InputTimes_bak.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Fatal,"Error allocating SrvD%Input_Saved and SrvD%InputTimes_Saved.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF
@@ -5686,12 +5686,12 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
    ! order = SIZE(ED%Input)
 
    DO j = 1, p_FAST%InterpOrder + 1
-      ED%InputTimes_bak(j) = t_initial - (j - 1) * p_FAST%dt
+      ED%InputTimes_Saved(j) = t_initial - (j - 1) * p_FAST%dt
       !ED_OutputTimes(p_FAST%InterpOrder + 1 + j) = t_initial - (j - 1) * dt
    END DO
 
    DO j = 1, p_FAST%InterpOrder + 1
-      CALL ED_CopyInput (ED%Input(1),  ED%Input_bak(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL ED_CopyInput (ED%Input(1),  ED%Input_Saved(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       CALL ED_CopyOutput (ED%y, ED%Output_bak(1), MESH_NEWCOPY, Errstat2, ErrMsg2) !BJJ: THIS IS REALLY ONLY NECESSARY FOR ED-HD COUPLING AT THE MOMENT
@@ -5722,11 +5722,11 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
 
             ! Copy values for interpolation/extrapolation:
          DO j = 1, p_FAST%InterpOrder + 1
-            BD%InputTimes_bak(j,k) = t_initial - (j - 1) * p_FAST%dt
+            BD%InputTimes_Saved(j,k) = t_initial - (j - 1) * p_FAST%dt
          END DO
 
          DO j = 1, p_FAST%InterpOrder + 1
-            CALL BD_CopyInput (BD%Input(1,k),  BD%Input_bak(j,k),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+            CALL BD_CopyInput (BD%Input(1,k),  BD%Input_Saved(j,k),  MESH_NEWCOPY, Errstat2, ErrMsg2)
                CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END DO
 
@@ -5759,12 +5759,12 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
       ! Initialize Input-Output arrays for interpolation/extrapolation:
 
       DO j = 1, p_FAST%InterpOrder + 1
-         SrvD%InputTimes_bak(j) = t_initial - (j - 1) * p_FAST%dt
+         SrvD%InputTimes_Saved(j) = t_initial - (j - 1) * p_FAST%dt
          !SrvD_OutputTimes(j) = t_initial - (j - 1) * dt
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL SrvD_CopyInput (SrvD%Input(1),  SrvD%Input_bak(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL SrvD_CopyInput (SrvD%Input(1),  SrvD%Input_Saved(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -5798,11 +5798,11 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
          ! Copy values for interpolation/extrapolation:
 
       DO j = 1, p_FAST%InterpOrder + 1
-         AD14%InputTimes_bak(j) = t_initial - (j - 1) * p_FAST%dt
+         AD14%InputTimes_Saved(j) = t_initial - (j - 1) * p_FAST%dt
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL AD14_CopyInput (AD14%Input(1),  AD14%Input_bak(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL AD14_CopyInput (AD14%Input(1),  AD14%Input_Saved(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -5830,11 +5830,11 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
          ! Copy values for interpolation/extrapolation:
 
       DO j = 1, p_FAST%InterpOrder + 1
-         AD%InputTimes_bak(j) = t_initial - (j - 1) * p_FAST%dt
+         AD%InputTimes_Saved(j) = t_initial - (j - 1) * p_FAST%dt
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL AD_CopyInput (AD%Input(1),  AD%Input_bak(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL AD_CopyInput (AD%Input(1),  AD%Input_Saved(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -5866,12 +5866,12 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
          ! Copy values for interpolation/extrapolation:
 
       DO j = 1, p_FAST%InterpOrder + 1
-         IfW%InputTimes_bak(j) = t_initial - (j - 1) * p_FAST%dt
+         IfW%InputTimes_Saved(j) = t_initial - (j - 1) * p_FAST%dt
          !IfW%OutputTimes(i) = t_initial - (j - 1) * dt
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL InflowWind_CopyInput (IfW%Input(1),  IfW%Input_bak(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL InflowWind_CopyInput (IfW%Input(1),  IfW%Input_Saved(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -5901,12 +5901,12 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
    IF ( p_FAST%CompHydro == Module_HD ) THEN
          ! Copy values for interpolation/extrapolation:
       DO j = 1, p_FAST%InterpOrder + 1
-         HD%InputTimes_bak(j) = t_initial - (j - 1) * p_FAST%dt
+         HD%InputTimes_Saved(j) = t_initial - (j - 1) * p_FAST%dt
          !HD_OutputTimes(i) = t_initial - (j - 1) * dt
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL HydroDyn_CopyInput (HD%Input(1),  HD%Input_bak(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL HydroDyn_CopyInput (HD%Input(1),  HD%Input_Saved(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -5937,12 +5937,12 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
 
          ! Copy values for interpolation/extrapolation:
       DO j = 1, p_FAST%InterpOrder + 1
-         SD%InputTimes_bak(j) = t_initial - (j - 1) * p_FAST%dt
+         SD%InputTimes_Saved(j) = t_initial - (j - 1) * p_FAST%dt
          !SD_OutputTimes(i) = t_initial - (j - 1) * dt
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL SD_CopyInput (SD%Input(1),  SD%Input_bak(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL SD_CopyInput (SD%Input(1),  SD%Input_Saved(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -5970,11 +5970,11 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
 
          ! Copy values for interpolation/extrapolation:
       DO j = 1, p_FAST%InterpOrder + 1
-         ExtPtfm%InputTimes_bak(j) = t_initial - (j - 1) * p_FAST%dt
+         ExtPtfm%InputTimes_Saved(j) = t_initial - (j - 1) * p_FAST%dt
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL ExtPtfm_CopyInput (ExtPtfm%Input(1),  ExtPtfm%Input_bak(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL ExtPtfm_CopyInput (ExtPtfm%Input(1),  ExtPtfm%Input_Saved(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6005,12 +6005,12 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
          ! Copy values for interpolation/extrapolation:
 
       DO j = 1, p_FAST%InterpOrder + 1
-         MAPp%InputTimes_bak(j) = t_initial - (j - 1) * p_FAST%dt
+         MAPp%InputTimes_Saved(j) = t_initial - (j - 1) * p_FAST%dt
          !MAP_OutputTimes(i) = t_initial - (j - 1) * dt
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL MAP_CopyInput (MAPp%Input(1),  MAPp%Input_bak(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL MAP_CopyInput (MAPp%Input(1),  MAPp%Input_Saved(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6042,12 +6042,12 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
          ! Copy values for interpolation/extrapolation:
 
       DO j = 1, p_FAST%InterpOrder + 1
-         MD%InputTimes_bak(j) = t_initial - (j - 1) * p_FAST%dt
+         MD%InputTimes_Saved(j) = t_initial - (j - 1) * p_FAST%dt
          !MD_OutputTimes(i) = t_initial - (j - 1) * dt
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL MD_CopyInput (MD%Input(1),  MD%Input_bak(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL MD_CopyInput (MD%Input(1),  MD%Input_Saved(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6077,12 +6077,12 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
          ! Copy values for interpolation/extrapolation:
 
       DO j = 1, p_FAST%InterpOrder + 1
-         FEAM%InputTimes_bak(j) = t_initial - (j - 1) * p_FAST%dt
+         FEAM%InputTimes_Saved(j) = t_initial - (j - 1) * p_FAST%dt
          !FEAM_OutputTimes(i) = t_initial - (j - 1) * dt
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL FEAM_CopyInput (FEAM%Input(1),  FEAM%Input_bak(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL FEAM_CopyInput (FEAM%Input(1),  FEAM%Input_Saved(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6110,11 +6110,11 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
          ! Copy values for interpolation/extrapolation:
 
       DO j = 1, p_FAST%InterpOrder + 1
-         Orca%InputTimes_bak(j) = t_initial - (j - 1) * p_FAST%dt
+         Orca%InputTimes_Saved(j) = t_initial - (j - 1) * p_FAST%dt
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL Orca_CopyInput (Orca%Input(1),  Orca%Input_bak(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL Orca_CopyInput (Orca%Input(1),  Orca%Input_Saved(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6145,12 +6145,12 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
 
          ! Copy values for interpolation/extrapolation:
       DO j = 1, p_FAST%InterpOrder + 1
-         IceF%InputTimes_bak(j) = t_initial - (j - 1) * p_FAST%dt
+         IceF%InputTimes_Saved(j) = t_initial - (j - 1) * p_FAST%dt
          !IceF_OutputTimes(i) = t_initial - (j - 1) * dt
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL IceFloe_CopyInput (IceF%Input(1),  IceF%Input_bak(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL IceFloe_CopyInput (IceF%Input(1),  IceF%Input_Saved(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6180,12 +6180,12 @@ SUBROUTINE FAST_InitIOarrays_SS( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD
 
             ! Copy values for interpolation/extrapolation:
          DO j = 1, p_FAST%InterpOrder + 1
-            IceD%InputTimes_bak(j,i) = t_initial - (j - 1) * p_FAST%dt
+            IceD%InputTimes_Saved(j,i) = t_initial - (j - 1) * p_FAST%dt
             !IceD%OutputTimes(j,i) = t_initial - (j - 1) * dt
          END DO
 
          DO j = 1, p_FAST%InterpOrder + 1
-            CALL IceD_CopyInput (IceD%Input(1,i),  IceD%Input_bak(j,i),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+            CALL IceD_CopyInput (IceD%Input(1,i),  IceD%Input_Saved(j,i),  MESH_NEWCOPY, Errstat2, ErrMsg2)
                CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END DO
 
@@ -6299,7 +6299,7 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
    END DO
 
    DO j = 1, p_FAST%InterpOrder + 1
-      CALL ED_CopyInput (ED%Input_bak(j), ED%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL ED_CopyInput (ED%Input_Saved(j), ED%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    END DO
    CALL ED_CopyOutput (ED%Output_bak(1), ED%y, MESH_UPDATECOPY, Errstat2, ErrMsg2)
@@ -6335,7 +6335,7 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
          END DO
 
          DO j = 1, p_FAST%InterpOrder + 1
-            CALL BD_CopyInput (BD%Input_bak(j,k),  BD%Input(j,k),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+            CALL BD_CopyInput (BD%Input_Saved(j,k),  BD%Input(j,k),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END DO
 
@@ -6382,7 +6382,7 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL SrvD_CopyInput (SrvD%Input_bak(j),  SrvD%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SrvD_CopyInput (SrvD%Input_Saved(j),  SrvD%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6417,7 +6417,7 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL AD14_CopyInput (AD14%Input_bak(j),  AD14%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL AD14_CopyInput (AD14%Input_Saved(j),  AD14%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6447,7 +6447,7 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL AD_CopyInput (AD%Input_bak(j),  AD%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL AD_CopyInput (AD%Input_Saved(j),  AD%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6480,7 +6480,7 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL InflowWind_CopyInput (IfW%Input_bak(j),  IfW%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL InflowWind_CopyInput (IfW%Input_Saved(j),  IfW%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6513,7 +6513,7 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL HydroDyn_CopyInput (HD%Input_bak(j),  HD%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL HydroDyn_CopyInput (HD%Input_Saved(j),  HD%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6547,7 +6547,7 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL SD_CopyInput (SD%Input_bak(j),  SD%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SD_CopyInput (SD%Input_Saved(j),  SD%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6577,7 +6577,7 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL ExtPtfm_CopyInput (ExtPtfm%Input_bak(j),  ExtPtfm%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL ExtPtfm_CopyInput (ExtPtfm%Input_Saved(j),  ExtPtfm%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6611,7 +6611,7 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL MAP_CopyInput (MAPp%Input_bak(j),  MAPp%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL MAP_CopyInput (MAPp%Input_Saved(j),  MAPp%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6642,7 +6642,7 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL MD_CopyInput (MD%Input_bak(j),  MD%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL MD_CopyInput (MD%Input_Saved(j),  MD%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6673,7 +6673,7 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL FEAM_CopyInput (FEAM%Input_bak(j),  FEAM%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL FEAM_CopyInput (FEAM%Input_Saved(j),  FEAM%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6703,7 +6703,7 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL Orca_CopyInput (Orca%Input_bak(j),  Orca%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL Orca_CopyInput (Orca%Input_Saved(j),  Orca%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6737,7 +6737,7 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL IceFloe_CopyInput (IceF%Input_bak(j),  IceF%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL IceFloe_CopyInput (IceF%Input_Saved(j),  IceF%Input(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6770,7 +6770,7 @@ SUBROUTINE FAST_Reset_SS(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST, m_F
          END DO
 
          DO j = 1, p_FAST%InterpOrder + 1
-            CALL IceD_CopyInput (IceD%Input_bak(j,i),  IceD%Input(j,i),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+            CALL IceD_CopyInput (IceD%Input_Saved(j,i),  IceD%Input(j,i),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
                CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END DO
 
@@ -6882,11 +6882,11 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    !----------------------------------------------------------------------------------------
 
    DO j = 1, p_FAST%InterpOrder + 1
-      ED%InputTimes_bak(j) = ED%InputTimes(j)
+      ED%InputTimes_Saved(j) = ED%InputTimes(j)
    END DO
 
    DO j = 1, p_FAST%InterpOrder + 1
-      CALL ED_CopyInput (ED%Input(j), ED%Input_bak(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      CALL ED_CopyInput (ED%Input(j), ED%Input_Saved(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
       CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    END DO
    CALL ED_CopyOutput (ED%y, ED%Output_bak(1), MESH_UPDATECOPY, Errstat2, ErrMsg2)
@@ -6918,11 +6918,11 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
 
          ! Copy values for interpolation/extrapolation:
          DO j = 1, p_FAST%InterpOrder + 1
-            BD%InputTimes_bak(j,k) = BD%InputTimes(j,k)
+            BD%InputTimes_Saved(j,k) = BD%InputTimes(j,k)
          END DO
 
          DO j = 1, p_FAST%InterpOrder + 1
-            CALL BD_CopyInput (BD%Input(j,k),  BD%Input_bak(j,k),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+            CALL BD_CopyInput (BD%Input(j,k),  BD%Input_Saved(j,k),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END DO
 
@@ -6951,11 +6951,11 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
       ! Initialize Input-Output arrays for interpolation/extrapolation:
 
       DO j = 1, p_FAST%InterpOrder + 1
-         SrvD%InputTimes_bak(j) = SrvD%InputTimes(j)
+         SrvD%InputTimes_Saved(j) = SrvD%InputTimes(j)
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL SrvD_CopyInput (SrvD%Input(j),  SrvD%Input_bak(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SrvD_CopyInput (SrvD%Input(j),  SrvD%Input_Saved(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -6986,11 +6986,11 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
          ! Copy values for interpolation/extrapolation:
 
       DO j = 1, p_FAST%InterpOrder + 1
-         AD14%InputTimes_bak(j) = AD14%InputTimes(j)
+         AD14%InputTimes_Saved(j) = AD14%InputTimes(j)
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL AD14_CopyInput (AD14%Input(j),  AD14%Input_bak(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL AD14_CopyInput (AD14%Input(j),  AD14%Input_Saved(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -7016,11 +7016,11 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
          ! Copy values for interpolation/extrapolation:
 
       DO j = 1, p_FAST%InterpOrder + 1
-         AD%InputTimes_bak(j) = AD%InputTimes(j)
+         AD%InputTimes_Saved(j) = AD%InputTimes(j)
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL AD_CopyInput (AD%Input(j),  AD%Input_bak(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL AD_CopyInput (AD%Input(j),  AD%Input_Saved(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -7048,12 +7048,12 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
          ! Copy values for interpolation/extrapolation:
 
       DO j = 1, p_FAST%InterpOrder + 1
-         IfW%InputTimes_bak(j) = IfW%InputTimes(j)
+         IfW%InputTimes_Saved(j) = IfW%InputTimes(j)
          !IfW%OutputTimes(i) = t_global - (j - 1) * dt
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL InflowWind_CopyInput (IfW%Input(j),  IfW%Input_bak(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL InflowWind_CopyInput (IfW%Input(j),  IfW%Input_Saved(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -7081,12 +7081,12 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    IF ( p_FAST%CompHydro == Module_HD ) THEN
          ! Copy values for interpolation/extrapolation:
       DO j = 1, p_FAST%InterpOrder + 1
-         HD%InputTimes_bak(j) = HD%InputTimes(j)
+         HD%InputTimes_Saved(j) = HD%InputTimes(j)
          !HD_OutputTimes(i) = t_global - (j - 1) * dt
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL HydroDyn_CopyInput (HD%Input(j),  HD%Input_bak(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL HydroDyn_CopyInput (HD%Input(j),  HD%Input_Saved(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -7115,12 +7115,12 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
 
          ! Copy values for interpolation/extrapolation:
       DO j = 1, p_FAST%InterpOrder + 1
-         SD%InputTimes_bak(j) = SD%InputTimes(j)
+         SD%InputTimes_Saved(j) = SD%InputTimes(j)
          !SD_OutputTimes(i) = t_global - (j - 1) * dt
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL SD_CopyInput (SD%Input(j),  SD%Input_bak(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SD_CopyInput (SD%Input(j),  SD%Input_Saved(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -7146,11 +7146,11 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
 
          ! Copy values for interpolation/extrapolation:
       DO j = 1, p_FAST%InterpOrder + 1
-         ExtPtfm%InputTimes_bak(j) = ExtPtfm%InputTimes(j)
+         ExtPtfm%InputTimes_Saved(j) = ExtPtfm%InputTimes(j)
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL ExtPtfm_CopyInput (ExtPtfm%Input(j),  ExtPtfm%Input_bak(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL ExtPtfm_CopyInput (ExtPtfm%Input(j),  ExtPtfm%Input_Saved(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -7179,12 +7179,12 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
          ! Copy values for interpolation/extrapolation:
 
       DO j = 1, p_FAST%InterpOrder + 1
-         MAPp%InputTimes_bak(j) = MAPp%InputTimes(j)
+         MAPp%InputTimes_Saved(j) = MAPp%InputTimes(j)
          !MAP_OutputTimes(i) = t_global - (j - 1) * dt
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL MAP_CopyInput (MAPp%Input(j),  MAPp%Input_bak(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL MAP_CopyInput (MAPp%Input(j),  MAPp%Input_Saved(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -7210,12 +7210,12 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
          ! Copy values for interpolation/extrapolation:
 
       DO j = 1, p_FAST%InterpOrder + 1
-         MD%InputTimes_bak(j) = MD%InputTimes(j)
+         MD%InputTimes_Saved(j) = MD%InputTimes(j)
          !MD_OutputTimes(i) = t_global - (j - 1) * dt
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL MD_CopyInput (MD%Input(j),  MD%Input_bak(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL MD_CopyInput (MD%Input(j),  MD%Input_Saved(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -7241,12 +7241,12 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
          ! Copy values for interpolation/extrapolation:
 
       DO j = 1, p_FAST%InterpOrder + 1
-         FEAM%InputTimes_bak(j) = FEAM%InputTimes(j)
+         FEAM%InputTimes_Saved(j) = FEAM%InputTimes(j)
          !FEAM_OutputTimes(i) = t_global - (j - 1) * dt
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL FEAM_CopyInput (FEAM%Input(j),  FEAM%Input_bak(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL FEAM_CopyInput (FEAM%Input(j),  FEAM%Input_Saved(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -7272,11 +7272,11 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
          ! Copy values for interpolation/extrapolation:
 
       DO j = 1, p_FAST%InterpOrder + 1
-         Orca%InputTimes_bak(j) = Orca%InputTimes(j)
+         Orca%InputTimes_Saved(j) = Orca%InputTimes(j)
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL Orca_CopyInput (Orca%Input(j),  Orca%Input_bak(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL Orca_CopyInput (Orca%Input(j),  Orca%Input_Saved(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -7305,12 +7305,12 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
 
          ! Copy values for interpolation/extrapolation:
       DO j = 1, p_FAST%InterpOrder + 1
-         IceF%InputTimes_bak(j) = IceF%InputTimes(j)
+         IceF%InputTimes_Saved(j) = IceF%InputTimes(j)
          !IceF_OutputTimes(i) = t_global - (j - 1) * dt
       END DO
 
       DO j = 1, p_FAST%InterpOrder + 1
-         CALL IceFloe_CopyInput (IceF%Input(j),  IceF%Input_bak(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL IceFloe_CopyInput (IceF%Input(j),  IceF%Input_Saved(j),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
 
@@ -7338,12 +7338,12 @@ SUBROUTINE FAST_Store_SS(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
 
             ! Copy values for interpolation/extrapolation:
          DO j = 1, p_FAST%InterpOrder + 1
-            IceD%InputTimes_bak(j,i) = IceD%InputTimes(j,i)
+            IceD%InputTimes_Saved(j,i) = IceD%InputTimes(j,i)
             !IceD%OutputTimes(j,i) = t_global - (j - 1) * dt
          END DO
 
          DO j = 1, p_FAST%InterpOrder + 1
-            CALL IceD_CopyInput (IceD%Input(j,i),  IceD%Input_bak(j,i),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+            CALL IceD_CopyInput (IceD%Input(j,i),  IceD%Input_Saved(j,i),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
                CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END DO
 

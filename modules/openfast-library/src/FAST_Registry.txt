@@ -57,7 +57,7 @@ param	^	-	INTEGER	Module_MD	-	16	-	"MoorDyn"	-
 param	^	-	INTEGER	Module_Orca	-	17	-	"OrcaFlex integration (HD/Mooring)"	-
 param	^	-	INTEGER	Module_IceF	-	18	-	"IceFloe"	-
 param	^	-	INTEGER	Module_IceD	-	19	-	"IceDyn"	-
-param	^	-	INTEGER	NumModules	-	20	-	"The number of modules available in FAST"	-
+param	^	-	INTEGER	NumModules	-	19	-	"The number of modules available in FAST"	-
 # Other Constants
 param	^	-	INTEGER	MaxNBlades	-	3	-	"Maximum number of blades allowed on a turbine"	-
 param	^	-	INTEGER	IceD_MaxLegs	-	4	-	"because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number"	-
@@ -406,9 +406,9 @@ typedef	^	^	IceD_InputType	u	{:}	-	-	"System inputs"
 typedef	^	^	IceD_OutputType	y	{:}	-	-	"System outputs"
 typedef	^	^	IceD_MiscVarType	m	{:}	-	-	"Misc/optimization variables"
 typedef	^	^	IceD_InputType	Input	{:}{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	IceD_InputType	Input_bak	{:}{:}	-	-	"Backup Array of inputs associated with InputTimes"
+typedef	^	^	IceD_InputType	Input_Saved	{:}{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_bak	{:}{:}	-	-	"Backup Array of times associated with Input Array"
+typedef	^	^	DbKi	InputTimes_Saved	{:}{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... BeamDyn data .......................................................................................................
 # [ the last dimension of each allocatable array is for the instance of BeamDyn being used ]
@@ -424,9 +424,9 @@ typedef	^	^	BD_MiscVarType	m	{:}	-	-	"Misc/optimization variables"
 typedef	^	^	BD_OutputType	Output	{:}{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
 typedef	^	^	BD_OutputType	y_interp	{:}	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	BD_InputType	Input	{:}{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	BD_InputType	Input_bak	{:}{:}	-	-	"Backup Array of inputs associated with InputTimes"
+typedef	^	^	BD_InputType	Input_Saved	{:}{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_bak	{:}{:}	-	-	"Backup Array of times associated with Input Array"
+typedef	^	^	DbKi	InputTimes_Saved	{:}{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... ElastoDyn data .......................................................................................................
 typedef	FAST	ElastoDyn_Data	ED_ContinuousStateType	x	{4}	-	-	"Continuous states"
@@ -441,9 +441,9 @@ typedef	^	^	ED_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcS
 typedef	^	^	ED_OutputType	Output_bak	{:}	-	-	"Backup Array of outputs associated with InputTimes"
 typedef	^	^	ED_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	ED_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	ED_InputType	Input_bak	{:}	-	-	"Backup Array of inputs associated with InputTimes"
+typedef	^	^	ED_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_bak	{:}	-	-	"Backup Array of times associated with Input Array"
+typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 
 # ..... ServoDyn data .......................................................................................................
@@ -459,9 +459,9 @@ typedef	^	^	SrvD_MiscVarType	m_bak	-	-	-	"Backup Misc (optimization) variables n
 typedef	^	^	SrvD_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
 typedef	^	^	SrvD_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	SrvD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	SrvD_InputType	Input_bak	{:}	-	-	"Backup Array of inputs associated with InputTimes"
+typedef	^	^	SrvD_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_bak	{:}	-	-	"Backup Array of times associated with Input Array"
+typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... AeroDyn14 data .......................................................................................................
 typedef	FAST	AeroDyn14_Data	AD14_ContinuousStateType	x	{4}	-	-	"Continuous states"
@@ -473,9 +473,9 @@ typedef	^	^	AD14_InputType	u	-	-	-	"System inputs"
 typedef	^	^	AD14_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	AD14_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	AD14_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	AD14_InputType	Input_bak	{:}	-	-	"Backup Array of inputs associated with InputTimes"
+typedef	^	^	AD14_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_bak	{:}	-	-	"Backup Array of times associated with Input Array"
+typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... AeroDyn data .......................................................................................................
 typedef	FAST	AeroDyn_Data	AD_ContinuousStateType	x	{4}	-	-	"Continuous states"
@@ -489,9 +489,9 @@ typedef	^	^	AD_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	AD_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
 typedef	^	^	AD_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	AD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	AD_InputType	Input_bak	{:}	-	-	"Backup Array of inputs associated with InputTimes"
+typedef	^	^	AD_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_bak	{:}	-	-	"Backup Array of times associated with Input Array"
+typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... ExtLoads data .......................................................................................................
 typedef	FAST	ExtLoads_Data	ExtLd_ContinuousStateType	x	{2}	-	-	"Continuous states"
@@ -516,9 +516,9 @@ typedef	^	^	InflowWind_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	InflowWind_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
 typedef	^	^	InflowWind_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	InflowWind_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	InflowWind_InputType	Input_bak	{:}	-	-	"Backup Array of inputs associated with InputTimes"
+typedef	^	^	InflowWind_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_bak	{:}	-	-	"Backup Array of times associated with Input Array"
+typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... ExternalInflow integration data .......................................................................................................
 typedef	FAST	ExternalInflow_Data	ExtInfw_InputType	u	-	-	-	"System inputs"
@@ -541,11 +541,11 @@ typedef	^	^	SD_InputType	u	-	-	-	"System inputs"
 typedef	^	^	SD_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	SD_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	SD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	SD_InputType	Input_bak	{:}	-	-	"Backup Array of inputs associated with InputTimes"
+typedef	^	^	SD_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	SD_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
 typedef	^	^	SD_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_bak	{:}	-	-	"Backup Array of times associated with Input Array"
+typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... ExtPtfm data .......................................................................................................
 typedef	FAST	ExtPtfm_Data	ExtPtfm_ContinuousStateType	x	{4}	-	-	"Continuous states"
@@ -557,9 +557,9 @@ typedef	^	^	ExtPtfm_InputType	u	-	-	-	"System inputs"
 typedef	^	^	ExtPtfm_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	ExtPtfm_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	ExtPtfm_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	ExtPtfm_InputType	Input_bak	{:}	-	-	"Backup Array of inputs associated with InputTimes"
+typedef	^	^	ExtPtfm_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_bak	{:}	-	-	"Backup Array of times associated with Input Array"
+typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... SeaState data .......................................................................................................
 typedef	FAST	SeaState_Data	SeaSt_ContinuousStateType	x	{4}	-	-	"Continuous states"
@@ -571,11 +571,11 @@ typedef	^	^	SeaSt_InputType	u	-	-	-	"System inputs"
 typedef	^	^	SeaSt_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	SeaSt_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	SeaSt_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	SeaSt_InputType	Input_bak	{:}	-	-	"Backup Array of inputs associated with InputTimes"
+typedef	^	^	SeaSt_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	SeaSt_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
 typedef	^	^	SeaSt_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_bak	{:}	-	-	"Backup Array of times associated with Input Array"
+typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... HydroDyn data .......................................................................................................
 typedef	FAST	HydroDyn_Data	HydroDyn_ContinuousStateType	x	{4}	-	-	"Continuous states"
@@ -589,9 +589,9 @@ typedef	^	^	HydroDyn_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	HydroDyn_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
 typedef	^	^	HydroDyn_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	HydroDyn_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	HydroDyn_InputType	Input_bak	{:}	-	-	"Backup Array of inputs associated with InputTimes"
+typedef	^	^	HydroDyn_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_bak	{:}	-	-	"Backup Array of times associated with Input Array"
+typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... IceFloe data .......................................................................................................
 typedef	FAST	IceFloe_Data	IceFloe_ContinuousStateType	x	{4}	-	-	"Continuous states"
@@ -603,9 +603,9 @@ typedef	^	^	IceFloe_InputType	u	-	-	-	"System inputs"
 typedef	^	^	IceFloe_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	IceFloe_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	IceFloe_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	IceFloe_InputType	Input_bak	{:}	-	-	"Backup Array of inputs associated with InputTimes"
+typedef	^	^	IceFloe_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_bak	{:}	-	-	"Backup Array of times associated with Input Array"
+typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... MAP data .......................................................................................................
 typedef	FAST	MAP_Data	MAP_ContinuousStateType	x	{4}	-	-	"Continuous states"
@@ -619,9 +619,9 @@ typedef	^	^	MAP_OtherStateType	OtherSt_old	-	-	-	"Other/optimization states (cop
 typedef	^	^	MAP_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
 typedef	^	^	MAP_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	MAP_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	MAP_InputType	Input_bak	{:}	-	-	"Backup Array of inputs associated with InputTimes"
+typedef	^	^	MAP_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_bak	{:}	-	-	"Backup Array of times associated with Input Array"
+typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... FEAMooring data .......................................................................................................
 typedef	FAST	FEAMooring_Data	FEAM_ContinuousStateType	x	{4}	-	-	"Continuous states"
@@ -633,9 +633,9 @@ typedef	^	^	FEAM_InputType	u	-	-	-	"System inputs"
 typedef	^	^	FEAM_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	FEAM_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	FEAM_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	FEAM_InputType	Input_bak	{:}	-	-	"Backup Array of inputs associated with InputTimes"
+typedef	^	^	FEAM_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_bak	{:}	-	-	"Backup Array of times associated with Input Array"
+typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... MoorDyn data .......................................................................................................
 typedef	FAST	MoorDyn_Data	MD_ContinuousStateType	x	{4}	-	-	"Continuous states"
@@ -649,9 +649,9 @@ typedef	^	^	MD_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	MD_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
 typedef	^	^	MD_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	MD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	MD_InputType	Input_bak	{:}	-	-	"Backup Array of inputs associated with InputTimes"
+typedef	^	^	MD_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_bak	{:}	-	-	"Backup Array of times associated with Input Array"
+typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... OrcaFlex data .......................................................................................................
 typedef	FAST	OrcaFlex_Data	Orca_ContinuousStateType	x	{4}	-	-	"Continuous states"
@@ -663,9 +663,9 @@ typedef	^	^	Orca_InputType	u	-	-	-	"System inputs"
 typedef	^	^	Orca_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	Orca_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	Orca_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	Orca_InputType	Input_bak	{:}	-	-	"Backup Array of inputs associated with InputTimes"
+typedef	^	^	Orca_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_bak	{:}	-	-	"Backup Array of times associated with Input Array"
+typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... FAST_ModuleMapType data .......................................................................................................
 # ! Data structures for mapping and coupling the various modules together
@@ -700,7 +700,7 @@ typedef	^	FAST_ModuleMapType	MeshMapType	SubStructure_2_SStC_P_P	{:}	-	-	"Map Su
 # ED --> SrvD -- PlatformPtMesh motion to SrvD%PtfmMotionMesh for passing to DLL
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SrvD_P_P	-   	-	-	"Map ElastoDyn     platform point mesh motion to ServoDyn      point mesh -- for passing to controller"
 # ED/BD <-> AD (blades)
-typedef	^	FAST_ModuleMapType	MeshMapType	BDED_L_2_AD_L_B	{:}	-	-	"Map ElastoDyn/BeamDyn BladeLn2Mesh point meshes OR BeamDyn BldMotion line2 meshes to AeroDyn14 InputMarkers OR AeroDyn BladeMotion line2 meshes"
+typedef	^	FAST_ModuleMapType	MeshMapType	BDED_L_2_AD_L_B	{:}	-	-	"Map ElastoDyn BladeLn2Mesh point meshes OR BeamDyn BldMotion line2 meshes to AeroDyn14 InputMarkers OR AeroDyn BladeMotion line2 meshes"
 typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_BDED_B	{:}	-	-	"Map AeroDyn14 InputMarkers or AeroDyn BladeLoad line2 meshes to ElastoDyn BladePtLoad point meshes or BeamDyn BldMotion line2 meshes"
 typedef	^	FAST_ModuleMapType	MeshMapType	BD_L_2_BD_L	{:}	-	-	"Map BeamDyn BldMotion output meshes to locations on the BD input DistrLoad mesh stored in MeshMapType%y_BD_BldMotion_4Loads (BD input and output meshes are not siblings and in fact have nodes at different locations"
 # ED <-> AD (nacelle, tower, hub, blade root, tailfin)
