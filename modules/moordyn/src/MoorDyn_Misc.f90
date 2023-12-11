@@ -1387,14 +1387,17 @@ CONTAINS
       READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type
       READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
       CALL gridAxisCoords(coordtype, entries2, p%pxWave, p%nxWave, ErrStat2, ErrMsg2)
+      Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
       ! Y grid points
       READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type
       READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
       CALL gridAxisCoords(coordtype, entries2, p%pyWave, p%nyWave, ErrStat2, ErrMsg2)
+      Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
       ! Z grid points
       READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type
       READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
       CALL gridAxisCoords(coordtype, entries2, p%pzWave, p%nzWave, ErrStat2, ErrMsg2)
+      Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
       ! ----- current -----
       CALL ReadCom( UnIn, FileName,                        'current header', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
       CALL ReadVar( UnIn, FileName, p%Current,   'CurrentMod', 'CurrentMod', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
@@ -1707,49 +1710,58 @@ CONTAINS
          REAL(ReKi) :: tempArray (100)
          REAL(ReKi) :: dx
          INTEGER(IntKi)                   :: nEntries, I
-         
-         ! get array of coordinate entries 
-         CALL stringToArray(entries, nEntries, tempArray)
-         
-         ! set number of coordinates
-         if (     coordtype==0) then   ! 0: not used - make one grid point at zero
-            n = 1;
-         else if (coordtype==1) then   ! 1: list values in ascending order
-            n = nEntries
-         else if (coordtype==2) then   ! 2: uniform specified by -xlim, xlim, num
-            n = int(tempArray(3))
-         else
-            print *, "Error: invalid coordinate type specified to gridAxisCoords"
-         end if
-         
-         ! allocate coordinate array
-         CALL AllocAry(coordarray, n, 'x,y, or z grid points' , ErrStat, ErrMsg)
-         !ALLOCATE ( coordarray(n), STAT=ErrStat) 
-         
-         ! fill in coordinates
-         if (     coordtype==0) then
-            coordarray(1) = 0.0_ReKi
-         
-         else if (coordtype==1) then
-            coordarray(1:n) = tempArray(1:n)
-         
-         else if (coordtype==2) then  
-            coordarray(1) = tempArray(1)
-            coordarray(n) = tempArray(2)
-            dx = (coordarray(n)-coordarray(1))/REAL(n-1)
-            do i=2,n
-               coordarray(i) = coordarray(i-1) + dx
-            end do
-         
-         else
-            print *, "Error: invalid coordinate type specified to gridAxisCoords" 
-         end if
-         
-         print *, "Set water grid coordinates to :"
-         DO i=1,n
-            print *, " ", coordarray(i)
-         end do
-         
+
+         IF (len(trim(entries)) == len(entries)) THEN
+            print*, "Warning: Only 120 characters read from wave grid coordinates"
+         END IF
+
+         IF (entries(len(entries):len(entries)) == ',') THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg = 'Last character of wave grid coordinate list cannot be comma'
+         ELSE
+            ! get array of coordinate entries 
+            CALL stringToArray(entries, nEntries, tempArray)
+            
+            ! set number of coordinates
+            if (     coordtype==0) then   ! 0: not used - make one grid point at zero
+               n = 1;
+            else if (coordtype==1) then   ! 1: list values in ascending order
+               n = nEntries
+            else if (coordtype==2) then   ! 2: uniform specified by -xlim, xlim, num
+               n = int(tempArray(3))
+            else
+               print *, "Error: invalid coordinate type specified to gridAxisCoords"
+            end if
+            
+            ! allocate coordinate array
+            CALL AllocAry(coordarray, n, 'x,y, or z grid points' , ErrStat, ErrMsg)
+            !ALLOCATE ( coordarray(n), STAT=ErrStat) 
+            
+            ! fill in coordinates
+            if (     coordtype==0) then
+               coordarray(1) = 0.0_ReKi
+            
+            else if (coordtype==1) then
+               coordarray(1:n) = tempArray(1:n)
+            
+            else if (coordtype==2) then  
+               coordarray(1) = tempArray(1)
+               coordarray(n) = tempArray(2)
+               dx = (coordarray(n)-coordarray(1))/REAL(n-1)
+               do i=2,n
+                  coordarray(i) = coordarray(i-1) + dx
+               end do
+            
+            else
+               print *, "Error: invalid coordinate type specified to gridAxisCoords" 
+            end if
+            
+            ! print *, "Set water grid coordinates to :"
+            ! DO i=1,n
+            !    print *, " ", coordarray(i)
+            ! end do
+         END IF
+
       END SUBROUTINE gridAxisCoords
    
    
