@@ -224,7 +224,8 @@ void fast::OpenFAST::prepareRestartFile(int iTurbLoc) {
     ierr = nc_enddef(ncid);
     check_nc_error(ierr, "nc_enddef");
 
-    if (turbineData[iTurbLoc].sType == EXTINFLOW) {
+    if ( (turbineData[iTurbLoc].sType == EXTINFLOW) && (turbineData[iTurbLoc].inflowType == 2) ) {
+
         int nfpts_data = 3*get_numForcePtsLoc(iTurbLoc);
         int ierr = nc_put_var_double(ncid, ncRstVarIDs_["xref_force"], velForceNodeData[iTurbLoc][fast::STATE_NP1].xref_force.data());
     }
@@ -728,6 +729,8 @@ void fast::OpenFAST::init() {
                         &ErrStat,
                         ErrMsg);
                     checkError(ErrStat, ErrMsg);
+
+                    std::cerr << "turbineData[iTurb].inflowType = " << turbineData[iTurb].inflowType << std::endl;
 
                     turbineData[iTurb].numVelPtsTwr = extinfw_o_t_FAST[iTurb].u_Len - turbineData[iTurb].numBlades*turbineData[iTurb].numVelPtsBlade - 1;
                     if(turbineData[iTurb].numVelPtsTwr == 0) {
@@ -2118,6 +2121,11 @@ void fast::OpenFAST::allocateMemory_postInit(int iTurbLoc) {
                 }
             }
         }
+        std::cerr << "turbineData[iTurbLoc].inflowType " << turbineData[iTurbLoc].inflowType << std::endl;
+        std::cerr << "turbineData[iTurbLoc].numForcePtsTwr = " << turbineData[iTurbLoc].numForcePtsTwr << std::endl;
+        std::cerr << "turbineData[iTurbLoc].numForcePtsBlade = " << turbineData[iTurbLoc].numForcePtsBlade << std::endl;
+        std::cerr << "turbineData[iTurbLoc].numForcePts = " << turbineData[iTurbLoc].numForcePts << std::endl;
+
 
     } else if (turbineData[iTurbLoc].sType == EXTLOADS) {
         turbineData[iTurbLoc].nBRfsiPtsBlade.resize(turbineData[iTurbLoc].numBlades);
@@ -2360,6 +2368,8 @@ void fast::OpenFAST::get_data_from_openfast(timeStep t) {
             if (turbineData[iTurb].inflowType == 2) {
                 int nvelpts = get_numVelPtsLoc(iTurb);
                 int nfpts = get_numForcePtsLoc(iTurb);
+                std::cerr << "nvelpts = " << nvelpts << std::endl;
+                std::cerr << "nfpts = " << nfpts << "  " << get_numForcePtsBladeLoc(iTurb) << " " << get_numForcePtsTwrLoc(iTurb) << std::endl;
                 for (int i=0; i<nvelpts; i++) {
                     velForceNodeData[iTurb][t].x_vel_resid += (velForceNodeData[iTurb][t].x_vel[i*3+0] - extinfw_i_f_FAST[iTurb].pxVel[i])*(velForceNodeData[iTurb][t].x_vel[i*3+0] - extinfw_i_f_FAST[iTurb].pxVel[i]);
                     velForceNodeData[iTurb][t].x_vel[i*3+0] = extinfw_i_f_FAST[iTurb].pxVel[i];
@@ -2588,7 +2598,7 @@ void fast::OpenFAST::writeOutputFile(int iTurbLoc, int n_t_global) {
     double curTime = n_t_global * dtFAST;
     ierr = nc_put_vara_double(ncid, ncOutVarIDs_["time"], &n_tsteps, &count1, &curTime);
 
-    if (turbineData[iTurbLoc].sType == EXTINFLOW) {
+    if ( (turbineData[iTurbLoc].sType == EXTINFLOW) && (turbineData[iTurbLoc].inflowType == 2) ) {
 
         // Nothing to do here yet
         int nBlades = get_numBladesLoc(iTurbLoc);
@@ -2883,7 +2893,7 @@ void fast::OpenFAST::writeRestartFile(int iTurbLoc, int n_t_global) {
     double curTime = n_t_global * dtFAST;
     ierr = nc_put_vara_double(ncid, ncRstVarIDs_["time"], &n_tsteps, &count1, &curTime);
 
-    if (turbineData[iTurbLoc].sType == EXTINFLOW) {
+    if ( (turbineData[iTurbLoc].sType == EXTINFLOW) && (turbineData[iTurbLoc].inflowType == 2) ){
 
         int nvelpts = get_numVelPtsLoc(iTurbLoc);
         int nfpts = get_numForcePtsLoc(iTurbLoc);
