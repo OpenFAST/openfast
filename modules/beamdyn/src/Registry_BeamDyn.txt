@@ -42,8 +42,6 @@ typedef   ^         InitInputType LOGICAL         CompAeroMaps -   .FALSE. - "fl
 typedef   ^        InitOutputType CHARACTER(ChanLen)  WriteOutputHdr {:}  -   -   "Names of the output-to-file channels"   -
 typedef   ^        InitOutputType CHARACTER(ChanLen)  WriteOutputUnt {:}  -   -   "Units of the output-to-file channels"   -
 typedef   ^        InitOutputType ProgDesc            Ver             -   -   -   "This module's name, version, and date"  -
-typedef   ^        InitOutputType R8Ki                kp_coordinate  {:}{:} - -   "Key point coordinates array"            -
-typedef   ^        InitOutputType IntKi               kp_total        -   -   -   "Total number of key points" -
 typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_y   {:}  -   -   "Names of the outputs used in linearization" -
 #typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_z   {:}  -   -   "Names of the constraint states used in linearization" -
 typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_x   {:}  -   -   "Names of the continuous states used in linearization" -

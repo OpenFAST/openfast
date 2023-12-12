@@ -247,9 +247,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
    z%DummyConstrState = 0.0_BDKi
 
-   ! copy data for BeamDyn driver:
-   call move_alloc ( InputFileData%kp_coordinate, InitOut%kp_coordinate)
-   InitOut%kp_total = InputFileData%kp_total
 
       !............................................................................................
       ! Initialize Jacobian:
