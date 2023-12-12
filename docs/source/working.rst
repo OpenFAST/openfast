@@ -173,7 +173,8 @@ Some typical errors and solutions are listed below:
 
 - *The input file "FILE" was not found*: As indicated, the input file is not found. Linux and Mac platforms are case sensitive, and require forward slashes. OpenFAST accepts relative or absolute path. Relative paths are expressed with respect to the file where they are referenced.
 
-- *Invalid input in file "FILE" while trying to read VAR*: Such errors typically occurs at initialization, when reading one of the input file of OpenFAST. It can be that the variable in the input file has a wrong type (integer instead of logical, float instead of string, etc.). Very often though, such error  indicates that the input file is not at the right version for the version of OpenFAST. Most likely your file is outdated. Lines are often added to the OpenFAST input files. You can have a look at :ref:`api_change` to see what lines have changed between versions of OpenFAST, or look at the `r-test <https://github.com/openfast/r-test>`__ to find working examples of input files for the latest release and dev version of OpenFAST.
+- *Invalid input in file "FILE" while trying to read VAR*: Such errors typically occurs at initialization, when reading one of the input file of OpenFAST. It can be that the variable in the input file has a wrong type (integer instead of logical, float instead of string, etc.). Very often though, such an error indicates that the input file is not formatted propertly for the version of OpenFAST your are executing. 
+ Most likely your file is outdated. Lines are often added to the OpenFAST input files. You can have a look at :ref:`api_change` to see what lines have changed between versions of OpenFAST, or look at the `r-test <https://github.com/openfast/r-test>`__ to find working examples of input files for the latest release and dev version of OpenFAST.
 
 - *A fatal error occurred when parsing data from "FILE". The variable "VAR" was not found on line #II*. Such errors are similar to the one described above. Check that your file has the proper format for the version of OpenFAST you are using. 
 
@@ -220,13 +221,13 @@ Below are some steps you can take to troubleshoot your model, in particular tryi
 
 - Remove the controller: Turn `GenDOF` to False in ElastoDyn, and set `CompServo` to 0 in the main input file. The rotor will spin at constant RPM.
 
-- Simplify your model by turning off most degrees of freedom in your ElastoDyn input file. You can start by keeping all degrees of freedom off, and progressively adding more degrees of freedom. This might indicat if the issue comes from the blade, nacelle, tower or substructure. Some degrees of freedom that are often problematic are the drive train torsion (`DrTrDOF`), and the yaw degree of freedom (`YawDOF`). The drive train stiffness and damping values in ElastoDyn are often set wrong. A common issues with yaw, is when `NacYaw` (in ElastoDyn) and `YawNeut` (in ServoDyn), are in disagreement, or, when the yaw spring and damping `YawSpr` and `YawDamp` are not physical. For offshore simulations, if `YawDOF` and `PtfmYDOF` are on, the model needs to have a realistic `PtfmYIner` present, otherwise these degrees of freedom will be ill-defined in ElastoDyn. The Y-inertia, should represent the torsional inertia of the platform/TP (if any) and the one from the tower.
+- Simplify your model by turning off most degrees of freedom in your ElastoDyn input file. You can start by keeping all degrees of freedom off, and progressively adding more degrees of freedom. This might indicat if the issue comes from the blade, nacelle, tower or substructure. Some degrees of freedom that are often problematic are the drive train torsion (`DrTrDOF`), and the yaw degree of freedom (`YawDOF`). The drive train stiffness and damping values in ElastoDyn are often set wrong. A common issues with yaw, is when `NacYaw` (in ElastoDyn) and `YawNeut` (in ServoDyn), are in disagreement, or, when the yaw spring and damping `YawSpr` and `YawDamp` are not physical. For offshore simulations, if `YawDOF` and `PtfmYDOF` are on, the model needs to have a realistic `PtfmYIner` present, otherwise these degrees of freedom will be ill-defined in ElastoDyn. PtfmYiner should contain the rotational inertia of the undeflected tower, and, if SubDyn is not used, the torsional inertia of the platform/TP (if any).
 
 - Simplify the physical models: use ElastoDyn (`CompElast=1`) over BeamDyn, use BEM (`WakeMod=1`) over OLAF, use 0 Craig-Bampton modes in SubDyn.
 
-- Visualize the outputs (see :ref:`visualizing_input_output_OF`). Add relevant displacement outputs to your model for instance: PtfmSurge, PtfmSway, PtfmHeave, PtfmRoll, PtfmPitch, PtfmYaw, NacYaw, TTDspFA, TTDspSS, RotSpeed, OoPDefl1, IPDefl1 and RtSkew. It is likely that the turbine has some large displacements due to some errors in the model. 
+- Visualize the time series outputs (see :ref:`visualizing_input_output_OF`). Add relevant displacement outputs to your model for instance: PtfmSurge, PtfmSway, PtfmHeave, PtfmRoll, PtfmPitch, PtfmYaw, NacYaw, TTDspFA, TTDspSS, RotSpeed, OoPDefl1, IPDefl1 and RtSkew. It is likely that the turbine has some large displacements due to some errors in the model. 
 
-- Adjust your initial conditions. As mentioned above, `NacYaw` (ElastoDyn) and `YawNeut` (ServoDyn) need to match when the yaw degrees of freedom is on. If the structural is at an initial position that is unrealistic given the environmental condition, it is likely to overshoot (e.g. high wind speed but pitch too low). 
+- Adjust your initial conditions. As mentioned above, `NacYaw` (ElastoDyn) and `YawNeut` (ServoDyn) need to match when the yaw degrees of freedom is on. If the structural is at an initial position that is unrealistic given the environmental condition, it is likely to overshoot (e.g. high wind speed but pitch too low). A common error is not initializing the rotor speed and blade-pitch angles to their expected (mean) values at the initial wind speed of the simulation, which causes issues with many wind turbine controllers.
 
 - Visualize the inputs (see :ref:`visualizing_input_output_OF`). Check that the mass and stiffness distributions of the blade and tower are as expected.
 
@@ -234,8 +235,9 @@ Below are some steps you can take to troubleshoot your model, in particular tryi
 
 - If you have isolated the problem to a given module, check the information provided in the summary file of this module. Most module have a flag at the end of their input file called `SumPrint` or similar, so that the summary file is written to disk. 
 
-- Reduce the time step. The simulation time step needs to be adjusted based on the frequencies that are modelled in the system (typically the time step needs to be at least half or even a tenth of the fastest frequency). Modules like BeamDyn and SubDyn usually require fine time steps.
-  Instead of reducing the time step, it is often equivalent to introduce 1 correction step (`NumCrctn`). When corrections are used the Jacobian need to be updated regularly, for instance setting `DT_UJac` to 100 time steps.
+- Reduce the time step. The simulation time step needs to be adjusted based on the frequencies that are modelled in the system (typically the time step needs to be at around a tenth of the fastest frequency). Modules like BeamDyn and SubDyn usually require fine time steps.
+  Instead of reducing the time step, it is often equivalent to introduce 1 correction step (`NumCrctn`). When corrections are used the Jacobian need to be updated regularly, for instance setting `DT_UJac` to 100 time steps. For a floating system, we recommend using `DT_UJac = 1/(10*f_pitch)`, where `f_pitch` is the natural frequency of the floating wind turbine in pitch.
+
 
 - Perform a linearization of your structure in vacuum (`CompInflow=0`, `CompAero=0`) and in standstill (`RotSpeed=0`) (see :ref:`linearization_analysis_OF`) and check that the frequencies and damping are within the range you expect. Adjust your structural inputs otherwise.
 
@@ -277,7 +279,7 @@ The scripts can for instance be used to read the input and outputs of OpenFAST, 
 
 The repositories maintained by NREL are the following:
 
-- `python-toolbox <https://github.com/OpenFAST/python-toolbox>`__:  collection of low-level Python tools to work with OpenFAST and perform simple operations, with granularity.
+- `openfast_toolbox <https://github.com/OpenFAST/openfast_toolbox>`__:  collection of low-level Python tools to work with OpenFAST and perform simple operations, with granularity.
 
 - `matlab-toolbox <https://github.com/OpenFAST/matlab-toolbox>`__: collection of low-level Matlab tools to work with OpenFAST. 
   
@@ -315,6 +317,7 @@ Open-source OpenFAST models
 Open-source OpenFAST wind turbine models can be found here:
 
 - `r-test <https://github.com/OpenFAST/r-test>`__: regression tests for OpenFAST, contains models for OpenFAST and its drivers (AeroDyn, SubDyn, HydroDyn, etc.). This repository is not intended to be used as a "database" of models, but it has the advantage that the input files are always up to date with the latest `format specifications <https://openfast.readthedocs.io/en/master/source/user/api_change.html>`_ . OpenFAST input files for previous version can be accessed via the git tags of this repository.
+- `IEA Wind Task 37 repository <https://github.com/IEAWindTask37>`_ :  contains OpenFAST models of the IEA Wind 3.4-MW, 10-MW, 15-MW, and up-and-coming 22-MW reference wind turbines.
 - `openfast-turbine-models <https://github.com/NREL/openfast-turbine-models>`_: open source wind turbine models (in development and out of date).
 
 
@@ -340,7 +343,7 @@ The VTK visualization files that are written by OpenFAST can be opened using:
 
 
 For advanced cases, the user may want to script the reading and plotting of the input files.
-Python and Matlab tools are respectively being provided in the `python-toolbox <https://github.com/OpenFAST/python-toolbox>`_ and `matlab-toolbox <https://github.com/OpenFAST/matlab-toolbox>`_. 
+Python and Matlab tools are respectively being provided in the `openfast_toolbox <https://github.com/OpenFAST/openfast_toolbox>`_ and `matlab-toolbox <https://github.com/OpenFAST/matlab-toolbox>`_. 
 In the matlab toolbox, the scripts `FAST2Matlab.m` and `Matlab2FAST.m` are used to read and write input files, the script `ReadFASTbinary` is used to open binary (`.outb`) output files. 
 The README files of these repositories points to examples and more documentation.
   
@@ -353,9 +356,9 @@ Running parametric studies and design load cases (DLC)
 ------------------------------------------------------
 
 Parametric studies can be run by using the scripts to read and write OpenFAST input files provided in the `matlab-toolbox <https://github.com/OpenFAST/matlab-toolbox>`__
-and 
-`python-toolbox <https://github.com/OpenFAST/python-toolbox>`__
-.  The python-toolbox provides dedicated scripts and examples to automatize the process (see the README of the repository for more).
+and the Python 
+`openfast_toolbox <https://github.com/OpenFAST/openfast_toolbox>`__
+.  The openfast_toolbox provides dedicated Python scripts and examples to automatize the process (see the README of the repository for more).
 The `AeroelasticSE` module of `WEIS <https://github.com/WEIS>`__ can generate input files for the design load cases specified in the standards. 
 Consult the WEIS repository for more information.
 
@@ -380,15 +383,20 @@ The output of the linearization is a linear state space model (four matrices rel
 Because the rotor is spinning, the equilibrium solution, if present, will likely be periodic.
 It is necessary to linearize at different operating points over a period of revolution (i.e. at different azimuthal positions).
 
-An additional complication is that some of the states of OpenFAST are in the rotating frame of reference (e.g. the ElastoDyn blade states). To obtain a linear state space model of the system that is in a fixed (non-rotating) frame of reference The multiblade coordinate transformation (MBC) is applied. For a purely periodic system, the MBC can be applied to the linearized outputs at different azimuthal positions which can be combined to form a linearized system in a fixed frame of reference. 
+An additional complication is that some of the states of OpenFAST are in the rotating frame of reference (e.g. the ElastoDyn blade states). To obtain a linear state space model of the system that is in a fixed (non-rotating) frame of reference the multiblade coordinate transformation (MBC) is applied. For a purely periodic system, the MBC can be applied to the linearized outputs at different azimuthal positions which can be combined to form a linearized system in a fixed frame of reference. 
+We note that the MBC only applies to 3 or more blades. 
+Floquet theory would be needed 1 or 2 blades, although NREL does not currently have a post-processor that makes use of Floquet theory.
+
 
 .. note::
    Our current recommended practice is to avoid periodicity and simplify the model such that the equilibrium is constant (e.g., removing tilt and gravity). The MBC is still required but it is not required to use different linearization at different azimuthal positions.
 
-One of the output of the linearization is the state matrix (`A`) which relates the system states to their time derivatives. An eigenvalue analysis of the state matrix provide the frequencies and damping of the system. 
+One of the outputs of the linearization is the state matrix (`A`) which relates the system states to their time derivatives.
+An eigenvalue analysis of `A` provides the full-system mode shapes, and their frequencies and damping.
 
 .. note::
-    Unlike a linear finite-element software, OpenFAST does not have a notion of stiffness and mass matrix. The underlying system of equation is non-linear, the frequencies of the system will vary with the operating conditions (e.g. wind speed, rotational speed).
+    Unlike a linear finite-element software, OpenFAST does not have a notion of a full-system stiffness and mass matrix (some modules have local matrices but only related to the module). The underlying system of equation is non-linear, the frequencies of the system will vary with the operating conditions (e.g. wind speed, rotational speed).
+
 
 The sections below detail the process of obtaining a linear model with OpenFAST, and will focus on its application to obtain the frequencies and damping of the system modes.
 
@@ -414,13 +422,16 @@ The steps to perform simple linearization analysis are given below:
    - using `CalcSteady=False`, the user prescribes the times where linearization is to occur using `NLinTimes` and `LinTimes` 
      (it is the responsibility of the user to provide times where the system is in equilibrium or at a periodic steady state, i.e. sufficiently long time); 
      - `CalcSteady=True` (recommended approach), OpenFAST will automatically start the linearization when the system is at a periodic steady state (based on given tolerance `TrimTol`) and will perform `NLinTimes` linearizations over a rotor revolution. When a controller is used the option `CalcSteady` will also adjust the controller inputs (either Pitch, Yaw, or Generator Torque, based on the input `TrimCase`) such as to reach the rotational speed indicated by the initial condition. The `TrimGain` and `TrimTol` might need to be adjusted. 
+`Twr_Kdmp` and `Bld_Kdmp` can be used to add damping to the tower and blades during the steady-state calculation. These may be helpful to speed up the steady-state calculation and may be necessary if the tower and/or blades are otherwise unstable. Once the steady-state solution is found. `Twr_Kdmp` and `Bld_Kdmp` will not impact the linearization results (i..e., the linear solution will not have extra tower and blade damping). 
 
 
 
-4. Chose the number of linearizations. For a standstill case, `NLinTimes=1`, for a rotating case, if the equilibrium point is periodic, it is recommended to use `NLinTimes=36`, otherwise `NLinTimes=1`. If `CalcSteady=False` and the user sets `NLinTimes=36`, the user needs to set `LinTimes` with values that corresponds to the rotor being at 36 unique azimuthal position based on the rotor speed. 
+4. Chose the number of linearizations. For a standstill case, `NLinTimes=1`, for a rotating case, if the equilibrium point is periodic, it is recommended to use `NLinTimes=36` (corresponding to on linearization every 10-degrees of azimuth rotation), otherwise `NLinTimes=1`. If `CalcSteady=False` and the user sets `NLinTimes=36`, the user needs to set `LinTimes` with values that corresponds to the rotor being at 36 unique azimuthal position based on the rotor speed. 
 
 
-5. For a typical linearization, the user may set `LinInputs=1`, `LinOutputs=1`, `LinOutJac=False`, `LinOutMod=False`, `Twr_Kdmp=0`, `Bld_Kdmp=0` (see the OpenFAST input file documentation). The standard set of linearization inputs inherent in the linearized system are available when `LinInputs=1`. This includes e.g. collective blade pitch. With `LinOutputs = 1`, every output various `OutList` sections of each module are included in the linearized system. For instance, `GenSpeed` can be included by including `GenSpeed` in the `OutList` of ElastoDyn. Linearization about all the inputs and outputs of OpenFAST set `LinInputs=2`, `LinOutputs=2`, at the expense of having large output files.
+5. For a typical linearization, the user may set `LinInputs=0`, `LinOutputs=0`, `LinOutJac=False`, `LinOutMod=False`, `Twr_Kdmp=0`, `Bld_Kdmp=0` (see the OpenFAST input file documentation).
+   Setting `LinInputs = LinOutputs = 0` avoids generating the B, C, and D matrices (no inputs and outputs).
+   The standard set of linearization inputs inherent in the linearized system are available when `LinInputs=1`. This includes e.g. collective blade pitch. With `LinOutputs = 1`, the outputs of the `OutList` sections of each module are included in the linearized system. For instance, `GenSpeed` can be included by including `GenSpeed` in the `OutList` of ElastoDyn. Linearization about all the inputs and outputs of OpenFAST set `LinInputs=2`, `LinOutputs=2`, at the expense of having large output files.
 
 6. Run OpenFAST on this `.fst` file. OpenFAST will display a message when it is performing each individual linearization, and individual files with the `.lin` extension will be written to disk.
 
@@ -438,7 +449,7 @@ Postprocessing
 
 To obtain the eigenfrequencies of the system the user can open a `.lin` file, extract the state matrix `A` and perform a eigenvalue analysis. For a spinning rotors, all lin-files generated from a simulation at different azimuthal positions need to be opened, and converted using the MBC-transformation. We provide scripts for such cases.
 
-When only one linearization file is to be used (e.g. at standstill), the script `postproLin_OneLinFile_NoRotation` can be used. Is is found in `matlab-toolbox/Campbell/example` or `python-toolbox/pyFAST/linearization/examples/`.
+When only one linearization file is to be used (e.g. at standstill), the script `postproLin_OneLinFile_NoRotation` can be used. Is is found in `matlab-toolbox/Campbell/example` or `openfast_toolbox/openfast_toolbox/linearization/examples/`.
 
 When several linearization files are to be postprocessed (in particular several files corresponding to different azimuthal positions), the script `postproLin_MultiLinFile_Campbel` can be used, located in the same folders mentioned above.
 The script can also be used if linearizations were performed at different wind speed and RPM (via different OpenFAST calls). Displaying the frequencies and damping at these different wind turbine operating conditions is referred to as Campbell diagram.
@@ -450,7 +461,7 @@ Campbell diagrams
 
 In the near future, a dedicated tool will be provided to simplify the process of generating Campbell diagrams.
 
-Until then, to avoid the manual process of editing input files for different wind turbine operating conditions, we provide the script `runCampbell`, found in `matlab-toolbox/Campbell/example` or `python-toolbox/pyFAST/linearization/examples/`.
+Until then, to avoid the manual process of editing input files for different wind turbine operating conditions, we provide the script `runCampbell`, found in `matlab-toolbox/Campbell/example` or `openfast_toolbox/openfast_toolbox/linearization/examples/`.
 The script relies on a template folder which a reference "fst" file. The folder is duplicated, files are created for each wind turbine operating conditions wind speed/rpm), OpenFAST is run, and the linearization files are postprocessed.
 
 
@@ -483,9 +494,9 @@ You might find that for 2 and 5m/s, the tower Fore-Aft is the second frequency, 
 
 The main question is how to determine which mode is which. There is no true solution to this question, here are some elements to help the identifications: 
 
- - The system frequencies are usually easy to determine at 0 m/s and 0 rpm. The system frequencies will vary progressively from this reference point as the RPM/WS/pitch changes. Blade modes will typically display a "splitting" equal to +/- the rotational speed frequency as the rotational speed increases.
+ - The system frequencies are usually easy to determine at 0 m/s and 0 rpm. The system frequencies will vary progressively from this reference point as the RPM/WS/pitch changes. Blade regressive and progressive modes will typically display a "splitting" equal to +/- the rotational speed frequency as the rotational speed increases. The collective modes in flap tend to increase in frequency with rotor speed due to centrifugal stiffening.
 
- - Blade flap modes are typically highly damped 
+ - Blade flap modes are typically highly damped (significantly more than edgewise modes) when aerodynamics are present.
 
  - From an operating point to the next, the damping will not change drastically.
 

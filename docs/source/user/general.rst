@@ -13,6 +13,7 @@ General
 
 Workshop material, legacy documentation, and other resources are listed below.
 
+- `Overview of OpenFAST at NAWEA WindTech 2023 <https://forums.nrel.gov/t/modeling-workshops/523/27>`_
 - `Overview of OpenFAST at NAWEA WindTech 2022 <https://drive.google.com/file/d/1bD5a6rRg6cCKht9Ar8AFJQ8YrI4-wsFe/view>`_
 - `Practical Guide to OpenFAST at NAWEA WindTech 2022 <https://drive.google.com/file/d/1FHovo6btDStPBh1Kv2swA09hIQRcZGZf/view>`_
 - `Overview of OpenFAST at NAWEA WindTech 2019 <https://drive.google.com/file/d/1wagMTOV_CLxSKzS2EEPFp2CExUo3JLpQ/view>`_
