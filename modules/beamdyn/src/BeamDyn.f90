@@ -824,12 +824,6 @@ subroutine SetInitOut(p, InitOut, ErrStat, ErrMsg)
 
    InitOut%Ver = BeamDyn_Ver
 
-   call AllocAry(InitOut%QPtN,  p%nqp, 'InitOut%QPtN', ErrStat2,ErrMsg2)
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
-   if(ErrStat >= AbortErrLev) return
-
-   InitOut%QPtN = (p%QPtN + 1.0)*0.5
-
       ! Set the info in WriteOutputHdr and WriteOutputUnt for BldNd sections.
    CALL BldNdOuts_InitOut( InitOut, p, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
