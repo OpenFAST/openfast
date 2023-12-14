@@ -807,6 +807,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_SeaSt%defWtrDens    = p_FAST%WtrDens
       Init%InData_SeaSt%defWtrDpth    = p_FAST%WtrDpth
       Init%InData_SeaSt%defMSL2SWL    = p_FAST%MSL2SWL
+      Init%InData_SeaSt%MHK           = p_FAST%MHK
       Init%InData_SeaSt%UseInputFile  = .TRUE.
       Init%InData_SeaSt%Linearize     = p_FAST%Linearize
       Init%InData_SeaSt%hasIce        = p_FAST%CompIce /= Module_None
