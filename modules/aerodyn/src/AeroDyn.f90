@@ -1340,6 +1340,7 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    
    p_AD%UA_Flag       = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
    p_AD%CompAeroMaps  = InitInp%CompAeroMaps
+   p_AD%CompSeaSt     = InitInp%CompSeaSt
 
    p%MHK              = InitInp%MHK
    
@@ -1830,59 +1831,7 @@ subroutine AD_CalcWind(t, u, p, o, m, ErrStat, ErrMsg)
          PosOffset = 0.0_ReKi
       end if
 
-      if (p%rotors(iWT)%MHK .EQ. 0_IntKi) then ! Wind turbines
-         ! Hub
-         if (u%rotors(iWT)%HubMotion%Committed) then
-            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
-               real(u%rotors(iWT)%HubMotion%TranslationDisp + u%rotors(iWT)%HubMotion%Position, ReKi), &
-               u%rotors(iWT)%InflowOnHub, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-            if(Failed()) return 
-         else
-            u%rotors(iWT)%InflowOnHub = 0.0_ReKi
-         end if
-         StartNode = StartNode + 1
-
-         ! Blade
-         do k = 1, p%rotors(iWT)%NumBlades
-            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
-               real(u%rotors(iWT)%BladeMotion(k)%TranslationDisp + u%rotors(iWT)%BladeMotion(k)%Position, ReKi), &
-               u%rotors(iWT)%Bld(k)%InflowOnBlade, u%rotors(iWT)%Bld(k)%AccelOnBlade, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-            if(Failed()) return
-            StartNode = StartNode + p%rotors(iWT)%NumBlNds
-         end do
-
-         ! Tower
-         if (u%rotors(iWT)%TowerMotion%Nnodes > 0) then
-            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
-               real(u%rotors(iWT)%TowerMotion%TranslationDisp + u%rotors(iWT)%TowerMotion%Position, ReKi), &
-               u%rotors(iWT)%InflowOnTower, u%rotors(iWT)%AccelOnTower, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-            if(Failed()) return
-            StartNode = StartNode + p%rotors(iWT)%NumTwrNds
-         end if
-
-         ! Nacelle
-         if (u%rotors(iWT)%NacelleMotion%Committed) then   
-            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
-               real(u%rotors(iWT)%NacelleMotion%TranslationDisp + u%rotors(iWT)%NacelleMotion%Position, ReKi), &
-               u%rotors(iWT)%InflowOnNacelle, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-            if(Failed()) return
-            StartNode = StartNode + 1
-         else
-            u%rotors(iWT)%InflowOnNacelle = 0.0_ReKi
-         end if
-
-         ! TailFin
-         if (u%rotors(iWT)%TFinMotion%Committed) then
-            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
-               real(u%rotors(iWT)%TFinMotion%TranslationDisp + u%rotors(iWT)%TFinMotion%Position, ReKi), &
-               u%rotors(iWT)%InflowOnTailFin, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-            if(Failed()) return
-            StartNode = StartNode + 1
-         else
-            u%rotors(iWT)%InflowOnTailFin = 0.0_ReKi
-         end if
-
-      else ! MHK turbines
+      if (p%rotors(iWT)%MHK .NE. MHK_None .and. p%CompSeaSt) then ! MHK turbines with waves
          ! Hub
          if (u%rotors(iWT)%HubMotion%Committed) then
             call WaveField_GetWaveVelAcc_AD(p%WaveField, m%SeaSt_Interp_m, StartNode, t, &
@@ -1928,6 +1877,57 @@ subroutine AD_CalcWind(t, u, p, o, m, ErrStat, ErrMsg)
             call WaveField_GetWaveVelAcc_AD(p%WaveField, m%SeaSt_Interp_m, StartNode, t, &
                real(u%rotors(iWT)%TFinMotion%TranslationDisp + u%rotors(iWT)%TFinMotion%Position, ReKi), &
                u%rotors(iWT)%InflowOnTailFin, NoAcc, ErrStat2, ErrMsg2)
+            if(Failed()) return
+            StartNode = StartNode + 1
+         else
+            u%rotors(iWT)%InflowOnTailFin = 0.0_ReKi
+         end if
+      else ! Wind turbines or MHK turbines without waves
+         ! Hub
+         if (u%rotors(iWT)%HubMotion%Committed) then
+            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
+               real(u%rotors(iWT)%HubMotion%TranslationDisp + u%rotors(iWT)%HubMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnHub, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+            if(Failed()) return 
+         else
+            u%rotors(iWT)%InflowOnHub = 0.0_ReKi
+         end if
+         StartNode = StartNode + 1
+
+         ! Blade
+         do k = 1, p%rotors(iWT)%NumBlades
+            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
+               real(u%rotors(iWT)%BladeMotion(k)%TranslationDisp + u%rotors(iWT)%BladeMotion(k)%Position, ReKi), &
+               u%rotors(iWT)%Bld(k)%InflowOnBlade, u%rotors(iWT)%Bld(k)%AccelOnBlade, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+            if(Failed()) return
+            StartNode = StartNode + p%rotors(iWT)%NumBlNds
+         end do
+
+         ! Tower
+         if (u%rotors(iWT)%TowerMotion%Nnodes > 0) then
+            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
+               real(u%rotors(iWT)%TowerMotion%TranslationDisp + u%rotors(iWT)%TowerMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnTower, u%rotors(iWT)%AccelOnTower, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+            if(Failed()) return
+            StartNode = StartNode + p%rotors(iWT)%NumTwrNds
+         end if
+
+         ! Nacelle
+         if (u%rotors(iWT)%NacelleMotion%Committed) then   
+            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
+               real(u%rotors(iWT)%NacelleMotion%TranslationDisp + u%rotors(iWT)%NacelleMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnNacelle, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+            if(Failed()) return
+            StartNode = StartNode + 1
+         else
+            u%rotors(iWT)%InflowOnNacelle = 0.0_ReKi
+         end if
+
+         ! TailFin
+         if (u%rotors(iWT)%TFinMotion%Committed) then
+            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
+               real(u%rotors(iWT)%TFinMotion%TranslationDisp + u%rotors(iWT)%TFinMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnTailFin, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
             if(Failed()) return
             StartNode = StartNode + 1
          else

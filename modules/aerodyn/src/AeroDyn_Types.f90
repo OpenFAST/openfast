@@ -119,6 +119,7 @@ IMPLICIT NONE
     LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false) [-]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravity force [Nm/s^2]
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK turbine type switch [-]
+    LOGICAL  :: CompSeaSt = .false.      !< Flag to indicate whether SeaState is selected [-]
     REAL(ReKi)  :: defFldDens = 0.0_ReKi      !< Default fluid density from the driver; may be overwritten [kg/m^3]
     REAL(ReKi)  :: defKinVisc = 0.0_ReKi      !< Default kinematic viscosity from the driver; may be overwritten [m^2/s]
     REAL(ReKi)  :: defSpdSound = 0.0_ReKi      !< Default speed of sound from the driver; may be overwritten [m/s]
@@ -472,6 +473,7 @@ IMPLICIT NONE
     TYPE(FVW_ParameterType)  :: FVW      !< Parameters for FVW module [-]
     LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false) [-]
     LOGICAL  :: UA_Flag = .false.      !< logical flag indicating whether to use UnsteadyAero [-]
+    LOGICAL  :: CompSeaSt = .false.      !< Flag to indicate whether SeaState is selected [-]
     TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Pointer of InflowWinds flow field data type [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field data type [-]
   END TYPE AD_ParameterType
@@ -1030,6 +1032,7 @@ subroutine AD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    DstInitInputData%CompAeroMaps = SrcInitInputData%CompAeroMaps
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%MHK = SrcInitInputData%MHK
+   DstInitInputData%CompSeaSt = SrcInitInputData%CompSeaSt
    DstInitInputData%defFldDens = SrcInitInputData%defFldDens
    DstInitInputData%defKinVisc = SrcInitInputData%defKinVisc
    DstInitInputData%defSpdSound = SrcInitInputData%defSpdSound
@@ -1087,6 +1090,7 @@ subroutine AD_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%CompAeroMaps)
    call RegPack(Buf, InData%Gravity)
    call RegPack(Buf, InData%MHK)
+   call RegPack(Buf, InData%CompSeaSt)
    call RegPack(Buf, InData%defFldDens)
    call RegPack(Buf, InData%defKinVisc)
    call RegPack(Buf, InData%defSpdSound)
@@ -1135,6 +1139,8 @@ subroutine AD_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%Gravity)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%MHK)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%CompSeaSt)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%defFldDens)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7122,6 +7128,7 @@ subroutine AD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
    DstParamData%CompAeroMaps = SrcParamData%CompAeroMaps
    DstParamData%UA_Flag = SrcParamData%UA_Flag
+   DstParamData%CompSeaSt = SrcParamData%CompSeaSt
    DstParamData%FlowField => SrcParamData%FlowField
    DstParamData%WaveField => SrcParamData%WaveField
 end subroutine
@@ -7194,6 +7201,7 @@ subroutine AD_PackParam(Buf, Indata)
    call FVW_PackParam(Buf, InData%FVW) 
    call RegPack(Buf, InData%CompAeroMaps)
    call RegPack(Buf, InData%UA_Flag)
+   call RegPack(Buf, InData%CompSeaSt)
    call RegPack(Buf, associated(InData%FlowField))
    if (associated(InData%FlowField)) then
       call RegPackPointer(Buf, c_loc(InData%FlowField), PtrInIndex)
@@ -7264,6 +7272,8 @@ subroutine AD_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%CompAeroMaps)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%UA_Flag)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%CompSeaSt)
    if (RegCheckErr(Buf, RoutineName)) return
    if (associated(OutData%FlowField)) deallocate(OutData%FlowField)
    call RegUnpack(Buf, IsAllocAssoc)

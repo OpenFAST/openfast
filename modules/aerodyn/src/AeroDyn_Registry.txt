@@ -99,6 +99,7 @@ typedef	^	InitInputType	Logical	Linearize	-	.FALSE.	-	"Flag that tells this modu
 typedef	^	InitInputType	LOGICAL	CompAeroMaps   -  .FALSE. -   "flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false)"	-
 typedef	^	InitInputType	ReKi	Gravity	-	-	-	"Gravity force" Nm/s^2
 typedef ^   InitInputType   IntKi   MHK     -   -   -   "MHK turbine type switch"   -
+typedef ^   InitInputType   LOGICAL CompSeaSt   -  -  -   "Flag to indicate whether SeaState is selected"   -
 typedef ^   InitInputType   ReKi    defFldDens  -   -   -   "Default fluid density from the driver; may be overwritten" kg/m^3
 typedef ^   InitInputType   ReKi    defKinVisc  -   -   -   "Default kinematic viscosity from the driver; may be overwritten" m^2/s
 typedef ^   InitInputType   ReKi    defSpdSound -   -   -   "Default speed of sound from the driver; may be overwritten" m/s
@@ -435,6 +436,7 @@ typedef	^	ParameterType	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=non
 typedef	^	ParameterType	FVW_ParameterType	FVW	-	-	-	"Parameters for FVW module"
 typedef   ^     ParameterType LOGICAL         CompAeroMaps   -  .FALSE. -   "flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false)"	-
 typedef   ^     ParameterType LOGICAL         UA_Flag       -  -  -  "logical flag indicating whether to use UnsteadyAero"        - 
+typedef   ^     ParameterType LOGICAL         CompSeaSt     -  -  -  "Flag to indicate whether SeaState is selected"   -
 typedef ^   ParameterType   FlowFieldType *FlowField -  -   -    "Pointer of InflowWinds flow field data type" - 
 typedef ^   ParameterType   SeaSt_WaveFieldType *WaveField -  -   -    "Pointer to SeaState wave field data type" -
 
