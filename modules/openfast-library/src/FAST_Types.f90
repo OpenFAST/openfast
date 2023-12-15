@@ -81,6 +81,7 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_RotSpeed = 4      ! rotor speed [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Err = 5      ! err in the ss solve [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Iter = 6      ! number of iterations [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: NumStateTimes = 4      ! size of arrays of state derived types (Continuous state type etc). (STATE_CURR, STATE_PRED, STATE_SAVED_CURR, STATE_SAVED_PRED) [-]
 ! =========  FAST_VTK_BLSurfaceType  =======
   TYPE, PUBLIC :: FAST_VTK_BLSurfaceType
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AirfoilCoords      !< x,y coordinates for airfoil around each blade node on a blade (relative to reference) [-]
@@ -427,10 +428,10 @@ IMPLICIT NONE
 ! =======================
 ! =========  ElastoDyn_Data  =======
   TYPE, PUBLIC :: ElastoDyn_Data
-    TYPE(ED_ContinuousStateType) , DIMENSION(1:4)  :: x      !< Continuous states [-]
-    TYPE(ED_DiscreteStateType) , DIMENSION(1:4)  :: xd      !< Discrete states [-]
-    TYPE(ED_ConstraintStateType) , DIMENSION(1:4)  :: z      !< Constraint states [-]
-    TYPE(ED_OtherStateType) , DIMENSION(1:4)  :: OtherSt      !< Other states [-]
+    TYPE(ED_ContinuousStateType) , DIMENSION(NumStateTimes)  :: x      !< Continuous states [-]
+    TYPE(ED_DiscreteStateType) , DIMENSION(NumStateTimes)  :: xd      !< Discrete states [-]
+    TYPE(ED_ConstraintStateType) , DIMENSION(NumStateTimes)  :: z      !< Constraint states [-]
+    TYPE(ED_OtherStateType) , DIMENSION(NumStateTimes)  :: OtherSt      !< Other states [-]
     TYPE(ED_ParameterType)  :: p      !< Parameters [-]
     TYPE(ED_InputType)  :: u      !< System inputs [-]
     TYPE(ED_OutputType)  :: y      !< System outputs [-]
@@ -446,10 +447,10 @@ IMPLICIT NONE
 ! =======================
 ! =========  ServoDyn_Data  =======
   TYPE, PUBLIC :: ServoDyn_Data
-    TYPE(SrvD_ContinuousStateType) , DIMENSION(1:4)  :: x      !< Continuous states [-]
-    TYPE(SrvD_DiscreteStateType) , DIMENSION(1:4)  :: xd      !< Discrete states [-]
-    TYPE(SrvD_ConstraintStateType) , DIMENSION(1:4)  :: z      !< Constraint states [-]
-    TYPE(SrvD_OtherStateType) , DIMENSION(1:4)  :: OtherSt      !< Other states [-]
+    TYPE(SrvD_ContinuousStateType) , DIMENSION(NumStateTimes)  :: x      !< Continuous states [-]
+    TYPE(SrvD_DiscreteStateType) , DIMENSION(NumStateTimes)  :: xd      !< Discrete states [-]
+    TYPE(SrvD_ConstraintStateType) , DIMENSION(NumStateTimes)  :: z      !< Constraint states [-]
+    TYPE(SrvD_OtherStateType) , DIMENSION(NumStateTimes)  :: OtherSt      !< Other states [-]
     TYPE(SrvD_ParameterType)  :: p      !< Parameters [-]
     TYPE(SrvD_InputType)  :: u      !< System inputs [-]
     TYPE(SrvD_OutputType)  :: y      !< System outputs [-]
@@ -465,10 +466,10 @@ IMPLICIT NONE
 ! =======================
 ! =========  AeroDyn14_Data  =======
   TYPE, PUBLIC :: AeroDyn14_Data
-    TYPE(AD14_ContinuousStateType) , DIMENSION(1:4)  :: x      !< Continuous states [-]
-    TYPE(AD14_DiscreteStateType) , DIMENSION(1:4)  :: xd      !< Discrete states [-]
-    TYPE(AD14_ConstraintStateType) , DIMENSION(1:4)  :: z      !< Constraint states [-]
-    TYPE(AD14_OtherStateType) , DIMENSION(1:4)  :: OtherSt      !< Other states [-]
+    TYPE(AD14_ContinuousStateType) , DIMENSION(NumStateTimes)  :: x      !< Continuous states [-]
+    TYPE(AD14_DiscreteStateType) , DIMENSION(NumStateTimes)  :: xd      !< Discrete states [-]
+    TYPE(AD14_ConstraintStateType) , DIMENSION(NumStateTimes)  :: z      !< Constraint states [-]
+    TYPE(AD14_OtherStateType) , DIMENSION(NumStateTimes)  :: OtherSt      !< Other states [-]
     TYPE(AD14_ParameterType)  :: p      !< Parameters [-]
     TYPE(AD14_InputType)  :: u      !< System inputs [-]
     TYPE(AD14_OutputType)  :: y      !< System outputs [-]
@@ -481,10 +482,10 @@ IMPLICIT NONE
 ! =======================
 ! =========  AeroDyn_Data  =======
   TYPE, PUBLIC :: AeroDyn_Data
-    TYPE(AD_ContinuousStateType) , DIMENSION(1:4)  :: x      !< Continuous states [-]
-    TYPE(AD_DiscreteStateType) , DIMENSION(1:4)  :: xd      !< Discrete states [-]
-    TYPE(AD_ConstraintStateType) , DIMENSION(1:4)  :: z      !< Constraint states [-]
-    TYPE(AD_OtherStateType) , DIMENSION(1:4)  :: OtherSt      !< Other states [-]
+    TYPE(AD_ContinuousStateType) , DIMENSION(NumStateTimes)  :: x      !< Continuous states [-]
+    TYPE(AD_DiscreteStateType) , DIMENSION(NumStateTimes)  :: xd      !< Discrete states [-]
+    TYPE(AD_ConstraintStateType) , DIMENSION(NumStateTimes)  :: z      !< Constraint states [-]
+    TYPE(AD_OtherStateType) , DIMENSION(NumStateTimes)  :: OtherSt      !< Other states [-]
     TYPE(AD_ParameterType)  :: p      !< Parameters [-]
     TYPE(AD_InputType)  :: u      !< System inputs [-]
     TYPE(AD_OutputType)  :: y      !< System outputs [-]
@@ -499,10 +500,10 @@ IMPLICIT NONE
 ! =======================
 ! =========  ExtLoads_Data  =======
   TYPE, PUBLIC :: ExtLoads_Data
-    TYPE(ExtLd_ContinuousStateType) , DIMENSION(1:2)  :: x      !< Continuous states [-]
-    TYPE(ExtLd_DiscreteStateType) , DIMENSION(1:2)  :: xd      !< Discrete states [-]
-    TYPE(ExtLd_ConstraintStateType) , DIMENSION(1:2)  :: z      !< Constraint states [-]
-    TYPE(ExtLd_OtherStateType) , DIMENSION(1:2)  :: OtherSt      !< Other states [-]
+    TYPE(ExtLd_ContinuousStateType) , DIMENSION(NumStateTimes)  :: x      !< Continuous states [-]
+    TYPE(ExtLd_DiscreteStateType) , DIMENSION(NumStateTimes)  :: xd      !< Discrete states [-]
+    TYPE(ExtLd_ConstraintStateType) , DIMENSION(NumStateTimes)  :: z      !< Constraint states [-]
+    TYPE(ExtLd_OtherStateType) , DIMENSION(NumStateTimes)  :: OtherSt      !< Other states [-]
     TYPE(ExtLd_ParameterType)  :: p      !< Parameters [-]
     TYPE(ExtLd_InputType)  :: u      !< System inputs [-]
     TYPE(ExtLd_OutputType)  :: y      !< System outputs [-]
@@ -512,10 +513,10 @@ IMPLICIT NONE
 ! =======================
 ! =========  InflowWind_Data  =======
   TYPE, PUBLIC :: InflowWind_Data
-    TYPE(InflowWind_ContinuousStateType) , DIMENSION(1:4)  :: x      !< Continuous states [-]
-    TYPE(InflowWind_DiscreteStateType) , DIMENSION(1:4)  :: xd      !< Discrete states [-]
-    TYPE(InflowWind_ConstraintStateType) , DIMENSION(1:4)  :: z      !< Constraint states [-]
-    TYPE(InflowWind_OtherStateType) , DIMENSION(1:4)  :: OtherSt      !< Other states [-]
+    TYPE(InflowWind_ContinuousStateType) , DIMENSION(NumStateTimes)  :: x      !< Continuous states [-]
+    TYPE(InflowWind_DiscreteStateType) , DIMENSION(NumStateTimes)  :: xd      !< Discrete states [-]
+    TYPE(InflowWind_ConstraintStateType) , DIMENSION(NumStateTimes)  :: z      !< Constraint states [-]
+    TYPE(InflowWind_OtherStateType) , DIMENSION(NumStateTimes)  :: OtherSt      !< Other states [-]
     TYPE(InflowWind_ParameterType)  :: p      !< Parameters [-]
     TYPE(InflowWind_InputType)  :: u      !< System inputs [-]
     TYPE(InflowWind_OutputType)  :: y      !< System outputs [-]
@@ -545,10 +546,10 @@ IMPLICIT NONE
 ! =======================
 ! =========  SubDyn_Data  =======
   TYPE, PUBLIC :: SubDyn_Data
-    TYPE(SD_ContinuousStateType) , DIMENSION(1:4)  :: x      !< Continuous states [-]
-    TYPE(SD_DiscreteStateType) , DIMENSION(1:4)  :: xd      !< Discrete states [-]
-    TYPE(SD_ConstraintStateType) , DIMENSION(1:4)  :: z      !< Constraint states [-]
-    TYPE(SD_OtherStateType) , DIMENSION(1:4)  :: OtherSt      !< Other states [-]
+    TYPE(SD_ContinuousStateType) , DIMENSION(NumStateTimes)  :: x      !< Continuous states [-]
+    TYPE(SD_DiscreteStateType) , DIMENSION(NumStateTimes)  :: xd      !< Discrete states [-]
+    TYPE(SD_ConstraintStateType) , DIMENSION(NumStateTimes)  :: z      !< Constraint states [-]
+    TYPE(SD_OtherStateType) , DIMENSION(NumStateTimes)  :: OtherSt      !< Other states [-]
     TYPE(SD_ParameterType)  :: p      !< Parameters [-]
     TYPE(SD_InputType)  :: u      !< System inputs [-]
     TYPE(SD_OutputType)  :: y      !< System outputs [-]
@@ -563,10 +564,10 @@ IMPLICIT NONE
 ! =======================
 ! =========  ExtPtfm_Data  =======
   TYPE, PUBLIC :: ExtPtfm_Data
-    TYPE(ExtPtfm_ContinuousStateType) , DIMENSION(1:4)  :: x      !< Continuous states [-]
-    TYPE(ExtPtfm_DiscreteStateType) , DIMENSION(1:4)  :: xd      !< Discrete states [-]
-    TYPE(ExtPtfm_ConstraintStateType) , DIMENSION(1:4)  :: z      !< Constraint states [-]
-    TYPE(ExtPtfm_OtherStateType) , DIMENSION(1:4)  :: OtherSt      !< Other states [-]
+    TYPE(ExtPtfm_ContinuousStateType) , DIMENSION(NumStateTimes)  :: x      !< Continuous states [-]
+    TYPE(ExtPtfm_DiscreteStateType) , DIMENSION(NumStateTimes)  :: xd      !< Discrete states [-]
+    TYPE(ExtPtfm_ConstraintStateType) , DIMENSION(NumStateTimes)  :: z      !< Constraint states [-]
+    TYPE(ExtPtfm_OtherStateType) , DIMENSION(NumStateTimes)  :: OtherSt      !< Other states [-]
     TYPE(ExtPtfm_ParameterType)  :: p      !< Parameters [-]
     TYPE(ExtPtfm_InputType)  :: u      !< System inputs [-]
     TYPE(ExtPtfm_OutputType)  :: y      !< System outputs [-]
@@ -579,10 +580,10 @@ IMPLICIT NONE
 ! =======================
 ! =========  SeaState_Data  =======
   TYPE, PUBLIC :: SeaState_Data
-    TYPE(SeaSt_ContinuousStateType) , DIMENSION(1:4)  :: x      !< Continuous states [-]
-    TYPE(SeaSt_DiscreteStateType) , DIMENSION(1:4)  :: xd      !< Discrete states [-]
-    TYPE(SeaSt_ConstraintStateType) , DIMENSION(1:4)  :: z      !< Constraint states [-]
-    TYPE(SeaSt_OtherStateType) , DIMENSION(1:4)  :: OtherSt      !< Other states [-]
+    TYPE(SeaSt_ContinuousStateType) , DIMENSION(NumStateTimes)  :: x      !< Continuous states [-]
+    TYPE(SeaSt_DiscreteStateType) , DIMENSION(NumStateTimes)  :: xd      !< Discrete states [-]
+    TYPE(SeaSt_ConstraintStateType) , DIMENSION(NumStateTimes)  :: z      !< Constraint states [-]
+    TYPE(SeaSt_OtherStateType) , DIMENSION(NumStateTimes)  :: OtherSt      !< Other states [-]
     TYPE(SeaSt_ParameterType)  :: p      !< Parameters [-]
     TYPE(SeaSt_InputType)  :: u      !< System inputs [-]
     TYPE(SeaSt_OutputType)  :: y      !< System outputs [-]
@@ -597,10 +598,10 @@ IMPLICIT NONE
 ! =======================
 ! =========  HydroDyn_Data  =======
   TYPE, PUBLIC :: HydroDyn_Data
-    TYPE(HydroDyn_ContinuousStateType) , DIMENSION(1:4)  :: x      !< Continuous states [-]
-    TYPE(HydroDyn_DiscreteStateType) , DIMENSION(1:4)  :: xd      !< Discrete states [-]
-    TYPE(HydroDyn_ConstraintStateType) , DIMENSION(1:4)  :: z      !< Constraint states [-]
-    TYPE(HydroDyn_OtherStateType) , DIMENSION(1:4)  :: OtherSt      !< Other states [-]
+    TYPE(HydroDyn_ContinuousStateType) , DIMENSION(NumStateTimes)  :: x      !< Continuous states [-]
+    TYPE(HydroDyn_DiscreteStateType) , DIMENSION(NumStateTimes)  :: xd      !< Discrete states [-]
+    TYPE(HydroDyn_ConstraintStateType) , DIMENSION(NumStateTimes)  :: z      !< Constraint states [-]
+    TYPE(HydroDyn_OtherStateType) , DIMENSION(NumStateTimes)  :: OtherSt      !< Other states [-]
     TYPE(HydroDyn_ParameterType)  :: p      !< Parameters [-]
     TYPE(HydroDyn_InputType)  :: u      !< System inputs [-]
     TYPE(HydroDyn_OutputType)  :: y      !< System outputs [-]
@@ -615,10 +616,10 @@ IMPLICIT NONE
 ! =======================
 ! =========  IceFloe_Data  =======
   TYPE, PUBLIC :: IceFloe_Data
-    TYPE(IceFloe_ContinuousStateType) , DIMENSION(1:4)  :: x      !< Continuous states [-]
-    TYPE(IceFloe_DiscreteStateType) , DIMENSION(1:4)  :: xd      !< Discrete states [-]
-    TYPE(IceFloe_ConstraintStateType) , DIMENSION(1:4)  :: z      !< Constraint states [-]
-    TYPE(IceFloe_OtherStateType) , DIMENSION(1:4)  :: OtherSt      !< Other states [-]
+    TYPE(IceFloe_ContinuousStateType) , DIMENSION(NumStateTimes)  :: x      !< Continuous states [-]
+    TYPE(IceFloe_DiscreteStateType) , DIMENSION(NumStateTimes)  :: xd      !< Discrete states [-]
+    TYPE(IceFloe_ConstraintStateType) , DIMENSION(NumStateTimes)  :: z      !< Constraint states [-]
+    TYPE(IceFloe_OtherStateType) , DIMENSION(NumStateTimes)  :: OtherSt      !< Other states [-]
     TYPE(IceFloe_ParameterType)  :: p      !< Parameters [-]
     TYPE(IceFloe_InputType)  :: u      !< System inputs [-]
     TYPE(IceFloe_OutputType)  :: y      !< System outputs [-]
@@ -631,9 +632,9 @@ IMPLICIT NONE
 ! =======================
 ! =========  MAP_Data  =======
   TYPE, PUBLIC :: MAP_Data
-    TYPE(MAP_ContinuousStateType) , DIMENSION(1:4)  :: x      !< Continuous states [-]
-    TYPE(MAP_DiscreteStateType) , DIMENSION(1:4)  :: xd      !< Discrete states [-]
-    TYPE(MAP_ConstraintStateType) , DIMENSION(1:4)  :: z      !< Constraint states [-]
+    TYPE(MAP_ContinuousStateType) , DIMENSION(NumStateTimes)  :: x      !< Continuous states [-]
+    TYPE(MAP_DiscreteStateType) , DIMENSION(NumStateTimes)  :: xd      !< Discrete states [-]
+    TYPE(MAP_ConstraintStateType) , DIMENSION(NumStateTimes)  :: z      !< Constraint states [-]
     TYPE(MAP_OtherStateType)  :: OtherSt      !< Other/optimization states [-]
     TYPE(MAP_ParameterType)  :: p      !< Parameters [-]
     TYPE(MAP_InputType)  :: u      !< System inputs [-]
@@ -649,10 +650,10 @@ IMPLICIT NONE
 ! =======================
 ! =========  FEAMooring_Data  =======
   TYPE, PUBLIC :: FEAMooring_Data
-    TYPE(FEAM_ContinuousStateType) , DIMENSION(1:4)  :: x      !< Continuous states [-]
-    TYPE(FEAM_DiscreteStateType) , DIMENSION(1:4)  :: xd      !< Discrete states [-]
-    TYPE(FEAM_ConstraintStateType) , DIMENSION(1:4)  :: z      !< Constraint states [-]
-    TYPE(FEAM_OtherStateType) , DIMENSION(1:4)  :: OtherSt      !< Other states [-]
+    TYPE(FEAM_ContinuousStateType) , DIMENSION(NumStateTimes)  :: x      !< Continuous states [-]
+    TYPE(FEAM_DiscreteStateType) , DIMENSION(NumStateTimes)  :: xd      !< Discrete states [-]
+    TYPE(FEAM_ConstraintStateType) , DIMENSION(NumStateTimes)  :: z      !< Constraint states [-]
+    TYPE(FEAM_OtherStateType) , DIMENSION(NumStateTimes)  :: OtherSt      !< Other states [-]
     TYPE(FEAM_ParameterType)  :: p      !< Parameters [-]
     TYPE(FEAM_InputType)  :: u      !< System inputs [-]
     TYPE(FEAM_OutputType)  :: y      !< System outputs [-]
@@ -665,10 +666,10 @@ IMPLICIT NONE
 ! =======================
 ! =========  MoorDyn_Data  =======
   TYPE, PUBLIC :: MoorDyn_Data
-    TYPE(MD_ContinuousStateType) , DIMENSION(1:4)  :: x      !< Continuous states [-]
-    TYPE(MD_DiscreteStateType) , DIMENSION(1:4)  :: xd      !< Discrete states [-]
-    TYPE(MD_ConstraintStateType) , DIMENSION(1:4)  :: z      !< Constraint states [-]
-    TYPE(MD_OtherStateType) , DIMENSION(1:4)  :: OtherSt      !< Other states [-]
+    TYPE(MD_ContinuousStateType) , DIMENSION(NumStateTimes)  :: x      !< Continuous states [-]
+    TYPE(MD_DiscreteStateType) , DIMENSION(NumStateTimes)  :: xd      !< Discrete states [-]
+    TYPE(MD_ConstraintStateType) , DIMENSION(NumStateTimes)  :: z      !< Constraint states [-]
+    TYPE(MD_OtherStateType) , DIMENSION(NumStateTimes)  :: OtherSt      !< Other states [-]
     TYPE(MD_ParameterType)  :: p      !< Parameters [-]
     TYPE(MD_InputType)  :: u      !< System inputs [-]
     TYPE(MD_OutputType)  :: y      !< System outputs [-]
@@ -683,10 +684,10 @@ IMPLICIT NONE
 ! =======================
 ! =========  OrcaFlex_Data  =======
   TYPE, PUBLIC :: OrcaFlex_Data
-    TYPE(Orca_ContinuousStateType) , DIMENSION(1:4)  :: x      !< Continuous states [-]
-    TYPE(Orca_DiscreteStateType) , DIMENSION(1:4)  :: xd      !< Discrete states [-]
-    TYPE(Orca_ConstraintStateType) , DIMENSION(1:4)  :: z      !< Constraint states [-]
-    TYPE(Orca_OtherStateType) , DIMENSION(1:4)  :: OtherSt      !< Other states [-]
+    TYPE(Orca_ContinuousStateType) , DIMENSION(NumStateTimes)  :: x      !< Continuous states [-]
+    TYPE(Orca_DiscreteStateType) , DIMENSION(NumStateTimes)  :: xd      !< Discrete states [-]
+    TYPE(Orca_ConstraintStateType) , DIMENSION(NumStateTimes)  :: z      !< Constraint states [-]
+    TYPE(Orca_OtherStateType) , DIMENSION(NumStateTimes)  :: OtherSt      !< Other states [-]
     TYPE(Orca_ParameterType)  :: p      !< Parameters [-]
     TYPE(Orca_InputType)  :: u      !< System inputs [-]
     TYPE(Orca_OutputType)  :: y      !< System outputs [-]
