@@ -14,7 +14,8 @@ The C++ API is defined and implemented in the :class:`~fast::OpenFAST` class. An
 All inputs to the OpenFAST class are expected through an object of the :class:`fast::fastInputs`.
 
 
-.. doxygenclass:: fast::fastInputs
+..
+ .. doxygenclass:: fast::fastInputs
    :members:
    :private-members:
    :protected-members:
@@ -22,7 +23,8 @@ All inputs to the OpenFAST class are expected through an object of the :class:`f
 
 The object of :class:`~fast::fastInputs` class is expected hold a struct vector of type :class:`~fast::turbineDataType` and size of the number of turbines in the simulation.
 
-.. doxygenstruct:: fast::turbineDataType
+..
+ .. doxygenstruct:: fast::turbineDataType
    :members:
    :private-members:
 
@@ -30,7 +32,7 @@ The object of :class:`~fast::fastInputs` class is expected hold a struct vector 
 Use of C++ API for Actuator Line Simulations
 --------------------------------------------
 
-The C++ API was developed mainly to integrate OpenFAST with Computational Fluid Dynamics (CFD) solvers for Fluid-Structure Interaction (FSI) applications. The workhorse FSI algorithm for wind energy applications today is the Actuator Line algorithm :cite:`churchfield2012`. The Actuator Line algorithm represents the effect of a turbine on a flow field as a series of point forces at **actuator points** along aerodynamic surfaces. The use of Blade Element Momentum theory in AeroDyn is modified to interface OpenFAST with CFD solvers for actuator line simulations. The CFD solver becomes the inflow module for OpenFAST that provides velocity information near the turbine. The calculation of the induction factors is turned off in OpenFAST and AeroDyn simply uses look up tables and an optional dynamic stall model to calculate the loads on the turbine based on the inflow field information received from the CFD solver. The induction model should be turned off in OpenFAST by selecting :samp:`WakeMod=0` in the AeroDyn input file. OpenFAST lumps the line forces along the blades and tower into a series of point forces for the actuator line algorithm. :numref:`actuatorline-viz` illustrates the transfer of information between OpenFAST and a CFD solver for actuator line applications.
+The C++ API was developed mainly to integrate OpenFAST with Computational Fluid Dynamics (CFD) solvers for Fluid-Structure Interaction (FSI) applications. The workhorse FSI algorithm for wind energy applications today is the Actuator Line algorithm :cite:`cpp-churchfield2012`. The Actuator Line algorithm represents the effect of a turbine on a flow field as a series of point forces at **actuator points** along aerodynamic surfaces. The use of Blade Element Momentum theory in AeroDyn is modified to interface OpenFAST with CFD solvers for actuator line simulations. The CFD solver becomes the inflow module for OpenFAST that provides velocity information near the turbine. The calculation of the induction factors is turned off in OpenFAST and AeroDyn simply uses look up tables and an optional dynamic stall model to calculate the loads on the turbine based on the inflow field information received from the CFD solver. The induction model should be turned off in OpenFAST by selecting :samp:`WakeMod=0` in the AeroDyn input file. OpenFAST lumps the line forces along the blades and tower into a series of point forces for the actuator line algorithm. :numref:`actuatorline-viz` illustrates the transfer of information between OpenFAST and a CFD solver for actuator line applications.
 
 .. _actuatorline-viz:
 
@@ -51,7 +53,7 @@ The CFD solver is expected to be the *driver program* for actuator line FSI simu
    A conventional serial staggered FSI scheme that can be constructed through the C++ API for actuator line applications.
 
 
-OpenFAST uses different spatial meshes for the various modules :cite:`fastv8ModFramework`. We define the actuator points to be along the mesh defined in the structural model (ElastoDyn/BeamDyn) of the turbine. The user defines the required number of actuator points along each blade and the tower through the input parameters :samp:`numForcePtsBlade` and :samp:`numForcePtsTower` for each turbine. The number of actuator points have to be the same on all blades. The C++ API uses OpenFAST to create the requested number of actuator points through linear interpolation of the nodes in the structural model. The mesh mapping algorithm in OpenFAST :cite:`fastv8AlgorithmsExamples` is used to transfer deflections from the structural model and loads from AeroDyn to the actuator points. To distinguish the *actuator points* from the Aerodyn points, the OpenFAST C++ uses the term :samp:`forceNodes` for the actuator points and :samp:`velNodes` (velocity nodes) for the Aerodyn points. The following piece of code illustrates how one can use the C++ API to implement a strongly coupled FSI scheme with "outer" iterations for actuator line applications. This sample piece of code sets the velocity at the :samp:`velNodes` and access the coordinates and the lumped forces at the :samp:`forceNodes`.
+OpenFAST uses different spatial meshes for the various modules :cite:`cpp-fastv8ModFramework`. We define the actuator points to be along the mesh defined in the structural model (ElastoDyn/BeamDyn) of the turbine. The user defines the required number of actuator points along each blade and the tower through the input parameters :samp:`numForcePtsBlade` and :samp:`numForcePtsTower` for each turbine. The number of actuator points have to be the same on all blades. The C++ API uses OpenFAST to create the requested number of actuator points through linear interpolation of the nodes in the structural model. The mesh mapping algorithm in OpenFAST :cite:`cpp-fastv8AlgorithmsExamples` is used to transfer deflections from the structural model and loads from AeroDyn to the actuator points. To distinguish the *actuator points* from the Aerodyn points, the OpenFAST C++ uses the term :samp:`forceNodes` for the actuator points and :samp:`velNodes` (velocity nodes) for the Aerodyn points. The following piece of code illustrates how one can use the C++ API to implement a strongly coupled FSI scheme with "outer" iterations for actuator line applications. This sample piece of code sets the velocity at the :samp:`velNodes` and access the coordinates and the lumped forces at the :samp:`forceNodes`.
 
 .. code-block:: c++
 
@@ -96,6 +98,7 @@ OpenFAST uses different spatial meshes for the various modules :cite:`fastv8ModF
    :maxdepth: 1
 
    api.rst
+   zrefs.rst
 
 
 Implementation

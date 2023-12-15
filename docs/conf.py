@@ -66,6 +66,7 @@ extensions = [
     'sphinxcontrib.doxylink',
     'sphinxcontrib.bibtex',
     'sphinxcontrib.mermaid',
+#    'breathe',
 ]
 bibtex_bibfiles = [
     'source/user/aerodyn-aeroacoustics/references.bib',
@@ -76,7 +77,8 @@ bibtex_bibfiles = [
     'source/user/fast.farm/bibliography.bib',
     'source/user/hydrodyn/references.bib',
     'source/user/servodyn-stc/StC_Refs.bib',
-    'source/user/subdyn/references_SD.bib'
+    'source/user/subdyn/references_SD.bib',
+    'source/dev/cppapi/bibliography.bib'
 ]
 
 autodoc_default_flags = [
@@ -88,6 +90,11 @@ autodoc_default_flags = [
 autoclass_content = 'both'
 
 mathjax_path = 'https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML'
+
+## Breathe Configuration -- for cpp interface
+#breathe_projects = {"cppapi": "source/dev/cppapi"}
+#breathe_default_project = "cppapi"
+
 
 # FIXME: Naively assuming build directory one level up locally, and two up on readthedocs
 if useDoxygen:
