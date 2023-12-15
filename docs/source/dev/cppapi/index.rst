@@ -14,6 +14,8 @@ The C++ API is defined and implemented in the :class:`~fast::OpenFAST` class. An
 All inputs to the OpenFAST class are expected through an object of the :class:`fast::fastInputs`.
 
 
+FIXME: **doxygenclass** is needed to render the :class:`fast::fastInputs` class structure
+
 ..
  .. doxygenclass:: fast::fastInputs
    :members:
@@ -22,6 +24,8 @@ All inputs to the OpenFAST class are expected through an object of the :class:`f
    :undoc-members:
 
 The object of :class:`~fast::fastInputs` class is expected hold a struct vector of type :class:`~fast::turbineDataType` and size of the number of turbines in the simulation.
+
+FIXME: **doxygenstruct** is needed to render the :class:`fast::turbineDataType` class structure
 
 ..
  .. doxygenstruct:: fast::turbineDataType
@@ -98,7 +102,6 @@ OpenFAST uses different spatial meshes for the various modules :cite:`cpp-fastv8
    :maxdepth: 1
 
    api.rst
-   zrefs.rst
 
 
 Implementation
@@ -206,3 +209,11 @@ The test for the implementation of the mapping procedure is as follows. OpenFAST
    :width: 100%
 
    Variation of torque using different number of actuator force nodes in `OpenFAST` for the same number of velocity nodes.
+
+
+
+References
+----------
+
+.. bibliography:: bibliography.bib
+   :labelprefix: cpp-
