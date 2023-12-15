@@ -36,7 +36,7 @@ The C++ API was developed mainly to integrate OpenFAST with Computational Fluid 
 
 .. _actuatorline-viz:
 
-.. figure:: files/actuatorLine_illustrationViz.pdf
+.. figure:: files/actuatorLine_illustrationViz.png
    :align: center
    :width: 100%
 
@@ -46,7 +46,7 @@ The CFD solver is expected to be the *driver program* for actuator line FSI simu
 
 .. _actuatorline-css:
 
-.. figure:: files/css_actuatorline.pdf
+.. figure:: files/css_actuatorline.png
    :align: center
    :width: 100%
 
