@@ -1825,7 +1825,7 @@ subroutine AD_CalcWind(t, u, p, o, m, ErrStat, ErrMsg)
    do iWT = 1, size(u%rotors)
 
       ! If rotor is MHK, add water depth to z coordinate
-      if (p%rotors(iWT)%MHK > 0) then
+      if (p%rotors(iWT)%MHK .NE. MHK_None) then
          PosOffset = [0.0_ReKi, 0.0_ReKi, p%rotors(iWT)%WtrDpth]
       else
          PosOffset = 0.0_ReKi
