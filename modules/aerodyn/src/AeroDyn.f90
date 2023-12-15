@@ -3904,6 +3904,8 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
 
    
       ! local variables
+   real(ReKi)                               :: BlCbSum
+   real(ReKi)                               :: TwrCbSum
    integer(IntKi)                           :: k                                 ! Blade number
    integer(IntKi)                           :: j                                 ! node number
    integer(IntKi)                           :: iR                                ! rotor index
@@ -4047,6 +4049,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       ! If the MHK flag is set to 1 or 2, check that the blade buoyancy and added mass coefficients are >= 0.
       if ( InitInp%MHK > 0 )  then
          do k=1,NumBl(iR)
+            BlCbSum = 0.0_ReKi
             do j=1,InputFileData%rotors(iR)%BladeProps(k)%NumBlNds
                if ( InputFileData%rotors(iR)%BladeProps(k)%BlCb(j) < 0.0_ReKi )  then
                   call SetErrStat( ErrID_Fatal, 'The buoyancy coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
@@ -4068,7 +4071,11 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
                   call SetErrStat( ErrID_Fatal, 'The pitch added mass coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
                                  //' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
                endif
+               BlCbSum = BlCbSum + InputFileData%rotors(iR)%BladeProps(k)%BlCb(j)
             end do ! j=nodes
+            if ( BlCbSum <= 0.0_ReKi .and. InputFileData%rotors(iR)%VolHub > 0.0_ReKi .or. InputFileData%rotors(iR)%VolHub <= 0.0_ReKi .and. BlCbSum > 0.0_ReKi )  then
+               call SetErrStat( ErrID_Fatal, 'If blade buoyancy is calculated, hub buoyancy must be calculated, and vice versa.', ErrStat, ErrMsg, RoutineName )
+            endif
          end do ! k=blades
       end if
    end do ! iR rotor
@@ -4105,6 +4112,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
 
          ! If the MHK flag is set to 1 or 2, check that the tower buoyancy and added mass coefficients are >= 0.
          if ( InitInp%MHK > 0 .and. InputFileData%rotors(iR)%NumTwrNds > 0 )  then
+            TwrCbSum = 0.0_ReKi
             do j=1,InputFileData%rotors(iR)%NumTwrNds
                if ( InputFileData%rotors(iR)%TwrCb(j) < 0.0_ReKi )  then
                   call SetErrStat( ErrID_Fatal, 'The buoyancy coefficient for tower node '//trim(Num2LStr(j))//' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
@@ -4113,7 +4121,11 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
                if ( InputFileData%rotors(iR)%TwrCa(j) < 0.0_ReKi )  then
                   call SetErrStat( ErrID_Fatal, 'The added mass coefficient for tower node '//trim(Num2LStr(j))//' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
                endif
+               TwrCbSum = TwrCbSum + InputFileData%rotors(iR)%TwrCb(j)
             end do ! j=nodes
+            if ( TwrCbSum <= 0.0_ReKi .and. InputFileData%rotors(iR)%VolNac > 0.0_ReKi .or. InputFileData%rotors(iR)%VolNac <= 0.0_ReKi .and. TwrCbSum > 0.0_ReKi )  then
+               call SetErrStat( ErrID_Fatal, 'If tower buoyancy is calculated, nacelle buoyancy must be calculated, and vice versa.', ErrStat, ErrMsg, RoutineName )
+            endif
          end if
 
       end if
