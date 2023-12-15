@@ -15,6 +15,14 @@ inline void check_nc_error(int code, std::string msg) {
 
 int fast::OpenFAST::AbortErrLev = ErrID_Fatal; // abort error level; compare with NWTC Library
 
+int time_step_ratio(double fastDt, double driverDt, double epsFactor=1e-6)
+{
+  // ensure that the ratio is robust to integer conversion by making sure it will always truncate down
+  // provide an epsilon that is small relative to dtFast to help with integer conversion
+  const double eps = fastDt*epsFactor;
+  return static_cast<int>((driverDt+eps)/fastDt);
+}
+
 //Constructor
 fast::fastInputs::fastInputs():
     nTurbinesGlob(0),
@@ -58,7 +66,7 @@ void fast::OpenFAST::findRestartFile(int iTurbLoc) {
     //Find the file and open it in read only mode
     std::stringstream rstfile_ss;
     rstfile_ss << "turb_" ;
-    rstfile_ss << std::setfill('0') << std::setw(2) << turbineMapProcToGlob[iTurbLoc];
+    rstfile_ss << std::setfill('0') << std::setw(2) << turbineData[iTurbLoc].TurbID;
     rstfile_ss << "_rst.nc";
     std::string rst_filename = rstfile_ss.str();
     int ierr = nc_open(rst_filename.c_str(), NC_NOWRITE, &ncid);
@@ -120,7 +128,7 @@ void fast::OpenFAST::prepareRestartFile(int iTurbLoc) {
     //This will destroy any existing file
     std::stringstream rstfile_ss;
     rstfile_ss << "turb_" ;
-    rstfile_ss << std::setfill('0') << std::setw(2) << turbineMapProcToGlob[iTurbLoc];
+    rstfile_ss << std::setfill('0') << std::setw(2) << turbineData[iTurbLoc].TurbID;
     rstfile_ss << "_rst.nc";
     std::string rst_filename = rstfile_ss.str();
     int ierr = nc_create(rst_filename.c_str(), NC_CLOBBER, &ncid);
@@ -246,7 +254,7 @@ void fast::OpenFAST::findOutputFile(int iTurbLoc) {
     //Find the file and open it in read only mode
     std::stringstream outfile_ss;
     outfile_ss << "turb_" ;
-    outfile_ss << std::setfill('0') << std::setw(2) << turbineMapProcToGlob[iTurbLoc];
+    outfile_ss << std::setfill('0') << std::setw(2) << turbineData[iTurbLoc].TurbID;
     outfile_ss << "_output.nc";
     std::string out_filename = outfile_ss.str();
     int ierr = nc_open(out_filename.c_str(), NC_NOWRITE, &ncid);
@@ -282,7 +290,7 @@ void fast::OpenFAST::prepareOutputFile(int iTurbLoc) {
     //Create the file - this will destory any file
     std::stringstream defloads_fstream;
     defloads_fstream << "turb_" ;
-    defloads_fstream << std::setfill('0') << std::setw(2) << iTurbLoc;
+    defloads_fstream << std::setfill('0') << std::setw(2) << turbineData[iTurbLoc].TurbID;
     defloads_fstream << "_output.nc";
     std::string defloads_filename = defloads_fstream.str();
     int ierr = nc_create(defloads_filename.c_str(), NC_CLOBBER, &ncid);
@@ -603,6 +611,17 @@ void fast::OpenFAST::prepareOutputFile(int iTurbLoc) {
                                           param_count_dim.data(), tmpArray.data());
             }
         }
+
+        ierr = nc_put_var_double(ncid, ncOutVarIDs_["nac_ref_pos"],
+                                 &brFSIData[iTurbLoc][3].nac_ref_pos[0]);
+        ierr = nc_put_var_double(ncid, ncOutVarIDs_["nac_ref_orient"],
+                                 &brFSIData[iTurbLoc][3].nac_ref_pos[3]);
+
+        ierr = nc_put_var_double(ncid, ncOutVarIDs_["hub_ref_pos"],
+                                 &brFSIData[iTurbLoc][3].hub_ref_pos[0]);
+        ierr = nc_put_var_double(ncid, ncOutVarIDs_["hub_ref_orient"],
+                                 &brFSIData[iTurbLoc][3].hub_ref_pos[3]);
+
     }
 
     ierr = nc_close(ncid);
@@ -1337,8 +1356,8 @@ void fast::OpenFAST::advance_to_next_driver_time_step(bool writeFiles) {
 
     if (writeFiles) {
       for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-          int tStepRatio = dtDriver/dtFAST;
-          if ( (((nt_global - ntStart) % (restartFreq_*tStepRatio)) == 0 )  && (nt_global != ntStart) ) {
+          int tStepRatio = time_step_ratio(dtFAST, dtDriver);
+          if ( (restartFreq_*tStepRatio > 0) && (((nt_global - ntStart) % (restartFreq_*tStepRatio)) == 0 )  && (nt_global != ntStart) ) {
               turbineData[iTurb].FASTRestartFileName = " "; // if blank, it will use FAST convention <RootName>.nt_global
               FAST_CreateCheckpoint(&iTurb, turbineData[iTurb].FASTRestartFileName.data(), &ErrStat, ErrMsg);
               checkError(ErrStat, ErrMsg);
@@ -1497,8 +1516,8 @@ void fast::OpenFAST::step(bool writeFiles) {
     }
 
     if (writeFiles) {
+        int tStepRatio = time_step_ratio(dtFAST, dtDriver);
         for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-            int tStepRatio = dtDriver/dtFAST;
             if ( (((nt_global - ntStart) % (restartFreq_ * tStepRatio)) == 0 )  && (nt_global != ntStart) ) {
                 turbineData[iTurb].FASTRestartFileName = " "; // if blank, it will use FAST convention <RootName>.nt_global
                 FAST_CreateCheckpoint(&iTurb, turbineData[iTurb].FASTRestartFileName.data(), &ErrStat, ErrMsg);
@@ -1568,7 +1587,7 @@ int fast::OpenFAST::checkAndSetSubsteps() {
                 }
             }
             if (dtFAST > 0) {
-                int tStepRatio = dtDriver/dtFAST;
+                int tStepRatio = time_step_ratio(dtFAST, dtDriver);
                 if (std::abs(dtDriver - tStepRatio * dtFAST) < 0.001) {// TODO: Fix arbitrary number 0.001
                     nSubsteps_ = tStepRatio;
                     return 1;
@@ -2221,7 +2240,7 @@ int fast::OpenFAST::openVelocityDataFile(int iTurb) {
     int ncid;
     std::stringstream velfile_fstream;
     velfile_fstream << "turb_" ;
-    velfile_fstream << std::setfill('0') << std::setw(2) << turbineMapProcToGlob[iTurb];
+    velfile_fstream << std::setfill('0') << std::setw(2) << turbineData[iTurb].TurbID;
     velfile_fstream << "_veldata.nc";
     std::string velfile_filename = velfile_fstream.str();
     int ierr = nc_open(velfile_filename.c_str(), NC_WRITE, &ncid);
@@ -2236,7 +2255,7 @@ void fast::OpenFAST::prepareVelocityDataFile(int iTurb) {
     int ncid;
     std::stringstream velfile_fstream;
     velfile_fstream << "turb_" ;
-    velfile_fstream << std::setfill('0') << std::setw(2) << turbineMapProcToGlob[iTurb];
+    velfile_fstream << std::setfill('0') << std::setw(2) << turbineData[iTurb].TurbID;
     velfile_fstream << "_veldata.nc";
     std::string velfile_filename = velfile_fstream.str();
     int ierr = nc_create(velfile_filename.c_str(), NC_CLOBBER, &ncid);
@@ -2269,7 +2288,7 @@ void fast::OpenFAST::writeVelocityData(int iTurb, int n_t_global, int nlinIter) 
     //Find the file and open it in append mode
     std::stringstream velfile_ss;
     velfile_ss << "turb_" ;
-    velfile_ss << std::setfill('0') << std::setw(2) << turbineMapProcToGlob[iTurb];
+    velfile_ss << std::setfill('0') << std::setw(2) << turbineData[iTurb].TurbID;
     velfile_ss << "_veldata.nc";
     std::string vel_filename = velfile_ss.str();
     int ierr = nc_open(vel_filename.c_str(), NC_WRITE, &ncid);
@@ -2586,14 +2605,14 @@ void fast::OpenFAST::writeOutputFile(int iTurbLoc, int n_t_global) {
     //Open the file in append mode
     std::stringstream outfile_ss;
     outfile_ss << "turb_" ;
-    outfile_ss << std::setfill('0') << std::setw(2) << iTurbLoc;
+    outfile_ss << std::setfill('0') << std::setw(2) << turbineData[iTurbLoc].TurbID;
     outfile_ss << "_output.nc";
     std::string defloads_filename = outfile_ss.str();
     int ierr = nc_open(defloads_filename.c_str(), NC_WRITE, &ncid);
     check_nc_error(ierr, "nc_open");
 
     size_t count1=1;
-    int tStepRatio = dtDriver/dtFAST;
+    int tStepRatio = time_step_ratio(dtFAST, dtDriver);
     size_t n_tsteps = n_t_global/tStepRatio/outputFreq_ - 1;
     double curTime = n_t_global * dtFAST;
     ierr = nc_put_vara_double(ncid, ncOutVarIDs_["time"], &n_tsteps, &count1, &curTime);
@@ -2888,7 +2907,7 @@ void fast::OpenFAST::writeRestartFile(int iTurbLoc, int n_t_global) {
     check_nc_error(ierr, "nc_open");
 
     size_t count1=1;
-    int tStepRatio = dtDriver/dtFAST;
+    int tStepRatio = time_step_ratio(dtFAST, dtDriver);
     size_t n_tsteps = n_t_global/tStepRatio/restartFreq_ - 1;
     double curTime = n_t_global * dtFAST;
     ierr = nc_put_vara_double(ncid, ncRstVarIDs_["time"], &n_tsteps, &count1, &curTime);
@@ -2964,6 +2983,8 @@ void fast::OpenFAST::get_ref_positions_from_openfast(int iTurb) {
         for (int i=0; i < 3; i++) {
             brFSIData[iTurb][fast::STATE_NP1].hub_ref_pos[i] = extld_i_f_FAST[iTurb].hubRefPos[i] + turbineData[iTurb].TurbineBasePos[i];
             brFSIData[iTurb][fast::STATE_NP1].nac_ref_pos[i] = extld_i_f_FAST[iTurb].nacRefPos[i] + turbineData[iTurb].TurbineBasePos[i];
+            brFSIData[iTurb][fast::STATE_NP1].hub_ref_pos[i+3] = extld_i_f_FAST[iTurb].hubRefPos[i+3];
+            brFSIData[iTurb][fast::STATE_NP1].nac_ref_pos[i+3] = extld_i_f_FAST[iTurb].nacRefPos[i+3];
         }
 
         int nBlades = turbineData[iTurb].numBlades;
