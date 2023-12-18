@@ -45,7 +45,7 @@ param	^	-	INTEGER	Module_ED	-	4	-	"ElastoDyn"	-
 param	^	-	INTEGER	Module_BD	-	5	-	"BeamDyn"	-
 param	^	-	INTEGER	Module_AD14	-	6	-	"AeroDyn14"	-
 param	^	-	INTEGER	Module_AD	-	7	-	"AeroDyn"	-
-param	^	-	INTEGER	Module_ExtLd	-	8	-	"AeroDyn"	-
+param	^	-	INTEGER	Module_ExtLd	-	8	-	"ExternalLoads"	-
 param	^	-	INTEGER	Module_SrvD	-	9	-	"ServoDyn"	-
 param	^	-	INTEGER	Module_SeaSt -	10	-	"SeaState"	-
 param	^	-	INTEGER	Module_HD	-	11	-	"HydroDyn"	-
