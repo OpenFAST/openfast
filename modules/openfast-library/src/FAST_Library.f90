@@ -1145,6 +1145,7 @@ subroutine FAST_CFD_AdvanceToNextTimeStep(iTurb, ErrStat_c, ErrMsg_c) BIND (C, N
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)
+   REAL(DbKi)                            :: t_now            ! current timestep of this turbine
 
 
    IF ( n_t_global > Turbine(iTurb)%p_FAST%n_TMax_m1 ) THEN !finish
@@ -1166,7 +1167,8 @@ subroutine FAST_CFD_AdvanceToNextTimeStep(iTurb, ErrStat_c, ErrMsg_c) BIND (C, N
 
    ELSE
 
-      CALL FAST_AdvanceToNextTimeStep_T( t_initial, n_t_global, Turbine(iTurb), ErrStat, ErrMsg )
+      t_now = n_t_global*Turbine(iTurb)%p_FAST%dt
+      CALL FAST_AdvanceToNextTimeStep_T( t_now, n_t_global, Turbine(iTurb), ErrStat, ErrMsg )
 
       ! if(Turbine(iTurb)%SC%p%scOn) then
       !    CALL SC_SetInputs(Turbine(iTurb)%p_FAST, Turbine(iTurb)%SrvD%y, Turbine(iTurb)%SC, ErrStat, ErrMsg)
@@ -1193,8 +1195,10 @@ subroutine FAST_CFD_WriteOutput(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)
+   REAL(DbKi)                            :: t_now            ! current timestep of this turbine
 
-   CALL FAST_WriteOutput_T( t_initial, n_t_global, Turbine(iTurb), ErrStat, ErrMsg )
+   t_now = n_t_global*Turbine(iTurb)%p_FAST%dt
+   CALL FAST_WriteOutput_T( t_now, n_t_global, Turbine(iTurb), ErrStat, ErrMsg )
 
 end subroutine FAST_CFD_WriteOutput
 !==================================================================================================================================
@@ -1228,7 +1232,7 @@ subroutine FAST_CFD_Step(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CFD_Ste
 
    ELSE
 
-      CALL FAST_Solution_T( t_initial, n_t_global, Turbine(iTurb), ErrStat, ErrMsg )
+      CALL FAST_Solution_T(t_initial, n_t_global, Turbine(iTurb), ErrStat, ErrMsg )
 
       if (iTurb .eq. (NumTurbines-1) ) then
          n_t_global = n_t_global + 1

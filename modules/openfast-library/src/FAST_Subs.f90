@@ -8021,15 +8021,15 @@ END SUBROUTINE FAST_AdvanceToNextTimeStep
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that calls FAST_WriteOutput for one instance of a Turbine data structure. This is a separate subroutine so that the FAST
 !! driver programs do not need to change or operate on the individual module level.
-SUBROUTINE FAST_WriteOutput_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg )
+SUBROUTINE FAST_WriteOutput_T(t_now, n_t_global, Turbine, ErrStat, ErrMsg )
 
-   REAL(DbKi),               INTENT(IN   ) :: t_initial           !< initial time
+   REAL(DbKi),               INTENT(IN   ) :: t_now               !< current time
    INTEGER(IntKi),           INTENT(IN   ) :: n_t_global          !< loop counter
    TYPE(FAST_TurbineType),   INTENT(INOUT) :: Turbine             !< all data for one instance of a turbine
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
-      CALL FAST_WriteOutput(t_initial, n_t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
+      CALL FAST_WriteOutput(t_now, n_t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                   Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%ExtLd, Turbine%IfW, Turbine%ExtInfw, Turbine%SC_DX, &
                   Turbine%SeaSt, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                   Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )
@@ -8037,10 +8037,10 @@ SUBROUTINE FAST_WriteOutput_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg )
 END SUBROUTINE FAST_WriteOutput_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes the outputs at this timestep
-SUBROUTINE FAST_WriteOutput(t_global, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, ExtLd, IfW, ExtInfw, SC_DX, &
+SUBROUTINE FAST_WriteOutput(t_now, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, ExtLd, IfW, ExtInfw, SC_DX, &
                   SeaSt, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
 
-   REAL(DbKi),               INTENT(IN   ) :: t_global            !< initial time
+   REAL(DbKi),               INTENT(IN   ) :: t_now               !< initial time
    INTEGER(IntKi),           INTENT(IN   ) :: n_t_global          !< loop counter
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
@@ -8087,7 +8087,7 @@ SUBROUTINE FAST_WriteOutput(t_global, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD
    !----------------------------------------------------------------------------------------
    !! Check to see if we should output data this time step:
    !----------------------------------------------------------------------------------------
-   CALL WriteOutputToFile(n_t_global, m_FAST%t_global, p_FAST, y_FAST, ED, BD, AD14, AD, IfW, ExtInfw, SeaSt, HD, SD, ExtPtfm, &
+   CALL WriteOutputToFile(n_t_global, t_now, p_FAST, y_FAST, ED, BD, AD14, AD, IfW, ExtInfw, SeaSt, HD, SD, ExtPtfm, &
                           SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
