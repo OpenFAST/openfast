@@ -1127,7 +1127,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_FEAM%NStepWave   = 1                          ! an arbitrary number > 0 (to set the size of the wave data, which currently contains all zero values)     
       Init%InData_FEAM%gravity     = p_FAST%Gravity     ! This need to be according to g from driver
       Init%InData_FEAM%WtrDens     = Init%OutData_SeaSt%WaveField%WtrDens     ! This needs to be set according to seawater density in SeaState
-!      Init%InData_FEAM%depth       =  Init%OutData_SeaSt%WtrDpth    ! This need to be set according to the water depth in SeaState
+!      Init%InData_FEAM%depth       =  Init%OutData_SeaSt%WaveField%WtrDpth    ! This need to be set according to the water depth in SeaState
 
       CALL FEAM_Init( Init%InData_FEAM, FEAM%Input(1), FEAM%p,  FEAM%x(STATE_CURR), FEAM%xd(STATE_CURR), FEAM%z(STATE_CURR), &
                       FEAM%OtherSt(STATE_CURR), FEAM%y, FEAM%m, p_FAST%dt_module( MODULE_FEAM ), Init%OutData_FEAM, ErrStat2, ErrMsg2 )
@@ -3853,7 +3853,7 @@ SUBROUTINE SetVTKParameters_B4SeaSt(p_FAST, InitOutData_ED, InitInData_SeaSt, BD
       n = 1
       do i=1,p_FAST%VTK_surface%NWaveElevPts(1)
          do j=1,p_FAST%VTK_surface%NWaveElevPts(2)
-            InitInData_SeaSt%WaveElevXY(1,n) = dx*(i-1) - WidthBy2 !+ p_FAST%TurbinePos(1) ! HD takes p_FAST%TurbinePos into account already
+            InitInData_SeaSt%WaveElevXY(1,n) = dx*(i-1) - WidthBy2 !+ p_FAST%TurbinePos(1) ! SeaSt takes p_FAST%TurbinePos into account already
             InitInData_SeaSt%WaveElevXY(2,n) = dy*(j-1) - WidthBy2 !+ p_FAST%TurbinePos(2)
             n = n+1
          end do

@@ -21,7 +21,6 @@ usefrom   WAMIT.txt
 usefrom   WAMIT2.txt
 usefrom   Morison.txt
 usefrom   SeaSt_WaveField.txt
-usefrom   SeaState.txt
 
 param     HydroDyn/HydroDyn            unused                        INTEGER                  MaxHDOutputs                    -          510        -         "The maximum number of output channels supported by this module"    -
 param     HydroDyn/HydroDyn            unused                        INTEGER                  MaxUserOutputs                  -         5150        -         " Total possible number of output channels:  SS_Excitation = 7 + SS_Radiation = 7 + Morison= 4626 + HydroDyn=510   =  5150" -
