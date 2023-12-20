@@ -10944,6 +10944,7 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
          + y%TowerLn2Mesh%NNodes    * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
          + y%HubPtMotion%NNodes     * 9            & ! 3 TranslationDisp, Orientation, and RotationVel at each node
          + y%NacelleMotion%NNodes   * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
+         + y%TFinCMMotion%NNodes    * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
          + 3                                       & ! Yaw, YawRate, and HSS_Spd
          + p%NumOuts  + p%BldNd_TotNumOuts           ! WriteOutput values 
       
@@ -10988,6 +10989,7 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       end do   
 
       call PackMotionMesh_Names(y%NacelleMotion, 'Nacelle', InitOut%LinNames_y, index_next)
+      call PackMotionMesh_Names(y%TFinCMMotion,  'TailFin', InitOut%LinNames_y, index_next)
       InitOut%LinNames_y(index_next) = 'Yaw, rad'; index_next = index_next+1
       InitOut%LinNames_y(index_next) = 'YawRate, rad/s'; index_next = index_next+1
       InitOut%LinNames_y(index_next) = 'HSS_Spd, rad/s'
