@@ -116,7 +116,10 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
         // verify that it does, otherwise exit with error
         if ((ddt.interface != nullptr) && ddt.interface->only_reals)
             if (!ddt.only_contains_reals())
+            {
+                std::cerr << "Registry warning: Data type '" << dt_name << "' contains non-real values." << std::endl;
                 exit(EXIT_FAILURE);
+            }
 
         // Write derived type header
         w << "! =========  " << ddt.type_fortran << (this->gen_c_code ? "_C" : "") << "  =======\n";

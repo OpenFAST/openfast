@@ -24,10 +24,10 @@ typedef     ^             ^                 CHARACTER(ChanLen)       Name   - - 
 typedef     ^             ^                 CHARACTER(ChanLen)       Units  - - - "Units this channel is specified in"
 typedef     ^             ^                 IntKi                    SignM  - - - "Multiplier for output channel; usually -1 (minus) or 0 (invalid channel)"
 
-typedef   NWTC_Library  FileInfoType        IntKi                    NumLines
-typedef     ^             ^                 IntKi                    NumFiles
-typedef     ^             ^                 IntKi                    FileLine  {:}
-typedef     ^             ^                 IntKi                    FileIndx  {:}
+typedef   NWTC_Library  FileInfoType        IntKi                          NumLines
+typedef     ^             ^                 IntKi                          NumFiles
+typedef     ^             ^                 IntKi                          FileLine  {:}
+typedef     ^             ^                 IntKi                          FileIndx  {:}
 typedef     ^             ^                 CHARACTER(MaxFileInfoLineLen)  FileList  {:}
 typedef     ^             ^                 CHARACTER(MaxFileInfoLineLen)  Lines     {:}
 
@@ -35,9 +35,9 @@ typedef   NWTC_Library  Quaternion          ReKi                     q0
 typedef     ^             ^                 ReKi                     v  {3}
 
 typedef   NWTC_Library  NWTC_RandomNumber_ParameterType   IntKi                pRNG
-typedef     ^             ^                     IntKi                RandSeed          {3}
-typedef     ^             ^                     IntKi                RandSeedAry       {:}
-typedef     ^             ^              CHARACTER(6)                RNG_type
+typedef     ^             ^                               IntKi                RandSeed          {3}
+typedef     ^             ^                               IntKi                RandSeedAry       {:}
+typedef     ^             ^                        CHARACTER(6)                RNG_type
 
 # This file defines types that may be  used from the NWTC_Library
 # include this into a component registry file if you wish to use these types
@@ -76,6 +76,6 @@ typedef     ^               ^               R8Ki                     DisplacedPo
 typedef     ^               ^               R8Ki                     LoadLn2_A_Mat     {:}{:}    - - "The 3-components of the forces for each node of an element in the point-to-line load mapping (for each element)"
 typedef     ^               ^               R8Ki                     LoadLn2_F         {:}{:}    - - "The 6-by-6 matrix that makes up the diagonal of the [A 0; B A] matrix in the point-to-line load mapping"
 typedef     ^               ^               R8Ki                     LoadLn2_M         {:}{:}    - - "The 3-components of the moments for each node of an element in the point-to-line load mapping (for each element)"
-typedef     ^             ^                 MeshMapLinearizationType dM
-#typedef     ^               ^               MeshType                 Lumped_Points_Dest -        - - "temporary mesh for debugging the lumped values in the line2-to-line2"
+typedef     ^               ^               MeshMapLinearizationType dM
+#typedef    ^               ^               MeshType                 Lumped_Points_Dest -        - - "temporary mesh for debugging the lumped values in the line2-to-line2"
 

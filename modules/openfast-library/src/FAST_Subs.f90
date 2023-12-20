@@ -6362,7 +6362,7 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW
 
 
    logical, parameter                      :: OutputFields = .FALSE. ! due to confusion about what fields mean on a surface, we are going to just output the basic meshes if people ask for fields
-   INTEGER(IntKi)                          :: NumBl, k, l
+   INTEGER(IntKi)                          :: NumBl, k, L
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMSg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'WrVTK_Surfaces'
@@ -6451,18 +6451,18 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW
    if ( p_FAST%CompMooring == Module_MD ) THEN
       !call MeshWrVTK(p_FAST%TurbinePos, MD%Input(1)%CoupledKinematics, trim(p_FAST%VTK_OutFileRoot)//'.MD_PtFair_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2 )        
       if (allocated(MD%y%VisLinesMesh)) then
-         do l=1,size(MD%y%VisLinesMesh)
-            if (MD%y%VisLinesMesh(l)%Committed) then  ! No orientation data, so surface representation not possible
-               call MeshWrVTK(p_FAST%TurbinePos, MD%y%VisLinesMesh(l), trim(p_FAST%VTK_OutFileRoot)//'.MD_Line'//trim(Num2LStr(l)), y_FAST%VTK_count, p_FAST%VTK_fields, &
+         do L=1,size(MD%y%VisLinesMesh)
+            if (MD%y%VisLinesMesh(L)%Committed) then  ! No orientation data, so surface representation not possible
+               call MeshWrVTK(p_FAST%TurbinePos, MD%y%VisLinesMesh(L), trim(p_FAST%VTK_OutFileRoot)//'.MD_Line'//trim(Num2LStr(L)), y_FAST%VTK_count, p_FAST%VTK_fields, &
                      ErrSTat2, ErrMsg2, p_FAST%VTK_tWidth )
             endif
          enddo
       endif
       if (allocated(MD%y%VisRodsMesh)) then
-         do l=1,size(MD%y%VisRodsMesh)
-            if (MD%y%VisRodsMesh(l)%Committed) then  ! No orientation data, so surface representation not possible
-               call MeshWrVTK_Ln2Surface(p_FAST%TurbinePos, MD%y%VisRodsMesh(l), trim(p_FAST%VTK_OutFileRoot)//'.MD_Rod'//trim(Num2LStr(l))//'Surface', y_FAST%VTK_count, p_FAST%VTK_fields, &
-                     ErrSTat2, ErrMsg2, p_FAST%VTK_tWidth, NumSegments=p_FAST%VTK_Surface%NumSectors, Radius=MD%p%VisRodsDiam(l)%Diam )
+         do L=1,size(MD%y%VisRodsMesh)
+            if (MD%y%VisRodsMesh(L)%Committed) then  ! No orientation data, so surface representation not possible
+               call MeshWrVTK_Ln2Surface(p_FAST%TurbinePos, MD%y%VisRodsMesh(L), trim(p_FAST%VTK_OutFileRoot)//'.MD_Rod'//trim(Num2LStr(L))//'Surface', y_FAST%VTK_count, p_FAST%VTK_fields, &
+                     ErrSTat2, ErrMsg2, p_FAST%VTK_tWidth, NumSegments=p_FAST%VTK_Surface%NumSectors, Radius=MD%p%VisRodsDiam(L)%Diam )
             endif
          enddo
       endif
