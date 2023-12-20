@@ -1361,6 +1361,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    character(*), parameter                      :: RoutineName = 'AWAE_UpdateStates'
 !   real(DbKi)          :: t1, t2
    integer(IntKi)                               :: n_high_low, nt, n_hl, i,j,k,c
+   real(ReKi)                                   :: offsetBoxCtr(3)      ! for shifting high res boxes before sending coordinates to InflowWind
    
    errStat = ErrID_None
    errMsg  = ""
@@ -1445,17 +1446,19 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
       else !p%Mod_AmbWind == 3
          do nt = 1,p%NumTurbines
             c = 1
+            offsetBoxCtr = (/ p%X0_high(nt) + 0.5*(p%nX_high-1)*p%dX_high(nt), p%Y0_high(nt) + 0.5*(p%nY_high-1)*p%dY_high(nt), 0.0_ReKi /)
             do k = 0,p%nZ_high-1
                do j = 0,p%nY_high-1
                   do i = 0,p%nX_high-1
-                     m%u_IfW_High%PositionXYZ(:,c) = p%Grid_high(:,c,nt) - p%WT_Position(:,nt)
+                     m%u_IfW_High%PositionXYZ(:,c) = p%Grid_high(:,c,nt) - offsetBoxCtr   ! Shift all points by the location of the wind box center in XY
                      c = c+1
                   end do
                end do
             end do
+            offsetBoxCtr = (/ p%X0_high(nt) + 0.5*(p%nX_high-1)*p%dX_high(nt), p%Y0_high(nt) + 0.5*(p%nY_high-1)*p%dY_high(nt), p%Z0_high(nt) + 0.5*(p%nZ_high-1)*p%dZ_high(nt) /)
             do n_hl=0, n_high_low
                   ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel)
-               m%u_IfW_High%HubPosition =  (/ p%X0_high(nt) + 0.5*p%nX_high*p%dX_high(nt), p%Y0_high(nt) + 0.5*p%nY_high*p%dY_high(nt), p%Z0_high(nt) + 0.5*p%nZ_high*p%dZ_high(nt) /) - p%WT_Position(:,nt)
+               m%u_IfW_High%HubPosition =  offsetBoxCtr - p%WT_Position(:,nt)
                call Eye(m%u_IfW_High%HubOrientation,ErrStat2,ErrMsg2)
                call InflowWind_CalcOutput(t+p%dt_low+n_hl*p%DT_high, m%u_IfW_High, p%IfW(nt), x%IfW(nt), xd%IfW(nt), z%IfW(nt), OtherState%IfW(nt), m%y_IfW_High, m%IfW(nt), errStat2, errMsg2)
                   call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
