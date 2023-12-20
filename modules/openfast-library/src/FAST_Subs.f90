@@ -3853,8 +3853,8 @@ SUBROUTINE SetVTKParameters_B4SeaSt(p_FAST, InitOutData_ED, InitInData_SeaSt, BD
       n = 1
       do i=1,p_FAST%VTK_surface%NWaveElevPts(1)
          do j=1,p_FAST%VTK_surface%NWaveElevPts(2)
-            InitInData_SeaSt%WaveElevXY(1,n) = dx*(i-1) - WidthBy2 !+ p_FAST%TurbinePos(1) ! SeaSt takes p_FAST%TurbinePos into account already
-            InitInData_SeaSt%WaveElevXY(2,n) = dy*(j-1) - WidthBy2 !+ p_FAST%TurbinePos(2)
+            InitInData_SeaSt%WaveElevXY(1,n) = dx*(i-1) - WidthBy2 ! SeaSt takes p_FAST%TurbinePos into account already
+            InitInData_SeaSt%WaveElevXY(2,n) = dy*(j-1) - WidthBy2 
             n = n+1
          end do
       end do
@@ -3873,7 +3873,7 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_S
    TYPE(SeaSt_InitInputType),    INTENT(INOUT) :: InitInData_SeaSt    !< The initialization input to SeaState
    TYPE(SeaSt_InitOutputType),   INTENT(INOUT) :: InitOutData_SeaSt   !< The initialization output from SeaState
    TYPE(HydroDyn_InitOutputType),INTENT(INOUT) :: InitOutData_HD   !< The initialization output from HydroDyn
-   TYPE(ElastoDyn_Data),         INTENT(IN   ) :: ED               !< ElastoDyn data
+   TYPE(ElastoDyn_Data), TARGET, INTENT(IN   ) :: ED               !< ElastoDyn data
    TYPE(BeamDyn_Data),           INTENT(IN   ) :: BD               !< BeamDyn data
    TYPE(AeroDyn_Data),           INTENT(IN   ) :: AD               !< AeroDyn data
    TYPE(HydroDyn_Data),          INTENT(IN   ) :: HD               !< HydroDyn data
@@ -3884,7 +3884,9 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_S
    REAL(SiKi)                              :: x, y
    REAL(SiKi)                              :: TwrDiam_top, TwrDiam_base, TwrRatio, TwrLength
    INTEGER(IntKi)                          :: topNode, baseNode
-   INTEGER(IntKi)                          :: NumBl, k
+   INTEGER(IntKi)                          :: NumBl, k, Indx
+   LOGICAL                                 :: UseADtwr
+   TYPE(MeshType), POINTER                 :: TowerMotionMesh
    CHARACTER(1024)                         :: vtkroot
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
@@ -3962,28 +3964,51 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_S
    p_FAST%VTK_Surface%NacelleBox(:,8) = (/ -x,  y, 2*y      /)
 
    !.......................
-   ! tapered tower
+   ! Create the tower surface data
    !.......................
+   TowerMotionMesh => ED%y%TowerLn2Mesh
 
-   CALL AllocAry(p_FAST%VTK_Surface%TowerRad,ED%y%TowerLn2Mesh%NNodes,'VTK_Surface%TowerRad',ErrStat2,ErrMsg2)
+   CALL AllocAry(p_FAST%VTK_Surface%TowerRad,TowerMotionMesh%NNodes,'VTK_Surface%TowerRad',ErrStat2,ErrMsg2)
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       IF (ErrStat >= AbortErrLev) RETURN
 
-   topNode   = ED%y%TowerLn2Mesh%NNodes - 1
-   baseNode  = ED%y%TowerLn2Mesh%refNode
-   TwrLength = TwoNorm( ED%y%TowerLn2Mesh%position(:,topNode) - ED%y%TowerLn2Mesh%position(:,baseNode) ) ! this is the assumed length of the tower
-   TwrRatio  = TwrLength / 87.6_SiKi  ! use ratio of the tower length to the length of the 5MW tower
-   TwrDiam_top  = 3.87*TwrRatio
-   TwrDiam_base = 6.0*TwrRatio
 
-   TwrRatio = 0.5 * (TwrDiam_top - TwrDiam_base) / TwrLength
-   do k=1,ED%y%TowerLn2Mesh%NNodes
-      TwrLength = TwoNorm( ED%y%TowerLn2Mesh%position(:,k) - ED%y%TowerLn2Mesh%position(:,baseNode) )
-      p_FAST%VTK_Surface%TowerRad(k) = 0.5*TwrDiam_Base + TwrRatio*TwrLength
-   end do
+   IF ( p_FAST%CompAero == Module_AD .and. allocated(InitOutData_AD%rotors) .and. allocated(AD%y%rotors) ) THEN  ! These meshes may have tower diameter data associated with nodes
+      UseADtwr = allocated(InitOutData_AD%rotors(1)%TowerRad)
+   ELSE
+      UseADtwr = .false.
+   END IF
 
+   if (UseADtwr) then
+      
+         ! This assumes a vertical tower (i.e., we deal only with z component of position)
+      Indx = 1
+      do k=1,TowerMotionMesh%NNodes
+         p_FAST%VTK_Surface%TowerRad(k) = InterpStp( TowerMotionMesh%Position(3,k), AD%y%rotors(1)%TowerLoad%Position(3,:), InitOutData_AD%rotors(1)%TowerRad, Indx, AD%y%rotors(1)%TowerLoad%NNodes )
+      end do
+   
+   else
+      !.......................
+      ! default tapered tower, based on 5MW baseline turbine:
+      !.......................
+   
+      topNode   = maxloc(TowerMotionMesh%position(3,:),DIM=1)
+      baseNode  = minloc(TowerMotionMesh%position(3,:),DIM=1)
+      TwrLength = TwoNorm( TowerMotionMesh%position(:,topNode) - TowerMotionMesh%position(:,baseNode) ) ! this is the assumed length of the tower
+      TwrRatio  = TwrLength / 87.6_SiKi  ! use ratio of the tower length to the length of the 5MW tower
+      TwrDiam_top  = 3.87*TwrRatio
+      TwrDiam_base = 6.0*TwrRatio
+   
+      TwrRatio = 0.5 * (TwrDiam_top - TwrDiam_base) / TwrLength
+         
+      do k=1,TowerMotionMesh%NNodes
+         TwrLength = TwoNorm( TowerMotionMesh%position(:,k) - TowerMotionMesh%position(:,baseNode) ) 
+         p_FAST%VTK_Surface%TowerRad(k) = 0.5*TwrDiam_Base + TwrRatio*TwrLength
+      end do
 
-
+   end if
+      
+   
    !.......................
    ! blade surfaces
    !.......................
