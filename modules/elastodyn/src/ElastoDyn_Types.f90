@@ -56,7 +56,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumBl      !< Number of blades on the turbine [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlPitch      !< Initial blade pitch angles [radians]
     REAL(ReKi)  :: BladeLength      !< Blade length (for AeroDyn) [meters]
-    REAL(ReKi)  :: TowerHeight      !< Tower Height [meters]
+    REAL(ReKi)  :: TowerFlexL      !< Tower Flexible Length [meters]
     REAL(ReKi)  :: TowerBaseHeight      !< Tower Base Height [meters]
     REAL(ReKi)  :: HubHt      !< Height of the hub [meters]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BldRNodes      !< Radius to analysis nodes relative to hub ( 0 < RNodes(:) < BldFlexL ) [-]
@@ -1093,7 +1093,7 @@ IF (ALLOCATED(SrcInitOutputData%BlPitch)) THEN
     DstInitOutputData%BlPitch = SrcInitOutputData%BlPitch
 ENDIF
     DstInitOutputData%BladeLength = SrcInitOutputData%BladeLength
-    DstInitOutputData%TowerHeight = SrcInitOutputData%TowerHeight
+    DstInitOutputData%TowerFlexL = SrcInitOutputData%TowerFlexL
     DstInitOutputData%TowerBaseHeight = SrcInitOutputData%TowerBaseHeight
     DstInitOutputData%HubHt = SrcInitOutputData%HubHt
 IF (ALLOCATED(SrcInitOutputData%BldRNodes)) THEN
@@ -1361,7 +1361,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%BlPitch)  ! BlPitch
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! BladeLength
-      Re_BufSz   = Re_BufSz   + 1  ! TowerHeight
+      Re_BufSz   = Re_BufSz   + 1  ! TowerFlexL
       Re_BufSz   = Re_BufSz   + 1  ! TowerBaseHeight
       Re_BufSz   = Re_BufSz   + 1  ! HubHt
   Int_BufSz   = Int_BufSz   + 1     ! BldRNodes allocated yes/no
@@ -1531,7 +1531,7 @@ ENDIF
   END IF
     ReKiBuf(Re_Xferred) = InData%BladeLength
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TowerHeight
+    ReKiBuf(Re_Xferred) = InData%TowerFlexL
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%TowerBaseHeight
     Re_Xferred = Re_Xferred + 1
@@ -1857,7 +1857,7 @@ ENDIF
   END IF
     OutData%BladeLength = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%TowerHeight = ReKiBuf(Re_Xferred)
+    OutData%TowerFlexL = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%TowerBaseHeight = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1

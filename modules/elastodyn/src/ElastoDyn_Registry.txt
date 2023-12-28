@@ -36,7 +36,7 @@ typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and da
 typedef	^	InitOutputType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"	-
 typedef	^	InitOutputType	ReKi	BlPitch	{:}	-	-	"Initial blade pitch angles"	radians
 typedef	^	InitOutputType	ReKi	BladeLength	-	-	-	"Blade length (for AeroDyn)"	meters
-typedef	^	InitOutputType	ReKi	TowerHeight	-	-	-	"Tower Height"	meters
+typedef	^	InitOutputType	ReKi	TowerFlexL	-	-	-	"Tower Flexible Length"	meters
 typedef	^	InitOutputType	ReKi	TowerBaseHeight	-	-	-	"Tower Base Height"	meters
 typedef	^	InitOutputType	ReKi	HubHt	-	-	-	"Height of the hub"	meters
 typedef	^	InitOutputType	ReKi	BldRNodes	{:}	-	-	"Radius to analysis nodes relative to hub ( 0 < RNodes(:) < BldFlexL )"

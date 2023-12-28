@@ -184,6 +184,7 @@ set(OPENFAST_MODULES
   nwtc-library
   version
   inflowwind
+  extloads
   aerodyn
   aerodyn14
   servodyn
