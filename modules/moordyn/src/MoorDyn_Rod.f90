@@ -151,24 +151,6 @@ CONTAINS
             
       IF (wordy > 0) print *, "Set up Rod ",Rod%IdNum, ", type ", Rod%typeNum
 
-
-      if (p%writeLog > 1) then
-         write(p%UnLog, '(A)') "  - Rod "//trim(num2lstr(Rod%IdNum))
-         write(p%UnLog, '(A)') "    ID: "//trim(num2lstr(Rod%IdNum))
-         write(p%UnLog, '(A)') "    UnstrLen: "//trim(num2lstr(Rod%UnstrLen))
-         write(p%UnLog, '(A)') "    N   : "//trim(num2lstr(Rod%N   ))
-         write(p%UnLog, '(A)') "    d   : "//trim(num2lstr(Rod%d   ))
-         write(p%UnLog, '(A)') "    rho : "//trim(num2lstr(Rod%rho ))
-         write(p%UnLog, '(A)') "    Can  : "//trim(num2lstr(Rod%Can ))
-         write(p%UnLog, '(A)') "    Cat  : "//trim(num2lstr(Rod%Cat ))         
-         write(p%UnLog, '(A)') "    CaEnd: "//trim(num2lstr(Rod%CaEnd ))
-         write(p%UnLog, '(A)') "    Cdn  : "//trim(num2lstr(Rod%Cdn ))
-         write(p%UnLog, '(A)') "    Cdt  : "//trim(num2lstr(Rod%Cdt ))
-         write(p%UnLog, '(A)') "    CdEnd: "//trim(num2lstr(Rod%CdEnd ))
-         !write(p%UnLog, '(A)') "    ww_l: " << ( (rho - env->rho_w)*(pi/4.*d*d) )*9.81 << endl;	
-      end if
-
-
       ! need to add cleanup sub <<<
 
 

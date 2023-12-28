@@ -249,29 +249,29 @@ CONTAINS
 
       ! -----------------------------------------------------------------
       ! Read the primary MoorDyn input file, or copy from passed input
-   if (InitInp%UsePrimaryInputFile) then
-      ! Read the entire input file, minus any comment lines, into the FileInfo_In
-      ! data structure in memory for further processing.
-      call ProcessComFile( InitInp%FileName, FileInfo_In, ErrStat2, ErrMsg2 )
-      CALL GetPath( InitInp%FileName, p%PriPath )    ! Input files will be relative to the path where the primary input file is located.
-   else
-      call NWTC_Library_CopyFileInfoType( InitInp%PassedPrimaryInputData, FileInfo_In, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-      p%PriPath = ""
-   endif
-   if (Failed()) return;
+      if (InitInp%UsePrimaryInputFile) then
+         ! Read the entire input file, minus any comment lines, into the FileInfo_In
+         ! data structure in memory for further processing.
+         call ProcessComFile( InitInp%FileName, FileInfo_In, ErrStat2, ErrMsg2 )
+         CALL GetPath( InitInp%FileName, p%PriPath )    ! Input files will be relative to the path where the primary input file is located.
+      else
+         call NWTC_Library_CopyFileInfoType( InitInp%PassedPrimaryInputData, FileInfo_In, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         p%PriPath = ""
+      endif
+      if (Failed()) return;
 
-   ! For diagnostic purposes, the following can be used to display the contents
-   ! of the FileInfo_In data structure.
-   !call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
+      ! For diagnostic purposes, the following can be used to display the contents
+      ! of the FileInfo_In data structure.
+      !call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
 
       !  Parse the FileInfo_In structure of data from the inputfile into the InitInp%InputFile structure
-!   CALL ParsePrimaryFileInfo_BuildModel( PriPath, InitInp, FileInfo_In, InputFileDat, p, m, UnEc, ErrStat2, ErrMsg2 )
-!   if (Failed()) return;
+      !   CALL ParsePrimaryFileInfo_BuildModel( PriPath, InitInp, FileInfo_In, InputFileDat, p, m, UnEc, ErrStat2, ErrMsg2 )
+      !   if (Failed()) return;
 
 
 
 
-!NOTE: This could be split into a separate routine for easier to read code
+      !NOTE: This could be split into a separate routine for easier to read code
       !-------------------------------------------------------------------------------------------------
       ! Parsing of input file from the FileInfo_In data structure
       !     -  FileInfo_Type is essentially a string array with some metadata.
@@ -429,6 +429,7 @@ CONTAINS
                         END IF
                         write(p%UnLog,'(A)', IOSTAT=ErrStat2) "MoorDyn v2 log file with output level "//TRIM(Num2LStr(p%writeLog))
                         write(p%UnLog,'(A)', IOSTAT=ErrStat2) "Note: options above the writeLog line in the input file will not be recorded."
+                        write(p%UnLog,'(A)', IOSTAT=ErrStat2) " Input File Summary:"
                      end if
                   else if ( OptString == 'DTM') THEN
                      read (OptValue,*) p%dtM0 
@@ -468,8 +469,28 @@ CONTAINS
 
                   nOpts = nOpts + 1
                   Line = NextLine(i)
+
                END DO
                
+               if (p%writeLog > 1) then
+                  write(p%UnLog, '(A)'        ) "  - Options List:"
+                  write(p%UnLog, '(A17,f12.4)') "   dtm      : ", p%dtM0 
+                  write(p%UnLog, '(A17,f12.4)') "   g        : ", p%g
+                  write(p%UnLog, '(A17,f12.4)') "   rhoW     : ", p%rhoW
+                  write(p%UnLog, '(A17,A)'    ) "   Depth    : ", DepthValue    ! water depth input read in as a string to be processed by setupBathymetry
+                  write(p%UnLog, '(A17,f12.4)') "   kBot     : ", p%kBot
+                  write(p%UnLog, '(A17,f12.4)') "   cBot     : ", p%cBot
+                  write(p%UnLog, '(A17,f12.4)') "   dtIC     : ", InputFileDat%dtIC
+                  write(p%UnLog, '(A17,f12.4)') "   TMaxIC   : ", InputFileDat%TMaxIC
+                  write(p%UnLog, '(A17,f12.4)') "   CdScaleIC: ", InputFileDat%CdScaleIC
+                  write(p%UnLog, '(A17,f12.4)') "   threshIC : ", InputFileDat%threshIC
+                  write(p%UnLog, '(A17,A)'    ) "   WaterKin : ", WaterKinValue
+                  write(p%UnLog, '(A17,f12.4)') "   dtOut    : ", p%dtOut
+                  write(p%UnLog, '(A17,f12.4)') "   mu_kT    : ", p%mu_kT
+                  write(p%UnLog, '(A17,f12.4)') "   mu_kA    : ", p%mu_kA
+                  write(p%UnLog, '(A17,f12.4)') "   mc       : ", p%mc
+                  write(p%UnLog, '(A17,f12.4)') "   cv       : ", p%cv
+               end if
 
             else if (INDEX(Line, "OUTPUT") > 0) then ! if output header
 
@@ -588,8 +609,8 @@ CONTAINS
                Line = NextLine(i)
                Line = NextLine(i)
                
-                ! process each line
-                DO l = 1,p%nLineTypes
+               ! process each line
+               DO l = 1,p%nLineTypes
                    
                    !read into a line
                    Line = NextLine(i)
@@ -641,6 +662,9 @@ CONTAINS
                       read(tempStrings(2), *) m%LineTypeList(l)%BA_D 
                    else if (m%LineTypeList(l)%ElasticMod == 2) then  ! case where there is no dynamic damping for viscoelastic model (will it work)?
                       CALL WrScr("Warning, viscoelastic model being used with zero damping on the dynamic stiffness.")
+                      if (p%writeLog > 0) then
+                        write(p%UnLog,'(A)') "Warning, viscoelastic model being used with zero damping on the dynamic stiffness."
+                     end if
                    end if
                    ! get the regular/static coefficient or relation in all cases (can be from a lookup table?)
                    CALL getCoefficientOrCurve(tempStrings(1), m%LineTypeList(l)%BA,     &
@@ -658,16 +682,16 @@ CONTAINS
                    m%LineTypeList(l)%IdNum = l  
                    
                   ! write lineType information to log file
-                  if (p%writeLog > 1) then
-                      write(p%UnLog, '(A12,A20)'  ) " LineType"//trim(num2lstr(l))//":"
-                      write(p%UnLog, '(A12,A20)'  ) " name: ", m%LineTypeList(l)%name
-                      write(p%UnLog, '(A12,f12.4)') " d   : ", m%LineTypeList(l)%d  
-                      write(p%UnLog, '(A12,f12.4)') " w   : ", m%LineTypeList(l)%w  
-                      write(p%UnLog, '(A12,f12.4)') " Cdn : ", m%LineTypeList(l)%Cdn
-                      write(p%UnLog, '(A12,f12.4)') " Can : ", m%LineTypeList(l)%Can
-                      write(p%UnLog, '(A12,f12.4)') " Cdt : ", m%LineTypeList(l)%Cdt
-                      write(p%UnLog, '(A12,f12.4)') " Cat : ", m%LineTypeList(l)%Cat
-                  end if
+                   if (p%writeLog > 1) then
+                     write(p%UnLog, '(A)'        ) "  - LineType"//trim(num2lstr(l))//":"
+                     write(p%UnLog, '(A12,A)'    ) " name: ", trim(m%LineTypeList(l)%name)
+                     write(p%UnLog, '(A12,f12.4)') " d   : ", m%LineTypeList(l)%d  
+                     write(p%UnLog, '(A12,f12.4)') " w   : ", m%LineTypeList(l)%w  
+                     write(p%UnLog, '(A12,f12.4)') " Cdn : ", m%LineTypeList(l)%Cdn
+                     write(p%UnLog, '(A12,f12.4)') " Can : ", m%LineTypeList(l)%Can
+                     write(p%UnLog, '(A12,f12.4)') " Cdt : ", m%LineTypeList(l)%Cdt
+                     write(p%UnLog, '(A12,f12.4)') " Cat : ", m%LineTypeList(l)%Cat
+                   end if
 
                   IF ( ErrStat2 /= ErrID_None ) THEN
                      CALL SetErrStat( ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -712,16 +736,16 @@ CONTAINS
                    ! specify IdNum of rod type for error checking
                    m%RodTypeList(l)%IdNum = l  
                    
-                  ! write lineType information to log file
+                  ! write rodType information to log file
                   if (p%writeLog > 1) then
-                      write(p%UnLog, '(A12,A20)'  ) " RodType"//trim(num2lstr(l))//":"
-                      write(p%UnLog, '(A12,A20)'  ) " name: ", m%RodTypeList(l)%name
-                      write(p%UnLog, '(A12,f12.4)') " d   : ", m%RodTypeList(l)%d  
-                      write(p%UnLog, '(A12,f12.4)') " w   : ", m%RodTypeList(l)%w  
-                      write(p%UnLog, '(A12,f12.4)') " Cdn : ", m%RodTypeList(l)%Cdn
-                      write(p%UnLog, '(A12,f12.4)') " Can : ", m%RodTypeList(l)%Can
-                      write(p%UnLog, '(A12,f12.4)') " Cdt : ", m%RodTypeList(l)%CdEnd
-                      write(p%UnLog, '(A12,f12.4)') " Cat : ", m%RodTypeList(l)%CaEnd
+                      write(p%UnLog, '(A)'        ) "  - RodType"//trim(num2lstr(l))//":"
+                      write(p%UnLog, '(A14,A)'    ) " name: ", trim(m%RodTypeList(l)%name)
+                      write(p%UnLog, '(A14,f12.4)') " d   : ", m%RodTypeList(l)%d  
+                      write(p%UnLog, '(A14,f12.4)') " w   : ", m%RodTypeList(l)%w  
+                      write(p%UnLog, '(A14,f12.4)') " Cdn : ", m%RodTypeList(l)%Cdn
+                      write(p%UnLog, '(A14,f12.4)') " Can : ", m%RodTypeList(l)%Can
+                      write(p%UnLog, '(A14,f12.4)') " CdEnd : ", m%RodTypeList(l)%CdEnd
+                      write(p%UnLog, '(A14,f12.4)') " CaEnd : ", m%RodTypeList(l)%CaEnd
                   end if
 
                    IF ( ErrStat2 /= ErrID_None ) THEN
@@ -818,6 +842,10 @@ CONTAINS
                      CALL WrScr('   Unable to parse Body '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file.')  ! Specific screen output because errors likely
                      CALL WrScr('   Ensure row has all 13 columns needed in MDv2 input file (13th Dec 2021).')  
                         CALL SetErrStat( ErrID_Fatal, 'Failed to read bodies.' , ErrStat, ErrMsg, RoutineName )
+                     if (p%writeLog > 0) then
+                        write(p%UnLog,'(A)') '   Unable to parse Body '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file.'
+                        write(p%UnLog,'(A)') '   Ensure row has all 13 columns needed in MDv2 input file (13th Dec 2021).'
+                     end if
                      CALL CleanUp()
                      RETURN
                   END IF
@@ -893,6 +921,19 @@ CONTAINS
                      CALL CleanUp()
                      RETURN
                   END IF
+
+                  ! write body information to log file
+                  if (p%writeLog > 1) then
+                     write(p%UnLog, '(A)'        ) "  - Body"//trim(num2lstr(l))//":"
+                     write(p%UnLog, '(A14,I2)'   ) " id    : ", m%BodyList(l)%IdNum
+                     write(p%UnLog, '(A14,A)'    ) " attach: ", trim(tempString1)
+                     write(p%UnLog, '(A14,f12.4)') " v     : ", m%BodyList(l)%bodyV 
+                     write(p%UnLog, '(A14,f12.4)') " m     : ", m%BodyList(l)%bodyM
+                     write(p%UnLog, '(A14,A)'    ) " I     : ", trim(num2lstr(m%BodyList(l)%BodyI(1)))//", "//trim(num2lstr(m%BodyList(l)%BodyI(2)))//", "//trim(num2lstr(m%BodyList(l)%BodyI(3)))
+                     write(p%UnLog, '(A14,A)'    ) " rCG   : ", trim(num2lstr(m%BodyList(l)%rCG(1)))//", "//trim(num2lstr(m%BodyList(l)%rCG(2)))//", "//trim(num2lstr(m%BodyList(l)%rCG(3)))
+                     write(p%UnLog, '(A14,A)'    ) " CdA   : ", trim(num2lstr(m%BodyList(l)%BodyCdA(1)))//", "//trim(num2lstr(m%BodyList(l)%BodyCdA(2)))//", "//trim(num2lstr(m%BodyList(l)%BodyCdA(3)))//", "//trim(num2lstr(m%BodyList(l)%BodyCdA(4)))//", "//trim(num2lstr(m%BodyList(l)%BodyCdA(5)))//", "//trim(num2lstr(m%BodyList(l)%BodyCdA(6)))
+                     write(p%UnLog, '(A14,A)'    ) " Ca    : ", trim(num2lstr(m%BodyList(l)%BodyCa(1)))//", "//trim(num2lstr(m%BodyList(l)%BodyCa(2)))//", "//trim(num2lstr(m%BodyList(l)%BodyCa(3)))//", "//trim(num2lstr(m%BodyList(l)%BodyCa(4)))//", "//trim(num2lstr(m%BodyList(l)%BodyCa(5)))//", "//trim(num2lstr(m%BodyList(l)%BodyCa(6)))
+                 end if
                   
                   IF (wordy > 1) print *, "Set up body ", l, " of type ",  m%BodyList(l)%typeNum
 
@@ -1069,6 +1110,14 @@ CONTAINS
                   ! specify IdNum of line for error checking
                   m%RodList(l)%IdNum = l  
 
+                  if (p%writeLog > 1) then
+                     write(p%UnLog, '(A)'        ) "  - Rod"//trim(num2lstr(m%RodList(l)%IdNum))//":"
+                     write(p%UnLog, '(A15,I2)'   ) "   ID     : ", m%RodList(l)%IdNum
+                     write(p%UnLog, '(A15,A)'    ) "   Type   : ", trim(m%RodTypeList(m%RodList(l)%PropsIdNum)%name)
+                     write(p%UnLog, '(A15,A)'    ) "   Attach : ", trim(tempString2)
+                     write(p%UnLog, '(A15,I2)'   ) "   NumSegs: ", m%RodList(l)%N
+                  end if
+
                   ! check for sequential IdNums
                   IF ( m%RodList(l)%IdNum .NE. l ) THEN
                      CALL SetErrStat( ErrID_Fatal, 'Line numbers must be sequential starting from 1.', ErrStat, ErrMsg, RoutineName )
@@ -1124,6 +1173,9 @@ CONTAINS
                      
                      if ((INDEX(tempString4, "SEABED") > 0 ) .or. (INDEX(tempString4, "GROUND") > 0 ) .or. (INDEX(tempString4, "FLOOR") > 0 )) then  ! if keyword used
                         CALL WrScr('Point '//trim(Num2LStr(l))//' depth set to be on the seabed; finding z location based on depth/bathymetry')      ! interpret the anchor depth value as a 'seabed' input
+                        if (p%writeLog > 0) then
+                           write(p%UnLog,'(A)') 'Point '//trim(Num2LStr(l))//' depth set to be on the seabed; finding z location based on depth/bathymetry'
+                        end if
                         CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, tempArray(1), tempArray(2), depth, nvec)         ! meaning the anchor should be at the depth of the local bathymetry
                         tempArray(3) = -depth
                      else                                                       ! if the anchor depth input isn't one of the supported keywords, 
@@ -1143,6 +1195,10 @@ CONTAINS
                      CALL WrScr('   Unable to parse Point '//trim(Num2LStr(l))//' row in input file.')  ! Specific screen output because errors likely
                      CALL WrScr('   Ensure row has all 9 columns, including CdA and Ca.')           ! to be caused by non-updated input file formats.
                         CALL SetErrStat( ErrID_Fatal, 'Failed to read points.' , ErrStat, ErrMsg, RoutineName ) ! would be nice to specify which line <<<<<<<<<
+                        if (p%writeLog > 0) then
+                           write(p%UnLog,'(A)') '   Unable to parse Point '//trim(Num2LStr(l))//' row in input file.'
+                           write(p%UnLog,'(A)') '   Ensure row has all 9 columns, including CdA and Ca.'
+                        end if
                      CALL CleanUp()
                      RETURN
                   END IF
@@ -1207,6 +1263,9 @@ CONTAINS
                            p%nCpldPoints(J) = p%nCpldPoints(J) + 1      ! increment counter for the appropriate turbine                   
                            m%CpldPointIs(p%nCpldPoints(J),J) = l
                            CALL WrScr(' added point '//TRIM(int2lstr(l))//' as fairlead for turbine '//trim(int2lstr(J)))
+                           if (p%writeLog > 0) then
+                              write(p%UnLog,'(A)') ' added point '//TRIM(int2lstr(l))//' as fairlead for turbine '//trim(int2lstr(J))
+                           end if
                            
                            
                         else
@@ -1231,6 +1290,16 @@ CONTAINS
                   !also set number of attached lines to zero initially
                   m%PointList(l)%nAttached = 0
 
+                  ! write body information to log file
+                  if (p%writeLog > 1) then
+                     write(p%UnLog, '(A)'        ) "  - Point"//trim(num2lstr(l))//":"
+                     write(p%UnLog, '(A12,I2)'   ) " id  : ", m%PointList(l)%IdNum
+                     write(p%UnLog, '(A12,I2)'   ) " type: ", m%PointList(l)%typeNum
+                     write(p%UnLog, '(A12,f12.4)') " v   : ", m%PointList(l)%pointV 
+                     write(p%UnLog, '(A12,f12.4)') " m   : ", m%PointList(l)%pointM
+                     write(p%UnLog, '(A12,f12.4)') " CdA : ", m%PointList(l)%pointCdA
+                     write(p%UnLog, '(A12,f12.4)') " Ca  : ", m%PointList(l)%pointCa
+                 end if
 
                   ! check for sequential IdNums
                   IF ( m%PointList(l)%IdNum .NE. l ) THEN
@@ -1409,6 +1478,15 @@ CONTAINS
                   ! specify IdNum of line for error checking
                   m%LineList(l)%IdNum = l  
 
+                  if (p%writeLog > 1) then
+                     write(p%UnLog, '(A)'        ) "  - Line"//trim(num2lstr(m%LineList(l)%IdNum))//":"
+                     write(p%UnLog, '(A15,I2)'   ) "   ID     : ", m%LineList(l)%IdNum
+                     write(p%UnLog, '(A15,A)'    ) "   Type   : ", trim(m%LineTypeList(m%LineList(l)%PropsIdNum)%name)
+                     write(p%UnLog, '(A15,f12.4)') "   Len    : ", m%LineList(l)%UnstrLen
+                     write(p%UnLog, '(A15,A)'    ) "   Node A : ", " "//tempString2 
+                     write(p%UnLog, '(A15,A)'    ) "   Node B : ", " "//tempString3
+                     write(p%UnLog, '(A15,I2)'   ) "   NumSegs: ", m%LineList(l)%N
+                  end if
 
                   ! check for sequential IdNums
                   IF ( m%LineList(l)%IdNum .NE. l ) THEN
@@ -1462,11 +1540,20 @@ CONTAINS
                         if (m%LineList( TempIDnums(J) )%CtrlChan == 0) then      ! ensure line doesn't already have a CtrlChan assigned 
                            m%LineList( TempIDnums(J) )%CtrlChan = Itemp
                            CALL WrScr('Assigned Line '//TRIM(Int2LStr(TempIDnums(J)))//' to control channel '//TRIM(Int2LStr(Itemp)))
+                           if (p%writeLog > 0) then
+                              write(p%UnLog,'(A)') 'Assigned Line '//TRIM(Int2LStr(TempIDnums(J)))//' to control channel '//TRIM(Int2LStr(Itemp))
+                           end if
                         else
                            CALL WrScr('Error: Line '//TRIM(Int2LStr(TempIDnums(J)))//' already is assigned to control channel '//TRIM(Int2LStr(m%LineList( TempIDnums(J) )%CtrlChan))//' so cannot also be assigned to channel '//TRIM(Int2LStr(Itemp)))
+                           if (p%writeLog > 0) then
+                              write(p%UnLog,'(A)') 'Error: Line '//TRIM(Int2LStr(TempIDnums(J)))//' already is assigned to control channel '//TRIM(Int2LStr(m%LineList( TempIDnums(J) )%CtrlChan))//' so cannot also be assigned to channel '//TRIM(Int2LStr(Itemp))
+                           end if
                         end if                     
                      else
                         CALL WrScr('Error: Line ID '//TRIM(Int2LStr(TempIDnums(J)))//' of CtrlChan '//TRIM(Int2LStr(Itemp))//' is out of range')
+                        if (p%writeLog > 0) then
+                           write(p%UnLog,'(A)') 'Error: Line ID '//TRIM(Int2LStr(TempIDnums(J)))//' of CtrlChan '//TRIM(Int2LStr(Itemp))//' is out of range'
+                        end if
                      end if
                   
                   END DO
@@ -1478,6 +1565,9 @@ CONTAINS
             else if (INDEX(Line, "FAILURE") > 0) then ! if failure conditions header
 
                CALL WrScr("   Warning: Failure capabilities are not yet implemented in MoorDyn.")
+               if (p%writeLog > 0) then
+                  write(p%UnLog,'(A)') "   Warning: Failure capabilities are not yet implemented in MoorDyn."
+               end if
                
                ! skip following two lines (label line and unit line)
                Line = NextLine(i)
@@ -1553,7 +1643,12 @@ CONTAINS
                   CALL CheckError( ErrStat2, ErrMsg2 )
                   IF (ErrStat >= AbortErrLev) RETURN
 
-
+               if (p%writeLog > 1) then
+                  write(p%UnLog, '(A)'        ) "  - Outputs List:"
+                  DO J = 1, SIZE(Outlist)
+                     write(p%UnLog, '(A)'     ) "      "//OutList(J)
+                  END DO
+               end if
             !-------------------------------------------------------------------------------------------
             else  ! otherwise ignore this line that isn't a recognized header line and read the next line
                Line = NextLine(i)
@@ -1592,7 +1687,9 @@ CONTAINS
 !     p%NAnchs = 0   ! this is the number of "fixed" type Points. <<<<<<<<<<<<<<
 
       CALL WrScr(trim(Num2LStr(p%nLines))//' lines, '//trim(Num2LStr(p%NPoints))//' points, '//trim(Num2LStr(p%nRods))//' rods, '//trim(Num2LStr(p%nBodies))//' bodies.')
-
+      if (p%writeLog > 0) then
+         write(p%UnLog,'(A)') trim(Num2LStr(p%nLines))//' lines, '//trim(Num2LStr(p%NPoints))//' points, '//trim(Num2LStr(p%nRods))//' rods, '//trim(Num2LStr(p%nBodies))//' bodies.'
+      end if
 
 
 
@@ -2091,6 +2188,9 @@ CONTAINS
       if (InputFileDat%TMaxIC > 0.0_DbKi) then
 
          CALL WrScr("   Finalizing initial conditions using dynamic relaxation."//NewLine)  ! newline because next line writes over itself
+         if (p%writeLog > 0) then
+            write(p%UnLog,'(A)') "   Finalizing initial conditions using dynamic relaxation."//NewLine
+         end if
 
          ! boost drag coefficient of each line type  <<<<<<<< does this actually do anything or do lines hold these coefficients???
          DO I = 1, p%nLines
@@ -2159,6 +2259,10 @@ CONTAINS
                
                IF (ErrStat == ErrID_Fatal) THEN
                   CALL WrScr("NaN detected at time "//TRIM(Num2LStr(t))//" during MoorDyn's dynamic relaxation process.")
+                  if (p%writeLog > 0) then
+                     write(p%UnLog,'(A)') "NaN detected at time "//TRIM(Num2LStr(t))//" during MoorDyn's dynamic relaxation process."//NewLine
+                  end if
+         
                   IF (wordy > 1) THEN
                      print *, "Here is the state vector: "
                      print *, x%states
@@ -2212,9 +2316,17 @@ CONTAINS
                IF (Converged == 1)  THEN  ! if we made it with all cases satisfying the threshold
                   CALL WrScr('') ! serves as line break from write over command in previous printed line
                   CALL WrScr('   Fairlead tensions converged to '//trim(Num2LStr(100.0*InputFileDat%threshIC))//'% after '//trim(Num2LStr(t))//' seconds.')
+                  if (p%writeLog > 0) then
+                     write(p%UnLog,'(A)') ''
+                     write(p%UnLog,'(A)') '   Fairlead tensions converged to '//trim(Num2LStr(100.0*InputFileDat%threshIC))//'% after '//trim(Num2LStr(t))//' seconds.'//NewLine
+                  end if
                   DO l = 1, p%nLines 
                       CALL WrScr('   Fairlead tension: '//trim(Num2LStr(FairTensIC(l,1))))
                       CALL WrScr('   Fairlead forces: '//trim(Num2LStr(m%LineList(l)%Fnet(1, m%LineList(l)%N)))//', '//trim(Num2LStr(m%LineList(l)%Fnet(2, m%LineList(l)%N)))//', '//trim(Num2LStr(m%LineList(l)%Fnet(3, m%LineList(l)%N))))
+                      if (p%writeLog > 0) then
+                        write(p%UnLog,'(A)') '   Fairlead tension: '//trim(Num2LStr(FairTensIC(l,1)))
+                        write(p%UnLog,'(A)') '   Fairlead forces: '//trim(Num2LStr(m%LineList(l)%Fnet(1, m%LineList(l)%N)))//', '//trim(Num2LStr(m%LineList(l)%Fnet(2, m%LineList(l)%N)))//', '//trim(Num2LStr(m%LineList(l)%Fnet(3, m%LineList(l)%N)))
+                      end if
                   ENDDO
                   EXIT  ! break out of the time stepping loop
                END IF
@@ -2223,6 +2335,11 @@ CONTAINS
             IF (I == ceiling(InputFileDat%TMaxIC/InputFileDat%dtIC) ) THEN
                CALL WrScr('') ! serves as line break from write over command in previous printed line
                CALL WrScr('   Fairlead tensions did not converge within TMaxIC='//trim(Num2LStr(InputFileDat%TMaxIC))//' seconds.')
+               if (p%writeLog > 0) then
+                  write(p%UnLog,'(A)') ''
+                  write(p%UnLog,'(A)') '   Fairlead tensions did not converge within TMaxIC='//trim(Num2LStr(InputFileDat%TMaxIC))//' seconds.'
+               end if
+
                !ErrStat = ErrID_Warn
                !ErrMsg = '  MD_Init: ran dynamic convergence to TMaxIC without convergence'
             END IF
@@ -2267,6 +2384,9 @@ CONTAINS
       endif
       
       CALL WrScr('   MoorDyn initialization completed.')
+      if (p%writeLog > 0) then
+         write(p%UnLog,'(A)') '   MoorDyn initialization completed.'
+      end if
       
       m%LastOutTime = -1.0_DbKi    ! set to nonzero to ensure that output happens at the start of simulation at t=0
       
@@ -2460,6 +2580,9 @@ CONTAINS
          
          IF (ErrStat == ErrID_Fatal) THEN
             CALL WrScr("NaN detected at time "//TRIM(Num2LStr(t2))//" in MoorDyn.")
+            if (p%writeLog > 0) then
+               write(p%UnLog,'(A)') "NaN detected at time "//TRIM(Num2LStr(t2))//" in MoorDyn."
+            end if
             IF (wordy > 1) THEN
                print *, ". Here is the state vector: "
                print *, x%states
@@ -2491,6 +2614,9 @@ CONTAINS
       
       IF (ErrStat == ErrID_Fatal) THEN
          CALL WrScr("NaN detected at time "//TRIM(Num2LStr(t2))//" in MoorDyn.")
+         if (p%writeLog > 0) then
+            write(p%UnLog,'(A)') "NaN detected at time "//TRIM(Num2LStr(t2))//" in MoorDyn."
+         end if
          IF (wordy > 1) THEN
             print *, ". Here is the state vector: "
             print *, x%states
@@ -2513,6 +2639,9 @@ CONTAINS
             ErrStat = MAX(ErrStat, ErrID)
 
             CALL WrScr( ErrMsg )  ! do this always or only if warning level?
+            if (p%writeLog > 0) then
+               write(p%UnLog,'(A)') ErrMsg
+            end if
 
             IF( ErrStat > ErrID_Warn ) THEN
        !         CALL MD_DestroyInput( u_interp, ErrStat, ErrMsg )
@@ -2717,6 +2846,9 @@ CONTAINS
             ErrStat = MAX(ErrStat, ErrID)
 
             CALL WrScr( ErrMsg )  ! do this always or only if warning level? <<<<<<<<<<<<<<<<<<<<<< probably should remove all instances
+            if (p%writeLog > 0) then
+               write(p%UnLog,'(A)') ErrMsg
+            end if
 
       !      IF( ErrStat > ErrID_Warn ) THEN
       !          CALL MD_DestroyContState( dxdt, ErrStat2, ErrMsg2)
@@ -2869,6 +3001,9 @@ CONTAINS
                 ErrStat = ErrID_Fatal
                 ErrMsg  = ' Active tension command will make a segment longer than the limit of twice its original length.'
                 call WrScr(trim(Num2LStr(u%DeltaL(m%LineList(L)%CtrlChan)))//" is an increase of more than "//trim(Num2LStr(m%LineList(L)%UnstrLen / m%LineList(L)%N)))
+                if (p%writeLog > 0) then
+                  write(p%UnLog,'(A)') trim(Num2LStr(u%DeltaL(m%LineList(L)%CtrlChan)))//" is an increase of more than "//trim(Num2LStr(m%LineList(L)%UnstrLen / m%LineList(L)%N))
+                end if
                 IF (wordy > 0) print *, u%DeltaL
                 IF (wordy > 0) print*, m%LineList(L)%CtrlChan
                 RETURN
@@ -2877,6 +3012,9 @@ CONTAINS
              ErrStat = ErrID_Fatal
                 ErrMsg  = ' Active tension command will make a segment shorter than the limit of half its original length.'
                 call WrScr(trim(Num2LStr(u%DeltaL(m%LineList(L)%CtrlChan)))//" is a reduction of more than half of "//trim(Num2LStr(m%LineList(L)%UnstrLen / m%LineList(L)%N)))
+                if (p%writeLog > 0) then
+                  write(p%UnLog,'(A)') trim(Num2LStr(u%DeltaL(m%LineList(L)%CtrlChan)))//" is a reduction of more than half of "//trim(Num2LStr(m%LineList(L)%UnstrLen / m%LineList(L)%N))
+                end if
                 IF (wordy > 0) print *, u%DeltaL
                 IF (wordy > 0) print*, m%LineList(L)%CtrlChan
                 RETURN
@@ -3090,6 +3228,9 @@ CONTAINS
             ErrStat = MAX(ErrStat, ErrID)
 
             CALL WrScr( ErrMsg )  ! do this always or only if warning level?
+            if (p%writeLog > 0) then
+               write(p%UnLog,'(A)') ErrMsg
+             end if
 
          END IF
 

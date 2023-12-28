@@ -151,8 +151,10 @@ CONTAINS
       vecLen   = SQRT(Dot_Product(vec,vec))
       vecLen2D = SQRT(vec(1)**2+vec(2)**2)
       if ( vecLen < 0.000001 ) then
-         print *, "ERROR in GetOrientationAngles in MoorDyn. Supplied vector is near zero" 
-         print *, vec
+         if (wordy > 0) then
+            print *, "ERROR in GetOrientationAngles in MoorDyn. Supplied vector is near zero" 
+            print *, vec
+         endif
          k_hat = NaN ! 1.0/0.0
       else
          k_hat = vec / vecLen 
