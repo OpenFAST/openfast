@@ -3974,7 +3974,7 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_S
 
 
    IF ( p_FAST%CompAero == Module_AD .and. allocated(InitOutData_AD%rotors) .and. allocated(AD%y%rotors) ) THEN  ! These meshes may have tower diameter data associated with nodes
-      UseADtwr = allocated(InitOutData_AD%rotors(1)%TowerRad)
+      UseADtwr = allocated(InitOutData_AD%rotors(1)%TwrDiam)
    ELSE
       UseADtwr = .false.
    END IF
@@ -3984,7 +3984,7 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_S
          ! This assumes a vertical tower (i.e., we deal only with z component of position)
       Indx = 1
       do k=1,TowerMotionMesh%NNodes
-         p_FAST%VTK_Surface%TowerRad(k) = InterpStp( TowerMotionMesh%Position(3,k), AD%y%rotors(1)%TowerLoad%Position(3,:), InitOutData_AD%rotors(1)%TowerRad, Indx, AD%y%rotors(1)%TowerLoad%NNodes )
+         p_FAST%VTK_Surface%TowerRad(k) = InterpStp( TowerMotionMesh%Position(3,k), AD%y%rotors(1)%TowerLoad%Position(3,:), InitOutData_AD%rotors(1)%TwrDiam, Indx, AD%y%rotors(1)%TowerLoad%NNodes ) / 2.0_ReKi
       end do
    
    else
