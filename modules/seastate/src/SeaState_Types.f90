@@ -103,6 +103,7 @@ IMPLICIT NONE
     LOGICAL  :: HasIce = .false.      !< Supplied by Driver:  Whether this simulation has ice loading (flag) [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     LOGICAL  :: hasCurrField = .false.      !< Flag to indicate whether to expect current field from IfW [-]
+    INTEGER(IntKi)  :: CompSeaSt = 0_IntKi      !< Flag to indicate whether SeaState module is activated [-]
   END TYPE SeaSt_InitInputType
 ! =======================
 ! =========  SeaSt_InitOutputType  =======
@@ -618,6 +619,7 @@ subroutine SeaSt_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%HasIce = SrcInitInputData%HasIce
    DstInitInputData%Linearize = SrcInitInputData%Linearize
    DstInitInputData%hasCurrField = SrcInitInputData%hasCurrField
+   DstInitInputData%CompSeaSt = SrcInitInputData%CompSeaSt
 end subroutine
 
 subroutine SeaSt_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -663,6 +665,7 @@ subroutine SeaSt_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%HasIce)
    call RegPack(Buf, InData%Linearize)
    call RegPack(Buf, InData%hasCurrField)
+   call RegPack(Buf, InData%CompSeaSt)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -720,6 +723,8 @@ subroutine SeaSt_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%Linearize)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%hasCurrField)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%CompSeaSt)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 

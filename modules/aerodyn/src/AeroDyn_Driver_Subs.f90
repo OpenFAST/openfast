@@ -24,6 +24,7 @@ module AeroDyn_Driver_Subs
    use AeroDyn_Inflow, only: concatOutputHeaders
    use AeroDyn_Inflow, only: Init_MeshMap_For_ADI, Set_Inputs_For_ADI
    use AeroDyn_IO,     only: AD_WrVTK_Surfaces, AD_WrVTK_LinesPoints
+   use SeaState,       only: SeaSt_Init
    
    use AeroDyn_Driver_Types   
    use AeroDyn
@@ -90,10 +91,11 @@ contains
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !>  
-subroutine Dvr_Init(dvr, ADI, FED, errStat, errMsg )
+subroutine Dvr_Init(dvr, ADI, FED, SeaSt, errStat, errMsg )
    type(Dvr_SimData),            intent(  out) :: dvr       !< driver data
    type(ADI_Data),               intent(  out) :: ADI       !< AeroDyn/InflowWind data
    type(FED_Data),               intent(  out) :: FED       !< Elastic wind turbine data (Fake ElastoDyn)
+   type(SeaState_Data),          intent(  out) :: SeaSt     !< SeaState data
    integer(IntKi)              , intent(  out) :: errStat   !< Status of error message
    character(*)                , intent(  out) :: errMsg    !< Error message if errStat /= ErrID_None
    ! local variables
@@ -139,13 +141,15 @@ end subroutine Dvr_Init
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !>  
-subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
-   integer(IntKi)              , intent(in   ) :: iCase
-   type(Dvr_SimData),           intent(inout) :: dvr       !< driver data
-   type(ADI_Data),              intent(inout) :: ADI       !< AeroDyn/InflowWind data
-   type(FED_Data),              intent(inout) :: FED       !< Elastic wind turbine data (Fake ElastoDyn)
-   integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
+subroutine Dvr_InitCase(iCase, dvr, ADI, FED, SeaSt, errStat, errMsg )
+   integer(IntKi)                  , intent(in   ) :: iCase
+   type(Dvr_SimData)               , intent(inout) :: dvr                  !< driver data
+   type(ADI_Data)                  , intent(inout) :: ADI                  !< AeroDyn/InflowWind data
+   type(FED_Data)                  , intent(inout) :: FED                  !< Elastic wind turbine data (Fake ElastoDyn)
+   type(SeaState_Data)             , intent(inout) :: SeaSt                !< SeaState data
+   integer(IntKi)                  , intent(  out) :: errStat              ! Status of error message
+   character(*)                    , intent(  out) :: errMsg               ! Error message if errStat /= ErrID_None
+
    ! local variables
    integer(IntKi)       :: errStat2      ! local status of error message
    character(ErrMsgLen) :: errMsg2       ! local error message if errStat /= ErrID_None
@@ -252,6 +256,41 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
       dvr%out%VTKRefPoint = (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /)
       call SetVTKParameters(dvr%out, dvr, ADI, errStat2, errMsg2); if(Failed()) return
    endif
+
+   ! --- Initialize SeaState
+   if ( dvr%SS_InitInp%CompSeaSt == 1 ) then
+
+      SeaSt%InitInp%Gravity       = 9.80665_ReKi
+      SeaSt%InitInp%hasIce        = .FALSE.
+      SeaSt%InitInp%defWtrDens    = dvr%FldDens
+      SeaSt%InitInp%defWtrDpth    = dvr%WtrDpth
+      SeaSt%InitInp%defMSL2SWL    = dvr%MSL2SWL
+      SeaSt%InitInp%MHK           = dvr%MHK
+      SeaSt%InitInp%UseInputFile  = .TRUE.
+      SeaSt%InitInp%Linearize     = .FALSE.
+      SeaSt%InitInp%InputFile     = dvr%SS_InitInp%InputFile
+      SeaSt%InitInp%OutRootName   = trim(dvr%out%Root)//'.SEA'
+      SeaSt%InitInp%TMax          = dvr%TMax
+
+      IF ( dvr%MHK .NE. 0_IntKi .AND. dvr%IW_InitInp%CompInflow == 1) THEN
+         SeaSt%InitInp%hasCurrField = .TRUE.
+      ELSE
+         SeaSt%InitInp%hasCurrField = .FALSE.
+      END IF
+
+      CALL SeaSt_Init( SeaSt%InitInp, SeaSt%u, SeaSt%p, SeaSt%x, SeaSt%xd, SeaSt%z, SeaSt%OtherState, SeaSt%y, SeaSt%m, dvr%dt, SeaSt%InitOut, ErrStat, ErrMsg )
+      
+      IF ( dvr%MHK .NE. 0_IntKi .AND. dvr%IW_InitInp%CompInflow == 1 ) THEN ! MHK turbine
+         ! Simulating an MHK turbine; load dynamic current from IfW
+         SeaSt%p%WaveField%CurrField  => ADI%p%AD%FlowField
+         SeaSt%p%WaveField%hasCurrField = .TRUE.
+         ! Set AD pointers to wavefield
+         ADI%p%AD%WaveField => SeaSt%InitOut%WaveField
+      ELSE ! Wind turbine
+         SeaSt%p%WaveField%hasCurrField = .FALSE.
+      END IF
+     
+   end if
 
    call cleanUp()
 contains
@@ -467,6 +506,9 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
       InitInp%IW_InitInp%PLExp      = dvr%IW_InitInp%PLExp
       InitInp%IW_InitInp%UseInputFile = .true.     ! read input file instead of passed file data
       InitInp%IW_InitInp%MHK        = dvr%MHK
+      InitInp%IW_InitInp%WtrDpth    = dvr%WtrDpth
+      InitInp%IW_InitInp%MSL2SWL    = dvr%MSL2SWL
+      InitInp%IW_InitInp%RootName   = trim(dvr%out%Root)
       ! AeroDyn
       InitInp%AD%Gravity   = 9.80665_ReKi
       InitInp%AD%RootName  = dvr%out%Root ! 'C:/Work/XFlow/'
@@ -987,8 +1029,14 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       dvr%IW_InitInp%HWindSpeed = myNaN
    endif
 
+   ! --- SeaState data
+   call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "CompSeaSt" , dvr%SS_InitInp%CompSeaSt , errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "SeaStFile" , dvr%SS_InitInp%InputFile , errStat2, errMsg2, unEc); if (Failed()) return
+
    if (PathIsRelative(dvr%AD_InputFile)) dvr%AD_InputFile = trim(PriPath)//trim(dvr%AD_InputFile)
    if (PathIsRelative(dvr%IW_InitInp%InputFile)) dvr%IW_InitInp%InputFile = trim(PriPath)//trim(dvr%IW_InitInp%InputFile)
+   if (PathIsRelative(dvr%SS_InitInp%InputFile)) dvr%SS_InitInp%InputFile = trim(PriPath)//trim(dvr%SS_InitInp%InputFile)
 
    ! --- Turbines
    call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
@@ -1347,10 +1395,15 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
    ! Turbine Data:
    !if ( dvr%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", errStat, ErrMsg, RoutineName)
       ! Combined-Case Analysis:
-   if (dvr%MHK /= MHK_None .and. dvr%MHK /= MHK_FixedBottom .and. dvr%MHK /= MHK_Floating) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0, 1, or 2.', ErrStat, ErrMsg, RoutineName)
-   
    if (dvr%DT < epsilon(0.0_ReKi) ) call SetErrStat(ErrID_Fatal,'dT must be larger than 0.',errStat, errMsg,RoutineName)
    if (Check(.not.(ANY((/0,1/) == dvr%IW_InitInp%compInflow) ), 'CompInflow needs to be 0 or 1')) return
+   if (Check(.not.(ANY((/0,1/) == dvr%SS_InitInp%CompSeaSt) ), 'CompSeaSt needs to be 0 or 1')) return
+   
+   if (dvr%MHK /= MHK_None .and. dvr%MHK /= MHK_FixedBottom .and. dvr%MHK /= MHK_Floating) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0, 1, or 2.', ErrStat, ErrMsg, RoutineName)
+   
+   if (dvr%MHK /= MHK_None .and. dvr%SS_InitInp%CompSeaSt == 1 .and. dvr%IW_InitInp%CompInflow /= 1) call SetErrStat( ErrID_Fatal, 'InflowWind must be activated for MHK turbines when SeaState is used.', ErrStat, ErrMsg, RoutineName )
+
+   if (dvr%MHK == MHK_None .and. dvr%SS_InitInp%CompSeaSt /= 0) call SetErrStat( ErrID_Fatal, 'SeaState cannot be used with wind turbines.', ErrStat, ErrMsg, RoutineName )
 
    if (Check(.not.(ANY(idAnalysisVALID == dvr%analysisType    )), 'Analysis type not supported: '//trim(Num2LStr(dvr%analysisType)) )) return
    

@@ -13,6 +13,7 @@
 include    Registry_NWTC_Library.txt
 usefrom    AeroDyn_Registry.txt
 usefrom    AeroDyn_Inflow_Registry.txt
+usefrom	   SeaState.txt
 #
 # ..... Table of combined cases to run .......................................................................................................
 typedef   AeroDyn_Driver/AD_Dvr Dvr_Case   ReKi                   HWindSpeed       -      -     -   "Hub wind speed" "m/s"
@@ -151,13 +152,26 @@ typedef   ^                         ^            IntKi                   iTimeSe
 typedef   ^                         ^            character(1024)         root             -      -     -   "Output file rootname" "-"
 typedef   ^                         ^            Dvr_Outputs            out              -      -     -   "data for driver output file" "-"
 typedef   ^                         ^            ADI_IW_InputData        IW_InitInp       -      -     -   "" -
+typedef   ^                         ^            SeaSt_InitInputType     SS_InitInp       -      -     -   "" -
+
+# ..... SeaState data .......................................................................................................
+typedef	^	SeaState_Data	SeaSt_ContinuousStateType	x	           - 	-	-	"Continuous states"
+typedef	^	^	            SeaSt_DiscreteStateType	    xd	           - 	-	-	"Discrete states"
+typedef	^	^	            SeaSt_ConstraintStateType   z	           - 	-	-	"Constraint states"
+typedef	^	^	            SeaSt_OtherStateType        OtherState     - 	-	-	"Other states"
+typedef	^	^	            SeaSt_ParameterType	        p	           -	-	-	"Parameters"
+typedef	^	^	            SeaSt_InputType	            u	           -	-	-	"System inputs"
+typedef	^	^	            SeaSt_OutputType	        y	           -	-	-	"System outputs"
+typedef	^	^	            SeaSt_MiscVarType	        m	           -	-	-	"Misc/optimization variables"
+typedef	^	^	            SeaSt_InitInputType	        InitInp        -	-	-	"Array of inputs associated with InputTimes"
+typedef	^	^	            SeaSt_InitOutputType	    InitOut        -	-	-	"Array of outputs associated with CalcSteady Azimuths"
 
 # ..... Data to wrap the driver ..........................................................................................................
-typedef   ^                        AllData       Dvr_SimData             dvr              -      -     -   "Driver data" -
-typedef   ^                           ^          ADI_Data                ADI              -      -     -   "AeroDyn InflowWind Data" -
-typedef   ^                           ^          FED_Data                FED              -      -     -   "Elastic wind turbine data (Fake ElastoDyn)" "-"
-typedef   ^                           ^          IntKi                   errStat          -      -     -   "" -
-typedef   ^                           ^          character(ErrMsgLen)    errMsg           -      -     -   "" -
-typedef   ^                           ^          logical                 initialized      -      -     -   "" -
-
+typedef ^   AllData         Dvr_SimData                 dvr                -    -   -   "Driver data" -
+typedef ^   ^               ADI_Data                    ADI                -    -   -   "AeroDyn InflowWind Data" -
+typedef ^   ^               FED_Data                    FED                -    -   -   "Elastic wind turbine data (Fake ElastoDyn)" "-"
+typedef ^   ^               IntKi                       errStat            -    -   -   "" -
+typedef ^   ^               character(ErrMsgLen)        errMsg             -    -   -   "" -
+typedef ^   ^               logical                     initialized        -    -   -   "" -
+typedef ^   ^               SeaState_Data               SeaSt              -    -   -   "SeaState data" -
 

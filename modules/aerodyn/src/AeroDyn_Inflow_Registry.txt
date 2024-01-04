@@ -40,6 +40,9 @@ typedef    ^        ^                  IntKi                            MHK     
 typedef    ^        ^                  LOGICAL                          UseInputFile     -    .TRUE.  -   "Should we read everthing from an input file, or is it passed in?"  -
 typedef    ^        ^                  FileInfoType                     PassedFileData   -      -     -   "If we don't use the input file, pass everything through this"      -
 typedef    ^        ^                  LOGICAL                          Linearize        -    .FALSE. -   "Flag that tells this module if the glue code wants to linearize." -
+typedef    ^        ^                  ReKi                             WtrDpth          -      -     -   "Water depth" m
+typedef    ^        ^                  ReKi                             MSL2SWL          -      -     -   "Offset between still-water level and mean sea level" m
+typedef    ^        ^                  Character(1024)                  RootName         -      -     -   "RootName for writing output files"	-
 
 
 # ..... InitIn ....................................................................................................................

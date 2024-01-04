@@ -82,6 +82,7 @@ typedef   ^                  ^                      IntKi                    WrW
 typedef   ^                  ^                      LOGICAL                  HasIce                          -          -          -         "Supplied by Driver:  Whether this simulation has ice loading (flag)"    -
 typedef   ^                  ^                      Logical                  Linearize                       -     .FALSE.         -         "Flag that tells this module if the glue code wants to linearize."	-
 typedef   ^                  ^                      LOGICAL                  hasCurrField                    -          -          -         "Flag to indicate whether to expect current field from IfW" -
+typedef   ^                  ^                      IntKi                    CompSeaSt                       -          -          -         "Flag to indicate whether SeaState module is activated" -
 #
 #
 # Define outputs from the initialization routine here:

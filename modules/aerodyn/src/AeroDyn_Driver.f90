@@ -41,12 +41,12 @@ program AeroDyn_Driver
 
    ! -----
    dat%initialized=.false.
-   call Dvr_Init(dat%dvr, dat%ADI, dat%FED, dat%errStat, dat%errMsg); call CheckError()
+   call Dvr_Init(dat%dvr, dat%ADI, dat%FED, dat%SeaSt, dat%errStat, dat%errMsg); call CheckError()
 
    do iCase= 1,dat%dvr%numCases
 
       ! Initial case
-      call Dvr_InitCase(iCase, dat%dvr, dat%ADI, dat%FED, dat%errStat, dat%errMsg); call CheckError()
+      call Dvr_InitCase(iCase, dat%dvr, dat%ADI, dat%FED, dat%SeaSt, dat%errStat, dat%errMsg); call CheckError()
       dat%initialized=.true.
    
       ! Init of time estimator

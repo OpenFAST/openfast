@@ -62,6 +62,9 @@ IMPLICIT NONE
     LOGICAL  :: UseInputFile = .TRUE.      !< Should we read everthing from an input file, or is it passed in? [-]
     TYPE(FileInfoType)  :: PassedFileData      !< If we don't use the input file, pass everything through this [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
+    REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [m]
+    REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Offset between still-water level and mean sea level [m]
+    Character(1024)  :: RootName      !< RootName for writing output files [-]
   END TYPE ADI_IW_InputData
 ! =======================
 ! =========  ADI_InitInputType  =======
@@ -309,6 +312,9 @@ subroutine ADI_CopyIW_InputData(SrcIW_InputDataData, DstIW_InputDataData, CtrlCo
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstIW_InputDataData%Linearize = SrcIW_InputDataData%Linearize
+   DstIW_InputDataData%WtrDpth = SrcIW_InputDataData%WtrDpth
+   DstIW_InputDataData%MSL2SWL = SrcIW_InputDataData%MSL2SWL
+   DstIW_InputDataData%RootName = SrcIW_InputDataData%RootName
 end subroutine
 
 subroutine ADI_DestroyIW_InputData(IW_InputDataData, ErrStat, ErrMsg)
@@ -338,6 +344,9 @@ subroutine ADI_PackIW_InputData(Buf, Indata)
    call RegPack(Buf, InData%UseInputFile)
    call NWTC_Library_PackFileInfoType(Buf, InData%PassedFileData) 
    call RegPack(Buf, InData%Linearize)
+   call RegPack(Buf, InData%WtrDpth)
+   call RegPack(Buf, InData%MSL2SWL)
+   call RegPack(Buf, InData%RootName)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -362,6 +371,12 @@ subroutine ADI_UnPackIW_InputData(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_UnpackFileInfoType(Buf, OutData%PassedFileData) ! PassedFileData 
    call RegUnpack(Buf, OutData%Linearize)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WtrDpth)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%MSL2SWL)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%RootName)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 

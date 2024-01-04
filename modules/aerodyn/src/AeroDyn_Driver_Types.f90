@@ -33,6 +33,7 @@ MODULE AeroDyn_Driver_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE AeroDyn_Types
 USE AeroDyn_Inflow_Types
+USE SeaState_Types
 USE NWTC_Library
 IMPLICIT NONE
 ! =========  Dvr_Case  =======
@@ -185,7 +186,22 @@ IMPLICIT NONE
     character(1024)  :: root      !< Output file rootname [-]
     TYPE(Dvr_Outputs)  :: out      !< data for driver output file [-]
     TYPE(ADI_IW_InputData)  :: IW_InitInp      !<  [-]
+    TYPE(SeaSt_InitInputType)  :: SS_InitInp      !<  [-]
   END TYPE Dvr_SimData
+! =======================
+! =========  SeaState_Data  =======
+  TYPE, PUBLIC :: SeaState_Data
+    TYPE(SeaSt_ContinuousStateType)  :: x      !< Continuous states [-]
+    TYPE(SeaSt_DiscreteStateType)  :: xd      !< Discrete states [-]
+    TYPE(SeaSt_ConstraintStateType)  :: z      !< Constraint states [-]
+    TYPE(SeaSt_OtherStateType)  :: OtherState      !< Other states [-]
+    TYPE(SeaSt_ParameterType)  :: p      !< Parameters [-]
+    TYPE(SeaSt_InputType)  :: u      !< System inputs [-]
+    TYPE(SeaSt_OutputType)  :: y      !< System outputs [-]
+    TYPE(SeaSt_MiscVarType)  :: m      !< Misc/optimization variables [-]
+    TYPE(SeaSt_InitInputType)  :: InitInp      !< Array of inputs associated with InputTimes [-]
+    TYPE(SeaSt_InitOutputType)  :: InitOut      !< Array of outputs associated with CalcSteady Azimuths [-]
+  END TYPE SeaState_Data
 ! =======================
 ! =========  AllData  =======
   TYPE, PUBLIC :: AllData
@@ -195,6 +211,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: errStat = 0_IntKi      !<  [-]
     character(ErrMsgLen)  :: errMsg      !<  [-]
     LOGICAL  :: initialized = .false.      !<  [-]
+    TYPE(SeaState_Data)  :: SeaSt      !< SeaState data [-]
   END TYPE AllData
 ! =======================
 CONTAINS
@@ -1461,6 +1478,9 @@ subroutine AD_Dvr_CopyDvr_SimData(SrcDvr_SimDataData, DstDvr_SimDataData, CtrlCo
    call ADI_CopyIW_InputData(SrcDvr_SimDataData%IW_InitInp, DstDvr_SimDataData%IW_InitInp, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyInitInput(SrcDvr_SimDataData%SS_InitInp, DstDvr_SimDataData%SS_InitInp, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine AD_Dvr_DestroyDvr_SimData(Dvr_SimDataData, ErrStat, ErrMsg)
@@ -1498,6 +1518,8 @@ subroutine AD_Dvr_DestroyDvr_SimData(Dvr_SimDataData, ErrStat, ErrMsg)
    call AD_Dvr_DestroyDvr_Outputs(Dvr_SimDataData%out, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call ADI_DestroyIW_InputData(Dvr_SimDataData%IW_InitInp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyInitInput(Dvr_SimDataData%SS_InitInp, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
@@ -1551,6 +1573,7 @@ subroutine AD_Dvr_PackDvr_SimData(Buf, Indata)
    call RegPack(Buf, InData%root)
    call AD_Dvr_PackDvr_Outputs(Buf, InData%out) 
    call ADI_PackIW_InputData(Buf, InData%IW_InitInp) 
+   call SeaSt_PackInitInput(Buf, InData%SS_InitInp) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -1645,6 +1668,116 @@ subroutine AD_Dvr_UnPackDvr_SimData(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call AD_Dvr_UnpackDvr_Outputs(Buf, OutData%out) ! out 
    call ADI_UnpackIW_InputData(Buf, OutData%IW_InitInp) ! IW_InitInp 
+   call SeaSt_UnpackInitInput(Buf, OutData%SS_InitInp) ! SS_InitInp 
+end subroutine
+
+subroutine AD_Dvr_CopySeaState_Data(SrcSeaState_DataData, DstSeaState_DataData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaState_Data), intent(in) :: SrcSeaState_DataData
+   type(SeaState_Data), intent(inout) :: DstSeaState_DataData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_Dvr_CopySeaState_Data'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call SeaSt_CopyContState(SrcSeaState_DataData%x, DstSeaState_DataData%x, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyDiscState(SrcSeaState_DataData%xd, DstSeaState_DataData%xd, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyConstrState(SrcSeaState_DataData%z, DstSeaState_DataData%z, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyOtherState(SrcSeaState_DataData%OtherState, DstSeaState_DataData%OtherState, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyParam(SrcSeaState_DataData%p, DstSeaState_DataData%p, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyInput(SrcSeaState_DataData%u, DstSeaState_DataData%u, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyOutput(SrcSeaState_DataData%y, DstSeaState_DataData%y, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyMisc(SrcSeaState_DataData%m, DstSeaState_DataData%m, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyInitInput(SrcSeaState_DataData%InitInp, DstSeaState_DataData%InitInp, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyInitOutput(SrcSeaState_DataData%InitOut, DstSeaState_DataData%InitOut, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
+
+subroutine AD_Dvr_DestroySeaState_Data(SeaState_DataData, ErrStat, ErrMsg)
+   type(SeaState_Data), intent(inout) :: SeaState_DataData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_Dvr_DestroySeaState_Data'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call SeaSt_DestroyContState(SeaState_DataData%x, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyDiscState(SeaState_DataData%xd, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyConstrState(SeaState_DataData%z, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyOtherState(SeaState_DataData%OtherState, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyParam(SeaState_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyInput(SeaState_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyOutput(SeaState_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyMisc(SeaState_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyInitInput(SeaState_DataData%InitInp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyInitOutput(SeaState_DataData%InitOut, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+end subroutine
+
+subroutine AD_Dvr_PackSeaState_Data(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(SeaState_Data), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'AD_Dvr_PackSeaState_Data'
+   if (Buf%ErrStat >= AbortErrLev) return
+   call SeaSt_PackContState(Buf, InData%x) 
+   call SeaSt_PackDiscState(Buf, InData%xd) 
+   call SeaSt_PackConstrState(Buf, InData%z) 
+   call SeaSt_PackOtherState(Buf, InData%OtherState) 
+   call SeaSt_PackParam(Buf, InData%p) 
+   call SeaSt_PackInput(Buf, InData%u) 
+   call SeaSt_PackOutput(Buf, InData%y) 
+   call SeaSt_PackMisc(Buf, InData%m) 
+   call SeaSt_PackInitInput(Buf, InData%InitInp) 
+   call SeaSt_PackInitOutput(Buf, InData%InitOut) 
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
+
+subroutine AD_Dvr_UnPackSeaState_Data(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(SeaState_Data), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'AD_Dvr_UnPackSeaState_Data'
+   if (Buf%ErrStat /= ErrID_None) return
+   call SeaSt_UnpackContState(Buf, OutData%x) ! x 
+   call SeaSt_UnpackDiscState(Buf, OutData%xd) ! xd 
+   call SeaSt_UnpackConstrState(Buf, OutData%z) ! z 
+   call SeaSt_UnpackOtherState(Buf, OutData%OtherState) ! OtherState 
+   call SeaSt_UnpackParam(Buf, OutData%p) ! p 
+   call SeaSt_UnpackInput(Buf, OutData%u) ! u 
+   call SeaSt_UnpackOutput(Buf, OutData%y) ! y 
+   call SeaSt_UnpackMisc(Buf, OutData%m) ! m 
+   call SeaSt_UnpackInitInput(Buf, OutData%InitInp) ! InitInp 
+   call SeaSt_UnpackInitOutput(Buf, OutData%InitOut) ! InitOut 
 end subroutine
 
 subroutine AD_Dvr_CopyAllData(SrcAllDataData, DstAllDataData, CtrlCode, ErrStat, ErrMsg)
@@ -1670,6 +1803,9 @@ subroutine AD_Dvr_CopyAllData(SrcAllDataData, DstAllDataData, CtrlCode, ErrStat,
    DstAllDataData%errStat = SrcAllDataData%errStat
    DstAllDataData%errMsg = SrcAllDataData%errMsg
    DstAllDataData%initialized = SrcAllDataData%initialized
+   call AD_Dvr_CopySeaState_Data(SrcAllDataData%SeaSt, DstAllDataData%SeaSt, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine AD_Dvr_DestroyAllData(AllDataData, ErrStat, ErrMsg)
@@ -1687,6 +1823,8 @@ subroutine AD_Dvr_DestroyAllData(AllDataData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call ADI_DestroyFED_Data(AllDataData%FED, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD_Dvr_DestroySeaState_Data(AllDataData%SeaSt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_Dvr_PackAllData(Buf, Indata)
@@ -1700,6 +1838,7 @@ subroutine AD_Dvr_PackAllData(Buf, Indata)
    call RegPack(Buf, InData%errStat)
    call RegPack(Buf, InData%errMsg)
    call RegPack(Buf, InData%initialized)
+   call AD_Dvr_PackSeaState_Data(Buf, InData%SeaSt) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -1717,6 +1856,7 @@ subroutine AD_Dvr_UnPackAllData(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%initialized)
    if (RegCheckErr(Buf, RoutineName)) return
+   call AD_Dvr_UnpackSeaState_Data(Buf, OutData%SeaSt) ! SeaSt 
 end subroutine
 END MODULE AeroDyn_Driver_Types
 !ENDOFREGISTRYGENERATEDFILE
