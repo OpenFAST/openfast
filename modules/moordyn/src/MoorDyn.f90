@@ -1645,7 +1645,7 @@ CONTAINS
 
                if (p%writeLog > 1) then
                   write(p%UnLog, '(A)'        ) "  - Outputs List:"
-                  DO J = 1, SIZE(Outlist)
+                  DO J = 1, p%NumOuts
                      write(p%UnLog, '(A)'     ) "      "//OutList(J)
                   END DO
                end if
@@ -1688,7 +1688,8 @@ CONTAINS
 
       CALL WrScr(trim(Num2LStr(p%nLines))//' lines, '//trim(Num2LStr(p%NPoints))//' points, '//trim(Num2LStr(p%nRods))//' rods, '//trim(Num2LStr(p%nBodies))//' bodies.')
       if (p%writeLog > 0) then
-         write(p%UnLog,'(A)') trim(Num2LStr(p%nLines))//' lines, '//trim(Num2LStr(p%NPoints))//' points, '//trim(Num2LStr(p%nRods))//' rods, '//trim(Num2LStr(p%nBodies))//' bodies.'
+         write(p%UnLog, '(A)') NewLine
+         write(p%UnLog, '(A)')  '   Created mooring system: '//trim(Num2LStr(p%nLines))//' lines, '//trim(Num2LStr(p%NPoints))//' points, '//trim(Num2LStr(p%nRods))//' rods, '//trim(Num2LStr(p%nBodies))//' bodies.'
       end if
 
 
@@ -1730,7 +1731,7 @@ CONTAINS
 
    ! write system description to log file
    if (p%writeLog > 1) then
-      write(p%UnLog, '(A)') "----- MoorDyn Model Summary (to be written) -----"
+      write(p%UnLog, '(A)') "----- MoorDyn Model Summary (unfinished) -----"
    end if
 
 
@@ -2152,7 +2153,7 @@ CONTAINS
       !        if log file, compute and write some object properties
       ! -------------------------------------------------------------------
       if (p%writeLog > 1) then
-      
+         write(p%UnLog, '(A)'  ) "Values after intialization before dynamic relaxation"
          write(p%UnLog, '(A)'  ) "  Bodies:"         
          DO l = 1,p%nBodies
             write(p%UnLog, '(A)'  )         "    Body"//trim(num2lstr(l))//":"            
@@ -2162,21 +2163,21 @@ CONTAINS
          write(p%UnLog, '(A)'  ) "  Rods:"
          DO l = 1,p%nRods
             write(p%UnLog, '(A)'  )         "    Rod"//trim(num2lstr(l))//":"  
-            ! m%RodList(l) 
+            write(p%UnLog, '(A12, f12.4)')  "      mass: ", m%RodList(l)%M6net(1,1)
+            write(p%UnLog, '(A17, A)')  "      direction: ", trim(num2lstr(m%RodList(l)%q(1)))//", "//trim(num2lstr(m%RodList(l)%q(2)))//", "//trim(num2lstr(m%RodList(l)%q(3)))
          END DO
          
          write(p%UnLog, '(A)'  ) "  Points:"
          DO l = 1,p%nFreePoints
             write(p%UnLog, '(A)'  )         "    Point"//trim(num2lstr(l))//":"  
-            ! m%PointList(l)
+            write(p%UnLog, '(A12, f12.4)')  "      mass: ", m%PointList(l)%M
          END DO
          
          write(p%UnLog, '(A)'  ) "  Lines:"
          DO l = 1,p%nLines
             write(p%UnLog, '(A)'  )         "    Line"//trim(num2lstr(l))//":"  
-            ! m%LineList(l)
          END DO
-      
+         write(p%UnLog, '(A)') "--------- End of Model Summary --------- "//NewLine
       end if
 
 
@@ -2189,7 +2190,7 @@ CONTAINS
 
          CALL WrScr("   Finalizing initial conditions using dynamic relaxation."//NewLine)  ! newline because next line writes over itself
          if (p%writeLog > 0) then
-            write(p%UnLog,'(A)') "   Finalizing initial conditions using dynamic relaxation."//NewLine
+            write(p%UnLog,'(A)') "Finalizing initial conditions using dynamic relaxation."//NewLine
          end if
 
          ! boost drag coefficient of each line type  <<<<<<<< does this actually do anything or do lines hold these coefficients???
@@ -2314,7 +2315,6 @@ CONTAINS
                END DO
 
                IF (Converged == 1)  THEN  ! if we made it with all cases satisfying the threshold
-                  CALL WrScr('') ! serves as line break from write over command in previous printed line
                   CALL WrScr('   Fairlead tensions converged to '//trim(Num2LStr(100.0*InputFileDat%threshIC))//'% after '//trim(Num2LStr(t))//' seconds.')
                   if (p%writeLog > 0) then
                      write(p%UnLog,'(A)') ''
@@ -2385,7 +2385,12 @@ CONTAINS
       
       CALL WrScr('   MoorDyn initialization completed.')
       if (p%writeLog > 0) then
-         write(p%UnLog,'(A)') '   MoorDyn initialization completed.'
+         write(p%UnLog, '(A)') NewLine//"MoorDyn initialization completed."//NewLine
+         if (ErrStat /= ErrID_None) then
+            write(p%UnLog, '(A34)') "Initalization Errors and Warnings:"
+            write(p%UnLog, '(A)'  ) ErrMsg
+         end if
+         write(p%UnLog, '(A)') NewLine
       end if
       
       m%LastOutTime = -1.0_DbKi    ! set to nonzero to ensure that output happens at the start of simulation at t=0
@@ -2468,7 +2473,6 @@ CONTAINS
       SUBROUTINE CleanUp()
         ! ErrStat = ErrID_Fatal  
         call MD_DestroyInputFileType( InputFileDat, ErrStat2, ErrMsg2 )    ! Ignore any error messages from this
-        IF (p%UnLog > 0_IntKi) CLOSE( p%UnLog )       ! Remove this when the log file is kept open during the full simulation
       END SUBROUTINE
 
       !> If for some reason the file is truncated, it is possible to get into an infinite loop

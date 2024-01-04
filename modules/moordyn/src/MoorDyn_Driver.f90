@@ -697,6 +697,11 @@ PROGRAM MoorDyn_Driver
       call MD_DestroyInput( MD_u(j), ErrStat2, ErrMsg2)
    end do  
 
+   if ( ErrStat /= ErrID_None ) THEN ! Display all errors
+      CALL WrScr1( "Errors: " )
+      CALL WrScr( trim(GetErrStr(ErrStat))//': '//trim(ErrMsg) )
+   endif
+
    !close (un)    
    call CleanUp()
    CALL NormStop()
@@ -711,8 +716,8 @@ CONTAINS
         if (ErrStat >= AbortErrLev) then
            call CleanUp()
            Call ProgAbort(trim(ErrMsg))
-        elseif ( ErrStat /= ErrID_None ) THEN
-           CALL WrScr1( trim(GetErrStr(ErrStat))//': '//trim(ErrMsg) )
+        elseif ( ErrStat2 /= ErrID_None ) THEN
+           CALL WrScr1( trim(GetErrStr(ErrStat2))//': '//trim(ErrMsg2)//NewLine)
         end if
    END SUBROUTINE AbortIfFailed
 
