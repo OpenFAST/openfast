@@ -409,7 +409,7 @@ subroutine MAP_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Er
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'MAP_CopyInitOutput'
@@ -422,8 +422,8 @@ subroutine MAP_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Er
    DstInitOutputData%compilingData = SrcInitOutputData%compilingData
    DstInitOutputData%C_obj%compilingData = SrcInitOutputData%C_obj%compilingData
    if (allocated(SrcInitOutputData%writeOutputHdr)) then
-      LB(1:1) = lbound(SrcInitOutputData%writeOutputHdr)
-      UB(1:1) = ubound(SrcInitOutputData%writeOutputHdr)
+      LB(1:1) = lbound(SrcInitOutputData%writeOutputHdr, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%writeOutputHdr, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%writeOutputHdr)) then
          allocate(DstInitOutputData%writeOutputHdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -434,8 +434,8 @@ subroutine MAP_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Er
       DstInitOutputData%writeOutputHdr = SrcInitOutputData%writeOutputHdr
    end if
    if (allocated(SrcInitOutputData%writeOutputUnt)) then
-      LB(1:1) = lbound(SrcInitOutputData%writeOutputUnt)
-      UB(1:1) = ubound(SrcInitOutputData%writeOutputUnt)
+      LB(1:1) = lbound(SrcInitOutputData%writeOutputUnt, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%writeOutputUnt, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%writeOutputUnt)) then
          allocate(DstInitOutputData%writeOutputUnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -488,12 +488,12 @@ subroutine MAP_PackInitOutput(Buf, Indata)
    call RegPack(Buf, InData%compilingData)
    call RegPack(Buf, allocated(InData%writeOutputHdr))
    if (allocated(InData%writeOutputHdr)) then
-      call RegPackBounds(Buf, 1, lbound(InData%writeOutputHdr), ubound(InData%writeOutputHdr))
+      call RegPackBounds(Buf, 1, lbound(InData%writeOutputHdr, kind=B8Ki), ubound(InData%writeOutputHdr, kind=B8Ki))
       call RegPack(Buf, InData%writeOutputHdr)
    end if
    call RegPack(Buf, allocated(InData%writeOutputUnt))
    if (allocated(InData%writeOutputUnt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%writeOutputUnt), ubound(InData%writeOutputUnt))
+      call RegPackBounds(Buf, 1, lbound(InData%writeOutputUnt, kind=B8Ki), ubound(InData%writeOutputUnt, kind=B8Ki))
       call RegPack(Buf, InData%writeOutputUnt)
    end if
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
@@ -505,7 +505,7 @@ subroutine MAP_UnPackInitOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(MAP_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MAP_UnPackInitOutput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -758,14 +758,14 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'MAP_CopyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (associated(SrcOtherStateData%H)) then
-      LB(1:1) = lbound(SrcOtherStateData%H)
-      UB(1:1) = ubound(SrcOtherStateData%H)
+      LB(1:1) = lbound(SrcOtherStateData%H, kind=B8Ki)
+      UB(1:1) = ubound(SrcOtherStateData%H, kind=B8Ki)
       if (.not. associated(DstOtherStateData%H)) then
          allocate(DstOtherStateData%H(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -779,8 +779,8 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%H = SrcOtherStateData%H
    end if
    if (associated(SrcOtherStateData%V)) then
-      LB(1:1) = lbound(SrcOtherStateData%V)
-      UB(1:1) = ubound(SrcOtherStateData%V)
+      LB(1:1) = lbound(SrcOtherStateData%V, kind=B8Ki)
+      UB(1:1) = ubound(SrcOtherStateData%V, kind=B8Ki)
       if (.not. associated(DstOtherStateData%V)) then
          allocate(DstOtherStateData%V(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -794,8 +794,8 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%V = SrcOtherStateData%V
    end if
    if (associated(SrcOtherStateData%Ha)) then
-      LB(1:1) = lbound(SrcOtherStateData%Ha)
-      UB(1:1) = ubound(SrcOtherStateData%Ha)
+      LB(1:1) = lbound(SrcOtherStateData%Ha, kind=B8Ki)
+      UB(1:1) = ubound(SrcOtherStateData%Ha, kind=B8Ki)
       if (.not. associated(DstOtherStateData%Ha)) then
          allocate(DstOtherStateData%Ha(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -809,8 +809,8 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%Ha = SrcOtherStateData%Ha
    end if
    if (associated(SrcOtherStateData%Va)) then
-      LB(1:1) = lbound(SrcOtherStateData%Va)
-      UB(1:1) = ubound(SrcOtherStateData%Va)
+      LB(1:1) = lbound(SrcOtherStateData%Va, kind=B8Ki)
+      UB(1:1) = ubound(SrcOtherStateData%Va, kind=B8Ki)
       if (.not. associated(DstOtherStateData%Va)) then
          allocate(DstOtherStateData%Va(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -824,8 +824,8 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%Va = SrcOtherStateData%Va
    end if
    if (associated(SrcOtherStateData%x)) then
-      LB(1:1) = lbound(SrcOtherStateData%x)
-      UB(1:1) = ubound(SrcOtherStateData%x)
+      LB(1:1) = lbound(SrcOtherStateData%x, kind=B8Ki)
+      UB(1:1) = ubound(SrcOtherStateData%x, kind=B8Ki)
       if (.not. associated(DstOtherStateData%x)) then
          allocate(DstOtherStateData%x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -839,8 +839,8 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%x = SrcOtherStateData%x
    end if
    if (associated(SrcOtherStateData%y)) then
-      LB(1:1) = lbound(SrcOtherStateData%y)
-      UB(1:1) = ubound(SrcOtherStateData%y)
+      LB(1:1) = lbound(SrcOtherStateData%y, kind=B8Ki)
+      UB(1:1) = ubound(SrcOtherStateData%y, kind=B8Ki)
       if (.not. associated(DstOtherStateData%y)) then
          allocate(DstOtherStateData%y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -854,8 +854,8 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%y = SrcOtherStateData%y
    end if
    if (associated(SrcOtherStateData%z)) then
-      LB(1:1) = lbound(SrcOtherStateData%z)
-      UB(1:1) = ubound(SrcOtherStateData%z)
+      LB(1:1) = lbound(SrcOtherStateData%z, kind=B8Ki)
+      UB(1:1) = ubound(SrcOtherStateData%z, kind=B8Ki)
       if (.not. associated(DstOtherStateData%z)) then
          allocate(DstOtherStateData%z(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -869,8 +869,8 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%z = SrcOtherStateData%z
    end if
    if (associated(SrcOtherStateData%xa)) then
-      LB(1:1) = lbound(SrcOtherStateData%xa)
-      UB(1:1) = ubound(SrcOtherStateData%xa)
+      LB(1:1) = lbound(SrcOtherStateData%xa, kind=B8Ki)
+      UB(1:1) = ubound(SrcOtherStateData%xa, kind=B8Ki)
       if (.not. associated(DstOtherStateData%xa)) then
          allocate(DstOtherStateData%xa(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -884,8 +884,8 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%xa = SrcOtherStateData%xa
    end if
    if (associated(SrcOtherStateData%ya)) then
-      LB(1:1) = lbound(SrcOtherStateData%ya)
-      UB(1:1) = ubound(SrcOtherStateData%ya)
+      LB(1:1) = lbound(SrcOtherStateData%ya, kind=B8Ki)
+      UB(1:1) = ubound(SrcOtherStateData%ya, kind=B8Ki)
       if (.not. associated(DstOtherStateData%ya)) then
          allocate(DstOtherStateData%ya(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -899,8 +899,8 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%ya = SrcOtherStateData%ya
    end if
    if (associated(SrcOtherStateData%za)) then
-      LB(1:1) = lbound(SrcOtherStateData%za)
-      UB(1:1) = ubound(SrcOtherStateData%za)
+      LB(1:1) = lbound(SrcOtherStateData%za, kind=B8Ki)
+      UB(1:1) = ubound(SrcOtherStateData%za, kind=B8Ki)
       if (.not. associated(DstOtherStateData%za)) then
          allocate(DstOtherStateData%za(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -914,8 +914,8 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%za = SrcOtherStateData%za
    end if
    if (associated(SrcOtherStateData%Fx_connect)) then
-      LB(1:1) = lbound(SrcOtherStateData%Fx_connect)
-      UB(1:1) = ubound(SrcOtherStateData%Fx_connect)
+      LB(1:1) = lbound(SrcOtherStateData%Fx_connect, kind=B8Ki)
+      UB(1:1) = ubound(SrcOtherStateData%Fx_connect, kind=B8Ki)
       if (.not. associated(DstOtherStateData%Fx_connect)) then
          allocate(DstOtherStateData%Fx_connect(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -929,8 +929,8 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%Fx_connect = SrcOtherStateData%Fx_connect
    end if
    if (associated(SrcOtherStateData%Fy_connect)) then
-      LB(1:1) = lbound(SrcOtherStateData%Fy_connect)
-      UB(1:1) = ubound(SrcOtherStateData%Fy_connect)
+      LB(1:1) = lbound(SrcOtherStateData%Fy_connect, kind=B8Ki)
+      UB(1:1) = ubound(SrcOtherStateData%Fy_connect, kind=B8Ki)
       if (.not. associated(DstOtherStateData%Fy_connect)) then
          allocate(DstOtherStateData%Fy_connect(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -944,8 +944,8 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%Fy_connect = SrcOtherStateData%Fy_connect
    end if
    if (associated(SrcOtherStateData%Fz_connect)) then
-      LB(1:1) = lbound(SrcOtherStateData%Fz_connect)
-      UB(1:1) = ubound(SrcOtherStateData%Fz_connect)
+      LB(1:1) = lbound(SrcOtherStateData%Fz_connect, kind=B8Ki)
+      UB(1:1) = ubound(SrcOtherStateData%Fz_connect, kind=B8Ki)
       if (.not. associated(DstOtherStateData%Fz_connect)) then
          allocate(DstOtherStateData%Fz_connect(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -959,8 +959,8 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%Fz_connect = SrcOtherStateData%Fz_connect
    end if
    if (associated(SrcOtherStateData%Fx_anchor)) then
-      LB(1:1) = lbound(SrcOtherStateData%Fx_anchor)
-      UB(1:1) = ubound(SrcOtherStateData%Fx_anchor)
+      LB(1:1) = lbound(SrcOtherStateData%Fx_anchor, kind=B8Ki)
+      UB(1:1) = ubound(SrcOtherStateData%Fx_anchor, kind=B8Ki)
       if (.not. associated(DstOtherStateData%Fx_anchor)) then
          allocate(DstOtherStateData%Fx_anchor(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -974,8 +974,8 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%Fx_anchor = SrcOtherStateData%Fx_anchor
    end if
    if (associated(SrcOtherStateData%Fy_anchor)) then
-      LB(1:1) = lbound(SrcOtherStateData%Fy_anchor)
-      UB(1:1) = ubound(SrcOtherStateData%Fy_anchor)
+      LB(1:1) = lbound(SrcOtherStateData%Fy_anchor, kind=B8Ki)
+      UB(1:1) = ubound(SrcOtherStateData%Fy_anchor, kind=B8Ki)
       if (.not. associated(DstOtherStateData%Fy_anchor)) then
          allocate(DstOtherStateData%Fy_anchor(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -989,8 +989,8 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%Fy_anchor = SrcOtherStateData%Fy_anchor
    end if
    if (associated(SrcOtherStateData%Fz_anchor)) then
-      LB(1:1) = lbound(SrcOtherStateData%Fz_anchor)
-      UB(1:1) = ubound(SrcOtherStateData%Fz_anchor)
+      LB(1:1) = lbound(SrcOtherStateData%Fz_anchor, kind=B8Ki)
+      UB(1:1) = ubound(SrcOtherStateData%Fz_anchor, kind=B8Ki)
       if (.not. associated(DstOtherStateData%Fz_anchor)) then
          allocate(DstOtherStateData%Fz_anchor(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1122,7 +1122,7 @@ subroutine MAP_PackOtherState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%H))
    if (associated(InData%H)) then
-      call RegPackBounds(Buf, 1, lbound(InData%H), ubound(InData%H))
+      call RegPackBounds(Buf, 1, lbound(InData%H, kind=B8Ki), ubound(InData%H, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%H), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%H)
@@ -1130,7 +1130,7 @@ subroutine MAP_PackOtherState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%V))
    if (associated(InData%V)) then
-      call RegPackBounds(Buf, 1, lbound(InData%V), ubound(InData%V))
+      call RegPackBounds(Buf, 1, lbound(InData%V, kind=B8Ki), ubound(InData%V, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%V), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%V)
@@ -1138,7 +1138,7 @@ subroutine MAP_PackOtherState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%Ha))
    if (associated(InData%Ha)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Ha), ubound(InData%Ha))
+      call RegPackBounds(Buf, 1, lbound(InData%Ha, kind=B8Ki), ubound(InData%Ha, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%Ha), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%Ha)
@@ -1146,7 +1146,7 @@ subroutine MAP_PackOtherState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%Va))
    if (associated(InData%Va)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Va), ubound(InData%Va))
+      call RegPackBounds(Buf, 1, lbound(InData%Va, kind=B8Ki), ubound(InData%Va, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%Va), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%Va)
@@ -1154,7 +1154,7 @@ subroutine MAP_PackOtherState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%x))
    if (associated(InData%x)) then
-      call RegPackBounds(Buf, 1, lbound(InData%x), ubound(InData%x))
+      call RegPackBounds(Buf, 1, lbound(InData%x, kind=B8Ki), ubound(InData%x, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%x), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%x)
@@ -1162,7 +1162,7 @@ subroutine MAP_PackOtherState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%y))
    if (associated(InData%y)) then
-      call RegPackBounds(Buf, 1, lbound(InData%y), ubound(InData%y))
+      call RegPackBounds(Buf, 1, lbound(InData%y, kind=B8Ki), ubound(InData%y, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%y), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%y)
@@ -1170,7 +1170,7 @@ subroutine MAP_PackOtherState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%z))
    if (associated(InData%z)) then
-      call RegPackBounds(Buf, 1, lbound(InData%z), ubound(InData%z))
+      call RegPackBounds(Buf, 1, lbound(InData%z, kind=B8Ki), ubound(InData%z, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%z), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%z)
@@ -1178,7 +1178,7 @@ subroutine MAP_PackOtherState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%xa))
    if (associated(InData%xa)) then
-      call RegPackBounds(Buf, 1, lbound(InData%xa), ubound(InData%xa))
+      call RegPackBounds(Buf, 1, lbound(InData%xa, kind=B8Ki), ubound(InData%xa, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%xa), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%xa)
@@ -1186,7 +1186,7 @@ subroutine MAP_PackOtherState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%ya))
    if (associated(InData%ya)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ya), ubound(InData%ya))
+      call RegPackBounds(Buf, 1, lbound(InData%ya, kind=B8Ki), ubound(InData%ya, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%ya), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%ya)
@@ -1194,7 +1194,7 @@ subroutine MAP_PackOtherState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%za))
    if (associated(InData%za)) then
-      call RegPackBounds(Buf, 1, lbound(InData%za), ubound(InData%za))
+      call RegPackBounds(Buf, 1, lbound(InData%za, kind=B8Ki), ubound(InData%za, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%za), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%za)
@@ -1202,7 +1202,7 @@ subroutine MAP_PackOtherState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%Fx_connect))
    if (associated(InData%Fx_connect)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Fx_connect), ubound(InData%Fx_connect))
+      call RegPackBounds(Buf, 1, lbound(InData%Fx_connect, kind=B8Ki), ubound(InData%Fx_connect, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%Fx_connect), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%Fx_connect)
@@ -1210,7 +1210,7 @@ subroutine MAP_PackOtherState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%Fy_connect))
    if (associated(InData%Fy_connect)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Fy_connect), ubound(InData%Fy_connect))
+      call RegPackBounds(Buf, 1, lbound(InData%Fy_connect, kind=B8Ki), ubound(InData%Fy_connect, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%Fy_connect), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%Fy_connect)
@@ -1218,7 +1218,7 @@ subroutine MAP_PackOtherState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%Fz_connect))
    if (associated(InData%Fz_connect)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Fz_connect), ubound(InData%Fz_connect))
+      call RegPackBounds(Buf, 1, lbound(InData%Fz_connect, kind=B8Ki), ubound(InData%Fz_connect, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%Fz_connect), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%Fz_connect)
@@ -1226,7 +1226,7 @@ subroutine MAP_PackOtherState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%Fx_anchor))
    if (associated(InData%Fx_anchor)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Fx_anchor), ubound(InData%Fx_anchor))
+      call RegPackBounds(Buf, 1, lbound(InData%Fx_anchor, kind=B8Ki), ubound(InData%Fx_anchor, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%Fx_anchor), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%Fx_anchor)
@@ -1234,7 +1234,7 @@ subroutine MAP_PackOtherState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%Fy_anchor))
    if (associated(InData%Fy_anchor)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Fy_anchor), ubound(InData%Fy_anchor))
+      call RegPackBounds(Buf, 1, lbound(InData%Fy_anchor, kind=B8Ki), ubound(InData%Fy_anchor, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%Fy_anchor), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%Fy_anchor)
@@ -1242,7 +1242,7 @@ subroutine MAP_PackOtherState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%Fz_anchor))
    if (associated(InData%Fz_anchor)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Fz_anchor), ubound(InData%Fz_anchor))
+      call RegPackBounds(Buf, 1, lbound(InData%Fz_anchor, kind=B8Ki), ubound(InData%Fz_anchor, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%Fz_anchor), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%Fz_anchor)
@@ -1255,10 +1255,10 @@ subroutine MAP_UnPackOtherState(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(MAP_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MAP_UnPackOtherState'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(IntKi)  :: PtrIdx
+   integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    if (associated(OutData%H)) deallocate(OutData%H)
@@ -1864,7 +1864,7 @@ SUBROUTINE MAP_F2C_CopyOtherState( OtherStateData, ErrStat, ErrMsg, SkipPointers
       ELSE
          OtherStateData%C_obj%H_Len = SIZE(OtherStateData%H)
          IF (OtherStateData%C_obj%H_Len > 0) &
-            OtherStateData%C_obj%H = C_LOC(OtherStateData%H(LBOUND(OtherStateData%H,1)))
+            OtherStateData%C_obj%H = C_LOC(OtherStateData%H(LBOUND(OtherStateData%H,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -1876,7 +1876,7 @@ SUBROUTINE MAP_F2C_CopyOtherState( OtherStateData, ErrStat, ErrMsg, SkipPointers
       ELSE
          OtherStateData%C_obj%V_Len = SIZE(OtherStateData%V)
          IF (OtherStateData%C_obj%V_Len > 0) &
-            OtherStateData%C_obj%V = C_LOC(OtherStateData%V(LBOUND(OtherStateData%V,1)))
+            OtherStateData%C_obj%V = C_LOC(OtherStateData%V(LBOUND(OtherStateData%V,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -1888,7 +1888,7 @@ SUBROUTINE MAP_F2C_CopyOtherState( OtherStateData, ErrStat, ErrMsg, SkipPointers
       ELSE
          OtherStateData%C_obj%Ha_Len = SIZE(OtherStateData%Ha)
          IF (OtherStateData%C_obj%Ha_Len > 0) &
-            OtherStateData%C_obj%Ha = C_LOC(OtherStateData%Ha(LBOUND(OtherStateData%Ha,1)))
+            OtherStateData%C_obj%Ha = C_LOC(OtherStateData%Ha(LBOUND(OtherStateData%Ha,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -1900,7 +1900,7 @@ SUBROUTINE MAP_F2C_CopyOtherState( OtherStateData, ErrStat, ErrMsg, SkipPointers
       ELSE
          OtherStateData%C_obj%Va_Len = SIZE(OtherStateData%Va)
          IF (OtherStateData%C_obj%Va_Len > 0) &
-            OtherStateData%C_obj%Va = C_LOC(OtherStateData%Va(LBOUND(OtherStateData%Va,1)))
+            OtherStateData%C_obj%Va = C_LOC(OtherStateData%Va(LBOUND(OtherStateData%Va,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -1912,7 +1912,7 @@ SUBROUTINE MAP_F2C_CopyOtherState( OtherStateData, ErrStat, ErrMsg, SkipPointers
       ELSE
          OtherStateData%C_obj%x_Len = SIZE(OtherStateData%x)
          IF (OtherStateData%C_obj%x_Len > 0) &
-            OtherStateData%C_obj%x = C_LOC(OtherStateData%x(LBOUND(OtherStateData%x,1)))
+            OtherStateData%C_obj%x = C_LOC(OtherStateData%x(LBOUND(OtherStateData%x,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -1924,7 +1924,7 @@ SUBROUTINE MAP_F2C_CopyOtherState( OtherStateData, ErrStat, ErrMsg, SkipPointers
       ELSE
          OtherStateData%C_obj%y_Len = SIZE(OtherStateData%y)
          IF (OtherStateData%C_obj%y_Len > 0) &
-            OtherStateData%C_obj%y = C_LOC(OtherStateData%y(LBOUND(OtherStateData%y,1)))
+            OtherStateData%C_obj%y = C_LOC(OtherStateData%y(LBOUND(OtherStateData%y,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -1936,7 +1936,7 @@ SUBROUTINE MAP_F2C_CopyOtherState( OtherStateData, ErrStat, ErrMsg, SkipPointers
       ELSE
          OtherStateData%C_obj%z_Len = SIZE(OtherStateData%z)
          IF (OtherStateData%C_obj%z_Len > 0) &
-            OtherStateData%C_obj%z = C_LOC(OtherStateData%z(LBOUND(OtherStateData%z,1)))
+            OtherStateData%C_obj%z = C_LOC(OtherStateData%z(LBOUND(OtherStateData%z,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -1948,7 +1948,7 @@ SUBROUTINE MAP_F2C_CopyOtherState( OtherStateData, ErrStat, ErrMsg, SkipPointers
       ELSE
          OtherStateData%C_obj%xa_Len = SIZE(OtherStateData%xa)
          IF (OtherStateData%C_obj%xa_Len > 0) &
-            OtherStateData%C_obj%xa = C_LOC(OtherStateData%xa(LBOUND(OtherStateData%xa,1)))
+            OtherStateData%C_obj%xa = C_LOC(OtherStateData%xa(LBOUND(OtherStateData%xa,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -1960,7 +1960,7 @@ SUBROUTINE MAP_F2C_CopyOtherState( OtherStateData, ErrStat, ErrMsg, SkipPointers
       ELSE
          OtherStateData%C_obj%ya_Len = SIZE(OtherStateData%ya)
          IF (OtherStateData%C_obj%ya_Len > 0) &
-            OtherStateData%C_obj%ya = C_LOC(OtherStateData%ya(LBOUND(OtherStateData%ya,1)))
+            OtherStateData%C_obj%ya = C_LOC(OtherStateData%ya(LBOUND(OtherStateData%ya,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -1972,7 +1972,7 @@ SUBROUTINE MAP_F2C_CopyOtherState( OtherStateData, ErrStat, ErrMsg, SkipPointers
       ELSE
          OtherStateData%C_obj%za_Len = SIZE(OtherStateData%za)
          IF (OtherStateData%C_obj%za_Len > 0) &
-            OtherStateData%C_obj%za = C_LOC(OtherStateData%za(LBOUND(OtherStateData%za,1)))
+            OtherStateData%C_obj%za = C_LOC(OtherStateData%za(LBOUND(OtherStateData%za,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -1984,7 +1984,7 @@ SUBROUTINE MAP_F2C_CopyOtherState( OtherStateData, ErrStat, ErrMsg, SkipPointers
       ELSE
          OtherStateData%C_obj%Fx_connect_Len = SIZE(OtherStateData%Fx_connect)
          IF (OtherStateData%C_obj%Fx_connect_Len > 0) &
-            OtherStateData%C_obj%Fx_connect = C_LOC(OtherStateData%Fx_connect(LBOUND(OtherStateData%Fx_connect,1)))
+            OtherStateData%C_obj%Fx_connect = C_LOC(OtherStateData%Fx_connect(LBOUND(OtherStateData%Fx_connect,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -1996,7 +1996,7 @@ SUBROUTINE MAP_F2C_CopyOtherState( OtherStateData, ErrStat, ErrMsg, SkipPointers
       ELSE
          OtherStateData%C_obj%Fy_connect_Len = SIZE(OtherStateData%Fy_connect)
          IF (OtherStateData%C_obj%Fy_connect_Len > 0) &
-            OtherStateData%C_obj%Fy_connect = C_LOC(OtherStateData%Fy_connect(LBOUND(OtherStateData%Fy_connect,1)))
+            OtherStateData%C_obj%Fy_connect = C_LOC(OtherStateData%Fy_connect(LBOUND(OtherStateData%Fy_connect,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -2008,7 +2008,7 @@ SUBROUTINE MAP_F2C_CopyOtherState( OtherStateData, ErrStat, ErrMsg, SkipPointers
       ELSE
          OtherStateData%C_obj%Fz_connect_Len = SIZE(OtherStateData%Fz_connect)
          IF (OtherStateData%C_obj%Fz_connect_Len > 0) &
-            OtherStateData%C_obj%Fz_connect = C_LOC(OtherStateData%Fz_connect(LBOUND(OtherStateData%Fz_connect,1)))
+            OtherStateData%C_obj%Fz_connect = C_LOC(OtherStateData%Fz_connect(LBOUND(OtherStateData%Fz_connect,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -2020,7 +2020,7 @@ SUBROUTINE MAP_F2C_CopyOtherState( OtherStateData, ErrStat, ErrMsg, SkipPointers
       ELSE
          OtherStateData%C_obj%Fx_anchor_Len = SIZE(OtherStateData%Fx_anchor)
          IF (OtherStateData%C_obj%Fx_anchor_Len > 0) &
-            OtherStateData%C_obj%Fx_anchor = C_LOC(OtherStateData%Fx_anchor(LBOUND(OtherStateData%Fx_anchor,1)))
+            OtherStateData%C_obj%Fx_anchor = C_LOC(OtherStateData%Fx_anchor(LBOUND(OtherStateData%Fx_anchor,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -2032,7 +2032,7 @@ SUBROUTINE MAP_F2C_CopyOtherState( OtherStateData, ErrStat, ErrMsg, SkipPointers
       ELSE
          OtherStateData%C_obj%Fy_anchor_Len = SIZE(OtherStateData%Fy_anchor)
          IF (OtherStateData%C_obj%Fy_anchor_Len > 0) &
-            OtherStateData%C_obj%Fy_anchor = C_LOC(OtherStateData%Fy_anchor(LBOUND(OtherStateData%Fy_anchor,1)))
+            OtherStateData%C_obj%Fy_anchor = C_LOC(OtherStateData%Fy_anchor(LBOUND(OtherStateData%Fy_anchor,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -2044,7 +2044,7 @@ SUBROUTINE MAP_F2C_CopyOtherState( OtherStateData, ErrStat, ErrMsg, SkipPointers
       ELSE
          OtherStateData%C_obj%Fz_anchor_Len = SIZE(OtherStateData%Fz_anchor)
          IF (OtherStateData%C_obj%Fz_anchor_Len > 0) &
-            OtherStateData%C_obj%Fz_anchor = C_LOC(OtherStateData%Fz_anchor(LBOUND(OtherStateData%Fz_anchor,1)))
+            OtherStateData%C_obj%Fz_anchor = C_LOC(OtherStateData%Fz_anchor(LBOUND(OtherStateData%Fz_anchor,1, kind=B8Ki)))
       END IF
    END IF
 END SUBROUTINE
@@ -2055,14 +2055,14 @@ subroutine MAP_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode,
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'MAP_CopyConstrState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (associated(SrcConstrStateData%H)) then
-      LB(1:1) = lbound(SrcConstrStateData%H)
-      UB(1:1) = ubound(SrcConstrStateData%H)
+      LB(1:1) = lbound(SrcConstrStateData%H, kind=B8Ki)
+      UB(1:1) = ubound(SrcConstrStateData%H, kind=B8Ki)
       if (.not. associated(DstConstrStateData%H)) then
          allocate(DstConstrStateData%H(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2076,8 +2076,8 @@ subroutine MAP_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode,
       DstConstrStateData%H = SrcConstrStateData%H
    end if
    if (associated(SrcConstrStateData%V)) then
-      LB(1:1) = lbound(SrcConstrStateData%V)
-      UB(1:1) = ubound(SrcConstrStateData%V)
+      LB(1:1) = lbound(SrcConstrStateData%V, kind=B8Ki)
+      UB(1:1) = ubound(SrcConstrStateData%V, kind=B8Ki)
       if (.not. associated(DstConstrStateData%V)) then
          allocate(DstConstrStateData%V(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2091,8 +2091,8 @@ subroutine MAP_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode,
       DstConstrStateData%V = SrcConstrStateData%V
    end if
    if (associated(SrcConstrStateData%x)) then
-      LB(1:1) = lbound(SrcConstrStateData%x)
-      UB(1:1) = ubound(SrcConstrStateData%x)
+      LB(1:1) = lbound(SrcConstrStateData%x, kind=B8Ki)
+      UB(1:1) = ubound(SrcConstrStateData%x, kind=B8Ki)
       if (.not. associated(DstConstrStateData%x)) then
          allocate(DstConstrStateData%x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2106,8 +2106,8 @@ subroutine MAP_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode,
       DstConstrStateData%x = SrcConstrStateData%x
    end if
    if (associated(SrcConstrStateData%y)) then
-      LB(1:1) = lbound(SrcConstrStateData%y)
-      UB(1:1) = ubound(SrcConstrStateData%y)
+      LB(1:1) = lbound(SrcConstrStateData%y, kind=B8Ki)
+      UB(1:1) = ubound(SrcConstrStateData%y, kind=B8Ki)
       if (.not. associated(DstConstrStateData%y)) then
          allocate(DstConstrStateData%y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2121,8 +2121,8 @@ subroutine MAP_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode,
       DstConstrStateData%y = SrcConstrStateData%y
    end if
    if (associated(SrcConstrStateData%z)) then
-      LB(1:1) = lbound(SrcConstrStateData%z)
-      UB(1:1) = ubound(SrcConstrStateData%z)
+      LB(1:1) = lbound(SrcConstrStateData%z, kind=B8Ki)
+      UB(1:1) = ubound(SrcConstrStateData%z, kind=B8Ki)
       if (.not. associated(DstConstrStateData%z)) then
          allocate(DstConstrStateData%z(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2188,7 +2188,7 @@ subroutine MAP_PackConstrState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%H))
    if (associated(InData%H)) then
-      call RegPackBounds(Buf, 1, lbound(InData%H), ubound(InData%H))
+      call RegPackBounds(Buf, 1, lbound(InData%H, kind=B8Ki), ubound(InData%H, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%H), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%H)
@@ -2196,7 +2196,7 @@ subroutine MAP_PackConstrState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%V))
    if (associated(InData%V)) then
-      call RegPackBounds(Buf, 1, lbound(InData%V), ubound(InData%V))
+      call RegPackBounds(Buf, 1, lbound(InData%V, kind=B8Ki), ubound(InData%V, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%V), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%V)
@@ -2204,7 +2204,7 @@ subroutine MAP_PackConstrState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%x))
    if (associated(InData%x)) then
-      call RegPackBounds(Buf, 1, lbound(InData%x), ubound(InData%x))
+      call RegPackBounds(Buf, 1, lbound(InData%x, kind=B8Ki), ubound(InData%x, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%x), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%x)
@@ -2212,7 +2212,7 @@ subroutine MAP_PackConstrState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%y))
    if (associated(InData%y)) then
-      call RegPackBounds(Buf, 1, lbound(InData%y), ubound(InData%y))
+      call RegPackBounds(Buf, 1, lbound(InData%y, kind=B8Ki), ubound(InData%y, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%y), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%y)
@@ -2220,7 +2220,7 @@ subroutine MAP_PackConstrState(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%z))
    if (associated(InData%z)) then
-      call RegPackBounds(Buf, 1, lbound(InData%z), ubound(InData%z))
+      call RegPackBounds(Buf, 1, lbound(InData%z, kind=B8Ki), ubound(InData%z, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%z), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%z)
@@ -2233,10 +2233,10 @@ subroutine MAP_UnPackConstrState(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(MAP_ConstraintStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MAP_UnPackConstrState'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(IntKi)  :: PtrIdx
+   integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    if (associated(OutData%H)) deallocate(OutData%H)
@@ -2457,7 +2457,7 @@ SUBROUTINE MAP_F2C_CopyConstrState( ConstrStateData, ErrStat, ErrMsg, SkipPointe
       ELSE
          ConstrStateData%C_obj%H_Len = SIZE(ConstrStateData%H)
          IF (ConstrStateData%C_obj%H_Len > 0) &
-            ConstrStateData%C_obj%H = C_LOC(ConstrStateData%H(LBOUND(ConstrStateData%H,1)))
+            ConstrStateData%C_obj%H = C_LOC(ConstrStateData%H(LBOUND(ConstrStateData%H,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -2469,7 +2469,7 @@ SUBROUTINE MAP_F2C_CopyConstrState( ConstrStateData, ErrStat, ErrMsg, SkipPointe
       ELSE
          ConstrStateData%C_obj%V_Len = SIZE(ConstrStateData%V)
          IF (ConstrStateData%C_obj%V_Len > 0) &
-            ConstrStateData%C_obj%V = C_LOC(ConstrStateData%V(LBOUND(ConstrStateData%V,1)))
+            ConstrStateData%C_obj%V = C_LOC(ConstrStateData%V(LBOUND(ConstrStateData%V,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -2481,7 +2481,7 @@ SUBROUTINE MAP_F2C_CopyConstrState( ConstrStateData, ErrStat, ErrMsg, SkipPointe
       ELSE
          ConstrStateData%C_obj%x_Len = SIZE(ConstrStateData%x)
          IF (ConstrStateData%C_obj%x_Len > 0) &
-            ConstrStateData%C_obj%x = C_LOC(ConstrStateData%x(LBOUND(ConstrStateData%x,1)))
+            ConstrStateData%C_obj%x = C_LOC(ConstrStateData%x(LBOUND(ConstrStateData%x,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -2493,7 +2493,7 @@ SUBROUTINE MAP_F2C_CopyConstrState( ConstrStateData, ErrStat, ErrMsg, SkipPointe
       ELSE
          ConstrStateData%C_obj%y_Len = SIZE(ConstrStateData%y)
          IF (ConstrStateData%C_obj%y_Len > 0) &
-            ConstrStateData%C_obj%y = C_LOC(ConstrStateData%y(LBOUND(ConstrStateData%y,1)))
+            ConstrStateData%C_obj%y = C_LOC(ConstrStateData%y(LBOUND(ConstrStateData%y,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -2505,7 +2505,7 @@ SUBROUTINE MAP_F2C_CopyConstrState( ConstrStateData, ErrStat, ErrMsg, SkipPointe
       ELSE
          ConstrStateData%C_obj%z_Len = SIZE(ConstrStateData%z)
          IF (ConstrStateData%C_obj%z_Len > 0) &
-            ConstrStateData%C_obj%z = C_LOC(ConstrStateData%z(LBOUND(ConstrStateData%z,1)))
+            ConstrStateData%C_obj%z = C_LOC(ConstrStateData%z(LBOUND(ConstrStateData%z,1, kind=B8Ki)))
       END IF
    END IF
 END SUBROUTINE
@@ -2648,15 +2648,15 @@ subroutine MAP_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'MAP_CopyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (associated(SrcInputData%x)) then
-      LB(1:1) = lbound(SrcInputData%x)
-      UB(1:1) = ubound(SrcInputData%x)
+      LB(1:1) = lbound(SrcInputData%x, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputData%x, kind=B8Ki)
       if (.not. associated(DstInputData%x)) then
          allocate(DstInputData%x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2670,8 +2670,8 @@ subroutine MAP_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%x = SrcInputData%x
    end if
    if (associated(SrcInputData%y)) then
-      LB(1:1) = lbound(SrcInputData%y)
-      UB(1:1) = ubound(SrcInputData%y)
+      LB(1:1) = lbound(SrcInputData%y, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputData%y, kind=B8Ki)
       if (.not. associated(DstInputData%y)) then
          allocate(DstInputData%y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2685,8 +2685,8 @@ subroutine MAP_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%y = SrcInputData%y
    end if
    if (associated(SrcInputData%z)) then
-      LB(1:1) = lbound(SrcInputData%z)
-      UB(1:1) = ubound(SrcInputData%z)
+      LB(1:1) = lbound(SrcInputData%z, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputData%z, kind=B8Ki)
       if (.not. associated(DstInputData%z)) then
          allocate(DstInputData%z(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2747,7 +2747,7 @@ subroutine MAP_PackInput(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%x))
    if (associated(InData%x)) then
-      call RegPackBounds(Buf, 1, lbound(InData%x), ubound(InData%x))
+      call RegPackBounds(Buf, 1, lbound(InData%x, kind=B8Ki), ubound(InData%x, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%x), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%x)
@@ -2755,7 +2755,7 @@ subroutine MAP_PackInput(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%y))
    if (associated(InData%y)) then
-      call RegPackBounds(Buf, 1, lbound(InData%y), ubound(InData%y))
+      call RegPackBounds(Buf, 1, lbound(InData%y, kind=B8Ki), ubound(InData%y, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%y), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%y)
@@ -2763,7 +2763,7 @@ subroutine MAP_PackInput(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%z))
    if (associated(InData%z)) then
-      call RegPackBounds(Buf, 1, lbound(InData%z), ubound(InData%z))
+      call RegPackBounds(Buf, 1, lbound(InData%z, kind=B8Ki), ubound(InData%z, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%z), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%z)
@@ -2777,10 +2777,10 @@ subroutine MAP_UnPackInput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(MAP_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MAP_UnPackInput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(IntKi)  :: PtrIdx
+   integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    if (associated(OutData%x)) deallocate(OutData%x)
@@ -2932,7 +2932,7 @@ SUBROUTINE MAP_F2C_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          InputData%C_obj%x_Len = SIZE(InputData%x)
          IF (InputData%C_obj%x_Len > 0) &
-            InputData%C_obj%x = C_LOC(InputData%x(LBOUND(InputData%x,1)))
+            InputData%C_obj%x = C_LOC(InputData%x(LBOUND(InputData%x,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -2944,7 +2944,7 @@ SUBROUTINE MAP_F2C_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          InputData%C_obj%y_Len = SIZE(InputData%y)
          IF (InputData%C_obj%y_Len > 0) &
-            InputData%C_obj%y = C_LOC(InputData%y(LBOUND(InputData%y,1)))
+            InputData%C_obj%y = C_LOC(InputData%y(LBOUND(InputData%y,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -2956,7 +2956,7 @@ SUBROUTINE MAP_F2C_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          InputData%C_obj%z_Len = SIZE(InputData%z)
          IF (InputData%C_obj%z_Len > 0) &
-            InputData%C_obj%z = C_LOC(InputData%z(LBOUND(InputData%z,1)))
+            InputData%C_obj%z = C_LOC(InputData%z(LBOUND(InputData%z,1, kind=B8Ki)))
       END IF
    END IF
 END SUBROUTINE
@@ -2967,15 +2967,15 @@ subroutine MAP_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'MAP_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (associated(SrcOutputData%Fx)) then
-      LB(1:1) = lbound(SrcOutputData%Fx)
-      UB(1:1) = ubound(SrcOutputData%Fx)
+      LB(1:1) = lbound(SrcOutputData%Fx, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%Fx, kind=B8Ki)
       if (.not. associated(DstOutputData%Fx)) then
          allocate(DstOutputData%Fx(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2989,8 +2989,8 @@ subroutine MAP_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%Fx = SrcOutputData%Fx
    end if
    if (associated(SrcOutputData%Fy)) then
-      LB(1:1) = lbound(SrcOutputData%Fy)
-      UB(1:1) = ubound(SrcOutputData%Fy)
+      LB(1:1) = lbound(SrcOutputData%Fy, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%Fy, kind=B8Ki)
       if (.not. associated(DstOutputData%Fy)) then
          allocate(DstOutputData%Fy(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3004,8 +3004,8 @@ subroutine MAP_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%Fy = SrcOutputData%Fy
    end if
    if (associated(SrcOutputData%Fz)) then
-      LB(1:1) = lbound(SrcOutputData%Fz)
-      UB(1:1) = ubound(SrcOutputData%Fz)
+      LB(1:1) = lbound(SrcOutputData%Fz, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%Fz, kind=B8Ki)
       if (.not. associated(DstOutputData%Fz)) then
          allocate(DstOutputData%Fz(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3019,8 +3019,8 @@ subroutine MAP_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%Fz = SrcOutputData%Fz
    end if
    if (allocated(SrcOutputData%WriteOutput)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutput)
-      UB(1:1) = ubound(SrcOutputData%WriteOutput)
+      LB(1:1) = lbound(SrcOutputData%WriteOutput, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput, kind=B8Ki)
       if (.not. allocated(DstOutputData%WriteOutput)) then
          allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3031,8 +3031,8 @@ subroutine MAP_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%WriteOutput = SrcOutputData%WriteOutput
    end if
    if (associated(SrcOutputData%wrtOutput)) then
-      LB(1:1) = lbound(SrcOutputData%wrtOutput)
-      UB(1:1) = ubound(SrcOutputData%wrtOutput)
+      LB(1:1) = lbound(SrcOutputData%wrtOutput, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%wrtOutput, kind=B8Ki)
       if (.not. associated(DstOutputData%wrtOutput)) then
          allocate(DstOutputData%wrtOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3102,7 +3102,7 @@ subroutine MAP_PackOutput(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%Fx))
    if (associated(InData%Fx)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Fx), ubound(InData%Fx))
+      call RegPackBounds(Buf, 1, lbound(InData%Fx, kind=B8Ki), ubound(InData%Fx, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%Fx), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%Fx)
@@ -3110,7 +3110,7 @@ subroutine MAP_PackOutput(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%Fy))
    if (associated(InData%Fy)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Fy), ubound(InData%Fy))
+      call RegPackBounds(Buf, 1, lbound(InData%Fy, kind=B8Ki), ubound(InData%Fy, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%Fy), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%Fy)
@@ -3118,7 +3118,7 @@ subroutine MAP_PackOutput(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%Fz))
    if (associated(InData%Fz)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Fz), ubound(InData%Fz))
+      call RegPackBounds(Buf, 1, lbound(InData%Fz, kind=B8Ki), ubound(InData%Fz, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%Fz), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%Fz)
@@ -3126,12 +3126,12 @@ subroutine MAP_PackOutput(Buf, Indata)
    end if
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutput, kind=B8Ki), ubound(InData%WriteOutput, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutput)
    end if
    call RegPack(Buf, associated(InData%wrtOutput))
    if (associated(InData%wrtOutput)) then
-      call RegPackBounds(Buf, 1, lbound(InData%wrtOutput), ubound(InData%wrtOutput))
+      call RegPackBounds(Buf, 1, lbound(InData%wrtOutput, kind=B8Ki), ubound(InData%wrtOutput, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%wrtOutput), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%wrtOutput)
@@ -3145,10 +3145,10 @@ subroutine MAP_UnPackOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(MAP_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MAP_UnPackOutput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(IntKi)  :: PtrIdx
+   integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    if (associated(OutData%Fx)) deallocate(OutData%Fx)
@@ -3349,7 +3349,7 @@ SUBROUTINE MAP_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          OutputData%C_obj%Fx_Len = SIZE(OutputData%Fx)
          IF (OutputData%C_obj%Fx_Len > 0) &
-            OutputData%C_obj%Fx = C_LOC(OutputData%Fx(LBOUND(OutputData%Fx,1)))
+            OutputData%C_obj%Fx = C_LOC(OutputData%Fx(LBOUND(OutputData%Fx,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -3361,7 +3361,7 @@ SUBROUTINE MAP_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          OutputData%C_obj%Fy_Len = SIZE(OutputData%Fy)
          IF (OutputData%C_obj%Fy_Len > 0) &
-            OutputData%C_obj%Fy = C_LOC(OutputData%Fy(LBOUND(OutputData%Fy,1)))
+            OutputData%C_obj%Fy = C_LOC(OutputData%Fy(LBOUND(OutputData%Fy,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -3373,7 +3373,7 @@ SUBROUTINE MAP_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          OutputData%C_obj%Fz_Len = SIZE(OutputData%Fz)
          IF (OutputData%C_obj%Fz_Len > 0) &
-            OutputData%C_obj%Fz = C_LOC(OutputData%Fz(LBOUND(OutputData%Fz,1)))
+            OutputData%C_obj%Fz = C_LOC(OutputData%Fz(LBOUND(OutputData%Fz,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -3385,7 +3385,7 @@ SUBROUTINE MAP_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          OutputData%C_obj%wrtOutput_Len = SIZE(OutputData%wrtOutput)
          IF (OutputData%C_obj%wrtOutput_Len > 0) &
-            OutputData%C_obj%wrtOutput = C_LOC(OutputData%wrtOutput(LBOUND(OutputData%wrtOutput,1)))
+            OutputData%C_obj%wrtOutput = C_LOC(OutputData%wrtOutput(LBOUND(OutputData%wrtOutput,1, kind=B8Ki)))
       END IF
    END IF
 END SUBROUTINE

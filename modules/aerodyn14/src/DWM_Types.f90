@@ -380,14 +380,14 @@ subroutine DWM_Copyturbine_average_velocity_data(Srcturbine_average_velocity_dat
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'DWM_Copyturbine_average_velocity_data'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(Srcturbine_average_velocity_dataData%average_velocity_array_temp)) then
-      LB(1:1) = lbound(Srcturbine_average_velocity_dataData%average_velocity_array_temp)
-      UB(1:1) = ubound(Srcturbine_average_velocity_dataData%average_velocity_array_temp)
+      LB(1:1) = lbound(Srcturbine_average_velocity_dataData%average_velocity_array_temp, kind=B8Ki)
+      UB(1:1) = ubound(Srcturbine_average_velocity_dataData%average_velocity_array_temp, kind=B8Ki)
       if (.not. allocated(Dstturbine_average_velocity_dataData%average_velocity_array_temp)) then
          allocate(Dstturbine_average_velocity_dataData%average_velocity_array_temp(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -398,8 +398,8 @@ subroutine DWM_Copyturbine_average_velocity_data(Srcturbine_average_velocity_dat
       Dstturbine_average_velocity_dataData%average_velocity_array_temp = Srcturbine_average_velocity_dataData%average_velocity_array_temp
    end if
    if (allocated(Srcturbine_average_velocity_dataData%average_velocity_array)) then
-      LB(1:1) = lbound(Srcturbine_average_velocity_dataData%average_velocity_array)
-      UB(1:1) = ubound(Srcturbine_average_velocity_dataData%average_velocity_array)
+      LB(1:1) = lbound(Srcturbine_average_velocity_dataData%average_velocity_array, kind=B8Ki)
+      UB(1:1) = ubound(Srcturbine_average_velocity_dataData%average_velocity_array, kind=B8Ki)
       if (.not. allocated(Dstturbine_average_velocity_dataData%average_velocity_array)) then
          allocate(Dstturbine_average_velocity_dataData%average_velocity_array(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -410,8 +410,8 @@ subroutine DWM_Copyturbine_average_velocity_data(Srcturbine_average_velocity_dat
       Dstturbine_average_velocity_dataData%average_velocity_array = Srcturbine_average_velocity_dataData%average_velocity_array
    end if
    if (allocated(Srcturbine_average_velocity_dataData%swept_area)) then
-      LB(1:1) = lbound(Srcturbine_average_velocity_dataData%swept_area)
-      UB(1:1) = ubound(Srcturbine_average_velocity_dataData%swept_area)
+      LB(1:1) = lbound(Srcturbine_average_velocity_dataData%swept_area, kind=B8Ki)
+      UB(1:1) = ubound(Srcturbine_average_velocity_dataData%swept_area, kind=B8Ki)
       if (.not. allocated(Dstturbine_average_velocity_dataData%swept_area)) then
          allocate(Dstturbine_average_velocity_dataData%swept_area(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -423,8 +423,8 @@ subroutine DWM_Copyturbine_average_velocity_data(Srcturbine_average_velocity_dat
    end if
    Dstturbine_average_velocity_dataData%time_step_velocity = Srcturbine_average_velocity_dataData%time_step_velocity
    if (allocated(Srcturbine_average_velocity_dataData%time_step_velocity_array)) then
-      LB(1:1) = lbound(Srcturbine_average_velocity_dataData%time_step_velocity_array)
-      UB(1:1) = ubound(Srcturbine_average_velocity_dataData%time_step_velocity_array)
+      LB(1:1) = lbound(Srcturbine_average_velocity_dataData%time_step_velocity_array, kind=B8Ki)
+      UB(1:1) = ubound(Srcturbine_average_velocity_dataData%time_step_velocity_array, kind=B8Ki)
       if (.not. allocated(Dstturbine_average_velocity_dataData%time_step_velocity_array)) then
          allocate(Dstturbine_average_velocity_dataData%time_step_velocity_array(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -466,23 +466,23 @@ subroutine DWM_Packturbine_average_velocity_data(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%average_velocity_array_temp))
    if (allocated(InData%average_velocity_array_temp)) then
-      call RegPackBounds(Buf, 1, lbound(InData%average_velocity_array_temp), ubound(InData%average_velocity_array_temp))
+      call RegPackBounds(Buf, 1, lbound(InData%average_velocity_array_temp, kind=B8Ki), ubound(InData%average_velocity_array_temp, kind=B8Ki))
       call RegPack(Buf, InData%average_velocity_array_temp)
    end if
    call RegPack(Buf, allocated(InData%average_velocity_array))
    if (allocated(InData%average_velocity_array)) then
-      call RegPackBounds(Buf, 1, lbound(InData%average_velocity_array), ubound(InData%average_velocity_array))
+      call RegPackBounds(Buf, 1, lbound(InData%average_velocity_array, kind=B8Ki), ubound(InData%average_velocity_array, kind=B8Ki))
       call RegPack(Buf, InData%average_velocity_array)
    end if
    call RegPack(Buf, allocated(InData%swept_area))
    if (allocated(InData%swept_area)) then
-      call RegPackBounds(Buf, 1, lbound(InData%swept_area), ubound(InData%swept_area))
+      call RegPackBounds(Buf, 1, lbound(InData%swept_area, kind=B8Ki), ubound(InData%swept_area, kind=B8Ki))
       call RegPack(Buf, InData%swept_area)
    end if
    call RegPack(Buf, InData%time_step_velocity)
    call RegPack(Buf, allocated(InData%time_step_velocity_array))
    if (allocated(InData%time_step_velocity_array)) then
-      call RegPackBounds(Buf, 1, lbound(InData%time_step_velocity_array), ubound(InData%time_step_velocity_array))
+      call RegPackBounds(Buf, 1, lbound(InData%time_step_velocity_array, kind=B8Ki), ubound(InData%time_step_velocity_array, kind=B8Ki))
       call RegPack(Buf, InData%time_step_velocity_array)
    end if
    call RegPack(Buf, InData%time_step_pass_velocity)
@@ -494,7 +494,7 @@ subroutine DWM_UnPackturbine_average_velocity_data(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(turbine_average_velocity_data), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackturbine_average_velocity_data'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -568,7 +568,7 @@ subroutine DWM_CopyWake_Deficit_Data(SrcWake_Deficit_DataData, DstWake_Deficit_D
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'DWM_CopyWake_Deficit_Data'
    ErrStat = ErrID_None
@@ -576,8 +576,8 @@ subroutine DWM_CopyWake_Deficit_Data(SrcWake_Deficit_DataData, DstWake_Deficit_D
    DstWake_Deficit_DataData%np_x = SrcWake_Deficit_DataData%np_x
    DstWake_Deficit_DataData%X_length = SrcWake_Deficit_DataData%X_length
    if (allocated(SrcWake_Deficit_DataData%Turb_Stress_DWM)) then
-      LB(1:2) = lbound(SrcWake_Deficit_DataData%Turb_Stress_DWM)
-      UB(1:2) = ubound(SrcWake_Deficit_DataData%Turb_Stress_DWM)
+      LB(1:2) = lbound(SrcWake_Deficit_DataData%Turb_Stress_DWM, kind=B8Ki)
+      UB(1:2) = ubound(SrcWake_Deficit_DataData%Turb_Stress_DWM, kind=B8Ki)
       if (.not. allocated(DstWake_Deficit_DataData%Turb_Stress_DWM)) then
          allocate(DstWake_Deficit_DataData%Turb_Stress_DWM(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -613,7 +613,7 @@ subroutine DWM_PackWake_Deficit_Data(Buf, Indata)
    call RegPack(Buf, InData%X_length)
    call RegPack(Buf, allocated(InData%Turb_Stress_DWM))
    if (allocated(InData%Turb_Stress_DWM)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Turb_Stress_DWM), ubound(InData%Turb_Stress_DWM))
+      call RegPackBounds(Buf, 2, lbound(InData%Turb_Stress_DWM, kind=B8Ki), ubound(InData%Turb_Stress_DWM, kind=B8Ki))
       call RegPack(Buf, InData%Turb_Stress_DWM)
    end if
    call RegPack(Buf, InData%n_x_vector)
@@ -626,7 +626,7 @@ subroutine DWM_UnPackWake_Deficit_Data(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(DWM_Wake_Deficit_Data), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackWake_Deficit_Data'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -705,15 +705,15 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'DWM_Copyread_turbine_position_data'
    ErrStat = ErrID_None
    ErrMsg  = ''
    Dstread_turbine_position_dataData%SimulationOrder_index = Srcread_turbine_position_dataData%SimulationOrder_index
    if (allocated(Srcread_turbine_position_dataData%Turbine_sort_order)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%Turbine_sort_order)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%Turbine_sort_order)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%Turbine_sort_order, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%Turbine_sort_order, kind=B8Ki)
       if (.not. allocated(Dstread_turbine_position_dataData%Turbine_sort_order)) then
          allocate(Dstread_turbine_position_dataData%Turbine_sort_order(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -725,8 +725,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
    end if
    Dstread_turbine_position_dataData%WT_index = Srcread_turbine_position_dataData%WT_index
    if (allocated(Srcread_turbine_position_dataData%TurbineInfluenceData)) then
-      LB(1:2) = lbound(Srcread_turbine_position_dataData%TurbineInfluenceData)
-      UB(1:2) = ubound(Srcread_turbine_position_dataData%TurbineInfluenceData)
+      LB(1:2) = lbound(Srcread_turbine_position_dataData%TurbineInfluenceData, kind=B8Ki)
+      UB(1:2) = ubound(Srcread_turbine_position_dataData%TurbineInfluenceData, kind=B8Ki)
       if (.not. allocated(Dstread_turbine_position_dataData%TurbineInfluenceData)) then
          allocate(Dstread_turbine_position_dataData%TurbineInfluenceData(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -737,8 +737,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%TurbineInfluenceData = Srcread_turbine_position_dataData%TurbineInfluenceData
    end if
    if (allocated(Srcread_turbine_position_dataData%upwind_turbine_index)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_index)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_turbine_index)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_index, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_turbine_index, kind=B8Ki)
       if (.not. allocated(Dstread_turbine_position_dataData%upwind_turbine_index)) then
          allocate(Dstread_turbine_position_dataData%upwind_turbine_index(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -749,8 +749,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%upwind_turbine_index = Srcread_turbine_position_dataData%upwind_turbine_index
    end if
    if (allocated(Srcread_turbine_position_dataData%downwind_turbine_index)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_index)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_turbine_index)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_index, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_turbine_index, kind=B8Ki)
       if (.not. allocated(Dstread_turbine_position_dataData%downwind_turbine_index)) then
          allocate(Dstread_turbine_position_dataData%downwind_turbine_index(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -763,8 +763,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
    Dstread_turbine_position_dataData%upwindturbine_number = Srcread_turbine_position_dataData%upwindturbine_number
    Dstread_turbine_position_dataData%downwindturbine_number = Srcread_turbine_position_dataData%downwindturbine_number
    if (allocated(Srcread_turbine_position_dataData%turbine_windorigin_length)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%turbine_windorigin_length)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%turbine_windorigin_length)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%turbine_windorigin_length, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%turbine_windorigin_length, kind=B8Ki)
       if (.not. allocated(Dstread_turbine_position_dataData%turbine_windorigin_length)) then
          allocate(Dstread_turbine_position_dataData%turbine_windorigin_length(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -775,8 +775,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%turbine_windorigin_length = Srcread_turbine_position_dataData%turbine_windorigin_length
    end if
    if (allocated(Srcread_turbine_position_dataData%upwind_turbine_projected_distance)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_projected_distance)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_turbine_projected_distance)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_projected_distance, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_turbine_projected_distance, kind=B8Ki)
       if (.not. allocated(Dstread_turbine_position_dataData%upwind_turbine_projected_distance)) then
          allocate(Dstread_turbine_position_dataData%upwind_turbine_projected_distance(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -787,8 +787,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%upwind_turbine_projected_distance = Srcread_turbine_position_dataData%upwind_turbine_projected_distance
    end if
    if (allocated(Srcread_turbine_position_dataData%downwind_turbine_projected_distance)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_projected_distance)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_turbine_projected_distance)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_projected_distance, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_turbine_projected_distance, kind=B8Ki)
       if (.not. allocated(Dstread_turbine_position_dataData%downwind_turbine_projected_distance)) then
          allocate(Dstread_turbine_position_dataData%downwind_turbine_projected_distance(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -799,8 +799,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%downwind_turbine_projected_distance = Srcread_turbine_position_dataData%downwind_turbine_projected_distance
    end if
    if (allocated(Srcread_turbine_position_dataData%turbine_angle)) then
-      LB(1:2) = lbound(Srcread_turbine_position_dataData%turbine_angle)
-      UB(1:2) = ubound(Srcread_turbine_position_dataData%turbine_angle)
+      LB(1:2) = lbound(Srcread_turbine_position_dataData%turbine_angle, kind=B8Ki)
+      UB(1:2) = ubound(Srcread_turbine_position_dataData%turbine_angle, kind=B8Ki)
       if (.not. allocated(Dstread_turbine_position_dataData%turbine_angle)) then
          allocate(Dstread_turbine_position_dataData%turbine_angle(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -811,8 +811,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%turbine_angle = Srcread_turbine_position_dataData%turbine_angle
    end if
    if (allocated(Srcread_turbine_position_dataData%upwind_align_angle)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_align_angle)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_align_angle)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_align_angle, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_align_angle, kind=B8Ki)
       if (.not. allocated(Dstread_turbine_position_dataData%upwind_align_angle)) then
          allocate(Dstread_turbine_position_dataData%upwind_align_angle(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -823,8 +823,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%upwind_align_angle = Srcread_turbine_position_dataData%upwind_align_angle
    end if
    if (allocated(Srcread_turbine_position_dataData%downwind_align_angle)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_align_angle)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_align_angle)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_align_angle, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_align_angle, kind=B8Ki)
       if (.not. allocated(Dstread_turbine_position_dataData%downwind_align_angle)) then
          allocate(Dstread_turbine_position_dataData%downwind_align_angle(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -835,8 +835,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%downwind_align_angle = Srcread_turbine_position_dataData%downwind_align_angle
    end if
    if (allocated(Srcread_turbine_position_dataData%upwind_turbine_Xcoor)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_Xcoor)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_turbine_Xcoor)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_Xcoor, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_turbine_Xcoor, kind=B8Ki)
       if (.not. allocated(Dstread_turbine_position_dataData%upwind_turbine_Xcoor)) then
          allocate(Dstread_turbine_position_dataData%upwind_turbine_Xcoor(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -847,8 +847,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%upwind_turbine_Xcoor = Srcread_turbine_position_dataData%upwind_turbine_Xcoor
    end if
    if (allocated(Srcread_turbine_position_dataData%upwind_turbine_Ycoor)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_Ycoor)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_turbine_Ycoor)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_Ycoor, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_turbine_Ycoor, kind=B8Ki)
       if (.not. allocated(Dstread_turbine_position_dataData%upwind_turbine_Ycoor)) then
          allocate(Dstread_turbine_position_dataData%upwind_turbine_Ycoor(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -859,8 +859,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%upwind_turbine_Ycoor = Srcread_turbine_position_dataData%upwind_turbine_Ycoor
    end if
    if (allocated(Srcread_turbine_position_dataData%wind_farm_Xcoor)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%wind_farm_Xcoor)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%wind_farm_Xcoor)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%wind_farm_Xcoor, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%wind_farm_Xcoor, kind=B8Ki)
       if (.not. allocated(Dstread_turbine_position_dataData%wind_farm_Xcoor)) then
          allocate(Dstread_turbine_position_dataData%wind_farm_Xcoor(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -871,8 +871,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%wind_farm_Xcoor = Srcread_turbine_position_dataData%wind_farm_Xcoor
    end if
    if (allocated(Srcread_turbine_position_dataData%wind_farm_Ycoor)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%wind_farm_Ycoor)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%wind_farm_Ycoor)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%wind_farm_Ycoor, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%wind_farm_Ycoor, kind=B8Ki)
       if (.not. allocated(Dstread_turbine_position_dataData%wind_farm_Ycoor)) then
          allocate(Dstread_turbine_position_dataData%wind_farm_Ycoor(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -883,8 +883,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%wind_farm_Ycoor = Srcread_turbine_position_dataData%wind_farm_Ycoor
    end if
    if (allocated(Srcread_turbine_position_dataData%downwind_turbine_Xcoor)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_Xcoor)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_turbine_Xcoor)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_Xcoor, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_turbine_Xcoor, kind=B8Ki)
       if (.not. allocated(Dstread_turbine_position_dataData%downwind_turbine_Xcoor)) then
          allocate(Dstread_turbine_position_dataData%downwind_turbine_Xcoor(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -895,8 +895,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%downwind_turbine_Xcoor = Srcread_turbine_position_dataData%downwind_turbine_Xcoor
    end if
    if (allocated(Srcread_turbine_position_dataData%downwind_turbine_Ycoor)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_Ycoor)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_turbine_Ycoor)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_Ycoor, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_turbine_Ycoor, kind=B8Ki)
       if (.not. allocated(Dstread_turbine_position_dataData%downwind_turbine_Ycoor)) then
          allocate(Dstread_turbine_position_dataData%downwind_turbine_Ycoor(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -973,85 +973,85 @@ subroutine DWM_Packread_turbine_position_data(Buf, Indata)
    call RegPack(Buf, InData%SimulationOrder_index)
    call RegPack(Buf, allocated(InData%Turbine_sort_order))
    if (allocated(InData%Turbine_sort_order)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Turbine_sort_order), ubound(InData%Turbine_sort_order))
+      call RegPackBounds(Buf, 1, lbound(InData%Turbine_sort_order, kind=B8Ki), ubound(InData%Turbine_sort_order, kind=B8Ki))
       call RegPack(Buf, InData%Turbine_sort_order)
    end if
    call RegPack(Buf, InData%WT_index)
    call RegPack(Buf, allocated(InData%TurbineInfluenceData))
    if (allocated(InData%TurbineInfluenceData)) then
-      call RegPackBounds(Buf, 2, lbound(InData%TurbineInfluenceData), ubound(InData%TurbineInfluenceData))
+      call RegPackBounds(Buf, 2, lbound(InData%TurbineInfluenceData, kind=B8Ki), ubound(InData%TurbineInfluenceData, kind=B8Ki))
       call RegPack(Buf, InData%TurbineInfluenceData)
    end if
    call RegPack(Buf, allocated(InData%upwind_turbine_index))
    if (allocated(InData%upwind_turbine_index)) then
-      call RegPackBounds(Buf, 1, lbound(InData%upwind_turbine_index), ubound(InData%upwind_turbine_index))
+      call RegPackBounds(Buf, 1, lbound(InData%upwind_turbine_index, kind=B8Ki), ubound(InData%upwind_turbine_index, kind=B8Ki))
       call RegPack(Buf, InData%upwind_turbine_index)
    end if
    call RegPack(Buf, allocated(InData%downwind_turbine_index))
    if (allocated(InData%downwind_turbine_index)) then
-      call RegPackBounds(Buf, 1, lbound(InData%downwind_turbine_index), ubound(InData%downwind_turbine_index))
+      call RegPackBounds(Buf, 1, lbound(InData%downwind_turbine_index, kind=B8Ki), ubound(InData%downwind_turbine_index, kind=B8Ki))
       call RegPack(Buf, InData%downwind_turbine_index)
    end if
    call RegPack(Buf, InData%upwindturbine_number)
    call RegPack(Buf, InData%downwindturbine_number)
    call RegPack(Buf, allocated(InData%turbine_windorigin_length))
    if (allocated(InData%turbine_windorigin_length)) then
-      call RegPackBounds(Buf, 1, lbound(InData%turbine_windorigin_length), ubound(InData%turbine_windorigin_length))
+      call RegPackBounds(Buf, 1, lbound(InData%turbine_windorigin_length, kind=B8Ki), ubound(InData%turbine_windorigin_length, kind=B8Ki))
       call RegPack(Buf, InData%turbine_windorigin_length)
    end if
    call RegPack(Buf, allocated(InData%upwind_turbine_projected_distance))
    if (allocated(InData%upwind_turbine_projected_distance)) then
-      call RegPackBounds(Buf, 1, lbound(InData%upwind_turbine_projected_distance), ubound(InData%upwind_turbine_projected_distance))
+      call RegPackBounds(Buf, 1, lbound(InData%upwind_turbine_projected_distance, kind=B8Ki), ubound(InData%upwind_turbine_projected_distance, kind=B8Ki))
       call RegPack(Buf, InData%upwind_turbine_projected_distance)
    end if
    call RegPack(Buf, allocated(InData%downwind_turbine_projected_distance))
    if (allocated(InData%downwind_turbine_projected_distance)) then
-      call RegPackBounds(Buf, 1, lbound(InData%downwind_turbine_projected_distance), ubound(InData%downwind_turbine_projected_distance))
+      call RegPackBounds(Buf, 1, lbound(InData%downwind_turbine_projected_distance, kind=B8Ki), ubound(InData%downwind_turbine_projected_distance, kind=B8Ki))
       call RegPack(Buf, InData%downwind_turbine_projected_distance)
    end if
    call RegPack(Buf, allocated(InData%turbine_angle))
    if (allocated(InData%turbine_angle)) then
-      call RegPackBounds(Buf, 2, lbound(InData%turbine_angle), ubound(InData%turbine_angle))
+      call RegPackBounds(Buf, 2, lbound(InData%turbine_angle, kind=B8Ki), ubound(InData%turbine_angle, kind=B8Ki))
       call RegPack(Buf, InData%turbine_angle)
    end if
    call RegPack(Buf, allocated(InData%upwind_align_angle))
    if (allocated(InData%upwind_align_angle)) then
-      call RegPackBounds(Buf, 1, lbound(InData%upwind_align_angle), ubound(InData%upwind_align_angle))
+      call RegPackBounds(Buf, 1, lbound(InData%upwind_align_angle, kind=B8Ki), ubound(InData%upwind_align_angle, kind=B8Ki))
       call RegPack(Buf, InData%upwind_align_angle)
    end if
    call RegPack(Buf, allocated(InData%downwind_align_angle))
    if (allocated(InData%downwind_align_angle)) then
-      call RegPackBounds(Buf, 1, lbound(InData%downwind_align_angle), ubound(InData%downwind_align_angle))
+      call RegPackBounds(Buf, 1, lbound(InData%downwind_align_angle, kind=B8Ki), ubound(InData%downwind_align_angle, kind=B8Ki))
       call RegPack(Buf, InData%downwind_align_angle)
    end if
    call RegPack(Buf, allocated(InData%upwind_turbine_Xcoor))
    if (allocated(InData%upwind_turbine_Xcoor)) then
-      call RegPackBounds(Buf, 1, lbound(InData%upwind_turbine_Xcoor), ubound(InData%upwind_turbine_Xcoor))
+      call RegPackBounds(Buf, 1, lbound(InData%upwind_turbine_Xcoor, kind=B8Ki), ubound(InData%upwind_turbine_Xcoor, kind=B8Ki))
       call RegPack(Buf, InData%upwind_turbine_Xcoor)
    end if
    call RegPack(Buf, allocated(InData%upwind_turbine_Ycoor))
    if (allocated(InData%upwind_turbine_Ycoor)) then
-      call RegPackBounds(Buf, 1, lbound(InData%upwind_turbine_Ycoor), ubound(InData%upwind_turbine_Ycoor))
+      call RegPackBounds(Buf, 1, lbound(InData%upwind_turbine_Ycoor, kind=B8Ki), ubound(InData%upwind_turbine_Ycoor, kind=B8Ki))
       call RegPack(Buf, InData%upwind_turbine_Ycoor)
    end if
    call RegPack(Buf, allocated(InData%wind_farm_Xcoor))
    if (allocated(InData%wind_farm_Xcoor)) then
-      call RegPackBounds(Buf, 1, lbound(InData%wind_farm_Xcoor), ubound(InData%wind_farm_Xcoor))
+      call RegPackBounds(Buf, 1, lbound(InData%wind_farm_Xcoor, kind=B8Ki), ubound(InData%wind_farm_Xcoor, kind=B8Ki))
       call RegPack(Buf, InData%wind_farm_Xcoor)
    end if
    call RegPack(Buf, allocated(InData%wind_farm_Ycoor))
    if (allocated(InData%wind_farm_Ycoor)) then
-      call RegPackBounds(Buf, 1, lbound(InData%wind_farm_Ycoor), ubound(InData%wind_farm_Ycoor))
+      call RegPackBounds(Buf, 1, lbound(InData%wind_farm_Ycoor, kind=B8Ki), ubound(InData%wind_farm_Ycoor, kind=B8Ki))
       call RegPack(Buf, InData%wind_farm_Ycoor)
    end if
    call RegPack(Buf, allocated(InData%downwind_turbine_Xcoor))
    if (allocated(InData%downwind_turbine_Xcoor)) then
-      call RegPackBounds(Buf, 1, lbound(InData%downwind_turbine_Xcoor), ubound(InData%downwind_turbine_Xcoor))
+      call RegPackBounds(Buf, 1, lbound(InData%downwind_turbine_Xcoor, kind=B8Ki), ubound(InData%downwind_turbine_Xcoor, kind=B8Ki))
       call RegPack(Buf, InData%downwind_turbine_Xcoor)
    end if
    call RegPack(Buf, allocated(InData%downwind_turbine_Ycoor))
    if (allocated(InData%downwind_turbine_Ycoor)) then
-      call RegPackBounds(Buf, 1, lbound(InData%downwind_turbine_Ycoor), ubound(InData%downwind_turbine_Ycoor))
+      call RegPackBounds(Buf, 1, lbound(InData%downwind_turbine_Ycoor, kind=B8Ki), ubound(InData%downwind_turbine_Ycoor, kind=B8Ki))
       call RegPack(Buf, InData%downwind_turbine_Ycoor)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1061,7 +1061,7 @@ subroutine DWM_UnPackread_turbine_position_data(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(read_turbine_position_data), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackread_turbine_position_data'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -1305,14 +1305,14 @@ subroutine DWM_CopyWeiMethod(SrcWeiMethodData, DstWeiMethodData, CtrlCode, ErrSt
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'DWM_CopyWeiMethod'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcWeiMethodData%sweptarea)) then
-      LB(1:1) = lbound(SrcWeiMethodData%sweptarea)
-      UB(1:1) = ubound(SrcWeiMethodData%sweptarea)
+      LB(1:1) = lbound(SrcWeiMethodData%sweptarea, kind=B8Ki)
+      UB(1:1) = ubound(SrcWeiMethodData%sweptarea, kind=B8Ki)
       if (.not. allocated(DstWeiMethodData%sweptarea)) then
          allocate(DstWeiMethodData%sweptarea(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1344,7 +1344,7 @@ subroutine DWM_PackWeiMethod(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%sweptarea))
    if (allocated(InData%sweptarea)) then
-      call RegPackBounds(Buf, 1, lbound(InData%sweptarea), ubound(InData%sweptarea))
+      call RegPackBounds(Buf, 1, lbound(InData%sweptarea, kind=B8Ki), ubound(InData%sweptarea, kind=B8Ki))
       call RegPack(Buf, InData%sweptarea)
    end if
    call RegPack(Buf, InData%weighting_denominator)
@@ -1355,7 +1355,7 @@ subroutine DWM_UnPackWeiMethod(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(WeiMethod), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackWeiMethod'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -1383,14 +1383,14 @@ subroutine DWM_CopyTIDownstream(SrcTIDownstreamData, DstTIDownstreamData, CtrlCo
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'DWM_CopyTIDownstream'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcTIDownstreamData%TI_downstream_matrix)) then
-      LB(1:2) = lbound(SrcTIDownstreamData%TI_downstream_matrix)
-      UB(1:2) = ubound(SrcTIDownstreamData%TI_downstream_matrix)
+      LB(1:2) = lbound(SrcTIDownstreamData%TI_downstream_matrix, kind=B8Ki)
+      UB(1:2) = ubound(SrcTIDownstreamData%TI_downstream_matrix, kind=B8Ki)
       if (.not. allocated(DstTIDownstreamData%TI_downstream_matrix)) then
          allocate(DstTIDownstreamData%TI_downstream_matrix(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1450,7 +1450,7 @@ subroutine DWM_PackTIDownstream(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%TI_downstream_matrix))
    if (allocated(InData%TI_downstream_matrix)) then
-      call RegPackBounds(Buf, 2, lbound(InData%TI_downstream_matrix), ubound(InData%TI_downstream_matrix))
+      call RegPackBounds(Buf, 2, lbound(InData%TI_downstream_matrix, kind=B8Ki), ubound(InData%TI_downstream_matrix, kind=B8Ki))
       call RegPack(Buf, InData%TI_downstream_matrix)
    end if
    call RegPack(Buf, InData%i)
@@ -1489,7 +1489,7 @@ subroutine DWM_UnPackTIDownstream(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(TIDownstream), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackTIDownstream'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -1636,14 +1636,14 @@ subroutine DWM_CopyShinozuka(SrcShinozukaData, DstShinozukaData, CtrlCode, ErrSt
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'DWM_CopyShinozuka'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcShinozukaData%f_syn)) then
-      LB(1:1) = lbound(SrcShinozukaData%f_syn)
-      UB(1:1) = ubound(SrcShinozukaData%f_syn)
+      LB(1:1) = lbound(SrcShinozukaData%f_syn, kind=B8Ki)
+      UB(1:1) = ubound(SrcShinozukaData%f_syn, kind=B8Ki)
       if (.not. allocated(DstShinozukaData%f_syn)) then
          allocate(DstShinozukaData%f_syn(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1654,8 +1654,8 @@ subroutine DWM_CopyShinozuka(SrcShinozukaData, DstShinozukaData, CtrlCode, ErrSt
       DstShinozukaData%f_syn = SrcShinozukaData%f_syn
    end if
    if (allocated(SrcShinozukaData%t_syn)) then
-      LB(1:1) = lbound(SrcShinozukaData%t_syn)
-      UB(1:1) = ubound(SrcShinozukaData%t_syn)
+      LB(1:1) = lbound(SrcShinozukaData%t_syn, kind=B8Ki)
+      UB(1:1) = ubound(SrcShinozukaData%t_syn, kind=B8Ki)
       if (.not. allocated(DstShinozukaData%t_syn)) then
          allocate(DstShinozukaData%t_syn(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1666,8 +1666,8 @@ subroutine DWM_CopyShinozuka(SrcShinozukaData, DstShinozukaData, CtrlCode, ErrSt
       DstShinozukaData%t_syn = SrcShinozukaData%t_syn
    end if
    if (allocated(SrcShinozukaData%phi)) then
-      LB(1:1) = lbound(SrcShinozukaData%phi)
-      UB(1:1) = ubound(SrcShinozukaData%phi)
+      LB(1:1) = lbound(SrcShinozukaData%phi, kind=B8Ki)
+      UB(1:1) = ubound(SrcShinozukaData%phi, kind=B8Ki)
       if (.not. allocated(DstShinozukaData%phi)) then
          allocate(DstShinozukaData%phi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1678,8 +1678,8 @@ subroutine DWM_CopyShinozuka(SrcShinozukaData, DstShinozukaData, CtrlCode, ErrSt
       DstShinozukaData%phi = SrcShinozukaData%phi
    end if
    if (allocated(SrcShinozukaData%p_k)) then
-      LB(1:1) = lbound(SrcShinozukaData%p_k)
-      UB(1:1) = ubound(SrcShinozukaData%p_k)
+      LB(1:1) = lbound(SrcShinozukaData%p_k, kind=B8Ki)
+      UB(1:1) = ubound(SrcShinozukaData%p_k, kind=B8Ki)
       if (.not. allocated(DstShinozukaData%p_k)) then
          allocate(DstShinozukaData%p_k(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1690,8 +1690,8 @@ subroutine DWM_CopyShinozuka(SrcShinozukaData, DstShinozukaData, CtrlCode, ErrSt
       DstShinozukaData%p_k = SrcShinozukaData%p_k
    end if
    if (allocated(SrcShinozukaData%a_k)) then
-      LB(1:1) = lbound(SrcShinozukaData%a_k)
-      UB(1:1) = ubound(SrcShinozukaData%a_k)
+      LB(1:1) = lbound(SrcShinozukaData%a_k, kind=B8Ki)
+      UB(1:1) = ubound(SrcShinozukaData%a_k, kind=B8Ki)
       if (.not. allocated(DstShinozukaData%a_k)) then
          allocate(DstShinozukaData%a_k(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1742,27 +1742,27 @@ subroutine DWM_PackShinozuka(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%f_syn))
    if (allocated(InData%f_syn)) then
-      call RegPackBounds(Buf, 1, lbound(InData%f_syn), ubound(InData%f_syn))
+      call RegPackBounds(Buf, 1, lbound(InData%f_syn, kind=B8Ki), ubound(InData%f_syn, kind=B8Ki))
       call RegPack(Buf, InData%f_syn)
    end if
    call RegPack(Buf, allocated(InData%t_syn))
    if (allocated(InData%t_syn)) then
-      call RegPackBounds(Buf, 1, lbound(InData%t_syn), ubound(InData%t_syn))
+      call RegPackBounds(Buf, 1, lbound(InData%t_syn, kind=B8Ki), ubound(InData%t_syn, kind=B8Ki))
       call RegPack(Buf, InData%t_syn)
    end if
    call RegPack(Buf, allocated(InData%phi))
    if (allocated(InData%phi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%phi), ubound(InData%phi))
+      call RegPackBounds(Buf, 1, lbound(InData%phi, kind=B8Ki), ubound(InData%phi, kind=B8Ki))
       call RegPack(Buf, InData%phi)
    end if
    call RegPack(Buf, allocated(InData%p_k))
    if (allocated(InData%p_k)) then
-      call RegPackBounds(Buf, 1, lbound(InData%p_k), ubound(InData%p_k))
+      call RegPackBounds(Buf, 1, lbound(InData%p_k, kind=B8Ki), ubound(InData%p_k, kind=B8Ki))
       call RegPack(Buf, InData%p_k)
    end if
    call RegPack(Buf, allocated(InData%a_k))
    if (allocated(InData%a_k)) then
-      call RegPackBounds(Buf, 1, lbound(InData%a_k), ubound(InData%a_k))
+      call RegPackBounds(Buf, 1, lbound(InData%a_k, kind=B8Ki), ubound(InData%a_k, kind=B8Ki))
       call RegPack(Buf, InData%a_k)
    end if
    call RegPack(Buf, InData%num_points)
@@ -1780,7 +1780,7 @@ subroutine DWM_UnPackShinozuka(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Shinozuka), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackShinozuka'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -1976,14 +1976,14 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(4), UB(4)
+   integer(B8Ki)                  :: LB(4), UB(4)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'DWM_Copyread_upwind_result'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(Srcread_upwind_resultData%upwind_U)) then
-      LB(1:2) = lbound(Srcread_upwind_resultData%upwind_U)
-      UB(1:2) = ubound(Srcread_upwind_resultData%upwind_U)
+      LB(1:2) = lbound(Srcread_upwind_resultData%upwind_U, kind=B8Ki)
+      UB(1:2) = ubound(Srcread_upwind_resultData%upwind_U, kind=B8Ki)
       if (.not. allocated(Dstread_upwind_resultData%upwind_U)) then
          allocate(Dstread_upwind_resultData%upwind_U(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1994,8 +1994,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%upwind_U = Srcread_upwind_resultData%upwind_U
    end if
    if (allocated(Srcread_upwind_resultData%upwind_wakecenter)) then
-      LB(1:4) = lbound(Srcread_upwind_resultData%upwind_wakecenter)
-      UB(1:4) = ubound(Srcread_upwind_resultData%upwind_wakecenter)
+      LB(1:4) = lbound(Srcread_upwind_resultData%upwind_wakecenter, kind=B8Ki)
+      UB(1:4) = ubound(Srcread_upwind_resultData%upwind_wakecenter, kind=B8Ki)
       if (.not. allocated(Dstread_upwind_resultData%upwind_wakecenter)) then
          allocate(Dstread_upwind_resultData%upwind_wakecenter(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2006,8 +2006,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%upwind_wakecenter = Srcread_upwind_resultData%upwind_wakecenter
    end if
    if (allocated(Srcread_upwind_resultData%upwind_meanU)) then
-      LB(1:1) = lbound(Srcread_upwind_resultData%upwind_meanU)
-      UB(1:1) = ubound(Srcread_upwind_resultData%upwind_meanU)
+      LB(1:1) = lbound(Srcread_upwind_resultData%upwind_meanU, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_upwind_resultData%upwind_meanU, kind=B8Ki)
       if (.not. allocated(Dstread_upwind_resultData%upwind_meanU)) then
          allocate(Dstread_upwind_resultData%upwind_meanU(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2018,8 +2018,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%upwind_meanU = Srcread_upwind_resultData%upwind_meanU
    end if
    if (allocated(Srcread_upwind_resultData%upwind_TI)) then
-      LB(1:1) = lbound(Srcread_upwind_resultData%upwind_TI)
-      UB(1:1) = ubound(Srcread_upwind_resultData%upwind_TI)
+      LB(1:1) = lbound(Srcread_upwind_resultData%upwind_TI, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_upwind_resultData%upwind_TI, kind=B8Ki)
       if (.not. allocated(Dstread_upwind_resultData%upwind_TI)) then
          allocate(Dstread_upwind_resultData%upwind_TI(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2030,8 +2030,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%upwind_TI = Srcread_upwind_resultData%upwind_TI
    end if
    if (allocated(Srcread_upwind_resultData%upwind_small_TI)) then
-      LB(1:1) = lbound(Srcread_upwind_resultData%upwind_small_TI)
-      UB(1:1) = ubound(Srcread_upwind_resultData%upwind_small_TI)
+      LB(1:1) = lbound(Srcread_upwind_resultData%upwind_small_TI, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_upwind_resultData%upwind_small_TI, kind=B8Ki)
       if (.not. allocated(Dstread_upwind_resultData%upwind_small_TI)) then
          allocate(Dstread_upwind_resultData%upwind_small_TI(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2042,8 +2042,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%upwind_small_TI = Srcread_upwind_resultData%upwind_small_TI
    end if
    if (allocated(Srcread_upwind_resultData%upwind_smoothWake)) then
-      LB(1:2) = lbound(Srcread_upwind_resultData%upwind_smoothWake)
-      UB(1:2) = ubound(Srcread_upwind_resultData%upwind_smoothWake)
+      LB(1:2) = lbound(Srcread_upwind_resultData%upwind_smoothWake, kind=B8Ki)
+      UB(1:2) = ubound(Srcread_upwind_resultData%upwind_smoothWake, kind=B8Ki)
       if (.not. allocated(Dstread_upwind_resultData%upwind_smoothWake)) then
          allocate(Dstread_upwind_resultData%upwind_smoothWake(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2054,8 +2054,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%upwind_smoothWake = Srcread_upwind_resultData%upwind_smoothWake
    end if
    if (allocated(Srcread_upwind_resultData%velocity_aerodyn)) then
-      LB(1:1) = lbound(Srcread_upwind_resultData%velocity_aerodyn)
-      UB(1:1) = ubound(Srcread_upwind_resultData%velocity_aerodyn)
+      LB(1:1) = lbound(Srcread_upwind_resultData%velocity_aerodyn, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_upwind_resultData%velocity_aerodyn, kind=B8Ki)
       if (.not. allocated(Dstread_upwind_resultData%velocity_aerodyn)) then
          allocate(Dstread_upwind_resultData%velocity_aerodyn(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2066,8 +2066,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%velocity_aerodyn = Srcread_upwind_resultData%velocity_aerodyn
    end if
    if (allocated(Srcread_upwind_resultData%TI_downstream)) then
-      LB(1:1) = lbound(Srcread_upwind_resultData%TI_downstream)
-      UB(1:1) = ubound(Srcread_upwind_resultData%TI_downstream)
+      LB(1:1) = lbound(Srcread_upwind_resultData%TI_downstream, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_upwind_resultData%TI_downstream, kind=B8Ki)
       if (.not. allocated(Dstread_upwind_resultData%TI_downstream)) then
          allocate(Dstread_upwind_resultData%TI_downstream(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2078,8 +2078,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%TI_downstream = Srcread_upwind_resultData%TI_downstream
    end if
    if (allocated(Srcread_upwind_resultData%small_scale_TI_downstream)) then
-      LB(1:1) = lbound(Srcread_upwind_resultData%small_scale_TI_downstream)
-      UB(1:1) = ubound(Srcread_upwind_resultData%small_scale_TI_downstream)
+      LB(1:1) = lbound(Srcread_upwind_resultData%small_scale_TI_downstream, kind=B8Ki)
+      UB(1:1) = ubound(Srcread_upwind_resultData%small_scale_TI_downstream, kind=B8Ki)
       if (.not. allocated(Dstread_upwind_resultData%small_scale_TI_downstream)) then
          allocate(Dstread_upwind_resultData%small_scale_TI_downstream(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2090,8 +2090,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%small_scale_TI_downstream = Srcread_upwind_resultData%small_scale_TI_downstream
    end if
    if (allocated(Srcread_upwind_resultData%smoothed_velocity_array)) then
-      LB(1:2) = lbound(Srcread_upwind_resultData%smoothed_velocity_array)
-      UB(1:2) = ubound(Srcread_upwind_resultData%smoothed_velocity_array)
+      LB(1:2) = lbound(Srcread_upwind_resultData%smoothed_velocity_array, kind=B8Ki)
+      UB(1:2) = ubound(Srcread_upwind_resultData%smoothed_velocity_array, kind=B8Ki)
       if (.not. allocated(Dstread_upwind_resultData%smoothed_velocity_array)) then
          allocate(Dstread_upwind_resultData%smoothed_velocity_array(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2102,8 +2102,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%smoothed_velocity_array = Srcread_upwind_resultData%smoothed_velocity_array
    end if
    if (allocated(Srcread_upwind_resultData%vel_matrix)) then
-      LB(1:3) = lbound(Srcread_upwind_resultData%vel_matrix)
-      UB(1:3) = ubound(Srcread_upwind_resultData%vel_matrix)
+      LB(1:3) = lbound(Srcread_upwind_resultData%vel_matrix, kind=B8Ki)
+      UB(1:3) = ubound(Srcread_upwind_resultData%vel_matrix, kind=B8Ki)
       if (.not. allocated(Dstread_upwind_resultData%vel_matrix)) then
          allocate(Dstread_upwind_resultData%vel_matrix(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2164,57 +2164,57 @@ subroutine DWM_Packread_upwind_result(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%upwind_U))
    if (allocated(InData%upwind_U)) then
-      call RegPackBounds(Buf, 2, lbound(InData%upwind_U), ubound(InData%upwind_U))
+      call RegPackBounds(Buf, 2, lbound(InData%upwind_U, kind=B8Ki), ubound(InData%upwind_U, kind=B8Ki))
       call RegPack(Buf, InData%upwind_U)
    end if
    call RegPack(Buf, allocated(InData%upwind_wakecenter))
    if (allocated(InData%upwind_wakecenter)) then
-      call RegPackBounds(Buf, 4, lbound(InData%upwind_wakecenter), ubound(InData%upwind_wakecenter))
+      call RegPackBounds(Buf, 4, lbound(InData%upwind_wakecenter, kind=B8Ki), ubound(InData%upwind_wakecenter, kind=B8Ki))
       call RegPack(Buf, InData%upwind_wakecenter)
    end if
    call RegPack(Buf, allocated(InData%upwind_meanU))
    if (allocated(InData%upwind_meanU)) then
-      call RegPackBounds(Buf, 1, lbound(InData%upwind_meanU), ubound(InData%upwind_meanU))
+      call RegPackBounds(Buf, 1, lbound(InData%upwind_meanU, kind=B8Ki), ubound(InData%upwind_meanU, kind=B8Ki))
       call RegPack(Buf, InData%upwind_meanU)
    end if
    call RegPack(Buf, allocated(InData%upwind_TI))
    if (allocated(InData%upwind_TI)) then
-      call RegPackBounds(Buf, 1, lbound(InData%upwind_TI), ubound(InData%upwind_TI))
+      call RegPackBounds(Buf, 1, lbound(InData%upwind_TI, kind=B8Ki), ubound(InData%upwind_TI, kind=B8Ki))
       call RegPack(Buf, InData%upwind_TI)
    end if
    call RegPack(Buf, allocated(InData%upwind_small_TI))
    if (allocated(InData%upwind_small_TI)) then
-      call RegPackBounds(Buf, 1, lbound(InData%upwind_small_TI), ubound(InData%upwind_small_TI))
+      call RegPackBounds(Buf, 1, lbound(InData%upwind_small_TI, kind=B8Ki), ubound(InData%upwind_small_TI, kind=B8Ki))
       call RegPack(Buf, InData%upwind_small_TI)
    end if
    call RegPack(Buf, allocated(InData%upwind_smoothWake))
    if (allocated(InData%upwind_smoothWake)) then
-      call RegPackBounds(Buf, 2, lbound(InData%upwind_smoothWake), ubound(InData%upwind_smoothWake))
+      call RegPackBounds(Buf, 2, lbound(InData%upwind_smoothWake, kind=B8Ki), ubound(InData%upwind_smoothWake, kind=B8Ki))
       call RegPack(Buf, InData%upwind_smoothWake)
    end if
    call RegPack(Buf, allocated(InData%velocity_aerodyn))
    if (allocated(InData%velocity_aerodyn)) then
-      call RegPackBounds(Buf, 1, lbound(InData%velocity_aerodyn), ubound(InData%velocity_aerodyn))
+      call RegPackBounds(Buf, 1, lbound(InData%velocity_aerodyn, kind=B8Ki), ubound(InData%velocity_aerodyn, kind=B8Ki))
       call RegPack(Buf, InData%velocity_aerodyn)
    end if
    call RegPack(Buf, allocated(InData%TI_downstream))
    if (allocated(InData%TI_downstream)) then
-      call RegPackBounds(Buf, 1, lbound(InData%TI_downstream), ubound(InData%TI_downstream))
+      call RegPackBounds(Buf, 1, lbound(InData%TI_downstream, kind=B8Ki), ubound(InData%TI_downstream, kind=B8Ki))
       call RegPack(Buf, InData%TI_downstream)
    end if
    call RegPack(Buf, allocated(InData%small_scale_TI_downstream))
    if (allocated(InData%small_scale_TI_downstream)) then
-      call RegPackBounds(Buf, 1, lbound(InData%small_scale_TI_downstream), ubound(InData%small_scale_TI_downstream))
+      call RegPackBounds(Buf, 1, lbound(InData%small_scale_TI_downstream, kind=B8Ki), ubound(InData%small_scale_TI_downstream, kind=B8Ki))
       call RegPack(Buf, InData%small_scale_TI_downstream)
    end if
    call RegPack(Buf, allocated(InData%smoothed_velocity_array))
    if (allocated(InData%smoothed_velocity_array)) then
-      call RegPackBounds(Buf, 2, lbound(InData%smoothed_velocity_array), ubound(InData%smoothed_velocity_array))
+      call RegPackBounds(Buf, 2, lbound(InData%smoothed_velocity_array, kind=B8Ki), ubound(InData%smoothed_velocity_array, kind=B8Ki))
       call RegPack(Buf, InData%smoothed_velocity_array)
    end if
    call RegPack(Buf, allocated(InData%vel_matrix))
    if (allocated(InData%vel_matrix)) then
-      call RegPackBounds(Buf, 3, lbound(InData%vel_matrix), ubound(InData%vel_matrix))
+      call RegPackBounds(Buf, 3, lbound(InData%vel_matrix, kind=B8Ki), ubound(InData%vel_matrix, kind=B8Ki))
       call RegPack(Buf, InData%vel_matrix)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2224,7 +2224,7 @@ subroutine DWM_UnPackread_upwind_result(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(read_upwind_result), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackread_upwind_result'
-   integer(IntKi)  :: LB(4), UB(4)
+   integer(B8Ki)   :: LB(4), UB(4)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -2390,14 +2390,14 @@ subroutine DWM_Copywake_meandered_center(Srcwake_meandered_centerData, Dstwake_m
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'DWM_Copywake_meandered_center'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(Srcwake_meandered_centerData%wake_width)) then
-      LB(1:1) = lbound(Srcwake_meandered_centerData%wake_width)
-      UB(1:1) = ubound(Srcwake_meandered_centerData%wake_width)
+      LB(1:1) = lbound(Srcwake_meandered_centerData%wake_width, kind=B8Ki)
+      UB(1:1) = ubound(Srcwake_meandered_centerData%wake_width, kind=B8Ki)
       if (.not. allocated(Dstwake_meandered_centerData%wake_width)) then
          allocate(Dstwake_meandered_centerData%wake_width(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2428,7 +2428,7 @@ subroutine DWM_Packwake_meandered_center(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%wake_width))
    if (allocated(InData%wake_width)) then
-      call RegPackBounds(Buf, 1, lbound(InData%wake_width), ubound(InData%wake_width))
+      call RegPackBounds(Buf, 1, lbound(InData%wake_width, kind=B8Ki), ubound(InData%wake_width, kind=B8Ki))
       call RegPack(Buf, InData%wake_width)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2438,7 +2438,7 @@ subroutine DWM_UnPackwake_meandered_center(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(wake_meandered_center), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackwake_meandered_center'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -2511,15 +2511,15 @@ subroutine DWM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(3), UB(3)
+   integer(B8Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'DWM_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcParamData%velocityU)) then
-      LB(1:1) = lbound(SrcParamData%velocityU)
-      UB(1:1) = ubound(SrcParamData%velocityU)
+      LB(1:1) = lbound(SrcParamData%velocityU, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%velocityU, kind=B8Ki)
       if (.not. allocated(DstParamData%velocityU)) then
          allocate(DstParamData%velocityU(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2530,8 +2530,8 @@ subroutine DWM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%velocityU = SrcParamData%velocityU
    end if
    if (allocated(SrcParamData%smoothed_wake)) then
-      LB(1:1) = lbound(SrcParamData%smoothed_wake)
-      UB(1:1) = ubound(SrcParamData%smoothed_wake)
+      LB(1:1) = lbound(SrcParamData%smoothed_wake, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%smoothed_wake, kind=B8Ki)
       if (.not. allocated(DstParamData%smoothed_wake)) then
          allocate(DstParamData%smoothed_wake(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2542,8 +2542,8 @@ subroutine DWM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%smoothed_wake = SrcParamData%smoothed_wake
    end if
    if (allocated(SrcParamData%WakePosition)) then
-      LB(1:3) = lbound(SrcParamData%WakePosition)
-      UB(1:3) = ubound(SrcParamData%WakePosition)
+      LB(1:3) = lbound(SrcParamData%WakePosition, kind=B8Ki)
+      UB(1:3) = ubound(SrcParamData%WakePosition, kind=B8Ki)
       if (.not. allocated(DstParamData%WakePosition)) then
          allocate(DstParamData%WakePosition(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2573,8 +2573,8 @@ subroutine DWM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%air_density = SrcParamData%air_density
    DstParamData%RR = SrcParamData%RR
    if (allocated(SrcParamData%ElementRad)) then
-      LB(1:1) = lbound(SrcParamData%ElementRad)
-      UB(1:1) = ubound(SrcParamData%ElementRad)
+      LB(1:1) = lbound(SrcParamData%ElementRad, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%ElementRad, kind=B8Ki)
       if (.not. allocated(DstParamData%ElementRad)) then
          allocate(DstParamData%ElementRad(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2628,17 +2628,17 @@ subroutine DWM_PackParam(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%velocityU))
    if (allocated(InData%velocityU)) then
-      call RegPackBounds(Buf, 1, lbound(InData%velocityU), ubound(InData%velocityU))
+      call RegPackBounds(Buf, 1, lbound(InData%velocityU, kind=B8Ki), ubound(InData%velocityU, kind=B8Ki))
       call RegPack(Buf, InData%velocityU)
    end if
    call RegPack(Buf, allocated(InData%smoothed_wake))
    if (allocated(InData%smoothed_wake)) then
-      call RegPackBounds(Buf, 1, lbound(InData%smoothed_wake), ubound(InData%smoothed_wake))
+      call RegPackBounds(Buf, 1, lbound(InData%smoothed_wake, kind=B8Ki), ubound(InData%smoothed_wake, kind=B8Ki))
       call RegPack(Buf, InData%smoothed_wake)
    end if
    call RegPack(Buf, allocated(InData%WakePosition))
    if (allocated(InData%WakePosition)) then
-      call RegPackBounds(Buf, 3, lbound(InData%WakePosition), ubound(InData%WakePosition))
+      call RegPackBounds(Buf, 3, lbound(InData%WakePosition, kind=B8Ki), ubound(InData%WakePosition, kind=B8Ki))
       call RegPack(Buf, InData%WakePosition)
    end if
    call RegPack(Buf, InData%WakePosition_1)
@@ -2662,7 +2662,7 @@ subroutine DWM_PackParam(Buf, Indata)
    call RegPack(Buf, InData%RR)
    call RegPack(Buf, allocated(InData%ElementRad))
    if (allocated(InData%ElementRad)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ElementRad), ubound(InData%ElementRad))
+      call RegPackBounds(Buf, 1, lbound(InData%ElementRad, kind=B8Ki), ubound(InData%ElementRad, kind=B8Ki))
       call RegPack(Buf, InData%ElementRad)
    end if
    call RegPack(Buf, InData%Bnum)
@@ -2676,7 +2676,7 @@ subroutine DWM_UnPackParam(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(DWM_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackParam'
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -2834,7 +2834,7 @@ subroutine DWM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'DWM_CopyMisc'
@@ -2850,8 +2850,8 @@ subroutine DWM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    DstMiscData%U_velocity = SrcMiscData%U_velocity
    DstMiscData%V_velocity = SrcMiscData%V_velocity
    if (allocated(SrcMiscData%Nforce)) then
-      LB(1:2) = lbound(SrcMiscData%Nforce)
-      UB(1:2) = ubound(SrcMiscData%Nforce)
+      LB(1:2) = lbound(SrcMiscData%Nforce, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%Nforce, kind=B8Ki)
       if (.not. allocated(DstMiscData%Nforce)) then
          allocate(DstMiscData%Nforce(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2862,8 +2862,8 @@ subroutine DWM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%Nforce = SrcMiscData%Nforce
    end if
    if (allocated(SrcMiscData%blade_dr)) then
-      LB(1:1) = lbound(SrcMiscData%blade_dr)
-      UB(1:1) = ubound(SrcMiscData%blade_dr)
+      LB(1:1) = lbound(SrcMiscData%blade_dr, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%blade_dr, kind=B8Ki)
       if (.not. allocated(DstMiscData%blade_dr)) then
          allocate(DstMiscData%blade_dr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2973,12 +2973,12 @@ subroutine DWM_PackMisc(Buf, Indata)
    call RegPack(Buf, InData%V_velocity)
    call RegPack(Buf, allocated(InData%Nforce))
    if (allocated(InData%Nforce)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Nforce), ubound(InData%Nforce))
+      call RegPackBounds(Buf, 2, lbound(InData%Nforce, kind=B8Ki), ubound(InData%Nforce, kind=B8Ki))
       call RegPack(Buf, InData%Nforce)
    end if
    call RegPack(Buf, allocated(InData%blade_dr))
    if (allocated(InData%blade_dr)) then
-      call RegPackBounds(Buf, 1, lbound(InData%blade_dr), ubound(InData%blade_dr))
+      call RegPackBounds(Buf, 1, lbound(InData%blade_dr, kind=B8Ki), ubound(InData%blade_dr, kind=B8Ki))
       call RegPack(Buf, InData%blade_dr)
    end if
    call RegPack(Buf, InData%NacYaw)
@@ -3005,7 +3005,7 @@ subroutine DWM_UnPackMisc(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(DWM_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackMisc'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -3133,15 +3133,15 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(3), UB(3)
+   integer(B8Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'DWM_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOutputData%turbine_thrust_force)) then
-      LB(1:1) = lbound(SrcOutputData%turbine_thrust_force)
-      UB(1:1) = ubound(SrcOutputData%turbine_thrust_force)
+      LB(1:1) = lbound(SrcOutputData%turbine_thrust_force, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%turbine_thrust_force, kind=B8Ki)
       if (.not. allocated(DstOutputData%turbine_thrust_force)) then
          allocate(DstOutputData%turbine_thrust_force(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3152,8 +3152,8 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%turbine_thrust_force = SrcOutputData%turbine_thrust_force
    end if
    if (allocated(SrcOutputData%induction_factor)) then
-      LB(1:1) = lbound(SrcOutputData%induction_factor)
-      UB(1:1) = ubound(SrcOutputData%induction_factor)
+      LB(1:1) = lbound(SrcOutputData%induction_factor, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%induction_factor, kind=B8Ki)
       if (.not. allocated(DstOutputData%induction_factor)) then
          allocate(DstOutputData%induction_factor(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3164,8 +3164,8 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%induction_factor = SrcOutputData%induction_factor
    end if
    if (allocated(SrcOutputData%r_initial)) then
-      LB(1:1) = lbound(SrcOutputData%r_initial)
-      UB(1:1) = ubound(SrcOutputData%r_initial)
+      LB(1:1) = lbound(SrcOutputData%r_initial, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%r_initial, kind=B8Ki)
       if (.not. allocated(DstOutputData%r_initial)) then
          allocate(DstOutputData%r_initial(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3176,8 +3176,8 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%r_initial = SrcOutputData%r_initial
    end if
    if (allocated(SrcOutputData%U_initial)) then
-      LB(1:1) = lbound(SrcOutputData%U_initial)
-      UB(1:1) = ubound(SrcOutputData%U_initial)
+      LB(1:1) = lbound(SrcOutputData%U_initial, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%U_initial, kind=B8Ki)
       if (.not. allocated(DstOutputData%U_initial)) then
          allocate(DstOutputData%U_initial(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3188,8 +3188,8 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%U_initial = SrcOutputData%U_initial
    end if
    if (allocated(SrcOutputData%Mean_FFWS_array)) then
-      LB(1:1) = lbound(SrcOutputData%Mean_FFWS_array)
-      UB(1:1) = ubound(SrcOutputData%Mean_FFWS_array)
+      LB(1:1) = lbound(SrcOutputData%Mean_FFWS_array, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%Mean_FFWS_array, kind=B8Ki)
       if (.not. allocated(DstOutputData%Mean_FFWS_array)) then
          allocate(DstOutputData%Mean_FFWS_array(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3203,8 +3203,8 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
    DstOutputData%TI = SrcOutputData%TI
    DstOutputData%TI_downstream = SrcOutputData%TI_downstream
    if (allocated(SrcOutputData%wake_u)) then
-      LB(1:2) = lbound(SrcOutputData%wake_u)
-      UB(1:2) = ubound(SrcOutputData%wake_u)
+      LB(1:2) = lbound(SrcOutputData%wake_u, kind=B8Ki)
+      UB(1:2) = ubound(SrcOutputData%wake_u, kind=B8Ki)
       if (.not. allocated(DstOutputData%wake_u)) then
          allocate(DstOutputData%wake_u(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3215,8 +3215,8 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%wake_u = SrcOutputData%wake_u
    end if
    if (allocated(SrcOutputData%wake_position)) then
-      LB(1:3) = lbound(SrcOutputData%wake_position)
-      UB(1:3) = ubound(SrcOutputData%wake_position)
+      LB(1:3) = lbound(SrcOutputData%wake_position, kind=B8Ki)
+      UB(1:3) = ubound(SrcOutputData%wake_position, kind=B8Ki)
       if (.not. allocated(DstOutputData%wake_position)) then
          allocate(DstOutputData%wake_position(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3227,8 +3227,8 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%wake_position = SrcOutputData%wake_position
    end if
    if (allocated(SrcOutputData%smoothed_velocity_array)) then
-      LB(1:2) = lbound(SrcOutputData%smoothed_velocity_array)
-      UB(1:2) = ubound(SrcOutputData%smoothed_velocity_array)
+      LB(1:2) = lbound(SrcOutputData%smoothed_velocity_array, kind=B8Ki)
+      UB(1:2) = ubound(SrcOutputData%smoothed_velocity_array, kind=B8Ki)
       if (.not. allocated(DstOutputData%smoothed_velocity_array)) then
          allocate(DstOutputData%smoothed_velocity_array(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3292,27 +3292,27 @@ subroutine DWM_PackOutput(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%turbine_thrust_force))
    if (allocated(InData%turbine_thrust_force)) then
-      call RegPackBounds(Buf, 1, lbound(InData%turbine_thrust_force), ubound(InData%turbine_thrust_force))
+      call RegPackBounds(Buf, 1, lbound(InData%turbine_thrust_force, kind=B8Ki), ubound(InData%turbine_thrust_force, kind=B8Ki))
       call RegPack(Buf, InData%turbine_thrust_force)
    end if
    call RegPack(Buf, allocated(InData%induction_factor))
    if (allocated(InData%induction_factor)) then
-      call RegPackBounds(Buf, 1, lbound(InData%induction_factor), ubound(InData%induction_factor))
+      call RegPackBounds(Buf, 1, lbound(InData%induction_factor, kind=B8Ki), ubound(InData%induction_factor, kind=B8Ki))
       call RegPack(Buf, InData%induction_factor)
    end if
    call RegPack(Buf, allocated(InData%r_initial))
    if (allocated(InData%r_initial)) then
-      call RegPackBounds(Buf, 1, lbound(InData%r_initial), ubound(InData%r_initial))
+      call RegPackBounds(Buf, 1, lbound(InData%r_initial, kind=B8Ki), ubound(InData%r_initial, kind=B8Ki))
       call RegPack(Buf, InData%r_initial)
    end if
    call RegPack(Buf, allocated(InData%U_initial))
    if (allocated(InData%U_initial)) then
-      call RegPackBounds(Buf, 1, lbound(InData%U_initial), ubound(InData%U_initial))
+      call RegPackBounds(Buf, 1, lbound(InData%U_initial, kind=B8Ki), ubound(InData%U_initial, kind=B8Ki))
       call RegPack(Buf, InData%U_initial)
    end if
    call RegPack(Buf, allocated(InData%Mean_FFWS_array))
    if (allocated(InData%Mean_FFWS_array)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Mean_FFWS_array), ubound(InData%Mean_FFWS_array))
+      call RegPackBounds(Buf, 1, lbound(InData%Mean_FFWS_array, kind=B8Ki), ubound(InData%Mean_FFWS_array, kind=B8Ki))
       call RegPack(Buf, InData%Mean_FFWS_array)
    end if
    call RegPack(Buf, InData%Mean_FFWS)
@@ -3320,17 +3320,17 @@ subroutine DWM_PackOutput(Buf, Indata)
    call RegPack(Buf, InData%TI_downstream)
    call RegPack(Buf, allocated(InData%wake_u))
    if (allocated(InData%wake_u)) then
-      call RegPackBounds(Buf, 2, lbound(InData%wake_u), ubound(InData%wake_u))
+      call RegPackBounds(Buf, 2, lbound(InData%wake_u, kind=B8Ki), ubound(InData%wake_u, kind=B8Ki))
       call RegPack(Buf, InData%wake_u)
    end if
    call RegPack(Buf, allocated(InData%wake_position))
    if (allocated(InData%wake_position)) then
-      call RegPackBounds(Buf, 3, lbound(InData%wake_position), ubound(InData%wake_position))
+      call RegPackBounds(Buf, 3, lbound(InData%wake_position, kind=B8Ki), ubound(InData%wake_position, kind=B8Ki))
       call RegPack(Buf, InData%wake_position)
    end if
    call RegPack(Buf, allocated(InData%smoothed_velocity_array))
    if (allocated(InData%smoothed_velocity_array)) then
-      call RegPackBounds(Buf, 2, lbound(InData%smoothed_velocity_array), ubound(InData%smoothed_velocity_array))
+      call RegPackBounds(Buf, 2, lbound(InData%smoothed_velocity_array, kind=B8Ki), ubound(InData%smoothed_velocity_array, kind=B8Ki))
       call RegPack(Buf, InData%smoothed_velocity_array)
    end if
    call RegPack(Buf, InData%AtmUscale)
@@ -3346,7 +3346,7 @@ subroutine DWM_UnPackOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(DWM_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackOutput'
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return

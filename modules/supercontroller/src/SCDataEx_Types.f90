@@ -361,14 +361,14 @@ subroutine SC_DX_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'SC_DX_CopyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (associated(SrcInputData%toSC)) then
-      LB(1:1) = lbound(SrcInputData%toSC)
-      UB(1:1) = ubound(SrcInputData%toSC)
+      LB(1:1) = lbound(SrcInputData%toSC, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputData%toSC, kind=B8Ki)
       if (.not. associated(DstInputData%toSC)) then
          allocate(DstInputData%toSC(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -410,7 +410,7 @@ subroutine SC_DX_PackInput(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%toSC))
    if (associated(InData%toSC)) then
-      call RegPackBounds(Buf, 1, lbound(InData%toSC), ubound(InData%toSC))
+      call RegPackBounds(Buf, 1, lbound(InData%toSC, kind=B8Ki), ubound(InData%toSC, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%toSC), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%toSC)
@@ -423,10 +423,10 @@ subroutine SC_DX_UnPackInput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(SC_DX_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_DX_UnPackInput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(IntKi)  :: PtrIdx
+   integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    if (associated(OutData%toSC)) deallocate(OutData%toSC)
@@ -507,7 +507,7 @@ SUBROUTINE SC_DX_F2C_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          InputData%C_obj%toSC_Len = SIZE(InputData%toSC)
          IF (InputData%C_obj%toSC_Len > 0) &
-            InputData%C_obj%toSC = C_LOC(InputData%toSC(LBOUND(InputData%toSC,1)))
+            InputData%C_obj%toSC = C_LOC(InputData%toSC(LBOUND(InputData%toSC,1, kind=B8Ki)))
       END IF
    END IF
 END SUBROUTINE
@@ -518,14 +518,14 @@ subroutine SC_DX_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'SC_DX_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (associated(SrcOutputData%fromSC)) then
-      LB(1:1) = lbound(SrcOutputData%fromSC)
-      UB(1:1) = ubound(SrcOutputData%fromSC)
+      LB(1:1) = lbound(SrcOutputData%fromSC, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%fromSC, kind=B8Ki)
       if (.not. associated(DstOutputData%fromSC)) then
          allocate(DstOutputData%fromSC(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -539,8 +539,8 @@ subroutine SC_DX_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
       DstOutputData%fromSC = SrcOutputData%fromSC
    end if
    if (associated(SrcOutputData%fromSCglob)) then
-      LB(1:1) = lbound(SrcOutputData%fromSCglob)
-      UB(1:1) = ubound(SrcOutputData%fromSCglob)
+      LB(1:1) = lbound(SrcOutputData%fromSCglob, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%fromSCglob, kind=B8Ki)
       if (.not. associated(DstOutputData%fromSCglob)) then
          allocate(DstOutputData%fromSCglob(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -588,7 +588,7 @@ subroutine SC_DX_PackOutput(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%fromSC))
    if (associated(InData%fromSC)) then
-      call RegPackBounds(Buf, 1, lbound(InData%fromSC), ubound(InData%fromSC))
+      call RegPackBounds(Buf, 1, lbound(InData%fromSC, kind=B8Ki), ubound(InData%fromSC, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%fromSC), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%fromSC)
@@ -596,7 +596,7 @@ subroutine SC_DX_PackOutput(Buf, Indata)
    end if
    call RegPack(Buf, associated(InData%fromSCglob))
    if (associated(InData%fromSCglob)) then
-      call RegPackBounds(Buf, 1, lbound(InData%fromSCglob), ubound(InData%fromSCglob))
+      call RegPackBounds(Buf, 1, lbound(InData%fromSCglob, kind=B8Ki), ubound(InData%fromSCglob, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%fromSCglob), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%fromSCglob)
@@ -609,10 +609,10 @@ subroutine SC_DX_UnPackOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(SC_DX_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_DX_UnPackOutput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(IntKi)  :: PtrIdx
+   integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    if (associated(OutData%fromSC)) deallocate(OutData%fromSC)
@@ -728,7 +728,7 @@ SUBROUTINE SC_DX_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          OutputData%C_obj%fromSC_Len = SIZE(OutputData%fromSC)
          IF (OutputData%C_obj%fromSC_Len > 0) &
-            OutputData%C_obj%fromSC = C_LOC(OutputData%fromSC(LBOUND(OutputData%fromSC,1)))
+            OutputData%C_obj%fromSC = C_LOC(OutputData%fromSC(LBOUND(OutputData%fromSC,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -740,7 +740,7 @@ SUBROUTINE SC_DX_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          OutputData%C_obj%fromSCglob_Len = SIZE(OutputData%fromSCglob)
          IF (OutputData%C_obj%fromSCglob_Len > 0) &
-            OutputData%C_obj%fromSCglob = C_LOC(OutputData%fromSCglob(LBOUND(OutputData%fromSCglob,1)))
+            OutputData%C_obj%fromSCglob = C_LOC(OutputData%fromSCglob(LBOUND(OutputData%fromSCglob,1, kind=B8Ki)))
       END IF
    END IF
 END SUBROUTINE

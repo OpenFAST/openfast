@@ -97,15 +97,15 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(5), UB(5)
+   integer(B8Ki)                  :: LB(5), UB(5)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SeaSt_WaveField_CopySeaSt_WaveFieldType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcSeaSt_WaveFieldTypeData%WaveTime)) then
-      LB(1:1) = lbound(SrcSeaSt_WaveFieldTypeData%WaveTime)
-      UB(1:1) = ubound(SrcSeaSt_WaveFieldTypeData%WaveTime)
+      LB(1:1) = lbound(SrcSeaSt_WaveFieldTypeData%WaveTime, kind=B8Ki)
+      UB(1:1) = ubound(SrcSeaSt_WaveFieldTypeData%WaveTime, kind=B8Ki)
       if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveTime)) then
          allocate(DstSeaSt_WaveFieldTypeData%WaveTime(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -116,8 +116,8 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
       DstSeaSt_WaveFieldTypeData%WaveTime = SrcSeaSt_WaveFieldTypeData%WaveTime
    end if
    if (allocated(SrcSeaSt_WaveFieldTypeData%WaveDynP)) then
-      LB(1:4) = lbound(SrcSeaSt_WaveFieldTypeData%WaveDynP)
-      UB(1:4) = ubound(SrcSeaSt_WaveFieldTypeData%WaveDynP)
+      LB(1:4) = lbound(SrcSeaSt_WaveFieldTypeData%WaveDynP, kind=B8Ki)
+      UB(1:4) = ubound(SrcSeaSt_WaveFieldTypeData%WaveDynP, kind=B8Ki)
       if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveDynP)) then
          allocate(DstSeaSt_WaveFieldTypeData%WaveDynP(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -128,8 +128,8 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
       DstSeaSt_WaveFieldTypeData%WaveDynP = SrcSeaSt_WaveFieldTypeData%WaveDynP
    end if
    if (allocated(SrcSeaSt_WaveFieldTypeData%WaveAcc)) then
-      LB(1:5) = lbound(SrcSeaSt_WaveFieldTypeData%WaveAcc)
-      UB(1:5) = ubound(SrcSeaSt_WaveFieldTypeData%WaveAcc)
+      LB(1:5) = lbound(SrcSeaSt_WaveFieldTypeData%WaveAcc, kind=B8Ki)
+      UB(1:5) = ubound(SrcSeaSt_WaveFieldTypeData%WaveAcc, kind=B8Ki)
       if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveAcc)) then
          allocate(DstSeaSt_WaveFieldTypeData%WaveAcc(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -140,8 +140,8 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
       DstSeaSt_WaveFieldTypeData%WaveAcc = SrcSeaSt_WaveFieldTypeData%WaveAcc
    end if
    if (allocated(SrcSeaSt_WaveFieldTypeData%WaveAccMCF)) then
-      LB(1:5) = lbound(SrcSeaSt_WaveFieldTypeData%WaveAccMCF)
-      UB(1:5) = ubound(SrcSeaSt_WaveFieldTypeData%WaveAccMCF)
+      LB(1:5) = lbound(SrcSeaSt_WaveFieldTypeData%WaveAccMCF, kind=B8Ki)
+      UB(1:5) = ubound(SrcSeaSt_WaveFieldTypeData%WaveAccMCF, kind=B8Ki)
       if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveAccMCF)) then
          allocate(DstSeaSt_WaveFieldTypeData%WaveAccMCF(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -152,8 +152,8 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
       DstSeaSt_WaveFieldTypeData%WaveAccMCF = SrcSeaSt_WaveFieldTypeData%WaveAccMCF
    end if
    if (allocated(SrcSeaSt_WaveFieldTypeData%WaveVel)) then
-      LB(1:5) = lbound(SrcSeaSt_WaveFieldTypeData%WaveVel)
-      UB(1:5) = ubound(SrcSeaSt_WaveFieldTypeData%WaveVel)
+      LB(1:5) = lbound(SrcSeaSt_WaveFieldTypeData%WaveVel, kind=B8Ki)
+      UB(1:5) = ubound(SrcSeaSt_WaveFieldTypeData%WaveVel, kind=B8Ki)
       if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveVel)) then
          allocate(DstSeaSt_WaveFieldTypeData%WaveVel(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -164,8 +164,8 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
       DstSeaSt_WaveFieldTypeData%WaveVel = SrcSeaSt_WaveFieldTypeData%WaveVel
    end if
    if (allocated(SrcSeaSt_WaveFieldTypeData%PWaveDynP0)) then
-      LB(1:3) = lbound(SrcSeaSt_WaveFieldTypeData%PWaveDynP0)
-      UB(1:3) = ubound(SrcSeaSt_WaveFieldTypeData%PWaveDynP0)
+      LB(1:3) = lbound(SrcSeaSt_WaveFieldTypeData%PWaveDynP0, kind=B8Ki)
+      UB(1:3) = ubound(SrcSeaSt_WaveFieldTypeData%PWaveDynP0, kind=B8Ki)
       if (.not. allocated(DstSeaSt_WaveFieldTypeData%PWaveDynP0)) then
          allocate(DstSeaSt_WaveFieldTypeData%PWaveDynP0(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -176,8 +176,8 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
       DstSeaSt_WaveFieldTypeData%PWaveDynP0 = SrcSeaSt_WaveFieldTypeData%PWaveDynP0
    end if
    if (allocated(SrcSeaSt_WaveFieldTypeData%PWaveAcc0)) then
-      LB(1:4) = lbound(SrcSeaSt_WaveFieldTypeData%PWaveAcc0)
-      UB(1:4) = ubound(SrcSeaSt_WaveFieldTypeData%PWaveAcc0)
+      LB(1:4) = lbound(SrcSeaSt_WaveFieldTypeData%PWaveAcc0, kind=B8Ki)
+      UB(1:4) = ubound(SrcSeaSt_WaveFieldTypeData%PWaveAcc0, kind=B8Ki)
       if (.not. allocated(DstSeaSt_WaveFieldTypeData%PWaveAcc0)) then
          allocate(DstSeaSt_WaveFieldTypeData%PWaveAcc0(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -188,8 +188,8 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
       DstSeaSt_WaveFieldTypeData%PWaveAcc0 = SrcSeaSt_WaveFieldTypeData%PWaveAcc0
    end if
    if (allocated(SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0)) then
-      LB(1:4) = lbound(SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0)
-      UB(1:4) = ubound(SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0)
+      LB(1:4) = lbound(SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0, kind=B8Ki)
+      UB(1:4) = ubound(SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0, kind=B8Ki)
       if (.not. allocated(DstSeaSt_WaveFieldTypeData%PWaveAccMCF0)) then
          allocate(DstSeaSt_WaveFieldTypeData%PWaveAccMCF0(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -200,8 +200,8 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
       DstSeaSt_WaveFieldTypeData%PWaveAccMCF0 = SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0
    end if
    if (allocated(SrcSeaSt_WaveFieldTypeData%PWaveVel0)) then
-      LB(1:4) = lbound(SrcSeaSt_WaveFieldTypeData%PWaveVel0)
-      UB(1:4) = ubound(SrcSeaSt_WaveFieldTypeData%PWaveVel0)
+      LB(1:4) = lbound(SrcSeaSt_WaveFieldTypeData%PWaveVel0, kind=B8Ki)
+      UB(1:4) = ubound(SrcSeaSt_WaveFieldTypeData%PWaveVel0, kind=B8Ki)
       if (.not. allocated(DstSeaSt_WaveFieldTypeData%PWaveVel0)) then
          allocate(DstSeaSt_WaveFieldTypeData%PWaveVel0(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -212,8 +212,8 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
       DstSeaSt_WaveFieldTypeData%PWaveVel0 = SrcSeaSt_WaveFieldTypeData%PWaveVel0
    end if
    if (allocated(SrcSeaSt_WaveFieldTypeData%WaveElev0)) then
-      LB(1:1) = lbound(SrcSeaSt_WaveFieldTypeData%WaveElev0)
-      UB(1:1) = ubound(SrcSeaSt_WaveFieldTypeData%WaveElev0)
+      LB(1:1) = lbound(SrcSeaSt_WaveFieldTypeData%WaveElev0, kind=B8Ki)
+      UB(1:1) = ubound(SrcSeaSt_WaveFieldTypeData%WaveElev0, kind=B8Ki)
       if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveElev0)) then
          allocate(DstSeaSt_WaveFieldTypeData%WaveElev0(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -224,8 +224,8 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
       DstSeaSt_WaveFieldTypeData%WaveElev0 = SrcSeaSt_WaveFieldTypeData%WaveElev0
    end if
    if (allocated(SrcSeaSt_WaveFieldTypeData%WaveElev1)) then
-      LB(1:3) = lbound(SrcSeaSt_WaveFieldTypeData%WaveElev1)
-      UB(1:3) = ubound(SrcSeaSt_WaveFieldTypeData%WaveElev1)
+      LB(1:3) = lbound(SrcSeaSt_WaveFieldTypeData%WaveElev1, kind=B8Ki)
+      UB(1:3) = ubound(SrcSeaSt_WaveFieldTypeData%WaveElev1, kind=B8Ki)
       if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveElev1)) then
          allocate(DstSeaSt_WaveFieldTypeData%WaveElev1(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -236,8 +236,8 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
       DstSeaSt_WaveFieldTypeData%WaveElev1 = SrcSeaSt_WaveFieldTypeData%WaveElev1
    end if
    if (allocated(SrcSeaSt_WaveFieldTypeData%WaveElev2)) then
-      LB(1:3) = lbound(SrcSeaSt_WaveFieldTypeData%WaveElev2)
-      UB(1:3) = ubound(SrcSeaSt_WaveFieldTypeData%WaveElev2)
+      LB(1:3) = lbound(SrcSeaSt_WaveFieldTypeData%WaveElev2, kind=B8Ki)
+      UB(1:3) = ubound(SrcSeaSt_WaveFieldTypeData%WaveElev2, kind=B8Ki)
       if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveElev2)) then
          allocate(DstSeaSt_WaveFieldTypeData%WaveElev2(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -254,8 +254,8 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
    DstSeaSt_WaveFieldTypeData%EffWtrDpth = SrcSeaSt_WaveFieldTypeData%EffWtrDpth
    DstSeaSt_WaveFieldTypeData%MSL2SWL = SrcSeaSt_WaveFieldTypeData%MSL2SWL
    if (allocated(SrcSeaSt_WaveFieldTypeData%WaveElevC)) then
-      LB(1:3) = lbound(SrcSeaSt_WaveFieldTypeData%WaveElevC)
-      UB(1:3) = ubound(SrcSeaSt_WaveFieldTypeData%WaveElevC)
+      LB(1:3) = lbound(SrcSeaSt_WaveFieldTypeData%WaveElevC, kind=B8Ki)
+      UB(1:3) = ubound(SrcSeaSt_WaveFieldTypeData%WaveElevC, kind=B8Ki)
       if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveElevC)) then
          allocate(DstSeaSt_WaveFieldTypeData%WaveElevC(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -266,8 +266,8 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
       DstSeaSt_WaveFieldTypeData%WaveElevC = SrcSeaSt_WaveFieldTypeData%WaveElevC
    end if
    if (allocated(SrcSeaSt_WaveFieldTypeData%WaveElevC0)) then
-      LB(1:2) = lbound(SrcSeaSt_WaveFieldTypeData%WaveElevC0)
-      UB(1:2) = ubound(SrcSeaSt_WaveFieldTypeData%WaveElevC0)
+      LB(1:2) = lbound(SrcSeaSt_WaveFieldTypeData%WaveElevC0, kind=B8Ki)
+      UB(1:2) = ubound(SrcSeaSt_WaveFieldTypeData%WaveElevC0, kind=B8Ki)
       if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveElevC0)) then
          allocate(DstSeaSt_WaveFieldTypeData%WaveElevC0(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -278,8 +278,8 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
       DstSeaSt_WaveFieldTypeData%WaveElevC0 = SrcSeaSt_WaveFieldTypeData%WaveElevC0
    end if
    if (allocated(SrcSeaSt_WaveFieldTypeData%WaveDirArr)) then
-      LB(1:1) = lbound(SrcSeaSt_WaveFieldTypeData%WaveDirArr)
-      UB(1:1) = ubound(SrcSeaSt_WaveFieldTypeData%WaveDirArr)
+      LB(1:1) = lbound(SrcSeaSt_WaveFieldTypeData%WaveDirArr, kind=B8Ki)
+      UB(1:1) = ubound(SrcSeaSt_WaveFieldTypeData%WaveDirArr, kind=B8Ki)
       if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveDirArr)) then
          allocate(DstSeaSt_WaveFieldTypeData%WaveDirArr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -378,62 +378,62 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%WaveTime))
    if (allocated(InData%WaveTime)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveTime), ubound(InData%WaveTime))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveTime, kind=B8Ki), ubound(InData%WaveTime, kind=B8Ki))
       call RegPack(Buf, InData%WaveTime)
    end if
    call RegPack(Buf, allocated(InData%WaveDynP))
    if (allocated(InData%WaveDynP)) then
-      call RegPackBounds(Buf, 4, lbound(InData%WaveDynP), ubound(InData%WaveDynP))
+      call RegPackBounds(Buf, 4, lbound(InData%WaveDynP, kind=B8Ki), ubound(InData%WaveDynP, kind=B8Ki))
       call RegPack(Buf, InData%WaveDynP)
    end if
    call RegPack(Buf, allocated(InData%WaveAcc))
    if (allocated(InData%WaveAcc)) then
-      call RegPackBounds(Buf, 5, lbound(InData%WaveAcc), ubound(InData%WaveAcc))
+      call RegPackBounds(Buf, 5, lbound(InData%WaveAcc, kind=B8Ki), ubound(InData%WaveAcc, kind=B8Ki))
       call RegPack(Buf, InData%WaveAcc)
    end if
    call RegPack(Buf, allocated(InData%WaveAccMCF))
    if (allocated(InData%WaveAccMCF)) then
-      call RegPackBounds(Buf, 5, lbound(InData%WaveAccMCF), ubound(InData%WaveAccMCF))
+      call RegPackBounds(Buf, 5, lbound(InData%WaveAccMCF, kind=B8Ki), ubound(InData%WaveAccMCF, kind=B8Ki))
       call RegPack(Buf, InData%WaveAccMCF)
    end if
    call RegPack(Buf, allocated(InData%WaveVel))
    if (allocated(InData%WaveVel)) then
-      call RegPackBounds(Buf, 5, lbound(InData%WaveVel), ubound(InData%WaveVel))
+      call RegPackBounds(Buf, 5, lbound(InData%WaveVel, kind=B8Ki), ubound(InData%WaveVel, kind=B8Ki))
       call RegPack(Buf, InData%WaveVel)
    end if
    call RegPack(Buf, allocated(InData%PWaveDynP0))
    if (allocated(InData%PWaveDynP0)) then
-      call RegPackBounds(Buf, 3, lbound(InData%PWaveDynP0), ubound(InData%PWaveDynP0))
+      call RegPackBounds(Buf, 3, lbound(InData%PWaveDynP0, kind=B8Ki), ubound(InData%PWaveDynP0, kind=B8Ki))
       call RegPack(Buf, InData%PWaveDynP0)
    end if
    call RegPack(Buf, allocated(InData%PWaveAcc0))
    if (allocated(InData%PWaveAcc0)) then
-      call RegPackBounds(Buf, 4, lbound(InData%PWaveAcc0), ubound(InData%PWaveAcc0))
+      call RegPackBounds(Buf, 4, lbound(InData%PWaveAcc0, kind=B8Ki), ubound(InData%PWaveAcc0, kind=B8Ki))
       call RegPack(Buf, InData%PWaveAcc0)
    end if
    call RegPack(Buf, allocated(InData%PWaveAccMCF0))
    if (allocated(InData%PWaveAccMCF0)) then
-      call RegPackBounds(Buf, 4, lbound(InData%PWaveAccMCF0), ubound(InData%PWaveAccMCF0))
+      call RegPackBounds(Buf, 4, lbound(InData%PWaveAccMCF0, kind=B8Ki), ubound(InData%PWaveAccMCF0, kind=B8Ki))
       call RegPack(Buf, InData%PWaveAccMCF0)
    end if
    call RegPack(Buf, allocated(InData%PWaveVel0))
    if (allocated(InData%PWaveVel0)) then
-      call RegPackBounds(Buf, 4, lbound(InData%PWaveVel0), ubound(InData%PWaveVel0))
+      call RegPackBounds(Buf, 4, lbound(InData%PWaveVel0, kind=B8Ki), ubound(InData%PWaveVel0, kind=B8Ki))
       call RegPack(Buf, InData%PWaveVel0)
    end if
    call RegPack(Buf, allocated(InData%WaveElev0))
    if (allocated(InData%WaveElev0)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveElev0), ubound(InData%WaveElev0))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveElev0, kind=B8Ki), ubound(InData%WaveElev0, kind=B8Ki))
       call RegPack(Buf, InData%WaveElev0)
    end if
    call RegPack(Buf, allocated(InData%WaveElev1))
    if (allocated(InData%WaveElev1)) then
-      call RegPackBounds(Buf, 3, lbound(InData%WaveElev1), ubound(InData%WaveElev1))
+      call RegPackBounds(Buf, 3, lbound(InData%WaveElev1, kind=B8Ki), ubound(InData%WaveElev1, kind=B8Ki))
       call RegPack(Buf, InData%WaveElev1)
    end if
    call RegPack(Buf, allocated(InData%WaveElev2))
    if (allocated(InData%WaveElev2)) then
-      call RegPackBounds(Buf, 3, lbound(InData%WaveElev2), ubound(InData%WaveElev2))
+      call RegPackBounds(Buf, 3, lbound(InData%WaveElev2, kind=B8Ki), ubound(InData%WaveElev2, kind=B8Ki))
       call RegPack(Buf, InData%WaveElev2)
    end if
    call SeaSt_Interp_PackParam(Buf, InData%SeaSt_Interp_p) 
@@ -442,17 +442,17 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, Indata)
    call RegPack(Buf, InData%MSL2SWL)
    call RegPack(Buf, allocated(InData%WaveElevC))
    if (allocated(InData%WaveElevC)) then
-      call RegPackBounds(Buf, 3, lbound(InData%WaveElevC), ubound(InData%WaveElevC))
+      call RegPackBounds(Buf, 3, lbound(InData%WaveElevC, kind=B8Ki), ubound(InData%WaveElevC, kind=B8Ki))
       call RegPack(Buf, InData%WaveElevC)
    end if
    call RegPack(Buf, allocated(InData%WaveElevC0))
    if (allocated(InData%WaveElevC0)) then
-      call RegPackBounds(Buf, 2, lbound(InData%WaveElevC0), ubound(InData%WaveElevC0))
+      call RegPackBounds(Buf, 2, lbound(InData%WaveElevC0, kind=B8Ki), ubound(InData%WaveElevC0, kind=B8Ki))
       call RegPack(Buf, InData%WaveElevC0)
    end if
    call RegPack(Buf, allocated(InData%WaveDirArr))
    if (allocated(InData%WaveDirArr)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveDirArr), ubound(InData%WaveDirArr))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveDirArr, kind=B8Ki), ubound(InData%WaveDirArr, kind=B8Ki))
       call RegPack(Buf, InData%WaveDirArr)
    end if
    call RegPack(Buf, InData%hasCurrField)
@@ -488,7 +488,7 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(SeaSt_WaveFieldType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_WaveField_UnPackSeaSt_WaveFieldType'
-   integer(IntKi)  :: LB(5), UB(5)
+   integer(B8Ki)   :: LB(5), UB(5)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(IntKi)  :: PtrIdx

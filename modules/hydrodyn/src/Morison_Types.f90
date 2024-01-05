@@ -549,15 +549,15 @@ subroutine Morison_CopyFilledGroupType(SrcFilledGroupTypeData, DstFilledGroupTyp
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Morison_CopyFilledGroupType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstFilledGroupTypeData%FillNumM = SrcFilledGroupTypeData%FillNumM
    if (allocated(SrcFilledGroupTypeData%FillMList)) then
-      LB(1:1) = lbound(SrcFilledGroupTypeData%FillMList)
-      UB(1:1) = ubound(SrcFilledGroupTypeData%FillMList)
+      LB(1:1) = lbound(SrcFilledGroupTypeData%FillMList, kind=B8Ki)
+      UB(1:1) = ubound(SrcFilledGroupTypeData%FillMList, kind=B8Ki)
       if (.not. allocated(DstFilledGroupTypeData%FillMList)) then
          allocate(DstFilledGroupTypeData%FillMList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -592,7 +592,7 @@ subroutine Morison_PackFilledGroupType(Buf, Indata)
    call RegPack(Buf, InData%FillNumM)
    call RegPack(Buf, allocated(InData%FillMList))
    if (allocated(InData%FillMList)) then
-      call RegPackBounds(Buf, 1, lbound(InData%FillMList), ubound(InData%FillMList))
+      call RegPackBounds(Buf, 1, lbound(InData%FillMList, kind=B8Ki), ubound(InData%FillMList, kind=B8Ki))
       call RegPack(Buf, InData%FillMList)
    end if
    call RegPack(Buf, InData%FillFSLoc)
@@ -605,7 +605,7 @@ subroutine Morison_UnPackFilledGroupType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Morison_FilledGroupType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Morison_UnPackFilledGroupType'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -801,15 +801,15 @@ subroutine Morison_CopyMemberInputType(SrcMemberInputTypeData, DstMemberInputTyp
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Morison_CopyMemberInputType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstMemberInputTypeData%MemberID = SrcMemberInputTypeData%MemberID
    if (allocated(SrcMemberInputTypeData%NodeIndx)) then
-      LB(1:1) = lbound(SrcMemberInputTypeData%NodeIndx)
-      UB(1:1) = ubound(SrcMemberInputTypeData%NodeIndx)
+      LB(1:1) = lbound(SrcMemberInputTypeData%NodeIndx, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberInputTypeData%NodeIndx, kind=B8Ki)
       if (.not. allocated(DstMemberInputTypeData%NodeIndx)) then
          allocate(DstMemberInputTypeData%NodeIndx(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -859,7 +859,7 @@ subroutine Morison_PackMemberInputType(Buf, Indata)
    call RegPack(Buf, InData%MemberID)
    call RegPack(Buf, allocated(InData%NodeIndx))
    if (allocated(InData%NodeIndx)) then
-      call RegPackBounds(Buf, 1, lbound(InData%NodeIndx), ubound(InData%NodeIndx))
+      call RegPackBounds(Buf, 1, lbound(InData%NodeIndx, kind=B8Ki), ubound(InData%NodeIndx, kind=B8Ki))
       call RegPack(Buf, InData%NodeIndx)
    end if
    call RegPack(Buf, InData%MJointID1)
@@ -887,7 +887,7 @@ subroutine Morison_UnPackMemberInputType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Morison_MemberInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Morison_UnPackMemberInputType'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -1046,14 +1046,14 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Morison_CopyMemberType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcMemberTypeData%NodeIndx)) then
-      LB(1:1) = lbound(SrcMemberTypeData%NodeIndx)
-      UB(1:1) = ubound(SrcMemberTypeData%NodeIndx)
+      LB(1:1) = lbound(SrcMemberTypeData%NodeIndx, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%NodeIndx, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%NodeIndx)) then
          allocate(DstMemberTypeData%NodeIndx(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1072,8 +1072,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
    DstMemberTypeData%kkt = SrcMemberTypeData%kkt
    DstMemberTypeData%Ak = SrcMemberTypeData%Ak
    if (allocated(SrcMemberTypeData%R)) then
-      LB(1:1) = lbound(SrcMemberTypeData%R)
-      UB(1:1) = ubound(SrcMemberTypeData%R)
+      LB(1:1) = lbound(SrcMemberTypeData%R, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%R, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%R)) then
          allocate(DstMemberTypeData%R(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1084,8 +1084,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%R = SrcMemberTypeData%R
    end if
    if (allocated(SrcMemberTypeData%RMG)) then
-      LB(1:1) = lbound(SrcMemberTypeData%RMG)
-      UB(1:1) = ubound(SrcMemberTypeData%RMG)
+      LB(1:1) = lbound(SrcMemberTypeData%RMG, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%RMG, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%RMG)) then
          allocate(DstMemberTypeData%RMG(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1096,8 +1096,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%RMG = SrcMemberTypeData%RMG
    end if
    if (allocated(SrcMemberTypeData%RMGB)) then
-      LB(1:1) = lbound(SrcMemberTypeData%RMGB)
-      UB(1:1) = ubound(SrcMemberTypeData%RMGB)
+      LB(1:1) = lbound(SrcMemberTypeData%RMGB, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%RMGB, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%RMGB)) then
          allocate(DstMemberTypeData%RMGB(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1108,8 +1108,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%RMGB = SrcMemberTypeData%RMGB
    end if
    if (allocated(SrcMemberTypeData%Rin)) then
-      LB(1:1) = lbound(SrcMemberTypeData%Rin)
-      UB(1:1) = ubound(SrcMemberTypeData%Rin)
+      LB(1:1) = lbound(SrcMemberTypeData%Rin, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%Rin, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%Rin)) then
          allocate(DstMemberTypeData%Rin(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1120,8 +1120,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%Rin = SrcMemberTypeData%Rin
    end if
    if (allocated(SrcMemberTypeData%tMG)) then
-      LB(1:1) = lbound(SrcMemberTypeData%tMG)
-      UB(1:1) = ubound(SrcMemberTypeData%tMG)
+      LB(1:1) = lbound(SrcMemberTypeData%tMG, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%tMG, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%tMG)) then
          allocate(DstMemberTypeData%tMG(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1132,8 +1132,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%tMG = SrcMemberTypeData%tMG
    end if
    if (allocated(SrcMemberTypeData%MGdensity)) then
-      LB(1:1) = lbound(SrcMemberTypeData%MGdensity)
-      UB(1:1) = ubound(SrcMemberTypeData%MGdensity)
+      LB(1:1) = lbound(SrcMemberTypeData%MGdensity, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%MGdensity, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%MGdensity)) then
          allocate(DstMemberTypeData%MGdensity(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1144,8 +1144,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%MGdensity = SrcMemberTypeData%MGdensity
    end if
    if (allocated(SrcMemberTypeData%dRdl_mg)) then
-      LB(1:1) = lbound(SrcMemberTypeData%dRdl_mg)
-      UB(1:1) = ubound(SrcMemberTypeData%dRdl_mg)
+      LB(1:1) = lbound(SrcMemberTypeData%dRdl_mg, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%dRdl_mg, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%dRdl_mg)) then
          allocate(DstMemberTypeData%dRdl_mg(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1156,8 +1156,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%dRdl_mg = SrcMemberTypeData%dRdl_mg
    end if
    if (allocated(SrcMemberTypeData%dRdl_mg_b)) then
-      LB(1:1) = lbound(SrcMemberTypeData%dRdl_mg_b)
-      UB(1:1) = ubound(SrcMemberTypeData%dRdl_mg_b)
+      LB(1:1) = lbound(SrcMemberTypeData%dRdl_mg_b, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%dRdl_mg_b, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%dRdl_mg_b)) then
          allocate(DstMemberTypeData%dRdl_mg_b(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1168,8 +1168,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%dRdl_mg_b = SrcMemberTypeData%dRdl_mg_b
    end if
    if (allocated(SrcMemberTypeData%dRdl_in)) then
-      LB(1:1) = lbound(SrcMemberTypeData%dRdl_in)
-      UB(1:1) = ubound(SrcMemberTypeData%dRdl_in)
+      LB(1:1) = lbound(SrcMemberTypeData%dRdl_in, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%dRdl_in, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%dRdl_in)) then
          allocate(DstMemberTypeData%dRdl_in(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1191,8 +1191,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
    DstMemberTypeData%doEndBuoyancy = SrcMemberTypeData%doEndBuoyancy
    DstMemberTypeData%memfloodstatus = SrcMemberTypeData%memfloodstatus
    if (allocated(SrcMemberTypeData%floodstatus)) then
-      LB(1:1) = lbound(SrcMemberTypeData%floodstatus)
-      UB(1:1) = ubound(SrcMemberTypeData%floodstatus)
+      LB(1:1) = lbound(SrcMemberTypeData%floodstatus, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%floodstatus, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%floodstatus)) then
          allocate(DstMemberTypeData%floodstatus(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1203,8 +1203,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%floodstatus = SrcMemberTypeData%floodstatus
    end if
    if (allocated(SrcMemberTypeData%alpha)) then
-      LB(1:1) = lbound(SrcMemberTypeData%alpha)
-      UB(1:1) = ubound(SrcMemberTypeData%alpha)
+      LB(1:1) = lbound(SrcMemberTypeData%alpha, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%alpha, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%alpha)) then
          allocate(DstMemberTypeData%alpha(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1215,8 +1215,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%alpha = SrcMemberTypeData%alpha
    end if
    if (allocated(SrcMemberTypeData%alpha_fb)) then
-      LB(1:1) = lbound(SrcMemberTypeData%alpha_fb)
-      UB(1:1) = ubound(SrcMemberTypeData%alpha_fb)
+      LB(1:1) = lbound(SrcMemberTypeData%alpha_fb, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%alpha_fb, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%alpha_fb)) then
          allocate(DstMemberTypeData%alpha_fb(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1227,8 +1227,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%alpha_fb = SrcMemberTypeData%alpha_fb
    end if
    if (allocated(SrcMemberTypeData%alpha_fb_star)) then
-      LB(1:1) = lbound(SrcMemberTypeData%alpha_fb_star)
-      UB(1:1) = ubound(SrcMemberTypeData%alpha_fb_star)
+      LB(1:1) = lbound(SrcMemberTypeData%alpha_fb_star, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%alpha_fb_star, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%alpha_fb_star)) then
          allocate(DstMemberTypeData%alpha_fb_star(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1239,8 +1239,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%alpha_fb_star = SrcMemberTypeData%alpha_fb_star
    end if
    if (allocated(SrcMemberTypeData%Cd)) then
-      LB(1:1) = lbound(SrcMemberTypeData%Cd)
-      UB(1:1) = ubound(SrcMemberTypeData%Cd)
+      LB(1:1) = lbound(SrcMemberTypeData%Cd, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%Cd, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%Cd)) then
          allocate(DstMemberTypeData%Cd(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1251,8 +1251,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%Cd = SrcMemberTypeData%Cd
    end if
    if (allocated(SrcMemberTypeData%Ca)) then
-      LB(1:1) = lbound(SrcMemberTypeData%Ca)
-      UB(1:1) = ubound(SrcMemberTypeData%Ca)
+      LB(1:1) = lbound(SrcMemberTypeData%Ca, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%Ca, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%Ca)) then
          allocate(DstMemberTypeData%Ca(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1263,8 +1263,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%Ca = SrcMemberTypeData%Ca
    end if
    if (allocated(SrcMemberTypeData%Cp)) then
-      LB(1:1) = lbound(SrcMemberTypeData%Cp)
-      UB(1:1) = ubound(SrcMemberTypeData%Cp)
+      LB(1:1) = lbound(SrcMemberTypeData%Cp, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%Cp, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%Cp)) then
          allocate(DstMemberTypeData%Cp(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1275,8 +1275,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%Cp = SrcMemberTypeData%Cp
    end if
    if (allocated(SrcMemberTypeData%AxCd)) then
-      LB(1:1) = lbound(SrcMemberTypeData%AxCd)
-      UB(1:1) = ubound(SrcMemberTypeData%AxCd)
+      LB(1:1) = lbound(SrcMemberTypeData%AxCd, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%AxCd, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%AxCd)) then
          allocate(DstMemberTypeData%AxCd(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1287,8 +1287,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%AxCd = SrcMemberTypeData%AxCd
    end if
    if (allocated(SrcMemberTypeData%AxCa)) then
-      LB(1:1) = lbound(SrcMemberTypeData%AxCa)
-      UB(1:1) = ubound(SrcMemberTypeData%AxCa)
+      LB(1:1) = lbound(SrcMemberTypeData%AxCa, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%AxCa, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%AxCa)) then
          allocate(DstMemberTypeData%AxCa(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1299,8 +1299,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%AxCa = SrcMemberTypeData%AxCa
    end if
    if (allocated(SrcMemberTypeData%AxCp)) then
-      LB(1:1) = lbound(SrcMemberTypeData%AxCp)
-      UB(1:1) = ubound(SrcMemberTypeData%AxCp)
+      LB(1:1) = lbound(SrcMemberTypeData%AxCp, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%AxCp, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%AxCp)) then
          allocate(DstMemberTypeData%AxCp(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1311,8 +1311,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%AxCp = SrcMemberTypeData%AxCp
    end if
    if (allocated(SrcMemberTypeData%Cb)) then
-      LB(1:1) = lbound(SrcMemberTypeData%Cb)
-      UB(1:1) = ubound(SrcMemberTypeData%Cb)
+      LB(1:1) = lbound(SrcMemberTypeData%Cb, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%Cb, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%Cb)) then
          allocate(DstMemberTypeData%Cb(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1323,8 +1323,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%Cb = SrcMemberTypeData%Cb
    end if
    if (allocated(SrcMemberTypeData%m_fb_l)) then
-      LB(1:1) = lbound(SrcMemberTypeData%m_fb_l)
-      UB(1:1) = ubound(SrcMemberTypeData%m_fb_l)
+      LB(1:1) = lbound(SrcMemberTypeData%m_fb_l, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%m_fb_l, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%m_fb_l)) then
          allocate(DstMemberTypeData%m_fb_l(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1335,8 +1335,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%m_fb_l = SrcMemberTypeData%m_fb_l
    end if
    if (allocated(SrcMemberTypeData%m_fb_u)) then
-      LB(1:1) = lbound(SrcMemberTypeData%m_fb_u)
-      UB(1:1) = ubound(SrcMemberTypeData%m_fb_u)
+      LB(1:1) = lbound(SrcMemberTypeData%m_fb_u, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%m_fb_u, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%m_fb_u)) then
          allocate(DstMemberTypeData%m_fb_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1347,8 +1347,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%m_fb_u = SrcMemberTypeData%m_fb_u
    end if
    if (allocated(SrcMemberTypeData%h_cfb_l)) then
-      LB(1:1) = lbound(SrcMemberTypeData%h_cfb_l)
-      UB(1:1) = ubound(SrcMemberTypeData%h_cfb_l)
+      LB(1:1) = lbound(SrcMemberTypeData%h_cfb_l, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%h_cfb_l, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%h_cfb_l)) then
          allocate(DstMemberTypeData%h_cfb_l(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1359,8 +1359,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%h_cfb_l = SrcMemberTypeData%h_cfb_l
    end if
    if (allocated(SrcMemberTypeData%h_cfb_u)) then
-      LB(1:1) = lbound(SrcMemberTypeData%h_cfb_u)
-      UB(1:1) = ubound(SrcMemberTypeData%h_cfb_u)
+      LB(1:1) = lbound(SrcMemberTypeData%h_cfb_u, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%h_cfb_u, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%h_cfb_u)) then
          allocate(DstMemberTypeData%h_cfb_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1371,8 +1371,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%h_cfb_u = SrcMemberTypeData%h_cfb_u
    end if
    if (allocated(SrcMemberTypeData%I_lfb_l)) then
-      LB(1:1) = lbound(SrcMemberTypeData%I_lfb_l)
-      UB(1:1) = ubound(SrcMemberTypeData%I_lfb_l)
+      LB(1:1) = lbound(SrcMemberTypeData%I_lfb_l, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%I_lfb_l, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%I_lfb_l)) then
          allocate(DstMemberTypeData%I_lfb_l(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1383,8 +1383,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%I_lfb_l = SrcMemberTypeData%I_lfb_l
    end if
    if (allocated(SrcMemberTypeData%I_lfb_u)) then
-      LB(1:1) = lbound(SrcMemberTypeData%I_lfb_u)
-      UB(1:1) = ubound(SrcMemberTypeData%I_lfb_u)
+      LB(1:1) = lbound(SrcMemberTypeData%I_lfb_u, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%I_lfb_u, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%I_lfb_u)) then
          allocate(DstMemberTypeData%I_lfb_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1395,8 +1395,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%I_lfb_u = SrcMemberTypeData%I_lfb_u
    end if
    if (allocated(SrcMemberTypeData%I_rfb_l)) then
-      LB(1:1) = lbound(SrcMemberTypeData%I_rfb_l)
-      UB(1:1) = ubound(SrcMemberTypeData%I_rfb_l)
+      LB(1:1) = lbound(SrcMemberTypeData%I_rfb_l, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%I_rfb_l, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%I_rfb_l)) then
          allocate(DstMemberTypeData%I_rfb_l(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1407,8 +1407,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%I_rfb_l = SrcMemberTypeData%I_rfb_l
    end if
    if (allocated(SrcMemberTypeData%I_rfb_u)) then
-      LB(1:1) = lbound(SrcMemberTypeData%I_rfb_u)
-      UB(1:1) = ubound(SrcMemberTypeData%I_rfb_u)
+      LB(1:1) = lbound(SrcMemberTypeData%I_rfb_u, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%I_rfb_u, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%I_rfb_u)) then
          allocate(DstMemberTypeData%I_rfb_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1419,8 +1419,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%I_rfb_u = SrcMemberTypeData%I_rfb_u
    end if
    if (allocated(SrcMemberTypeData%m_mg_l)) then
-      LB(1:1) = lbound(SrcMemberTypeData%m_mg_l)
-      UB(1:1) = ubound(SrcMemberTypeData%m_mg_l)
+      LB(1:1) = lbound(SrcMemberTypeData%m_mg_l, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%m_mg_l, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%m_mg_l)) then
          allocate(DstMemberTypeData%m_mg_l(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1431,8 +1431,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%m_mg_l = SrcMemberTypeData%m_mg_l
    end if
    if (allocated(SrcMemberTypeData%m_mg_u)) then
-      LB(1:1) = lbound(SrcMemberTypeData%m_mg_u)
-      UB(1:1) = ubound(SrcMemberTypeData%m_mg_u)
+      LB(1:1) = lbound(SrcMemberTypeData%m_mg_u, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%m_mg_u, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%m_mg_u)) then
          allocate(DstMemberTypeData%m_mg_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1443,8 +1443,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%m_mg_u = SrcMemberTypeData%m_mg_u
    end if
    if (allocated(SrcMemberTypeData%h_cmg_l)) then
-      LB(1:1) = lbound(SrcMemberTypeData%h_cmg_l)
-      UB(1:1) = ubound(SrcMemberTypeData%h_cmg_l)
+      LB(1:1) = lbound(SrcMemberTypeData%h_cmg_l, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%h_cmg_l, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%h_cmg_l)) then
          allocate(DstMemberTypeData%h_cmg_l(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1455,8 +1455,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%h_cmg_l = SrcMemberTypeData%h_cmg_l
    end if
    if (allocated(SrcMemberTypeData%h_cmg_u)) then
-      LB(1:1) = lbound(SrcMemberTypeData%h_cmg_u)
-      UB(1:1) = ubound(SrcMemberTypeData%h_cmg_u)
+      LB(1:1) = lbound(SrcMemberTypeData%h_cmg_u, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%h_cmg_u, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%h_cmg_u)) then
          allocate(DstMemberTypeData%h_cmg_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1467,8 +1467,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%h_cmg_u = SrcMemberTypeData%h_cmg_u
    end if
    if (allocated(SrcMemberTypeData%I_lmg_l)) then
-      LB(1:1) = lbound(SrcMemberTypeData%I_lmg_l)
-      UB(1:1) = ubound(SrcMemberTypeData%I_lmg_l)
+      LB(1:1) = lbound(SrcMemberTypeData%I_lmg_l, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%I_lmg_l, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%I_lmg_l)) then
          allocate(DstMemberTypeData%I_lmg_l(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1479,8 +1479,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%I_lmg_l = SrcMemberTypeData%I_lmg_l
    end if
    if (allocated(SrcMemberTypeData%I_lmg_u)) then
-      LB(1:1) = lbound(SrcMemberTypeData%I_lmg_u)
-      UB(1:1) = ubound(SrcMemberTypeData%I_lmg_u)
+      LB(1:1) = lbound(SrcMemberTypeData%I_lmg_u, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%I_lmg_u, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%I_lmg_u)) then
          allocate(DstMemberTypeData%I_lmg_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1491,8 +1491,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%I_lmg_u = SrcMemberTypeData%I_lmg_u
    end if
    if (allocated(SrcMemberTypeData%I_rmg_l)) then
-      LB(1:1) = lbound(SrcMemberTypeData%I_rmg_l)
-      UB(1:1) = ubound(SrcMemberTypeData%I_rmg_l)
+      LB(1:1) = lbound(SrcMemberTypeData%I_rmg_l, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%I_rmg_l, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%I_rmg_l)) then
          allocate(DstMemberTypeData%I_rmg_l(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1503,8 +1503,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%I_rmg_l = SrcMemberTypeData%I_rmg_l
    end if
    if (allocated(SrcMemberTypeData%I_rmg_u)) then
-      LB(1:1) = lbound(SrcMemberTypeData%I_rmg_u)
-      UB(1:1) = ubound(SrcMemberTypeData%I_rmg_u)
+      LB(1:1) = lbound(SrcMemberTypeData%I_rmg_u, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%I_rmg_u, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%I_rmg_u)) then
          allocate(DstMemberTypeData%I_rmg_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1515,8 +1515,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%I_rmg_u = SrcMemberTypeData%I_rmg_u
    end if
    if (allocated(SrcMemberTypeData%Cfl_fb)) then
-      LB(1:1) = lbound(SrcMemberTypeData%Cfl_fb)
-      UB(1:1) = ubound(SrcMemberTypeData%Cfl_fb)
+      LB(1:1) = lbound(SrcMemberTypeData%Cfl_fb, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%Cfl_fb, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%Cfl_fb)) then
          allocate(DstMemberTypeData%Cfl_fb(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1527,8 +1527,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%Cfl_fb = SrcMemberTypeData%Cfl_fb
    end if
    if (allocated(SrcMemberTypeData%Cfr_fb)) then
-      LB(1:1) = lbound(SrcMemberTypeData%Cfr_fb)
-      UB(1:1) = ubound(SrcMemberTypeData%Cfr_fb)
+      LB(1:1) = lbound(SrcMemberTypeData%Cfr_fb, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%Cfr_fb, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%Cfr_fb)) then
          allocate(DstMemberTypeData%Cfr_fb(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1539,8 +1539,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%Cfr_fb = SrcMemberTypeData%Cfr_fb
    end if
    if (allocated(SrcMemberTypeData%CM0_fb)) then
-      LB(1:1) = lbound(SrcMemberTypeData%CM0_fb)
-      UB(1:1) = ubound(SrcMemberTypeData%CM0_fb)
+      LB(1:1) = lbound(SrcMemberTypeData%CM0_fb, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%CM0_fb, kind=B8Ki)
       if (.not. allocated(DstMemberTypeData%CM0_fb)) then
          allocate(DstMemberTypeData%CM0_fb(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1699,7 +1699,7 @@ subroutine Morison_PackMemberType(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%NodeIndx))
    if (allocated(InData%NodeIndx)) then
-      call RegPackBounds(Buf, 1, lbound(InData%NodeIndx), ubound(InData%NodeIndx))
+      call RegPackBounds(Buf, 1, lbound(InData%NodeIndx, kind=B8Ki), ubound(InData%NodeIndx, kind=B8Ki))
       call RegPack(Buf, InData%NodeIndx)
    end if
    call RegPack(Buf, InData%MemberID)
@@ -1712,47 +1712,47 @@ subroutine Morison_PackMemberType(Buf, Indata)
    call RegPack(Buf, InData%Ak)
    call RegPack(Buf, allocated(InData%R))
    if (allocated(InData%R)) then
-      call RegPackBounds(Buf, 1, lbound(InData%R), ubound(InData%R))
+      call RegPackBounds(Buf, 1, lbound(InData%R, kind=B8Ki), ubound(InData%R, kind=B8Ki))
       call RegPack(Buf, InData%R)
    end if
    call RegPack(Buf, allocated(InData%RMG))
    if (allocated(InData%RMG)) then
-      call RegPackBounds(Buf, 1, lbound(InData%RMG), ubound(InData%RMG))
+      call RegPackBounds(Buf, 1, lbound(InData%RMG, kind=B8Ki), ubound(InData%RMG, kind=B8Ki))
       call RegPack(Buf, InData%RMG)
    end if
    call RegPack(Buf, allocated(InData%RMGB))
    if (allocated(InData%RMGB)) then
-      call RegPackBounds(Buf, 1, lbound(InData%RMGB), ubound(InData%RMGB))
+      call RegPackBounds(Buf, 1, lbound(InData%RMGB, kind=B8Ki), ubound(InData%RMGB, kind=B8Ki))
       call RegPack(Buf, InData%RMGB)
    end if
    call RegPack(Buf, allocated(InData%Rin))
    if (allocated(InData%Rin)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Rin), ubound(InData%Rin))
+      call RegPackBounds(Buf, 1, lbound(InData%Rin, kind=B8Ki), ubound(InData%Rin, kind=B8Ki))
       call RegPack(Buf, InData%Rin)
    end if
    call RegPack(Buf, allocated(InData%tMG))
    if (allocated(InData%tMG)) then
-      call RegPackBounds(Buf, 1, lbound(InData%tMG), ubound(InData%tMG))
+      call RegPackBounds(Buf, 1, lbound(InData%tMG, kind=B8Ki), ubound(InData%tMG, kind=B8Ki))
       call RegPack(Buf, InData%tMG)
    end if
    call RegPack(Buf, allocated(InData%MGdensity))
    if (allocated(InData%MGdensity)) then
-      call RegPackBounds(Buf, 1, lbound(InData%MGdensity), ubound(InData%MGdensity))
+      call RegPackBounds(Buf, 1, lbound(InData%MGdensity, kind=B8Ki), ubound(InData%MGdensity, kind=B8Ki))
       call RegPack(Buf, InData%MGdensity)
    end if
    call RegPack(Buf, allocated(InData%dRdl_mg))
    if (allocated(InData%dRdl_mg)) then
-      call RegPackBounds(Buf, 1, lbound(InData%dRdl_mg), ubound(InData%dRdl_mg))
+      call RegPackBounds(Buf, 1, lbound(InData%dRdl_mg, kind=B8Ki), ubound(InData%dRdl_mg, kind=B8Ki))
       call RegPack(Buf, InData%dRdl_mg)
    end if
    call RegPack(Buf, allocated(InData%dRdl_mg_b))
    if (allocated(InData%dRdl_mg_b)) then
-      call RegPackBounds(Buf, 1, lbound(InData%dRdl_mg_b), ubound(InData%dRdl_mg_b))
+      call RegPackBounds(Buf, 1, lbound(InData%dRdl_mg_b, kind=B8Ki), ubound(InData%dRdl_mg_b, kind=B8Ki))
       call RegPack(Buf, InData%dRdl_mg_b)
    end if
    call RegPack(Buf, allocated(InData%dRdl_in))
    if (allocated(InData%dRdl_in)) then
-      call RegPackBounds(Buf, 1, lbound(InData%dRdl_in), ubound(InData%dRdl_in))
+      call RegPackBounds(Buf, 1, lbound(InData%dRdl_in, kind=B8Ki), ubound(InData%dRdl_in, kind=B8Ki))
       call RegPack(Buf, InData%dRdl_in)
    end if
    call RegPack(Buf, InData%Vinner)
@@ -1768,152 +1768,152 @@ subroutine Morison_PackMemberType(Buf, Indata)
    call RegPack(Buf, InData%memfloodstatus)
    call RegPack(Buf, allocated(InData%floodstatus))
    if (allocated(InData%floodstatus)) then
-      call RegPackBounds(Buf, 1, lbound(InData%floodstatus), ubound(InData%floodstatus))
+      call RegPackBounds(Buf, 1, lbound(InData%floodstatus, kind=B8Ki), ubound(InData%floodstatus, kind=B8Ki))
       call RegPack(Buf, InData%floodstatus)
    end if
    call RegPack(Buf, allocated(InData%alpha))
    if (allocated(InData%alpha)) then
-      call RegPackBounds(Buf, 1, lbound(InData%alpha), ubound(InData%alpha))
+      call RegPackBounds(Buf, 1, lbound(InData%alpha, kind=B8Ki), ubound(InData%alpha, kind=B8Ki))
       call RegPack(Buf, InData%alpha)
    end if
    call RegPack(Buf, allocated(InData%alpha_fb))
    if (allocated(InData%alpha_fb)) then
-      call RegPackBounds(Buf, 1, lbound(InData%alpha_fb), ubound(InData%alpha_fb))
+      call RegPackBounds(Buf, 1, lbound(InData%alpha_fb, kind=B8Ki), ubound(InData%alpha_fb, kind=B8Ki))
       call RegPack(Buf, InData%alpha_fb)
    end if
    call RegPack(Buf, allocated(InData%alpha_fb_star))
    if (allocated(InData%alpha_fb_star)) then
-      call RegPackBounds(Buf, 1, lbound(InData%alpha_fb_star), ubound(InData%alpha_fb_star))
+      call RegPackBounds(Buf, 1, lbound(InData%alpha_fb_star, kind=B8Ki), ubound(InData%alpha_fb_star, kind=B8Ki))
       call RegPack(Buf, InData%alpha_fb_star)
    end if
    call RegPack(Buf, allocated(InData%Cd))
    if (allocated(InData%Cd)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Cd), ubound(InData%Cd))
+      call RegPackBounds(Buf, 1, lbound(InData%Cd, kind=B8Ki), ubound(InData%Cd, kind=B8Ki))
       call RegPack(Buf, InData%Cd)
    end if
    call RegPack(Buf, allocated(InData%Ca))
    if (allocated(InData%Ca)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Ca), ubound(InData%Ca))
+      call RegPackBounds(Buf, 1, lbound(InData%Ca, kind=B8Ki), ubound(InData%Ca, kind=B8Ki))
       call RegPack(Buf, InData%Ca)
    end if
    call RegPack(Buf, allocated(InData%Cp))
    if (allocated(InData%Cp)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Cp), ubound(InData%Cp))
+      call RegPackBounds(Buf, 1, lbound(InData%Cp, kind=B8Ki), ubound(InData%Cp, kind=B8Ki))
       call RegPack(Buf, InData%Cp)
    end if
    call RegPack(Buf, allocated(InData%AxCd))
    if (allocated(InData%AxCd)) then
-      call RegPackBounds(Buf, 1, lbound(InData%AxCd), ubound(InData%AxCd))
+      call RegPackBounds(Buf, 1, lbound(InData%AxCd, kind=B8Ki), ubound(InData%AxCd, kind=B8Ki))
       call RegPack(Buf, InData%AxCd)
    end if
    call RegPack(Buf, allocated(InData%AxCa))
    if (allocated(InData%AxCa)) then
-      call RegPackBounds(Buf, 1, lbound(InData%AxCa), ubound(InData%AxCa))
+      call RegPackBounds(Buf, 1, lbound(InData%AxCa, kind=B8Ki), ubound(InData%AxCa, kind=B8Ki))
       call RegPack(Buf, InData%AxCa)
    end if
    call RegPack(Buf, allocated(InData%AxCp))
    if (allocated(InData%AxCp)) then
-      call RegPackBounds(Buf, 1, lbound(InData%AxCp), ubound(InData%AxCp))
+      call RegPackBounds(Buf, 1, lbound(InData%AxCp, kind=B8Ki), ubound(InData%AxCp, kind=B8Ki))
       call RegPack(Buf, InData%AxCp)
    end if
    call RegPack(Buf, allocated(InData%Cb))
    if (allocated(InData%Cb)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Cb), ubound(InData%Cb))
+      call RegPackBounds(Buf, 1, lbound(InData%Cb, kind=B8Ki), ubound(InData%Cb, kind=B8Ki))
       call RegPack(Buf, InData%Cb)
    end if
    call RegPack(Buf, allocated(InData%m_fb_l))
    if (allocated(InData%m_fb_l)) then
-      call RegPackBounds(Buf, 1, lbound(InData%m_fb_l), ubound(InData%m_fb_l))
+      call RegPackBounds(Buf, 1, lbound(InData%m_fb_l, kind=B8Ki), ubound(InData%m_fb_l, kind=B8Ki))
       call RegPack(Buf, InData%m_fb_l)
    end if
    call RegPack(Buf, allocated(InData%m_fb_u))
    if (allocated(InData%m_fb_u)) then
-      call RegPackBounds(Buf, 1, lbound(InData%m_fb_u), ubound(InData%m_fb_u))
+      call RegPackBounds(Buf, 1, lbound(InData%m_fb_u, kind=B8Ki), ubound(InData%m_fb_u, kind=B8Ki))
       call RegPack(Buf, InData%m_fb_u)
    end if
    call RegPack(Buf, allocated(InData%h_cfb_l))
    if (allocated(InData%h_cfb_l)) then
-      call RegPackBounds(Buf, 1, lbound(InData%h_cfb_l), ubound(InData%h_cfb_l))
+      call RegPackBounds(Buf, 1, lbound(InData%h_cfb_l, kind=B8Ki), ubound(InData%h_cfb_l, kind=B8Ki))
       call RegPack(Buf, InData%h_cfb_l)
    end if
    call RegPack(Buf, allocated(InData%h_cfb_u))
    if (allocated(InData%h_cfb_u)) then
-      call RegPackBounds(Buf, 1, lbound(InData%h_cfb_u), ubound(InData%h_cfb_u))
+      call RegPackBounds(Buf, 1, lbound(InData%h_cfb_u, kind=B8Ki), ubound(InData%h_cfb_u, kind=B8Ki))
       call RegPack(Buf, InData%h_cfb_u)
    end if
    call RegPack(Buf, allocated(InData%I_lfb_l))
    if (allocated(InData%I_lfb_l)) then
-      call RegPackBounds(Buf, 1, lbound(InData%I_lfb_l), ubound(InData%I_lfb_l))
+      call RegPackBounds(Buf, 1, lbound(InData%I_lfb_l, kind=B8Ki), ubound(InData%I_lfb_l, kind=B8Ki))
       call RegPack(Buf, InData%I_lfb_l)
    end if
    call RegPack(Buf, allocated(InData%I_lfb_u))
    if (allocated(InData%I_lfb_u)) then
-      call RegPackBounds(Buf, 1, lbound(InData%I_lfb_u), ubound(InData%I_lfb_u))
+      call RegPackBounds(Buf, 1, lbound(InData%I_lfb_u, kind=B8Ki), ubound(InData%I_lfb_u, kind=B8Ki))
       call RegPack(Buf, InData%I_lfb_u)
    end if
    call RegPack(Buf, allocated(InData%I_rfb_l))
    if (allocated(InData%I_rfb_l)) then
-      call RegPackBounds(Buf, 1, lbound(InData%I_rfb_l), ubound(InData%I_rfb_l))
+      call RegPackBounds(Buf, 1, lbound(InData%I_rfb_l, kind=B8Ki), ubound(InData%I_rfb_l, kind=B8Ki))
       call RegPack(Buf, InData%I_rfb_l)
    end if
    call RegPack(Buf, allocated(InData%I_rfb_u))
    if (allocated(InData%I_rfb_u)) then
-      call RegPackBounds(Buf, 1, lbound(InData%I_rfb_u), ubound(InData%I_rfb_u))
+      call RegPackBounds(Buf, 1, lbound(InData%I_rfb_u, kind=B8Ki), ubound(InData%I_rfb_u, kind=B8Ki))
       call RegPack(Buf, InData%I_rfb_u)
    end if
    call RegPack(Buf, allocated(InData%m_mg_l))
    if (allocated(InData%m_mg_l)) then
-      call RegPackBounds(Buf, 1, lbound(InData%m_mg_l), ubound(InData%m_mg_l))
+      call RegPackBounds(Buf, 1, lbound(InData%m_mg_l, kind=B8Ki), ubound(InData%m_mg_l, kind=B8Ki))
       call RegPack(Buf, InData%m_mg_l)
    end if
    call RegPack(Buf, allocated(InData%m_mg_u))
    if (allocated(InData%m_mg_u)) then
-      call RegPackBounds(Buf, 1, lbound(InData%m_mg_u), ubound(InData%m_mg_u))
+      call RegPackBounds(Buf, 1, lbound(InData%m_mg_u, kind=B8Ki), ubound(InData%m_mg_u, kind=B8Ki))
       call RegPack(Buf, InData%m_mg_u)
    end if
    call RegPack(Buf, allocated(InData%h_cmg_l))
    if (allocated(InData%h_cmg_l)) then
-      call RegPackBounds(Buf, 1, lbound(InData%h_cmg_l), ubound(InData%h_cmg_l))
+      call RegPackBounds(Buf, 1, lbound(InData%h_cmg_l, kind=B8Ki), ubound(InData%h_cmg_l, kind=B8Ki))
       call RegPack(Buf, InData%h_cmg_l)
    end if
    call RegPack(Buf, allocated(InData%h_cmg_u))
    if (allocated(InData%h_cmg_u)) then
-      call RegPackBounds(Buf, 1, lbound(InData%h_cmg_u), ubound(InData%h_cmg_u))
+      call RegPackBounds(Buf, 1, lbound(InData%h_cmg_u, kind=B8Ki), ubound(InData%h_cmg_u, kind=B8Ki))
       call RegPack(Buf, InData%h_cmg_u)
    end if
    call RegPack(Buf, allocated(InData%I_lmg_l))
    if (allocated(InData%I_lmg_l)) then
-      call RegPackBounds(Buf, 1, lbound(InData%I_lmg_l), ubound(InData%I_lmg_l))
+      call RegPackBounds(Buf, 1, lbound(InData%I_lmg_l, kind=B8Ki), ubound(InData%I_lmg_l, kind=B8Ki))
       call RegPack(Buf, InData%I_lmg_l)
    end if
    call RegPack(Buf, allocated(InData%I_lmg_u))
    if (allocated(InData%I_lmg_u)) then
-      call RegPackBounds(Buf, 1, lbound(InData%I_lmg_u), ubound(InData%I_lmg_u))
+      call RegPackBounds(Buf, 1, lbound(InData%I_lmg_u, kind=B8Ki), ubound(InData%I_lmg_u, kind=B8Ki))
       call RegPack(Buf, InData%I_lmg_u)
    end if
    call RegPack(Buf, allocated(InData%I_rmg_l))
    if (allocated(InData%I_rmg_l)) then
-      call RegPackBounds(Buf, 1, lbound(InData%I_rmg_l), ubound(InData%I_rmg_l))
+      call RegPackBounds(Buf, 1, lbound(InData%I_rmg_l, kind=B8Ki), ubound(InData%I_rmg_l, kind=B8Ki))
       call RegPack(Buf, InData%I_rmg_l)
    end if
    call RegPack(Buf, allocated(InData%I_rmg_u))
    if (allocated(InData%I_rmg_u)) then
-      call RegPackBounds(Buf, 1, lbound(InData%I_rmg_u), ubound(InData%I_rmg_u))
+      call RegPackBounds(Buf, 1, lbound(InData%I_rmg_u, kind=B8Ki), ubound(InData%I_rmg_u, kind=B8Ki))
       call RegPack(Buf, InData%I_rmg_u)
    end if
    call RegPack(Buf, allocated(InData%Cfl_fb))
    if (allocated(InData%Cfl_fb)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Cfl_fb), ubound(InData%Cfl_fb))
+      call RegPackBounds(Buf, 1, lbound(InData%Cfl_fb, kind=B8Ki), ubound(InData%Cfl_fb, kind=B8Ki))
       call RegPack(Buf, InData%Cfl_fb)
    end if
    call RegPack(Buf, allocated(InData%Cfr_fb))
    if (allocated(InData%Cfr_fb)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Cfr_fb), ubound(InData%Cfr_fb))
+      call RegPackBounds(Buf, 1, lbound(InData%Cfr_fb, kind=B8Ki), ubound(InData%Cfr_fb, kind=B8Ki))
       call RegPack(Buf, InData%Cfr_fb)
    end if
    call RegPack(Buf, allocated(InData%CM0_fb))
    if (allocated(InData%CM0_fb)) then
-      call RegPackBounds(Buf, 1, lbound(InData%CM0_fb), ubound(InData%CM0_fb))
+      call RegPackBounds(Buf, 1, lbound(InData%CM0_fb, kind=B8Ki), ubound(InData%CM0_fb, kind=B8Ki))
       call RegPack(Buf, InData%CM0_fb)
    end if
    call RegPack(Buf, InData%MGvolume)
@@ -1934,7 +1934,7 @@ subroutine Morison_UnPackMemberType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Morison_MemberType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Morison_UnPackMemberType'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -2566,14 +2566,14 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Morison_CopyMemberLoads'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcMemberLoadsData%F_D)) then
-      LB(1:2) = lbound(SrcMemberLoadsData%F_D)
-      UB(1:2) = ubound(SrcMemberLoadsData%F_D)
+      LB(1:2) = lbound(SrcMemberLoadsData%F_D, kind=B8Ki)
+      UB(1:2) = ubound(SrcMemberLoadsData%F_D, kind=B8Ki)
       if (.not. allocated(DstMemberLoadsData%F_D)) then
          allocate(DstMemberLoadsData%F_D(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2584,8 +2584,8 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
       DstMemberLoadsData%F_D = SrcMemberLoadsData%F_D
    end if
    if (allocated(SrcMemberLoadsData%F_I)) then
-      LB(1:2) = lbound(SrcMemberLoadsData%F_I)
-      UB(1:2) = ubound(SrcMemberLoadsData%F_I)
+      LB(1:2) = lbound(SrcMemberLoadsData%F_I, kind=B8Ki)
+      UB(1:2) = ubound(SrcMemberLoadsData%F_I, kind=B8Ki)
       if (.not. allocated(DstMemberLoadsData%F_I)) then
          allocate(DstMemberLoadsData%F_I(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2596,8 +2596,8 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
       DstMemberLoadsData%F_I = SrcMemberLoadsData%F_I
    end if
    if (allocated(SrcMemberLoadsData%F_A)) then
-      LB(1:2) = lbound(SrcMemberLoadsData%F_A)
-      UB(1:2) = ubound(SrcMemberLoadsData%F_A)
+      LB(1:2) = lbound(SrcMemberLoadsData%F_A, kind=B8Ki)
+      UB(1:2) = ubound(SrcMemberLoadsData%F_A, kind=B8Ki)
       if (.not. allocated(DstMemberLoadsData%F_A)) then
          allocate(DstMemberLoadsData%F_A(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2608,8 +2608,8 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
       DstMemberLoadsData%F_A = SrcMemberLoadsData%F_A
    end if
    if (allocated(SrcMemberLoadsData%F_B)) then
-      LB(1:2) = lbound(SrcMemberLoadsData%F_B)
-      UB(1:2) = ubound(SrcMemberLoadsData%F_B)
+      LB(1:2) = lbound(SrcMemberLoadsData%F_B, kind=B8Ki)
+      UB(1:2) = ubound(SrcMemberLoadsData%F_B, kind=B8Ki)
       if (.not. allocated(DstMemberLoadsData%F_B)) then
          allocate(DstMemberLoadsData%F_B(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2620,8 +2620,8 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
       DstMemberLoadsData%F_B = SrcMemberLoadsData%F_B
    end if
    if (allocated(SrcMemberLoadsData%F_BF)) then
-      LB(1:2) = lbound(SrcMemberLoadsData%F_BF)
-      UB(1:2) = ubound(SrcMemberLoadsData%F_BF)
+      LB(1:2) = lbound(SrcMemberLoadsData%F_BF, kind=B8Ki)
+      UB(1:2) = ubound(SrcMemberLoadsData%F_BF, kind=B8Ki)
       if (.not. allocated(DstMemberLoadsData%F_BF)) then
          allocate(DstMemberLoadsData%F_BF(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2632,8 +2632,8 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
       DstMemberLoadsData%F_BF = SrcMemberLoadsData%F_BF
    end if
    if (allocated(SrcMemberLoadsData%F_If)) then
-      LB(1:2) = lbound(SrcMemberLoadsData%F_If)
-      UB(1:2) = ubound(SrcMemberLoadsData%F_If)
+      LB(1:2) = lbound(SrcMemberLoadsData%F_If, kind=B8Ki)
+      UB(1:2) = ubound(SrcMemberLoadsData%F_If, kind=B8Ki)
       if (.not. allocated(DstMemberLoadsData%F_If)) then
          allocate(DstMemberLoadsData%F_If(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2644,8 +2644,8 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
       DstMemberLoadsData%F_If = SrcMemberLoadsData%F_If
    end if
    if (allocated(SrcMemberLoadsData%F_WMG)) then
-      LB(1:2) = lbound(SrcMemberLoadsData%F_WMG)
-      UB(1:2) = ubound(SrcMemberLoadsData%F_WMG)
+      LB(1:2) = lbound(SrcMemberLoadsData%F_WMG, kind=B8Ki)
+      UB(1:2) = ubound(SrcMemberLoadsData%F_WMG, kind=B8Ki)
       if (.not. allocated(DstMemberLoadsData%F_WMG)) then
          allocate(DstMemberLoadsData%F_WMG(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2656,8 +2656,8 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
       DstMemberLoadsData%F_WMG = SrcMemberLoadsData%F_WMG
    end if
    if (allocated(SrcMemberLoadsData%F_IMG)) then
-      LB(1:2) = lbound(SrcMemberLoadsData%F_IMG)
-      UB(1:2) = ubound(SrcMemberLoadsData%F_IMG)
+      LB(1:2) = lbound(SrcMemberLoadsData%F_IMG, kind=B8Ki)
+      UB(1:2) = ubound(SrcMemberLoadsData%F_IMG, kind=B8Ki)
       if (.not. allocated(DstMemberLoadsData%F_IMG)) then
          allocate(DstMemberLoadsData%F_IMG(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2668,8 +2668,8 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
       DstMemberLoadsData%F_IMG = SrcMemberLoadsData%F_IMG
    end if
    if (allocated(SrcMemberLoadsData%FV)) then
-      LB(1:2) = lbound(SrcMemberLoadsData%FV)
-      UB(1:2) = ubound(SrcMemberLoadsData%FV)
+      LB(1:2) = lbound(SrcMemberLoadsData%FV, kind=B8Ki)
+      UB(1:2) = ubound(SrcMemberLoadsData%FV, kind=B8Ki)
       if (.not. allocated(DstMemberLoadsData%FV)) then
          allocate(DstMemberLoadsData%FV(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2680,8 +2680,8 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
       DstMemberLoadsData%FV = SrcMemberLoadsData%FV
    end if
    if (allocated(SrcMemberLoadsData%FA)) then
-      LB(1:2) = lbound(SrcMemberLoadsData%FA)
-      UB(1:2) = ubound(SrcMemberLoadsData%FA)
+      LB(1:2) = lbound(SrcMemberLoadsData%FA, kind=B8Ki)
+      UB(1:2) = ubound(SrcMemberLoadsData%FA, kind=B8Ki)
       if (.not. allocated(DstMemberLoadsData%FA)) then
          allocate(DstMemberLoadsData%FA(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2692,8 +2692,8 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
       DstMemberLoadsData%FA = SrcMemberLoadsData%FA
    end if
    if (allocated(SrcMemberLoadsData%F_DP)) then
-      LB(1:2) = lbound(SrcMemberLoadsData%F_DP)
-      UB(1:2) = ubound(SrcMemberLoadsData%F_DP)
+      LB(1:2) = lbound(SrcMemberLoadsData%F_DP, kind=B8Ki)
+      UB(1:2) = ubound(SrcMemberLoadsData%F_DP, kind=B8Ki)
       if (.not. allocated(DstMemberLoadsData%F_DP)) then
          allocate(DstMemberLoadsData%F_DP(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2754,57 +2754,57 @@ subroutine Morison_PackMemberLoads(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%F_D))
    if (allocated(InData%F_D)) then
-      call RegPackBounds(Buf, 2, lbound(InData%F_D), ubound(InData%F_D))
+      call RegPackBounds(Buf, 2, lbound(InData%F_D, kind=B8Ki), ubound(InData%F_D, kind=B8Ki))
       call RegPack(Buf, InData%F_D)
    end if
    call RegPack(Buf, allocated(InData%F_I))
    if (allocated(InData%F_I)) then
-      call RegPackBounds(Buf, 2, lbound(InData%F_I), ubound(InData%F_I))
+      call RegPackBounds(Buf, 2, lbound(InData%F_I, kind=B8Ki), ubound(InData%F_I, kind=B8Ki))
       call RegPack(Buf, InData%F_I)
    end if
    call RegPack(Buf, allocated(InData%F_A))
    if (allocated(InData%F_A)) then
-      call RegPackBounds(Buf, 2, lbound(InData%F_A), ubound(InData%F_A))
+      call RegPackBounds(Buf, 2, lbound(InData%F_A, kind=B8Ki), ubound(InData%F_A, kind=B8Ki))
       call RegPack(Buf, InData%F_A)
    end if
    call RegPack(Buf, allocated(InData%F_B))
    if (allocated(InData%F_B)) then
-      call RegPackBounds(Buf, 2, lbound(InData%F_B), ubound(InData%F_B))
+      call RegPackBounds(Buf, 2, lbound(InData%F_B, kind=B8Ki), ubound(InData%F_B, kind=B8Ki))
       call RegPack(Buf, InData%F_B)
    end if
    call RegPack(Buf, allocated(InData%F_BF))
    if (allocated(InData%F_BF)) then
-      call RegPackBounds(Buf, 2, lbound(InData%F_BF), ubound(InData%F_BF))
+      call RegPackBounds(Buf, 2, lbound(InData%F_BF, kind=B8Ki), ubound(InData%F_BF, kind=B8Ki))
       call RegPack(Buf, InData%F_BF)
    end if
    call RegPack(Buf, allocated(InData%F_If))
    if (allocated(InData%F_If)) then
-      call RegPackBounds(Buf, 2, lbound(InData%F_If), ubound(InData%F_If))
+      call RegPackBounds(Buf, 2, lbound(InData%F_If, kind=B8Ki), ubound(InData%F_If, kind=B8Ki))
       call RegPack(Buf, InData%F_If)
    end if
    call RegPack(Buf, allocated(InData%F_WMG))
    if (allocated(InData%F_WMG)) then
-      call RegPackBounds(Buf, 2, lbound(InData%F_WMG), ubound(InData%F_WMG))
+      call RegPackBounds(Buf, 2, lbound(InData%F_WMG, kind=B8Ki), ubound(InData%F_WMG, kind=B8Ki))
       call RegPack(Buf, InData%F_WMG)
    end if
    call RegPack(Buf, allocated(InData%F_IMG))
    if (allocated(InData%F_IMG)) then
-      call RegPackBounds(Buf, 2, lbound(InData%F_IMG), ubound(InData%F_IMG))
+      call RegPackBounds(Buf, 2, lbound(InData%F_IMG, kind=B8Ki), ubound(InData%F_IMG, kind=B8Ki))
       call RegPack(Buf, InData%F_IMG)
    end if
    call RegPack(Buf, allocated(InData%FV))
    if (allocated(InData%FV)) then
-      call RegPackBounds(Buf, 2, lbound(InData%FV), ubound(InData%FV))
+      call RegPackBounds(Buf, 2, lbound(InData%FV, kind=B8Ki), ubound(InData%FV, kind=B8Ki))
       call RegPack(Buf, InData%FV)
    end if
    call RegPack(Buf, allocated(InData%FA))
    if (allocated(InData%FA)) then
-      call RegPackBounds(Buf, 2, lbound(InData%FA), ubound(InData%FA))
+      call RegPackBounds(Buf, 2, lbound(InData%FA, kind=B8Ki), ubound(InData%FA, kind=B8Ki))
       call RegPack(Buf, InData%FA)
    end if
    call RegPack(Buf, allocated(InData%F_DP))
    if (allocated(InData%F_DP)) then
-      call RegPackBounds(Buf, 2, lbound(InData%F_DP), ubound(InData%F_DP))
+      call RegPackBounds(Buf, 2, lbound(InData%F_DP, kind=B8Ki), ubound(InData%F_DP, kind=B8Ki))
       call RegPack(Buf, InData%F_DP)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2814,7 +2814,7 @@ subroutine Morison_UnPackMemberLoads(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Morison_MemberLoads), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Morison_UnPackMemberLoads'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -3182,7 +3182,7 @@ subroutine Morison_CopyMOutput(SrcMOutputData, DstMOutputData, CtrlCode, ErrStat
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Morison_CopyMOutput'
    ErrStat = ErrID_None
@@ -3190,8 +3190,8 @@ subroutine Morison_CopyMOutput(SrcMOutputData, DstMOutputData, CtrlCode, ErrStat
    DstMOutputData%MemberID = SrcMOutputData%MemberID
    DstMOutputData%NOutLoc = SrcMOutputData%NOutLoc
    if (allocated(SrcMOutputData%NodeLocs)) then
-      LB(1:1) = lbound(SrcMOutputData%NodeLocs)
-      UB(1:1) = ubound(SrcMOutputData%NodeLocs)
+      LB(1:1) = lbound(SrcMOutputData%NodeLocs, kind=B8Ki)
+      UB(1:1) = ubound(SrcMOutputData%NodeLocs, kind=B8Ki)
       if (.not. allocated(DstMOutputData%NodeLocs)) then
          allocate(DstMOutputData%NodeLocs(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3203,8 +3203,8 @@ subroutine Morison_CopyMOutput(SrcMOutputData, DstMOutputData, CtrlCode, ErrStat
    end if
    DstMOutputData%MemberIDIndx = SrcMOutputData%MemberIDIndx
    if (allocated(SrcMOutputData%MeshIndx1)) then
-      LB(1:1) = lbound(SrcMOutputData%MeshIndx1)
-      UB(1:1) = ubound(SrcMOutputData%MeshIndx1)
+      LB(1:1) = lbound(SrcMOutputData%MeshIndx1, kind=B8Ki)
+      UB(1:1) = ubound(SrcMOutputData%MeshIndx1, kind=B8Ki)
       if (.not. allocated(DstMOutputData%MeshIndx1)) then
          allocate(DstMOutputData%MeshIndx1(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3215,8 +3215,8 @@ subroutine Morison_CopyMOutput(SrcMOutputData, DstMOutputData, CtrlCode, ErrStat
       DstMOutputData%MeshIndx1 = SrcMOutputData%MeshIndx1
    end if
    if (allocated(SrcMOutputData%MeshIndx2)) then
-      LB(1:1) = lbound(SrcMOutputData%MeshIndx2)
-      UB(1:1) = ubound(SrcMOutputData%MeshIndx2)
+      LB(1:1) = lbound(SrcMOutputData%MeshIndx2, kind=B8Ki)
+      UB(1:1) = ubound(SrcMOutputData%MeshIndx2, kind=B8Ki)
       if (.not. allocated(DstMOutputData%MeshIndx2)) then
          allocate(DstMOutputData%MeshIndx2(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3227,8 +3227,8 @@ subroutine Morison_CopyMOutput(SrcMOutputData, DstMOutputData, CtrlCode, ErrStat
       DstMOutputData%MeshIndx2 = SrcMOutputData%MeshIndx2
    end if
    if (allocated(SrcMOutputData%MemberIndx1)) then
-      LB(1:1) = lbound(SrcMOutputData%MemberIndx1)
-      UB(1:1) = ubound(SrcMOutputData%MemberIndx1)
+      LB(1:1) = lbound(SrcMOutputData%MemberIndx1, kind=B8Ki)
+      UB(1:1) = ubound(SrcMOutputData%MemberIndx1, kind=B8Ki)
       if (.not. allocated(DstMOutputData%MemberIndx1)) then
          allocate(DstMOutputData%MemberIndx1(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3239,8 +3239,8 @@ subroutine Morison_CopyMOutput(SrcMOutputData, DstMOutputData, CtrlCode, ErrStat
       DstMOutputData%MemberIndx1 = SrcMOutputData%MemberIndx1
    end if
    if (allocated(SrcMOutputData%MemberIndx2)) then
-      LB(1:1) = lbound(SrcMOutputData%MemberIndx2)
-      UB(1:1) = ubound(SrcMOutputData%MemberIndx2)
+      LB(1:1) = lbound(SrcMOutputData%MemberIndx2, kind=B8Ki)
+      UB(1:1) = ubound(SrcMOutputData%MemberIndx2, kind=B8Ki)
       if (.not. allocated(DstMOutputData%MemberIndx2)) then
          allocate(DstMOutputData%MemberIndx2(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3251,8 +3251,8 @@ subroutine Morison_CopyMOutput(SrcMOutputData, DstMOutputData, CtrlCode, ErrStat
       DstMOutputData%MemberIndx2 = SrcMOutputData%MemberIndx2
    end if
    if (allocated(SrcMOutputData%s)) then
-      LB(1:1) = lbound(SrcMOutputData%s)
-      UB(1:1) = ubound(SrcMOutputData%s)
+      LB(1:1) = lbound(SrcMOutputData%s, kind=B8Ki)
+      UB(1:1) = ubound(SrcMOutputData%s, kind=B8Ki)
       if (.not. allocated(DstMOutputData%s)) then
          allocate(DstMOutputData%s(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3300,33 +3300,33 @@ subroutine Morison_PackMOutput(Buf, Indata)
    call RegPack(Buf, InData%NOutLoc)
    call RegPack(Buf, allocated(InData%NodeLocs))
    if (allocated(InData%NodeLocs)) then
-      call RegPackBounds(Buf, 1, lbound(InData%NodeLocs), ubound(InData%NodeLocs))
+      call RegPackBounds(Buf, 1, lbound(InData%NodeLocs, kind=B8Ki), ubound(InData%NodeLocs, kind=B8Ki))
       call RegPack(Buf, InData%NodeLocs)
    end if
    call RegPack(Buf, InData%MemberIDIndx)
    call RegPack(Buf, allocated(InData%MeshIndx1))
    if (allocated(InData%MeshIndx1)) then
-      call RegPackBounds(Buf, 1, lbound(InData%MeshIndx1), ubound(InData%MeshIndx1))
+      call RegPackBounds(Buf, 1, lbound(InData%MeshIndx1, kind=B8Ki), ubound(InData%MeshIndx1, kind=B8Ki))
       call RegPack(Buf, InData%MeshIndx1)
    end if
    call RegPack(Buf, allocated(InData%MeshIndx2))
    if (allocated(InData%MeshIndx2)) then
-      call RegPackBounds(Buf, 1, lbound(InData%MeshIndx2), ubound(InData%MeshIndx2))
+      call RegPackBounds(Buf, 1, lbound(InData%MeshIndx2, kind=B8Ki), ubound(InData%MeshIndx2, kind=B8Ki))
       call RegPack(Buf, InData%MeshIndx2)
    end if
    call RegPack(Buf, allocated(InData%MemberIndx1))
    if (allocated(InData%MemberIndx1)) then
-      call RegPackBounds(Buf, 1, lbound(InData%MemberIndx1), ubound(InData%MemberIndx1))
+      call RegPackBounds(Buf, 1, lbound(InData%MemberIndx1, kind=B8Ki), ubound(InData%MemberIndx1, kind=B8Ki))
       call RegPack(Buf, InData%MemberIndx1)
    end if
    call RegPack(Buf, allocated(InData%MemberIndx2))
    if (allocated(InData%MemberIndx2)) then
-      call RegPackBounds(Buf, 1, lbound(InData%MemberIndx2), ubound(InData%MemberIndx2))
+      call RegPackBounds(Buf, 1, lbound(InData%MemberIndx2, kind=B8Ki), ubound(InData%MemberIndx2, kind=B8Ki))
       call RegPack(Buf, InData%MemberIndx2)
    end if
    call RegPack(Buf, allocated(InData%s))
    if (allocated(InData%s)) then
-      call RegPackBounds(Buf, 1, lbound(InData%s), ubound(InData%s))
+      call RegPackBounds(Buf, 1, lbound(InData%s, kind=B8Ki), ubound(InData%s, kind=B8Ki))
       call RegPack(Buf, InData%s)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3336,7 +3336,7 @@ subroutine Morison_UnPackMOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Morison_MOutput), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Morison_UnPackMOutput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -3481,8 +3481,8 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Morison_CopyInitInput'
@@ -3494,8 +3494,8 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    DstInitInputData%NJoints = SrcInitInputData%NJoints
    DstInitInputData%NNodes = SrcInitInputData%NNodes
    if (allocated(SrcInitInputData%InpJoints)) then
-      LB(1:1) = lbound(SrcInitInputData%InpJoints)
-      UB(1:1) = ubound(SrcInitInputData%InpJoints)
+      LB(1:1) = lbound(SrcInitInputData%InpJoints, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%InpJoints, kind=B8Ki)
       if (.not. allocated(DstInitInputData%InpJoints)) then
          allocate(DstInitInputData%InpJoints(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3510,8 +3510,8 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
       end do
    end if
    if (allocated(SrcInitInputData%Nodes)) then
-      LB(1:1) = lbound(SrcInitInputData%Nodes)
-      UB(1:1) = ubound(SrcInitInputData%Nodes)
+      LB(1:1) = lbound(SrcInitInputData%Nodes, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%Nodes, kind=B8Ki)
       if (.not. allocated(DstInitInputData%Nodes)) then
          allocate(DstInitInputData%Nodes(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3527,8 +3527,8 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    end if
    DstInitInputData%NAxCoefs = SrcInitInputData%NAxCoefs
    if (allocated(SrcInitInputData%AxialCoefs)) then
-      LB(1:1) = lbound(SrcInitInputData%AxialCoefs)
-      UB(1:1) = ubound(SrcInitInputData%AxialCoefs)
+      LB(1:1) = lbound(SrcInitInputData%AxialCoefs, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%AxialCoefs, kind=B8Ki)
       if (.not. allocated(DstInitInputData%AxialCoefs)) then
          allocate(DstInitInputData%AxialCoefs(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3544,8 +3544,8 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    end if
    DstInitInputData%NPropSets = SrcInitInputData%NPropSets
    if (allocated(SrcInitInputData%MPropSets)) then
-      LB(1:1) = lbound(SrcInitInputData%MPropSets)
-      UB(1:1) = ubound(SrcInitInputData%MPropSets)
+      LB(1:1) = lbound(SrcInitInputData%MPropSets, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%MPropSets, kind=B8Ki)
       if (.not. allocated(DstInitInputData%MPropSets)) then
          allocate(DstInitInputData%MPropSets(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3576,8 +3576,8 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    DstInitInputData%SimplMCF = SrcInitInputData%SimplMCF
    DstInitInputData%NCoefDpth = SrcInitInputData%NCoefDpth
    if (allocated(SrcInitInputData%CoefDpths)) then
-      LB(1:1) = lbound(SrcInitInputData%CoefDpths)
-      UB(1:1) = ubound(SrcInitInputData%CoefDpths)
+      LB(1:1) = lbound(SrcInitInputData%CoefDpths, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%CoefDpths, kind=B8Ki)
       if (.not. allocated(DstInitInputData%CoefDpths)) then
          allocate(DstInitInputData%CoefDpths(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3593,8 +3593,8 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    end if
    DstInitInputData%NCoefMembers = SrcInitInputData%NCoefMembers
    if (allocated(SrcInitInputData%CoefMembers)) then
-      LB(1:1) = lbound(SrcInitInputData%CoefMembers)
-      UB(1:1) = ubound(SrcInitInputData%CoefMembers)
+      LB(1:1) = lbound(SrcInitInputData%CoefMembers, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%CoefMembers, kind=B8Ki)
       if (.not. allocated(DstInitInputData%CoefMembers)) then
          allocate(DstInitInputData%CoefMembers(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3610,8 +3610,8 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    end if
    DstInitInputData%NMembers = SrcInitInputData%NMembers
    if (allocated(SrcInitInputData%InpMembers)) then
-      LB(1:1) = lbound(SrcInitInputData%InpMembers)
-      UB(1:1) = ubound(SrcInitInputData%InpMembers)
+      LB(1:1) = lbound(SrcInitInputData%InpMembers, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%InpMembers, kind=B8Ki)
       if (.not. allocated(DstInitInputData%InpMembers)) then
          allocate(DstInitInputData%InpMembers(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3627,8 +3627,8 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    end if
    DstInitInputData%NFillGroups = SrcInitInputData%NFillGroups
    if (allocated(SrcInitInputData%FilledGroups)) then
-      LB(1:1) = lbound(SrcInitInputData%FilledGroups)
-      UB(1:1) = ubound(SrcInitInputData%FilledGroups)
+      LB(1:1) = lbound(SrcInitInputData%FilledGroups, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%FilledGroups, kind=B8Ki)
       if (.not. allocated(DstInitInputData%FilledGroups)) then
          allocate(DstInitInputData%FilledGroups(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3644,8 +3644,8 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    end if
    DstInitInputData%NMGDepths = SrcInitInputData%NMGDepths
    if (allocated(SrcInitInputData%MGDepths)) then
-      LB(1:1) = lbound(SrcInitInputData%MGDepths)
-      UB(1:1) = ubound(SrcInitInputData%MGDepths)
+      LB(1:1) = lbound(SrcInitInputData%MGDepths, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%MGDepths, kind=B8Ki)
       if (.not. allocated(DstInitInputData%MGDepths)) then
          allocate(DstInitInputData%MGDepths(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3663,8 +3663,8 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    DstInitInputData%MGBottom = SrcInitInputData%MGBottom
    DstInitInputData%NMOutputs = SrcInitInputData%NMOutputs
    if (allocated(SrcInitInputData%MOutLst)) then
-      LB(1:1) = lbound(SrcInitInputData%MOutLst)
-      UB(1:1) = ubound(SrcInitInputData%MOutLst)
+      LB(1:1) = lbound(SrcInitInputData%MOutLst, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%MOutLst, kind=B8Ki)
       if (.not. allocated(DstInitInputData%MOutLst)) then
          allocate(DstInitInputData%MOutLst(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3680,8 +3680,8 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    end if
    DstInitInputData%NJOutputs = SrcInitInputData%NJOutputs
    if (allocated(SrcInitInputData%JOutLst)) then
-      LB(1:1) = lbound(SrcInitInputData%JOutLst)
-      UB(1:1) = ubound(SrcInitInputData%JOutLst)
+      LB(1:1) = lbound(SrcInitInputData%JOutLst, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%JOutLst, kind=B8Ki)
       if (.not. allocated(DstInitInputData%JOutLst)) then
          allocate(DstInitInputData%JOutLst(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3696,8 +3696,8 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
       end do
    end if
    if (allocated(SrcInitInputData%OutList)) then
-      LB(1:1) = lbound(SrcInitInputData%OutList)
-      UB(1:1) = ubound(SrcInitInputData%OutList)
+      LB(1:1) = lbound(SrcInitInputData%OutList, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%OutList, kind=B8Ki)
       if (.not. allocated(DstInitInputData%OutList)) then
          allocate(DstInitInputData%OutList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -3717,16 +3717,16 @@ subroutine Morison_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    type(Morison_InitInputType), intent(inout) :: InitInputData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Morison_DestroyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(InitInputData%InpJoints)) then
-      LB(1:1) = lbound(InitInputData%InpJoints)
-      UB(1:1) = ubound(InitInputData%InpJoints)
+      LB(1:1) = lbound(InitInputData%InpJoints, kind=B8Ki)
+      UB(1:1) = ubound(InitInputData%InpJoints, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_DestroyJointType(InitInputData%InpJoints(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3734,8 +3734,8 @@ subroutine Morison_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
       deallocate(InitInputData%InpJoints)
    end if
    if (allocated(InitInputData%Nodes)) then
-      LB(1:1) = lbound(InitInputData%Nodes)
-      UB(1:1) = ubound(InitInputData%Nodes)
+      LB(1:1) = lbound(InitInputData%Nodes, kind=B8Ki)
+      UB(1:1) = ubound(InitInputData%Nodes, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_DestroyNodeType(InitInputData%Nodes(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3743,8 +3743,8 @@ subroutine Morison_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
       deallocate(InitInputData%Nodes)
    end if
    if (allocated(InitInputData%AxialCoefs)) then
-      LB(1:1) = lbound(InitInputData%AxialCoefs)
-      UB(1:1) = ubound(InitInputData%AxialCoefs)
+      LB(1:1) = lbound(InitInputData%AxialCoefs, kind=B8Ki)
+      UB(1:1) = ubound(InitInputData%AxialCoefs, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_DestroyAxialCoefType(InitInputData%AxialCoefs(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3752,8 +3752,8 @@ subroutine Morison_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
       deallocate(InitInputData%AxialCoefs)
    end if
    if (allocated(InitInputData%MPropSets)) then
-      LB(1:1) = lbound(InitInputData%MPropSets)
-      UB(1:1) = ubound(InitInputData%MPropSets)
+      LB(1:1) = lbound(InitInputData%MPropSets, kind=B8Ki)
+      UB(1:1) = ubound(InitInputData%MPropSets, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_DestroyMemberPropType(InitInputData%MPropSets(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3761,8 +3761,8 @@ subroutine Morison_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
       deallocate(InitInputData%MPropSets)
    end if
    if (allocated(InitInputData%CoefDpths)) then
-      LB(1:1) = lbound(InitInputData%CoefDpths)
-      UB(1:1) = ubound(InitInputData%CoefDpths)
+      LB(1:1) = lbound(InitInputData%CoefDpths, kind=B8Ki)
+      UB(1:1) = ubound(InitInputData%CoefDpths, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_DestroyCoefDpths(InitInputData%CoefDpths(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3770,8 +3770,8 @@ subroutine Morison_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
       deallocate(InitInputData%CoefDpths)
    end if
    if (allocated(InitInputData%CoefMembers)) then
-      LB(1:1) = lbound(InitInputData%CoefMembers)
-      UB(1:1) = ubound(InitInputData%CoefMembers)
+      LB(1:1) = lbound(InitInputData%CoefMembers, kind=B8Ki)
+      UB(1:1) = ubound(InitInputData%CoefMembers, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_DestroyCoefMembers(InitInputData%CoefMembers(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3779,8 +3779,8 @@ subroutine Morison_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
       deallocate(InitInputData%CoefMembers)
    end if
    if (allocated(InitInputData%InpMembers)) then
-      LB(1:1) = lbound(InitInputData%InpMembers)
-      UB(1:1) = ubound(InitInputData%InpMembers)
+      LB(1:1) = lbound(InitInputData%InpMembers, kind=B8Ki)
+      UB(1:1) = ubound(InitInputData%InpMembers, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_DestroyMemberInputType(InitInputData%InpMembers(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3788,8 +3788,8 @@ subroutine Morison_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
       deallocate(InitInputData%InpMembers)
    end if
    if (allocated(InitInputData%FilledGroups)) then
-      LB(1:1) = lbound(InitInputData%FilledGroups)
-      UB(1:1) = ubound(InitInputData%FilledGroups)
+      LB(1:1) = lbound(InitInputData%FilledGroups, kind=B8Ki)
+      UB(1:1) = ubound(InitInputData%FilledGroups, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_DestroyFilledGroupType(InitInputData%FilledGroups(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3797,8 +3797,8 @@ subroutine Morison_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
       deallocate(InitInputData%FilledGroups)
    end if
    if (allocated(InitInputData%MGDepths)) then
-      LB(1:1) = lbound(InitInputData%MGDepths)
-      UB(1:1) = ubound(InitInputData%MGDepths)
+      LB(1:1) = lbound(InitInputData%MGDepths, kind=B8Ki)
+      UB(1:1) = ubound(InitInputData%MGDepths, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_DestroyMGDepthsType(InitInputData%MGDepths(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3806,8 +3806,8 @@ subroutine Morison_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
       deallocate(InitInputData%MGDepths)
    end if
    if (allocated(InitInputData%MOutLst)) then
-      LB(1:1) = lbound(InitInputData%MOutLst)
-      UB(1:1) = ubound(InitInputData%MOutLst)
+      LB(1:1) = lbound(InitInputData%MOutLst, kind=B8Ki)
+      UB(1:1) = ubound(InitInputData%MOutLst, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_DestroyMOutput(InitInputData%MOutLst(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3815,8 +3815,8 @@ subroutine Morison_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
       deallocate(InitInputData%MOutLst)
    end if
    if (allocated(InitInputData%JOutLst)) then
-      LB(1:1) = lbound(InitInputData%JOutLst)
-      UB(1:1) = ubound(InitInputData%JOutLst)
+      LB(1:1) = lbound(InitInputData%JOutLst, kind=B8Ki)
+      UB(1:1) = ubound(InitInputData%JOutLst, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_DestroyJOutput(InitInputData%JOutLst(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3833,8 +3833,8 @@ subroutine Morison_PackInitInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Morison_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Morison_PackInitInput'
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%Gravity)
@@ -3844,18 +3844,18 @@ subroutine Morison_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%NNodes)
    call RegPack(Buf, allocated(InData%InpJoints))
    if (allocated(InData%InpJoints)) then
-      call RegPackBounds(Buf, 1, lbound(InData%InpJoints), ubound(InData%InpJoints))
-      LB(1:1) = lbound(InData%InpJoints)
-      UB(1:1) = ubound(InData%InpJoints)
+      call RegPackBounds(Buf, 1, lbound(InData%InpJoints, kind=B8Ki), ubound(InData%InpJoints, kind=B8Ki))
+      LB(1:1) = lbound(InData%InpJoints, kind=B8Ki)
+      UB(1:1) = ubound(InData%InpJoints, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_PackJointType(Buf, InData%InpJoints(i1)) 
       end do
    end if
    call RegPack(Buf, allocated(InData%Nodes))
    if (allocated(InData%Nodes)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Nodes), ubound(InData%Nodes))
-      LB(1:1) = lbound(InData%Nodes)
-      UB(1:1) = ubound(InData%Nodes)
+      call RegPackBounds(Buf, 1, lbound(InData%Nodes, kind=B8Ki), ubound(InData%Nodes, kind=B8Ki))
+      LB(1:1) = lbound(InData%Nodes, kind=B8Ki)
+      UB(1:1) = ubound(InData%Nodes, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_PackNodeType(Buf, InData%Nodes(i1)) 
       end do
@@ -3863,9 +3863,9 @@ subroutine Morison_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%NAxCoefs)
    call RegPack(Buf, allocated(InData%AxialCoefs))
    if (allocated(InData%AxialCoefs)) then
-      call RegPackBounds(Buf, 1, lbound(InData%AxialCoefs), ubound(InData%AxialCoefs))
-      LB(1:1) = lbound(InData%AxialCoefs)
-      UB(1:1) = ubound(InData%AxialCoefs)
+      call RegPackBounds(Buf, 1, lbound(InData%AxialCoefs, kind=B8Ki), ubound(InData%AxialCoefs, kind=B8Ki))
+      LB(1:1) = lbound(InData%AxialCoefs, kind=B8Ki)
+      UB(1:1) = ubound(InData%AxialCoefs, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_PackAxialCoefType(Buf, InData%AxialCoefs(i1)) 
       end do
@@ -3873,9 +3873,9 @@ subroutine Morison_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%NPropSets)
    call RegPack(Buf, allocated(InData%MPropSets))
    if (allocated(InData%MPropSets)) then
-      call RegPackBounds(Buf, 1, lbound(InData%MPropSets), ubound(InData%MPropSets))
-      LB(1:1) = lbound(InData%MPropSets)
-      UB(1:1) = ubound(InData%MPropSets)
+      call RegPackBounds(Buf, 1, lbound(InData%MPropSets, kind=B8Ki), ubound(InData%MPropSets, kind=B8Ki))
+      LB(1:1) = lbound(InData%MPropSets, kind=B8Ki)
+      UB(1:1) = ubound(InData%MPropSets, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_PackMemberPropType(Buf, InData%MPropSets(i1)) 
       end do
@@ -3898,9 +3898,9 @@ subroutine Morison_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%NCoefDpth)
    call RegPack(Buf, allocated(InData%CoefDpths))
    if (allocated(InData%CoefDpths)) then
-      call RegPackBounds(Buf, 1, lbound(InData%CoefDpths), ubound(InData%CoefDpths))
-      LB(1:1) = lbound(InData%CoefDpths)
-      UB(1:1) = ubound(InData%CoefDpths)
+      call RegPackBounds(Buf, 1, lbound(InData%CoefDpths, kind=B8Ki), ubound(InData%CoefDpths, kind=B8Ki))
+      LB(1:1) = lbound(InData%CoefDpths, kind=B8Ki)
+      UB(1:1) = ubound(InData%CoefDpths, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_PackCoefDpths(Buf, InData%CoefDpths(i1)) 
       end do
@@ -3908,9 +3908,9 @@ subroutine Morison_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%NCoefMembers)
    call RegPack(Buf, allocated(InData%CoefMembers))
    if (allocated(InData%CoefMembers)) then
-      call RegPackBounds(Buf, 1, lbound(InData%CoefMembers), ubound(InData%CoefMembers))
-      LB(1:1) = lbound(InData%CoefMembers)
-      UB(1:1) = ubound(InData%CoefMembers)
+      call RegPackBounds(Buf, 1, lbound(InData%CoefMembers, kind=B8Ki), ubound(InData%CoefMembers, kind=B8Ki))
+      LB(1:1) = lbound(InData%CoefMembers, kind=B8Ki)
+      UB(1:1) = ubound(InData%CoefMembers, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_PackCoefMembers(Buf, InData%CoefMembers(i1)) 
       end do
@@ -3918,9 +3918,9 @@ subroutine Morison_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%NMembers)
    call RegPack(Buf, allocated(InData%InpMembers))
    if (allocated(InData%InpMembers)) then
-      call RegPackBounds(Buf, 1, lbound(InData%InpMembers), ubound(InData%InpMembers))
-      LB(1:1) = lbound(InData%InpMembers)
-      UB(1:1) = ubound(InData%InpMembers)
+      call RegPackBounds(Buf, 1, lbound(InData%InpMembers, kind=B8Ki), ubound(InData%InpMembers, kind=B8Ki))
+      LB(1:1) = lbound(InData%InpMembers, kind=B8Ki)
+      UB(1:1) = ubound(InData%InpMembers, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_PackMemberInputType(Buf, InData%InpMembers(i1)) 
       end do
@@ -3928,9 +3928,9 @@ subroutine Morison_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%NFillGroups)
    call RegPack(Buf, allocated(InData%FilledGroups))
    if (allocated(InData%FilledGroups)) then
-      call RegPackBounds(Buf, 1, lbound(InData%FilledGroups), ubound(InData%FilledGroups))
-      LB(1:1) = lbound(InData%FilledGroups)
-      UB(1:1) = ubound(InData%FilledGroups)
+      call RegPackBounds(Buf, 1, lbound(InData%FilledGroups, kind=B8Ki), ubound(InData%FilledGroups, kind=B8Ki))
+      LB(1:1) = lbound(InData%FilledGroups, kind=B8Ki)
+      UB(1:1) = ubound(InData%FilledGroups, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_PackFilledGroupType(Buf, InData%FilledGroups(i1)) 
       end do
@@ -3938,9 +3938,9 @@ subroutine Morison_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%NMGDepths)
    call RegPack(Buf, allocated(InData%MGDepths))
    if (allocated(InData%MGDepths)) then
-      call RegPackBounds(Buf, 1, lbound(InData%MGDepths), ubound(InData%MGDepths))
-      LB(1:1) = lbound(InData%MGDepths)
-      UB(1:1) = ubound(InData%MGDepths)
+      call RegPackBounds(Buf, 1, lbound(InData%MGDepths, kind=B8Ki), ubound(InData%MGDepths, kind=B8Ki))
+      LB(1:1) = lbound(InData%MGDepths, kind=B8Ki)
+      UB(1:1) = ubound(InData%MGDepths, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_PackMGDepthsType(Buf, InData%MGDepths(i1)) 
       end do
@@ -3950,9 +3950,9 @@ subroutine Morison_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%NMOutputs)
    call RegPack(Buf, allocated(InData%MOutLst))
    if (allocated(InData%MOutLst)) then
-      call RegPackBounds(Buf, 1, lbound(InData%MOutLst), ubound(InData%MOutLst))
-      LB(1:1) = lbound(InData%MOutLst)
-      UB(1:1) = ubound(InData%MOutLst)
+      call RegPackBounds(Buf, 1, lbound(InData%MOutLst, kind=B8Ki), ubound(InData%MOutLst, kind=B8Ki))
+      LB(1:1) = lbound(InData%MOutLst, kind=B8Ki)
+      UB(1:1) = ubound(InData%MOutLst, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_PackMOutput(Buf, InData%MOutLst(i1)) 
       end do
@@ -3960,16 +3960,16 @@ subroutine Morison_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%NJOutputs)
    call RegPack(Buf, allocated(InData%JOutLst))
    if (allocated(InData%JOutLst)) then
-      call RegPackBounds(Buf, 1, lbound(InData%JOutLst), ubound(InData%JOutLst))
-      LB(1:1) = lbound(InData%JOutLst)
-      UB(1:1) = ubound(InData%JOutLst)
+      call RegPackBounds(Buf, 1, lbound(InData%JOutLst, kind=B8Ki), ubound(InData%JOutLst, kind=B8Ki))
+      LB(1:1) = lbound(InData%JOutLst, kind=B8Ki)
+      UB(1:1) = ubound(InData%JOutLst, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_PackJOutput(Buf, InData%JOutLst(i1)) 
       end do
    end if
    call RegPack(Buf, allocated(InData%OutList))
    if (allocated(InData%OutList)) then
-      call RegPackBounds(Buf, 1, lbound(InData%OutList), ubound(InData%OutList))
+      call RegPackBounds(Buf, 1, lbound(InData%OutList, kind=B8Ki), ubound(InData%OutList, kind=B8Ki))
       call RegPack(Buf, InData%OutList)
    end if
    call RegPack(Buf, InData%NumOuts)
@@ -3989,11 +3989,11 @@ subroutine Morison_UnPackInitInput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Morison_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Morison_UnPackInitInput'
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(IntKi)  :: PtrIdx
+   integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    call RegUnpack(Buf, OutData%Gravity)
@@ -4271,14 +4271,14 @@ subroutine Morison_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Morison_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInitOutputData%MorisonVisRad)) then
-      LB(1:1) = lbound(SrcInitOutputData%MorisonVisRad)
-      UB(1:1) = ubound(SrcInitOutputData%MorisonVisRad)
+      LB(1:1) = lbound(SrcInitOutputData%MorisonVisRad, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%MorisonVisRad, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%MorisonVisRad)) then
          allocate(DstInitOutputData%MorisonVisRad(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4289,8 +4289,8 @@ subroutine Morison_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%MorisonVisRad = SrcInitOutputData%MorisonVisRad
    end if
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
          allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4301,8 +4301,8 @@ subroutine Morison_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
          allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4339,17 +4339,17 @@ subroutine Morison_PackInitOutput(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%MorisonVisRad))
    if (allocated(InData%MorisonVisRad)) then
-      call RegPackBounds(Buf, 1, lbound(InData%MorisonVisRad), ubound(InData%MorisonVisRad))
+      call RegPackBounds(Buf, 1, lbound(InData%MorisonVisRad, kind=B8Ki), ubound(InData%MorisonVisRad, kind=B8Ki))
       call RegPack(Buf, InData%MorisonVisRad)
    end if
    call RegPack(Buf, allocated(InData%WriteOutputHdr))
    if (allocated(InData%WriteOutputHdr)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr, kind=B8Ki), ubound(InData%WriteOutputHdr, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt, kind=B8Ki), ubound(InData%WriteOutputUnt, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4359,7 +4359,7 @@ subroutine Morison_UnPackInitOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Morison_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Morison_UnPackInitOutput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -4452,14 +4452,14 @@ subroutine Morison_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Morison_CopyDiscState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcDiscStateData%V_rel_n_FiltStat)) then
-      LB(1:1) = lbound(SrcDiscStateData%V_rel_n_FiltStat)
-      UB(1:1) = ubound(SrcDiscStateData%V_rel_n_FiltStat)
+      LB(1:1) = lbound(SrcDiscStateData%V_rel_n_FiltStat, kind=B8Ki)
+      UB(1:1) = ubound(SrcDiscStateData%V_rel_n_FiltStat, kind=B8Ki)
       if (.not. allocated(DstDiscStateData%V_rel_n_FiltStat)) then
          allocate(DstDiscStateData%V_rel_n_FiltStat(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4490,7 +4490,7 @@ subroutine Morison_PackDiscState(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%V_rel_n_FiltStat))
    if (allocated(InData%V_rel_n_FiltStat)) then
-      call RegPackBounds(Buf, 1, lbound(InData%V_rel_n_FiltStat), ubound(InData%V_rel_n_FiltStat))
+      call RegPackBounds(Buf, 1, lbound(InData%V_rel_n_FiltStat, kind=B8Ki), ubound(InData%V_rel_n_FiltStat, kind=B8Ki))
       call RegPack(Buf, InData%V_rel_n_FiltStat)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4500,7 +4500,7 @@ subroutine Morison_UnPackDiscState(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Morison_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Morison_UnPackDiscState'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -4604,16 +4604,16 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Morison_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcMiscData%DispNodePosHdn)) then
-      LB(1:2) = lbound(SrcMiscData%DispNodePosHdn)
-      UB(1:2) = ubound(SrcMiscData%DispNodePosHdn)
+      LB(1:2) = lbound(SrcMiscData%DispNodePosHdn, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%DispNodePosHdn, kind=B8Ki)
       if (.not. allocated(DstMiscData%DispNodePosHdn)) then
          allocate(DstMiscData%DispNodePosHdn(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4624,8 +4624,8 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%DispNodePosHdn = SrcMiscData%DispNodePosHdn
    end if
    if (allocated(SrcMiscData%DispNodePosHst)) then
-      LB(1:2) = lbound(SrcMiscData%DispNodePosHst)
-      UB(1:2) = ubound(SrcMiscData%DispNodePosHst)
+      LB(1:2) = lbound(SrcMiscData%DispNodePosHst, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%DispNodePosHst, kind=B8Ki)
       if (.not. allocated(DstMiscData%DispNodePosHst)) then
          allocate(DstMiscData%DispNodePosHst(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4636,8 +4636,8 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%DispNodePosHst = SrcMiscData%DispNodePosHst
    end if
    if (allocated(SrcMiscData%FV)) then
-      LB(1:2) = lbound(SrcMiscData%FV)
-      UB(1:2) = ubound(SrcMiscData%FV)
+      LB(1:2) = lbound(SrcMiscData%FV, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%FV, kind=B8Ki)
       if (.not. allocated(DstMiscData%FV)) then
          allocate(DstMiscData%FV(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4648,8 +4648,8 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%FV = SrcMiscData%FV
    end if
    if (allocated(SrcMiscData%FA)) then
-      LB(1:2) = lbound(SrcMiscData%FA)
-      UB(1:2) = ubound(SrcMiscData%FA)
+      LB(1:2) = lbound(SrcMiscData%FA, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%FA, kind=B8Ki)
       if (.not. allocated(DstMiscData%FA)) then
          allocate(DstMiscData%FA(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4660,8 +4660,8 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%FA = SrcMiscData%FA
    end if
    if (allocated(SrcMiscData%FAMCF)) then
-      LB(1:2) = lbound(SrcMiscData%FAMCF)
-      UB(1:2) = ubound(SrcMiscData%FAMCF)
+      LB(1:2) = lbound(SrcMiscData%FAMCF, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%FAMCF, kind=B8Ki)
       if (.not. allocated(DstMiscData%FAMCF)) then
          allocate(DstMiscData%FAMCF(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4672,8 +4672,8 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%FAMCF = SrcMiscData%FAMCF
    end if
    if (allocated(SrcMiscData%FDynP)) then
-      LB(1:1) = lbound(SrcMiscData%FDynP)
-      UB(1:1) = ubound(SrcMiscData%FDynP)
+      LB(1:1) = lbound(SrcMiscData%FDynP, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%FDynP, kind=B8Ki)
       if (.not. allocated(DstMiscData%FDynP)) then
          allocate(DstMiscData%FDynP(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4684,8 +4684,8 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%FDynP = SrcMiscData%FDynP
    end if
    if (allocated(SrcMiscData%WaveElev)) then
-      LB(1:1) = lbound(SrcMiscData%WaveElev)
-      UB(1:1) = ubound(SrcMiscData%WaveElev)
+      LB(1:1) = lbound(SrcMiscData%WaveElev, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%WaveElev, kind=B8Ki)
       if (.not. allocated(DstMiscData%WaveElev)) then
          allocate(DstMiscData%WaveElev(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4696,8 +4696,8 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%WaveElev = SrcMiscData%WaveElev
    end if
    if (allocated(SrcMiscData%WaveElev1)) then
-      LB(1:1) = lbound(SrcMiscData%WaveElev1)
-      UB(1:1) = ubound(SrcMiscData%WaveElev1)
+      LB(1:1) = lbound(SrcMiscData%WaveElev1, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%WaveElev1, kind=B8Ki)
       if (.not. allocated(DstMiscData%WaveElev1)) then
          allocate(DstMiscData%WaveElev1(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4708,8 +4708,8 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%WaveElev1 = SrcMiscData%WaveElev1
    end if
    if (allocated(SrcMiscData%WaveElev2)) then
-      LB(1:1) = lbound(SrcMiscData%WaveElev2)
-      UB(1:1) = ubound(SrcMiscData%WaveElev2)
+      LB(1:1) = lbound(SrcMiscData%WaveElev2, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%WaveElev2, kind=B8Ki)
       if (.not. allocated(DstMiscData%WaveElev2)) then
          allocate(DstMiscData%WaveElev2(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4720,8 +4720,8 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%WaveElev2 = SrcMiscData%WaveElev2
    end if
    if (allocated(SrcMiscData%vrel)) then
-      LB(1:2) = lbound(SrcMiscData%vrel)
-      UB(1:2) = ubound(SrcMiscData%vrel)
+      LB(1:2) = lbound(SrcMiscData%vrel, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%vrel, kind=B8Ki)
       if (.not. allocated(DstMiscData%vrel)) then
          allocate(DstMiscData%vrel(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4732,8 +4732,8 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%vrel = SrcMiscData%vrel
    end if
    if (allocated(SrcMiscData%nodeInWater)) then
-      LB(1:1) = lbound(SrcMiscData%nodeInWater)
-      UB(1:1) = ubound(SrcMiscData%nodeInWater)
+      LB(1:1) = lbound(SrcMiscData%nodeInWater, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%nodeInWater, kind=B8Ki)
       if (.not. allocated(DstMiscData%nodeInWater)) then
          allocate(DstMiscData%nodeInWater(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4744,8 +4744,8 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%nodeInWater = SrcMiscData%nodeInWater
    end if
    if (allocated(SrcMiscData%memberLoads)) then
-      LB(1:1) = lbound(SrcMiscData%memberLoads)
-      UB(1:1) = ubound(SrcMiscData%memberLoads)
+      LB(1:1) = lbound(SrcMiscData%memberLoads, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%memberLoads, kind=B8Ki)
       if (.not. allocated(DstMiscData%memberLoads)) then
          allocate(DstMiscData%memberLoads(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4760,8 +4760,8 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcMiscData%F_B_End)) then
-      LB(1:2) = lbound(SrcMiscData%F_B_End)
-      UB(1:2) = ubound(SrcMiscData%F_B_End)
+      LB(1:2) = lbound(SrcMiscData%F_B_End, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%F_B_End, kind=B8Ki)
       if (.not. allocated(DstMiscData%F_B_End)) then
          allocate(DstMiscData%F_B_End(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4772,8 +4772,8 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%F_B_End = SrcMiscData%F_B_End
    end if
    if (allocated(SrcMiscData%F_D_End)) then
-      LB(1:2) = lbound(SrcMiscData%F_D_End)
-      UB(1:2) = ubound(SrcMiscData%F_D_End)
+      LB(1:2) = lbound(SrcMiscData%F_D_End, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%F_D_End, kind=B8Ki)
       if (.not. allocated(DstMiscData%F_D_End)) then
          allocate(DstMiscData%F_D_End(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4784,8 +4784,8 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%F_D_End = SrcMiscData%F_D_End
    end if
    if (allocated(SrcMiscData%F_I_End)) then
-      LB(1:2) = lbound(SrcMiscData%F_I_End)
-      UB(1:2) = ubound(SrcMiscData%F_I_End)
+      LB(1:2) = lbound(SrcMiscData%F_I_End, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%F_I_End, kind=B8Ki)
       if (.not. allocated(DstMiscData%F_I_End)) then
          allocate(DstMiscData%F_I_End(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4796,8 +4796,8 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%F_I_End = SrcMiscData%F_I_End
    end if
    if (allocated(SrcMiscData%F_IMG_End)) then
-      LB(1:2) = lbound(SrcMiscData%F_IMG_End)
-      UB(1:2) = ubound(SrcMiscData%F_IMG_End)
+      LB(1:2) = lbound(SrcMiscData%F_IMG_End, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%F_IMG_End, kind=B8Ki)
       if (.not. allocated(DstMiscData%F_IMG_End)) then
          allocate(DstMiscData%F_IMG_End(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4808,8 +4808,8 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%F_IMG_End = SrcMiscData%F_IMG_End
    end if
    if (allocated(SrcMiscData%F_A_End)) then
-      LB(1:2) = lbound(SrcMiscData%F_A_End)
-      UB(1:2) = ubound(SrcMiscData%F_A_End)
+      LB(1:2) = lbound(SrcMiscData%F_A_End, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%F_A_End, kind=B8Ki)
       if (.not. allocated(DstMiscData%F_A_End)) then
          allocate(DstMiscData%F_A_End(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4820,8 +4820,8 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%F_A_End = SrcMiscData%F_A_End
    end if
    if (allocated(SrcMiscData%F_BF_End)) then
-      LB(1:2) = lbound(SrcMiscData%F_BF_End)
-      UB(1:2) = ubound(SrcMiscData%F_BF_End)
+      LB(1:2) = lbound(SrcMiscData%F_BF_End, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%F_BF_End, kind=B8Ki)
       if (.not. allocated(DstMiscData%F_BF_End)) then
          allocate(DstMiscData%F_BF_End(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4832,8 +4832,8 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%F_BF_End = SrcMiscData%F_BF_End
    end if
    if (allocated(SrcMiscData%V_rel_n)) then
-      LB(1:1) = lbound(SrcMiscData%V_rel_n)
-      UB(1:1) = ubound(SrcMiscData%V_rel_n)
+      LB(1:1) = lbound(SrcMiscData%V_rel_n, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%V_rel_n, kind=B8Ki)
       if (.not. allocated(DstMiscData%V_rel_n)) then
          allocate(DstMiscData%V_rel_n(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4844,8 +4844,8 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%V_rel_n = SrcMiscData%V_rel_n
    end if
    if (allocated(SrcMiscData%V_rel_n_HiPass)) then
-      LB(1:1) = lbound(SrcMiscData%V_rel_n_HiPass)
-      UB(1:1) = ubound(SrcMiscData%V_rel_n_HiPass)
+      LB(1:1) = lbound(SrcMiscData%V_rel_n_HiPass, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%V_rel_n_HiPass, kind=B8Ki)
       if (.not. allocated(DstMiscData%V_rel_n_HiPass)) then
          allocate(DstMiscData%V_rel_n_HiPass(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4867,8 +4867,8 @@ subroutine Morison_DestroyMisc(MiscData, ErrStat, ErrMsg)
    type(Morison_MiscVarType), intent(inout) :: MiscData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Morison_DestroyMisc'
@@ -4908,8 +4908,8 @@ subroutine Morison_DestroyMisc(MiscData, ErrStat, ErrMsg)
       deallocate(MiscData%nodeInWater)
    end if
    if (allocated(MiscData%memberLoads)) then
-      LB(1:1) = lbound(MiscData%memberLoads)
-      UB(1:1) = ubound(MiscData%memberLoads)
+      LB(1:1) = lbound(MiscData%memberLoads, kind=B8Ki)
+      UB(1:1) = ubound(MiscData%memberLoads, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_DestroyMemberLoads(MiscData%memberLoads(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4950,111 +4950,111 @@ subroutine Morison_PackMisc(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Morison_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Morison_PackMisc'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%DispNodePosHdn))
    if (allocated(InData%DispNodePosHdn)) then
-      call RegPackBounds(Buf, 2, lbound(InData%DispNodePosHdn), ubound(InData%DispNodePosHdn))
+      call RegPackBounds(Buf, 2, lbound(InData%DispNodePosHdn, kind=B8Ki), ubound(InData%DispNodePosHdn, kind=B8Ki))
       call RegPack(Buf, InData%DispNodePosHdn)
    end if
    call RegPack(Buf, allocated(InData%DispNodePosHst))
    if (allocated(InData%DispNodePosHst)) then
-      call RegPackBounds(Buf, 2, lbound(InData%DispNodePosHst), ubound(InData%DispNodePosHst))
+      call RegPackBounds(Buf, 2, lbound(InData%DispNodePosHst, kind=B8Ki), ubound(InData%DispNodePosHst, kind=B8Ki))
       call RegPack(Buf, InData%DispNodePosHst)
    end if
    call RegPack(Buf, allocated(InData%FV))
    if (allocated(InData%FV)) then
-      call RegPackBounds(Buf, 2, lbound(InData%FV), ubound(InData%FV))
+      call RegPackBounds(Buf, 2, lbound(InData%FV, kind=B8Ki), ubound(InData%FV, kind=B8Ki))
       call RegPack(Buf, InData%FV)
    end if
    call RegPack(Buf, allocated(InData%FA))
    if (allocated(InData%FA)) then
-      call RegPackBounds(Buf, 2, lbound(InData%FA), ubound(InData%FA))
+      call RegPackBounds(Buf, 2, lbound(InData%FA, kind=B8Ki), ubound(InData%FA, kind=B8Ki))
       call RegPack(Buf, InData%FA)
    end if
    call RegPack(Buf, allocated(InData%FAMCF))
    if (allocated(InData%FAMCF)) then
-      call RegPackBounds(Buf, 2, lbound(InData%FAMCF), ubound(InData%FAMCF))
+      call RegPackBounds(Buf, 2, lbound(InData%FAMCF, kind=B8Ki), ubound(InData%FAMCF, kind=B8Ki))
       call RegPack(Buf, InData%FAMCF)
    end if
    call RegPack(Buf, allocated(InData%FDynP))
    if (allocated(InData%FDynP)) then
-      call RegPackBounds(Buf, 1, lbound(InData%FDynP), ubound(InData%FDynP))
+      call RegPackBounds(Buf, 1, lbound(InData%FDynP, kind=B8Ki), ubound(InData%FDynP, kind=B8Ki))
       call RegPack(Buf, InData%FDynP)
    end if
    call RegPack(Buf, allocated(InData%WaveElev))
    if (allocated(InData%WaveElev)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveElev), ubound(InData%WaveElev))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveElev, kind=B8Ki), ubound(InData%WaveElev, kind=B8Ki))
       call RegPack(Buf, InData%WaveElev)
    end if
    call RegPack(Buf, allocated(InData%WaveElev1))
    if (allocated(InData%WaveElev1)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveElev1), ubound(InData%WaveElev1))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveElev1, kind=B8Ki), ubound(InData%WaveElev1, kind=B8Ki))
       call RegPack(Buf, InData%WaveElev1)
    end if
    call RegPack(Buf, allocated(InData%WaveElev2))
    if (allocated(InData%WaveElev2)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveElev2), ubound(InData%WaveElev2))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveElev2, kind=B8Ki), ubound(InData%WaveElev2, kind=B8Ki))
       call RegPack(Buf, InData%WaveElev2)
    end if
    call RegPack(Buf, allocated(InData%vrel))
    if (allocated(InData%vrel)) then
-      call RegPackBounds(Buf, 2, lbound(InData%vrel), ubound(InData%vrel))
+      call RegPackBounds(Buf, 2, lbound(InData%vrel, kind=B8Ki), ubound(InData%vrel, kind=B8Ki))
       call RegPack(Buf, InData%vrel)
    end if
    call RegPack(Buf, allocated(InData%nodeInWater))
    if (allocated(InData%nodeInWater)) then
-      call RegPackBounds(Buf, 1, lbound(InData%nodeInWater), ubound(InData%nodeInWater))
+      call RegPackBounds(Buf, 1, lbound(InData%nodeInWater, kind=B8Ki), ubound(InData%nodeInWater, kind=B8Ki))
       call RegPack(Buf, InData%nodeInWater)
    end if
    call RegPack(Buf, allocated(InData%memberLoads))
    if (allocated(InData%memberLoads)) then
-      call RegPackBounds(Buf, 1, lbound(InData%memberLoads), ubound(InData%memberLoads))
-      LB(1:1) = lbound(InData%memberLoads)
-      UB(1:1) = ubound(InData%memberLoads)
+      call RegPackBounds(Buf, 1, lbound(InData%memberLoads, kind=B8Ki), ubound(InData%memberLoads, kind=B8Ki))
+      LB(1:1) = lbound(InData%memberLoads, kind=B8Ki)
+      UB(1:1) = ubound(InData%memberLoads, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_PackMemberLoads(Buf, InData%memberLoads(i1)) 
       end do
    end if
    call RegPack(Buf, allocated(InData%F_B_End))
    if (allocated(InData%F_B_End)) then
-      call RegPackBounds(Buf, 2, lbound(InData%F_B_End), ubound(InData%F_B_End))
+      call RegPackBounds(Buf, 2, lbound(InData%F_B_End, kind=B8Ki), ubound(InData%F_B_End, kind=B8Ki))
       call RegPack(Buf, InData%F_B_End)
    end if
    call RegPack(Buf, allocated(InData%F_D_End))
    if (allocated(InData%F_D_End)) then
-      call RegPackBounds(Buf, 2, lbound(InData%F_D_End), ubound(InData%F_D_End))
+      call RegPackBounds(Buf, 2, lbound(InData%F_D_End, kind=B8Ki), ubound(InData%F_D_End, kind=B8Ki))
       call RegPack(Buf, InData%F_D_End)
    end if
    call RegPack(Buf, allocated(InData%F_I_End))
    if (allocated(InData%F_I_End)) then
-      call RegPackBounds(Buf, 2, lbound(InData%F_I_End), ubound(InData%F_I_End))
+      call RegPackBounds(Buf, 2, lbound(InData%F_I_End, kind=B8Ki), ubound(InData%F_I_End, kind=B8Ki))
       call RegPack(Buf, InData%F_I_End)
    end if
    call RegPack(Buf, allocated(InData%F_IMG_End))
    if (allocated(InData%F_IMG_End)) then
-      call RegPackBounds(Buf, 2, lbound(InData%F_IMG_End), ubound(InData%F_IMG_End))
+      call RegPackBounds(Buf, 2, lbound(InData%F_IMG_End, kind=B8Ki), ubound(InData%F_IMG_End, kind=B8Ki))
       call RegPack(Buf, InData%F_IMG_End)
    end if
    call RegPack(Buf, allocated(InData%F_A_End))
    if (allocated(InData%F_A_End)) then
-      call RegPackBounds(Buf, 2, lbound(InData%F_A_End), ubound(InData%F_A_End))
+      call RegPackBounds(Buf, 2, lbound(InData%F_A_End, kind=B8Ki), ubound(InData%F_A_End, kind=B8Ki))
       call RegPack(Buf, InData%F_A_End)
    end if
    call RegPack(Buf, allocated(InData%F_BF_End))
    if (allocated(InData%F_BF_End)) then
-      call RegPackBounds(Buf, 2, lbound(InData%F_BF_End), ubound(InData%F_BF_End))
+      call RegPackBounds(Buf, 2, lbound(InData%F_BF_End, kind=B8Ki), ubound(InData%F_BF_End, kind=B8Ki))
       call RegPack(Buf, InData%F_BF_End)
    end if
    call RegPack(Buf, allocated(InData%V_rel_n))
    if (allocated(InData%V_rel_n)) then
-      call RegPackBounds(Buf, 1, lbound(InData%V_rel_n), ubound(InData%V_rel_n))
+      call RegPackBounds(Buf, 1, lbound(InData%V_rel_n, kind=B8Ki), ubound(InData%V_rel_n, kind=B8Ki))
       call RegPack(Buf, InData%V_rel_n)
    end if
    call RegPack(Buf, allocated(InData%V_rel_n_HiPass))
    if (allocated(InData%V_rel_n_HiPass)) then
-      call RegPackBounds(Buf, 1, lbound(InData%V_rel_n_HiPass), ubound(InData%V_rel_n_HiPass))
+      call RegPackBounds(Buf, 1, lbound(InData%V_rel_n_HiPass, kind=B8Ki), ubound(InData%V_rel_n_HiPass, kind=B8Ki))
       call RegPack(Buf, InData%V_rel_n_HiPass)
    end if
    call NWTC_Library_PackMeshMapType(Buf, InData%VisMeshMap) 
@@ -5066,8 +5066,8 @@ subroutine Morison_UnPackMisc(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Morison_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Morison_UnPackMisc'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -5362,8 +5362,8 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2, i3
-   integer(IntKi)                 :: LB(3), UB(3)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Morison_CopyParam'
@@ -5375,8 +5375,8 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    DstParamData%AMMod = SrcParamData%AMMod
    DstParamData%NMembers = SrcParamData%NMembers
    if (allocated(SrcParamData%Members)) then
-      LB(1:1) = lbound(SrcParamData%Members)
-      UB(1:1) = ubound(SrcParamData%Members)
+      LB(1:1) = lbound(SrcParamData%Members, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%Members, kind=B8Ki)
       if (.not. allocated(DstParamData%Members)) then
          allocate(DstParamData%Members(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -5393,8 +5393,8 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    DstParamData%NNodes = SrcParamData%NNodes
    DstParamData%NJoints = SrcParamData%NJoints
    if (allocated(SrcParamData%I_MG_End)) then
-      LB(1:3) = lbound(SrcParamData%I_MG_End)
-      UB(1:3) = ubound(SrcParamData%I_MG_End)
+      LB(1:3) = lbound(SrcParamData%I_MG_End, kind=B8Ki)
+      UB(1:3) = ubound(SrcParamData%I_MG_End, kind=B8Ki)
       if (.not. allocated(DstParamData%I_MG_End)) then
          allocate(DstParamData%I_MG_End(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -5405,8 +5405,8 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%I_MG_End = SrcParamData%I_MG_End
    end if
    if (allocated(SrcParamData%An_End)) then
-      LB(1:2) = lbound(SrcParamData%An_End)
-      UB(1:2) = ubound(SrcParamData%An_End)
+      LB(1:2) = lbound(SrcParamData%An_End, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%An_End, kind=B8Ki)
       if (.not. allocated(DstParamData%An_End)) then
          allocate(DstParamData%An_End(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -5417,8 +5417,8 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%An_End = SrcParamData%An_End
    end if
    if (allocated(SrcParamData%DragConst_End)) then
-      LB(1:1) = lbound(SrcParamData%DragConst_End)
-      UB(1:1) = ubound(SrcParamData%DragConst_End)
+      LB(1:1) = lbound(SrcParamData%DragConst_End, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%DragConst_End, kind=B8Ki)
       if (.not. allocated(DstParamData%DragConst_End)) then
          allocate(DstParamData%DragConst_End(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -5429,8 +5429,8 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%DragConst_End = SrcParamData%DragConst_End
    end if
    if (allocated(SrcParamData%VRelNFiltConst)) then
-      LB(1:1) = lbound(SrcParamData%VRelNFiltConst)
-      UB(1:1) = ubound(SrcParamData%VRelNFiltConst)
+      LB(1:1) = lbound(SrcParamData%VRelNFiltConst, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%VRelNFiltConst, kind=B8Ki)
       if (.not. allocated(DstParamData%VRelNFiltConst)) then
          allocate(DstParamData%VRelNFiltConst(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -5441,8 +5441,8 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%VRelNFiltConst = SrcParamData%VRelNFiltConst
    end if
    if (allocated(SrcParamData%DragMod_End)) then
-      LB(1:1) = lbound(SrcParamData%DragMod_End)
-      UB(1:1) = ubound(SrcParamData%DragMod_End)
+      LB(1:1) = lbound(SrcParamData%DragMod_End, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%DragMod_End, kind=B8Ki)
       if (.not. allocated(DstParamData%DragMod_End)) then
          allocate(DstParamData%DragMod_End(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -5453,8 +5453,8 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%DragMod_End = SrcParamData%DragMod_End
    end if
    if (allocated(SrcParamData%DragLoFSc_End)) then
-      LB(1:1) = lbound(SrcParamData%DragLoFSc_End)
-      UB(1:1) = ubound(SrcParamData%DragLoFSc_End)
+      LB(1:1) = lbound(SrcParamData%DragLoFSc_End, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%DragLoFSc_End, kind=B8Ki)
       if (.not. allocated(DstParamData%DragLoFSc_End)) then
          allocate(DstParamData%DragLoFSc_End(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -5465,8 +5465,8 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%DragLoFSc_End = SrcParamData%DragLoFSc_End
    end if
    if (allocated(SrcParamData%F_WMG_End)) then
-      LB(1:2) = lbound(SrcParamData%F_WMG_End)
-      UB(1:2) = ubound(SrcParamData%F_WMG_End)
+      LB(1:2) = lbound(SrcParamData%F_WMG_End, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%F_WMG_End, kind=B8Ki)
       if (.not. allocated(DstParamData%F_WMG_End)) then
          allocate(DstParamData%F_WMG_End(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -5477,8 +5477,8 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%F_WMG_End = SrcParamData%F_WMG_End
    end if
    if (allocated(SrcParamData%DP_Const_End)) then
-      LB(1:2) = lbound(SrcParamData%DP_Const_End)
-      UB(1:2) = ubound(SrcParamData%DP_Const_End)
+      LB(1:2) = lbound(SrcParamData%DP_Const_End, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%DP_Const_End, kind=B8Ki)
       if (.not. allocated(DstParamData%DP_Const_End)) then
          allocate(DstParamData%DP_Const_End(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -5489,8 +5489,8 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%DP_Const_End = SrcParamData%DP_Const_End
    end if
    if (allocated(SrcParamData%Mass_MG_End)) then
-      LB(1:1) = lbound(SrcParamData%Mass_MG_End)
-      UB(1:1) = ubound(SrcParamData%Mass_MG_End)
+      LB(1:1) = lbound(SrcParamData%Mass_MG_End, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%Mass_MG_End, kind=B8Ki)
       if (.not. allocated(DstParamData%Mass_MG_End)) then
          allocate(DstParamData%Mass_MG_End(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -5501,8 +5501,8 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%Mass_MG_End = SrcParamData%Mass_MG_End
    end if
    if (allocated(SrcParamData%AM_End)) then
-      LB(1:3) = lbound(SrcParamData%AM_End)
-      UB(1:3) = ubound(SrcParamData%AM_End)
+      LB(1:3) = lbound(SrcParamData%AM_End, kind=B8Ki)
+      UB(1:3) = ubound(SrcParamData%AM_End, kind=B8Ki)
       if (.not. allocated(DstParamData%AM_End)) then
          allocate(DstParamData%AM_End(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -5514,8 +5514,8 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    end if
    DstParamData%NMOutputs = SrcParamData%NMOutputs
    if (allocated(SrcParamData%MOutLst)) then
-      LB(1:1) = lbound(SrcParamData%MOutLst)
-      UB(1:1) = ubound(SrcParamData%MOutLst)
+      LB(1:1) = lbound(SrcParamData%MOutLst, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%MOutLst, kind=B8Ki)
       if (.not. allocated(DstParamData%MOutLst)) then
          allocate(DstParamData%MOutLst(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -5531,8 +5531,8 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    end if
    DstParamData%NJOutputs = SrcParamData%NJOutputs
    if (allocated(SrcParamData%JOutLst)) then
-      LB(1:1) = lbound(SrcParamData%JOutLst)
-      UB(1:1) = ubound(SrcParamData%JOutLst)
+      LB(1:1) = lbound(SrcParamData%JOutLst, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%JOutLst, kind=B8Ki)
       if (.not. allocated(DstParamData%JOutLst)) then
          allocate(DstParamData%JOutLst(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -5547,8 +5547,8 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       end do
    end if
    if (allocated(SrcParamData%OutParam)) then
-      LB(1:1) = lbound(SrcParamData%OutParam)
-      UB(1:1) = ubound(SrcParamData%OutParam)
+      LB(1:1) = lbound(SrcParamData%OutParam, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%OutParam, kind=B8Ki)
       if (.not. allocated(DstParamData%OutParam)) then
          allocate(DstParamData%OutParam(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -5571,16 +5571,16 @@ subroutine Morison_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(Morison_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2, i3
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Morison_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(ParamData%Members)) then
-      LB(1:1) = lbound(ParamData%Members)
-      UB(1:1) = ubound(ParamData%Members)
+      LB(1:1) = lbound(ParamData%Members, kind=B8Ki)
+      UB(1:1) = ubound(ParamData%Members, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_DestroyMemberType(ParamData%Members(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -5618,8 +5618,8 @@ subroutine Morison_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%AM_End)
    end if
    if (allocated(ParamData%MOutLst)) then
-      LB(1:1) = lbound(ParamData%MOutLst)
-      UB(1:1) = ubound(ParamData%MOutLst)
+      LB(1:1) = lbound(ParamData%MOutLst, kind=B8Ki)
+      UB(1:1) = ubound(ParamData%MOutLst, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_DestroyMOutput(ParamData%MOutLst(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -5627,8 +5627,8 @@ subroutine Morison_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%MOutLst)
    end if
    if (allocated(ParamData%JOutLst)) then
-      LB(1:1) = lbound(ParamData%JOutLst)
-      UB(1:1) = ubound(ParamData%JOutLst)
+      LB(1:1) = lbound(ParamData%JOutLst, kind=B8Ki)
+      UB(1:1) = ubound(ParamData%JOutLst, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_DestroyJOutput(ParamData%JOutLst(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -5636,8 +5636,8 @@ subroutine Morison_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%JOutLst)
    end if
    if (allocated(ParamData%OutParam)) then
-      LB(1:1) = lbound(ParamData%OutParam)
-      UB(1:1) = ubound(ParamData%OutParam)
+      LB(1:1) = lbound(ParamData%OutParam, kind=B8Ki)
+      UB(1:1) = ubound(ParamData%OutParam, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyOutParmType(ParamData%OutParam(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -5651,8 +5651,8 @@ subroutine Morison_PackParam(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Morison_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Morison_PackParam'
-   integer(IntKi)  :: i1, i2, i3
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)   :: LB(3), UB(3)
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%DT)
@@ -5662,9 +5662,9 @@ subroutine Morison_PackParam(Buf, Indata)
    call RegPack(Buf, InData%NMembers)
    call RegPack(Buf, allocated(InData%Members))
    if (allocated(InData%Members)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Members), ubound(InData%Members))
-      LB(1:1) = lbound(InData%Members)
-      UB(1:1) = ubound(InData%Members)
+      call RegPackBounds(Buf, 1, lbound(InData%Members, kind=B8Ki), ubound(InData%Members, kind=B8Ki))
+      LB(1:1) = lbound(InData%Members, kind=B8Ki)
+      UB(1:1) = ubound(InData%Members, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_PackMemberType(Buf, InData%Members(i1)) 
       end do
@@ -5673,60 +5673,60 @@ subroutine Morison_PackParam(Buf, Indata)
    call RegPack(Buf, InData%NJoints)
    call RegPack(Buf, allocated(InData%I_MG_End))
    if (allocated(InData%I_MG_End)) then
-      call RegPackBounds(Buf, 3, lbound(InData%I_MG_End), ubound(InData%I_MG_End))
+      call RegPackBounds(Buf, 3, lbound(InData%I_MG_End, kind=B8Ki), ubound(InData%I_MG_End, kind=B8Ki))
       call RegPack(Buf, InData%I_MG_End)
    end if
    call RegPack(Buf, allocated(InData%An_End))
    if (allocated(InData%An_End)) then
-      call RegPackBounds(Buf, 2, lbound(InData%An_End), ubound(InData%An_End))
+      call RegPackBounds(Buf, 2, lbound(InData%An_End, kind=B8Ki), ubound(InData%An_End, kind=B8Ki))
       call RegPack(Buf, InData%An_End)
    end if
    call RegPack(Buf, allocated(InData%DragConst_End))
    if (allocated(InData%DragConst_End)) then
-      call RegPackBounds(Buf, 1, lbound(InData%DragConst_End), ubound(InData%DragConst_End))
+      call RegPackBounds(Buf, 1, lbound(InData%DragConst_End, kind=B8Ki), ubound(InData%DragConst_End, kind=B8Ki))
       call RegPack(Buf, InData%DragConst_End)
    end if
    call RegPack(Buf, allocated(InData%VRelNFiltConst))
    if (allocated(InData%VRelNFiltConst)) then
-      call RegPackBounds(Buf, 1, lbound(InData%VRelNFiltConst), ubound(InData%VRelNFiltConst))
+      call RegPackBounds(Buf, 1, lbound(InData%VRelNFiltConst, kind=B8Ki), ubound(InData%VRelNFiltConst, kind=B8Ki))
       call RegPack(Buf, InData%VRelNFiltConst)
    end if
    call RegPack(Buf, allocated(InData%DragMod_End))
    if (allocated(InData%DragMod_End)) then
-      call RegPackBounds(Buf, 1, lbound(InData%DragMod_End), ubound(InData%DragMod_End))
+      call RegPackBounds(Buf, 1, lbound(InData%DragMod_End, kind=B8Ki), ubound(InData%DragMod_End, kind=B8Ki))
       call RegPack(Buf, InData%DragMod_End)
    end if
    call RegPack(Buf, allocated(InData%DragLoFSc_End))
    if (allocated(InData%DragLoFSc_End)) then
-      call RegPackBounds(Buf, 1, lbound(InData%DragLoFSc_End), ubound(InData%DragLoFSc_End))
+      call RegPackBounds(Buf, 1, lbound(InData%DragLoFSc_End, kind=B8Ki), ubound(InData%DragLoFSc_End, kind=B8Ki))
       call RegPack(Buf, InData%DragLoFSc_End)
    end if
    call RegPack(Buf, allocated(InData%F_WMG_End))
    if (allocated(InData%F_WMG_End)) then
-      call RegPackBounds(Buf, 2, lbound(InData%F_WMG_End), ubound(InData%F_WMG_End))
+      call RegPackBounds(Buf, 2, lbound(InData%F_WMG_End, kind=B8Ki), ubound(InData%F_WMG_End, kind=B8Ki))
       call RegPack(Buf, InData%F_WMG_End)
    end if
    call RegPack(Buf, allocated(InData%DP_Const_End))
    if (allocated(InData%DP_Const_End)) then
-      call RegPackBounds(Buf, 2, lbound(InData%DP_Const_End), ubound(InData%DP_Const_End))
+      call RegPackBounds(Buf, 2, lbound(InData%DP_Const_End, kind=B8Ki), ubound(InData%DP_Const_End, kind=B8Ki))
       call RegPack(Buf, InData%DP_Const_End)
    end if
    call RegPack(Buf, allocated(InData%Mass_MG_End))
    if (allocated(InData%Mass_MG_End)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Mass_MG_End), ubound(InData%Mass_MG_End))
+      call RegPackBounds(Buf, 1, lbound(InData%Mass_MG_End, kind=B8Ki), ubound(InData%Mass_MG_End, kind=B8Ki))
       call RegPack(Buf, InData%Mass_MG_End)
    end if
    call RegPack(Buf, allocated(InData%AM_End))
    if (allocated(InData%AM_End)) then
-      call RegPackBounds(Buf, 3, lbound(InData%AM_End), ubound(InData%AM_End))
+      call RegPackBounds(Buf, 3, lbound(InData%AM_End, kind=B8Ki), ubound(InData%AM_End, kind=B8Ki))
       call RegPack(Buf, InData%AM_End)
    end if
    call RegPack(Buf, InData%NMOutputs)
    call RegPack(Buf, allocated(InData%MOutLst))
    if (allocated(InData%MOutLst)) then
-      call RegPackBounds(Buf, 1, lbound(InData%MOutLst), ubound(InData%MOutLst))
-      LB(1:1) = lbound(InData%MOutLst)
-      UB(1:1) = ubound(InData%MOutLst)
+      call RegPackBounds(Buf, 1, lbound(InData%MOutLst, kind=B8Ki), ubound(InData%MOutLst, kind=B8Ki))
+      LB(1:1) = lbound(InData%MOutLst, kind=B8Ki)
+      UB(1:1) = ubound(InData%MOutLst, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_PackMOutput(Buf, InData%MOutLst(i1)) 
       end do
@@ -5734,18 +5734,18 @@ subroutine Morison_PackParam(Buf, Indata)
    call RegPack(Buf, InData%NJOutputs)
    call RegPack(Buf, allocated(InData%JOutLst))
    if (allocated(InData%JOutLst)) then
-      call RegPackBounds(Buf, 1, lbound(InData%JOutLst), ubound(InData%JOutLst))
-      LB(1:1) = lbound(InData%JOutLst)
-      UB(1:1) = ubound(InData%JOutLst)
+      call RegPackBounds(Buf, 1, lbound(InData%JOutLst, kind=B8Ki), ubound(InData%JOutLst, kind=B8Ki))
+      LB(1:1) = lbound(InData%JOutLst, kind=B8Ki)
+      UB(1:1) = ubound(InData%JOutLst, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_PackJOutput(Buf, InData%JOutLst(i1)) 
       end do
    end if
    call RegPack(Buf, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
-      call RegPackBounds(Buf, 1, lbound(InData%OutParam), ubound(InData%OutParam))
-      LB(1:1) = lbound(InData%OutParam)
-      UB(1:1) = ubound(InData%OutParam)
+      call RegPackBounds(Buf, 1, lbound(InData%OutParam, kind=B8Ki), ubound(InData%OutParam, kind=B8Ki))
+      LB(1:1) = lbound(InData%OutParam, kind=B8Ki)
+      UB(1:1) = ubound(InData%OutParam, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackOutParmType(Buf, InData%OutParam(i1)) 
       end do
@@ -5766,11 +5766,11 @@ subroutine Morison_UnPackParam(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Morison_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Morison_UnPackParam'
-   integer(IntKi)  :: i1, i2, i3
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(IntKi)  :: PtrIdx
+   integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    call RegUnpack(Buf, OutData%DT)
@@ -6069,7 +6069,7 @@ subroutine Morison_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Morison_CopyOutput'
@@ -6082,8 +6082,8 @@ subroutine Morison_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, E
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcOutputData%WriteOutput)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutput)
-      UB(1:1) = ubound(SrcOutputData%WriteOutput)
+      LB(1:1) = lbound(SrcOutputData%WriteOutput, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput, kind=B8Ki)
       if (.not. allocated(DstOutputData%WriteOutput)) then
          allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -6122,7 +6122,7 @@ subroutine Morison_PackOutput(Buf, Indata)
    call MeshPack(Buf, InData%VisMesh) 
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutput, kind=B8Ki), ubound(InData%WriteOutput, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutput)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -6132,7 +6132,7 @@ subroutine Morison_UnPackOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Morison_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Morison_UnPackOutput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return

@@ -186,7 +186,7 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SeaSt_CopyInputFile'
@@ -212,8 +212,8 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
    DstInputFileData%Echo = SrcInputFileData%Echo
    DstInputFileData%NWaveElev = SrcInputFileData%NWaveElev
    if (allocated(SrcInputFileData%WaveElevxi)) then
-      LB(1:1) = lbound(SrcInputFileData%WaveElevxi)
-      UB(1:1) = ubound(SrcInputFileData%WaveElevxi)
+      LB(1:1) = lbound(SrcInputFileData%WaveElevxi, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputFileData%WaveElevxi, kind=B8Ki)
       if (.not. allocated(DstInputFileData%WaveElevxi)) then
          allocate(DstInputFileData%WaveElevxi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -224,8 +224,8 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
       DstInputFileData%WaveElevxi = SrcInputFileData%WaveElevxi
    end if
    if (allocated(SrcInputFileData%WaveElevyi)) then
-      LB(1:1) = lbound(SrcInputFileData%WaveElevyi)
-      UB(1:1) = ubound(SrcInputFileData%WaveElevyi)
+      LB(1:1) = lbound(SrcInputFileData%WaveElevyi, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputFileData%WaveElevyi, kind=B8Ki)
       if (.not. allocated(DstInputFileData%WaveElevyi)) then
          allocate(DstInputFileData%WaveElevyi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -237,8 +237,8 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
    end if
    DstInputFileData%NWaveKin = SrcInputFileData%NWaveKin
    if (allocated(SrcInputFileData%WaveKinxi)) then
-      LB(1:1) = lbound(SrcInputFileData%WaveKinxi)
-      UB(1:1) = ubound(SrcInputFileData%WaveKinxi)
+      LB(1:1) = lbound(SrcInputFileData%WaveKinxi, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputFileData%WaveKinxi, kind=B8Ki)
       if (.not. allocated(DstInputFileData%WaveKinxi)) then
          allocate(DstInputFileData%WaveKinxi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -249,8 +249,8 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
       DstInputFileData%WaveKinxi = SrcInputFileData%WaveKinxi
    end if
    if (allocated(SrcInputFileData%WaveKinyi)) then
-      LB(1:1) = lbound(SrcInputFileData%WaveKinyi)
-      UB(1:1) = ubound(SrcInputFileData%WaveKinyi)
+      LB(1:1) = lbound(SrcInputFileData%WaveKinyi, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputFileData%WaveKinyi, kind=B8Ki)
       if (.not. allocated(DstInputFileData%WaveKinyi)) then
          allocate(DstInputFileData%WaveKinyi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -261,8 +261,8 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
       DstInputFileData%WaveKinyi = SrcInputFileData%WaveKinyi
    end if
    if (allocated(SrcInputFileData%WaveKinzi)) then
-      LB(1:1) = lbound(SrcInputFileData%WaveKinzi)
-      UB(1:1) = ubound(SrcInputFileData%WaveKinzi)
+      LB(1:1) = lbound(SrcInputFileData%WaveKinzi, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputFileData%WaveKinzi, kind=B8Ki)
       if (.not. allocated(DstInputFileData%WaveKinzi)) then
          allocate(DstInputFileData%WaveKinzi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -276,8 +276,8 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
    DstInputFileData%OutAll = SrcInputFileData%OutAll
    DstInputFileData%NumOuts = SrcInputFileData%NumOuts
    if (allocated(SrcInputFileData%OutList)) then
-      LB(1:1) = lbound(SrcInputFileData%OutList)
-      UB(1:1) = ubound(SrcInputFileData%OutList)
+      LB(1:1) = lbound(SrcInputFileData%OutList, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputFileData%OutList, kind=B8Ki)
       if (.not. allocated(DstInputFileData%OutList)) then
          allocate(DstInputFileData%OutList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -362,28 +362,28 @@ subroutine SeaSt_PackInputFile(Buf, Indata)
    call RegPack(Buf, InData%NWaveElev)
    call RegPack(Buf, allocated(InData%WaveElevxi))
    if (allocated(InData%WaveElevxi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveElevxi), ubound(InData%WaveElevxi))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveElevxi, kind=B8Ki), ubound(InData%WaveElevxi, kind=B8Ki))
       call RegPack(Buf, InData%WaveElevxi)
    end if
    call RegPack(Buf, allocated(InData%WaveElevyi))
    if (allocated(InData%WaveElevyi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveElevyi), ubound(InData%WaveElevyi))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveElevyi, kind=B8Ki), ubound(InData%WaveElevyi, kind=B8Ki))
       call RegPack(Buf, InData%WaveElevyi)
    end if
    call RegPack(Buf, InData%NWaveKin)
    call RegPack(Buf, allocated(InData%WaveKinxi))
    if (allocated(InData%WaveKinxi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveKinxi), ubound(InData%WaveKinxi))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveKinxi, kind=B8Ki), ubound(InData%WaveKinxi, kind=B8Ki))
       call RegPack(Buf, InData%WaveKinxi)
    end if
    call RegPack(Buf, allocated(InData%WaveKinyi))
    if (allocated(InData%WaveKinyi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveKinyi), ubound(InData%WaveKinyi))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveKinyi, kind=B8Ki), ubound(InData%WaveKinyi, kind=B8Ki))
       call RegPack(Buf, InData%WaveKinyi)
    end if
    call RegPack(Buf, allocated(InData%WaveKinzi))
    if (allocated(InData%WaveKinzi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveKinzi), ubound(InData%WaveKinzi))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveKinzi, kind=B8Ki), ubound(InData%WaveKinzi, kind=B8Ki))
       call RegPack(Buf, InData%WaveKinzi)
    end if
    call RegPack(Buf, InData%OutSwtch)
@@ -391,7 +391,7 @@ subroutine SeaSt_PackInputFile(Buf, Indata)
    call RegPack(Buf, InData%NumOuts)
    call RegPack(Buf, allocated(InData%OutList))
    if (allocated(InData%OutList)) then
-      call RegPackBounds(Buf, 1, lbound(InData%OutList), ubound(InData%OutList))
+      call RegPackBounds(Buf, 1, lbound(InData%OutList, kind=B8Ki), ubound(InData%OutList, kind=B8Ki))
       call RegPack(Buf, InData%OutList)
    end if
    call RegPack(Buf, InData%SeaStSum)
@@ -419,7 +419,7 @@ subroutine SeaSt_UnPackInputFile(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(SeaSt_InputFile), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_UnPackInputFile'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -582,7 +582,7 @@ subroutine SeaSt_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SeaSt_CopyInitInput'
@@ -601,8 +601,8 @@ subroutine SeaSt_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%MHK = SrcInitInputData%MHK
    DstInitInputData%TMax = SrcInitInputData%TMax
    if (allocated(SrcInitInputData%WaveElevXY)) then
-      LB(1:2) = lbound(SrcInitInputData%WaveElevXY)
-      UB(1:2) = ubound(SrcInitInputData%WaveElevXY)
+      LB(1:2) = lbound(SrcInitInputData%WaveElevXY, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitInputData%WaveElevXY, kind=B8Ki)
       if (.not. allocated(DstInitInputData%WaveElevXY)) then
          allocate(DstInitInputData%WaveElevXY(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -655,7 +655,7 @@ subroutine SeaSt_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%TMax)
    call RegPack(Buf, allocated(InData%WaveElevXY))
    if (allocated(InData%WaveElevXY)) then
-      call RegPackBounds(Buf, 2, lbound(InData%WaveElevXY), ubound(InData%WaveElevXY))
+      call RegPackBounds(Buf, 2, lbound(InData%WaveElevXY, kind=B8Ki), ubound(InData%WaveElevXY, kind=B8Ki))
       call RegPack(Buf, InData%WaveElevXY)
    end if
    call RegPack(Buf, InData%WaveFieldMod)
@@ -673,7 +673,7 @@ subroutine SeaSt_UnPackInitInput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(SeaSt_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_UnPackInitInput'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -734,15 +734,15 @@ subroutine SeaSt_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SeaSt_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
          allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -753,8 +753,8 @@ subroutine SeaSt_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
          allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -769,8 +769,8 @@ subroutine SeaSt_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    if (ErrStat >= AbortErrLev) return
    DstInitOutputData%InvalidWithSSExctn = SrcInitOutputData%InvalidWithSSExctn
    if (allocated(SrcInitOutputData%WaveElevSeries)) then
-      LB(1:2) = lbound(SrcInitOutputData%WaveElevSeries)
-      UB(1:2) = ubound(SrcInitOutputData%WaveElevSeries)
+      LB(1:2) = lbound(SrcInitOutputData%WaveElevSeries, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitOutputData%WaveElevSeries, kind=B8Ki)
       if (.not. allocated(DstInitOutputData%WaveElevSeries)) then
          allocate(DstInitOutputData%WaveElevSeries(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -814,19 +814,19 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%WriteOutputHdr))
    if (allocated(InData%WriteOutputHdr)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr, kind=B8Ki), ubound(InData%WriteOutputHdr, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt, kind=B8Ki), ubound(InData%WriteOutputUnt, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
    call RegPack(Buf, InData%InvalidWithSSExctn)
    call RegPack(Buf, allocated(InData%WaveElevSeries))
    if (allocated(InData%WaveElevSeries)) then
-      call RegPackBounds(Buf, 2, lbound(InData%WaveElevSeries), ubound(InData%WaveElevSeries))
+      call RegPackBounds(Buf, 2, lbound(InData%WaveElevSeries, kind=B8Ki), ubound(InData%WaveElevSeries, kind=B8Ki))
       call RegPack(Buf, InData%WaveElevSeries)
    end if
    call RegPack(Buf, associated(InData%WaveField))
@@ -843,10 +843,10 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(SeaSt_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_UnPackInitOutput'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(IntKi)  :: PtrIdx
+   integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    if (allocated(OutData%WriteOutputHdr)) deallocate(OutData%WriteOutputHdr)
@@ -1136,8 +1136,8 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SeaSt_CopyParam'
@@ -1149,8 +1149,8 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    DstParamData%deltaGrid = SrcParamData%deltaGrid
    DstParamData%NWaveElev = SrcParamData%NWaveElev
    if (allocated(SrcParamData%WaveElevxi)) then
-      LB(1:1) = lbound(SrcParamData%WaveElevxi)
-      UB(1:1) = ubound(SrcParamData%WaveElevxi)
+      LB(1:1) = lbound(SrcParamData%WaveElevxi, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%WaveElevxi, kind=B8Ki)
       if (.not. allocated(DstParamData%WaveElevxi)) then
          allocate(DstParamData%WaveElevxi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1161,8 +1161,8 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
       DstParamData%WaveElevxi = SrcParamData%WaveElevxi
    end if
    if (allocated(SrcParamData%WaveElevyi)) then
-      LB(1:1) = lbound(SrcParamData%WaveElevyi)
-      UB(1:1) = ubound(SrcParamData%WaveElevyi)
+      LB(1:1) = lbound(SrcParamData%WaveElevyi, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%WaveElevyi, kind=B8Ki)
       if (.not. allocated(DstParamData%WaveElevyi)) then
          allocate(DstParamData%WaveElevyi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1174,8 +1174,8 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    end if
    DstParamData%NWaveKin = SrcParamData%NWaveKin
    if (allocated(SrcParamData%WaveKinxi)) then
-      LB(1:1) = lbound(SrcParamData%WaveKinxi)
-      UB(1:1) = ubound(SrcParamData%WaveKinxi)
+      LB(1:1) = lbound(SrcParamData%WaveKinxi, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%WaveKinxi, kind=B8Ki)
       if (.not. allocated(DstParamData%WaveKinxi)) then
          allocate(DstParamData%WaveKinxi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1186,8 +1186,8 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
       DstParamData%WaveKinxi = SrcParamData%WaveKinxi
    end if
    if (allocated(SrcParamData%WaveKinyi)) then
-      LB(1:1) = lbound(SrcParamData%WaveKinyi)
-      UB(1:1) = ubound(SrcParamData%WaveKinyi)
+      LB(1:1) = lbound(SrcParamData%WaveKinyi, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%WaveKinyi, kind=B8Ki)
       if (.not. allocated(DstParamData%WaveKinyi)) then
          allocate(DstParamData%WaveKinyi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1198,8 +1198,8 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
       DstParamData%WaveKinyi = SrcParamData%WaveKinyi
    end if
    if (allocated(SrcParamData%WaveKinzi)) then
-      LB(1:1) = lbound(SrcParamData%WaveKinzi)
-      UB(1:1) = ubound(SrcParamData%WaveKinzi)
+      LB(1:1) = lbound(SrcParamData%WaveKinzi, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%WaveKinzi, kind=B8Ki)
       if (.not. allocated(DstParamData%WaveKinzi)) then
          allocate(DstParamData%WaveKinzi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1210,8 +1210,8 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
       DstParamData%WaveKinzi = SrcParamData%WaveKinzi
    end if
    if (allocated(SrcParamData%OutParam)) then
-      LB(1:1) = lbound(SrcParamData%OutParam)
-      UB(1:1) = ubound(SrcParamData%OutParam)
+      LB(1:1) = lbound(SrcParamData%OutParam, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%OutParam, kind=B8Ki)
       if (.not. allocated(DstParamData%OutParam)) then
          allocate(DstParamData%OutParam(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1250,8 +1250,8 @@ subroutine SeaSt_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(SeaSt_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SeaSt_DestroyParam'
@@ -1273,8 +1273,8 @@ subroutine SeaSt_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%WaveKinzi)
    end if
    if (allocated(ParamData%OutParam)) then
-      LB(1:1) = lbound(ParamData%OutParam)
-      UB(1:1) = ubound(ParamData%OutParam)
+      LB(1:1) = lbound(ParamData%OutParam, kind=B8Ki)
+      UB(1:1) = ubound(ParamData%OutParam, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyOutParmType(ParamData%OutParam(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1293,8 +1293,8 @@ subroutine SeaSt_PackParam(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SeaSt_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_PackParam'
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%WaveDT)
@@ -1304,35 +1304,35 @@ subroutine SeaSt_PackParam(Buf, Indata)
    call RegPack(Buf, InData%NWaveElev)
    call RegPack(Buf, allocated(InData%WaveElevxi))
    if (allocated(InData%WaveElevxi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveElevxi), ubound(InData%WaveElevxi))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveElevxi, kind=B8Ki), ubound(InData%WaveElevxi, kind=B8Ki))
       call RegPack(Buf, InData%WaveElevxi)
    end if
    call RegPack(Buf, allocated(InData%WaveElevyi))
    if (allocated(InData%WaveElevyi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveElevyi), ubound(InData%WaveElevyi))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveElevyi, kind=B8Ki), ubound(InData%WaveElevyi, kind=B8Ki))
       call RegPack(Buf, InData%WaveElevyi)
    end if
    call RegPack(Buf, InData%NWaveKin)
    call RegPack(Buf, allocated(InData%WaveKinxi))
    if (allocated(InData%WaveKinxi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveKinxi), ubound(InData%WaveKinxi))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveKinxi, kind=B8Ki), ubound(InData%WaveKinxi, kind=B8Ki))
       call RegPack(Buf, InData%WaveKinxi)
    end if
    call RegPack(Buf, allocated(InData%WaveKinyi))
    if (allocated(InData%WaveKinyi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveKinyi), ubound(InData%WaveKinyi))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveKinyi, kind=B8Ki), ubound(InData%WaveKinyi, kind=B8Ki))
       call RegPack(Buf, InData%WaveKinyi)
    end if
    call RegPack(Buf, allocated(InData%WaveKinzi))
    if (allocated(InData%WaveKinzi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveKinzi), ubound(InData%WaveKinzi))
+      call RegPackBounds(Buf, 1, lbound(InData%WaveKinzi, kind=B8Ki), ubound(InData%WaveKinzi, kind=B8Ki))
       call RegPack(Buf, InData%WaveKinzi)
    end if
    call RegPack(Buf, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
-      call RegPackBounds(Buf, 1, lbound(InData%OutParam), ubound(InData%OutParam))
-      LB(1:1) = lbound(InData%OutParam)
-      UB(1:1) = ubound(InData%OutParam)
+      call RegPackBounds(Buf, 1, lbound(InData%OutParam, kind=B8Ki), ubound(InData%OutParam, kind=B8Ki))
+      LB(1:1) = lbound(InData%OutParam, kind=B8Ki)
+      UB(1:1) = ubound(InData%OutParam, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackOutParmType(Buf, InData%OutParam(i1)) 
       end do
@@ -1358,11 +1358,11 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(SeaSt_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_UnPackParam'
-   integer(IntKi)  :: i1
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(IntKi)  :: PtrIdx
+   integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    call RegUnpack(Buf, OutData%WaveDT)
@@ -1543,14 +1543,14 @@ subroutine SeaSt_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'SeaSt_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOutputData%WriteOutput)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutput)
-      UB(1:1) = ubound(SrcOutputData%WriteOutput)
+      LB(1:1) = lbound(SrcOutputData%WriteOutput, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput, kind=B8Ki)
       if (.not. allocated(DstOutputData%WriteOutput)) then
          allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1581,7 +1581,7 @@ subroutine SeaSt_PackOutput(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutput, kind=B8Ki), ubound(InData%WriteOutput, kind=B8Ki))
       call RegPack(Buf, InData%WriteOutput)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1591,7 +1591,7 @@ subroutine SeaSt_UnPackOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(SeaSt_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_UnPackOutput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return

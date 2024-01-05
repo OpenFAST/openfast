@@ -705,7 +705,7 @@ subroutine InflowWind_IO_CopyGrid4D_InitInputType(SrcGrid4D_InitInputTypeData, D
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(5), UB(5)
+   integer(B8Ki)                  :: LB(5), UB(5)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'InflowWind_IO_CopyGrid4D_InitInputType'
    ErrStat = ErrID_None
@@ -737,7 +737,7 @@ subroutine InflowWind_IO_PackGrid4D_InitInputType(Buf, Indata)
    call RegPack(Buf, InData%pZero)
    call RegPack(Buf, associated(InData%Vel))
    if (associated(InData%Vel)) then
-      call RegPackBounds(Buf, 5, lbound(InData%Vel), ubound(InData%Vel))
+      call RegPackBounds(Buf, 5, lbound(InData%Vel, kind=B8Ki), ubound(InData%Vel, kind=B8Ki))
       call RegPackPointer(Buf, c_loc(InData%Vel), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%Vel)
@@ -750,10 +750,10 @@ subroutine InflowWind_IO_UnPackGrid4D_InitInputType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Grid4D_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackGrid4D_InitInputType'
-   integer(IntKi)  :: LB(5), UB(5)
+   integer(B8Ki)   :: LB(5), UB(5)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(IntKi)  :: PtrIdx
+   integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    call RegUnpack(Buf, OutData%n)
