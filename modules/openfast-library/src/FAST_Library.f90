@@ -741,8 +741,11 @@ subroutine FAST_ExtInfw_Init(iTurb, TMax, InputFileName_c, TurbID, OutFileRoot_c
       IF (NumBl_c > 0) THEN
          NumBlElem_c = Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion(1)%Nnodes
       END IF
-!FIXME: need some checks on this.  If the Tower mesh is not initialized, this will be garbage
-      NumTwrElem_c = Turbine(iTurb)%AD%y%rotors(1)%TowerLoad%Nnodes
+      if (Turbine(iTurb)%AD%y%rotors(1)%TowerLoad%Committed) then
+         NumTwrElem_c = Turbine(iTurb)%AD%y%rotors(1)%TowerLoad%Nnodes
+      else
+         NumTwrElem_c = 0
+      endif
    ELSE
       NumBl_c     = 0
       NumBlElem_c = 0
