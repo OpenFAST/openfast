@@ -343,7 +343,7 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, FED, SeaSt, errStat, errMsg)
    call SeaSt_CalcOutput( time, SeaSt%u, SeaSt%p, SeaSt%x, SeaSt%xd, SeaSt%z, SeaSt%OtherState, SeaSt%y, SeaSt%m, errStat2, errMsg2 )
 
    ! Write outputs for all turbines at nt-1
-   call Dvr_WriteOutputs(nt, time, dvr, dvr%out, ADI%y, SeaSt%y, errStat2, errMsg2); if(Failed()) return
+   call Dvr_WriteOutputs(nt, time, dvr, dvr%out, ADI%y, SeaSt, errStat2, errMsg2); if(Failed()) return
 
    ! We store the "driver-level" outputs only now,  above, the old outputs are used
    call Dvr_CalcOutputDriver(dvr, ADI%y, FED, errStat, errMsg)
@@ -1704,13 +1704,13 @@ subroutine Dvr_CalcOutputDriver(dvr, y_ADI, FED, errStat, errMsg)
 
 end subroutine Dvr_CalcOutputDriver
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine Dvr_WriteOutputs(nt, t, dvr, out, yADI, ySeaSt, errStat, errMsg)
+subroutine Dvr_WriteOutputs(nt, t, dvr, out, yADI, SeaSt, errStat, errMsg)
    integer(IntKi)         ,  intent(in   )   :: nt                   ! simulation time step
    real(DbKi)             ,  intent(in   )   :: t                    ! simulation time (s)
-   type(Dvr_SimData),        intent(inout)   :: dvr              ! driver data
+   type(Dvr_SimData)      ,  intent(inout)   :: dvr                  ! driver data
    type(Dvr_Outputs)      ,  intent(inout)   :: out                  ! driver uotput options
    type(ADI_OutputType)   ,  intent(in   )   :: yADI                 ! aerodyn outputs
-   type(SeaSt_OutputType) ,  intent(in   )   :: ySeaSt               ! SeaSt outputs
+   type(SeaState_Data)    ,  intent(inout)   :: SeaSt                ! SeaState data
    integer(IntKi)         ,  intent(inout)   :: errStat              ! Status of error message
    character(*)           ,  intent(inout)   :: errMsg               ! Error message if errStat /= ErrID_None
    ! Local variables.
@@ -1722,10 +1722,20 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, yADI, ySeaSt, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ''
 
+   IF ( .not. allocated( SeaSt%y%WriteOutput ) ) then 
+      ALLOCATE ( SeaSt%y%WriteOutput ( SeaSt%p%NumOuts ) , STAT=ErrStat )
+      IF ( ErrStat /= 0 )  THEN
+         ErrMsg  = ' Error allocating memory for the SeaState WriteOutput array.'
+         ErrStat = ErrID_Fatal
+         RETURN
+      END IF
+      SeaSt%y%WriteOutput = 0.0_ReKi
+   END IF
+
    ! Packing all outputs excpet time into one array
    nAD = size(yADI%AD%rotors(1)%WriteOutput)
    nIW = size(yADI%IW_WriteOutput)
-   nSS = size(ySeaSt%WriteOutput)
+   nSS = size(SeaSt%y%WriteOutput)
    nDV = out%nDvrOutputs
    do iWT = 1, dvr%numTurbines
       if (dvr%wt(iWT)%numBlades >0 ) then ! TODO, export for tower only
@@ -1735,7 +1745,7 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, yADI, ySeaSt, errStat, errMsg)
 
          out%outLine(nDV+1:nDV+nAD)         = yADI%AD%rotors(iWT)%WriteOutput     ! AeroDyn WriteOutputs
          out%outLine(nDV+nAD+1:nDV+nAD+nIW) = yADI%IW_WriteOutput                 ! InflowWind WriteOutputs
-         out%outLine(nDV+nAD+nIW+1:)        = ySeaSt%WriteOutput                  ! SeaState WriteOutputs
+         out%outLine(nDV+nAD+nIW+1:)        = SeaSt%y%WriteOutput                  ! SeaState WriteOutputs
 
          if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtAscii) then
             ! ASCII
