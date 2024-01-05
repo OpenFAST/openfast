@@ -1255,8 +1255,8 @@ subroutine AD_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, C
       DstBladePropsTypeData%BlAFID = SrcBladePropsTypeData%BlAFID
    end if
    if (allocated(SrcBladePropsTypeData%t_c)) then
-      LB(1:1) = lbound(SrcBladePropsTypeData%t_c)
-      UB(1:1) = ubound(SrcBladePropsTypeData%t_c)
+      LB(1:1) = lbound(SrcBladePropsTypeData%t_c, kind=B8Ki)
+      UB(1:1) = ubound(SrcBladePropsTypeData%t_c, kind=B8Ki)
       if (.not. allocated(DstBladePropsTypeData%t_c)) then
          allocate(DstBladePropsTypeData%t_c(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1303,8 +1303,8 @@ subroutine AD_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, C
       DstBladePropsTypeData%BlCenBt = SrcBladePropsTypeData%BlCenBt
    end if
    if (allocated(SrcBladePropsTypeData%BlCpn)) then
-      LB(1:1) = lbound(SrcBladePropsTypeData%BlCpn)
-      UB(1:1) = ubound(SrcBladePropsTypeData%BlCpn)
+      LB(1:1) = lbound(SrcBladePropsTypeData%BlCpn, kind=B8Ki)
+      UB(1:1) = ubound(SrcBladePropsTypeData%BlCpn, kind=B8Ki)
       if (.not. allocated(DstBladePropsTypeData%BlCpn)) then
          allocate(DstBladePropsTypeData%BlCpn(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1315,8 +1315,8 @@ subroutine AD_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, C
       DstBladePropsTypeData%BlCpn = SrcBladePropsTypeData%BlCpn
    end if
    if (allocated(SrcBladePropsTypeData%BlCpt)) then
-      LB(1:1) = lbound(SrcBladePropsTypeData%BlCpt)
-      UB(1:1) = ubound(SrcBladePropsTypeData%BlCpt)
+      LB(1:1) = lbound(SrcBladePropsTypeData%BlCpt, kind=B8Ki)
+      UB(1:1) = ubound(SrcBladePropsTypeData%BlCpt, kind=B8Ki)
       if (.not. allocated(DstBladePropsTypeData%BlCpt)) then
          allocate(DstBladePropsTypeData%BlCpt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1327,8 +1327,8 @@ subroutine AD_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, C
       DstBladePropsTypeData%BlCpt = SrcBladePropsTypeData%BlCpt
    end if
    if (allocated(SrcBladePropsTypeData%BlCan)) then
-      LB(1:1) = lbound(SrcBladePropsTypeData%BlCan)
-      UB(1:1) = ubound(SrcBladePropsTypeData%BlCan)
+      LB(1:1) = lbound(SrcBladePropsTypeData%BlCan, kind=B8Ki)
+      UB(1:1) = ubound(SrcBladePropsTypeData%BlCan, kind=B8Ki)
       if (.not. allocated(DstBladePropsTypeData%BlCan)) then
          allocate(DstBladePropsTypeData%BlCan(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1339,8 +1339,8 @@ subroutine AD_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, C
       DstBladePropsTypeData%BlCan = SrcBladePropsTypeData%BlCan
    end if
    if (allocated(SrcBladePropsTypeData%BlCat)) then
-      LB(1:1) = lbound(SrcBladePropsTypeData%BlCat)
-      UB(1:1) = ubound(SrcBladePropsTypeData%BlCat)
+      LB(1:1) = lbound(SrcBladePropsTypeData%BlCat, kind=B8Ki)
+      UB(1:1) = ubound(SrcBladePropsTypeData%BlCat, kind=B8Ki)
       if (.not. allocated(DstBladePropsTypeData%BlCat)) then
          allocate(DstBladePropsTypeData%BlCat(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1351,8 +1351,8 @@ subroutine AD_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, C
       DstBladePropsTypeData%BlCat = SrcBladePropsTypeData%BlCat
    end if
    if (allocated(SrcBladePropsTypeData%BlCam)) then
-      LB(1:1) = lbound(SrcBladePropsTypeData%BlCam)
-      UB(1:1) = ubound(SrcBladePropsTypeData%BlCam)
+      LB(1:1) = lbound(SrcBladePropsTypeData%BlCam, kind=B8Ki)
+      UB(1:1) = ubound(SrcBladePropsTypeData%BlCam, kind=B8Ki)
       if (.not. allocated(DstBladePropsTypeData%BlCam)) then
          allocate(DstBladePropsTypeData%BlCam(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1464,7 +1464,7 @@ subroutine AD_PackBladePropsType(Buf, Indata)
    end if
    call RegPack(Buf, allocated(InData%t_c))
    if (allocated(InData%t_c)) then
-      call RegPackBounds(Buf, 1, lbound(InData%t_c), ubound(InData%t_c))
+      call RegPackBounds(Buf, 1, lbound(InData%t_c, kind=B8Ki), ubound(InData%t_c, kind=B8Ki))
       call RegPack(Buf, InData%t_c)
    end if
    call RegPack(Buf, allocated(InData%BlCb))
@@ -1484,27 +1484,27 @@ subroutine AD_PackBladePropsType(Buf, Indata)
    end if
    call RegPack(Buf, allocated(InData%BlCpn))
    if (allocated(InData%BlCpn)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BlCpn), ubound(InData%BlCpn))
+      call RegPackBounds(Buf, 1, lbound(InData%BlCpn, kind=B8Ki), ubound(InData%BlCpn, kind=B8Ki))
       call RegPack(Buf, InData%BlCpn)
    end if
    call RegPack(Buf, allocated(InData%BlCpt))
    if (allocated(InData%BlCpt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BlCpt), ubound(InData%BlCpt))
+      call RegPackBounds(Buf, 1, lbound(InData%BlCpt, kind=B8Ki), ubound(InData%BlCpt, kind=B8Ki))
       call RegPack(Buf, InData%BlCpt)
    end if
    call RegPack(Buf, allocated(InData%BlCan))
    if (allocated(InData%BlCan)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BlCan), ubound(InData%BlCan))
+      call RegPackBounds(Buf, 1, lbound(InData%BlCan, kind=B8Ki), ubound(InData%BlCan, kind=B8Ki))
       call RegPack(Buf, InData%BlCan)
    end if
    call RegPack(Buf, allocated(InData%BlCat))
    if (allocated(InData%BlCat)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BlCat), ubound(InData%BlCat))
+      call RegPackBounds(Buf, 1, lbound(InData%BlCat, kind=B8Ki), ubound(InData%BlCat, kind=B8Ki))
       call RegPack(Buf, InData%BlCat)
    end if
    call RegPack(Buf, allocated(InData%BlCam))
    if (allocated(InData%BlCam)) then
-      call RegPackBounds(Buf, 1, lbound(InData%BlCam), ubound(InData%BlCam))
+      call RegPackBounds(Buf, 1, lbound(InData%BlCam, kind=B8Ki), ubound(InData%BlCam, kind=B8Ki))
       call RegPack(Buf, InData%BlCam)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2575,8 +2575,8 @@ subroutine AD_CopyRotInputFile(SrcRotInputFileData, DstRotInputFileData, CtrlCod
       DstRotInputFileData%TwrCb = SrcRotInputFileData%TwrCb
    end if
    if (allocated(SrcRotInputFileData%TwrCp)) then
-      LB(1:1) = lbound(SrcRotInputFileData%TwrCp)
-      UB(1:1) = ubound(SrcRotInputFileData%TwrCp)
+      LB(1:1) = lbound(SrcRotInputFileData%TwrCp, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotInputFileData%TwrCp, kind=B8Ki)
       if (.not. allocated(DstRotInputFileData%TwrCp)) then
          allocate(DstRotInputFileData%TwrCp(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2587,8 +2587,8 @@ subroutine AD_CopyRotInputFile(SrcRotInputFileData, DstRotInputFileData, CtrlCod
       DstRotInputFileData%TwrCp = SrcRotInputFileData%TwrCp
    end if
    if (allocated(SrcRotInputFileData%TwrCa)) then
-      LB(1:1) = lbound(SrcRotInputFileData%TwrCa)
-      UB(1:1) = ubound(SrcRotInputFileData%TwrCa)
+      LB(1:1) = lbound(SrcRotInputFileData%TwrCa, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotInputFileData%TwrCa, kind=B8Ki)
       if (.not. allocated(DstRotInputFileData%TwrCa)) then
          allocate(DstRotInputFileData%TwrCa(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2698,12 +2698,12 @@ subroutine AD_PackRotInputFile(Buf, Indata)
    end if
    call RegPack(Buf, allocated(InData%TwrCp))
    if (allocated(InData%TwrCp)) then
-      call RegPackBounds(Buf, 1, lbound(InData%TwrCp), ubound(InData%TwrCp))
+      call RegPackBounds(Buf, 1, lbound(InData%TwrCp, kind=B8Ki), ubound(InData%TwrCp, kind=B8Ki))
       call RegPack(Buf, InData%TwrCp)
    end if
    call RegPack(Buf, allocated(InData%TwrCa))
    if (allocated(InData%TwrCa)) then
-      call RegPackBounds(Buf, 1, lbound(InData%TwrCa), ubound(InData%TwrCa))
+      call RegPackBounds(Buf, 1, lbound(InData%TwrCa, kind=B8Ki), ubound(InData%TwrCa, kind=B8Ki))
       call RegPack(Buf, InData%TwrCa)
    end if
    call RegPack(Buf, InData%VolHub)
@@ -4334,8 +4334,8 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
       DstRotMiscVarTypeData%NacMB = SrcRotMiscVarTypeData%NacMB
    end if
    if (allocated(SrcRotMiscVarTypeData%BlFI)) then
-      LB(1:3) = lbound(SrcRotMiscVarTypeData%BlFI)
-      UB(1:3) = ubound(SrcRotMiscVarTypeData%BlFI)
+      LB(1:3) = lbound(SrcRotMiscVarTypeData%BlFI, kind=B8Ki)
+      UB(1:3) = ubound(SrcRotMiscVarTypeData%BlFI, kind=B8Ki)
       if (.not. allocated(DstRotMiscVarTypeData%BlFI)) then
          allocate(DstRotMiscVarTypeData%BlFI(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4346,8 +4346,8 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
       DstRotMiscVarTypeData%BlFI = SrcRotMiscVarTypeData%BlFI
    end if
    if (allocated(SrcRotMiscVarTypeData%BlFA)) then
-      LB(1:3) = lbound(SrcRotMiscVarTypeData%BlFA)
-      UB(1:3) = ubound(SrcRotMiscVarTypeData%BlFA)
+      LB(1:3) = lbound(SrcRotMiscVarTypeData%BlFA, kind=B8Ki)
+      UB(1:3) = ubound(SrcRotMiscVarTypeData%BlFA, kind=B8Ki)
       if (.not. allocated(DstRotMiscVarTypeData%BlFA)) then
          allocate(DstRotMiscVarTypeData%BlFA(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4358,8 +4358,8 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
       DstRotMiscVarTypeData%BlFA = SrcRotMiscVarTypeData%BlFA
    end if
    if (allocated(SrcRotMiscVarTypeData%BlMA)) then
-      LB(1:3) = lbound(SrcRotMiscVarTypeData%BlMA)
-      UB(1:3) = ubound(SrcRotMiscVarTypeData%BlMA)
+      LB(1:3) = lbound(SrcRotMiscVarTypeData%BlMA, kind=B8Ki)
+      UB(1:3) = ubound(SrcRotMiscVarTypeData%BlMA, kind=B8Ki)
       if (.not. allocated(DstRotMiscVarTypeData%BlMA)) then
          allocate(DstRotMiscVarTypeData%BlMA(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4370,8 +4370,8 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
       DstRotMiscVarTypeData%BlMA = SrcRotMiscVarTypeData%BlMA
    end if
    if (allocated(SrcRotMiscVarTypeData%TwrFI)) then
-      LB(1:2) = lbound(SrcRotMiscVarTypeData%TwrFI)
-      UB(1:2) = ubound(SrcRotMiscVarTypeData%TwrFI)
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%TwrFI, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%TwrFI, kind=B8Ki)
       if (.not. allocated(DstRotMiscVarTypeData%TwrFI)) then
          allocate(DstRotMiscVarTypeData%TwrFI(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4382,8 +4382,8 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
       DstRotMiscVarTypeData%TwrFI = SrcRotMiscVarTypeData%TwrFI
    end if
    if (allocated(SrcRotMiscVarTypeData%TwrFA)) then
-      LB(1:2) = lbound(SrcRotMiscVarTypeData%TwrFA)
-      UB(1:2) = ubound(SrcRotMiscVarTypeData%TwrFA)
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%TwrFA, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%TwrFA, kind=B8Ki)
       if (.not. allocated(DstRotMiscVarTypeData%TwrFA)) then
          allocate(DstRotMiscVarTypeData%TwrFA(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -4851,27 +4851,27 @@ subroutine AD_PackRotMiscVarType(Buf, Indata)
    end if
    call RegPack(Buf, allocated(InData%BlFI))
    if (allocated(InData%BlFI)) then
-      call RegPackBounds(Buf, 3, lbound(InData%BlFI), ubound(InData%BlFI))
+      call RegPackBounds(Buf, 3, lbound(InData%BlFI, kind=B8Ki), ubound(InData%BlFI, kind=B8Ki))
       call RegPack(Buf, InData%BlFI)
    end if
    call RegPack(Buf, allocated(InData%BlFA))
    if (allocated(InData%BlFA)) then
-      call RegPackBounds(Buf, 3, lbound(InData%BlFA), ubound(InData%BlFA))
+      call RegPackBounds(Buf, 3, lbound(InData%BlFA, kind=B8Ki), ubound(InData%BlFA, kind=B8Ki))
       call RegPack(Buf, InData%BlFA)
    end if
    call RegPack(Buf, allocated(InData%BlMA))
    if (allocated(InData%BlMA)) then
-      call RegPackBounds(Buf, 3, lbound(InData%BlMA), ubound(InData%BlMA))
+      call RegPackBounds(Buf, 3, lbound(InData%BlMA, kind=B8Ki), ubound(InData%BlMA, kind=B8Ki))
       call RegPack(Buf, InData%BlMA)
    end if
    call RegPack(Buf, allocated(InData%TwrFI))
    if (allocated(InData%TwrFI)) then
-      call RegPackBounds(Buf, 2, lbound(InData%TwrFI), ubound(InData%TwrFI))
+      call RegPackBounds(Buf, 2, lbound(InData%TwrFI, kind=B8Ki), ubound(InData%TwrFI, kind=B8Ki))
       call RegPack(Buf, InData%TwrFI)
    end if
    call RegPack(Buf, allocated(InData%TwrFA))
    if (allocated(InData%TwrFA)) then
-      call RegPackBounds(Buf, 2, lbound(InData%TwrFA), ubound(InData%TwrFA))
+      call RegPackBounds(Buf, 2, lbound(InData%TwrFA, kind=B8Ki), ubound(InData%TwrFA, kind=B8Ki))
       call RegPack(Buf, InData%TwrFA)
    end if
    call RegPack(Buf, allocated(InData%BladeRootLoad))
@@ -5879,8 +5879,8 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
       DstRotParameterTypeData%TwrCb = SrcRotParameterTypeData%TwrCb
    end if
    if (allocated(SrcRotParameterTypeData%TwrCp)) then
-      LB(1:1) = lbound(SrcRotParameterTypeData%TwrCp)
-      UB(1:1) = ubound(SrcRotParameterTypeData%TwrCp)
+      LB(1:1) = lbound(SrcRotParameterTypeData%TwrCp, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotParameterTypeData%TwrCp, kind=B8Ki)
       if (.not. allocated(DstRotParameterTypeData%TwrCp)) then
          allocate(DstRotParameterTypeData%TwrCp(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -5891,8 +5891,8 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
       DstRotParameterTypeData%TwrCp = SrcRotParameterTypeData%TwrCp
    end if
    if (allocated(SrcRotParameterTypeData%TwrCa)) then
-      LB(1:1) = lbound(SrcRotParameterTypeData%TwrCa)
-      UB(1:1) = ubound(SrcRotParameterTypeData%TwrCa)
+      LB(1:1) = lbound(SrcRotParameterTypeData%TwrCa, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotParameterTypeData%TwrCa, kind=B8Ki)
       if (.not. allocated(DstRotParameterTypeData%TwrCa)) then
          allocate(DstRotParameterTypeData%TwrCa(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -5981,8 +5981,8 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
       DstRotParameterTypeData%BlAxCent = SrcRotParameterTypeData%BlAxCent
    end if
    if (allocated(SrcRotParameterTypeData%BlIN)) then
-      LB(1:2) = lbound(SrcRotParameterTypeData%BlIN)
-      UB(1:2) = ubound(SrcRotParameterTypeData%BlIN)
+      LB(1:2) = lbound(SrcRotParameterTypeData%BlIN, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotParameterTypeData%BlIN, kind=B8Ki)
       if (.not. allocated(DstRotParameterTypeData%BlIN)) then
          allocate(DstRotParameterTypeData%BlIN(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -5993,8 +5993,8 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
       DstRotParameterTypeData%BlIN = SrcRotParameterTypeData%BlIN
    end if
    if (allocated(SrcRotParameterTypeData%BlIT)) then
-      LB(1:2) = lbound(SrcRotParameterTypeData%BlIT)
-      UB(1:2) = ubound(SrcRotParameterTypeData%BlIT)
+      LB(1:2) = lbound(SrcRotParameterTypeData%BlIT, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotParameterTypeData%BlIT, kind=B8Ki)
       if (.not. allocated(DstRotParameterTypeData%BlIT)) then
          allocate(DstRotParameterTypeData%BlIT(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -6005,8 +6005,8 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
       DstRotParameterTypeData%BlIT = SrcRotParameterTypeData%BlIT
    end if
    if (allocated(SrcRotParameterTypeData%BlAN)) then
-      LB(1:2) = lbound(SrcRotParameterTypeData%BlAN)
-      UB(1:2) = ubound(SrcRotParameterTypeData%BlAN)
+      LB(1:2) = lbound(SrcRotParameterTypeData%BlAN, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotParameterTypeData%BlAN, kind=B8Ki)
       if (.not. allocated(DstRotParameterTypeData%BlAN)) then
          allocate(DstRotParameterTypeData%BlAN(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -6017,8 +6017,8 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
       DstRotParameterTypeData%BlAN = SrcRotParameterTypeData%BlAN
    end if
    if (allocated(SrcRotParameterTypeData%BlAT)) then
-      LB(1:2) = lbound(SrcRotParameterTypeData%BlAT)
-      UB(1:2) = ubound(SrcRotParameterTypeData%BlAT)
+      LB(1:2) = lbound(SrcRotParameterTypeData%BlAT, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotParameterTypeData%BlAT, kind=B8Ki)
       if (.not. allocated(DstRotParameterTypeData%BlAT)) then
          allocate(DstRotParameterTypeData%BlAT(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -6029,8 +6029,8 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
       DstRotParameterTypeData%BlAT = SrcRotParameterTypeData%BlAT
    end if
    if (allocated(SrcRotParameterTypeData%BlAM)) then
-      LB(1:2) = lbound(SrcRotParameterTypeData%BlAM)
-      UB(1:2) = ubound(SrcRotParameterTypeData%BlAM)
+      LB(1:2) = lbound(SrcRotParameterTypeData%BlAM, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotParameterTypeData%BlAM, kind=B8Ki)
       if (.not. allocated(DstRotParameterTypeData%BlAM)) then
          allocate(DstRotParameterTypeData%BlAM(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -6089,8 +6089,8 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
       DstRotParameterTypeData%TwrAxCent = SrcRotParameterTypeData%TwrAxCent
    end if
    if (allocated(SrcRotParameterTypeData%TwrIT)) then
-      LB(1:1) = lbound(SrcRotParameterTypeData%TwrIT)
-      UB(1:1) = ubound(SrcRotParameterTypeData%TwrIT)
+      LB(1:1) = lbound(SrcRotParameterTypeData%TwrIT, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotParameterTypeData%TwrIT, kind=B8Ki)
       if (.not. allocated(DstRotParameterTypeData%TwrIT)) then
          allocate(DstRotParameterTypeData%TwrIT(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -6101,8 +6101,8 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
       DstRotParameterTypeData%TwrIT = SrcRotParameterTypeData%TwrIT
    end if
    if (allocated(SrcRotParameterTypeData%TwrAT)) then
-      LB(1:1) = lbound(SrcRotParameterTypeData%TwrAT)
-      UB(1:1) = ubound(SrcRotParameterTypeData%TwrAT)
+      LB(1:1) = lbound(SrcRotParameterTypeData%TwrAT, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotParameterTypeData%TwrAT, kind=B8Ki)
       if (.not. allocated(DstRotParameterTypeData%TwrAT)) then
          allocate(DstRotParameterTypeData%TwrAT(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -6390,12 +6390,12 @@ subroutine AD_PackRotParameterType(Buf, Indata)
    end if
    call RegPack(Buf, allocated(InData%TwrCp))
    if (allocated(InData%TwrCp)) then
-      call RegPackBounds(Buf, 1, lbound(InData%TwrCp), ubound(InData%TwrCp))
+      call RegPackBounds(Buf, 1, lbound(InData%TwrCp, kind=B8Ki), ubound(InData%TwrCp, kind=B8Ki))
       call RegPack(Buf, InData%TwrCp)
    end if
    call RegPack(Buf, allocated(InData%TwrCa))
    if (allocated(InData%TwrCa)) then
-      call RegPackBounds(Buf, 1, lbound(InData%TwrCa), ubound(InData%TwrCa))
+      call RegPackBounds(Buf, 1, lbound(InData%TwrCa, kind=B8Ki), ubound(InData%TwrCa, kind=B8Ki))
       call RegPack(Buf, InData%TwrCa)
    end if
    call RegPack(Buf, allocated(InData%BlCenBn))
@@ -6436,27 +6436,27 @@ subroutine AD_PackRotParameterType(Buf, Indata)
    end if
    call RegPack(Buf, allocated(InData%BlIN))
    if (allocated(InData%BlIN)) then
-      call RegPackBounds(Buf, 2, lbound(InData%BlIN), ubound(InData%BlIN))
+      call RegPackBounds(Buf, 2, lbound(InData%BlIN, kind=B8Ki), ubound(InData%BlIN, kind=B8Ki))
       call RegPack(Buf, InData%BlIN)
    end if
    call RegPack(Buf, allocated(InData%BlIT))
    if (allocated(InData%BlIT)) then
-      call RegPackBounds(Buf, 2, lbound(InData%BlIT), ubound(InData%BlIT))
+      call RegPackBounds(Buf, 2, lbound(InData%BlIT, kind=B8Ki), ubound(InData%BlIT, kind=B8Ki))
       call RegPack(Buf, InData%BlIT)
    end if
    call RegPack(Buf, allocated(InData%BlAN))
    if (allocated(InData%BlAN)) then
-      call RegPackBounds(Buf, 2, lbound(InData%BlAN), ubound(InData%BlAN))
+      call RegPackBounds(Buf, 2, lbound(InData%BlAN, kind=B8Ki), ubound(InData%BlAN, kind=B8Ki))
       call RegPack(Buf, InData%BlAN)
    end if
    call RegPack(Buf, allocated(InData%BlAT))
    if (allocated(InData%BlAT)) then
-      call RegPackBounds(Buf, 2, lbound(InData%BlAT), ubound(InData%BlAT))
+      call RegPackBounds(Buf, 2, lbound(InData%BlAT, kind=B8Ki), ubound(InData%BlAT, kind=B8Ki))
       call RegPack(Buf, InData%BlAT)
    end if
    call RegPack(Buf, allocated(InData%BlAM))
    if (allocated(InData%BlAM)) then
-      call RegPackBounds(Buf, 2, lbound(InData%BlAM), ubound(InData%BlAM))
+      call RegPackBounds(Buf, 2, lbound(InData%BlAM, kind=B8Ki), ubound(InData%BlAM, kind=B8Ki))
       call RegPack(Buf, InData%BlAM)
    end if
    call RegPack(Buf, allocated(InData%TwrRad))
@@ -6481,12 +6481,12 @@ subroutine AD_PackRotParameterType(Buf, Indata)
    end if
    call RegPack(Buf, allocated(InData%TwrIT))
    if (allocated(InData%TwrIT)) then
-      call RegPackBounds(Buf, 1, lbound(InData%TwrIT), ubound(InData%TwrIT))
+      call RegPackBounds(Buf, 1, lbound(InData%TwrIT, kind=B8Ki), ubound(InData%TwrIT, kind=B8Ki))
       call RegPack(Buf, InData%TwrIT)
    end if
    call RegPack(Buf, allocated(InData%TwrAT))
    if (allocated(InData%TwrAT)) then
-      call RegPackBounds(Buf, 1, lbound(InData%TwrAT), ubound(InData%TwrAT))
+      call RegPackBounds(Buf, 1, lbound(InData%TwrAT, kind=B8Ki), ubound(InData%TwrAT, kind=B8Ki))
       call RegPack(Buf, InData%TwrAT)
    end if
    call BEMT_PackParam(Buf, InData%BEMT) 
