@@ -97,6 +97,9 @@ MODULE AeroDyn_Inflow_C_BINDING
    type(ADI_InitOutputType)               :: InitOutData       !< Initial output data -- Names, units, and version info.
    type(ADI_InputType)                    :: ADI_u             !< ADI inputs -- set by AD_SetInputMotion.  Copied as needed (necessary for correction steps)
    !------------------------------
+   !  Primary SeaSt data derived data types
+   type(SeaState_Data)                    :: SeaSt             !< SeaState data
+   !------------------------------
    !  Simulation data
    type(Dvr_SimData)                      :: Sim               !< data about the simulation
    !------------------------------
@@ -794,7 +797,7 @@ CONTAINS
       WrOutputsData%unOutFile = -1
 !FIXME: number of timesteps is incorrect!
       call Dvr_InitializeOutputs(Sim%numTurbines, WrOutputsData, Sim%numSteps-1, ErrStat2, ErrMsg2); if(Failed()) return
-      call Dvr_WriteOutputs(n_Global+1, ADI%InputTimes(INPUT_CURR), Sim, WrOutputsData, ADI%y, errStat2, errMsg2); if(Failed()) return
+      call Dvr_WriteOutputs(n_Global+1, ADI%InputTimes(INPUT_CURR), Sim, WrOutputsData, ADI%y, SeaSt%y, errStat2, errMsg2); if(Failed()) return
    end subroutine SetupFileOutputs
 
 
@@ -1039,7 +1042,7 @@ SUBROUTINE ADI_C_CalcOutput(Time_C, &
 
    if (WrOutputsData%fileFmt > idFmtNone) then
 !FIXME: need some way to overwrite the correction timesteps (for text file)!
-      call Dvr_WriteOutputs(n_Global+1, ADI%InputTimes(INPUT_CURR), Sim, WrOutputsData, ADI%y, errStat2, errMsg2); if(Failed()) return
+      call Dvr_WriteOutputs(n_Global+1, ADI%InputTimes(INPUT_CURR), Sim, WrOutputsData, ADI%y, SeaSt%y, errStat2, errMsg2); if(Failed()) return
    endif
 
    ! Set error status

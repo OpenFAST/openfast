@@ -13,6 +13,7 @@
 include   Registry_NWTC_Library.txt
 usefrom   AeroDyn_Registry.txt
 usefrom   InflowWind.txt
+usefrom   SeaState.txt
 
 param   AeroDyn_Inflow/ADI     -       IntKi             ADI_Version  -  1   -    "" -
 
@@ -109,6 +110,18 @@ typedef   ^          ^                 ADI_MiscVarType                  m       
 typedef   ^          ^                 ADI_InputType                    u        {:}   -    -    "Array of inputs associated with InputTimes"
 typedef   ^          ^                 ADI_OutputType                   y        -     -    -    "System outputs"
 typedef   ^          ^                 DbKi                             inputTimes {:} -    -    "Array of times associated with u array"
+
+# ..... SeaState data .......................................................................................................
+typedef	  ^	     SeaState_Data	       SeaSt_ContinuousStateType	    x	         - 	  -	 -	 "Continuous states"
+typedef	  ^	         ^	               SeaSt_DiscreteStateType	        xd	         - 	  -	 -	 "Discrete states"
+typedef	  ^	         ^	               SeaSt_ConstraintStateType        z	         - 	  -	 -	 "Constraint states"
+typedef	  ^	         ^	               SeaSt_OtherStateType             OtherState   - 	  -	 -	 "Other states"
+typedef	  ^	         ^	               SeaSt_ParameterType	            p	         -	  -	 -	 "Parameters"
+typedef	  ^	         ^	               SeaSt_InputType	                u	         -	  -	 -	 "System inputs"
+typedef	  ^	         ^	               SeaSt_OutputType	                y	         -	  -	 -	 "System outputs"
+typedef	  ^	         ^	               SeaSt_MiscVarType	            m	         -	  -	 -	 "Misc/optimization variables"
+typedef	  ^	         ^	               SeaSt_InitInputType	            InitInp      -	  -	 -	 "Array of inputs associated with InputTimes"
+typedef	  ^	         ^	               SeaSt_InitOutputType	            InitOut      -	  -	 -	 "Array of outputs associated with CalcSteady Azimuths"
 
 # ..... Rotor elastic data ..................................................................................................
 # NOTE: useful for driver/wrapper of this module
