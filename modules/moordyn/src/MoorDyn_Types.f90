@@ -456,6 +456,7 @@ IMPLICIT NONE
     LOGICAL  :: VisMeshes      !< Using visualization meshes as requested by glue code [-]
     TYPE(VisDiam) , DIMENSION(:), ALLOCATABLE  :: VisRodsDiam      !< Diameters for visualization of rods [-]
     INTEGER(IntKi)  :: Standalone      !< Indicates MoorDyn run as standalone code if 1, coupled if 0 [-]
+    INTEGER(IntKi)  :: inertialF = 1    !< Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 1 if yes, 0 if no [-]
   END TYPE MD_ParameterType
 ! =======================
 ! =========  MD_InputType  =======

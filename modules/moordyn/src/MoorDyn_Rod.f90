@@ -996,14 +996,24 @@ CONTAINS
       ! add inertial loads as appropriate (written out in a redundant way just for clarity, and to support load separation in future)
       ! fixed coupled rod
       if (Rod%typeNum == -2) then                          
-      
-         F6_iner  = -MATMUL(Rod%M6net, Rod%a6)    ! inertial loads      
+
+         if (p%inertialF == 1) then      ! include inertial components  
+            F6_iner  = -MATMUL(Rod%M6net, Rod%a6)    ! inertial loads 
+         else 
+            F6_iner = 0.0
+         endif     
          Rod%F6net = Rod%F6net + F6_iner           ! add inertial loads  
          Fnet_out = Rod%F6net
       ! pinned coupled rod      
-      else if (Rod%typeNum == -1) then                     
-         ! inertial loads ... from input translational ... and solved rotational ... acceleration
-         F6_iner(1:3)  = -MATMUL(Rod%M6net(1:3,1:3), Rod%a6(1:3)) - MATMUL(Rod%M6net(1:3,4:6), Rod%a6(4:6))
+      else if (Rod%typeNum == -1) then   
+                     
+         if (p%inertialF == 1) then      ! include inertial components 
+            ! inertial loads ... from input translational ... and solved rotational ... acceleration
+            F6_iner(1:3)  = -MATMUL(Rod%M6net(1:3,1:3), Rod%a6(1:3)) - MATMUL(Rod%M6net(1:3,4:6), Rod%a6(4:6))
+         else
+            F6_iner(1:3) = 0.0
+         endif
+         
          Rod%F6net(1:3) = Rod%F6net(1:3) + F6_iner(1:3)     ! add translational inertial loads
          Rod%F6net(4:6) = 0.0_DbKi
          Fnet_out = Rod%F6net

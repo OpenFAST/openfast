@@ -463,6 +463,8 @@ CONTAINS
                      read (OptValue,*) p%mc
                   else if ( OptString == 'CV')  then
                      read (OptValue,*) p%cv
+                  else if ( OptString == 'INERTIALF')  then
+                     read (OptValue,*) p%inertialF
                   else
                      CALL SetErrStat( ErrID_Warn, 'Unable to interpret input '//trim(OptString)//' in OPTIONS section.', ErrStat, ErrMsg, RoutineName )
                   end if

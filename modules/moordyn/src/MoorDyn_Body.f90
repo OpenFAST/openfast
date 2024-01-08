@@ -522,13 +522,25 @@ CONTAINS
       ! add inertial loads as appropriate 
       if (Body%typeNum == -1) then                          
       
-         F6_iner = -MATMUL(Body%M, Body%a6)     ! <<<<<<<< why does including F6_iner cause instability???
+         if (p%inertialF == 1) then      ! include inertial components 
+            F6_iner = -MATMUL(Body%M, Body%a6)     ! unstable in OpenFAST v4 and below becasue of loose coupling with ED and SD. Transients in acceleration can cause issues
+         else
+            ! When OpenFAST v5 is released w/ tight coupling, remove this hack and just use the inertial term above 
+            F6_iner = 0.0
+         endif
+
          Body%F6net = Body%F6net + F6_iner        ! add inertial loads
          Fnet_out = Body%F6net
                  
-      else if (Body%typeNum == 2) then  ! pinned coupled body                   
-         ! inertial loads ... from input translational ... and solved rotational ... acceleration
-         F6_iner(1:3)  = -MATMUL(Body%M(1:3,1:3), Body%a6(1:3)) - MATMUL(Body%M(1:3,4:6), Body%a6(4:6))
+      else if (Body%typeNum == 2) then  ! pinned coupled body  
+
+         if (p%inertialF == 1) then      ! include inertial components  
+            ! inertial loads ... from input translational ... and solved rotational ... acceleration
+            F6_iner(1:3)  = -MATMUL(Body%M(1:3,1:3), Body%a6(1:3)) - MATMUL(Body%M(1:3,4:6), Body%a6(4:6))
+         else 
+            F6_iner(1:3) = 0.0
+         endif
+         
          Body%F6net(1:3) = Body%F6net(1:3) + F6_iner(1:3)     ! add translational inertial loads
          Body%F6net(4:6) = 0.0_DbKi
          Fnet_out = Body%F6net

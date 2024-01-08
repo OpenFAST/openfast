@@ -423,6 +423,7 @@ typedef   ^       ^                    Integer      dxIdx_map2_xStateIdx {:}    
 typedef   ^       ^                    Logical      VisMeshes           -           -  -   "Using visualization meshes as requested by glue code" -
 typedef   ^       ^                    VisDiam      VisRodsDiam        {:}          -  -   "Diameters for visualization of rods" -
 typedef   ^       ^                    IntKi        Standalone          -           -  -   "Indicates MoorDyn run as standalone code if 1, coupled if 0" - 
+typedef   ^       ^                    IntKi        inertialF            -           1  -   "Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 1 if yes, 0 if no" - 
 
 
 # ============================== Inputs ============================================================================================================================================
