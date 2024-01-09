@@ -242,8 +242,7 @@ CONTAINS
          LineProp_npoints = 0;
       
       else ! otherwise interpet the input as a file name to load stress-strain lookup data from
-      
-         CALL WrScr("found A letter in the line coefficient value so will try to load the filename.")
+         CALL WrScr1(" Found a letter in the line EA coefficient value so will try to load the filename.")
          
          LineProp_c = 0.0
          
@@ -251,8 +250,13 @@ CONTAINS
         
          CALL GetNewUnit( UnCoef )
          CALL OpenFInpFile( UnCoef, TRIM(inputString), ErrStat4, ErrMsg4 )   ! add error handling?
+         IF (ErrStat4 == ErrID_Fatal) then
+            ErrStat3 = ErrStat4
+            ErrMsg3 = ErrMsg4
+            RETURN
+         ENDIF   
          
-         READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2   ! skip the first two lines (title, names, and units) then parse
+         READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2   ! skip the first three lines (title, names, and units) then parse
          READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2
          READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2
             
