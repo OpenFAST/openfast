@@ -817,6 +817,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    character(1024)                               :: rootDir, baseName, OutFileVTKDir ! Simulation root dir, basename for outputs
    integer(IntKi)                                :: i,j,nt        ! loop counter
    real(ReKi)                                    :: gridLoc       ! Location of requested output slice in grid coordinates [0,sz-1]
+   real(ReKi)                                    :: tmpDy,tmpRe
    integer(IntKi)                                :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                          :: errMsg2       ! temporary error message
    character(*), parameter                       :: RoutineName = 'AWAE_Init'
@@ -1053,25 +1054,47 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          do nt = 1,p%NumTurbines
 
             IfW_InitInp%TurbineID          = nt
-      
+            call WrScr(NewLine//'Initializing high-resolution grid for Turbine '//trim(Num2Lstr(nt)))
             call InflowWind_Init( IfW_InitInp, m%u_IfW_High, p%IfW(nt), x%IfW(nt), xd%IfW(nt), z%IfW(nt), OtherState%IfW(nt), m%y_IfW_High, m%IfW(nt), Interval, IfW_InitOut, ErrStat2, ErrMsg2 )
                call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
             if (errStat2 >= AbortErrLev) then
                return
             end if
 
+            ! Check that the high resolution grid placement is correct
+            !     The InflowWind grid location is exactly centered on the TurbPos location in the Y direction.  The high resolution grid
+            !     must exactly match the sizing and location of the InflowWind grid.  We are only going to check the Y and Z locations
+            !     for now and throw an error if these don't match appropriately.
+            if (IfW_InitOut%WindFileInfo%YRange_Limited) then     ! only check boundaries if the YRange is limited (we don't care what kind of wind)
+               tmpRe = p%Y0_High(nt) + (real(p%nY_high,ReKi)-1.0_ReKi)*p%dY_high(nt)      ! upper bound of high-res grid
+               if ((.not. EqualRealNos(p%WT_Position(2,nt)+IfW_InitOut%WindFileInfo%YRange(1),p%Y0_High(nt))) .or. &    ! lower bound
+                   (.not. EqualRealNos(p%WT_Position(2,nt)+IfW_InitOut%WindFileInfo%YRange(2),tmpRe)) ) then            ! upper bound
+                  ErrStat2 = ErrID_Fatal
+                  ErrMsg2  = NewLine//NewLine//'Turbine '//trim(Num2LStr(nt))//' -- Mod_AmbWind=3 requires the InflowWind high-res data range exactly match the high-res grid '// &
+                             'and the turbine is exactly centered in the high-res grid in the Y direction.  '//NewLine//' Try setting:'//NewLine// &
+                             '    Y0_high = '// &
+                             trim(Num2LStr(p%WT_Position(2,nt)+IfW_InitOut%WindFileInfo%YRange(1)))
+                  if (allocated(p%IfW(nt)%FlowField%Grid3D%Vel)) then
+                     tmpDy = abs(IfW_InitOut%WindFileInfo%YRange(2)-IfW_InitOut%WindFileInfo%YRange(1))/(real(p%nY_high,ReKi)-1.0_ReKi)
+                     ErrMsg2=trim(ErrMsg2)//NewLine//'    dY_High = '//trim(Num2LStr(tmpDy))
+                     call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+                  endif
+               endif
+            endif
+
          end do
+         if (errStat >= AbortErrLev) return
 
       end if
 
          ! Set the position inputs once for the low-resolution grid
       m%u_IfW_Low%PositionXYZ = p%Grid_low
-         ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel)
+         ! Set the hub position and orientation to pass to IfW (FIXME: IfW always calculates hub and disk avg vel. Change this after IfW pointers fully enabled.)
       m%u_IfW_Low%HubPosition =  (/ p%X0_low + 0.5*p%nX_low*p%dX_low, p%Y0_low + 0.5*p%nY_low*p%dY_low, p%Z0_low + 0.5*p%nZ_low*p%dZ_low /)
       call Eye(m%u_IfW_Low%HubOrientation,ErrStat2,ErrMsg2)
 
          ! Initialize the high-resolution grid inputs and outputs
-       IF ( .NOT. ALLOCATED( m%u_IfW_High%PositionXYZ ) ) THEN
+      IF ( .NOT. ALLOCATED( m%u_IfW_High%PositionXYZ ) ) THEN
          call AllocAry(m%u_IfW_High%PositionXYZ, 3, p%nX_high*p%nY_high*p%nZ_high, 'm%u_IfW_High%PositionXYZ', ErrStat2, ErrMsg2)
             call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
          call AllocAry(m%y_IfW_High%VelocityUVW, 3, p%nX_high*p%nY_high*p%nZ_high, 'm%y_IfW_High%VelocityUVW', ErrStat2, ErrMsg2)
