@@ -570,7 +570,7 @@ CONTAINS
          Body%AttachedC(Body%nAttachedC) = pointID
          Body%rPointRel(:,Body%nAttachedC) = coords  ! store relative position of point on body
       ELSE
-         Print*, "too many Points attached to Body ", Body%IdNum, " in MoorDyn!"
+         call WrScr("too many Points attached to Body "//trim(num2lstr(Body%IdNum))//" in MoorDyn!")
       END IF
 
    END SUBROUTINE Body_AddPoint
@@ -601,7 +601,7 @@ CONTAINS
          Body%r6RodRel(4:6, Body%nAttachedR) = tempUnitVec
          
       ELSE
-         Print*, "too many rods attached to Body ", Body%IdNum, " in MoorDyn"
+         call WrScr("too many rods attached to Body "//trim(num2lstr(Body%IdNum))//" in MoorDyn")
       END IF
 
    END SUBROUTINE Body_AddRod

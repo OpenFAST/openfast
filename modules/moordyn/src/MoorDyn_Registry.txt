@@ -391,6 +391,8 @@ typedef   ^       ^                    DbKi                mu_kT          -     
 typedef   ^       ^                    DbKi                mu_kA          -     -    -   "axial kinetic friction coefficient" "(-)"
 typedef   ^       ^                    DbKi                mc             -     -    -   "ratio of the static friction coefficient to the kinetic friction coefficient" "(-)"
 typedef   ^       ^                    DbKi                cv             -     -    -   "saturated damping coefficient" "(-)"
+typedef   ^       ^                    IntKi        Standalone          -           -  -   "Indicates MoorDyn run as standalone code if 1, coupled if 0" - 
+typedef   ^       ^                    IntKi        inertialF            -           0  -   "Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 1 if yes, 0 if no" - 
 # --- parameters for wave and current ---
 typedef   ^       ^                    IntKi        nxWave             -            -  -   "number of x wave grid points"            -
 typedef   ^       ^                    IntKi        nyWave             -            -  -   "number of y wave grid points"            -
@@ -422,8 +424,6 @@ typedef   ^       ^                    Integer      Jac_nx              -       
 typedef   ^       ^                    Integer      dxIdx_map2_xStateIdx {:}        -  -   "Mapping array from index of dX array to corresponding state index" -
 typedef   ^       ^                    Logical      VisMeshes           -           -  -   "Using visualization meshes as requested by glue code" -
 typedef   ^       ^                    VisDiam      VisRodsDiam        {:}          -  -   "Diameters for visualization of rods" -
-typedef   ^       ^                    IntKi        Standalone          -           -  -   "Indicates MoorDyn run as standalone code if 1, coupled if 0" - 
-typedef   ^       ^                    IntKi        inertialF            -           0  -   "Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 1 if yes, 0 if no" - 
 
 
 # ============================== Inputs ============================================================================================================================================

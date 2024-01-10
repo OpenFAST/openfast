@@ -1081,7 +1081,7 @@ CONTAINS
             Rod%AttachedB(Rod%nAttachedB) = lineID
             Rod%TopB(Rod%nAttachedB) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
          ELSE
-            Print*, "too many lines connected to Rod ", Rod%IdNum, " in MoorDyn!"
+            call WrScr("too many lines connected to Rod "//trim(num2lstr(Rod%IdNum))//" in MoorDyn!")
          END IF
 
       else              ! attaching to end A
@@ -1093,7 +1093,7 @@ CONTAINS
             Rod%AttachedA(Rod%nAttachedA) = lineID
             Rod%TopA(Rod%nAttachedA) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
          ELSE
-            Print*, "too many lines connected to Rod ", Rod%IdNum, " in MoorDyn!"
+            call WrScr("too many lines connected to Rod "//trim(num2lstr(Rod%IdNum))//" in MoorDyn!")
          END IF
          
       end if
@@ -1135,7 +1135,7 @@ CONTAINS
                      rdEnd(J) = Rod%rd(J,Rod%N)
                   END DO
                   
-                  print*, "Detached line ", lineID, " from Rod ", Rod%IdNum, " end B"
+                  call WrScr( "Detached line "//trim(num2lstr(lineID))//" from Rod "//trim(num2lstr(Rod%IdNum))//" end B")
                   
                   EXIT
                END DO
@@ -1167,7 +1167,7 @@ CONTAINS
                      rdEnd(J) = Rod%rd(J,0)
                   END DO
                   
-                  print*, "Detached line ", lineID, " from Rod ", Rod%IdNum, " end A"
+                  call WrScr( "Detached line "//trim(num2lstr(lineID))//" from Rod "//trim(num2lstr(Rod%IdNum))//" end A")
                   
                   EXIT
                END DO

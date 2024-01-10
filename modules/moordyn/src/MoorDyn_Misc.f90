@@ -1350,7 +1350,7 @@ CONTAINS
          
       ELSE IF (SCAN(WaterKinString, "abcdfghijklmnopqrstuvwxyzABCDFGHIJKLMNOPQRSTUVWXYZ") == 0) THEN
          ! If the input has no letters, let's assume it's a number         
-         print *, "ERROR WaveKin option does not currently support numeric entries. It must be a filename."
+         call WrScr( "ERROR WaveKin option does not currently support numeric entries. It must be a filename." )
          p%WaveKin = 0
          p%Current = 0
          return
@@ -1358,7 +1358,7 @@ CONTAINS
 
 
       ! otherwise interpret the input as a file name to load the bathymetry lookup data from
-      print *, "   The waterKin input contains letters so will load a water kinematics input file"
+      call WrScr( "   The waterKin input contains letters so will load a water kinematics input file" )
       
       
       ! -------- load water kinematics input file -------------
@@ -1413,7 +1413,7 @@ CONTAINS
             EXIT      ! break out of the loop if it couldn't read the line (i.e. if at end of file)
          end if
          if (i == 100) then
-            print*,"WARNING: MD can handle a maximum of 100 current profile points"
+            call WrScr("WARNING: MD can handle a maximum of 100 current profile points")
             exit
          end if
       END DO
@@ -1449,7 +1449,7 @@ CONTAINS
       ! --------------------- set from inputted wave elevation time series, grid approach -------------------
       if (p%WaveKin == 3) then
 
-         print *, 'Setting up WaveKin 3 option: read wave elevation time series from file'
+         call WrScr( 'Setting up WaveKin 3 option: read wave elevation time series from file' )
 
          IF ( LEN_TRIM( WaveKinFile ) == 0 )  THEN
             CALL SetErrStat( ErrID_Fatal,'WaveKinFile must not be an empty string.',ErrStat, ErrMsg, RoutineName); return
@@ -1467,7 +1467,7 @@ CONTAINS
       
          CALL OpenFInpFile ( UnElev, WaveKinFile, ErrStat2, ErrMsg2 ); if(Failed()) return
         
-         print *, 'Reading wave elevation data from ', trim(WaveKinFile)
+         call WrScr( 'Reading wave elevation data from '//trim(WaveKinFile) )
          
          ! Read through length of file to find its length
          i = 1  ! start counter
@@ -1502,7 +1502,7 @@ CONTAINS
          ! Close the inputs file 
          CLOSE ( UnElev ) 
          
-         print *, "Read ", ntIn, " time steps from input file."
+         call WrScr( "Read "//trim(num2lstr(ntIn))//" time steps from input file." )
 
          ! if (WaveTimeIn(ntIn) < TMax) then <<<< need to handle if time series is too short?
            
@@ -1714,7 +1714,7 @@ CONTAINS
          INTEGER(IntKi)                   :: nEntries, I
 
          IF (len(trim(entries)) == len(entries)) THEN
-            print*, "Warning: Only 120 characters read from wave grid coordinates"
+            call WrScr("Warning: Only 120 characters read from wave grid coordinates")
          END IF
 
          IF (entries(len(entries):len(entries)) == ',') THEN
@@ -1732,7 +1732,7 @@ CONTAINS
             else if (coordtype==2) then   ! 2: uniform specified by -xlim, xlim, num
                n = int(tempArray(3))
             else
-               print *, "Error: invalid coordinate type specified to gridAxisCoords"
+               call WrScr("Error: invalid coordinate type specified to gridAxisCoords")
             end if
             
             ! allocate coordinate array
@@ -1755,7 +1755,7 @@ CONTAINS
                end do
             
             else
-               print *, "Error: invalid coordinate type specified to gridAxisCoords" 
+               call WrScr("Error: invalid coordinate type specified to gridAxisCoords")
             end if
             
             ! print *, "Set water grid coordinates to :"
@@ -1791,7 +1791,7 @@ CONTAINS
             END IF
             n = n + 1
             if (n > 100) then
-               print *, "ERROR - stringToArray cannot do more than 100 entries"
+               call WrScr( "ERROR - stringToArray cannot do more than 100 entries")
             end if            
             READ(instring(pos1:pos1+pos2-2), *) outarray(n)
 
