@@ -173,13 +173,9 @@ PROGRAM MoorDyn_Driver
       
    MD_InitInp%FarmSize                = drvrInitInp%FarmSize
    
-   MD_InitInp%Standalone = 0
    if (drvrInitInp%FarmSize > 0) then   ! Check if this MoorDyn instance is being run from FAST.Farm (indicated by FarmSize > 0)
       nTurbines = drvrInitInp%FarmSize
-   else if (drvrInitInp%FarmSize < 0) then    ! FarmSize<0 indicates standalone mode
-      MD_InitInp%Standalone = 1
-      nTurbines = 1 ! to keep routines happy
-   else ! FarmSize==0 indicates normal, FAST module mode
+   else ! FarmSize==0 indicates normal, FAST module mode; FarmSize<0 indicates standalone mode
       nTurbines = 1  ! if a regular FAST module mode, we treat it like a nTurbine=1 farm case
    end if
    
@@ -494,13 +490,14 @@ PROGRAM MoorDyn_Driver
          i = 1  ! read first timestep data 
          K = 1  ! the index of the coupling points in the input mesh CoupledKinematics
          J = 1  ! the starting index of the relevant DOFs in the input array
+
+         IF (MD_InitInp%FarmSize < 0) THEN
+            MD_p%TurbineRefPos(:,iTurb) = 0.0
+         ENDIF 
+
          ! any coupled bodies (type -1)
          DO l = 1,MD_p%nCpldBodies(iTurb)
-            IF (MD_InitInp%Standalone == 1) THEN 
-               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K)
-            ELSE
-               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)   
-            ENDIF
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)   
             MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,K) = EulerConstruct( r_in(i, J+3:J+5) ) ! full Euler angle approach
             MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
             MD_u(1)%CoupledKinematics(iTurb)%RotationVel(    :,K) = rd_in(i, J+3:J+5)
@@ -513,12 +510,7 @@ PROGRAM MoorDyn_Driver
          
          ! any coupled rods (type -1 or -2)    >>> need to make rotations ignored if it's a pinned rod <<<
          DO l = 1,MD_p%nCpldRods(iTurb)
-         
-            IF (MD_InitInp%Standalone == 1) THEN 
-               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K)
-            ELSE
-               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)   
-            ENDIF
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)   
             MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,K) = EulerConstruct( r_in(i, J+3:J+5) )
             MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
             MD_u(1)%CoupledKinematics(iTurb)%RotationVel(    :,K) = rd_in(i, J+3:J+5)
@@ -531,12 +523,7 @@ PROGRAM MoorDyn_Driver
          
          ! any coupled points (type -1)
          DO l = 1, MD_p%nCpldPoints(iTurb)
-            
-            IF (MD_InitInp%Standalone == 1) THEN 
-               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K)
-            ELSE
-               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)   
-            ENDIF
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)   
             MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
             MD_u(1)%CoupledKinematics(iTurb)%TranslationAcc( :,K) = 0.0_DbKi !rdd_in(i, J:J+2)
             
@@ -595,13 +582,13 @@ PROGRAM MoorDyn_Driver
             
             K = 1  ! the index of the coupling points in the input mesh CoupledKinematics
             J = 1  ! the starting index of the relevant DOFs in the input array
+            IF (MD_InitInp%FarmSize < 0) THEN
+               MD_p%TurbineRefPos(:,iTurb) = 0.0
+            ENDIF 
+
             ! any coupled bodies (type -1)
             DO l = 1,MD_p%nCpldBodies(iTurb)
-               IF (MD_InitInp%Standalone == 1) THEN 
-                  MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K)
-               ELSE
-                  MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)   
-               ENDIF
+               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)   
                MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,K) = EulerConstruct( r_in(i, J+3:J+5) ) ! full Euler angle approach
                MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
                MD_u(1)%CoupledKinematics(iTurb)%RotationVel(    :,K) = rd_in(i, J+3:J+5)
@@ -614,12 +601,7 @@ PROGRAM MoorDyn_Driver
             
             ! any coupled rods (type -1 or -2)    >>> need to make rotations ignored if it's a pinned rod <<<
             DO l = 1,MD_p%nCpldRods(iTurb)
-            
-               IF (MD_InitInp%Standalone == 1) THEN 
-                  MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K)
-               ELSE
-                  MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)   
-               ENDIF
+               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)   
                MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,K) = EulerConstruct( r_in(i, J+3:J+5) )
                MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
                MD_u(1)%CoupledKinematics(iTurb)%RotationVel(    :,K) = rd_in(i, J+3:J+5)
@@ -632,12 +614,7 @@ PROGRAM MoorDyn_Driver
             
             ! any coupled points (type -1)
             DO l = 1, MD_p%nCpldPoints(iTurb)
-               
-               IF (MD_InitInp%Standalone == 1) THEN 
-                  MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K)
-               ELSE
-                  MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)   
-               ENDIF
+               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)   
                MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
                MD_u(1)%CoupledKinematics(iTurb)%TranslationAcc( :,K) = 0.0_DbKi !rdd_in(i, J:J+2)
                

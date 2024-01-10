@@ -200,10 +200,6 @@ CONTAINS
       
       m%PtfmInit = InitInp%PtfmInit(:,1)   ! is this copying necssary in case this is an individual instance in FAST.Farm?
 
-      p%Standalone = InitInp%Standalone
-
-
-
       ! Check if this MoorDyn instance is being run from FAST.Farm (indicated by FarmSize > 0)
       if (InitInp%FarmSize > 0) then
          CALL WrScr('   >>> MoorDyn is running in array mode <<< ')

@@ -25,7 +25,6 @@ typedef   ^           ^                ReKi               rhoW           -   -99
 typedef   ^           ^                ReKi               WtrDepth       -   -999.9 -   "depth of water"     "[m]"
 typedef   ^           ^                ReKi               PtfmInit      {:}{:} -    -   "initial position of platform(s) shape: 6, nTurbines"     -
 typedef   ^           ^                IntKi              FarmSize       -    0     -   "Indicates normal FAST module mode if 0, FAST.Farm coupled mode and =nTurbines if >0, standalone mode if -1"     -
-typedef   ^           ^                IntKi              Standalone     -    0     -   "Indicates MoorDyn run as standalone code if 1, coupled if 0"     -
 typedef   ^           ^                ReKi               TurbineRefPos {:}{:} -    -   "reference position of turbines in farm, shape: 3, nTurbines"     -
 typedef   ^           ^                ReKi               Tmax           -     -    -   "simulation duration" "[s]"
 typedef   ^           ^                CHARACTER(1024)    FileName       -   ""     -   "MoorDyn input file"
