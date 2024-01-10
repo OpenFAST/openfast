@@ -425,6 +425,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: mu_kA      !< axial kinetic friction coefficient [(-)]
     REAL(DbKi)  :: mc      !< ratio of the static friction coefficient to the kinetic friction coefficient [(-)]
     REAL(DbKi)  :: cv      !< saturated damping coefficient [(-)]
+    INTEGER(IntKi)  :: Standalone      !< Indicates MoorDyn run as standalone code if 1, coupled if 0 [-]
+    INTEGER(IntKi)  :: inertialF = 0    !< Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 1 if yes, 0 if no [-]
     INTEGER(IntKi)  :: nxWave      !< number of x wave grid points [-]
     INTEGER(IntKi)  :: nyWave      !< number of y wave grid points [-]
     INTEGER(IntKi)  :: nzWave      !< number of z wave grid points [-]
