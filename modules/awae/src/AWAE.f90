@@ -799,7 +799,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
    type(AWAE_InitInputType),       intent(in   ) :: InitInp       !< Input data for initialization routine
    type(AWAE_InputType),           intent(  out) :: u             !< An initial guess for the input; input mesh must be defined
-   type(AWAE_ParameterType),       intent(  out) :: p             !< Parameters
+   type(AWAE_ParameterType),target,intent(  out) :: p             !< Parameters
    type(AWAE_ContinuousStateType), intent(  out) :: x             !< Initial continuous states
    type(AWAE_DiscreteStateType),   intent(  out) :: xd            !< Initial discrete states
    type(AWAE_ConstraintStateType), intent(  out) :: z             !< Initial guess of the constraint states
@@ -817,12 +817,11 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    character(1024)                               :: rootDir, baseName, OutFileVTKDir ! Simulation root dir, basename for outputs
    integer(IntKi)                                :: i,j,nt        ! loop counter
    real(ReKi)                                    :: gridLoc       ! Location of requested output slice in grid coordinates [0,sz-1]
-   real(ReKi)                                    :: tmpDy,tmpRe
    integer(IntKi)                                :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                          :: errMsg2       ! temporary error message
    character(*), parameter                       :: RoutineName = 'AWAE_Init'
    type(InflowWind_InitInputType)                :: IfW_InitInp
-   type(InflowWind_InitOutputType)               :: IfW_InitOut
+   type(InflowWind_InitOutputType), target       :: IfW_InitOut
       ! Initialize variables for this routine
 
    errStat = ErrID_None
@@ -1057,7 +1056,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
             call WrScr(NewLine//'Initializing high-resolution grid for Turbine '//trim(Num2Lstr(nt)))
             call InflowWind_Init( IfW_InitInp, m%u_IfW_High, p%IfW(nt), x%IfW(nt), xd%IfW(nt), z%IfW(nt), OtherState%IfW(nt), m%y_IfW_High, m%IfW(nt), Interval, IfW_InitOut, ErrStat2, ErrMsg2 )
                call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-            if (errStat2 >= AbortErrLev) then
+            if (errStat >= AbortErrLev) then
                return
             end if
 
@@ -1065,22 +1064,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
             !     The InflowWind grid location is exactly centered on the TurbPos location in the Y direction.  The high resolution grid
             !     must exactly match the sizing and location of the InflowWind grid.  We are only going to check the Y and Z locations
             !     for now and throw an error if these don't match appropriately.
-            if (IfW_InitOut%WindFileInfo%YRange_Limited) then     ! only check boundaries if the YRange is limited (we don't care what kind of wind)
-               tmpRe = p%Y0_High(nt) + (real(p%nY_high,ReKi)-1.0_ReKi)*p%dY_high(nt)      ! upper bound of high-res grid
-               if ((.not. EqualRealNos(p%WT_Position(2,nt)+IfW_InitOut%WindFileInfo%YRange(1),p%Y0_High(nt))) .or. &    ! lower bound
-                   (.not. EqualRealNos(p%WT_Position(2,nt)+IfW_InitOut%WindFileInfo%YRange(2),tmpRe)) ) then            ! upper bound
-                  ErrStat2 = ErrID_Fatal
-                  ErrMsg2  = NewLine//NewLine//'Turbine '//trim(Num2LStr(nt))//' -- Mod_AmbWind=3 requires the InflowWind high-res data range exactly match the high-res grid '// &
-                             'and the turbine is exactly centered in the high-res grid in the Y direction.  '//NewLine//' Try setting:'//NewLine// &
-                             '    Y0_high = '// &
-                             trim(Num2LStr(p%WT_Position(2,nt)+IfW_InitOut%WindFileInfo%YRange(1)))
-                  if (allocated(p%IfW(nt)%FlowField%Grid3D%Vel)) then
-                     tmpDy = abs(IfW_InitOut%WindFileInfo%YRange(2)-IfW_InitOut%WindFileInfo%YRange(1))/(real(p%nY_high,ReKi)-1.0_ReKi)
-                     ErrMsg2=trim(ErrMsg2)//NewLine//'    dY_High = '//trim(Num2LStr(tmpDy))
-                     call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-                  endif
-               endif
-            endif
+            call CheckModAmb3Boundaries()
 
          end do
          if (errStat >= AbortErrLev) return
@@ -1281,6 +1265,70 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
 
 
+contains
+   subroutine CheckModAmb3Boundaries()
+      real(ReKi)                       :: Dx,Dy,Dz
+      real(ReKi)                       :: ff_lim(2)
+      real(ReKi)                       :: hr_lim(2)
+      real(ReKi),          parameter   :: GridTol = 1.0E-3  ! Tolerance from IfW for checking the high-res grid (Mod_AmbWind=3 only).
+      type(FlowFieldType), pointer     :: ff                ! alias to shorten notation to fullfield
+      type(WindFileDat),   pointer     :: wfi               ! alias to shorten notation to WindFileInfo
+      character(1024)                  :: tmpMsg
+
+      ff  => p%IfW(nt)%FlowField 
+      wfi => IfW_InitOut%WindFileInfo
+
+      tmpMsg = NewLine//NewLine//'Turbine '//trim(Num2LStr(nt))//' -- Mod_AmbWind=3 requires the InflowWind high-res data range exactly match the high-res grid '// &
+               'and the turbine is exactly centered in the high-res grid in the Y direction (or X direction if FlowField is along Y).  '//NewLine//' Try setting:'//NewLine
+      ! check Z limits, if ZRange is limited (we don't care what kind of wind)
+      if (wfi%ZRange_Limited) then
+      endif
+
+      ! check X/Y limits if range limited.  Depends on orientation of winds.
+      if (wfi%YRange_Limited) then
+         ! flow field limits (with grid tolerance)
+         ff_lim(1) = p%WT_Position(2,nt) + wfi%YRange(1) - GridTol
+         ff_lim(2) = p%WT_Position(2,nt) + wfi%YRange(2) + GridTol
+
+         ! wind X aligned with high-res X
+         if (.not. ff%RotateWindBox) then
+            ! high-res Y limits
+            hr_lim(1) = p%Y0_High(nt)
+            hr_lim(2) = p%Y0_High(nt) + (real(p%nY_high,ReKi)-1.0_ReKi)*p%dY_high(nt)
+            if ((hr_lim(1) < ff_lim(1))   .or.  &
+                (hr_lim(2) > ff_lim(2)) ) then
+               ErrStat2 = ErrID_Fatal
+               ErrMsg2  = trim(tmpMsg)// &
+                          '    Y0_high = '//trim(Num2LStr(p%WT_Position(2,nt)+wfi%YRange(1)))
+               if (allocated(ff%Grid3D%Vel)) then
+                  Dy = abs(wfi%YRange(2)-wfi%YRange(1))/(real(p%nY_high,ReKi)-1.0_ReKi)
+                  ErrMsg2=trim(ErrMsg2)//NewLine//'    dY_High = '//trim(Num2LStr(Dy))
+                  call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+               endif
+            endif
+
+         ! wind X aligned with high-res Y
+         elseif (EqualRealNos(abs(ff%PropagationDir),PiBy2)) then
+            ! high-res X limits
+            hr_lim(1) = p%X0_High(nt)
+            hr_lim(2) = p%X0_High(nt) + (real(p%nX_high,ReKi)-1.0_ReKi)*p%dX_high(nt)
+            if ((hr_lim(1) < ff_lim(1))   .or.  &
+                (hr_lim(2) > ff_lim(2)) ) then
+               ErrStat2 = ErrID_Fatal
+               ErrMsg2  = trim(tmpMsg)// &
+                          '    X0_high = '//trim(Num2LStr(p%WT_Position(1,nt)+wfi%YRange(1)))
+               if (allocated(ff%Grid3D%Vel)) then
+                  Dx = abs(wfi%YRange(2)-wfi%YRange(1))/(real(p%nX_high,ReKi)-1.0_ReKi)
+                  ErrMsg2=trim(ErrMsg2)//NewLine//'    dX_High = '//trim(Num2LStr(Dx))
+                  call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+               endif
+            endif
+         elseif (.not. EqualRealNos(ff%PropagationDir,0.0_ReKi))  then        ! wind not aligned with X or Y.  This is not allowed at present
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = NewLine//NewLine//'Turbine '//trim(Num2LStr(nt))//' -- Mod_AmbWind=3 requires InflowWind propagation direction alignment with X or Y (0, 90, 180, 270 degrees).'
+         endif
+      endif
+   end subroutine CheckModAmb3Boundaries
 
 
 end subroutine AWAE_Init
