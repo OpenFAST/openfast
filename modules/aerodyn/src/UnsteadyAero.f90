@@ -28,7 +28,7 @@
 !        Development plan for the aerodynamic linearization in OpenFAST
 !        Unpublished
 !
-!   [70] User Documentation / AeroDyn / Unsteady Aerodynamics / Boing-Vertol model
+!   [70] User Documentation / AeroDyn / Unsteady Aerodynamics / Boeing-Vertol model
 !        https://openfast.readthedocs.io/
 !
 !   [other] R. Damiani and G. Hayman (2017)
@@ -1424,7 +1424,7 @@ subroutine UA_ValidateInput(InitInp, ErrStat, ErrMsg)
 
    if (InitInp%UAMod < UA_Gonzalez .or. InitInp%UAMod > UA_BV ) call SetErrStat( ErrID_Fatal, &
       "In this version, UAMod must be 2 (Gonzalez's variant), 3 (Minnema/Pierce variant), 4 (continuous HGM model), 5 (HGM with vortex), &
-      &6 (Oye), 7 (Boing-Vertol)", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
+      &6 (Oye), 7 (Boeing-Vertol)", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
       
    if (.not. InitInp%FLookUp ) call SetErrStat( ErrID_Fatal, 'FLookUp must be TRUE for this version.', ErrStat, ErrMsg, RoutineName )
    
@@ -1664,7 +1664,7 @@ subroutine UA_TurnOff_param(p, AFInfo, ErrStat, ErrMsg)
 
 end subroutine UA_TurnOff_param
 !============================================================================== 
-!> Update discrete states for Boieng Vertol model
+!> Update discrete states for Boeing Vertol model
 subroutine UA_UpdateDiscOtherState_BV( i, j, u, p, xd, OtherState, AFInfo, m, ErrStat, ErrMsg )   
    integer   ,                   intent(in   )  :: i           !< node index within a blade
    integer   ,                   intent(in   )  :: j           !< blade index    
@@ -3756,7 +3756,7 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
 #endif
 
 contains 
-   !> Calc Outputs for Boieng-Vertol dynamic stall
+   !> Calc Outputs for Boeing-Vertol dynamic stall
    !! See BV_DynStall.f95 of CACTUS, and [70], notations kept more or less consistent
    subroutine BV_CalcOutput()
       real(ReKi) :: alpha_50
