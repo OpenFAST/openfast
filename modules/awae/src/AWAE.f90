@@ -1267,7 +1267,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
 contains
    subroutine CheckModAmb3Boundaries()
-      real(ReKi)                       :: Dx,Dy,Dz
+      real(ReKi)                       :: Dxyz
       real(ReKi)                       :: ff_lim(2)
       real(ReKi)                       :: hr_lim(2)
       real(ReKi),          parameter   :: GridTol = 1.0E-3  ! Tolerance from IfW for checking the high-res grid (Mod_AmbWind=3 only).
@@ -1278,10 +1278,28 @@ contains
       ff  => p%IfW(nt)%FlowField 
       wfi => IfW_InitOut%WindFileInfo
 
-      tmpMsg = NewLine//NewLine//'Turbine '//trim(Num2LStr(nt))//' -- Mod_AmbWind=3 requires the InflowWind high-res data range exactly match the high-res grid '// &
-               'and the turbine is exactly centered in the high-res grid in the Y direction (or X direction if FlowField is along Y).  '//NewLine//' Try setting:'//NewLine
+      tmpMsg = NewLine//NewLine//'Turbine '//trim(Num2LStr(nt))//' -- Mod_AmbWind=3 requires the InflowWind high-res grid '// &
+               'is entirely contained within the high-res flow-field from InflowWind. '//NewLine//' Try setting:'//NewLine
+
       ! check Z limits, if ZRange is limited (we don't care what kind of wind)
       if (wfi%ZRange_Limited) then
+         ! flow field limits (with grid tolerance)
+         ff_lim(1) = p%WT_Position(3,nt) + wfi%ZRange(1) - GridTol
+         ff_lim(2) = p%WT_Position(3,nt) + wfi%ZRange(2) + GridTol
+         ! high-res Z limits
+         hr_lim(1) = p%Z0_High(nt)
+         hr_lim(2) = p%Z0_High(nt) + (real(p%nZ_high,ReKi)-1.0_ReKi)*p%dZ_high(nt)
+         if ((hr_lim(1) < ff_lim(1))   .or.  &
+             (hr_lim(2) > ff_lim(2)) ) then
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = trim(tmpMsg)// &
+                       '    Z0_high = '//trim(Num2LStr(p%WT_Position(3,nt)+wfi%ZRange(1)))
+            if (allocated(ff%Grid3D%Vel)) then
+               Dxyz = abs(wfi%ZRange(2)-wfi%ZRange(1))/(real(p%nZ_high,ReKi)-1.0_ReKi)
+               ErrMsg2=trim(ErrMsg2)//NewLine//'    dZ_High = '//trim(Num2LStr(Dxyz))
+               call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+            endif
+         endif
       endif
 
       ! check X/Y limits if range limited.  Depends on orientation of winds.
@@ -1301,8 +1319,8 @@ contains
                ErrMsg2  = trim(tmpMsg)// &
                           '    Y0_high = '//trim(Num2LStr(p%WT_Position(2,nt)+wfi%YRange(1)))
                if (allocated(ff%Grid3D%Vel)) then
-                  Dy = abs(wfi%YRange(2)-wfi%YRange(1))/(real(p%nY_high,ReKi)-1.0_ReKi)
-                  ErrMsg2=trim(ErrMsg2)//NewLine//'    dY_High = '//trim(Num2LStr(Dy))
+                  Dxyz = abs(wfi%YRange(2)-wfi%YRange(1))/(real(p%nY_high,ReKi)-1.0_ReKi)
+                  ErrMsg2=trim(ErrMsg2)//NewLine//'    dY_High = '//trim(Num2LStr(Dxyz))
                   call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
                endif
             endif
@@ -1318,8 +1336,8 @@ contains
                ErrMsg2  = trim(tmpMsg)// &
                           '    X0_high = '//trim(Num2LStr(p%WT_Position(1,nt)+wfi%YRange(1)))
                if (allocated(ff%Grid3D%Vel)) then
-                  Dx = abs(wfi%YRange(2)-wfi%YRange(1))/(real(p%nX_high,ReKi)-1.0_ReKi)
-                  ErrMsg2=trim(ErrMsg2)//NewLine//'    dX_High = '//trim(Num2LStr(Dx))
+                  Dxyz = abs(wfi%YRange(2)-wfi%YRange(1))/(real(p%nX_high,ReKi)-1.0_ReKi)
+                  ErrMsg2=trim(ErrMsg2)//NewLine//'    dX_High = '//trim(Num2LStr(Dxyz))
                   call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
                endif
             endif
