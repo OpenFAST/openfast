@@ -3984,7 +3984,7 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_S
          ! This assumes a vertical tower (i.e., we deal only with z component of position)
       Indx = 1
       do k=1,TowerMotionMesh%NNodes
-         p_FAST%VTK_Surface%TowerRad(k) = InterpStp( TowerMotionMesh%Position(3,k), AD%y%rotors(1)%TowerLoad%Position(3,:), InitOutData_AD%rotors(1)%TwrDiam, Indx, AD%y%rotors(1)%TowerLoad%NNodes ) / 2.0_ReKi
+         p_FAST%VTK_Surface%TowerRad(k) = InterpStp( TowerMotionMesh%Position(3,k), InitOutData_AD%rotors(1)%TwrElev, InitOutData_AD%rotors(1)%TwrDiam, Indx, size(InitOutData_AD%rotors(1)%TwrElev) ) / 2.0_ReKi
       end do
    
    else
