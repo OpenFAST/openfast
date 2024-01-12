@@ -406,7 +406,7 @@ subroutine Farm_DestroyParam(ParamData, ErrStat, ErrMsg)
 end subroutine
 
 subroutine Farm_PackParam(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+   type(RegFile), intent(inout) :: Buf
    type(Farm_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Farm_PackParam'
    integer(B8Ki)   :: i1, i2
@@ -508,7 +508,7 @@ subroutine Farm_PackParam(Buf, Indata)
 end subroutine
 
 subroutine Farm_UnPackParam(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+   type(RegFile), intent(inout)    :: Buf
    type(Farm_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Farm_UnPackParam'
    integer(B8Ki)   :: i1, i2
@@ -847,7 +847,7 @@ subroutine Farm_DestroyMisc(MiscData, ErrStat, ErrMsg)
 end subroutine
 
 subroutine Farm_PackMisc(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+   type(RegFile), intent(inout) :: Buf
    type(Farm_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Farm_PackMisc'
    integer(B8Ki)   :: i1, i2
@@ -891,7 +891,7 @@ subroutine Farm_PackMisc(Buf, Indata)
 end subroutine
 
 subroutine Farm_UnPackMisc(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+   type(RegFile), intent(inout)    :: Buf
    type(Farm_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Farm_UnPackMisc'
    integer(B8Ki)   :: i1, i2
@@ -1041,7 +1041,7 @@ subroutine Farm_DestroyFASTWrapper_Data(FASTWrapper_DataData, ErrStat, ErrMsg)
 end subroutine
 
 subroutine Farm_PackFASTWrapper_Data(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+   type(RegFile), intent(inout) :: Buf
    type(FASTWrapper_Data), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Farm_PackFASTWrapper_Data'
    if (Buf%ErrStat >= AbortErrLev) return
@@ -1058,7 +1058,7 @@ subroutine Farm_PackFASTWrapper_Data(Buf, Indata)
 end subroutine
 
 subroutine Farm_UnPackFASTWrapper_Data(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+   type(RegFile), intent(inout)    :: Buf
    type(FASTWrapper_Data), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Farm_UnPackFASTWrapper_Data'
    if (Buf%ErrStat /= ErrID_None) return
@@ -1140,7 +1140,7 @@ subroutine Farm_DestroyWakeDynamics_Data(WakeDynamics_DataData, ErrStat, ErrMsg)
 end subroutine
 
 subroutine Farm_PackWakeDynamics_Data(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+   type(RegFile), intent(inout) :: Buf
    type(WakeDynamics_Data), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Farm_PackWakeDynamics_Data'
    if (Buf%ErrStat >= AbortErrLev) return
@@ -1157,7 +1157,7 @@ subroutine Farm_PackWakeDynamics_Data(Buf, Indata)
 end subroutine
 
 subroutine Farm_UnPackWakeDynamics_Data(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+   type(RegFile), intent(inout)    :: Buf
    type(WakeDynamics_Data), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Farm_UnPackWakeDynamics_Data'
    if (Buf%ErrStat /= ErrID_None) return
@@ -1239,7 +1239,7 @@ subroutine Farm_DestroyAWAE_Data(AWAE_DataData, ErrStat, ErrMsg)
 end subroutine
 
 subroutine Farm_PackAWAE_Data(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+   type(RegFile), intent(inout) :: Buf
    type(AWAE_Data), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Farm_PackAWAE_Data'
    if (Buf%ErrStat >= AbortErrLev) return
@@ -1256,7 +1256,7 @@ subroutine Farm_PackAWAE_Data(Buf, Indata)
 end subroutine
 
 subroutine Farm_UnPackAWAE_Data(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+   type(RegFile), intent(inout)    :: Buf
    type(AWAE_Data), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Farm_UnPackAWAE_Data'
    if (Buf%ErrStat /= ErrID_None) return
@@ -1339,7 +1339,7 @@ subroutine Farm_DestroySC_Data(SC_DataData, ErrStat, ErrMsg)
 end subroutine
 
 subroutine Farm_PackSC_Data(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+   type(RegFile), intent(inout) :: Buf
    type(SC_Data), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Farm_PackSC_Data'
    if (Buf%ErrStat >= AbortErrLev) return
@@ -1357,7 +1357,7 @@ subroutine Farm_PackSC_Data(Buf, Indata)
 end subroutine
 
 subroutine Farm_UnPackSC_Data(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+   type(RegFile), intent(inout)    :: Buf
    type(SC_Data), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Farm_UnPackSC_Data'
    if (Buf%ErrStat /= ErrID_None) return
@@ -1485,7 +1485,7 @@ subroutine Farm_DestroyMD_Data(MD_DataData, ErrStat, ErrMsg)
 end subroutine
 
 subroutine Farm_PackMD_Data(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+   type(RegFile), intent(inout) :: Buf
    type(MD_Data), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Farm_PackMD_Data'
    integer(B8Ki)   :: i1
@@ -1518,7 +1518,7 @@ subroutine Farm_PackMD_Data(Buf, Indata)
 end subroutine
 
 subroutine Farm_UnPackMD_Data(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+   type(RegFile), intent(inout)    :: Buf
    type(MD_Data), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Farm_UnPackMD_Data'
    integer(B8Ki)   :: i1
@@ -1671,7 +1671,7 @@ subroutine Farm_DestroyAll_FastFarm_Data(All_FastFarm_DataData, ErrStat, ErrMsg)
 end subroutine
 
 subroutine Farm_PackAll_FastFarm_Data(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+   type(RegFile), intent(inout) :: Buf
    type(All_FastFarm_Data), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Farm_PackAll_FastFarm_Data'
    integer(B8Ki)   :: i1
@@ -1704,7 +1704,7 @@ subroutine Farm_PackAll_FastFarm_Data(Buf, Indata)
 end subroutine
 
 subroutine Farm_UnPackAll_FastFarm_Data(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+   type(RegFile), intent(inout)    :: Buf
    type(All_FastFarm_Data), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Farm_UnPackAll_FastFarm_Data'
    integer(B8Ki)   :: i1

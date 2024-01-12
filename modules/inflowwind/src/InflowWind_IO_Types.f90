@@ -180,73 +180,55 @@ subroutine InflowWind_IO_DestroyWindFileDat(WindFileDatData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine InflowWind_IO_PackWindFileDat(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine InflowWind_IO_PackWindFileDat(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(WindFileDat), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackWindFileDat'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%FileName)
-   call RegPack(Buf, InData%WindType)
-   call RegPack(Buf, InData%RefHt)
-   call RegPack(Buf, InData%RefHt_Set)
-   call RegPack(Buf, InData%DT)
-   call RegPack(Buf, InData%NumTSteps)
-   call RegPack(Buf, InData%ConstantDT)
-   call RegPack(Buf, InData%TRange)
-   call RegPack(Buf, InData%TRange_Limited)
-   call RegPack(Buf, InData%YRange)
-   call RegPack(Buf, InData%YRange_Limited)
-   call RegPack(Buf, InData%ZRange)
-   call RegPack(Buf, InData%ZRange_Limited)
-   call RegPack(Buf, InData%BinaryFormat)
-   call RegPack(Buf, InData%IsBinary)
-   call RegPack(Buf, InData%TI)
-   call RegPack(Buf, InData%TI_listed)
-   call RegPack(Buf, InData%MWS)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%FileName)
+   call RegPack(RF, InData%WindType)
+   call RegPack(RF, InData%RefHt)
+   call RegPack(RF, InData%RefHt_Set)
+   call RegPack(RF, InData%DT)
+   call RegPack(RF, InData%NumTSteps)
+   call RegPack(RF, InData%ConstantDT)
+   call RegPack(RF, InData%TRange)
+   call RegPack(RF, InData%TRange_Limited)
+   call RegPack(RF, InData%YRange)
+   call RegPack(RF, InData%YRange_Limited)
+   call RegPack(RF, InData%ZRange)
+   call RegPack(RF, InData%ZRange_Limited)
+   call RegPack(RF, InData%BinaryFormat)
+   call RegPack(RF, InData%IsBinary)
+   call RegPack(RF, InData%TI)
+   call RegPack(RF, InData%TI_listed)
+   call RegPack(RF, InData%MWS)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine InflowWind_IO_UnPackWindFileDat(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine InflowWind_IO_UnPackWindFileDat(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(WindFileDat), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackWindFileDat'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%FileName)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WindType)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%RefHt)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%RefHt_Set)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%DT)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NumTSteps)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%ConstantDT)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%TRange)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%TRange_Limited)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%YRange)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%YRange_Limited)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%ZRange)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%ZRange_Limited)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%BinaryFormat)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%IsBinary)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%TI)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%TI_listed)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%MWS)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%FileName); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WindType); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RefHt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RefHt_Set); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumTSteps); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ConstantDT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TRange); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TRange_Limited); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%YRange); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%YRange_Limited); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ZRange); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ZRange_Limited); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BinaryFormat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%IsBinary); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TI); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TI_listed); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MWS); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine InflowWind_IO_CopySteady_InitInputType(SrcSteady_InitInputTypeData, DstSteady_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -272,28 +254,25 @@ subroutine InflowWind_IO_DestroySteady_InitInputType(Steady_InitInputTypeData, E
    ErrMsg  = ''
 end subroutine
 
-subroutine InflowWind_IO_PackSteady_InitInputType(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine InflowWind_IO_PackSteady_InitInputType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Steady_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackSteady_InitInputType'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%HWindSpeed)
-   call RegPack(Buf, InData%RefHt)
-   call RegPack(Buf, InData%PLExp)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%HWindSpeed)
+   call RegPack(RF, InData%RefHt)
+   call RegPack(RF, InData%PLExp)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine InflowWind_IO_UnPackSteady_InitInputType(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine InflowWind_IO_UnPackSteady_InitInputType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Steady_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackSteady_InitInputType'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%HWindSpeed)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%RefHt)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%PLExp)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%HWindSpeed); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RefHt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PLExp); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine InflowWind_IO_CopyUniform_InitInputType(SrcUniform_InitInputTypeData, DstUniform_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -330,36 +309,31 @@ subroutine InflowWind_IO_DestroyUniform_InitInputType(Uniform_InitInputTypeData,
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine InflowWind_IO_PackUniform_InitInputType(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine InflowWind_IO_PackUniform_InitInputType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Uniform_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackUniform_InitInputType'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%WindFileName)
-   call RegPack(Buf, InData%RefHt)
-   call RegPack(Buf, InData%RefLength)
-   call RegPack(Buf, InData%PropagationDir)
-   call RegPack(Buf, InData%UseInputFile)
-   call NWTC_Library_PackFileInfoType(Buf, InData%PassedFileData) 
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%WindFileName)
+   call RegPack(RF, InData%RefHt)
+   call RegPack(RF, InData%RefLength)
+   call RegPack(RF, InData%PropagationDir)
+   call RegPack(RF, InData%UseInputFile)
+   call NWTC_Library_PackFileInfoType(RF, InData%PassedFileData) 
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine InflowWind_IO_UnPackUniform_InitInputType(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine InflowWind_IO_UnPackUniform_InitInputType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Uniform_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackUniform_InitInputType'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%WindFileName)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%RefHt)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%RefLength)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%PropagationDir)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%UseInputFile)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call NWTC_Library_UnpackFileInfoType(Buf, OutData%PassedFileData) ! PassedFileData 
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%WindFileName); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RefHt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RefLength); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PropagationDir); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%UseInputFile); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackFileInfoType(RF, OutData%PassedFileData) ! PassedFileData 
 end subroutine
 
 subroutine InflowWind_IO_CopyGrid3D_InitInputType(SrcGrid3D_InitInputTypeData, DstGrid3D_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -394,55 +368,43 @@ subroutine InflowWind_IO_DestroyGrid3D_InitInputType(Grid3D_InitInputTypeData, E
    ErrMsg  = ''
 end subroutine
 
-subroutine InflowWind_IO_PackGrid3D_InitInputType(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine InflowWind_IO_PackGrid3D_InitInputType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Grid3D_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackGrid3D_InitInputType'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%ScaleMethod)
-   call RegPack(Buf, InData%SF)
-   call RegPack(Buf, InData%SigmaF)
-   call RegPack(Buf, InData%WindProfileType)
-   call RegPack(Buf, InData%RefHt)
-   call RegPack(Buf, InData%URef)
-   call RegPack(Buf, InData%PLExp)
-   call RegPack(Buf, InData%VLinShr)
-   call RegPack(Buf, InData%HLinShr)
-   call RegPack(Buf, InData%RefLength)
-   call RegPack(Buf, InData%Z0)
-   call RegPack(Buf, InData%XOffset)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%ScaleMethod)
+   call RegPack(RF, InData%SF)
+   call RegPack(RF, InData%SigmaF)
+   call RegPack(RF, InData%WindProfileType)
+   call RegPack(RF, InData%RefHt)
+   call RegPack(RF, InData%URef)
+   call RegPack(RF, InData%PLExp)
+   call RegPack(RF, InData%VLinShr)
+   call RegPack(RF, InData%HLinShr)
+   call RegPack(RF, InData%RefLength)
+   call RegPack(RF, InData%Z0)
+   call RegPack(RF, InData%XOffset)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine InflowWind_IO_UnPackGrid3D_InitInputType(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine InflowWind_IO_UnPackGrid3D_InitInputType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Grid3D_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackGrid3D_InitInputType'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%ScaleMethod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%SF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%SigmaF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WindProfileType)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%RefHt)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%URef)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%PLExp)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%VLinShr)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%HLinShr)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%RefLength)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Z0)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%XOffset)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%ScaleMethod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SigmaF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WindProfileType); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RefHt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%URef); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PLExp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VLinShr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HLinShr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RefLength); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Z0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%XOffset); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine InflowWind_IO_CopyTurbSim_InitInputType(SrcTurbSim_InitInputTypeData, DstTurbSim_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -466,22 +428,21 @@ subroutine InflowWind_IO_DestroyTurbSim_InitInputType(TurbSim_InitInputTypeData,
    ErrMsg  = ''
 end subroutine
 
-subroutine InflowWind_IO_PackTurbSim_InitInputType(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine InflowWind_IO_PackTurbSim_InitInputType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(TurbSim_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackTurbSim_InitInputType'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%WindFileName)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%WindFileName)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine InflowWind_IO_UnPackTurbSim_InitInputType(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine InflowWind_IO_UnPackTurbSim_InitInputType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(TurbSim_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackTurbSim_InitInputType'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%WindFileName)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%WindFileName); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine InflowWind_IO_CopyBladed_InitInputType(SrcBladed_InitInputTypeData, DstBladed_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -510,37 +471,31 @@ subroutine InflowWind_IO_DestroyBladed_InitInputType(Bladed_InitInputTypeData, E
    ErrMsg  = ''
 end subroutine
 
-subroutine InflowWind_IO_PackBladed_InitInputType(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine InflowWind_IO_PackBladed_InitInputType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Bladed_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackBladed_InitInputType'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%WindFileName)
-   call RegPack(Buf, InData%WindType)
-   call RegPack(Buf, InData%NativeBladedFmt)
-   call RegPack(Buf, InData%TowerFileExist)
-   call RegPack(Buf, InData%TurbineID)
-   call RegPack(Buf, InData%FixedWindFileRootName)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%WindFileName)
+   call RegPack(RF, InData%WindType)
+   call RegPack(RF, InData%NativeBladedFmt)
+   call RegPack(RF, InData%TowerFileExist)
+   call RegPack(RF, InData%TurbineID)
+   call RegPack(RF, InData%FixedWindFileRootName)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine InflowWind_IO_UnPackBladed_InitInputType(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine InflowWind_IO_UnPackBladed_InitInputType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Bladed_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackBladed_InitInputType'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%WindFileName)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WindType)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NativeBladedFmt)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%TowerFileExist)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%TurbineID)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%FixedWindFileRootName)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%WindFileName); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WindType); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NativeBladedFmt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TowerFileExist); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TurbineID); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%FixedWindFileRootName); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine InflowWind_IO_CopyBladed_InitOutputType(SrcBladed_InitOutputTypeData, DstBladed_InitOutputTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -565,25 +520,23 @@ subroutine InflowWind_IO_DestroyBladed_InitOutputType(Bladed_InitOutputTypeData,
    ErrMsg  = ''
 end subroutine
 
-subroutine InflowWind_IO_PackBladed_InitOutputType(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine InflowWind_IO_PackBladed_InitOutputType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Bladed_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackBladed_InitOutputType'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%PropagationDir)
-   call RegPack(Buf, InData%VFlowAngle)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%PropagationDir)
+   call RegPack(RF, InData%VFlowAngle)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine InflowWind_IO_UnPackBladed_InitOutputType(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine InflowWind_IO_UnPackBladed_InitOutputType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Bladed_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackBladed_InitOutputType'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%PropagationDir)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%VFlowAngle)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%PropagationDir); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VFlowAngle); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine InflowWind_IO_CopyHAWC_InitInputType(SrcHAWC_InitInputTypeData, DstHAWC_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -622,42 +575,35 @@ subroutine InflowWind_IO_DestroyHAWC_InitInputType(HAWC_InitInputTypeData, ErrSt
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine InflowWind_IO_PackHAWC_InitInputType(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine InflowWind_IO_PackHAWC_InitInputType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(HAWC_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackHAWC_InitInputType'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%WindFileName)
-   call RegPack(Buf, InData%nx)
-   call RegPack(Buf, InData%ny)
-   call RegPack(Buf, InData%nz)
-   call RegPack(Buf, InData%dx)
-   call RegPack(Buf, InData%dy)
-   call RegPack(Buf, InData%dz)
-   call InflowWind_IO_PackGrid3D_InitInputType(Buf, InData%G3D) 
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%WindFileName)
+   call RegPack(RF, InData%nx)
+   call RegPack(RF, InData%ny)
+   call RegPack(RF, InData%nz)
+   call RegPack(RF, InData%dx)
+   call RegPack(RF, InData%dy)
+   call RegPack(RF, InData%dz)
+   call InflowWind_IO_PackGrid3D_InitInputType(RF, InData%G3D) 
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine InflowWind_IO_UnPackHAWC_InitInputType(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine InflowWind_IO_UnPackHAWC_InitInputType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(HAWC_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackHAWC_InitInputType'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%WindFileName)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%nx)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%ny)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%nz)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%dx)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%dy)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%dz)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call InflowWind_IO_UnpackGrid3D_InitInputType(Buf, OutData%G3D) ! G3D 
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%WindFileName); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ny); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nz); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%dx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%dy); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%dz); if (RegCheckErr(RF, RoutineName)) return
+   call InflowWind_IO_UnpackGrid3D_InitInputType(RF, OutData%G3D) ! G3D 
 end subroutine
 
 subroutine InflowWind_IO_CopyUser_InitInputType(SrcUser_InitInputTypeData, DstUser_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -681,22 +627,21 @@ subroutine InflowWind_IO_DestroyUser_InitInputType(User_InitInputTypeData, ErrSt
    ErrMsg  = ''
 end subroutine
 
-subroutine InflowWind_IO_PackUser_InitInputType(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine InflowWind_IO_PackUser_InitInputType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(User_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackUser_InitInputType'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%Dummy)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%Dummy)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine InflowWind_IO_UnPackUser_InitInputType(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine InflowWind_IO_UnPackUser_InitInputType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(User_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackUser_InitInputType'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%Dummy)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%Dummy); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine InflowWind_IO_CopyGrid4D_InitInputType(SrcGrid4D_InitInputTypeData, DstGrid4D_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -726,28 +671,21 @@ subroutine InflowWind_IO_DestroyGrid4D_InitInputType(Grid4D_InitInputTypeData, E
    nullify(Grid4D_InitInputTypeData%Vel)
 end subroutine
 
-subroutine InflowWind_IO_PackGrid4D_InitInputType(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine InflowWind_IO_PackGrid4D_InitInputType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Grid4D_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackGrid4D_InitInputType'
    logical         :: PtrInIndex
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%n)
-   call RegPack(Buf, InData%delta)
-   call RegPack(Buf, InData%pZero)
-   call RegPack(Buf, associated(InData%Vel))
-   if (associated(InData%Vel)) then
-      call RegPackBounds(Buf, 5, lbound(InData%Vel, kind=B8Ki), ubound(InData%Vel, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%Vel), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%Vel)
-      end if
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%n)
+   call RegPack(RF, InData%delta)
+   call RegPack(RF, InData%pZero)
+   call RegPackPtr(RF, InData%Vel)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine InflowWind_IO_UnPackGrid4D_InitInputType(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine InflowWind_IO_UnPackGrid4D_InitInputType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Grid4D_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackGrid4D_InitInputType'
    integer(B8Ki)   :: LB(5), UB(5)
@@ -755,37 +693,11 @@ subroutine InflowWind_IO_UnPackGrid4D_InitInputType(Buf, OutData)
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%n)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%delta)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%pZero)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (associated(OutData%Vel)) deallocate(OutData%Vel)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 5, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vel, UB(1:5)-LB(1:5))
-         OutData%Vel(LB(1):,LB(2):,LB(3):,LB(4):,LB(5):) => OutData%Vel
-      else
-         allocate(OutData%Vel(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vel.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%Vel)
-         call RegUnpack(Buf, OutData%Vel)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%Vel => null()
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%n); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%delta); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%pZero); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%Vel); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine InflowWind_IO_CopyPoints_InitInputType(SrcPoints_InitInputTypeData, DstPoints_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -809,22 +721,21 @@ subroutine InflowWind_IO_DestroyPoints_InitInputType(Points_InitInputTypeData, E
    ErrMsg  = ''
 end subroutine
 
-subroutine InflowWind_IO_PackPoints_InitInputType(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine InflowWind_IO_PackPoints_InitInputType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Points_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackPoints_InitInputType'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%NumWindPoints)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%NumWindPoints)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine InflowWind_IO_UnPackPoints_InitInputType(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine InflowWind_IO_UnPackPoints_InitInputType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Points_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackPoints_InitInputType'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%NumWindPoints)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%NumWindPoints); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 END MODULE InflowWind_IO_Types
 !ENDOFREGISTRYGENERATEDFILE

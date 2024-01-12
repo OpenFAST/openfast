@@ -7505,7 +7505,7 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
    INTEGER(IntKi), OPTIONAL, INTENT(INOUT) :: Unit                !< unit number for output file
 
       ! local variables:
-   type(PackBuffer)                        :: Buf
+   type(RegFile)                           :: RF
 
    INTEGER(IntKi)                          :: unOut               ! unit number for output file
    INTEGER(IntKi)                          :: old_avrSwap1        ! previous value of avrSwap(1) !hack for Bladed DLL checkpoint/restore
@@ -7519,19 +7519,6 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
       ! init error status
    ErrStat = ErrID_None
    ErrMsg  = ""
-
-      ! Initialize the pack buffer
-   call InitPackBuffer(Buf, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) return
-
-      ! Get the arrays of data to be stored in the output file
-   call FAST_PackTurbineType(Buf, Turbine)
-      call SetErrStat(Buf%ErrStat, Buf%ErrMsg, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev ) then
-         call cleanup()
-         return
-      end if
       
    FileName    = TRIM(CheckpointRoot)//'.chkp'
    DLLFileName = TRIM(CheckpointRoot)//'.dll.chkp'
@@ -7562,8 +7549,23 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
 
    END IF
 
-   ! data from current turbine at time step:
-   call WritePackBuffer(Buf, unOut, ErrStat2, ErrMsg2)
+   ! Initialize the registry file
+   call InitRegFile(RF, unOut, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) return
+
+   ! Pack data into the registry file
+   call FAST_PackTurbineType(RF, Turbine)
+      call SetErrStat(RF%ErrStat, RF%ErrMsg, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev ) then
+         call cleanup()
+         return
+      end if
+
+   ! Close registry file
+   call CloseRegFile(RF, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) return
 
    ! If last turbine or no unit, close output unit
    IF (Turbine%TurbID == NumTurbines .OR. .NOT. PRESENT(Unit)) THEN
@@ -7599,7 +7601,7 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
 
 contains
    subroutine cleanup()
-      call DestroyPackBuffer(Buf, ErrStat2, ErrMsg2)
+      call CloseRegFile(RF, ErrStat2, ErrMsg2)
    end subroutine cleanup
 
 END SUBROUTINE FAST_CreateCheckpoint_T
@@ -7664,7 +7666,7 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
    INTEGER(IntKi), OPTIONAL, INTENT(INOUT) :: Unit                !< unit number for output file
 
       ! local variables:
-   type(PackBuffer)                        :: Buf
+   type(RegFile)                           :: RF
 
    INTEGER(IntKi)                          :: unIn                ! unit number for input file
    INTEGER(IntKi)                          :: old_avrSwap1        ! previous value of avrSwap(1) !hack for Bladed DLL checkpoint/restore
@@ -7705,14 +7707,14 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) return
 
-      ! Read the packed arrays
-   call ReadPackBuffer(Buf, unIn, ErrStat2, ErrMsg2)
+      ! Initialize registry file for reading
+   call OpenRegFile(RF, unIn, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
 
-      ! Put the arrays back in the data types
-   call FAST_UnpackTurbineType(Buf, Turbine)
-      call SetErrStat(Buf%ErrStat, Buf%ErrMsg, ErrStat, ErrMsg, RoutineName )
+      ! Unpack registry file into turbine data structure
+   call FAST_UnpackTurbineType(RF, Turbine)
+      call SetErrStat(RF%ErrStat, RF%ErrMsg, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) return
 
       ! close file if necessary (do this after unpacking turbine data, so that TurbID is set)

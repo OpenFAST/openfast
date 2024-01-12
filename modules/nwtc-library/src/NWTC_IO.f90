@@ -1725,56 +1725,56 @@ END SUBROUTINE CheckR8Var
 !=======================================================================
 !> This routine packs the DLL_Type (nwtc_base::dll_type) data into an integer buffer.
 !! It is required for the FAST Registry. It is the inverse of DLLTypeUnPack (nwtc_io::dlltypeunpack).
-   SUBROUTINE DLLTypePack(Buf, InData)
-      type(PackBuffer), intent(inout)  :: Buf
+   SUBROUTINE DLLTypePack(RF, InData)
+      type(RegFile), intent(inout)  :: RF
       TYPE(DLL_Type), intent(in)       :: InData  !< DLL data to pack
       
       INTEGER(IntKi)                   :: i
 
       ! If buffer error, return
-      if (Buf%ErrStat /= ErrID_None) return
+      if (RF%ErrStat /= ErrID_None) return
       
       ! has the DLL procedure been loaded?
-      call RegPack(Buf, c_associated(InData%ProcAddr(1)))
+      call RegPack(RF, c_associated(InData%ProcAddr(1)))
       
       ! Pack strings
-      call RegPack(Buf, InData%FileName)
+      call RegPack(RF, InData%FileName)
       do i = 1, NWTC_MAX_DLL_PROC
-         call RegPack(Buf, InData%ProcName(i))
+         call RegPack(RF, InData%ProcName(i))
       end do
 
       ! If buffer error, return
-      if (RegCheckErr(Buf, 'DLLTypeUnPack')) return
+      if (RegCheckErr(RF, 'DLLTypeUnPack')) return
       
    END SUBROUTINE DLLTypePack
 !=======================================================================
 !> This routine unpacks the DLL_Type data from an integer buffer.
 !! It is required for the FAST Registry. It is the inverse of DLLTypePack (nwtc_io::dlltypepack).
-   subroutine DLLTypeUnPack(Buf, OutData)
-      type(PackBuffer), intent(inout)  :: Buf
-      type(DLL_Type), intent(out)      :: OutData !< Reconstituted OutData structure
+   subroutine DLLTypeUnPack(RF, OutData)
+      type(RegFile), intent(inout)  :: RF
+      type(DLL_Type), intent(out)   :: OutData !< Reconstituted OutData structure
          
       logical        :: WasAssociated
       integer(IntKi) :: i
 
       ! If buffer error, return
-      if (Buf%ErrStat /= ErrID_None) return
+      if (RF%ErrStat /= ErrID_None) return
       
       ! Get flag indicating if dll was associated
-      call RegUnpack(Buf, WasAssociated)
+      call RegUnpack(RF, WasAssociated)
 
       ! Unpack strings
-      call RegUnpack(Buf, OutData%FileName)
+      call RegUnpack(RF, OutData%FileName)
       do i = 1, NWTC_MAX_DLL_PROC
-         call RegUnpack(Buf, OutData%ProcName(i))
+         call RegUnpack(RF, OutData%ProcName(i))
       end do
 
       ! If buffer error, return
-      if (RegCheckErr(Buf, 'DLLTypeUnPack')) return
+      if (RegCheckErr(RF, 'DLLTypeUnPack')) return
       
       ! If dll was loaded, and data in filename and procname, load dll
       IF (WasAssociated .AND. LEN_TRIM(OutData%FileName) > 0 .AND. LEN_TRIM(OutData%ProcName(1)) > 0) THEN
-         CALL LoadDynamicLib(OutData, Buf%ErrStat, Buf%ErrMsg)
+         CALL LoadDynamicLib(OutData, RF%ErrStat, RF%ErrMsg)
       else
          ! Nullifying
          OutData%FileAddr  = INT(0,C_INTPTR_T)
@@ -1783,7 +1783,7 @@ END SUBROUTINE CheckR8Var
       END IF
 
       ! If buffer error, return
-      if (RegCheckErr(Buf, 'DLLTypeUnPack')) return
+      if (RegCheckErr(RF, 'DLLTypeUnPack')) return
       
    END SUBROUTINE DLLTypeUnPack   
 !=======================================================================

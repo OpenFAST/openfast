@@ -160,53 +160,32 @@ subroutine DBEMT_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine DBEMT_PackInitInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine DBEMT_PackInitInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(DBEMT_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'DBEMT_PackInitInput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%NumBlades)
-   call RegPack(Buf, InData%NumNodes)
-   call RegPack(Buf, InData%tau1_const)
-   call RegPack(Buf, InData%DBEMT_Mod)
-   call RegPack(Buf, allocated(InData%rLocal))
-   if (allocated(InData%rLocal)) then
-      call RegPackBounds(Buf, 2, lbound(InData%rLocal, kind=B8Ki), ubound(InData%rLocal, kind=B8Ki))
-      call RegPack(Buf, InData%rLocal)
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%NumBlades)
+   call RegPack(RF, InData%NumNodes)
+   call RegPack(RF, InData%tau1_const)
+   call RegPack(RF, InData%DBEMT_Mod)
+   call RegPackAlloc(RF, InData%rLocal)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine DBEMT_UnPackInitInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine DBEMT_UnPackInitInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(DBEMT_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DBEMT_UnPackInitInput'
    integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%NumBlades)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NumNodes)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%tau1_const)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%DBEMT_Mod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%rLocal)) deallocate(OutData%rLocal)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%rLocal(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%rLocal.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%rLocal)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%NumBlades); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumNodes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%tau1_const); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DBEMT_Mod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%rLocal); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine DBEMT_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -238,21 +217,21 @@ subroutine DBEMT_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine DBEMT_PackInitOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine DBEMT_PackInitOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(DBEMT_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'DBEMT_PackInitOutput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call NWTC_Library_PackProgDesc(RF, InData%Ver) 
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine DBEMT_UnPackInitOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine DBEMT_UnPackInitOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(DBEMT_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DBEMT_UnPackInitOutput'
-   if (Buf%ErrStat /= ErrID_None) return
-   call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
+   if (RF%ErrStat /= ErrID_None) return
+   call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
 end subroutine
 
 subroutine DBEMT_CopyElementContinuousStateType(SrcElementContinuousStateTypeData, DstElementContinuousStateTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -277,25 +256,23 @@ subroutine DBEMT_DestroyElementContinuousStateType(ElementContinuousStateTypeDat
    ErrMsg  = ''
 end subroutine
 
-subroutine DBEMT_PackElementContinuousStateType(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine DBEMT_PackElementContinuousStateType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(DBEMT_ElementContinuousStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'DBEMT_PackElementContinuousStateType'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%vind)
-   call RegPack(Buf, InData%vind_1)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%vind)
+   call RegPack(RF, InData%vind_1)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine DBEMT_UnPackElementContinuousStateType(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine DBEMT_UnPackElementContinuousStateType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(DBEMT_ElementContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DBEMT_UnPackElementContinuousStateType'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%vind)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%vind_1)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%vind); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%vind_1); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine DBEMT_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
@@ -355,50 +332,48 @@ subroutine DBEMT_DestroyContState(ContStateData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine DBEMT_PackContState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine DBEMT_PackContState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(DBEMT_ContinuousStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'DBEMT_PackContState'
    integer(B8Ki)   :: i1, i2
    integer(B8Ki)   :: LB(2), UB(2)
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%element))
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, allocated(InData%element))
    if (allocated(InData%element)) then
-      call RegPackBounds(Buf, 2, lbound(InData%element, kind=B8Ki), ubound(InData%element, kind=B8Ki))
+      call RegPackBounds(RF, 2, lbound(InData%element, kind=B8Ki), ubound(InData%element, kind=B8Ki))
       LB(1:2) = lbound(InData%element, kind=B8Ki)
       UB(1:2) = ubound(InData%element, kind=B8Ki)
       do i2 = LB(2), UB(2)
          do i1 = LB(1), UB(1)
-            call DBEMT_PackElementContinuousStateType(Buf, InData%element(i1,i2)) 
+            call DBEMT_PackElementContinuousStateType(RF, InData%element(i1,i2)) 
          end do
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine DBEMT_UnPackContState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine DBEMT_UnPackContState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(DBEMT_ContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DBEMT_UnPackContState'
    integer(B8Ki)   :: i1, i2
    integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
+   if (RF%ErrStat /= ErrID_None) return
    if (allocated(OutData%element)) deallocate(OutData%element)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%element(LB(1):UB(1),LB(2):UB(2)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%element.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%element.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i2 = LB(2), UB(2)
          do i1 = LB(1), UB(1)
-            call DBEMT_UnpackElementContinuousStateType(Buf, OutData%element(i1,i2)) ! element 
+            call DBEMT_UnpackElementContinuousStateType(RF, OutData%element(i1,i2)) ! element 
          end do
       end do
    end if
@@ -425,22 +400,21 @@ subroutine DBEMT_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine DBEMT_PackDiscState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine DBEMT_PackDiscState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(DBEMT_DiscreteStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'DBEMT_PackDiscState'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%DummyState)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%DummyState)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine DBEMT_UnPackDiscState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine DBEMT_UnPackDiscState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(DBEMT_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DBEMT_UnPackDiscState'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%DummyState)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%DummyState); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine DBEMT_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg)
@@ -464,22 +438,21 @@ subroutine DBEMT_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine DBEMT_PackConstrState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine DBEMT_PackConstrState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(DBEMT_ConstraintStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'DBEMT_PackConstrState'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%DummyState)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%DummyState)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine DBEMT_UnPackConstrState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine DBEMT_UnPackConstrState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(DBEMT_ConstraintStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DBEMT_UnPackConstrState'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%DummyState)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%DummyState); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine DBEMT_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg)
@@ -555,78 +528,42 @@ subroutine DBEMT_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    end do
 end subroutine
 
-subroutine DBEMT_PackOtherState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine DBEMT_PackOtherState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(DBEMT_OtherStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'DBEMT_PackOtherState'
    integer(B8Ki)   :: i1, i2
    integer(B8Ki)   :: LB(2), UB(2)
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%areStatesInitialized))
-   if (allocated(InData%areStatesInitialized)) then
-      call RegPackBounds(Buf, 2, lbound(InData%areStatesInitialized, kind=B8Ki), ubound(InData%areStatesInitialized, kind=B8Ki))
-      call RegPack(Buf, InData%areStatesInitialized)
-   end if
-   call RegPack(Buf, InData%tau1)
-   call RegPack(Buf, InData%tau2)
-   call RegPack(Buf, allocated(InData%n))
-   if (allocated(InData%n)) then
-      call RegPackBounds(Buf, 2, lbound(InData%n, kind=B8Ki), ubound(InData%n, kind=B8Ki))
-      call RegPack(Buf, InData%n)
-   end if
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%areStatesInitialized)
+   call RegPack(RF, InData%tau1)
+   call RegPack(RF, InData%tau2)
+   call RegPackAlloc(RF, InData%n)
    LB(1:1) = lbound(InData%xdot, kind=B8Ki)
    UB(1:1) = ubound(InData%xdot, kind=B8Ki)
    do i1 = LB(1), UB(1)
-      call DBEMT_PackContState(Buf, InData%xdot(i1)) 
+      call DBEMT_PackContState(RF, InData%xdot(i1)) 
    end do
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine DBEMT_UnPackOtherState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine DBEMT_UnPackOtherState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(DBEMT_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DBEMT_UnPackOtherState'
    integer(B8Ki)   :: i1, i2
    integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   if (allocated(OutData%areStatesInitialized)) deallocate(OutData%areStatesInitialized)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%areStatesInitialized(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%areStatesInitialized.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%areStatesInitialized)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%tau1)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%tau2)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%n)) deallocate(OutData%n)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%n(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%n.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%n)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%areStatesInitialized); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%tau1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%tau2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%n); if (RegCheckErr(RF, RoutineName)) return
    LB(1:1) = lbound(OutData%xdot, kind=B8Ki)
    UB(1:1) = ubound(OutData%xdot, kind=B8Ki)
    do i1 = LB(1), UB(1)
-      call DBEMT_UnpackContState(Buf, OutData%xdot(i1)) ! xdot 
+      call DBEMT_UnpackContState(RF, OutData%xdot(i1)) ! xdot 
    end do
 end subroutine
 
@@ -651,22 +588,21 @@ subroutine DBEMT_DestroyMisc(MiscData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine DBEMT_PackMisc(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine DBEMT_PackMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(DBEMT_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'DBEMT_PackMisc'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%FirstWarn_tau1)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%FirstWarn_tau1)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine DBEMT_UnPackMisc(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine DBEMT_UnPackMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(DBEMT_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DBEMT_UnPackMisc'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%FirstWarn_tau1)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%FirstWarn_tau1); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine DBEMT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -713,62 +649,38 @@ subroutine DBEMT_DestroyParam(ParamData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine DBEMT_PackParam(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine DBEMT_PackParam(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(DBEMT_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'DBEMT_PackParam'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%DT)
-   call RegPack(Buf, InData%lin_nx)
-   call RegPack(Buf, InData%NumBlades)
-   call RegPack(Buf, InData%NumNodes)
-   call RegPack(Buf, InData%k_0ye)
-   call RegPack(Buf, InData%tau1_const)
-   call RegPack(Buf, allocated(InData%spanRatio))
-   if (allocated(InData%spanRatio)) then
-      call RegPackBounds(Buf, 2, lbound(InData%spanRatio, kind=B8Ki), ubound(InData%spanRatio, kind=B8Ki))
-      call RegPack(Buf, InData%spanRatio)
-   end if
-   call RegPack(Buf, InData%DBEMT_Mod)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%DT)
+   call RegPack(RF, InData%lin_nx)
+   call RegPack(RF, InData%NumBlades)
+   call RegPack(RF, InData%NumNodes)
+   call RegPack(RF, InData%k_0ye)
+   call RegPack(RF, InData%tau1_const)
+   call RegPackAlloc(RF, InData%spanRatio)
+   call RegPack(RF, InData%DBEMT_Mod)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine DBEMT_UnPackParam(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine DBEMT_UnPackParam(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(DBEMT_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DBEMT_UnPackParam'
    integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%DT)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%lin_nx)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NumBlades)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NumNodes)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%k_0ye)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%tau1_const)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%spanRatio)) deallocate(OutData%spanRatio)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%spanRatio(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%spanRatio.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%spanRatio)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%DBEMT_Mod)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%lin_nx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumBlades); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumNodes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k_0ye); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%tau1_const); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%spanRatio); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DBEMT_Mod); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine DBEMT_CopyElementInputType(SrcElementInputTypeData, DstElementInputTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -793,25 +705,23 @@ subroutine DBEMT_DestroyElementInputType(ElementInputTypeData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine DBEMT_PackElementInputType(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine DBEMT_PackElementInputType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(DBEMT_ElementInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'DBEMT_PackElementInputType'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%vind_s)
-   call RegPack(Buf, InData%spanRatio)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%vind_s)
+   call RegPack(RF, InData%spanRatio)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine DBEMT_UnPackElementInputType(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine DBEMT_UnPackElementInputType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(DBEMT_ElementInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DBEMT_UnPackElementInputType'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%vind_s)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%spanRatio)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%vind_s); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%spanRatio); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine DBEMT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -874,59 +784,54 @@ subroutine DBEMT_DestroyInput(InputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine DBEMT_PackInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine DBEMT_PackInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(DBEMT_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'DBEMT_PackInput'
    integer(B8Ki)   :: i1, i2
    integer(B8Ki)   :: LB(2), UB(2)
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%AxInd_disk)
-   call RegPack(Buf, InData%Un_disk)
-   call RegPack(Buf, InData%R_disk)
-   call RegPack(Buf, allocated(InData%element))
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%AxInd_disk)
+   call RegPack(RF, InData%Un_disk)
+   call RegPack(RF, InData%R_disk)
+   call RegPack(RF, allocated(InData%element))
    if (allocated(InData%element)) then
-      call RegPackBounds(Buf, 2, lbound(InData%element, kind=B8Ki), ubound(InData%element, kind=B8Ki))
+      call RegPackBounds(RF, 2, lbound(InData%element, kind=B8Ki), ubound(InData%element, kind=B8Ki))
       LB(1:2) = lbound(InData%element, kind=B8Ki)
       UB(1:2) = ubound(InData%element, kind=B8Ki)
       do i2 = LB(2), UB(2)
          do i1 = LB(1), UB(1)
-            call DBEMT_PackElementInputType(Buf, InData%element(i1,i2)) 
+            call DBEMT_PackElementInputType(RF, InData%element(i1,i2)) 
          end do
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine DBEMT_UnPackInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine DBEMT_UnPackInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(DBEMT_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DBEMT_UnPackInput'
    integer(B8Ki)   :: i1, i2
    integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%AxInd_disk)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Un_disk)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%R_disk)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%AxInd_disk); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Un_disk); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%R_disk); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%element)) deallocate(OutData%element)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%element(LB(1):UB(1),LB(2):UB(2)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%element.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%element.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i2 = LB(2), UB(2)
          do i1 = LB(1), UB(1)
-            call DBEMT_UnpackElementInputType(Buf, OutData%element(i1,i2)) ! element 
+            call DBEMT_UnpackElementInputType(RF, OutData%element(i1,i2)) ! element 
          end do
       end do
    end if
@@ -969,41 +874,24 @@ subroutine DBEMT_DestroyOutput(OutputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine DBEMT_PackOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine DBEMT_PackOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(DBEMT_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'DBEMT_PackOutput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%vind))
-   if (allocated(InData%vind)) then
-      call RegPackBounds(Buf, 3, lbound(InData%vind, kind=B8Ki), ubound(InData%vind, kind=B8Ki))
-      call RegPack(Buf, InData%vind)
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%vind)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine DBEMT_UnPackOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine DBEMT_UnPackOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(DBEMT_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DBEMT_UnPackOutput'
    integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   if (allocated(OutData%vind)) deallocate(OutData%vind)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 3, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%vind(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%vind.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%vind)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%vind); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine DBEMT_ElementInputType_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)

@@ -109,77 +109,48 @@ subroutine Current_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine Current_PackInitInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine Current_PackInitInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Current_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Current_PackInitInput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%CurrSSV0)
-   call RegPack(Buf, InData%CurrSSDirChr)
-   call RegPack(Buf, InData%CurrSSDir)
-   call RegPack(Buf, InData%CurrNSRef)
-   call RegPack(Buf, InData%CurrNSV0)
-   call RegPack(Buf, InData%CurrNSDir)
-   call RegPack(Buf, InData%CurrDIV)
-   call RegPack(Buf, InData%CurrDIDir)
-   call RegPack(Buf, InData%CurrMod)
-   call RegPack(Buf, InData%EffWtrDpth)
-   call RegPack(Buf, allocated(InData%WaveKinGridzi))
-   if (allocated(InData%WaveKinGridzi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridzi, kind=B8Ki), ubound(InData%WaveKinGridzi, kind=B8Ki))
-      call RegPack(Buf, InData%WaveKinGridzi)
-   end if
-   call RegPack(Buf, InData%NGridPts)
-   call RegPack(Buf, InData%DirRoot)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%CurrSSV0)
+   call RegPack(RF, InData%CurrSSDirChr)
+   call RegPack(RF, InData%CurrSSDir)
+   call RegPack(RF, InData%CurrNSRef)
+   call RegPack(RF, InData%CurrNSV0)
+   call RegPack(RF, InData%CurrNSDir)
+   call RegPack(RF, InData%CurrDIV)
+   call RegPack(RF, InData%CurrDIDir)
+   call RegPack(RF, InData%CurrMod)
+   call RegPack(RF, InData%EffWtrDpth)
+   call RegPackAlloc(RF, InData%WaveKinGridzi)
+   call RegPack(RF, InData%NGridPts)
+   call RegPack(RF, InData%DirRoot)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine Current_UnPackInitInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine Current_UnPackInitInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Current_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Current_UnPackInitInput'
    integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%CurrSSV0)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%CurrSSDirChr)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%CurrSSDir)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%CurrNSRef)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%CurrNSV0)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%CurrNSDir)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%CurrDIV)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%CurrDIDir)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%CurrMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%EffWtrDpth)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%WaveKinGridzi)) deallocate(OutData%WaveKinGridzi)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveKinGridzi(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveKinGridzi.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveKinGridzi)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%NGridPts)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%DirRoot)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%CurrSSV0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CurrSSDirChr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CurrSSDir); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CurrNSRef); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CurrNSV0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CurrNSDir); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CurrDIV); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CurrDIDir); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CurrMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%EffWtrDpth); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveKinGridzi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NGridPts); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DirRoot); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Current_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -236,66 +207,30 @@ subroutine Current_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine Current_PackInitOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine Current_PackInitOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Current_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Current_PackInitOutput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%CurrVxi))
-   if (allocated(InData%CurrVxi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%CurrVxi, kind=B8Ki), ubound(InData%CurrVxi, kind=B8Ki))
-      call RegPack(Buf, InData%CurrVxi)
-   end if
-   call RegPack(Buf, allocated(InData%CurrVyi))
-   if (allocated(InData%CurrVyi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%CurrVyi, kind=B8Ki), ubound(InData%CurrVyi, kind=B8Ki))
-      call RegPack(Buf, InData%CurrVyi)
-   end if
-   call RegPack(Buf, InData%PCurrVxiPz0)
-   call RegPack(Buf, InData%PCurrVyiPz0)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%CurrVxi)
+   call RegPackAlloc(RF, InData%CurrVyi)
+   call RegPack(RF, InData%PCurrVxiPz0)
+   call RegPack(RF, InData%PCurrVyiPz0)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine Current_UnPackInitOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine Current_UnPackInitOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Current_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Current_UnPackInitOutput'
    integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   if (allocated(OutData%CurrVxi)) deallocate(OutData%CurrVxi)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%CurrVxi(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%CurrVxi.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%CurrVxi)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%CurrVyi)) deallocate(OutData%CurrVyi)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%CurrVyi(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%CurrVyi.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%CurrVyi)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%PCurrVxiPz0)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%PCurrVyiPz0)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%CurrVxi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%CurrVyi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PCurrVxiPz0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PCurrVyiPz0); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 END MODULE Current_Types
 !ENDOFREGISTRYGENERATEDFILE

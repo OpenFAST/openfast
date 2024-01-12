@@ -398,43 +398,6 @@ void gen_copy(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
             continue;
         }
 
-        // If allocatable field that is not a derived type, use Fortran 2003 automatic
-        // allocation to duplicate the source variable
-        if (field.is_allocatable && field.data_type->tag != DataType::Tag::Derived)
-        {
-            // If source is allocated or associated
-            w << indent << "if (" << alloc_assoc << "(" << src << ")) then";
-            indent += "   ";
-
-            // Copy values
-            w << indent << dst << " = " << src;
-
-            // If C code and field isn't a pointer, copy data to C object
-            if (gen_c_code && !field.is_pointer)
-            {
-                if (field.rank == 0) // scalar of any type OR a character array
-                {
-                    std::string tmp = ddt.name_short + "Data%C_obj%" + field.name;
-                    w << indent << "Dst" << tmp << " = Src" << tmp;
-                }
-            }
-
-            // End if dst alloc/assoc
-            indent.erase(indent.size() - 3);
-            w << indent << "else if (" << alloc_assoc << "(" << dst << ")) then";
-            if (field.is_pointer && !field.is_target)
-            {
-                w << indent << "   nullify(" << dst << ")";
-            }
-            else
-            {
-                w << indent << "   deallocate(" << dst << ")";
-            }
-            w << indent << "end if";
-
-            continue;
-        }
-
         // If field is allocatable
         if (field.is_allocatable)
         {

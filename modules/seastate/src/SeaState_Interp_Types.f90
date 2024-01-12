@@ -89,31 +89,27 @@ subroutine SeaSt_Interp_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine SeaSt_Interp_PackInitInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine SeaSt_Interp_PackInitInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(SeaSt_Interp_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_Interp_PackInitInput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%n)
-   call RegPack(Buf, InData%delta)
-   call RegPack(Buf, InData%pZero)
-   call RegPack(Buf, InData%Z_Depth)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%n)
+   call RegPack(RF, InData%delta)
+   call RegPack(RF, InData%pZero)
+   call RegPack(RF, InData%Z_Depth)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SeaSt_Interp_UnPackInitInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine SeaSt_Interp_UnPackInitInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(SeaSt_Interp_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_Interp_UnPackInitInput'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%n)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%delta)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%pZero)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Z_Depth)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%n); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%delta); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%pZero); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Z_Depth); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine SeaSt_Interp_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -145,21 +141,21 @@ subroutine SeaSt_Interp_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine SeaSt_Interp_PackInitOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine SeaSt_Interp_PackInitOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(SeaSt_Interp_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_Interp_PackInitOutput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call NWTC_Library_PackProgDesc(RF, InData%Ver) 
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SeaSt_Interp_UnPackInitOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine SeaSt_Interp_UnPackInitOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(SeaSt_Interp_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_Interp_UnPackInitOutput'
-   if (Buf%ErrStat /= ErrID_None) return
-   call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
+   if (RF%ErrStat /= ErrID_None) return
+   call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
 end subroutine
 
 subroutine SeaSt_Interp_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
@@ -187,34 +183,29 @@ subroutine SeaSt_Interp_DestroyMisc(MiscData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine SeaSt_Interp_PackMisc(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine SeaSt_Interp_PackMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(SeaSt_Interp_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_Interp_PackMisc'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%N3D)
-   call RegPack(Buf, InData%N4D)
-   call RegPack(Buf, InData%Indx_Lo)
-   call RegPack(Buf, InData%Indx_Hi)
-   call RegPack(Buf, InData%FirstWarn_Clamp)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%N3D)
+   call RegPack(RF, InData%N4D)
+   call RegPack(RF, InData%Indx_Lo)
+   call RegPack(RF, InData%Indx_Hi)
+   call RegPack(RF, InData%FirstWarn_Clamp)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SeaSt_Interp_UnPackMisc(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine SeaSt_Interp_UnPackMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(SeaSt_Interp_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_Interp_UnPackMisc'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%N3D)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%N4D)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Indx_Lo)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Indx_Hi)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%FirstWarn_Clamp)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%N3D); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%N4D); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Indx_Lo); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Indx_Hi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%FirstWarn_Clamp); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine SeaSt_Interp_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -241,31 +232,27 @@ subroutine SeaSt_Interp_DestroyParam(ParamData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine SeaSt_Interp_PackParam(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine SeaSt_Interp_PackParam(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(SeaSt_Interp_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_Interp_PackParam'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%n)
-   call RegPack(Buf, InData%delta)
-   call RegPack(Buf, InData%pZero)
-   call RegPack(Buf, InData%Z_Depth)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%n)
+   call RegPack(RF, InData%delta)
+   call RegPack(RF, InData%pZero)
+   call RegPack(RF, InData%Z_Depth)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SeaSt_Interp_UnPackParam(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine SeaSt_Interp_UnPackParam(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(SeaSt_Interp_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_Interp_UnPackParam'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%n)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%delta)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%pZero)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Z_Depth)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%n); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%delta); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%pZero); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Z_Depth); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 END MODULE SeaState_Interp_Types
 !ENDOFREGISTRYGENERATEDFILE

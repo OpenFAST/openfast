@@ -203,7 +203,7 @@ subroutine FWrap_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
 end subroutine
 
 subroutine FWrap_PackInitInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+   type(RegFile), intent(inout) :: Buf
    type(FWrap_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FWrap_PackInitInput'
    logical         :: PtrInIndex
@@ -251,7 +251,7 @@ subroutine FWrap_PackInitInput(Buf, Indata)
 end subroutine
 
 subroutine FWrap_UnPackInitInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+   type(RegFile), intent(inout)    :: Buf
    type(FWrap_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FWrap_UnPackInitInput'
    integer(B8Ki)   :: LB(5), UB(5)
@@ -387,7 +387,7 @@ subroutine FWrap_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
 end subroutine
 
 subroutine FWrap_PackInitOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+   type(RegFile), intent(inout) :: Buf
    type(FWrap_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FWrap_PackInitOutput'
    if (Buf%ErrStat >= AbortErrLev) return
@@ -397,7 +397,7 @@ subroutine FWrap_PackInitOutput(Buf, Indata)
 end subroutine
 
 subroutine FWrap_UnPackInitOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+   type(RegFile), intent(inout)    :: Buf
    type(FWrap_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FWrap_UnPackInitOutput'
    if (Buf%ErrStat /= ErrID_None) return
@@ -428,7 +428,7 @@ subroutine FWrap_DestroyContState(ContStateData, ErrStat, ErrMsg)
 end subroutine
 
 subroutine FWrap_PackContState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+   type(RegFile), intent(inout) :: Buf
    type(FWrap_ContinuousStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FWrap_PackContState'
    if (Buf%ErrStat >= AbortErrLev) return
@@ -437,7 +437,7 @@ subroutine FWrap_PackContState(Buf, Indata)
 end subroutine
 
 subroutine FWrap_UnPackContState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+   type(RegFile), intent(inout)    :: Buf
    type(FWrap_ContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FWrap_UnPackContState'
    if (Buf%ErrStat /= ErrID_None) return
@@ -467,7 +467,7 @@ subroutine FWrap_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
 end subroutine
 
 subroutine FWrap_PackDiscState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+   type(RegFile), intent(inout) :: Buf
    type(FWrap_DiscreteStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FWrap_PackDiscState'
    if (Buf%ErrStat >= AbortErrLev) return
@@ -476,7 +476,7 @@ subroutine FWrap_PackDiscState(Buf, Indata)
 end subroutine
 
 subroutine FWrap_UnPackDiscState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+   type(RegFile), intent(inout)    :: Buf
    type(FWrap_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FWrap_UnPackDiscState'
    if (Buf%ErrStat /= ErrID_None) return
@@ -506,7 +506,7 @@ subroutine FWrap_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
 end subroutine
 
 subroutine FWrap_PackConstrState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+   type(RegFile), intent(inout) :: Buf
    type(FWrap_ConstraintStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FWrap_PackConstrState'
    if (Buf%ErrStat >= AbortErrLev) return
@@ -515,7 +515,7 @@ subroutine FWrap_PackConstrState(Buf, Indata)
 end subroutine
 
 subroutine FWrap_UnPackConstrState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+   type(RegFile), intent(inout)    :: Buf
    type(FWrap_ConstraintStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FWrap_UnPackConstrState'
    if (Buf%ErrStat /= ErrID_None) return
@@ -545,7 +545,7 @@ subroutine FWrap_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
 end subroutine
 
 subroutine FWrap_PackOtherState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+   type(RegFile), intent(inout) :: Buf
    type(FWrap_OtherStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FWrap_PackOtherState'
    if (Buf%ErrStat >= AbortErrLev) return
@@ -554,7 +554,7 @@ subroutine FWrap_PackOtherState(Buf, Indata)
 end subroutine
 
 subroutine FWrap_UnPackOtherState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+   type(RegFile), intent(inout)    :: Buf
    type(FWrap_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FWrap_UnPackOtherState'
    if (Buf%ErrStat /= ErrID_None) return
@@ -696,7 +696,7 @@ subroutine FWrap_DestroyMisc(MiscData, ErrStat, ErrMsg)
 end subroutine
 
 subroutine FWrap_PackMisc(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+   type(RegFile), intent(inout) :: Buf
    type(FWrap_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FWrap_PackMisc'
    integer(B8Ki)   :: i1
@@ -743,7 +743,7 @@ subroutine FWrap_PackMisc(Buf, Indata)
 end subroutine
 
 subroutine FWrap_UnPackMisc(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+   type(RegFile), intent(inout)    :: Buf
    type(FWrap_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FWrap_UnPackMisc'
    integer(B8Ki)   :: i1
@@ -855,7 +855,7 @@ subroutine FWrap_DestroyParam(ParamData, ErrStat, ErrMsg)
 end subroutine
 
 subroutine FWrap_PackParam(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+   type(RegFile), intent(inout) :: Buf
    type(FWrap_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FWrap_PackParam'
    if (Buf%ErrStat >= AbortErrLev) return
@@ -871,7 +871,7 @@ subroutine FWrap_PackParam(Buf, Indata)
 end subroutine
 
 subroutine FWrap_UnPackParam(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+   type(RegFile), intent(inout)    :: Buf
    type(FWrap_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FWrap_UnPackParam'
    integer(B8Ki)   :: LB(1), UB(1)
@@ -953,7 +953,7 @@ subroutine FWrap_DestroyInput(InputData, ErrStat, ErrMsg)
 end subroutine
 
 subroutine FWrap_PackInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+   type(RegFile), intent(inout) :: Buf
    type(FWrap_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FWrap_PackInput'
    if (Buf%ErrStat >= AbortErrLev) return
@@ -971,7 +971,7 @@ subroutine FWrap_PackInput(Buf, Indata)
 end subroutine
 
 subroutine FWrap_UnPackInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+   type(RegFile), intent(inout)    :: Buf
    type(FWrap_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FWrap_UnPackInput'
    integer(B8Ki)   :: LB(1), UB(1)
@@ -1083,7 +1083,7 @@ subroutine FWrap_DestroyOutput(OutputData, ErrStat, ErrMsg)
 end subroutine
 
 subroutine FWrap_PackOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+   type(RegFile), intent(inout) :: Buf
    type(FWrap_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FWrap_PackOutput'
    if (Buf%ErrStat >= AbortErrLev) return
@@ -1113,7 +1113,7 @@ subroutine FWrap_PackOutput(Buf, Indata)
 end subroutine
 
 subroutine FWrap_UnPackOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+   type(RegFile), intent(inout)    :: Buf
    type(FWrap_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FWrap_UnPackOutput'
    integer(B8Ki)   :: LB(1), UB(1)

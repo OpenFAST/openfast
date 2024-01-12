@@ -174,100 +174,42 @@ subroutine Conv_Rdtn_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine Conv_Rdtn_PackInitInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine Conv_Rdtn_PackInitInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Conv_Rdtn_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Conv_Rdtn_PackInitInput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%RdtnDT)
-   call RegPack(Buf, InData%RdtnDTChr)
-   call RegPack(Buf, InData%NBody)
-   call RegPack(Buf, InData%HighFreq)
-   call RegPack(Buf, InData%WAMITFile)
-   call RegPack(Buf, allocated(InData%HdroAddMs))
-   if (allocated(InData%HdroAddMs)) then
-      call RegPackBounds(Buf, 3, lbound(InData%HdroAddMs, kind=B8Ki), ubound(InData%HdroAddMs, kind=B8Ki))
-      call RegPack(Buf, InData%HdroAddMs)
-   end if
-   call RegPack(Buf, allocated(InData%HdroFreq))
-   if (allocated(InData%HdroFreq)) then
-      call RegPackBounds(Buf, 1, lbound(InData%HdroFreq, kind=B8Ki), ubound(InData%HdroFreq, kind=B8Ki))
-      call RegPack(Buf, InData%HdroFreq)
-   end if
-   call RegPack(Buf, allocated(InData%HdroDmpng))
-   if (allocated(InData%HdroDmpng)) then
-      call RegPackBounds(Buf, 3, lbound(InData%HdroDmpng, kind=B8Ki), ubound(InData%HdroDmpng, kind=B8Ki))
-      call RegPack(Buf, InData%HdroDmpng)
-   end if
-   call RegPack(Buf, InData%NInpFreq)
-   call RegPack(Buf, InData%RdtnTMax)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%RdtnDT)
+   call RegPack(RF, InData%RdtnDTChr)
+   call RegPack(RF, InData%NBody)
+   call RegPack(RF, InData%HighFreq)
+   call RegPack(RF, InData%WAMITFile)
+   call RegPackAlloc(RF, InData%HdroAddMs)
+   call RegPackAlloc(RF, InData%HdroFreq)
+   call RegPackAlloc(RF, InData%HdroDmpng)
+   call RegPack(RF, InData%NInpFreq)
+   call RegPack(RF, InData%RdtnTMax)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine Conv_Rdtn_UnPackInitInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine Conv_Rdtn_UnPackInitInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Conv_Rdtn_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Conv_Rdtn_UnPackInitInput'
    integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%RdtnDT)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%RdtnDTChr)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NBody)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%HighFreq)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WAMITFile)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%HdroAddMs)) deallocate(OutData%HdroAddMs)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 3, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%HdroAddMs(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%HdroAddMs.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%HdroAddMs)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%HdroFreq)) deallocate(OutData%HdroFreq)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%HdroFreq(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%HdroFreq.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%HdroFreq)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%HdroDmpng)) deallocate(OutData%HdroDmpng)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 3, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%HdroDmpng(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%HdroDmpng.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%HdroDmpng)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%NInpFreq)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%RdtnTMax)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%RdtnDT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RdtnDTChr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NBody); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HighFreq); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAMITFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%HdroAddMs); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%HdroFreq); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%HdroDmpng); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NInpFreq); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RdtnTMax); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Conv_Rdtn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -291,22 +233,21 @@ subroutine Conv_Rdtn_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine Conv_Rdtn_PackInitOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine Conv_Rdtn_PackInitOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Conv_Rdtn_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Conv_Rdtn_PackInitOutput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%DummyInitOut)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%DummyInitOut)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine Conv_Rdtn_UnPackInitOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine Conv_Rdtn_UnPackInitOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Conv_Rdtn_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Conv_Rdtn_UnPackInitOutput'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%DummyInitOut)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%DummyInitOut); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Conv_Rdtn_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
@@ -330,22 +271,21 @@ subroutine Conv_Rdtn_DestroyContState(ContStateData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine Conv_Rdtn_PackContState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine Conv_Rdtn_PackContState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Conv_Rdtn_ContinuousStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Conv_Rdtn_PackContState'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%DummyContState)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%DummyContState)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine Conv_Rdtn_UnPackContState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine Conv_Rdtn_UnPackContState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Conv_Rdtn_ContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Conv_Rdtn_UnPackContState'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%DummyContState)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%DummyContState); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Conv_Rdtn_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg)
@@ -386,44 +326,26 @@ subroutine Conv_Rdtn_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine Conv_Rdtn_PackDiscState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine Conv_Rdtn_PackDiscState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Conv_Rdtn_DiscreteStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Conv_Rdtn_PackDiscState'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%XDHistory))
-   if (allocated(InData%XDHistory)) then
-      call RegPackBounds(Buf, 2, lbound(InData%XDHistory, kind=B8Ki), ubound(InData%XDHistory, kind=B8Ki))
-      call RegPack(Buf, InData%XDHistory)
-   end if
-   call RegPack(Buf, InData%LastTime)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%XDHistory)
+   call RegPack(RF, InData%LastTime)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine Conv_Rdtn_UnPackDiscState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine Conv_Rdtn_UnPackDiscState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Conv_Rdtn_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Conv_Rdtn_UnPackDiscState'
    integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   if (allocated(OutData%XDHistory)) deallocate(OutData%XDHistory)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%XDHistory(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%XDHistory.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%XDHistory)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%LastTime)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%XDHistory); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LastTime); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Conv_Rdtn_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg)
@@ -447,22 +369,21 @@ subroutine Conv_Rdtn_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine Conv_Rdtn_PackConstrState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine Conv_Rdtn_PackConstrState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Conv_Rdtn_ConstraintStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Conv_Rdtn_PackConstrState'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%DummyConstrState)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%DummyConstrState)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine Conv_Rdtn_UnPackConstrState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine Conv_Rdtn_UnPackConstrState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Conv_Rdtn_ConstraintStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Conv_Rdtn_UnPackConstrState'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%DummyConstrState)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%DummyConstrState); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Conv_Rdtn_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg)
@@ -486,22 +407,21 @@ subroutine Conv_Rdtn_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine Conv_Rdtn_PackOtherState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine Conv_Rdtn_PackOtherState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Conv_Rdtn_OtherStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Conv_Rdtn_PackOtherState'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%IndRdtn)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%IndRdtn)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine Conv_Rdtn_UnPackOtherState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine Conv_Rdtn_UnPackOtherState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Conv_Rdtn_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Conv_Rdtn_UnPackOtherState'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%IndRdtn)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%IndRdtn); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Conv_Rdtn_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
@@ -525,22 +445,21 @@ subroutine Conv_Rdtn_DestroyMisc(MiscData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine Conv_Rdtn_PackMisc(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine Conv_Rdtn_PackMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Conv_Rdtn_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Conv_Rdtn_PackMisc'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%LastIndRdtn)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%LastIndRdtn)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine Conv_Rdtn_UnPackMisc(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine Conv_Rdtn_UnPackMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Conv_Rdtn_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Conv_Rdtn_UnPackMisc'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%LastIndRdtn)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%LastIndRdtn); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Conv_Rdtn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -585,56 +504,34 @@ subroutine Conv_Rdtn_DestroyParam(ParamData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine Conv_Rdtn_PackParam(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine Conv_Rdtn_PackParam(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Conv_Rdtn_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Conv_Rdtn_PackParam'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%DT)
-   call RegPack(Buf, InData%RdtnDT)
-   call RegPack(Buf, InData%NBody)
-   call RegPack(Buf, allocated(InData%RdtnKrnl))
-   if (allocated(InData%RdtnKrnl)) then
-      call RegPackBounds(Buf, 3, lbound(InData%RdtnKrnl, kind=B8Ki), ubound(InData%RdtnKrnl, kind=B8Ki))
-      call RegPack(Buf, InData%RdtnKrnl)
-   end if
-   call RegPack(Buf, InData%NStepRdtn)
-   call RegPack(Buf, InData%NStepRdtn1)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%DT)
+   call RegPack(RF, InData%RdtnDT)
+   call RegPack(RF, InData%NBody)
+   call RegPackAlloc(RF, InData%RdtnKrnl)
+   call RegPack(RF, InData%NStepRdtn)
+   call RegPack(RF, InData%NStepRdtn1)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine Conv_Rdtn_UnPackParam(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine Conv_Rdtn_UnPackParam(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Conv_Rdtn_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Conv_Rdtn_UnPackParam'
    integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%DT)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%RdtnDT)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NBody)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%RdtnKrnl)) deallocate(OutData%RdtnKrnl)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 3, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%RdtnKrnl(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%RdtnKrnl.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%RdtnKrnl)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%NStepRdtn)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NStepRdtn1)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RdtnDT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NBody); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%RdtnKrnl); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NStepRdtn); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NStepRdtn1); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Conv_Rdtn_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -674,41 +571,24 @@ subroutine Conv_Rdtn_DestroyInput(InputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine Conv_Rdtn_PackInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine Conv_Rdtn_PackInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Conv_Rdtn_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Conv_Rdtn_PackInput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%Velocity))
-   if (allocated(InData%Velocity)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Velocity, kind=B8Ki), ubound(InData%Velocity, kind=B8Ki))
-      call RegPack(Buf, InData%Velocity)
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%Velocity)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine Conv_Rdtn_UnPackInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine Conv_Rdtn_UnPackInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Conv_Rdtn_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Conv_Rdtn_UnPackInput'
    integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   if (allocated(OutData%Velocity)) deallocate(OutData%Velocity)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%Velocity(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Velocity.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%Velocity)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%Velocity); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Conv_Rdtn_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -748,41 +628,24 @@ subroutine Conv_Rdtn_DestroyOutput(OutputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine Conv_Rdtn_PackOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine Conv_Rdtn_PackOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Conv_Rdtn_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Conv_Rdtn_PackOutput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%F_Rdtn))
-   if (allocated(InData%F_Rdtn)) then
-      call RegPackBounds(Buf, 1, lbound(InData%F_Rdtn, kind=B8Ki), ubound(InData%F_Rdtn, kind=B8Ki))
-      call RegPack(Buf, InData%F_Rdtn)
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%F_Rdtn)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine Conv_Rdtn_UnPackOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine Conv_Rdtn_UnPackOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Conv_Rdtn_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Conv_Rdtn_UnPackOutput'
    integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   if (allocated(OutData%F_Rdtn)) deallocate(OutData%F_Rdtn)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%F_Rdtn(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%F_Rdtn.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%F_Rdtn)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%F_Rdtn); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Conv_Rdtn_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)
