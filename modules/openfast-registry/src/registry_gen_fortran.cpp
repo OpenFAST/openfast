@@ -398,6 +398,43 @@ void gen_copy(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
             continue;
         }
 
+        // If allocatable field that is not a derived type, use Fortran 2003 automatic
+        // allocation to duplicate the source variable
+        if (field.is_allocatable && field.data_type->tag != DataType::Tag::Derived)
+        {
+            // If source is allocated or associated
+            w << indent << "if (" << alloc_assoc << "(" << src << ")) then";
+            indent += "   ";
+
+            // Copy values
+            w << indent << dst << " = " << src;
+
+            // If C code and field isn't a pointer, copy data to C object
+            if (gen_c_code && !field.is_pointer)
+            {
+                if (field.rank == 0) // scalar of any type OR a character array
+                {
+                    std::string tmp = ddt.name_short + "Data%C_obj%" + field.name;
+                    w << indent << "Dst" << tmp << " = Src" << tmp;
+                }
+            }
+
+            // End if dst alloc/assoc
+            indent.erase(indent.size() - 3);
+            w << indent << "else if (" << alloc_assoc << "(" << dst << ")) then";
+            if (field.is_pointer && !field.is_target)
+            {
+                w << indent << "   nullify(" << dst << ")";
+            }
+            else
+            {
+                w << indent << "   deallocate(" << dst << ")";
+            }
+            w << indent << "end if";
+
+            continue;
+        }
+
         // If field is allocatable
         if (field.is_allocatable)
         {
@@ -650,9 +687,9 @@ void gen_pack(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
     bool has_ddt_arr = std::any_of(ddt.fields.begin(), ddt.fields.end(), [](Field f)
                                    { return f.data_type->tag == DataType::Tag::Derived && f.rank > 0; });
 
-    w << indent << "subroutine " << routine_name << "(Buf, Indata)";
+    w << indent << "subroutine " << routine_name << "(RF, Indata)";
     indent += "   ";
-    w << indent << "type(PackBuffer), intent(inout) :: Buf";
+    w << indent << "type(RegFile), intent(inout) :: RF";
     w << indent << "type(" << ddt.type_fortran << "), intent(in) :: InData";
     w << indent << "character(*), parameter         :: RoutineName = '" << routine_name << "'";
     if (has_ddt_arr)
@@ -667,12 +704,12 @@ void gen_pack(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
         w << indent << "logical         :: PtrInIndex";
     }
 
-    w << indent << "if (Buf%ErrStat >= AbortErrLev) return";
+    w << indent << "if (RF%ErrStat >= AbortErrLev) return";
 
     if (gen_c_code)
     {
         w << indent << "if (c_associated(InData%C_obj%object)) then";
-        w << indent << "   call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)";
+        w << indent << "   call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)";
         w << indent << "   return";
         w << indent << "end if";
     }
@@ -685,19 +722,34 @@ void gen_pack(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
 
         // w << indent << "! " << field.name;
 
+        // If the field is not derived, is allocatable, is not a pointer,
+        // use RegPackAlloc function and continue
+        if (field.data_type->tag != DataType::Tag::Derived && field.is_allocatable)
+        {
+            if (field.is_pointer)
+            {
+                w << indent << "call RegPackPtr(RF, " << var << ")";
+            }
+            else
+            {
+                w << indent << "call RegPackAlloc(RF, " << var << ")";
+            }
+            continue;
+        }
+
         if (field.is_allocatable)
         {
-            w << indent << "call RegPack(Buf, " << assoc_alloc << "(" << var << "))";
+            w << indent << "call RegPack(RF, " << assoc_alloc << "(" << var << "))";
             w << indent << "if (" << assoc_alloc << "(" << var << ")) then";
             indent += "   ";
             if (field.rank > 0)
             {
-                w << indent << "call RegPackBounds(Buf, " << field.rank << ", lbound(" << var << ", kind=B8Ki), ubound(" << var << ", kind=B8Ki))";
+                w << indent << "call RegPackBounds(RF, " << field.rank << ", lbound(" << var << ", kind=B8Ki), ubound(" << var << ", kind=B8Ki))";
             }
         }
         if (field.is_pointer)
         {
-            w << indent << "call RegPackPointer(Buf, c_loc(" << var << "), PtrInIndex)";
+            w << indent << "call RegPackPointer(RF, c_loc(" << var << "), PtrInIndex)";
             w << indent << "if (.not. PtrInIndex) then";
             indent += "   ";
         }
@@ -721,16 +773,16 @@ void gen_pack(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
 
             if (field.data_type->derived.name.compare("MeshType") == 0)
             {
-                w << indent << "call MeshPack(Buf, " << field_dims << ") ";
+                w << indent << "call MeshPack(RF, " << field_dims << ") ";
             }
             else if (field.data_type->derived.name.compare("DLL_Type") == 0)
             {
-                w << indent << "call DLLTypePack(Buf, " << field_dims << ") ";
+                w << indent << "call DLLTypePack(RF, " << field_dims << ") ";
             }
             else
             {
                 w << indent << "call " << field.data_type->derived.module->nickname << "_Pack"
-                  << field.data_type->derived.name_short << "(Buf, " << field_dims << ") ";
+                  << field.data_type->derived.name_short << "(RF, " << field_dims << ") ";
             }
 
             for (int d = field.rank; d >= 1; d--)
@@ -741,8 +793,8 @@ void gen_pack(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
         }
         else
         {
-            // Intrinsic types are handled by generic Pack method on buffer
-            w << indent << "call RegPack(Buf, " << var << ")";
+            // Intrinsic types are handled by generic registry file Pack method
+            w << indent << "call RegPack(RF, " << var << ")";
         }
 
         if (field.is_pointer)
@@ -759,7 +811,7 @@ void gen_pack(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
     }
 
     // Check for pack errors at end of routine
-    w << indent << "if (RegCheckErr(Buf, RoutineName)) return";
+    w << indent << "if (RegCheckErr(RF, RoutineName)) return";
 
     indent.erase(indent.size() - 3);
     w << indent << "end subroutine";
@@ -778,9 +830,9 @@ void gen_unpack(std::ostream &w, const Module &mod, const DataType::Derived &ddt
     bool has_ddt_arr = std::any_of(ddt.fields.begin(), ddt.fields.end(), [](Field f)
                                    { return f.data_type->tag == DataType::Tag::Derived && f.rank > 0; });
 
-    w << indent << "subroutine " << routine_name << "(Buf, OutData)";
+    w << indent << "subroutine " << routine_name << "(RF, OutData)";
     indent += "   ";
-    w << indent << "type(PackBuffer), intent(inout)    :: Buf";
+    w << indent << "type(RegFile), intent(inout)    :: RF";
     w << indent << "type(" << ddt.type_fortran << "), intent(inout) :: OutData";
     w << indent << "character(*), parameter            :: RoutineName = '" << routine_name << "'";
     if (has_ddt_arr)
@@ -804,7 +856,7 @@ void gen_unpack(std::ostream &w, const Module &mod, const DataType::Derived &ddt
         w << indent << "integer(B8Ki)   :: PtrIdx";
         w << indent << "type(c_ptr)     :: Ptr";
     }
-    w << indent << "if (Buf%ErrStat /= ErrID_None) return";
+    w << indent << "if (RF%ErrStat /= ErrID_None) return";
 
     // BJJ: TODO:  if there are C types, we're going to have to associate with C data structures....
 
@@ -819,24 +871,41 @@ void gen_unpack(std::ostream &w, const Module &mod, const DataType::Derived &ddt
 
         // w << indent << "! " << field.name << "";
 
+        // If the field is not derived, is allocatable, is not a pointer,
+        // use RegUnpackAlloc function and continue
+        if (field.data_type->tag != DataType::Tag::Derived && field.is_allocatable)
+        {
+            if (field.is_pointer)
+            {
+                w << indent << "call RegUnpackPtr(RF, " << var << ")"
+                  << "; if (RegCheckErr(RF, RoutineName)) return";
+            }
+            else
+            {
+                w << indent << "call RegUnpackAlloc(RF, " << var << ")"
+                  << "; if (RegCheckErr(RF, RoutineName)) return";
+            }
+            continue;
+        }
+
         if (field.is_allocatable)
         {
             w << indent << "if (" << assoc_alloc << "(" << var << ")) deallocate(" << var << ")";
-            w << indent << "call RegUnpack(Buf, IsAllocAssoc)";
-            w << indent << "if (RegCheckErr(Buf, RoutineName)) return";
+            w << indent << "call RegUnpack(RF, IsAllocAssoc)"
+              << "; if (RegCheckErr(RF, RoutineName)) return";
             w << indent << "if (IsAllocAssoc) then";
             indent += "   ";
             if (field.rank > 0)
             {
-                w << indent << "call RegUnpackBounds(Buf, " << field.rank << ", LB, UB)";
-                w << indent << "if (RegCheckErr(Buf, RoutineName)) return";
+                w << indent << "call RegUnpackBounds(RF, " << field.rank << ", LB, UB)"
+                  << "; if (RegCheckErr(RF, RoutineName)) return";
             }
         }
 
         if (field.is_pointer)
         {
-            w << indent << "call RegUnpackPointer(Buf, Ptr, PtrIdx)";
-            w << indent << "if (RegCheckErr(Buf, RoutineName)) return";
+            w << indent << "call RegUnpackPointer(RF, Ptr, PtrIdx)"
+              << "; if (RegCheckErr(RF, RoutineName)) return";
             w << indent << "if (c_associated(Ptr)) then";
             if (field.rank == 0)
             {
@@ -863,15 +932,15 @@ void gen_unpack(std::ostream &w, const Module &mod, const DataType::Derived &ddt
                         ":UB(" + std::to_string(d) + ")" + (d < field.rank ? "," : ")");
             w << indent << "allocate(" << var << dims << ",stat=stat)";
             w << indent << "if (stat /= 0) then ";
-            w << indent << "   call SetErrStat(ErrID_Fatal, 'Error allocating " << var << ".', Buf%ErrStat, Buf%ErrMsg, RoutineName)";
+            w << indent << "   call SetErrStat(ErrID_Fatal, 'Error allocating " << var << ".', RF%ErrStat, RF%ErrMsg, RoutineName)";
             w << indent << "   return";
             w << indent << "end if";
         }
 
-        // If this is a pointer, set pointer in buffer pointer index
+        // If this is a pointer, set pointer in registry file pointer index
         if (field.is_pointer)
         {
-            w << indent << "Buf%Pointers(PtrIdx) = c_loc(" << var << ")";
+            w << indent << "RF%Pointers(PtrIdx) = c_loc(" << var << ")";
         }
 
         // bjj: this needs to be updated if we've got multiple dimension arrays
@@ -903,16 +972,16 @@ void gen_unpack(std::ostream &w, const Module &mod, const DataType::Derived &ddt
 
             if (field.data_type->derived.name.compare("MeshType") == 0)
             {
-                w << indent << "call MeshUnpack(Buf, " << var_dims << ") ! " << field.name << " ";
+                w << indent << "call MeshUnpack(RF, " << var_dims << ") ! " << field.name << " ";
             }
             else if (field.data_type->derived.name.compare("DLL_Type") == 0)
             {
-                w << indent << "call DLLTypeUnpack(Buf, " << var_dims << ") ! " << field.name << " ";
+                w << indent << "call DLLTypeUnpack(RF, " << var_dims << ") ! " << field.name << " ";
             }
             else
             {
                 w << indent << "call " << field.data_type->derived.module->nickname << "_Unpack"
-                  << field.data_type->derived.name_short << "(Buf, " << var_dims << ") ! " << field.name << " ";
+                  << field.data_type->derived.name_short << "(RF, " << var_dims << ") ! " << field.name << " ";
             }
 
             for (int d = field.rank; d >= 1; d--)
@@ -923,9 +992,9 @@ void gen_unpack(std::ostream &w, const Module &mod, const DataType::Derived &ddt
         }
         else
         {
-            // Intrinsic types are handled by generic unpack method on buffer
-            w << indent << "call RegUnpack(Buf, " << var << ")";
-            w << indent << "if (RegCheckErr(Buf, RoutineName)) return";
+            // Intrinsic types are handled by generic registry file unpack method
+            w << indent << "call RegUnpack(RF, " << var << ")"
+              << "; if (RegCheckErr(RF, RoutineName)) return";
 
             // need to move scalars and strings to the %c_obj% type, too!
             // compare with copy routine
