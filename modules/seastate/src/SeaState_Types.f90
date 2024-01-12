@@ -93,6 +93,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: defWtrDens = 0.0_ReKi      !< Default water density from the driver; may be overwritten                       [(kg/m^3)]
     REAL(ReKi)  :: defWtrDpth = 0.0_ReKi      !< Default water depth from the driver; may be overwritten                         [m]
     REAL(ReKi)  :: defMSL2SWL = 0.0_ReKi      !< Default mean sea level to still water level from the driver; may be overwritten [m]
+    INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK flag [-]
     REAL(DbKi)  :: TMax = 0.0_R8Ki      !< Supplied by Driver:  The total simulation time [(sec)]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevXY      !< Supplied by Driver:  X-Y locations for WaveElevation output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number. [m,-]
     INTEGER(IntKi)  :: WaveFieldMod = 0_IntKi      !< Wave field handling (-) (switch) 0: use individual SeaState inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
@@ -101,6 +102,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: WrWvKinMod = 0      !< 0,1, or 2 indicating whether we are going to write out kinematics files.  [ignored if WaveMod = 6, if 1 or 2 then files are written using the outrootname] [-]
     LOGICAL  :: HasIce = .false.      !< Supplied by Driver:  Whether this simulation has ice loading (flag) [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
+    LOGICAL  :: hasCurrField = .false.      !< Flag to indicate whether to expect current field from IfW [-]
+    INTEGER(IntKi)  :: CompSeaSt = 0_IntKi      !< Flag to indicate whether SeaState module is activated [-]
   END TYPE SeaSt_InitInputType
 ! =======================
 ! =========  SeaSt_InitOutputType  =======
@@ -595,6 +598,7 @@ subroutine SeaSt_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%defWtrDens = SrcInitInputData%defWtrDens
    DstInitInputData%defWtrDpth = SrcInitInputData%defWtrDpth
    DstInitInputData%defMSL2SWL = SrcInitInputData%defMSL2SWL
+   DstInitInputData%MHK = SrcInitInputData%MHK
    DstInitInputData%TMax = SrcInitInputData%TMax
    if (allocated(SrcInitInputData%WaveElevXY)) then
       LB(1:2) = lbound(SrcInitInputData%WaveElevXY, kind=B8Ki)
@@ -614,6 +618,8 @@ subroutine SeaSt_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%WrWvKinMod = SrcInitInputData%WrWvKinMod
    DstInitInputData%HasIce = SrcInitInputData%HasIce
    DstInitInputData%Linearize = SrcInitInputData%Linearize
+   DstInitInputData%hasCurrField = SrcInitInputData%hasCurrField
+   DstInitInputData%CompSeaSt = SrcInitInputData%CompSeaSt
 end subroutine
 
 subroutine SeaSt_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -645,6 +651,7 @@ subroutine SeaSt_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%defWtrDens)
    call RegPack(Buf, InData%defWtrDpth)
    call RegPack(Buf, InData%defMSL2SWL)
+   call RegPack(Buf, InData%MHK)
    call RegPack(Buf, InData%TMax)
    call RegPack(Buf, allocated(InData%WaveElevXY))
    if (allocated(InData%WaveElevXY)) then
@@ -657,6 +664,8 @@ subroutine SeaSt_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%WrWvKinMod)
    call RegPack(Buf, InData%HasIce)
    call RegPack(Buf, InData%Linearize)
+   call RegPack(Buf, InData%hasCurrField)
+   call RegPack(Buf, InData%CompSeaSt)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -682,6 +691,8 @@ subroutine SeaSt_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%defWtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%defMSL2SWL)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%MHK)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%TMax)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -710,6 +721,10 @@ subroutine SeaSt_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%HasIce)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%Linearize)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%hasCurrField)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%CompSeaSt)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 

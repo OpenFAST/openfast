@@ -505,6 +505,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_AD%InputFile          = p_FAST%AeroFile
       Init%InData_AD%RootName           = p_FAST%OutFileRoot
       Init%InData_AD%MHK                = p_FAST%MHK
+      Init%InData_AD%CompSeaSt          = p_FAST%CompSeaSt
       if ( p_FAST%MHK == MHK_None ) then
          Init%InData_AD%defFldDens      = p_FAST%AirDens
       else
@@ -806,6 +807,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_SeaSt%defWtrDens    = p_FAST%WtrDens
       Init%InData_SeaSt%defWtrDpth    = p_FAST%WtrDpth
       Init%InData_SeaSt%defMSL2SWL    = p_FAST%MSL2SWL
+      Init%InData_SeaSt%MHK           = p_FAST%MHK
       Init%InData_SeaSt%UseInputFile  = .TRUE.
       Init%InData_SeaSt%Linearize     = p_FAST%Linearize
       Init%InData_SeaSt%hasIce        = p_FAST%CompIce /= Module_None
@@ -819,6 +821,12 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       
       Init%InData_SeaSt%TMax          = p_FAST%TMax
       
+      IF ( p_FAST%MHK .NE. 0_IntKi .AND. p_FAST%CompInflow == Module_IfW) THEN
+         Init%InData_SeaSt%hasCurrField = .TRUE.
+      ELSE
+         Init%InData_SeaSt%hasCurrField = .FALSE.
+      END IF
+
       CALL SeaSt_Init( Init%InData_SeaSt, SeaSt%Input(1), SeaSt%p,  SeaSt%x(STATE_CURR), SeaSt%xd(STATE_CURR), SeaSt%z(STATE_CURR), &
                           SeaSt%OtherSt(STATE_CURR), SeaSt%y, SeaSt%m, p_FAST%dt_module( MODULE_SeaSt ), Init%OutData_SeaSt, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -832,6 +840,16 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          RETURN
       END IF  
       
+      IF ( p_FAST%MHK .NE. 0_IntKi .AND. p_FAST%CompInflow == Module_IfW) THEN ! MHK turbine
+         ! Simulating an MHK turbine; load dynamic current from IfW
+         SeaSt%p%WaveField%CurrField  => Init%OutData_IfW%FlowField
+         SeaSt%p%WaveField%hasCurrField = .TRUE.
+         ! Set AD pointers to wavefield
+         IF (p_FAST%CompAero == Module_AD) AD%p%WaveField => Init%OutData_SeaSt%WaveField
+      ELSE ! Wind turbine
+         SeaSt%p%WaveField%hasCurrField = .FALSE.
+      END IF
+     
    end if
    
    ! ........................
@@ -2018,6 +2036,8 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
    IF (p%MHK /= MHK_None .and. p%CompAero == Module_AD14) CALL SetErrStat( ErrID_Fatal, 'AeroDyn14 cannot be used with an MHK turbine. Change CompAero or MHK in the FAST input file.', ErrStat, ErrMsg, RoutineName )
 
    IF (p%MHK /= MHK_None .and. p%Linearize) CALL SetErrStat( ErrID_Fatal, 'Linearization has not yet been implemented for an MHK turbine. Change MHK or Linearize in the FAST input file.', ErrStat, ErrMsg, RoutineName )
+
+   IF (p%MHK /= MHK_None .and. p%CompSeaSt == Module_SeaSt .and. p%CompInflow /= Module_IfW) CALL SetErrStat( ErrID_Fatal, 'InflowWind must be activated for MHK turbines when SeaState is used.', ErrStat, ErrMsg, RoutineName )
 
    IF (p%Gravity < 0.0_ReKi) CALL SetErrStat( ErrID_Fatal, 'Gravity must not be negative.', ErrStat, ErrMsg, RoutineName )
 

@@ -106,11 +106,6 @@ not function with unsteady airfoil aerodynamics. If ``CavitCheck`` is
 TRUE, the ``MHK`` flag in the AeroDyn or OpenFAST driver input file must be set
 to 1 or 2 to indicate an MHK turbine is being modeled.
 
-Set the ``Buoyancy`` flag to TRUE to calculate buoyant loads on the blades,
-tower, nacelle, and hub of an MHK turbine or FALSE to disable this calculation.
-If ``Buoyancy`` is TRUE, the ``MHK`` flag in the AeroDyn or OpenFAST driver 
-input file must be set to 1 or 2 to indicate an MHK turbine is being modeled.
-
 Set the ``CompAA`` flag to TRUE to run aero-acoustic calculations.  This
 option is only available for ``WakeMod = 1`` or ``2`` and is not available for
 an MHK turbine.  See section :numref:`AeroAcoustics` for information on how to 
@@ -327,19 +322,19 @@ permits modeling of aerodynamic imbalances.
 Hub Properties
 ~~~~~~~~~~~~~~
 The input parameters in this section pertain to the calculation of buoyant loads
-on the hub and are only used when ``Buoyancy = TRUE``.
+on the hub.
 
 ``VolHub`` is the volume of the hub and ``HubCenBx`` is the x offset of the hub
 center of buoyancy from the hub center in local hub coordinates;
 offsets in the y and z directions are assumed to be zero. To neglect buoyant 
 loads on the hub, set ``VolHub`` to 0.
 
-Since the hub and blades are joined elements, hub buoyancy should be turned on if blade buoyancy is on, and vice versa.
+Since the hub and blades are joined elements, hub buoyancy should be included if blade buoyancy is included, and vice versa.
 
 Nacelle Properties
 ~~~~~~~~~~~~~~~~~~
 The input parameters in this section pertain to the calculation of buoyant loads
-on the nacelle and are only used when ``Buoyancy = TRUE``.
+on the nacelle.
 
 ``VolNac`` is the volume of the nacelle and ``NacCenB``` is the 
 position (x,y,z vector) of the nacelle center of buoyancy from
@@ -372,7 +367,7 @@ Tower Influence and Aerodynamics
 
 The input parameters in this section pertain to the tower influence, tower drag,
 and/or tower buoyancy calculations and are only used when ``TwrPotent`` >
-0, ``TwrShadow`` > 0, ``TwrAero = TRUE``, or ``Buoyancy = TRUE``.
+0, ``TwrShadow`` > 0, ``TwrAero = TRUE``, ``MHK = 1``, or ``MHK = 2``.
 
 ``NumTwrNds`` is the user-specified number of tower analysis nodes and
 determines the number of rows in the subsequent table (after two table
@@ -840,7 +835,7 @@ nodes. For each node:
 -  ``BlCb`` specifies the blade buoyancy coefficient, defined as the local
    cross-sectional area of the blade divided by the area of a circle with 
    diameter equal to ``BlChord``; to neglect buoyant loads on the blade,
-   set ``BlCb`` to 0; since the blades and hub are joined elements, blade buoyancy should be turned on if hub buoyancy is on, and vice versa;
+   set ``BlCb`` to 0; since the blades and hub are joined elements, blade buoyancy should be included if hub buoyancy is included, and vice versa;
 
 -  ``BlCenBn`` specifies the offset of the blade center of buoyancy from the
    aerodynamic center in the direction normal to the chord (positive pointing
