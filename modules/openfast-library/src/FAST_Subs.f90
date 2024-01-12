@@ -1127,7 +1127,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_FEAM%NStepWave   = 1                          ! an arbitrary number > 0 (to set the size of the wave data, which currently contains all zero values)     
       Init%InData_FEAM%gravity     = p_FAST%Gravity     ! This need to be according to g from driver
       Init%InData_FEAM%WtrDens     = Init%OutData_SeaSt%WaveField%WtrDens     ! This needs to be set according to seawater density in SeaState
-!      Init%InData_FEAM%depth       =  Init%OutData_SeaSt%WtrDpth    ! This need to be set according to the water depth in SeaState
+!      Init%InData_FEAM%depth       =  Init%OutData_SeaSt%WaveField%WtrDpth    ! This need to be set according to the water depth in SeaState
 
       CALL FEAM_Init( Init%InData_FEAM, FEAM%Input(1), FEAM%p,  FEAM%x(STATE_CURR), FEAM%xd(STATE_CURR), FEAM%z(STATE_CURR), &
                       FEAM%OtherSt(STATE_CURR), FEAM%y, FEAM%m, p_FAST%dt_module( MODULE_FEAM ), Init%OutData_FEAM, ErrStat2, ErrMsg2 )
@@ -3853,8 +3853,8 @@ SUBROUTINE SetVTKParameters_B4SeaSt(p_FAST, InitOutData_ED, InitInData_SeaSt, BD
       n = 1
       do i=1,p_FAST%VTK_surface%NWaveElevPts(1)
          do j=1,p_FAST%VTK_surface%NWaveElevPts(2)
-            InitInData_SeaSt%WaveElevXY(1,n) = dx*(i-1) - WidthBy2 !+ p_FAST%TurbinePos(1) ! HD takes p_FAST%TurbinePos into account already
-            InitInData_SeaSt%WaveElevXY(2,n) = dy*(j-1) - WidthBy2 !+ p_FAST%TurbinePos(2)
+            InitInData_SeaSt%WaveElevXY(1,n) = dx*(i-1) - WidthBy2 ! SeaSt takes p_FAST%TurbinePos into account already
+            InitInData_SeaSt%WaveElevXY(2,n) = dy*(j-1) - WidthBy2 
             n = n+1
          end do
       end do
@@ -3873,7 +3873,7 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_S
    TYPE(SeaSt_InitInputType),    INTENT(INOUT) :: InitInData_SeaSt    !< The initialization input to SeaState
    TYPE(SeaSt_InitOutputType),   INTENT(INOUT) :: InitOutData_SeaSt   !< The initialization output from SeaState
    TYPE(HydroDyn_InitOutputType),INTENT(INOUT) :: InitOutData_HD   !< The initialization output from HydroDyn
-   TYPE(ElastoDyn_Data),         INTENT(IN   ) :: ED               !< ElastoDyn data
+   TYPE(ElastoDyn_Data), TARGET, INTENT(IN   ) :: ED               !< ElastoDyn data
    TYPE(BeamDyn_Data),           INTENT(IN   ) :: BD               !< BeamDyn data
    TYPE(AeroDyn_Data),           INTENT(IN   ) :: AD               !< AeroDyn data
    TYPE(HydroDyn_Data),          INTENT(IN   ) :: HD               !< HydroDyn data
@@ -3884,7 +3884,9 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_S
    REAL(SiKi)                              :: x, y
    REAL(SiKi)                              :: TwrDiam_top, TwrDiam_base, TwrRatio, TwrLength
    INTEGER(IntKi)                          :: topNode, baseNode
-   INTEGER(IntKi)                          :: NumBl, k
+   INTEGER(IntKi)                          :: NumBl, k, Indx
+   LOGICAL                                 :: UseADtwr
+   TYPE(MeshType), POINTER                 :: TowerMotionMesh
    CHARACTER(1024)                         :: vtkroot
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
@@ -3962,28 +3964,51 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_S
    p_FAST%VTK_Surface%NacelleBox(:,8) = (/ -x,  y, 2*y      /)
 
    !.......................
-   ! tapered tower
+   ! Create the tower surface data
    !.......................
+   TowerMotionMesh => ED%y%TowerLn2Mesh
 
-   CALL AllocAry(p_FAST%VTK_Surface%TowerRad,ED%y%TowerLn2Mesh%NNodes,'VTK_Surface%TowerRad',ErrStat2,ErrMsg2)
+   CALL AllocAry(p_FAST%VTK_Surface%TowerRad,TowerMotionMesh%NNodes,'VTK_Surface%TowerRad',ErrStat2,ErrMsg2)
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       IF (ErrStat >= AbortErrLev) RETURN
 
-   topNode   = ED%y%TowerLn2Mesh%NNodes - 1
-   baseNode  = ED%y%TowerLn2Mesh%refNode
-   TwrLength = TwoNorm( ED%y%TowerLn2Mesh%position(:,topNode) - ED%y%TowerLn2Mesh%position(:,baseNode) ) ! this is the assumed length of the tower
-   TwrRatio  = TwrLength / 87.6_SiKi  ! use ratio of the tower length to the length of the 5MW tower
-   TwrDiam_top  = 3.87*TwrRatio
-   TwrDiam_base = 6.0*TwrRatio
 
-   TwrRatio = 0.5 * (TwrDiam_top - TwrDiam_base) / TwrLength
-   do k=1,ED%y%TowerLn2Mesh%NNodes
-      TwrLength = TwoNorm( ED%y%TowerLn2Mesh%position(:,k) - ED%y%TowerLn2Mesh%position(:,baseNode) )
-      p_FAST%VTK_Surface%TowerRad(k) = 0.5*TwrDiam_Base + TwrRatio*TwrLength
-   end do
+   IF ( p_FAST%CompAero == Module_AD .and. allocated(InitOutData_AD%rotors) .and. allocated(AD%y%rotors) ) THEN  ! These meshes may have tower diameter data associated with nodes
+      UseADtwr = allocated(InitOutData_AD%rotors(1)%TwrDiam)
+   ELSE
+      UseADtwr = .false.
+   END IF
 
+   if (UseADtwr) then
+      
+         ! This assumes a vertical tower (i.e., we deal only with z component of position)
+      Indx = 1
+      do k=1,TowerMotionMesh%NNodes
+         p_FAST%VTK_Surface%TowerRad(k) = InterpStp( TowerMotionMesh%Position(3,k), InitOutData_AD%rotors(1)%TwrElev, InitOutData_AD%rotors(1)%TwrDiam, Indx, size(InitOutData_AD%rotors(1)%TwrElev) ) / 2.0_ReKi
+      end do
+   
+   else
+      !.......................
+      ! default tapered tower, based on 5MW baseline turbine:
+      !.......................
+   
+      topNode   = maxloc(TowerMotionMesh%position(3,:),DIM=1)
+      baseNode  = minloc(TowerMotionMesh%position(3,:),DIM=1)
+      TwrLength = TwoNorm( TowerMotionMesh%position(:,topNode) - TowerMotionMesh%position(:,baseNode) ) ! this is the assumed length of the tower
+      TwrRatio  = TwrLength / 87.6_SiKi  ! use ratio of the tower length to the length of the 5MW tower
+      TwrDiam_top  = 3.87*TwrRatio
+      TwrDiam_base = 6.0*TwrRatio
+   
+      TwrRatio = 0.5 * (TwrDiam_top - TwrDiam_base) / TwrLength
+         
+      do k=1,TowerMotionMesh%NNodes
+         TwrLength = TwoNorm( TowerMotionMesh%position(:,k) - TowerMotionMesh%position(:,baseNode) ) 
+         p_FAST%VTK_Surface%TowerRad(k) = 0.5*TwrDiam_Base + TwrRatio*TwrLength
+      end do
 
-
+   end if
+      
+   
    !.......................
    ! blade surfaces
    !.......................
@@ -6337,7 +6362,7 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW
 
 
    logical, parameter                      :: OutputFields = .FALSE. ! due to confusion about what fields mean on a surface, we are going to just output the basic meshes if people ask for fields
-   INTEGER(IntKi)                          :: NumBl, k, l
+   INTEGER(IntKi)                          :: NumBl, k, L
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMSg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'WrVTK_Surfaces'
@@ -6426,18 +6451,18 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW
    if ( p_FAST%CompMooring == Module_MD ) THEN
       !call MeshWrVTK(p_FAST%TurbinePos, MD%Input(1)%CoupledKinematics, trim(p_FAST%VTK_OutFileRoot)//'.MD_PtFair_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2 )        
       if (allocated(MD%y%VisLinesMesh)) then
-         do l=1,size(MD%y%VisLinesMesh)
-            if (MD%y%VisLinesMesh(l)%Committed) then  ! No orientation data, so surface representation not possible
-               call MeshWrVTK(p_FAST%TurbinePos, MD%y%VisLinesMesh(l), trim(p_FAST%VTK_OutFileRoot)//'.MD_Line'//trim(Num2LStr(l)), y_FAST%VTK_count, p_FAST%VTK_fields, &
+         do L=1,size(MD%y%VisLinesMesh)
+            if (MD%y%VisLinesMesh(L)%Committed) then  ! No orientation data, so surface representation not possible
+               call MeshWrVTK(p_FAST%TurbinePos, MD%y%VisLinesMesh(L), trim(p_FAST%VTK_OutFileRoot)//'.MD_Line'//trim(Num2LStr(L)), y_FAST%VTK_count, p_FAST%VTK_fields, &
                      ErrSTat2, ErrMsg2, p_FAST%VTK_tWidth )
             endif
          enddo
       endif
       if (allocated(MD%y%VisRodsMesh)) then
-         do l=1,size(MD%y%VisRodsMesh)
-            if (MD%y%VisRodsMesh(l)%Committed) then  ! No orientation data, so surface representation not possible
-               call MeshWrVTK_Ln2Surface(p_FAST%TurbinePos, MD%y%VisRodsMesh(l), trim(p_FAST%VTK_OutFileRoot)//'.MD_Rod'//trim(Num2LStr(l))//'Surface', y_FAST%VTK_count, p_FAST%VTK_fields, &
-                     ErrSTat2, ErrMsg2, p_FAST%VTK_tWidth, NumSegments=p_FAST%VTK_Surface%NumSectors, Radius=MD%p%VisRodsDiam(l)%Diam )
+         do L=1,size(MD%y%VisRodsMesh)
+            if (MD%y%VisRodsMesh(L)%Committed) then  ! No orientation data, so surface representation not possible
+               call MeshWrVTK_Ln2Surface(p_FAST%TurbinePos, MD%y%VisRodsMesh(L), trim(p_FAST%VTK_OutFileRoot)//'.MD_Rod'//trim(Num2LStr(L))//'Surface', y_FAST%VTK_count, p_FAST%VTK_fields, &
+                     ErrSTat2, ErrMsg2, p_FAST%VTK_tWidth, NumSegments=p_FAST%VTK_Surface%NumSectors, Radius=MD%p%VisRodsDiam(L)%Diam )
             endif
          enddo
       endif

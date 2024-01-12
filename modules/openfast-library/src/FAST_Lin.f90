@@ -2275,8 +2275,6 @@ SUBROUTINE Linear_SD_InputSolve_du( p_FAST, y_FAST, SrvD, u_SD, y_SD, y_ED, HD, 
          ! Transfer MAP loads to ED PlatformPtmesh input:
          ! we're mapping loads, so we also need the sibling meshes' displacements:
 
-      MAP_Start = y_FAST%Lin%Modules(MODULE_MAP)%Instance(1)%LinStartIndx(LIN_INPUT_COL)
-   
          MAP_Start = y_FAST%Lin%Modules(MODULE_MAP)%Instance(1)%LinStartIndx(LIN_INPUT_COL)
       
          ! NOTE: Assumes at least one MAP Fairlead point    

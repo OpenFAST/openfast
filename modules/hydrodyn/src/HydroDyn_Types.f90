@@ -37,7 +37,6 @@ USE SS_Excitation_Types
 USE WAMIT_Types
 USE WAMIT2_Types
 USE Morison_Types
-USE SeaState_Types
 USE NWTC_Library
 IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxHDOutputs = 510      ! The maximum number of output channels supported by this module [-]
