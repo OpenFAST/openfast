@@ -63,6 +63,10 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
 {
     // Create file name and path
     auto file_name = mod.name + "_Types.f90";
+    if (this->gen_subs)
+    {
+        file_name = mod.name + "_Subs.f90";
+    }
     auto file_path = out_dir + "/" + file_name;
     std::cerr << "generating " << file_name << std::endl;
     bool is_NWTC_Library = false;
@@ -71,8 +75,23 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
     std::ofstream w(file_path);
     if (!w)
     {
-        std::cerr << "Error creating module file: '" << file_path << "'" << std::endl;
+        std::cerr << "Error creating module file: '" << file_path << "'\n";
         exit(EXIT_FAILURE);
+    }
+
+    // If flag set to generate subroutines only (e.g. for inclusing in ModMesh_Mappings.f90)
+    // write header, subs, and footer to file, then return
+    if (this->gen_subs)
+    {
+        w << std::regex_replace("!STARTOFREGISTRYGENERATEDFILE 'ModuleName_Subs.f90'\n", std::regex("ModuleName"), mod.name);
+        w << "!\n! WARNING This file is generated automatically by the FAST registry.\n";
+        w << "! Do not edit.  Your changes to this file will be lost.\n";
+        w << "!\n! FAST Registry'\n";
+
+        this->gen_fortran_subs(w, mod);
+
+        w << "!ENDOFREGISTRYGENERATEDFILE\n";
+        return;
     }
 
     // Write preamble
@@ -274,6 +293,16 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
 
     w << "CONTAINS\n";
 
+    // Generate subroutines for this module
+    this->gen_fortran_subs(w, mod);
+
+    // Write module footer
+    w << "END MODULE " << mod.name << "_Types\n";
+    w << "!ENDOFREGISTRYGENERATEDFILE\n";
+}
+
+void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
+{
     // Loop through derived data types
     for (auto &dt_name : mod.ddt_names)
     {
@@ -311,9 +340,6 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
         gen_ExtrapInterp(w, mod, "InputType", "DbKi", 1);
         gen_ExtrapInterp(w, mod, "OutputType", "DbKi", 1);
     }
-
-    w << "END MODULE " << mod.name << "_Types\n";
-    w << "!ENDOFREGISTRYGENERATEDFILE\n";
 }
 
 void gen_copy(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
