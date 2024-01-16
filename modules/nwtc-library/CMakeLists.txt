@@ -16,7 +16,7 @@
 
 if (GENERATE_TYPES)
   generate_f90_types(src/Registry_NWTC_Library_base.txt ${CMAKE_CURRENT_SOURCE_DIR}/src/NWTC_Library_Types.f90 -noextrap)
-  generate_f90_types(src/Registry_NWTC_Library_mesh.txt ${CMAKE_CURRENT_SOURCE_DIR}/src/NWTC_Library_Subs.f90 -incsubs -noextrap)
+  generate_f90_types(src/Registry_NWTC_Library_mesh.txt ${CMAKE_CURRENT_SOURCE_DIR}/src/NWTC_Library_IncSubs.f90 -incsubs -noextrap)
   # Generate Registry_NWTC_Library.txt by concatenating _base.txt and _mesh.txt
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS 
     src/Registry_NWTC_Library_mesh.txt 
@@ -149,14 +149,14 @@ if (CMAKE_BUILD_TYPE MATCHES Debug)
    endif()
 endif()
 
-add_custom_target(nwtc_library_subs DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/NWTC_Library_IncSubs.f90)
+add_custom_target(nwtc_library_inc_subs DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/NWTC_Library_IncSubs.f90)
 
 # Create NWTC Library
 add_library(nwtclibs STATIC
   ${NWTC_SYS_FILE} 
   ${NWTCLIBS_SOURCES}
 )
-add_dependencies(nwtclibs nwtc_library_subs)
+add_dependencies(nwtclibs nwtc_library_inc_subs)
 target_link_libraries(nwtclibs PUBLIC
   ${LAPACK_LIBRARIES} 
   ${CMAKE_DL_LIBS} 
