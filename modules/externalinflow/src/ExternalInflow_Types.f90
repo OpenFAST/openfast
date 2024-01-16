@@ -282,43 +282,29 @@ subroutine ExtInfw_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine ExtInfw_PackInitInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine ExtInfw_PackInitInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(ExtInfw_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtInfw_PackInitInput'
    logical         :: PtrInIndex
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call RegPack(Buf, InData%NumActForcePtsBlade)
-   call RegPack(Buf, InData%NumActForcePtsTower)
-   call RegPack(Buf, associated(InData%StructBldRNodes))
-   if (associated(InData%StructBldRNodes)) then
-      call RegPackBounds(Buf, 1, lbound(InData%StructBldRNodes, kind=B8Ki), ubound(InData%StructBldRNodes, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%StructBldRNodes), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%StructBldRNodes)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%StructTwrHNodes))
-   if (associated(InData%StructTwrHNodes)) then
-      call RegPackBounds(Buf, 1, lbound(InData%StructTwrHNodes, kind=B8Ki), ubound(InData%StructTwrHNodes, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%StructTwrHNodes), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%StructTwrHNodes)
-      end if
-   end if
-   call RegPack(Buf, InData%BladeLength)
-   call RegPack(Buf, InData%TowerHeight)
-   call RegPack(Buf, InData%TowerBaseHeight)
-   call RegPack(Buf, InData%NodeClusterType)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPack(RF, InData%NumActForcePtsBlade)
+   call RegPack(RF, InData%NumActForcePtsTower)
+   call RegPackPtr(RF, InData%StructBldRNodes)
+   call RegPackPtr(RF, InData%StructTwrHNodes)
+   call RegPack(RF, InData%BladeLength)
+   call RegPack(RF, InData%TowerHeight)
+   call RegPack(RF, InData%TowerBaseHeight)
+   call RegPack(RF, InData%NodeClusterType)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine ExtInfw_UnPackInitInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine ExtInfw_UnPackInitInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(ExtInfw_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtInfw_UnPackInitInput'
    integer(B8Ki)   :: LB(1), UB(1)
@@ -326,76 +312,20 @@ subroutine ExtInfw_UnPackInitInput(Buf, OutData)
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%NumActForcePtsBlade)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%NumActForcePtsBlade); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NumActForcePtsBlade = OutData%NumActForcePtsBlade
-   call RegUnpack(Buf, OutData%NumActForcePtsTower)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NumActForcePtsTower); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NumActForcePtsTower = OutData%NumActForcePtsTower
-   if (associated(OutData%StructBldRNodes)) deallocate(OutData%StructBldRNodes)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%StructBldRNodes, UB(1:1)-LB(1:1))
-         OutData%StructBldRNodes(LB(1):) => OutData%StructBldRNodes
-      else
-         allocate(OutData%StructBldRNodes(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%StructBldRNodes.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%StructBldRNodes)
-         OutData%C_obj%StructBldRNodes_Len = size(OutData%StructBldRNodes)
-         if (OutData%C_obj%StructBldRNodes_Len > 0) OutData%C_obj%StructBldRNodes = c_loc(OutData%StructBldRNodes(LB(1)))
-         call RegUnpack(Buf, OutData%StructBldRNodes)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%StructBldRNodes => null()
-   end if
-   if (associated(OutData%StructTwrHNodes)) deallocate(OutData%StructTwrHNodes)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%StructTwrHNodes, UB(1:1)-LB(1:1))
-         OutData%StructTwrHNodes(LB(1):) => OutData%StructTwrHNodes
-      else
-         allocate(OutData%StructTwrHNodes(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%StructTwrHNodes.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%StructTwrHNodes)
-         OutData%C_obj%StructTwrHNodes_Len = size(OutData%StructTwrHNodes)
-         if (OutData%C_obj%StructTwrHNodes_Len > 0) OutData%C_obj%StructTwrHNodes = c_loc(OutData%StructTwrHNodes(LB(1)))
-         call RegUnpack(Buf, OutData%StructTwrHNodes)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%StructTwrHNodes => null()
-   end if
-   call RegUnpack(Buf, OutData%BladeLength)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%StructBldRNodes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%StructTwrHNodes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BladeLength); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%BladeLength = OutData%BladeLength
-   call RegUnpack(Buf, OutData%TowerHeight)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%TowerHeight); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%TowerHeight = OutData%TowerHeight
-   call RegUnpack(Buf, OutData%TowerBaseHeight)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%TowerBaseHeight); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%TowerBaseHeight = OutData%TowerBaseHeight
-   call RegUnpack(Buf, OutData%NodeClusterType)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NodeClusterType); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NodeClusterType = OutData%NodeClusterType
 end subroutine
 
@@ -549,39 +479,31 @@ subroutine ExtInfw_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    nullify(InitOutputData%FlowField)
 end subroutine
 
-subroutine ExtInfw_PackInitOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine ExtInfw_PackInitOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(ExtInfw_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtInfw_PackInitOutput'
    logical         :: PtrInIndex
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call RegPack(Buf, allocated(InData%WriteOutputHdr))
-   if (allocated(InData%WriteOutputHdr)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr, kind=B8Ki), ubound(InData%WriteOutputHdr, kind=B8Ki))
-      call RegPack(Buf, InData%WriteOutputHdr)
-   end if
-   call RegPack(Buf, allocated(InData%WriteOutputUnt))
-   if (allocated(InData%WriteOutputUnt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt, kind=B8Ki), ubound(InData%WriteOutputUnt, kind=B8Ki))
-      call RegPack(Buf, InData%WriteOutputUnt)
-   end if
-   call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
-   call RegPack(Buf, associated(InData%FlowField))
+   call RegPackAlloc(RF, InData%WriteOutputHdr)
+   call RegPackAlloc(RF, InData%WriteOutputUnt)
+   call NWTC_Library_PackProgDesc(RF, InData%Ver) 
+   call RegPack(RF, associated(InData%FlowField))
    if (associated(InData%FlowField)) then
-      call RegPackPointer(Buf, c_loc(InData%FlowField), PtrInIndex)
+      call RegPackPointer(RF, c_loc(InData%FlowField), PtrInIndex)
       if (.not. PtrInIndex) then
-         call IfW_FlowField_PackFlowFieldType(Buf, InData%FlowField) 
+         call IfW_FlowField_PackFlowFieldType(RF, InData%FlowField) 
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine ExtInfw_UnPackInitOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine ExtInfw_UnPackInitOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(ExtInfw_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtInfw_UnPackInitOutput'
    integer(B8Ki)   :: LB(1), UB(1)
@@ -589,52 +511,24 @@ subroutine ExtInfw_UnPackInitOutput(Buf, OutData)
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
-   if (Buf%ErrStat /= ErrID_None) return
-   if (allocated(OutData%WriteOutputHdr)) deallocate(OutData%WriteOutputHdr)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WriteOutputHdr(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputHdr.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WriteOutputHdr)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%WriteOutputUnt)) deallocate(OutData%WriteOutputUnt)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WriteOutputUnt(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputUnt.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WriteOutputUnt)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
    if (associated(OutData%FlowField)) deallocate(OutData%FlowField)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
       if (c_associated(Ptr)) then
          call c_f_pointer(Ptr, OutData%FlowField)
       else
          allocate(OutData%FlowField,stat=stat)
          if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%FlowField.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%FlowField.', RF%ErrStat, RF%ErrMsg, RoutineName)
             return
          end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%FlowField)
-         call IfW_FlowField_UnpackFlowFieldType(Buf, OutData%FlowField) ! FlowField 
+         RF%Pointers(PtrIdx) = c_loc(OutData%FlowField)
+         call IfW_FlowField_UnpackFlowFieldType(RF, OutData%FlowField) ! FlowField 
       end if
    else
       OutData%FlowField => null()
@@ -821,66 +715,66 @@ subroutine ExtInfw_DestroyMisc(MiscData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine ExtInfw_PackMisc(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine ExtInfw_PackMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(ExtInfw_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtInfw_PackMisc'
    integer(B8Ki)   :: i1
    integer(B8Ki)   :: LB(1), UB(1)
    logical         :: PtrInIndex
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call RegPack(Buf, allocated(InData%ActForceMotionsPoints))
+   call RegPack(RF, allocated(InData%ActForceMotionsPoints))
    if (allocated(InData%ActForceMotionsPoints)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ActForceMotionsPoints, kind=B8Ki), ubound(InData%ActForceMotionsPoints, kind=B8Ki))
+      call RegPackBounds(RF, 1, lbound(InData%ActForceMotionsPoints, kind=B8Ki), ubound(InData%ActForceMotionsPoints, kind=B8Ki))
       LB(1:1) = lbound(InData%ActForceMotionsPoints, kind=B8Ki)
       UB(1:1) = ubound(InData%ActForceMotionsPoints, kind=B8Ki)
       do i1 = LB(1), UB(1)
-         call MeshPack(Buf, InData%ActForceMotionsPoints(i1)) 
+         call MeshPack(RF, InData%ActForceMotionsPoints(i1)) 
       end do
    end if
-   call RegPack(Buf, allocated(InData%ActForceLoadsPoints))
+   call RegPack(RF, allocated(InData%ActForceLoadsPoints))
    if (allocated(InData%ActForceLoadsPoints)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ActForceLoadsPoints, kind=B8Ki), ubound(InData%ActForceLoadsPoints, kind=B8Ki))
+      call RegPackBounds(RF, 1, lbound(InData%ActForceLoadsPoints, kind=B8Ki), ubound(InData%ActForceLoadsPoints, kind=B8Ki))
       LB(1:1) = lbound(InData%ActForceLoadsPoints, kind=B8Ki)
       UB(1:1) = ubound(InData%ActForceLoadsPoints, kind=B8Ki)
       do i1 = LB(1), UB(1)
-         call MeshPack(Buf, InData%ActForceLoadsPoints(i1)) 
+         call MeshPack(RF, InData%ActForceLoadsPoints(i1)) 
       end do
    end if
-   call RegPack(Buf, allocated(InData%Line2_to_Point_Loads))
+   call RegPack(RF, allocated(InData%Line2_to_Point_Loads))
    if (allocated(InData%Line2_to_Point_Loads)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Line2_to_Point_Loads, kind=B8Ki), ubound(InData%Line2_to_Point_Loads, kind=B8Ki))
+      call RegPackBounds(RF, 1, lbound(InData%Line2_to_Point_Loads, kind=B8Ki), ubound(InData%Line2_to_Point_Loads, kind=B8Ki))
       LB(1:1) = lbound(InData%Line2_to_Point_Loads, kind=B8Ki)
       UB(1:1) = ubound(InData%Line2_to_Point_Loads, kind=B8Ki)
       do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(Buf, InData%Line2_to_Point_Loads(i1)) 
+         call NWTC_Library_PackMeshMapType(RF, InData%Line2_to_Point_Loads(i1)) 
       end do
    end if
-   call RegPack(Buf, allocated(InData%Line2_to_Point_Motions))
+   call RegPack(RF, allocated(InData%Line2_to_Point_Motions))
    if (allocated(InData%Line2_to_Point_Motions)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Line2_to_Point_Motions, kind=B8Ki), ubound(InData%Line2_to_Point_Motions, kind=B8Ki))
+      call RegPackBounds(RF, 1, lbound(InData%Line2_to_Point_Motions, kind=B8Ki), ubound(InData%Line2_to_Point_Motions, kind=B8Ki))
       LB(1:1) = lbound(InData%Line2_to_Point_Motions, kind=B8Ki)
       UB(1:1) = ubound(InData%Line2_to_Point_Motions, kind=B8Ki)
       do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(Buf, InData%Line2_to_Point_Motions(i1)) 
+         call NWTC_Library_PackMeshMapType(RF, InData%Line2_to_Point_Motions(i1)) 
       end do
    end if
-   call RegPack(Buf, associated(InData%FlowField))
+   call RegPack(RF, associated(InData%FlowField))
    if (associated(InData%FlowField)) then
-      call RegPackPointer(Buf, c_loc(InData%FlowField), PtrInIndex)
+      call RegPackPointer(RF, c_loc(InData%FlowField), PtrInIndex)
       if (.not. PtrInIndex) then
-         call IfW_FlowField_PackFlowFieldType(Buf, InData%FlowField) 
+         call IfW_FlowField_PackFlowFieldType(RF, InData%FlowField) 
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine ExtInfw_UnPackMisc(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine ExtInfw_UnPackMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(ExtInfw_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtInfw_UnPackMisc'
    integer(B8Ki)   :: i1
@@ -889,83 +783,73 @@ subroutine ExtInfw_UnPackMisc(Buf, OutData)
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
-   if (Buf%ErrStat /= ErrID_None) return
+   if (RF%ErrStat /= ErrID_None) return
    if (allocated(OutData%ActForceMotionsPoints)) deallocate(OutData%ActForceMotionsPoints)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%ActForceMotionsPoints(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ActForceMotionsPoints.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ActForceMotionsPoints.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call MeshUnpack(Buf, OutData%ActForceMotionsPoints(i1)) ! ActForceMotionsPoints 
+         call MeshUnpack(RF, OutData%ActForceMotionsPoints(i1)) ! ActForceMotionsPoints 
       end do
    end if
    if (allocated(OutData%ActForceLoadsPoints)) deallocate(OutData%ActForceLoadsPoints)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%ActForceLoadsPoints(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ActForceLoadsPoints.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ActForceLoadsPoints.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call MeshUnpack(Buf, OutData%ActForceLoadsPoints(i1)) ! ActForceLoadsPoints 
+         call MeshUnpack(RF, OutData%ActForceLoadsPoints(i1)) ! ActForceLoadsPoints 
       end do
    end if
    if (allocated(OutData%Line2_to_Point_Loads)) deallocate(OutData%Line2_to_Point_Loads)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%Line2_to_Point_Loads(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Line2_to_Point_Loads.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Line2_to_Point_Loads.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(Buf, OutData%Line2_to_Point_Loads(i1)) ! Line2_to_Point_Loads 
+         call NWTC_Library_UnpackMeshMapType(RF, OutData%Line2_to_Point_Loads(i1)) ! Line2_to_Point_Loads 
       end do
    end if
    if (allocated(OutData%Line2_to_Point_Motions)) deallocate(OutData%Line2_to_Point_Motions)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%Line2_to_Point_Motions(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Line2_to_Point_Motions.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Line2_to_Point_Motions.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(Buf, OutData%Line2_to_Point_Motions(i1)) ! Line2_to_Point_Motions 
+         call NWTC_Library_UnpackMeshMapType(RF, OutData%Line2_to_Point_Motions(i1)) ! Line2_to_Point_Motions 
       end do
    end if
    if (associated(OutData%FlowField)) deallocate(OutData%FlowField)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
       if (c_associated(Ptr)) then
          call c_f_pointer(Ptr, OutData%FlowField)
       else
          allocate(OutData%FlowField,stat=stat)
          if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%FlowField.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%FlowField.', RF%ErrStat, RF%ErrMsg, RoutineName)
             return
          end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%FlowField)
-         call IfW_FlowField_UnpackFlowFieldType(Buf, OutData%FlowField) ! FlowField 
+         RF%Pointers(PtrIdx) = c_loc(OutData%FlowField)
+         call IfW_FlowField_UnpackFlowFieldType(RF, OutData%FlowField) ! FlowField 
       end if
    else
       OutData%FlowField => null()
@@ -1092,48 +976,34 @@ subroutine ExtInfw_DestroyParam(ParamData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine ExtInfw_PackParam(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine ExtInfw_PackParam(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(ExtInfw_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtInfw_PackParam'
    logical         :: PtrInIndex
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call RegPack(Buf, InData%AirDens)
-   call RegPack(Buf, InData%NumBl)
-   call RegPack(Buf, InData%NMappings)
-   call RegPack(Buf, InData%NnodesVel)
-   call RegPack(Buf, InData%NnodesForce)
-   call RegPack(Buf, InData%NnodesForceBlade)
-   call RegPack(Buf, InData%NnodesForceTower)
-   call RegPack(Buf, associated(InData%forceBldRnodes))
-   if (associated(InData%forceBldRnodes)) then
-      call RegPackBounds(Buf, 1, lbound(InData%forceBldRnodes, kind=B8Ki), ubound(InData%forceBldRnodes, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%forceBldRnodes), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%forceBldRnodes)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%forceTwrHnodes))
-   if (associated(InData%forceTwrHnodes)) then
-      call RegPackBounds(Buf, 1, lbound(InData%forceTwrHnodes, kind=B8Ki), ubound(InData%forceTwrHnodes, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%forceTwrHnodes), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%forceTwrHnodes)
-      end if
-   end if
-   call RegPack(Buf, InData%BladeLength)
-   call RegPack(Buf, InData%TowerHeight)
-   call RegPack(Buf, InData%TowerBaseHeight)
-   call RegPack(Buf, InData%NodeClusterType)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPack(RF, InData%AirDens)
+   call RegPack(RF, InData%NumBl)
+   call RegPack(RF, InData%NMappings)
+   call RegPack(RF, InData%NnodesVel)
+   call RegPack(RF, InData%NnodesForce)
+   call RegPack(RF, InData%NnodesForceBlade)
+   call RegPack(RF, InData%NnodesForceTower)
+   call RegPackPtr(RF, InData%forceBldRnodes)
+   call RegPackPtr(RF, InData%forceTwrHnodes)
+   call RegPack(RF, InData%BladeLength)
+   call RegPack(RF, InData%TowerHeight)
+   call RegPack(RF, InData%TowerBaseHeight)
+   call RegPack(RF, InData%NodeClusterType)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine ExtInfw_UnPackParam(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine ExtInfw_UnPackParam(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(ExtInfw_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtInfw_UnPackParam'
    integer(B8Ki)   :: LB(1), UB(1)
@@ -1141,91 +1011,30 @@ subroutine ExtInfw_UnPackParam(Buf, OutData)
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%AirDens)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%AirDens); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%AirDens = OutData%AirDens
-   call RegUnpack(Buf, OutData%NumBl)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NumBl); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NumBl = OutData%NumBl
-   call RegUnpack(Buf, OutData%NMappings)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NMappings); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NMappings = OutData%NMappings
-   call RegUnpack(Buf, OutData%NnodesVel)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NnodesVel); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NnodesVel = OutData%NnodesVel
-   call RegUnpack(Buf, OutData%NnodesForce)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NnodesForce); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NnodesForce = OutData%NnodesForce
-   call RegUnpack(Buf, OutData%NnodesForceBlade)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NnodesForceBlade); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NnodesForceBlade = OutData%NnodesForceBlade
-   call RegUnpack(Buf, OutData%NnodesForceTower)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NnodesForceTower); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NnodesForceTower = OutData%NnodesForceTower
-   if (associated(OutData%forceBldRnodes)) deallocate(OutData%forceBldRnodes)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%forceBldRnodes, UB(1:1)-LB(1:1))
-         OutData%forceBldRnodes(LB(1):) => OutData%forceBldRnodes
-      else
-         allocate(OutData%forceBldRnodes(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%forceBldRnodes.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%forceBldRnodes)
-         OutData%C_obj%forceBldRnodes_Len = size(OutData%forceBldRnodes)
-         if (OutData%C_obj%forceBldRnodes_Len > 0) OutData%C_obj%forceBldRnodes = c_loc(OutData%forceBldRnodes(LB(1)))
-         call RegUnpack(Buf, OutData%forceBldRnodes)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%forceBldRnodes => null()
-   end if
-   if (associated(OutData%forceTwrHnodes)) deallocate(OutData%forceTwrHnodes)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%forceTwrHnodes, UB(1:1)-LB(1:1))
-         OutData%forceTwrHnodes(LB(1):) => OutData%forceTwrHnodes
-      else
-         allocate(OutData%forceTwrHnodes(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%forceTwrHnodes.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%forceTwrHnodes)
-         OutData%C_obj%forceTwrHnodes_Len = size(OutData%forceTwrHnodes)
-         if (OutData%C_obj%forceTwrHnodes_Len > 0) OutData%C_obj%forceTwrHnodes = c_loc(OutData%forceTwrHnodes(LB(1)))
-         call RegUnpack(Buf, OutData%forceTwrHnodes)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%forceTwrHnodes => null()
-   end if
-   call RegUnpack(Buf, OutData%BladeLength)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%forceBldRnodes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%forceTwrHnodes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BladeLength); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%BladeLength = OutData%BladeLength
-   call RegUnpack(Buf, OutData%TowerHeight)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%TowerHeight); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%TowerHeight = OutData%TowerHeight
-   call RegUnpack(Buf, OutData%TowerBaseHeight)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%TowerBaseHeight); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%TowerBaseHeight = OutData%TowerBaseHeight
-   call RegUnpack(Buf, OutData%NodeClusterType)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NodeClusterType); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NodeClusterType = OutData%NodeClusterType
 end subroutine
 
@@ -1706,157 +1515,38 @@ subroutine ExtInfw_DestroyInput(InputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine ExtInfw_PackInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine ExtInfw_PackInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(ExtInfw_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtInfw_PackInput'
    logical         :: PtrInIndex
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call RegPack(Buf, associated(InData%pxVel))
-   if (associated(InData%pxVel)) then
-      call RegPackBounds(Buf, 1, lbound(InData%pxVel, kind=B8Ki), ubound(InData%pxVel, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%pxVel), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%pxVel)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%pyVel))
-   if (associated(InData%pyVel)) then
-      call RegPackBounds(Buf, 1, lbound(InData%pyVel, kind=B8Ki), ubound(InData%pyVel, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%pyVel), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%pyVel)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%pzVel))
-   if (associated(InData%pzVel)) then
-      call RegPackBounds(Buf, 1, lbound(InData%pzVel, kind=B8Ki), ubound(InData%pzVel, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%pzVel), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%pzVel)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%pxForce))
-   if (associated(InData%pxForce)) then
-      call RegPackBounds(Buf, 1, lbound(InData%pxForce, kind=B8Ki), ubound(InData%pxForce, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%pxForce), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%pxForce)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%pyForce))
-   if (associated(InData%pyForce)) then
-      call RegPackBounds(Buf, 1, lbound(InData%pyForce, kind=B8Ki), ubound(InData%pyForce, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%pyForce), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%pyForce)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%pzForce))
-   if (associated(InData%pzForce)) then
-      call RegPackBounds(Buf, 1, lbound(InData%pzForce, kind=B8Ki), ubound(InData%pzForce, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%pzForce), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%pzForce)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%xdotForce))
-   if (associated(InData%xdotForce)) then
-      call RegPackBounds(Buf, 1, lbound(InData%xdotForce, kind=B8Ki), ubound(InData%xdotForce, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%xdotForce), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%xdotForce)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%ydotForce))
-   if (associated(InData%ydotForce)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ydotForce, kind=B8Ki), ubound(InData%ydotForce, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%ydotForce), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%ydotForce)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%zdotForce))
-   if (associated(InData%zdotForce)) then
-      call RegPackBounds(Buf, 1, lbound(InData%zdotForce, kind=B8Ki), ubound(InData%zdotForce, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%zdotForce), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%zdotForce)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%pOrientation))
-   if (associated(InData%pOrientation)) then
-      call RegPackBounds(Buf, 1, lbound(InData%pOrientation, kind=B8Ki), ubound(InData%pOrientation, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%pOrientation), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%pOrientation)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%fx))
-   if (associated(InData%fx)) then
-      call RegPackBounds(Buf, 1, lbound(InData%fx, kind=B8Ki), ubound(InData%fx, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%fx), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%fx)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%fy))
-   if (associated(InData%fy)) then
-      call RegPackBounds(Buf, 1, lbound(InData%fy, kind=B8Ki), ubound(InData%fy, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%fy), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%fy)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%fz))
-   if (associated(InData%fz)) then
-      call RegPackBounds(Buf, 1, lbound(InData%fz, kind=B8Ki), ubound(InData%fz, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%fz), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%fz)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%momentx))
-   if (associated(InData%momentx)) then
-      call RegPackBounds(Buf, 1, lbound(InData%momentx, kind=B8Ki), ubound(InData%momentx, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%momentx), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%momentx)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%momenty))
-   if (associated(InData%momenty)) then
-      call RegPackBounds(Buf, 1, lbound(InData%momenty, kind=B8Ki), ubound(InData%momenty, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%momenty), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%momenty)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%momentz))
-   if (associated(InData%momentz)) then
-      call RegPackBounds(Buf, 1, lbound(InData%momentz, kind=B8Ki), ubound(InData%momentz, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%momentz), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%momentz)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%forceNodesChord))
-   if (associated(InData%forceNodesChord)) then
-      call RegPackBounds(Buf, 1, lbound(InData%forceNodesChord, kind=B8Ki), ubound(InData%forceNodesChord, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%forceNodesChord), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%forceNodesChord)
-      end if
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPackPtr(RF, InData%pxVel)
+   call RegPackPtr(RF, InData%pyVel)
+   call RegPackPtr(RF, InData%pzVel)
+   call RegPackPtr(RF, InData%pxForce)
+   call RegPackPtr(RF, InData%pyForce)
+   call RegPackPtr(RF, InData%pzForce)
+   call RegPackPtr(RF, InData%xdotForce)
+   call RegPackPtr(RF, InData%ydotForce)
+   call RegPackPtr(RF, InData%zdotForce)
+   call RegPackPtr(RF, InData%pOrientation)
+   call RegPackPtr(RF, InData%fx)
+   call RegPackPtr(RF, InData%fy)
+   call RegPackPtr(RF, InData%fz)
+   call RegPackPtr(RF, InData%momentx)
+   call RegPackPtr(RF, InData%momenty)
+   call RegPackPtr(RF, InData%momentz)
+   call RegPackPtr(RF, InData%forceNodesChord)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine ExtInfw_UnPackInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine ExtInfw_UnPackInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(ExtInfw_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtInfw_UnPackInput'
    integer(B8Ki)   :: LB(1), UB(1)
@@ -1864,449 +1554,24 @@ subroutine ExtInfw_UnPackInput(Buf, OutData)
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
-   if (Buf%ErrStat /= ErrID_None) return
-   if (associated(OutData%pxVel)) deallocate(OutData%pxVel)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%pxVel, UB(1:1)-LB(1:1))
-         OutData%pxVel(LB(1):) => OutData%pxVel
-      else
-         allocate(OutData%pxVel(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%pxVel.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%pxVel)
-         OutData%C_obj%pxVel_Len = size(OutData%pxVel)
-         if (OutData%C_obj%pxVel_Len > 0) OutData%C_obj%pxVel = c_loc(OutData%pxVel(LB(1)))
-         call RegUnpack(Buf, OutData%pxVel)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%pxVel => null()
-   end if
-   if (associated(OutData%pyVel)) deallocate(OutData%pyVel)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%pyVel, UB(1:1)-LB(1:1))
-         OutData%pyVel(LB(1):) => OutData%pyVel
-      else
-         allocate(OutData%pyVel(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%pyVel.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%pyVel)
-         OutData%C_obj%pyVel_Len = size(OutData%pyVel)
-         if (OutData%C_obj%pyVel_Len > 0) OutData%C_obj%pyVel = c_loc(OutData%pyVel(LB(1)))
-         call RegUnpack(Buf, OutData%pyVel)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%pyVel => null()
-   end if
-   if (associated(OutData%pzVel)) deallocate(OutData%pzVel)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%pzVel, UB(1:1)-LB(1:1))
-         OutData%pzVel(LB(1):) => OutData%pzVel
-      else
-         allocate(OutData%pzVel(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%pzVel.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%pzVel)
-         OutData%C_obj%pzVel_Len = size(OutData%pzVel)
-         if (OutData%C_obj%pzVel_Len > 0) OutData%C_obj%pzVel = c_loc(OutData%pzVel(LB(1)))
-         call RegUnpack(Buf, OutData%pzVel)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%pzVel => null()
-   end if
-   if (associated(OutData%pxForce)) deallocate(OutData%pxForce)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%pxForce, UB(1:1)-LB(1:1))
-         OutData%pxForce(LB(1):) => OutData%pxForce
-      else
-         allocate(OutData%pxForce(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%pxForce.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%pxForce)
-         OutData%C_obj%pxForce_Len = size(OutData%pxForce)
-         if (OutData%C_obj%pxForce_Len > 0) OutData%C_obj%pxForce = c_loc(OutData%pxForce(LB(1)))
-         call RegUnpack(Buf, OutData%pxForce)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%pxForce => null()
-   end if
-   if (associated(OutData%pyForce)) deallocate(OutData%pyForce)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%pyForce, UB(1:1)-LB(1:1))
-         OutData%pyForce(LB(1):) => OutData%pyForce
-      else
-         allocate(OutData%pyForce(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%pyForce.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%pyForce)
-         OutData%C_obj%pyForce_Len = size(OutData%pyForce)
-         if (OutData%C_obj%pyForce_Len > 0) OutData%C_obj%pyForce = c_loc(OutData%pyForce(LB(1)))
-         call RegUnpack(Buf, OutData%pyForce)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%pyForce => null()
-   end if
-   if (associated(OutData%pzForce)) deallocate(OutData%pzForce)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%pzForce, UB(1:1)-LB(1:1))
-         OutData%pzForce(LB(1):) => OutData%pzForce
-      else
-         allocate(OutData%pzForce(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%pzForce.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%pzForce)
-         OutData%C_obj%pzForce_Len = size(OutData%pzForce)
-         if (OutData%C_obj%pzForce_Len > 0) OutData%C_obj%pzForce = c_loc(OutData%pzForce(LB(1)))
-         call RegUnpack(Buf, OutData%pzForce)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%pzForce => null()
-   end if
-   if (associated(OutData%xdotForce)) deallocate(OutData%xdotForce)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%xdotForce, UB(1:1)-LB(1:1))
-         OutData%xdotForce(LB(1):) => OutData%xdotForce
-      else
-         allocate(OutData%xdotForce(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%xdotForce.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%xdotForce)
-         OutData%C_obj%xdotForce_Len = size(OutData%xdotForce)
-         if (OutData%C_obj%xdotForce_Len > 0) OutData%C_obj%xdotForce = c_loc(OutData%xdotForce(LB(1)))
-         call RegUnpack(Buf, OutData%xdotForce)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%xdotForce => null()
-   end if
-   if (associated(OutData%ydotForce)) deallocate(OutData%ydotForce)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%ydotForce, UB(1:1)-LB(1:1))
-         OutData%ydotForce(LB(1):) => OutData%ydotForce
-      else
-         allocate(OutData%ydotForce(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ydotForce.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%ydotForce)
-         OutData%C_obj%ydotForce_Len = size(OutData%ydotForce)
-         if (OutData%C_obj%ydotForce_Len > 0) OutData%C_obj%ydotForce = c_loc(OutData%ydotForce(LB(1)))
-         call RegUnpack(Buf, OutData%ydotForce)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%ydotForce => null()
-   end if
-   if (associated(OutData%zdotForce)) deallocate(OutData%zdotForce)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%zdotForce, UB(1:1)-LB(1:1))
-         OutData%zdotForce(LB(1):) => OutData%zdotForce
-      else
-         allocate(OutData%zdotForce(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%zdotForce.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%zdotForce)
-         OutData%C_obj%zdotForce_Len = size(OutData%zdotForce)
-         if (OutData%C_obj%zdotForce_Len > 0) OutData%C_obj%zdotForce = c_loc(OutData%zdotForce(LB(1)))
-         call RegUnpack(Buf, OutData%zdotForce)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%zdotForce => null()
-   end if
-   if (associated(OutData%pOrientation)) deallocate(OutData%pOrientation)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%pOrientation, UB(1:1)-LB(1:1))
-         OutData%pOrientation(LB(1):) => OutData%pOrientation
-      else
-         allocate(OutData%pOrientation(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%pOrientation.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%pOrientation)
-         OutData%C_obj%pOrientation_Len = size(OutData%pOrientation)
-         if (OutData%C_obj%pOrientation_Len > 0) OutData%C_obj%pOrientation = c_loc(OutData%pOrientation(LB(1)))
-         call RegUnpack(Buf, OutData%pOrientation)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%pOrientation => null()
-   end if
-   if (associated(OutData%fx)) deallocate(OutData%fx)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%fx, UB(1:1)-LB(1:1))
-         OutData%fx(LB(1):) => OutData%fx
-      else
-         allocate(OutData%fx(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%fx.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%fx)
-         OutData%C_obj%fx_Len = size(OutData%fx)
-         if (OutData%C_obj%fx_Len > 0) OutData%C_obj%fx = c_loc(OutData%fx(LB(1)))
-         call RegUnpack(Buf, OutData%fx)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%fx => null()
-   end if
-   if (associated(OutData%fy)) deallocate(OutData%fy)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%fy, UB(1:1)-LB(1:1))
-         OutData%fy(LB(1):) => OutData%fy
-      else
-         allocate(OutData%fy(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%fy.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%fy)
-         OutData%C_obj%fy_Len = size(OutData%fy)
-         if (OutData%C_obj%fy_Len > 0) OutData%C_obj%fy = c_loc(OutData%fy(LB(1)))
-         call RegUnpack(Buf, OutData%fy)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%fy => null()
-   end if
-   if (associated(OutData%fz)) deallocate(OutData%fz)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%fz, UB(1:1)-LB(1:1))
-         OutData%fz(LB(1):) => OutData%fz
-      else
-         allocate(OutData%fz(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%fz.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%fz)
-         OutData%C_obj%fz_Len = size(OutData%fz)
-         if (OutData%C_obj%fz_Len > 0) OutData%C_obj%fz = c_loc(OutData%fz(LB(1)))
-         call RegUnpack(Buf, OutData%fz)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%fz => null()
-   end if
-   if (associated(OutData%momentx)) deallocate(OutData%momentx)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%momentx, UB(1:1)-LB(1:1))
-         OutData%momentx(LB(1):) => OutData%momentx
-      else
-         allocate(OutData%momentx(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%momentx.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%momentx)
-         OutData%C_obj%momentx_Len = size(OutData%momentx)
-         if (OutData%C_obj%momentx_Len > 0) OutData%C_obj%momentx = c_loc(OutData%momentx(LB(1)))
-         call RegUnpack(Buf, OutData%momentx)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%momentx => null()
-   end if
-   if (associated(OutData%momenty)) deallocate(OutData%momenty)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%momenty, UB(1:1)-LB(1:1))
-         OutData%momenty(LB(1):) => OutData%momenty
-      else
-         allocate(OutData%momenty(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%momenty.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%momenty)
-         OutData%C_obj%momenty_Len = size(OutData%momenty)
-         if (OutData%C_obj%momenty_Len > 0) OutData%C_obj%momenty = c_loc(OutData%momenty(LB(1)))
-         call RegUnpack(Buf, OutData%momenty)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%momenty => null()
-   end if
-   if (associated(OutData%momentz)) deallocate(OutData%momentz)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%momentz, UB(1:1)-LB(1:1))
-         OutData%momentz(LB(1):) => OutData%momentz
-      else
-         allocate(OutData%momentz(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%momentz.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%momentz)
-         OutData%C_obj%momentz_Len = size(OutData%momentz)
-         if (OutData%C_obj%momentz_Len > 0) OutData%C_obj%momentz = c_loc(OutData%momentz(LB(1)))
-         call RegUnpack(Buf, OutData%momentz)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%momentz => null()
-   end if
-   if (associated(OutData%forceNodesChord)) deallocate(OutData%forceNodesChord)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%forceNodesChord, UB(1:1)-LB(1:1))
-         OutData%forceNodesChord(LB(1):) => OutData%forceNodesChord
-      else
-         allocate(OutData%forceNodesChord(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%forceNodesChord.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%forceNodesChord)
-         OutData%C_obj%forceNodesChord_Len = size(OutData%forceNodesChord)
-         if (OutData%C_obj%forceNodesChord_Len > 0) OutData%C_obj%forceNodesChord = c_loc(OutData%forceNodesChord(LB(1)))
-         call RegUnpack(Buf, OutData%forceNodesChord)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%forceNodesChord => null()
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackPtr(RF, OutData%pxVel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%pyVel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%pzVel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%pxForce); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%pyForce); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%pzForce); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%xdotForce); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%ydotForce); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%zdotForce); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%pOrientation); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%fx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%fy); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%fz); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%momentx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%momenty); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%momentz); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%forceNodesChord); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 SUBROUTINE ExtInfw_C2Fary_CopyInput(InputData, ErrStat, ErrMsg, SkipPointers)
@@ -2800,50 +2065,25 @@ subroutine ExtInfw_DestroyOutput(OutputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine ExtInfw_PackOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine ExtInfw_PackOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(ExtInfw_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtInfw_PackOutput'
    logical         :: PtrInIndex
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call RegPack(Buf, associated(InData%u))
-   if (associated(InData%u)) then
-      call RegPackBounds(Buf, 1, lbound(InData%u, kind=B8Ki), ubound(InData%u, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%u), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%u)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%v))
-   if (associated(InData%v)) then
-      call RegPackBounds(Buf, 1, lbound(InData%v, kind=B8Ki), ubound(InData%v, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%v), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%v)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%w))
-   if (associated(InData%w)) then
-      call RegPackBounds(Buf, 1, lbound(InData%w, kind=B8Ki), ubound(InData%w, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%w), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%w)
-      end if
-   end if
-   call RegPack(Buf, allocated(InData%WriteOutput))
-   if (allocated(InData%WriteOutput)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutput, kind=B8Ki), ubound(InData%WriteOutput, kind=B8Ki))
-      call RegPack(Buf, InData%WriteOutput)
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPackPtr(RF, InData%u)
+   call RegPackPtr(RF, InData%v)
+   call RegPackPtr(RF, InData%w)
+   call RegPackAlloc(RF, InData%WriteOutput)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine ExtInfw_UnPackOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine ExtInfw_UnPackOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(ExtInfw_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtInfw_UnPackOutput'
    integer(B8Ki)   :: LB(1), UB(1)
@@ -2851,99 +2091,11 @@ subroutine ExtInfw_UnPackOutput(Buf, OutData)
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
-   if (Buf%ErrStat /= ErrID_None) return
-   if (associated(OutData%u)) deallocate(OutData%u)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%u, UB(1:1)-LB(1:1))
-         OutData%u(LB(1):) => OutData%u
-      else
-         allocate(OutData%u(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%u.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%u)
-         OutData%C_obj%u_Len = size(OutData%u)
-         if (OutData%C_obj%u_Len > 0) OutData%C_obj%u = c_loc(OutData%u(LB(1)))
-         call RegUnpack(Buf, OutData%u)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%u => null()
-   end if
-   if (associated(OutData%v)) deallocate(OutData%v)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%v, UB(1:1)-LB(1:1))
-         OutData%v(LB(1):) => OutData%v
-      else
-         allocate(OutData%v(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%v.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%v)
-         OutData%C_obj%v_Len = size(OutData%v)
-         if (OutData%C_obj%v_Len > 0) OutData%C_obj%v = c_loc(OutData%v(LB(1)))
-         call RegUnpack(Buf, OutData%v)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%v => null()
-   end if
-   if (associated(OutData%w)) deallocate(OutData%w)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%w, UB(1:1)-LB(1:1))
-         OutData%w(LB(1):) => OutData%w
-      else
-         allocate(OutData%w(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%w.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%w)
-         OutData%C_obj%w_Len = size(OutData%w)
-         if (OutData%C_obj%w_Len > 0) OutData%C_obj%w = c_loc(OutData%w(LB(1)))
-         call RegUnpack(Buf, OutData%w)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%w => null()
-   end if
-   if (allocated(OutData%WriteOutput)) deallocate(OutData%WriteOutput)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WriteOutput(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutput.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WriteOutput)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackPtr(RF, OutData%u); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%v); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%w); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WriteOutput); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 SUBROUTINE ExtInfw_C2Fary_CopyOutput(OutputData, ErrStat, ErrMsg, SkipPointers)

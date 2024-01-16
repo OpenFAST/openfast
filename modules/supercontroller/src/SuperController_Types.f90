@@ -205,30 +205,28 @@ subroutine SC_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine SC_PackInitInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine SC_PackInitInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(SC_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SC_PackInitInput'
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call RegPack(Buf, InData%nTurbines)
-   call RegPack(Buf, InData%DLL_FileName)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPack(RF, InData%nTurbines)
+   call RegPack(RF, InData%DLL_FileName)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SC_UnPackInitInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine SC_UnPackInitInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(SC_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_UnPackInitInput'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%nTurbines)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%nTurbines); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%nTurbines = OutData%nTurbines
-   call RegUnpack(Buf, OutData%DLL_FileName)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%DLL_FileName); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%DLL_FileName = transfer(OutData%DLL_FileName, OutData%C_obj%DLL_FileName )
 end subroutine
 
@@ -307,40 +305,36 @@ subroutine SC_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine SC_PackInitOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine SC_PackInitOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(SC_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SC_PackInitOutput'
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
-   call RegPack(Buf, InData%NumCtrl2SC)
-   call RegPack(Buf, InData%nInpGlobal)
-   call RegPack(Buf, InData%NumSC2Ctrl)
-   call RegPack(Buf, InData%NumSC2CtrlGlob)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call NWTC_Library_PackProgDesc(RF, InData%Ver) 
+   call RegPack(RF, InData%NumCtrl2SC)
+   call RegPack(RF, InData%nInpGlobal)
+   call RegPack(RF, InData%NumSC2Ctrl)
+   call RegPack(RF, InData%NumSC2CtrlGlob)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SC_UnPackInitOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine SC_UnPackInitOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(SC_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_UnPackInitOutput'
-   if (Buf%ErrStat /= ErrID_None) return
-   call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
-   call RegUnpack(Buf, OutData%NumCtrl2SC)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
+   call RegUnpack(RF, OutData%NumCtrl2SC); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NumCtrl2SC = OutData%NumCtrl2SC
-   call RegUnpack(Buf, OutData%nInpGlobal)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%nInpGlobal); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%nInpGlobal = OutData%nInpGlobal
-   call RegUnpack(Buf, OutData%NumSC2Ctrl)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NumSC2Ctrl); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NumSC2Ctrl = OutData%NumSC2Ctrl
-   call RegUnpack(Buf, OutData%NumSC2CtrlGlob)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NumSC2CtrlGlob); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NumSC2CtrlGlob = OutData%NumSC2CtrlGlob
 end subroutine
 
@@ -476,48 +470,34 @@ subroutine SC_DestroyParam(ParamData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine SC_PackParam(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine SC_PackParam(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(SC_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SC_PackParam'
    logical         :: PtrInIndex
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call RegPack(Buf, InData%DT)
-   call RegPack(Buf, InData%nTurbines)
-   call RegPack(Buf, InData%NumCtrl2SC)
-   call RegPack(Buf, InData%nInpGlobal)
-   call RegPack(Buf, InData%NumSC2Ctrl)
-   call RegPack(Buf, InData%NumSC2CtrlGlob)
-   call RegPack(Buf, InData%NumStatesGlobal)
-   call RegPack(Buf, InData%NumStatesTurbine)
-   call RegPack(Buf, InData%NumParamGlobal)
-   call RegPack(Buf, InData%NumParamTurbine)
-   call RegPack(Buf, associated(InData%ParamGlobal))
-   if (associated(InData%ParamGlobal)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ParamGlobal, kind=B8Ki), ubound(InData%ParamGlobal, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%ParamGlobal), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%ParamGlobal)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%ParamTurbine))
-   if (associated(InData%ParamTurbine)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ParamTurbine, kind=B8Ki), ubound(InData%ParamTurbine, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%ParamTurbine), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%ParamTurbine)
-      end if
-   end if
-   call DLLTypePack(Buf, InData%DLL_Trgt) 
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPack(RF, InData%DT)
+   call RegPack(RF, InData%nTurbines)
+   call RegPack(RF, InData%NumCtrl2SC)
+   call RegPack(RF, InData%nInpGlobal)
+   call RegPack(RF, InData%NumSC2Ctrl)
+   call RegPack(RF, InData%NumSC2CtrlGlob)
+   call RegPack(RF, InData%NumStatesGlobal)
+   call RegPack(RF, InData%NumStatesTurbine)
+   call RegPack(RF, InData%NumParamGlobal)
+   call RegPack(RF, InData%NumParamTurbine)
+   call RegPackPtr(RF, InData%ParamGlobal)
+   call RegPackPtr(RF, InData%ParamTurbine)
+   call DLLTypePack(RF, InData%DLL_Trgt) 
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SC_UnPackParam(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine SC_UnPackParam(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(SC_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_UnPackParam'
    integer(B8Ki)   :: LB(1), UB(1)
@@ -525,90 +505,30 @@ subroutine SC_UnPackParam(Buf, OutData)
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%DT)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%DT = OutData%DT
-   call RegUnpack(Buf, OutData%nTurbines)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%nTurbines); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%nTurbines = OutData%nTurbines
-   call RegUnpack(Buf, OutData%NumCtrl2SC)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NumCtrl2SC); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NumCtrl2SC = OutData%NumCtrl2SC
-   call RegUnpack(Buf, OutData%nInpGlobal)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%nInpGlobal); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%nInpGlobal = OutData%nInpGlobal
-   call RegUnpack(Buf, OutData%NumSC2Ctrl)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NumSC2Ctrl); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NumSC2Ctrl = OutData%NumSC2Ctrl
-   call RegUnpack(Buf, OutData%NumSC2CtrlGlob)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NumSC2CtrlGlob); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NumSC2CtrlGlob = OutData%NumSC2CtrlGlob
-   call RegUnpack(Buf, OutData%NumStatesGlobal)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NumStatesGlobal); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NumStatesGlobal = OutData%NumStatesGlobal
-   call RegUnpack(Buf, OutData%NumStatesTurbine)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NumStatesTurbine); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NumStatesTurbine = OutData%NumStatesTurbine
-   call RegUnpack(Buf, OutData%NumParamGlobal)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NumParamGlobal); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NumParamGlobal = OutData%NumParamGlobal
-   call RegUnpack(Buf, OutData%NumParamTurbine)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NumParamTurbine); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NumParamTurbine = OutData%NumParamTurbine
-   if (associated(OutData%ParamGlobal)) deallocate(OutData%ParamGlobal)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%ParamGlobal, UB(1:1)-LB(1:1))
-         OutData%ParamGlobal(LB(1):) => OutData%ParamGlobal
-      else
-         allocate(OutData%ParamGlobal(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ParamGlobal.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%ParamGlobal)
-         OutData%C_obj%ParamGlobal_Len = size(OutData%ParamGlobal)
-         if (OutData%C_obj%ParamGlobal_Len > 0) OutData%C_obj%ParamGlobal = c_loc(OutData%ParamGlobal(LB(1)))
-         call RegUnpack(Buf, OutData%ParamGlobal)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%ParamGlobal => null()
-   end if
-   if (associated(OutData%ParamTurbine)) deallocate(OutData%ParamTurbine)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%ParamTurbine, UB(1:1)-LB(1:1))
-         OutData%ParamTurbine(LB(1):) => OutData%ParamTurbine
-      else
-         allocate(OutData%ParamTurbine(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ParamTurbine.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%ParamTurbine)
-         OutData%C_obj%ParamTurbine_Len = size(OutData%ParamTurbine)
-         if (OutData%C_obj%ParamTurbine_Len > 0) OutData%C_obj%ParamTurbine = c_loc(OutData%ParamTurbine(LB(1)))
-         call RegUnpack(Buf, OutData%ParamTurbine)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%ParamTurbine => null()
-   end if
-   call DLLTypeUnpack(Buf, OutData%DLL_Trgt) ! DLL_Trgt 
+   call RegUnpackPtr(RF, OutData%ParamGlobal); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%ParamTurbine); if (RegCheckErr(RF, RoutineName)) return
+   call DLLTypeUnpack(RF, OutData%DLL_Trgt) ! DLL_Trgt 
 end subroutine
 
 SUBROUTINE SC_C2Fary_CopyParam(ParamData, ErrStat, ErrMsg, SkipPointers)
@@ -771,37 +691,23 @@ subroutine SC_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine SC_PackDiscState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine SC_PackDiscState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(SC_DiscreteStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SC_PackDiscState'
    logical         :: PtrInIndex
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call RegPack(Buf, associated(InData%Global))
-   if (associated(InData%Global)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Global, kind=B8Ki), ubound(InData%Global, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%Global), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%Global)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%Turbine))
-   if (associated(InData%Turbine)) then
-      call RegPackBounds(Buf, 1, lbound(InData%Turbine, kind=B8Ki), ubound(InData%Turbine, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%Turbine), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%Turbine)
-      end if
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPackPtr(RF, InData%Global)
+   call RegPackPtr(RF, InData%Turbine)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SC_UnPackDiscState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine SC_UnPackDiscState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(SC_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_UnPackDiscState'
    integer(B8Ki)   :: LB(1), UB(1)
@@ -809,59 +715,9 @@ subroutine SC_UnPackDiscState(Buf, OutData)
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
-   if (Buf%ErrStat /= ErrID_None) return
-   if (associated(OutData%Global)) deallocate(OutData%Global)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Global, UB(1:1)-LB(1:1))
-         OutData%Global(LB(1):) => OutData%Global
-      else
-         allocate(OutData%Global(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Global.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%Global)
-         OutData%C_obj%Global_Len = size(OutData%Global)
-         if (OutData%C_obj%Global_Len > 0) OutData%C_obj%Global = c_loc(OutData%Global(LB(1)))
-         call RegUnpack(Buf, OutData%Global)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%Global => null()
-   end if
-   if (associated(OutData%Turbine)) deallocate(OutData%Turbine)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Turbine, UB(1:1)-LB(1:1))
-         OutData%Turbine(LB(1):) => OutData%Turbine
-      else
-         allocate(OutData%Turbine(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Turbine.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%Turbine)
-         OutData%C_obj%Turbine_Len = size(OutData%Turbine)
-         if (OutData%C_obj%Turbine_Len > 0) OutData%C_obj%Turbine = c_loc(OutData%Turbine(LB(1)))
-         call RegUnpack(Buf, OutData%Turbine)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%Turbine => null()
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackPtr(RF, OutData%Global); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%Turbine); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 SUBROUTINE SC_C2Fary_CopyDiscState(DiscStateData, ErrStat, ErrMsg, SkipPointers)
@@ -962,26 +818,25 @@ subroutine SC_DestroyContState(ContStateData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine SC_PackContState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine SC_PackContState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(SC_ContinuousStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SC_PackContState'
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call RegPack(Buf, InData%Dummy)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPack(RF, InData%Dummy)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SC_UnPackContState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine SC_UnPackContState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(SC_ContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_UnPackContState'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%Dummy)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%Dummy); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%Dummy = OutData%Dummy
 end subroutine
 
@@ -1043,26 +898,25 @@ subroutine SC_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine SC_PackConstrState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine SC_PackConstrState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(SC_ConstraintStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SC_PackConstrState'
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call RegPack(Buf, InData%Dummy)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPack(RF, InData%Dummy)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SC_UnPackConstrState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine SC_UnPackConstrState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(SC_ConstraintStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_UnPackConstrState'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%Dummy)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%Dummy); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%Dummy = OutData%Dummy
 end subroutine
 
@@ -1124,26 +978,25 @@ subroutine SC_DestroyMisc(MiscData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine SC_PackMisc(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine SC_PackMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(SC_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SC_PackMisc'
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call RegPack(Buf, InData%Dummy)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPack(RF, InData%Dummy)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SC_UnPackMisc(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine SC_UnPackMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(SC_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_UnPackMisc'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%Dummy)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%Dummy); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%Dummy = OutData%Dummy
 end subroutine
 
@@ -1205,26 +1058,25 @@ subroutine SC_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine SC_PackOtherState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine SC_PackOtherState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(SC_OtherStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SC_PackOtherState'
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call RegPack(Buf, InData%Dummy)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPack(RF, InData%Dummy)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SC_UnPackOtherState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine SC_UnPackOtherState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(SC_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_UnPackOtherState'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%Dummy)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%Dummy); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%Dummy = OutData%Dummy
 end subroutine
 
@@ -1328,37 +1180,23 @@ subroutine SC_DestroyInput(InputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine SC_PackInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine SC_PackInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(SC_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SC_PackInput'
    logical         :: PtrInIndex
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call RegPack(Buf, associated(InData%toSCglob))
-   if (associated(InData%toSCglob)) then
-      call RegPackBounds(Buf, 1, lbound(InData%toSCglob, kind=B8Ki), ubound(InData%toSCglob, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%toSCglob), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%toSCglob)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%toSC))
-   if (associated(InData%toSC)) then
-      call RegPackBounds(Buf, 1, lbound(InData%toSC, kind=B8Ki), ubound(InData%toSC, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%toSC), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%toSC)
-      end if
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPackPtr(RF, InData%toSCglob)
+   call RegPackPtr(RF, InData%toSC)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SC_UnPackInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine SC_UnPackInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(SC_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_UnPackInput'
    integer(B8Ki)   :: LB(1), UB(1)
@@ -1366,59 +1204,9 @@ subroutine SC_UnPackInput(Buf, OutData)
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
-   if (Buf%ErrStat /= ErrID_None) return
-   if (associated(OutData%toSCglob)) deallocate(OutData%toSCglob)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%toSCglob, UB(1:1)-LB(1:1))
-         OutData%toSCglob(LB(1):) => OutData%toSCglob
-      else
-         allocate(OutData%toSCglob(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%toSCglob.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%toSCglob)
-         OutData%C_obj%toSCglob_Len = size(OutData%toSCglob)
-         if (OutData%C_obj%toSCglob_Len > 0) OutData%C_obj%toSCglob = c_loc(OutData%toSCglob(LB(1)))
-         call RegUnpack(Buf, OutData%toSCglob)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%toSCglob => null()
-   end if
-   if (associated(OutData%toSC)) deallocate(OutData%toSC)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%toSC, UB(1:1)-LB(1:1))
-         OutData%toSC(LB(1):) => OutData%toSC
-      else
-         allocate(OutData%toSC(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%toSC.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%toSC)
-         OutData%C_obj%toSC_Len = size(OutData%toSC)
-         if (OutData%C_obj%toSC_Len > 0) OutData%C_obj%toSC = c_loc(OutData%toSC(LB(1)))
-         call RegUnpack(Buf, OutData%toSC)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%toSC => null()
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackPtr(RF, OutData%toSCglob); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%toSC); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 SUBROUTINE SC_C2Fary_CopyInput(InputData, ErrStat, ErrMsg, SkipPointers)
@@ -1561,37 +1349,23 @@ subroutine SC_DestroyOutput(OutputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine SC_PackOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine SC_PackOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(SC_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SC_PackOutput'
    logical         :: PtrInIndex
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call RegPack(Buf, associated(InData%fromSCglob))
-   if (associated(InData%fromSCglob)) then
-      call RegPackBounds(Buf, 1, lbound(InData%fromSCglob, kind=B8Ki), ubound(InData%fromSCglob, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%fromSCglob), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%fromSCglob)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%fromSC))
-   if (associated(InData%fromSC)) then
-      call RegPackBounds(Buf, 1, lbound(InData%fromSC, kind=B8Ki), ubound(InData%fromSC, kind=B8Ki))
-      call RegPackPointer(Buf, c_loc(InData%fromSC), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%fromSC)
-      end if
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPackPtr(RF, InData%fromSCglob)
+   call RegPackPtr(RF, InData%fromSC)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SC_UnPackOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine SC_UnPackOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(SC_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_UnPackOutput'
    integer(B8Ki)   :: LB(1), UB(1)
@@ -1599,59 +1373,9 @@ subroutine SC_UnPackOutput(Buf, OutData)
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
-   if (Buf%ErrStat /= ErrID_None) return
-   if (associated(OutData%fromSCglob)) deallocate(OutData%fromSCglob)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%fromSCglob, UB(1:1)-LB(1:1))
-         OutData%fromSCglob(LB(1):) => OutData%fromSCglob
-      else
-         allocate(OutData%fromSCglob(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%fromSCglob.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%fromSCglob)
-         OutData%C_obj%fromSCglob_Len = size(OutData%fromSCglob)
-         if (OutData%C_obj%fromSCglob_Len > 0) OutData%C_obj%fromSCglob = c_loc(OutData%fromSCglob(LB(1)))
-         call RegUnpack(Buf, OutData%fromSCglob)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%fromSCglob => null()
-   end if
-   if (associated(OutData%fromSC)) deallocate(OutData%fromSC)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%fromSC, UB(1:1)-LB(1:1))
-         OutData%fromSC(LB(1):) => OutData%fromSC
-      else
-         allocate(OutData%fromSC(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%fromSC.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%fromSC)
-         OutData%C_obj%fromSC_Len = size(OutData%fromSC)
-         if (OutData%C_obj%fromSC_Len > 0) OutData%C_obj%fromSC = c_loc(OutData%fromSC(LB(1)))
-         call RegUnpack(Buf, OutData%fromSC)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%fromSC => null()
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackPtr(RF, OutData%fromSCglob); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%fromSC); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 SUBROUTINE SC_C2Fary_CopyOutput(OutputData, ErrStat, ErrMsg, SkipPointers)

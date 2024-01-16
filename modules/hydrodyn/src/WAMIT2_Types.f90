@@ -187,58 +187,42 @@ subroutine WAMIT2_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    nullify(InitInputData%WaveField)
 end subroutine
 
-subroutine WAMIT2_PackInitInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine WAMIT2_PackInitInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(WAMIT2_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'WAMIT2_PackInitInput'
    logical         :: PtrInIndex
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%HasWAMIT)
-   call RegPack(Buf, InData%WAMITFile)
-   call RegPack(Buf, InData%NBody)
-   call RegPack(Buf, InData%NBodyMod)
-   call RegPack(Buf, allocated(InData%PtfmRefxt))
-   if (allocated(InData%PtfmRefxt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefxt, kind=B8Ki), ubound(InData%PtfmRefxt, kind=B8Ki))
-      call RegPack(Buf, InData%PtfmRefxt)
-   end if
-   call RegPack(Buf, allocated(InData%PtfmRefyt))
-   if (allocated(InData%PtfmRefyt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefyt, kind=B8Ki), ubound(InData%PtfmRefyt, kind=B8Ki))
-      call RegPack(Buf, InData%PtfmRefyt)
-   end if
-   call RegPack(Buf, allocated(InData%PtfmRefzt))
-   if (allocated(InData%PtfmRefzt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefzt, kind=B8Ki), ubound(InData%PtfmRefzt, kind=B8Ki))
-      call RegPack(Buf, InData%PtfmRefzt)
-   end if
-   call RegPack(Buf, allocated(InData%PtfmRefztRot))
-   if (allocated(InData%PtfmRefztRot)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefztRot, kind=B8Ki), ubound(InData%PtfmRefztRot, kind=B8Ki))
-      call RegPack(Buf, InData%PtfmRefztRot)
-   end if
-   call RegPack(Buf, InData%WAMITULEN)
-   call RegPack(Buf, InData%Gravity)
-   call RegPack(Buf, associated(InData%WaveField))
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%HasWAMIT)
+   call RegPack(RF, InData%WAMITFile)
+   call RegPack(RF, InData%NBody)
+   call RegPack(RF, InData%NBodyMod)
+   call RegPackAlloc(RF, InData%PtfmRefxt)
+   call RegPackAlloc(RF, InData%PtfmRefyt)
+   call RegPackAlloc(RF, InData%PtfmRefzt)
+   call RegPackAlloc(RF, InData%PtfmRefztRot)
+   call RegPack(RF, InData%WAMITULEN)
+   call RegPack(RF, InData%Gravity)
+   call RegPack(RF, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
-      call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
+      call RegPackPointer(RF, c_loc(InData%WaveField), PtrInIndex)
       if (.not. PtrInIndex) then
-         call SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, InData%WaveField) 
+         call SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, InData%WaveField) 
       end if
    end if
-   call RegPack(Buf, InData%MnDrift)
-   call RegPack(Buf, InData%NewmanApp)
-   call RegPack(Buf, InData%DiffQTF)
-   call RegPack(Buf, InData%SumQTF)
-   call RegPack(Buf, InData%MnDriftF)
-   call RegPack(Buf, InData%NewmanAppF)
-   call RegPack(Buf, InData%DiffQTFF)
-   call RegPack(Buf, InData%SumQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPack(RF, InData%MnDrift)
+   call RegPack(RF, InData%NewmanApp)
+   call RegPack(RF, InData%DiffQTF)
+   call RegPack(RF, InData%SumQTF)
+   call RegPack(RF, InData%MnDriftF)
+   call RegPack(RF, InData%NewmanAppF)
+   call RegPack(RF, InData%DiffQTFF)
+   call RegPack(RF, InData%SumQTFF)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine WAMIT2_UnPackInitInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine WAMIT2_UnPackInitInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(WAMIT2_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT2_UnPackInitInput'
    integer(B8Ki)   :: LB(1), UB(1)
@@ -246,111 +230,43 @@ subroutine WAMIT2_UnPackInitInput(Buf, OutData)
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%HasWAMIT)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WAMITFile)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NBody)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NBodyMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%PtfmRefxt)) deallocate(OutData%PtfmRefxt)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%PtfmRefxt(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmRefxt.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%PtfmRefxt)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%PtfmRefyt)) deallocate(OutData%PtfmRefyt)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%PtfmRefyt(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmRefyt.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%PtfmRefyt)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%PtfmRefzt)) deallocate(OutData%PtfmRefzt)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%PtfmRefzt(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmRefzt.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%PtfmRefzt)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%PtfmRefztRot)) deallocate(OutData%PtfmRefztRot)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%PtfmRefztRot(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmRefztRot.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%PtfmRefztRot)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%WAMITULEN)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Gravity)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%HasWAMIT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAMITFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NBody); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NBodyMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PtfmRefxt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PtfmRefyt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PtfmRefzt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PtfmRefztRot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAMITULEN); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
       if (c_associated(Ptr)) then
          call c_f_pointer(Ptr, OutData%WaveField)
       else
          allocate(OutData%WaveField,stat=stat)
          if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveField.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveField.', RF%ErrStat, RF%ErrMsg, RoutineName)
             return
          end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%WaveField)
-         call SeaSt_WaveField_UnpackSeaSt_WaveFieldType(Buf, OutData%WaveField) ! WaveField 
+         RF%Pointers(PtrIdx) = c_loc(OutData%WaveField)
+         call SeaSt_WaveField_UnpackSeaSt_WaveFieldType(RF, OutData%WaveField) ! WaveField 
       end if
    else
       OutData%WaveField => null()
    end if
-   call RegUnpack(Buf, OutData%MnDrift)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NewmanApp)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%DiffQTF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%SumQTF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%MnDriftF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NewmanAppF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%DiffQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%SumQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%MnDrift); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NewmanApp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DiffQTF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SumQTF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MnDriftF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NewmanAppF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DiffQTFF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SumQTFF); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WAMIT2_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
@@ -405,60 +321,26 @@ subroutine WAMIT2_DestroyMisc(MiscData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine WAMIT2_PackMisc(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine WAMIT2_PackMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(WAMIT2_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'WAMIT2_PackMisc'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%LastIndWave))
-   if (allocated(InData%LastIndWave)) then
-      call RegPackBounds(Buf, 1, lbound(InData%LastIndWave, kind=B8Ki), ubound(InData%LastIndWave, kind=B8Ki))
-      call RegPack(Buf, InData%LastIndWave)
-   end if
-   call RegPack(Buf, allocated(InData%F_Waves2))
-   if (allocated(InData%F_Waves2)) then
-      call RegPackBounds(Buf, 1, lbound(InData%F_Waves2, kind=B8Ki), ubound(InData%F_Waves2, kind=B8Ki))
-      call RegPack(Buf, InData%F_Waves2)
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%LastIndWave)
+   call RegPackAlloc(RF, InData%F_Waves2)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine WAMIT2_UnPackMisc(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine WAMIT2_UnPackMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(WAMIT2_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT2_UnPackMisc'
    integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   if (allocated(OutData%LastIndWave)) deallocate(OutData%LastIndWave)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%LastIndWave(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%LastIndWave.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%LastIndWave)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%F_Waves2)) deallocate(OutData%F_Waves2)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%F_Waves2(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%F_Waves2.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%F_Waves2)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%LastIndWave); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%F_Waves2); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WAMIT2_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -508,71 +390,44 @@ subroutine WAMIT2_DestroyParam(ParamData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine WAMIT2_PackParam(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine WAMIT2_PackParam(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(WAMIT2_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'WAMIT2_PackParam'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%NBody)
-   call RegPack(Buf, InData%NBodyMod)
-   call RegPack(Buf, allocated(InData%WaveExctn2))
-   if (allocated(InData%WaveExctn2)) then
-      call RegPackBounds(Buf, 2, lbound(InData%WaveExctn2, kind=B8Ki), ubound(InData%WaveExctn2, kind=B8Ki))
-      call RegPack(Buf, InData%WaveExctn2)
-   end if
-   call RegPack(Buf, InData%MnDriftDims)
-   call RegPack(Buf, InData%NewmanAppDims)
-   call RegPack(Buf, InData%DiffQTFDims)
-   call RegPack(Buf, InData%SumQTFDims)
-   call RegPack(Buf, InData%MnDriftF)
-   call RegPack(Buf, InData%NewmanAppF)
-   call RegPack(Buf, InData%DiffQTFF)
-   call RegPack(Buf, InData%SumQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%NBody)
+   call RegPack(RF, InData%NBodyMod)
+   call RegPackAlloc(RF, InData%WaveExctn2)
+   call RegPack(RF, InData%MnDriftDims)
+   call RegPack(RF, InData%NewmanAppDims)
+   call RegPack(RF, InData%DiffQTFDims)
+   call RegPack(RF, InData%SumQTFDims)
+   call RegPack(RF, InData%MnDriftF)
+   call RegPack(RF, InData%NewmanAppF)
+   call RegPack(RF, InData%DiffQTFF)
+   call RegPack(RF, InData%SumQTFF)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine WAMIT2_UnPackParam(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine WAMIT2_UnPackParam(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(WAMIT2_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT2_UnPackParam'
    integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%NBody)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NBodyMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%WaveExctn2)) deallocate(OutData%WaveExctn2)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveExctn2(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveExctn2.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveExctn2)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%MnDriftDims)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NewmanAppDims)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%DiffQTFDims)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%SumQTFDims)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%MnDriftF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NewmanAppF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%DiffQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%SumQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%NBody); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NBodyMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveExctn2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MnDriftDims); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NewmanAppDims); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DiffQTFDims); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SumQTFDims); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MnDriftF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NewmanAppF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DiffQTFF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SumQTFF); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WAMIT2_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -604,21 +459,21 @@ subroutine WAMIT2_DestroyOutput(OutputData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine WAMIT2_PackOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine WAMIT2_PackOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(WAMIT2_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'WAMIT2_PackOutput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call MeshPack(Buf, InData%Mesh) 
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call MeshPack(RF, InData%Mesh) 
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine WAMIT2_UnPackOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine WAMIT2_UnPackOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(WAMIT2_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT2_UnPackOutput'
-   if (Buf%ErrStat /= ErrID_None) return
-   call MeshUnpack(Buf, OutData%Mesh) ! Mesh 
+   if (RF%ErrStat /= ErrID_None) return
+   call MeshUnpack(RF, OutData%Mesh) ! Mesh 
 end subroutine
 
 subroutine WAMIT2_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg)

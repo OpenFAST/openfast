@@ -210,200 +210,88 @@ subroutine Waves_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine Waves_PackInitInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine Waves_PackInitInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Waves_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Waves_PackInitInput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%InputFile)
-   call RegPack(Buf, InData%DirRoot)
-   call RegPack(Buf, InData%WvKinFile)
-   call RegPack(Buf, InData%Gravity)
-   call RegPack(Buf, InData%nGrid)
-   call RegPack(Buf, InData%WaveNDir)
-   call RegPack(Buf, InData%WaveDirSpread)
-   call RegPack(Buf, InData%WaveDirRange)
-   call RegPack(Buf, InData%WaveDT)
-   call RegPack(Buf, InData%WaveHs)
-   call RegPack(Buf, InData%WaveNDAmp)
-   call RegPack(Buf, InData%WavePhase)
-   call RegPack(Buf, InData%WavePkShp)
-   call RegPack(Buf, InData%WaveTMax)
-   call RegPack(Buf, InData%WaveTp)
-   call RegPack(Buf, InData%NWaveElevGrid)
-   call RegPack(Buf, InData%NWaveKinGrid)
-   call RegPack(Buf, allocated(InData%WaveKinGridxi))
-   if (allocated(InData%WaveKinGridxi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridxi, kind=B8Ki), ubound(InData%WaveKinGridxi, kind=B8Ki))
-      call RegPack(Buf, InData%WaveKinGridxi)
-   end if
-   call RegPack(Buf, allocated(InData%WaveKinGridyi))
-   if (allocated(InData%WaveKinGridyi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridyi, kind=B8Ki), ubound(InData%WaveKinGridyi, kind=B8Ki))
-      call RegPack(Buf, InData%WaveKinGridyi)
-   end if
-   call RegPack(Buf, allocated(InData%WaveKinGridzi))
-   if (allocated(InData%WaveKinGridzi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridzi, kind=B8Ki), ubound(InData%WaveKinGridzi, kind=B8Ki))
-      call RegPack(Buf, InData%WaveKinGridzi)
-   end if
-   call RegPack(Buf, allocated(InData%CurrVxi))
-   if (allocated(InData%CurrVxi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%CurrVxi, kind=B8Ki), ubound(InData%CurrVxi, kind=B8Ki))
-      call RegPack(Buf, InData%CurrVxi)
-   end if
-   call RegPack(Buf, allocated(InData%CurrVyi))
-   if (allocated(InData%CurrVyi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%CurrVyi, kind=B8Ki), ubound(InData%CurrVyi, kind=B8Ki))
-      call RegPack(Buf, InData%CurrVyi)
-   end if
-   call RegPack(Buf, InData%PCurrVxiPz0)
-   call RegPack(Buf, InData%PCurrVyiPz0)
-   call NWTC_Library_PackNWTC_RandomNumber_ParameterType(Buf, InData%RNG) 
-   call RegPack(Buf, InData%ConstWaveMod)
-   call RegPack(Buf, InData%CrestHmax)
-   call RegPack(Buf, InData%CrestTime)
-   call RegPack(Buf, InData%CrestXi)
-   call RegPack(Buf, InData%CrestYi)
-   call RegPack(Buf, InData%WaveFieldMod)
-   call RegPack(Buf, InData%PtfmLocationX)
-   call RegPack(Buf, InData%PtfmLocationY)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%InputFile)
+   call RegPack(RF, InData%DirRoot)
+   call RegPack(RF, InData%WvKinFile)
+   call RegPack(RF, InData%Gravity)
+   call RegPack(RF, InData%nGrid)
+   call RegPack(RF, InData%WaveNDir)
+   call RegPack(RF, InData%WaveDirSpread)
+   call RegPack(RF, InData%WaveDirRange)
+   call RegPack(RF, InData%WaveDT)
+   call RegPack(RF, InData%WaveHs)
+   call RegPack(RF, InData%WaveNDAmp)
+   call RegPack(RF, InData%WavePhase)
+   call RegPack(RF, InData%WavePkShp)
+   call RegPack(RF, InData%WaveTMax)
+   call RegPack(RF, InData%WaveTp)
+   call RegPack(RF, InData%NWaveElevGrid)
+   call RegPack(RF, InData%NWaveKinGrid)
+   call RegPackAlloc(RF, InData%WaveKinGridxi)
+   call RegPackAlloc(RF, InData%WaveKinGridyi)
+   call RegPackAlloc(RF, InData%WaveKinGridzi)
+   call RegPackAlloc(RF, InData%CurrVxi)
+   call RegPackAlloc(RF, InData%CurrVyi)
+   call RegPack(RF, InData%PCurrVxiPz0)
+   call RegPack(RF, InData%PCurrVyiPz0)
+   call NWTC_Library_PackNWTC_RandomNumber_ParameterType(RF, InData%RNG) 
+   call RegPack(RF, InData%ConstWaveMod)
+   call RegPack(RF, InData%CrestHmax)
+   call RegPack(RF, InData%CrestTime)
+   call RegPack(RF, InData%CrestXi)
+   call RegPack(RF, InData%CrestYi)
+   call RegPack(RF, InData%WaveFieldMod)
+   call RegPack(RF, InData%PtfmLocationX)
+   call RegPack(RF, InData%PtfmLocationY)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine Waves_UnPackInitInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine Waves_UnPackInitInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Waves_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Waves_UnPackInitInput'
    integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%InputFile)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%DirRoot)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvKinFile)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Gravity)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%nGrid)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveNDir)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDirSpread)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDirRange)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDT)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveHs)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveNDAmp)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WavePhase)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WavePkShp)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveTMax)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveTp)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NWaveElevGrid)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NWaveKinGrid)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%WaveKinGridxi)) deallocate(OutData%WaveKinGridxi)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveKinGridxi(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveKinGridxi.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveKinGridxi)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%WaveKinGridyi)) deallocate(OutData%WaveKinGridyi)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveKinGridyi(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveKinGridyi.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveKinGridyi)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%WaveKinGridzi)) deallocate(OutData%WaveKinGridzi)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveKinGridzi(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveKinGridzi.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveKinGridzi)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%CurrVxi)) deallocate(OutData%CurrVxi)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%CurrVxi(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%CurrVxi.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%CurrVxi)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%CurrVyi)) deallocate(OutData%CurrVyi)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%CurrVyi(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%CurrVyi.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%CurrVyi)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%PCurrVxiPz0)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%PCurrVyiPz0)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call NWTC_Library_UnpackNWTC_RandomNumber_ParameterType(Buf, OutData%RNG) ! RNG 
-   call RegUnpack(Buf, OutData%ConstWaveMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%CrestHmax)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%CrestTime)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%CrestXi)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%CrestYi)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveFieldMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%PtfmLocationX)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%PtfmLocationY)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%InputFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DirRoot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WvKinFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nGrid); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WaveNDir); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WaveDirSpread); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WaveDirRange); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WaveDT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WaveHs); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WaveNDAmp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WavePhase); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WavePkShp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WaveTMax); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WaveTp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NWaveElevGrid); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NWaveKinGrid); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveKinGridxi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveKinGridyi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveKinGridzi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%CurrVxi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%CurrVyi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PCurrVxiPz0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PCurrVyiPz0); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackNWTC_RandomNumber_ParameterType(RF, OutData%RNG) ! RNG 
+   call RegUnpack(RF, OutData%ConstWaveMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CrestHmax); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CrestTime); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CrestXi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CrestYi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WaveFieldMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmLocationX); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmLocationY); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Waves_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -428,25 +316,23 @@ subroutine Waves_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine Waves_PackInitOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine Waves_PackInitOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Waves_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Waves_PackInitOutput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%WaveNDir)
-   call RegPack(Buf, InData%WaveTMax)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%WaveNDir)
+   call RegPack(RF, InData%WaveTMax)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine Waves_UnPackInitOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine Waves_UnPackInitOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Waves_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Waves_UnPackInitOutput'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%WaveNDir)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveTMax)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%WaveNDir); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WaveTMax); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 END MODULE Waves_Types
 !ENDOFREGISTRYGENERATEDFILE

@@ -24,10 +24,10 @@ typedef     ^             ^                 CHARACTER(ChanLen)       Name   - - 
 typedef     ^             ^                 CHARACTER(ChanLen)       Units  - - - "Units this channel is specified in"
 typedef     ^             ^                 IntKi                    SignM  - - - "Multiplier for output channel; usually -1 (minus) or 0 (invalid channel)"
 
-typedef   NWTC_Library  FileInfoType        IntKi                          NumLines
-typedef     ^             ^                 IntKi                          NumFiles
-typedef     ^             ^                 IntKi                          FileLine  {:}
-typedef     ^             ^                 IntKi                          FileIndx  {:}
+typedef   NWTC_Library  FileInfoType        IntKi                    NumLines
+typedef     ^             ^                 IntKi                    NumFiles
+typedef     ^             ^                 IntKi                    FileLine  {:}
+typedef     ^             ^                 IntKi                    FileIndx  {:}
 typedef     ^             ^                 CHARACTER(MaxFileInfoLineLen)  FileList  {:}
 typedef     ^             ^                 CHARACTER(MaxFileInfoLineLen)  Lines     {:}
 
@@ -35,9 +35,93 @@ typedef   NWTC_Library  Quaternion          ReKi                     q0
 typedef     ^             ^                 ReKi                     v  {3}
 
 typedef   NWTC_Library  NWTC_RandomNumber_ParameterType   IntKi                pRNG
-typedef     ^             ^                               IntKi                RandSeed          {3}
-typedef     ^             ^                               IntKi                RandSeedAry       {:}
-typedef     ^             ^                        CHARACTER(6)                RNG_type
+typedef     ^             ^                     IntKi                RandSeed          {3}
+typedef     ^             ^                     IntKi                RandSeedAry       {:}
+typedef     ^             ^              CHARACTER(6)                RNG_type
+
+#-------------------------------------------------------------------------------
+# Module Variables
+#-------------------------------------------------------------------------------
+
+param       ^       -           IntKi           VarNameLen          -   64  -   ""  -
+
+param       ^       -           IntKi           VF_Force            -   1   -   ""  -
+param       ^       -           IntKi           VF_Moment           -   2   -   ""  -
+param       ^       -           IntKi           VF_Orientation      -   3   -   ""  -
+param       ^       -           IntKi           VF_TransDisp        -   4   -   ""  -
+param       ^       -           IntKi           VF_AngularDisp      -   5   -   ""  -
+param       ^       -           IntKi           VF_TransVel         -   6   -   ""  -
+param       ^       -           IntKi           VF_AngularVel       -   7   -   ""  -
+param       ^       -           IntKi           VF_TransAcc         -   8   -   ""  -
+param       ^       -           IntKi           VF_AngularAcc       -   9   -   ""  -
+param       ^       -           IntKi           VF_Scalar           -  10   -   ""  -
+
+param       ^       -           IntKi           VF_None             -   0   -   "Variable with no flags"  -
+param       ^       -           IntKi           VF_Mesh             -   1   -   "Variable contained in mesh"  -
+param       ^       -           IntKi           VF_Line             -   2   -   "Variable is for a line mesh"  -
+param       ^       -           IntKi           VF_RotFrame         -   4   -   "Variable in rotating frame"  -
+param       ^       -           IntKi           VF_Ext              -   8   -   "Variable for extended linearization"  -
+param       ^       -           IntKi           VF_Any              - 4095  -   "Enable all flags (used for filtering)"  -
+
+param       ^       -           IntKi           VC_None             -   0   -   ""  -
+param       ^       -           IntKi           VC_Tight            -   1   -   ""  -
+param       ^       -           IntKi           VC_Option1          -   2   -   ""  -
+param       ^       -           IntKi           VC_Option2          -   3   -   ""  -
+
+typedef     ^       ModVarType  character(VarNameLen)   Name        -   -   -   ""  -
+typedef     ^       ^           IntKi           Field               -   0   -   ""  -
+typedef     ^       ^           IntKi           Nodes               -   1   -   ""  -
+typedef     ^       ^           IntKi           Num                 -   1   -   ""  -
+typedef     ^       ^           IntKi           Flags               -   0   -   ""  -
+typedef     ^       ^           IntKi           DerivOrder          -   0   -   ""  -
+typedef     ^       ^           IntKi           iLoc                :   -   -   "indices in local arrays"  -
+typedef     ^       ^           IntKi           iSol                :   -   -   "indices in solver arrays"  -
+typedef     ^       ^           IntKi           iLin                :   -   -   "indices in linearization arrays"  -
+typedef     ^       ^           IntKi           iq                  :   -   -   "row index in solver q matrix"  -
+typedef     ^       ^           IntKi           iUsr                2   -   -   "first user defined index for variable, can be used a lower/upper bounds"  -
+typedef     ^       ^           IntKi           jUsr                -   0   -   "second user defined index for variable"  -
+typedef     ^       ^           IntKi           MeshID              -   0   -   "Mesh identification number"  -
+typedef     ^       ^           logical         Solve               -   F   -   "flag indicating that variable is used by solver"  -
+typedef     ^       ^           R8Ki            Perturb             -   0   -   "perturbation"  -
+typedef     ^       ^           character(LinChanLen)   LinNames    :   -   -   ""  -
+
+typedef     ^       ModVarsType IntKi           ModNum              -   0   -   ""  -
+typedef     ^       ^           character(6)    ModAbbr             -   -   -   ""  -
+typedef     ^       ^           ModVarType      x                   :   -   -   "Module state variable array"  -
+typedef     ^       ^           ModVarType      u                   :   -   -   "Module input variable array"  -
+typedef     ^       ^           ModVarType      y                   :   -   -   "Module output variable array"  -
+typedef     ^       ^           IntKi           Nx                  -   -   -   ""  -
+typedef     ^       ^           IntKi           Nu                  -   -   -   ""  -
+typedef     ^       ^           IntKi           Ny                  -   -   -   ""  -
+
+typedef     ^       ModValsType R8Ki            x                   :   -   -   ""  -
+typedef     ^       ^           R8Ki            dxdt                :   -   -   ""  -
+typedef     ^       ^           R8Ki            u                   :   -   -   ""  -
+typedef     ^       ^           R8Ki            y                   :   -   -   ""  -
+typedef     ^       ^           R8Ki            u_perturb           :   -   -   "input perturbation array"  -
+typedef     ^       ^           R8Ki            x_perturb           :   -   -   ""  -
+typedef     ^       ^           R8Ki            xp                  :   -   -   ""  -
+typedef     ^       ^           R8Ki            xn                  :   -   -   ""  -
+typedef     ^       ^           R8Ki            yp                  :   -   -   ""  -
+typedef     ^       ^           R8Ki            yn                  :   -   -   ""  -
+typedef     ^       ^           R8Ki            dYdx                ::  -   -   ""  -
+typedef     ^       ^           R8Ki            dXdx                ::  -   -   ""  -
+typedef     ^       ^           R8Ki            dYdu                ::  -   -   ""  -
+typedef     ^       ^           R8Ki            dXdu                ::  -   -   ""  -
+
+typedef     ^       ModDataType IntKi           Idx                 -   0   -   "Module index in array of modules"  -
+typedef     ^       ^           IntKi           ID                  -   0   -   "Module identification number"  -
+typedef     ^       ^           character(ChanLen) Abbr             -   -   -   "Module name abbreviation"  -
+typedef     ^       ^           IntKi           Ins                 -   0   -   "Module instance number"  -
+typedef     ^       ^           logical         IsTC                -   F   -   "Flag indicating module is part of tight coupling" -
+typedef     ^       ^           R8Ki            DT                  -   0   -   "Module time step"  -
+typedef     ^       ^           IntKi           SubSteps            -   0   -   "Module number of substeps per solver time step"  -
+typedef     ^       ^           IntKi           ixs                 ::  -   -   "index array mapping local x vector to global x vector" -
+typedef     ^       ^           IntKi           ius                 ::  -   -   "index array mapping local u vector to global u vector" -
+typedef     ^       ^           IntKi           iys                 ::  -   -   "index array mapping local y vector to global y vector" -
+typedef     ^       ^           ModVarsType    *Vars                -   -   -   "Pointer to module variables type"  -
+typedef     ^       ^           IntKi           SrcMaps             :   -   -   "Indices of mappings where module is the source"
+typedef     ^       ^           IntKi           DstMaps             :   -   -   "Indices of mappings where module is the destination"
 
 # This file defines types that may be  used from the NWTC_Library
 # include this into a component registry file if you wish to use these types
@@ -76,6 +160,6 @@ typedef     ^               ^               R8Ki                     DisplacedPo
 typedef     ^               ^               R8Ki                     LoadLn2_A_Mat     {:}{:}    - - "The 3-components of the forces for each node of an element in the point-to-line load mapping (for each element)"
 typedef     ^               ^               R8Ki                     LoadLn2_F         {:}{:}    - - "The 6-by-6 matrix that makes up the diagonal of the [A 0; B A] matrix in the point-to-line load mapping"
 typedef     ^               ^               R8Ki                     LoadLn2_M         {:}{:}    - - "The 3-components of the moments for each node of an element in the point-to-line load mapping (for each element)"
-typedef     ^               ^               MeshMapLinearizationType dM
-#typedef    ^               ^               MeshType                 Lumped_Points_Dest -        - - "temporary mesh for debugging the lumped values in the line2-to-line2"
+typedef     ^             ^                 MeshMapLinearizationType dM
+#typedef     ^               ^               MeshType                 Lumped_Points_Dest -        - - "temporary mesh for debugging the lumped values in the line2-to-line2"
 
