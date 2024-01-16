@@ -1278,8 +1278,8 @@ contains
       ff  => p%IfW(nt)%FlowField 
       wfi => IfW_InitOut%WindFileInfo
 
-      tmpMsg = NewLine//NewLine//'Turbine '//trim(Num2LStr(nt))//' -- Mod_AmbWind=3 requires the InflowWind high-res grid '// &
-               'is entirely contained within the high-res flow-field from InflowWind. '//NewLine//' Try setting:'//NewLine
+      tmpMsg = NewLine//NewLine//'Turbine '//trim(Num2LStr(nt))//' -- Mod_AmbWind=3 requires the FAST.Farm high-res grid '// &
+               'is entirely contained within the flow-field from InflowWind. '//NewLine//' Try setting:'//NewLine
 
       ! check Z limits, if ZRange is limited (we don't care what kind of wind)
       if (wfi%ZRange_Limited) then
@@ -1299,17 +1299,17 @@ contains
                ErrMsg2=trim(ErrMsg2)//NewLine//'    dZ_High = '//trim(Num2LStr(Dxyz))
                call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
             endif
+            ErrMsg2=NewLine//' for Turbine '//trim(Num2LStr(nt))
          endif
       endif
 
-      ! check X/Y limits if range limited.  Depends on orientation of winds.
+      ! check FlowField Y limits if range limited.  Depends on orientation of winds.
       if (wfi%YRange_Limited) then
-         ! flow field limits (with grid tolerance)
-         ff_lim(1) = p%WT_Position(2,nt) + wfi%YRange(1) - GridTol
-         ff_lim(2) = p%WT_Position(2,nt) + wfi%YRange(2) + GridTol
-
          ! wind X aligned with high-res X
-         if (.not. ff%RotateWindBox) then
+         if ((.not. ff%RotateWindBox) .or. EqualRealNos(abs(ff%PropagationDir),Pi)) then
+            ! flow field limits (with grid tolerance)
+            ff_lim(1) = p%WT_Position(2,nt) + wfi%YRange(1) - GridTol
+            ff_lim(2) = p%WT_Position(2,nt) + wfi%YRange(2) + GridTol
             ! high-res Y limits
             hr_lim(1) = p%Y0_High(nt)
             hr_lim(2) = p%Y0_High(nt) + (real(p%nY_high,ReKi)-1.0_ReKi)*p%dY_high(nt)
@@ -1323,10 +1323,14 @@ contains
                   ErrMsg2=trim(ErrMsg2)//NewLine//'    dY_High = '//trim(Num2LStr(Dxyz))
                   call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
                endif
+               ErrMsg2=NewLine//' for Turbine '//trim(Num2LStr(nt))
             endif
 
          ! wind X aligned with high-res Y
          elseif (EqualRealNos(abs(ff%PropagationDir),PiBy2)) then
+            ! flow field limits (with grid tolerance)
+            ff_lim(1) = p%WT_Position(1,nt) + wfi%YRange(1) - GridTol
+            ff_lim(2) = p%WT_Position(1,nt) + wfi%YRange(2) + GridTol
             ! high-res X limits
             hr_lim(1) = p%X0_High(nt)
             hr_lim(2) = p%X0_High(nt) + (real(p%nX_high,ReKi)-1.0_ReKi)*p%dX_high(nt)
@@ -1340,6 +1344,7 @@ contains
                   ErrMsg2=trim(ErrMsg2)//NewLine//'    dX_High = '//trim(Num2LStr(Dxyz))
                   call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
                endif
+               ErrMsg2=NewLine//' for Turbine '//trim(Num2LStr(nt))
             endif
          elseif (.not. EqualRealNos(ff%PropagationDir,0.0_ReKi))  then        ! wind not aligned with X or Y.  This is not allowed at present
             ErrStat2 = ErrID_Fatal
