@@ -13,7 +13,7 @@ Options:
     -h                this summary
     -I <dir>          look for usefrom files in directory "dir"
     -O <dir>          generate types files in directory "dir"
-    -inc              generate types file to be included in another file
+    -subs             generate only subroutines (to be included in another file)
     -noextrap         do not generate ModName_Input_ExtrapInterp or ModName_Output_ExtrapInterp routines
     -D<SYM>           define symbol for conditional evaluation inside registry file
     -ccode            generate additional code for interfacing with C/C++
