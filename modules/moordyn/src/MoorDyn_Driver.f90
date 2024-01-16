@@ -132,7 +132,7 @@ PROGRAM MoorDyn_Driver
    IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
 
       ! Display the copyright notice
-   CALL DispCopyrightLicense( version%Name, 'Copyright (C) 2021 NREL, 2019 Matt Hall' )
+   CALL DispCopyrightLicense( version%Name, 'Copyright (C) 2024 NREL, 2019 Matt Hall' )
       ! Obtain OpenFAST git commit hash
    git_commit = QueryGitVersion()
       ! Tell our users what they're running
@@ -144,7 +144,7 @@ PROGRAM MoorDyn_Driver
    CALL CPU_TIME ( ProgStrtCPU )                                    ! Initial time (this zeros the start time when used as a MATLAB function)
    
 
-   CALL WrScr( ' MD Driver updated 2022-01-12')
+   CALL WrScr( ' MD Driver updated 2024-01-16')
 
    ! Parse the driver input file and run the simulation based on that file
    CALL get_command_argument(1, drvrFilename)

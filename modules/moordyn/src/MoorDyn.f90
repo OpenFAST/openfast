@@ -34,7 +34,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v2.0.0', '2023-09-18' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v2.2.2', '2024-01-16' )
 
    INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
@@ -163,7 +163,7 @@ CONTAINS
       InitOut%Ver = MD_ProgDesc
 
       CALL WrScr('   This is MoorDyn v2, with significant input file changes from v1.')
-      CALL WrScr('   Copyright: (C) 2023 National Renewable Energy Laboratory, (C) 2019 Matt Hall')
+      CALL WrScr('   Copyright: (C) 2024 National Renewable Energy Laboratory, (C) 2019 Matt Hall')
 
 
       !---------------------------------------------------------------------------------------------
