@@ -440,7 +440,7 @@ struct Registry
     std::map<std::string, std::shared_ptr<DataType>, ci_less> data_types;
     bool gen_c_code = false;
     bool no_extrap_interp = false;
-    bool gen_subs = false;
+    bool gen_inc_subs = false;
 
     Registry()
     {

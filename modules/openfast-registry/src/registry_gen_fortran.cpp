@@ -63,9 +63,9 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
 {
     // Create file name and path
     auto file_name = mod.name + "_Types.f90";
-    if (this->gen_subs)
+    if (this->gen_inc_subs)
     {
-        file_name = mod.name + "_Subs.f90";
+        file_name = mod.name + "_IncSubs.f90";
     }
     auto file_path = out_dir + "/" + file_name;
     std::cerr << "generating " << file_name << std::endl;
@@ -81,7 +81,7 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
 
     // If flag set to generate subroutines only (e.g. for inclusing in ModMesh_Mappings.f90)
     // write header, subs, and footer to file, then return
-    if (this->gen_subs)
+    if (this->gen_inc_subs)
     {
         w << std::regex_replace("!STARTOFREGISTRYGENERATEDFILE 'ModuleName_Subs.f90'\n", std::regex("ModuleName"), mod.name);
         w << "!\n! WARNING This file is generated automatically by the FAST registry.\n";
