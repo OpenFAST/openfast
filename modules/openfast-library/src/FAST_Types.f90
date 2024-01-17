@@ -92,8 +92,9 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(1:3,1:8)  :: NacelleBox = 0.0_R4Ki      !< X-Y-Z locations of 8 points that define the nacelle box, relative to the nacelle position [m]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: TowerRad      !< radius of each ED tower node [m]
     INTEGER(IntKi) , DIMENSION(1:2)  :: NWaveElevPts = 0_IntKi      !< number of points for wave elevation visualization [-]
-    REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevXY      !< X-Y locations for WaveElev output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number. [m,-]
-    REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElev      !< wave elevation at WaveElevXY; first dimension is time step; second dimension is point number [m,-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevVisX      !< X locations for WaveElev output (for visualization). [m,-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevVisY      !< Y locations for WaveElev output (for visualization). [m,-]
+    REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElevVisGrid      !< wave elevation at WaveElevVis{XY}; first dimension is time step; second/third dimensions are grid of elevations [m,-]
     TYPE(FAST_VTK_BLSurfaceType) , DIMENSION(:), ALLOCATABLE  :: BladeShape      !< AirfoilCoords for each blade [m]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: MorisonVisRad      !< radius of each Morison node [m]
   END TYPE FAST_VTK_SurfaceType
@@ -896,8 +897,8 @@ subroutine FAST_CopyVTK_SurfaceType(SrcVTK_SurfaceTypeData, DstVTK_SurfaceTypeDa
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FAST_CopyVTK_SurfaceType'
@@ -920,29 +921,41 @@ subroutine FAST_CopyVTK_SurfaceType(SrcVTK_SurfaceTypeData, DstVTK_SurfaceTypeDa
       DstVTK_SurfaceTypeData%TowerRad = SrcVTK_SurfaceTypeData%TowerRad
    end if
    DstVTK_SurfaceTypeData%NWaveElevPts = SrcVTK_SurfaceTypeData%NWaveElevPts
-   if (allocated(SrcVTK_SurfaceTypeData%WaveElevXY)) then
-      LB(1:2) = lbound(SrcVTK_SurfaceTypeData%WaveElevXY, kind=B8Ki)
-      UB(1:2) = ubound(SrcVTK_SurfaceTypeData%WaveElevXY, kind=B8Ki)
-      if (.not. allocated(DstVTK_SurfaceTypeData%WaveElevXY)) then
-         allocate(DstVTK_SurfaceTypeData%WaveElevXY(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcVTK_SurfaceTypeData%WaveElevVisX)) then
+      LB(1:1) = lbound(SrcVTK_SurfaceTypeData%WaveElevVisX, kind=B8Ki)
+      UB(1:1) = ubound(SrcVTK_SurfaceTypeData%WaveElevVisX, kind=B8Ki)
+      if (.not. allocated(DstVTK_SurfaceTypeData%WaveElevVisX)) then
+         allocate(DstVTK_SurfaceTypeData%WaveElevVisX(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstVTK_SurfaceTypeData%WaveElevXY.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstVTK_SurfaceTypeData%WaveElevVisX.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstVTK_SurfaceTypeData%WaveElevXY = SrcVTK_SurfaceTypeData%WaveElevXY
+      DstVTK_SurfaceTypeData%WaveElevVisX = SrcVTK_SurfaceTypeData%WaveElevVisX
    end if
-   if (allocated(SrcVTK_SurfaceTypeData%WaveElev)) then
-      LB(1:2) = lbound(SrcVTK_SurfaceTypeData%WaveElev, kind=B8Ki)
-      UB(1:2) = ubound(SrcVTK_SurfaceTypeData%WaveElev, kind=B8Ki)
-      if (.not. allocated(DstVTK_SurfaceTypeData%WaveElev)) then
-         allocate(DstVTK_SurfaceTypeData%WaveElev(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcVTK_SurfaceTypeData%WaveElevVisY)) then
+      LB(1:1) = lbound(SrcVTK_SurfaceTypeData%WaveElevVisY, kind=B8Ki)
+      UB(1:1) = ubound(SrcVTK_SurfaceTypeData%WaveElevVisY, kind=B8Ki)
+      if (.not. allocated(DstVTK_SurfaceTypeData%WaveElevVisY)) then
+         allocate(DstVTK_SurfaceTypeData%WaveElevVisY(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstVTK_SurfaceTypeData%WaveElev.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstVTK_SurfaceTypeData%WaveElevVisY.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstVTK_SurfaceTypeData%WaveElev = SrcVTK_SurfaceTypeData%WaveElev
+      DstVTK_SurfaceTypeData%WaveElevVisY = SrcVTK_SurfaceTypeData%WaveElevVisY
+   end if
+   if (allocated(SrcVTK_SurfaceTypeData%WaveElevVisGrid)) then
+      LB(1:3) = lbound(SrcVTK_SurfaceTypeData%WaveElevVisGrid, kind=B8Ki)
+      UB(1:3) = ubound(SrcVTK_SurfaceTypeData%WaveElevVisGrid, kind=B8Ki)
+      if (.not. allocated(DstVTK_SurfaceTypeData%WaveElevVisGrid)) then
+         allocate(DstVTK_SurfaceTypeData%WaveElevVisGrid(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstVTK_SurfaceTypeData%WaveElevVisGrid.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstVTK_SurfaceTypeData%WaveElevVisGrid = SrcVTK_SurfaceTypeData%WaveElevVisGrid
    end if
    if (allocated(SrcVTK_SurfaceTypeData%BladeShape)) then
       LB(1:1) = lbound(SrcVTK_SurfaceTypeData%BladeShape, kind=B8Ki)
@@ -978,8 +991,8 @@ subroutine FAST_DestroyVTK_SurfaceType(VTK_SurfaceTypeData, ErrStat, ErrMsg)
    type(FAST_VTK_SurfaceType), intent(inout) :: VTK_SurfaceTypeData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FAST_DestroyVTK_SurfaceType'
@@ -988,11 +1001,14 @@ subroutine FAST_DestroyVTK_SurfaceType(VTK_SurfaceTypeData, ErrStat, ErrMsg)
    if (allocated(VTK_SurfaceTypeData%TowerRad)) then
       deallocate(VTK_SurfaceTypeData%TowerRad)
    end if
-   if (allocated(VTK_SurfaceTypeData%WaveElevXY)) then
-      deallocate(VTK_SurfaceTypeData%WaveElevXY)
+   if (allocated(VTK_SurfaceTypeData%WaveElevVisX)) then
+      deallocate(VTK_SurfaceTypeData%WaveElevVisX)
    end if
-   if (allocated(VTK_SurfaceTypeData%WaveElev)) then
-      deallocate(VTK_SurfaceTypeData%WaveElev)
+   if (allocated(VTK_SurfaceTypeData%WaveElevVisY)) then
+      deallocate(VTK_SurfaceTypeData%WaveElevVisY)
+   end if
+   if (allocated(VTK_SurfaceTypeData%WaveElevVisGrid)) then
+      deallocate(VTK_SurfaceTypeData%WaveElevVisGrid)
    end if
    if (allocated(VTK_SurfaceTypeData%BladeShape)) then
       LB(1:1) = lbound(VTK_SurfaceTypeData%BladeShape, kind=B8Ki)
@@ -1012,8 +1028,8 @@ subroutine FAST_PackVTK_SurfaceType(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(FAST_VTK_SurfaceType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FAST_PackVTK_SurfaceType'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)   :: LB(3), UB(3)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%NumSectors)
    call RegPack(RF, InData%HubRad)
@@ -1021,8 +1037,9 @@ subroutine FAST_PackVTK_SurfaceType(RF, Indata)
    call RegPack(RF, InData%NacelleBox)
    call RegPackAlloc(RF, InData%TowerRad)
    call RegPack(RF, InData%NWaveElevPts)
-   call RegPackAlloc(RF, InData%WaveElevXY)
-   call RegPackAlloc(RF, InData%WaveElev)
+   call RegPackAlloc(RF, InData%WaveElevVisX)
+   call RegPackAlloc(RF, InData%WaveElevVisY)
+   call RegPackAlloc(RF, InData%WaveElevVisGrid)
    call RegPack(RF, allocated(InData%BladeShape))
    if (allocated(InData%BladeShape)) then
       call RegPackBounds(RF, 1, lbound(InData%BladeShape, kind=B8Ki), ubound(InData%BladeShape, kind=B8Ki))
@@ -1040,8 +1057,8 @@ subroutine FAST_UnPackVTK_SurfaceType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(FAST_VTK_SurfaceType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FAST_UnPackVTK_SurfaceType'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B8Ki)   :: i1, i2, i3
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1051,8 +1068,9 @@ subroutine FAST_UnPackVTK_SurfaceType(RF, OutData)
    call RegUnpack(RF, OutData%NacelleBox); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TowerRad); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NWaveElevPts); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%WaveElevXY); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%WaveElev); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveElevVisX); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveElevVisY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveElevVisGrid); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%BladeShape)) deallocate(OutData%BladeShape)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then

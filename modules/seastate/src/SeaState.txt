@@ -73,13 +73,15 @@ typedef   ^                  ^                      ReKi                     def
 typedef   ^                  ^                      ReKi                     defWtrDpth                      -          -          -         "Default water depth from the driver; may be overwritten                        "  "m"
 typedef   ^                  ^                      ReKi                     defMSL2SWL                      -          -          -         "Default mean sea level to still water level from the driver; may be overwritten"  "m"
 typedef   ^                  ^                      DbKi                     TMax                            -          -          -         "Supplied by Driver:  The total simulation time"    "(sec)"
-typedef   ^                  ^                      SiKi                     WaveElevXY                      {:}{:}     -          -         "Supplied by Driver:  X-Y locations for WaveElevation output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number."    "m,-"
 typedef   ^                  ^                      INTEGER                  WaveFieldMod                    -          -          -         "Wave field handling (-) (switch) 0: use individual SeaState inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin"   -
 typedef   ^                  ^                      ReKi                     PtfmLocationX                   -          -          -         "Supplied by Driver:  X coordinate of platform location in the wave field"    "m"
 typedef   ^                  ^                      ReKi                     PtfmLocationY                   -          -          -         "Supplied by Driver:  Y coordinate of platform location in the wave field"    "m"
 typedef   ^                  ^                      IntKi                    WrWvKinMod                      -          0          -         "0,1, or 2 indicating whether we are going to write out kinematics files.  [ignored if WaveMod = 6, if 1 or 2 then files are written using the outrootname]" -
 typedef   ^                  ^                      LOGICAL                  HasIce                          -          -          -         "Supplied by Driver:  Whether this simulation has ice loading (flag)"    -
 typedef   ^                  ^                      Logical                  Linearize                       -     .FALSE.         -         "Flag that tells this module if the glue code wants to linearize."	-
+typedef   ^                  ^                      Logical                  SurfaceVis                      -     .FALSE.         -         "Turn on grid surface visualization outputs" -
+typedef   ^                  ^                      IntKi                    SurfaceVisNx                    -          0          -         "Number of points in X direction to output for visualization grid.  Use 0 or negative to set to SeaState resolution." -
+typedef   ^                  ^                      IntKi                    SurfaceVisNy                    -          0          -         "Number of points in Y direction to output for visualization grid.  Use 0 or negative to set to SeaState resolution." -
 
 #
 #
@@ -89,8 +91,11 @@ typedef   ^                  InitOutputType         CHARACTER(ChanLen)       Wri
 typedef   ^                  ^                      CHARACTER(ChanLen)       WriteOutputUnt    {:}     -      -  "The is the list of all HD-related output channel unit strings (includes all sub-module channels)"    -
 typedef   ^                  ^                      ProgDesc                 Ver                -      -      -  "Version of SeaState"
 typedef   ^                  ^                      LOGICAL                  InvalidWithSSExctn -      -      -  "Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2)" (-)
-typedef   ^                  ^                      SiKi                     WaveElevSeries    {:}{:}  -      -  "Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second dimension is XY point number corresponding to second dimension of WaveElevXY." (m)
+typedef   ^                  ^                      SiKi                     WaveElevVisX       {:}     -      -  "X locations of grid output"    "m,-"
+typedef   ^                  ^                      SiKi                     WaveElevVisY       {:}     -      -  "X locations of grid output"    "m,-"
+typedef   ^                  ^                      SiKi                     WaveElevVisGrid    {:}{:}{:}  -   -  "Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second/third dimensions are the grid of points." (m)
 typedef   ^                  ^                      SeaSt_WaveFieldType     *WaveField          -      -      -  "Pointer to wave field"
+
 #                            
 #                            
 # ..... States ....................................................................................................................

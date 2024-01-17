@@ -381,35 +381,11 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       
       
          ! If requested, output wave elevation data for VTK visualization
-
-      IF (ALLOCATED(InitInp%WaveElevXY)) THEN
-      ! maybe instead of getting these requested points, we just output the grid that SeaState is generated on?
-         ALLOCATE(InitOut%WaveElevSeries( 0:p%WaveField%NStepWave, 1:SIZE(InitInp%WaveElevXY, DIM=2)),STAT=ErrStat2)
-         if (ErrStat2 /= 0) then
-            CALL SetErrStat(ErrID_Fatal,"Error allocating InitOut%WaveElevSeries.",ErrStat,ErrMsg,RoutineName)
-            CALL CleanUp()
-            RETURN
-         end if
-
-         do it = 1,size(p%WaveField%WaveTime)
-            do i = 1, size(InitOut%WaveElevSeries,DIM=2)
-               InitOut%WaveElevSeries(it,i) = SeaSt_Interp_3D( real(p%WaveField%WaveTime(it),DbKi), real(InitInp%WaveElevXY(:,i),ReKi), p%WaveField%WaveElev1, p%WaveField%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            end do
-         end do
-         
-         if (allocated(p%WaveField%WaveElev2)) then
-            do it = 1,size(p%WaveField%WaveTime)
-               do i = 1, size(InitOut%WaveElevSeries,DIM=2)
-                  TmpElev = SeaSt_Interp_3D( real(p%WaveField%WaveTime(it),DbKi), real(InitInp%WaveElevXY(:,i),ReKi), p%WaveField%WaveElev2, p%WaveField%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-                     call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  InitOut%WaveElevSeries(it,i) =  InitOut%WaveElevSeries(it,i) + TmpElev
-               end do
-            end do
-         end if
-
-         
-      ENDIF
+      if (InitInp%SurfaceVis) then
+         call SurfaceVisGenerate(ErrStat2, ErrMsg2) 
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat >= AbortErrLev) return
+      endif
       
       
       IF ( InitInp%hasIce ) THEN
@@ -468,6 +444,88 @@ CONTAINS
 
    END SUBROUTINE CleanUp
 !................................
+   subroutine SurfaceVisGenerate(ErrStat3, ErrMsg3)
+      integer(IntKi),      intent(  out)  :: ErrStat3
+      character(ErrMsgLen),intent(  out)  :: ErrMsg3
+      integer(IntKi)                      :: Nx,Ny,i1,i2
+      real(SiKi)                          :: HWidX, HWidY, dx, dy, TmpElev
+      real(ReKi)                          :: loc(2)      ! location (x,y)
+      integer(IntKi)                      :: ErrStat4
+      character(ErrMsgLen)                :: ErrMsg4
+      character(*),        parameter      :: RtnName="SurfaceVisGenerate"
+
+      ErrStat3 = ErrID_None
+      ErrMsg3  = ""
+
+      ! Grid half width from the WaveField
+      HWidX = (real(p%WaveField%SeaSt_Interp_p%n(2)-1,SiKi)) / 2.0_SiKi * p%WaveField%SeaSt_Interp_p%delta(2)
+      HWidY = (real(p%WaveField%SeaSt_Interp_p%n(3)-1,SiKi)) / 2.0_SiKi * p%WaveField%SeaSt_Interp_p%delta(3)
+
+      if ((InitInp%SurfaceVisNx <= 0) .or. (InitInp%SurfaceVisNy <= 0))then      ! use the SeaState points exactly
+         ! Set number of points to the number of seastate grid points in each direction
+         Nx = p%WaveField%SeaSt_Interp_p%n(2)
+         Ny = p%WaveField%SeaSt_Interp_p%n(3)
+         dx = p%WaveField%SeaSt_Interp_p%delta(2)
+         dy = p%WaveField%SeaSt_Interp_p%delta(3)
+         call SetErrStat(ErrID_Info,"Setting wavefield visualization grid to "//trim(Num2LStr(Nx))//" x "//trim(Num2LStr(Ny))//"points",ErrStat3,ErrMsg3,RoutineName)
+      elseif ((InitInp%SurfaceVisNx < 3) .or. (InitInp%SurfaceVisNx < 3)) then   ! Set to 3 for minimum
+         Nx = 3
+         Ny = 3
+         dx = HWidX
+         dy = HWidY
+         call SetErrStat(ErrID_Warn,"Setting wavefield visualization grid to 3 points in each direction",ErrStat3,ErrMsg3,RoutineName)
+      else                                         ! Specified number of points
+         Nx = InitInp%SurfaceVisNx
+         Ny = InitInp%SurfaceVisNy
+         dx = 2.0_SiKi * HWidX / (real(Nx,SiKi)-1)
+         dy = 2.0_SiKi * HWidY / (real(Ny,SiKi)-1)
+      endif
+
+      ! allocate arrays
+      call AllocAry(InitOut%WaveElevVisX,Nx,"InitOut%NWaveElevVisX",ErrStat4,ErrMsg4)
+      call SetErrStat(ErrStat4,ErrMsg4,ErrStat3,ErrMsg3,RtnName)
+      call AllocAry(InitOut%WaveElevVisY,Ny,"InitOut%NWaveElevVisY",ErrStat4,ErrMsg4)
+      call SetErrStat(ErrStat4,ErrMsg4,ErrStat3,ErrMsg3,RtnName)
+      allocate(InitOut%WaveElevVisGrid( 0:size(p%WaveField%WaveTime),Nx,Ny ),STAT=ErrStat4)
+      if (ErrStat4 /= 0) then
+         CALL SetErrStat(ErrID_Fatal,"Error allocating InitOut%WaveElevVisGrid.",ErrStat3,ErrMsg3,RoutineName)
+         return
+      end if
+
+      ! Populate the arrays
+      do i1=1,Nx
+         InitOut%WaveElevVisX(i1) = -HWidX + real(i1-1,SiKi)*dx
+      enddo
+      do i2=1,Ny
+         InitOut%WaveElevVisY(i2) = -HWidY + real(i2-1,SiKi)*dy
+      enddo
+
+!FIXME: calculate from the FFT of the data.
+      do it = 0,size(p%WaveField%WaveTime)-1
+         do i1 = 1, nx
+            loc(1) = InitOut%WaveElevVisX(i1)
+            do i2 = 1, ny
+               loc(2) = InitOut%WaveElevVisX(i2)
+               InitOut%WaveElevVisGrid(it,i1,i2) = SeaSt_Interp_3D( real(p%WaveField%WaveTime(it),DbKi), real(loc,ReKi), p%WaveField%WaveElev1, p%WaveField%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat4, ErrMsg4 )
+               call SetErrStat( ErrStat4, ErrMsg4, ErrStat3, ErrMsg3, RoutineName )
+            enddo
+         end do
+      end do
+      
+      if (allocated(p%WaveField%WaveElev2)) then
+         do it = 0,size(p%WaveField%WaveTime)-1
+            do i1 = 1, nx
+               loc(1) = InitOut%WaveElevVisX(i1)
+               do i2 = 1, ny
+                  loc(2) = InitOut%WaveElevVisX(i2)
+                  TmpElev = SeaSt_Interp_3D( real(p%WaveField%WaveTime(it),DbKi), real(loc,ReKi), p%WaveField%WaveElev2, p%WaveField%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat4, ErrMsg4 )
+                     call SetErrStat( ErrStat4, ErrMsg4, ErrStat3, ErrMsg3, RoutineName )
+                  InitOut%WaveElevVisGrid(it,i1,i2) =  InitOut%WaveElevVisGrid(it,i1,i2) + TmpElev
+               end do
+            end do
+         end do
+      end if
+   end subroutine SurfaceVisGenerate
 
 END SUBROUTINE SeaSt_Init
 !----------------------------------------------------------------------------------------------------------------------------------
