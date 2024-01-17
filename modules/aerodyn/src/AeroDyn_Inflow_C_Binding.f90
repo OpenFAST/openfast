@@ -27,7 +27,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    USE NWTC_Library
    USE VersionInfo
 
- 
+
    IMPLICIT NONE
    SAVE
 
@@ -122,7 +122,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    !     interface and therefore must store it here analogously to how it is handled
    !     in the OpenFAST glue code.
    integer(IntKi)                         :: n_Global          ! global timestep
-   integer(IntKi)                         :: n_VTK             ! VTK timestep 
+   integer(IntKi)                         :: n_VTK             ! VTK timestep
    real(DbKi)                             :: InputTimePrev     ! input time of last UpdateStates call
    ! Note that we are including the previous state info here (not done in OF this way)
    integer(IntKi),   parameter            :: STATE_LAST = 0    ! Index for previous state (not needed in OF, but necessary here)
@@ -158,7 +158,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    !  Mesh mapping: motions
    !     The mapping of motions from the nodes passed in to the corresponding AD meshes
    type(MeshMapType), allocatable         :: Map_BldPtMotion_2_AD_Blade(:,:)  ! Mesh mapping between input motion mesh for blade
-   type(MeshMapType), allocatable         :: Map_AD_Nac_2_NacPtLoad(:)       ! Mesh mapping between input motion mesh for nacelle 
+   type(MeshMapType), allocatable         :: Map_AD_Nac_2_NacPtLoad(:)       ! Mesh mapping between input motion mesh for nacelle
    !------------------------------
    !  Mesh mapping: loads
    !     The mapping of loads from the AD meshes to the corresponding external nodes
@@ -341,7 +341,7 @@ contains
       call WrScr("-----------------------------------------------------------")
    end subroutine ShowPassedData
 
-end subroutine ADI_C_PreInit    
+end subroutine ADI_C_PreInit
 
 !===============================================================================================================
 !--------------------------------------------- AeroDyn Init----------------------------------------------------
@@ -391,7 +391,7 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    real(c_float),             intent(in   )  :: VTKNacDim_in(6)                        !< Nacelle dimension passed in for VTK surface rendering [0,y0,z0,Lx,Ly,Lz] (m)
    real(c_float),             intent(in   )  :: VTKHubrad_in                           !< Hub radius for VTK surface rendering
    integer(c_int),            intent(in   )  :: wrOuts_C                               !< Write ADI output file
-   real(c_double),            intent(in   )  :: DT_Outs_C                              !< Timestep to write output file from ADI 
+   real(c_double),            intent(in   )  :: DT_Outs_C                              !< Timestep to write output file from ADI
    ! Output
    integer(c_int),            intent(  out)  :: NumChannels_C                          !< Number of output channels requested from the input file
    character(kind=c_char),    intent(  out)  :: OutputChannelNames_C(ChanLen*MaxADIOutputs+1)    !< NOTE: if MaxADIOutputs is sufficiently large, we may overrun the buffer on the Python side.
@@ -787,9 +787,9 @@ CONTAINS
       call concatOutputHeaders(WrOutputsData%WriteOutputHdr, WrOutputsData%WriteOutputUnt, InitOutData%WriteOutputHdr, InitOutData%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
 
       ! allocate output file handling and set formats
-      WrOutputsData%outFmt = "ES15.8E2" 
+      WrOutputsData%outFmt = "ES15.8E2"
       WrOutputsData%delim  = TAB
-      WrOutputsData%AD_ver = InitOutData%Ver 
+      WrOutputsData%AD_ver = InitOutData%Ver
       allocate(WrOutputsData%unOutFile(Sim%numTurbines), STAT=ErrStat2); if(Failed0("unOutFile")) return;
       WrOutputsData%unOutFile = -1
 !FIXME: number of timesteps is incorrect!
@@ -873,7 +873,7 @@ CONTAINS
                         Moment   = .TRUE.                )
             if(Failed()) return
          BldPtLoadMesh(iWT)%RemapFlag  = .FALSE.
- 
+
          ! Temp mesh for load transfer
          CALL MeshCopy( SrcMesh  = BldPtLoadMesh(iWT)    ,&
                         DestMesh = BldPtLoadMesh_tmp(iWT),&
@@ -885,8 +885,8 @@ CONTAINS
                         Moment   = .TRUE.                )
             if(Failed()) return
          BldPtLoadMesh_tmp(iWT)%RemapFlag  = .FALSE.
- 
- 
+
+
          ! For checking the mesh
          !     note: CU is is output unit (platform dependent).
          if (debugverbose >= 4)  call MeshPrintInfo( CU, BldPtLoadMesh(iWT), MeshName='BldPtLoadMesh'//trim(Num2LStr(iWT)) )
@@ -1308,7 +1308,7 @@ subroutine ADI_C_SetupRotor(iWT_c, TurbineIsHAWT_c, TurbOrigin_C,    &
    integer(c_int),            intent(in   )  :: NumBlades_C                            !< Number of blades
    real(c_float),             intent(in   )  :: BldRootPos_C( 3*NumBlades_C )          !< Blade root positions
    real(c_double),            intent(in   )  :: BldRootOri_C( 9*NumBlades_C )          !< Blade root orientations
-   ! Initial nodes            
+   ! Initial nodes
    integer(c_int),            intent(in   )  :: NumMeshPts_C                           !< Number of mesh points we are transfering motions to and output loads to
    real(c_float),             intent(in   )  :: InitMeshPos_C( 3*NumMeshPts_C )        !< A 3xNumMeshPts_C array [x,y,z]
    real(c_double),            intent(in   )  :: InitMeshOri_C( 9*NumMeshPts_C )        !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
@@ -1375,7 +1375,7 @@ subroutine ADI_C_SetupRotor(iWT_c, TurbineIsHAWT_c, TurbOrigin_C,    &
       enddo
    endif
 
-   ! Remap the orientation DCM just in case there is some issue with passed 
+   ! Remap the orientation DCM just in case there is some issue with passed
    call OrientRemap(InitInp%AD%rotors(iWT)%HubOrientation)
    call OrientRemap(InitInp%AD%rotors(iWT)%NacelleOrientation)
    do i=1,Sim%WT(iWT)%NumBlades
@@ -1558,7 +1558,7 @@ contains
       if ( allocated(tmpBldPtMeshPos) )   deallocate(tmpBldPtMeshPos)
       if ( allocated(tmpBldPtMeshOri) )   deallocate(tmpBldPtMeshOri)
    end subroutine SetupMotionMesh
-end subroutine ADI_C_SetupRotor    
+end subroutine ADI_C_SetupRotor
 
 !===============================================================================================================
 !--------------------------------------------- AeroDyn SetRotorMotion ------------------------------------------
@@ -1738,7 +1738,7 @@ end subroutine ADI_C_SetRotorMotion
 !--------------------------------------------- AeroDyn GetRotorLoads -------------------------------------------
 !===============================================================================================================
 !> Get the loads from a single rotor.  This must be called after ADI_C_CalcOutput
-subroutine ADI_C_GetRotorLoads(iWT_C, & 
+subroutine ADI_C_GetRotorLoads(iWT_C, &
                NumMeshPts_C, MeshFrc_C,   &
                ErrStat_C, ErrMsg_C) BIND (C, NAME='ADI_C_GetRotorLoads')
    implicit none
@@ -1809,7 +1809,7 @@ CONTAINS
       call WrScr("       NumMeshPts_C                   "//trim(Num2LStr( NumMeshPts_C  )) )
       call WrScr("-----------------------------------------------------------")
    end subroutine ShowPassedData
-end subroutine ADI_C_GetRotorLoads 
+end subroutine ADI_C_GetRotorLoads
 
 
 
@@ -1993,7 +1993,7 @@ subroutine WrVTK_refMeshes(rot_u, RefPoint, ErrStat, ErrMsg)
       else
          sWT = '.T'//trim(num2lstr(iWT))
       endif
- 
+
       select case (WrOutputsData%WrVTK_Type)
          case (1)    ! surfaces -- don't write any surface references
             call WrVTK_PointsRef(  ErrStat2,ErrMsg2); if (Failed()) return;
@@ -2094,7 +2094,7 @@ subroutine WrVTK_Meshes(rot_u, RefPoint, ErrStat, ErrMsg)
       else
          sWT = '.T'//trim(num2lstr(iWT))
       endif
- 
+
       select case (WrOutputsData%WrVTK_Type)
          case (1)    ! surfaces
             call WrVTK_Points(  ErrStat2,ErrMsg2); if (Failed()) return;
@@ -2250,7 +2250,7 @@ subroutine WrVTK_Ground (RefPoint, HalfLengths, FileRootName, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ""
    FileName = TRIM(FileRootName)//'.vtp'
-   call WrVTK_header( FileName, NumberOfPoints, NumberOfLines, NumberOfPolys, Un, errStat2, errMsg2 )    
+   call WrVTK_header( FileName, NumberOfPoints, NumberOfLines, NumberOfPolys, Un, errStat2, errMsg2 )
    call SetErrStat(errStat2,errMsg2,errStat,errMsg,'WrVTK_Ground'); if (errStat >= AbortErrLev) return
    WRITE(Un,'(A)')         '      <Points>'
    WRITE(Un,'(A)')         '        <DataArray type="Float32" NumberOfComponents="3" format="ascii">'
@@ -2260,16 +2260,16 @@ subroutine WrVTK_Ground (RefPoint, HalfLengths, FileRootName, errStat, errMsg)
    WRITE(Un,VTK_AryFmt) RefPoint(1) - HalfLengths(1) , RefPoint(2) + HalfLengths(2), RefPoint(3)
    WRITE(Un,'(A)')         '        </DataArray>'
    WRITE(Un,'(A)')         '      </Points>'
-   WRITE(Un,'(A)')         '      <Polys>'      
-   WRITE(Un,'(A)')         '        <DataArray type="Int32" Name="connectivity" format="ascii">'         
-   WRITE(Un,'('//trim(num2lstr(NumberOfPoints))//'(i7))') (ix, ix=0,NumberOfPoints-1)                   
-   WRITE(Un,'(A)')         '        </DataArray>'      
-   
-   WRITE(Un,'(A)')         '        <DataArray type="Int32" Name="offsets" format="ascii">'            
+   WRITE(Un,'(A)')         '      <Polys>'
+   WRITE(Un,'(A)')         '        <DataArray type="Int32" Name="connectivity" format="ascii">'
+   WRITE(Un,'('//trim(num2lstr(NumberOfPoints))//'(i7))') (ix, ix=0,NumberOfPoints-1)
+   WRITE(Un,'(A)')         '        </DataArray>'
+
+   WRITE(Un,'(A)')         '        <DataArray type="Int32" Name="offsets" format="ascii">'
    WRITE(Un,'(i7)') NumberOfPoints
    WRITE(Un,'(A)')         '        </DataArray>'
-   WRITE(Un,'(A)')         '      </Polys>'      
-   call WrVTK_footer( Un )       
+   WRITE(Un,'(A)')         '      </Polys>'
+   call WrVTK_footer( Un )
 end subroutine WrVTK_Ground
 
 
@@ -2288,12 +2288,12 @@ subroutine SetTempStorage(ErrStat,ErrMsg)
       ErrStat = ErrID_Fatal
       ErrMSg  = "Pre-Init has not been called yet"
       return
-   endif 
+   endif
    if (minval(NumMeshPts) < 0) then
       ErrStat = ErrID_Fatal
       ErrMSg  = "ADI_C_SetupRotor haven't been called for all rotors"
       return
-   endif 
+   endif
 
    ! Allocate temporary arrays to simplify data conversions
    maxMeshPts=0_IntKi
