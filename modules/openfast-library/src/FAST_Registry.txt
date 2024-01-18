@@ -76,8 +76,9 @@ typedef	^	FAST_VTK_SurfaceType	SiKi	GroundRad	-	-	-	"radius for plotting circle 
 typedef	^	FAST_VTK_SurfaceType	SiKi	NacelleBox	{3}{8}	-	-	"X-Y-Z locations of 8 points that define the nacelle box, relative to the nacelle position"	m
 typedef	^	FAST_VTK_SurfaceType	SiKi	TowerRad	{:}	-	-	"radius of each ED tower node"	m
 typedef	^	FAST_VTK_SurfaceType	IntKi	NWaveElevPts	{2}	-	-	"number of points for wave elevation visualization"	-
-typedef	^	FAST_VTK_SurfaceType	SiKi	WaveElevXY	{:}{:}	-	-	"X-Y locations for WaveElev output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number."	"m,-"
-typedef	^	FAST_VTK_SurfaceType	SiKi	WaveElev	{:}{:}	-	-	"wave elevation at WaveElevXY; first dimension is time step; second dimension is point number"	"m,-"
+typedef	^	FAST_VTK_SurfaceType	SiKi	WaveElevVisX	{:}	-	-	"X locations for WaveElev output (for visualization)."	"m,-"
+typedef	^	FAST_VTK_SurfaceType	SiKi	WaveElevVisY	{:}	-	-	"Y locations for WaveElev output (for visualization)."	"m,-"
+typedef	^	FAST_VTK_SurfaceType	SiKi	WaveElevVisGrid	{:}{:}{:}	-	-	"wave elevation at WaveElevVis{XY}; first dimension is time step; second/third dimensions are grid of elevations"	"m,-"
 typedef	^	FAST_VTK_SurfaceType	FAST_VTK_BLSurfaceType	BladeShape	{:}	-	-	"AirfoilCoords for each blade"	m
 typedef	^	FAST_VTK_SurfaceType	SiKi	MorisonVisRad	{:}	-	-	"radius of each Morison node"	m
 
