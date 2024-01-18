@@ -163,7 +163,7 @@ CONTAINS
       InitOut%Ver = MD_ProgDesc
 
       CALL WrScr('   This is MoorDyn v2, with significant input file changes from v1.')
-      CALL WrScr('   Copyright: (C) 2024 National Renewable Energy Laboratory, (C) 2019 Matt Hall')
+      CALL DispCopyrightLicense( MD_ProgDesc%Name, 'Copyright (C) 2019 Matt Hall' )
 
 
       !---------------------------------------------------------------------------------------------
