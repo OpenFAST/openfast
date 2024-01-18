@@ -228,10 +228,15 @@ subroutine ADI_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
    ! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
    call AD_UpdateStates(t, n, u_AD(:), utimes(:), p%AD, x%AD, xd%AD, z%AD, OtherState%AD, m%AD, errStat2, errMsg2); if(Failed()) return
 
+   call CleanUp()
+
 contains
 
    subroutine CleanUp()
       !call ADI_DestroyConstrState(z_guess, errStat2, errMsg2); if(Failed()) return
+      do it=1,size(utimes)
+         call AD_DestroyInput(u_AD(it), errStat2, errMsg2); if(Failed()) return
+      enddo
    end subroutine
 
    logical function Failed()
