@@ -441,6 +441,7 @@ struct Registry
     bool gen_c_code = false;
     bool no_extrap_interp = false;
     bool gen_inc_subs = false;
+    bool input_int_allow = false;
 
     Registry()
     {

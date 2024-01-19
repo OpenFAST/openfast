@@ -17,6 +17,7 @@ Options:
     -noextrap         do not generate ModName_Input_ExtrapInterp or ModName_Output_ExtrapInterp routines
     -D<SYM>           define symbol for conditional evaluation inside registry file
     -ccode            generate additional code for interfacing with C/C++
+    -inputintallow    allow integers in InputType
     -keep             do not delete temporary files from registry program
     -shownodes        output a listing of the nodes in registry's AST
   === alternate usage for generating templates ===
@@ -62,6 +63,10 @@ int main(int argc, char *argv[])
         else if ((arg.compare("-ccode")) == 0 || (arg.compare("/ccode")) == 0)
         {
             reg.gen_c_code = true;
+        }
+        else if ((arg.compare("-inputintallow")) == 0 || (arg.compare("/inputintallow")) == 0)
+        {
+            reg.input_int_allow = true;
         }
         else if ((arg.compare("-noextrap")) == 0 || (arg.compare("/noextrap")) == 0)
         {
