@@ -4730,6 +4730,18 @@ FUNCTION Indx_y_ED_Nacelle_Start(y_ED, y_FAST) RESULT(ED_Out_Start)
    ED_Out_Start = ED_Out_Start + y_ED%BladeRootMotion(size(y_ED%BladeRootMotion))%NNodes*18  ! N blade roots, 6 fields with 3 components per blade.
 END FUNCTION Indx_y_ED_Nacelle_Start
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine returns the starting index for the y_ED%TFinCMMotion mesh in the FAST linearization outputs.
+FUNCTION indx_y_ed_tfin_start(y_ED, y_FAST) RESULT(ED_Out_Start)
+   TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
+   TYPE(ED_OutputType),            INTENT(IN )  :: y_ED             !< ED outputs at t
+   INTEGER                                      :: k                !< blade number loop
+
+   INTEGER                                      :: ED_Out_Start     !< starting index of tailfin mesh in ElastoDyn outputs
+
+   ED_Out_Start = Indx_y_ED_Nacelle_Start(y_ED, y_FAST)        ! start of nacelle node
+   ED_Out_Start = ED_Out_Start + y_ED%NacelleMotion%NNodes*18  ! N blade roots, 6 fields with 3 components per blade.
+END FUNCTION Indx_y_ED_TFin_Start
+!----------------------------------------------------------------------------------------------------------------------------------
 !> This routine returns the starting index for y_ED%Yaw in the FAST linearization outputs.
 FUNCTION Indx_y_Yaw_Start(y_FAST, ThisModule) RESULT(ED_Out_Start)
    TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
