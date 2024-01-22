@@ -72,6 +72,7 @@ typedef ^       OtherStateType	        ReKi	blah    -       -       -       "Som
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
+typedef  ^  ParameterType   ExtLdDX_ParameterType  DX_p    -       -       -       "Data to send to external driver"
 typedef	^	ParameterType	IntKi	NumBlds      -       -       -       "Number of blades on the turbine" -
 typedef ^       ParameterType   IntKi   NumBldNds   {:}      -       -       "Number of blade nodes for each blade"  -
 typedef ^       ParameterType   IntKi   nTotBldNds   -       -       -       "Total number of blade nodes"   -

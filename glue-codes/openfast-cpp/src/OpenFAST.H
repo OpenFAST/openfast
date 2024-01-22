@@ -333,6 +333,8 @@ class OpenFAST {
 
   //! Data structure to get deflections from ExternalLoads module in OpenFAST
   std::vector<ExtLdDX_InputType_t> extld_i_f_FAST; // Input from OpenFAST
+  //! Data structure to get deflections from ExternalLoads module in OpenFAST
+  std::vector<ExtLdDX_ParameterType_t> extld_p_f_FAST; // Parameter from OpenFAST
   //! Data structure to send force information to ExternalLoads module in OpenFAST
   std::vector<ExtLdDX_OutputType_t> extld_o_t_FAST; // Output to OpenFAST
 

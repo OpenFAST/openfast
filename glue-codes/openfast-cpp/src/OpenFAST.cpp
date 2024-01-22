@@ -674,6 +674,7 @@ void fast::OpenFAST::init() {
                         &turbineData[iTurb].numBlades,
                         &ntStart,
                         &extld_i_f_FAST[iTurb],
+                        &extld_p_f_FAST[iTurb],
                         &extld_o_t_FAST[iTurb],
                         &sc->ip_from_FAST[iTurb],
                         &sc->op_to_FAST[iTurb],
@@ -778,6 +779,7 @@ void fast::OpenFAST::init() {
                         &turbineData[iTurb].zRef,
                         &turbineData[iTurb].shearExp,
                         &extld_i_f_FAST[iTurb],
+                        &extld_p_f_FAST[iTurb],
                         &extld_o_t_FAST[iTurb],
                         &sc->ip_from_FAST[iTurb],
                         &sc->op_to_FAST[iTurb],
@@ -2090,8 +2092,9 @@ void fast::OpenFAST::allocateMemory_preInit() {
     extinfw_i_f_FAST.resize(nTurbinesProc) ;
     extinfw_o_t_FAST.resize(nTurbinesProc) ;
 
-    // Allocate memory for ExtLd Input types in FAST
+    // Allocate memory for ExtLd Input/Parameter/Output types in FAST
     extld_i_f_FAST.resize(nTurbinesProc) ;
+    extld_p_f_FAST.resize(nTurbinesProc) ;
     extld_o_t_FAST.resize(nTurbinesProc) ;
 
     if(scStatus) {
@@ -2150,11 +2153,11 @@ void fast::OpenFAST::allocateMemory_postInit(int iTurbLoc) {
         turbineData[iTurbLoc].nBRfsiPtsBlade.resize(turbineData[iTurbLoc].numBlades);
         int nTotBldNds = 0;
         for(int i=0; i < turbineData[iTurbLoc].numBlades; i++) {
-            nTotBldNds += extld_i_f_FAST[iTurbLoc].nBladeNodes[i];
-            turbineData[iTurbLoc].nBRfsiPtsBlade[i] = extld_i_f_FAST[iTurbLoc].nBladeNodes[i];
+            nTotBldNds += extld_p_f_FAST[iTurbLoc].nBladeNodes[i];
+            turbineData[iTurbLoc].nBRfsiPtsBlade[i] = extld_p_f_FAST[iTurbLoc].nBladeNodes[i];
             turbineData[iTurbLoc].nTotBRfsiPtsBlade += turbineData[iTurbLoc].nBRfsiPtsBlade[i];
         }
-        turbineData[iTurbLoc].nBRfsiPtsTwr = extld_i_f_FAST[iTurbLoc].nTowerNodes[0];
+        turbineData[iTurbLoc].nBRfsiPtsTwr = extld_p_f_FAST[iTurbLoc].nTowerNodes[0];
 
         // Allocate memory for reference position only for 1 time step - np1
         for(int k=0; k<4; k++) {

@@ -28,15 +28,16 @@ typedef ^       InputType      R8Ki            bldRefPos     {:}     -       -  
 typedef ^       InputType      R8Ki            hubRefPos     {:}     -       -       "Reference position of the tower nodes - to send to external driver"
 typedef ^       InputType      R8Ki            nacRefPos     {:}     -       -       "Reference position of the all blade nodes - to send to external driver"
 typedef ^       InputType      R8Ki            bldRootRefPos {:}     -       -       "Reference position of the blade root nodes - to send to external driver"
-typedef ^       InputType      IntKi           nBlades       {:}     -       -       "Number of blades"
-typedef ^       InputType      IntKi           nBladeNodes   {:}     -       -       "Number of blade nodes for each blade"  -
-typedef ^       InputType      IntKi           nTowerNodes   {:}     -       -       "Number of tower nodes for each blade"  -
 typedef ^       InputType      R8Ki            bldChord      {:}     -       -       "Blade chord" m
 typedef ^       InputType      R8Ki            bldRloc       {:}     -       -       "Radial location along the blade" m
 typedef ^       InputType      R8Ki            twrDia        {:}     -       -       "Tower diameter" m
 typedef ^       InputType      R8Ki            twrHloc       {:}     -       -       "Height location along the tower" m
 typedef ^       InputType      R8Ki            bldPitch      {:}     -       -       "Pitch angle of blade"
 
+# ..... Parameters ................................................................................................................
+typedef ^       ParameterType  IntKi           nBlades       {:}     -       -       "Number of blades"
+typedef ^       ParameterType  IntKi           nBladeNodes   {:}     -       -       "Number of blade nodes for each blade"  -
+typedef ^       ParameterType  IntKi           nTowerNodes   {:}     -       -       "Number of tower nodes for each blade"  -
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:

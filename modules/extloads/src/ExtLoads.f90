@@ -299,7 +299,7 @@ subroutine Init_u( u, p, InitInp, errStat, errMsg )
   USE BeamDyn_IO, ONLY: BD_CrvExtractCrv
   
    type(ExtLd_InputType),           intent(  out)  :: u                 !< Input data
-   type(ExtLd_ParameterType),       intent(in   )  :: p                 !< Parameters
+   type(ExtLd_ParameterType),       intent(inout)  :: p                 !< Parameters (inout so can update DX_p)
    type(ExtLd_InitInputType),       intent(in   )  :: InitInp           !< Input data for ExtLd initialization routine
    integer(IntKi),               intent(  out)  :: errStat           !< Error status of the operation
    character(*),                 intent(  out)  :: errMsg            !< Error message if ErrStat /= ErrID_None
@@ -542,15 +542,15 @@ subroutine Init_u( u, p, InitInp, errStat, errMsg )
    end do !k=numBlades
 
    ! Set the parameters first
-   CALL AllocPAry( u%DX_u%nTowerNodes, 1, 'nTowerNodes', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   u%DX_u%c_obj%nTowerNodes_Len = 1; u%DX_u%c_obj%nTowerNodes = C_LOC( u%DX_u%nTowerNodes(1) )
-   u%DX_u%nTowerNodes(1) = p%NumTwrNds
-   CALL AllocPAry( u%DX_u%nBlades, 1, 'nBlades', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   u%DX_u%c_obj%nBlades_Len = 1; u%DX_u%c_obj%nBlades = C_LOC( u%DX_u%nBlades(1) )
-   u%DX_u%nBlades(1) = p%NumBlds
-   CALL AllocPAry( u%DX_u%nBladeNodes, p%NumBlds, 'nBladeNodes', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   u%DX_u%c_obj%nBladeNodes_Len = p%NumBlds; u%DX_u%c_obj%nBladeNodes = C_LOC( u%DX_u%nBladeNodes(1) )
-   u%DX_u%nBladeNodes(:) = p%NumBldNds(:)
+   CALL AllocPAry( p%DX_p%nTowerNodes, 1, 'nTowerNodes', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   p%DX_p%c_obj%nTowerNodes_Len = 1; p%DX_p%c_obj%nTowerNodes = C_LOC( p%DX_p%nTowerNodes(1) )
+   p%DX_p%nTowerNodes(1) = p%NumTwrNds
+   CALL AllocPAry( p%DX_p%nBlades, 1, 'nBlades', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   p%DX_p%c_obj%nBlades_Len = 1; p%DX_p%c_obj%nBlades = C_LOC( p%DX_p%nBlades(1) )
+   p%DX_p%nBlades(1) = p%NumBlds
+   CALL AllocPAry( p%DX_p%nBladeNodes, p%NumBlds, 'nBladeNodes', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   p%DX_p%c_obj%nBladeNodes_Len = p%NumBlds; p%DX_p%c_obj%nBladeNodes = C_LOC( p%DX_p%nBladeNodes(1) )
+   p%DX_p%nBladeNodes(:) = p%NumBldNds(:)
 
    ! Set the reference positions next
    CALL AllocPAry( u%DX_u%twrRefPos, p%NumTwrNds*6, 'twrRefPos', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )

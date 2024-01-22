@@ -510,7 +510,7 @@ end subroutine FAST_Restart
 !==================================================================================================================================
 subroutine FAST_ExtLoads_Init(iTurb, TMax, InputFileName_c, TurbID, OutFileRoot_c, TurbPosn, AbortErrLev_c, dtDriver_c, dt_c, NumBl_c, &
      az_blend_mean_c, az_blend_delta_c, vel_mean_c, wind_dir_c, z_ref_c, shear_exp_c, &
-     ExtLd_Input_from_FAST, ExtLd_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_ExtLoads_Init')
+     ExtLd_Input_from_FAST, ExtLd_Parameter_from_FAST, ExtLd_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_ExtLoads_Init')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_ExtLoads_Init
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
@@ -533,10 +533,11 @@ subroutine FAST_ExtLoads_Init(iTurb, TMax, InputFileName_c, TurbID, OutFileRoot_
    REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c
    INTEGER(C_INT),         INTENT(  OUT) :: AbortErrLev_c
    INTEGER(C_INT),         INTENT(  OUT) :: NumBl_c
-   TYPE(ExtLdDX_InputType_C), INTENT(  OUT) :: ExtLd_Input_from_FAST
-   TYPE(ExtLdDX_OutputType_C),INTENT(  OUT) :: ExtLd_Output_to_FAST
-   TYPE(SC_DX_InputType_C),   INTENT(INOUT) :: SC_DX_Input_from_FAST
-   TYPE(SC_DX_OutputType_C),  INTENT(INOUT) :: SC_DX_Output_to_FAST
+   TYPE(ExtLdDX_InputType_C),     INTENT(  OUT) :: ExtLd_Input_from_FAST
+   TYPE(ExtLdDX_ParameterType_C), INTENT(  OUT) :: ExtLd_Parameter_from_FAST
+   TYPE(ExtLdDX_OutputType_C),    INTENT(  OUT) :: ExtLd_Output_to_FAST
+   TYPE(SC_DX_InputType_C),       INTENT(INOUT) :: SC_DX_Input_from_FAST
+   TYPE(SC_DX_OutputType_C),      INTENT(INOUT) :: SC_DX_Output_to_FAST
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)
 
@@ -597,7 +598,7 @@ subroutine FAST_ExtLoads_Init(iTurb, TMax, InputFileName_c, TurbID, OutFileRoot_
       return
    end if
 
-   call SetExtLoads_pointers(iTurb, ExtLd_Input_from_FAST, ExtLd_Output_to_FAST)
+   call SetExtLoads_pointers(iTurb, ExtLd_Input_from_FAST, ExtLd_Parameter_from_FAST, ExtLd_Output_to_FAST)
 
    OutFileRoot_c = TRANSFER( trim(Turbine(iTurb)%p_FAST%OutFileRoot)//C_NULL_CHAR, OutFileRoot_c )
 
@@ -901,7 +902,7 @@ subroutine FAST_ExtInfw_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c
 end subroutine FAST_ExtInfw_Restart
 !==================================================================================================================================
 subroutine FAST_ExtLoads_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, numblades_c, &
-     n_t_global_c, ExtLd_Input_from_FAST, ExtLd_Output_to_FAST, &
+     n_t_global_c, ExtLd_Input_from_FAST, ExtLd_Parameter_from_FAST, ExtLd_Output_to_FAST, &
      SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_ExtLoads_Restart')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_ExtLoads_Restart
    IMPLICIT NONE
@@ -915,10 +916,11 @@ subroutine FAST_ExtLoads_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_
    INTEGER(C_INT),         INTENT(  OUT) :: numblades_c
    REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c
    INTEGER(C_INT),         INTENT(  OUT) :: n_t_global_c
-   TYPE(ExtLdDX_InputType_C), INTENT(  OUT) :: ExtLd_Input_from_FAST
-   TYPE(ExtLdDX_OutputType_C),INTENT(  OUT) :: ExtLd_Output_to_FAST
-   TYPE(SC_DX_InputType_C),   INTENT(INOUT) :: SC_DX_Input_from_FAST
-   TYPE(SC_DX_OutputType_C),  INTENT(INOUT) :: SC_DX_Output_to_FAST
+   TYPE(ExtLdDX_InputType_C),     INTENT(  OUT) :: ExtLd_Input_from_FAST
+   TYPE(ExtLdDX_ParameterType_C), INTENT(  OUT) :: ExtLd_Parameter_from_FAST
+   TYPE(ExtLdDX_OutputType_C),    INTENT(  OUT) :: ExtLd_Output_to_FAST
+   TYPE(SC_DX_InputType_C),       INTENT(INOUT) :: SC_DX_Input_from_FAST
+   TYPE(SC_DX_OutputType_C),      INTENT(INOUT) :: SC_DX_Output_to_FAST
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)
 
@@ -972,19 +974,20 @@ subroutine FAST_ExtLoads_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_
    end if
 
    write(*,*) 'Finished restoring OpenFAST from checkpoint'
-   call SetExtLoads_pointers(iTurb, ExtLd_Input_from_FAST, ExtLd_Output_to_FAST)
+   call SetExtLoads_pointers(iTurb, ExtLd_Input_from_FAST, ExtLd_Parameter_from_FAST, ExtLd_Output_to_FAST)
 
    ErrStat_c     = ErrStat
    ErrMsg_c      = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
 
 end subroutine FAST_ExtLoads_Restart
 !==================================================================================================================================
-subroutine SetExtLoads_pointers(iTurb, ExtLd_iFromOF, ExtLd_oToOF)
+subroutine SetExtLoads_pointers(iTurb, ExtLd_iFromOF, ExtLd_pFromOF, ExtLd_oToOF)
 
    IMPLICIT NONE
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number
-   TYPE(ExtLdDX_InputType_C), INTENT(INOUT) :: ExtLd_iFromOF
-   TYPE(ExtLdDX_OutputType_C),INTENT(INOUT) :: ExtLd_oToOF
+   INTEGER(C_INT),                INTENT(IN   ) :: iTurb            ! Turbine number
+   TYPE(ExtLdDX_InputType_C),     INTENT(INOUT) :: ExtLd_iFromOF
+   TYPE(ExtLdDX_ParameterType_C), INTENT(INOUT) :: ExtLd_pFromOF
+   TYPE(ExtLdDX_OutputType_C),    INTENT(INOUT) :: ExtLd_oToOF
 
    ExtLd_iFromOF%bldPitch_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldPitch_Len; ExtLd_iFromOF%bldPitch = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldPitch
    ExtLd_iFromOF%twrHloc_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%twrHloc_Len; ExtLd_iFromOF%twrHloc = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%twrHloc
@@ -996,9 +999,6 @@ subroutine SetExtLoads_pointers(iTurb, ExtLd_iFromOF, ExtLd_oToOF)
    ExtLd_iFromOF%bldRefPos_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldRefPos_Len; ExtLd_iFromOF%bldRefPos = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldRefPos
    ExtLd_iFromOF%bldRootRefPos_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldRootRefPos_Len; ExtLd_iFromOF%bldRootRefPos = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldRootRefPos
    ExtLd_iFromOF%bldDef_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldDef_Len; ExtLd_iFromOF%bldDef = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldDef
-   ExtLd_iFromOF%nBlades_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%nBlades_Len; ExtLd_iFromOF%nBlades = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%nBlades
-   ExtLd_iFromOF%nBladeNodes_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%nBladeNodes_Len; ExtLd_iFromOF%nBladeNodes = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%nBladeNodes
-   ExtLd_iFromOF%nTowerNodes_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%nTowerNodes_Len; ExtLd_iFromOF%nTowerNodes = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%nTowerNodes
 
    ExtLd_iFromOF%bldRootDef_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldRootDef_Len; ExtLd_iFromOF%bldRootDef = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldRootDef
 
@@ -1007,6 +1007,10 @@ subroutine SetExtLoads_pointers(iTurb, ExtLd_iFromOF, ExtLd_oToOF)
 
    ExtLd_iFromOF%nacRefPos_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%nacRefPos_Len; ExtLd_iFromOF%nacRefPos = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%nacRefPos
    ExtLd_iFromOF%nacDef_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%nacDef_Len; ExtLd_iFromOF%nacDef = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%nacDef
+
+   ExtLd_pFromOF%nBlades_Len = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nBlades_Len; ExtLd_pFromOF%nBlades = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nBlades
+   ExtLd_pFromOF%nBladeNodes_Len = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nBladeNodes_Len; ExtLd_pFromOF%nBladeNodes = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nBladeNodes
+   ExtLd_pFromOF%nTowerNodes_Len = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nTowerNodes_Len; ExtLd_pFromOF%nTowerNodes = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nTowerNodes
 
    ExtLd_oToOF%twrLd_Len   = Turbine(iTurb)%ExtLd%y%DX_y%c_obj%twrLd_Len;  ExtLd_oToOF%twrLd = Turbine(iTurb)%ExtLd%y%DX_y%c_obj%twrLd
    ExtLd_oToOF%bldLd_Len   = Turbine(iTurb)%ExtLd%y%DX_y%c_obj%bldLd_Len;  ExtLd_oToOF%bldLd = Turbine(iTurb)%ExtLd%y%DX_y%c_obj%bldLd

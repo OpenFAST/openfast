@@ -57,12 +57,6 @@ IMPLICIT NONE
     INTEGER(C_int) :: nacRefPos_Len = 0 
     TYPE(C_ptr) :: bldRootRefPos = C_NULL_PTR 
     INTEGER(C_int) :: bldRootRefPos_Len = 0 
-    TYPE(C_ptr) :: nBlades = C_NULL_PTR 
-    INTEGER(C_int) :: nBlades_Len = 0 
-    TYPE(C_ptr) :: nBladeNodes = C_NULL_PTR 
-    INTEGER(C_int) :: nBladeNodes_Len = 0 
-    TYPE(C_ptr) :: nTowerNodes = C_NULL_PTR 
-    INTEGER(C_int) :: nTowerNodes_Len = 0 
     TYPE(C_ptr) :: bldChord = C_NULL_PTR 
     INTEGER(C_int) :: bldChord_Len = 0 
     TYPE(C_ptr) :: bldRloc = C_NULL_PTR 
@@ -86,15 +80,29 @@ IMPLICIT NONE
     REAL(KIND=C_DOUBLE) , DIMENSION(:), POINTER  :: hubRefPos => NULL()      !< Reference position of the tower nodes - to send to external driver [-]
     REAL(KIND=C_DOUBLE) , DIMENSION(:), POINTER  :: nacRefPos => NULL()      !< Reference position of the all blade nodes - to send to external driver [-]
     REAL(KIND=C_DOUBLE) , DIMENSION(:), POINTER  :: bldRootRefPos => NULL()      !< Reference position of the blade root nodes - to send to external driver [-]
-    INTEGER(KIND=C_INT) , DIMENSION(:), POINTER  :: nBlades => NULL()      !< Number of blades [-]
-    INTEGER(KIND=C_INT) , DIMENSION(:), POINTER  :: nBladeNodes => NULL()      !< Number of blade nodes for each blade [-]
-    INTEGER(KIND=C_INT) , DIMENSION(:), POINTER  :: nTowerNodes => NULL()      !< Number of tower nodes for each blade [-]
     REAL(KIND=C_DOUBLE) , DIMENSION(:), POINTER  :: bldChord => NULL()      !< Blade chord [m]
     REAL(KIND=C_DOUBLE) , DIMENSION(:), POINTER  :: bldRloc => NULL()      !< Radial location along the blade [m]
     REAL(KIND=C_DOUBLE) , DIMENSION(:), POINTER  :: twrDia => NULL()      !< Tower diameter [m]
     REAL(KIND=C_DOUBLE) , DIMENSION(:), POINTER  :: twrHloc => NULL()      !< Height location along the tower [m]
     REAL(KIND=C_DOUBLE) , DIMENSION(:), POINTER  :: bldPitch => NULL()      !< Pitch angle of blade [-]
   END TYPE ExtLdDX_InputType
+! =======================
+! =========  ExtLdDX_ParameterType_C  =======
+  TYPE, BIND(C) :: ExtLdDX_ParameterType_C
+   TYPE(C_PTR) :: object = C_NULL_PTR
+    TYPE(C_ptr) :: nBlades = C_NULL_PTR 
+    INTEGER(C_int) :: nBlades_Len = 0 
+    TYPE(C_ptr) :: nBladeNodes = C_NULL_PTR 
+    INTEGER(C_int) :: nBladeNodes_Len = 0 
+    TYPE(C_ptr) :: nTowerNodes = C_NULL_PTR 
+    INTEGER(C_int) :: nTowerNodes_Len = 0 
+  END TYPE ExtLdDX_ParameterType_C
+  TYPE, PUBLIC :: ExtLdDX_ParameterType
+    TYPE( ExtLdDX_ParameterType_C ) :: C_obj
+    INTEGER(KIND=C_INT) , DIMENSION(:), POINTER  :: nBlades => NULL()      !< Number of blades [-]
+    INTEGER(KIND=C_INT) , DIMENSION(:), POINTER  :: nBladeNodes => NULL()      !< Number of blade nodes for each blade [-]
+    INTEGER(KIND=C_INT) , DIMENSION(:), POINTER  :: nTowerNodes => NULL()      !< Number of tower nodes for each blade [-]
+  END TYPE ExtLdDX_ParameterType
 ! =======================
 ! =========  ExtLdDX_OutputType_C  =======
   TYPE, BIND(C) :: ExtLdDX_OutputType_C
@@ -276,51 +284,6 @@ IF (ASSOCIATED(SrcInputData%bldRootRefPos)) THEN
   END IF
     DstInputData%bldRootRefPos = SrcInputData%bldRootRefPos
 ENDIF
-IF (ASSOCIATED(SrcInputData%nBlades)) THEN
-  i1_l = LBOUND(SrcInputData%nBlades,1)
-  i1_u = UBOUND(SrcInputData%nBlades,1)
-  IF (.NOT. ASSOCIATED(DstInputData%nBlades)) THEN 
-    ALLOCATE(DstInputData%nBlades(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%nBlades.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-    DstInputData%c_obj%nBlades_Len = SIZE(DstInputData%nBlades)
-    IF (DstInputData%c_obj%nBlades_Len > 0) &
-          DstInputData%c_obj%nBlades = C_LOC( DstInputData%nBlades( i1_l ) )
-  END IF
-    DstInputData%nBlades = SrcInputData%nBlades
-ENDIF
-IF (ASSOCIATED(SrcInputData%nBladeNodes)) THEN
-  i1_l = LBOUND(SrcInputData%nBladeNodes,1)
-  i1_u = UBOUND(SrcInputData%nBladeNodes,1)
-  IF (.NOT. ASSOCIATED(DstInputData%nBladeNodes)) THEN 
-    ALLOCATE(DstInputData%nBladeNodes(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%nBladeNodes.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-    DstInputData%c_obj%nBladeNodes_Len = SIZE(DstInputData%nBladeNodes)
-    IF (DstInputData%c_obj%nBladeNodes_Len > 0) &
-          DstInputData%c_obj%nBladeNodes = C_LOC( DstInputData%nBladeNodes( i1_l ) )
-  END IF
-    DstInputData%nBladeNodes = SrcInputData%nBladeNodes
-ENDIF
-IF (ASSOCIATED(SrcInputData%nTowerNodes)) THEN
-  i1_l = LBOUND(SrcInputData%nTowerNodes,1)
-  i1_u = UBOUND(SrcInputData%nTowerNodes,1)
-  IF (.NOT. ASSOCIATED(DstInputData%nTowerNodes)) THEN 
-    ALLOCATE(DstInputData%nTowerNodes(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%nTowerNodes.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-    DstInputData%c_obj%nTowerNodes_Len = SIZE(DstInputData%nTowerNodes)
-    IF (DstInputData%c_obj%nTowerNodes_Len > 0) &
-          DstInputData%c_obj%nTowerNodes = C_LOC( DstInputData%nTowerNodes( i1_l ) )
-  END IF
-    DstInputData%nTowerNodes = SrcInputData%nTowerNodes
-ENDIF
 IF (ASSOCIATED(SrcInputData%bldChord)) THEN
   i1_l = LBOUND(SrcInputData%bldChord,1)
   i1_u = UBOUND(SrcInputData%bldChord,1)
@@ -489,27 +452,6 @@ IF (ASSOCIATED(InputData%bldRootRefPos)) THEN
   InputData%C_obj%bldRootRefPos = C_NULL_PTR
   InputData%C_obj%bldRootRefPos_Len = 0
 ENDIF
-IF (ASSOCIATED(InputData%nBlades)) THEN
- IF (DEALLOCATEpointers_local) &
-  DEALLOCATE(InputData%nBlades)
-  InputData%nBlades => NULL()
-  InputData%C_obj%nBlades = C_NULL_PTR
-  InputData%C_obj%nBlades_Len = 0
-ENDIF
-IF (ASSOCIATED(InputData%nBladeNodes)) THEN
- IF (DEALLOCATEpointers_local) &
-  DEALLOCATE(InputData%nBladeNodes)
-  InputData%nBladeNodes => NULL()
-  InputData%C_obj%nBladeNodes = C_NULL_PTR
-  InputData%C_obj%nBladeNodes_Len = 0
-ENDIF
-IF (ASSOCIATED(InputData%nTowerNodes)) THEN
- IF (DEALLOCATEpointers_local) &
-  DEALLOCATE(InputData%nTowerNodes)
-  InputData%nTowerNodes => NULL()
-  InputData%C_obj%nTowerNodes = C_NULL_PTR
-  InputData%C_obj%nTowerNodes_Len = 0
-ENDIF
 IF (ASSOCIATED(InputData%bldChord)) THEN
  IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%bldChord)
@@ -631,21 +573,6 @@ ENDIF
   IF ( ASSOCIATED(InData%bldRootRefPos) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! bldRootRefPos upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%bldRootRefPos)  ! bldRootRefPos
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! nBlades allocated yes/no
-  IF ( ASSOCIATED(InData%nBlades) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! nBlades upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%nBlades)  ! nBlades
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! nBladeNodes allocated yes/no
-  IF ( ASSOCIATED(InData%nBladeNodes) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! nBladeNodes upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%nBladeNodes)  ! nBladeNodes
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! nTowerNodes allocated yes/no
-  IF ( ASSOCIATED(InData%nTowerNodes) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! nTowerNodes upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%nTowerNodes)  ! nTowerNodes
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! bldChord allocated yes/no
   IF ( ASSOCIATED(InData%bldChord) ) THEN
@@ -849,51 +776,6 @@ ENDIF
       DO i1 = LBOUND(InData%bldRootRefPos,1), UBOUND(InData%bldRootRefPos,1)
         DbKiBuf(Db_Xferred) = InData%bldRootRefPos(i1)
         Db_Xferred = Db_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ASSOCIATED(InData%nBlades) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%nBlades,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%nBlades,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%nBlades,1), UBOUND(InData%nBlades,1)
-        IntKiBuf(Int_Xferred) = InData%nBlades(i1)
-        Int_Xferred = Int_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ASSOCIATED(InData%nBladeNodes) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%nBladeNodes,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%nBladeNodes,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%nBladeNodes,1), UBOUND(InData%nBladeNodes,1)
-        IntKiBuf(Int_Xferred) = InData%nBladeNodes(i1)
-        Int_Xferred = Int_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ASSOCIATED(InData%nTowerNodes) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%nTowerNodes,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%nTowerNodes,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%nTowerNodes,1), UBOUND(InData%nTowerNodes,1)
-        IntKiBuf(Int_Xferred) = InData%nTowerNodes(i1)
-        Int_Xferred = Int_Xferred + 1
       END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%bldChord) ) THEN
@@ -1210,69 +1092,6 @@ ENDIF
         Db_Xferred = Db_Xferred + 1
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! nBlades not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ASSOCIATED(OutData%nBlades)) DEALLOCATE(OutData%nBlades)
-    ALLOCATE(OutData%nBlades(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%nBlades.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    OutData%c_obj%nBlades_Len = SIZE(OutData%nBlades)
-    IF (OutData%c_obj%nBlades_Len > 0) &
-       OutData%c_obj%nBlades = C_LOC( OutData%nBlades( i1_l ) )
-      DO i1 = LBOUND(OutData%nBlades,1), UBOUND(OutData%nBlades,1)
-        OutData%nBlades(i1) = IntKiBuf(Int_Xferred)
-        Int_Xferred = Int_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! nBladeNodes not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ASSOCIATED(OutData%nBladeNodes)) DEALLOCATE(OutData%nBladeNodes)
-    ALLOCATE(OutData%nBladeNodes(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%nBladeNodes.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    OutData%c_obj%nBladeNodes_Len = SIZE(OutData%nBladeNodes)
-    IF (OutData%c_obj%nBladeNodes_Len > 0) &
-       OutData%c_obj%nBladeNodes = C_LOC( OutData%nBladeNodes( i1_l ) )
-      DO i1 = LBOUND(OutData%nBladeNodes,1), UBOUND(OutData%nBladeNodes,1)
-        OutData%nBladeNodes(i1) = IntKiBuf(Int_Xferred)
-        Int_Xferred = Int_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! nTowerNodes not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ASSOCIATED(OutData%nTowerNodes)) DEALLOCATE(OutData%nTowerNodes)
-    ALLOCATE(OutData%nTowerNodes(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%nTowerNodes.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    OutData%c_obj%nTowerNodes_Len = SIZE(OutData%nTowerNodes)
-    IF (OutData%c_obj%nTowerNodes_Len > 0) &
-       OutData%c_obj%nTowerNodes = C_LOC( OutData%nTowerNodes( i1_l ) )
-      DO i1 = LBOUND(OutData%nTowerNodes,1), UBOUND(OutData%nTowerNodes,1)
-        OutData%nTowerNodes(i1) = IntKiBuf(Int_Xferred)
-        Int_Xferred = Int_Xferred + 1
-      END DO
-  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! bldChord not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -1486,33 +1305,6 @@ ENDIF
        END IF
     END IF
 
-    ! -- nBlades Input Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%nBlades ) ) THEN
-          NULLIFY( InputData%nBlades )
-       ELSE
-          CALL C_F_POINTER(InputData%C_obj%nBlades, InputData%nBlades, (/InputData%C_obj%nBlades_Len/))
-       END IF
-    END IF
-
-    ! -- nBladeNodes Input Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%nBladeNodes ) ) THEN
-          NULLIFY( InputData%nBladeNodes )
-       ELSE
-          CALL C_F_POINTER(InputData%C_obj%nBladeNodes, InputData%nBladeNodes, (/InputData%C_obj%nBladeNodes_Len/))
-       END IF
-    END IF
-
-    ! -- nTowerNodes Input Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%nTowerNodes ) ) THEN
-          NULLIFY( InputData%nTowerNodes )
-       ELSE
-          CALL C_F_POINTER(InputData%C_obj%nTowerNodes, InputData%nTowerNodes, (/InputData%C_obj%nTowerNodes_Len/))
-       END IF
-    END IF
-
     ! -- bldChord Input Data fields
     IF ( .NOT. SkipPointers_local ) THEN
        IF ( .NOT. C_ASSOCIATED( InputData%C_obj%bldChord ) ) THEN
@@ -1695,42 +1487,6 @@ ENDIF
        END IF
     END IF
 
-    ! -- nBlades Input Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. ASSOCIATED(InputData%nBlades)) THEN 
-          InputData%c_obj%nBlades_Len = 0
-          InputData%c_obj%nBlades = C_NULL_PTR
-       ELSE
-          InputData%c_obj%nBlades_Len = SIZE(InputData%nBlades)
-          IF (InputData%c_obj%nBlades_Len > 0) &
-             InputData%c_obj%nBlades = C_LOC( InputData%nBlades( LBOUND(InputData%nBlades,1) ) )
-       END IF
-    END IF
-
-    ! -- nBladeNodes Input Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. ASSOCIATED(InputData%nBladeNodes)) THEN 
-          InputData%c_obj%nBladeNodes_Len = 0
-          InputData%c_obj%nBladeNodes = C_NULL_PTR
-       ELSE
-          InputData%c_obj%nBladeNodes_Len = SIZE(InputData%nBladeNodes)
-          IF (InputData%c_obj%nBladeNodes_Len > 0) &
-             InputData%c_obj%nBladeNodes = C_LOC( InputData%nBladeNodes( LBOUND(InputData%nBladeNodes,1) ) )
-       END IF
-    END IF
-
-    ! -- nTowerNodes Input Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. ASSOCIATED(InputData%nTowerNodes)) THEN 
-          InputData%c_obj%nTowerNodes_Len = 0
-          InputData%c_obj%nTowerNodes = C_NULL_PTR
-       ELSE
-          InputData%c_obj%nTowerNodes_Len = SIZE(InputData%nTowerNodes)
-          IF (InputData%c_obj%nTowerNodes_Len > 0) &
-             InputData%c_obj%nTowerNodes = C_LOC( InputData%nTowerNodes( LBOUND(InputData%nTowerNodes,1) ) )
-       END IF
-    END IF
-
     ! -- bldChord Input Data fields
     IF ( .NOT. SkipPointers_local ) THEN
        IF ( .NOT. ASSOCIATED(InputData%bldChord)) THEN 
@@ -1791,6 +1547,427 @@ ENDIF
        END IF
     END IF
  END SUBROUTINE ExtLdDX_F2C_CopyInput
+
+ SUBROUTINE ExtLdDX_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(ExtLdDX_ParameterType), INTENT(IN) :: SrcParamData
+   TYPE(ExtLdDX_ParameterType), INTENT(INOUT) :: DstParamData
+   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+! Local 
+   INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: ErrStat2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
+   CHARACTER(*), PARAMETER        :: RoutineName = 'ExtLdDX_CopyParam'
+! 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+IF (ASSOCIATED(SrcParamData%nBlades)) THEN
+  i1_l = LBOUND(SrcParamData%nBlades,1)
+  i1_u = UBOUND(SrcParamData%nBlades,1)
+  IF (.NOT. ASSOCIATED(DstParamData%nBlades)) THEN 
+    ALLOCATE(DstParamData%nBlades(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%nBlades.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+    DstParamData%c_obj%nBlades_Len = SIZE(DstParamData%nBlades)
+    IF (DstParamData%c_obj%nBlades_Len > 0) &
+          DstParamData%c_obj%nBlades = C_LOC( DstParamData%nBlades( i1_l ) )
+  END IF
+    DstParamData%nBlades = SrcParamData%nBlades
+ENDIF
+IF (ASSOCIATED(SrcParamData%nBladeNodes)) THEN
+  i1_l = LBOUND(SrcParamData%nBladeNodes,1)
+  i1_u = UBOUND(SrcParamData%nBladeNodes,1)
+  IF (.NOT. ASSOCIATED(DstParamData%nBladeNodes)) THEN 
+    ALLOCATE(DstParamData%nBladeNodes(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%nBladeNodes.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+    DstParamData%c_obj%nBladeNodes_Len = SIZE(DstParamData%nBladeNodes)
+    IF (DstParamData%c_obj%nBladeNodes_Len > 0) &
+          DstParamData%c_obj%nBladeNodes = C_LOC( DstParamData%nBladeNodes( i1_l ) )
+  END IF
+    DstParamData%nBladeNodes = SrcParamData%nBladeNodes
+ENDIF
+IF (ASSOCIATED(SrcParamData%nTowerNodes)) THEN
+  i1_l = LBOUND(SrcParamData%nTowerNodes,1)
+  i1_u = UBOUND(SrcParamData%nTowerNodes,1)
+  IF (.NOT. ASSOCIATED(DstParamData%nTowerNodes)) THEN 
+    ALLOCATE(DstParamData%nTowerNodes(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%nTowerNodes.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+    DstParamData%c_obj%nTowerNodes_Len = SIZE(DstParamData%nTowerNodes)
+    IF (DstParamData%c_obj%nTowerNodes_Len > 0) &
+          DstParamData%c_obj%nTowerNodes = C_LOC( DstParamData%nTowerNodes( i1_l ) )
+  END IF
+    DstParamData%nTowerNodes = SrcParamData%nTowerNodes
+ENDIF
+ END SUBROUTINE ExtLdDX_CopyParam
+
+ SUBROUTINE ExtLdDX_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
+  TYPE(ExtLdDX_ParameterType), INTENT(INOUT) :: ParamData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
+  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'ExtLdDX_DestroyParam'
+
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+IF (ASSOCIATED(ParamData%nBlades)) THEN
+ IF (DEALLOCATEpointers_local) &
+  DEALLOCATE(ParamData%nBlades)
+  ParamData%nBlades => NULL()
+  ParamData%C_obj%nBlades = C_NULL_PTR
+  ParamData%C_obj%nBlades_Len = 0
+ENDIF
+IF (ASSOCIATED(ParamData%nBladeNodes)) THEN
+ IF (DEALLOCATEpointers_local) &
+  DEALLOCATE(ParamData%nBladeNodes)
+  ParamData%nBladeNodes => NULL()
+  ParamData%C_obj%nBladeNodes = C_NULL_PTR
+  ParamData%C_obj%nBladeNodes_Len = 0
+ENDIF
+IF (ASSOCIATED(ParamData%nTowerNodes)) THEN
+ IF (DEALLOCATEpointers_local) &
+  DEALLOCATE(ParamData%nTowerNodes)
+  ParamData%nTowerNodes => NULL()
+  ParamData%C_obj%nTowerNodes = C_NULL_PTR
+  ParamData%C_obj%nTowerNodes_Len = 0
+ENDIF
+ END SUBROUTINE ExtLdDX_DestroyParam
+
+ SUBROUTINE ExtLdDX_PackParam( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
+  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
+  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
+  TYPE(ExtLdDX_ParameterType),  INTENT(IN) :: InData
+  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
+  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
+    ! Local variables
+  INTEGER(IntKi)                 :: Re_BufSz
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_BufSz
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_BufSz
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
+  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'ExtLdDX_PackParam'
+ ! buffers to store subtypes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+
+  OnlySize = .FALSE.
+  IF ( PRESENT(SizeOnly) ) THEN
+    OnlySize = SizeOnly
+  ENDIF
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_BufSz  = 0
+  Db_BufSz  = 0
+  Int_BufSz  = 0
+  Int_BufSz   = Int_BufSz   + 1     ! nBlades allocated yes/no
+  IF ( ASSOCIATED(InData%nBlades) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! nBlades upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%nBlades)  ! nBlades
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! nBladeNodes allocated yes/no
+  IF ( ASSOCIATED(InData%nBladeNodes) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! nBladeNodes upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%nBladeNodes)  ! nBladeNodes
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! nTowerNodes allocated yes/no
+  IF ( ASSOCIATED(InData%nTowerNodes) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! nTowerNodes upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%nTowerNodes)  ! nTowerNodes
+  END IF
+  IF ( Re_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Db_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Int_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+
+  IF (C_ASSOCIATED(InData%C_obj%object)) CALL SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.',ErrStat,ErrMsg,RoutineName)
+
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred = 1
+
+  IF ( .NOT. ASSOCIATED(InData%nBlades) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%nBlades,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%nBlades,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%nBlades,1), UBOUND(InData%nBlades,1)
+        IntKiBuf(Int_Xferred) = InData%nBlades(i1)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ASSOCIATED(InData%nBladeNodes) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%nBladeNodes,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%nBladeNodes,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%nBladeNodes,1), UBOUND(InData%nBladeNodes,1)
+        IntKiBuf(Int_Xferred) = InData%nBladeNodes(i1)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ASSOCIATED(InData%nTowerNodes) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%nTowerNodes,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%nTowerNodes,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%nTowerNodes,1), UBOUND(InData%nTowerNodes,1)
+        IntKiBuf(Int_Xferred) = InData%nTowerNodes(i1)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+ END SUBROUTINE ExtLdDX_PackParam
+
+ SUBROUTINE ExtLdDX_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
+  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
+  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
+  TYPE(ExtLdDX_ParameterType), INTENT(INOUT) :: OutData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    ! Local variables
+  INTEGER(IntKi)                 :: Buf_size
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'ExtLdDX_UnPackParam'
+ ! buffers to store meshes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred  = 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! nBlades not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ASSOCIATED(OutData%nBlades)) DEALLOCATE(OutData%nBlades)
+    ALLOCATE(OutData%nBlades(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%nBlades.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    OutData%c_obj%nBlades_Len = SIZE(OutData%nBlades)
+    IF (OutData%c_obj%nBlades_Len > 0) &
+       OutData%c_obj%nBlades = C_LOC( OutData%nBlades( i1_l ) )
+      DO i1 = LBOUND(OutData%nBlades,1), UBOUND(OutData%nBlades,1)
+        OutData%nBlades(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! nBladeNodes not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ASSOCIATED(OutData%nBladeNodes)) DEALLOCATE(OutData%nBladeNodes)
+    ALLOCATE(OutData%nBladeNodes(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%nBladeNodes.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    OutData%c_obj%nBladeNodes_Len = SIZE(OutData%nBladeNodes)
+    IF (OutData%c_obj%nBladeNodes_Len > 0) &
+       OutData%c_obj%nBladeNodes = C_LOC( OutData%nBladeNodes( i1_l ) )
+      DO i1 = LBOUND(OutData%nBladeNodes,1), UBOUND(OutData%nBladeNodes,1)
+        OutData%nBladeNodes(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! nTowerNodes not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ASSOCIATED(OutData%nTowerNodes)) DEALLOCATE(OutData%nTowerNodes)
+    ALLOCATE(OutData%nTowerNodes(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%nTowerNodes.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    OutData%c_obj%nTowerNodes_Len = SIZE(OutData%nTowerNodes)
+    IF (OutData%c_obj%nTowerNodes_Len > 0) &
+       OutData%c_obj%nTowerNodes = C_LOC( OutData%nTowerNodes( i1_l ) )
+      DO i1 = LBOUND(OutData%nTowerNodes,1), UBOUND(OutData%nTowerNodes,1)
+        OutData%nTowerNodes(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+ END SUBROUTINE ExtLdDX_UnPackParam
+
+ SUBROUTINE ExtLdDX_C2Fary_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers )
+    TYPE(ExtLdDX_ParameterType), INTENT(INOUT) :: ParamData
+    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+    ! 
+    LOGICAL                        :: SkipPointers_local
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
+
+    ! -- nBlades Param Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( ParamData%C_obj%nBlades ) ) THEN
+          NULLIFY( ParamData%nBlades )
+       ELSE
+          CALL C_F_POINTER(ParamData%C_obj%nBlades, ParamData%nBlades, (/ParamData%C_obj%nBlades_Len/))
+       END IF
+    END IF
+
+    ! -- nBladeNodes Param Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( ParamData%C_obj%nBladeNodes ) ) THEN
+          NULLIFY( ParamData%nBladeNodes )
+       ELSE
+          CALL C_F_POINTER(ParamData%C_obj%nBladeNodes, ParamData%nBladeNodes, (/ParamData%C_obj%nBladeNodes_Len/))
+       END IF
+    END IF
+
+    ! -- nTowerNodes Param Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( ParamData%C_obj%nTowerNodes ) ) THEN
+          NULLIFY( ParamData%nTowerNodes )
+       ELSE
+          CALL C_F_POINTER(ParamData%C_obj%nTowerNodes, ParamData%nTowerNodes, (/ParamData%C_obj%nTowerNodes_Len/))
+       END IF
+    END IF
+ END SUBROUTINE ExtLdDX_C2Fary_CopyParam
+
+ SUBROUTINE ExtLdDX_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
+    TYPE(ExtLdDX_ParameterType), INTENT(INOUT) :: ParamData
+    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+    ! 
+    LOGICAL                        :: SkipPointers_local
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
+
+    ! -- nBlades Param Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(ParamData%nBlades)) THEN 
+          ParamData%c_obj%nBlades_Len = 0
+          ParamData%c_obj%nBlades = C_NULL_PTR
+       ELSE
+          ParamData%c_obj%nBlades_Len = SIZE(ParamData%nBlades)
+          IF (ParamData%c_obj%nBlades_Len > 0) &
+             ParamData%c_obj%nBlades = C_LOC( ParamData%nBlades( LBOUND(ParamData%nBlades,1) ) )
+       END IF
+    END IF
+
+    ! -- nBladeNodes Param Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(ParamData%nBladeNodes)) THEN 
+          ParamData%c_obj%nBladeNodes_Len = 0
+          ParamData%c_obj%nBladeNodes = C_NULL_PTR
+       ELSE
+          ParamData%c_obj%nBladeNodes_Len = SIZE(ParamData%nBladeNodes)
+          IF (ParamData%c_obj%nBladeNodes_Len > 0) &
+             ParamData%c_obj%nBladeNodes = C_LOC( ParamData%nBladeNodes( LBOUND(ParamData%nBladeNodes,1) ) )
+       END IF
+    END IF
+
+    ! -- nTowerNodes Param Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(ParamData%nTowerNodes)) THEN 
+          ParamData%c_obj%nTowerNodes_Len = 0
+          ParamData%c_obj%nTowerNodes = C_NULL_PTR
+       ELSE
+          ParamData%c_obj%nTowerNodes_Len = SIZE(ParamData%nTowerNodes)
+          IF (ParamData%c_obj%nTowerNodes_Len > 0) &
+             ParamData%c_obj%nTowerNodes = C_LOC( ParamData%nTowerNodes( LBOUND(ParamData%nTowerNodes,1) ) )
+       END IF
+    END IF
+ END SUBROUTINE ExtLdDX_F2C_CopyParam
 
  SUBROUTINE ExtLdDX_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
    TYPE(ExtLdDX_OutputType), INTENT(IN) :: SrcOutputData
@@ -2284,12 +2461,6 @@ IF (ASSOCIATED(u_out%bldRootRefPos) .AND. ASSOCIATED(u1%bldRootRefPos)) THEN
     u_out%bldRootRefPos(i1) = u1%bldRootRefPos(i1) + b * ScaleFactor
   END DO
 END IF ! check if allocated
-IF (ASSOCIATED(u_out%nBlades) .AND. ASSOCIATED(u1%nBlades)) THEN
-END IF ! check if allocated
-IF (ASSOCIATED(u_out%nBladeNodes) .AND. ASSOCIATED(u1%nBladeNodes)) THEN
-END IF ! check if allocated
-IF (ASSOCIATED(u_out%nTowerNodes) .AND. ASSOCIATED(u1%nTowerNodes)) THEN
-END IF ! check if allocated
 IF (ASSOCIATED(u_out%bldChord) .AND. ASSOCIATED(u1%bldChord)) THEN
   DO i1 = LBOUND(u_out%bldChord,1),UBOUND(u_out%bldChord,1)
     b = -(u1%bldChord(i1) - u2%bldChord(i1))
@@ -2446,12 +2617,6 @@ IF (ASSOCIATED(u_out%bldRootRefPos) .AND. ASSOCIATED(u1%bldRootRefPos)) THEN
     c = ( (t(2)-t(3))*u1%bldRootRefPos(i1) + t(3)*u2%bldRootRefPos(i1) - t(2)*u3%bldRootRefPos(i1) ) * scaleFactor
     u_out%bldRootRefPos(i1) = u1%bldRootRefPos(i1) + b  + c * t_out
   END DO
-END IF ! check if allocated
-IF (ASSOCIATED(u_out%nBlades) .AND. ASSOCIATED(u1%nBlades)) THEN
-END IF ! check if allocated
-IF (ASSOCIATED(u_out%nBladeNodes) .AND. ASSOCIATED(u1%nBladeNodes)) THEN
-END IF ! check if allocated
-IF (ASSOCIATED(u_out%nTowerNodes) .AND. ASSOCIATED(u1%nTowerNodes)) THEN
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%bldChord) .AND. ASSOCIATED(u1%bldChord)) THEN
   DO i1 = LBOUND(u_out%bldChord,1),UBOUND(u_out%bldChord,1)
