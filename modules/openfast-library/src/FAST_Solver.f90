@@ -531,6 +531,9 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_A
          Node = Node + 1      
          u_IfW%PositionXYZ(:,Node) = u_AD14%Twr_InputMarkers%TranslationDisp(:,J) + u_AD14%Twr_InputMarkers%Position(:,J)
       END DO      
+
+      u_IfW%HubPosition    = y_ED%HubPtMotion%Position(:,1) + y_ED%HubPtMotion%TranslationDisp(:,1)
+      u_IfW%HubOrientation = y_ED%HubPtMotion%Orientation(:,:,1)
          
    ELSEIF (p_FAST%CompAero == MODULE_AD) THEN               
       
@@ -740,6 +743,8 @@ SUBROUTINE AD14_InputSolve_IfW( p_FAST, u_AD14, y_IfW, ErrStat, ErrMsg )
       u_AD14%InflowVelocity = 0.0_ReKi           ! whole array
    END IF
       
+   u_AD14%AvgInfVel = y_IfW%DiskVel
+
 END SUBROUTINE AD14_InputSolve_IfW
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets all the AeroDyn14 inputs, except for the wind inflow values.
