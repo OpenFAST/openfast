@@ -2984,10 +2984,10 @@ void fast::OpenFAST::get_ref_positions_from_openfast(int iTurb) {
     if(turbineData[iTurb].sType == EXTLOADS) {
 
         for (int i=0; i < 3; i++) {
-            brFSIData[iTurb][fast::STATE_NP1].hub_ref_pos[i] = extld_i_f_FAST[iTurb].hubRefPos[i] + turbineData[iTurb].TurbineBasePos[i];
-            brFSIData[iTurb][fast::STATE_NP1].nac_ref_pos[i] = extld_i_f_FAST[iTurb].nacRefPos[i] + turbineData[iTurb].TurbineBasePos[i];
-            brFSIData[iTurb][fast::STATE_NP1].hub_ref_pos[i+3] = extld_i_f_FAST[iTurb].hubRefPos[i+3];
-            brFSIData[iTurb][fast::STATE_NP1].nac_ref_pos[i+3] = extld_i_f_FAST[iTurb].nacRefPos[i+3];
+            brFSIData[iTurb][fast::STATE_NP1].hub_ref_pos[i] = extld_p_f_FAST[iTurb].hubRefPos[i] + turbineData[iTurb].TurbineBasePos[i];
+            brFSIData[iTurb][fast::STATE_NP1].nac_ref_pos[i] = extld_p_f_FAST[iTurb].nacRefPos[i] + turbineData[iTurb].TurbineBasePos[i];
+            brFSIData[iTurb][fast::STATE_NP1].hub_ref_pos[i+3] = extld_p_f_FAST[iTurb].hubRefPos[i+3];
+            brFSIData[iTurb][fast::STATE_NP1].nac_ref_pos[i+3] = extld_p_f_FAST[iTurb].nacRefPos[i+3];
         }
 
         int nBlades = turbineData[iTurb].numBlades;
@@ -2996,17 +2996,17 @@ void fast::OpenFAST::get_ref_positions_from_openfast(int iTurb) {
             int nPtsBlade = turbineData[iTurb].nBRfsiPtsBlade[i];
             for (int j=0; j < nPtsBlade; j++) {
                 for (int k=0; k < 3; k++) {
-                    brFSIData[iTurb][fast::STATE_NP1].bld_ref_pos[iRunTot*6+k] = extld_i_f_FAST[iTurb].bldRefPos[iRunTot*6+k] + turbineData[iTurb].TurbineBasePos[k];
-                    brFSIData[iTurb][fast::STATE_NP1].bld_ref_pos[iRunTot*6+k+3] = extld_i_f_FAST[iTurb].bldRefPos[iRunTot*6+k+3];
+                    brFSIData[iTurb][fast::STATE_NP1].bld_ref_pos[iRunTot*6+k] = extld_p_f_FAST[iTurb].bldRefPos[iRunTot*6+k] + turbineData[iTurb].TurbineBasePos[k];
+                    brFSIData[iTurb][fast::STATE_NP1].bld_ref_pos[iRunTot*6+k+3] = extld_p_f_FAST[iTurb].bldRefPos[iRunTot*6+k+3];
                 }
-                brFSIData[iTurb][fast::STATE_NP1].bld_chord[iRunTot] = extld_i_f_FAST[iTurb].bldChord[iRunTot];
-                brFSIData[iTurb][fast::STATE_NP1].bld_rloc[iRunTot] = extld_i_f_FAST[iTurb].bldRloc[iRunTot];
+                brFSIData[iTurb][fast::STATE_NP1].bld_chord[iRunTot] = extld_p_f_FAST[iTurb].bldChord[iRunTot];
+                brFSIData[iTurb][fast::STATE_NP1].bld_rloc[iRunTot] = extld_p_f_FAST[iTurb].bldRloc[iRunTot];
                 iRunTot++;
             }
 
             for (int k=0; k < 3; k++) {
-                brFSIData[iTurb][fast::STATE_NP1].bld_root_ref_pos[i*6+k] = extld_i_f_FAST[iTurb].bldRootRefPos[i*6+k] + turbineData[iTurb].TurbineBasePos[k];
-                brFSIData[iTurb][fast::STATE_NP1].bld_root_ref_pos[i*6+k+3] = extld_i_f_FAST[iTurb].bldRootRefPos[i*6+k+3];
+                brFSIData[iTurb][fast::STATE_NP1].bld_root_ref_pos[i*6+k] = extld_p_f_FAST[iTurb].bldRootRefPos[i*6+k] + turbineData[iTurb].TurbineBasePos[k];
+                brFSIData[iTurb][fast::STATE_NP1].bld_root_ref_pos[i*6+k+3] = extld_p_f_FAST[iTurb].bldRootRefPos[i*6+k+3];
             }
 
         }
@@ -3014,8 +3014,8 @@ void fast::OpenFAST::get_ref_positions_from_openfast(int iTurb) {
         int nPtsTwr = turbineData[iTurb].nBRfsiPtsTwr;
         for (int i=0; i < nPtsTwr; i++) {
             for (int j = 0; j < 3; j++) {
-                brFSIData[iTurb][fast::STATE_NP1].twr_ref_pos[i*6+j] = extld_i_f_FAST[iTurb].twrRefPos[i*6+j] + turbineData[iTurb].TurbineBasePos[j];
-                brFSIData[iTurb][fast::STATE_NP1].twr_ref_pos[i*6+j+3] = extld_i_f_FAST[iTurb].twrRefPos[i*6+j+3];
+                brFSIData[iTurb][fast::STATE_NP1].twr_ref_pos[i*6+j] = extld_p_f_FAST[iTurb].twrRefPos[i*6+j] + turbineData[iTurb].TurbineBasePos[j];
+                brFSIData[iTurb][fast::STATE_NP1].twr_ref_pos[i*6+j+3] = extld_p_f_FAST[iTurb].twrRefPos[i*6+j+3];
             }
         }
 

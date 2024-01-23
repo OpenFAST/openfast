@@ -989,31 +989,32 @@ subroutine SetExtLoads_pointers(iTurb, ExtLd_iFromOF, ExtLd_pFromOF, ExtLd_oToOF
    TYPE(ExtLdDX_ParameterType_C), INTENT(INOUT) :: ExtLd_pFromOF
    TYPE(ExtLdDX_OutputType_C),    INTENT(INOUT) :: ExtLd_oToOF
 
-   ExtLd_iFromOF%bldPitch_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldPitch_Len; ExtLd_iFromOF%bldPitch = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldPitch
-   ExtLd_iFromOF%twrHloc_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%twrHloc_Len; ExtLd_iFromOF%twrHloc = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%twrHloc
-   ExtLd_iFromOF%twrDia_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%twrDia_Len; ExtLd_iFromOF%twrDia = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%twrDia
-   ExtLd_iFromOF%twrRefPos_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%twrRefPos_Len; ExtLd_iFromOF%twrRefPos = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%twrRefPos
-   ExtLd_iFromOF%twrDef_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%twrDef_Len; ExtLd_iFromOF%twrDef = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%twrDef
-   ExtLd_iFromOF%bldRloc_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldRloc_Len; ExtLd_iFromOF%bldRloc = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldRloc
-   ExtLd_iFromOF%bldChord_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldChord_Len; ExtLd_iFromOF%bldChord = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldChord
-   ExtLd_iFromOF%bldRefPos_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldRefPos_Len; ExtLd_iFromOF%bldRefPos = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldRefPos
-   ExtLd_iFromOF%bldRootRefPos_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldRootRefPos_Len; ExtLd_iFromOF%bldRootRefPos = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldRootRefPos
-   ExtLd_iFromOF%bldDef_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldDef_Len; ExtLd_iFromOF%bldDef = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldDef
+   ! Inputs
+   ExtLd_iFromOF%bldPitch_Len      = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldPitch_Len;      ExtLd_iFromOF%bldPitch      = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldPitch
+   ExtLd_iFromOF%twrDef_Len        = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%twrDef_Len;        ExtLd_iFromOF%twrDef        = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%twrDef
+   ExtLd_iFromOF%bldDef_Len        = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldDef_Len;        ExtLd_iFromOF%bldDef        = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldDef
+   ExtLd_iFromOF%bldRootDef_Len    = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldRootDef_Len;    ExtLd_iFromOF%bldRootDef    = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldRootDef
+   ExtLd_iFromOF%hubDef_Len        = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%hubDef_Len;        ExtLd_iFromOF%hubDef        = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%hubDef
+   ExtLd_iFromOF%nacDef_Len        = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%nacDef_Len;        ExtLd_iFromOF%nacDef        = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%nacDef
 
-   ExtLd_iFromOF%bldRootDef_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldRootDef_Len; ExtLd_iFromOF%bldRootDef = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%bldRootDef
+   ! Parameters
+   ExtLd_pFromOF%nBlades_Len       = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nBlades_Len;       ExtLd_pFromOF%nBlades       = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nBlades
+   ExtLd_pFromOF%nBladeNodes_Len   = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nBladeNodes_Len;   ExtLd_pFromOF%nBladeNodes   = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nBladeNodes
+   ExtLd_pFromOF%nTowerNodes_Len   = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nTowerNodes_Len;   ExtLd_pFromOF%nTowerNodes   = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nTowerNodes
 
-   ExtLd_iFromOF%hubRefPos_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%hubRefPos_Len; ExtLd_iFromOF%hubRefPos = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%hubRefPos
-   ExtLd_iFromOF%hubDef_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%hubDef_Len; ExtLd_iFromOF%hubDef = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%hubDef
+   ExtLd_pFromOF%twrHloc_Len       = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%twrHloc_Len;       ExtLd_pFromOF%twrHloc       = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%twrHloc
+   ExtLd_pFromOF%twrDia_Len        = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%twrDia_Len;        ExtLd_pFromOF%twrDia        = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%twrDia
+   ExtLd_pFromOF%twrRefPos_Len     = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%twrRefPos_Len;     ExtLd_pFromOF%twrRefPos     = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%twrRefPos
+   ExtLd_pFromOF%bldRloc_Len       = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%bldRloc_Len;       ExtLd_pFromOF%bldRloc       = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%bldRloc
+   ExtLd_pFromOF%bldChord_Len      = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%bldChord_Len;      ExtLd_pFromOF%bldChord      = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%bldChord
+   ExtLd_pFromOF%bldRefPos_Len     = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%bldRefPos_Len;     ExtLd_pFromOF%bldRefPos     = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%bldRefPos
+   ExtLd_pFromOF%bldRootRefPos_Len = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%bldRootRefPos_Len; ExtLd_pFromOF%bldRootRefPos = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%bldRootRefPos
+   ExtLd_pFromOF%hubRefPos_Len     = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%hubRefPos_Len;     ExtLd_pFromOF%hubRefPos     = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%hubRefPos
+   ExtLd_pFromOF%nacRefPos_Len     = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nacRefPos_Len;     ExtLd_pFromOF%nacRefPos     = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nacRefPos
 
-   ExtLd_iFromOF%nacRefPos_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%nacRefPos_Len; ExtLd_iFromOF%nacRefPos = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%nacRefPos
-   ExtLd_iFromOF%nacDef_Len = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%nacDef_Len; ExtLd_iFromOF%nacDef = Turbine(iTurb)%ExtLd%u%DX_u%c_obj%nacDef
-
-   ExtLd_pFromOF%nBlades_Len = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nBlades_Len; ExtLd_pFromOF%nBlades = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nBlades
-   ExtLd_pFromOF%nBladeNodes_Len = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nBladeNodes_Len; ExtLd_pFromOF%nBladeNodes = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nBladeNodes
-   ExtLd_pFromOF%nTowerNodes_Len = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nTowerNodes_Len; ExtLd_pFromOF%nTowerNodes = Turbine(iTurb)%ExtLd%p%DX_p%c_obj%nTowerNodes
-
-   ExtLd_oToOF%twrLd_Len   = Turbine(iTurb)%ExtLd%y%DX_y%c_obj%twrLd_Len;  ExtLd_oToOF%twrLd = Turbine(iTurb)%ExtLd%y%DX_y%c_obj%twrLd
-   ExtLd_oToOF%bldLd_Len   = Turbine(iTurb)%ExtLd%y%DX_y%c_obj%bldLd_Len;  ExtLd_oToOF%bldLd = Turbine(iTurb)%ExtLd%y%DX_y%c_obj%bldLd
+   ! Outputs
+   ExtLd_oToOF%twrLd_Len           = Turbine(iTurb)%ExtLd%y%DX_y%c_obj%twrLd_Len;         ExtLd_oToOF%twrLd = Turbine(iTurb)%ExtLd%y%DX_y%c_obj%twrLd
+   ExtLd_oToOF%bldLd_Len           = Turbine(iTurb)%ExtLd%y%DX_y%c_obj%bldLd_Len;         ExtLd_oToOF%bldLd = Turbine(iTurb)%ExtLd%y%DX_y%c_obj%bldLd
 
  end subroutine SetExtLoads_pointers
 
