@@ -1940,6 +1940,20 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
             call SetBlockMatrix( dUdu, MeshMapData%AD_L_2_ED_P_T%dM%m_us, ED_Start_mt, y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
          end if
       END IF
+
+      ! Tailfin
+      IF ( y_AD%rotors(1)%TFinLoad%Committed ) THEN
+         ED_Start_mt = Indx_u_ED_TFin_Start(u_ED, y_FAST) &
+                       + u_ED%TFinCMLoads%NNodes   * 3             ! 3 forces at each node (we're going to start at the moments)
+         
+         CALL Linearize_Line2_to_Point( y_AD%rotors(1)%TFinLoad, u_ED%TFinCMLoads, MeshMapData%AD_P_2_ED_P_TF, ErrStat2, ErrMsg2, u_AD%rotors(1)%TFinMotion, y_ED%TFinCMMotion )
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+            
+            ! AD is source in the mapping, so we want M_{uSm}
+         if (allocated(MeshMapData%AD_L_2_ED_P_T%dM%m_us )) then
+            call SetBlockMatrix( dUdu, MeshMapData%AD_P_2_ED_P_TF%dM%m_us, ED_Start_mt, y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+         end if
+      END IF
       
    END IF
    
@@ -3105,7 +3119,25 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
          call SumBlockMatrix( dUdy, MeshMapData%AD_L_2_ED_P_T%dM%m_uD, ED_Start, ED_Out_Start )
             
       END IF ! tower
-      
+
+      IF ( y_AD%rotors(1)%TFinLoad%Committed ) THEN
+         !!! ! This linearization was done in forming dUdu (see Linear_ED_InputSolve_du()), so we don't need to re-calculate these matrices 
+         !!! ! while forming dUdy, too.
+         !CALL Linearize_Line2_to_Point( y_AD%rotors(1)%TFinLoad, u_ED%TFinCMLoads, MeshMapData%AD_L_2_ED_P_T, ErrStat2, ErrMsg2, u_AD%rotors(1)%TFinMotion, y_ED%TFinCMMotion )
+            
+            ! AD loads-to-ED loads transfer (dU^{ED}/dy^{AD}):
+         ED_Start = Indx_u_ED_TFin_Start(u_ED, y_FAST) ! u_ED%TFinCMLoads%Force field
+         AD_Out_Start = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) ! start of y_AD%rotors(1)%TFinLoads%Force
+         IF (p_FAST%CompElast == Module_ED) AD_Out_Start = AD_Out_Start + y_AD%rotors(1)%BladeLoad(k)%NNodes*6
+         call Assemble_dUdy_Loads(y_AD%rotors(1)%TFinLoad, u_ED%TFinCMLoads, MeshMapData%AD_P_2_ED_P_TF, ED_Start, AD_Out_Start, dUdy)
+
+            ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
+         ED_Start = ED_Start + u_ED%TFinCMLoads%NNodes*3 ! start of u_ED%TFinCMLoads%Moment field  [skip the ED forces to get to the moments]
+         ED_Out_Start  = Indx_y_ED_TFin_Start(y_ED, y_FAST) ! start of y_ED%TFinCMMotion%TranslationDisp field
+         call SumBlockMatrix( dUdy, MeshMapData%AD_P_2_ED_P_TF%dM%m_uD, ED_Start, ED_Out_Start )
+            
+      END IF ! tailfin
+
    END IF ! aero loads
       
       ! U_ED_SD_HD_BD_Orca_Residual() in InputSolve Option 1
@@ -3407,7 +3439,6 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, p_AD, y_ED, BD, 
 
    !-----------------------------------
    ! Nacelle
-!FIXME: see note on tower below about dUdu -- does that apply here?
    CALL Linearize_Point_to_Point( y_ED%NacelleMotion, u_AD%rotors(1)%NacelleMotion, MeshMapData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%NacelleMotion' )
       if (errStat>=AbortErrLev) return
@@ -3465,10 +3496,7 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, p_AD, y_ED, BD, 
       
    END IF
 
-!FIXME: missing terms here!!!!!!
-!  tailfin
-!  userprop????
-!  extended inputs????
+
    !...................................
    ! blade root   
    !...................................
@@ -3521,7 +3549,6 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, p_AD, y_ED, BD, 
    
    !-----------------------------------
    ! TailFin
-!FIXME: see note on tower below about dUdu -- does that apply here? Is there an offset between the AD and ED tailfins?
    CALL Linearize_Point_to_Point( y_ED%TFinCMMotion, u_AD%rotors(1)%TFinMotion, MeshMapData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%TFinMotion' )
       if (errStat>=AbortErrLev) return
@@ -3538,7 +3565,6 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, p_AD, y_ED, BD, 
    AD_Start = AD_Start + u_AD%rotors(1)%TFinMotion%NNodes * 3 ! move past the AD translation disp field to orientation field         
    call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%mi, AD_Start, ED_Out_Start )
  
-!FIXME: translationVel piece missing
 END SUBROUTINE Linear_AD_InputSolve_NoIfW_dy
 !----------------------------------------------------------------------------------------------------------------------------------
 
@@ -4638,8 +4664,8 @@ FUNCTION Indx_u_ED_Nacelle_Start(u_ED, y_FAST) RESULT(ED_Start)
    ED_Start = ED_Start + u_ED%HubPtLoad%NNodes * 6            ! 3 forces + 3 moments at each node
 END FUNCTION Indx_u_ED_Nacelle_Start
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine returns the starting index for the u_ED%BladePitchCom array in the FAST linearization inputs.
-FUNCTION Indx_u_ED_BlPitchCom_Start(u_ED, y_FAST) RESULT(ED_Start)
+!> This routine returns the starting index for the u_ED%NacelleLoads mesh in the FAST linearization inputs.
+FUNCTION Indx_u_ED_TFin_Start(u_ED, y_FAST) RESULT(ED_Start)
    TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
    TYPE(ED_InputType),             INTENT(IN )  :: u_ED             !< ED Inputs at t
 
@@ -4647,6 +4673,17 @@ FUNCTION Indx_u_ED_BlPitchCom_Start(u_ED, y_FAST) RESULT(ED_Start)
 
    ED_Start = Indx_u_ED_Nacelle_Start(u_ED, y_FAST)
    ED_Start = ED_Start + u_ED%NacelleLoads%NNodes * 6            ! 3 forces + 3 moments at each node
+END FUNCTION Indx_u_ED_TFin_Start
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine returns the starting index for the u_ED%BladePitchCom array in the FAST linearization inputs.
+FUNCTION Indx_u_ED_BlPitchCom_Start(u_ED, y_FAST) RESULT(ED_Start)
+   TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
+   TYPE(ED_InputType),             INTENT(IN )  :: u_ED             !< ED Inputs at t
+
+   INTEGER                                      :: ED_Start         !< starting index of this mesh
+
+   ED_Start = Indx_u_ED_TFin_Start(u_ED, y_FAST)
+   ED_Start = ED_Start + u_ED%TFinCMLoads%NNodes * 6            ! 3 forces + 3 moments at each node
 END FUNCTION Indx_u_ED_BlPitchCom_Start
 !----------------------------------------------------------------------------------------------------------------------------------
 
@@ -4731,7 +4768,7 @@ FUNCTION Indx_y_ED_Nacelle_Start(y_ED, y_FAST) RESULT(ED_Out_Start)
 END FUNCTION Indx_y_ED_Nacelle_Start
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine returns the starting index for the y_ED%TFinCMMotion mesh in the FAST linearization outputs.
-FUNCTION indx_y_ed_tfin_start(y_ED, y_FAST) RESULT(ED_Out_Start)
+FUNCTION Indx_y_ED_TFin_Start(y_ED, y_FAST) RESULT(ED_Out_Start)
    TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
    TYPE(ED_OutputType),            INTENT(IN )  :: y_ED             !< ED outputs at t
    INTEGER                                      :: k                !< blade number loop

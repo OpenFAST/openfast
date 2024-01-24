@@ -11212,6 +11212,7 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
          + u%TowerPtLoads%NNodes   * 6            & ! 3 forces + 3 moments at each node
          + u%HubPtLoad%NNodes      * 6            & ! 3 forces + 3 moments at each node
          + u%NacelleLoads%NNodes   * 6            & ! 3 forces + 3 moments at each node
+         + u%TFinCMLoads%NNodes    * 6            & ! 3 forces + 3 moments at each node
          + p%NumBl                                & ! blade pitch command (BlPitchCom)    
          + 2                                        ! YawMom and GenTrq
       p%NumExtendedInputs = 1
@@ -11305,15 +11306,26 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
          end do !i
       end do
    
+      do i_meshField = 15,16
+         do i=1,u%TFinCMLoads%NNodes
+            do j=1,3
+               p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%TFinCMLoads%Force = 15; u%TFinCMLoads%Moment = 16;
+               p%Jac_u_indx(index,2) =  j !index:  j
+               p%Jac_u_indx(index,3) =  i !Node:   i
+               index = index + 1
+            end do !j      
+         end do !i
+      end do
+   
       do i_meshField = 1,p%NumBl ! scalars   
-         p%Jac_u_indx(index,1) =  15 !Module/Mesh/Field: u%BlPitchCom = 15;
+         p%Jac_u_indx(index,1) =  17 !Module/Mesh/Field: u%BlPitchCom = 17;
          p%Jac_u_indx(index,2) =  1 !index:  n/a
          p%Jac_u_indx(index,3) =  i_meshField !Node:   blade
          index = index + 1      
       end do
-   
-      do i_meshField = 16,17 ! scalars   
-         p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%YawMom = 16; u%GenTrq = 17;
+  
+      do i_meshField = 18,19 ! scalars   
+         p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%YawMom = 18; u%GenTrq = 19;
          p%Jac_u_indx(index,2) =  1 !index:  j
          p%Jac_u_indx(index,3) =  1 !Node:   i
          index = index + 1
@@ -11323,7 +11335,7 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    !................
    ! input perturbations, du:
    !................
-   call AllocAry(p%du, 17, 'p%du', ErrStat2, ErrMsg2) ! 17 = number of unique values in p%Jac_u_indx(:,1) 
+   call AllocAry(p%du, 19, 'p%du', ErrStat2, ErrMsg2) ! 19 = number of unique values in p%Jac_u_indx(:,1) 
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
    if (ErrStat >= AbortErrLev) return
    
@@ -11349,9 +11361,11 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    p%du(12) = MaxTorque / 100.0_R8Ki                           ! u%HubPtLoad%Moment = 12
    p%du(13) = MaxThrust / 100.0_R8Ki                           ! u%NacelleLoads%Force = 13
    p%du(14) = MaxTorque / 100.0_R8Ki                           ! u%NacelleLoads%Moment = 14   
-   p%du(15) = 2.0_R8Ki * D2R_D                                 ! u%BlPitchCom = 15 
-   p%du(16) = MaxTorque / 100.0_R8Ki                           ! u%YawMom = 16
-   p%du(17) = MaxTorque / (100.0_R8Ki*p%GBRatio)               ! u%GenTrq = 17
+   p%du(15) = MaxThrust / 100.0_R8Ki                           ! u%TFinCMLoads%Force = 15
+   p%du(16) = MaxTorque / 100.0_R8Ki                           ! u%TFinCMLoads%Moment = 16   
+   p%du(17) = 2.0_R8Ki * D2R_D                                 ! u%BlPitchCom = 17 
+   p%du(18) = MaxTorque / 100.0_R8Ki                           ! u%YawMom = 18
+   p%du(19) = MaxTorque / (100.0_R8Ki*p%GBRatio)               ! u%GenTrq = 19
       
    !Set some limits in case perturbation is very small
    do i=1,size(p%du)
@@ -11381,6 +11395,7 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       call PackLoadMesh_Names(u%TowerPtLoads, 'Tower', InitOut%LinNames_u, index)   
       call PackLoadMesh_Names(u%HubPtLoad, 'Hub', InitOut%LinNames_u, index)   
       call PackLoadMesh_Names(u%NacelleLoads, 'Nacelle', InitOut%LinNames_u, index)   
+      call PackLoadMesh_Names(u%TFinCMLoads, 'Tailfin', InitOut%LinNames_u, index)   
       
       do k = 1,p%NumBl ! scalars
          InitOut%LinNames_u(index) = 'Blade '//trim(num2lstr(k))//' pitch command, rad'
@@ -11454,11 +11469,16 @@ SUBROUTINE ED_Perturb_u( p, n, perturb_sign, u, du )
    CASE (14) !Module/Mesh/Field: u%NacelleLoads%Moment = 14
       u%NacelleLoads%Moment(fieldIndx,node) = u%NacelleLoads%Moment(fieldIndx,node) + du * perturb_sign            
    
-   CASE (15) !Module/Mesh/Field: u%BlPitchCom = 15
+   CASE (15) !Module/Mesh/Field: u%TFinCMLoads%Force = 15
+      u%TFinCMLoads%Force( fieldIndx,node) = u%TFinCMLoads%Force( fieldIndx,node) + du * perturb_sign       
+   CASE (16) !Module/Mesh/Field: u%TFinCMLoads%Moment = 16
+      u%TFinCMLoads%Moment(fieldIndx,node) = u%TFinCMLoads%Moment(fieldIndx,node) + du * perturb_sign            
+   
+   CASE (17) !Module/Mesh/Field: u%BlPitchCom = 17
       u%BlPitchCom(node) = u%BlPitchCom(node) + du * perturb_sign
-   CASE (16) !Module/Mesh/Field: u%YawMom = 16
+   CASE (18) !Module/Mesh/Field: u%YawMom = 18
       u%YawMom = u%YawMom + du * perturb_sign
-   CASE (17) !Module/Mesh/Field: u%GenTrq = 17
+   CASE (19) !Module/Mesh/Field: u%GenTrq = 19
       u%GenTrq = u%GenTrq + du * perturb_sign
       
    END SELECT
@@ -11542,6 +11562,7 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
          call PackMotionMesh_dY(y_p%BladeRootMotion(k),   y_m%BladeRootMotion(k),   dY, indx_first)
       end do
       call PackMotionMesh_dY(y_p%NacelleMotion,  y_m%NacelleMotion,  dY, indx_first)
+      call PackMotionMesh_dY(y_p%TFinCMMotion,  y_m%TFinCMMotion,  dY, indx_first)
                      
       dY(indx_first) = y_p%Yaw     - y_m%Yaw;       indx_first = indx_first + 1
       dY(indx_first) = y_p%YawRate - y_m%YawRate;   indx_first = indx_first + 1
@@ -11648,6 +11669,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          call PackLoadMesh(u%TowerPtLoads, u_op, index)   
          call PackLoadMesh(u%HubPtLoad, u_op, index)   
          call PackLoadMesh(u%NacelleLoads, u_op, index)   
+         call PackLoadMesh(u%TFinCMLoads, u_op, index)   
       
          do k = 1,p%NumBl_Lin ! scalars
             u_op(index) = u%BlPitchCom(k)
@@ -11686,7 +11708,8 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
             ny = p%Jac_ny + y%PlatformPtMesh%NNodes * 6 & ! Jac_ny has 3 for Orientation, but we need 9 at each node
                        + y%TowerLn2Mesh%NNodes   * 6 & ! Jac_ny has 3 for Orientation, but we need 9 at each node 
                        + y%HubPtMotion%NNodes    * 6 & ! Jac_ny has 3 for Orientation, but we need 9 at each node
-                       + y%NacelleMotion%NNodes  * 6   ! Jac_ny has 3 for Orientation, but we need 9 at each node
+                       + y%NacelleMotion%NNodes  * 6 & ! Jac_ny has 3 for Orientation, but we need 9 at each node
+                       + y%TFinCMMotion%NNodes   * 6   ! Jac_ny has 3 for Orientation, but we need 9 at each node
                        
             do k=1,p%NumBl_Lin
                ny = ny + y%BladeRootMotion(k)%NNodes * 6  ! Jac_ny has 3 for Orientation, but we need 9 at each node on each blade
@@ -11737,6 +11760,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
             call PackMotionMesh(y%BladeRootMotion(k), y_op, index, TrimOP=ReturnTrimOP)
          end do   
          call PackMotionMesh(y%NacelleMotion, y_op, index, TrimOP=ReturnTrimOP)
+         call PackMotionMesh(y%TFinCMMotion, y_op, index, TrimOP=ReturnTrimOP)
       
          y_op(index) = y%Yaw     ; index = index + 1    
          y_op(index) = y%YawRate ; index = index + 1    
