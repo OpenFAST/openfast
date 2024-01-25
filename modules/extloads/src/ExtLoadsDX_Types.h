@@ -27,20 +27,23 @@
     double * hubDef ;     int hubDef_Len ;
     double * nacDef ;     int nacDef_Len ;
     double * bldRootDef ;     int bldRootDef_Len ;
+    double * bldPitch ;     int bldPitch_Len ;
+  } ExtLdDX_InputType_t ;
+  typedef struct ExtLdDX_ParameterType {
+    void * object ;
+    int * nBlades ;     int nBlades_Len ;
+    int * nBladeNodes ;     int nBladeNodes_Len ;
+    int * nTowerNodes ;     int nTowerNodes_Len ;
     double * twrRefPos ;     int twrRefPos_Len ;
     double * bldRefPos ;     int bldRefPos_Len ;
     double * hubRefPos ;     int hubRefPos_Len ;
     double * nacRefPos ;     int nacRefPos_Len ;
     double * bldRootRefPos ;     int bldRootRefPos_Len ;
-    int * nBlades ;     int nBlades_Len ;
-    int * nBladeNodes ;     int nBladeNodes_Len ;
-    int * nTowerNodes ;     int nTowerNodes_Len ;
     double * bldChord ;     int bldChord_Len ;
     double * bldRloc ;     int bldRloc_Len ;
     double * twrDia ;     int twrDia_Len ;
     double * twrHloc ;     int twrHloc_Len ;
-    double * bldPitch ;     int bldPitch_Len ;
-  } ExtLdDX_InputType_t ;
+  } ExtLdDX_ParameterType_t ;
   typedef struct ExtLdDX_OutputType {
     void * object ;
     double * twrLd ;     int twrLd_Len ;
@@ -48,6 +51,7 @@
   } ExtLdDX_OutputType_t ;
   typedef struct ExtLdDX_UserData {
     ExtLdDX_InputType_t            ExtLdDX_Input ;
+    ExtLdDX_ParameterType_t        ExtLdDX_Param ;
     ExtLdDX_OutputType_t           ExtLdDX_Output ;
   } ExtLdDX_t ;
 

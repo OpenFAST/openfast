@@ -299,7 +299,7 @@ subroutine Init_u( u, p, InitInp, errStat, errMsg )
   USE BeamDyn_IO, ONLY: BD_CrvExtractCrv
   
    type(ExtLd_InputType),           intent(  out)  :: u                 !< Input data
-   type(ExtLd_ParameterType),       intent(in   )  :: p                 !< Parameters
+   type(ExtLd_ParameterType),       intent(inout)  :: p                 !< Parameters (inout so can update DX_p)
    type(ExtLd_InitInputType),       intent(in   )  :: InitInp           !< Input data for ExtLd initialization routine
    integer(IntKi),               intent(  out)  :: errStat           !< Error status of the operation
    character(*),                 intent(  out)  :: errMsg            !< Error message if ErrStat /= ErrID_None
@@ -542,37 +542,37 @@ subroutine Init_u( u, p, InitInp, errStat, errMsg )
    end do !k=numBlades
 
    ! Set the parameters first
-   CALL AllocPAry( u%DX_u%nTowerNodes, 1, 'nTowerNodes', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   u%DX_u%c_obj%nTowerNodes_Len = 1; u%DX_u%c_obj%nTowerNodes = C_LOC( u%DX_u%nTowerNodes(1) )
-   u%DX_u%nTowerNodes(1) = p%NumTwrNds
-   CALL AllocPAry( u%DX_u%nBlades, 1, 'nBlades', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   u%DX_u%c_obj%nBlades_Len = 1; u%DX_u%c_obj%nBlades = C_LOC( u%DX_u%nBlades(1) )
-   u%DX_u%nBlades(1) = p%NumBlds
-   CALL AllocPAry( u%DX_u%nBladeNodes, p%NumBlds, 'nBladeNodes', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   u%DX_u%c_obj%nBladeNodes_Len = p%NumBlds; u%DX_u%c_obj%nBladeNodes = C_LOC( u%DX_u%nBladeNodes(1) )
-   u%DX_u%nBladeNodes(:) = p%NumBldNds(:)
+   CALL AllocPAry( p%DX_p%nTowerNodes, 1, 'nTowerNodes', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   p%DX_p%c_obj%nTowerNodes_Len = 1; p%DX_p%c_obj%nTowerNodes = C_LOC( p%DX_p%nTowerNodes(1) )
+   p%DX_p%nTowerNodes(1) = p%NumTwrNds
+   CALL AllocPAry( p%DX_p%nBlades, 1, 'nBlades', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   p%DX_p%c_obj%nBlades_Len = 1; p%DX_p%c_obj%nBlades = C_LOC( p%DX_p%nBlades(1) )
+   p%DX_p%nBlades(1) = p%NumBlds
+   CALL AllocPAry( p%DX_p%nBladeNodes, p%NumBlds, 'nBladeNodes', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   p%DX_p%c_obj%nBladeNodes_Len = p%NumBlds; p%DX_p%c_obj%nBladeNodes = C_LOC( p%DX_p%nBladeNodes(1) )
+   p%DX_p%nBladeNodes(:) = p%NumBldNds(:)
 
    ! Set the reference positions next
-   CALL AllocPAry( u%DX_u%twrRefPos, p%NumTwrNds*6, 'twrRefPos', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocPAry( u%DX_u%bldRefPos, p%nTotBldNds*6, 'bldRefPos', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocPAry( u%DX_u%hubRefPos, 6, 'hubRefPos', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocPAry( u%DX_u%nacRefPos, 6, 'nacRefPos', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocPAry (u%DX_u%bldRootRefPos, p%NumBlds*6, 'bldRootRefPos', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocPAry( p%DX_p%twrRefPos, p%NumTwrNds*6, 'twrRefPos', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocPAry( p%DX_p%bldRefPos, p%nTotBldNds*6, 'bldRefPos', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocPAry( p%DX_p%hubRefPos, 6, 'hubRefPos', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocPAry( p%DX_p%nacRefPos, 6, 'nacRefPos', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocPAry (p%DX_p%bldRootRefPos, p%NumBlds*6, 'bldRootRefPos', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ! make sure the C versions are synced with these arrays
-   u%DX_u%c_obj%twrRefPos_Len = p%NumTwrNds*6; u%DX_u%c_obj%twrRefPos = C_LOC( u%DX_u%twrRefPos(1) )
-   u%DX_u%c_obj%bldRefPos_Len = p%nTotBldNds*6; u%DX_u%c_obj%bldRefPos = C_LOC( u%DX_u%bldRefPos(1) )
-   u%DX_u%c_obj%hubRefPos_Len = 6; u%DX_u%c_obj%hubRefPos = C_LOC( u%DX_u%hubRefPos(1) )
-   u%DX_u%c_obj%nacRefPos_Len = 6; u%DX_u%c_obj%nacRefPos = C_LOC( u%DX_u%nacRefPos(1) )
-   u%DX_u%c_obj%bldRootRefPos_Len = p%NumBlds*6; u%DX_u%c_obj%bldRootRefPos = C_LOC( u%DX_u%bldRootRefPos(1) )
+   p%DX_p%c_obj%twrRefPos_Len = p%NumTwrNds*6; p%DX_p%c_obj%twrRefPos = C_LOC( p%DX_p%twrRefPos(1) )
+   p%DX_p%c_obj%bldRefPos_Len = p%nTotBldNds*6; p%DX_p%c_obj%bldRefPos = C_LOC( p%DX_p%bldRefPos(1) )
+   p%DX_p%c_obj%hubRefPos_Len = 6; p%DX_p%c_obj%hubRefPos = C_LOC( p%DX_p%hubRefPos(1) )
+   p%DX_p%c_obj%nacRefPos_Len = 6; p%DX_p%c_obj%nacRefPos = C_LOC( p%DX_p%nacRefPos(1) )
+   p%DX_p%c_obj%bldRootRefPos_Len = p%NumBlds*6; p%DX_p%c_obj%bldRootRefPos = C_LOC( p%DX_p%bldRootRefPos(1) )
    
    if (p%TwrAero) then
       do j=1,p%NumTwrNds
          call BD_CrvExtractCrv(u%TowerMotion%RefOrientation(:,:,j), wm_crv, ErrStat2, ErrMsg2)
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-         u%DX_u%twrRefPos((j-1)*6+1:(j-1)*6+3) = u%TowerMotion%Position(:,j)
-         u%DX_u%twrRefPos((j-1)*6+4:(j-1)*6+6) = wm_crv
+         p%DX_p%twrRefPos((j-1)*6+1:(j-1)*6+3) = u%TowerMotion%Position(:,j)
+         p%DX_p%twrRefPos((j-1)*6+4:(j-1)*6+6) = wm_crv
       end do
    end if
 
@@ -581,27 +581,27 @@ subroutine Init_u( u, p, InitInp, errStat, errMsg )
       do j=1,p%NumBldNds(k)
          call BD_CrvExtractCrv(u%BladeMotion(k)%RefOrientation(:,:,j), wm_crv, ErrStat2, ErrMsg2)
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         u%DX_u%bldRefPos((jTot-1)*6+1:(jTot-1)*6+3) = u%BladeMotion(k)%Position(:,j)
-         u%DX_u%bldRefPos((jTot-1)*6+4:(jTot-1)*6+6) = wm_crv
+         p%DX_p%bldRefPos((jTot-1)*6+1:(jTot-1)*6+3) = u%BladeMotion(k)%Position(:,j)
+         p%DX_p%bldRefPos((jTot-1)*6+4:(jTot-1)*6+6) = wm_crv
          jTot = jTot+1
       end do
    end do
 
    call BD_CrvExtractCrv(u%HubMotion%RefOrientation(:,:,1), wm_crv, ErrStat2, ErrMsg2)
    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   u%DX_u%hubRefPos(1:3) = u%HubMotion%Position(:,1)
-   u%DX_u%hubRefPos(4:6) = wm_crv
+   p%DX_p%hubRefPos(1:3) = u%HubMotion%Position(:,1)
+   p%DX_p%hubRefPos(4:6) = wm_crv
 
    call BD_CrvExtractCrv(u%NacelleMotion%RefOrientation(:,:,1), wm_crv, ErrStat2, ErrMsg2)
    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   u%DX_u%nacRefPos(1:3) = u%NacelleMotion%Position(:,1)
-   u%DX_u%nacRefPos(4:6) = wm_crv
+   p%DX_p%nacRefPos(1:3) = u%NacelleMotion%Position(:,1)
+   p%DX_p%nacRefPos(4:6) = wm_crv
 
    do k=1,p%NumBlds
       call BD_CrvExtractCrv(u%BladeRootMotion(k)%RefOrientation(:,:,1), wm_crv, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      u%DX_u%bldRootRefPos((k-1)*6+1:(k-1)*6+3) = u%BladeRootMotion(k)%Position(:,1)
-      u%DX_u%bldRootRefPos((k-1)*6+4:(k-1)*6+6) = wm_crv
+      p%DX_p%bldRootRefPos((k-1)*6+1:(k-1)*6+3) = u%BladeRootMotion(k)%Position(:,1)
+      p%DX_p%bldRootRefPos((k-1)*6+4:(k-1)*6+6) = wm_crv
    end do
       
 
@@ -621,31 +621,31 @@ subroutine Init_u( u, p, InitInp, errStat, errMsg )
    call ExtLd_ConvertInpDataForExtProg(u, p, ErrStat2, ErrMsg2 )
    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   CALL AllocPAry( u%DX_u%bldChord, p%nTotBldNds, 'bldChord', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocPAry( u%DX_u%bldRloc, p%nTotBldNds, 'bldRloc', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocPAry( u%DX_u%twrdia, p%NumTwrNds, 'twrDia', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocPAry( u%DX_u%twrHloc, p%NumTwrNds, 'twrHloc', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocPAry( p%DX_p%bldChord, p%nTotBldNds, 'bldChord', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocPAry( p%DX_p%bldRloc, p%nTotBldNds, 'bldRloc', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocPAry( p%DX_p%twrdia, p%NumTwrNds, 'twrDia', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocPAry( p%DX_p%twrHloc, p%NumTwrNds, 'twrHloc', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocPAry( u%DX_u%bldPitch, p%NumBlds, 'bldPitch', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ! make sure the C versions are synced with these arrays
-   u%DX_u%c_obj%bldChord_Len = p%nTotBldNds; u%DX_u%c_obj%bldChord = C_LOC( u%DX_u%bldChord(1) )
-   u%DX_u%c_obj%bldRloc_Len = p%nTotBldNds; u%DX_u%c_obj%bldRloc = C_LOC( u%DX_u%bldRloc(1) )
-   u%DX_u%c_obj%twrDia_Len = p%NumTwrNds; u%DX_u%c_obj%twrDia = C_LOC( u%DX_u%twrDia(1) )
-   u%DX_u%c_obj%twrHloc_Len = p%NumTwrNds; u%DX_u%c_obj%twrHloc = C_LOC( u%DX_u%twrHloc(1) )
+   p%DX_p%c_obj%bldChord_Len = p%nTotBldNds; p%DX_p%c_obj%bldChord = C_LOC( p%DX_p%bldChord(1) )
+   p%DX_p%c_obj%bldRloc_Len = p%nTotBldNds; p%DX_p%c_obj%bldRloc = C_LOC( p%DX_p%bldRloc(1) )
+   p%DX_p%c_obj%twrDia_Len = p%NumTwrNds; p%DX_p%c_obj%twrDia = C_LOC( p%DX_p%twrDia(1) )
+   p%DX_p%c_obj%twrHloc_Len = p%NumTwrNds; p%DX_p%c_obj%twrHloc = C_LOC( p%DX_p%twrHloc(1) )
    u%DX_u%c_obj%bldPitch_Len = p%NumBlds; u%DX_u%c_obj%bldPitch = C_LOC( u%DX_u%bldPitch(1) )
 
    jTot = 1
    do k=1,p%NumBlds
       do j=1,p%NumBldNds(k)
-         u%DX_u%bldChord(jTot) = InitInp%bldChord(j,k)
-         u%DX_u%bldRloc(jTot) = InitInp%bldRloc(j,k)
+         p%DX_p%bldChord(jTot) = InitInp%bldChord(j,k)
+         p%DX_p%bldRloc(jTot) = InitInp%bldRloc(j,k)
          jTot = jTot+1
       end do
    end do
 
    do j=1,p%NumTwrNds
-      u%DX_u%twrDia(j) = InitInp%twrDia(j)
-      u%DX_u%twrHloc(j) = InitInp%twrHloc(j)
+      p%DX_p%twrDia(j) = InitInp%twrDia(j)
+      p%DX_p%twrHloc(j) = InitInp%twrHloc(j)
    end do
    
 end subroutine Init_u
