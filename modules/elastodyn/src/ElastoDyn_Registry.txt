@@ -58,6 +58,7 @@ typedef	^	InitOutputType	IntKi	DerivOrder_x {:}	-	-	"Integer that tells FAST/MBC
 typedef	^	InitOutputType	LOGICAL	RotFrame_u	{:}	-	-	"Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
 typedef	^	InitOutputType	LOGICAL	IsLoad_u	{:}	-	-	"Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
 typedef	^	InitOutputType	IntKi	GearBox_index	-	-	-	"Index to gearbox rotation in state array (for steady-state calculations)"   -
+typedef	^	InitOutputType	ModVarsType	*Vars	-	-	-	"Module Variables"
 
 # ..... Blade Input file data ...........................................................................................................
 typedef	ElastoDyn/ED	BladeInputData	IntKi	NBlInpSt	-	-	-	"Number of blade input stations"	-
@@ -513,21 +514,12 @@ typedef	^	OtherStateType	ReKi	HSSBrTrqC	-	-	-	"Commanded HSS brake torque (adjus
 typedef	^	OtherStateType	IntKi	SgnPrvLSTQ	-	-	-	"The sign of the low-speed shaft torque from the previous call to RtHS().  This is calculated at the end of RtHS().  NOTE: The low-speed shaft torque is assumed to be positive at the beginning of the run!"	-
 typedef	^	OtherStateType	IntKi	SgnLSTQ	{ED_NMX}	-	-	"history of sign of LSTQ"
 
-# ..... Misc Vars ................................................................................................................
-typedef	^	MiscVarType	ED_CoordSys	CoordSys	-	-	-	"Coordinate systems in the FAST framework"	-
-typedef	^	MiscVarType	ED_RtHndSide	RtHS	-	-	-	"Values used in calculating the right-hand-side RtHS (and outputs)"
-typedef	^	MiscVarType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	"see OutListParameters.xlsx spreadsheet"
-typedef	^	MiscVarType	R8Ki	AugMat	{:}{:}	-	-	"The augmented matrix used for the solution of the QD2T()s"
-typedef	^	MiscVarType	R8Ki	AugMat_factor	{:}{:}	-	-	"factored version of AugMat matrix"
-typedef	^	MiscVarType	R8Ki	SolnVec	{:}	-	-	"b in the equation Ax=b (last column of AugMat)"
-typedef	^	MiscVarType	IntKi	AugMat_pivot	{:}	-	-	"Pivot column for AugMat in LAPACK factorization"
-typedef	^	MiscVarType	ReKi	OgnlGeAzRo	{:}	-	-	"Original DOF_GeAz row in AugMat"	-
-typedef	^	MiscVarType	R8Ki	QD2T	{:}	-	-	"Solution (acceleration) vector; the first time derivative of QDT"
-typedef	^	MiscVarType	Logical	IgnoreMod	-	-	-	"whether to ignore the modulo in ED outputs (necessary for linearization perturbations)"	-
-
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+typedef	^	ParameterType	ModVarsType	&Vars	-	-	-	"Module Variables"
+typedef	^	ParameterType	ModIdxType	IdxAeroMap	-	-	-	"Module variable index for AeroMap"
+typedef	^	ParameterType	ModIdxType	IdxSolver	-	-	-	"Module variable index for Solver"
 typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
 typedef	^	ParameterType	DbKi	DT24	-	-	-	"=DT/24 (used in loose coupling)"	seconds
 typedef	^	ParameterType	IntKi	BldNodes	-	-	-	"Number of blade nodes used in the analysis"	-
@@ -757,6 +749,27 @@ typedef	^	ParameterType	Integer	NumBl_Lin	-	-	-	"number of blades in the jacobia
 typedef	^	ParameterType	Integer	NActvVelDOF_Lin	-	-	-	"number of velocity states in the jacobian"	-
 typedef	^	ParameterType	Integer	NActvDOF_Lin	-	-	-	"number of active DOFs to use in the jacobian"	-
 typedef	^	ParameterType	Integer	NActvDOF_Stride	-	-	-	"stride for active DOFs to use in the jacobian"	-
+# Input variable indices
+typedef	^	ParameterType	IntKi	iVarBladePtLoads	{:}	-	-	"Indices of blade point loads mesh variable"	-
+typedef	^	ParameterType	IntKi	iVarPlatformPtMesh	-	-	-	"Index of platform point loads mesh variable"	-
+typedef	^	ParameterType	IntKi	iVarTowerPtLoads	-	-	-	"Index of tower point loads mesh variable"	-
+typedef	^	ParameterType	IntKi	iVarHubPtLoad	-	-	-	"Index of hub point load mesh variable"	-
+typedef	^	ParameterType	IntKi	iVarNacelleLoads	-	-	-	"Index of nacelle loads mesh variable"	-
+typedef	^	ParameterType	IntKi	iVarBlPitchCom	-	-	-	"Index of blade pitch command variable"	-
+typedef	^	ParameterType	IntKi	iVarYawMom	-	-	-	"Index of yaw moment variable"	-
+typedef	^	ParameterType	IntKi	iVarGenTrq	-	-	-	"Index of generator torque variable"	-
+typedef	^	ParameterType	IntKi	iVarBlPitchComC	-	-	-	"Index of blade pitch command C variable"	-
+# Output variable indices
+typedef	^	ParameterType	IntKi	iVarBladeMotion	{:}	-	-	"Indices of blade motion mesh variable"	-
+typedef	^	ParameterType	IntKi	iVarPlatformMotion	-	-	-	"Index of variable"	-
+typedef	^	ParameterType	IntKi	iVarTowerMotion	-	-	-	"Index of variable"	-
+typedef	^	ParameterType	IntKi	iVarHubMotion	-	-	-	"Index of variable"	-
+typedef	^	ParameterType	IntKi	iVarBladeRootMotion	{:}	-	-	"Indices of variable"	-
+typedef	^	ParameterType	IntKi	iVarNacelleMotion	-	-	-	"Index of variable"	-
+typedef	^	ParameterType	IntKi	iVarYaw	-	-	-	"Index of variable"	-
+typedef	^	ParameterType	IntKi	iVarYawRate	-	-	-	"Index of variable"	-
+typedef	^	ParameterType	IntKi	iVarHSS_Spd	-	-	-	"Index of variable"	-
+typedef	^	ParameterType	IntKi	iVarOutput	-	-	-	"Index of variable"	-
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
@@ -817,3 +830,20 @@ typedef	^	OutputType	ReKi	RotPwr	-	-	-	"Rotor power (this is equivalent to the l
 typedef	^	OutputType	ReKi	LSShftFxa	-	-	-	"Rotating low-speed shaft force x"	N
 typedef	^	OutputType	ReKi	LSShftFys	-	-	-	"Nonrotating low-speed shaft force y"	N
 typedef	^	OutputType	ReKi	LSShftFzs	-	-	-	"Nonrotating low-speed shaft force z"	N
+
+# ..... Misc Vars ................................................................................................................
+typedef	^	MiscVarType	ED_CoordSys	CoordSys	-	-	-	"Coordinate systems in the FAST framework"	-
+typedef	^	MiscVarType	ED_RtHndSide	RtHS	-	-	-	"Values used in calculating the right-hand-side RtHS (and outputs)"
+typedef	^	MiscVarType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	"see OutListParameters.xlsx spreadsheet"
+typedef	^	MiscVarType	R8Ki	AugMat	{:}{:}	-	-	"The augmented matrix used for the solution of the QD2T()s"
+typedef	^	MiscVarType	R8Ki	AugMat_factor	{:}{:}	-	-	"factored version of AugMat matrix"
+typedef	^	MiscVarType	R8Ki	SolnVec	{:}	-	-	"b in the equation Ax=b (last column of AugMat)"
+typedef	^	MiscVarType	IntKi	AugMat_pivot	{:}	-	-	"Pivot column for AugMat in LAPACK factorization"
+typedef	^	MiscVarType	ReKi	OgnlGeAzRo	{:}	-	-	"Original DOF_GeAz row in AugMat"	-
+typedef	^	MiscVarType	R8Ki	QD2T	{:}	-	-	"Solution (acceleration) vector; the first time derivative of QDT"
+typedef	^	MiscVarType	Logical	IgnoreMod	-	-	-	"whether to ignore the modulo in ED outputs (necessary for linearization perturbations)"	-
+typedef	^	MiscVarType	ModLinType	Lin	-	-	-   "Values corresponding to module variables"
+typedef	^	MiscVarType	ED_ContinuousStateType	x_perturb	-	-	-	""	-
+typedef	^	MiscVarType	ED_ContinuousStateType	dx_perturb	-	-	-	""	-
+typedef	^	MiscVarType	ED_InputType	u_perturb	-	-	-	""	-
+typedef	^	MiscVarType	ED_OutputType	y_perturb	-	-	-	""	-
