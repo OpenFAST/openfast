@@ -29,30 +29,32 @@ use ModMesh
 implicit none
 
 private
+public :: MV_InitVarsLin, MV_Pack, MV_Unpack
+public :: MV_ComputeCentralDiff, MV_Perturb, MV_ComputeDiff
+public :: MV_AddVar, MV_AddMeshVar, MV_AddModule
+public :: SetFlags, UnsetFlags, MV_NumVars
+public :: LoadFields, MotionFields, TransFields, AngularFields
+public :: wm_to_dcm, wm_compose, wm_from_dcm, wm_inv, wm_to_rvec, wm_from_rvec
+public :: MV_FieldString, IdxStr
+public :: MV_InitLinArrays, MV_InitVarIdx
 
 integer(IntKi), parameter :: &
    LoadFields(*) = [VF_Force, VF_Moment], &
    TransFields(*) = [VF_TransDisp, VF_TransVel, VF_TransAcc], &
    AngularFields(*) = [VF_Orientation, VF_AngularDisp, VF_AngularVel, VF_AngularAcc], &
-   MotionFields(*) = [VF_TransDisp, VF_Orientation, VF_TransVel, VF_AngularVel, VF_TransAcc, VF_AngularAcc], &
-   MeshFields(*) = [LoadFields, MotionFields]
+   MotionFields(*) = [VF_TransDisp, VF_Orientation, VF_TransVel, VF_AngularVel, VF_TransAcc, VF_AngularAcc]
 
-interface MV_PackVar
+interface MV_Pack
    module procedure MV_PackVarR4, MV_PackVarR4Ary
    module procedure MV_PackVarR8, MV_PackVarR8Ary
+   module procedure MV_PackMesh
 end interface
 
-interface MV_UnpackVar
+interface MV_Unpack
    module procedure MV_UnpackVarR4, MV_UnpackVarR4Ary
    module procedure MV_UnpackVarR8, MV_UnpackVarR8Ary
+   module procedure MV_UnpackMesh
 end interface
-
-public :: MV_InitVarsVals, MV_LinkOutputInput, MV_VarIndex, MV_PackMesh, MV_UnpackMesh, MV_PackVar, MV_UnpackVar
-public :: MV_ComputeCentralDiff, MV_Perturb, MV_ComputeDiff
-public :: MV_AddVar, MV_AddMeshVar, MV_AddModule, SetFlags
-public :: LoadFields, MotionFields, TransFields, AngularFields, MeshFields
-public :: wm_to_dcm, wm_compose, wm_from_dcm, wm_inv, wm_to_xyz, wm_from_xyz
-public :: MV_FieldString, IdxStr
 
 contains
 
@@ -83,14 +85,14 @@ function MV_FieldString(Field) result(str)
    end select
 end function
 
-subroutine MV_InitVarsVals(Vars, Vals, Linearize, ErrStat, ErrMsg)
+subroutine MV_InitVarsLin(Vars, Lin, Linearize, ErrStat, ErrMsg)
    type(ModVarsType), intent(inout)    :: Vars
-   type(ModValsType), intent(inout)    :: Vals
+   type(ModLinType), intent(inout)     :: Lin
    logical, intent(in)                 :: Linearize
    integer(IntKi), intent(out)         :: ErrStat
    character(ErrMsgLen), intent(out)   :: ErrMsg
 
-   character(*), parameter  :: RoutineName = 'MV_InitMod'
+   character(*), parameter  :: RoutineName = 'MV_InitVarsLin'
    integer(IntKi)           :: ErrStat2
    character(ErrMsgLen)     :: ErrMsg2
    integer(IntKi)           :: i, StartIndex
@@ -103,21 +105,24 @@ subroutine MV_InitVarsVals(Vars, Vals, Linearize, ErrStat, ErrMsg)
    if (.not. allocated(Vars%x)) allocate (Vars%x(0))
    StartIndex = 1
    do i = 1, size(Vars%x)
-      call ModVarType_Init(Vars%x(i), StartIndex, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+      call ModVarType_Init(Vars%x(i), StartIndex, Linearize, ErrStat2, ErrMsg2)
+      if (Failed()) return
    end do
 
    ! Initialize input variables
    if (.not. allocated(Vars%u)) allocate (Vars%u(0))
    StartIndex = 1
    do i = 1, size(Vars%u)
-      call ModVarType_Init(Vars%u(i), StartIndex, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+      call ModVarType_Init(Vars%u(i), StartIndex, Linearize, ErrStat2, ErrMsg2)
+      if (Failed()) return
    end do
 
    ! Initialize output variables
    if (.not. allocated(Vars%y)) allocate (Vars%y(0))
    StartIndex = 1
    do i = 1, size(Vars%y)
-      call ModVarType_Init(Vars%y(i), StartIndex, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+      call ModVarType_Init(Vars%y(i), StartIndex, Linearize, ErrStat2, ErrMsg2)
+      if (Failed()) return
    end do
 
    ! Calculate number of state, input, and output variables
@@ -125,19 +130,25 @@ subroutine MV_InitVarsVals(Vars, Vals, Linearize, ErrStat, ErrMsg)
    Vars%Nu = sum(Vars%u%Num)
    Vars%Ny = sum(Vars%y%Num)
 
-   ! Allocate state, input, and output values
-   call AllocAry(Vals%x, Vars%Nx, "Vals%x", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(Vals%dxdt, Vars%Nx, "Vals%dxdt", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(Vals%u, Vars%Nu, "Vals%u", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(Vals%y, Vars%Ny, "Vals%y", ErrStat2, ErrMsg2); if (Failed()) return
+   ! Allocate state, state derivative, input, and output arrays
+   call AllocAry(Lin%x, Vars%Nx, "Vals%x", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(Lin%dx, Vars%Nx, "Vals%dx", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(Lin%u, Vars%Nu, "Vals%u", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(Lin%y, Vars%Ny, "Vals%y", ErrStat2, ErrMsg2); if (Failed()) return
 
-   ! Allocate perturbation input and output values
-   call AllocAry(Vals%u_perturb, Vars%Nu, "Vals%u_perturb", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(Vals%x_perturb, Vars%Nx, "Vals%x_perturb", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(Vals%xp, Vars%Nx, "Vals%xp", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(Vals%xn, Vars%Nx, "Vals%xn", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(Vals%yp, Vars%Ny, "Vals%yp", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(Vals%yn, Vars%Ny, "Vals%yn", ErrStat2, ErrMsg2); if (Failed()) return
+   ! Allocate perturbation and +/- arrays
+   call AllocAry(Lin%u_perturb, Vars%Nu, "Vals%u_perturb", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(Lin%x_perturb, Vars%Nx, "Vals%x_perturb", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(Lin%x_pos, Vars%Nx, "Vals%x_pos", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(Lin%x_neg, Vars%Nx, "Vals%x_neg", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(Lin%y_pos, Vars%Ny, "Vals%y_pos", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(Lin%y_neg, Vars%Ny, "Vals%y_neg", ErrStat2, ErrMsg2); if (Failed()) return
+
+   ! Allocate Jacobian matrices
+   call AllocAry(Lin%dYdu, Vars%Ny, Vars%Nu, "Lin%dYdu", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(Lin%dXdu, Vars%Nx, Vars%Nu, "Lin%dXdu", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(Lin%dYdx, Vars%Ny, Vars%Nx, "Lin%dYdx", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(Lin%dXdx, Vars%Nx, Vars%Nx, "Lin%dXdx", ErrStat2, ErrMsg2); if (Failed()) return
 
 contains
 
@@ -172,7 +183,6 @@ subroutine ModVarType_Init(Var, Index, Linearize, ErrStat, ErrMsg)
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
    integer(IntKi)                :: i, j
-   integer(IntKi)                :: nNodes
    character(1), parameter       :: Comp(3) = ['X', 'Y', 'Z']
    character(*), parameter       :: Fmt = '(A," ",A,", node",I0,", ",A)'
    character(2)                  :: UnitDesc
@@ -194,7 +204,7 @@ subroutine ModVarType_Init(Var, Index, Linearize, ErrStat, ErrMsg)
       ! Number of values
       Var%Num = Var%Nodes*3
 
-      ! If linearization requested
+      ! If linearization enabled
       if (Linearize) then
 
          ! Set unit description for line mesh
@@ -204,21 +214,21 @@ subroutine ModVarType_Init(Var, Index, Linearize, ErrStat, ErrMsg)
          ! Switch based on field number
          select case (Var%Field)
          case (VF_Force)
-            Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" force, node "//trim(num2lstr(i))//', N'//UnitDesc, j=1, 3), i=1, nNodes)]
+            Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" force, node "//trim(num2lstr(i))//', N'//UnitDesc, j=1, 3), i=1, Var%Nodes)]
          case (VF_Moment)
-            Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" moment, node "//trim(num2lstr(i))//', Nm'//UnitDesc, j=1, 3), i=1, nNodes)]
+            Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" moment, node "//trim(num2lstr(i))//', Nm'//UnitDesc, j=1, 3), i=1, Var%Nodes)]
          case (VF_TransDisp)
-            Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" translation displacement, node "//trim(num2lstr(i))//', m', j=1, 3), i=1, nNodes)]
+            Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" translation displacement, node "//trim(num2lstr(i))//', m', j=1, 3), i=1, Var%Nodes)]
          case (VF_Orientation)
-            Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" orientation angle, node "//trim(num2lstr(i))//', rad', j=1, 3), i=1, nNodes)]
+            Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" orientation angle, node "//trim(num2lstr(i))//', rad', j=1, 3), i=1, Var%Nodes)]
          case (VF_TransVel)
-            Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" translation velocity, node "//trim(num2lstr(i))//', m/s', j=1, 3), i=1, nNodes)]
+            Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" translation velocity, node "//trim(num2lstr(i))//', m/s', j=1, 3), i=1, Var%Nodes)]
          case (VF_AngularVel)
-            Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" rotation velocity, node "//trim(num2lstr(i))//', rad/s', j=1, 3), i=1, nNodes)]
+            Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" rotation velocity, node "//trim(num2lstr(i))//', rad/s', j=1, 3), i=1, Var%Nodes)]
          case (VF_TransAcc)
-            Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" translation acceleration, node "//trim(num2lstr(i))//', m/s^2', j=1, 3), i=1, nNodes)]
+            Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" translation acceleration, node "//trim(num2lstr(i))//', m/s^2', j=1, 3), i=1, Var%Nodes)]
          case (VF_AngularAcc)
-            Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" rotation acceleration, node "//trim(num2lstr(i))//', rad/s^2', j=1, 3), i=1, nNodes)]
+            Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" rotation acceleration, node "//trim(num2lstr(i))//', rad/s^2', j=1, 3), i=1, Var%Nodes)]
          case default
             call SetErrStat(ErrID_Fatal, "Invalid mesh field type", ErrStat, ErrMsg, RoutineName)
             return
@@ -232,24 +242,27 @@ subroutine ModVarType_Init(Var, Index, Linearize, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    if (Linearize) then
-
-      ! If incorrect number of linearization names, return error
-      if (size(Var%LinNames) < Var%Num) then
+      if (.not. allocated(Var%LinNames)) then
+         call SetErrStat(ErrID_Fatal, "LinNames not allocated for "//Var%Name, ErrStat, ErrMsg, RoutineName)
+         return
+      else if (size(Var%LinNames) < Var%Num) then
          call SetErrStat(ErrID_Fatal, "insufficient LinNames given for "//Var%Name, ErrStat, ErrMsg, RoutineName)
          return
       else if (size(Var%LinNames) > Var%Num) then
          call SetErrStat(ErrID_Fatal, "excessive LinNames given for "//Var%Name, ErrStat, ErrMsg, RoutineName)
          return
       end if
+   else
+      ! Deallocate linearization names if linearization is not enabled
+      if (allocated(Var%LinNames)) deallocate (Var%LinNames)
    end if
 
    !----------------------------------------------------------------------------
    ! Indices
    !----------------------------------------------------------------------------
 
-   ! Initialize local index
-   call AllocAry(Var%iLoc, Var%Num, "Var%iLoc", ErrStat2, ErrMsg2); if (Failed()) return
-   Var%iLoc = [(index + i, i=0, Var%Num - 1)]
+   ! Set start and end indices for local matrices
+   Var%iLoc = [index, index + Var%Num - 1]
 
    ! Update index based on variable size
    index = index + Var%Num
@@ -266,158 +279,183 @@ end subroutine
 ! Functions for packing and unpacking data by variable
 !-------------------------------------------------------------------------------
 
+subroutine MV_PackMatrix(RowVarAry, ColVarAry, FlagFilter, M, SubM)
+   type(ModVarType), intent(in)  :: RowVarAry(:), ColVarAry(:)
+   real(R8Ki), intent(in)        :: M(:, :)
+   real(R8Ki), intent(inout)     :: SubM(:, :)
+   integer(IntKi), intent(in)    :: FlagFilter
+   integer(IntKi)                :: i, j
+   integer(IntKi)                :: row, col
+   col = 1
+   row = 1
+   do i = 1, size(ColVarAry)
+      if (iand(ColVarAry(i)%Flags, FlagFilter) == 0) cycle
+      do j = 1, size(RowVarAry)
+         if (iand(RowVarAry(j)%Flags, FlagFilter) == 0) cycle
+         associate (rVar => RowVarAry(i), cVar => ColVarAry(i))
+            SubM(row:row + rVar%Num - 1, col:col + cVar%Num - 1) = M(rVar%iLoc(1):rVar%iLoc(2), cVar%iLoc(1):cVar%iLoc(2))
+         end associate
+         row = row + RowVarAry(j)%Num - 1
+      end do
+      col = col + ColVarAry(i)%Num - 1
+   end do
+end subroutine
+
 subroutine MV_PackVarR4(VarAry, iVar, Val, Ary)
    type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(inout) :: iVar
+   integer(IntKi), intent(in)    :: iVar
    real(R4Ki), intent(in)        :: Val
    real(R8Ki), intent(inout)     :: Ary(:)
    Ary(VarAry(iVar)%iLoc(1)) = real(Val, R8Ki)
-   iVar = iVar + 1
 end subroutine
 
 subroutine MV_PackVarR8(VarAry, iVar, Val, Ary)
    type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(inout) :: iVar
+   integer(IntKi), intent(in)    :: iVar
    real(R8Ki), intent(in)        :: Val
    real(R8Ki), intent(inout)     :: Ary(:)
    Ary(VarAry(iVar)%iLoc(1)) = Val
-   iVar = iVar + 1
 end subroutine
 
 subroutine MV_PackVarR4Ary(VarAry, iVar, Val, Ary)
    type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(inout) :: iVar
+   integer(IntKi), intent(in)    :: iVar
    real(R4Ki), intent(in)        :: Val(:)
    real(R8Ki), intent(inout)     :: Ary(:)
-   Ary(VarAry(iVar)%iLoc) = real(pack(Val, .true.), R4Ki)
-   iVar = iVar + 1
+   associate (iLoc => VarAry(iVar)%iLoc)
+      Ary(iLoc(1):iLoc(2)) = real(Val, R8Ki)
+   end associate
 end subroutine
 
 subroutine MV_PackVarR8Ary(VarAry, iVar, Vals, Ary)
    type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(inout) :: iVar
+   integer(IntKi), intent(in)    :: iVar
    real(R8Ki), intent(in)        :: Vals(:)
    real(R8Ki), intent(inout)     :: Ary(:)
-   Ary(VarAry(iVar)%iLoc) = pack(Vals, .true.)
-   iVar = iVar + 1
+   associate (iLoc => VarAry(iVar)%iLoc)
+      Ary(iLoc(1):iLoc(2)) = Vals
+   end associate
 end subroutine
 
 subroutine MV_UnpackVarR4(VarAry, iVar, Ary, Val)
    type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(inout) :: iVar
+   integer(IntKi), intent(in)    :: iVar
    real(R4Ki), intent(in)        :: Ary(:)
    real(R8Ki), intent(inout)     :: Val
    Val = Ary(VarAry(iVar)%iLoc(1))
-   iVar = iVar + 1
 end subroutine
 
 subroutine MV_UnpackVarR4Ary(VarAry, iVar, Ary, Vals)
    type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(inout) :: iVar
+   integer(IntKi), intent(in)    :: iVar
    real(R4Ki), intent(in)        :: Ary(:)
    real(R8Ki), intent(inout)     :: Vals(:)
-   Vals = Ary(VarAry(iVar)%iLoc)
-   iVar = iVar + 1
+   associate (iLoc => VarAry(iVar)%iLoc)
+      Vals = real(Ary(iLoc(1):iLoc(2)), R4Ki)
+   end associate
 end subroutine
 
 subroutine MV_UnpackVarR8(VarAry, iVar, Ary, Vals)
    type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(inout) :: iVar
+   integer(IntKi), intent(in)    :: iVar
    real(R8Ki), intent(in)        :: Ary(:)
    real(R8Ki), intent(inout)     :: Vals
    Vals = Ary(VarAry(iVar)%iLoc(1))
-   iVar = iVar + 1
 end subroutine
 
 subroutine MV_UnpackVarR8Ary(VarAry, iVar, Ary, Vals)
    type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(inout) :: iVar
+   integer(IntKi), intent(in)    :: iVar
    real(R8Ki), intent(in)        :: Ary(:)
    real(R8Ki), intent(inout)     :: Vals(:)
-   Vals = Ary(VarAry(iVar)%iLoc)
-   iVar = iVar + 1
+   associate (iLoc => VarAry(iVar)%iLoc)
+      Vals = Ary(iLoc(1):iLoc(2))
+   end associate
 end subroutine
 
 subroutine MV_PackMesh(VarAry, iVar, Mesh, Values)
    type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(inout) :: iVar
+   integer(IntKi), intent(in)    :: iVar
    type(MeshType), intent(in)    :: Mesh
    real(R8Ki), intent(inout)     :: Values(:)
-   integer(IntKi)                :: MeshID, j
+   integer(IntKi)                :: MeshID, i, j
    MeshID = VarAry(iVar)%MeshID
-   do while (VarAry(iVar)%MeshID == MeshID)
-      select case (VarAry(iVar)%Field)
-      case (VF_Force)
-         Values(VarAry(iVar)%iLoc) = pack(Mesh%Force, .true.)
-      case (VF_Moment)
-         Values(VarAry(iVar)%iLoc) = pack(Mesh%Moment, .true.)
-      case (VF_TransDisp)
-         Values(VarAry(iVar)%iLoc) = pack(Mesh%TranslationDisp, .true.)
-      case (VF_Orientation)
-         do j = 1, VarAry(iVar)%Nodes
-            Values(VarAry(iVar)%iLoc(3*(j - 1) + 1:3*j)) = wm_from_dcm(Mesh%Orientation(:, :, j))
-         end do
-      case (VF_TransVel)
-         Values(VarAry(iVar)%iLoc) = pack(Mesh%TranslationVel, .true.)
-      case (VF_AngularVel)
-         Values(VarAry(iVar)%iLoc) = pack(Mesh%RotationVel, .true.)
-      case (VF_TransAcc)
-         Values(VarAry(iVar)%iLoc) = pack(Mesh%TranslationAcc, .true.)
-      case (VF_AngularAcc)
-         Values(VarAry(iVar)%iLoc) = pack(Mesh%RotationAcc, .true.)
-      case (VF_Scalar)
-         Values(VarAry(iVar)%iLoc) = pack(Mesh%Scalars, .true.)
-      end select
-      iVar = iVar + 1
-      if (iVar > size(VarAry)) exit
+   do i = iVar, size(VarAry)
+      if (VarAry(i)%MeshID /= MeshID) exit
+      associate (iLoc => VarAry(i)%iLoc)
+         select case (VarAry(i)%Field)
+         case (VF_Force)
+            Values(iLoc(1):iLoc(2)) = pack(Mesh%Force, .true.)
+         case (VF_Moment)
+            Values(iLoc(1):iLoc(2)) = pack(Mesh%Moment, .true.)
+         case (VF_TransDisp)
+            Values(iLoc(1):iLoc(2)) = pack(Mesh%TranslationDisp, .true.)
+         case (VF_Orientation)
+            do j = 1, VarAry(i)%Nodes
+               Values(iLoc(1) + 3*(j - 1):iLoc(1) + 3*j) = wm_from_dcm(Mesh%Orientation(:, :, j))
+            end do
+         case (VF_TransVel)
+            Values(iLoc(1):iLoc(2)) = pack(Mesh%TranslationVel, .true.)
+         case (VF_AngularVel)
+            Values(iLoc(1):iLoc(2)) = pack(Mesh%RotationVel, .true.)
+         case (VF_TransAcc)
+            Values(iLoc(1):iLoc(2)) = pack(Mesh%TranslationAcc, .true.)
+         case (VF_AngularAcc)
+            Values(iLoc(1):iLoc(2)) = pack(Mesh%RotationAcc, .true.)
+         case (VF_Scalar)
+            Values(iLoc(1):iLoc(2)) = pack(Mesh%Scalars, .true.)
+         end select
+      end associate
    end do
 end subroutine
 
 subroutine MV_UnpackMesh(VarAry, iVar, Values, Mesh)
    type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(inout) :: iVar
+   integer(IntKi), intent(in) :: iVar
    real(R8Ki), intent(in)        :: Values(:)
    type(MeshType), intent(inout) :: Mesh
-   integer(IntKi)                :: MeshID, j
+   integer(IntKi)                :: MeshID, i, j
    MeshID = VarAry(iVar)%MeshID
-   do while (VarAry(iVar)%MeshID == MeshID)
-      select case (VarAry(iVar)%Field)
-      case (VF_Force)
-         Mesh%Force = reshape(Values(VarAry(iVar)%iLoc), shape(Mesh%Force))
-      case (VF_Moment)
-         Mesh%Moment = reshape(Values(VarAry(iVar)%iLoc), shape(Mesh%Moment))
-      case (VF_TransDisp)
-         Mesh%TranslationDisp = reshape(Values(VarAry(iVar)%iLoc), shape(Mesh%TranslationDisp))
-      case (VF_Orientation)
-         do j = 1, VarAry(iVar)%Nodes
-            Mesh%Orientation(:, :, j) = wm_to_dcm(Values(VarAry(iVar)%iLoc(3*(j - 1) + 1:3*j)))
-         end do
-      case (VF_TransVel)
-         Mesh%TranslationVel = reshape(Values(VarAry(iVar)%iLoc), shape(Mesh%TranslationVel))
-      case (VF_AngularVel)
-         Mesh%RotationVel = reshape(Values(VarAry(iVar)%iLoc), shape(Mesh%RotationVel))
-      case (VF_TransAcc)
-         Mesh%TranslationAcc = reshape(Values(VarAry(iVar)%iLoc), shape(Mesh%TranslationAcc))
-      case (VF_AngularAcc)
-         Mesh%RotationAcc = reshape(Values(VarAry(iVar)%iLoc), shape(Mesh%RotationAcc))
-      case (VF_Scalar)
-         Mesh%Scalars = reshape(Values(VarAry(iVar)%iLoc), shape(Mesh%Scalars))
-      end select
-      iVar = iVar + 1
-      if (iVar > size(VarAry)) exit
+   do i = iVar, size(VarAry)
+      if (VarAry(i)%MeshID /= MeshID) exit
+      associate (iLoc => VarAry(i)%iLoc)
+         select case (VarAry(i)%Field)
+         case (VF_Force)
+            Mesh%Force = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%Force))
+         case (VF_Moment)
+            Mesh%Moment = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%Moment))
+         case (VF_TransDisp)
+            Mesh%TranslationDisp = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%TranslationDisp))
+         case (VF_Orientation)
+            do j = 1, VarAry(i)%Nodes
+               Mesh%Orientation(:, :, j) = wm_to_dcm(Values(iLoc(1) + 3*(j - 1):iLoc(1) + 3*j))
+            end do
+         case (VF_TransVel)
+            Mesh%TranslationVel = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%TranslationVel))
+         case (VF_AngularVel)
+            Mesh%RotationVel = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%RotationVel))
+         case (VF_TransAcc)
+            Mesh%TranslationAcc = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%TranslationAcc))
+         case (VF_AngularAcc)
+            Mesh%RotationAcc = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%RotationAcc))
+         case (VF_Scalar)
+            Mesh%Scalars = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%Scalars))
+         end select
+      end associate
    end do
 end subroutine
 
-subroutine MV_Perturb(Var, iLin, PerturbSign, BaseAry, PerturbAry, iPerturb)
+subroutine MV_Perturb(Var, iLin, PerturbSign, BaseAry, PerturbAry)
    type(ModVarType), intent(in)     :: Var
    integer(IntKi), intent(in)       :: iLin
    integer(IntKi), intent(in)       :: PerturbSign
    real(R8Ki), intent(in)           :: BaseAry(:)
    real(R8Ki), intent(inout)        :: PerturbAry(:)
-   integer(IntKi), intent(out)      :: iPerturb
+
+   integer(IntKi)                   :: iAry
    real(R8Ki)                       :: Perturb
-   real(R8Ki)                       :: WM(3), WMp(3)
-   integer(IntKi)                   :: i, j, iLoc(3)
+   real(R8Ki)                       :: WM(3), rotvec(3)
+   integer(IntKi)                   :: i, j
 
    ! Copy base array to perturbed array
    PerturbAry = BaseAry
@@ -426,19 +464,18 @@ subroutine MV_Perturb(Var, iLin, PerturbSign, BaseAry, PerturbAry, iPerturb)
    Perturb = Var%Perturb*real(PerturbSign, R8Ki)
 
    ! Perturbation index within array
-   iPerturb = Var%iLoc(iLin)
+   iAry = Var%iLoc(1) + iLin - 1
 
    ! If variable field is orientation, perturbation is in WM parameters
    if (Var%Field == VF_Orientation) then
-      j = mod(iLin - 1, 3)                                ! component being modified (0, 1, 2)
-      i = iLin - j                                        ! index of start of WM parameters (3)
-      iLoc = Var%iLoc(i:i + 2)                            ! array index vector
-      WMp = 0.0_R8Ki                                      ! Init WM perturbation to zero
-      WMp(j + 1) = Perturb                                ! WM perturbation around X,Y,Z axis
-      WM = PerturbAry(iLoc)                               ! Current WM parameters value
-      PerturbAry(iLoc) = wm_compose(WM, wm_from_xyz(WMp)) ! Compose value and perturbation
+      j = mod(iLin - 1, 3)                                        ! component being modified (0, 1, 2)
+      i = iLin - j                                                ! index of start of WM parameters (3)
+      rotvec = 0.0_R8Ki                                           ! Init WM perturbation to zero
+      rotvec(j + 1) = Perturb                                     ! WM perturbation around X,Y,Z axis
+      WM = PerturbAry(i:i + 2)                                    ! Current WM parameters value
+      PerturbAry(i:i + 2) = wm_compose(WM, wm_from_rvec(rotvec))   ! Compose value and perturbation
    else
-      PerturbAry(Var%iLoc(iLin)) = PerturbAry(Var%iLoc(iLin)) + Perturb
+      PerturbAry(iAry) = PerturbAry(iAry) + Perturb
    end if
 
 end subroutine
@@ -448,7 +485,7 @@ subroutine MV_ComputeDiff(VarAry, PosAry, NegAry, DiffAry)
    real(R8Ki), intent(in)        :: PosAry(:)      ! Positive result array
    real(R8Ki), intent(in)        :: NegAry(:)      ! Negative result array
    real(R8Ki), intent(inout)     :: DiffAry(:)     ! Array containing difference
-   integer(IntKi)                :: i, j, ind(3)
+   integer(IntKi)                :: i, j, k
    real(R8Ki)                    :: DeltaWM(3)
 
    ! Loop through variables
@@ -461,19 +498,21 @@ subroutine MV_ComputeDiff(VarAry, PosAry, NegAry, DiffAry)
          do j = 1, VarAry(i)%Nodes
 
             ! Get vector of indicies of WM rotation parameters in array
-            ind = VarAry(i)%iLoc(3*(j - 1) + 1:3*j)
+            k = VarAry(i)%iLoc(1) + 3*(j - 1)
 
             ! Compose WM parameters to go from negative to positive array
-            DeltaWM = wm_compose(wm_inv(NegAry(ind)), PosAry(ind))
+            DeltaWM = wm_compose(PosAry(k:k + 2), wm_inv(NegAry(k:k + 2)))
 
             ! Calculate change in rotation in XYZ in radians
-            DiffAry(ind) = wm_to_xyz(DeltaWM)   ! store delta as radians
+            DiffAry(k:k + 2) = wm_to_rvec(DeltaWM)
          end do
 
       else
 
          ! Subtract negative array from positive array
-         DiffAry(VarAry(i)%iLoc) = PosAry(VarAry(i)%iLoc) - NegAry(VarAry(i)%iLoc)
+         associate (iLoc => VarAry(i)%iLoc)
+            DiffAry(iLoc(1):iLoc(2)) = PosAry(iLoc(1):iLoc(2)) - NegAry(iLoc(1):iLoc(2))
+         end associate
       end if
    end do
 end subroutine
@@ -569,45 +608,78 @@ subroutine MV_AddModule(ModAry, ModID, ModAbbr, Instance, ModDT, SolverDT, Vars,
 
 end subroutine
 
-subroutine MV_AddMeshVar(VarAry, Name, Fields, Mesh, Flags, Perturbs)
+subroutine MV_AddMeshVar(VarAry, Name, Fields, Mesh, VarIdx, Flags, Perturbs, Active)
    type(ModVarType), allocatable, intent(inout) :: VarAry(:)
    character(*), intent(in)                     :: Name
    integer(IntKi), intent(in)                   :: Fields(:)
-   integer(IntKi), optional, intent(in)         :: Flags
    type(MeshType), intent(inout)                :: Mesh
+   integer(IntKi), intent(out)                  :: VarIdx
+   integer(IntKi), optional, intent(in)         :: Flags
    real(R8Ki), optional, intent(in)             :: Perturbs(:)
-   integer(IntKi)                               :: i, FlagsLocal
+   logical, optional, intent(in)                :: Active
+   integer(IntKi)                               :: FlagsLocal
    logical                                      :: ActiveLocal
    real(R8Ki), allocatable                      :: PerturbsLocal(:)
-   if (.not. Mesh%committed) return
-   if (allocated(VarAry)) then
-      Mesh%ID = size(VarAry) + 1
-   else
-      Mesh%ID = 1
+   integer(IntKi)                               :: i, idx
+
+   ! Initialize variable index, in case variable is not active
+   VarIdx = 0
+
+   ! If active argument specified and not active, return
+   if (present(Active)) then
+      if (.not. Active) return
    end if
-   FlagsLocal = 0
-   if (present(Flags)) FlagsLocal = Flags
-   FlagsLocal = ior(FlagsLocal, VF_Mesh)
+
+   ! If mesh has not been committed, return
+   if (.not. Mesh%committed) return
+
+   ! Set variable index
+   if (allocated(VarAry)) then
+      VarIdx = size(VarAry) + 1
+   else
+      VarIdx = 1
+   end if
+
+   ! Set mesh ID based on variable index
+   Mesh%ID = VarIdx
+
+   ! Apply flags if specified
+   FlagsLocal = VF_Mesh
+   if (present(Flags)) FlagsLocal = ior(FlagsLocal, Flags)
+
+   ! Set perturbations if specified
    PerturbsLocal = [(0.0_R8Ki, i=1, size(Fields))]
    if (present(Perturbs)) PerturbsLocal = Perturbs
+
+   ! Loop through fields in mesh
    do i = 1, size(Fields)
-      call MV_AddVar(VarAry, Name, Fields(i), Num=Mesh%Nnodes, Flags=FlagsLocal, &
+
+      ! Add variable
+      call MV_AddVar(VarAry, Name, Fields(i), VarIdx=idx, &
+                     Num=Mesh%Nnodes, &
+                     Flags=FlagsLocal, &
                      Perturb=PerturbsLocal(i))
+
+      ! Save mesh ID
       VarAry(size(VarAry))%MeshID = Mesh%ID
    end do
 end subroutine
 
-subroutine MV_AddVar(VarAry, Name, Field, Num, Flags, iUsr, jUsr, DerivOrder, Perturb, LinNames, Active)
+subroutine MV_AddVar(VarAry, Name, Field, VarIdx, Num, Flags, iUsr, jUsr, DerivOrder, Perturb, LinNames, Active)
    type(ModVarType), allocatable, intent(inout) :: VarAry(:)
    character(*), intent(in)                     :: Name
    integer(IntKi), intent(in)                   :: Field
+   integer(IntKi), intent(out)                  :: VarIdx
    integer(IntKi), optional, intent(in)         :: Num, Flags, iUsr, jUsr
    real(R8Ki), optional, intent(in)             :: Perturb
    integer(IntKi), optional, intent(in)         :: DerivOrder
-   logical, optional, intent(in)                :: Active
    character(*), optional, intent(in)           :: LinNames(:)
+   logical, optional, intent(in)                :: Active
    integer(IntKi)                               :: i
    type(ModVarType)                             :: Var
+
+   ! Initialize variable index, in case variable is not active
+   VarIdx = 0
 
    ! If active argument specified and not active, return
    if (present(Active)) then
@@ -652,102 +724,176 @@ subroutine MV_AddVar(VarAry, Name, Field, Num, Flags, iUsr, jUsr, DerivOrder, Pe
    else
       VarAry = [Var]
    end if
+
+   ! Set variable index if present
+   VarIdx = size(VarAry)
 end subroutine
 
-! Get index of variable in array matching name and field
-function MV_VarIndex(VarAry, Name, Field) result(Indx)
-   type(ModVarType), intent(in)  :: VarAry(:)
-   character(*), intent(in)      :: Name
-   integer(IntKi), intent(in)    :: Field
-   integer(IntKi)                :: Indx
-   do Indx = 1, size(VarAry)
-      if (string_equal_ci(VarAry(Indx)%Name, Name) .and. &
-          VarAry(Indx)%Field == Field) exit
+subroutine MV_InitLinArrays(Vars, DerivOrder, LinNames_x, RotFrame_x, DerivOrder_x, &
+                         LinNames_u, RotFrame_u, IsLoad_u, &
+                         LinNames_y, RotFrame_y, ErrStat, ErrMsg)
+   type(ModVarsType), intent(in)                         :: Vars
+   integer(IntKi), intent(in)                            :: DerivOrder
+   character(LinChanLen), allocatable, intent(inout)     :: LinNames_x(:)
+   logical, allocatable, intent(inout)                   :: RotFrame_x(:)
+   integer(IntKi), allocatable, intent(inout)            :: DerivOrder_x(:)
+   character(LinChanLen), allocatable, intent(inout)     :: LinNames_u(:)
+   logical, allocatable, intent(inout)                   :: RotFrame_u(:)
+   logical, allocatable, intent(inout)                   :: IsLoad_u(:)
+   character(LinChanLen), allocatable, intent(inout)     :: LinNames_y(:)
+   logical, allocatable, intent(inout)                   :: RotFrame_y(:)
+   integer(IntKi), intent(out)                           :: ErrStat
+   character(ErrMsgLen), intent(out)                     :: ErrMsg
+
+   character(*), parameter                :: RoutineName = 'PopulateLinArrays'
+   integer(IntKi)                         :: ErrStat2
+   character(ErrMsgLen)                   :: ErrMsg2
+   type(ModDataType)                      :: ModData
+   integer(IntKi)                         :: i
+
+   ! State Variables
+   call AllocAry(LinNames_x, Vars%Nx, 'LinNames_x', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(RotFrame_x, Vars%Nx, 'RotFrame_x', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(DerivOrder_x, Vars%Nx, 'DerivOrder_x', ErrStat2, ErrMsg2); if (Failed()) return
+   DerivOrder_x = DerivOrder
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), iLoc => Vars%x(i)%iLoc)
+         LinNames_x(iLoc(1):iLoc(2)) = Var%LinNames
+         RotFrame_x(iLoc(1):iLoc(2)) = iand(Var%Flags, VF_RotFrame) > 0
+      end associate
    end do
-   if (Indx > size(VarAry)) Indx = 0
-end function
 
-!-------------------------------------------------------------------------------
-! Functions for linking variables (Output and Input)
-!-------------------------------------------------------------------------------
+   ! Input Variables
+   call AllocAry(LinNames_u, Vars%Nu, 'LinNames_u', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(RotFrame_u, Vars%Nu, 'RotFrame_u', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(IsLoad_u, Vars%Nu, 'IsLoad_u', ErrStat2, ErrMsg2); if (Failed()) return
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), iLoc => Vars%u(i)%iLoc)
+         LinNames_u(iLoc(1):iLoc(2)) = Var%LinNames
+         RotFrame_u(iLoc(1):iLoc(2)) = iand(Var%Flags, VF_RotFrame) > 0
+         IsLoad_u(iLoc(1):iLoc(2)) = iand(Var%Field, VF_Force + VF_Moment) > 0
+      end associate
+   end do
 
-subroutine MV_LinkOutputInput(OutVars, InpVars, OutName, InpName, Field, ErrStat, ErrMsg)
-   type(ModVarsType), intent(inout)    :: OutVars, InpVars
-   character(*), intent(in)            :: OutName, InpName
-   integer(IntKi), intent(in)          :: Field
+   ! Output variables
+   call AllocAry(LinNames_y, Vars%Ny, 'LinNames_y', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(RotFrame_y, Vars%Ny, 'RotFrame_y', ErrStat2, ErrMsg2); if (Failed()) return
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), iLoc => Vars%y(i)%iLoc)
+         LinNames_y(iLoc(1):iLoc(2)) = Var%LinNames
+         RotFrame_y(iLoc(1):iLoc(2)) = iand(Var%Flags, VF_RotFrame) > 0
+      end associate
+   end do
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
+end subroutine
+
+subroutine MV_InitVarIdx(Vars, Idx, FlagFilter, ErrStat, ErrMsg)
+   type(ModVarsType), intent(in)       :: Vars
+   type(ModIdxType), intent(out)       :: Idx
+   integer(IntKi), intent(in)          :: FlagFilter
    integer(IntKi), intent(out)         :: ErrStat
    character(ErrMsgLen), intent(out)   :: ErrMsg
 
-   character(*), parameter  :: RoutineName = 'MV_LinkOutputInput'
-   ! integer(IntKi)           :: ErrStat2
-   ! character(ErrMsgLen)     :: ErrMsg2
-   ! integer(IntKi)           :: i
-   integer(IntKi)           :: InpVarIndex, OutVarIndex
+   character(*), parameter             :: RoutineName = 'MV_InitVarIdx'
+   integer(IntKi)                      :: ErrStat2
+   character(ErrMsgLen)                :: ErrMsg2
+   type(ModDataType)                   :: ModData
+   integer(IntKi)                      :: i, j, k
 
-   ! Initialize error outputs
-   ErrStat = ErrID_None
-   ErrMsg = ''
+   ! Save filter in index
+   Idx%FlagFilter = FlagFilter
 
-   ! Find name/field in input vars
-   InpVarIndex = MV_VarIndex(InpVars%u, InpName, Field)
-   if (InpVarIndex == 0) then
-      call SetErrStat(ErrID_Fatal, 'Input variable "'//InpName//'" with field '// &
-                      trim(num2lstr(Field))//' not found', ErrStat, ErrMsg, RoutineName)
-      return
-   end if
+   ! Get number of filtered variables
+   Idx%Nx = MV_NumVars(Vars%x, FlagFilter)
+   Idx%Nu = MV_NumVars(Vars%u, FlagFilter)
+   Idx%Ny = MV_NumVars(Vars%y, FlagFilter)
 
-   ! Find name/field in output vars
-   OutVarIndex = MV_VarIndex(OutVars%u, OutName, Field)
-   if (OutVarIndex == 0) then
-      call SetErrStat(ErrID_Fatal, 'Output variable "'//OutName//'" with field '// &
-                      trim(num2lstr(Field))//' not found', ErrStat, ErrMsg, RoutineName)
-      return
-   end if
+   ! Allocate index arrays
+   call AllocAry(Idx%ix, Idx%Nx, "ix", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(Idx%idx, Idx%Nx, "idx", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(Idx%iu, Idx%Nu, "iu", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(Idx%iy, Idx%Ny, "iy", ErrStat2, ErrMsg2); if (Failed()) return
 
-   ! If error finding input or output variable, return
-   if (ErrStat >= AbortErrLev) return
+   ! Get indices for state variables
+   k = 1
+   do i = 1, size(Vars%x)
+      if ((FlagFilter /= VF_None) .and. (iand(Vars%x(i)%Flags, FlagFilter) == 0)) cycle
+      do j = 0, Vars%x(i)%Num - 1
+         Idx%ix(k + j) = Vars%x(i)%iLoc(1) + j
+      end do
+      k = k + Vars%x(i)%Num
+   end do
 
-   ! TODO: figure out what to do here
+   ! Copy state variable indices to state variable derivative indices
+   Idx%idx = Idx%ix
 
+   ! Get indices for input variables
+   k = 1
+   do i = 1, size(Vars%u)
+      if ((FlagFilter /= VF_None) .and. (iand(Vars%u(i)%Flags, FlagFilter) == 0)) cycle
+      do j = 0, Vars%u(i)%Num - 1
+         Idx%iu(k + j) = Vars%u(i)%iLoc(1) + j
+      end do
+      k = k + Vars%u(i)%Num
+   end do
+
+   ! Get indices for output variables
+   k = 1
+   do i = 1, size(Vars%y)
+      if ((FlagFilter /= VF_None) .and. (iand(Vars%y(i)%Flags, FlagFilter) == 0)) cycle
+      do j = 0, Vars%y(i)%Num - 1
+         Idx%iy(k + j) = Vars%y(i)%iLoc(1) + j
+      end do
+      k = k + Vars%y(i)%Num
+   end do
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
 end subroutine
+
+function MV_NumVars(VarAry, FlagFilter) result(Num)
+   type(ModVarType), intent(in)           :: VarAry(:)
+   integer(IntKi), optional, intent(in)   :: FlagFilter
+   integer(IntKi)                         :: Num, i
+   if (present(FlagFilter)) then
+      Num = 0
+      do i = 1, size(VarAry)
+         if ((FlagFilter == VF_None) .or. (iand(VarAry(i)%Flags, FlagFilter) /= 0)) Num = Num + VarAry(i)%Num
+      end do
+   else
+      Num = sum(VarAry%Num)
+   end if
+end function
 
 !-------------------------------------------------------------------------------
 ! Flag Utilities
 !-------------------------------------------------------------------------------
 
-subroutine SetFlags(Var, Mask)
-   type(ModVarType), intent(inout)  :: Var
+subroutine SetFlags(Flags, Mask)
+   integer(IntKi), intent(inout)    :: Flags
    integer(IntKi), intent(in)       :: Mask
    integer(IntKi)                   :: i
-   Var%Flags = ior(Var%Flags, Mask)
+   Flags = ior(Flags, Mask)
+end subroutine
+
+subroutine UnsetFlags(Flags, Mask)
+   integer(IntKi), intent(inout)    :: Flags
+   integer(IntKi), intent(in)       :: Mask
+   integer(IntKi)                   :: i
+   Flags = iand(Flags, not(Mask))
 end subroutine
 
 !-------------------------------------------------------------------------------
 ! String Utilities
 !-------------------------------------------------------------------------------
-
-! Compare strings s1 and s2 while ignoring case
-function string_equal_ci(s1, s2) result(is_equal)
-   character(*), intent(in)   :: s1, s2
-   logical                    :: is_equal
-   integer(IntKi), parameter  :: ca = iachar("a")
-   integer(IntKi), parameter  :: cz = iachar("z")
-   integer(IntKi)             :: i, j
-   integer(IntKi)             :: c1, c2
-   is_equal = .false.
-   i = len_trim(s1)
-   j = len_trim(s2)
-   if (i /= j) return
-   do i = 1, j
-      c1 = iachar(s1(i:i))
-      c2 = iachar(s2(i:i))
-      if (c1 == c2) cycle
-      if (c1 >= ca .and. c1 <= cz) c1 = c1 - 32
-      if (c2 >= ca .and. c2 <= cz) c2 = c2 - 32
-      if (c1 /= c2) return
-   end do
-   is_equal = .true.
-end function
 
 function IdxStr(i1, i2, i3, i4, i5) result(s)
    integer(IntKi), intent(in)             :: i1
@@ -828,48 +974,34 @@ pure function wm_from_quat(q) result(c)
    c = 4.0_R8Ki*e/(1.0_R8Ki + e0)
 end function
 
-! pure function wm_to_dcm(c) result(R)
-!    real(R8Ki), intent(in)  :: c(3)
-!    real(R8Ki)              :: R(3, 3)
-!    R = quat_to_dcm(wm_to_quat(c))
-! end function
-
-! pure function wm_to_dcm(c) result(R)
-!    real(R8Ki), intent(in)  :: c(3)
-!    real(R8Ki)              :: R(3, 3), cct, F(3, 3)
-!    integer(IntKi)          :: i, j
-!    cct = dot_product(c, c)
-!    F = reshape([0.0_R8Ki, -c(3), c(2), c(3), 0.0_R8Ki, -c(1), -c(2), c(1), 0.0_R8Ki], [3, 3])/2.0_R8Ki
-!    do i = 1, 3
-!       F(i, i) = F(i, i) + 1.0_R8Ki - cct/16.0_R8Ki
-!       do j = 1, 3
-!          F(i, j) = F(i, j) + c(i)*c(j)/8.0_R8Ki
-!       end do
-!    end do
-!    F = F/(1.0_R8Ki + cct/16.0_R8Ki)
-!    R = matmul(F, F)
-! end function
-
 pure function wm_to_dcm(c) result(R)
    real(R8Ki), intent(in)  :: c(3)
-   real(R8Ki)              :: R(3, 3), c0, vc, ct(3, 3)
+   real(R8Ki)              :: R(3, 3), c0, c1, c2, c3
    integer(IntKi)          :: i, j
-   ct(1, :) = [0.0_R8Ki, -c(3), c(2)]
-   ct(2, :) = [c(3), 0.0_R8Ki, -c(1)]
-   ct(3, :) = [-c(2), c(1), 0.0_R8Ki]
+   c1 = c(1)
+   c2 = c(2)
+   c3 = c(3)
    c0 = 2.0_R8Ki - dot_product(c, c)/8.0_R8Ki
-   vc = 2.0_R8Ki/(4.0_R8Ki - c0)
-   R = vc*vc*(c0*ct + matmul(ct, ct))/2.0_R8Ki
-   do i = 1, 3
-      R(i, i) = R(i, i) + 1.0_R8Ki
-   end do
+   R(:, 1) = [c0*c0 + c1*c1 - c2*c2 - c3*c3, &
+              2.0_R8Ki*(c1*c2 - c0*c3), &
+              2.0_R8Ki*(c1*c3 + c0*c2)]
+   R(:, 2) = [2.0_R8Ki*(c1*c2 + c0*c3), &
+              c0*c0 - c1*c1 + c2*c2 - c3*c3, &
+              2.0_R8Ki*(c2*c3 - c0*c1)]
+   R(:, 3) = [2.0_R8Ki*(c1*c3 - c0*c2), &
+              2.0_R8Ki*(c2*c3 + c0*c1), &
+              c0*c0 - c1*c1 - c2*c2 + c3*c3]
+   R = R / (4.0_R8Ki - c0)**2
+   ! ct(1, :) = [0.0_R8Ki, -c(3), c(2)]
+   ! ct(2, :) = [c(3), 0.0_R8Ki, -c(1)]
+   ! ct(3, :) = [-c(2), c(1), 0.0_R8Ki]
+   ! c0 = 2.0_R8Ki - dot_product(c, c)/8.0_R8Ki
+   ! vc = 2.0_R8Ki/(4.0_R8Ki - c0)
+   ! R = vc*vc*(c0*ct + matmul(ct, ct))/2.0_R8Ki
+   ! do i = 1, 3
+   !    R(i, i) = R(i, i) + 1.0_R8Ki
+   ! end do
 end function
-
-! pure function wm_from_dcm(R) result(c)
-!    real(R8Ki), intent(in)  :: R(3, 3)
-!    real(R8Ki)              :: c(3), cct
-!    c = wm_from_quat(quat_from_dcm(R))
-! end function
 
 pure function wm_from_dcm(R) result(c)
    real(R8Ki), intent(in)  :: R(3, 3)
@@ -879,7 +1011,7 @@ pure function wm_from_dcm(R) result(c)
    real(R8Ki)              :: Rr(3, 3), c(3)
    integer                 :: i        ! case indicator
 
-   Rr = R
+   Rr = transpose(R)
 
    ! mjs--find max value of T := Tr(Rr) and diagonal elements of Rr
    ! This tells us which denominator is largest (and less likely to produce numerical noise)
@@ -914,45 +1046,28 @@ pure function wm_from_dcm(R) result(c)
    c = em*sm(1:3)
 end function
 
-pure function wm_to_xyz(c) result(xyz)
+pure function wm_to_rvec(c) result(rvec)
    real(R8Ki), intent(in) :: c(3)
-   real(R8Ki)             :: phi, n(3), xyz(3), m
-   m = sqrt(dot_product(c,c))
+   real(R8Ki)             :: phi, m, rvec(3)
+   m = sqrt(dot_product(c, c))
    if (m == 0.0_R8Ki) then
-      xyz = 0.0_R8Ki
+      rvec = 0.0_R8Ki
       return
    end if
-   n = c/m
    phi = 4.0_R8Ki*atan(m/4.0_R8Ki)
-   xyz = phi*n
-   ! xyz = c
+   rvec = phi*c/m
 end function
 
-pure function wm_from_xyz(xyz) result(c)
-   real(R8Ki), intent(in) :: xyz(3)
-   real(R8Ki)             :: phi, n(3), c(3)
-   phi = sqrt(dot_product(xyz,xyz))
+pure function wm_from_rvec(rvec) result(c)
+   real(R8Ki), intent(in) :: rvec(3)
+   real(R8Ki)             :: phi, c(3)
+   phi = sqrt(dot_product(rvec, rvec))
    if (phi == 0.0_R8Ki) then
       c = 0.0_R8Ki
       return
    end if
-   n = xyz / phi
-   c = 4.0_R8Ki*tan(phi/4.0_R8Ki) * n
-   ! c = xyz
+   c = 4.0_R8Ki*tan(phi/4.0_R8Ki)*rvec/phi
 end function
-
-! pure function wm_from_dcm(R) result(c)
-!    real(R8Ki), intent(in)  :: R(3, 3)
-!    real(R8Ki)              :: c(3), t1, t2, cct
-!    t1 = 1.0_R8Ki + R(1,1) + R(2,2) + R(3,3)
-!    t2 = 2.0_R8Ki*sqrt(t1)
-!    c(1) = (R(3,2) - R(2,3))
-!    c(2) = (R(1,3) - R(3,1))
-!    c(3) = (R(2,1) - R(1,2))
-!    c = 4.0_R8Ki * c / (t1 + t2)
-!    cct = dot_product(c,c)
-!    if (cct > 16.0_R8Ki) c = 16.0_R8Ki*c / cct
-! end function
 
 pure function wm_compose(p, q) result(r)
    real(R8Ki), intent(in)  :: p(3), q(3)
@@ -962,10 +1077,11 @@ pure function wm_compose(p, q) result(r)
    q0 = 2.0_R8Ki - dot_product(q, q)/8.0_R8Ki
    D1 = (4.0_R8Ki - p0)*(4.0_R8Ki - q0)
    D2 = p0*q0 - dot_product(p, q)
+   r = 4.0_R8Ki*(q0*p + p0*q + cross(p, q))
    if (D2 >= 0.0_R8Ki) then
-      r = 4.0_R8Ki*(q0*p + p0*q + cross(p, q))/(D1 + D2)
+      r = r / (D1 + D2)
    else
-      r = -4.0_R8Ki*(q0*p + p0*q + cross(p, q))/(D1 - D2)
+      r = -r / (D1 - D2)
    end if
 end function
 

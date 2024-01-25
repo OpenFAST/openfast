@@ -50,6 +50,7 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_Line = 2      ! Variable is for a line mesh [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_RotFrame = 4      ! Variable in rotating frame [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_Ext = 8      ! Variable for extended linearization [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_AeroMap = 16      ! Variable for aeromap [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_Any = 4095      ! Enable all flags (used for filtering) [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VC_None = 0      !  [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VC_Tight = 1      !  [-]
@@ -114,14 +115,10 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Num = 1      !<  [-]
     INTEGER(IntKi)  :: Flags = 0      !<  [-]
     INTEGER(IntKi)  :: DerivOrder = 0      !<  [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iLoc      !< indices in local arrays [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iSol      !< indices in solver arrays [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iLin      !< indices in linearization arrays [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iq      !< row index in solver q matrix [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: iLoc = 0_IntKi      !< indices in local arrays [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iUsr = 0_IntKi      !< first user defined index for variable, can be used a lower/upper bounds [-]
     INTEGER(IntKi)  :: jUsr = 0      !< second user defined index for variable [-]
     INTEGER(IntKi)  :: MeshID = 0      !< Mesh identification number [-]
-    LOGICAL  :: Solve = .false.      !< flag indicating that variable is used by solver [-]
     REAL(R8Ki)  :: Perturb = 0      !< perturbation [-]
     character(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames      !<  [-]
   END TYPE ModVarType
@@ -138,23 +135,35 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Ny = 0_IntKi      !<  [-]
   END TYPE ModVarsType
 ! =======================
-! =========  ModValsType  =======
-  TYPE, PUBLIC :: ModValsType
+! =========  ModIdxType  =======
+  TYPE, PUBLIC :: ModIdxType
+    INTEGER(IntKi)  :: FlagFilter = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: Nx = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: Nu = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: Ny = 0_IntKi      !<  [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ix      !<  [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: idx      !<  [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iu      !<  [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iy      !<  [-]
+  END TYPE ModIdxType
+! =======================
+! =========  ModLinType  =======
+  TYPE, PUBLIC :: ModLinType
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: x      !<  [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dxdt      !<  [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !<  [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: u      !<  [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: y      !<  [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: u_perturb      !< input perturbation array [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: u_perturb      !<  [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: x_perturb      !<  [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: xp      !<  [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: xn      !<  [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: yp      !<  [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: yn      !<  [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: x_pos      !<  [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: x_neg      !<  [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: y_pos      !<  [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: y_neg      !<  [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: dYdx      !<  [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: dXdx      !<  [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: dYdu      !<  [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: dXdu      !<  [-]
-  END TYPE ModValsType
+  END TYPE ModLinType
 ! =======================
 ! =========  ModDataType  =======
   TYPE, PUBLIC :: ModDataType
@@ -610,58 +619,10 @@ subroutine NWTC_Library_CopyModVarType(SrcModVarTypeData, DstModVarTypeData, Ctr
    DstModVarTypeData%Num = SrcModVarTypeData%Num
    DstModVarTypeData%Flags = SrcModVarTypeData%Flags
    DstModVarTypeData%DerivOrder = SrcModVarTypeData%DerivOrder
-   if (allocated(SrcModVarTypeData%iLoc)) then
-      LB(1:1) = lbound(SrcModVarTypeData%iLoc, kind=B8Ki)
-      UB(1:1) = ubound(SrcModVarTypeData%iLoc, kind=B8Ki)
-      if (.not. allocated(DstModVarTypeData%iLoc)) then
-         allocate(DstModVarTypeData%iLoc(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModVarTypeData%iLoc.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstModVarTypeData%iLoc = SrcModVarTypeData%iLoc
-   end if
-   if (allocated(SrcModVarTypeData%iSol)) then
-      LB(1:1) = lbound(SrcModVarTypeData%iSol, kind=B8Ki)
-      UB(1:1) = ubound(SrcModVarTypeData%iSol, kind=B8Ki)
-      if (.not. allocated(DstModVarTypeData%iSol)) then
-         allocate(DstModVarTypeData%iSol(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModVarTypeData%iSol.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstModVarTypeData%iSol = SrcModVarTypeData%iSol
-   end if
-   if (allocated(SrcModVarTypeData%iLin)) then
-      LB(1:1) = lbound(SrcModVarTypeData%iLin, kind=B8Ki)
-      UB(1:1) = ubound(SrcModVarTypeData%iLin, kind=B8Ki)
-      if (.not. allocated(DstModVarTypeData%iLin)) then
-         allocate(DstModVarTypeData%iLin(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModVarTypeData%iLin.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstModVarTypeData%iLin = SrcModVarTypeData%iLin
-   end if
-   if (allocated(SrcModVarTypeData%iq)) then
-      LB(1:1) = lbound(SrcModVarTypeData%iq, kind=B8Ki)
-      UB(1:1) = ubound(SrcModVarTypeData%iq, kind=B8Ki)
-      if (.not. allocated(DstModVarTypeData%iq)) then
-         allocate(DstModVarTypeData%iq(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModVarTypeData%iq.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstModVarTypeData%iq = SrcModVarTypeData%iq
-   end if
+   DstModVarTypeData%iLoc = SrcModVarTypeData%iLoc
    DstModVarTypeData%iUsr = SrcModVarTypeData%iUsr
    DstModVarTypeData%jUsr = SrcModVarTypeData%jUsr
    DstModVarTypeData%MeshID = SrcModVarTypeData%MeshID
-   DstModVarTypeData%Solve = SrcModVarTypeData%Solve
    DstModVarTypeData%Perturb = SrcModVarTypeData%Perturb
    if (allocated(SrcModVarTypeData%LinNames)) then
       LB(1:1) = lbound(SrcModVarTypeData%LinNames, kind=B8Ki)
@@ -684,18 +645,6 @@ subroutine NWTC_Library_DestroyModVarType(ModVarTypeData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyModVarType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(ModVarTypeData%iLoc)) then
-      deallocate(ModVarTypeData%iLoc)
-   end if
-   if (allocated(ModVarTypeData%iSol)) then
-      deallocate(ModVarTypeData%iSol)
-   end if
-   if (allocated(ModVarTypeData%iLin)) then
-      deallocate(ModVarTypeData%iLin)
-   end if
-   if (allocated(ModVarTypeData%iq)) then
-      deallocate(ModVarTypeData%iq)
-   end if
    if (allocated(ModVarTypeData%LinNames)) then
       deallocate(ModVarTypeData%LinNames)
    end if
@@ -712,14 +661,10 @@ subroutine NWTC_Library_PackModVarType(RF, Indata)
    call RegPack(RF, InData%Num)
    call RegPack(RF, InData%Flags)
    call RegPack(RF, InData%DerivOrder)
-   call RegPackAlloc(RF, InData%iLoc)
-   call RegPackAlloc(RF, InData%iSol)
-   call RegPackAlloc(RF, InData%iLin)
-   call RegPackAlloc(RF, InData%iq)
+   call RegPack(RF, InData%iLoc)
    call RegPack(RF, InData%iUsr)
    call RegPack(RF, InData%jUsr)
    call RegPack(RF, InData%MeshID)
-   call RegPack(RF, InData%Solve)
    call RegPack(RF, InData%Perturb)
    call RegPackAlloc(RF, InData%LinNames)
    if (RegCheckErr(RF, RoutineName)) return
@@ -739,14 +684,10 @@ subroutine NWTC_Library_UnPackModVarType(RF, OutData)
    call RegUnpack(RF, OutData%Num); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Flags); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DerivOrder); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iLoc); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iSol); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iLin); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iq); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iLoc); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iUsr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%jUsr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MeshID); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Solve); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Perturb); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LinNames); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -956,253 +897,373 @@ subroutine NWTC_Library_UnPackModVarsType(RF, OutData)
    call RegUnpack(RF, OutData%Ny); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine NWTC_Library_CopyModValsType(SrcModValsTypeData, DstModValsTypeData, CtrlCode, ErrStat, ErrMsg)
-   type(ModValsType), intent(in) :: SrcModValsTypeData
-   type(ModValsType), intent(inout) :: DstModValsTypeData
+subroutine NWTC_Library_CopyModIdxType(SrcModIdxTypeData, DstModIdxTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(ModIdxType), intent(in) :: SrcModIdxTypeData
+   type(ModIdxType), intent(inout) :: DstModIdxTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'NWTC_Library_CopyModIdxType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstModIdxTypeData%FlagFilter = SrcModIdxTypeData%FlagFilter
+   DstModIdxTypeData%Nx = SrcModIdxTypeData%Nx
+   DstModIdxTypeData%Nu = SrcModIdxTypeData%Nu
+   DstModIdxTypeData%Ny = SrcModIdxTypeData%Ny
+   if (allocated(SrcModIdxTypeData%ix)) then
+      LB(1:1) = lbound(SrcModIdxTypeData%ix, kind=B8Ki)
+      UB(1:1) = ubound(SrcModIdxTypeData%ix, kind=B8Ki)
+      if (.not. allocated(DstModIdxTypeData%ix)) then
+         allocate(DstModIdxTypeData%ix(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModIdxTypeData%ix.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstModIdxTypeData%ix = SrcModIdxTypeData%ix
+   end if
+   if (allocated(SrcModIdxTypeData%idx)) then
+      LB(1:1) = lbound(SrcModIdxTypeData%idx, kind=B8Ki)
+      UB(1:1) = ubound(SrcModIdxTypeData%idx, kind=B8Ki)
+      if (.not. allocated(DstModIdxTypeData%idx)) then
+         allocate(DstModIdxTypeData%idx(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModIdxTypeData%idx.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstModIdxTypeData%idx = SrcModIdxTypeData%idx
+   end if
+   if (allocated(SrcModIdxTypeData%iu)) then
+      LB(1:1) = lbound(SrcModIdxTypeData%iu, kind=B8Ki)
+      UB(1:1) = ubound(SrcModIdxTypeData%iu, kind=B8Ki)
+      if (.not. allocated(DstModIdxTypeData%iu)) then
+         allocate(DstModIdxTypeData%iu(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModIdxTypeData%iu.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstModIdxTypeData%iu = SrcModIdxTypeData%iu
+   end if
+   if (allocated(SrcModIdxTypeData%iy)) then
+      LB(1:1) = lbound(SrcModIdxTypeData%iy, kind=B8Ki)
+      UB(1:1) = ubound(SrcModIdxTypeData%iy, kind=B8Ki)
+      if (.not. allocated(DstModIdxTypeData%iy)) then
+         allocate(DstModIdxTypeData%iy(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModIdxTypeData%iy.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstModIdxTypeData%iy = SrcModIdxTypeData%iy
+   end if
+end subroutine
+
+subroutine NWTC_Library_DestroyModIdxType(ModIdxTypeData, ErrStat, ErrMsg)
+   type(ModIdxType), intent(inout) :: ModIdxTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyModIdxType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(ModIdxTypeData%ix)) then
+      deallocate(ModIdxTypeData%ix)
+   end if
+   if (allocated(ModIdxTypeData%idx)) then
+      deallocate(ModIdxTypeData%idx)
+   end if
+   if (allocated(ModIdxTypeData%iu)) then
+      deallocate(ModIdxTypeData%iu)
+   end if
+   if (allocated(ModIdxTypeData%iy)) then
+      deallocate(ModIdxTypeData%iy)
+   end if
+end subroutine
+
+subroutine NWTC_Library_PackModIdxType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(ModIdxType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'NWTC_Library_PackModIdxType'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%FlagFilter)
+   call RegPack(RF, InData%Nx)
+   call RegPack(RF, InData%Nu)
+   call RegPack(RF, InData%Ny)
+   call RegPackAlloc(RF, InData%ix)
+   call RegPackAlloc(RF, InData%idx)
+   call RegPackAlloc(RF, InData%iu)
+   call RegPackAlloc(RF, InData%iy)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine NWTC_Library_UnPackModIdxType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(ModIdxType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackModIdxType'
+   integer(B8Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%FlagFilter); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Nx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Nu); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Ny); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ix); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%idx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iu); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iy); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine NWTC_Library_CopyModLinType(SrcModLinTypeData, DstModLinTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(ModLinType), intent(in) :: SrcModLinTypeData
+   type(ModLinType), intent(inout) :: DstModLinTypeData
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
    integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
-   character(*), parameter        :: RoutineName = 'NWTC_Library_CopyModValsType'
+   character(*), parameter        :: RoutineName = 'NWTC_Library_CopyModLinType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(SrcModValsTypeData%x)) then
-      LB(1:1) = lbound(SrcModValsTypeData%x, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%x, kind=B8Ki)
-      if (.not. allocated(DstModValsTypeData%x)) then
-         allocate(DstModValsTypeData%x(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcModLinTypeData%x)) then
+      LB(1:1) = lbound(SrcModLinTypeData%x, kind=B8Ki)
+      UB(1:1) = ubound(SrcModLinTypeData%x, kind=B8Ki)
+      if (.not. allocated(DstModLinTypeData%x)) then
+         allocate(DstModLinTypeData%x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModValsTypeData%x.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModLinTypeData%x.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstModValsTypeData%x = SrcModValsTypeData%x
+      DstModLinTypeData%x = SrcModLinTypeData%x
    end if
-   if (allocated(SrcModValsTypeData%dxdt)) then
-      LB(1:1) = lbound(SrcModValsTypeData%dxdt, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%dxdt, kind=B8Ki)
-      if (.not. allocated(DstModValsTypeData%dxdt)) then
-         allocate(DstModValsTypeData%dxdt(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcModLinTypeData%dx)) then
+      LB(1:1) = lbound(SrcModLinTypeData%dx, kind=B8Ki)
+      UB(1:1) = ubound(SrcModLinTypeData%dx, kind=B8Ki)
+      if (.not. allocated(DstModLinTypeData%dx)) then
+         allocate(DstModLinTypeData%dx(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModValsTypeData%dxdt.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModLinTypeData%dx.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstModValsTypeData%dxdt = SrcModValsTypeData%dxdt
+      DstModLinTypeData%dx = SrcModLinTypeData%dx
    end if
-   if (allocated(SrcModValsTypeData%u)) then
-      LB(1:1) = lbound(SrcModValsTypeData%u, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%u, kind=B8Ki)
-      if (.not. allocated(DstModValsTypeData%u)) then
-         allocate(DstModValsTypeData%u(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcModLinTypeData%u)) then
+      LB(1:1) = lbound(SrcModLinTypeData%u, kind=B8Ki)
+      UB(1:1) = ubound(SrcModLinTypeData%u, kind=B8Ki)
+      if (.not. allocated(DstModLinTypeData%u)) then
+         allocate(DstModLinTypeData%u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModValsTypeData%u.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModLinTypeData%u.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstModValsTypeData%u = SrcModValsTypeData%u
+      DstModLinTypeData%u = SrcModLinTypeData%u
    end if
-   if (allocated(SrcModValsTypeData%y)) then
-      LB(1:1) = lbound(SrcModValsTypeData%y, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%y, kind=B8Ki)
-      if (.not. allocated(DstModValsTypeData%y)) then
-         allocate(DstModValsTypeData%y(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcModLinTypeData%y)) then
+      LB(1:1) = lbound(SrcModLinTypeData%y, kind=B8Ki)
+      UB(1:1) = ubound(SrcModLinTypeData%y, kind=B8Ki)
+      if (.not. allocated(DstModLinTypeData%y)) then
+         allocate(DstModLinTypeData%y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModValsTypeData%y.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModLinTypeData%y.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstModValsTypeData%y = SrcModValsTypeData%y
+      DstModLinTypeData%y = SrcModLinTypeData%y
    end if
-   if (allocated(SrcModValsTypeData%u_perturb)) then
-      LB(1:1) = lbound(SrcModValsTypeData%u_perturb, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%u_perturb, kind=B8Ki)
-      if (.not. allocated(DstModValsTypeData%u_perturb)) then
-         allocate(DstModValsTypeData%u_perturb(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcModLinTypeData%u_perturb)) then
+      LB(1:1) = lbound(SrcModLinTypeData%u_perturb, kind=B8Ki)
+      UB(1:1) = ubound(SrcModLinTypeData%u_perturb, kind=B8Ki)
+      if (.not. allocated(DstModLinTypeData%u_perturb)) then
+         allocate(DstModLinTypeData%u_perturb(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModValsTypeData%u_perturb.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModLinTypeData%u_perturb.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstModValsTypeData%u_perturb = SrcModValsTypeData%u_perturb
+      DstModLinTypeData%u_perturb = SrcModLinTypeData%u_perturb
    end if
-   if (allocated(SrcModValsTypeData%x_perturb)) then
-      LB(1:1) = lbound(SrcModValsTypeData%x_perturb, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%x_perturb, kind=B8Ki)
-      if (.not. allocated(DstModValsTypeData%x_perturb)) then
-         allocate(DstModValsTypeData%x_perturb(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcModLinTypeData%x_perturb)) then
+      LB(1:1) = lbound(SrcModLinTypeData%x_perturb, kind=B8Ki)
+      UB(1:1) = ubound(SrcModLinTypeData%x_perturb, kind=B8Ki)
+      if (.not. allocated(DstModLinTypeData%x_perturb)) then
+         allocate(DstModLinTypeData%x_perturb(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModValsTypeData%x_perturb.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModLinTypeData%x_perturb.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstModValsTypeData%x_perturb = SrcModValsTypeData%x_perturb
+      DstModLinTypeData%x_perturb = SrcModLinTypeData%x_perturb
    end if
-   if (allocated(SrcModValsTypeData%xp)) then
-      LB(1:1) = lbound(SrcModValsTypeData%xp, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%xp, kind=B8Ki)
-      if (.not. allocated(DstModValsTypeData%xp)) then
-         allocate(DstModValsTypeData%xp(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcModLinTypeData%x_pos)) then
+      LB(1:1) = lbound(SrcModLinTypeData%x_pos, kind=B8Ki)
+      UB(1:1) = ubound(SrcModLinTypeData%x_pos, kind=B8Ki)
+      if (.not. allocated(DstModLinTypeData%x_pos)) then
+         allocate(DstModLinTypeData%x_pos(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModValsTypeData%xp.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModLinTypeData%x_pos.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstModValsTypeData%xp = SrcModValsTypeData%xp
+      DstModLinTypeData%x_pos = SrcModLinTypeData%x_pos
    end if
-   if (allocated(SrcModValsTypeData%xn)) then
-      LB(1:1) = lbound(SrcModValsTypeData%xn, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%xn, kind=B8Ki)
-      if (.not. allocated(DstModValsTypeData%xn)) then
-         allocate(DstModValsTypeData%xn(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcModLinTypeData%x_neg)) then
+      LB(1:1) = lbound(SrcModLinTypeData%x_neg, kind=B8Ki)
+      UB(1:1) = ubound(SrcModLinTypeData%x_neg, kind=B8Ki)
+      if (.not. allocated(DstModLinTypeData%x_neg)) then
+         allocate(DstModLinTypeData%x_neg(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModValsTypeData%xn.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModLinTypeData%x_neg.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstModValsTypeData%xn = SrcModValsTypeData%xn
+      DstModLinTypeData%x_neg = SrcModLinTypeData%x_neg
    end if
-   if (allocated(SrcModValsTypeData%yp)) then
-      LB(1:1) = lbound(SrcModValsTypeData%yp, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%yp, kind=B8Ki)
-      if (.not. allocated(DstModValsTypeData%yp)) then
-         allocate(DstModValsTypeData%yp(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcModLinTypeData%y_pos)) then
+      LB(1:1) = lbound(SrcModLinTypeData%y_pos, kind=B8Ki)
+      UB(1:1) = ubound(SrcModLinTypeData%y_pos, kind=B8Ki)
+      if (.not. allocated(DstModLinTypeData%y_pos)) then
+         allocate(DstModLinTypeData%y_pos(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModValsTypeData%yp.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModLinTypeData%y_pos.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstModValsTypeData%yp = SrcModValsTypeData%yp
+      DstModLinTypeData%y_pos = SrcModLinTypeData%y_pos
    end if
-   if (allocated(SrcModValsTypeData%yn)) then
-      LB(1:1) = lbound(SrcModValsTypeData%yn, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%yn, kind=B8Ki)
-      if (.not. allocated(DstModValsTypeData%yn)) then
-         allocate(DstModValsTypeData%yn(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcModLinTypeData%y_neg)) then
+      LB(1:1) = lbound(SrcModLinTypeData%y_neg, kind=B8Ki)
+      UB(1:1) = ubound(SrcModLinTypeData%y_neg, kind=B8Ki)
+      if (.not. allocated(DstModLinTypeData%y_neg)) then
+         allocate(DstModLinTypeData%y_neg(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModValsTypeData%yn.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModLinTypeData%y_neg.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstModValsTypeData%yn = SrcModValsTypeData%yn
+      DstModLinTypeData%y_neg = SrcModLinTypeData%y_neg
    end if
-   if (allocated(SrcModValsTypeData%dYdx)) then
-      LB(1:2) = lbound(SrcModValsTypeData%dYdx, kind=B8Ki)
-      UB(1:2) = ubound(SrcModValsTypeData%dYdx, kind=B8Ki)
-      if (.not. allocated(DstModValsTypeData%dYdx)) then
-         allocate(DstModValsTypeData%dYdx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcModLinTypeData%dYdx)) then
+      LB(1:2) = lbound(SrcModLinTypeData%dYdx, kind=B8Ki)
+      UB(1:2) = ubound(SrcModLinTypeData%dYdx, kind=B8Ki)
+      if (.not. allocated(DstModLinTypeData%dYdx)) then
+         allocate(DstModLinTypeData%dYdx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModValsTypeData%dYdx.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModLinTypeData%dYdx.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstModValsTypeData%dYdx = SrcModValsTypeData%dYdx
+      DstModLinTypeData%dYdx = SrcModLinTypeData%dYdx
    end if
-   if (allocated(SrcModValsTypeData%dXdx)) then
-      LB(1:2) = lbound(SrcModValsTypeData%dXdx, kind=B8Ki)
-      UB(1:2) = ubound(SrcModValsTypeData%dXdx, kind=B8Ki)
-      if (.not. allocated(DstModValsTypeData%dXdx)) then
-         allocate(DstModValsTypeData%dXdx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcModLinTypeData%dXdx)) then
+      LB(1:2) = lbound(SrcModLinTypeData%dXdx, kind=B8Ki)
+      UB(1:2) = ubound(SrcModLinTypeData%dXdx, kind=B8Ki)
+      if (.not. allocated(DstModLinTypeData%dXdx)) then
+         allocate(DstModLinTypeData%dXdx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModValsTypeData%dXdx.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModLinTypeData%dXdx.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstModValsTypeData%dXdx = SrcModValsTypeData%dXdx
+      DstModLinTypeData%dXdx = SrcModLinTypeData%dXdx
    end if
-   if (allocated(SrcModValsTypeData%dYdu)) then
-      LB(1:2) = lbound(SrcModValsTypeData%dYdu, kind=B8Ki)
-      UB(1:2) = ubound(SrcModValsTypeData%dYdu, kind=B8Ki)
-      if (.not. allocated(DstModValsTypeData%dYdu)) then
-         allocate(DstModValsTypeData%dYdu(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcModLinTypeData%dYdu)) then
+      LB(1:2) = lbound(SrcModLinTypeData%dYdu, kind=B8Ki)
+      UB(1:2) = ubound(SrcModLinTypeData%dYdu, kind=B8Ki)
+      if (.not. allocated(DstModLinTypeData%dYdu)) then
+         allocate(DstModLinTypeData%dYdu(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModValsTypeData%dYdu.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModLinTypeData%dYdu.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstModValsTypeData%dYdu = SrcModValsTypeData%dYdu
+      DstModLinTypeData%dYdu = SrcModLinTypeData%dYdu
    end if
-   if (allocated(SrcModValsTypeData%dXdu)) then
-      LB(1:2) = lbound(SrcModValsTypeData%dXdu, kind=B8Ki)
-      UB(1:2) = ubound(SrcModValsTypeData%dXdu, kind=B8Ki)
-      if (.not. allocated(DstModValsTypeData%dXdu)) then
-         allocate(DstModValsTypeData%dXdu(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcModLinTypeData%dXdu)) then
+      LB(1:2) = lbound(SrcModLinTypeData%dXdu, kind=B8Ki)
+      UB(1:2) = ubound(SrcModLinTypeData%dXdu, kind=B8Ki)
+      if (.not. allocated(DstModLinTypeData%dXdu)) then
+         allocate(DstModLinTypeData%dXdu(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModValsTypeData%dXdu.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModLinTypeData%dXdu.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstModValsTypeData%dXdu = SrcModValsTypeData%dXdu
+      DstModLinTypeData%dXdu = SrcModLinTypeData%dXdu
    end if
 end subroutine
 
-subroutine NWTC_Library_DestroyModValsType(ModValsTypeData, ErrStat, ErrMsg)
-   type(ModValsType), intent(inout) :: ModValsTypeData
+subroutine NWTC_Library_DestroyModLinType(ModLinTypeData, ErrStat, ErrMsg)
+   type(ModLinType), intent(inout) :: ModLinTypeData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyModValsType'
+   character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyModLinType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(ModValsTypeData%x)) then
-      deallocate(ModValsTypeData%x)
+   if (allocated(ModLinTypeData%x)) then
+      deallocate(ModLinTypeData%x)
    end if
-   if (allocated(ModValsTypeData%dxdt)) then
-      deallocate(ModValsTypeData%dxdt)
+   if (allocated(ModLinTypeData%dx)) then
+      deallocate(ModLinTypeData%dx)
    end if
-   if (allocated(ModValsTypeData%u)) then
-      deallocate(ModValsTypeData%u)
+   if (allocated(ModLinTypeData%u)) then
+      deallocate(ModLinTypeData%u)
    end if
-   if (allocated(ModValsTypeData%y)) then
-      deallocate(ModValsTypeData%y)
+   if (allocated(ModLinTypeData%y)) then
+      deallocate(ModLinTypeData%y)
    end if
-   if (allocated(ModValsTypeData%u_perturb)) then
-      deallocate(ModValsTypeData%u_perturb)
+   if (allocated(ModLinTypeData%u_perturb)) then
+      deallocate(ModLinTypeData%u_perturb)
    end if
-   if (allocated(ModValsTypeData%x_perturb)) then
-      deallocate(ModValsTypeData%x_perturb)
+   if (allocated(ModLinTypeData%x_perturb)) then
+      deallocate(ModLinTypeData%x_perturb)
    end if
-   if (allocated(ModValsTypeData%xp)) then
-      deallocate(ModValsTypeData%xp)
+   if (allocated(ModLinTypeData%x_pos)) then
+      deallocate(ModLinTypeData%x_pos)
    end if
-   if (allocated(ModValsTypeData%xn)) then
-      deallocate(ModValsTypeData%xn)
+   if (allocated(ModLinTypeData%x_neg)) then
+      deallocate(ModLinTypeData%x_neg)
    end if
-   if (allocated(ModValsTypeData%yp)) then
-      deallocate(ModValsTypeData%yp)
+   if (allocated(ModLinTypeData%y_pos)) then
+      deallocate(ModLinTypeData%y_pos)
    end if
-   if (allocated(ModValsTypeData%yn)) then
-      deallocate(ModValsTypeData%yn)
+   if (allocated(ModLinTypeData%y_neg)) then
+      deallocate(ModLinTypeData%y_neg)
    end if
-   if (allocated(ModValsTypeData%dYdx)) then
-      deallocate(ModValsTypeData%dYdx)
+   if (allocated(ModLinTypeData%dYdx)) then
+      deallocate(ModLinTypeData%dYdx)
    end if
-   if (allocated(ModValsTypeData%dXdx)) then
-      deallocate(ModValsTypeData%dXdx)
+   if (allocated(ModLinTypeData%dXdx)) then
+      deallocate(ModLinTypeData%dXdx)
    end if
-   if (allocated(ModValsTypeData%dYdu)) then
-      deallocate(ModValsTypeData%dYdu)
+   if (allocated(ModLinTypeData%dYdu)) then
+      deallocate(ModLinTypeData%dYdu)
    end if
-   if (allocated(ModValsTypeData%dXdu)) then
-      deallocate(ModValsTypeData%dXdu)
+   if (allocated(ModLinTypeData%dXdu)) then
+      deallocate(ModLinTypeData%dXdu)
    end if
 end subroutine
 
-subroutine NWTC_Library_PackModValsType(RF, Indata)
+subroutine NWTC_Library_PackModLinType(RF, Indata)
    type(RegFile), intent(inout) :: RF
-   type(ModValsType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'NWTC_Library_PackModValsType'
+   type(ModLinType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'NWTC_Library_PackModLinType'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%x)
-   call RegPackAlloc(RF, InData%dxdt)
+   call RegPackAlloc(RF, InData%dx)
    call RegPackAlloc(RF, InData%u)
    call RegPackAlloc(RF, InData%y)
    call RegPackAlloc(RF, InData%u_perturb)
    call RegPackAlloc(RF, InData%x_perturb)
-   call RegPackAlloc(RF, InData%xp)
-   call RegPackAlloc(RF, InData%xn)
-   call RegPackAlloc(RF, InData%yp)
-   call RegPackAlloc(RF, InData%yn)
+   call RegPackAlloc(RF, InData%x_pos)
+   call RegPackAlloc(RF, InData%x_neg)
+   call RegPackAlloc(RF, InData%y_pos)
+   call RegPackAlloc(RF, InData%y_neg)
    call RegPackAlloc(RF, InData%dYdx)
    call RegPackAlloc(RF, InData%dXdx)
    call RegPackAlloc(RF, InData%dYdu)
@@ -1210,24 +1271,24 @@ subroutine NWTC_Library_PackModValsType(RF, Indata)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine NWTC_Library_UnPackModValsType(RF, OutData)
+subroutine NWTC_Library_UnPackModLinType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
-   type(ModValsType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackModValsType'
+   type(ModLinType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackModLinType'
    integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%dxdt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%dx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%y); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%u_perturb); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%x_perturb); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%xp); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%xn); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%yp); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%yn); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%x_pos); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%x_neg); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%y_pos); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%y_neg); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%dYdx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%dXdx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%dYdu); if (RegCheckErr(RF, RoutineName)) return
