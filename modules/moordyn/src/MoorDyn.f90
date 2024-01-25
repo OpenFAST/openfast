@@ -205,9 +205,6 @@ CONTAINS
          CALL WrScr('   >>> MoorDyn is running in array mode <<< ')
          ! could make sure the size of this is right: SIZE(InitInp%FarmCoupledKinematics)  
          p%nTurbines = InitInp%FarmSize
-      else if (InitInp%FarmSize < 0)  then ! Farmsize==-1 indicates standlone, run MoorDyn as a standalone code with no openfast coupling
-         p%Standalone = 1
-         p%nTurbines = 1
       else ! FarmSize==0 indicates normal, FAST module mode
          p%nTurbines = 1  ! if a regular FAST module mode, we treat it like a nTurbine=1 farm case
       END IF
@@ -1868,30 +1865,35 @@ CONTAINS
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
       
-         ! note: in MoorDyn-F v2, the points in the mesh correspond in order to all the coupled bodies, then rods, then points
-         ! >>> make sure all coupled objects have been offset correctly by the PtfmInit values, including if it's a farm situation -- below or where the objects are first created <<<<
+         ! Note: in MoorDyn-F v2, the points in the mesh correspond in order to
+         ! all the coupled bodies, then rods, then points. The below code makes
+         ! sure all coupled objects have been offset correctly by the PtfmInit
+         ! values (initial platform pose), including if using FAST.Farm.
          
+         ! rRef and OrMatRef or the position and orientation matrix of the
+         ! coupled object relative to the platform, based on the input file.
+         ! They are used to set the "reference" pose of each coupled mesh
+         ! entry before the intial offsets from PtfmInit are applied.
          
          J = 0 ! this is the counter through the mesh points for each turbine
          
          DO l = 1,p%nCpldBodies(iTurb)
             J = J + 1
          
-            rRef = m%BodyList(m%CpldBodyIs(l,iTurb))%r6              ! for now set reference position as per input file <<< 
-            
-            CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef(1:3), ErrStat2, ErrMsg2) ! defaults to identity orientation matrix
+            rRef = m%BodyList(m%CpldBodyIs(l,iTurb))%r6  ! set reference position as per input file
+            OrMatRef = ( m%RodList(m%CpldBodyIs(l,iTurb))%OrMat )  ! set reference orientation as per input file
+            CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef(1:3), ErrStat2, ErrMsg2, OrMatRef)
 
-            ! set absolute initial positions in MoorDyn
-            IF (p%Standalone /= 1) THEN 
-               !TODO: >>> should also maybe set reference orientation (which might make part of a couple lines down redundant) <<<
-               OrMat2 = MATMUL(OrMat, ( EulerConstruct( rRef(4:6))))  ! combine the Body's relative orientation with the turbine's initial orientation
-               u%CoupledKinematics(iTurb)%Orientation(:,:,J) = OrMat2          ! set the result as the current orientation of the body <<<
+            ! set absolute initial positions in MoorDyn 
+            OrMat2 = MATMUL(OrMat, OrMatRef)  ! combine the Body's relative orientation with the turbine's initial orientation
+            u%CoupledKinematics(iTurb)%Orientation(:,:,J) = OrMat2  ! set the result as the current orientation of the body
 
-               ! calculate initial point relative position, adjusted due to initial platform translations
-               u%CoupledKinematics(iTurb)%TranslationDisp(:,J) = InitInp%PtfmInit(1:3,iTurb) - rRef(1:3)
-               m%BodyList(m%CpldBodyIs(l,iTurb))%r6(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
-               m%BodyList(m%CpldBodyIs(l,iTurb))%r6(4:6) = EulerExtract(OrMat2)     ! apply rotation from PtfmInit onto input file's body orientation to get its true initial orientation
-            ENDIF
+            ! calculate initial body relative position, adjusted due to initial platform translations
+            u%CoupledKinematics(iTurb)%TranslationDisp(1,J) = InitInp%PtfmInit(1,iTurb) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3) - rRef(1)
+            u%CoupledKinematics(iTurb)%TranslationDisp(2,J) = InitInp%PtfmInit(2,iTurb) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
+            u%CoupledKinematics(iTurb)%TranslationDisp(3,J) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
+            m%BodyList(m%CpldBodyIs(l,iTurb))%r6(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
+            m%BodyList(m%CpldBodyIs(l,iTurb))%r6(4:6) = EulerExtract(OrMat2)     ! apply rotation from PtfmInit onto input file's body orientation to get its true initial orientation
 
             CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)      ! set node as point element
             
@@ -1906,19 +1908,17 @@ CONTAINS
             rRef = m%RodList(m%CpldRodIs(l,iTurb))%r6          ! for now set reference position as per input file <<< 
 
             ! set absolute initial positions in MoorDyn
-            IF (p%Standalone /= 1) THEN
-               OrMatRef = ( m%RodList(m%CpldRodIs(l,iTurb))%OrMat )  ! for now set reference orientation as per input file <<< 
-               CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef(1:3), ErrStat2, ErrMsg2, OrMatRef)  ! assign the reference position and orientation
-               OrMat2 = MATMUL(OrMat, OrMatRef)  ! combine the Rod's relative orientation with the turbine's initial orientation
-               u%CoupledKinematics(iTurb)%Orientation(:,:,J) = OrMat2          ! set the result as the current orientation of the rod <<<
-               
-               ! calculate initial point relative position, adjusted due to initial platform rotations and translations  <<< could convert to array math
-               u%CoupledKinematics(iTurb)%TranslationDisp(1,J) = InitInp%PtfmInit(1,iTurb) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3) - rRef(1)
-               u%CoupledKinematics(iTurb)%TranslationDisp(2,J) = InitInp%PtfmInit(2,iTurb) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
-               u%CoupledKinematics(iTurb)%TranslationDisp(3,J) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
-               m%RodList(m%CpldRodIs(l,iTurb))%r6(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
-               m%RodList(m%CpldRodIs(l,iTurb))%r6(4:6) = MATMUL(OrMat2 , (/0.0, 0.0, 1.0/) )     ! apply rotation from PtfmInit onto input file's rod orientation to get its true initial orientation
-            ENDIF
+            OrMatRef = ( m%RodList(m%CpldRodIs(l,iTurb))%OrMat )  ! set reference orientation as per input file
+            CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef(1:3), ErrStat2, ErrMsg2, OrMatRef)  ! assign the reference position and orientation
+            OrMat2 = MATMUL(OrMat, OrMatRef)  ! combine the Rod's relative orientation with the turbine's initial orientation
+            u%CoupledKinematics(iTurb)%Orientation(:,:,J) = OrMat2          ! set the result as the current orientation of the rod <<<
+            
+            ! calculate initial rod relative position, adjusted due to initial platform rotations and translations  <<< could convert to array math
+            u%CoupledKinematics(iTurb)%TranslationDisp(1,J) = InitInp%PtfmInit(1,iTurb) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3) - rRef(1)
+            u%CoupledKinematics(iTurb)%TranslationDisp(2,J) = InitInp%PtfmInit(2,iTurb) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
+            u%CoupledKinematics(iTurb)%TranslationDisp(3,J) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
+            m%RodList(m%CpldRodIs(l,iTurb))%r6(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
+            m%RodList(m%CpldRodIs(l,iTurb))%r6(4:6) = MATMUL(OrMat2 , (/0.0, 0.0, 1.0/) )     ! apply rotation from PtfmInit onto input file's rod orientation to get its true initial orientation
             
             ! >>> still need to set Rod initial orientations accounting for PtfmInit rotation <<<
 
@@ -1935,14 +1935,12 @@ CONTAINS
             rRef(1:3) = m%PointList(m%CpldPointIs(l,iTurb))%r                           
 
             ! set absolute initial positions in MoorDyn
-            IF (p%Standalone /= 1) THEN
-               CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef(1:3), ErrStat2, ErrMsg2)  
-               ! calculate initial point relative position, adjusted due to initial platform rotations and translations  <<< could convert to array math
-               u%CoupledKinematics(iTurb)%TranslationDisp(1,J) = InitInp%PtfmInit(1,iTurb) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3) - rRef(1)
-               u%CoupledKinematics(iTurb)%TranslationDisp(2,J) = InitInp%PtfmInit(2,iTurb) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
-               u%CoupledKinematics(iTurb)%TranslationDisp(3,J) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)   
-               m%PointList(m%CpldPointIs(l,iTurb))%r = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
-            ENDIF
+            CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef(1:3), ErrStat2, ErrMsg2)  
+            ! calculate initial point relative position, adjusted due to initial platform rotations and translations  <<< could convert to array math
+            u%CoupledKinematics(iTurb)%TranslationDisp(1,J) = InitInp%PtfmInit(1,iTurb) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3) - rRef(1)
+            u%CoupledKinematics(iTurb)%TranslationDisp(2,J) = InitInp%PtfmInit(2,iTurb) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
+            u%CoupledKinematics(iTurb)%TranslationDisp(3,J) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)   
+            m%PointList(m%CpldPointIs(l,iTurb))%r = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
             CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)
 
             ! lastly, do this to set the attached line endpoint positions:
