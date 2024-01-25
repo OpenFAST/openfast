@@ -1232,7 +1232,7 @@ SUBROUTINE FormSteadyStateJacobian( caseData, Jmat, p_FAST, y_FAST, m_FAST, ED, 
 
 
    if (output_debugging) then
-      call WrLinFile_txt_Head(SS_t_global, p_FAST, y_FAST, y_FAST%Lin%Glue, LinRootName, Un, ErrStat2, ErrMsg2 )
+      call WrLinFile_txt_Head(SS_t_global, p_FAST, y_FAST, y_FAST%Lin%Glue, LinRootName, Un, Module_Glue, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >=AbortErrLev) then
             call cleanup()
@@ -1335,11 +1335,11 @@ SUBROUTINE GetModuleJacobians( caseData, dxdotdy, p_FAST, y_FAST, m_FAST, ED, BD
       if ( p_FAST%CompElast  == Module_ED ) then
             ! get the jacobians
          call ED_JacobianPInput( SS_t_global, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt(STATE_CURR), &
-                                    ED%y, ED%m, ErrStat2, ErrMsg2, dYdu=y_FAST%Lin%Modules(Module_ED)%Instance(1)%D, dXdu=y_FAST%Lin%Modules(Module_ED)%Instance(1)%B )
+                                    ED%y, ED%m, ErrStat2, ErrMsg2, dYdu=y_FAST%Lin%Modules(Module_ED)%Instance(1)%D, dXdu=y_FAST%Lin%Modules(Module_ED)%Instance(1)%B, ModIdx=ED%p%IdxAeroMap )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
          call ED_JacobianPContState( SS_t_global, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt(STATE_CURR), &
-                                        ED%y, ED%m, ErrStat2, ErrMsg2, dYdx=y_FAST%Lin%Modules(Module_ED)%Instance(1)%C, dXdx=y_FAST%Lin%Modules(Module_ED)%Instance(1)%A )
+                                        ED%y, ED%m, ErrStat2, ErrMsg2, dYdx=y_FAST%Lin%Modules(Module_ED)%Instance(1)%C, dXdx=y_FAST%Lin%Modules(Module_ED)%Instance(1)%A, ModIdx=ED%p%IdxAeroMap )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
             ! get the operating point
@@ -1348,7 +1348,7 @@ SUBROUTINE GetModuleJacobians( caseData, dxdotdy, p_FAST, y_FAST, m_FAST, ED, BD
                               ED%y, ED%m, ErrStat2, ErrMsg2, u_op=y_FAST%Lin%Modules(Module_ED)%Instance(1)%op_u, &
                                                              y_op=y_FAST%Lin%Modules(Module_ED)%Instance(1)%op_y, &
                                                              x_op=y_FAST%Lin%Modules(Module_ED)%Instance(1)%op_x, &
-                                                            dx_op=y_FAST%Lin%Modules(Module_ED)%Instance(1)%op_dx )
+                                                            dx_op=y_FAST%Lin%Modules(Module_ED)%Instance(1)%op_dx, ModIdx=ED%p%IdxAeroMap  )
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
                if (ErrStat >=AbortErrLev) return
 

@@ -974,7 +974,7 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
       
       
          
-   call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Glue, LinRootName, Un, ErrStat2, ErrMsg2 )       
+   call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Glue, LinRootName, Un, Module_Glue, ErrStat2, ErrMsg2 )       
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >=AbortErrLev) then
          call cleanup()
@@ -1019,7 +1019,7 @@ contains
 END SUBROUTINE FAST_Linearize_OP   
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that writes the A,B,C,D matrices from linearization to a text file. 
-SUBROUTINE WrLinFile_txt_Head(t_global, p_FAST, y_FAST, LinData, FileName, Un, ErrStat, ErrMsg)
+SUBROUTINE WrLinFile_txt_Head(t_global, p_FAST, y_FAST, LinData, FileName, Un, ModuleID, ErrStat, ErrMsg)
 
    INTEGER(IntKi),           INTENT(  OUT) :: Un                  !< unit number
    REAL(DbKi),               INTENT(IN   ) :: t_global            !< current (global) simulation time
@@ -1027,6 +1027,7 @@ SUBROUTINE WrLinFile_txt_Head(t_global, p_FAST, y_FAST, LinData, FileName, Un, E
    TYPE(FAST_OutputFileType),INTENT(IN   ) :: y_FAST              !< Output variables for the glue code
    TYPE(FAST_LinType),       INTENT(IN   ) :: LinData             !< Linearization data for individual module or glue (coupled system)
    CHARACTER(*),             INTENT(IN   ) :: FileName            !< root name of the linearization file to open for writing
+   integer(IntKi),           INTENT(IN   ) :: ModuleID            !< module abbreviation
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
@@ -1131,30 +1132,30 @@ SUBROUTINE WrLinFile_txt_Head(t_global, p_FAST, y_FAST, LinData, FileName, Un, E
          !......................................................
    if (n(Indx_x) > 0) then
       WRITE(Un, '(A)') 'Order of continuous states:'      
-      call WrLinFile_txt_Table(p_FAST, Un, "Row/Column", LinData%op_x, LinData%names_x, rotFrame=LinData%RotFrame_x, derivOrder=LinData%DerivOrder_x  )
+      call WrLinFile_txt_Table(p_FAST, Un, "Row/Column", LinData%op_x, LinData%names_x, ModuleID, rotFrame=LinData%RotFrame_x, derivOrder=LinData%DerivOrder_x  )
       
       WRITE(Un, '(A)') 'Order of continuous state derivatives:'      
-      call WrLinFile_txt_Table(p_FAST, Un, "Row/Column", LinData%op_dx, LinData%names_x, rotFrame=LinData%RotFrame_x, deriv=.true., derivOrder=LinData%DerivOrder_x  )
+      call WrLinFile_txt_Table(p_FAST, Un, "Row/Column", LinData%op_dx, LinData%names_x, ModuleID, rotFrame=LinData%RotFrame_x, deriv=.true., derivOrder=LinData%DerivOrder_x  )
    end if
    
    if (n(Indx_xd) > 0) then
       WRITE(Un, '(A)') 'Order of discrete states:'      
-      call WrLinFile_txt_Table(p_FAST, Un, "Row/Column", LinData%op_xd, LinData%names_xd )      
+      call WrLinFile_txt_Table(p_FAST, Un, "Row/Column", LinData%op_xd, LinData%names_xd, ModuleID )      
    end if
 
    if (n(Indx_z) > 0) then
       WRITE(Un, '(A)') 'Order of constraint states:' 
-      call WrLinFile_txt_Table(p_FAST, Un, "Row/Column", LinData%op_z, LinData%names_z, rotFrame=LinData%RotFrame_z )      
+      call WrLinFile_txt_Table(p_FAST, Un, "Row/Column", LinData%op_z, LinData%names_z, ModuleID, rotFrame=LinData%RotFrame_z )      
    end if
          
    if (n(Indx_u) > 0) then
       WRITE(Un, '(A)') 'Order of inputs:'   
-      call WrLinFile_txt_Table(p_FAST, Un, "Column  ", LinData%op_u, LinData%names_u, rotFrame=LinData%RotFrame_u, UseCol=LinData%use_u )
+      call WrLinFile_txt_Table(p_FAST, Un, "Column  ", LinData%op_u, LinData%names_u, ModuleID, rotFrame=LinData%RotFrame_u, UseCol=LinData%use_u )
    end if
    
    if (n(Indx_y) > 0) then
       WRITE(Un, '(A)') 'Order of outputs:'      
-      call WrLinFile_txt_Table(p_FAST, Un, "Row  ", LinData%op_y, LinData%names_y, rotFrame=LinData%RotFrame_y, UseCol=LinData%use_y )      
+      call WrLinFile_txt_Table(p_FAST, Un, "Row  ", LinData%op_y, LinData%names_y, ModuleID, rotFrame=LinData%RotFrame_y, UseCol=LinData%use_y )      
    end if
       
    !.............
@@ -1199,13 +1200,14 @@ SUBROUTINE WrLinFile_txt_End(Un, p_FAST, LinData)
    
 END SUBROUTINE WrLinFile_txt_End   
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, rotFrame, deriv, derivOrder, UseCol,start_indx)
+SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, ModuleID, rotFrame, deriv, derivOrder, UseCol,start_indx)
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< parameters
    INTEGER(IntKi),           INTENT(IN   ) :: Un                  !< unit number
    CHARACTER(*),             INTENT(IN   ) :: RowCol              !< Row/Column description
    REAL(ReKi),               INTENT(IN   ) :: op(:)               !< operating point values (possibly different size that Desc because of orientations)
    CHARACTER(LinChanLen),    INTENT(IN   ) :: names(:)            !< Descriptions of the channels (names and units)
+   integer(IntKi),           INTENT(IN   ) :: ModuleID            !< Module identifier
    logical, optional,        INTENT(IN   ) :: rotFrame(:)         !< determines if this parameter is in the rotating frame
    logical, optional,        intent(in   ) :: deriv               !< flag that tells us if we need to modify the channel names for derivatives (xdot)
    integer(IntKi), optional, intent(in   ) :: derivOrder(:)       !< Order of the time derivatives associated with the channel
@@ -1227,8 +1229,16 @@ SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, rotFrame, deriv, d
    CHARACTER(100)                          :: FmtOrient
    CHARACTER(25)                           :: DerivStr
    CHARACTER(25)                           :: DerivUnitStr
-   
+   logical                                 :: UsesWM
+   real(R8Ki)                              :: DCM(3,3)
+   integer(IntKi)                          :: row
 
+   select case (ModuleID)
+   case (Module_ED)
+      UsesWM = .true.
+   case default
+      UsesWM = .false.
+   end select
    
    if (present(deriv) ) then
       UseDerivNames = deriv
@@ -1278,14 +1288,40 @@ SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, rotFrame, deriv, d
       
       RotatingCol = .false.
       if (present(rotFrame)) RotatingCol = rotFrame(i)
+
+      select case (ModuleID)
+      case (Module_Glue)
+         UsesWM = index(names(i), "ED") == 1
+      case (Module_ED)
+         UsesWM = .true.
+      case default
+         UsesWM = .false.
+      end select
                   
-      if (index(names(i), ' orientation angle, node ') > 0 ) then  ! make sure this matches what is written in PackMotionMesh_Names()
-         if (UseThisCol) then
-            WRITE(Un, FmtOrient) i_print, op(i_op), op(i_op+1), op(i_op+2), RotatingCol, DerivOrdCol, trim(names(i))  !//' [OP is a row of the DCM]
-            i_print = i_print + 1
+      if (index(names(i), ' orientation angle, node ') > 0) then  ! make sure this matches what is written in PackMotionMesh_Names()
+         if (UsesWM) then
+            if (UseThisCol) then
+               if (index(names(i), ' X orientation angle, node ') > 0) then 
+                  DCM = wm_to_dcm(op(i_op:i_op+2))
+                  row = 1
+               else if (index(names(i), ' Y orientation angle, node ') > 0) then 
+                  DCM = wm_to_dcm(op(i_op-1:i_op+1))
+                  row = 2
+               else if (index(names(i), ' Z orientation angle, node ') > 0) then 
+                  DCM = wm_to_dcm(op(i_op-2:i_op))
+                  row = 3
+               end if
+               WRITE(Un, FmtOrient) i_print, dcm(row, 1), dcm(row, 2), dcm(row, 3), RotatingCol, DerivOrdCol, trim(names(i))  !//' [OP is a row of the DCM]
+               i_print = i_print + 1
+            end if
+            i_op = i_op + 1
+         else
+            if (UseThisCol) then
+               WRITE(Un, FmtOrient) i_print, op(i_op), op(i_op+1), op(i_op+2), RotatingCol, DerivOrdCol, trim(names(i))  !//' [OP is a row of the DCM]
+               i_print = i_print + 1
+            end if
+            i_op = i_op + 3
          end if
-         
-         i_op = i_op + 3
       else
          if (UseThisCol) then
             if (UseDerivNames) then
@@ -1295,7 +1331,6 @@ SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, rotFrame, deriv, d
             end if
             i_print = i_print + 1
          end if
-         
          i_op = i_op + 1
       end if 
    end do
@@ -1332,7 +1367,7 @@ SUBROUTINE WriteModuleLinearMatrices(ThisModule, ThisInstance, t_global, p_FAST,
       OutFileName = trim(LinRootName)//'.'//TRIM(y_FAST%Module_Abrev(ThisModule))
       if (size(y_FAST%Lin%Modules(ThisModule)%Instance) > 1 .or. ThisModule==Module_BD) OutFileName = trim(OutFileName)//TRIM(num2lstr(ThisInstance))
       
-      call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Modules(ThisModule)%Instance(ThisInstance), OutFileName, Un, ErrStat, ErrMsg )
+      call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Modules(ThisModule)%Instance(ThisInstance), OutFileName, Un, ThisModule, ErrStat, ErrMsg )
          if (ErrStat >=AbortErrLev) then
             if (Un > 0) close(Un)
             return
