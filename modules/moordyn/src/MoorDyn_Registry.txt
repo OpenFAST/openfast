@@ -24,7 +24,7 @@ typedef   MoorDyn/MD  InitInputType    ReKi               g              -   -99
 typedef   ^           ^                ReKi               rhoW           -   -999.9 -   "sea density"        "[kg/m^3]"
 typedef   ^           ^                ReKi               WtrDepth       -   -999.9 -   "depth of water"     "[m]"
 typedef   ^           ^                ReKi               PtfmInit      {:}{:} -    -   "initial position of platform(s) shape: 6, nTurbines"     -
-typedef   ^           ^                IntKi              FarmSize       -    0     -   "Indicates normal FAST module mode if 0, FAST.Farm coupled mode and =nTurbines if >0, standalone mode if -1"     -
+typedef   ^           ^                IntKi              FarmSize       -    0     -   "Indicates normal FAST module mode if 0, FAST.Farm coupled mode and =nTurbines if >0"     -
 typedef   ^           ^                ReKi               TurbineRefPos {:}{:} -    -   "reference position of turbines in farm, shape: 3, nTurbines"     -
 typedef   ^           ^                ReKi               Tmax           -     -    -   "simulation duration" "[s]"
 typedef   ^           ^                CHARACTER(1024)    FileName       -   ""     -   "MoorDyn input file"
@@ -390,7 +390,6 @@ typedef   ^       ^                    DbKi                mu_kT          -     
 typedef   ^       ^                    DbKi                mu_kA          -     -    -   "axial kinetic friction coefficient" "(-)"
 typedef   ^       ^                    DbKi                mc             -     -    -   "ratio of the static friction coefficient to the kinetic friction coefficient" "(-)"
 typedef   ^       ^                    DbKi                cv             -     -    -   "saturated damping coefficient" "(-)"
-typedef   ^       ^                    IntKi        Standalone          -           -  -   "Indicates MoorDyn run as standalone code if 1, coupled if 0" - 
 typedef   ^       ^                    IntKi        inertialF            -           0  -   "Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 1 if yes, 0 if no" - 
 # --- parameters for wave and current ---
 typedef   ^       ^                    IntKi        nxWave             -            -  -   "number of x wave grid points"            -

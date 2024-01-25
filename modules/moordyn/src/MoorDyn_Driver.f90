@@ -175,7 +175,7 @@ PROGRAM MoorDyn_Driver
    
    if (drvrInitInp%FarmSize > 0) then   ! Check if this MoorDyn instance is being run from FAST.Farm (indicated by FarmSize > 0)
       nTurbines = drvrInitInp%FarmSize
-   else ! FarmSize==0 indicates normal, FAST module mode; FarmSize<0 indicates standalone mode
+   else ! FarmSize==0 indicates normal, FAST module mode
       nTurbines = 1  ! if a regular FAST module mode, we treat it like a nTurbine=1 farm case
    end if
    
@@ -491,10 +491,6 @@ PROGRAM MoorDyn_Driver
          K = 1  ! the index of the coupling points in the input mesh CoupledKinematics
          J = 1  ! the starting index of the relevant DOFs in the input array
 
-         IF (MD_InitInp%FarmSize < 0) THEN
-            MD_p%TurbineRefPos(:,iTurb) = 0.0
-         ENDIF 
-
          ! any coupled bodies (type -1)
          DO l = 1,MD_p%nCpldBodies(iTurb)
             MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)   
@@ -582,9 +578,6 @@ PROGRAM MoorDyn_Driver
             
             K = 1  ! the index of the coupling points in the input mesh CoupledKinematics
             J = 1  ! the starting index of the relevant DOFs in the input array
-            IF (MD_InitInp%FarmSize < 0) THEN
-               MD_p%TurbineRefPos(:,iTurb) = 0.0
-            ENDIF 
 
             ! any coupled bodies (type -1)
             DO l = 1,MD_p%nCpldBodies(iTurb)
