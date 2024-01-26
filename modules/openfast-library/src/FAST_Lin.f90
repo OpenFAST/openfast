@@ -1290,13 +1290,13 @@ SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, ModuleID, rotFrame
          if (UsesWM) then
             if (UseThisCol) then
                if (index(names(i), ' X orientation angle, node ') > 0) then 
-                  DCM = wm_to_dcm(op(i_op:i_op+2))
+                  DCM = wm_to_dcm(real(op(i_op:i_op+2), R8Ki))
                   row = 1
                else if (index(names(i), ' Y orientation angle, node ') > 0) then 
-                  DCM = wm_to_dcm(op(i_op-1:i_op+1))
+                  DCM = wm_to_dcm(real(op(i_op-1:i_op+1), R8Ki))
                   row = 2
                else if (index(names(i), ' Z orientation angle, node ') > 0) then 
-                  DCM = wm_to_dcm(op(i_op-2:i_op))
+                  DCM = wm_to_dcm(real(op(i_op-2:i_op), R8Ki))
                   row = 3
                end if
                WRITE(Un, FmtOrient) i_print, dcm(row, 1), dcm(row, 2), dcm(row, 3), RotatingCol, DerivOrdCol, trim(names(i))  !//' [OP is a row of the DCM]

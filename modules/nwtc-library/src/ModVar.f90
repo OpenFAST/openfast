@@ -340,16 +340,16 @@ end subroutine
 subroutine MV_UnpackVarR4(VarAry, iVar, Ary, Val)
    type(ModVarType), intent(in)  :: VarAry(:)
    integer(IntKi), intent(in)    :: iVar
-   real(R4Ki), intent(in)        :: Ary(:)
-   real(R8Ki), intent(inout)     :: Val
+   real(R8Ki), intent(in)        :: Ary(:)
+   real(R4Ki), intent(inout)     :: Val
    Val = Ary(VarAry(iVar)%iLoc(1))
 end subroutine
 
 subroutine MV_UnpackVarR4Ary(VarAry, iVar, Ary, Vals)
    type(ModVarType), intent(in)  :: VarAry(:)
    integer(IntKi), intent(in)    :: iVar
-   real(R4Ki), intent(in)        :: Ary(:)
-   real(R8Ki), intent(inout)     :: Vals(:)
+   real(R8Ki), intent(in)        :: Ary(:)
+   real(R4Ki), intent(inout)     :: Vals(:)
    associate (iLoc => VarAry(iVar)%iLoc)
       Vals = real(Ary(iLoc(1):iLoc(2)), R4Ki)
    end associate
