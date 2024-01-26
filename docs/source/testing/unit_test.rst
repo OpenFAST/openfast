@@ -12,7 +12,8 @@ Unit testing in OpenFAST modules is accomplished through `pFUnit <https://github
 This framework provides a Fortran abstraction to the popular
 `xUnit <https://en.wikipedia.org/wiki/XUnit>`__ structure. pFUnit is compiled
 along with OpenFAST through CMake when the CMake variable ``BUILD_TESTING`` is
-turned on.
+turned on (default off) and the CMake variable ``BUILD_UNIT_TESTING`` is on
+(turned on by default when ``BUILD_TEST`` is on).
 
 The BeamDyn and NWTC Library modules contain some sample unit tests and should
 serve as a reference for future development and testing.
@@ -21,7 +22,7 @@ Dependencies
 ------------
 The following packages are required for unit testing:
 
-- Python 3.7+
+- Python 3.7+, <3.12
 - CMake
 - pFUnit - Included in OpenFAST repo through a git-submodule
 

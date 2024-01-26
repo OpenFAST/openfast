@@ -56,7 +56,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumBl = 0_IntKi      !< Number of blades on the turbine [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlPitch      !< Initial blade pitch angles [radians]
     REAL(ReKi)  :: BladeLength = 0.0_ReKi      !< Blade length (for AeroDyn) [meters]
-    REAL(ReKi)  :: TowerHeight = 0.0_ReKi      !< Tower Height [meters]
+    REAL(ReKi)  :: TowerFlexL = 0.0_ReKi      !< Tower Flexible Length [meters]
     REAL(ReKi)  :: TowerBaseHeight = 0.0_ReKi      !< Tower Base Height [meters]
     REAL(ReKi)  :: HubHt = 0.0_ReKi      !< Height of the hub [meters]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BldRNodes      !< Radius to analysis nodes relative to hub ( 0 < RNodes(:) < BldFlexL ) [-]
@@ -942,7 +942,7 @@ subroutine ED_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%BlPitch = SrcInitOutputData%BlPitch
    end if
    DstInitOutputData%BladeLength = SrcInitOutputData%BladeLength
-   DstInitOutputData%TowerHeight = SrcInitOutputData%TowerHeight
+   DstInitOutputData%TowerFlexL = SrcInitOutputData%TowerFlexL
    DstInitOutputData%TowerBaseHeight = SrcInitOutputData%TowerBaseHeight
    DstInitOutputData%HubHt = SrcInitOutputData%HubHt
    if (allocated(SrcInitOutputData%BldRNodes)) then
@@ -1139,7 +1139,7 @@ subroutine ED_PackInitOutput(RF, Indata)
    call RegPack(RF, InData%NumBl)
    call RegPackAlloc(RF, InData%BlPitch)
    call RegPack(RF, InData%BladeLength)
-   call RegPack(RF, InData%TowerHeight)
+   call RegPack(RF, InData%TowerFlexL)
    call RegPack(RF, InData%TowerBaseHeight)
    call RegPack(RF, InData%HubHt)
    call RegPackAlloc(RF, InData%BldRNodes)
@@ -1178,7 +1178,7 @@ subroutine ED_UnPackInitOutput(RF, OutData)
    call RegUnpack(RF, OutData%NumBl); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BlPitch); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BladeLength); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%TowerHeight); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TowerFlexL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TowerBaseHeight); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HubHt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BldRNodes); if (RegCheckErr(RF, RoutineName)) return

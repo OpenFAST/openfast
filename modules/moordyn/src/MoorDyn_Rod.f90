@@ -151,24 +151,6 @@ CONTAINS
             
       IF (wordy > 0) print *, "Set up Rod ",Rod%IdNum, ", type ", Rod%typeNum
 
-
-      if (p%writeLog > 1) then
-         write(p%UnLog, '(A)') "  - Rod "//trim(num2lstr(Rod%IdNum))
-         write(p%UnLog, '(A)') "    ID: "//trim(num2lstr(Rod%IdNum))
-         write(p%UnLog, '(A)') "    UnstrLen: "//trim(num2lstr(Rod%UnstrLen))
-         write(p%UnLog, '(A)') "    N   : "//trim(num2lstr(Rod%N   ))
-         write(p%UnLog, '(A)') "    d   : "//trim(num2lstr(Rod%d   ))
-         write(p%UnLog, '(A)') "    rho : "//trim(num2lstr(Rod%rho ))
-         write(p%UnLog, '(A)') "    Can  : "//trim(num2lstr(Rod%Can ))
-         write(p%UnLog, '(A)') "    Cat  : "//trim(num2lstr(Rod%Cat ))         
-         write(p%UnLog, '(A)') "    CaEnd: "//trim(num2lstr(Rod%CaEnd ))
-         write(p%UnLog, '(A)') "    Cdn  : "//trim(num2lstr(Rod%Cdn ))
-         write(p%UnLog, '(A)') "    Cdt  : "//trim(num2lstr(Rod%Cdt ))
-         write(p%UnLog, '(A)') "    CdEnd: "//trim(num2lstr(Rod%CdEnd ))
-         !write(p%UnLog, '(A)') "    ww_l: " << ( (rho - env->rho_w)*(pi/4.*d*d) )*9.81 << endl;	
-      end if
-
-
       ! need to add cleanup sub <<<
 
 
@@ -491,8 +473,7 @@ CONTAINS
       ELSE                            ! pinned rod, 6 states (rotational only)
       
          ! account for moment in response to end A acceleration due to inertial coupling (off-diagonal sub-matrix terms)
-         !Fnet(4:6) = Fnet(4:6) - MATMUL(M_out(4:6,1:3), Rod%a6(1:3))  ! <<<check that it's the right submatrix <<<
-         Fnet(4:6) = Fnet(4:6) - MATMUL(M_out(1:3,4:6), Rod%a6(1:3))  ! <<< THIS order is stable. Weird. <<<
+         Fnet(4:6) = Fnet(4:6) - MATMUL(M_out(4:6,1:3), Rod%a6(1:3))  
          ! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the above line seems to be causing the stability problems for USFLOWT! <<<<
          
          ! solve for accelerations in [M]{a}={f} using LU decomposition
@@ -1015,16 +996,27 @@ CONTAINS
       ! add inertial loads as appropriate (written out in a redundant way just for clarity, and to support load separation in future)
       ! fixed coupled rod
       if (Rod%typeNum == -2) then                          
-      
-         F6_iner  = -MATMUL(Rod%M6net, Rod%a6)    ! inertial loads      
-         Fnet_out = Rod%F6net + F6_iner           ! add inertial loads
-      
+
+         if (p%inertialF == 1) then      ! include inertial components  
+            F6_iner  = -MATMUL(Rod%M6net, Rod%a6)    ! inertial loads 
+         else 
+            F6_iner = 0.0
+         endif     
+         Rod%F6net = Rod%F6net + F6_iner           ! add inertial loads  
+         Fnet_out = Rod%F6net
       ! pinned coupled rod      
-      else if (Rod%typeNum == -1) then                     
-         ! inertial loads ... from input translational ... and solved rotational ... acceleration
-         F6_iner(4:6)  = -MATMUL(Rod%M6net(1:3,1:3), Rod%a6(1:3)) - MATMUL(Rod%M6net(1:3,4:6), Rod%a6(4:6))
-         Fnet_out(1:3) = Rod%F6net(1:3) + F6_iner(4:6)     ! add translational inertial loads
-         Fnet_out(4:6) = 0.0_DbKi
+      else if (Rod%typeNum == -1) then   
+                     
+         if (p%inertialF == 1) then      ! include inertial components 
+            ! inertial loads ... from input translational ... and solved rotational ... acceleration
+            F6_iner(1:3)  = -MATMUL(Rod%M6net(1:3,1:3), Rod%a6(1:3)) - MATMUL(Rod%M6net(1:3,4:6), Rod%a6(4:6))
+         else
+            F6_iner(1:3) = 0.0
+         endif
+         
+         Rod%F6net(1:3) = Rod%F6net(1:3) + F6_iner(1:3)     ! add translational inertial loads
+         Rod%F6net(4:6) = 0.0_DbKi
+         Fnet_out = Rod%F6net
       else
          print *, "ERROR, Rod_GetCoupledForce called for wrong (non-coupled) rod type!"
       end if
@@ -1089,7 +1081,7 @@ CONTAINS
             Rod%AttachedB(Rod%nAttachedB) = lineID
             Rod%TopB(Rod%nAttachedB) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
          ELSE
-            Print*, "too many lines connected to Rod ", Rod%IdNum, " in MoorDyn!"
+            call WrScr("too many lines connected to Rod "//trim(num2lstr(Rod%IdNum))//" in MoorDyn!")
          END IF
 
       else              ! attaching to end A
@@ -1101,7 +1093,7 @@ CONTAINS
             Rod%AttachedA(Rod%nAttachedA) = lineID
             Rod%TopA(Rod%nAttachedA) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
          ELSE
-            Print*, "too many lines connected to Rod ", Rod%IdNum, " in MoorDyn!"
+            call WrScr("too many lines connected to Rod "//trim(num2lstr(Rod%IdNum))//" in MoorDyn!")
          END IF
          
       end if
@@ -1143,7 +1135,7 @@ CONTAINS
                      rdEnd(J) = Rod%rd(J,Rod%N)
                   END DO
                   
-                  print*, "Detached line ", lineID, " from Rod ", Rod%IdNum, " end B"
+                  call WrScr( "Detached line "//trim(num2lstr(lineID))//" from Rod "//trim(num2lstr(Rod%IdNum))//" end B")
                   
                   EXIT
                END DO
@@ -1175,7 +1167,7 @@ CONTAINS
                      rdEnd(J) = Rod%rd(J,0)
                   END DO
                   
-                  print*, "Detached line ", lineID, " from Rod ", Rod%IdNum, " end A"
+                  call WrScr( "Detached line "//trim(num2lstr(lineID))//" from Rod "//trim(num2lstr(Rod%IdNum))//" end A")
                   
                   EXIT
                END DO

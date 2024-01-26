@@ -151,8 +151,10 @@ CONTAINS
       vecLen   = SQRT(Dot_Product(vec,vec))
       vecLen2D = SQRT(vec(1)**2+vec(2)**2)
       if ( vecLen < 0.000001 ) then
-         print *, "ERROR in GetOrientationAngles in MoorDyn. Supplied vector is near zero" 
-         print *, vec
+         if (wordy > 0) then
+            print *, "ERROR in GetOrientationAngles in MoorDyn. Supplied vector is near zero" 
+            print *, vec
+         endif
          k_hat = NaN ! 1.0/0.0
       else
          k_hat = vec / vecLen 
@@ -1348,7 +1350,7 @@ CONTAINS
          
       ELSE IF (SCAN(WaterKinString, "abcdfghijklmnopqrstuvwxyzABCDFGHIJKLMNOPQRSTUVWXYZ") == 0) THEN
          ! If the input has no letters, let's assume it's a number         
-         print *, "ERROR WaveKin option does not currently support numeric entries. It must be a filename."
+         call WrScr( "ERROR WaveKin option does not currently support numeric entries. It must be a filename." )
          p%WaveKin = 0
          p%Current = 0
          return
@@ -1356,7 +1358,7 @@ CONTAINS
 
 
       ! otherwise interpret the input as a file name to load the bathymetry lookup data from
-      print *, "   The waterKin input contains letters so will load a water kinematics input file"
+      call WrScr( "   The waterKin input contains letters so will load a water kinematics input file" )
       
       
       ! -------- load water kinematics input file -------------
@@ -1387,14 +1389,17 @@ CONTAINS
       READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type
       READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
       CALL gridAxisCoords(coordtype, entries2, p%pxWave, p%nxWave, ErrStat2, ErrMsg2)
+      Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
       ! Y grid points
       READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type
       READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
       CALL gridAxisCoords(coordtype, entries2, p%pyWave, p%nyWave, ErrStat2, ErrMsg2)
+      Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
       ! Z grid points
       READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type
       READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
       CALL gridAxisCoords(coordtype, entries2, p%pzWave, p%nzWave, ErrStat2, ErrMsg2)
+      Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
       ! ----- current -----
       CALL ReadCom( UnIn, FileName,                        'current header', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
       CALL ReadVar( UnIn, FileName, p%Current,   'CurrentMod', 'CurrentMod', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
@@ -1408,7 +1413,7 @@ CONTAINS
             EXIT      ! break out of the loop if it couldn't read the line (i.e. if at end of file)
          end if
          if (i == 100) then
-            print*,"WARNING: MD can handle a maximum of 100 current profile points"
+            call WrScr("WARNING: MD can handle a maximum of 100 current profile points")
             exit
          end if
       END DO
@@ -1444,7 +1449,7 @@ CONTAINS
       ! --------------------- set from inputted wave elevation time series, grid approach -------------------
       if (p%WaveKin == 3) then
 
-         print *, 'Setting up WaveKin 3 option: read wave elevation time series from file'
+         call WrScr( 'Setting up WaveKin 3 option: read wave elevation time series from file' )
 
          IF ( LEN_TRIM( WaveKinFile ) == 0 )  THEN
             CALL SetErrStat( ErrID_Fatal,'WaveKinFile must not be an empty string.',ErrStat, ErrMsg, RoutineName); return
@@ -1462,7 +1467,7 @@ CONTAINS
       
          CALL OpenFInpFile ( UnElev, WaveKinFile, ErrStat2, ErrMsg2 ); if(Failed()) return
         
-         print *, 'Reading wave elevation data from ', trim(WaveKinFile)
+         call WrScr( 'Reading wave elevation data from '//trim(WaveKinFile) )
          
          ! Read through length of file to find its length
          i = 1  ! start counter
@@ -1497,7 +1502,7 @@ CONTAINS
          ! Close the inputs file 
          CLOSE ( UnElev ) 
          
-         print *, "Read ", ntIn, " time steps from input file."
+         call WrScr( "Read "//trim(num2lstr(ntIn))//" time steps from input file." )
 
          ! if (WaveTimeIn(ntIn) < TMax) then <<<< need to handle if time series is too short?
            
@@ -1707,49 +1712,58 @@ CONTAINS
          REAL(ReKi) :: tempArray (100)
          REAL(ReKi) :: dx
          INTEGER(IntKi)                   :: nEntries, I
-         
-         ! get array of coordinate entries 
-         CALL stringToArray(entries, nEntries, tempArray)
-         
-         ! set number of coordinates
-         if (     coordtype==0) then   ! 0: not used - make one grid point at zero
-            n = 1;
-         else if (coordtype==1) then   ! 1: list values in ascending order
-            n = nEntries
-         else if (coordtype==2) then   ! 2: uniform specified by -xlim, xlim, num
-            n = int(tempArray(3))
-         else
-            print *, "Error: invalid coordinate type specified to gridAxisCoords"
-         end if
-         
-         ! allocate coordinate array
-         CALL AllocAry(coordarray, n, 'x,y, or z grid points' , ErrStat, ErrMsg)
-         !ALLOCATE ( coordarray(n), STAT=ErrStat) 
-         
-         ! fill in coordinates
-         if (     coordtype==0) then
-            coordarray(1) = 0.0_ReKi
-         
-         else if (coordtype==1) then
-            coordarray(1:n) = tempArray(1:n)
-         
-         else if (coordtype==2) then  
-            coordarray(1) = tempArray(1)
-            coordarray(n) = tempArray(2)
-            dx = (coordarray(n)-coordarray(0))/REAL(n-1)
-            do i=2,n-1
-               coordarray(i) = coordarray(1) + REAL(i)*dx
-            end do
-         
-         else
-            print *, "Error: invalid coordinate type specified to gridAxisCoords" 
-         end if
-         
-         print *, "Set water grid coordinates to :"
-         DO i=1,n
-            print *, " ", coordarray(i)
-         end do
-         
+
+         IF (len(trim(entries)) == len(entries)) THEN
+            call WrScr("Warning: Only 120 characters read from wave grid coordinates")
+         END IF
+
+         IF (entries(len(entries):len(entries)) == ',') THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg = 'Last character of wave grid coordinate list cannot be comma'
+         ELSE
+            ! get array of coordinate entries 
+            CALL stringToArray(entries, nEntries, tempArray)
+            
+            ! set number of coordinates
+            if (     coordtype==0) then   ! 0: not used - make one grid point at zero
+               n = 1;
+            else if (coordtype==1) then   ! 1: list values in ascending order
+               n = nEntries
+            else if (coordtype==2) then   ! 2: uniform specified by -xlim, xlim, num
+               n = int(tempArray(3))
+            else
+               call WrScr("Error: invalid coordinate type specified to gridAxisCoords")
+            end if
+            
+            ! allocate coordinate array
+            CALL AllocAry(coordarray, n, 'x,y, or z grid points' , ErrStat, ErrMsg)
+            !ALLOCATE ( coordarray(n), STAT=ErrStat) 
+            
+            ! fill in coordinates
+            if (     coordtype==0) then
+               coordarray(1) = 0.0_ReKi
+            
+            else if (coordtype==1) then
+               coordarray(1:n) = tempArray(1:n)
+            
+            else if (coordtype==2) then  
+               coordarray(1) = tempArray(1)
+               coordarray(n) = tempArray(2)
+               dx = (coordarray(n)-coordarray(1))/REAL(n-1)
+               do i=2,n
+                  coordarray(i) = coordarray(i-1) + dx
+               end do
+            
+            else
+               call WrScr("Error: invalid coordinate type specified to gridAxisCoords")
+            end if
+            
+            ! print *, "Set water grid coordinates to :"
+            ! DO i=1,n
+            !    print *, " ", coordarray(i)
+            ! end do
+         END IF
+
       END SUBROUTINE gridAxisCoords
    
    
@@ -1777,7 +1791,7 @@ CONTAINS
             END IF
             n = n + 1
             if (n > 100) then
-               print *, "ERROR - stringToArray cannot do more than 100 entries"
+               call WrScr( "ERROR - stringToArray cannot do more than 100 entries")
             end if            
             READ(instring(pos1:pos1+pos2-2), *) outarray(n)
 

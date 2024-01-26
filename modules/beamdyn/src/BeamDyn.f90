@@ -247,9 +247,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
    z%DummyConstrState = 0.0_BDKi
 
-   ! copy data for BeamDyn driver:
-   call move_alloc ( InputFileData%kp_coordinate, InitOut%kp_coordinate)
-   InitOut%kp_total = InputFileData%kp_total
 
       !............................................................................................
       ! Initialize Jacobian:
@@ -823,7 +820,6 @@ subroutine SetInitOut(p, InitOut, ErrStat, ErrMsg)
    end do
 
    InitOut%Ver = BeamDyn_Ver
-
 
       ! Set the info in WriteOutputHdr and WriteOutputUnt for BldNd sections.
    CALL BldNdOuts_InitOut( InitOut, p, ErrStat2, ErrMsg2 )
