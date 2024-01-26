@@ -567,7 +567,7 @@ CONTAINS
           END IF
         
         ! Point case                            
-        ELSE IF (let1(1:1) == 'P') THEN    ! Look for P?xxx or Point?xxx
+        ELSE IF (let1(1:1) == 'P' .OR. let1(1:1) == 'C') THEN    ! Look for P?xxx or Point?xxx (C?xxx and Con?xxx for backwards compatability)
           p%OutParam(I)%OType = 2                ! Point object type
           qVal = let2                            ! quantity type string
           
@@ -605,7 +605,7 @@ CONTAINS
         ! error
         ELSE
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
-          CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Must start with L, C, R, or B')
+          CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Must start with L, R, or B')
           CYCLE
         END IF
 
