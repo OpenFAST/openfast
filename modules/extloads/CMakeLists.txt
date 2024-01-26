@@ -27,7 +27,7 @@ add_library(extloadslib STATIC
 target_include_directories(extloadslib PUBLIC 
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>  
 )
-target_link_libraries(extloadslib beamdynlib nwtclibs versioninfolib)
+target_link_libraries(extloadslib beamdynlib nwtclibs versioninfolib ifwlib)
 set_target_properties(extloadslib PROPERTIES PUBLIC_HEADER "src/ExtLoadsDX_Types.h")
 
 install(TARGETS extloadslib

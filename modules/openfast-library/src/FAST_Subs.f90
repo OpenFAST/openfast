@@ -613,6 +613,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
          AirDens = Init%OutData_ExtLd%AirDens
 
+         ! Set pointer to flowfield
+         IF (p_FAST%CompAero == Module_AD) AD%p%FlowField => Init%OutData_ExtLd%FlowField
+
       END IF
 
    END IF
@@ -654,13 +657,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
       IF ( p_FAST%CompAero  == Module_AD14 ) THEN
          Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + NumBl * AD14%Input(1)%InputMarkers(1)%NNodes + AD14%Input(1)%Twr_InputMarkers%NNodes
-      ELSEIF ( p_FAST%CompAero  == Module_AD ) THEN
-         ! Number of Wind points from AeroDyn, see AeroDyn.f90
-         Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints
-         ! Wake -- we allow the wake positions to exceed the wind box
-         if (allocated(AD%OtherSt(STATE_CURR)%WakeLocationPoints)) then
-            Init%InData_IfW%BoxExceedAllow = .true.
-         endif
       END IF
 
       ! lidar
@@ -4664,6 +4660,10 @@ SUBROUTINE ExtLd_SetInitInput(InitInData_ExtLd, InitOutData_ED, y_ED, InitOutDat
      end do
      deallocate(AD_etaNodes)
   end if
+
+   ! Total number of nodes velocity is needed at
+   InitInData_ExtLd%nNodesVel = InitOutData_AD%nNodesVel
+
 
   RETURN
 
