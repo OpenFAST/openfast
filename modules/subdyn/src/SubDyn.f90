@@ -222,7 +222,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       !     %RefOrientation   is the identity matrix (3,3,N)
       !     %Position         is the reference position (3,N)
       ! Maybe some logic to make sure these points correspond roughly to nodes -- though this may not be true for a long pile into the soil with multiple connection points
-      ! Note: F = -kx  whre k is the relevant 6x6 matrix from SoilStiffness
+      ! Note: F = -kx  where k is the relevant 6x6 matrix from SoilStiffness
       call AllocAry(Init%Soil_K, 6,6, size(InitInput%SoilStiffness,3), 'Soil_K', ErrStat2, ErrMsg2);
       call AllocAry(Init%Soil_Points, 3, InitInput%SoilMesh%NNodes, 'Soil_Points', ErrStat2, ErrMsg2);
       call AllocAry(Init%Soil_Nodes,     InitInput%SoilMesh%NNodes, 'Soil_Nodes' , ErrStat2, ErrMsg2);
@@ -1173,7 +1173,7 @@ if (ErrStat2/=0) then
    CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Members', 'First line of members array', ErrStat2, ErrMsg2 ); if(Failed()) return
    call LegacyWarning('Member table contains 6 columns instead of 7,  using default member directional cosines ID (-1) for all members. &
    &The directional cosines will be computed based on the member nodes for all members.')
-   Init%Members(:,7) = -1
+   Init%Members(:,7) = -1 ! For the spring element, we need the direction cosine from the user. Both JointIDs are coincident, the direction cosine cannot be determined.
 endif
 ! Extract fields from first line
 DO I = 1, nColumns
@@ -1250,11 +1250,29 @@ if (.not. LegacyFormat) then
       CALL ReadAry( UnIn, SDInputFile, Init%PropSetsR(I,:), PropSetsRCol, 'RigidPropSets', 'RigidPropSets ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    ENDDO   
    IF (Check( Init%NPropSetsR < 0, 'NPropSetsRigid must be >=0')) return
+   !----------------------- SPRING ELEMENT PROPERTIES --------------------------------
+   CALL ReadCom  ( UnIn, SDInputFile,                  'Spring element properties'                                 ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsS, 'NPropSetsS', 'Number of spring properties' ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL ReadCom  ( UnIn, SDInputFile,                  'Spring element properties Header'                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL ReadCom  ( UnIn, SDInputFile,                  'Spring element properties Unit  '                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   IF (Check( Init%NPropSetsS < 0, 'NPropSetsSpring must be >=0')) return
+   CALL AllocAry(Init%PropSetsS, Init%NPropSetsS, PropSetsSCol, 'PropSetsS', ErrStat2, ErrMsg2); if(Failed()) return
+   DO I = 1, Init%NPropSetsS
+      READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line; ErrMsg2='Error reading spring property line'; if (Failed()) return
+      call ReadFAryFromStr(Line, Init%PropSetsS(I,:), PropSetsSCol, nColValid, nColNumeric);
+      if ((nColValid/=nColNumeric).or.((nColNumeric/=22).and.(nColNumeric/=PropSetsSCol)) ) then
+         CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Spring property line must consist of 22 numerical values. Problematic line: "'//trim(Line)//'"')
+         return
+      endif
+   ENDDO   
+
 else
    Init%NPropSetsC=0
    Init%NPropSetsR=0
+   Init%NPropSetsS=0
    CALL AllocAry(Init%PropSetsC, Init%NPropSetsC, PropSetsCCol, 'PropSetsC', ErrStat2, ErrMsg2); if(Failed()) return
    CALL AllocAry(Init%PropSetsR, Init%NPropSetsR, PropSetsRCol, 'RigidPropSets', ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(Init%PropSetsS, Init%NPropSetsS, PropSetsSCol, 'PropSetsS', ErrStat2, ErrMsg2); if(Failed()) return
 endif
 
 !---------------------- MEMBER COSINE MATRICES COSM(i,j) ------------------------
@@ -3549,6 +3567,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    INTEGER(IntKi)         :: i, j, k, propIDs(2), Iprop(2)  !counter and temporary holders
    INTEGER(IntKi)         :: iNode1, iNode2 ! Node indices
    INTEGER(IntKi)         :: mType ! Member Type
+   INTEGER                :: iDirCos
    REAL(ReKi)             :: mMass, mLength ! Member mass and length
    REAL(ReKi)             :: M_O(6,6)    ! Equivalent mass matrix at origin
    REAL(ReKi)             :: M_P(6,6)    ! Equivalent mass matrix at P (ref point)
@@ -3765,11 +3784,13 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    WRITE(UnSum, '(A,I6)')  '#Number of nodes per member:', Init%Ndiv+1
    WRITE(UnSum, '(A9,A10,A10,A10,A10,A15,A15,A16)')  '#Member ID', 'Joint1_ID', 'Joint2_ID','Prop_I','Prop_J', 'Mass','Length', 'Node IDs...'
    DO i=1,p%NMembers
-       !Calculate member mass here; this should really be done somewhere else, yet it is not used anywhere else
-       !IT WILL HAVE TO BE MODIFIED FOR OTHER THAN CIRCULAR PIPE ELEMENTS
-       propIDs=Init%Members(i,iMProp:iMProp+1) 
-       mLength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg) ! TODO double check mass and length
-       IF (ErrStat .EQ. ErrID_None) THEN
+      !Calculate member mass here; this should really be done somewhere else, yet it is not used anywhere else
+      !IT WILL HAVE TO BE MODIFIED FOR OTHER THAN CIRCULAR PIPE ELEMENTS
+      propIDs=Init%Members(i,iMProp:iMProp+1) 
+      if (Init%Members(I, iMType)/=idMemberSpring) then ! This check only applies for members different than springs (springs have no mass and no length)
+      mLength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg) ! TODO double check mass and length
+      endif
+      IF (ErrStat .EQ. ErrID_None) THEN
         mType =  Init%Members(I, iMType) ! 
         if (mType==idMemberBeamCirc) then
            iProp(1) = FINDLOCI(Init%PropSetsB(:,1), propIDs(1))
@@ -3789,6 +3810,12 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
            mMass= Init%PropSetsR(iProp(1),2) * mLength ! rho [kg/m] * L
            WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,2(I6),A)') Init%Members(i,1:3),propIDs(1),propIDs(2),&
                  mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, 2), ' # Rigid link'
+        else if (mType==idMemberSpring) then
+           iProp(1) = FINDLOCI(Init%PropSetsS(:,1), propIDs(1))
+           mMass= 0.0 ! Spring element has no mass
+           mLength = 0.0 ! Spring element has no length. Both JointIDs must be coincident.
+           WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,2(I6),A)') Init%Members(i,1:3),propIDs(1),propIDs(2),&
+                 mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, 2), ' # Spring element'
          else if (mType==idMemberBeamArb) then
            iProp(1) = FINDLOCI(Init%PropSetsX(:,1), propIDs(1))
            iProp(2) = FINDLOCI(Init%PropSetsX(:,1), propIDs(2))
@@ -3798,9 +3825,9 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
          else
            WRITE(UnSum, '(A)') '#TODO, member unknown'
         endif
-       ELSE 
-           RETURN
-       ENDIF
+      ELSE 
+          RETURN
+      ENDIF
    ENDDO   
    !-------------------------------------------------------------------------------------------------------------
    ! write Cosine matrix for all members to a txt file
@@ -3809,11 +3836,25 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    WRITE(UnSum, '(A, I6)') '#Direction Cosine Matrices for all Members: GLOBAL-2-LOCAL. No. of 3x3 matrices=', p%NMembers 
    WRITE(UnSum, '(A9,9(A15))')  '#Member ID', 'DC(1,1)', 'DC(1,2)', 'DC(1,3)', 'DC(2,1)','DC(2,2)','DC(2,3)','DC(3,1)','DC(3,2)','DC(3,3)'
    DO i=1,p%NMembers
+      mType = Init%Members(I, iMType)
       iNode1 = FINDLOCI(Init%Joints(:,1), Init%Members(i,2)) ! index of joint 1 of member i
       iNode2 = FINDLOCI(Init%Joints(:,1), Init%Members(i,3)) ! index of joint 2 of member i
       XYZ1   = Init%Joints(iNode1,2:4)
       XYZ2   = Init%Joints(iNode2,2:4)
-      CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), DirCos, mLength, ErrStat, ErrMsg)
+      if ((mType == idMemberSpring) .or. (mType == idMemberBeamArb)) then ! The direction cosine for these member types must be provided by the user
+         iDirCos = p%Elems(i, iMDirCosID)
+         DirCos(1, 1) =  Init%COSMs(iDirCos, 2)
+         DirCos(2, 1) =  Init%COSMs(iDirCos, 3)
+         DirCos(3, 1) =  Init%COSMs(iDirCos, 4)
+         DirCos(1, 2) =  Init%COSMs(iDirCos, 5)
+         DirCos(2, 2) =  Init%COSMs(iDirCos, 6)
+         DirCos(3, 2) =  Init%COSMs(iDirCos, 7)
+         DirCos(1, 3) =  Init%COSMs(iDirCos, 8)
+         DirCos(2, 3) =  Init%COSMs(iDirCos, 9)
+         DirCos(3, 3) =  Init%COSMs(iDirCos, 10)
+      else
+         CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), mType, DirCos, mLength, ErrStat, ErrMsg)
+      endif
       DirCos=TRANSPOSE(DirCos) !This is now global to local
       WRITE(UnSum, '("#",I9,9(ES28.18E2))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
    ENDDO
@@ -4084,7 +4125,7 @@ FUNCTION MemberLength(MemberID,Init,ErrStat,ErrMsg)
     xyz1= Init%Joints(Joint1,2:4)
     xyz2= Init%Joints(Joint2,2:4)
     MemberLength=SQRT( SUM((xyz2-xyz1)**2.) )
-    if ( EqualRealNos(MemberLength, 0.0_ReKi) ) then 
+    if ( EqualRealNos(MemberLength, 0.0_ReKi) ) then
         call SetErrStat(ErrID_Fatal,' Member with ID '//trim(Num2LStr(MemberID))//' has zero length!', ErrStat,ErrMsg,RoutineName);
         return
     endif

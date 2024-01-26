@@ -1467,6 +1467,45 @@
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\orcaflex-interface\src\OrcaFlexInterface.F90"/></Filter></Filter>
+		<Filter Name="ExtLoads">
+		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\modules\extloads\src\ExtLoads_Registry.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\extloads\src\ExtLoads_Types.f90"/>
+		<File RelativePath="..\..\modules\extloads\src\ExtLoadsDX_Registry.txt">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoadsDX" Description="Running Registry for ExtLoadsDX" Outputs="..\..\modules\extloads\src\ExtLoadsDX_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoadsDX" Description="Running Registry for ExtLoadsDX" Outputs="..\..\modules\extloads\src\ExtLoadsDX_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\extloads\src\ExtLoadsDX_Types.f90"/></Filter>
+		<File RelativePath="..\..\modules\extloads\src\ExtLoads.f90"/></Filter>
 		<Filter Name="NWTC_Library">
 		<Filter Name="NetLib">
 		<Filter Name="FFTPACK">

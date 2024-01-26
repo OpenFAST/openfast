@@ -9,7 +9,8 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
-OpenFAST v3.5.1 to OpenFAST dev
+
+OpenFAST v3.5.2 to OpenFAST dev
 ----------------------------------
 
 The HydroDyn module was split into HydroDyn and SeaState.  This results in a
@@ -23,14 +24,25 @@ Module                                        Line  Flag Name           Example 
 ============================================= ==== ==================== ========================================================================================================================================================================================================
 HydroDyn                                       all                      Complete restructuring of input file
 SeaState                                       all                      New module (split from HydroDyn, so contains some inputs previously found in HydroDyn)
+SubDyn                                        56\*                                            ----------------------- SPRING ELEMENT PROPERTIES -------------------------------------
+SubDyn                                        57\* NSpringPropSets  0                         - Number of spring properties
+SubDyn                                        58\*                                            PropSetID   k11     k12     k13     k14     k15     k16     k22     k23     k24     k25     k26     k33     k34     k35     k36     k44      k45      k46      k55      k56      k66
+SubDyn                                        59\*                                            (-)      (N/m)   (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)  (N/rad) (N/rad) (N/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad)   
 ============================================= ==== ==================== ========================================================================================================================================================================================================
 
+\*Exact line number depends on number of entries in various preceeding tables.
+
+
+OpenFAST v3.5.1 to OpenFAST v3.5.2 
+----------------------------------
+
+No input file changes were made.
 
 
 OpenFAST v3.5.0 to OpenFAST v3.5.1 
 ----------------------------------
 
-No input files changes were made.  Some input files now include additional
+No input file changes were made.  Some input files now include additional
 output channels:  AeroDyn nodal outputs for another coordinate system, new
 MoorDyn output names (Connect changed to Point).
 

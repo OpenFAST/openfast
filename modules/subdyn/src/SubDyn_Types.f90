@@ -77,6 +77,27 @@ IMPLICIT NONE
     REAL(ReKi)  :: Area = 0.0_ReKi      !< Area of an element [m^2]
     REAL(ReKi)  :: Rho = 0.0_ReKi      !< Density [kg/m^3]
     REAL(ReKi)  :: T0 = 0.0_ReKi      !< Pretension  [N]
+    REAL(ReKi)  :: k11 = 0.0_ReKi      !< Spring translational stiffness [N/m]
+    REAL(ReKi)  :: k12 = 0.0_ReKi      !< Spring cross-coupling stiffness [N/m]
+    REAL(ReKi)  :: k13 = 0.0_ReKi      !< Spring cross-coupling stiffness [N/m]
+    REAL(ReKi)  :: k14 = 0.0_ReKi      !< Spring cross-coupling stiffness [N/rad]
+    REAL(ReKi)  :: k15 = 0.0_ReKi      !< Spring cross-coupling stiffness [N/rad]
+    REAL(ReKi)  :: k16 = 0.0_ReKi      !< Spring cross-coupling stiffness [N/rad]
+    REAL(ReKi)  :: k22 = 0.0_ReKi      !< Spring translational stiffness [N/m]
+    REAL(ReKi)  :: k23 = 0.0_ReKi      !< Spring cross-coupling stiffness [N/m]
+    REAL(ReKi)  :: k24 = 0.0_ReKi      !< Spring cross-coupling stiffness [N/rad]
+    REAL(ReKi)  :: k25 = 0.0_ReKi      !< Spring cross-coupling stiffness [N/rad]
+    REAL(ReKi)  :: k26 = 0.0_ReKi      !< Spring cross-coupling stiffness [N/rad]
+    REAL(ReKi)  :: k33 = 0.0_ReKi      !< Spring translational stiffness [N/m]
+    REAL(ReKi)  :: k34 = 0.0_ReKi      !< Spring cross-coupling stiffness [N/rad]
+    REAL(ReKi)  :: k35 = 0.0_ReKi      !< Spring cross-coupling stiffness [N/rad]
+    REAL(ReKi)  :: k36 = 0.0_ReKi      !< Spring cross-coupling stiffness [N/rad]
+    REAL(ReKi)  :: k44 = 0.0_ReKi      !< Spring rotational stiffness [Nm/rad]
+    REAL(ReKi)  :: k45 = 0.0_ReKi      !< Spring cross-coupling stiffness [Nm/rad]
+    REAL(ReKi)  :: k46 = 0.0_ReKi      !< Spring cross-coupling stiffness [Nm/rad]
+    REAL(ReKi)  :: k55 = 0.0_ReKi      !< Spring rotational stiffness [Nm/rad]
+    REAL(ReKi)  :: k56 = 0.0_ReKi      !< Spring cross-coupling stiffness [Nm/rad]
+    REAL(ReKi)  :: k66 = 0.0_ReKi      !< Spring rotational stiffness [Nm/rad]
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: DirCos = 0.0_R8Ki      !< Element direction cosine matrix [-]
   END TYPE ElemPropType
 ! =======================
@@ -121,6 +142,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NPropSetsB = 0_IntKi      !< Number of property sets for beams [-]
     INTEGER(IntKi)  :: NPropSetsC = 0_IntKi      !< Number of property sets for cables [-]
     INTEGER(IntKi)  :: NPropSetsR = 0_IntKi      !< Number of property sets for rigid links [-]
+    INTEGER(IntKi)  :: NPropSetsS = 0_IntKi      !< Number of property sets for spring elements [-]
     INTEGER(IntKi)  :: NCMass = 0_IntKi      !< Number of joints with concentrated mass [-]
     INTEGER(IntKi)  :: NCOSMs = 0_IntKi      !< Number of independent cosine matrices [-]
     INTEGER(IntKi)  :: FEMMod = 0_IntKi      !< FEM switch  element model in the FEM [-]
@@ -130,6 +152,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsB      !< Property sets number and values [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsC      !< Property ID and values for cables [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsR      !< Property ID and values for rigid link [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsS      !< Property ID and values for spring element [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsX      !< Extended property sets [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: COSMs      !< Independent direction cosine matrices [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CMass      !< Concentrated mass information [-]
@@ -151,10 +174,12 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NPropB = 0_IntKi      !< Total number of property sets for Beams [-]
     INTEGER(IntKi)  :: NPropC = 0_IntKi      !< Total number of property sets for Cable [-]
     INTEGER(IntKi)  :: NPropR = 0_IntKi      !< Total number of property sets for Rigid [-]
+    INTEGER(IntKi)  :: NPropS = 0_IntKi      !< Total number of property sets for Spring [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Nodes      !< Nodes number and coordinates            [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsB      !< Property sets and values for Beams      [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsC      !< Property sets and values for Cable      [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsR      !< Property sets and values for Rigid link [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsS      !< Property sets and values for Spring     [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: K      !< System stiffness matrix                 [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: M      !< System mass matrix                      [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: ElemProps      !< Element properties(A, L, Ixx, Iyy, Jzz, Shear, Kappa, E, G, Rho, DirCos(1,1), DirCos(2, 1), ....., DirCos(3, 3) ) [-]
@@ -730,6 +755,27 @@ subroutine SD_CopyElemPropType(SrcElemPropTypeData, DstElemPropTypeData, CtrlCod
    DstElemPropTypeData%Area = SrcElemPropTypeData%Area
    DstElemPropTypeData%Rho = SrcElemPropTypeData%Rho
    DstElemPropTypeData%T0 = SrcElemPropTypeData%T0
+   DstElemPropTypeData%k11 = SrcElemPropTypeData%k11
+   DstElemPropTypeData%k12 = SrcElemPropTypeData%k12
+   DstElemPropTypeData%k13 = SrcElemPropTypeData%k13
+   DstElemPropTypeData%k14 = SrcElemPropTypeData%k14
+   DstElemPropTypeData%k15 = SrcElemPropTypeData%k15
+   DstElemPropTypeData%k16 = SrcElemPropTypeData%k16
+   DstElemPropTypeData%k22 = SrcElemPropTypeData%k22
+   DstElemPropTypeData%k23 = SrcElemPropTypeData%k23
+   DstElemPropTypeData%k24 = SrcElemPropTypeData%k24
+   DstElemPropTypeData%k25 = SrcElemPropTypeData%k25
+   DstElemPropTypeData%k26 = SrcElemPropTypeData%k26
+   DstElemPropTypeData%k33 = SrcElemPropTypeData%k33
+   DstElemPropTypeData%k34 = SrcElemPropTypeData%k34
+   DstElemPropTypeData%k35 = SrcElemPropTypeData%k35
+   DstElemPropTypeData%k36 = SrcElemPropTypeData%k36
+   DstElemPropTypeData%k44 = SrcElemPropTypeData%k44
+   DstElemPropTypeData%k45 = SrcElemPropTypeData%k45
+   DstElemPropTypeData%k46 = SrcElemPropTypeData%k46
+   DstElemPropTypeData%k55 = SrcElemPropTypeData%k55
+   DstElemPropTypeData%k56 = SrcElemPropTypeData%k56
+   DstElemPropTypeData%k66 = SrcElemPropTypeData%k66
    DstElemPropTypeData%DirCos = SrcElemPropTypeData%DirCos
 end subroutine
 
@@ -761,6 +807,27 @@ subroutine SD_PackElemPropType(RF, Indata)
    call RegPack(RF, InData%Area)
    call RegPack(RF, InData%Rho)
    call RegPack(RF, InData%T0)
+   call RegPack(RF, InData%k11)
+   call RegPack(RF, InData%k12)
+   call RegPack(RF, InData%k13)
+   call RegPack(RF, InData%k14)
+   call RegPack(RF, InData%k15)
+   call RegPack(RF, InData%k16)
+   call RegPack(RF, InData%k22)
+   call RegPack(RF, InData%k23)
+   call RegPack(RF, InData%k24)
+   call RegPack(RF, InData%k25)
+   call RegPack(RF, InData%k26)
+   call RegPack(RF, InData%k33)
+   call RegPack(RF, InData%k34)
+   call RegPack(RF, InData%k35)
+   call RegPack(RF, InData%k36)
+   call RegPack(RF, InData%k44)
+   call RegPack(RF, InData%k45)
+   call RegPack(RF, InData%k46)
+   call RegPack(RF, InData%k55)
+   call RegPack(RF, InData%k56)
+   call RegPack(RF, InData%k66)
    call RegPack(RF, InData%DirCos)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -784,6 +851,27 @@ subroutine SD_UnPackElemPropType(RF, OutData)
    call RegUnpack(RF, OutData%Area); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Rho); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%T0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k11); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k12); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k13); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k14); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k15); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k16); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k22); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k23); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k24); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k25); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k26); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k33); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k34); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k35); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k36); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k44); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k45); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k46); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k55); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k56); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k66); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DirCos); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1133,6 +1221,7 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
    DstInitTypeData%NPropSetsB = SrcInitTypeData%NPropSetsB
    DstInitTypeData%NPropSetsC = SrcInitTypeData%NPropSetsC
    DstInitTypeData%NPropSetsR = SrcInitTypeData%NPropSetsR
+   DstInitTypeData%NPropSetsS = SrcInitTypeData%NPropSetsS
    DstInitTypeData%NCMass = SrcInitTypeData%NCMass
    DstInitTypeData%NCOSMs = SrcInitTypeData%NCOSMs
    DstInitTypeData%FEMMod = SrcInitTypeData%FEMMod
@@ -1185,6 +1274,18 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%PropSetsR = SrcInitTypeData%PropSetsR
+   end if
+   if (allocated(SrcInitTypeData%PropSetsS)) then
+      LB(1:2) = lbound(SrcInitTypeData%PropSetsS, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%PropSetsS, kind=B8Ki)
+      if (.not. allocated(DstInitTypeData%PropSetsS)) then
+         allocate(DstInitTypeData%PropSetsS(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%PropSetsS.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitTypeData%PropSetsS = SrcInitTypeData%PropSetsS
    end if
    if (allocated(SrcInitTypeData%PropSetsX)) then
       LB(1:2) = lbound(SrcInitTypeData%PropSetsX, kind=B8Ki)
@@ -1339,6 +1440,7 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
    DstInitTypeData%NPropB = SrcInitTypeData%NPropB
    DstInitTypeData%NPropC = SrcInitTypeData%NPropC
    DstInitTypeData%NPropR = SrcInitTypeData%NPropR
+   DstInitTypeData%NPropS = SrcInitTypeData%NPropS
    if (allocated(SrcInitTypeData%Nodes)) then
       LB(1:2) = lbound(SrcInitTypeData%Nodes, kind=B8Ki)
       UB(1:2) = ubound(SrcInitTypeData%Nodes, kind=B8Ki)
@@ -1386,6 +1488,18 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%PropsR = SrcInitTypeData%PropsR
+   end if
+   if (allocated(SrcInitTypeData%PropsS)) then
+      LB(1:2) = lbound(SrcInitTypeData%PropsS, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitTypeData%PropsS, kind=B8Ki)
+      if (.not. allocated(DstInitTypeData%PropsS)) then
+         allocate(DstInitTypeData%PropsS(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%PropsS.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitTypeData%PropsS = SrcInitTypeData%PropsS
    end if
    if (allocated(SrcInitTypeData%K)) then
       LB(1:2) = lbound(SrcInitTypeData%K, kind=B8Ki)
@@ -1481,6 +1595,9 @@ subroutine SD_DestroyInitType(InitTypeData, ErrStat, ErrMsg)
    if (allocated(InitTypeData%PropSetsR)) then
       deallocate(InitTypeData%PropSetsR)
    end if
+   if (allocated(InitTypeData%PropSetsS)) then
+      deallocate(InitTypeData%PropSetsS)
+   end if
    if (allocated(InitTypeData%PropSetsX)) then
       deallocate(InitTypeData%PropSetsX)
    end if
@@ -1529,6 +1646,9 @@ subroutine SD_DestroyInitType(InitTypeData, ErrStat, ErrMsg)
    if (allocated(InitTypeData%PropsR)) then
       deallocate(InitTypeData%PropsR)
    end if
+   if (allocated(InitTypeData%PropsS)) then
+      deallocate(InitTypeData%PropsS)
+   end if
    if (allocated(InitTypeData%K)) then
       deallocate(InitTypeData%K)
    end if
@@ -1564,6 +1684,7 @@ subroutine SD_PackInitType(RF, Indata)
    call RegPack(RF, InData%NPropSetsB)
    call RegPack(RF, InData%NPropSetsC)
    call RegPack(RF, InData%NPropSetsR)
+   call RegPack(RF, InData%NPropSetsS)
    call RegPack(RF, InData%NCMass)
    call RegPack(RF, InData%NCOSMs)
    call RegPack(RF, InData%FEMMod)
@@ -1573,6 +1694,7 @@ subroutine SD_PackInitType(RF, Indata)
    call RegPackAlloc(RF, InData%PropSetsB)
    call RegPackAlloc(RF, InData%PropSetsC)
    call RegPackAlloc(RF, InData%PropSetsR)
+   call RegPackAlloc(RF, InData%PropSetsS)
    call RegPackAlloc(RF, InData%PropSetsX)
    call RegPackAlloc(RF, InData%COSMs)
    call RegPackAlloc(RF, InData%CMass)
@@ -1594,10 +1716,12 @@ subroutine SD_PackInitType(RF, Indata)
    call RegPack(RF, InData%NPropB)
    call RegPack(RF, InData%NPropC)
    call RegPack(RF, InData%NPropR)
+   call RegPack(RF, InData%NPropS)
    call RegPackAlloc(RF, InData%Nodes)
    call RegPackAlloc(RF, InData%PropsB)
    call RegPackAlloc(RF, InData%PropsC)
    call RegPackAlloc(RF, InData%PropsR)
+   call RegPackAlloc(RF, InData%PropsS)
    call RegPackAlloc(RF, InData%K)
    call RegPackAlloc(RF, InData%M)
    call RegPackAlloc(RF, InData%ElemProps)
@@ -1626,6 +1750,7 @@ subroutine SD_UnPackInitType(RF, OutData)
    call RegUnpack(RF, OutData%NPropSetsB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropSetsC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropSetsR); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NPropSetsS); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NCMass); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NCOSMs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FEMMod); if (RegCheckErr(RF, RoutineName)) return
@@ -1635,6 +1760,7 @@ subroutine SD_UnPackInitType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%PropSetsB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PropSetsC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PropSetsR); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PropSetsS); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PropSetsX); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%COSMs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%CMass); if (RegCheckErr(RF, RoutineName)) return
@@ -1656,10 +1782,12 @@ subroutine SD_UnPackInitType(RF, OutData)
    call RegUnpack(RF, OutData%NPropB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropR); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NPropS); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Nodes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PropsB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PropsC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PropsR); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PropsS); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%K); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%M); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%ElemProps); if (RegCheckErr(RF, RoutineName)) return

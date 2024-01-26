@@ -410,6 +410,12 @@ sd_regression("SD_SparHanging"                                "subdyn;offshore")
 sd_regression("SD_AnsysComp1_PinBeam"                         "subdyn;offshore") # TODO Issue #855
 sd_regression("SD_AnsysComp2_Cable"                           "subdyn;offshore") 
 sd_regression("SD_AnsysComp3_PinBeamCable"                    "subdyn;offshore") # TODO Issue #855
+sd_regression("SD_Spring_Case1"                               "subdyn;offshore")
+sd_regression("SD_Spring_Case2"                               "subdyn;offshore")
+sd_regression("SD_Spring_Case3"                               "subdyn;offshore")
+sd_regression("SD_Revolute_Joint"                             "subdyn;offshore")
+sd_regression("SD_2Beam_Spring"                               "subdyn;offshore")
+sd_regression("SD_2Beam_Cantilever"                           "subdyn;offshore")
 # TODO test below are bugs, should be added when fixed
 # sd_regression("SD_Force"                                      "subdyn;offshore")
 # sd_regression("SD_AnsysComp4_UniversalCableRigid"             "subdyn;offshore")

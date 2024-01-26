@@ -2317,8 +2317,15 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
       DEALLOCATE(foundMask)
    ELSE
+
+      ! Set number of outputs to zero
       InputFileData%NumOuts = 0
       InputFileData%Morison%NumOuts = 0
+
+      ! Allocate outlist with zero length
+      call AllocAry(InputFileData%OutList, 0, "InputFileData%OutList", ErrStat2, ErrMsg2); 
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
    END IF
       ! Now that we have the sub-lists organized, lets do some additional validation.
    
