@@ -883,7 +883,7 @@ CONTAINS
       else
          dc_dx = 0.0_DbKi   ! maybe this should raise an error
       end if
-      if ( dx > 0.0 ) then
+      if ( dy > 0.0 ) then
          dc_dy = (cx1-cx0)/dy
       else
          dc_dy = 0.0_DbKi   ! maybe this should raise an error
