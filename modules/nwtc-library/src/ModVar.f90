@@ -472,7 +472,7 @@ subroutine MV_Perturb(Var, iLin, PerturbSign, BaseAry, PerturbAry)
       rotvec(j + 1) = Perturb                                     ! WM perturbation around X,Y,Z axis
       i = i - j                                                   ! index of start of WM parameters (3)
       WM = PerturbAry(i:i + 2)                                    ! Current WM parameters value
-      PerturbAry(i:i + 2) = wm_compose(WM, wm_from_rvec(rotvec))  ! Compose value and perturbation
+      PerturbAry(i:i + 2) = wm_compose(wm_from_rvec(rotvec), WM)  ! Compose value and perturbation
    else
       PerturbAry(i) = PerturbAry(i) + Perturb                     ! Add perturbation
    end if
@@ -485,7 +485,7 @@ subroutine MV_ComputeDiff(VarAry, PosAry, NegAry, DiffAry)
    real(R8Ki), intent(in)        :: NegAry(:)      ! Negative result array
    real(R8Ki), intent(inout)     :: DiffAry(:)     ! Array containing difference
    integer(IntKi)                :: i, j, k
-   real(R8Ki)                    :: DeltaWM(3)
+   real(R8Ki)                    :: DeltaWM(3), R(3,3), C1(3), C2(3)
 
    ! Loop through variables
    do i = 1, size(VarAry)
@@ -500,7 +500,7 @@ subroutine MV_ComputeDiff(VarAry, PosAry, NegAry, DiffAry)
             k = VarAry(i)%iLoc(1) + 3*(j - 1)
 
             ! Compose WM parameters to go from negative to positive array
-            DeltaWM = wm_compose(PosAry(k:k + 2), wm_inv(NegAry(k:k + 2)))
+            DeltaWM = wm_compose((PosAry(k:k + 2)), wm_inv(NegAry(k:k + 2)))
 
             ! Calculate change in rotation in XYZ in radians
             DiffAry(k:k + 2) = wm_to_rvec(DeltaWM)
@@ -1002,19 +1002,19 @@ pure function wm_to_dcm(c) result(R)
    ! end do
 end function
 
-pure function wm_from_dcm(R) result(c)
-   real(R8Ki), intent(in)  :: R(3, 3)
+pure function wm_from_dcm(dcm) result(c)
+   real(R8Ki), intent(in)  :: dcm(3, 3)
    real(R8Ki)              :: pivot(4) ! Trace of the rotation matrix and diagonal elements
    real(R8Ki)              :: sm(0:3)
    real(R8Ki)              :: em
    real(R8Ki)              :: Rr(3, 3), c(3)
    integer                 :: i        ! case indicator
 
-   Rr = transpose(R)
+   Rr = transpose(dcm)
 
    ! mjs--find max value of T := Tr(Rr) and diagonal elements of Rr
    ! This tells us which denominator is largest (and less likely to produce numerical noise)
-   pivot = (/Rr(1, 1) + Rr(2, 2) + Rr(3, 3), Rr(1, 1), Rr(2, 2), Rr(3, 3)/)
+   pivot = [Rr(1, 1) + Rr(2, 2) + Rr(3, 3), Rr(1, 1), Rr(2, 2), Rr(3, 3)]
    i = maxloc(pivot, 1) - 1 ! our sm array starts at 0, so we need to subtract 1 here to get the correct index
 
    select case (i)
