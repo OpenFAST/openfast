@@ -393,6 +393,9 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       p%rotors(iR)%TFin%TFinAFID    = InputFileData%rotors(iR)%TFin%TFinAFID
    enddo
 
+   ! Set pointer to FlowField data
+   if (associated(InitInp%FlowField))  p%FlowField => InitInp%FlowField
+
  
       !............................................................................................
       ! Define and initialize inputs here 

@@ -104,6 +104,7 @@ typedef ^   InitInputType   ReKi    defPatm     -   -   -   "Default atmospheric
 typedef ^   InitInputType   ReKi    defPvap     -   -   -   "Default vapor pressure from the driver; may be overwritten" Pa
 typedef ^   InitInputType   ReKi    WtrDpth -  -   -    "Water depth" m
 typedef ^   InitInputType   ReKi    MSL2SWL -  -   -    "Offset between still-water level and mean sea level" m
+typedef ^   InitInputType   FlowFieldType *FlowField -  -   -    "Pointer of InflowWinds flow field data type" - 
 
 # This is data defined in the Input File for this module (or could otherwise be passed in)
 # ..... Blade Input file data .....................................................................................................
