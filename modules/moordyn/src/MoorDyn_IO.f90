@@ -182,7 +182,7 @@ CONTAINS
          READ(UnCoef,*,IOSTAT=ErrStat4) nGridY_string, nGridY  ! read in the third line as the number of y values in the BathGrid
 
          ! Allocate the bathymetry matrix and associated grid x and y values
-         ALLOCATE(BathGrid(nGridX, nGridY), STAT=ErrStat4)
+         ALLOCATE(BathGrid(nGridY, nGridX), STAT=ErrStat4)
          ALLOCATE(BathGrid_Xs(nGridX), STAT=ErrStat4)
          ALLOCATE(BathGrid_Ys(nGridY), STAT=ErrStat4)
 
