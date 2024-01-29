@@ -6249,19 +6249,21 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          end do
       end do
 
+      ! If rotate states is enabled, modify Jacobian
+      if (p%RotStates) then
+         RotateStates = matmul(u%RootMotion%Orientation(:,:,1), transpose(u%RootMotion%RefOrientation(:,:,1)))
+         do i=1,size(m%Lin%dXdu,1),3
+            m%Lin%dXdu(i:i+2, :) = matmul(RotateStates, m%Lin%dXdu(i:i+2, :))
+         end do
+      end if
+
       ! If ModIdx is present, copy subset of Jacobian to output 
       if (present(ModIdx)) then
-         dXdu = m%Lin%dXdu(ModIdx%iy, ModIdx%iu)
+         dXdu = m%Lin%dXdu(ModIdx%ix, ModIdx%iu)
       else
          dXdu = m%Lin%dXdu
       end if
-      
-      if (p%RotStates) then
-         RotateStates = matmul( u%RootMotion%Orientation(:,:,1), transpose( u%RootMotion%RefOrientation(:,:,1) ) )
-         do i=1,size(dXdu,1),3
-            dXdu(i:i+2, :) = matmul( RotateStates, dXdu(i:i+2, :) )
-         end do
-      end if
+
    end if ! dXdu
 
    if (present(dXddu)) then
@@ -6385,18 +6387,18 @@ SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          end do
       end do
             
+      ! If rotate state is enabled, modify Jacobian
+      if (p%RotStates) then
+         do i=1,size(m%Lin%dYdx,2),3
+            m%Lin%dYdx(:, i:i+2) = matmul( m%Lin%dYdx(:, i:i+2), RotateStatesTranspose)
+         end do
+      end if
+
       ! If ModIdx is present, copy subset of Jacobian to output 
       if (present(ModIdx)) then
          dYdx = m%Lin%dYdx(ModIdx%iy, ModIdx%ix)
       else
          dYdx = m%Lin%dYdx
-      end if
-
-      ! If rotate state is enabled, rotate
-      if (p%RotStates) then
-         do i=1,size(dYdx,2),3
-            dYdx(:, i:i+2) = matmul( dYdx(:, i:i+2), RotateStatesTranspose)
-         end do
       end if
    end if
 
@@ -6444,20 +6446,21 @@ SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          end do
       end do
 
+      ! If rotate state is enabled, modify Jacobian
+      if (p%RotStates) then
+         do i=1,size(m%Lin%dXdx,1),3
+            m%Lin%dXdx(i:i+2,:) = matmul(RotateStates, m%Lin%dXdx(i:i+2,:))
+         end do
+         do i=1,size(m%Lin%dXdx,2),3
+            m%Lin%dXdx(:, i:i+2) = matmul(m%Lin%dXdx(:, i:i+2), RotateStatesTranspose)
+         end do
+      end if
+
       ! If ModIdx is present, copy subset of Jacobian to output 
       if (present(ModIdx)) then
          dXdx = m%Lin%dXdx(ModIdx%idx, ModIdx%ix)
       else
          dXdx = m%Lin%dXdx
-      end if
-
-      if (p%RotStates) then
-         do i=1,size(dXdx,1),3
-            dXdx(i:i+2,:) = matmul(RotateStates, dXdx(i:i+2,:))
-         end do
-         do i=1,size(dXdx,2),3
-            dXdx(:, i:i+2) = matmul(dXdx(:, i:i+2), RotateStatesTranspose)
-         end do
       end if
    end if
 
@@ -6646,7 +6649,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    ErrMsg  = ''
 
    ! Set flag to pack write outputs
-   PackOut = .not. present(ModIdx)
+   PackOut = .true.
 
    ! If inputs requested
    if (present(u_op)) then
