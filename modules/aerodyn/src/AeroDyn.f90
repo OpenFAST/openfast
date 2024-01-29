@@ -31,7 +31,7 @@ module AeroDyn
    use UnsteadyAero
    use FVW
    use FVW_Subs, only: FVW_AeroOuts
-   use IfW_FlowField, only: IfW_FlowField_GetVelAcc
+   use IfW_FlowField, only: IfW_FlowField_GetVelAcc, IfW_UniformWind_GetOP
    
    implicit none
    private
@@ -1193,6 +1193,7 @@ subroutine Init_u( u, p, p_AD, InputFileData, MHK, WtrDpth, InitInp, errStat, er
                         ,TranslationVel  = .true.                         &
                         ,RotationVel     = .true.                         &
                         ,TranslationAcc  = .true.                         &
+                        ,RotationAcc     = .true.                         &
                         )
             call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
@@ -6071,6 +6072,7 @@ SUBROUTINE RotGetOP( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, ErrSt
    CHARACTER(*), PARAMETER                                       :: RoutineName = 'AD_GetOP'
    LOGICAL                                                       :: FieldMask(FIELDMASK_SIZE)
    TYPE(RotContinuousStateType)                                  :: dxdt
+   real(ReKi)                                                    :: OP_out(3)  !< operating point of wind (HWindSpeed, PLexp, and AngleH)
 
 
       ! Initialize ErrStat
@@ -6196,11 +6198,18 @@ SUBROUTINE RotGetOP( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, ErrSt
          end do
 
          !------------------------------
-         ! Extended inputs
+         ! Extended inputs -- Linearization is only possible with Steady or Uniform Wind, so take advantage of that here
          !     Module/Mesh/Field:  HWindSpeed      = 37
          !     Module/Mesh/Field:  PLexp           = 38
          !     Module/Mesh/Field:  PropagationDir  = 39
-!FIXME: Extended inputs
+         call IfW_UniformWind_GetOP(p_AD%FlowField%Uniform, t, .false. , OP_out)
+         ! HWindSpeed
+         u_op(index) = OP_out(1);   index = index + 1
+         ! PLexp
+         u_op(index) = OP_out(2);   index = index + 1
+         ! PropagationDir (include AngleH in calculation if any)
+         u_op(index) = OP_out(3) + p_AD%FlowField%PropagationDir;   index = index + 1
+         
       end if
    END IF
 
@@ -6658,7 +6667,7 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
       p%Jac_u_idxStartList%Tower = index
       call SetJac_u_idx(6,9,u%TowerMotion%NNodes,index)
       !     Perturbations
-      p%du(5) = perturb_t
+      p%du(6) = perturb_t
       p%du(7) = perturb
       p%du(8) = perturb_t
       p%du(9) = perturb_t
@@ -6707,7 +6716,7 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
       p%Jac_u_idxStartList%Blade = index
       call SetJac_u_idx(13,18,u%BladeMotion(1)%NNodes,index)
       if (p%NumBl_Lin > 1)   call SetJac_u_idx(19,24,u%BladeMotion(2)%NNodes,index)
-      if (p%NumBl_Lin > 2)   call SetJac_u_idx(15,30,u%BladeMotion(3)%NNodes,index)
+      if (p%NumBl_Lin > 2)   call SetJac_u_idx(25,30,u%BladeMotion(3)%NNodes,index)
       !     Perturbations
       do k=1,p%NumBl_Lin
          p%du(13 + (k-1)*6) = perturb_b(k)
@@ -6798,18 +6807,14 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
       !     Module/Mesh/Field:  PLexp           = 38
       !     Module/Mesh/Field:  PropagationDir  = 39
       p%Jac_u_idxStartList%Extended = index
-      p%Jac_u_indx(index,1)=37;  p%Jac_u_indx(index,2)=1;   p%Jac_u_indx(index,3)=1;    index = index + 1
-      p%Jac_u_indx(index,1)=38;  p%Jac_u_indx(index,2)=1;   p%Jac_u_indx(index,3)=1;    index = index + 1
-      p%Jac_u_indx(index,1)=39;  p%Jac_u_indx(index,2)=1;   p%Jac_u_indx(index,3)=1;    index = index + 1
+      p%Jac_u_indx(index,1)=37;  p%Jac_u_indx(index,2)=1;   p%Jac_u_indx(index,3)=1;    InitOut%LinNames_u(index) = 'Extended input: horizontal wind speed (steady/uniform wind), m/s'; index=index+1
+      p%Jac_u_indx(index,1)=38;  p%Jac_u_indx(index,2)=1;   p%Jac_u_indx(index,3)=1;    InitOut%LinNames_u(index) = 'Extended input: vertical power-law shear exponent, -';             index=index+1
+      p%Jac_u_indx(index,1)=39;  p%Jac_u_indx(index,2)=1;   p%Jac_u_indx(index,3)=1;    InitOut%LinNames_u(index) = 'Extended input: propagation direction, rad';                       index=index+1
       !     Perturbations
       p%du(37) = perturb
       p%du(38) = perturb
       p%du(39) = perturb
-      !     Names
-      InitOut%LinNames_u(index) = 'Extended input: horizontal wind speed (steady/uniform wind), m/s'; index=index+1
-      InitOut%LinNames_u(index) = 'Extended input: vertical power-law shear exponent, -';             index=index+1
-      InitOut%LinNames_u(index) = 'Extended input: propagation direction, rad';                       index=index+1
-
+      
    end if ! .not. compAeroMaps
 
 contains
@@ -7063,7 +7068,7 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
       case(15);      u%BladeMotion(1)%TranslationVel( fieldIndx,node)  = u%BladeMotion(1)%TranslationVel(fieldIndx,node) + du * perturb_sign
       case(16);      u%BladeMotion(1)%RotationVel(    fieldIndx,node)  = u%BladeMotion(1)%RotationVel(fieldIndx,node) + du * perturb_sign
       case(17);      u%BladeMotion(1)%TranslationAcc( fieldIndx,node)  = u%BladeMotion(1)%TranslationAcc(fieldIndx,node) + du * perturb_sign
-      case(18);      u%BladeMotion(1)%RotationAcc(    fieldIndx,node)  = u%BladeMotion(1)%TranslationAcc(fieldIndx,node) + du * perturb_sign
+      case(18);      u%BladeMotion(1)%RotationAcc(    fieldIndx,node)  = u%BladeMotion(1)%RotationAcc(   fieldIndx,node) + du * perturb_sign
 
       ! Blade 2
       !     Module/Mesh/Field: u%BladeMotion(2)%TranslationDisp = 19;
@@ -7077,7 +7082,7 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
       case(21);      u%BladeMotion(2)%TranslationVel( fieldIndx,node)  = u%BladeMotion(2)%TranslationVel(fieldIndx,node) + du * perturb_sign
       case(22);      u%BladeMotion(2)%RotationVel(    fieldIndx,node)  = u%BladeMotion(2)%RotationVel(fieldIndx,node) + du * perturb_sign
       case(23);      u%BladeMotion(2)%TranslationAcc( fieldIndx,node)  = u%BladeMotion(2)%TranslationAcc(fieldIndx,node) + du * perturb_sign
-      case(24);      u%BladeMotion(2)%RotationAcc(    fieldIndx,node)  = u%BladeMotion(2)%TranslationAcc(fieldIndx,node) + du * perturb_sign
+      case(24);      u%BladeMotion(2)%RotationAcc(    fieldIndx,node)  = u%BladeMotion(2)%RotationAcc(   fieldIndx,node) + du * perturb_sign
 
       ! Blade 3
       !     Module/Mesh/Field: u%BladeMotion(3)%TranslationDisp = 25;
@@ -7091,7 +7096,7 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
       case(27);      u%BladeMotion(3)%TranslationVel( fieldIndx,node)  = u%BladeMotion(3)%TranslationVel(fieldIndx,node) + du * perturb_sign
       case(28);      u%BladeMotion(3)%RotationVel(    fieldIndx,node)  = u%BladeMotion(3)%RotationVel(fieldIndx,node) + du * perturb_sign
       case(29);      u%BladeMotion(3)%TranslationAcc( fieldIndx,node)  = u%BladeMotion(3)%TranslationAcc(fieldIndx,node) + du * perturb_sign
-      case(30);      u%BladeMotion(3)%RotationAcc(    fieldIndx,node)  = u%BladeMotion(3)%TranslationAcc(fieldIndx,node) + du * perturb_sign
+      case(30);      u%BladeMotion(3)%RotationAcc(    fieldIndx,node)  = u%BladeMotion(3)%RotationAcc(   fieldIndx,node) + du * perturb_sign
 
       ! TailFin
       !     Module/Mesh/Field: u%TFinMotion%TranslationDisp = 31;

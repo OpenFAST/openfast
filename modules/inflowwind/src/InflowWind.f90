@@ -814,8 +814,10 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
    IF ( PRESENT( dYdu ) ) THEN
 
       ! If dYdu is allocated, make sure it is the correct size
-      if (size(dYdu,1) /= NumExtendedIO + p%NumOuts)  deallocate (dYdu)
-      if (size(dYdu,2) /= NumExtendedIO)              deallocate (dYdu)
+      if (allocated(dYdu)) then
+         if (size(dYdu,1) /= NumExtendedIO + p%NumOuts)  deallocate (dYdu)
+         if (size(dYdu,2) /= NumExtendedIO)              deallocate (dYdu)
+      endif
 
       ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
       !  -  inputs are extended inputs only
@@ -1094,8 +1096,8 @@ SUBROUTINE InflowWind_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
             if (ErrStat >= AbortErrLev) return
       end if
       
-      call IfW_UniformWind_GetOP( p%FlowField%Uniform, t, p%FlowField%VelInterpCubic, u_op(1:2) )
-      u_op(3) = p%FlowField%PropagationDir
+      call IfW_UniformWind_GetOP( p%FlowField%Uniform, t, p%FlowField%VelInterpCubic, u_op )
+      u_op(3) = p%FlowField%PropagationDir + u_op(3)  ! include the AngleH from Uniform Wind input files
    end if
 
    if ( PRESENT( y_op ) ) then

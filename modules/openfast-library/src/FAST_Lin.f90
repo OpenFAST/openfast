@@ -1510,13 +1510,7 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInf
    end do
    
    
-      !............
-      ! \f$ \frac{\partial U_\Lambda^{IfW}}{\partial u^{AD}} \end{bmatrix} = \f$   (dUdu block row 1=IfW)
-      !............
-   IF (p_FAST%CompInflow == MODULE_IfW .and. p_FAST%CompAero == MODULE_AD) THEN  
-      call Linear_IfW_InputSolve_du_AD( p_FAST, y_FAST, AD%Input(1), dUdu )
-   end if ! we're using the InflowWind module
-   
+  
       !............
       ! \f$ \frac{\partial U_\Lambda^{SrvD}}{\partial u^{SrvD}} \end{bmatrix} = \f$ (dUdu block row 2=SrvD)
       !............
@@ -1701,70 +1695,6 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInf
    end if
 
 END SUBROUTINE Glue_Jacobians
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine forms the dU^{IfW}/du^{AD} block of dUdu. (i.e., how do changes in the AD inputs affect IfW inputs?)
-SUBROUTINE Linear_IfW_InputSolve_du_AD( p_FAST, y_FAST, u_AD, dUdu )
-!FIXME: this routine needs revision (info passed is no longer correct)
-   TYPE(FAST_ParameterType),       INTENT(IN   )   :: p_FAST      !< FAST parameter data
-   TYPE(FAST_OutputFileType),      INTENT(IN   )   :: y_FAST      !< FAST output data (for linearization)
-   TYPE(AD_InputType),             INTENT(IN)      :: u_AD        !< The input meshes (already calculated) from AeroDyn
-   REAL(R8Ki),                     INTENT(INOUT)   :: dUdu(:,:)   !< Jacobian matrix of which we are computing the dU^(IfW)/du^(AD) block
-   
-   
-   INTEGER(IntKi)                          :: i, j, k             ! loop counters
-   INTEGER(IntKi)                          :: i2, j2              ! loop counters
-   INTEGER(IntKi)                          :: AD_Start_Bl         ! starting index of dUdu (column) where AD blade motion inputs are located
-   INTEGER(IntKi)                          :: Node                ! InflowWind node number
-   
-            
-         ! compare with IfW_InputSolve():
-   
-      Node = 0 !InflowWind node
-      if (p_FAST%CompServo == MODULE_SrvD) Node = Node + 1
-            
-      IF (p_FAST%CompAero == MODULE_AD) THEN 
-         
-            ! blades:
-         AD_Start_Bl = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) &
-                     + u_AD%rotors(1)%TowerMotion%NNodes * 9  & ! 3 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_TRANSLATIONVel) with 3 components
-                     + u_AD%rotors(1)%HubMotion%NNodes   * 9    ! 3 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_RotationVel) with 3 components
-   
-         do k = 1,size(u_AD%rotors(1)%BladeRootMotion)         
-            AD_Start_Bl = AD_Start_Bl + u_AD%rotors(1)%BladeRootMotion(k)%NNodes * 3 ! 1 field (MASKID_Orientation) with 3 components
-         end do
-         ! next is u_AD%rotors(1)%BladeMotion(k):
-                  
-         DO K = 1,SIZE(u_AD%rotors(1)%BladeMotion)
-            DO J = 1,u_AD%rotors(1)%BladeMotion(k)%Nnodes
-               Node = Node + 1 ! InflowWind node
-               do i=1,3 !XYZ components of this node
-                  i2 = y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + (Node-1)*3 + i - 1
-                  j2 = AD_Start_Bl + (j-1)*3 + i - 1
-                  dUdu( i2, j2 ) = -1.0_R8Ki
-               end do            
-            END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
-                     
-               ! get starting AD index of BladeMotion for next blade
-            AD_Start_Bl = AD_Start_Bl + u_AD%rotors(1)%BladeMotion(k)%Nnodes * 9  ! 3 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_TRANSLATIONVel) with 3 components
-         END DO !K = 1,p%NumBl     
-         
-            ! tower:
-         DO J=1,u_AD%rotors(1)%TowerMotion%nnodes
-            Node = Node + 1   
-            do i=1,3 !XYZ components of this node
-               i2 = y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + (Node-1)*3 + i - 1
-               j2 = y_FAST%Lin%Modules(MODULE_AD )%Instance(1)%LinStartIndx(LIN_INPUT_COL) +    (j-1)*3 + i - 1
-               dUdu( i2, j2 ) = -1.0_R8Ki
-            end do            
-         END DO              
-         
-         ! HubPosition and HubOrientation from ElastoDyn are missing from this
-!FIXME: add in the extended inputs here
-      END IF     
-END SUBROUTINE Linear_IfW_InputSolve_du_AD
-
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine forms the dU^{ED}/du^{BD} and dU^{ED}/du^{AD} blocks (ED row) of dUdu. (i.e., how do changes in the AD and BD inputs affect the ED inputs?)
