@@ -6082,15 +6082,15 @@ subroutine BD_UnpackInputValues(p, Ary, u)
    call MV_Unpack(p%Vars%u, p%iVarDistrLoad, Ary, u%DistrLoad)
 end subroutine
 
-subroutine BD_PackOutputValues(p, y, Ary, PackOut)
+subroutine BD_PackOutputValues(p, y, Ary, PackWriteOutput)
    type(BD_ParameterType), intent(in)  :: p
    type(BD_OutputType), intent(in)     :: y
    real(R8Ki), intent(out)             :: Ary(:)
-   logical, intent(in)                 :: PackOut
+   logical, intent(in)                 :: PackWriteOutput
    integer(IntKi)                      :: i
    call MV_Pack(p%Vars%y, p%iVarReactionForce, y%ReactionForce, Ary)
    call MV_Pack(p%Vars%y, p%iVarBldMotion, y%BldMotion, Ary)
-   if (PackOut) then
+   if (PackWriteOutput) then
       do i = p%iVarWriteOutput, size(p%Vars%y)
          call MV_Pack(p%Vars%y, i, y%WriteOutput(p%Vars%y(i)%iUsr(1):p%Vars%y(i)%iUsr(2)), Ary)
       end do
@@ -6131,13 +6131,13 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    character(ErrMsgLen)       :: ErrMsg2
    INTEGER(IntKi)             :: i, j, col
    REAL(R8Ki)                 :: RotateStates(3,3)
-   logical                    :: PackOut
+   logical                    :: CalcWriteOutput
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
    ! Set flag to pack write outputs
-   PackOut = .not. present(ModIdx)
+   CalcWriteOutput = .not. present(ModIdx)
 
    ! Get OP values here
    call BD_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2); if (Failed()) return
@@ -6176,14 +6176,14 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
                ! Calculate positive perturbation
                call MV_Perturb(p%Vars%u(i), j, 1, m%Lin%u, m%Lin%u_perturb)
                call BD_UnpackInputValues(p, m%Lin%u_perturb, m%u_perturb)
-               call BD_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2, NeedWriteOutput=PackOut); if (Failed()) return
-               call BD_PackOutputValues(p, m%y_perturb, m%Lin%y_pos, PackOut)
+               call BD_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2, NeedWriteOutput=CalcWriteOutput); if (Failed()) return
+               call BD_PackOutputValues(p, m%y_perturb, m%Lin%y_pos, CalcWriteOutput)
 
                ! Calculate negative perturbation
                call MV_Perturb(p%Vars%u(i), j, -1, m%Lin%u, m%Lin%u_perturb)
                call BD_UnpackInputValues(p, m%Lin%u_perturb, m%u_perturb)
-               call BD_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2, NeedWriteOutput=PackOut); if (Failed()) return
-               call BD_PackOutputValues(p, m%y_perturb, m%Lin%y_neg, PackOut)
+               call BD_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2, NeedWriteOutput=CalcWriteOutput); if (Failed()) return
+               call BD_PackOutputValues(p, m%y_perturb, m%Lin%y_neg, CalcWriteOutput)
 
                ! Calculate column index
                col = p%Vars%u(i)%iLoc(1) + j - 1
@@ -6313,13 +6313,13 @@ SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    INTEGER(IntKi)             :: i, j, col
    REAL(R8Ki)                 :: RotateStates(3,3)
    REAL(R8Ki)                 :: RotateStatesTranspose(3,3)
-   logical                    :: PackOut
+   logical                    :: CalcWriteOutput
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
    ! Set flag to pack write outputs
-   PackOut = .not. present(ModIdx)
+   CalcWriteOutput = .not. present(ModIdx)
 
    ! Copy state values
    call BD_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
@@ -6370,14 +6370,14 @@ SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%x(i), j, 1, m%Lin%x, m%Lin%x_perturb)
             call BD_UnpackStateValues(p, m%Lin%x_perturb, m%x_perturb)
-            call BD_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2, NeedWriteOutput=PackOut); if (Failed()) return
-            call BD_PackOutputValues(p, m%y_perturb, m%Lin%y_pos, PackOut)
+            call BD_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2, NeedWriteOutput=CalcWriteOutput); if (Failed()) return
+            call BD_PackOutputValues(p, m%y_perturb, m%Lin%y_pos, CalcWriteOutput)
 
             ! Calculate negative perturbation
             call MV_Perturb(p%Vars%x(i), j, -1, m%Lin%x, m%Lin%x_perturb)
             call BD_UnpackStateValues(p, m%Lin%x_perturb, m%x_perturb)
-            call BD_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2, NeedWriteOutput=PackOut); if (Failed()) return
-            call BD_PackOutputValues(p, m%y_perturb, m%Lin%y_neg, PackOut)
+            call BD_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2, NeedWriteOutput=CalcWriteOutput); if (Failed()) return
+            call BD_PackOutputValues(p, m%y_perturb, m%Lin%y_neg, CalcWriteOutput)
 
             ! Calculate column index
             col = p%Vars%x(i)%iLoc(1) + j - 1
@@ -6643,13 +6643,13 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    CHARACTER(*), PARAMETER    :: RoutineName = 'BD_GetOP'
    LOGICAL                    :: FieldMask(FIELDMASK_SIZE)
    LOGICAL                    :: ReturnTrimOP
-   logical                    :: PackOut
+   logical                    :: CalcWriteOutput
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
    ! Set flag to pack write outputs
-   PackOut = .true.
+   CalcWriteOutput = .true.
 
    ! If inputs requested
    if (present(u_op)) then
@@ -6695,7 +6695,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          if (Failed()) return
       end if
 
-      call BD_PackOutputValues(p, y, m%Lin%y, PackOut)
+      call BD_PackOutputValues(p, y, m%Lin%y, CalcWriteOutput)
             
       ! If ModIdx is present
       if (present(ModIdx)) then

@@ -10385,7 +10385,7 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_JacobianPInput'
    integer(IntKi)                                    :: i, j, col
-   logical                                           :: PackOut
+   logical                                           :: CalcWriteOutput
    
    ! Initialize ErrStat
    ErrStat = ErrID_None
@@ -10393,7 +10393,7 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    m%IgnoreMod = .true. ! to compute perturbations, we need to ignore the modulo function
 
    ! Set flag to pack write outputs
-   PackOut = .not. present(ModIdx)
+   CalcWriteOutput = .not. present(ModIdx)
 
    ! Update copy of the inputs to perturb
    call ED_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
@@ -10430,13 +10430,13 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
                call MV_Perturb(p%Vars%u(i), j, 1, m%Lin%u, m%Lin%u_perturb)
                call ED_UnpackInputValues(p, m%Lin%u_perturb, m%u_perturb)
                call ED_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2); if (Failed()) return
-               call ED_PackOutputValues(p, m%y_perturb, m%Lin%y_pos, PackOut)
+               call ED_PackOutputValues(p, m%y_perturb, m%Lin%y_pos, CalcWriteOutput)
 
                ! Calculate negative perturbation
                call MV_Perturb(p%Vars%u(i), j, -1, m%Lin%u, m%Lin%u_perturb)
                call ED_UnpackInputValues(p, m%Lin%u_perturb, m%u_perturb)
                call ED_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2); if (Failed()) return
-               call ED_PackOutputValues(p, m%y_perturb, m%Lin%y_neg, PackOut)
+               call ED_PackOutputValues(p, m%y_perturb, m%Lin%y_neg, CalcWriteOutput)
 
                ! Calculate column index
                col = p%Vars%u(i)%iLoc(1) + j - 1
@@ -10582,7 +10582,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_JacobianPContState'
    INTEGER(IntKi)                                    :: i, j, col
-   logical                                           :: PackOut
+   logical                                           :: CalcWriteOutput
 
    ! Initialize ErrStat
    ErrStat = ErrID_None
@@ -10590,7 +10590,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    m%IgnoreMod = .true. ! to get true perturbations, we can't use the modulo function
 
    ! Set flag to pack write outputs
-   PackOut = .not. present(ModIdx)
+   CalcWriteOutput = .not. present(ModIdx)
 
    ! Copy state values
    call ED_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
@@ -10624,13 +10624,13 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
             call MV_Perturb(p%Vars%x(i), j, 1, m%Lin%x, m%Lin%x_perturb)
             call ED_UnpackStateValues(p, m%Lin%x_perturb, m%x_perturb)
             call ED_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackOutputValues(p, m%y_perturb, m%Lin%y_pos, PackOut)
+            call ED_PackOutputValues(p, m%y_perturb, m%Lin%y_pos, CalcWriteOutput)
 
             ! Calculate negative perturbation
             call MV_Perturb(p%Vars%x(i), j, -1, m%Lin%x, m%Lin%x_perturb)
             call ED_UnpackStateValues(p, m%Lin%x_perturb, m%x_perturb)
             call ED_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackOutputValues(p, m%y_perturb, m%Lin%y_neg, PackOut)
+            call ED_PackOutputValues(p, m%y_perturb, m%Lin%y_neg, CalcWriteOutput)
 
             ! Calculate column index
             col = p%Vars%x(i)%iLoc(1) + j - 1
@@ -11555,11 +11555,11 @@ subroutine ED_UnpackInputValues(p, Ary, u)
    call MV_Unpack(p%Vars%u, p%iVarGenTrq, Ary, u%GenTrq)
 end subroutine
 
-subroutine ED_PackOutputValues(p, y, Ary, PackOut)
+subroutine ED_PackOutputValues(p, y, Ary, PackWriteOutput)
    type(ED_ParameterType), intent(in)  :: p
    type(ED_OutputType), intent(in)     :: y
    real(R8Ki), intent(out)             :: Ary(:)
-   logical, intent(in)                 :: PackOut
+   logical, intent(in)                 :: PackWriteOutput
    integer(IntKi)                      :: i
    if (allocated(y%BladeLn2Mesh)) then
       do i = 1, size(y%BladeLn2Mesh)
@@ -11578,7 +11578,7 @@ subroutine ED_PackOutputValues(p, y, Ary, PackOut)
    call MV_Pack(p%Vars%y, p%iVarYaw, y%Yaw, Ary)
    call MV_Pack(p%Vars%y, p%iVarYawRate, y%YawRate, Ary)
    call MV_Pack(p%Vars%y, p%iVarHSS_Spd, y%HSS_Spd, Ary)
-   if (PackOut) then
+   if (PackWriteOutput) then
       do i = p%iVarOutput, size(p%Vars%y)
          call MV_Pack(p%Vars%y, i, y%WriteOutput(p%Vars%y(i)%iUsr(1):p%Vars%y(i)%iUsr(2)), Ary)
       end do
