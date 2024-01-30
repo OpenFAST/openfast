@@ -31,7 +31,7 @@ module AeroDyn
    use UnsteadyAero
    use FVW
    use FVW_Subs, only: FVW_AeroOuts
-   use IfW_FlowField, only: IfW_FlowField_GetVelAcc, IfW_UniformWind_GetOP
+   use IfW_FlowField, only: IfW_FlowField_GetVelAcc, IfW_UniformWind_GetOP, IfW_UniformWind_Perturb, IfW_FlowField_CopyFlowFieldType
    
    implicit none
    private
@@ -1674,7 +1674,7 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
 
    ! Set wind -- NOTE: this is inneficient since the previous input value resides at m%Inflow(2)
    do i=1,size(u)
-      call AD_CalcWind(utimes(i), u(i), p, OtherState, m%Inflow(i), ErrStat2, ErrMsg2)
+      call AD_CalcWind(utimes(i), u(i), p%FLowField, p, OtherState, m%Inflow(i), ErrStat2, ErrMsg2)
       if (Failed()) return
    enddo
 
@@ -1697,7 +1697,7 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
       if (Failed()) return
 
 !Calculate using uInterp
-!      call AD_CalcWind(utimes(i),uInterp, p, OtherState, m%Inflow(1), ErrStat2, ErrMsg2)
+!      call AD_CalcWind(utimes(i),uInterp, p%FLowField, p, OtherState, m%Inflow(1), ErrStat2, ErrMsg2)
 !      if (Failed()) return
 
       do iR = 1,size(p%rotors)
@@ -1755,14 +1755,15 @@ contains
    end function Failed
 end subroutine AD_UpdateStates
 
-subroutine AD_CalcWind(t, u, p, o, Inflow, ErrStat, ErrMsg)
-   real(DbKi),                intent(in   )     :: t        !< Current simulation time in seconds
-   type(AD_InputType),        intent(in   )     :: u        !< Inputs at Time t
-   type(AD_ParameterType),    intent(in   )     :: p        !< Parameters
-   type(AD_OtherStateType),   intent(in   )     :: o        !< Other states at t
-   type(AD_InflowType),target,intent(inout)     :: Inflow   !< calculated inflow
-   integer(IntKi),            intent(  out)     :: ErrStat  !< Error status of the operation
-   character(*),              intent(  out)     :: ErrMsg   !< Error message if ErrStat /= ErrID_None
+subroutine AD_CalcWind(t, u, FLowField, p, o, Inflow, ErrStat, ErrMsg)
+   real(DbKi),                   intent(in   )  :: t        !< Current simulation time in seconds
+   type(AD_InputType),           intent(in   )  :: u        !< Inputs at Time t
+   type(FlowFieldType),pointer,  intent(in   )  :: FlowField
+   type(AD_ParameterType),       intent(in   )  :: p        !< Parameters
+   type(AD_OtherStateType),      intent(in   )  :: o        !< Other states at t
+   type(AD_InflowType),target,   intent(inout)  :: Inflow   !< calculated inflow
+   integer(IntKi),               intent(  out)  :: ErrStat  !< Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg   !< Error message if ErrStat /= ErrID_None
    
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
@@ -1774,7 +1775,7 @@ subroutine AD_CalcWind(t, u, p, o, Inflow, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   if (.not. associated(p%FlowField)) return  ! use the initial (or input) values for these inputs
+   if (.not. associated(FlowField)) return  ! use the initial (or input) values for these inputs
    ! bjj: if the previous line is not appropriate, then some other check for if FlowField has been set should be used.
 
    ! Initialize node. The StartNode is used for OpenFOAM to provide the wind
@@ -1782,71 +1783,12 @@ subroutine AD_CalcWind(t, u, p, o, Inflow, ErrStat, ErrMsg)
    StartNode = 1
 
    do iWT = 1, size(u%rotors)
-      RotInflow => Inflow%RotInflow(iWT)
-
-      ! If rotor is MHK, add water depth to z coordinate
-      if (p%rotors(iWT)%MHK > 0) then
-         PosOffset = [0.0_ReKi, 0.0_ReKi, p%rotors(iWT)%WtrDpth]
-      else
-         PosOffset = 0.0_ReKi
-      end if
-
-      ! Hub
-      if (u%rotors(iWT)%HubMotion%Committed) then
-         call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
-            real(u%rotors(iWT)%HubMotion%TranslationDisp + u%rotors(iWT)%HubMotion%Position, ReKi), &
-            RotInflow%InflowOnHub, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-         if(Failed()) return 
-      else
-         RotInflow%InflowOnHub = 0.0_ReKi
-      end if
-      StartNode = StartNode + 1
-
-      ! Blade
-      do k = 1, p%rotors(iWT)%NumBlades
-         call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
-            real(u%rotors(iWT)%BladeMotion(k)%TranslationDisp + u%rotors(iWT)%BladeMotion(k)%Position, ReKi), &
-            RotInflow%Bld(k)%InflowOnBlade, RotInflow%Bld(k)%AccelOnBlade, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-         if(Failed()) return
-         StartNode = StartNode + p%rotors(iWT)%NumBlNds
-      end do
-
-      ! Tower
-      if (u%rotors(iWT)%TowerMotion%Nnodes > 0) then
-         call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
-            real(u%rotors(iWT)%TowerMotion%TranslationDisp + u%rotors(iWT)%TowerMotion%Position, ReKi), &
-            RotInflow%InflowOnTower, RotInflow%AccelOnTower, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-         if(Failed()) return
-         StartNode = StartNode + p%rotors(iWT)%NumTwrNds
-      end if
-
-      ! Nacelle
-      if (u%rotors(iWT)%NacelleMotion%Committed) then   
-         call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
-            real(u%rotors(iWT)%NacelleMotion%TranslationDisp + u%rotors(iWT)%NacelleMotion%Position, ReKi), &
-            RotInflow%InflowOnNacelle, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-         if(Failed()) return
-         StartNode = StartNode + 1
-      else
-         RotInflow%InflowOnNacelle = 0.0_ReKi
-      end if
-
-      ! TailFin
-      if (u%rotors(iWT)%TFinMotion%Committed) then
-         call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
-            real(u%rotors(iWT)%TFinMotion%TranslationDisp + u%rotors(iWT)%TFinMotion%Position, ReKi), &
-            RotInflow%InflowOnTailFin, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-         if(Failed()) return
-         StartNode = StartNode + 1
-      else
-         RotInflow%InflowOnTailFin = 0.0_ReKi
-      end if
-
-   enddo ! iWT
+      call AD_CalcWind_Rotor(t, u%rotors(iWT), FLowField, p%rotors(iWT), Inflow%RotInflow(iWT), ErrStat, ErrMsg)
+   enddo
 
    ! OLAF points
    if (allocated(o%WakeLocationPoints) .and. allocated(Inflow%InflowWakeVel)) then
-      call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
+      call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
                                    o%WakeLocationPoints, &
                                    Inflow%InflowWakeVel, &
                                    NoAcc, ErrStat2, ErrMsg2, &
@@ -1861,6 +1803,92 @@ contains
       Failed = errStat >= AbortErrLev
    end function Failed
 end subroutine
+
+subroutine AD_CalcWind_Rotor(t, u, FlowField, p, RotInflow, ErrStat, ErrMsg)
+   real(DbKi),                   intent(in   )  :: t           !< Current simulation time in seconds
+   type(RotInputType),           intent(in   )  :: u           !< Inputs at Time t
+   type(FlowFieldType),pointer,  intent(in   )  :: FlowField
+   type(RotParameterType),       intent(in   )  :: p           !< Parameters
+   type(RotInflowType),          intent(inout)  :: RotInflow   !< calculated inflow for rotor
+   integer(IntKi),               intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+                                 
+   integer(intKi)                               :: ErrStat2
+   character(ErrMsgLen)                         :: ErrMsg2
+   integer(intKi)                               :: StartNode, k
+   real(ReKi)                                   :: PosOffset(3)
+   real(ReKi), allocatable                      :: NoAcc(:,:)
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   if (.not. associated(FlowField)) return  ! use the initial (or input) values for these inputs
+
+   ! If rotor is MHK, add water depth to z coordinate
+   if (p%MHK > 0) then
+      PosOffset = [0.0_ReKi, 0.0_ReKi, p%WtrDpth]
+   else
+      PosOffset = 0.0_ReKi
+   end if
+
+   ! Hub
+   if (u%HubMotion%Committed) then
+      call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
+         real(u%HubMotion%TranslationDisp + u%HubMotion%Position, ReKi), &
+         RotInflow%InflowOnHub, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+      if(Failed()) return 
+   else
+      RotInflow%InflowOnHub = 0.0_ReKi
+   end if
+   StartNode = StartNode + 1
+
+   ! Blade
+   do k = 1, p%NumBlades
+      call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
+         real(u%BladeMotion(k)%TranslationDisp + u%BladeMotion(k)%Position, ReKi), &
+         RotInflow%Bld(k)%InflowOnBlade, RotInflow%Bld(k)%AccelOnBlade, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+      if(Failed()) return
+      StartNode = StartNode + p%NumBlNds
+   end do
+
+   ! Tower
+   if (u%TowerMotion%Nnodes > 0) then
+      call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
+         real(u%TowerMotion%TranslationDisp + u%TowerMotion%Position, ReKi), &
+         RotInflow%InflowOnTower, RotInflow%AccelOnTower, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+      if(Failed()) return
+      StartNode = StartNode + p%NumTwrNds
+   end if
+
+   ! Nacelle
+   if (u%NacelleMotion%Committed) then   
+      call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
+         real(u%NacelleMotion%TranslationDisp + u%NacelleMotion%Position, ReKi), &
+         RotInflow%InflowOnNacelle, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+      if(Failed()) return
+      StartNode = StartNode + 1
+   else
+      RotInflow%InflowOnNacelle = 0.0_ReKi
+   end if
+
+   ! TailFin
+   if (u%TFinMotion%Committed) then
+      call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
+         real(u%TFinMotion%TranslationDisp + u%TFinMotion%Position, ReKi), &
+         RotInflow%InflowOnTailFin, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+      if(Failed()) return
+      StartNode = StartNode + 1
+   else
+      RotInflow%InflowOnTailFin = 0.0_ReKi
+   end if
+
+contains
+   logical function Failed()
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'AD_CalcWind')
+      Failed = errStat >= AbortErrLev
+   end function Failed
+end subroutine
+
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
@@ -1903,7 +1931,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    end if
 
    ! Calculate wind based on current positions
-   call AD_CalcWind(t, u, p, OtherState, m%Inflow(1), ErrStat2, ErrMsg2)
+   call AD_CalcWind(t, u, p%FlowField, p, OtherState, m%Inflow(1), ErrStat2, ErrMsg2)
    if(Failed()) return
 
    ! SetInputs, Calc BEM Outputs and Twr Outputs 
@@ -5335,6 +5363,9 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
    TYPE(RotOtherStateType)                                       :: OtherState_copy
    TYPE(RotOtherStateType)                                       :: OtherState_init
    TYPE(RotInputType)                                            :: u_perturb
+   type(FLowFieldType),target                                    :: FlowField_perturb
+   type(FLowFieldType),pointer                                   :: FlowField_perturb_p   ! need a pointer in the CalcWind_Rotor routine
+   type(RotInflowType)                                           :: RotInflow_perturb !< Rotor inflow, perturbed by FlowField extended inputs
    REAL(R8Ki)                                                    :: delta_p, delta_m  ! delta change in input
    INTEGER(IntKi)                                                :: i
    
@@ -5348,7 +5379,6 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-
       ! get OP values here (i.e., set inputs for BEMT):
    if ( p%FrozenWake ) then
       call SetInputs(p, p_AD, u, RotInflow, m, indx, errStat2, errMsg2);   if (Failed()) return
@@ -5361,7 +5391,11 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
    
    call AD_CopyRotContinuousStateType( x, x_init, MESH_NEWCOPY, ErrStat2, ErrMsg2 ); if (Failed()) return
    call AD_CopyRotOtherStateType( OtherState, OtherState_init, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
-      
+   ! Copy FlowField data -- ideally we would not do this, but we cannot linearize with turbulent winds
+   call IfW_FlowField_CopyFlowFieldType(p_AD%FlowField, FlowField_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed()) return
+   FlowField_perturb_p => FlowField_perturb
+   call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+
    ! initialize x_init so that we get accurrate values for first step
    if (.not. OtherState%BEMT%nodesInitialized ) then
       call SetInputs(p, p_AD, u, RotInflow, m, indx, errStat2, errMsg2); if (Failed()) return
@@ -5394,8 +5428,11 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
       do i=1,size(p%Jac_u_indx,1)
          
             ! get u_op + delta_p u
+         call IfW_FlowField_CopyFlowFieldType(p_AD%FlowField, FlowField_perturb_p, MESH_UPDATECOPY, ErrStat2, ErrMsg2);   if (Failed()) return
+         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
          call AD_CopyRotInputType( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed()) return
          call Perturb_u( p, i, 1, u_perturb, delta_p )
+         call Perturb_uExtend( t, u_perturb, FlowField_perturb_p, RotInflow_perturb, p, OtherState, i, 1, u_perturb, delta_p, ErrStat2, ErrMsg2); if (Failed()) return
 
          call AD_CopyRotConstraintStateType( z, z_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
          call AD_CopyRotOtherStateType( OtherState_init, OtherState_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
@@ -5409,8 +5446,11 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
          
             
             ! get u_op - delta_m u
+         call IfW_FlowField_CopyFlowFieldType(p_AD%FlowField, FlowField_perturb_p, MESH_UPDATECOPY, ErrStat2, ErrMsg2);   if (Failed()) return
+         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
          call AD_CopyRotInputType( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed()) return
          call Perturb_u( p, i, -1, u_perturb, delta_m )
+         call Perturb_uExtend( t, u_perturb, FlowField_perturb_p, RotInflow_perturb, p, OtherState, i, -1, u_perturb, delta_p, ErrStat2, ErrMsg2); if (Failed()) return
          
          call AD_CopyRotConstraintStateType( z, z_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
          call AD_CopyRotOtherStateType( OtherState, OtherState_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
@@ -5448,16 +5488,22 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
       do i=1,size(p%Jac_u_indx,1)
          
             ! get u_op + delta u
+         call IfW_FlowField_CopyFlowFieldType(p_AD%FlowField, FlowField_perturb_p, MESH_UPDATECOPY, ErrStat2, ErrMsg2);   if (Failed()) return
+         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
          call AD_CopyRotInputType( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed()) return
          call Perturb_u( p, i, 1, u_perturb, delta_p )
+         call Perturb_uExtend( t, u_perturb, FlowField_perturb_p, RotInflow_perturb, p, OtherState, i, 1, u_perturb, delta_p, ErrStat2, ErrMsg2); if (Failed()) return
 
             ! compute x at u_op + delta u
          ! note that this routine updates z%phi instead of using the actual state value, so we don't need to call UpdateStates/UpdatePhi here to get z_op + delta_z:
          call RotCalcContStateDeriv( t, u_perturb, RotInflow, p, p_AD, x_init, xd, z, OtherState_init, m, x_p, ErrStat2, ErrMsg2 ); if (Failed()) return
                                          
             ! get u_op - delta u
+         call IfW_FlowField_CopyFlowFieldType(p_AD%FlowField, FlowField_perturb_p, MESH_UPDATECOPY, ErrStat2, ErrMsg2);   if (Failed()) return
+         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
          call AD_CopyRotInputType( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed()) return
          call Perturb_u( p, i, -1, u_perturb, delta_m )
+         call Perturb_uExtend( t, u_perturb, FlowField_perturb_p, RotInflow_perturb, p, OtherState, i, -1, u_perturb, delta_p, ErrStat2, ErrMsg2); if (Failed()) return
 
             ! compute x at u_op - delta u
          ! note that this routine updates z%phi instead of using the actual state value, so we don't need to call UpdateStates here to get z_op + delta_z:
@@ -5508,6 +5554,8 @@ contains
       call AD_DestroyRotOtherStateType( OtherState_copy, ErrStat2, ErrMsg2)
       call AD_DestroyRotOtherStateType( OtherState_init, ErrStat2, ErrMsg2)
       call AD_DestroyRotInputType( u_perturb, ErrStat2, ErrMsg2 )
+      call AD_DestroyRotInflowType( RotInflow_perturb, ErrStat2, ErrMsg2 )
+      call IfW_FlowField_DestroyFlowFieldType( FlowField_perturb, ErrStat2, ErrMsg2 )
    end subroutine cleanup
 END SUBROUTINE Rot_JacobianPInput
 
@@ -7021,7 +7069,6 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
 
    fieldIndx = p%Jac_u_indx(n,2)
    node      = p%Jac_u_indx(n,3)
-
    du = p%du(  p%Jac_u_indx(n,1) )
 
       ! determine which mesh we're trying to perturb and perturb the input:
@@ -7115,18 +7162,60 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
       case(35);      u%UserProp(node,2) = u%UserProp(node,2) + du * perturb_sign
       case(36);      u%UserProp(node,3) = u%UserProp(node,3) + du * perturb_sign
 
+   END SELECT
+
+END SUBROUTINE Perturb_u
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine perturbs the nth element of the u array extended inputs (and mesh/field it corresponds to)
+!! Do not change this without making sure subroutine aerodyn::init_jacobian is consistant with this routine!
+subroutine Perturb_uExtend( t, u_perturb, FlowField_perturb, RotInflow_perturb, p, OtherState, n, perturb_sign, u, du, ErrStat, ErrMsg )
+   real(DbKi),                   intent(in   ) :: t                  !< Time in seconds at operating point
+   type(RotInputType),           intent(inout) :: u_perturb
+   type(FLowFieldType),pointer,  intent(inout) :: FlowField_perturb  !< perturbed flowfield (only the uniform wind)
+   type(RotInflowType),          intent(inout) :: RotInflow_perturb  !< Rotor inflow, perturbed by FlowField extended inputs
+   type(RotParameterType),       intent(in   ) :: p                  !< parameters
+   type(RotOtherStateType),      intent(in   ) :: OtherState         !< Other states at operating point
+   integer( IntKi ),             intent(in   ) :: n                  !< number of array element to use
+   integer( IntKi ),             intent(in   ) :: perturb_sign       !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
+   type(RotInputType),           intent(inout) :: u                  !< perturbed AD inputs
+   real( R8Ki ),                 intent(  out) :: du                 !< amount that specific input was perturbed
+   integer(IntKi),               intent(  out) :: ErrStat            !< Error status of the operation
+   character(*),                 intent(  out) :: ErrMsg             !< Error message if ErrStat /= ErrID_None
+
+   ! local variables
+   integer                                     :: fieldIndx
+   integer                                     :: node
+   real(R8Ki)                                  :: FlowField_du(3)    !< vector of perturbations to apply to flow field
+
+   ! Error handling
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   fieldIndx = p%Jac_u_indx(n,2)
+   node      = p%Jac_u_indx(n,3)
+   du = p%du(  p%Jac_u_indx(n,1) )
+
+   ! determine which mesh we're trying to perturb and perturb the input:
+   select case( p%Jac_u_indx(n,1) )
       ! Extended inputs
       !     Module/Mesh/Field:  HWindSpeed      = 37
       !     Module/Mesh/Field:  PLexp           = 38
       !     Module/Mesh/Field:  PropagationDir  = 39
-!FIXME add perturbs here!!!!
-!     case (37);     call
-!     case (38);     call
-!     case (39);     call
+      case(37,38,39)
+         FlowField_du = 0.0_R8Ki
+         select case( p%Jac_u_indx(n,1) )
+            case (37);  FlowField_du(1) = du *perturb_sign
+            case (38);  FlowField_du(2) = du *perturb_sign
+            case (39);  FlowField_du(3) = du *perturb_sign
+         end select
+         FlowField_du = FlowField_du * perturb_sign
+         call IfW_UniformWind_Perturb(FlowField_perturb, FlowField_du) 
+         call AD_CalcWind_Rotor(t, u_perturb, FlowField_perturb, p, RotInflow_perturb, ErrStat, ErrMsg)
 
-   END SELECT
-
-END SUBROUTINE Perturb_u
+   end select
+end subroutine Perturb_uExtend
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
