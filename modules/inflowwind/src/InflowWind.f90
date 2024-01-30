@@ -1080,6 +1080,7 @@ SUBROUTINE InflowWind_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
 
    INTEGER(IntKi)                                    :: i
+   real(ReKi)                                        :: tmp_op(NumExtendedIO)
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'InflowWind_GetOP'
@@ -1089,15 +1090,21 @@ SUBROUTINE InflowWind_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
    ErrStat = ErrID_None
    ErrMsg  = ''
 
+   ! Since both u_op and y_op need this, calculate it up front
+   if (present(u_op) .or. present(y_op)) then
+      call IfW_UniformWind_GetOP( p%FlowField%Uniform, t, p%FlowField%VelInterpCubic, tmp_op )
+      tmp_op(3) = p%FlowField%PropagationDir + tmp_op(3)  ! include the AngleH from Uniform Wind input files
+   endif
+
    if ( PRESENT( u_op ) ) then
       if (.not. allocated(u_op)) then
          call AllocAry(u_op, NumExtendedIO, 'u_op', ErrStat2, ErrMsg2)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             if (ErrStat >= AbortErrLev) return
       end if
-      
-      call IfW_UniformWind_GetOP( p%FlowField%Uniform, t, p%FlowField%VelInterpCubic, u_op )
-      u_op(3) = p%FlowField%PropagationDir + u_op(3)  ! include the AngleH from Uniform Wind input files
+
+      u_op(1:NumExtendedIO) = tmp_op(1:NumExtendedIO)
+
    end if
 
    if ( PRESENT( y_op ) ) then
@@ -1106,9 +1113,10 @@ SUBROUTINE InflowWind_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             if (ErrStat >= AbortErrLev) return
       end if
-      
+
+      y_op(1:NumExtendedIO) = tmp_op(1:NumExtendedIO)
       do i=1,p%NumOuts
-         y_op(i) = y%WriteOutput( i )
+         y_op(NumExtendedIO + i) = y%WriteOutput( i )
       end do
    end if
 
