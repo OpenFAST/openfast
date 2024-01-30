@@ -345,6 +345,7 @@ of_regression_linear("5MW_Land_BD_Linear"           "openfast;linear;beamdyn;ser
 of_regression_linear("5MW_OC4Semi_Linear"           "openfast;linear;hydrodyn;servodyn")
 of_regression_linear("StC_test_OC4Semi_Linear_Nac"  "openfast;linear;servodyn;stc")
 of_regression_linear("StC_test_OC4Semi_Linear_Tow"  "openfast;linear;servodyn;stc")
+of_regression_linear("5MW_Land_BD_Linear_Aero"      "openfast;linear;aerodyn;beamdyn;servodyn")
 
 # FAST Farm regression tests
 if(BUILD_FASTFARM)
