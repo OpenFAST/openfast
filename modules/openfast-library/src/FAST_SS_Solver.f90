@@ -1153,24 +1153,14 @@ SUBROUTINE SteadyStatePrescribedInputs( caseData, p_FAST, y_FAST, m_FAST, ED, BD
       !AD%Input(1)%rotors(1)%BladeMotion(k)%RotationAcc = 0.0_ReKi
       AD%Input(1)%rotors(1)%BladeMotion(k)%TranslationAcc = 0.0_ReKi
    END DO
-   
-   !> begin @todo <This needs to be updated for the new InflowWind pointers... possibly with the ADI module?>
-   do  k = 1,size(AD%m%Inflow(1)%RotInflow(1)%Bld)
-      AD%m%Inflow(1)%RotInflow(1)%Bld(k)%InflowOnBlade(  1,  :) = caseData%WindSpeed
-      AD%m%Inflow(1)%RotInflow(1)%Bld(k)%InflowOnBlade(  2:3,:) = 0.0_ReKi
-   end do
-   AD%m%Inflow(1)%RotInflow(1)%InflowOnHub(    1  ,1) = caseData%WindSpeed
-   AD%m%Inflow(1)%RotInflow(1)%InflowOnHub(    2:3,1) = 0.0_ReKi
-   AD%m%Inflow(1)%RotInflow(1)%InflowOnNacelle(1  ,1) = caseData%WindSpeed
-   AD%m%Inflow(1)%RotInflow(1)%InflowOnNacelle(2:3,1) = 0.0_ReKi
-   AD%m%Inflow(1)%RotInflow(1)%InflowOnTailFin(1  ,1) = caseData%WindSpeed
-   AD%m%Inflow(1)%RotInflow(1)%InflowOnTailFin(2:3,1) = 0.0_ReKi
-   AD%m%Inflow(1)%RotInflow(1)%InflowOnTower = 0.0_ReKi
-   !> end @todo <This needs to be updated for the new InflowWind pointers... possibly with the ADI module?>
-   
+  
+   ! Set FlowField information -- AD calculates everything from the data stored in the FlowField pointer
+   AD%p%FlowField%Uniform%VelH(:)    = caseData%WindSpeed
+   AD%p%FlowField%Uniform%LinShrV(:) = 0.0_ReKi
+   AD%p%FlowField%Uniform%AngleH(:)  = 0.0_ReKi
+   AD%p%FlowField%PropagationDir     = 0.0_ReKi
+
    AD%Input(1)%rotors(1)%UserProp       = 0.0_ReKi
-   
-   AD%m%Inflow(1)%RotInflow(1)%AvgDiskVel    = AD%m%Inflow(1)%RotInflow(1)%Bld(1)%InflowOnBlade(:,1)
    
    
 END SUBROUTINE SteadyStatePrescribedInputs

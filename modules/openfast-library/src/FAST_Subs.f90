@@ -9503,6 +9503,11 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
    end if
 
 
+      ! If we are doing AeroMaps, there is leftover data in AD15 parameters
+   if (p_FAST%CompAeroMaps) then
+      if (associated(AD%p%FlowField))  deallocate(AD%p%FlowField)
+   endif
+
 
       ! End all modules
    CALL FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, SeaSt, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat2, ErrMsg2 )
