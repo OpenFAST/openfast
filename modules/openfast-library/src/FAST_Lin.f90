@@ -2270,7 +2270,7 @@ SUBROUTINE Linear_SD_InputSolve_dy( p_FAST, y_FAST, SrvD, u_SD, y_SD, y_ED, HD, 
       
    SD_Start     = Indx_u_SD_TPMesh_Start(u_SD, y_FAST)  ! start of u_SD%MTPMesh%TranslationDisp field     
    ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
-   call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_SD%TPMesh, MeshMapData%ED_P_2_SD_TP, SD_Start, ED_Out_Start, dUdy, .false.)
+   call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_SD%TPMesh, MeshMapData%ED_P_2_SD_TP, SD_Start, ED_Out_Start, dUdy)
    
    !..........
    ! dU^{SD}/dy^{HD}
@@ -2531,11 +2531,15 @@ SUBROUTINE Linear_AD_InputSolve_du( p_FAST, y_FAST, u_AD, p_AD, y_ED, BD, MeshMa
       CALL Linearize_Line2_to_Line2( y_ED%TowerLn2Mesh, u_AD%rotors(1)%TowerMotion, MeshMapData%ED_L_2_AD_L_T, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%TowerMotion' )     
       
+      AD_Start_td = Indx_u_AD_Tower_Start(u_AD, p_AD, y_FAST) ! index for u_AD%rotors(1)%TowerMotion(k)%translationDisp field
       !AD is the destination here, so we need tv_ud
       if (allocated( MeshMapData%ED_L_2_AD_L_T%dM%tv_ud)) then
-         AD_Start_td = Indx_u_AD_Tower_Start(u_AD, p_AD, y_FAST) ! index for u_AD%rotors(1)%TowerMotion(k)%translationDisp field
-         AD_Start_tv = AD_Start_td + u_AD%rotors(1)%TowerMotion%NNodes * 6 ! 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field      
+         AD_Start_tv = AD_Start_td + u_AD%rotors(1)%TowerMotion%NNodes * 6 ! 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field
          call SetBlockMatrix( dUdu, MeshMapData%ED_L_2_AD_L_T%dM%tv_ud, AD_Start_tv, AD_Start_td )
+      end if
+      if (allocated( MeshMapData%ED_L_2_AD_L_T%dM%ta_ud)) then
+         AD_Start_ta = AD_Start_td + u_AD%rotors(1)%TowerMotion%NNodes * 9 ! 3 fields (TranslationDisp and Orientation, transVel) with 3 components before translational accel
+         call SetBlockMatrix( dUdu, MeshMapData%ED_L_2_AD_L_T%dM%ta_ud, AD_Start_ta, AD_Start_td )
       end if
    END IF
    
@@ -2798,7 +2802,7 @@ SUBROUTINE Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, p_SrvD, u_SrvD, y_ED, BD, 
                if (u_SrvD%BStCMotionMesh(K,j)%Committed) then
                   SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_BStC_u(1,k,j))
                   ED_Out_Start = Indx_y_ED_Blade_Start(y_ED, y_FAST, k)    ! start of %TranslationDisp field
-                  call Assemble_dUdy_Motions( y_ED%BladeLn2Mesh(K), u_SrvD%BStCMotionMesh(K,j), MeshMapData%ED_L_2_BStC_P_B(K,j), SrvD_Start, ED_Out_Start, dUdy, .false.)
+                  call Assemble_dUdy_Motions( y_ED%BladeLn2Mesh(K), u_SrvD%BStCMotionMesh(K,j), MeshMapData%ED_L_2_BStC_P_B(K,j), SrvD_Start, ED_Out_Start, dUdy)
                endif
             enddo
          enddo
@@ -2813,7 +2817,7 @@ SUBROUTINE Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, p_SrvD, u_SrvD, y_ED, BD, 
                if (u_SrvD%BStCMotionMesh(K,j)%Committed) then
                   SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_BStC_u(1,k,j))
                   BD_Out_Start = y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%LinStartIndx(LIN_OUTPUT_COL)    ! start of %TranslationDisp field
-                  call Assemble_dUdy_Motions( BD%y(k)%BldMotion, u_SrvD%BStCMotionMesh(K,j), MeshMapData%BD_L_2_BStC_P_B(K,j), SrvD_Start, BD_Out_Start, dUdy, .false.)
+                  call Assemble_dUdy_Motions( BD%y(k)%BldMotion, u_SrvD%BStCMotionMesh(K,j), MeshMapData%BD_L_2_BStC_P_B(K,j), SrvD_Start, BD_Out_Start, dUdy)
                endif
             enddo
          enddo
@@ -2828,7 +2832,7 @@ SUBROUTINE Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, p_SrvD, u_SrvD, y_ED, BD, 
          if (u_SrvD%NStCMotionMesh(j)%Committed) then
             SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_NStC_u(1,j))
             ED_Out_Start = Indx_y_ED_Nacelle_Start(y_ED, y_FAST)    ! start of %TranslationDisp field
-            call Assemble_dUdy_Motions( y_ED%NacelleMotion, u_SrvD%NStCMotionMesh(j), MeshMapData%ED_P_2_NStC_P_N(j), SrvD_Start, ED_Out_Start, dUdy, .false.)
+            call Assemble_dUdy_Motions( y_ED%NacelleMotion, u_SrvD%NStCMotionMesh(j), MeshMapData%ED_P_2_NStC_P_N(j), SrvD_Start, ED_Out_Start, dUdy)
          endif
       enddo
    endif
@@ -2841,7 +2845,7 @@ SUBROUTINE Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, p_SrvD, u_SrvD, y_ED, BD, 
          if (u_SrvD%TStCMotionMesh(j)%Committed) then
             SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_TStC_u(1,j))
             ED_Out_Start = Indx_y_ED_Tower_Start(y_ED, y_FAST)    ! start of %TranslationDisp field
-            call Assemble_dUdy_Motions( y_ED%TowerLn2Mesh, u_SrvD%TStCMotionMesh(j), MeshMapData%ED_L_2_TStC_P_T(j), SrvD_Start, ED_Out_Start, dUdy, .false.)
+            call Assemble_dUdy_Motions( y_ED%TowerLn2Mesh, u_SrvD%TStCMotionMesh(j), MeshMapData%ED_L_2_TStC_P_T(j), SrvD_Start, ED_Out_Start, dUdy)
          endif
       enddo
    endif
@@ -2858,7 +2862,7 @@ SUBROUTINE Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, p_SrvD, u_SrvD, y_ED, BD, 
             if (u_SrvD%SStCMotionMesh(j)%Committed) then
                SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_SStC_u(1,j))
                ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of %TranslationDisp field
-               call Assemble_dUdy_Motions( y_ED%PlatformPtMesh, u_SrvD%SStCMotionMesh(j), MeshMapData%Substructure_2_SStC_P_P(j), SrvD_Start, ED_Out_Start, dUdy, .false.)
+               call Assemble_dUdy_Motions( y_ED%PlatformPtMesh, u_SrvD%SStCMotionMesh(j), MeshMapData%Substructure_2_SStC_P_P(j), SrvD_Start, ED_Out_Start, dUdy)
             endif
          enddo
       endif
@@ -2871,7 +2875,7 @@ SUBROUTINE Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, p_SrvD, u_SrvD, y_ED, BD, 
             if (u_SrvD%SStCMotionMesh(j)%Committed) then
                SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_SStC_u(1,j))
                SD_Out_Start = Indx_y_SD_Y3Mesh_Start(y_SD, y_FAST)   ! start of %TranslationDisp field
-               call Assemble_dUdy_Motions( y_SD%y3Mesh, u_SrvD%SStCMotionMesh(j), MeshMapData%SubStructure_2_SStC_P_P(j), SrvD_Start, SD_Out_Start, dUdy, .false.)
+               call Assemble_dUdy_Motions( y_SD%y3Mesh, u_SrvD%SStCMotionMesh(j), MeshMapData%SubStructure_2_SStC_P_P(j), SrvD_Start, SD_Out_Start, dUdy)
             endif
          enddo
       endif
@@ -3357,6 +3361,7 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, p_AD, y_ED, BD, 
    INTEGER(IntKi)                               :: AD_Start    ! starting index of dUdy (column) where particular AD fields are located
    INTEGER(IntKi)                               :: ED_Out_Start! starting index of dUdy (row) where particular ED fields are located
    INTEGER(IntKi)                               :: BD_Out_Start! starting index of dUdy (row) where particular BD fields are located
+   LOGICAL                                      :: FieldMask(FIELDMASK_SIZE) !< which source fields to assemble 
    INTEGER(IntKi)                               :: ErrStat2
    CHARACTER(ErrMsgLen)                         :: ErrMsg2 
    CHARACTER(*), PARAMETER                      :: RoutineName = 'Linear_AD_InputSolve_NoIfW_dy'
@@ -3370,80 +3375,74 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, p_AD, y_ED, BD, 
    !-------------------------------------------------------------------------------------------------
 
    !-----------------------------------
-   ! Nacelle
-   CALL Linearize_Point_to_Point( y_ED%NacelleMotion, u_AD%rotors(1)%NacelleMotion, MeshMapData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%NacelleMotion' )
-      if (errStat>=AbortErrLev) return
+   ! Nacelle -- disp, orient
+   if (u_AD%rotors(1)%NacelleMotion%Committed) then
+      ! Linearize done in dUdu (see Linear_AD_InputSolve_du())
+      !CALL Linearize_Point_to_Point( y_ED%NacelleMotion, u_AD%rotors(1)%NacelleMotion, MeshMapData%ED_P_2_AD_P_N, ErrStat2, ErrMsg2 )
+      !   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%NacelleMotion' )
+      !   if (errStat>=AbortErrLev) return
       
-   ! *** AD translational displacement: from ED translational displacement (MeshMapData%ED_P_2_AD_P_H%dM%mi) and orientation (MeshMapData%ED_P_2_AD_P_H%dM%fx_p)
-   AD_Start = Indx_u_AD_Nacelle_Start(u_AD, p_AD, y_FAST) ! start of u_AD%rotors(1)%NacelleMotion%TranslationDisp field   
-   ED_Out_Start = Indx_y_ED_Nacelle_Start(y_ED, y_FAST) ! start of y_ED%NacelleMotion%TranslationDisp field
-   call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%mi, AD_Start, ED_Out_Start )
-
-   ED_Out_Start = Indx_y_ED_Nacelle_Start(y_ED, y_FAST) + y_ED%NacelleMotion%NNodes * 3 ! start of y_ED%NacelleMotion%Orientation field
-   call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%fx_p, AD_Start, ED_Out_Start )
+      ! *** AD translational displacement: from ED translational displacement (MeshMapData%ED_P_2_AD_P_N%dM%mi) and orientation (MeshMapData%ED_P_2_AD_P_N%dM%fx_p)
+      AD_Start = Indx_u_AD_Nacelle_Start(u_AD, p_AD, y_FAST) ! start of u_AD%rotors(1)%NacelleMotion%TranslationDisp field   
+      ED_Out_Start = Indx_y_ED_Nacelle_Start(y_ED, y_FAST) ! start of y_ED%NacelleMotion%TranslationDisp field
       
-   ! *** AD orientation: from ED orientation
-   AD_Start = AD_Start + u_AD%rotors(1)%NacelleMotion%NNodes * 3 ! move past the AD translation disp field to orientation field         
-   call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%mi, AD_Start, ED_Out_Start )
+      FieldMask = .true.   ! all fields
+      call Assemble_dUdy_Motions(y_ED%NacelleMotion, u_AD%rotors(1)%NacelleMotion, MeshMapData%ED_P_2_AD_P_N, AD_Start, ED_Out_Start, dUdy, FieldMask)
+   endif
  
 
    !-----------------------------------
-   ! Hub
-   CALL Linearize_Point_to_Point( y_ED%HubPtMotion, u_AD%rotors(1)%HubMotion, MeshMapData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%HubMotion' )
-      if (errStat>=AbortErrLev) return
+   ! Hub -- disp, orient, RV
+   if (u_AD%rotors(1)%HubMotion%Committed) then
+      ! Linearize done in dUdu (see Linear_AD_InputSolve_du())
+      !CALL Linearize_Point_to_Point( y_ED%HubPtMotion, u_AD%rotors(1)%HubMotion, MeshMapData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2 )
+      !   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%HubMotion' )
+      !   if (errStat>=AbortErrLev) return
       
-   ! *** AD translational displacement: from ED translational displacement (MeshMapData%ED_P_2_AD_P_H%dM%mi) and orientation (MeshMapData%ED_P_2_AD_P_H%dM%fx_p)
-   AD_Start = Indx_u_AD_Hub_Start(u_AD, p_AD, y_FAST) ! start of u_AD%rotors(1)%HubMotion%TranslationDisp field   
-   ED_Out_Start = Indx_y_ED_Hub_Start(y_ED, y_FAST) ! start of y_ED%HubPtMotion%TranslationDisp field
-   call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%mi, AD_Start, ED_Out_Start )
-
-   ED_Out_Start = Indx_y_ED_Hub_Start(y_ED, y_FAST) + y_ED%HubPtMotion%NNodes * 3 ! start of y_ED%HubPtMotion%Orientation field
-   call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%fx_p, AD_Start, ED_Out_Start )
+      ! *** AD translational displacement: from ED translational displacement (MeshMapData%ED_P_2_AD_P_H%dM%mi) and orientation (MeshMapData%ED_P_2_AD_P_H%dM%fx_p)
+      AD_Start = Indx_u_AD_Hub_Start(u_AD, p_AD, y_FAST) ! start of u_AD%rotors(1)%HubMotion%TranslationDisp field   
+      ED_Out_Start = Indx_y_ED_Hub_Start(y_ED, y_FAST) ! start of y_ED%HubPtMotion%TranslationDisp field
       
-   ! *** AD orientation: from ED orientation
-   AD_Start = AD_Start + u_AD%rotors(1)%HubMotion%NNodes * 3 ! move past the AD translation disp field to orientation field         
-   call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%mi, AD_Start, ED_Out_Start )
-   
-   ! *** AD rotational velocity: from ED rotational velocity
-   AD_Start = AD_Start + u_AD%rotors(1)%HubMotion%NNodes * 3 ! move past the AD orientation field to rotational velocity field          
-   ED_Out_Start = Indx_y_ED_Hub_Start(y_ED, y_FAST) + y_ED%HubPtMotion%NNodes * 6 ! ! start of y_ED%HubPtMotion%RotationVel field
-   call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%mi, AD_Start, ED_Out_Start )
+      FieldMask = .false.
+      FieldMask(MASKID_TRANSLATIONDISP) = .true.
+      FieldMask(MASKID_ORIENTATION)     = .true.
+      FieldMask(MASKID_ROTATIONVEL)     = .true.
+      call Assemble_dUdy_Motions(y_ED%HubPtMotion, u_AD%rotors(1)%HubMotion, MeshMapData%ED_P_2_AD_P_H, AD_Start, ED_Out_Start, dUdy, FieldMask)
+   endif
       
 
    !-----------------------------------
-   ! TailFin
-   CALL Linearize_Point_to_Point( y_ED%TFinCMMotion, u_AD%rotors(1)%TFinMotion, MeshMapData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%TFinMotion' )
-      if (errStat>=AbortErrLev) return
+   ! TailFin -- disp, orient, TV
+   if (u_AD%rotors(1)%TFinMotion%Committed) then
+      ! Linearize done in dUdu (see Linear_AD_InputSolve_du())
+      !CALL Linearize_Point_to_Point( y_ED%TFinCMMotion, u_AD%rotors(1)%TFinMotion, MeshMapData%ED_P_2_AD_P_TF, ErrStat2, ErrMsg2 )
+      !   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%TFinMotion' )
+      !   if (errStat>=AbortErrLev) return
       
-   ! *** AD translational displacement: from ED translational displacement (MeshMapData%ED_P_2_AD_P_H%dM%mi) and orientation (MeshMapData%ED_P_2_AD_P_H%dM%fx_p)
-   AD_Start = Indx_u_AD_TFin_Start(u_AD, p_AD, y_FAST) ! start of u_AD%rotors(1)%TFinMotion%TranslationDisp field   
-   ED_Out_Start = Indx_y_ED_TFin_Start(y_ED, y_FAST) ! start of y_ED%TFinCMMotion%TranslationDisp field
-   call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%mi, AD_Start, ED_Out_Start )
-
-   ED_Out_Start = Indx_y_ED_TFin_Start(y_ED, y_FAST) + y_ED%TFinCMMotion%NNodes * 3 ! start of y_ED%TFinCMMotion%Orientation field
-   call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%fx_p, AD_Start, ED_Out_Start )
+      ! *** AD translational displacement: from ED translational displacement (MeshMapData%ED_P_2_AD_P_TF%dM%mi) and orientation (MeshMapData%ED_P_2_AD_P_TF%dM%fx_p)
+      AD_Start = Indx_u_AD_TFin_Start(u_AD, p_AD, y_FAST) ! start of u_AD%rotors(1)%TFinMotion%TranslationDisp field   
+      ED_Out_Start = Indx_y_ED_TFin_Start(y_ED, y_FAST) ! start of y_ED%TFinCMMotion%TranslationDisp field
       
-   ! *** AD orientation: from ED orientation
-   AD_Start = AD_Start + u_AD%rotors(1)%TFinMotion%NNodes * 3 ! move past the AD translation disp field to orientation field         
-   call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%mi, AD_Start, ED_Out_Start )
+      FieldMask = .false.
+      FieldMask(MASKID_TRANSLATIONDISP) = .true.
+      FieldMask(MASKID_ORIENTATION)     = .true.
+      FieldMask(MASKID_TRANSLATIONVEL)  = .true.
+      call Assemble_dUdy_Motions(y_ED%TFinCMMotion, u_AD%rotors(1)%TFinMotion, MeshMapData%ED_P_2_AD_P_TF, AD_Start, ED_Out_Start, dUdy, FieldMask)
+   endif
  
 
    !...................................
    ! tower
    IF (u_AD%rotors(1)%TowerMotion%Committed) THEN
-            
       !!! ! This linearization was done in forming dUdu (see Linear_AD_InputSolve_du()), so we don't need to re-calculate these matrices 
       !!! ! while forming dUdy, too.
       !!!CALL Linearize_Line2_to_Line2( y_ED%TowerLn2Mesh, u_AD%rotors(1)%TowerMotion, MeshMapData%ED_L_2_AD_L_T, ErrStat2, ErrMsg2 )
       
       AD_Start = Indx_u_AD_Tower_Start(u_AD, p_AD, y_FAST) ! start of u_AD%rotors(1)%TowerMotion%TranslationDisp field
-      
       ED_Out_Start = Indx_y_ED_Tower_Start(y_ED, y_FAST) ! start of y_ED%TowerLn2Mesh%TranslationDisp field
-      call Assemble_dUdy_Motions(y_ED%TowerLn2Mesh, u_AD%rotors(1)%TowerMotion, MeshMapData%ED_L_2_AD_L_T, AD_Start, ED_Out_Start, dUdy)
       
+      FieldMask = .true.   ! all fields
+      call Assemble_dUdy_Motions(y_ED%TowerLn2Mesh, u_AD%rotors(1)%TowerMotion, MeshMapData%ED_L_2_AD_L_T, AD_Start, ED_Out_Start, dUdy, FieldMask)
    END IF
 
 
@@ -3457,11 +3456,12 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, p_AD, y_ED, BD, 
             
       ! *** AD orientation: from ED orientation
       AD_Start = Indx_u_AD_BladeRoot_Start(u_AD, p_AD, y_FAST, k)       ! start of u_AD%rotors(1)%BladeRootMotion(k)%Orientation field
-   
       ED_Out_Start = Indx_y_ED_BladeRoot_Start(y_ED, y_FAST, k) & ! start of y_ED%BladeRootMotion(k)%TranslationDisp field
                    + y_ED%BladeRootMotion(k)%NNodes * 3           ! start of y_ED%BladeRootMotion(k)%Orientation field
-      call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_R(k)%dM%mi, AD_Start, ED_Out_Start )
-               
+
+      FieldMask = .false.
+      FieldMask(MASKID_ORIENTATION)     = .true.
+      call Assemble_dUdy_Motions(y_ED%BladeRootMotion(k), u_AD%rotors(1)%BladeRootMotion(k), MeshMapData%ED_P_2_AD_P_R(k), AD_Start, ED_Out_Start, dUdy, FieldMask)
    END DO
    
    
@@ -3470,7 +3470,6 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, p_AD, y_ED, BD, 
       !...................................
    IF (p_FAST%CompElast == Module_ED ) THEN
       
-      
       DO k=1,size(y_ED%BladeLn2Mesh)
          !!! ! This linearization was done in forming dUdu (see Linear_AD_InputSolve_du()), so we don't need to re-calculate these matrices 
          !!! ! while forming dUdy, too.
@@ -3478,8 +3477,9 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, p_AD, y_ED, BD, 
          
          AD_Start = Indx_u_AD_Blade_Start(u_AD, p_AD, y_FAST, k)     ! start of u_AD%rotors(1)%BladeMotion(k)%TranslationDisp field
          ED_Out_Start = Indx_y_ED_Blade_Start(y_ED, y_FAST, k) ! start of y_ED%BladeLn2Mesh(k)%TranslationDisp field
-         CALL Assemble_dUdy_Motions(y_ED%BladeLn2Mesh(k), u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), AD_Start, ED_Out_Start, dUdy)
-         
+
+         FieldMask = .true.   ! all fields
+         CALL Assemble_dUdy_Motions(y_ED%BladeLn2Mesh(k), u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), AD_Start, ED_Out_Start, dUdy, FieldMask)
       END DO
       
    ELSEIF (p_FAST%CompElast == Module_BD ) THEN
@@ -3490,8 +3490,9 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, p_AD, y_ED, BD, 
       DO k=1,p_FAST%nBeams
          AD_Start     = Indx_u_AD_Blade_Start(u_AD, p_AD, y_FAST, k)     ! start of u_AD%rotors(1)%BladeMotion(k)%TranslationDisp field
          BD_Out_Start = y_FAST%Lin%Modules(Module_BD)%Instance(k)%LinStartIndx(LIN_OUTPUT_COL)
-         
-         CALL Assemble_dUdy_Motions(BD%y(k)%BldMotion, u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), AD_Start, BD_Out_Start, dUdy)
+
+         FieldMask = .true.   ! all fields
+         CALL Assemble_dUdy_Motions(BD%y(k)%BldMotion, u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), AD_Start, BD_Out_Start, dUdy, FieldMask)
       END DO
    
    END IF
@@ -3678,8 +3679,8 @@ SUBROUTINE Linear_HD_InputSolve_dy( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
    ! HD PRP Mesh
    !...................................
    !  use Indx_u_HD_PRP_Start
-   HD_Start     = Indx_u_HD_PRP_Start(u_HD, y_FAST)  ! start of u_HD%Morison%Mesh%TranslationDisp field     
-   call Assemble_dUdy_Motions(PlatformMotion, u_HD%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, HD_Start, Platform_Out_Start, dUdy, .false.)
+   HD_Start     = Indx_u_HD_PRP_Start(u_HD, y_FAST)  ! start of u_HD%Morison%Mesh%TranslationDisp field
+   call Assemble_dUdy_Motions(PlatformMotion, u_HD%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, HD_Start, Platform_Out_Start, dUdy)
    
    
    ! dU^{HD}/dy^{ED} or ! dU^{HD}/dy^{SD}
@@ -3693,7 +3694,7 @@ SUBROUTINE Linear_HD_InputSolve_dy( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
       !!!call Linearize_Point_to_Line2( SubstructureMotion2HD, u_HD%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2 )
       
       HD_Start     = Indx_u_HD_Morison_Start(u_HD, y_FAST)  ! start of u_HD%Morison%Mesh%TranslationDisp field
-      call Assemble_dUdy_Motions(SubstructureMotion2HD, u_HD%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, HD_Start, SubStructure_Out_Start, dUdy, .false.)
+      call Assemble_dUdy_Motions(SubstructureMotion2HD, u_HD%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, HD_Start, SubStructure_Out_Start, dUdy)
    END IF
 
       !...................................
@@ -3706,7 +3707,7 @@ SUBROUTINE Linear_HD_InputSolve_dy( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
       !!!call Linearize_Point_to_Point( SubstructureMotion2HD, u_HD%Mesh, MeshMapData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2 )
       
       HD_Start     = Indx_u_HD_WAMIT_Start(u_HD, y_FAST)  ! start of u_HD%Mesh%TranslationDisp field
-      call Assemble_dUdy_Motions(SubstructureMotion2HD, u_HD%WAMITMesh, MeshMapData%SubStructure_2_HD_W_P, HD_Start, SubStructure_Out_Start, dUdy, .false.)
+      call Assemble_dUdy_Motions(SubstructureMotion2HD, u_HD%WAMITMesh, MeshMapData%SubStructure_2_HD_W_P, HD_Start, SubStructure_Out_Start, dUdy)
    END IF
 
    
@@ -3735,6 +3736,7 @@ SUBROUTINE Linear_MAP_InputSolve_dy( p_FAST, y_FAST, u_MAP, y_ED, y_SD, MeshMapD
 
    INTEGER(IntKi)                               :: SubStructure_Out_Start! starting index of dUdy (row) where particular SD/ED fields are located
    TYPE(MeshType), POINTER                      :: SubstructureMotion
+   LOGICAL                                      :: FieldMask(FIELDMASK_SIZE) !< which source fields to assemble
    
    INTEGER(IntKi)                               :: ErrStat2
    CHARACTER(ErrMsgLen)                         :: ErrMsg2 
@@ -3761,7 +3763,9 @@ SUBROUTINE Linear_MAP_InputSolve_dy( p_FAST, y_FAST, u_MAP, y_ED, y_SD, MeshMapD
       
       ! dU^{MAP}/dy^{SD} or ! dU^{MAP}/dy^{ED}
       call Linearize_Point_to_Point( SubstructureMotion, u_MAP%PtFairDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
-      call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%Structure_2_Mooring, MAP_Start, SubStructure_Out_Start, dUdy, OnlyTranslationDisp=.true.)
+      FieldMask = .false.
+      FieldMask(MASKID_TRANSLATIONDISP) = .true.
+      call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%Structure_2_Mooring, MAP_Start, SubStructure_Out_Start, dUdy, FieldMask)
 
    END IF
 END SUBROUTINE Linear_MAP_InputSolve_dy
@@ -3881,7 +3885,7 @@ SUBROUTINE Linear_MD_InputSolve_dy( p_FAST, y_FAST, u_MD, y_ED, y_SD, MeshMapDat
       !!! ! while forming dUdy, too.
       !!!call Linearize_Point_to_Point( SubstructureMotion, u_MD%CoupledKinematics(1), MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
 
-      call Assemble_dUdy_Motions(    SubstructureMotion, u_MD%CoupledKinematics(1), MeshMapData%Structure_2_Mooring, MD_Start, SubStructure_Out_Start, dUdy, OnlyTranslationDisp=.false.)
+      call Assemble_dUdy_Motions(    SubstructureMotion, u_MD%CoupledKinematics(1), MeshMapData%Structure_2_Mooring, MD_Start, SubStructure_Out_Start, dUdy)
       
    END IF
 END SUBROUTINE Linear_MD_InputSolve_dy
@@ -4380,20 +4384,30 @@ END SUBROUTINE SumBlockMatrix
 !!      \vec{a}^S \\
 !!      \vec{\alpha}^S \\
 !! \end{matrix} \right\} \f$
-SUBROUTINE Assemble_dUdy_Motions(y, u, MeshMap, BlockRowStart, BlockColStart, dUdy, skipRotVel, skipRotAcc, onlyTranslationDisp)
+SUBROUTINE Assemble_dUdy_Motions(y, u, MeshMap, BlockRowStart, BlockColStart, dUdy, FieldMaskIn)
    TYPE(MeshType),    INTENT(IN)     :: y                      !< the output (source) mesh that is transfering motions
    TYPE(MeshType),    INTENT(IN)     :: u                      !< the input (destination) mesh that is receiving motions
    TYPE(MeshMapType), INTENT(IN)     :: MeshMap                !< the mesh mapping from y to u
    INTEGER(IntKi),    INTENT(IN)     :: BlockRowStart          !< the index of the row defining the block of dUdy to be set
    INTEGER(IntKi),    INTENT(IN)     :: BlockColStart          !< the index of the column defining the block of dUdy to be set
    REAL(R8Ki),        INTENT(INOUT)  :: dUdy(:,:)              !< full Jacobian matrix
-   LOGICAL, OPTIONAL, INTENT(IN)     :: skipRotVel             !< if present and true, we skip the rotational velocity and both acceleration fields and return early
-   LOGICAL, OPTIONAL, INTENT(IN)     :: onlyTranslationDisp    !< if present and true, we set only the destination translationDisp fields and return early
-   LOGICAL, OPTIONAL, INTENT(IN)     :: skipRotAcc             !< if present and true, we skip the rotational acceleration field
+   LOGICAL, OPTIONAL, INTENT(IN   )  :: FieldMaskIn(FIELDMASK_SIZE) !< which source fields to do
    
    INTEGER(IntKi)                    :: row
    INTEGER(IntKi)                    :: col
-   
+   LOGICAL                           :: FieldMask(FIELDMASK_SIZE) !< which source fields to do
+
+   if (present(FieldMaskIn)) then
+      FieldMask = FieldMaskIn
+   else
+      FieldMask(MASKID_TRANSLATIONDISP) = .true.
+      FieldMask(MASKID_ORIENTATION)     = .true.
+      FieldMask(MASKID_TRANSLATIONVEL)  = .true.
+      FieldMask(MASKID_ROTATIONVEL)     = .true.
+      FieldMask(MASKID_TRANSLATIONACC)  = .true.
+      FieldMask(MASKID_ROTATIONACC)     = .true.
+   endif
+ 
 !! \f$M_{mi}\f$ is modmesh_mapping::meshmaplinearizationtype::mi (motion identity)\n
 !! \f$M_{f_{\times p}}\f$ is modmesh_mapping::meshmaplinearizationtype::fx_p \n
 !! \f$M_{tv\_uD}\f$ is modmesh_mapping::meshmaplinearizationtype::tv_uD \n
@@ -4403,90 +4417,89 @@ SUBROUTINE Assemble_dUdy_Motions(y, u, MeshMap, BlockRowStart, BlockColStart, dU
 !! \f$M_{ta\_rv}\f$ is modmesh_mapping::meshmaplinearizationtype::ta_rv \n
 
       !*** row for translational displacement ***
+      if (FieldMask(MASKID_TRANSLATIONDISP)) then
          ! source translational displacement to destination translational displacement:
-      row = BlockRowStart                    ! start of u%TranslationDisp field
-      col = BlockColStart                    ! start of y%TranslationDisp field
-      call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+         row = BlockRowStart                    ! start of u%TranslationDisp field
+         col = BlockColStart                    ! start of y%TranslationDisp field
+         call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
 
          ! source orientation to destination translational displacement:
-      row = BlockRowStart                    ! start of u%TranslationDisp field
-      col = BlockColStart + y%NNodes*3       ! start of y%Orientation field [skip 1 field with 3 components]
-      call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
+         row = BlockRowStart                    ! start of u%TranslationDisp field
+         col = BlockColStart + y%NNodes*3       ! start of y%Orientation field [skip 1 field with 3 components]
+         call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
+      endif
 
-
-      if (PRESENT(onlyTranslationDisp)) then
-         if (onlyTranslationDisp) return ! destination includes only the translational displacement field, so we'll just return
-      end if
 
 
       !*** row for orientation ***
+      if (FieldMask(MASKID_ORIENTATION)) then
          ! source orientation to destination orientation:
-      row = BlockRowStart + u%NNodes*3       ! start of u%Orientation field [skip 1 field with 3 components]
-      col = BlockColStart + y%NNodes*3       ! start of y%Orientation field [skip 1 field with 3 components]
-      call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+         row = BlockRowStart + u%NNodes*3       ! start of u%Orientation field [skip 1 field with 3 components]
+         col = BlockColStart + y%NNodes*3       ! start of y%Orientation field [skip 1 field with 3 components]
+         call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+      endif
 
 
       !*** row for translational velocity ***
+      if (FieldMask(MASKID_TRANSLATIONVEL)) then
          ! source translational displacement to destination translational velocity:
-      row = BlockRowStart + u%NNodes*6       ! start of u%TranslationVel field [skip 2 fields with 3 components]
-      col = BlockColStart                    ! start of y%TranslationDisp field
-      call SetBlockMatrix( dUdy, MeshMap%dM%tv_us, row, col )
+         row = BlockRowStart + u%NNodes*6       ! start of u%TranslationVel field [skip 2 fields with 3 components]
+         col = BlockColStart                    ! start of y%TranslationDisp field
+         call SetBlockMatrix( dUdy, MeshMap%dM%tv_us, row, col )
 
          ! source translational velocity to destination translational velocity:
-      row = BlockRowStart + u%NNodes*6       ! start of u%TranslationVel field [skip 2 fields with 3 components]
-      col = BlockColStart + y%NNodes*6       ! start of y%TranslationVel field [skip 2 fields with 3 components]
-      call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+         row = BlockRowStart + u%NNodes*6       ! start of u%TranslationVel field [skip 2 fields with 3 components]
+         col = BlockColStart + y%NNodes*6       ! start of y%TranslationVel field [skip 2 fields with 3 components]
+         call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
 
          ! source rotational velocity to destination translational velocity:
-      row = BlockRowStart + u%NNodes*6       ! start of u%TranslationVel field [skip 2 fields with 3 components]
-      col = BlockColStart + y%NNodes*9       ! start of y%RotationVel field [skip 3 fields with 3 components]
-      call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
+         row = BlockRowStart + u%NNodes*6       ! start of u%TranslationVel field [skip 2 fields with 3 components]
+         col = BlockColStart + y%NNodes*9       ! start of y%RotationVel field [skip 3 fields with 3 components]
+         call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
+      endif
 
-
-      if (PRESENT(skipRotVel)) then
-         if (skipRotVel) return ! destination does not include rotational velocities or accelerations, so we'll just return
-      end if
 
 
       !*** row for rotational velocity ***
+      if (FieldMask(MASKID_ROTATIONVEL)) then
          ! source rotational velocity to destination rotational velocity:
-      row = BlockRowStart + u%NNodes*9       ! start of u%RotationVel field [skip 3 fields with 3 components]
-      col = BlockColStart + y%NNodes*9       ! start of y%RotationVel field [skip 3 fields with 3 components]
-      call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+         row = BlockRowStart + u%NNodes*9       ! start of u%RotationVel field [skip 3 fields with 3 components]
+         col = BlockColStart + y%NNodes*9       ! start of y%RotationVel field [skip 3 fields with 3 components]
+         call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+      endif
 
 
       !*** row for translational acceleration ***
+      if (FieldMask(MASKID_TRANSLATIONACC)) then
          ! source translational displacement to destination translational acceleration:
-      row = BlockRowStart + u%NNodes*12      ! start of u%TranslationAcc field [skip 4 fields with 3 components]
-      col = BlockColStart                    ! start of y%TranslationDisp field
-      call SetBlockMatrix( dUdy, MeshMap%dM%ta_us, row, col )
+         row = BlockRowStart + u%NNodes*12      ! start of u%TranslationAcc field [skip 4 fields with 3 components]
+         col = BlockColStart                    ! start of y%TranslationDisp field
+         call SetBlockMatrix( dUdy, MeshMap%dM%ta_us, row, col )
 
          ! source rotational velocity to destination translational acceleration:
-      row = BlockRowStart + u%NNodes*12      ! start of u%TranslationAcc field [skip 4 fields with 3 components]
-      col = BlockColStart + y%NNodes*9       ! start of y%RotationVel field [skip 3 fields with 3 components]
-      call SetBlockMatrix( dUdy, MeshMap%dM%ta_rv, row, col )
+         row = BlockRowStart + u%NNodes*12      ! start of u%TranslationAcc field [skip 4 fields with 3 components]
+         col = BlockColStart + y%NNodes*9       ! start of y%RotationVel field [skip 3 fields with 3 components]
+         call SetBlockMatrix( dUdy, MeshMap%dM%ta_rv, row, col )
 
          ! source translational acceleration to destination translational acceleration:
-      row = BlockRowStart + u%NNodes*12      ! start of u%TranslationAcc field [skip 4 fields with 3 components]
-      col = BlockColStart + y%NNodes*12      ! start of y%TranslationAcc field [skip 4 fields with 3 components]
-      call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+         row = BlockRowStart + u%NNodes*12      ! start of u%TranslationAcc field [skip 4 fields with 3 components]
+         col = BlockColStart + y%NNodes*12      ! start of y%TranslationAcc field [skip 4 fields with 3 components]
+         call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
 
          ! source rotational acceleration to destination translational acceleration:
-      row = BlockRowStart + u%NNodes*12      ! start of u%TranslationAcc field [skip 4 fields with 3 components]
-      col = BlockColStart + y%NNodes*15      ! start of y%RotationAcc field [skip 5 fields with 3 components]
-      call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
-
-
-      if (PRESENT(skipRotAcc)) then
-         if (skipRotAcc) return ! destination does not include rotational accelerations, so we'll just return
-      end if
+         row = BlockRowStart + u%NNodes*12      ! start of u%TranslationAcc field [skip 4 fields with 3 components]
+         col = BlockColStart + y%NNodes*15      ! start of y%RotationAcc field [skip 5 fields with 3 components]
+         call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
+      endif
 
 
       !*** row for rotational acceleration ***
+      if (FieldMask(MASKID_ROTATIONACC)) then
          ! source rotational acceleration to destination rotational acceleration
-      row = BlockRowStart + u%NNodes*15      ! start of u%RotationAcc field [skip 5 fields with 3 components]
-      col = BlockColStart + y%NNodes*15      ! start of y%RotationAcc field [skip 5 fields with 3 components]
-      call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+         row = BlockRowStart + u%NNodes*15      ! start of u%RotationAcc field [skip 5 fields with 3 components]
+         col = BlockColStart + y%NNodes*15      ! start of y%RotationAcc field [skip 5 fields with 3 components]
+         call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+      endif
 
 
 END SUBROUTINE Assemble_dUdy_Motions
