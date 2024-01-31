@@ -444,10 +444,11 @@ SUBROUTINE Init_Lin_InputOutput(p_FAST, y_FAST, NumBl, NumBlNodes, ErrStat, ErrM
             y_FAST%Lin%Modules(ThisModule)%Instance(k)%use_u = .false.
          end do
       end do
-      
-      ! AD standard inputs: UserProp(NumBlNodes,NumBl)
+     
+!NOTE: we assume that the standard inputs are the last inputs.  These would ideally be checked against a stored set of indices so the order could be arbitrary 
+      ! AD standard inputs: UserProp(NumBlNodes,NumBl), and 3 Extended inputs
       if (p_FAST%CompAero == MODULE_AD) then
-         do j=1,NumBl*NumBlNodes
+         do j=1,NumBl*NumBlNodes+3
             y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%SizeLin(LIN_INPUT_COL)+1-j) = .true.
          end do
       end if
@@ -3068,6 +3069,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
             
       END IF ! tailfin
 
+!FIXME: nacelle + hub
    END IF ! aero loads
       
       ! U_ED_SD_HD_BD_Orca_Residual() in InputSolve Option 1
@@ -3410,6 +3412,24 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, p_AD, y_ED, BD, 
    call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%mi, AD_Start, ED_Out_Start )
       
 
+   !-----------------------------------
+   ! TailFin
+   CALL Linearize_Point_to_Point( y_ED%TFinCMMotion, u_AD%rotors(1)%TFinMotion, MeshMapData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%TFinMotion' )
+      if (errStat>=AbortErrLev) return
+      
+   ! *** AD translational displacement: from ED translational displacement (MeshMapData%ED_P_2_AD_P_H%dM%mi) and orientation (MeshMapData%ED_P_2_AD_P_H%dM%fx_p)
+   AD_Start = Indx_u_AD_TFin_Start(u_AD, p_AD, y_FAST) ! start of u_AD%rotors(1)%TFinMotion%TranslationDisp field   
+   ED_Out_Start = Indx_y_ED_TFin_Start(y_ED, y_FAST) ! start of y_ED%TFinCMMotion%TranslationDisp field
+   call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%mi, AD_Start, ED_Out_Start )
+
+   ED_Out_Start = Indx_y_ED_TFin_Start(y_ED, y_FAST) + y_ED%TFinCMMotion%NNodes * 3 ! start of y_ED%TFinCMMotion%Orientation field
+   call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%fx_p, AD_Start, ED_Out_Start )
+      
+   ! *** AD orientation: from ED orientation
+   AD_Start = AD_Start + u_AD%rotors(1)%TFinMotion%NNodes * 3 ! move past the AD translation disp field to orientation field         
+   call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%mi, AD_Start, ED_Out_Start )
+ 
 
    !...................................
    ! tower
@@ -3477,24 +3497,6 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, p_AD, y_ED, BD, 
    END IF
    
    
-   !-----------------------------------
-   ! TailFin
-   CALL Linearize_Point_to_Point( y_ED%TFinCMMotion, u_AD%rotors(1)%TFinMotion, MeshMapData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%TFinMotion' )
-      if (errStat>=AbortErrLev) return
-      
-   ! *** AD translational displacement: from ED translational displacement (MeshMapData%ED_P_2_AD_P_H%dM%mi) and orientation (MeshMapData%ED_P_2_AD_P_H%dM%fx_p)
-   AD_Start = Indx_u_AD_TFin_Start(u_AD, p_AD, y_FAST) ! start of u_AD%rotors(1)%TFinMotion%TranslationDisp field   
-   ED_Out_Start = Indx_y_ED_TFin_Start(y_ED, y_FAST) ! start of y_ED%TFinCMMotion%TranslationDisp field
-   call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%mi, AD_Start, ED_Out_Start )
-
-   ED_Out_Start = Indx_y_ED_TFin_Start(y_ED, y_FAST) + y_ED%TFinCMMotion%NNodes * 3 ! start of y_ED%TFinCMMotion%Orientation field
-   call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%fx_p, AD_Start, ED_Out_Start )
-      
-   ! *** AD orientation: from ED orientation
-   AD_Start = AD_Start + u_AD%rotors(1)%TFinMotion%NNodes * 3 ! move past the AD translation disp field to orientation field         
-   call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%mi, AD_Start, ED_Out_Start )
- 
 END SUBROUTINE Linear_AD_InputSolve_NoIfW_dy
 !----------------------------------------------------------------------------------------------------------------------------------
 
