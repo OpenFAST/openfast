@@ -1300,8 +1300,7 @@ CONTAINS
       REAL(SiKi)                       :: t, Frac
       CHARACTER(1024)                  :: FileName             ! Name of MoorDyn input file  
       CHARACTER(120)                   :: Line
-!      CHARACTER(120)                   :: Line2  
-      CHARACTER(120)                   :: entries2  
+      CHARACTER(4096)                  :: entries2  
       INTEGER(IntKi)                   :: coordtype
    
       INTEGER(IntKi)                   :: NStepWave    ! 
