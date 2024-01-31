@@ -164,6 +164,12 @@ typedef	^	ED_InputFile	ReKi	TeetSStP	-	-	-	"Rotor-teeter soft-stop position"	rad
 typedef	^	ED_InputFile	ReKi	TeetHStP	-	-	-	"Rotor-teeter hard-stop position"	radians
 typedef	^	ED_InputFile	ReKi	TeetSSSp	-	-	-	"Rotor-teeter soft-stop linear-spring constant"	N-m/rad
 typedef	^	ED_InputFile	ReKi	TeetHSSp	-	-	-	"Rotor-teeter hard-stop linear-spring constant"	N-m/rad
+typedef ^       ED_InputFile    IntKi   YawFrctMod      -       -       -       "Identifier for YawFrctMod (0 [no friction], 1 [does not use Fz at bearing], 2 [does use Fz at bearing], or 3 [user defined model]"     -
+typedef ^       ED_InputFile    R8Ki    M_CD    -       -       -       "Dynamic friction moment at null yaw rate"      N-m
+typedef ^       ED_InputFile    R8Ki    M_CSMAX -       -       -       "Maximum Coulomb friction torque" N-m
+typedef ^       ED_InputFile    R8Ki    sig_v   -       -       -       "Viscous friction coefficient"  N-m/(rad/s)
+#typedef        ^       ED_InputFile    R8Ki    thr_omg -       -       -       "Yaw rate stiction threshold"   rad/s
+#typedef        ^       ED_InputFile    R8Ki    thr_omgdot      -       -       -       "Yaw acceleration stiction threshold"   rad/s^2
 typedef	^	ED_InputFile	ReKi	GBoxEff	-	-	-	"Gearbox efficiency"	%
 typedef	^	ED_InputFile	ReKi	GBRatio	-	-	-	"Gearbox ratio"	-
 typedef	^	ED_InputFile	ReKi	DTTorSpr	-	-	-	"Drivetrain torsional spring"	N-m/rad
@@ -492,6 +498,7 @@ typedef	^	ED_RtHndSide	ReKi	TFrlMom	-	-	-	"The total tail-furl spring and damper
 typedef	^	ED_RtHndSide	ReKi	RFrlMom	-	-	-	"The total rotor-furl spring and damper moment"
 typedef	^	ED_RtHndSide	ReKi	GBoxEffFac	-	-	-	"The factor used to apply the gearbox efficiency effects to the equation associated with the generator DOF"
 typedef	^	ED_RtHndSide	ReKi	rSAerCen	{:}{:}{:}	-	-	"aerodynamic pitching moment arm (i.e., the position vector from point S on the blade to the aerodynamic center of the element)"
+typedef ^       ED_RtHndSide    ReKi    YawFriMom       -       -       -       "Yaw Friction Moment"   kN-m
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
@@ -512,6 +519,10 @@ typedef	^	OtherStateType	ReKi	HSSBrTrq	-	-	-	"HSSBrTrq from update states; a hac
 typedef	^	OtherStateType	ReKi	HSSBrTrqC	-	-	-	"Commanded HSS brake torque (adjusted for sign)"	N-m
 typedef	^	OtherStateType	IntKi	SgnPrvLSTQ	-	-	-	"The sign of the low-speed shaft torque from the previous call to RtHS().  This is calculated at the end of RtHS().  NOTE: The low-speed shaft torque is assumed to be positive at the beginning of the run!"	-
 typedef	^	OtherStateType	IntKi	SgnLSTQ	{ED_NMX}	-	-	"history of sign of LSTQ"
+typedef ^       OtherStateType  ReKi    Mfhat   -       -       -       "Final Yaw Friction Torque"     N-m
+typedef ^       OtherStateType  ReKi    Mfp     -       -       -       "Yaw Friction Torque to bring yaw system to a stop at current time step"        N-m
+typedef ^       OtherStateType  R8Ki    OmegaTn -       -       -       "Yaw rate at t_n used to calculate friction torque and yaw rate at t_n+1"       rad/s
+typedef ^       OtherStateType  R8Ki    OmegaDotTn      -       -       -       "Yaw acceleration at t_n used to calculate friction torque and yaw rate at t_n+1"       rad/s^2
 
 # ..... Misc Vars ................................................................................................................
 typedef	^	MiscVarType	ED_CoordSys	CoordSys	-	-	-	"Coordinate systems in the FAST framework"	-
@@ -524,6 +535,9 @@ typedef	^	MiscVarType	IntKi	AugMat_pivot	{:}	-	-	"Pivot column for AugMat in LAP
 typedef	^	MiscVarType	ReKi	OgnlGeAzRo	{:}	-	-	"Original DOF_GeAz row in AugMat"	-
 typedef	^	MiscVarType	R8Ki	QD2T	{:}	-	-	"Solution (acceleration) vector; the first time derivative of QDT"
 typedef	^	MiscVarType	Logical	IgnoreMod	-	-	-	"whether to ignore the modulo in ED outputs (necessary for linearization perturbations)"	-
+typedef ^       MiscVarType     ReKi    OgnlYawRow      {:}     -       -       "Original DOF_Yaw row in AugMat"        -
+typedef ^       MiscVarType     ReKi    FrcONcRt        -       -       -       "Fz acting on yaw bearing including inertial contributions"     N
+typedef ^       MiscVarType     ReKi    Mz      -       -       -       "External loading on yaw bearing not including inertial contributions"  N-m
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -740,6 +754,13 @@ typedef	^	ParameterType	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground l
 typedef	^	ParameterType	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
 typedef	^	ParameterType	LOGICAL	BD4Blades	-	-	-	"flag to determine if BeamDyn is computing blade loads (true) or ElastoDyn is (false)"	-
 typedef	^	ParameterType	LOGICAL	UseAD14	-	-	-	"flag to determine if AeroDyn14 is being used. Will remove this later when we've replaced AD14."	-
+typedef ^       ParameterType   IntKi   YawFrctMod      -       -       -       "Identifier for YawFrctMod (0 [no friction], 1 [does not use Fz at bearing], or 2 [does use Fz at bearing]"     -
+typedef ^       ParameterType   R8Ki    M_CD    -       -       -       "Dynamic friction moment at null yaw rate"      N-m
+typedef ^       ParameterType   R8Ki    M_CSMAX -       -       -       "Maximum Coulomb friction torque"       N-m
+typedef ^       ParameterType   R8Ki    sig_v   -       -       -       "Viscous friction coefficient"  N-m/(rad/s)
+#typedef        ^       ParameterType   R8Ki    thr_omg -       -       -       "Yaw rate stiction threshold"   rad/s
+#typedef        ^       ParameterType   R8Ki    thr_omgdot      -       -       -       "Yaw acceleration stiction threshold"   rad/s^2
+
 # .... ED_AllBlNds option ........................................................................................................
 typedef  ^  ParameterType  IntKi   BldNd_NumOuts        -  -  -  "Number of requested output channels per blade node (ED_AllBldNdOuts)"  -
 typedef  ^  ParameterType  IntKi   BldNd_TotNumOuts     -  -  -  "Total number of requested output channels of blade node information (BldNd_NumOuts * BldNd_BlOutNd * BldNd_BladesOut -- ED_AllBldNdOuts)" -
