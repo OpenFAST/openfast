@@ -8980,8 +8980,8 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
                  , Orientation     = .TRUE.    &
                  , TranslationVel  = .TRUE.    &
                  , RotationVel     = .TRUE.    &
-                 , TranslationAcc  = .TRUE.    &
-                 , RotationAcc     = .TRUE.    &   
+                 , TranslationAcc  = .FALSE.   &
+                 , RotationAcc     = .FALSE.   &   
                  , ErrStat  = ErrStat2         &
                  , ErrMess  = ErrMsg2          )
 
@@ -10940,11 +10940,11 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       end if
    
       p%Jac_ny = p%Jac_ny &
-         + y%PlatformPtMesh%NNodes  * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
-         + y%TowerLn2Mesh%NNodes    * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
-         + y%HubPtMotion%NNodes     * 9            & ! 3 TranslationDisp, Orientation, and RotationVel at each node
-         + y%NacelleMotion%NNodes   * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
-         + y%TFinCMMotion%NNodes    * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
+         + y%PlatformPtMesh%NNodes  * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, RotationAcc at each node
+         + y%TowerLn2Mesh%NNodes    * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, RotationAcc at each node
+         + y%HubPtMotion%NNodes     * 9            & ! 3 TranslationDisp, Orientation,                 RotationVel                              at each node
+         + y%NacelleMotion%NNodes   * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, RotationAcc at each node
+         + y%TFinCMMotion%NNodes    * 12           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel                              at each node
          + 3                                       & ! Yaw, YawRate, and HSS_Spd
          + p%NumOuts  + p%BldNd_TotNumOuts           ! WriteOutput values 
       
@@ -10989,7 +10989,14 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       end do   
 
       call PackMotionMesh_Names(y%NacelleMotion, 'Nacelle', InitOut%LinNames_y, index_next)
-      call PackMotionMesh_Names(y%TFinCMMotion,  'TailFin', InitOut%LinNames_y, index_next)
+
+      Mask  = .false.
+      Mask(MASKID_TRANSLATIONDISP) = .true.
+      Mask(MASKID_ORIENTATION)     = .true.
+      Mask(MASKID_TRANSLATIONVEL)  = .true.
+      Mask(MASKID_ROTATIONVEL)     = .true.
+      call PackMotionMesh_Names(y%TFinCMMotion,  'TailFin', InitOut%LinNames_y, index_next, FieldMask=Mask)
+
       InitOut%LinNames_y(index_next) = 'Yaw, rad'; index_next = index_next+1
       InitOut%LinNames_y(index_next) = 'YawRate, rad/s'; index_next = index_next+1
       InitOut%LinNames_y(index_next) = 'HSS_Spd, rad/s'
@@ -11562,7 +11569,13 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
          call PackMotionMesh_dY(y_p%BladeRootMotion(k),   y_m%BladeRootMotion(k),   dY, indx_first)
       end do
       call PackMotionMesh_dY(y_p%NacelleMotion,  y_m%NacelleMotion,  dY, indx_first)
-      call PackMotionMesh_dY(y_p%TFinCMMotion,  y_m%TFinCMMotion,  dY, indx_first)
+
+      Mask  = .false.
+      Mask(MASKID_TRANSLATIONDISP) = .true.
+      Mask(MASKID_ORIENTATION)     = .true.
+      Mask(MASKID_TRANSLATIONVEL)  = .true.   
+      Mask(MASKID_ROTATIONVEL)     = .true.   
+      call PackMotionMesh_dY(y_p%TFinCMMotion,  y_m%TFinCMMotion,  dY, indx_first, FieldMask=Mask)
                      
       dY(indx_first) = y_p%Yaw     - y_m%Yaw;       indx_first = indx_first + 1
       dY(indx_first) = y_p%YawRate - y_m%YawRate;   indx_first = indx_first + 1
@@ -11748,19 +11761,26 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          end do      
       end if
       if (.not. p%CompAeroMaps) then
+         call PackMotionMesh(y%TowerLn2Mesh, y_op, index, TrimOP=ReturnTrimOP)
+         call PackMotionMesh(y%PlatformPtMesh, y_op, index, TrimOP=ReturnTrimOP)
+      
          Mask  = .false.
          Mask(MASKID_TRANSLATIONDISP) = .true.
          Mask(MASKID_ORIENTATION) = .true.
          Mask(MASKID_ROTATIONVEL) = .true.
-      
-         call PackMotionMesh(y%PlatformPtMesh, y_op, index, TrimOP=ReturnTrimOP)
-         call PackMotionMesh(y%TowerLn2Mesh, y_op, index, TrimOP=ReturnTrimOP)
          call PackMotionMesh(y%HubPtMotion, y_op, index, FieldMask=Mask, TrimOP=ReturnTrimOP)
+
          do k=1,p%NumBl_Lin
             call PackMotionMesh(y%BladeRootMotion(k), y_op, index, TrimOP=ReturnTrimOP)
          end do   
          call PackMotionMesh(y%NacelleMotion, y_op, index, TrimOP=ReturnTrimOP)
-         call PackMotionMesh(y%TFinCMMotion, y_op, index, TrimOP=ReturnTrimOP)
+
+         Mask  = .false.
+         Mask(MASKID_TRANSLATIONDISP) = .true.
+         Mask(MASKID_ORIENTATION)     = .true.
+         Mask(MASKID_TRANSLATIONVEL)  = .true.
+         Mask(MASKID_ROTATIONVEL)     = .true.
+         call PackMotionMesh(y%TFinCMMotion, y_op, index, FieldMask=Mask, TrimOP=ReturnTrimOP)
       
          y_op(index) = y%Yaw     ; index = index + 1    
          y_op(index) = y%YawRate ; index = index + 1    

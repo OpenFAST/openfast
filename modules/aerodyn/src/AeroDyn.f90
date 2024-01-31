@@ -6175,6 +6175,17 @@ SUBROUTINE RotGetOP( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, ErrSt
          call PackMotionMesh(u%HubMotion, u_op, index, FieldMask=FieldMask)
 
          !------------------------------
+         ! TailFin
+         !     Module/Mesh/Field: u%TFinMotion%TranslationDisp
+         !     Module/Mesh/Field: u%TFinMotion%Orientation
+         !     Module/Mesh/Field: u%TFinMotion%TranslationVel
+         FieldMask = .false.
+         FieldMask(MASKID_TRANSLATIONDISP) = .true.
+         FieldMask(MASKID_ORIENTATION)     = .true.
+         FieldMask(MASKID_TRANSLATIONVEL)  = .true.
+         call PackMotionMesh(u%TFinMotion, u_op, index, FieldMask=FieldMask)
+
+         !------------------------------
          ! Tower
          !     Module/Mesh/Field: u%TowerMotion%TranslationDisp
          !     Module/Mesh/Field: u%TowerMotion%Orientation
@@ -6227,17 +6238,6 @@ SUBROUTINE RotGetOP( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, ErrSt
       end do
 
       if (.not. p_AD%CompAeroMaps) then
-         !------------------------------
-         ! TailFin
-         !     Module/Mesh/Field: u%TFinMotion%TranslationDisp
-         !     Module/Mesh/Field: u%TFinMotion%Orientation
-         !     Module/Mesh/Field: u%TFinMotion%TranslationVel
-         FieldMask = .false.
-         FieldMask(MASKID_TRANSLATIONDISP) = .true.
-         FieldMask(MASKID_ORIENTATION)     = .true.
-         FieldMask(MASKID_TRANSLATIONVEL)  = .true.
-         call PackMotionMesh(u%TFinMotion, u_op, index, FieldMask=FieldMask)
-
          !------------------------------
          ! UserProp
          !     Module/Mesh/Field: u%UserProp(:,:)
@@ -7094,7 +7094,7 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
       !     Module/Mesh/Field: u%TFinMotion%TranslationVel  = 33;
       case( 6);   u%TFinMotion%TranslationDisp(fieldIndx,node) = u%TFinMotion%TranslationDisp(fieldIndx,node) + du * perturb_sign
       case( 7);   call PerturbOrientationMatrix( u%TFinMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx )
-      case( 8);   u%TFinMotion%RotationVel(    fieldIndx,node) = u%TFinMotion%RotationVel(fieldIndx,node) + du * perturb_sign
+      case( 8);   u%TFinMotion%TranslationVel( fieldIndx,node) = u%TFinMotion%TranslationVel(fieldIndx,node) + du * perturb_sign
 
       ! Tower
       !     Module/Mesh/Field: u%TowerMotion%TranslationDisp =  9;
@@ -7104,7 +7104,7 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
       case( 9);   u%TowerMotion%TranslationDisp(fieldIndx,node) = u%TowerMotion%TranslationDisp( fieldIndx,node) + du * perturb_sign
       case(10);   CALL PerturbOrientationMatrix( u%TowerMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
       case(11);   u%TowerMotion%TranslationVel( fieldIndx,node) = u%TowerMotion%TranslationVel( fieldIndx,node) + du * perturb_sign
-      case(12);   u%TowerMotion%TranslationAcc( fieldIndx,node)  = u%TowerMotion%TranslationAcc(fieldIndx,node) + du * perturb_sign
+      case(12);   u%TowerMotion%TranslationAcc( fieldIndx,node) = u%TowerMotion%TranslationAcc(fieldIndx,node) + du * perturb_sign
 
       ! BladeRoot
       !     Module/Mesh/Field: u%BladeRootMotion(1)%Orientation = 13;

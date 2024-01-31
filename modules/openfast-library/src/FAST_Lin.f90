@@ -1858,7 +1858,6 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
       END IF
       
       ! ED inputs on tower from AD:
-      
       IF ( y_AD%rotors(1)%TowerLoad%Committed ) THEN
          ED_Start_mt = Indx_u_ED_Tower_Start(u_ED, y_FAST) &
                        + u_ED%TowerPtLoads%NNodes   * 3             ! 3 forces at each node (we're going to start at the moments)
@@ -1872,7 +1871,40 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
          end if
       END IF
 
-      ! Tailfin
+      ! ED inputs on Hub from AD:
+      IF ( y_AD%rotors(1)%HubLoad%Committed ) THEN
+         ED_Start_mt = Indx_u_ED_Hub_Start(u_ED, y_FAST) &
+                       + u_ED%HubPtLoad%NNodes   * 3             ! 3 forces at each node (we're going to start at the moments)
+         
+print*,'Lin Hub broken!!!!!'
+!FIXME: source mesh not initialized...
+!         CALL Linearize_Line2_to_Point( y_AD%rotors(1)%HubLoad, u_ED%HubPtLoad, MeshMapData%AD_P_2_ED_P_H, ErrStat2, ErrMsg2, u_AD%rotors(1)%HubMotion, y_ED%HubPtMotion )
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+            
+            ! AD is source in the mapping, so we want M_{uSm}
+         if (allocated(MeshMapData%AD_P_2_ED_P_H%dM%m_us )) then
+!            call SetBlockMatrix( dUdu, MeshMapData%AD_P_2_ED_P_H%dM%m_us, ED_Start_mt, y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+         end if
+      END IF
+
+      ! ED inputs on Nacelle from AD:
+      IF ( y_AD%rotors(1)%NacelleLoad%Committed ) THEN
+         ED_Start_mt = Indx_u_ED_Nacelle_Start(u_ED, y_FAST) &
+                       + u_ED%NacelleLoads%NNodes   * 3             ! 3 forces at each node (we're going to start at the moments)
+
+print*,'Lin Nacelle'         
+print*,'Lin Nacelle broken!!!!!'
+!FIXME: source mesh not initialized...
+!         CALL Linearize_Line2_to_Point( y_AD%rotors(1)%NacelleLoad, u_ED%NacelleLoads, MeshMapData%AD_P_2_ED_P_N, ErrStat2, ErrMsg2, u_AD%rotors(1)%NacelleMotion, y_ED%NacelleMotion )
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+            
+            ! AD is source in the mapping, so we want M_{uSm}
+         if (allocated(MeshMapData%AD_P_2_ED_P_N%dM%m_us )) then
+!            call SetBlockMatrix( dUdu, MeshMapData%AD_P_2_ED_P_N%dM%m_us, ED_Start_mt, y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+         end if
+      END IF
+
+      ! ED inputs on Tailfin from AD:
       IF ( y_AD%rotors(1)%TFinLoad%Committed ) THEN
          ED_Start_mt = Indx_u_ED_TFin_Start(u_ED, y_FAST) &
                        + u_ED%TFinCMLoads%NNodes   * 3             ! 3 forces at each node (we're going to start at the moments)
@@ -2526,7 +2558,47 @@ SUBROUTINE Linear_AD_InputSolve_du( p_FAST, y_FAST, u_AD, p_AD, y_ED, BD, MeshMa
    ! Set the inputs from ElastoDyn and/or BeamDyn:
    !-------------------------------------------------------------------------------------------------
       
-      ! tower
+   !-----------------------------------
+   ! Nacelle - Disp, Orient
+   ! NOTE: no velocity or acceleration terms, so nothing to do here.
+   if (u_AD%rotors(1)%NacelleMotion%Committed) then
+      call Linearize_Point_to_Point( y_ED%NacelleMotion, u_AD%rotors(1)%NacelleMotion, MeshMapData%ED_P_2_AD_P_N, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%NacelleMotion' )
+   end if
+
+
+   !-----------------------------------
+   ! Hub - Disp, Orient, RotVel
+   if (u_AD%rotors(1)%HubMotion%Committed) then
+      call Linearize_Point_to_Point( y_ED%HubPtMotion, u_AD%rotors(1)%HubMotion, MeshMapData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%HubMotion' )
+
+!FIXME: no translation accel.  So do we do anything here?
+      !AD is the destination here, so we need tv_ud
+!      if (allocated( MeshMapData%ED_P_2_AD_P_H%dM%tv_ud)) then
+!         AD_Start_td = Indx_u_AD_Hub_Start(u_AD, p_AD, y_FAST) ! index for u_AD%rotors(1)%HubMotion(k)%translationDisp field
+!         AD_Start_tv = AD_Start_td + u_AD%rotors(1)%HubMotion%NNodes * 6 ! 2 fields (TranslationDisp and Orientation) with 3 components before rotational velocity field      
+!         call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_AD_P_H%dM%tv_ud, AD_Start_tv, AD_Start_td )
+!      end if
+   end if
+
+
+   !-----------------------------------
+   ! TailFin - Disp, Orient, TransVel, TransAcc
+   if (u_AD%rotors(1)%TFinMotion%Committed) then
+      call Linearize_Point_to_Point( y_ED%TFinCMMotion, u_AD%rotors(1)%TFinMotion, MeshMapData%ED_P_2_AD_P_TF, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%TFinMotion' )
+
+      !AD is the destination here, so we need tv_ud
+      if (allocated( MeshMapData%ED_P_2_AD_P_TF%dM%tv_ud)) then
+         AD_Start_td = Indx_u_AD_TFin_Start(u_AD, p_AD, y_FAST) ! index for u_AD%rotors(1)%TFinMotion(k)%translationDisp field
+         AD_Start_tv = AD_Start_td + u_AD%rotors(1)%TFinMotion%NNodes * 6 ! 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field
+         call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_AD_P_TF%dM%tv_ud, AD_Start_tv, AD_Start_td )
+      end if
+   end if
+
+   !-----------------------------------
+   ! tower - Disp, Orient, TransVel, TransAcc
    IF (u_AD%rotors(1)%TowerMotion%Committed) THEN
       CALL Linearize_Line2_to_Line2( y_ED%TowerLn2Mesh, u_AD%rotors(1)%TowerMotion, MeshMapData%ED_L_2_AD_L_T, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%TowerMotion' )     
@@ -2572,6 +2644,7 @@ SUBROUTINE Linear_AD_InputSolve_du( p_FAST, y_FAST, u_AD, p_AD, y_ED, BD, MeshMa
          AD_Start_ta = AD_Start_td + u_AD%rotors(1)%BladeMotion(k)%NNodes * 12 ! 4 fields (TranslationDisp, Orientation, TranslationVel, and RotationVel) with 3 components before translational acceleration field
          call SetBlockMatrix( dUdu, MeshMapData%BDED_L_2_AD_L_B(k)%dM%ta_ud, AD_Start_ta, AD_Start_td )
       end if
+!FIXME: do we need to add rotational accel???
    END DO
 
 END SUBROUTINE Linear_AD_InputSolve_du
@@ -3058,7 +3131,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
       IF ( y_AD%rotors(1)%TFinLoad%Committed ) THEN
          !!! ! This linearization was done in forming dUdu (see Linear_ED_InputSolve_du()), so we don't need to re-calculate these matrices 
          !!! ! while forming dUdy, too.
-         !CALL Linearize_Line2_to_Point( y_AD%rotors(1)%TFinLoad, u_ED%TFinCMLoads, MeshMapData%AD_L_2_ED_P_T, ErrStat2, ErrMsg2, u_AD%rotors(1)%TFinMotion, y_ED%TFinCMMotion )
+         !CALL Linearize_Line2_to_Point( y_AD%rotors(1)%TFinLoad, u_ED%TFinCMLoads, MeshMapData%AD_L_2_ED_P_TF, ErrStat2, ErrMsg2, u_AD%rotors(1)%TFinMotion, y_ED%TFinCMMotion )
             
             ! AD loads-to-ED loads transfer (dU^{ED}/dy^{AD}):
          ED_Start = Indx_u_ED_TFin_Start(u_ED, y_FAST) ! u_ED%TFinCMLoads%Force field
@@ -3070,10 +3143,44 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
          ED_Start = ED_Start + u_ED%TFinCMLoads%NNodes*3 ! start of u_ED%TFinCMLoads%Moment field  [skip the ED forces to get to the moments]
          ED_Out_Start  = Indx_y_ED_TFin_Start(y_ED, y_FAST) ! start of y_ED%TFinCMMotion%TranslationDisp field
          call SumBlockMatrix( dUdy, MeshMapData%AD_P_2_ED_P_TF%dM%m_uD, ED_Start, ED_Out_Start )
-            
       END IF ! tailfin
 
-!FIXME: nacelle + hub
+      IF ( y_AD%rotors(1)%NacelleLoad%Committed ) THEN
+         !!! ! This linearization was done in forming dUdu (see Linear_ED_InputSolve_du()), so we don't need to re-calculate these matrices 
+         !!! ! while forming dUdy, too.
+         !CALL Linearize_Line2_to_Point( y_AD%rotors(1)%NacelleLoad, u_ED%NacelleLoads, MeshMapData%AD_L_2_ED_P_N, ErrStat2, ErrMsg2, u_AD%rotors(1)%NacelleMotion, y_ED%NacelleMotion )
+
+!FIXME: nacelle linearize fails
+            ! AD loads-to-ED loads transfer (dU^{ED}/dy^{AD}):
+         ED_Start = Indx_u_ED_Nacelle_Start(u_ED, y_FAST) ! u_ED%NacelleLoads%Force field
+         AD_Out_Start = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) ! start of y_AD%rotors(1)%NacelleLoads%Force
+         AD_Out_Start = AD_Out_Start + y_AD%rotors(1)%NacelleLoad%NNodes*6
+!         call Assemble_dUdy_Loads(y_AD%rotors(1)%NacelleLoad, u_ED%NacelleLoads, MeshMapData%AD_P_2_ED_P_N, ED_Start, AD_Out_Start, dUdy)
+
+            ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
+         ED_Start = ED_Start + u_ED%NacelleLoads%NNodes*3 ! start of u_ED%NacelleLoads%Moment field  [skip the ED forces to get to the moments]
+         ED_Out_Start  = Indx_y_ED_Nacelle_Start(y_ED, y_FAST) ! start of y_ED%NacelleMotion%TranslationDisp field
+!         call SumBlockMatrix( dUdy, MeshMapData%AD_P_2_ED_P_N%dM%m_uD, ED_Start, ED_Out_Start )
+      END IF ! nacelle
+
+      IF ( y_AD%rotors(1)%HubLoad%Committed ) THEN
+         !!! ! This linearization was done in forming dUdu (see Linear_ED_InputSolve_du()), so we don't need to re-calculate these matrices 
+         !!! ! while forming dUdy, too.
+         !CALL Linearize_Line2_to_Point( y_AD%rotors(1)%HubLoad, u_ED%HubLoads, MeshMapData%AD_L_2_ED_P_H, ErrStat2, ErrMsg2, u_AD%rotors(1)%HubMotion, y_ED%HubMotion )
+
+!FIXME: hub linearize fails
+            ! AD loads-to-ED loads transfer (dU^{ED}/dy^{AD}):
+         ED_Start = Indx_u_ED_Hub_Start(u_ED, y_FAST) ! u_ED%HubLoads%Force field
+         AD_Out_Start = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) ! start of y_AD%rotors(1)%HubLoads%Force
+         AD_Out_Start = AD_Out_Start + y_AD%rotors(1)%HubLoad%NNodes*6
+!         call Assemble_dUdy_Loads(y_AD%rotors(1)%HubLoad, u_ED%HubPtLoad, MeshMapData%AD_P_2_ED_P_H, ED_Start, AD_Out_Start, dUdy)
+
+            ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
+         ED_Start = ED_Start + u_ED%HubPtLoad%NNodes*3 ! start of u_ED%HubLoads%Moment field  [skip the ED forces to get to the moments]
+         ED_Out_Start  = Indx_y_ED_Hub_Start(y_ED, y_FAST) ! start of y_ED%HubMotion%TranslationDisp field
+!         call SumBlockMatrix( dUdy, MeshMapData%AD_P_2_ED_P_H%dM%m_uD, ED_Start, ED_Out_Start )
+      END IF ! hub
+
    END IF ! aero loads
       
       ! U_ED_SD_HD_BD_Orca_Residual() in InputSolve Option 1
@@ -3386,7 +3493,9 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, p_AD, y_ED, BD, 
       AD_Start = Indx_u_AD_Nacelle_Start(u_AD, p_AD, y_FAST) ! start of u_AD%rotors(1)%NacelleMotion%TranslationDisp field   
       ED_Out_Start = Indx_y_ED_Nacelle_Start(y_ED, y_FAST) ! start of y_ED%NacelleMotion%TranslationDisp field
       
-      FieldMask = .true.   ! all fields
+      FieldMask = .false.
+      FieldMask(MASKID_TRANSLATIONDISP) = .true.
+      FieldMask(MASKID_ORIENTATION)     = .true.
       call Assemble_dUdy_Motions(y_ED%NacelleMotion, u_AD%rotors(1)%NacelleMotion, MeshMapData%ED_P_2_AD_P_N, AD_Start, ED_Out_Start, dUdy, FieldMask)
    endif
  
@@ -3432,7 +3541,7 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, p_AD, y_ED, BD, 
  
 
    !...................................
-   ! tower
+   ! tower -- Disp, Orient, TransVel, TransAcc
    IF (u_AD%rotors(1)%TowerMotion%Committed) THEN
       !!! ! This linearization was done in forming dUdu (see Linear_AD_InputSolve_du()), so we don't need to re-calculate these matrices 
       !!! ! while forming dUdy, too.
@@ -3441,7 +3550,11 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, p_AD, y_ED, BD, 
       AD_Start = Indx_u_AD_Tower_Start(u_AD, p_AD, y_FAST) ! start of u_AD%rotors(1)%TowerMotion%TranslationDisp field
       ED_Out_Start = Indx_y_ED_Tower_Start(y_ED, y_FAST) ! start of y_ED%TowerLn2Mesh%TranslationDisp field
       
-      FieldMask = .true.   ! all fields
+      FieldMask = .false.
+      FieldMask(MASKID_TRANSLATIONDISP) = .true.
+      FieldMask(MASKID_ORIENTATION)     = .true.
+      FieldMask(MASKID_TRANSLATIONVEL)  = .true.
+      FieldMask(MASKID_TRANSLATIONACC)  = .true.
       call Assemble_dUdy_Motions(y_ED%TowerLn2Mesh, u_AD%rotors(1)%TowerMotion, MeshMapData%ED_L_2_AD_L_T, AD_Start, ED_Out_Start, dUdy, FieldMask)
    END IF
 
