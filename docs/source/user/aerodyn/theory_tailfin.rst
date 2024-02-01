@@ -164,7 +164,7 @@ Unsteady slender body model
 The unsteady aerodynamics of the tail fin is modeled based on Unsteady Slender Body Theory.
 The theory is extended to include the effect of high yaw angle :cite:`ad-hammam_NREL:2023`.
 
-The normal force on the tail fin can be described as
+The normal force on the tail fin can be described as the sum of three contributions (potential lift, vortex lift, and drag), weighted by separation functions :math:`x_i` as:
 
 .. math::  :label: TFUSBForce
 
@@ -179,6 +179,7 @@ where :math:`\rho` is the density of air, :math:`A_{tf}` is the tail fin area, :
     x_i = (1+exp{[\sigma_i (|\gamma_{tf}|-\alpha^*_i)]})^{-1}
 
 
-where :math:`\sigma_i` are emperical constants characterizing the decay of separation functions, :math:`\gamma_{tf}` is the yaw angle of the tail fin with respect to the free-stream wind (:math:`V_{\text{wind}}`), :math:`\alpha^*_i` are the characteristics angles for separation functions.
+where :math:`\sigma_i` are empirical constants characterizing the decay of separation functions, :math:`\gamma_{tf}` is the yaw angle of the tail fin with respect to the free-stream wind (:math:`V_{\text{wind}}`), :math:`\alpha^*_i` are the characteristics angles for separation functions.
+:math:`x_i` takes on a value between 0 and 1, and are used to activate or deactivate a the contribution of potential lift, vortex lift and draft to the normal force on the tail fin.
 
 The normal force is assumed to act at the user defined reference point on the tail fin and the moment of the normal force is calculated accordingly.

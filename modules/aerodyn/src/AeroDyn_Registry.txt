@@ -55,7 +55,7 @@ typedef  ^  TFinParameterType   ReKi    TFinArea   -    -   - "Tail fin planform
 typedef  ^  TFinParameterType   IntKi   TFinIndMod -    -   - "Model for induced velocity calculation {0=none, 1=rotor-average}" (switch)
 typedef  ^  TFinParameterType   IntKi   TFinAFID   -    -   - "Index of Tail fin airfoil number [1 to NumAFfiles]" -
 typedef  ^  TFinParameterType   ReKi   TFinKp   -    -   - "Tail fin potential lift coefficient for unsteady aerodynamics [used only when TFMod=2]" -
-typedef  ^  TFinParameterType   ReKi   TFinSigma   3    -   - "Tail fin emperical constants characterizing the decay of separation functions [used only when TFMod=2]" -
+typedef  ^  TFinParameterType   ReKi   TFinSigma   3    -   - "Tail fin empirical constants characterizing the decay of separation functions [used only when TFMod=2]" -
 typedef  ^  TFinParameterType   ReKi   TFinAStar   3    -   - "Tail fin characteristics angles for separation functions [used only when TFMod=2]" deg
 typedef  ^  TFinParameterType   ReKi   TFinKv   -    -   - "Tail fin vortex lift coefficient for unsteady aerodynamics [used only when TFMod=2]" -
 typedef  ^  TFinParameterType   ReKi   TFinCDc   -    -   - "Tail fin drag coefficient for unsteady aerodynamics [used only when TFMod=2]" -
@@ -69,7 +69,7 @@ typedef  ^  TFinInputFileType   ReKi    TFinAngles 3    -   - "Tail fin chordlin
 typedef  ^  TFinInputFileType   IntKi   TFinIndMod -    -   - "Model for induced velocity calculation {0=none, 1=rotor-average}" (switch)
 typedef  ^  TFinInputFileType   IntKi   TFinAFID   -    -   - "Index of Tail fin airfoil number [1 to NumAFfiles]" -
 typedef  ^  TFinInputFileType   ReKi    TFinKp   -    -   - "Tail fin potential lift coefficient for unsteady aerodynamics [used only when TFMod=2]" -
-typedef  ^  TFinInputFileType   ReKi    TFinSigma   3    -   - "Tail fin emperical constants characterizing the decay of separation functions [used only when TFMod=2]" -
+typedef  ^  TFinInputFileType   ReKi    TFinSigma   3    -   - "Tail fin empirical constants characterizing the decay of separation functions [used only when TFMod=2]" -
 typedef  ^  TFinInputFileType   ReKi    TFinAStar 3    -   - "Tail fin characteristics angles for separation functions [used only when TFMod=2]" deg
 typedef  ^  TFinInputFileType   ReKi   TFinKv   -    -   - "Tail fin vortex lift coefficient for unsteady aerodynamics [used only when TFMod=2]" -
 typedef  ^  TFinInputFileType   ReKi   TFinCDc   -    -   - "Tail fin drag coefficient for unsteady aerodynamics [used only when TFMod=2]" -

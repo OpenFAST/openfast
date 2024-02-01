@@ -4389,7 +4389,7 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
       V_ind = 0.0_ReKi 
 
    else
-      STOP ! Will never happen
+      setErrStat(ErrID_Fatal, 'TailFin model unsupported', ErrStat, ErrMsg, 'TFin_CalcOutput')
 
    endif
    
@@ -4429,7 +4429,7 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
       x2 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(2)*((ABS(gamma_tf)*180.0_ReKi/pi)-p%TFin%TFinAStar(2)))) 
       x3 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(3)*((ABS(gamma_tf)*180.0_ReKi/pi)-p%TFin%TFinAStar(3))))
    
-      ! Calculate unsteady force on tain fin
+      ! Calculate unsteady force on tail fin
       force_tf(2) = 0.5_ReKi * p%AirDens * p%TFin%TFinArea * &
          (p%TFin%TFinKp * x1 * V_rel_tf(1) * V_rel_tf(2) + &
          (x2 * p%TFin%TFinKv + (1-x3)*p%TFin%TFinCDc) * V_rel_tf(2) * ABS(V_rel_tf(2)))

@@ -884,11 +884,11 @@ An example of tail fin input file is given below:
     ====== Polar-based model ================================ [used only when TFinMod=1] 
     1        TFinAFID - Index of Tail fin airfoil number [1 to NumAFfiles]
     ====== Unsteady slender body model  ===================== [used only when TFinMod=2]
-    0.9           TFinKp        - Tail fin moment of area about reference point [used only when TFMod=2]
-    0.3,0.1,0.1   TFinSigma     - Tail fin emperical constant for vortex separation functions [used only when TFMod=2]
-    40,60,60      TFinAStar     - Tail fin initial angles for vortex separation functions [used only when TFMod=2] (deg)
-    3.1416        TFinKv        - Tail fin vortex lift coefficient [used only when TFMod=2]
-    1.3           TFinCDc       - Tail fin drag coefficient [used only when TFMod=2]
+    0.9           TFinKp        - Tail fin moment of area about reference point
+    0.3,0.1,0.1   TFinSigma     - Tail fin empirical constant for vortex separation functions
+    40,60,60      TFinAStar     - Tail fin initial angles for vortex separation functions (deg)
+    3.1416        TFinKv        - Tail fin vortex lift coefficient
+    1.3           TFinCDc       - Tail fin drag coefficient
 
 General inputs
 ~~~~~~~~~~~~~~
@@ -955,7 +955,7 @@ Refer to :numref:`TF-aerotheory` and :cite:`ad-hammam_NREL:2023` for guidance on
 Potential lift coefficient for unsteady aerodynamics. ``TFinKp`` is used to calculate the potential flow contribution to the unsteady aerodynamic force on the tail fin.
 
 ``TFinSigma``
-Tail fin emperical constants characterizing the decay of separation functions used in the unsteady aerodynamic model. The separation functions and their dependence on ``TFinSigma`` are described in :numref:`TF-aerotheory`.
+Tail fin empirical constants characterizing the decay of separation functions used in the unsteady aerodynamic model. The separation functions and their dependence on ``TFinSigma`` are described in :numref:`TF-aerotheory`.
 
 
 ``TFinAStar``
