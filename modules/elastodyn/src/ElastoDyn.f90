@@ -11556,8 +11556,8 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
    end if
    
    if (.not. p%CompAeroMaps) then
-      call PackMotionMesh_dY(y_p%PlatformPtMesh, y_m%PlatformPtMesh, dY, indx_first, UseSmlAngle=.true.)
-      call PackMotionMesh_dY(y_p%TowerLn2Mesh,   y_m%TowerLn2Mesh,   dY, indx_first, UseSmlAngle=.true.)
+      call PackMotionMesh_dY(y_p%PlatformPtMesh, y_m%PlatformPtMesh, dY, indx_first, UseSmlAngle=.true.)    ! all fields
+      call PackMotionMesh_dY(y_p%TowerLn2Mesh,   y_m%TowerLn2Mesh,   dY, indx_first, UseSmlAngle=.true.)    ! all fields
       
       Mask  = .false.
       Mask(MASKID_TRANSLATIONDISP) = .true.
@@ -11761,8 +11761,8 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          end do      
       end if
       if (.not. p%CompAeroMaps) then
-         call PackMotionMesh(y%TowerLn2Mesh, y_op, index, TrimOP=ReturnTrimOP)
          call PackMotionMesh(y%PlatformPtMesh, y_op, index, TrimOP=ReturnTrimOP)
+         call PackMotionMesh(y%TowerLn2Mesh, y_op, index, TrimOP=ReturnTrimOP)
       
          Mask  = .false.
          Mask(MASKID_TRANSLATIONDISP) = .true.
