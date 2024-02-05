@@ -11443,50 +11443,57 @@ SUBROUTINE ED_Perturb_u( p, n, perturb_sign, u, du )
       ! determine which mesh we're trying to perturb and perturb the input:
    SELECT CASE( p%Jac_u_indx(n,1) )
       
-   CASE ( 1) !Module/Mesh/Field: u%BladePtLoads(1)%Force = 1      
-      u%BladePtLoads(1)%Force( fieldIndx,node) = u%BladePtLoads(1)%Force( fieldIndx,node) + du * perturb_sign       
-   CASE ( 2) !Module/Mesh/Field: u%BladePtLoads(1)%Moment = 2
-      u%BladePtLoads(1)%Moment(fieldIndx,node) = u%BladePtLoads(1)%Moment(fieldIndx,node) + du * perturb_sign            
-   CASE ( 3) !Module/Mesh/Field: u%BladePtLoads(2)%Force = 3
-      u%BladePtLoads(2)%Force( fieldIndx,node) = u%BladePtLoads(2)%Force( fieldIndx,node) + du * perturb_sign       
-   CASE ( 4) !Module/Mesh/Field: u%BladePtLoads(2)%Moment = 4
-      u%BladePtLoads(2)%Moment(fieldIndx,node) = u%BladePtLoads(2)%Moment(fieldIndx,node) + du * perturb_sign            
-   CASE ( 5) !Module/Mesh/Field: u%BladePtLoads(2)%Force = 5
-      u%BladePtLoads(3)%Force( fieldIndx,node) = u%BladePtLoads(3)%Force( fieldIndx,node) + du * perturb_sign       
-   CASE ( 6) !Module/Mesh/Field: u%BladePtLoads(2)%Moment = 6
-      u%BladePtLoads(3)%Moment(fieldIndx,node) = u%BladePtLoads(3)%Moment(fieldIndx,node) + du * perturb_sign            
-               
-   CASE ( 7) !Module/Mesh/Field: u%PlatformPtMesh%Force = 7
-      u%PlatformPtMesh%Force( fieldIndx,node) = u%PlatformPtMesh%Force( fieldIndx,node) + du * perturb_sign       
-   CASE ( 8) !Module/Mesh/Field: u%PlatformPtMesh%Moment = 8
-      u%PlatformPtMesh%Moment(fieldIndx,node) = u%PlatformPtMesh%Moment(fieldIndx,node) + du * perturb_sign            
-                     
-   CASE ( 9) !Module/Mesh/Field: u%TowerPtLoads%Force = 9
-      u%TowerPtLoads%Force( fieldIndx,node) = u%TowerPtLoads%Force( fieldIndx,node) + du * perturb_sign       
-   CASE (10) !Module/Mesh/Field: u%TowerPtLoads%Moment = 10
-      u%TowerPtLoads%Moment(fieldIndx,node) = u%TowerPtLoads%Moment(fieldIndx,node) + du * perturb_sign            
+   !  BladePtLoads
+   !     Module/Mesh/Field: u%BladePtLoads(1)%Force  = 1
+   !     Module/Mesh/Field: u%BladePtLoads(1)%Moment = 2
+   !     Module/Mesh/Field: u%BladePtLoads(2)%Force  = 3
+   !     Module/Mesh/Field: u%BladePtLoads(2)%Moment = 4
+   !     Module/Mesh/Field: u%BladePtLoads(3)%Force  = 5
+   !     Module/Mesh/Field: u%BladePtLoads(3)%Moment = 6
+   CASE ( 1);  u%BladePtLoads(1)%Force( fieldIndx,node) = u%BladePtLoads(1)%Force( fieldIndx,node) + du * perturb_sign       
+   CASE ( 2);  u%BladePtLoads(1)%Moment(fieldIndx,node) = u%BladePtLoads(1)%Moment(fieldIndx,node) + du * perturb_sign            
+   CASE ( 3);  u%BladePtLoads(2)%Force( fieldIndx,node) = u%BladePtLoads(2)%Force( fieldIndx,node) + du * perturb_sign       
+   CASE ( 4);  u%BladePtLoads(2)%Moment(fieldIndx,node) = u%BladePtLoads(2)%Moment(fieldIndx,node) + du * perturb_sign            
+   CASE ( 5);  u%BladePtLoads(3)%Force( fieldIndx,node) = u%BladePtLoads(3)%Force( fieldIndx,node) + du * perturb_sign       
+   CASE ( 6);  u%BladePtLoads(3)%Moment(fieldIndx,node) = u%BladePtLoads(3)%Moment(fieldIndx,node) + du * perturb_sign            
 
-   CASE (11) !Module/Mesh/Field: u%HubPtLoad%Force = 11
-      u%HubPtLoad%Force( fieldIndx,node) = u%HubPtLoad%Force( fieldIndx,node) + du * perturb_sign       
-   CASE (12) !Module/Mesh/Field: u%HubPtLoad%Moment = 12
-      u%HubPtLoad%Moment(fieldIndx,node) = u%HubPtLoad%Moment(fieldIndx,node) + du * perturb_sign            
-  
-   CASE (13) !Module/Mesh/Field: u%NacelleLoads%Force = 13
-      u%NacelleLoads%Force( fieldIndx,node) = u%NacelleLoads%Force( fieldIndx,node) + du * perturb_sign       
-   CASE (14) !Module/Mesh/Field: u%NacelleLoads%Moment = 14
-      u%NacelleLoads%Moment(fieldIndx,node) = u%NacelleLoads%Moment(fieldIndx,node) + du * perturb_sign            
-   
-   CASE (15) !Module/Mesh/Field: u%TFinCMLoads%Force = 15
-      u%TFinCMLoads%Force( fieldIndx,node) = u%TFinCMLoads%Force( fieldIndx,node) + du * perturb_sign       
-   CASE (16) !Module/Mesh/Field: u%TFinCMLoads%Moment = 16
-      u%TFinCMLoads%Moment(fieldIndx,node) = u%TFinCMLoads%Moment(fieldIndx,node) + du * perturb_sign            
-   
-   CASE (17) !Module/Mesh/Field: u%BlPitchCom = 17
-      u%BlPitchCom(node) = u%BlPitchCom(node) + du * perturb_sign
-   CASE (18) !Module/Mesh/Field: u%YawMom = 18
-      u%YawMom = u%YawMom + du * perturb_sign
-   CASE (19) !Module/Mesh/Field: u%GenTrq = 19
-      u%GenTrq = u%GenTrq + du * perturb_sign
+   !  PlatformPtMesh
+   !     Module/Mesh/Field: u%PlatformPtMesh%Force  = 7
+   !     Module/Mesh/Field: u%PlatformPtMesh%Moment = 8
+   CASE ( 7);  u%PlatformPtMesh%Force( fieldIndx,node) = u%PlatformPtMesh%Force( fieldIndx,node) + du * perturb_sign       
+   CASE ( 8);  u%PlatformPtMesh%Moment(fieldIndx,node) = u%PlatformPtMesh%Moment(fieldIndx,node) + du * perturb_sign            
+                     
+   !  TowerPtLoads
+   !     Module/Mesh/Field: u%TowerPtLoads%Force  = 9
+   !     Module/Mesh/Field: u%TowerPtLoads%Moment = 10
+   CASE ( 9);  u%TowerPtLoads%Force( fieldIndx,node) = u%TowerPtLoads%Force( fieldIndx,node) + du * perturb_sign       
+   CASE (10);  u%TowerPtLoads%Moment(fieldIndx,node) = u%TowerPtLoads%Moment(fieldIndx,node) + du * perturb_sign            
+
+   !  HubPtLoad
+   !     Module/Mesh/Field: u%HubPtLoad%Force  = 11
+   !     Module/Mesh/Field: u%HubPtLoad%Moment = 12
+   CASE (11);  u%HubPtLoad%Force( fieldIndx,node) = u%HubPtLoad%Force( fieldIndx,node) + du * perturb_sign       
+   CASE (12);  u%HubPtLoad%Moment(fieldIndx,node) = u%HubPtLoad%Moment(fieldIndx,node) + du * perturb_sign            
+
+   !  NacelleLoads  
+   !     Module/Mesh/Field: u%NacelleLoads%Force  = 13
+   !     Module/Mesh/Field: u%NacelleLoads%Moment = 14
+   CASE (13);  u%NacelleLoads%Force( fieldIndx,node) = u%NacelleLoads%Force( fieldIndx,node) + du * perturb_sign       
+   CASE (14);  u%NacelleLoads%Moment(fieldIndx,node) = u%NacelleLoads%Moment(fieldIndx,node) + du * perturb_sign            
+
+   !  TFinCMLoads
+   !     Module/Mesh/Field: u%TFinCMLoads%Force  = 15
+   !     Module/Mesh/Field: u%TFinCMLoads%Moment = 16
+   CASE (15);  u%TFinCMLoads%Force( fieldIndx,node) = u%TFinCMLoads%Force( fieldIndx,node) + du * perturb_sign       
+   CASE (16);  u%TFinCMLoads%Moment(fieldIndx,node) = u%TFinCMLoads%Moment(fieldIndx,node) + du * perturb_sign            
+
+   !  Controller inputs
+   !     Module/Mesh/Field: u%BlPitchCom = 17
+   !     Module/Mesh/Field: u%YawMom     = 18
+   !     Module/Mesh/Field: u%GenTrq     = 19
+   CASE (17);  u%BlPitchCom(node) = u%BlPitchCom(node) + du * perturb_sign
+   CASE (18);  u%YawMom = u%YawMom + du * perturb_sign
+   CASE (19);  u%GenTrq = u%GenTrq + du * perturb_sign
       
    END SELECT
                                              
