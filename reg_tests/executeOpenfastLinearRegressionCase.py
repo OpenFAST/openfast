@@ -98,6 +98,10 @@ atol_f=1e-2
 rtol_d=1e-2
 atol_d=1e-1  
 
+# --- Filenames for frequency info
+fileNameFreqRef="frequencies_ref.txt"
+fileNameFreqNew="frequencies_new.txt"
+
 
 CasePrefix=' Case: {}: '.format(caseName)
 def exitWithError(msg):
@@ -120,6 +124,8 @@ moduleDirectory = os.path.join(rtest, "glue-codes", "openfast")
 inputsDirectory = os.path.join(moduleDirectory, caseName)
 targetOutputDirectory = os.path.join(inputsDirectory)
 testBuildDirectory = os.path.join(buildDirectory, caseName)
+fNameFreqRef = os.path.join(testBuildDirectory, fileNameFreqRef)
+fNameFreqNew = os.path.join(testBuildDirectory, fileNameFreqNew)
 
 # verify all the required directories exist
 if not os.path.isdir(rtest):
@@ -183,7 +189,7 @@ if len(localOutFiles) != len(baselineOutFiles):
 
 ### test for regression (compare lin files only)
 
-def compareLin(f):
+def compareLin(f,file_freq_ref,file_freq_new):
     Errors     = []
     ElemErrors = []
 
@@ -261,12 +267,44 @@ def compareLin(f):
                 Err='Failed to compare A-matrix frequencies\n\tLinfile: {}.\n\tException: {}'.format(local_file2, indent(e.args[0]))
                 newError(Err)
         else:
-
             #if verbose:
-            print(errPrefix+'freq_ref:', np.around(freq_bas[:8]    ,5), '[Hz]')
-            print(errPrefix+'freq_new:', np.around(freq_loc[:8]    ,5),'[Hz]')
-            print(errPrefix+'damp_ref:', np.around(zeta_bas[:8]*100,5), '[%]')
-            print(errPrefix+'damp_new:', np.around(zeta_loc[:8]*100,5), '[%]')
+            print('\n'+errPrefix+':')
+            print('              Frequency (Hz)                        Damping (%)')
+            print('           ----------------------------         ----------------------------')
+            print('            Ref              New                 Ref              New')
+
+            #write frequencies to file
+            try:
+                file_freq_ref.write('\n'+errPrefix+':\n')
+                file_freq_ref.write('            Freq (Hz)        Damp (%)\n')
+                file_freq_new.write('\n'+errPrefix+':\n')
+                file_freq_new.write('            Freq (Hz)        Damp (%)\n')
+            except Exception:
+                pass    # ignore all writing errors
+
+
+            for j in range(min(10,max(len(freq_bas),len(freq_loc)))):
+                if j<len(freq_bas):
+                    str_freq_bas='{:14.9f}'.format(freq_bas[j])
+                    str_zeta_bas='{:14.9f}'.format(zeta_bas[j])
+                else:
+                    str_freq_bas='              '
+                    str_zeta_bas='              '
+                if j<len(freq_loc):
+                    str_freq_loc='{:14.9f}'.format(freq_loc[j])
+                    str_zeta_loc='{:14.9f}'.format(zeta_loc[j])
+                else:
+                    str_freq_loc='              '
+                    str_zeta_loc='              '
+                print('        '+str_freq_bas+'   '+str_freq_loc+'      '+str_zeta_bas+'   '+str_zeta_loc)
+
+                #write frequencies to file
+                try:
+                    file_freq_ref.write('        '+str_freq_bas+'   '+str_zeta_bas+'\n')
+                    file_freq_new.write('        '+str_freq_loc+'   '+str_zeta_loc+'\n')
+                except Exception:
+                    pass
+
 
             try:
                 np.testing.assert_allclose(freq_loc[:10], freq_bas[:10], rtol=rtol_f, atol=atol_f)
@@ -331,12 +369,50 @@ def compareLin(f):
                         ElemErrors.append(Err)
     return Errors, ElemErrors
 
+
+# Header for file containing all frequency information
+def freqFileHdr():
+    Err=[]
+    file_freq_ref=[]
+    file_freq_new=[]
+    try:
+        file_freq_ref=open(fNameFreqRef,"w")
+    except Exception as e:
+        Err = 'Could not open file '+fileNameFreqRef+' for writing'
+
+    try:
+        file_freq_new=open(fNameFreqNew,"w")
+    except Exception as e:
+        Err = 'Could not open file '+fileNameFreqNew+' for writing'
+
+    return Err,file_freq_ref,file_freq_new
+
+# close files with frequency info
+def freqFileClose(file_freq_ref,file_freq_new):
+    try:
+        file_ref.close()
+    except Exception:
+        pass
+    try:
+        file_new.close()
+    except Exception:
+        pass
+
+
+# Compare
 Errors=[]
+
+ErrorsLoc,ff1,ff2 = freqFileHdr()
+Errors += ErrorsLoc
+
 for i, f in enumerate(localOutFiles):
-    ErrorsLoc, ElemErrorsLoc = compareLin(f)
+    ErrorsLoc, ElemErrorsLoc = compareLin(f,ff1,ff2)
     Errors += ErrorsLoc
     if len(ElemErrorsLoc)>0:
         Errors += ElemErrorsLoc[:3] # Just a couple of them
+
+freqFileClose(ff1,ff2)
+
 
 if len(Errors)>0:
     exitWithError('See errors below: \n'+'\n'.join(Errors))
