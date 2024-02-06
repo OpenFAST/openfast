@@ -1629,7 +1629,7 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInf
       ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial y^{MAP}}  \end{bmatrix} = \f$ (dUdy block row 3=ED)
       !............
 
-   call Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, ED%Input(1), ED%y, AD%y, AD%Input(1), BD, HD, SD, MAPp, MD, MeshMapData, dUdy, ErrStat2, ErrMsg2 )
+   call Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, ED%Input(1), ED%y, AD%y, AD%Input(1), AD%p, BD, HD, SD, MAPp, MD, MeshMapData, dUdy, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
       !............
@@ -1638,7 +1638,7 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInf
       ! \f$ \frac{\partial U_\Lambda^{BD}}{\partial y^{AD}} \end{bmatrix} = \f$ (dUdy block row 4=BD)
       !............
    if (p_FAST%CompElast == MODULE_BD) then
-      call Linear_BD_InputSolve_dy( p_FAST, y_FAST, SrvD, ED%Input(1), ED%y, AD%y, AD%Input(1), BD, MeshMapData, dUdy, ErrStat2, ErrMsg2 )
+      call Linear_BD_InputSolve_dy( p_FAST, y_FAST, SrvD, ED%Input(1), ED%y, AD%p, AD%y, AD%Input(1), BD, MeshMapData, dUdy, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end if
    
@@ -1724,7 +1724,7 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
    INTEGER(IntKi)                                 :: K              ! Loops through blades
    INTEGER(IntKi)                                 :: SrvD_Start     ! starting index of dUdu (column) where SrvD StC load is
    INTEGER(IntKi)                                 :: BD_Start       ! starting index of dUdu (column) where BD root motion inputs are located
-   INTEGER(IntKi)                                 :: AD_Start_Bl    ! starting index of dUdu (column) where AD blade motion inputs are located
+   INTEGER(IntKi)                                 :: AD_Start       ! starting index of dUdu (column) where AD motion inputs are located
    INTEGER(IntKi)                                 :: ED_Start_mt    ! starting index of dUdu (row) where ED blade/tower or hub moment inputs are located
    INTEGER(IntKi)                                 :: HD_Start       ! starting index of dUdu (column) where HD motion inputs are located
    INTEGER(IntKi)                                 :: SD_Start       ! starting index of dUdu (column) where SD TP motion inputs are located
@@ -1840,14 +1840,14 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
          
          DO K = 1,SIZE(u_ED%BladePtLoads,1) ! Loop through all blades (p_ED%NumBl)
             ED_Start_mt = ED_Start_mt + u_ED%BladePtLoads(k)%NNodes*3 ! skip the forces on this blade
-            AD_Start_Bl = Indx_u_AD_Blade_Start(u_AD, p_AD, y_FAST, k) 
+            AD_Start = Indx_u_AD_Blade_Start(u_AD, p_AD, y_FAST, k) 
             
             CALL Linearize_Line2_to_Point( y_AD%rotors(1)%BladeLoad(k), u_ED%BladePtLoads(k), MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%rotors(1)%BladeMotion(k), y_ED%BladeLn2Mesh(k) )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             
                ! AD is source in the mapping, so we want M_{uSm}               
             if (allocated(MeshMapData%AD_L_2_BDED_B(k)%dM%m_us )) then
-               call SetBlockMatrix( dUdu, MeshMapData%AD_L_2_BDED_B(k)%dM%m_us, ED_Start_mt, AD_Start_Bl )
+               call SetBlockMatrix( dUdu, MeshMapData%AD_L_2_BDED_B(k)%dM%m_us, ED_Start_mt, AD_Start )
             end if
             
                ! get starting index of next blade
@@ -1859,57 +1859,57 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
       
       ! ED inputs on tower from AD:
       IF ( y_AD%rotors(1)%TowerLoad%Committed ) THEN
-         ED_Start_mt = Indx_u_ED_Tower_Start(u_ED, y_FAST) &
-                       + u_ED%TowerPtLoads%NNodes   * 3             ! 3 forces at each node (we're going to start at the moments)
+         ED_Start_mt = Indx_u_ED_Tower_Start(u_ED, y_FAST) + u_ED%TowerPtLoads%NNodes * 3  ! skip 3 forces at each node
+         AD_Start = Indx_u_AD_Tower_Start(u_AD, p_AD, y_FAST) 
          
          CALL Linearize_Line2_to_Point( y_AD%rotors(1)%TowerLoad, u_ED%TowerPtLoads, MeshMapData%AD_L_2_ED_P_T, ErrStat2, ErrMsg2, u_AD%rotors(1)%TowerMotion, y_ED%TowerLn2Mesh )
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
             
             ! AD is source in the mapping, so we want M_{uSm}
          if (allocated(MeshMapData%AD_L_2_ED_P_T%dM%m_us )) then
-            call SetBlockMatrix( dUdu, MeshMapData%AD_L_2_ED_P_T%dM%m_us, ED_Start_mt, y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+            call SetBlockMatrix( dUdu, MeshMapData%AD_L_2_ED_P_T%dM%m_us, ED_Start_mt, AD_Start )
          end if
       END IF
 
       ! ED inputs on Hub from AD:
       IF ( y_AD%rotors(1)%HubLoad%Committed ) THEN
-         ED_Start_mt = Indx_u_ED_Hub_Start(u_ED, y_FAST) &
-                       + u_ED%HubPtLoad%NNodes   * 3             ! 3 forces at each node (we're going to start at the moments)
+         ED_Start_mt = Indx_u_ED_Hub_Start(u_ED, y_FAST) + u_ED%HubPtLoad%NNodes * 3   ! skip 3 forces at each node
+         AD_Start = Indx_u_AD_Hub_Start(u_AD, p_AD, y_FAST) 
          
          CALL Linearize_Point_to_Point( y_AD%rotors(1)%HubLoad, u_ED%HubPtLoad, MeshMapData%AD_P_2_ED_P_H, ErrStat2, ErrMsg2, u_AD%rotors(1)%HubMotion, y_ED%HubPtMotion )
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
             
             ! AD is source in the mapping, so we want M_{uSm}
          if (allocated(MeshMapData%AD_P_2_ED_P_H%dM%m_us )) then
-            call SetBlockMatrix( dUdu, MeshMapData%AD_P_2_ED_P_H%dM%m_us, ED_Start_mt, y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+            call SetBlockMatrix( dUdu, MeshMapData%AD_P_2_ED_P_H%dM%m_us, ED_Start_mt, AD_Start )
          end if
       END IF
 
       ! ED inputs on Nacelle from AD:
       IF ( y_AD%rotors(1)%NacelleLoad%Committed ) THEN
-         ED_Start_mt = Indx_u_ED_Nacelle_Start(u_ED, y_FAST) &
-                       + u_ED%NacelleLoads%NNodes   * 3             ! 3 forces at each node (we're going to start at the moments)
+         ED_Start_mt = Indx_u_ED_Nacelle_Start(u_ED, y_FAST) + u_ED%NacelleLoads%NNodes * 3   ! skip 3 forces at each node
+         AD_Start = Indx_u_AD_Nacelle_Start(u_AD, p_AD, y_FAST) 
 
          CALL Linearize_Point_to_Point( y_AD%rotors(1)%NacelleLoad, u_ED%NacelleLoads, MeshMapData%AD_P_2_ED_P_N, ErrStat2, ErrMsg2, u_AD%rotors(1)%NacelleMotion, y_ED%NacelleMotion )
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
             
             ! AD is source in the mapping, so we want M_{uSm}
          if (allocated(MeshMapData%AD_P_2_ED_P_N%dM%m_us )) then
-            call SetBlockMatrix( dUdu, MeshMapData%AD_P_2_ED_P_N%dM%m_us, ED_Start_mt, y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+            call SetBlockMatrix( dUdu, MeshMapData%AD_P_2_ED_P_N%dM%m_us, ED_Start_mt, AD_Start )
          end if
       END IF
 
       ! ED inputs on Tailfin from AD:
       IF ( y_AD%rotors(1)%TFinLoad%Committed ) THEN
-         ED_Start_mt = Indx_u_ED_TFin_Start(u_ED, y_FAST) &
-                       + u_ED%TFinCMLoads%NNodes   * 3             ! 3 forces at each node (we're going to start at the moments)
+         ED_Start_mt = Indx_u_ED_TFin_Start(u_ED, y_FAST) + u_ED%TFinCMLoads%NNodes * 3   ! skip 3 forces at each node
+         AD_Start = Indx_u_AD_TFin_Start(u_AD, p_AD, y_FAST) 
          
          CALL Linearize_Point_to_Point( y_AD%rotors(1)%TFinLoad, u_ED%TFinCMLoads, MeshMapData%AD_P_2_ED_P_TF, ErrStat2, ErrMsg2, u_AD%rotors(1)%TFinMotion, y_ED%TFinCMMotion )
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
             
             ! AD is source in the mapping, so we want M_{uSm}
          if (allocated(MeshMapData%AD_L_2_ED_P_T%dM%m_us )) then
-            call SetBlockMatrix( dUdu, MeshMapData%AD_P_2_ED_P_TF%dM%m_us, ED_Start_mt, y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+            call SetBlockMatrix( dUdu, MeshMapData%AD_P_2_ED_P_TF%dM%m_us, ED_Start_mt, AD_Start )
          end if
       END IF
       
@@ -2631,7 +2631,6 @@ SUBROUTINE Linear_AD_InputSolve_du( p_FAST, y_FAST, u_AD, p_AD, y_ED, BD, MeshMa
          AD_Start_ta = AD_Start_td + u_AD%rotors(1)%BladeMotion(k)%NNodes * 12 ! 4 fields (TranslationDisp, Orientation, TranslationVel, and RotationVel) with 3 components before translational acceleration field
          call SetBlockMatrix( dUdu, MeshMapData%BDED_L_2_AD_L_B(k)%dM%ta_ud, AD_Start_ta, AD_Start_td )
       end if
-!FIXME: do we need to add rotational accel???
    END DO
 
 END SUBROUTINE Linear_AD_InputSolve_du
@@ -2947,7 +2946,7 @@ END SUBROUTINE Linear_SrvD_InputSolve_dy
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine forms the dU^{ED}/dy^{SrvD}, dU^{ED}/dy^{ED}, dU^{ED}/dy^{BD},  dU^{ED}/dy^{AD}, dU^{ED}/dy^{HD}, and dU^{ED}/dy^{MAP}
 !! blocks of dUdy. (i.e., how do changes in the SrvD, ED, BD, AD, HD, and MAP outputs effect the ED inputs?)
-SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD, BD, HD, SD, MAPp, MD, MeshMapData, dUdy, ErrStat, ErrMsg )
+SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD, p_AD, BD, HD, SD, MAPp, MD, MeshMapData, dUdy, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType),       INTENT(IN   )  :: p_FAST           !< Glue-code simulation parameters
    TYPE(FAST_OutputFileType),      INTENT(IN   )  :: y_FAST           !< FAST output file data (for linearization)
@@ -2955,6 +2954,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
    TYPE(ED_InputType),             INTENT(INOUT)  :: u_ED             !< ED Inputs at t
    TYPE(ED_OutputType),            INTENT(IN   )  :: y_ED             !< ElastoDyn outputs (need translation displacement on meshes for loads mapping)
    TYPE(AD_OutputType),            INTENT(IN   )  :: y_AD             !< AeroDyn outputs
+   TYPE(AD_ParameterType),         INTENT(IN   )  :: p_AD             !< AeroDyn outputs
    TYPE(AD_InputType),             INTENT(INOUT)  :: u_AD             !< AD inputs (for AD-ED load linerization)
    TYPE(BeamDyn_Data),             INTENT(INOUT)  :: BD               !< BD data at t
    TYPE(HydroDyn_Data),            INTENT(INOUT)  :: HD               !< HD data at t
@@ -2973,6 +2973,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
    INTEGER(IntKi)                                 :: K                ! Loops through blades
    INTEGER(IntKi)                                 :: SrvD_Out_Start   ! starting index of dUdy (column) where the StC motion inputs are located
    INTEGER(IntKi)                                 :: AD_Out_Start     ! starting index of dUdy (column) where particular AD fields are located
+   INTEGER(IntKi)                                 :: AD_Block_Start   ! starting index of dUdy (column) for all AD outputs
    INTEGER(IntKi)                                 :: BD_Out_Start     ! starting index of dUdy (column) where particular BD fields are located
    INTEGER(IntKi)                                 :: ED_Start         ! starting index of dUdy (row) where ED input fields are located
    INTEGER(IntKi)                                 :: ED_Out_Start     ! starting index of dUdy (column) where ED output fields are located
@@ -3076,8 +3077,10 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
       ! ElastoDyn inputs on blade from AeroDyn and ElastoDyn
    IF ( p_FAST%CompAero == Module_AD ) THEN
 
+      AD_Block_Start = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL)
+
       IF (p_FAST%CompElast == Module_ED) THEN 
-         AD_Out_Start = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + y_AD%rotors(1)%TowerLoad%NNodes * 6    ! start of y_AD%rotors(1)%BladeLoad(1)%Force field [2 fields (force, moment) with 3 components]
+         AD_Out_Start = AD_Block_Start + p_AD%rotors(1)%Jac_y_idxStartList%BladeLoad - 1
          
          DO K = 1,SIZE(u_ED%BladePtLoads,1) ! Loop through all blades (p_ED%NumBl)
             !!! ! This linearization was done in forming dUdu (see Linear_ED_InputSolve_du()), so we don't need to re-calculate these matrices 
@@ -3085,7 +3088,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
             !CALL Linearize_Line2_to_Point( y_AD%rotors(1)%BladeLoad(k), u_ED%BladePtLoads(k), MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%rotors(1)%BladeMotion(k), y_ED%BladeLn2Mesh(k) )
                
                ! AD loads-to-ED loads transfer (dU^{ED}/dy^{AD}):
-            ED_Start = Indx_u_ED_Blade_Start(u_ED, y_FAST, k) ! start of u_ED%BladePtLoads(k)%Force field
+            ED_Start = Indx_u_ED_Blade_Start(u_ED, y_FAST, k)
             call Assemble_dUdy_Loads(y_AD%rotors(1)%BladeLoad(k), u_ED%BladePtLoads(k), MeshMapData%AD_L_2_BDED_B(k), ED_Start, AD_Out_Start, dUdy)
 
                ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
@@ -3105,7 +3108,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
             
             ! AD loads-to-ED loads transfer (dU^{ED}/dy^{AD}):
          ED_Start = Indx_u_ED_Tower_Start(u_ED, y_FAST) ! u_ED%TowerPtLoads%Force field
-         AD_Out_Start = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) ! start of y_AD%rotors(1)%Tower%Force
+         AD_Out_Start = AD_Block_Start + p_AD%rotors(1)%Jac_y_idxStartList%TowerLoad - 1
          call Assemble_dUdy_Loads(y_AD%rotors(1)%TowerLoad, u_ED%TowerPtLoads, MeshMapData%AD_L_2_ED_P_T, ED_Start, AD_Out_Start, dUdy)
 
             ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
@@ -3122,8 +3125,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
             
             ! AD loads-to-ED loads transfer (dU^{ED}/dy^{AD}):
          ED_Start = Indx_u_ED_TFin_Start(u_ED, y_FAST) ! u_ED%TFinCMLoads%Force field
-         AD_Out_Start = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) ! start of y_AD%rotors(1)%TFinLoads%Force
-         IF (p_FAST%CompElast == Module_ED) AD_Out_Start = AD_Out_Start + y_AD%rotors(1)%BladeLoad(k)%NNodes*6
+         AD_Out_Start = AD_Block_Start + p_AD%rotors(1)%Jac_y_idxStartList%TFinLoad - 1
          call Assemble_dUdy_Loads(y_AD%rotors(1)%TFinLoad, u_ED%TFinCMLoads, MeshMapData%AD_P_2_ED_P_TF, ED_Start, AD_Out_Start, dUdy)
 
             ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
@@ -3139,8 +3141,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
 
             ! AD loads-to-ED loads transfer (dU^{ED}/dy^{AD}):
          ED_Start = Indx_u_ED_Nacelle_Start(u_ED, y_FAST) ! u_ED%NacelleLoads%Force field
-         AD_Out_Start = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) ! start of y_AD%rotors(1)%NacelleLoads%Force
-         AD_Out_Start = AD_Out_Start + y_AD%rotors(1)%NacelleLoad%NNodes*6
+         AD_Out_Start = AD_Block_Start + p_AD%rotors(1)%Jac_y_idxStartList%NacelleLoad - 1
          call Assemble_dUdy_Loads(y_AD%rotors(1)%NacelleLoad, u_ED%NacelleLoads, MeshMapData%AD_P_2_ED_P_N, ED_Start, AD_Out_Start, dUdy)
 
             ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
@@ -3156,8 +3157,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
 
             ! AD loads-to-ED loads transfer (dU^{ED}/dy^{AD}):
          ED_Start = Indx_u_ED_Hub_Start(u_ED, y_FAST) ! u_ED%HubLoads%Force field
-         AD_Out_Start = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) ! start of y_AD%rotors(1)%HubLoads%Force
-         AD_Out_Start = AD_Out_Start + y_AD%rotors(1)%HubLoad%NNodes*6
+         AD_Out_Start = AD_Block_Start + p_AD%rotors(1)%Jac_y_idxStartList%HubLoad - 1
          call Assemble_dUdy_Loads(y_AD%rotors(1)%HubLoad, u_ED%HubPtLoad, MeshMapData%AD_P_2_ED_P_H, ED_Start, AD_Out_Start, dUdy)
 
             ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
@@ -3282,13 +3282,14 @@ END SUBROUTINE Linear_ED_InputSolve_dy
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine forms the dU^{BD}/dy^{ED}, dU^{BD}/dy^{BD}, and dU^{BD}/dy^{AD} blocks of dUdy. (i.e., how do 
 !! changes in the ED, BD, and AD outputs effect the BD inputs?)
-SUBROUTINE Linear_BD_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD, BD, MeshMapData, dUdy, ErrStat, ErrMsg )
+SUBROUTINE Linear_BD_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, p_AD, y_AD, u_AD, BD, MeshMapData, dUdy, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType),       INTENT(IN   )  :: p_FAST           !< Glue-code simulation parameters
    TYPE(FAST_OutputFileType),      INTENT(IN   )  :: y_FAST           !< FAST output file data (for linearization)
    type(ServoDyn_Data),            intent(in   )  :: SrvD             !< SrvD parameters
    TYPE(ED_InputType),             INTENT(INOUT)  :: u_ED             !< ED Inputs at t
    TYPE(ED_OutputType),            INTENT(IN   )  :: y_ED             !< ElastoDyn outputs (need translation displacement on meshes for loads mapping)
+   TYPE(AD_ParameterType),         INTENT(IN   )  :: p_AD             !< AeroDyn parameters
    TYPE(AD_OutputType),            INTENT(IN   )  :: y_AD             !< AeroDyn outputs
    TYPE(AD_InputType),             INTENT(INOUT)  :: u_AD             !< AD inputs (for AD-ED load linearization)
    TYPE(BeamDyn_Data),             INTENT(IN   )  :: BD               !< BD data at t
@@ -3353,8 +3354,7 @@ SUBROUTINE Linear_BD_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
       !!!   CALL Linearize_Line2_to_Line2( BD%y(k)%BldMotion, MeshMapData%y_BD_BldMotion_4Loads(k), MeshMapData%BD_L_2_BD_L(k), ErrStat2, ErrMsg2 )
       !!!   CALL Linearize_Line2_to_Line2( y_AD%rotors(1)%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%rotors(1)%BladeMotion(k), MeshMapData%y_BD_BldMotion_4Loads(k) )
       !!!end if
-
-      AD_Out_Start = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + y_AD%rotors(1)%TowerLoad%NNodes * 6    ! start of y_AD%rotors(1)%BladeLoad(1)%Force field [2 fields (force, moment) with 3 components]
+      AD_Out_Start = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + p_AD%rotors(1)%Jac_y_idxStartList%TowerLoad - 1
       DO K = 1,p_FAST%nBeams ! Loop through all blades
 
          BD_Start = y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%LinStartIndx(LIN_INPUT_COL) & ! start of BD%Input(1,k)%DistrLoad%Force field
@@ -4853,7 +4853,7 @@ FUNCTION Indx_u_AD_Nacelle_Start(u_AD, p_AD, y_FAST) RESULT(AD_Start)
    TYPE(AD_InputType),             INTENT(IN )  :: u_AD             !< AD Inputs at t
    TYPE(AD_ParameterType),         INTENT(IN )  :: p_AD             !< AD parameters
    INTEGER                                      :: AD_Start         !< starting index of this mesh in AeroDyn inputs
-   AD_Start = y_FAST%Lin%Modules(Module_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + p_AD%rotors(1)%Jac_u_idxStartList%Nacelle - 1   ! index starts at 1
+   AD_Start = y_FAST%Lin%Modules(Module_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + (p_AD%rotors(1)%Jac_u_idxStartList%Nacelle - 1)   ! index starts at 1
 END FUNCTION Indx_u_AD_Nacelle_Start
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine returns the starting index for the u_AD%rotors(1)%NacelleMotion mesh in the FAST linearization inputs.
@@ -4862,7 +4862,7 @@ FUNCTION Indx_u_AD_Hub_Start(u_AD, p_AD, y_FAST) RESULT(AD_Start)
    TYPE(AD_InputType),             INTENT(IN )  :: u_AD             !< AD Inputs at t
    TYPE(AD_ParameterType),         INTENT(IN )  :: p_AD             !< AD parameters
    INTEGER                                      :: AD_Start         !< starting index of this mesh in AeroDyn inputs
-   AD_Start = y_FAST%Lin%Modules(Module_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + p_AD%rotors(1)%Jac_u_idxStartList%Hub - 1   ! index starts at 1
+   AD_Start = y_FAST%Lin%Modules(Module_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + (p_AD%rotors(1)%Jac_u_idxStartList%Hub - 1)   ! index starts at 1
 END FUNCTION Indx_u_AD_Hub_Start
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine returns the starting index for the u_AD%rotors(1)%TowerMotion mesh in the FAST linearization inputs.
@@ -4871,7 +4871,7 @@ FUNCTION Indx_u_AD_Tower_Start(u_AD, p_AD, y_FAST) RESULT(AD_Start)
    TYPE(AD_InputType),             INTENT(IN )  :: u_AD             !< AD Inputs at t
    TYPE(AD_ParameterType),         INTENT(IN )  :: p_AD             !< AD parameters
    INTEGER                                      :: AD_Start         !< starting index of this mesh in AeroDyn inputs
-   AD_Start = y_FAST%Lin%Modules(Module_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + p_AD%rotors(1)%Jac_u_idxStartList%Tower - 1   ! index starts at 1
+   AD_Start = y_FAST%Lin%Modules(Module_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + (p_AD%rotors(1)%Jac_u_idxStartList%Tower - 1)   ! index starts at 1
 END FUNCTION Indx_u_AD_Tower_Start
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine returns the starting index for the u_AD%rotors(1)%TFinMotion mesh in the FAST linearization inputs.
@@ -4880,7 +4880,7 @@ FUNCTION Indx_u_AD_TFin_Start(u_AD, p_AD, y_FAST) RESULT(AD_Start)
    TYPE(AD_InputType),             INTENT(IN )  :: u_AD             !< AD Inputs at t
    TYPE(AD_ParameterType),         INTENT(IN )  :: p_AD             !< AD parameters
    INTEGER                                      :: AD_Start         !< starting index of this mesh in AeroDyn inputs
-   AD_Start = y_FAST%Lin%Modules(Module_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + p_AD%rotors(1)%Jac_u_idxStartList%TFin - 1   ! index starts at 1
+   AD_Start = y_FAST%Lin%Modules(Module_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + (p_AD%rotors(1)%Jac_u_idxStartList%TFin - 1)   ! index starts at 1
 END FUNCTION Indx_u_AD_TFin_Start
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine returns the starting index for the u_AD%rotors(1)%BladeRootMotion(k) mesh in the FAST linearization inputs.
@@ -4892,7 +4892,7 @@ FUNCTION Indx_u_AD_BladeRoot_Start(u_AD, p_AD, y_FAST, BladeNum) RESULT(AD_Start
    INTEGER                                      :: k                !< blade number loop
    INTEGER                                      :: AD_Start         !< starting index of this mesh in AeroDyn inputs
 
-   AD_Start = y_FAST%Lin%Modules(Module_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + p_AD%rotors(1)%Jac_u_idxStartList%BladeRoot - 1   ! index starts at 1
+   AD_Start = y_FAST%Lin%Modules(Module_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + (p_AD%rotors(1)%Jac_u_idxStartList%BladeRoot - 1)   ! index starts at 1
    
    do k = 1,min(BladeNum-1,size(u_AD%rotors(1)%BladeRootMotion))
       AD_Start = AD_Start + u_AD%rotors(1)%BladeRootMotion(k)%NNodes * 3 ! 1 field (MASKID_Orientation) with 3 components
@@ -4908,7 +4908,7 @@ FUNCTION Indx_u_AD_Blade_Start(u_AD, p_AD, y_FAST, BladeNum) RESULT(AD_Start)
    INTEGER                                      :: k                !< blade number loop
    INTEGER                                      :: AD_Start         !< starting index of this mesh in AeroDyn inputs
 
-   AD_Start = y_FAST%Lin%Modules(Module_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + p_AD%rotors(1)%Jac_u_idxStartList%Blade - 1   ! index starts at 1
+   AD_Start = y_FAST%Lin%Modules(Module_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + (p_AD%rotors(1)%Jac_u_idxStartList%Blade - 1)   ! index starts at 1
    
    do k = 1,min(BladeNum-1,size(u_AD%rotors(1)%BladeMotion))
       AD_Start = AD_Start + u_AD%rotors(1)%BladeMotion(k)%NNodes * 18 ! 6 fields (TranslationDisp, MASKID_Orientation, TranslationVel, RotationVel, TranslationAcc, RotationAcc) with 3 components

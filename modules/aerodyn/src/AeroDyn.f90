@@ -6274,6 +6274,7 @@ SUBROUTINE RotGetOP( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, ErrSt
       if (.not. p_AD%CompAeroMaps) then
          call PackLoadMesh(y%NacelleLoad, y_op, index)
          call PackLoadMesh(y%HubLoad,     y_op, index)
+         call PackLoadMesh(y%TFinLoad,    y_op, index)
          call PackLoadMesh(y%TowerLoad,   y_op, index)
       endif
       do k=1,p%NumBl_Lin
@@ -6281,7 +6282,6 @@ SUBROUTINE RotGetOP( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, ErrSt
       end do
 
       if (.not. p_AD%CompAeroMaps) then
-         call PackLoadMesh(y%TFinLoad,   y_op, index)
          index = index - 1
          do i=1,p%NumOuts + p%BldNd_TotNumOuts
             y_op(i+index) = y%WriteOutput(i)
@@ -6457,8 +6457,8 @@ SUBROUTINE Init_Jacobian_y( p, p_AD, y, InitOut, ErrStat, ErrMsg)
    else
       p%Jac_ny = y%NacelleLoad%NNodes * 6       & ! 3 forces + 3 moments at each node
                + y%HubLoad%NNodes     * 6       & ! 3 forces + 3 moments at each node
-               + y%TowerLoad%NNodes   * 6       & ! 3 forces + 3 moments at each node
                + y%TFinLoad%NNodes    * 6       & ! 3 forces + 3 moments at each node
+               + y%TowerLoad%NNodes   * 6       & ! 3 forces + 3 moments at each node
                + p%NumOuts + p%BldNd_TotNumOuts   ! WriteOutput values 
    end if
    
@@ -6475,21 +6475,20 @@ SUBROUTINE Init_Jacobian_y( p, p_AD, y, InitOut, ErrStat, ErrMsg)
    InitOut%RotFrame_y = .false. ! default all to false, then set the true ones below
    indx_next = 1  
    if (.not. p_AD%CompAeroMaps) then
-      call PackLoadMesh_Names(y%NacelleLoad, 'Nacelle', InitOut%LinNames_y, indx_next)
-      call PackLoadMesh_Names(y%HubLoad,     'Hub',     InitOut%LinNames_y, indx_next)
-      call PackLoadMesh_Names(y%TowerLoad,   'Tower',   InitOut%LinNames_y, indx_next) ! note: y%TowerLoad%NNodes=0 for aeroMaps
+      p%Jac_y_idxStartList%NacelleLoad = indx_next;   call PackLoadMesh_Names(y%NacelleLoad, 'Nacelle', InitOut%LinNames_y, indx_next)
+      p%Jac_y_idxStartList%HubLoad     = indx_next;   call PackLoadMesh_Names(y%HubLoad,     'Hub',     InitOut%LinNames_y, indx_next)
+      p%Jac_y_idxStartList%TFinLoad    = indx_next;   call PackLoadMesh_Names(y%TFinLoad,    'TailFin', InitOut%LinNames_y, indx_next)
+      p%Jac_y_idxStartList%TowerLoad   = indx_next;   call PackLoadMesh_Names(y%TowerLoad,   'Tower',   InitOut%LinNames_y, indx_next) ! note: y%TowerLoad%NNodes=0 for aeroMaps
    endif
    
    indx_last = indx_next
+   p%Jac_y_idxStartList%BladeLoad = indx_next;
    do k=1,p%NumBl_Lin
       call PackLoadMesh_Names(y%BladeLoad(k), 'Blade '//trim(num2lstr(k)), InitOut%LinNames_y, indx_next)
    end do
    ! InitOut%RotFrame_y(indx_last:indx_next-1) = .true. ! The mesh fields are in the global frame, so are not in the rotating frame
 
    if (.not. p_AD%CompAeroMaps) then
-      ! TailFin
-      call PackLoadMesh_Names(y%TFinLoad, 'TailFin', InitOut%LinNames_y, indx_next)
-
       ! Outputs
       do i=1,p%NumOuts + p%BldNd_TotNumOuts
          InitOut%LinNames_y(i+indx_next-1) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))  !trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
@@ -6786,8 +6785,8 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
       indexNames=index
       p%Jac_u_idxStartList%Blade = index
       call SetJac_u_idx(16,21,u%BladeMotion(1)%NNodes,index)
-      if (p%NumBl_Lin > 1)   call SetJac_u_idx(19,24,u%BladeMotion(2)%NNodes,index)
-      if (p%NumBl_Lin > 2)   call SetJac_u_idx(25,30,u%BladeMotion(3)%NNodes,index)
+      if (p%NumBl_Lin > 1)   call SetJac_u_idx(22,27,u%BladeMotion(2)%NNodes,index)
+      if (p%NumBl_Lin > 2)   call SetJac_u_idx(28,33,u%BladeMotion(3)%NNodes,index)
       !     Perturbations
       do k=1,p%NumBl_Lin
          p%du(16 + (k-1)*6) = perturb_b(k)
@@ -6813,7 +6812,7 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
       p%Jac_u_idxStartList%Blade = index
       call SetJac_u_idx(16,18,u%BladeMotion(1)%NNodes,index)
       if (p%NumBl_Lin > 1)   call SetJac_u_idx(22,24,u%BladeMotion(2)%NNodes,index)
-      if (p%NumBl_Lin > 2)   call SetJac_u_idx(18,30,u%BladeMotion(3)%NNodes,index)
+      if (p%NumBl_Lin > 2)   call SetJac_u_idx(28,30,u%BladeMotion(3)%NNodes,index)
       !     Perturbations
       do k=1,p%NumBl_Lin
          p%du(16 + (k-1)*6) = perturb_b(k)
@@ -7089,9 +7088,9 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
       case( 5);   u%HubMotion%RotationVel(    fieldIndx,node) = u%HubMotion%RotationVel(fieldIndx,node) + du * perturb_sign
 
       ! TailFin
-      !     Module/Mesh/Field: u%TFinMotion%TranslationDisp = 31;
-      !     Module/Mesh/Field: u%TFinMotion%Orientation     = 32;
-      !     Module/Mesh/Field: u%TFinMotion%TranslationVel  = 33;
+      !     Module/Mesh/Field: u%TFinMotion%TranslationDisp = 6;
+      !     Module/Mesh/Field: u%TFinMotion%Orientation     = 7;
+      !     Module/Mesh/Field: u%TFinMotion%TranslationVel  = 8;
       case( 6);   u%TFinMotion%TranslationDisp(fieldIndx,node) = u%TFinMotion%TranslationDisp(fieldIndx,node) + du * perturb_sign
       case( 7);   call PerturbOrientationMatrix( u%TFinMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx )
       case( 8);   u%TFinMotion%TranslationVel( fieldIndx,node) = u%TFinMotion%TranslationVel(fieldIndx,node) + du * perturb_sign
@@ -7310,6 +7309,7 @@ SUBROUTINE Compute_dY(p, p_AD, y_p, y_m, delta_p, delta_m, dY)
    if (.not. p_AD%CompAeroMaps) then
       call PackLoadMesh_dY(y_p%NacelleLoad, y_m%NacelleLoad, dY, indx_first)
       call PackLoadMesh_dY(y_p%HubLoad,     y_m%HubLoad,     dY, indx_first)
+      call PackLoadMesh_dY(y_p%TFinLoad,    y_m%TFinLoad,    dY, indx_first)
       call PackLoadMesh_dY(y_p%TowerLoad,   y_m%TowerLoad,   dY, indx_first)
    endif
    
@@ -7318,7 +7318,6 @@ SUBROUTINE Compute_dY(p, p_AD, y_p, y_m, delta_p, delta_m, dY)
    end do
    
    if (.not. p_AD%CompAeroMaps) then
-      call PackLoadMesh_dY(y_p%TFinLoad, y_m%TFinLoad, dY, indx_first)
       do k=1,p%NumOuts + p%BldNd_TotNumOuts
          dY(k+indx_first-1) = y_p%WriteOutput(k) - y_m%WriteOutput(k)
       end do
