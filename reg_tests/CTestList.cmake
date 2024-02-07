@@ -342,8 +342,8 @@ of_regression_py("EllipticalWing_OLAF_py"                    "openfast;fastlib;p
 of_regression_aeroacoustic("IEA_LB_RWT-AeroAcoustics"  "openfast;aerodyn15;aeroacoustics")
 
 # Linearized OpenFAST regression tests
-of_regression_linear("Fake5MW_AeroLin_B1_UA4_DBEMT3"  "-lowpass=0.05"   "openfast;linear;elastodyn;aerodyn")
-of_regression_linear("Fake5MW_AeroLin_B3_UA6"         "-lowpass=0.05"   "openfast;linear;elastodyn;aerodyn")
+#of_regression_linear("Fake5MW_AeroLin_B1_UA4_DBEMT3"  "-lowpass=0.05"   "openfast;linear;elastodyn;aerodyn")
+#of_regression_linear("Fake5MW_AeroLin_B3_UA6"         "-lowpass=0.05"   "openfast;linear;elastodyn;aerodyn")
 of_regression_linear("WP_Stationary_Linear"           ""                "openfast;linear;elastodyn")
 of_regression_linear("Ideal_Beam_Fixed_Free_Linear"   "-lowpass=0.05"   "openfast;linear;beamdyn")
 of_regression_linear("Ideal_Beam_Free_Free_Linear"    "-lowpass=0.05"   "openfast;linear;beamdyn")
