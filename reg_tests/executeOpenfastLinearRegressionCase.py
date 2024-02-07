@@ -67,6 +67,7 @@ parser.add_argument("atol", metavar="Absolute-Tolerance", type=float, nargs=1, h
 parser.add_argument("-p", "-plot", dest="plot", action='store_true', help="bool to include plots in failed cases")
 parser.add_argument("-n", "-no-exec", dest="noExec", action='store_true', help="bool to prevent execution of the test cases")
 parser.add_argument("-v", "-verbose", dest="verbose", action='store_true', help="bool to include verbose system output")
+parser.add_argument("-highpass", dest='highpass', metavar="LowPass-Filter", type=float, nargs='?', default=0.0, help="high pass filter on linearization frequencies to compare")
 
 args = parser.parse_args()
 
@@ -79,6 +80,7 @@ atol = args.atol[0]
 plotError = args.plot
 noExec = args.noExec
 verbose = args.verbose
+highpass = args.highpass
 
 # --- Tolerances for matrix comparison
 # Outputs of lin matrices have 3 decimal digits leading to minimum error of 0.001  
@@ -212,6 +214,14 @@ def compareLin(f,file_freq_ref,file_freq_new):
             print(msg)
         Errors.append(msg)
 
+    def ApplyHighPass(freq,zeta):
+        freqL=np.array([])
+        zetaL=np.array([])
+        for i in range(len(freq)):
+            if freq[i]>highpass:
+                freqL = np.append(freqL,freq[i])
+                zetaL = np.append(zetaL,zeta[i])
+        return freqL,zetaL
 
 
 
@@ -249,6 +259,9 @@ def compareLin(f,file_freq_ref,file_freq_new):
         # Note: we could potentially reorder states like MBC does, but no need for freq/damping
         _, zeta_bas, _, freq_bas = eigA(Abas, nq=None, nq1=None, sort=True, fullEV=True)
         _, zeta_loc, _, freq_loc = eigA(Aloc, nq=None, nq1=None, sort=True, fullEV=True)
+
+        freq_bas, zeta_bas = ApplyHighPass( freq_bas, zeta_bas )
+        freq_loc, zeta_loc = ApplyHighPass( freq_loc, zeta_loc )
 
         if len(freq_bas)==0:
             # We use complex eigenvalues instead of frequencies/damping
