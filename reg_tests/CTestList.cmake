@@ -108,7 +108,7 @@ function(of_fastlib_regression TESTNAME LABEL)
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast")
   # extra flag in call to "regression" on next line sets the ${TESTDIR}
-  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " "${TESTNAME}_fastlib" "${LABEL}" ${TESTNAME} " ")
+  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " "${TESTNAME}_fastlib" "${LABEL}" " " ${TESTNAME})
 endfunction(of_fastlib_regression)
 
 # openfast aeroacoustic 
@@ -342,11 +342,11 @@ of_regression_py("EllipticalWing_OLAF_py"                    "openfast;fastlib;p
 of_regression_aeroacoustic("IEA_LB_RWT-AeroAcoustics"  "openfast;aerodyn15;aeroacoustics")
 
 # Linearized OpenFAST regression tests
-#of_regression_linear("Fake5MW_AeroLin_B1_UA4_DBEMT3"  "-lowpass=0.05"   "openfast;linear;elastodyn;aerodyn")
-#of_regression_linear("Fake5MW_AeroLin_B3_UA6"         "-lowpass=0.05"   "openfast;linear;elastodyn;aerodyn")
+#of_regression_linear("Fake5MW_AeroLin_B1_UA4_DBEMT3"  "-highpass=0.05"  "openfast;linear;elastodyn;aerodyn")
+#of_regression_linear("Fake5MW_AeroLin_B3_UA6"         "-highpass=0.05"  "openfast;linear;elastodyn;aerodyn")
 of_regression_linear("WP_Stationary_Linear"           ""                "openfast;linear;elastodyn")
-of_regression_linear("Ideal_Beam_Fixed_Free_Linear"   "-lowpass=0.05"   "openfast;linear;beamdyn")
-of_regression_linear("Ideal_Beam_Free_Free_Linear"    "-lowpass=0.05"   "openfast;linear;beamdyn")
+of_regression_linear("Ideal_Beam_Fixed_Free_Linear"   "-highpass=0.05"  "openfast;linear;beamdyn")
+of_regression_linear("Ideal_Beam_Free_Free_Linear"    "-highpass=0.05"  "openfast;linear;beamdyn")
 of_regression_linear("5MW_Land_BD_Linear"             ""                "openfast;linear;beamdyn;servodyn")
 of_regression_linear("5MW_OC4Semi_Linear"             ""                "openfast;linear;hydrodyn;servodyn")
 of_regression_linear("StC_test_OC4Semi_Linear_Nac"    ""                "openfast;linear;servodyn;stc")
