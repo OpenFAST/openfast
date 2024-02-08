@@ -587,6 +587,9 @@ subroutine SetTimeIndex(Time, deltaT, nMax, Indx_Lo, Indx_Hi, isopc, ErrStat, Er
       RETURN
    end if
 
+   ! if there are no timesteps, don't proceed
+   if (EqualRealNos(deltaT,0.0_ReKi) .or. deltaT < 0.0_ReKi)  return;
+
 ! NOTE: nMax is the total number of time values in the grid, since this is zero-based indexing, the max index is nMax-1
 !       for example: in a time grid with 11 grid points, the indices run from 0,1,2,3,4,5,6,7,8,9,10
 !                    for the repeating waves feature, index 10 is the same as index 0, so if Indx_Lo = 10 then we want to
