@@ -89,7 +89,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       TYPE(FileInfoType)                     :: InFileInfo                          !< The derived type for holding the full input file for parsing -- we may pass this in the future
       TYPE(Waves_InitOutputType)             :: Waves_InitOut                       ! Initialization Outputs from the Waves submodule initialization
       TYPE(Waves2_InitOutputType)            :: Waves2_InitOut                      ! Initialization Outputs from the Waves2 submodule initialization
-      TYPE(SeaSt_WaveField_InitInputType)    :: WaveField_InitInp
       TYPE(Current_InitOutputType)           :: Current_InitOut                     ! Initialization Outputs from the Current module initialization
       INTEGER                                :: I                                   ! Generic counters
       INTEGER                                :: it                                  ! Generic counters
@@ -263,14 +262,13 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       
 
       ! Setup the 4D grid information for the Interpolation Module
-      WaveField_InitInp%n        = (/p%WaveField%NStepWave,p%nGrid(1),p%nGrid(2),p%nGrid(3)/)
-      WaveField_InitInp%delta    = (/real(p%WaveDT,ReKi),p%deltaGrid(1),p%deltaGrid(2),p%deltaGrid(3)/)
-      WaveField_InitInp%pZero(1) = 0.0  !Time
-      WaveField_InitInp%pZero(2) = -InputFileData%X_HalfWidth
-      WaveField_InitInp%pZero(3) = -InputFileData%Y_HalfWidth
-      WaveField_InitInp%pZero(4) = -InputFileData%Z_Depth  ! zi
-      WaveField_InitInp%Z_Depth  =  InputFileData%Z_Depth
-      call WaveField_SetParam(WaveField_InitInp, p%WaveField%GridParams)
+      p%WaveField%GridParams%n        = (/p%WaveField%NStepWave,p%nGrid(1),p%nGrid(2),p%nGrid(3)/)
+      p%WaveField%GridParams%delta    = (/real(p%WaveDT,ReKi),p%deltaGrid(1),p%deltaGrid(2),p%deltaGrid(3)/)
+      p%WaveField%GridParams%pZero(1) = 0.0  !Time
+      p%WaveField%GridParams%pZero(2) = -InputFileData%X_HalfWidth
+      p%WaveField%GridParams%pZero(3) = -InputFileData%Y_HalfWidth
+      p%WaveField%GridParams%pZero(4) = -InputFileData%Z_Depth  ! zi
+      p%WaveField%GridParams%Z_Depth  =  InputFileData%Z_Depth
 
       IF ( p%OutSwtch == 1 ) THEN ! Only HD-level output writing
          ! HACK  WE can tell FAST not to write any HD outputs by simply deallocating the WriteOutputHdr array!

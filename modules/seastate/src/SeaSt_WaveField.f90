@@ -16,8 +16,6 @@ PUBLIC WaveField_GetNodeWaveVel
 
 PUBLIC WaveField_GetWaveKin
 
-public WaveField_SetParam
-
 public WaveField_Interp_Setup3D, WaveField_Interp_Setup4D
 
 CONTAINS
@@ -434,21 +432,6 @@ end subroutine WaveField_GetWaveKin
 !----------------------------------------------------------------------------------------------------
 ! Interpolation related functions
 !----------------------------------------------------------------------------------------------------
-
-!> Set the WaveField 4D Params
-subroutine WaveField_SetParam( InitInp, p )
-   type(SeaSt_WaveField_InitInputType),   intent(in   ) :: InitInp
-   type(SeaSt_WaveField_ParameterType),   intent(  out) :: p
-
-   ! Copy things from the InitData to the ParamData.
-   p%n       = InitInp%n        ! number of points on the evenly-spaced grid (in each direction)
-   p%delta   = InitInp%delta    ! distance between consecutive grid points in each direction (s,m,m,m)
-   p%pZero   = InitInp%pZero    ! fixed location of first time-XYZ grid point (i.e., XYZ coordinates of m%V(:,1,1,1,:))
-   p%Z_Depth = InitInp%Z_Depth
-
-   return
-end subroutine WaveField_SetParam
-
 
 subroutine SetCartesianXYIndex(p, pZero, delta, nMax, Indx_Lo, Indx_Hi, isopc, FirstWarn, ErrStat, ErrMsg)
    REAL(ReKi),       intent(in   )  :: p

@@ -44,14 +44,6 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtElev = 5      ! WaveMod = 5   [Incident wave kinematics model: Externally generated wave-elevation time series] [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtFull = 6      ! WaveMod = 6   [Incident wave kinematics model: Externally generated full wave-kinematics time series (invalid for PotMod/=0)] [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_UserFreq = 7      ! WaveMod = 7   [Incident wave kinematics model: user-defined wave frequency components] [-]
-! =========  SeaSt_WaveField_InitInputType  =======
-  TYPE, PUBLIC :: SeaSt_WaveField_InitInputType
-    INTEGER(IntKi) , DIMENSION(1:4)  :: n = 0_IntKi      !< number of grid points in the t, x, y, and z directions [-]
-    REAL(ReKi) , DIMENSION(1:4)  :: delta = 0.0_ReKi      !< size between 2 consecutive grid points in each grid direction (time, x, y, z) [s,m,m,m]
-    REAL(ReKi) , DIMENSION(1:4)  :: pZero = 0.0_ReKi      !< fixed position of the time-X-Y-Z grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
-    REAL(ReKi)  :: Z_Depth = 0.0_ReKi      !< grid depth [m]
-  END TYPE SeaSt_WaveField_InitInputType
-! =======================
 ! =========  SeaSt_WaveField_ParameterType  =======
   TYPE, PUBLIC :: SeaSt_WaveField_ParameterType
     INTEGER(IntKi) , DIMENSION(1:4)  :: n = 0_IntKi      !< number of evenly-spaced grid points in the t, x, y, and z directions [-]
@@ -111,53 +103,6 @@ IMPLICIT NONE
   END TYPE SeaSt_WaveFieldType
 ! =======================
 CONTAINS
-
-subroutine SeaSt_WaveField_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
-   type(SeaSt_WaveField_InitInputType), intent(in) :: SrcInitInputData
-   type(SeaSt_WaveField_InitInputType), intent(inout) :: DstInitInputData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'SeaSt_WaveField_CopyInitInput'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   DstInitInputData%n = SrcInitInputData%n
-   DstInitInputData%delta = SrcInitInputData%delta
-   DstInitInputData%pZero = SrcInitInputData%pZero
-   DstInitInputData%Z_Depth = SrcInitInputData%Z_Depth
-end subroutine
-
-subroutine SeaSt_WaveField_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
-   type(SeaSt_WaveField_InitInputType), intent(inout) :: InitInputData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'SeaSt_WaveField_DestroyInitInput'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-end subroutine
-
-subroutine SeaSt_WaveField_PackInitInput(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(SeaSt_WaveField_InitInputType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'SeaSt_WaveField_PackInitInput'
-   if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, InData%n)
-   call RegPack(RF, InData%delta)
-   call RegPack(RF, InData%pZero)
-   call RegPack(RF, InData%Z_Depth)
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine SeaSt_WaveField_UnPackInitInput(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(SeaSt_WaveField_InitInputType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'SeaSt_WaveField_UnPackInitInput'
-   if (RF%ErrStat /= ErrID_None) return
-   call RegUnpack(RF, OutData%n); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%delta); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%pZero); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Z_Depth); if (RegCheckErr(RF, RoutineName)) return
-end subroutine
 
 subroutine SeaSt_WaveField_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    type(SeaSt_WaveField_ParameterType), intent(in) :: SrcParamData

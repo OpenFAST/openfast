@@ -17,11 +17,6 @@ param     SeaSt_WaveField      -                INTEGER             WaveMod_User
 #---------------------------------------------------------------------------------------------------------------------------------------------------------
 #<Key Word> <Module>         <TypeName>            <FieldType>                   <FieldName>     <Dims>           <Ctrl>   <DNA ME> <Description> <Units>
 #---------------------------------------------------------------------------------------------------------------------------------------------------------
-typedef     ^             InitInputType         IntKi                n                4               -        -        "number of grid points in the t, x, y, and z directions"                     -
-typedef     ^             InitInputType         ReKi                 delta            4               -        -        "size between 2 consecutive grid points in each grid direction (time, x, y, z)"  "s,m,m,m"
-typedef     ^             InitInputType         ReKi                 pZero            4               -        -        "fixed position of the time-X-Y-Z grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))" "m"
-typedef     ^             InitInputType         ReKi                 Z_Depth          -               -        -        "grid depth" m
-
 typedef     ^             ParameterType         IntKi                n                4               -        -        "number of evenly-spaced grid points in the t, x, y, and z directions"      -
 typedef     ^             ParameterType         ReKi                 delta            4               -        -        "size between 2 consecutive grid points in each grid direction"            "s,m,m,m"
 typedef     ^             ParameterType         ReKi                 pZero            4               -        -        "fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))" "m"
