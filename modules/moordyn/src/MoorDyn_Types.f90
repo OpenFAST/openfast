@@ -33,6 +33,12 @@ MODULE MoorDyn_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_u_CoupledKinematics           = 1      ! Mesh number for MD MD_u_CoupledKinematics mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_y_CoupledLoads                = 2      ! Mesh number for MD MD_y_CoupledLoads mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_y_VisLinesMesh                = 3      ! Mesh number for MD MD_y_VisLinesMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_y_VisRodsMesh                 = 4      ! Mesh number for MD MD_y_VisRodsMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_y_VisBodiesMesh               = 5      ! Mesh number for MD MD_y_VisBodiesMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_y_VisAnchsMesh                = 6      ! Mesh number for MD MD_y_VisAnchsMesh mesh [-]
 ! =========  MD_InputFileType  =======
   TYPE, PUBLIC :: MD_InputFileType
     REAL(DbKi)  :: DTIC = 0.5      !< convergence check time step for IC generation [[s]]
@@ -4949,5 +4955,65 @@ SUBROUTINE MD_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Err
       END DO
    END IF ! check if allocated
 END SUBROUTINE
+
+function MD_InputMeshPointer(u, ML) result(Mesh)
+   type(MD_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (MD_u_CoupledKinematics)
+       Mesh => u%CoupledKinematics(ML%i1)
+   end select
+end function
+
+function MD_InputMeshName(u, ML) result(Name)
+   type(MD_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (MD_u_CoupledKinematics)
+       Name = "u%CoupledKinematics("//trim(Num2LStr(ML%i1))//")"
+   end select
+end function
+
+function MD_OutputMeshPointer(y, ML) result(Mesh)
+   type(MD_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (MD_y_CoupledLoads)
+       Mesh => y%CoupledLoads(ML%i1)
+   case (MD_y_VisLinesMesh)
+       Mesh => y%VisLinesMesh(ML%i1)
+   case (MD_y_VisRodsMesh)
+       Mesh => y%VisRodsMesh(ML%i1)
+   case (MD_y_VisBodiesMesh)
+       Mesh => y%VisBodiesMesh(ML%i1)
+   case (MD_y_VisAnchsMesh)
+       Mesh => y%VisAnchsMesh(ML%i1)
+   end select
+end function
+
+function MD_OutputMeshName(y, ML) result(Name)
+   type(MD_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (MD_y_CoupledLoads)
+       Name = "y%CoupledLoads("//trim(Num2LStr(ML%i1))//")"
+   case (MD_y_VisLinesMesh)
+       Name = "y%VisLinesMesh("//trim(Num2LStr(ML%i1))//")"
+   case (MD_y_VisRodsMesh)
+       Name = "y%VisRodsMesh("//trim(Num2LStr(ML%i1))//")"
+   case (MD_y_VisBodiesMesh)
+       Name = "y%VisBodiesMesh("//trim(Num2LStr(ML%i1))//")"
+   case (MD_y_VisAnchsMesh)
+       Name = "y%VisAnchsMesh("//trim(Num2LStr(ML%i1))//")"
+   end select
+end function
 END MODULE MoorDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

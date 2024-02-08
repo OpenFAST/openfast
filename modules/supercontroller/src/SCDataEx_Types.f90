@@ -644,5 +644,41 @@ SUBROUTINE SC_DX_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
       END IF
    END IF
 END SUBROUTINE
+
+function SC_DX_InputMeshPointer(u, ML) result(Mesh)
+   type(SC_DX_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function SC_DX_InputMeshName(u, ML) result(Name)
+   type(SC_DX_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
+
+function SC_DX_OutputMeshPointer(y, ML) result(Mesh)
+   type(SC_DX_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function SC_DX_OutputMeshName(y, ML) result(Name)
+   type(SC_DX_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
 END MODULE SCDataEx_Types
 !ENDOFREGISTRYGENERATEDFILE

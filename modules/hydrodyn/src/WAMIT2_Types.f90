@@ -34,7 +34,8 @@ MODULE WAMIT2_Types
 USE SeaSt_WaveField_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxWAMIT2Outputs = 6      !  [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxWAMIT2Outputs                 = 6      !  [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WAMIT2_y_Mesh                    = 1      ! Mesh number for WAMIT2 WAMIT2_y_Mesh mesh [-]
 ! =========  WAMIT2_InitInputType  =======
   TYPE, PUBLIC :: WAMIT2_InitInputType
     LOGICAL  :: HasWAMIT = .false.      !< .TRUE. if using WAMIT model, .FALSE. otherwise [-]
@@ -631,5 +632,27 @@ SUBROUTINE WAMIT2_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat,
    CALL MeshExtrapInterp2(y1%Mesh, y2%Mesh, y3%Mesh, tin, y_out%Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 END SUBROUTINE
+
+function WAMIT2_OutputMeshPointer(y, ML) result(Mesh)
+   type(WAMIT2_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (WAMIT2_y_Mesh)
+       Mesh => y%Mesh
+   end select
+end function
+
+function WAMIT2_OutputMeshName(y, ML) result(Name)
+   type(WAMIT2_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (WAMIT2_y_Mesh)
+       Name = "y%Mesh"
+   end select
+end function
 END MODULE WAMIT2_Types
 !ENDOFREGISTRYGENERATEDFILE

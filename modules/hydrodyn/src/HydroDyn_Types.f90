@@ -39,8 +39,16 @@ USE WAMIT2_Types
 USE Morison_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxHDOutputs = 510      ! The maximum number of output channels supported by this module [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxUserOutputs = 5150      !  Total possible number of output channels:  SS_Excitation = 7 + SS_Radiation = 7 + Morison= 4626 + HydroDyn=510   =  5150 [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxHDOutputs                     = 510      ! The maximum number of output channels supported by this module [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxUserOutputs                   = 5150      !  Total possible number of output channels:  SS_Excitation = 7 + SS_Radiation = 7 + Morison= 4626 + HydroDyn=510   =  5150 [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: HydroDyn_u_Morison_Mesh          = 1      ! Mesh number for HydroDyn HydroDyn_u_Morison_Mesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: HydroDyn_u_WAMITMesh             = 2      ! Mesh number for HydroDyn HydroDyn_u_WAMITMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: HydroDyn_u_PRPMesh               = 3      ! Mesh number for HydroDyn HydroDyn_u_PRPMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: HydroDyn_y_WAMIT_Mesh            = 4      ! Mesh number for HydroDyn HydroDyn_y_WAMIT_Mesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: HydroDyn_y_WAMIT2_Mesh           = 5      ! Mesh number for HydroDyn HydroDyn_y_WAMIT2_Mesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: HydroDyn_y_Morison_Mesh          = 6      ! Mesh number for HydroDyn HydroDyn_y_Morison_Mesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: HydroDyn_y_Morison_VisMesh       = 7      ! Mesh number for HydroDyn HydroDyn_y_Morison_VisMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: HydroDyn_y_WAMITMesh             = 8      ! Mesh number for HydroDyn HydroDyn_y_WAMITMesh mesh [-]
 ! =========  HydroDyn_InputFile  =======
   TYPE, PUBLIC :: HydroDyn_InputFile
     LOGICAL  :: EchoFlag = .false.      !< Echo the input file [-]
@@ -2526,5 +2534,73 @@ SUBROUTINE HydroDyn_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrSta
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
    END IF ! check if allocated
 END SUBROUTINE
+
+function HydroDyn_InputMeshPointer(u, ML) result(Mesh)
+   type(HydroDyn_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (HydroDyn_u_Morison_Mesh)
+       Mesh => u%Morison%Mesh
+   case (HydroDyn_u_WAMITMesh)
+       Mesh => u%WAMITMesh
+   case (HydroDyn_u_PRPMesh)
+       Mesh => u%PRPMesh
+   end select
+end function
+
+function HydroDyn_InputMeshName(u, ML) result(Name)
+   type(HydroDyn_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (HydroDyn_u_Morison_Mesh)
+       Name = "u%Morison%Mesh"
+   case (HydroDyn_u_WAMITMesh)
+       Name = "u%WAMITMesh"
+   case (HydroDyn_u_PRPMesh)
+       Name = "u%PRPMesh"
+   end select
+end function
+
+function HydroDyn_OutputMeshPointer(y, ML) result(Mesh)
+   type(HydroDyn_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (HydroDyn_y_WAMIT_Mesh)
+       Mesh => y%WAMIT(ML%i1)%Mesh
+   case (HydroDyn_y_WAMIT2_Mesh)
+       Mesh => y%WAMIT2(ML%i1)%Mesh
+   case (HydroDyn_y_Morison_Mesh)
+       Mesh => y%Morison%Mesh
+   case (HydroDyn_y_Morison_VisMesh)
+       Mesh => y%Morison%VisMesh
+   case (HydroDyn_y_WAMITMesh)
+       Mesh => y%WAMITMesh
+   end select
+end function
+
+function HydroDyn_OutputMeshName(y, ML) result(Name)
+   type(HydroDyn_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (HydroDyn_y_WAMIT_Mesh)
+       Name = "y%WAMIT("//trim(Num2LStr(ML%i1))//")%Mesh"
+   case (HydroDyn_y_WAMIT2_Mesh)
+       Name = "y%WAMIT2("//trim(Num2LStr(ML%i1))//")%Mesh"
+   case (HydroDyn_y_Morison_Mesh)
+       Name = "y%Morison%Mesh"
+   case (HydroDyn_y_Morison_VisMesh)
+       Name = "y%Morison%VisMesh"
+   case (HydroDyn_y_WAMITMesh)
+       Name = "y%WAMITMesh"
+   end select
+end function
 END MODULE HydroDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

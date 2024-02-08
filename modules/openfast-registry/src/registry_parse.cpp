@@ -71,6 +71,45 @@ void Registry::parse(const std::string &file_name, const int recurse_level)
         auto module_name = has_slash ? fields_prev[1].substr(0, slash_index) : fields_prev[1];
         this->use_modules.push_back(module_name);
     }
+
+    // If this is the root file
+    if (recurse_level == 0)
+    {
+        // Get the root module
+        std::shared_ptr<Module> mod;
+        for (auto &it : this->modules)
+        {
+            if (it.second->is_root)
+            {
+                mod = it.second;
+                break;
+            }
+        }
+
+        int mesh_num = 0;
+
+        // Loop through input and output types if in module
+        for (const auto &is_input : std::vector<bool>{true, false})
+        {
+            auto it = mod->data_types.find(mod->nickname + (is_input ? "_InputType" : "_OutputType"));
+            if (it == mod->data_types.end())
+            {
+                continue;
+            }
+
+            // Get mesh names in derived type or subtypes and add parameters for identifying the mesh
+            std::string prefix = mod->nickname + (is_input ? "_u" : "_y");
+            auto &ddt = it->second->derived;
+            std::vector<std::string> mesh_names, mesh_paths;
+            ddt.get_mesh_names_paths(prefix, "", 0, mesh_names, mesh_paths);
+            auto param_type = this->find_data_type("integer");
+            for (const auto &mesh_name: mesh_names)
+            {
+                ++mesh_num;
+                mod->params.push_back(Parameter(mesh_name, param_type, std::to_string(mesh_num), "Mesh number for " + mod->nickname + " " + mesh_name + " mesh", ""));
+            }
+        }
+    }
 }
 
 int Registry::parse_line(const std::string &line, std::vector<std::string> &fields_prev,

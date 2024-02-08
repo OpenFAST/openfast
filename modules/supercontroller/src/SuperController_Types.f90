@@ -1789,5 +1789,41 @@ SUBROUTINE SC_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Err
       y_out%fromSC = a1*y1%fromSC + a2*y2%fromSC + a3*y3%fromSC
    END IF ! check if allocated
 END SUBROUTINE
+
+function SC_InputMeshPointer(u, ML) result(Mesh)
+   type(SC_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function SC_InputMeshName(u, ML) result(Name)
+   type(SC_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
+
+function SC_OutputMeshPointer(y, ML) result(Mesh)
+   type(SC_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function SC_OutputMeshName(y, ML) result(Name)
+   type(SC_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
 END MODULE SuperController_Types
 !ENDOFREGISTRYGENERATEDFILE

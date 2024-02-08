@@ -35,8 +35,9 @@ USE AirfoilInfo_Types
 USE UnsteadyAero_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: idGridVelocity = 1      ! Grid stores velocity field [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: idGridVelVorticity = 2      ! Grid stores velocity and vorticity [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: idGridVelocity                   = 1      ! Grid stores velocity field [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: idGridVelVorticity               = 2      ! Grid stores velocity and vorticity [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: FVW_u_WingsMesh                  = 1      ! Mesh number for FVW FVW_u_WingsMesh mesh [-]
 ! =========  GridOutType  =======
   TYPE, PUBLIC :: GridOutType
     CHARACTER(100)  :: name      !< Grid name [-]
@@ -4087,5 +4088,45 @@ SUBROUTINE FVW_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Er
       END DO
    END IF ! check if allocated
 END SUBROUTINE
+
+function FVW_InputMeshPointer(u, ML) result(Mesh)
+   type(FVW_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (FVW_u_WingsMesh)
+       Mesh => u%WingsMesh(ML%i1)
+   end select
+end function
+
+function FVW_InputMeshName(u, ML) result(Name)
+   type(FVW_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (FVW_u_WingsMesh)
+       Name = "u%WingsMesh("//trim(Num2LStr(ML%i1))//")"
+   end select
+end function
+
+function FVW_OutputMeshPointer(y, ML) result(Mesh)
+   type(FVW_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function FVW_OutputMeshName(y, ML) result(Name)
+   type(FVW_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
 END MODULE FVW_Types
 !ENDOFREGISTRYGENERATEDFILE

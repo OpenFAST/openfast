@@ -33,6 +33,8 @@ MODULE IceDyn_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: IceD_u_PointMesh                 = 1      ! Mesh number for IceD IceD_u_PointMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: IceD_y_PointMesh                 = 2      ! Mesh number for IceD IceD_y_PointMesh mesh [-]
 ! =========  IceD_InputFile  =======
   TYPE, PUBLIC :: IceD_InputFile
     INTEGER(IntKi)  :: IceModel = 0_IntKi      !< The current ice model number [-]
@@ -1739,5 +1741,49 @@ SUBROUTINE IceD_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, E
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
    END IF ! check if allocated
 END SUBROUTINE
+
+function IceD_InputMeshPointer(u, ML) result(Mesh)
+   type(IceD_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (IceD_u_PointMesh)
+       Mesh => u%PointMesh
+   end select
+end function
+
+function IceD_InputMeshName(u, ML) result(Name)
+   type(IceD_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (IceD_u_PointMesh)
+       Name = "u%PointMesh"
+   end select
+end function
+
+function IceD_OutputMeshPointer(y, ML) result(Mesh)
+   type(IceD_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (IceD_y_PointMesh)
+       Mesh => y%PointMesh
+   end select
+end function
+
+function IceD_OutputMeshName(y, ML) result(Name)
+   type(IceD_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (IceD_y_PointMesh)
+       Name = "y%PointMesh"
+   end select
+end function
 END MODULE IceDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

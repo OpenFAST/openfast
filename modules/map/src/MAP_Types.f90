@@ -34,6 +34,8 @@ MODULE MAP_Types
 USE MAP_Fortran_Types
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MAP_u_PtFairDisplacement         = 1      ! Mesh number for MAP MAP_u_PtFairDisplacement mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MAP_y_ptFairleadLoad             = 2      ! Mesh number for MAP MAP_y_ptFairleadLoad mesh [-]
 ! =========  MAP_InitInputType_C  =======
   TYPE, BIND(C) :: MAP_InitInputType_C
    TYPE(C_PTR) :: object = C_NULL_PTR
@@ -2789,5 +2791,49 @@ SUBROUTINE MAP_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Er
    CALL MeshExtrapInterp2(y1%ptFairleadLoad, y2%ptFairleadLoad, y3%ptFairleadLoad, tin, y_out%ptFairleadLoad, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 END SUBROUTINE
+
+function MAP_InputMeshPointer(u, ML) result(Mesh)
+   type(MAP_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (MAP_u_PtFairDisplacement)
+       Mesh => u%PtFairDisplacement
+   end select
+end function
+
+function MAP_InputMeshName(u, ML) result(Name)
+   type(MAP_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (MAP_u_PtFairDisplacement)
+       Name = "u%PtFairDisplacement"
+   end select
+end function
+
+function MAP_OutputMeshPointer(y, ML) result(Mesh)
+   type(MAP_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (MAP_y_ptFairleadLoad)
+       Mesh => y%ptFairleadLoad
+   end select
+end function
+
+function MAP_OutputMeshName(y, ML) result(Name)
+   type(MAP_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (MAP_y_ptFairleadLoad)
+       Name = "y%ptFairleadLoad"
+   end select
+end function
 END MODULE MAP_Types
 !ENDOFREGISTRYGENERATEDFILE

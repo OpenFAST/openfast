@@ -3165,5 +3165,41 @@ SUBROUTINE DWM_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Er
    CALL InflowWind_Output_ExtrapInterp2( y1%IfW, y2%IfW, y3%IfW, tin, y_out%IfW, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 END SUBROUTINE
+
+function DWM_InputMeshPointer(u, ML) result(Mesh)
+   type(DWM_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function DWM_InputMeshName(u, ML) result(Name)
+   type(DWM_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
+
+function DWM_OutputMeshPointer(y, ML) result(Mesh)
+   type(DWM_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function DWM_OutputMeshName(y, ML) result(Name)
+   type(DWM_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
 END MODULE DWM_Types
 !ENDOFREGISTRYGENERATEDFILE

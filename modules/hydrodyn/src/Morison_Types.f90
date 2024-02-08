@@ -34,6 +34,9 @@ MODULE Morison_Types
 USE SeaSt_WaveField_Types
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Morison_u_Mesh                   = 1      ! Mesh number for Morison Morison_u_Mesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Morison_y_Mesh                   = 2      ! Mesh number for Morison Morison_y_Mesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Morison_y_VisMesh                = 3      ! Mesh number for Morison Morison_y_VisMesh mesh [-]
 ! =========  Morison_JointType  =======
   TYPE, PUBLIC :: Morison_JointType
     INTEGER(IntKi)  :: JointID = 0_IntKi      !< User-specified integer ID for the given joint [-]
@@ -4657,5 +4660,53 @@ SUBROUTINE Morison_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
    END IF ! check if allocated
 END SUBROUTINE
+
+function Morison_InputMeshPointer(u, ML) result(Mesh)
+   type(Morison_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (Morison_u_Mesh)
+       Mesh => u%Mesh
+   end select
+end function
+
+function Morison_InputMeshName(u, ML) result(Name)
+   type(Morison_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (Morison_u_Mesh)
+       Name = "u%Mesh"
+   end select
+end function
+
+function Morison_OutputMeshPointer(y, ML) result(Mesh)
+   type(Morison_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (Morison_y_Mesh)
+       Mesh => y%Mesh
+   case (Morison_y_VisMesh)
+       Mesh => y%VisMesh
+   end select
+end function
+
+function Morison_OutputMeshName(y, ML) result(Name)
+   type(Morison_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (Morison_y_Mesh)
+       Name = "y%Mesh"
+   case (Morison_y_VisMesh)
+       Name = "y%VisMesh"
+   end select
+end function
 END MODULE Morison_Types
 !ENDOFREGISTRYGENERATEDFILE

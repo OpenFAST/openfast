@@ -33,10 +33,10 @@ MODULE DBEMT_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_none = 0      ! use BEMT instead (not DBEMT) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_tauConst = 1      ! use constant tau1 [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_tauVaries = 2      ! use time-dependent tau1 [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_cont_tauConst = 3      ! use continuous formulation with constant tau1 [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_none                       = 0      ! use BEMT instead (not DBEMT) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_tauConst                   = 1      ! use constant tau1 [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_tauVaries                  = 2      ! use time-dependent tau1 [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_cont_tauConst              = 3      ! use continuous formulation with constant tau1 [-]
 ! =========  DBEMT_InitInputType  =======
   TYPE, PUBLIC :: DBEMT_InitInputType
     INTEGER(IntKi)  :: NumBlades = 0_IntKi      !< Number of blades on the turbine [-]
@@ -1413,5 +1413,41 @@ SUBROUTINE DBEMT_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, 
       y_out%vind = a1*y1%vind + a2*y2%vind + a3*y3%vind
    END IF ! check if allocated
 END SUBROUTINE
+
+function DBEMT_InputMeshPointer(u, ML) result(Mesh)
+   type(DBEMT_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function DBEMT_InputMeshName(u, ML) result(Name)
+   type(DBEMT_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
+
+function DBEMT_OutputMeshPointer(y, ML) result(Mesh)
+   type(DBEMT_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function DBEMT_OutputMeshName(y, ML) result(Name)
+   type(DBEMT_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
 END MODULE DBEMT_Types
 !ENDOFREGISTRYGENERATEDFILE

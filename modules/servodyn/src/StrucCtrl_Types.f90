@@ -33,6 +33,8 @@ MODULE StrucCtrl_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: StC_u_Mesh                       = 1      ! Mesh number for StC StC_u_Mesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: StC_y_Mesh                       = 2      ! Mesh number for StC StC_y_Mesh mesh [-]
 ! =========  StC_InputFile  =======
   TYPE, PUBLIC :: StC_InputFile
     CHARACTER(1024)  :: StCFileName      !< Name of the input file; remove if there is no file [-]
@@ -2300,5 +2302,49 @@ SUBROUTINE StC_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Er
       y_out%MeasVel = a1*y1%MeasVel + a2*y2%MeasVel + a3*y3%MeasVel
    END IF ! check if allocated
 END SUBROUTINE
+
+function StC_InputMeshPointer(u, ML) result(Mesh)
+   type(StC_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (StC_u_Mesh)
+       Mesh => u%Mesh(ML%i1)
+   end select
+end function
+
+function StC_InputMeshName(u, ML) result(Name)
+   type(StC_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (StC_u_Mesh)
+       Name = "u%Mesh("//trim(Num2LStr(ML%i1))//")"
+   end select
+end function
+
+function StC_OutputMeshPointer(y, ML) result(Mesh)
+   type(StC_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (StC_y_Mesh)
+       Mesh => y%Mesh(ML%i1)
+   end select
+end function
+
+function StC_OutputMeshName(y, ML) result(Name)
+   type(StC_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (StC_y_Mesh)
+       Name = "y%Mesh("//trim(Num2LStr(ML%i1))//")"
+   end select
+end function
 END MODULE StrucCtrl_Types
 !ENDOFREGISTRYGENERATEDFILE

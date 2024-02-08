@@ -33,12 +33,12 @@ MODULE IfW_FlowField_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Undef_FieldType = 0      ! This is the code for an undefined FieldType [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Uniform_FieldType = 1      ! Uniform FieldType from SteadyWind or Uniform Wind [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Grid3D_FieldType = 2      ! 3D Grid FieldType from TurbSim, Bladed, HAWC [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Grid4D_FieldType = 3      ! 4D Grid FieldType from FAST.Farm [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Point_FieldType = 4      ! Points FieldType from ExtInflow [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: User_FieldType = 5      ! User FieldType configured by the user [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Undef_FieldType                  = 0      ! This is the code for an undefined FieldType [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Uniform_FieldType                = 1      ! Uniform FieldType from SteadyWind or Uniform Wind [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Grid3D_FieldType                 = 2      ! 3D Grid FieldType from TurbSim, Bladed, HAWC [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Grid4D_FieldType                 = 3      ! 4D Grid FieldType from FAST.Farm [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Point_FieldType                  = 4      ! Points FieldType from ExtInflow [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: User_FieldType                   = 5      ! User FieldType configured by the user [-]
 ! =========  UniformFieldType  =======
   TYPE, PUBLIC :: UniformFieldType
     REAL(ReKi)  :: RefHeight = 0.0_ReKi      !< reference height; used to center the wind [meters]

@@ -33,6 +33,11 @@ MODULE SubDyn_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SD_u_TPMesh                      = 1      ! Mesh number for SD SD_u_TPMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SD_u_LMesh                       = 2      ! Mesh number for SD SD_u_LMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SD_y_Y1Mesh                      = 3      ! Mesh number for SD SD_y_Y1Mesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SD_y_Y2Mesh                      = 4      ! Mesh number for SD SD_y_Y2Mesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SD_y_Y3Mesh                      = 5      ! Mesh number for SD SD_y_Y3Mesh mesh [-]
 ! =========  IList  =======
   TYPE, PUBLIC :: IList
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: List      !< List of integers [-]
@@ -4401,5 +4406,61 @@ SUBROUTINE SD_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Err
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
    END IF ! check if allocated
 END SUBROUTINE
+
+function SD_InputMeshPointer(u, ML) result(Mesh)
+   type(SD_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (SD_u_TPMesh)
+       Mesh => u%TPMesh
+   case (SD_u_LMesh)
+       Mesh => u%LMesh
+   end select
+end function
+
+function SD_InputMeshName(u, ML) result(Name)
+   type(SD_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (SD_u_TPMesh)
+       Name = "u%TPMesh"
+   case (SD_u_LMesh)
+       Name = "u%LMesh"
+   end select
+end function
+
+function SD_OutputMeshPointer(y, ML) result(Mesh)
+   type(SD_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (SD_y_Y1Mesh)
+       Mesh => y%Y1Mesh
+   case (SD_y_Y2Mesh)
+       Mesh => y%Y2Mesh
+   case (SD_y_Y3Mesh)
+       Mesh => y%Y3Mesh
+   end select
+end function
+
+function SD_OutputMeshName(y, ML) result(Name)
+   type(SD_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (SD_y_Y1Mesh)
+       Name = "y%Y1Mesh"
+   case (SD_y_Y2Mesh)
+       Name = "y%Y2Mesh"
+   case (SD_y_Y3Mesh)
+       Name = "y%Y3Mesh"
+   end select
+end function
 END MODULE SubDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

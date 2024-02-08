@@ -34,6 +34,10 @@ MODULE AeroDyn14_Types
 USE DWM_Types
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD14_u_InputMarkers              = 1      ! Mesh number for AD14 AD14_u_InputMarkers mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD14_u_Twr_InputMarkers          = 2      ! Mesh number for AD14 AD14_u_Twr_InputMarkers mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD14_y_OutputLoads               = 3      ! Mesh number for AD14 AD14_y_OutputLoads mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD14_y_Twr_OutputLoads           = 4      ! Mesh number for AD14 AD14_y_Twr_OutputLoads mesh [-]
 ! =========  Marker  =======
   TYPE, PUBLIC :: Marker
     REAL(ReKi) , DIMENSION(1:3)  :: Position = 0.0 
@@ -4895,5 +4899,57 @@ SUBROUTINE AD14_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, E
    CALL MeshExtrapInterp2(y1%Twr_OutputLoads, y2%Twr_OutputLoads, y3%Twr_OutputLoads, tin, y_out%Twr_OutputLoads, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 END SUBROUTINE
+
+function AD14_InputMeshPointer(u, ML) result(Mesh)
+   type(AD14_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (AD14_u_InputMarkers)
+       Mesh => u%InputMarkers(ML%i1)
+   case (AD14_u_Twr_InputMarkers)
+       Mesh => u%Twr_InputMarkers
+   end select
+end function
+
+function AD14_InputMeshName(u, ML) result(Name)
+   type(AD14_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (AD14_u_InputMarkers)
+       Name = "u%InputMarkers("//trim(Num2LStr(ML%i1))//")"
+   case (AD14_u_Twr_InputMarkers)
+       Name = "u%Twr_InputMarkers"
+   end select
+end function
+
+function AD14_OutputMeshPointer(y, ML) result(Mesh)
+   type(AD14_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (AD14_y_OutputLoads)
+       Mesh => y%OutputLoads(ML%i1)
+   case (AD14_y_Twr_OutputLoads)
+       Mesh => y%Twr_OutputLoads
+   end select
+end function
+
+function AD14_OutputMeshName(y, ML) result(Name)
+   type(AD14_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (AD14_y_OutputLoads)
+       Name = "y%OutputLoads("//trim(Num2LStr(ML%i1))//")"
+   case (AD14_y_Twr_OutputLoads)
+       Name = "y%Twr_OutputLoads"
+   end select
+end function
 END MODULE AeroDyn14_Types
 !ENDOFREGISTRYGENERATEDFILE

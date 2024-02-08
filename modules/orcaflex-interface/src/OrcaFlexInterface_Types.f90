@@ -33,6 +33,8 @@ MODULE OrcaFlexInterface_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Orca_u_PtfmMesh                  = 1      ! Mesh number for Orca Orca_u_PtfmMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Orca_y_PtfmMesh                  = 2      ! Mesh number for Orca Orca_y_PtfmMesh mesh [-]
 ! =========  Orca_InitInputType  =======
   TYPE, PUBLIC :: Orca_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file; remove if there is no file [-]
@@ -1054,5 +1056,49 @@ SUBROUTINE Orca_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, E
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
    END IF ! check if allocated
 END SUBROUTINE
+
+function Orca_InputMeshPointer(u, ML) result(Mesh)
+   type(Orca_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (Orca_u_PtfmMesh)
+       Mesh => u%PtfmMesh
+   end select
+end function
+
+function Orca_InputMeshName(u, ML) result(Name)
+   type(Orca_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (Orca_u_PtfmMesh)
+       Name = "u%PtfmMesh"
+   end select
+end function
+
+function Orca_OutputMeshPointer(y, ML) result(Mesh)
+   type(Orca_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (Orca_y_PtfmMesh)
+       Mesh => y%PtfmMesh
+   end select
+end function
+
+function Orca_OutputMeshName(y, ML) result(Name)
+   type(Orca_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (Orca_y_PtfmMesh)
+       Name = "y%PtfmMesh"
+   end select
+end function
 END MODULE OrcaFlexInterface_Types
 !ENDOFREGISTRYGENERATEDFILE

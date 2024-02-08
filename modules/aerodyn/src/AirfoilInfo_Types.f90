@@ -33,9 +33,9 @@ MODULE AirfoilInfo_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFITable_1 = 1      ! 1D interpolation on AoA (first table only) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFITable_2Re = 2      ! 2D interpolation on AoA and Re [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFITable_2User = 3      ! 2D interpolation on AoA and UserProp [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFITable_1                       = 1      ! 1D interpolation on AoA (first table only) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFITable_2Re                     = 2      ! 2D interpolation on AoA and Re [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFITable_2User                   = 3      ! 2D interpolation on AoA and UserProp [-]
 ! =========  AFI_UA_BL_Type  =======
   TYPE, PUBLIC :: AFI_UA_BL_Type
     REAL(ReKi)  :: alpha0 = 0.0_ReKi      !< Angle of attack for zero lift (also used in HGM) [input in degrees; stored as radians]
@@ -1447,5 +1447,41 @@ SUBROUTINE AFI_UA_BL_Type_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat
    u_out%c_alphaLowerWrap = a1*u1%c_alphaLowerWrap + a2*u2%c_alphaLowerWrap + a3*u3%c_alphaLowerWrap
    u_out%c_alphaUpperWrap = a1*u1%c_alphaUpperWrap + a2*u2%c_alphaUpperWrap + a3*u3%c_alphaUpperWrap
 END SUBROUTINE
+
+function AFI_InputMeshPointer(u, ML) result(Mesh)
+   type(AFI_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function AFI_InputMeshName(u, ML) result(Name)
+   type(AFI_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
+
+function AFI_OutputMeshPointer(y, ML) result(Mesh)
+   type(AFI_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function AFI_OutputMeshName(y, ML) result(Name)
+   type(AFI_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
 END MODULE AirfoilInfo_Types
 !ENDOFREGISTRYGENERATEDFILE

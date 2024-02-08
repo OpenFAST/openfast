@@ -34,12 +34,12 @@ MODULE AWAE_Types
 USE InflowWind_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: XYSlice = 1      ! Extract an XY slice of data from the 3D grid [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: YZSlice = 2      ! Extract an YZ slice of data from the 3D grid [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: XZSlice = 3      ! Extract an XZ slice of data from the 3D grid [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MeanderMod_Uniform = 1      ! Spatial filter model for wake meandering: uniform [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MeanderMod_TruncJinc = 2      ! Spatial filter model for wake meandering: truncated jinc [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MeanderMod_WndwdJinc = 3      ! Spatial filter model for wake meandering: windowed jinc [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: XYSlice                          = 1      ! Extract an XY slice of data from the 3D grid [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: YZSlice                          = 2      ! Extract an YZ slice of data from the 3D grid [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: XZSlice                          = 3      ! Extract an XZ slice of data from the 3D grid [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MeanderMod_Uniform               = 1      ! Spatial filter model for wake meandering: uniform [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MeanderMod_TruncJinc             = 2      ! Spatial filter model for wake meandering: truncated jinc [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MeanderMod_WndwdJinc             = 3      ! Spatial filter model for wake meandering: windowed jinc [-]
 ! =========  AWAE_HighWindGrid  =======
   TYPE, PUBLIC :: AWAE_HighWindGrid
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: data => NULL()      !< UVW components of wind data across the high-res regularly-spaced grid [m/s]
@@ -2494,5 +2494,41 @@ subroutine AWAE_UnPackInput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%D_wake); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WAT_k_mt); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
+function AWAE_InputMeshPointer(u, ML) result(Mesh)
+   type(AWAE_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function AWAE_InputMeshName(u, ML) result(Name)
+   type(AWAE_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
+
+function AWAE_OutputMeshPointer(y, ML) result(Mesh)
+   type(AWAE_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function AWAE_OutputMeshName(y, ML) result(Name)
+   type(AWAE_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
 END MODULE AWAE_Types
 !ENDOFREGISTRYGENERATEDFILE

@@ -33,12 +33,18 @@ MODULE BeamDyn_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_STATIC_ANALYSIS = 1      ! Constant for static analysis. InputType%Dynamic = FALSE. [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_DYNAMIC_ANALYSIS = 2      ! Constant for dynamic analysis. InputType%Dynamic = TRUE .AND. BD_InputFile%QuasiStaticSolve = FALSE [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_DYN_SSS_ANALYSIS = 3      ! Constant for dynamic analysis with Steady State Startup solve. InputType%Dynamic = TRUE .AND. BD_InputFile%QuasiStaticSolve = TRUE [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_MESH_FE = 1      ! Constant for creating y%BldMotion at the FE (GLL) nodes [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_MESH_QP = 2      ! Constant for creating y%BldMotion at the quadrature nodes [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_MESH_STATIONS = 3      ! Constant for creating y%BldMotion at the blade property input stations [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_STATIC_ANALYSIS               = 1      ! Constant for static analysis. InputType%Dynamic = FALSE. [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_DYNAMIC_ANALYSIS              = 2      ! Constant for dynamic analysis. InputType%Dynamic = TRUE .AND. BD_InputFile%QuasiStaticSolve = FALSE [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_DYN_SSS_ANALYSIS              = 3      ! Constant for dynamic analysis with Steady State Startup solve. InputType%Dynamic = TRUE .AND. BD_InputFile%QuasiStaticSolve = TRUE [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_MESH_FE                       = 1      ! Constant for creating y%BldMotion at the FE (GLL) nodes [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_MESH_QP                       = 2      ! Constant for creating y%BldMotion at the quadrature nodes [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_MESH_STATIONS                 = 3      ! Constant for creating y%BldMotion at the blade property input stations [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_u_RootMotion                  = 1      ! Mesh number for BD BD_u_RootMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_u_PointLoad                   = 2      ! Mesh number for BD BD_u_PointLoad mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_u_DistrLoad                   = 3      ! Mesh number for BD BD_u_DistrLoad mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_u_HubMotion                   = 4      ! Mesh number for BD BD_u_HubMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_y_ReactionForce               = 5      ! Mesh number for BD BD_y_ReactionForce mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_y_BldMotion                   = 6      ! Mesh number for BD BD_y_BldMotion mesh [-]
 ! =========  BD_InitInputType  =======
   TYPE, PUBLIC :: BD_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file; remove if there is no file [-]
@@ -160,7 +166,6 @@ IMPLICIT NONE
 ! =========  BD_ParameterType  =======
   TYPE, PUBLIC :: BD_ParameterType
     TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
-    TYPE(VarsIdxType)  :: IdxAeroMap      !< Module variable index for AeroMap [-]
     INTEGER(IntKi)  :: iVarRootMotion = 0_IntKi      !< Root motion variable index [-]
     INTEGER(IntKi)  :: iVarPointLoad = 0_IntKi      !< Point load variable index [-]
     INTEGER(IntKi)  :: iVarDistrLoad = 0_IntKi      !< Distributed load variable index [-]
@@ -338,11 +343,11 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: LP_indx      !< Index vector for LU [-]
     TYPE(BD_InputType)  :: u      !< Inputs converted to the internal BD coordinate system [-]
     TYPE(BD_InputType)  :: u2      !< Inputs in the FAST coordinate system, possibly modified by pitch actuator [-]
-    TYPE(ModLinType)  :: Lin      !< Values corresponding to module variables [-]
+    TYPE(ModJacType)  :: Jac      !< Jacobian matrices and arrays corresponding to module variables [-]
     TYPE(BD_ContinuousStateType)  :: x_perturb      !<  [-]
-    TYPE(BD_ContinuousStateType)  :: dx_perturb      !<  [-]
+    TYPE(BD_ContinuousStateType)  :: dxdt_lin      !<  [-]
     TYPE(BD_InputType)  :: u_perturb      !<  [-]
-    TYPE(BD_OutputType)  :: y_perturb      !<  [-]
+    TYPE(BD_OutputType)  :: y_lin      !<  [-]
   END TYPE BD_MiscVarType
 ! =======================
 CONTAINS
@@ -1340,9 +1345,6 @@ subroutine BD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end if
-   call NWTC_Library_CopyVarsIdxType(SrcParamData%IdxAeroMap, DstParamData%IdxAeroMap, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    DstParamData%iVarRootMotion = SrcParamData%iVarRootMotion
    DstParamData%iVarPointLoad = SrcParamData%iVarPointLoad
    DstParamData%iVarDistrLoad = SrcParamData%iVarDistrLoad
@@ -1763,8 +1765,6 @@ subroutine BD_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%Vars)
       ParamData%Vars => null()
    end if
-   call NWTC_Library_DestroyVarsIdxType(ParamData%IdxAeroMap, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%uuN0)) then
       deallocate(ParamData%uuN0)
    end if
@@ -1880,7 +1880,6 @@ subroutine BD_PackParam(RF, Indata)
          call NWTC_Library_PackModVarsType(RF, InData%Vars) 
       end if
    end if
-   call NWTC_Library_PackVarsIdxType(RF, InData%IdxAeroMap) 
    call RegPack(RF, InData%iVarRootMotion)
    call RegPack(RF, InData%iVarPointLoad)
    call RegPack(RF, InData%iVarDistrLoad)
@@ -2012,7 +2011,6 @@ subroutine BD_UnPackParam(RF, OutData)
    else
       OutData%Vars => null()
    end if
-   call NWTC_Library_UnpackVarsIdxType(RF, OutData%IdxAeroMap) ! IdxAeroMap 
    call RegUnpack(RF, OutData%iVarRootMotion); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarPointLoad); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarDistrLoad); if (RegCheckErr(RF, RoutineName)) return
@@ -3230,19 +3228,19 @@ subroutine BD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call BD_CopyInput(SrcMiscData%u2, DstMiscData%u2, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyModLinType(SrcMiscData%Lin, DstMiscData%Lin, CtrlCode, ErrStat2, ErrMsg2)
+   call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call BD_CopyContState(SrcMiscData%x_perturb, DstMiscData%x_perturb, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call BD_CopyContState(SrcMiscData%dx_perturb, DstMiscData%dx_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call BD_CopyContState(SrcMiscData%dxdt_lin, DstMiscData%dxdt_lin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call BD_CopyInput(SrcMiscData%u_perturb, DstMiscData%u_perturb, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call BD_CopyOutput(SrcMiscData%y_perturb, DstMiscData%y_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call BD_CopyOutput(SrcMiscData%y_lin, DstMiscData%y_lin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 end subroutine
@@ -3360,15 +3358,15 @@ subroutine BD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call BD_DestroyInput(MiscData%u2, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyModLinType(MiscData%Lin, ErrStat2, ErrMsg2)
+   call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call BD_DestroyContState(MiscData%x_perturb, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call BD_DestroyContState(MiscData%dx_perturb, ErrStat2, ErrMsg2)
+   call BD_DestroyContState(MiscData%dxdt_lin, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call BD_DestroyInput(MiscData%u_perturb, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call BD_DestroyOutput(MiscData%y_perturb, ErrStat2, ErrMsg2)
+   call BD_DestroyOutput(MiscData%y_lin, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
@@ -3415,11 +3413,11 @@ subroutine BD_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%LP_indx)
    call BD_PackInput(RF, InData%u) 
    call BD_PackInput(RF, InData%u2) 
-   call NWTC_Library_PackModLinType(RF, InData%Lin) 
+   call NWTC_Library_PackModJacType(RF, InData%Jac) 
    call BD_PackContState(RF, InData%x_perturb) 
-   call BD_PackContState(RF, InData%dx_perturb) 
+   call BD_PackContState(RF, InData%dxdt_lin) 
    call BD_PackInput(RF, InData%u_perturb) 
-   call BD_PackOutput(RF, InData%y_perturb) 
+   call BD_PackOutput(RF, InData%y_lin) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -3469,11 +3467,11 @@ subroutine BD_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%LP_indx); if (RegCheckErr(RF, RoutineName)) return
    call BD_UnpackInput(RF, OutData%u) ! u 
    call BD_UnpackInput(RF, OutData%u2) ! u2 
-   call NWTC_Library_UnpackModLinType(RF, OutData%Lin) ! Lin 
+   call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
    call BD_UnpackContState(RF, OutData%x_perturb) ! x_perturb 
-   call BD_UnpackContState(RF, OutData%dx_perturb) ! dx_perturb 
+   call BD_UnpackContState(RF, OutData%dxdt_lin) ! dxdt_lin 
    call BD_UnpackInput(RF, OutData%u_perturb) ! u_perturb 
-   call BD_UnpackOutput(RF, OutData%y_perturb) ! y_perturb 
+   call BD_UnpackOutput(RF, OutData%y_lin) ! y_lin 
 end subroutine
 
 subroutine BD_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)
@@ -3817,5 +3815,65 @@ SUBROUTINE BD_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Err
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
    END IF ! check if allocated
 END SUBROUTINE
+
+function BD_InputMeshPointer(u, ML) result(Mesh)
+   type(BD_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (BD_u_RootMotion)
+       Mesh => u%RootMotion
+   case (BD_u_PointLoad)
+       Mesh => u%PointLoad
+   case (BD_u_DistrLoad)
+       Mesh => u%DistrLoad
+   case (BD_u_HubMotion)
+       Mesh => u%HubMotion
+   end select
+end function
+
+function BD_InputMeshName(u, ML) result(Name)
+   type(BD_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (BD_u_RootMotion)
+       Name = "u%RootMotion"
+   case (BD_u_PointLoad)
+       Name = "u%PointLoad"
+   case (BD_u_DistrLoad)
+       Name = "u%DistrLoad"
+   case (BD_u_HubMotion)
+       Name = "u%HubMotion"
+   end select
+end function
+
+function BD_OutputMeshPointer(y, ML) result(Mesh)
+   type(BD_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (BD_y_ReactionForce)
+       Mesh => y%ReactionForce
+   case (BD_y_BldMotion)
+       Mesh => y%BldMotion
+   end select
+end function
+
+function BD_OutputMeshName(y, ML) result(Name)
+   type(BD_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (BD_y_ReactionForce)
+       Name = "y%ReactionForce"
+   case (BD_y_BldMotion)
+       Name = "y%BldMotion"
+   end select
+end function
 END MODULE BeamDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

@@ -38,28 +38,39 @@ USE AeroAcoustics_Types
 USE InflowWind_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModelUnknown = -1      !  [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeMod_none = 0      ! Wake model - none [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeMod_BEMT = 1      ! Wake model - BEMT (blade elememnt momentum theory) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeMod_DBEMT = 2      ! Wake model - DBEMT (dynamic elememnt momentum theory) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeMod_FVW = 3      ! Wake model - FVW (free vortex wake, OLAF) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFAeroMod_steady = 1      ! steady model [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFAeroMod_BL_unsteady = 2      ! Beddoes-Leishman unsteady model [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrPotent_none = 0      ! no tower potential flow [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrPotent_baseline = 1      ! baseline tower potential flow [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrPotent_Bak = 2      ! tower potential flow with Bak correction [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrShadow_none = 0      ! no tower shadow [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrShadow_Powles = 1      ! Powles tower shadow model [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrShadow_Eames = 2      ! Eames tower shadow model [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinAero_none = 0      ! no tail fin aero [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinAero_polar = 1      ! polar-based tail fin aerodynamics [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinAero_USB = 2      ! unsteady slender body tail fin aerodynamics model [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinIndMod_none = 0      ! no induction [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinIndMod_rotavg = 1      ! rotor averaged induction [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: APM_BEM_NoSweepPitchTwist = 1      ! Original AeroDyn model where momentum balance is done in the WithoutSweepPitchTwist system [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: APM_BEM_Polar = 2      ! Use staggered polar grid for momentum balance in each annulus [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: APM_LiftingLine = 3      ! Use the blade lifting line (i.e. the structural) orientation (currently for OLAF with VAWT) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_MaxBl_Out = 3      ! Maximum number of blades for information output (or linearization) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModelUnknown                     = -1      !  [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeMod_none                     = 0      ! Wake model - none [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeMod_BEMT                     = 1      ! Wake model - BEMT (blade elememnt momentum theory) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeMod_DBEMT                    = 2      ! Wake model - DBEMT (dynamic elememnt momentum theory) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeMod_FVW                      = 3      ! Wake model - FVW (free vortex wake, OLAF) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFAeroMod_steady                 = 1      ! steady model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFAeroMod_BL_unsteady            = 2      ! Beddoes-Leishman unsteady model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrPotent_none                   = 0      ! no tower potential flow [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrPotent_baseline               = 1      ! baseline tower potential flow [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrPotent_Bak                    = 2      ! tower potential flow with Bak correction [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrShadow_none                   = 0      ! no tower shadow [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrShadow_Powles                 = 1      ! Powles tower shadow model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrShadow_Eames                  = 2      ! Eames tower shadow model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinAero_none                    = 0      ! no tail fin aero [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinAero_polar                   = 1      ! polar-based tail fin aerodynamics [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinAero_USB                     = 2      ! unsteady slender body tail fin aerodynamics model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinIndMod_none                  = 0      ! no induction [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinIndMod_rotavg                = 1      ! rotor averaged induction [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: APM_BEM_NoSweepPitchTwist        = 1      ! Original AeroDyn model where momentum balance is done in the WithoutSweepPitchTwist system [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: APM_BEM_Polar                    = 2      ! Use staggered polar grid for momentum balance in each annulus [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: APM_LiftingLine                  = 3      ! Use the blade lifting line (i.e. the structural) orientation (currently for OLAF with VAWT) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_MaxBl_Out                     = 3      ! Maximum number of blades for information output (or linearization) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_u_rotors_NacelleMotion        = 1      ! Mesh number for AD AD_u_rotors_NacelleMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_u_rotors_TowerMotion          = 2      ! Mesh number for AD AD_u_rotors_TowerMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_u_rotors_HubMotion            = 3      ! Mesh number for AD AD_u_rotors_HubMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_u_rotors_BladeRootMotion      = 4      ! Mesh number for AD AD_u_rotors_BladeRootMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_u_rotors_BladeMotion          = 5      ! Mesh number for AD AD_u_rotors_BladeMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_u_rotors_TFinMotion           = 6      ! Mesh number for AD AD_u_rotors_TFinMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_y_rotors_NacelleLoad          = 7      ! Mesh number for AD AD_y_rotors_NacelleLoad mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_y_rotors_HubLoad              = 8      ! Mesh number for AD AD_y_rotors_HubLoad mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_y_rotors_TowerLoad            = 9      ! Mesh number for AD AD_y_rotors_TowerLoad mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_y_rotors_BladeLoad            = 10      ! Mesh number for AD AD_y_rotors_BladeLoad mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_y_rotors_TFinLoad             = 11      ! Mesh number for AD AD_y_rotors_TFinLoad mesh [-]
 ! =========  TFinParameterType  =======
   TYPE, PUBLIC :: TFinParameterType
     INTEGER(IntKi)  :: TFinMod = 0_IntKi      !< Tail fin aerodynamics model {0=none, 1=polar-based, 2=USB-based} [(switch)]
@@ -148,6 +159,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  RotInitOutputType  =======
   TYPE, PUBLIC :: RotInitOutputType
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
     REAL(ReKi)  :: AirDens = 0.0_ReKi      !< Air density [kg/m^3]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
@@ -297,82 +309,24 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WakeLocationPoints      !< wake points velocity [m/s]
   END TYPE AD_OtherStateType
 ! =======================
-! =========  RotMiscVarType  =======
-  TYPE, PUBLIC :: RotMiscVarType
-    TYPE(BEMT_MiscVarType)  :: BEMT      !< MiscVars from the BEMT module [-]
-    TYPE(BEMT_OutputType)  :: BEMT_y      !< Outputs from the BEMT module [-]
-    TYPE(BEMT_InputType) , DIMENSION(1:2)  :: BEMT_u      !< Inputs to the BEMT module [-]
-    TYPE(AA_MiscVarType)  :: AA      !< MiscVars from the AA module [-]
-    TYPE(AA_OutputType)  :: AA_y      !< Outputs from the AA module [-]
-    TYPE(AA_InputType)  :: AA_u      !< Inputs to the AA module [-]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: DisturbedInflow      !< InflowOnBlade values modified by tower influence [m/s]
-    REAL(R8Ki) , DIMENSION(:,:,:,:), ALLOCATABLE  :: orientationAnnulus      !< Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles [-]
-    REAL(R8Ki) , DIMENSION(:,:,:,:), ALLOCATABLE  :: R_li      !< Transformation matrix from inertial system to the staggered polar coordinate system of a given section [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< An array holding the value of all of the calculated (not only selected) output channels [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: W_Twr      !< relative wind speed normal to the tower at node j [m/s]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: X_Twr      !< local x-component of force per unit length of the jth node in the tower [m/s]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y_Twr      !< local y-component of force per unit length of the jth node in the tower [m/s]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Curve      !< curvature angle, saved for possible output to file [rad]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TwrClrnc      !< Distance between tower (including tower radius) and blade node (not including blade width), saved for possible output to file [m]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: X      !< normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade [N/m]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Y      !< tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade [N/m]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Z      !< axial force per unit length (tangential to the plane, not chord) of the jth node in the kth blade [N/m]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: M      !< pitching moment per unit length of the jth node in the kth blade [Nm/m]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Mx      !< pitching moment per unit length of the jth node in the kth blade (in x direction) [Nm/m]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: My      !< pitching moment per unit length of the jth node in the kth blade  (in y direction) [Nm/m]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Mz      !< pitching moment per unit length of the jth node in the kth blade  (in z direction) [Nm/m]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Vind_i      !< Induced velocities at jth node and kth blade (3xnSpanxnB) [m/s]
-    REAL(ReKi) , DIMENSION(1:3)  :: V_DiskAvg = 0.0_ReKi      !< disk-average relative wind speed [m/s]
-    REAL(ReKi)  :: yaw = 0.0_ReKi      !< Yaw calculated in  SetInputsForBEMT [rad]
-    REAL(ReKi)  :: tilt = 0.0_ReKi      !< tilt calculated in  SetInputsForBEMT [rad]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: hub_theta_x_root      !< angles saved for FAST.Farm [rad]
-    REAL(ReKi)  :: V_dot_x = 0.0_ReKi 
-    TYPE(MeshType)  :: HubLoad      !< mesh at hub; used to compute an integral for mapping the output blade loads to a single point (for writing to file only) [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: B_L_2_H_P      !< mapping data structure to map each bladeLoad output mesh to the MiscVar%HubLoad mesh [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SigmaCavitCrit      !< critical cavitation number-  inception value (above which cavit will occur) [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SigmaCavit      !< cavitation number at node  [-]
-    LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: CavitWarnSet      !< cavitation warning issued  [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TwrFB      !< buoyant force per unit length at tower node [N/m]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TwrMB      !< buoyant moment per unit length at tower node [Nm/m]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: HubFB      !< buoyant force at hub node [N]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: HubMB      !< buoyant moment at hub node [Nm]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: NacFB      !< buoyant force at nacelle (tower top) node [N]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: NacMB      !< buoyant moment at nacelle (tower top) node [Nm]
-    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeRootLoad      !< meshes at blade root; used to compute an integral for mapping the output blade loads to single points (for writing to file only) [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: B_L_2_R_P      !< mapping data structure to map each bladeLoad output mesh to corresponding MiscVar%BladeRootLoad mesh [-]
-    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeBuoyLoadPoint      !< point mesh for lumped buoyant blade loads [-]
-    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeBuoyLoad      !< line mesh for per unit length buoyant blade loads [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: B_P_2_B_L      !< mapping data structure to map buoyant blade point loads (m%BladeBuoyLoadPoint) to buoyant blade line loads (m%BladeBuoyLoad) [-]
-    TYPE(MeshType)  :: TwrBuoyLoadPoint      !< point mesh for lumped buoyant tower loads [-]
-    TYPE(MeshType)  :: TwrBuoyLoad      !< line mesh for per unit length buoyant tower loads [-]
-    TYPE(MeshMapType)  :: T_P_2_T_L      !< mapping data structure to map buoyant tower point loads (m%TwrBuoyLoadPoint) to buoyant tower line loads (m%TwrBuoyLoad) [-]
-    LOGICAL  :: FirstWarn_TowerStrike = .false.      !< flag to avoid printing tower strike multiple times [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: AvgDiskVel = 0.0_ReKi      !< disk-averaged U,V,W (undisturbed) [m/s]
-    REAL(ReKi) , DIMENSION(1:3)  :: AvgDiskVelDist = 0.0_ReKi      !< disk-averaged U,V,W (disturbed) [m/s]
-    REAL(ReKi)  :: TFinAlpha = 0.0_ReKi      !< Angle of attack for tailfin [-]
-    REAL(ReKi)  :: TFinRe = 0.0_ReKi      !< Reynolds number for tailfin [-]
-    REAL(ReKi)  :: TFinVrel = 0.0_ReKi      !< Orthogonal relative velocity nrom at the reference point [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: TFinVund_i = 0.0_ReKi      !< Undisturbed wind velocity at the reference point of the fin in the inertial system [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: TFinVind_i = 0.0_ReKi      !< Induced velocity at the reference point of the fin in the inertial system [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: TFinVrel_i = 0.0_ReKi      !< Relative velocity at the reference point of the fin in the inertial system [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: TFinSTV_i = 0.0_ReKi      !< Structural velocity at the reference point of the fin in the inertial system [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: TFinF_i = 0.0_ReKi      !< Forces at the reference point of the fin in the inertial system [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: TFinM_i = 0.0_ReKi      !< Moments at the reference point of the fin in the inertial system [-]
-  END TYPE RotMiscVarType
-! =======================
-! =========  AD_MiscVarType  =======
-  TYPE, PUBLIC :: AD_MiscVarType
-    TYPE(RotMiscVarType) , DIMENSION(:), ALLOCATABLE  :: rotors      !< MiscVars for each rotor [-]
-    TYPE(FVW_InputType) , DIMENSION(:), ALLOCATABLE  :: FVW_u      !< Inputs to the FVW module [-]
-    TYPE(FVW_OutputType)  :: FVW_y      !< Outputs from the FVW module [-]
-    TYPE(FVW_MiscVarType)  :: FVW      !< MiscVars from the FVW module [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindPos      !< XYZ coordinates to query for wind velocity/acceleration [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindVel      !< XYZ components of wind velocity [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindAcc      !< XYZ components of wind acceleration [-]
-  END TYPE AD_MiscVarType
-! =======================
 ! =========  RotParameterType  =======
   TYPE, PUBLIC :: RotParameterType
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
+    INTEGER(IntKi)  :: iVarDBEMT = 0      !<  [-]
+    INTEGER(IntKi)  :: iVarUA = 0      !<  [-]
+    INTEGER(IntKi)  :: iVarTowerMotion = 0      !<  [-]
+    INTEGER(IntKi)  :: iVarNacelleMotion = 0      !<  [-]
+    INTEGER(IntKi)  :: iVarHubMotion = 0      !<  [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladeRootMotion      !<  [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladeMotion      !<  [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarInflowOnBlade      !<  [-]
+    INTEGER(IntKi)  :: iVarInflowOnTower = 0      !<  [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarUserProp      !<  [-]
+    INTEGER(IntKi)  :: iVarTowerLoad = 0      !<  [-]
+    INTEGER(IntKi)  :: iVarHubLoad = 0      !<  [-]
+    INTEGER(IntKi)  :: iVarNacelleLoad = 0      !<  [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladeLoad      !<  [-]
+    INTEGER(IntKi)  :: iVarWriteOutput = 0      !<  [-]
     INTEGER(IntKi)  :: NumBlades = 0_IntKi      !< Number of blades on the turbine [-]
     INTEGER(IntKi)  :: NumBlNds = 0_IntKi      !< Number of nodes on each blade [-]
     INTEGER(IntKi)  :: NumTwrNds = 0_IntKi      !< Number of nodes on the tower [-]
@@ -496,6 +450,89 @@ IMPLICIT NONE
   TYPE, PUBLIC :: AD_OutputType
     TYPE(RotOutputType) , DIMENSION(:), ALLOCATABLE  :: rotors      !< Ouputs for each rotor [-]
   END TYPE AD_OutputType
+! =======================
+! =========  RotMiscVarType  =======
+  TYPE, PUBLIC :: RotMiscVarType
+    TYPE(ModJacType)  :: Jac      !< Values corresponding to module variables [-]
+    TYPE(RotContinuousStateType)  :: x_init      !<  [-]
+    TYPE(RotContinuousStateType)  :: x_perturb      !<  [-]
+    TYPE(RotContinuousStateType)  :: dxdt_lin      !<  [-]
+    TYPE(RotInputType)  :: u_perturb      !<  [-]
+    TYPE(RotOutputType)  :: y_lin      !<  [-]
+    TYPE(RotConstraintStateType)  :: z_lin      !<  [-]
+    TYPE(RotOtherStateType)  :: OtherState_init      !<  [-]
+    TYPE(RotOtherStateType)  :: OtherState_jac      !<  [-]
+    TYPE(BEMT_MiscVarType)  :: BEMT      !< MiscVars from the BEMT module [-]
+    TYPE(BEMT_OutputType)  :: BEMT_y      !< Outputs from the BEMT module [-]
+    TYPE(BEMT_InputType) , DIMENSION(1:2)  :: BEMT_u      !< Inputs to the BEMT module [-]
+    TYPE(AA_MiscVarType)  :: AA      !< MiscVars from the AA module [-]
+    TYPE(AA_OutputType)  :: AA_y      !< Outputs from the AA module [-]
+    TYPE(AA_InputType)  :: AA_u      !< Inputs to the AA module [-]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: DisturbedInflow      !< InflowOnBlade values modified by tower influence [m/s]
+    REAL(R8Ki) , DIMENSION(:,:,:,:), ALLOCATABLE  :: orientationAnnulus      !< Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles [-]
+    REAL(R8Ki) , DIMENSION(:,:,:,:), ALLOCATABLE  :: R_li      !< Transformation matrix from inertial system to the staggered polar coordinate system of a given section [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< An array holding the value of all of the calculated (not only selected) output channels [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: W_Twr      !< relative wind speed normal to the tower at node j [m/s]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: X_Twr      !< local x-component of force per unit length of the jth node in the tower [m/s]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y_Twr      !< local y-component of force per unit length of the jth node in the tower [m/s]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Curve      !< curvature angle, saved for possible output to file [rad]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TwrClrnc      !< Distance between tower (including tower radius) and blade node (not including blade width), saved for possible output to file [m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: X      !< normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade [N/m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Y      !< tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade [N/m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Z      !< axial force per unit length (tangential to the plane, not chord) of the jth node in the kth blade [N/m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: M      !< pitching moment per unit length of the jth node in the kth blade [Nm/m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Mx      !< pitching moment per unit length of the jth node in the kth blade (in x direction) [Nm/m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: My      !< pitching moment per unit length of the jth node in the kth blade  (in y direction) [Nm/m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Mz      !< pitching moment per unit length of the jth node in the kth blade  (in z direction) [Nm/m]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Vind_i      !< Induced velocities at jth node and kth blade (3xnSpanxnB) [m/s]
+    REAL(ReKi) , DIMENSION(1:3)  :: V_DiskAvg = 0.0_ReKi      !< disk-average relative wind speed [m/s]
+    REAL(ReKi)  :: yaw = 0.0_ReKi      !< Yaw calculated in  SetInputsForBEMT [rad]
+    REAL(ReKi)  :: tilt = 0.0_ReKi      !< tilt calculated in  SetInputsForBEMT [rad]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: hub_theta_x_root      !< angles saved for FAST.Farm [rad]
+    REAL(ReKi)  :: V_dot_x = 0.0_ReKi 
+    TYPE(MeshType)  :: HubLoad      !< mesh at hub; used to compute an integral for mapping the output blade loads to a single point (for writing to file only) [-]
+    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: B_L_2_H_P      !< mapping data structure to map each bladeLoad output mesh to the MiscVar%HubLoad mesh [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SigmaCavitCrit      !< critical cavitation number-  inception value (above which cavit will occur) [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SigmaCavit      !< cavitation number at node  [-]
+    LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: CavitWarnSet      !< cavitation warning issued  [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TwrFB      !< buoyant force per unit length at tower node [N/m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TwrMB      !< buoyant moment per unit length at tower node [Nm/m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: HubFB      !< buoyant force at hub node [N]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: HubMB      !< buoyant moment at hub node [Nm]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: NacFB      !< buoyant force at nacelle (tower top) node [N]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: NacMB      !< buoyant moment at nacelle (tower top) node [Nm]
+    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeRootLoad      !< meshes at blade root; used to compute an integral for mapping the output blade loads to single points (for writing to file only) [-]
+    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: B_L_2_R_P      !< mapping data structure to map each bladeLoad output mesh to corresponding MiscVar%BladeRootLoad mesh [-]
+    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeBuoyLoadPoint      !< point mesh for lumped buoyant blade loads [-]
+    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeBuoyLoad      !< line mesh for per unit length buoyant blade loads [-]
+    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: B_P_2_B_L      !< mapping data structure to map buoyant blade point loads (m%BladeBuoyLoadPoint) to buoyant blade line loads (m%BladeBuoyLoad) [-]
+    TYPE(MeshType)  :: TwrBuoyLoadPoint      !< point mesh for lumped buoyant tower loads [-]
+    TYPE(MeshType)  :: TwrBuoyLoad      !< line mesh for per unit length buoyant tower loads [-]
+    TYPE(MeshMapType)  :: T_P_2_T_L      !< mapping data structure to map buoyant tower point loads (m%TwrBuoyLoadPoint) to buoyant tower line loads (m%TwrBuoyLoad) [-]
+    LOGICAL  :: FirstWarn_TowerStrike = .false.      !< flag to avoid printing tower strike multiple times [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: AvgDiskVel = 0.0_ReKi      !< disk-averaged U,V,W (undisturbed) [m/s]
+    REAL(ReKi) , DIMENSION(1:3)  :: AvgDiskVelDist = 0.0_ReKi      !< disk-averaged U,V,W (disturbed) [m/s]
+    REAL(ReKi)  :: TFinAlpha = 0.0_ReKi      !< Angle of attack for tailfin [-]
+    REAL(ReKi)  :: TFinRe = 0.0_ReKi      !< Reynolds number for tailfin [-]
+    REAL(ReKi)  :: TFinVrel = 0.0_ReKi      !< Orthogonal relative velocity nrom at the reference point [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: TFinVund_i = 0.0_ReKi      !< Undisturbed wind velocity at the reference point of the fin in the inertial system [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: TFinVind_i = 0.0_ReKi      !< Induced velocity at the reference point of the fin in the inertial system [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: TFinVrel_i = 0.0_ReKi      !< Relative velocity at the reference point of the fin in the inertial system [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: TFinSTV_i = 0.0_ReKi      !< Structural velocity at the reference point of the fin in the inertial system [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: TFinF_i = 0.0_ReKi      !< Forces at the reference point of the fin in the inertial system [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: TFinM_i = 0.0_ReKi      !< Moments at the reference point of the fin in the inertial system [-]
+  END TYPE RotMiscVarType
+! =======================
+! =========  AD_MiscVarType  =======
+  TYPE, PUBLIC :: AD_MiscVarType
+    TYPE(RotMiscVarType) , DIMENSION(:), ALLOCATABLE  :: rotors      !< MiscVars for each rotor [-]
+    TYPE(FVW_InputType) , DIMENSION(:), ALLOCATABLE  :: FVW_u      !< Inputs to the FVW module [-]
+    TYPE(FVW_OutputType)  :: FVW_y      !< Outputs from the FVW module [-]
+    TYPE(FVW_MiscVarType)  :: FVW      !< MiscVars from the FVW module [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindPos      !< XYZ coordinates to query for wind velocity/acceleration [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindVel      !< XYZ components of wind velocity [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindAcc      !< XYZ components of wind acceleration [-]
+  END TYPE AD_MiscVarType
 ! =======================
 CONTAINS
 
@@ -1304,6 +1341,7 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
    character(*), parameter        :: RoutineName = 'AD_CopyRotInitOutputType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   DstRotInitOutputTypeData%Vars => SrcRotInitOutputTypeData%Vars
    DstRotInitOutputTypeData%AirDens = SrcRotInitOutputTypeData%AirDens
    if (allocated(SrcRotInitOutputTypeData%WriteOutputHdr)) then
       LB(1:1) = lbound(SrcRotInitOutputTypeData%WriteOutputHdr, kind=B8Ki)
@@ -1494,6 +1532,7 @@ subroutine AD_DestroyRotInitOutputType(RotInitOutputTypeData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AD_DestroyRotInitOutputType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   nullify(RotInitOutputTypeData%Vars)
    if (allocated(RotInitOutputTypeData%WriteOutputHdr)) then
       deallocate(RotInitOutputTypeData%WriteOutputHdr)
    end if
@@ -1556,7 +1595,15 @@ subroutine AD_PackRotInitOutputType(RF, Indata)
    character(*), parameter         :: RoutineName = 'AD_PackRotInitOutputType'
    integer(B8Ki)   :: i1
    integer(B8Ki)   :: LB(1), UB(1)
+   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
+      end if
+   end if
    call RegPack(RF, InData%AirDens)
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
@@ -1599,7 +1646,27 @@ subroutine AD_UnPackRotInitOutputType(RF, OutData)
    integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(B8Ki)   :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
    call RegUnpack(RF, OutData%AirDens); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
@@ -2908,1138 +2975,6 @@ subroutine AD_UnPackOtherState(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WakeLocationPoints); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, CtrlCode, ErrStat, ErrMsg)
-   type(RotMiscVarType), intent(inout) :: SrcRotMiscVarTypeData
-   type(RotMiscVarType), intent(inout) :: DstRotMiscVarTypeData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2, i3, i4
-   integer(B8Ki)                  :: LB(4), UB(4)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'AD_CopyRotMiscVarType'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   call BEMT_CopyMisc(SrcRotMiscVarTypeData%BEMT, DstRotMiscVarTypeData%BEMT, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call BEMT_CopyOutput(SrcRotMiscVarTypeData%BEMT_y, DstRotMiscVarTypeData%BEMT_y, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   LB(1:1) = lbound(SrcRotMiscVarTypeData%BEMT_u, kind=B8Ki)
-   UB(1:1) = ubound(SrcRotMiscVarTypeData%BEMT_u, kind=B8Ki)
-   do i1 = LB(1), UB(1)
-      call BEMT_CopyInput(SrcRotMiscVarTypeData%BEMT_u(i1), DstRotMiscVarTypeData%BEMT_u(i1), CtrlCode, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-   end do
-   call AA_CopyMisc(SrcRotMiscVarTypeData%AA, DstRotMiscVarTypeData%AA, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call AA_CopyOutput(SrcRotMiscVarTypeData%AA_y, DstRotMiscVarTypeData%AA_y, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call AA_CopyInput(SrcRotMiscVarTypeData%AA_u, DstRotMiscVarTypeData%AA_u, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcRotMiscVarTypeData%DisturbedInflow)) then
-      LB(1:3) = lbound(SrcRotMiscVarTypeData%DisturbedInflow, kind=B8Ki)
-      UB(1:3) = ubound(SrcRotMiscVarTypeData%DisturbedInflow, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%DisturbedInflow)) then
-         allocate(DstRotMiscVarTypeData%DisturbedInflow(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%DisturbedInflow.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%DisturbedInflow = SrcRotMiscVarTypeData%DisturbedInflow
-   end if
-   if (allocated(SrcRotMiscVarTypeData%orientationAnnulus)) then
-      LB(1:4) = lbound(SrcRotMiscVarTypeData%orientationAnnulus, kind=B8Ki)
-      UB(1:4) = ubound(SrcRotMiscVarTypeData%orientationAnnulus, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%orientationAnnulus)) then
-         allocate(DstRotMiscVarTypeData%orientationAnnulus(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%orientationAnnulus.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%orientationAnnulus = SrcRotMiscVarTypeData%orientationAnnulus
-   end if
-   if (allocated(SrcRotMiscVarTypeData%R_li)) then
-      LB(1:4) = lbound(SrcRotMiscVarTypeData%R_li, kind=B8Ki)
-      UB(1:4) = ubound(SrcRotMiscVarTypeData%R_li, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%R_li)) then
-         allocate(DstRotMiscVarTypeData%R_li(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%R_li.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%R_li = SrcRotMiscVarTypeData%R_li
-   end if
-   if (allocated(SrcRotMiscVarTypeData%AllOuts)) then
-      LB(1:1) = lbound(SrcRotMiscVarTypeData%AllOuts, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotMiscVarTypeData%AllOuts, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%AllOuts)) then
-         allocate(DstRotMiscVarTypeData%AllOuts(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%AllOuts.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%AllOuts = SrcRotMiscVarTypeData%AllOuts
-   end if
-   if (allocated(SrcRotMiscVarTypeData%W_Twr)) then
-      LB(1:1) = lbound(SrcRotMiscVarTypeData%W_Twr, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotMiscVarTypeData%W_Twr, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%W_Twr)) then
-         allocate(DstRotMiscVarTypeData%W_Twr(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%W_Twr.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%W_Twr = SrcRotMiscVarTypeData%W_Twr
-   end if
-   if (allocated(SrcRotMiscVarTypeData%X_Twr)) then
-      LB(1:1) = lbound(SrcRotMiscVarTypeData%X_Twr, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotMiscVarTypeData%X_Twr, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%X_Twr)) then
-         allocate(DstRotMiscVarTypeData%X_Twr(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%X_Twr.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%X_Twr = SrcRotMiscVarTypeData%X_Twr
-   end if
-   if (allocated(SrcRotMiscVarTypeData%Y_Twr)) then
-      LB(1:1) = lbound(SrcRotMiscVarTypeData%Y_Twr, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotMiscVarTypeData%Y_Twr, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%Y_Twr)) then
-         allocate(DstRotMiscVarTypeData%Y_Twr(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%Y_Twr.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%Y_Twr = SrcRotMiscVarTypeData%Y_Twr
-   end if
-   if (allocated(SrcRotMiscVarTypeData%Curve)) then
-      LB(1:2) = lbound(SrcRotMiscVarTypeData%Curve, kind=B8Ki)
-      UB(1:2) = ubound(SrcRotMiscVarTypeData%Curve, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%Curve)) then
-         allocate(DstRotMiscVarTypeData%Curve(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%Curve.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%Curve = SrcRotMiscVarTypeData%Curve
-   end if
-   if (allocated(SrcRotMiscVarTypeData%TwrClrnc)) then
-      LB(1:2) = lbound(SrcRotMiscVarTypeData%TwrClrnc, kind=B8Ki)
-      UB(1:2) = ubound(SrcRotMiscVarTypeData%TwrClrnc, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%TwrClrnc)) then
-         allocate(DstRotMiscVarTypeData%TwrClrnc(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%TwrClrnc.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%TwrClrnc = SrcRotMiscVarTypeData%TwrClrnc
-   end if
-   if (allocated(SrcRotMiscVarTypeData%X)) then
-      LB(1:2) = lbound(SrcRotMiscVarTypeData%X, kind=B8Ki)
-      UB(1:2) = ubound(SrcRotMiscVarTypeData%X, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%X)) then
-         allocate(DstRotMiscVarTypeData%X(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%X.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%X = SrcRotMiscVarTypeData%X
-   end if
-   if (allocated(SrcRotMiscVarTypeData%Y)) then
-      LB(1:2) = lbound(SrcRotMiscVarTypeData%Y, kind=B8Ki)
-      UB(1:2) = ubound(SrcRotMiscVarTypeData%Y, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%Y)) then
-         allocate(DstRotMiscVarTypeData%Y(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%Y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%Y = SrcRotMiscVarTypeData%Y
-   end if
-   if (allocated(SrcRotMiscVarTypeData%Z)) then
-      LB(1:2) = lbound(SrcRotMiscVarTypeData%Z, kind=B8Ki)
-      UB(1:2) = ubound(SrcRotMiscVarTypeData%Z, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%Z)) then
-         allocate(DstRotMiscVarTypeData%Z(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%Z.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%Z = SrcRotMiscVarTypeData%Z
-   end if
-   if (allocated(SrcRotMiscVarTypeData%M)) then
-      LB(1:2) = lbound(SrcRotMiscVarTypeData%M, kind=B8Ki)
-      UB(1:2) = ubound(SrcRotMiscVarTypeData%M, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%M)) then
-         allocate(DstRotMiscVarTypeData%M(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%M.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%M = SrcRotMiscVarTypeData%M
-   end if
-   if (allocated(SrcRotMiscVarTypeData%Mx)) then
-      LB(1:2) = lbound(SrcRotMiscVarTypeData%Mx, kind=B8Ki)
-      UB(1:2) = ubound(SrcRotMiscVarTypeData%Mx, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%Mx)) then
-         allocate(DstRotMiscVarTypeData%Mx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%Mx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%Mx = SrcRotMiscVarTypeData%Mx
-   end if
-   if (allocated(SrcRotMiscVarTypeData%My)) then
-      LB(1:2) = lbound(SrcRotMiscVarTypeData%My, kind=B8Ki)
-      UB(1:2) = ubound(SrcRotMiscVarTypeData%My, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%My)) then
-         allocate(DstRotMiscVarTypeData%My(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%My.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%My = SrcRotMiscVarTypeData%My
-   end if
-   if (allocated(SrcRotMiscVarTypeData%Mz)) then
-      LB(1:2) = lbound(SrcRotMiscVarTypeData%Mz, kind=B8Ki)
-      UB(1:2) = ubound(SrcRotMiscVarTypeData%Mz, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%Mz)) then
-         allocate(DstRotMiscVarTypeData%Mz(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%Mz.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%Mz = SrcRotMiscVarTypeData%Mz
-   end if
-   if (allocated(SrcRotMiscVarTypeData%Vind_i)) then
-      LB(1:3) = lbound(SrcRotMiscVarTypeData%Vind_i, kind=B8Ki)
-      UB(1:3) = ubound(SrcRotMiscVarTypeData%Vind_i, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%Vind_i)) then
-         allocate(DstRotMiscVarTypeData%Vind_i(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%Vind_i.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%Vind_i = SrcRotMiscVarTypeData%Vind_i
-   end if
-   DstRotMiscVarTypeData%V_DiskAvg = SrcRotMiscVarTypeData%V_DiskAvg
-   DstRotMiscVarTypeData%yaw = SrcRotMiscVarTypeData%yaw
-   DstRotMiscVarTypeData%tilt = SrcRotMiscVarTypeData%tilt
-   if (allocated(SrcRotMiscVarTypeData%hub_theta_x_root)) then
-      LB(1:1) = lbound(SrcRotMiscVarTypeData%hub_theta_x_root, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotMiscVarTypeData%hub_theta_x_root, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%hub_theta_x_root)) then
-         allocate(DstRotMiscVarTypeData%hub_theta_x_root(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%hub_theta_x_root.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%hub_theta_x_root = SrcRotMiscVarTypeData%hub_theta_x_root
-   end if
-   DstRotMiscVarTypeData%V_dot_x = SrcRotMiscVarTypeData%V_dot_x
-   call MeshCopy(SrcRotMiscVarTypeData%HubLoad, DstRotMiscVarTypeData%HubLoad, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcRotMiscVarTypeData%B_L_2_H_P)) then
-      LB(1:1) = lbound(SrcRotMiscVarTypeData%B_L_2_H_P, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotMiscVarTypeData%B_L_2_H_P, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%B_L_2_H_P)) then
-         allocate(DstRotMiscVarTypeData%B_L_2_H_P(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%B_L_2_H_P.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcRotMiscVarTypeData%B_L_2_H_P(i1), DstRotMiscVarTypeData%B_L_2_H_P(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcRotMiscVarTypeData%SigmaCavitCrit)) then
-      LB(1:2) = lbound(SrcRotMiscVarTypeData%SigmaCavitCrit, kind=B8Ki)
-      UB(1:2) = ubound(SrcRotMiscVarTypeData%SigmaCavitCrit, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%SigmaCavitCrit)) then
-         allocate(DstRotMiscVarTypeData%SigmaCavitCrit(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%SigmaCavitCrit.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%SigmaCavitCrit = SrcRotMiscVarTypeData%SigmaCavitCrit
-   end if
-   if (allocated(SrcRotMiscVarTypeData%SigmaCavit)) then
-      LB(1:2) = lbound(SrcRotMiscVarTypeData%SigmaCavit, kind=B8Ki)
-      UB(1:2) = ubound(SrcRotMiscVarTypeData%SigmaCavit, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%SigmaCavit)) then
-         allocate(DstRotMiscVarTypeData%SigmaCavit(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%SigmaCavit.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%SigmaCavit = SrcRotMiscVarTypeData%SigmaCavit
-   end if
-   if (allocated(SrcRotMiscVarTypeData%CavitWarnSet)) then
-      LB(1:2) = lbound(SrcRotMiscVarTypeData%CavitWarnSet, kind=B8Ki)
-      UB(1:2) = ubound(SrcRotMiscVarTypeData%CavitWarnSet, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%CavitWarnSet)) then
-         allocate(DstRotMiscVarTypeData%CavitWarnSet(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%CavitWarnSet.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%CavitWarnSet = SrcRotMiscVarTypeData%CavitWarnSet
-   end if
-   if (allocated(SrcRotMiscVarTypeData%TwrFB)) then
-      LB(1:2) = lbound(SrcRotMiscVarTypeData%TwrFB, kind=B8Ki)
-      UB(1:2) = ubound(SrcRotMiscVarTypeData%TwrFB, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%TwrFB)) then
-         allocate(DstRotMiscVarTypeData%TwrFB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%TwrFB.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%TwrFB = SrcRotMiscVarTypeData%TwrFB
-   end if
-   if (allocated(SrcRotMiscVarTypeData%TwrMB)) then
-      LB(1:2) = lbound(SrcRotMiscVarTypeData%TwrMB, kind=B8Ki)
-      UB(1:2) = ubound(SrcRotMiscVarTypeData%TwrMB, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%TwrMB)) then
-         allocate(DstRotMiscVarTypeData%TwrMB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%TwrMB.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%TwrMB = SrcRotMiscVarTypeData%TwrMB
-   end if
-   if (allocated(SrcRotMiscVarTypeData%HubFB)) then
-      LB(1:1) = lbound(SrcRotMiscVarTypeData%HubFB, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotMiscVarTypeData%HubFB, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%HubFB)) then
-         allocate(DstRotMiscVarTypeData%HubFB(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%HubFB.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%HubFB = SrcRotMiscVarTypeData%HubFB
-   end if
-   if (allocated(SrcRotMiscVarTypeData%HubMB)) then
-      LB(1:1) = lbound(SrcRotMiscVarTypeData%HubMB, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotMiscVarTypeData%HubMB, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%HubMB)) then
-         allocate(DstRotMiscVarTypeData%HubMB(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%HubMB.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%HubMB = SrcRotMiscVarTypeData%HubMB
-   end if
-   if (allocated(SrcRotMiscVarTypeData%NacFB)) then
-      LB(1:1) = lbound(SrcRotMiscVarTypeData%NacFB, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotMiscVarTypeData%NacFB, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%NacFB)) then
-         allocate(DstRotMiscVarTypeData%NacFB(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%NacFB.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%NacFB = SrcRotMiscVarTypeData%NacFB
-   end if
-   if (allocated(SrcRotMiscVarTypeData%NacMB)) then
-      LB(1:1) = lbound(SrcRotMiscVarTypeData%NacMB, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotMiscVarTypeData%NacMB, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%NacMB)) then
-         allocate(DstRotMiscVarTypeData%NacMB(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%NacMB.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotMiscVarTypeData%NacMB = SrcRotMiscVarTypeData%NacMB
-   end if
-   if (allocated(SrcRotMiscVarTypeData%BladeRootLoad)) then
-      LB(1:1) = lbound(SrcRotMiscVarTypeData%BladeRootLoad, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotMiscVarTypeData%BladeRootLoad, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%BladeRootLoad)) then
-         allocate(DstRotMiscVarTypeData%BladeRootLoad(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%BladeRootLoad.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call MeshCopy(SrcRotMiscVarTypeData%BladeRootLoad(i1), DstRotMiscVarTypeData%BladeRootLoad(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcRotMiscVarTypeData%B_L_2_R_P)) then
-      LB(1:1) = lbound(SrcRotMiscVarTypeData%B_L_2_R_P, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotMiscVarTypeData%B_L_2_R_P, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%B_L_2_R_P)) then
-         allocate(DstRotMiscVarTypeData%B_L_2_R_P(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%B_L_2_R_P.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcRotMiscVarTypeData%B_L_2_R_P(i1), DstRotMiscVarTypeData%B_L_2_R_P(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcRotMiscVarTypeData%BladeBuoyLoadPoint)) then
-      LB(1:1) = lbound(SrcRotMiscVarTypeData%BladeBuoyLoadPoint, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotMiscVarTypeData%BladeBuoyLoadPoint, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%BladeBuoyLoadPoint)) then
-         allocate(DstRotMiscVarTypeData%BladeBuoyLoadPoint(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%BladeBuoyLoadPoint.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call MeshCopy(SrcRotMiscVarTypeData%BladeBuoyLoadPoint(i1), DstRotMiscVarTypeData%BladeBuoyLoadPoint(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcRotMiscVarTypeData%BladeBuoyLoad)) then
-      LB(1:1) = lbound(SrcRotMiscVarTypeData%BladeBuoyLoad, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotMiscVarTypeData%BladeBuoyLoad, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%BladeBuoyLoad)) then
-         allocate(DstRotMiscVarTypeData%BladeBuoyLoad(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%BladeBuoyLoad.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call MeshCopy(SrcRotMiscVarTypeData%BladeBuoyLoad(i1), DstRotMiscVarTypeData%BladeBuoyLoad(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcRotMiscVarTypeData%B_P_2_B_L)) then
-      LB(1:1) = lbound(SrcRotMiscVarTypeData%B_P_2_B_L, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotMiscVarTypeData%B_P_2_B_L, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%B_P_2_B_L)) then
-         allocate(DstRotMiscVarTypeData%B_P_2_B_L(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%B_P_2_B_L.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcRotMiscVarTypeData%B_P_2_B_L(i1), DstRotMiscVarTypeData%B_P_2_B_L(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   call MeshCopy(SrcRotMiscVarTypeData%TwrBuoyLoadPoint, DstRotMiscVarTypeData%TwrBuoyLoadPoint, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcRotMiscVarTypeData%TwrBuoyLoad, DstRotMiscVarTypeData%TwrBuoyLoad, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcRotMiscVarTypeData%T_P_2_T_L, DstRotMiscVarTypeData%T_P_2_T_L, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   DstRotMiscVarTypeData%FirstWarn_TowerStrike = SrcRotMiscVarTypeData%FirstWarn_TowerStrike
-   DstRotMiscVarTypeData%AvgDiskVel = SrcRotMiscVarTypeData%AvgDiskVel
-   DstRotMiscVarTypeData%AvgDiskVelDist = SrcRotMiscVarTypeData%AvgDiskVelDist
-   DstRotMiscVarTypeData%TFinAlpha = SrcRotMiscVarTypeData%TFinAlpha
-   DstRotMiscVarTypeData%TFinRe = SrcRotMiscVarTypeData%TFinRe
-   DstRotMiscVarTypeData%TFinVrel = SrcRotMiscVarTypeData%TFinVrel
-   DstRotMiscVarTypeData%TFinVund_i = SrcRotMiscVarTypeData%TFinVund_i
-   DstRotMiscVarTypeData%TFinVind_i = SrcRotMiscVarTypeData%TFinVind_i
-   DstRotMiscVarTypeData%TFinVrel_i = SrcRotMiscVarTypeData%TFinVrel_i
-   DstRotMiscVarTypeData%TFinSTV_i = SrcRotMiscVarTypeData%TFinSTV_i
-   DstRotMiscVarTypeData%TFinF_i = SrcRotMiscVarTypeData%TFinF_i
-   DstRotMiscVarTypeData%TFinM_i = SrcRotMiscVarTypeData%TFinM_i
-end subroutine
-
-subroutine AD_DestroyRotMiscVarType(RotMiscVarTypeData, ErrStat, ErrMsg)
-   type(RotMiscVarType), intent(inout) :: RotMiscVarTypeData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2, i3, i4
-   integer(B8Ki)   :: LB(4), UB(4)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'AD_DestroyRotMiscVarType'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   call BEMT_DestroyMisc(RotMiscVarTypeData%BEMT, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call BEMT_DestroyOutput(RotMiscVarTypeData%BEMT_y, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   LB(1:1) = lbound(RotMiscVarTypeData%BEMT_u, kind=B8Ki)
-   UB(1:1) = ubound(RotMiscVarTypeData%BEMT_u, kind=B8Ki)
-   do i1 = LB(1), UB(1)
-      call BEMT_DestroyInput(RotMiscVarTypeData%BEMT_u(i1), ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   end do
-   call AA_DestroyMisc(RotMiscVarTypeData%AA, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call AA_DestroyOutput(RotMiscVarTypeData%AA_y, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call AA_DestroyInput(RotMiscVarTypeData%AA_u, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(RotMiscVarTypeData%DisturbedInflow)) then
-      deallocate(RotMiscVarTypeData%DisturbedInflow)
-   end if
-   if (allocated(RotMiscVarTypeData%orientationAnnulus)) then
-      deallocate(RotMiscVarTypeData%orientationAnnulus)
-   end if
-   if (allocated(RotMiscVarTypeData%R_li)) then
-      deallocate(RotMiscVarTypeData%R_li)
-   end if
-   if (allocated(RotMiscVarTypeData%AllOuts)) then
-      deallocate(RotMiscVarTypeData%AllOuts)
-   end if
-   if (allocated(RotMiscVarTypeData%W_Twr)) then
-      deallocate(RotMiscVarTypeData%W_Twr)
-   end if
-   if (allocated(RotMiscVarTypeData%X_Twr)) then
-      deallocate(RotMiscVarTypeData%X_Twr)
-   end if
-   if (allocated(RotMiscVarTypeData%Y_Twr)) then
-      deallocate(RotMiscVarTypeData%Y_Twr)
-   end if
-   if (allocated(RotMiscVarTypeData%Curve)) then
-      deallocate(RotMiscVarTypeData%Curve)
-   end if
-   if (allocated(RotMiscVarTypeData%TwrClrnc)) then
-      deallocate(RotMiscVarTypeData%TwrClrnc)
-   end if
-   if (allocated(RotMiscVarTypeData%X)) then
-      deallocate(RotMiscVarTypeData%X)
-   end if
-   if (allocated(RotMiscVarTypeData%Y)) then
-      deallocate(RotMiscVarTypeData%Y)
-   end if
-   if (allocated(RotMiscVarTypeData%Z)) then
-      deallocate(RotMiscVarTypeData%Z)
-   end if
-   if (allocated(RotMiscVarTypeData%M)) then
-      deallocate(RotMiscVarTypeData%M)
-   end if
-   if (allocated(RotMiscVarTypeData%Mx)) then
-      deallocate(RotMiscVarTypeData%Mx)
-   end if
-   if (allocated(RotMiscVarTypeData%My)) then
-      deallocate(RotMiscVarTypeData%My)
-   end if
-   if (allocated(RotMiscVarTypeData%Mz)) then
-      deallocate(RotMiscVarTypeData%Mz)
-   end if
-   if (allocated(RotMiscVarTypeData%Vind_i)) then
-      deallocate(RotMiscVarTypeData%Vind_i)
-   end if
-   if (allocated(RotMiscVarTypeData%hub_theta_x_root)) then
-      deallocate(RotMiscVarTypeData%hub_theta_x_root)
-   end if
-   call MeshDestroy( RotMiscVarTypeData%HubLoad, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(RotMiscVarTypeData%B_L_2_H_P)) then
-      LB(1:1) = lbound(RotMiscVarTypeData%B_L_2_H_P, kind=B8Ki)
-      UB(1:1) = ubound(RotMiscVarTypeData%B_L_2_H_P, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(RotMiscVarTypeData%B_L_2_H_P(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(RotMiscVarTypeData%B_L_2_H_P)
-   end if
-   if (allocated(RotMiscVarTypeData%SigmaCavitCrit)) then
-      deallocate(RotMiscVarTypeData%SigmaCavitCrit)
-   end if
-   if (allocated(RotMiscVarTypeData%SigmaCavit)) then
-      deallocate(RotMiscVarTypeData%SigmaCavit)
-   end if
-   if (allocated(RotMiscVarTypeData%CavitWarnSet)) then
-      deallocate(RotMiscVarTypeData%CavitWarnSet)
-   end if
-   if (allocated(RotMiscVarTypeData%TwrFB)) then
-      deallocate(RotMiscVarTypeData%TwrFB)
-   end if
-   if (allocated(RotMiscVarTypeData%TwrMB)) then
-      deallocate(RotMiscVarTypeData%TwrMB)
-   end if
-   if (allocated(RotMiscVarTypeData%HubFB)) then
-      deallocate(RotMiscVarTypeData%HubFB)
-   end if
-   if (allocated(RotMiscVarTypeData%HubMB)) then
-      deallocate(RotMiscVarTypeData%HubMB)
-   end if
-   if (allocated(RotMiscVarTypeData%NacFB)) then
-      deallocate(RotMiscVarTypeData%NacFB)
-   end if
-   if (allocated(RotMiscVarTypeData%NacMB)) then
-      deallocate(RotMiscVarTypeData%NacMB)
-   end if
-   if (allocated(RotMiscVarTypeData%BladeRootLoad)) then
-      LB(1:1) = lbound(RotMiscVarTypeData%BladeRootLoad, kind=B8Ki)
-      UB(1:1) = ubound(RotMiscVarTypeData%BladeRootLoad, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call MeshDestroy( RotMiscVarTypeData%BladeRootLoad(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(RotMiscVarTypeData%BladeRootLoad)
-   end if
-   if (allocated(RotMiscVarTypeData%B_L_2_R_P)) then
-      LB(1:1) = lbound(RotMiscVarTypeData%B_L_2_R_P, kind=B8Ki)
-      UB(1:1) = ubound(RotMiscVarTypeData%B_L_2_R_P, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(RotMiscVarTypeData%B_L_2_R_P(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(RotMiscVarTypeData%B_L_2_R_P)
-   end if
-   if (allocated(RotMiscVarTypeData%BladeBuoyLoadPoint)) then
-      LB(1:1) = lbound(RotMiscVarTypeData%BladeBuoyLoadPoint, kind=B8Ki)
-      UB(1:1) = ubound(RotMiscVarTypeData%BladeBuoyLoadPoint, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call MeshDestroy( RotMiscVarTypeData%BladeBuoyLoadPoint(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(RotMiscVarTypeData%BladeBuoyLoadPoint)
-   end if
-   if (allocated(RotMiscVarTypeData%BladeBuoyLoad)) then
-      LB(1:1) = lbound(RotMiscVarTypeData%BladeBuoyLoad, kind=B8Ki)
-      UB(1:1) = ubound(RotMiscVarTypeData%BladeBuoyLoad, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call MeshDestroy( RotMiscVarTypeData%BladeBuoyLoad(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(RotMiscVarTypeData%BladeBuoyLoad)
-   end if
-   if (allocated(RotMiscVarTypeData%B_P_2_B_L)) then
-      LB(1:1) = lbound(RotMiscVarTypeData%B_P_2_B_L, kind=B8Ki)
-      UB(1:1) = ubound(RotMiscVarTypeData%B_P_2_B_L, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(RotMiscVarTypeData%B_P_2_B_L(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(RotMiscVarTypeData%B_P_2_B_L)
-   end if
-   call MeshDestroy( RotMiscVarTypeData%TwrBuoyLoadPoint, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( RotMiscVarTypeData%TwrBuoyLoad, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(RotMiscVarTypeData%T_P_2_T_L, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-end subroutine
-
-subroutine AD_PackRotMiscVarType(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(RotMiscVarType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'AD_PackRotMiscVarType'
-   integer(B8Ki)   :: i1, i2, i3, i4
-   integer(B8Ki)   :: LB(4), UB(4)
-   if (RF%ErrStat >= AbortErrLev) return
-   call BEMT_PackMisc(RF, InData%BEMT) 
-   call BEMT_PackOutput(RF, InData%BEMT_y) 
-   LB(1:1) = lbound(InData%BEMT_u, kind=B8Ki)
-   UB(1:1) = ubound(InData%BEMT_u, kind=B8Ki)
-   do i1 = LB(1), UB(1)
-      call BEMT_PackInput(RF, InData%BEMT_u(i1)) 
-   end do
-   call AA_PackMisc(RF, InData%AA) 
-   call AA_PackOutput(RF, InData%AA_y) 
-   call AA_PackInput(RF, InData%AA_u) 
-   call RegPackAlloc(RF, InData%DisturbedInflow)
-   call RegPackAlloc(RF, InData%orientationAnnulus)
-   call RegPackAlloc(RF, InData%R_li)
-   call RegPackAlloc(RF, InData%AllOuts)
-   call RegPackAlloc(RF, InData%W_Twr)
-   call RegPackAlloc(RF, InData%X_Twr)
-   call RegPackAlloc(RF, InData%Y_Twr)
-   call RegPackAlloc(RF, InData%Curve)
-   call RegPackAlloc(RF, InData%TwrClrnc)
-   call RegPackAlloc(RF, InData%X)
-   call RegPackAlloc(RF, InData%Y)
-   call RegPackAlloc(RF, InData%Z)
-   call RegPackAlloc(RF, InData%M)
-   call RegPackAlloc(RF, InData%Mx)
-   call RegPackAlloc(RF, InData%My)
-   call RegPackAlloc(RF, InData%Mz)
-   call RegPackAlloc(RF, InData%Vind_i)
-   call RegPack(RF, InData%V_DiskAvg)
-   call RegPack(RF, InData%yaw)
-   call RegPack(RF, InData%tilt)
-   call RegPackAlloc(RF, InData%hub_theta_x_root)
-   call RegPack(RF, InData%V_dot_x)
-   call MeshPack(RF, InData%HubLoad) 
-   call RegPack(RF, allocated(InData%B_L_2_H_P))
-   if (allocated(InData%B_L_2_H_P)) then
-      call RegPackBounds(RF, 1, lbound(InData%B_L_2_H_P, kind=B8Ki), ubound(InData%B_L_2_H_P, kind=B8Ki))
-      LB(1:1) = lbound(InData%B_L_2_H_P, kind=B8Ki)
-      UB(1:1) = ubound(InData%B_L_2_H_P, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%B_L_2_H_P(i1)) 
-      end do
-   end if
-   call RegPackAlloc(RF, InData%SigmaCavitCrit)
-   call RegPackAlloc(RF, InData%SigmaCavit)
-   call RegPackAlloc(RF, InData%CavitWarnSet)
-   call RegPackAlloc(RF, InData%TwrFB)
-   call RegPackAlloc(RF, InData%TwrMB)
-   call RegPackAlloc(RF, InData%HubFB)
-   call RegPackAlloc(RF, InData%HubMB)
-   call RegPackAlloc(RF, InData%NacFB)
-   call RegPackAlloc(RF, InData%NacMB)
-   call RegPack(RF, allocated(InData%BladeRootLoad))
-   if (allocated(InData%BladeRootLoad)) then
-      call RegPackBounds(RF, 1, lbound(InData%BladeRootLoad, kind=B8Ki), ubound(InData%BladeRootLoad, kind=B8Ki))
-      LB(1:1) = lbound(InData%BladeRootLoad, kind=B8Ki)
-      UB(1:1) = ubound(InData%BladeRootLoad, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call MeshPack(RF, InData%BladeRootLoad(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%B_L_2_R_P))
-   if (allocated(InData%B_L_2_R_P)) then
-      call RegPackBounds(RF, 1, lbound(InData%B_L_2_R_P, kind=B8Ki), ubound(InData%B_L_2_R_P, kind=B8Ki))
-      LB(1:1) = lbound(InData%B_L_2_R_P, kind=B8Ki)
-      UB(1:1) = ubound(InData%B_L_2_R_P, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%B_L_2_R_P(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%BladeBuoyLoadPoint))
-   if (allocated(InData%BladeBuoyLoadPoint)) then
-      call RegPackBounds(RF, 1, lbound(InData%BladeBuoyLoadPoint, kind=B8Ki), ubound(InData%BladeBuoyLoadPoint, kind=B8Ki))
-      LB(1:1) = lbound(InData%BladeBuoyLoadPoint, kind=B8Ki)
-      UB(1:1) = ubound(InData%BladeBuoyLoadPoint, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call MeshPack(RF, InData%BladeBuoyLoadPoint(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%BladeBuoyLoad))
-   if (allocated(InData%BladeBuoyLoad)) then
-      call RegPackBounds(RF, 1, lbound(InData%BladeBuoyLoad, kind=B8Ki), ubound(InData%BladeBuoyLoad, kind=B8Ki))
-      LB(1:1) = lbound(InData%BladeBuoyLoad, kind=B8Ki)
-      UB(1:1) = ubound(InData%BladeBuoyLoad, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call MeshPack(RF, InData%BladeBuoyLoad(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%B_P_2_B_L))
-   if (allocated(InData%B_P_2_B_L)) then
-      call RegPackBounds(RF, 1, lbound(InData%B_P_2_B_L, kind=B8Ki), ubound(InData%B_P_2_B_L, kind=B8Ki))
-      LB(1:1) = lbound(InData%B_P_2_B_L, kind=B8Ki)
-      UB(1:1) = ubound(InData%B_P_2_B_L, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%B_P_2_B_L(i1)) 
-      end do
-   end if
-   call MeshPack(RF, InData%TwrBuoyLoadPoint) 
-   call MeshPack(RF, InData%TwrBuoyLoad) 
-   call NWTC_Library_PackMeshMapType(RF, InData%T_P_2_T_L) 
-   call RegPack(RF, InData%FirstWarn_TowerStrike)
-   call RegPack(RF, InData%AvgDiskVel)
-   call RegPack(RF, InData%AvgDiskVelDist)
-   call RegPack(RF, InData%TFinAlpha)
-   call RegPack(RF, InData%TFinRe)
-   call RegPack(RF, InData%TFinVrel)
-   call RegPack(RF, InData%TFinVund_i)
-   call RegPack(RF, InData%TFinVind_i)
-   call RegPack(RF, InData%TFinVrel_i)
-   call RegPack(RF, InData%TFinSTV_i)
-   call RegPack(RF, InData%TFinF_i)
-   call RegPack(RF, InData%TFinM_i)
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine AD_UnPackRotMiscVarType(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(RotMiscVarType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'AD_UnPackRotMiscVarType'
-   integer(B8Ki)   :: i1, i2, i3, i4
-   integer(B8Ki)   :: LB(4), UB(4)
-   integer(IntKi)  :: stat
-   logical         :: IsAllocAssoc
-   if (RF%ErrStat /= ErrID_None) return
-   call BEMT_UnpackMisc(RF, OutData%BEMT) ! BEMT 
-   call BEMT_UnpackOutput(RF, OutData%BEMT_y) ! BEMT_y 
-   LB(1:1) = lbound(OutData%BEMT_u, kind=B8Ki)
-   UB(1:1) = ubound(OutData%BEMT_u, kind=B8Ki)
-   do i1 = LB(1), UB(1)
-      call BEMT_UnpackInput(RF, OutData%BEMT_u(i1)) ! BEMT_u 
-   end do
-   call AA_UnpackMisc(RF, OutData%AA) ! AA 
-   call AA_UnpackOutput(RF, OutData%AA_y) ! AA_y 
-   call AA_UnpackInput(RF, OutData%AA_u) ! AA_u 
-   call RegUnpackAlloc(RF, OutData%DisturbedInflow); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%orientationAnnulus); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%R_li); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%AllOuts); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%W_Twr); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%X_Twr); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Y_Twr); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Curve); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%TwrClrnc); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%X); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Z); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%M); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Mx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%My); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Mz); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Vind_i); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%V_DiskAvg); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%yaw); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%tilt); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%hub_theta_x_root); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%V_dot_x); if (RegCheckErr(RF, RoutineName)) return
-   call MeshUnpack(RF, OutData%HubLoad) ! HubLoad 
-   if (allocated(OutData%B_L_2_H_P)) deallocate(OutData%B_L_2_H_P)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%B_L_2_H_P(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%B_L_2_H_P.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%B_L_2_H_P(i1)) ! B_L_2_H_P 
-      end do
-   end if
-   call RegUnpackAlloc(RF, OutData%SigmaCavitCrit); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%SigmaCavit); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%CavitWarnSet); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%TwrFB); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%TwrMB); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%HubFB); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%HubMB); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%NacFB); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%NacMB); if (RegCheckErr(RF, RoutineName)) return
-   if (allocated(OutData%BladeRootLoad)) deallocate(OutData%BladeRootLoad)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%BladeRootLoad(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%BladeRootLoad.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call MeshUnpack(RF, OutData%BladeRootLoad(i1)) ! BladeRootLoad 
-      end do
-   end if
-   if (allocated(OutData%B_L_2_R_P)) deallocate(OutData%B_L_2_R_P)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%B_L_2_R_P(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%B_L_2_R_P.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%B_L_2_R_P(i1)) ! B_L_2_R_P 
-      end do
-   end if
-   if (allocated(OutData%BladeBuoyLoadPoint)) deallocate(OutData%BladeBuoyLoadPoint)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%BladeBuoyLoadPoint(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%BladeBuoyLoadPoint.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call MeshUnpack(RF, OutData%BladeBuoyLoadPoint(i1)) ! BladeBuoyLoadPoint 
-      end do
-   end if
-   if (allocated(OutData%BladeBuoyLoad)) deallocate(OutData%BladeBuoyLoad)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%BladeBuoyLoad(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%BladeBuoyLoad.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call MeshUnpack(RF, OutData%BladeBuoyLoad(i1)) ! BladeBuoyLoad 
-      end do
-   end if
-   if (allocated(OutData%B_P_2_B_L)) deallocate(OutData%B_P_2_B_L)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%B_P_2_B_L(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%B_P_2_B_L.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%B_P_2_B_L(i1)) ! B_P_2_B_L 
-      end do
-   end if
-   call MeshUnpack(RF, OutData%TwrBuoyLoadPoint) ! TwrBuoyLoadPoint 
-   call MeshUnpack(RF, OutData%TwrBuoyLoad) ! TwrBuoyLoad 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%T_P_2_T_L) ! T_P_2_T_L 
-   call RegUnpack(RF, OutData%FirstWarn_TowerStrike); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%AvgDiskVel); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%AvgDiskVelDist); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%TFinAlpha); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%TFinRe); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%TFinVrel); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%TFinVund_i); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%TFinVind_i); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%TFinVrel_i); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%TFinSTV_i); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%TFinF_i); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%TFinM_i); if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine AD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
-   type(AD_MiscVarType), intent(inout) :: SrcMiscData
-   type(AD_MiscVarType), intent(inout) :: DstMiscData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)                  :: LB(2), UB(2)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'AD_CopyMisc'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   if (allocated(SrcMiscData%rotors)) then
-      LB(1:1) = lbound(SrcMiscData%rotors, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%rotors, kind=B8Ki)
-      if (.not. allocated(DstMiscData%rotors)) then
-         allocate(DstMiscData%rotors(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%rotors.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call AD_CopyRotMiscVarType(SrcMiscData%rotors(i1), DstMiscData%rotors(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcMiscData%FVW_u)) then
-      LB(1:1) = lbound(SrcMiscData%FVW_u, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%FVW_u, kind=B8Ki)
-      if (.not. allocated(DstMiscData%FVW_u)) then
-         allocate(DstMiscData%FVW_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FVW_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call FVW_CopyInput(SrcMiscData%FVW_u(i1), DstMiscData%FVW_u(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   call FVW_CopyOutput(SrcMiscData%FVW_y, DstMiscData%FVW_y, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call FVW_CopyMisc(SrcMiscData%FVW, DstMiscData%FVW, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcMiscData%WindPos)) then
-      LB(1:2) = lbound(SrcMiscData%WindPos, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%WindPos, kind=B8Ki)
-      if (.not. allocated(DstMiscData%WindPos)) then
-         allocate(DstMiscData%WindPos(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WindPos.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%WindPos = SrcMiscData%WindPos
-   end if
-   if (allocated(SrcMiscData%WindVel)) then
-      LB(1:2) = lbound(SrcMiscData%WindVel, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%WindVel, kind=B8Ki)
-      if (.not. allocated(DstMiscData%WindVel)) then
-         allocate(DstMiscData%WindVel(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WindVel.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%WindVel = SrcMiscData%WindVel
-   end if
-   if (allocated(SrcMiscData%WindAcc)) then
-      LB(1:2) = lbound(SrcMiscData%WindAcc, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%WindAcc, kind=B8Ki)
-      if (.not. allocated(DstMiscData%WindAcc)) then
-         allocate(DstMiscData%WindAcc(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WindAcc.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%WindAcc = SrcMiscData%WindAcc
-   end if
-end subroutine
-
-subroutine AD_DestroyMisc(MiscData, ErrStat, ErrMsg)
-   type(AD_MiscVarType), intent(inout) :: MiscData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'AD_DestroyMisc'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   if (allocated(MiscData%rotors)) then
-      LB(1:1) = lbound(MiscData%rotors, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%rotors, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call AD_DestroyRotMiscVarType(MiscData%rotors(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(MiscData%rotors)
-   end if
-   if (allocated(MiscData%FVW_u)) then
-      LB(1:1) = lbound(MiscData%FVW_u, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%FVW_u, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call FVW_DestroyInput(MiscData%FVW_u(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(MiscData%FVW_u)
-   end if
-   call FVW_DestroyOutput(MiscData%FVW_y, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call FVW_DestroyMisc(MiscData%FVW, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(MiscData%WindPos)) then
-      deallocate(MiscData%WindPos)
-   end if
-   if (allocated(MiscData%WindVel)) then
-      deallocate(MiscData%WindVel)
-   end if
-   if (allocated(MiscData%WindAcc)) then
-      deallocate(MiscData%WindAcc)
-   end if
-end subroutine
-
-subroutine AD_PackMisc(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(AD_MiscVarType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'AD_PackMisc'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
-   if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, allocated(InData%rotors))
-   if (allocated(InData%rotors)) then
-      call RegPackBounds(RF, 1, lbound(InData%rotors, kind=B8Ki), ubound(InData%rotors, kind=B8Ki))
-      LB(1:1) = lbound(InData%rotors, kind=B8Ki)
-      UB(1:1) = ubound(InData%rotors, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call AD_PackRotMiscVarType(RF, InData%rotors(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%FVW_u))
-   if (allocated(InData%FVW_u)) then
-      call RegPackBounds(RF, 1, lbound(InData%FVW_u, kind=B8Ki), ubound(InData%FVW_u, kind=B8Ki))
-      LB(1:1) = lbound(InData%FVW_u, kind=B8Ki)
-      UB(1:1) = ubound(InData%FVW_u, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call FVW_PackInput(RF, InData%FVW_u(i1)) 
-      end do
-   end if
-   call FVW_PackOutput(RF, InData%FVW_y) 
-   call FVW_PackMisc(RF, InData%FVW) 
-   call RegPackAlloc(RF, InData%WindPos)
-   call RegPackAlloc(RF, InData%WindVel)
-   call RegPackAlloc(RF, InData%WindAcc)
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine AD_UnPackMisc(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(AD_MiscVarType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'AD_UnPackMisc'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
-   integer(IntKi)  :: stat
-   logical         :: IsAllocAssoc
-   if (RF%ErrStat /= ErrID_None) return
-   if (allocated(OutData%rotors)) deallocate(OutData%rotors)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%rotors(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%rotors.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call AD_UnpackRotMiscVarType(RF, OutData%rotors(i1)) ! rotors 
-      end do
-   end if
-   if (allocated(OutData%FVW_u)) deallocate(OutData%FVW_u)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%FVW_u(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%FVW_u.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call FVW_UnpackInput(RF, OutData%FVW_u(i1)) ! FVW_u 
-      end do
-   end if
-   call FVW_UnpackOutput(RF, OutData%FVW_y) ! FVW_y 
-   call FVW_UnpackMisc(RF, OutData%FVW) ! FVW 
-   call RegUnpackAlloc(RF, OutData%WindPos); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%WindVel); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%WindAcc); if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
 subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeData, CtrlCode, ErrStat, ErrMsg)
    type(RotParameterType), intent(in) :: SrcRotParameterTypeData
    type(RotParameterType), intent(inout) :: DstRotParameterTypeData
@@ -4053,6 +2988,88 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
    character(*), parameter        :: RoutineName = 'AD_CopyRotParameterType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (associated(SrcRotParameterTypeData%Vars)) then
+      if (.not. associated(DstRotParameterTypeData%Vars)) then
+         allocate(DstRotParameterTypeData%Vars, stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%Vars.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      call NWTC_Library_CopyModVarsType(SrcRotParameterTypeData%Vars, DstRotParameterTypeData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end if
+   DstRotParameterTypeData%iVarDBEMT = SrcRotParameterTypeData%iVarDBEMT
+   DstRotParameterTypeData%iVarUA = SrcRotParameterTypeData%iVarUA
+   DstRotParameterTypeData%iVarTowerMotion = SrcRotParameterTypeData%iVarTowerMotion
+   DstRotParameterTypeData%iVarNacelleMotion = SrcRotParameterTypeData%iVarNacelleMotion
+   DstRotParameterTypeData%iVarHubMotion = SrcRotParameterTypeData%iVarHubMotion
+   if (allocated(SrcRotParameterTypeData%iVarBladeRootMotion)) then
+      LB(1:1) = lbound(SrcRotParameterTypeData%iVarBladeRootMotion, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotParameterTypeData%iVarBladeRootMotion, kind=B8Ki)
+      if (.not. allocated(DstRotParameterTypeData%iVarBladeRootMotion)) then
+         allocate(DstRotParameterTypeData%iVarBladeRootMotion(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%iVarBladeRootMotion.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotParameterTypeData%iVarBladeRootMotion = SrcRotParameterTypeData%iVarBladeRootMotion
+   end if
+   if (allocated(SrcRotParameterTypeData%iVarBladeMotion)) then
+      LB(1:1) = lbound(SrcRotParameterTypeData%iVarBladeMotion, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotParameterTypeData%iVarBladeMotion, kind=B8Ki)
+      if (.not. allocated(DstRotParameterTypeData%iVarBladeMotion)) then
+         allocate(DstRotParameterTypeData%iVarBladeMotion(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%iVarBladeMotion.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotParameterTypeData%iVarBladeMotion = SrcRotParameterTypeData%iVarBladeMotion
+   end if
+   if (allocated(SrcRotParameterTypeData%iVarInflowOnBlade)) then
+      LB(1:1) = lbound(SrcRotParameterTypeData%iVarInflowOnBlade, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotParameterTypeData%iVarInflowOnBlade, kind=B8Ki)
+      if (.not. allocated(DstRotParameterTypeData%iVarInflowOnBlade)) then
+         allocate(DstRotParameterTypeData%iVarInflowOnBlade(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%iVarInflowOnBlade.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotParameterTypeData%iVarInflowOnBlade = SrcRotParameterTypeData%iVarInflowOnBlade
+   end if
+   DstRotParameterTypeData%iVarInflowOnTower = SrcRotParameterTypeData%iVarInflowOnTower
+   if (allocated(SrcRotParameterTypeData%iVarUserProp)) then
+      LB(1:1) = lbound(SrcRotParameterTypeData%iVarUserProp, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotParameterTypeData%iVarUserProp, kind=B8Ki)
+      if (.not. allocated(DstRotParameterTypeData%iVarUserProp)) then
+         allocate(DstRotParameterTypeData%iVarUserProp(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%iVarUserProp.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotParameterTypeData%iVarUserProp = SrcRotParameterTypeData%iVarUserProp
+   end if
+   DstRotParameterTypeData%iVarTowerLoad = SrcRotParameterTypeData%iVarTowerLoad
+   DstRotParameterTypeData%iVarHubLoad = SrcRotParameterTypeData%iVarHubLoad
+   DstRotParameterTypeData%iVarNacelleLoad = SrcRotParameterTypeData%iVarNacelleLoad
+   if (allocated(SrcRotParameterTypeData%iVarBladeLoad)) then
+      LB(1:1) = lbound(SrcRotParameterTypeData%iVarBladeLoad, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotParameterTypeData%iVarBladeLoad, kind=B8Ki)
+      if (.not. allocated(DstRotParameterTypeData%iVarBladeLoad)) then
+         allocate(DstRotParameterTypeData%iVarBladeLoad(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%iVarBladeLoad.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotParameterTypeData%iVarBladeLoad = SrcRotParameterTypeData%iVarBladeLoad
+   end if
+   DstRotParameterTypeData%iVarWriteOutput = SrcRotParameterTypeData%iVarWriteOutput
    DstRotParameterTypeData%NumBlades = SrcRotParameterTypeData%NumBlades
    DstRotParameterTypeData%NumBlNds = SrcRotParameterTypeData%NumBlNds
    DstRotParameterTypeData%NumTwrNds = SrcRotParameterTypeData%NumTwrNds
@@ -4374,6 +3391,27 @@ subroutine AD_DestroyRotParameterType(RotParameterTypeData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AD_DestroyRotParameterType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (associated(RotParameterTypeData%Vars)) then
+      call NWTC_Library_DestroyModVarsType(RotParameterTypeData%Vars, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      deallocate(RotParameterTypeData%Vars)
+      RotParameterTypeData%Vars => null()
+   end if
+   if (allocated(RotParameterTypeData%iVarBladeRootMotion)) then
+      deallocate(RotParameterTypeData%iVarBladeRootMotion)
+   end if
+   if (allocated(RotParameterTypeData%iVarBladeMotion)) then
+      deallocate(RotParameterTypeData%iVarBladeMotion)
+   end if
+   if (allocated(RotParameterTypeData%iVarInflowOnBlade)) then
+      deallocate(RotParameterTypeData%iVarInflowOnBlade)
+   end if
+   if (allocated(RotParameterTypeData%iVarUserProp)) then
+      deallocate(RotParameterTypeData%iVarUserProp)
+   end if
+   if (allocated(RotParameterTypeData%iVarBladeLoad)) then
+      deallocate(RotParameterTypeData%iVarBladeLoad)
+   end if
    if (allocated(RotParameterTypeData%TwrDiam)) then
       deallocate(RotParameterTypeData%TwrDiam)
    end if
@@ -4463,7 +3501,30 @@ subroutine AD_PackRotParameterType(RF, Indata)
    character(*), parameter         :: RoutineName = 'AD_PackRotParameterType'
    integer(B8Ki)   :: i1, i2
    integer(B8Ki)   :: LB(2), UB(2)
+   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
+      end if
+   end if
+   call RegPack(RF, InData%iVarDBEMT)
+   call RegPack(RF, InData%iVarUA)
+   call RegPack(RF, InData%iVarTowerMotion)
+   call RegPack(RF, InData%iVarNacelleMotion)
+   call RegPack(RF, InData%iVarHubMotion)
+   call RegPackAlloc(RF, InData%iVarBladeRootMotion)
+   call RegPackAlloc(RF, InData%iVarBladeMotion)
+   call RegPackAlloc(RF, InData%iVarInflowOnBlade)
+   call RegPack(RF, InData%iVarInflowOnTower)
+   call RegPackAlloc(RF, InData%iVarUserProp)
+   call RegPack(RF, InData%iVarTowerLoad)
+   call RegPack(RF, InData%iVarHubLoad)
+   call RegPack(RF, InData%iVarNacelleLoad)
+   call RegPackAlloc(RF, InData%iVarBladeLoad)
+   call RegPack(RF, InData%iVarWriteOutput)
    call RegPack(RF, InData%NumBlades)
    call RegPack(RF, InData%NumBlNds)
    call RegPack(RF, InData%NumTwrNds)
@@ -4554,7 +3615,42 @@ subroutine AD_UnPackRotParameterType(RF, OutData)
    integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(B8Ki)   :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
+   call RegUnpack(RF, OutData%iVarDBEMT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarUA); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarTowerMotion); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarNacelleMotion); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarHubMotion); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iVarBladeRootMotion); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iVarBladeMotion); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iVarInflowOnBlade); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarInflowOnTower); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iVarUserProp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarTowerLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarHubLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarNacelleLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iVarBladeLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarWriteOutput); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumBlades); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumBlNds); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumTwrNds); if (RegCheckErr(RF, RoutineName)) return
@@ -5547,6 +4643,1201 @@ subroutine AD_UnPackOutput(RF, OutData)
    end if
 end subroutine
 
+subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(RotMiscVarType), intent(inout) :: SrcRotMiscVarTypeData
+   type(RotMiscVarType), intent(inout) :: DstRotMiscVarTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B8Ki)   :: i1, i2, i3, i4
+   integer(B8Ki)                  :: LB(4), UB(4)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_CopyRotMiscVarType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call NWTC_Library_CopyModJacType(SrcRotMiscVarTypeData%Jac, DstRotMiscVarTypeData%Jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call AD_CopyRotContinuousStateType(SrcRotMiscVarTypeData%x_init, DstRotMiscVarTypeData%x_init, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call AD_CopyRotContinuousStateType(SrcRotMiscVarTypeData%x_perturb, DstRotMiscVarTypeData%x_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call AD_CopyRotContinuousStateType(SrcRotMiscVarTypeData%dxdt_lin, DstRotMiscVarTypeData%dxdt_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call AD_CopyRotInputType(SrcRotMiscVarTypeData%u_perturb, DstRotMiscVarTypeData%u_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call AD_CopyRotOutputType(SrcRotMiscVarTypeData%y_lin, DstRotMiscVarTypeData%y_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call AD_CopyRotConstraintStateType(SrcRotMiscVarTypeData%z_lin, DstRotMiscVarTypeData%z_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call AD_CopyRotOtherStateType(SrcRotMiscVarTypeData%OtherState_init, DstRotMiscVarTypeData%OtherState_init, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call AD_CopyRotOtherStateType(SrcRotMiscVarTypeData%OtherState_jac, DstRotMiscVarTypeData%OtherState_jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call BEMT_CopyMisc(SrcRotMiscVarTypeData%BEMT, DstRotMiscVarTypeData%BEMT, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call BEMT_CopyOutput(SrcRotMiscVarTypeData%BEMT_y, DstRotMiscVarTypeData%BEMT_y, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   LB(1:1) = lbound(SrcRotMiscVarTypeData%BEMT_u, kind=B8Ki)
+   UB(1:1) = ubound(SrcRotMiscVarTypeData%BEMT_u, kind=B8Ki)
+   do i1 = LB(1), UB(1)
+      call BEMT_CopyInput(SrcRotMiscVarTypeData%BEMT_u(i1), DstRotMiscVarTypeData%BEMT_u(i1), CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end do
+   call AA_CopyMisc(SrcRotMiscVarTypeData%AA, DstRotMiscVarTypeData%AA, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call AA_CopyOutput(SrcRotMiscVarTypeData%AA_y, DstRotMiscVarTypeData%AA_y, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call AA_CopyInput(SrcRotMiscVarTypeData%AA_u, DstRotMiscVarTypeData%AA_u, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcRotMiscVarTypeData%DisturbedInflow)) then
+      LB(1:3) = lbound(SrcRotMiscVarTypeData%DisturbedInflow, kind=B8Ki)
+      UB(1:3) = ubound(SrcRotMiscVarTypeData%DisturbedInflow, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%DisturbedInflow)) then
+         allocate(DstRotMiscVarTypeData%DisturbedInflow(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%DisturbedInflow.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%DisturbedInflow = SrcRotMiscVarTypeData%DisturbedInflow
+   end if
+   if (allocated(SrcRotMiscVarTypeData%orientationAnnulus)) then
+      LB(1:4) = lbound(SrcRotMiscVarTypeData%orientationAnnulus, kind=B8Ki)
+      UB(1:4) = ubound(SrcRotMiscVarTypeData%orientationAnnulus, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%orientationAnnulus)) then
+         allocate(DstRotMiscVarTypeData%orientationAnnulus(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%orientationAnnulus.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%orientationAnnulus = SrcRotMiscVarTypeData%orientationAnnulus
+   end if
+   if (allocated(SrcRotMiscVarTypeData%R_li)) then
+      LB(1:4) = lbound(SrcRotMiscVarTypeData%R_li, kind=B8Ki)
+      UB(1:4) = ubound(SrcRotMiscVarTypeData%R_li, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%R_li)) then
+         allocate(DstRotMiscVarTypeData%R_li(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%R_li.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%R_li = SrcRotMiscVarTypeData%R_li
+   end if
+   if (allocated(SrcRotMiscVarTypeData%AllOuts)) then
+      LB(1:1) = lbound(SrcRotMiscVarTypeData%AllOuts, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotMiscVarTypeData%AllOuts, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%AllOuts)) then
+         allocate(DstRotMiscVarTypeData%AllOuts(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%AllOuts.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%AllOuts = SrcRotMiscVarTypeData%AllOuts
+   end if
+   if (allocated(SrcRotMiscVarTypeData%W_Twr)) then
+      LB(1:1) = lbound(SrcRotMiscVarTypeData%W_Twr, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotMiscVarTypeData%W_Twr, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%W_Twr)) then
+         allocate(DstRotMiscVarTypeData%W_Twr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%W_Twr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%W_Twr = SrcRotMiscVarTypeData%W_Twr
+   end if
+   if (allocated(SrcRotMiscVarTypeData%X_Twr)) then
+      LB(1:1) = lbound(SrcRotMiscVarTypeData%X_Twr, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotMiscVarTypeData%X_Twr, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%X_Twr)) then
+         allocate(DstRotMiscVarTypeData%X_Twr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%X_Twr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%X_Twr = SrcRotMiscVarTypeData%X_Twr
+   end if
+   if (allocated(SrcRotMiscVarTypeData%Y_Twr)) then
+      LB(1:1) = lbound(SrcRotMiscVarTypeData%Y_Twr, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotMiscVarTypeData%Y_Twr, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%Y_Twr)) then
+         allocate(DstRotMiscVarTypeData%Y_Twr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%Y_Twr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%Y_Twr = SrcRotMiscVarTypeData%Y_Twr
+   end if
+   if (allocated(SrcRotMiscVarTypeData%Curve)) then
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%Curve, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%Curve, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%Curve)) then
+         allocate(DstRotMiscVarTypeData%Curve(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%Curve.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%Curve = SrcRotMiscVarTypeData%Curve
+   end if
+   if (allocated(SrcRotMiscVarTypeData%TwrClrnc)) then
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%TwrClrnc, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%TwrClrnc, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%TwrClrnc)) then
+         allocate(DstRotMiscVarTypeData%TwrClrnc(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%TwrClrnc.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%TwrClrnc = SrcRotMiscVarTypeData%TwrClrnc
+   end if
+   if (allocated(SrcRotMiscVarTypeData%X)) then
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%X, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%X, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%X)) then
+         allocate(DstRotMiscVarTypeData%X(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%X.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%X = SrcRotMiscVarTypeData%X
+   end if
+   if (allocated(SrcRotMiscVarTypeData%Y)) then
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%Y, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%Y, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%Y)) then
+         allocate(DstRotMiscVarTypeData%Y(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%Y.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%Y = SrcRotMiscVarTypeData%Y
+   end if
+   if (allocated(SrcRotMiscVarTypeData%Z)) then
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%Z, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%Z, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%Z)) then
+         allocate(DstRotMiscVarTypeData%Z(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%Z.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%Z = SrcRotMiscVarTypeData%Z
+   end if
+   if (allocated(SrcRotMiscVarTypeData%M)) then
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%M, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%M, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%M)) then
+         allocate(DstRotMiscVarTypeData%M(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%M.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%M = SrcRotMiscVarTypeData%M
+   end if
+   if (allocated(SrcRotMiscVarTypeData%Mx)) then
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%Mx, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%Mx, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%Mx)) then
+         allocate(DstRotMiscVarTypeData%Mx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%Mx.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%Mx = SrcRotMiscVarTypeData%Mx
+   end if
+   if (allocated(SrcRotMiscVarTypeData%My)) then
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%My, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%My, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%My)) then
+         allocate(DstRotMiscVarTypeData%My(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%My.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%My = SrcRotMiscVarTypeData%My
+   end if
+   if (allocated(SrcRotMiscVarTypeData%Mz)) then
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%Mz, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%Mz, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%Mz)) then
+         allocate(DstRotMiscVarTypeData%Mz(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%Mz.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%Mz = SrcRotMiscVarTypeData%Mz
+   end if
+   if (allocated(SrcRotMiscVarTypeData%Vind_i)) then
+      LB(1:3) = lbound(SrcRotMiscVarTypeData%Vind_i, kind=B8Ki)
+      UB(1:3) = ubound(SrcRotMiscVarTypeData%Vind_i, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%Vind_i)) then
+         allocate(DstRotMiscVarTypeData%Vind_i(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%Vind_i.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%Vind_i = SrcRotMiscVarTypeData%Vind_i
+   end if
+   DstRotMiscVarTypeData%V_DiskAvg = SrcRotMiscVarTypeData%V_DiskAvg
+   DstRotMiscVarTypeData%yaw = SrcRotMiscVarTypeData%yaw
+   DstRotMiscVarTypeData%tilt = SrcRotMiscVarTypeData%tilt
+   if (allocated(SrcRotMiscVarTypeData%hub_theta_x_root)) then
+      LB(1:1) = lbound(SrcRotMiscVarTypeData%hub_theta_x_root, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotMiscVarTypeData%hub_theta_x_root, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%hub_theta_x_root)) then
+         allocate(DstRotMiscVarTypeData%hub_theta_x_root(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%hub_theta_x_root.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%hub_theta_x_root = SrcRotMiscVarTypeData%hub_theta_x_root
+   end if
+   DstRotMiscVarTypeData%V_dot_x = SrcRotMiscVarTypeData%V_dot_x
+   call MeshCopy(SrcRotMiscVarTypeData%HubLoad, DstRotMiscVarTypeData%HubLoad, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcRotMiscVarTypeData%B_L_2_H_P)) then
+      LB(1:1) = lbound(SrcRotMiscVarTypeData%B_L_2_H_P, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotMiscVarTypeData%B_L_2_H_P, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%B_L_2_H_P)) then
+         allocate(DstRotMiscVarTypeData%B_L_2_H_P(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%B_L_2_H_P.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_CopyMeshMapType(SrcRotMiscVarTypeData%B_L_2_H_P(i1), DstRotMiscVarTypeData%B_L_2_H_P(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcRotMiscVarTypeData%SigmaCavitCrit)) then
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%SigmaCavitCrit, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%SigmaCavitCrit, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%SigmaCavitCrit)) then
+         allocate(DstRotMiscVarTypeData%SigmaCavitCrit(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%SigmaCavitCrit.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%SigmaCavitCrit = SrcRotMiscVarTypeData%SigmaCavitCrit
+   end if
+   if (allocated(SrcRotMiscVarTypeData%SigmaCavit)) then
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%SigmaCavit, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%SigmaCavit, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%SigmaCavit)) then
+         allocate(DstRotMiscVarTypeData%SigmaCavit(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%SigmaCavit.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%SigmaCavit = SrcRotMiscVarTypeData%SigmaCavit
+   end if
+   if (allocated(SrcRotMiscVarTypeData%CavitWarnSet)) then
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%CavitWarnSet, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%CavitWarnSet, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%CavitWarnSet)) then
+         allocate(DstRotMiscVarTypeData%CavitWarnSet(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%CavitWarnSet.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%CavitWarnSet = SrcRotMiscVarTypeData%CavitWarnSet
+   end if
+   if (allocated(SrcRotMiscVarTypeData%TwrFB)) then
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%TwrFB, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%TwrFB, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%TwrFB)) then
+         allocate(DstRotMiscVarTypeData%TwrFB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%TwrFB.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%TwrFB = SrcRotMiscVarTypeData%TwrFB
+   end if
+   if (allocated(SrcRotMiscVarTypeData%TwrMB)) then
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%TwrMB, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%TwrMB, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%TwrMB)) then
+         allocate(DstRotMiscVarTypeData%TwrMB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%TwrMB.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%TwrMB = SrcRotMiscVarTypeData%TwrMB
+   end if
+   if (allocated(SrcRotMiscVarTypeData%HubFB)) then
+      LB(1:1) = lbound(SrcRotMiscVarTypeData%HubFB, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotMiscVarTypeData%HubFB, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%HubFB)) then
+         allocate(DstRotMiscVarTypeData%HubFB(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%HubFB.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%HubFB = SrcRotMiscVarTypeData%HubFB
+   end if
+   if (allocated(SrcRotMiscVarTypeData%HubMB)) then
+      LB(1:1) = lbound(SrcRotMiscVarTypeData%HubMB, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotMiscVarTypeData%HubMB, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%HubMB)) then
+         allocate(DstRotMiscVarTypeData%HubMB(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%HubMB.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%HubMB = SrcRotMiscVarTypeData%HubMB
+   end if
+   if (allocated(SrcRotMiscVarTypeData%NacFB)) then
+      LB(1:1) = lbound(SrcRotMiscVarTypeData%NacFB, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotMiscVarTypeData%NacFB, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%NacFB)) then
+         allocate(DstRotMiscVarTypeData%NacFB(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%NacFB.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%NacFB = SrcRotMiscVarTypeData%NacFB
+   end if
+   if (allocated(SrcRotMiscVarTypeData%NacMB)) then
+      LB(1:1) = lbound(SrcRotMiscVarTypeData%NacMB, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotMiscVarTypeData%NacMB, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%NacMB)) then
+         allocate(DstRotMiscVarTypeData%NacMB(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%NacMB.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%NacMB = SrcRotMiscVarTypeData%NacMB
+   end if
+   if (allocated(SrcRotMiscVarTypeData%BladeRootLoad)) then
+      LB(1:1) = lbound(SrcRotMiscVarTypeData%BladeRootLoad, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotMiscVarTypeData%BladeRootLoad, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%BladeRootLoad)) then
+         allocate(DstRotMiscVarTypeData%BladeRootLoad(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%BladeRootLoad.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshCopy(SrcRotMiscVarTypeData%BladeRootLoad(i1), DstRotMiscVarTypeData%BladeRootLoad(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcRotMiscVarTypeData%B_L_2_R_P)) then
+      LB(1:1) = lbound(SrcRotMiscVarTypeData%B_L_2_R_P, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotMiscVarTypeData%B_L_2_R_P, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%B_L_2_R_P)) then
+         allocate(DstRotMiscVarTypeData%B_L_2_R_P(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%B_L_2_R_P.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_CopyMeshMapType(SrcRotMiscVarTypeData%B_L_2_R_P(i1), DstRotMiscVarTypeData%B_L_2_R_P(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcRotMiscVarTypeData%BladeBuoyLoadPoint)) then
+      LB(1:1) = lbound(SrcRotMiscVarTypeData%BladeBuoyLoadPoint, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotMiscVarTypeData%BladeBuoyLoadPoint, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%BladeBuoyLoadPoint)) then
+         allocate(DstRotMiscVarTypeData%BladeBuoyLoadPoint(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%BladeBuoyLoadPoint.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshCopy(SrcRotMiscVarTypeData%BladeBuoyLoadPoint(i1), DstRotMiscVarTypeData%BladeBuoyLoadPoint(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcRotMiscVarTypeData%BladeBuoyLoad)) then
+      LB(1:1) = lbound(SrcRotMiscVarTypeData%BladeBuoyLoad, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotMiscVarTypeData%BladeBuoyLoad, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%BladeBuoyLoad)) then
+         allocate(DstRotMiscVarTypeData%BladeBuoyLoad(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%BladeBuoyLoad.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshCopy(SrcRotMiscVarTypeData%BladeBuoyLoad(i1), DstRotMiscVarTypeData%BladeBuoyLoad(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcRotMiscVarTypeData%B_P_2_B_L)) then
+      LB(1:1) = lbound(SrcRotMiscVarTypeData%B_P_2_B_L, kind=B8Ki)
+      UB(1:1) = ubound(SrcRotMiscVarTypeData%B_P_2_B_L, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%B_P_2_B_L)) then
+         allocate(DstRotMiscVarTypeData%B_P_2_B_L(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%B_P_2_B_L.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_CopyMeshMapType(SrcRotMiscVarTypeData%B_P_2_B_L(i1), DstRotMiscVarTypeData%B_P_2_B_L(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   call MeshCopy(SrcRotMiscVarTypeData%TwrBuoyLoadPoint, DstRotMiscVarTypeData%TwrBuoyLoadPoint, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call MeshCopy(SrcRotMiscVarTypeData%TwrBuoyLoad, DstRotMiscVarTypeData%TwrBuoyLoad, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyMeshMapType(SrcRotMiscVarTypeData%T_P_2_T_L, DstRotMiscVarTypeData%T_P_2_T_L, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstRotMiscVarTypeData%FirstWarn_TowerStrike = SrcRotMiscVarTypeData%FirstWarn_TowerStrike
+   DstRotMiscVarTypeData%AvgDiskVel = SrcRotMiscVarTypeData%AvgDiskVel
+   DstRotMiscVarTypeData%AvgDiskVelDist = SrcRotMiscVarTypeData%AvgDiskVelDist
+   DstRotMiscVarTypeData%TFinAlpha = SrcRotMiscVarTypeData%TFinAlpha
+   DstRotMiscVarTypeData%TFinRe = SrcRotMiscVarTypeData%TFinRe
+   DstRotMiscVarTypeData%TFinVrel = SrcRotMiscVarTypeData%TFinVrel
+   DstRotMiscVarTypeData%TFinVund_i = SrcRotMiscVarTypeData%TFinVund_i
+   DstRotMiscVarTypeData%TFinVind_i = SrcRotMiscVarTypeData%TFinVind_i
+   DstRotMiscVarTypeData%TFinVrel_i = SrcRotMiscVarTypeData%TFinVrel_i
+   DstRotMiscVarTypeData%TFinSTV_i = SrcRotMiscVarTypeData%TFinSTV_i
+   DstRotMiscVarTypeData%TFinF_i = SrcRotMiscVarTypeData%TFinF_i
+   DstRotMiscVarTypeData%TFinM_i = SrcRotMiscVarTypeData%TFinM_i
+end subroutine
+
+subroutine AD_DestroyRotMiscVarType(RotMiscVarTypeData, ErrStat, ErrMsg)
+   type(RotMiscVarType), intent(inout) :: RotMiscVarTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B8Ki)   :: i1, i2, i3, i4
+   integer(B8Ki)   :: LB(4), UB(4)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_DestroyRotMiscVarType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call NWTC_Library_DestroyModJacType(RotMiscVarTypeData%Jac, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD_DestroyRotContinuousStateType(RotMiscVarTypeData%x_init, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD_DestroyRotContinuousStateType(RotMiscVarTypeData%x_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD_DestroyRotContinuousStateType(RotMiscVarTypeData%dxdt_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD_DestroyRotInputType(RotMiscVarTypeData%u_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD_DestroyRotOutputType(RotMiscVarTypeData%y_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD_DestroyRotConstraintStateType(RotMiscVarTypeData%z_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD_DestroyRotOtherStateType(RotMiscVarTypeData%OtherState_init, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD_DestroyRotOtherStateType(RotMiscVarTypeData%OtherState_jac, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call BEMT_DestroyMisc(RotMiscVarTypeData%BEMT, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call BEMT_DestroyOutput(RotMiscVarTypeData%BEMT_y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   LB(1:1) = lbound(RotMiscVarTypeData%BEMT_u, kind=B8Ki)
+   UB(1:1) = ubound(RotMiscVarTypeData%BEMT_u, kind=B8Ki)
+   do i1 = LB(1), UB(1)
+      call BEMT_DestroyInput(RotMiscVarTypeData%BEMT_u(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call AA_DestroyMisc(RotMiscVarTypeData%AA, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AA_DestroyOutput(RotMiscVarTypeData%AA_y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AA_DestroyInput(RotMiscVarTypeData%AA_u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(RotMiscVarTypeData%DisturbedInflow)) then
+      deallocate(RotMiscVarTypeData%DisturbedInflow)
+   end if
+   if (allocated(RotMiscVarTypeData%orientationAnnulus)) then
+      deallocate(RotMiscVarTypeData%orientationAnnulus)
+   end if
+   if (allocated(RotMiscVarTypeData%R_li)) then
+      deallocate(RotMiscVarTypeData%R_li)
+   end if
+   if (allocated(RotMiscVarTypeData%AllOuts)) then
+      deallocate(RotMiscVarTypeData%AllOuts)
+   end if
+   if (allocated(RotMiscVarTypeData%W_Twr)) then
+      deallocate(RotMiscVarTypeData%W_Twr)
+   end if
+   if (allocated(RotMiscVarTypeData%X_Twr)) then
+      deallocate(RotMiscVarTypeData%X_Twr)
+   end if
+   if (allocated(RotMiscVarTypeData%Y_Twr)) then
+      deallocate(RotMiscVarTypeData%Y_Twr)
+   end if
+   if (allocated(RotMiscVarTypeData%Curve)) then
+      deallocate(RotMiscVarTypeData%Curve)
+   end if
+   if (allocated(RotMiscVarTypeData%TwrClrnc)) then
+      deallocate(RotMiscVarTypeData%TwrClrnc)
+   end if
+   if (allocated(RotMiscVarTypeData%X)) then
+      deallocate(RotMiscVarTypeData%X)
+   end if
+   if (allocated(RotMiscVarTypeData%Y)) then
+      deallocate(RotMiscVarTypeData%Y)
+   end if
+   if (allocated(RotMiscVarTypeData%Z)) then
+      deallocate(RotMiscVarTypeData%Z)
+   end if
+   if (allocated(RotMiscVarTypeData%M)) then
+      deallocate(RotMiscVarTypeData%M)
+   end if
+   if (allocated(RotMiscVarTypeData%Mx)) then
+      deallocate(RotMiscVarTypeData%Mx)
+   end if
+   if (allocated(RotMiscVarTypeData%My)) then
+      deallocate(RotMiscVarTypeData%My)
+   end if
+   if (allocated(RotMiscVarTypeData%Mz)) then
+      deallocate(RotMiscVarTypeData%Mz)
+   end if
+   if (allocated(RotMiscVarTypeData%Vind_i)) then
+      deallocate(RotMiscVarTypeData%Vind_i)
+   end if
+   if (allocated(RotMiscVarTypeData%hub_theta_x_root)) then
+      deallocate(RotMiscVarTypeData%hub_theta_x_root)
+   end if
+   call MeshDestroy( RotMiscVarTypeData%HubLoad, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(RotMiscVarTypeData%B_L_2_H_P)) then
+      LB(1:1) = lbound(RotMiscVarTypeData%B_L_2_H_P, kind=B8Ki)
+      UB(1:1) = ubound(RotMiscVarTypeData%B_L_2_H_P, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_DestroyMeshMapType(RotMiscVarTypeData%B_L_2_H_P(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(RotMiscVarTypeData%B_L_2_H_P)
+   end if
+   if (allocated(RotMiscVarTypeData%SigmaCavitCrit)) then
+      deallocate(RotMiscVarTypeData%SigmaCavitCrit)
+   end if
+   if (allocated(RotMiscVarTypeData%SigmaCavit)) then
+      deallocate(RotMiscVarTypeData%SigmaCavit)
+   end if
+   if (allocated(RotMiscVarTypeData%CavitWarnSet)) then
+      deallocate(RotMiscVarTypeData%CavitWarnSet)
+   end if
+   if (allocated(RotMiscVarTypeData%TwrFB)) then
+      deallocate(RotMiscVarTypeData%TwrFB)
+   end if
+   if (allocated(RotMiscVarTypeData%TwrMB)) then
+      deallocate(RotMiscVarTypeData%TwrMB)
+   end if
+   if (allocated(RotMiscVarTypeData%HubFB)) then
+      deallocate(RotMiscVarTypeData%HubFB)
+   end if
+   if (allocated(RotMiscVarTypeData%HubMB)) then
+      deallocate(RotMiscVarTypeData%HubMB)
+   end if
+   if (allocated(RotMiscVarTypeData%NacFB)) then
+      deallocate(RotMiscVarTypeData%NacFB)
+   end if
+   if (allocated(RotMiscVarTypeData%NacMB)) then
+      deallocate(RotMiscVarTypeData%NacMB)
+   end if
+   if (allocated(RotMiscVarTypeData%BladeRootLoad)) then
+      LB(1:1) = lbound(RotMiscVarTypeData%BladeRootLoad, kind=B8Ki)
+      UB(1:1) = ubound(RotMiscVarTypeData%BladeRootLoad, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call MeshDestroy( RotMiscVarTypeData%BladeRootLoad(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(RotMiscVarTypeData%BladeRootLoad)
+   end if
+   if (allocated(RotMiscVarTypeData%B_L_2_R_P)) then
+      LB(1:1) = lbound(RotMiscVarTypeData%B_L_2_R_P, kind=B8Ki)
+      UB(1:1) = ubound(RotMiscVarTypeData%B_L_2_R_P, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_DestroyMeshMapType(RotMiscVarTypeData%B_L_2_R_P(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(RotMiscVarTypeData%B_L_2_R_P)
+   end if
+   if (allocated(RotMiscVarTypeData%BladeBuoyLoadPoint)) then
+      LB(1:1) = lbound(RotMiscVarTypeData%BladeBuoyLoadPoint, kind=B8Ki)
+      UB(1:1) = ubound(RotMiscVarTypeData%BladeBuoyLoadPoint, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call MeshDestroy( RotMiscVarTypeData%BladeBuoyLoadPoint(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(RotMiscVarTypeData%BladeBuoyLoadPoint)
+   end if
+   if (allocated(RotMiscVarTypeData%BladeBuoyLoad)) then
+      LB(1:1) = lbound(RotMiscVarTypeData%BladeBuoyLoad, kind=B8Ki)
+      UB(1:1) = ubound(RotMiscVarTypeData%BladeBuoyLoad, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call MeshDestroy( RotMiscVarTypeData%BladeBuoyLoad(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(RotMiscVarTypeData%BladeBuoyLoad)
+   end if
+   if (allocated(RotMiscVarTypeData%B_P_2_B_L)) then
+      LB(1:1) = lbound(RotMiscVarTypeData%B_P_2_B_L, kind=B8Ki)
+      UB(1:1) = ubound(RotMiscVarTypeData%B_P_2_B_L, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_DestroyMeshMapType(RotMiscVarTypeData%B_P_2_B_L(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(RotMiscVarTypeData%B_P_2_B_L)
+   end if
+   call MeshDestroy( RotMiscVarTypeData%TwrBuoyLoadPoint, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( RotMiscVarTypeData%TwrBuoyLoad, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(RotMiscVarTypeData%T_P_2_T_L, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+end subroutine
+
+subroutine AD_PackRotMiscVarType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(RotMiscVarType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'AD_PackRotMiscVarType'
+   integer(B8Ki)   :: i1, i2, i3, i4
+   integer(B8Ki)   :: LB(4), UB(4)
+   if (RF%ErrStat >= AbortErrLev) return
+   call NWTC_Library_PackModJacType(RF, InData%Jac) 
+   call AD_PackRotContinuousStateType(RF, InData%x_init) 
+   call AD_PackRotContinuousStateType(RF, InData%x_perturb) 
+   call AD_PackRotContinuousStateType(RF, InData%dxdt_lin) 
+   call AD_PackRotInputType(RF, InData%u_perturb) 
+   call AD_PackRotOutputType(RF, InData%y_lin) 
+   call AD_PackRotConstraintStateType(RF, InData%z_lin) 
+   call AD_PackRotOtherStateType(RF, InData%OtherState_init) 
+   call AD_PackRotOtherStateType(RF, InData%OtherState_jac) 
+   call BEMT_PackMisc(RF, InData%BEMT) 
+   call BEMT_PackOutput(RF, InData%BEMT_y) 
+   LB(1:1) = lbound(InData%BEMT_u, kind=B8Ki)
+   UB(1:1) = ubound(InData%BEMT_u, kind=B8Ki)
+   do i1 = LB(1), UB(1)
+      call BEMT_PackInput(RF, InData%BEMT_u(i1)) 
+   end do
+   call AA_PackMisc(RF, InData%AA) 
+   call AA_PackOutput(RF, InData%AA_y) 
+   call AA_PackInput(RF, InData%AA_u) 
+   call RegPackAlloc(RF, InData%DisturbedInflow)
+   call RegPackAlloc(RF, InData%orientationAnnulus)
+   call RegPackAlloc(RF, InData%R_li)
+   call RegPackAlloc(RF, InData%AllOuts)
+   call RegPackAlloc(RF, InData%W_Twr)
+   call RegPackAlloc(RF, InData%X_Twr)
+   call RegPackAlloc(RF, InData%Y_Twr)
+   call RegPackAlloc(RF, InData%Curve)
+   call RegPackAlloc(RF, InData%TwrClrnc)
+   call RegPackAlloc(RF, InData%X)
+   call RegPackAlloc(RF, InData%Y)
+   call RegPackAlloc(RF, InData%Z)
+   call RegPackAlloc(RF, InData%M)
+   call RegPackAlloc(RF, InData%Mx)
+   call RegPackAlloc(RF, InData%My)
+   call RegPackAlloc(RF, InData%Mz)
+   call RegPackAlloc(RF, InData%Vind_i)
+   call RegPack(RF, InData%V_DiskAvg)
+   call RegPack(RF, InData%yaw)
+   call RegPack(RF, InData%tilt)
+   call RegPackAlloc(RF, InData%hub_theta_x_root)
+   call RegPack(RF, InData%V_dot_x)
+   call MeshPack(RF, InData%HubLoad) 
+   call RegPack(RF, allocated(InData%B_L_2_H_P))
+   if (allocated(InData%B_L_2_H_P)) then
+      call RegPackBounds(RF, 1, lbound(InData%B_L_2_H_P, kind=B8Ki), ubound(InData%B_L_2_H_P, kind=B8Ki))
+      LB(1:1) = lbound(InData%B_L_2_H_P, kind=B8Ki)
+      UB(1:1) = ubound(InData%B_L_2_H_P, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_PackMeshMapType(RF, InData%B_L_2_H_P(i1)) 
+      end do
+   end if
+   call RegPackAlloc(RF, InData%SigmaCavitCrit)
+   call RegPackAlloc(RF, InData%SigmaCavit)
+   call RegPackAlloc(RF, InData%CavitWarnSet)
+   call RegPackAlloc(RF, InData%TwrFB)
+   call RegPackAlloc(RF, InData%TwrMB)
+   call RegPackAlloc(RF, InData%HubFB)
+   call RegPackAlloc(RF, InData%HubMB)
+   call RegPackAlloc(RF, InData%NacFB)
+   call RegPackAlloc(RF, InData%NacMB)
+   call RegPack(RF, allocated(InData%BladeRootLoad))
+   if (allocated(InData%BladeRootLoad)) then
+      call RegPackBounds(RF, 1, lbound(InData%BladeRootLoad, kind=B8Ki), ubound(InData%BladeRootLoad, kind=B8Ki))
+      LB(1:1) = lbound(InData%BladeRootLoad, kind=B8Ki)
+      UB(1:1) = ubound(InData%BladeRootLoad, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call MeshPack(RF, InData%BladeRootLoad(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%B_L_2_R_P))
+   if (allocated(InData%B_L_2_R_P)) then
+      call RegPackBounds(RF, 1, lbound(InData%B_L_2_R_P, kind=B8Ki), ubound(InData%B_L_2_R_P, kind=B8Ki))
+      LB(1:1) = lbound(InData%B_L_2_R_P, kind=B8Ki)
+      UB(1:1) = ubound(InData%B_L_2_R_P, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_PackMeshMapType(RF, InData%B_L_2_R_P(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%BladeBuoyLoadPoint))
+   if (allocated(InData%BladeBuoyLoadPoint)) then
+      call RegPackBounds(RF, 1, lbound(InData%BladeBuoyLoadPoint, kind=B8Ki), ubound(InData%BladeBuoyLoadPoint, kind=B8Ki))
+      LB(1:1) = lbound(InData%BladeBuoyLoadPoint, kind=B8Ki)
+      UB(1:1) = ubound(InData%BladeBuoyLoadPoint, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call MeshPack(RF, InData%BladeBuoyLoadPoint(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%BladeBuoyLoad))
+   if (allocated(InData%BladeBuoyLoad)) then
+      call RegPackBounds(RF, 1, lbound(InData%BladeBuoyLoad, kind=B8Ki), ubound(InData%BladeBuoyLoad, kind=B8Ki))
+      LB(1:1) = lbound(InData%BladeBuoyLoad, kind=B8Ki)
+      UB(1:1) = ubound(InData%BladeBuoyLoad, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call MeshPack(RF, InData%BladeBuoyLoad(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%B_P_2_B_L))
+   if (allocated(InData%B_P_2_B_L)) then
+      call RegPackBounds(RF, 1, lbound(InData%B_P_2_B_L, kind=B8Ki), ubound(InData%B_P_2_B_L, kind=B8Ki))
+      LB(1:1) = lbound(InData%B_P_2_B_L, kind=B8Ki)
+      UB(1:1) = ubound(InData%B_P_2_B_L, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_PackMeshMapType(RF, InData%B_P_2_B_L(i1)) 
+      end do
+   end if
+   call MeshPack(RF, InData%TwrBuoyLoadPoint) 
+   call MeshPack(RF, InData%TwrBuoyLoad) 
+   call NWTC_Library_PackMeshMapType(RF, InData%T_P_2_T_L) 
+   call RegPack(RF, InData%FirstWarn_TowerStrike)
+   call RegPack(RF, InData%AvgDiskVel)
+   call RegPack(RF, InData%AvgDiskVelDist)
+   call RegPack(RF, InData%TFinAlpha)
+   call RegPack(RF, InData%TFinRe)
+   call RegPack(RF, InData%TFinVrel)
+   call RegPack(RF, InData%TFinVund_i)
+   call RegPack(RF, InData%TFinVind_i)
+   call RegPack(RF, InData%TFinVrel_i)
+   call RegPack(RF, InData%TFinSTV_i)
+   call RegPack(RF, InData%TFinF_i)
+   call RegPack(RF, InData%TFinM_i)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine AD_UnPackRotMiscVarType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(RotMiscVarType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'AD_UnPackRotMiscVarType'
+   integer(B8Ki)   :: i1, i2, i3, i4
+   integer(B8Ki)   :: LB(4), UB(4)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
+   call AD_UnpackRotContinuousStateType(RF, OutData%x_init) ! x_init 
+   call AD_UnpackRotContinuousStateType(RF, OutData%x_perturb) ! x_perturb 
+   call AD_UnpackRotContinuousStateType(RF, OutData%dxdt_lin) ! dxdt_lin 
+   call AD_UnpackRotInputType(RF, OutData%u_perturb) ! u_perturb 
+   call AD_UnpackRotOutputType(RF, OutData%y_lin) ! y_lin 
+   call AD_UnpackRotConstraintStateType(RF, OutData%z_lin) ! z_lin 
+   call AD_UnpackRotOtherStateType(RF, OutData%OtherState_init) ! OtherState_init 
+   call AD_UnpackRotOtherStateType(RF, OutData%OtherState_jac) ! OtherState_jac 
+   call BEMT_UnpackMisc(RF, OutData%BEMT) ! BEMT 
+   call BEMT_UnpackOutput(RF, OutData%BEMT_y) ! BEMT_y 
+   LB(1:1) = lbound(OutData%BEMT_u, kind=B8Ki)
+   UB(1:1) = ubound(OutData%BEMT_u, kind=B8Ki)
+   do i1 = LB(1), UB(1)
+      call BEMT_UnpackInput(RF, OutData%BEMT_u(i1)) ! BEMT_u 
+   end do
+   call AA_UnpackMisc(RF, OutData%AA) ! AA 
+   call AA_UnpackOutput(RF, OutData%AA_y) ! AA_y 
+   call AA_UnpackInput(RF, OutData%AA_u) ! AA_u 
+   call RegUnpackAlloc(RF, OutData%DisturbedInflow); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%orientationAnnulus); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%R_li); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AllOuts); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%W_Twr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%X_Twr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Y_Twr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Curve); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TwrClrnc); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%X); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Y); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Z); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%M); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Mx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%My); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Mz); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Vind_i); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%V_DiskAvg); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%yaw); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%tilt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%hub_theta_x_root); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%V_dot_x); if (RegCheckErr(RF, RoutineName)) return
+   call MeshUnpack(RF, OutData%HubLoad) ! HubLoad 
+   if (allocated(OutData%B_L_2_H_P)) deallocate(OutData%B_L_2_H_P)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%B_L_2_H_P(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%B_L_2_H_P.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_UnpackMeshMapType(RF, OutData%B_L_2_H_P(i1)) ! B_L_2_H_P 
+      end do
+   end if
+   call RegUnpackAlloc(RF, OutData%SigmaCavitCrit); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%SigmaCavit); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%CavitWarnSet); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TwrFB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TwrMB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%HubFB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%HubMB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%NacFB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%NacMB); if (RegCheckErr(RF, RoutineName)) return
+   if (allocated(OutData%BladeRootLoad)) deallocate(OutData%BladeRootLoad)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%BladeRootLoad(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%BladeRootLoad.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshUnpack(RF, OutData%BladeRootLoad(i1)) ! BladeRootLoad 
+      end do
+   end if
+   if (allocated(OutData%B_L_2_R_P)) deallocate(OutData%B_L_2_R_P)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%B_L_2_R_P(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%B_L_2_R_P.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_UnpackMeshMapType(RF, OutData%B_L_2_R_P(i1)) ! B_L_2_R_P 
+      end do
+   end if
+   if (allocated(OutData%BladeBuoyLoadPoint)) deallocate(OutData%BladeBuoyLoadPoint)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%BladeBuoyLoadPoint(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%BladeBuoyLoadPoint.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshUnpack(RF, OutData%BladeBuoyLoadPoint(i1)) ! BladeBuoyLoadPoint 
+      end do
+   end if
+   if (allocated(OutData%BladeBuoyLoad)) deallocate(OutData%BladeBuoyLoad)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%BladeBuoyLoad(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%BladeBuoyLoad.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshUnpack(RF, OutData%BladeBuoyLoad(i1)) ! BladeBuoyLoad 
+      end do
+   end if
+   if (allocated(OutData%B_P_2_B_L)) deallocate(OutData%B_P_2_B_L)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%B_P_2_B_L(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%B_P_2_B_L.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_UnpackMeshMapType(RF, OutData%B_P_2_B_L(i1)) ! B_P_2_B_L 
+      end do
+   end if
+   call MeshUnpack(RF, OutData%TwrBuoyLoadPoint) ! TwrBuoyLoadPoint 
+   call MeshUnpack(RF, OutData%TwrBuoyLoad) ! TwrBuoyLoad 
+   call NWTC_Library_UnpackMeshMapType(RF, OutData%T_P_2_T_L) ! T_P_2_T_L 
+   call RegUnpack(RF, OutData%FirstWarn_TowerStrike); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%AvgDiskVel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%AvgDiskVelDist); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinAlpha); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinRe); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinVrel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinVund_i); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinVind_i); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinVrel_i); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinSTV_i); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinF_i); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinM_i); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine AD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
+   type(AD_MiscVarType), intent(inout) :: SrcMiscData
+   type(AD_MiscVarType), intent(inout) :: DstMiscData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_CopyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(SrcMiscData%rotors)) then
+      LB(1:1) = lbound(SrcMiscData%rotors, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%rotors, kind=B8Ki)
+      if (.not. allocated(DstMiscData%rotors)) then
+         allocate(DstMiscData%rotors(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%rotors.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call AD_CopyRotMiscVarType(SrcMiscData%rotors(i1), DstMiscData%rotors(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcMiscData%FVW_u)) then
+      LB(1:1) = lbound(SrcMiscData%FVW_u, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%FVW_u, kind=B8Ki)
+      if (.not. allocated(DstMiscData%FVW_u)) then
+         allocate(DstMiscData%FVW_u(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FVW_u.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call FVW_CopyInput(SrcMiscData%FVW_u(i1), DstMiscData%FVW_u(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   call FVW_CopyOutput(SrcMiscData%FVW_y, DstMiscData%FVW_y, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call FVW_CopyMisc(SrcMiscData%FVW, DstMiscData%FVW, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcMiscData%WindPos)) then
+      LB(1:2) = lbound(SrcMiscData%WindPos, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%WindPos, kind=B8Ki)
+      if (.not. allocated(DstMiscData%WindPos)) then
+         allocate(DstMiscData%WindPos(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WindPos.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%WindPos = SrcMiscData%WindPos
+   end if
+   if (allocated(SrcMiscData%WindVel)) then
+      LB(1:2) = lbound(SrcMiscData%WindVel, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%WindVel, kind=B8Ki)
+      if (.not. allocated(DstMiscData%WindVel)) then
+         allocate(DstMiscData%WindVel(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WindVel.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%WindVel = SrcMiscData%WindVel
+   end if
+   if (allocated(SrcMiscData%WindAcc)) then
+      LB(1:2) = lbound(SrcMiscData%WindAcc, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%WindAcc, kind=B8Ki)
+      if (.not. allocated(DstMiscData%WindAcc)) then
+         allocate(DstMiscData%WindAcc(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WindAcc.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%WindAcc = SrcMiscData%WindAcc
+   end if
+end subroutine
+
+subroutine AD_DestroyMisc(MiscData, ErrStat, ErrMsg)
+   type(AD_MiscVarType), intent(inout) :: MiscData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_DestroyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(MiscData%rotors)) then
+      LB(1:1) = lbound(MiscData%rotors, kind=B8Ki)
+      UB(1:1) = ubound(MiscData%rotors, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call AD_DestroyRotMiscVarType(MiscData%rotors(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%rotors)
+   end if
+   if (allocated(MiscData%FVW_u)) then
+      LB(1:1) = lbound(MiscData%FVW_u, kind=B8Ki)
+      UB(1:1) = ubound(MiscData%FVW_u, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call FVW_DestroyInput(MiscData%FVW_u(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%FVW_u)
+   end if
+   call FVW_DestroyOutput(MiscData%FVW_y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FVW_DestroyMisc(MiscData%FVW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(MiscData%WindPos)) then
+      deallocate(MiscData%WindPos)
+   end if
+   if (allocated(MiscData%WindVel)) then
+      deallocate(MiscData%WindVel)
+   end if
+   if (allocated(MiscData%WindAcc)) then
+      deallocate(MiscData%WindAcc)
+   end if
+end subroutine
+
+subroutine AD_PackMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(AD_MiscVarType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'AD_PackMisc'
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, allocated(InData%rotors))
+   if (allocated(InData%rotors)) then
+      call RegPackBounds(RF, 1, lbound(InData%rotors, kind=B8Ki), ubound(InData%rotors, kind=B8Ki))
+      LB(1:1) = lbound(InData%rotors, kind=B8Ki)
+      UB(1:1) = ubound(InData%rotors, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call AD_PackRotMiscVarType(RF, InData%rotors(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%FVW_u))
+   if (allocated(InData%FVW_u)) then
+      call RegPackBounds(RF, 1, lbound(InData%FVW_u, kind=B8Ki), ubound(InData%FVW_u, kind=B8Ki))
+      LB(1:1) = lbound(InData%FVW_u, kind=B8Ki)
+      UB(1:1) = ubound(InData%FVW_u, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call FVW_PackInput(RF, InData%FVW_u(i1)) 
+      end do
+   end if
+   call FVW_PackOutput(RF, InData%FVW_y) 
+   call FVW_PackMisc(RF, InData%FVW) 
+   call RegPackAlloc(RF, InData%WindPos)
+   call RegPackAlloc(RF, InData%WindVel)
+   call RegPackAlloc(RF, InData%WindAcc)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine AD_UnPackMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(AD_MiscVarType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'AD_UnPackMisc'
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   if (allocated(OutData%rotors)) deallocate(OutData%rotors)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%rotors(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%rotors.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call AD_UnpackRotMiscVarType(RF, OutData%rotors(i1)) ! rotors 
+      end do
+   end if
+   if (allocated(OutData%FVW_u)) deallocate(OutData%FVW_u)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%FVW_u(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%FVW_u.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call FVW_UnpackInput(RF, OutData%FVW_u(i1)) ! FVW_u 
+      end do
+   end if
+   call FVW_UnpackOutput(RF, OutData%FVW_y) ! FVW_y 
+   call FVW_UnpackMisc(RF, OutData%FVW) ! FVW 
+   call RegUnpackAlloc(RF, OutData%WindPos); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WindVel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WindAcc); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
 subroutine AD_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)
    !
    ! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
@@ -6084,5 +6375,85 @@ SUBROUTINE AD_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Err
       END DO
    END IF ! check if allocated
 END SUBROUTINE
+
+function AD_InputMeshPointer(u, ML) result(Mesh)
+   type(AD_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (AD_u_rotors_NacelleMotion)
+       Mesh => u%rotors(ML%i1)%NacelleMotion
+   case (AD_u_rotors_TowerMotion)
+       Mesh => u%rotors(ML%i1)%TowerMotion
+   case (AD_u_rotors_HubMotion)
+       Mesh => u%rotors(ML%i1)%HubMotion
+   case (AD_u_rotors_BladeRootMotion)
+       Mesh => u%rotors(ML%i1)%BladeRootMotion(ML%i2)
+   case (AD_u_rotors_BladeMotion)
+       Mesh => u%rotors(ML%i1)%BladeMotion(ML%i2)
+   case (AD_u_rotors_TFinMotion)
+       Mesh => u%rotors(ML%i1)%TFinMotion
+   end select
+end function
+
+function AD_InputMeshName(u, ML) result(Name)
+   type(AD_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (AD_u_rotors_NacelleMotion)
+       Name = "u%rotors("//trim(Num2LStr(ML%i1))//")%NacelleMotion"
+   case (AD_u_rotors_TowerMotion)
+       Name = "u%rotors("//trim(Num2LStr(ML%i1))//")%TowerMotion"
+   case (AD_u_rotors_HubMotion)
+       Name = "u%rotors("//trim(Num2LStr(ML%i1))//")%HubMotion"
+   case (AD_u_rotors_BladeRootMotion)
+       Name = "u%rotors("//trim(Num2LStr(ML%i1))//")%BladeRootMotion("//trim(Num2LStr(ML%i2))//")"
+   case (AD_u_rotors_BladeMotion)
+       Name = "u%rotors("//trim(Num2LStr(ML%i1))//")%BladeMotion("//trim(Num2LStr(ML%i2))//")"
+   case (AD_u_rotors_TFinMotion)
+       Name = "u%rotors("//trim(Num2LStr(ML%i1))//")%TFinMotion"
+   end select
+end function
+
+function AD_OutputMeshPointer(y, ML) result(Mesh)
+   type(AD_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (AD_y_rotors_NacelleLoad)
+       Mesh => y%rotors(ML%i1)%NacelleLoad
+   case (AD_y_rotors_HubLoad)
+       Mesh => y%rotors(ML%i1)%HubLoad
+   case (AD_y_rotors_TowerLoad)
+       Mesh => y%rotors(ML%i1)%TowerLoad
+   case (AD_y_rotors_BladeLoad)
+       Mesh => y%rotors(ML%i1)%BladeLoad(ML%i2)
+   case (AD_y_rotors_TFinLoad)
+       Mesh => y%rotors(ML%i1)%TFinLoad
+   end select
+end function
+
+function AD_OutputMeshName(y, ML) result(Name)
+   type(AD_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (AD_y_rotors_NacelleLoad)
+       Name = "y%rotors("//trim(Num2LStr(ML%i1))//")%NacelleLoad"
+   case (AD_y_rotors_HubLoad)
+       Name = "y%rotors("//trim(Num2LStr(ML%i1))//")%HubLoad"
+   case (AD_y_rotors_TowerLoad)
+       Name = "y%rotors("//trim(Num2LStr(ML%i1))//")%TowerLoad"
+   case (AD_y_rotors_BladeLoad)
+       Name = "y%rotors("//trim(Num2LStr(ML%i1))//")%BladeLoad("//trim(Num2LStr(ML%i2))//")"
+   case (AD_y_rotors_TFinLoad)
+       Name = "y%rotors("//trim(Num2LStr(ML%i1))//")%TFinLoad"
+   end select
+end function
 END MODULE AeroDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

@@ -307,6 +307,56 @@ struct DataType
             // Derived data type and all of its fields only contain reals
             return true;
         }
+
+        void get_mesh_names_paths(const std::string &name_prefix, const std::string &path_prefix, int index_num, std::vector<std::string> &names, std::vector<std::string> &paths)
+        {
+            // Loop through fields
+            for (const auto &field : this->fields)
+            {
+                // Skip fields that aren't derived types or don't contain meshes
+                if ((field.data_type->tag != Tag::Derived) || !field.data_type->derived.contains_mesh)
+                {
+                    continue;
+                }
+
+                auto &ddt = field.data_type->derived;
+
+                // If this field is a mesh, add field name to vector
+                // otherwise get mesh names within derived type
+                if (tolower(ddt.name).compare("meshtype") == 0)
+                {
+                    names.push_back(name_prefix + "_" + field.name);
+                    std::string array_index;
+                    switch (field.rank)
+                    {
+                    case 3:
+                        array_index = ", ML%i" + std::to_string(index_num + 3) + array_index;
+                    case 2:
+                        array_index = ", ML%i" + std::to_string(index_num + 2) + array_index;
+                    case 1:
+                        array_index = "(ML%i" + std::to_string(index_num + 1) + array_index + ")";
+                    }
+                    paths.push_back(path_prefix + "%" + field.name + array_index);
+                }
+                else
+                {
+                    std::string array_index;
+                    switch (field.rank)
+                    {
+                    case 3:
+                        array_index = ", ML%i" + std::to_string(index_num + 3) + array_index;
+                    case 2:
+                        array_index = ", ML%i" + std::to_string(index_num + 2) + array_index;
+                    case 1:
+                        array_index = "(ML%i" + std::to_string(index_num + 1) + array_index + ")";
+                    }
+                    field.data_type->derived.get_mesh_names_paths(name_prefix + "_" + field.name,
+                                                                  path_prefix + "%" + field.name + array_index,
+                                                                  index_num + field.rank,
+                                                                  names, paths);
+                }
+            }
+        }
     };
     Derived derived;
 

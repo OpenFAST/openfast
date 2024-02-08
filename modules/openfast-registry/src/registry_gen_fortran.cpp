@@ -1,5 +1,6 @@
 #include <fstream>
 #include <algorithm>
+#include <iomanip>
 
 #include "registry.hpp"
 #include "templates.hpp"
@@ -114,7 +115,7 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
     // Write parameters to file
     for (const auto &param : mod.params)
     {
-        w << "    " << param.type->basic.type_fortran << ", PUBLIC, PARAMETER  :: " << param.name;
+        w << "    " << param.type->basic.type_fortran << ", PUBLIC, PARAMETER  :: " << std::setw(32) << std::left << param.name;
 
         if (!param.value.empty())
             w << " = " << param.value;
@@ -339,6 +340,71 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
         // Generate extrap/interp routines for module input and output types
         gen_ExtrapInterp(w, mod, "InputType", "DbKi", 1);
         gen_ExtrapInterp(w, mod, "OutputType", "DbKi", 1);
+    }
+
+    // Loop through input and output types if in module
+    for (const auto &is_input : std::vector<bool>{true, false})
+    {
+        auto it = mod.data_types.find(mod.nickname + (is_input ? "_InputType" : "_OutputType"));
+        if (it == mod.data_types.end())
+        {
+            continue;
+        }
+        auto &ddt = it->second->derived;
+
+        // Get mesh names in derived type or subtypes and add parameters for identifying the mesh
+        std::string u_or_y = is_input ? "u" : "y";
+        std::vector<std::string> mesh_names, mesh_paths;
+        ddt.get_mesh_names_paths(mod.nickname + "_" + u_or_y, u_or_y, 0, mesh_names, mesh_paths);
+        std::string routine_name = mod.nickname + (is_input ? "_Input" : "_Output") + "MeshPointer";
+        std::string indent("\n");
+
+        // Mesh pointer routine
+        w << indent << "function " << routine_name << "(" << u_or_y << ", ML) result(Mesh)";
+        indent += "   ";
+        w << indent << "type(" << ddt.type_fortran << "), target, intent(in) :: " << u_or_y;
+        w << indent << "type(MeshLocType), intent(in)      :: ML";
+        w << indent << "type(MeshType), pointer            :: Mesh";
+        w << indent << "nullify(Mesh)";
+        w << indent << "select case (ML%Num)";
+        for (int i = 0; i < mesh_paths.size(); ++i)
+        {
+            w << indent << "case (" << mesh_names[i] << ")";
+            w << indent << "    Mesh => " << mesh_paths[i];
+        }
+        w << indent << "end select";
+        indent.erase(indent.size() - 3);
+        w << indent << "end function";
+        w << indent;
+
+        // Mesh name routine
+        indent = "\n";
+        routine_name = mod.nickname + (is_input ? "_Input" : "_Output") + "MeshName";
+        w << indent << "function " << routine_name << "(" << u_or_y << ", ML) result(Name)";
+        indent += "   ";
+        w << indent << "type(" << ddt.type_fortran << "), target, intent(in) :: " << u_or_y;
+        w << indent << "type(MeshLocType), intent(in)      :: ML";
+        w << indent << "character(32)                      :: Name";
+        w << indent << "Name = \"\"";
+        w << indent << "select case (ML%Num)";
+        for (int i = 0; i < mesh_paths.size(); ++i)
+        {
+            std::string new_path(mesh_paths[i]);
+            for (int j = 1; j < 5; ++j){
+                auto ind_str = "ML%i"+std::to_string(j);
+                auto ind = new_path.find(ind_str);
+                if (ind != std::string::npos)
+                {
+                    new_path = new_path.substr(0, ind) + "\"//trim(Num2LStr(" + ind_str + "))//\"" + new_path.substr(ind+5);
+                }
+            }
+            w << indent << "case (" << mesh_names[i] << ")";
+            w << indent << "    Name = \"" << new_path << "\"";
+        }
+        w << indent << "end select";
+        indent.erase(indent.size() - 3);
+        w << indent << "end function";
+        w << indent;
     }
 }
 

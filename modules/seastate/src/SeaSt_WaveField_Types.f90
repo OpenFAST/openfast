@@ -33,34 +33,17 @@ MODULE SeaSt_WaveField_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveDirMod_None = 0      ! WaveDirMod = 0 [Directional spreading function is NONE] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveDirMod_COS2S = 1      ! WaveDirMod = 1 [Directional spreading function is COS2S] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_None = 0      ! WaveMod = 0   [Incident wave kinematics model: NONE (still water)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_Regular = 1      ! WaveMod = 1   [Incident wave kinematics model: Regular (periodic)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_RegularUsrPh = 10      ! WaveMod = 1P# [Incident wave kinematics model: Regular (user specified phase)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_JONSWAP = 2      ! WaveMod = 2   [Incident wave kinematics model: JONSWAP/Pierson-Moskowitz spectrum (irregular)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_WhiteNoise = 3      ! WaveMod = 3   [Incident wave kinematics model: White noise spectrum (irregular)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_UserSpctrm = 4      ! WaveMod = 4   [Incident wave kinematics model: user-defined spectrum from routine UserWaveSpctrm (irregular)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtElev = 5      ! WaveMod = 5   [Incident wave kinematics model: Externally generated wave-elevation time series] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtFull = 6      ! WaveMod = 6   [Incident wave kinematics model: Externally generated full wave-kinematics time series (invalid for PotMod/=0)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_UserFreq = 7      ! WaveMod = 7   [Incident wave kinematics model: user-defined wave frequency components] [-]
-! =========  SeaSt_WaveField_ParameterType  =======
-  TYPE, PUBLIC :: SeaSt_WaveField_ParameterType
-    INTEGER(IntKi) , DIMENSION(1:4)  :: n = 0_IntKi      !< number of evenly-spaced grid points in the t, x, y, and z directions [-]
-    REAL(ReKi) , DIMENSION(1:4)  :: delta = 0.0_ReKi      !< size between 2 consecutive grid points in each grid direction [s,m,m,m]
-    REAL(ReKi) , DIMENSION(1:4)  :: pZero = 0.0_ReKi      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
-    REAL(ReKi)  :: Z_Depth = 0.0_ReKi      !< grid depth [m]
-  END TYPE SeaSt_WaveField_ParameterType
-! =======================
-! =========  SeaSt_WaveField_MiscVarType  =======
-  TYPE, PUBLIC :: SeaSt_WaveField_MiscVarType
-    REAL(SiKi) , DIMENSION(1:8)  :: N3D = 0.0_R4Ki      !< this is the weighting function for 3-d velocity field [-]
-    REAL(SiKi) , DIMENSION(1:16)  :: N4D = 0.0_R4Ki      !< this is the weighting function for 4-d velocity field [-]
-    INTEGER(IntKi) , DIMENSION(1:4)  :: Indx_Lo = 0_IntKi      !< this is the index into the 4-d velocity field for each wave component [-]
-    INTEGER(IntKi) , DIMENSION(1:4)  :: Indx_Hi = 0_IntKi      !< this is the index into the 4-d velocity field for each wave component [-]
-    LOGICAL  :: FirstWarn_Clamp = .true.      !< used to avoid too many 'Position has been clamped to the grid boundary' warning messages  [-]
-  END TYPE SeaSt_WaveField_MiscVarType
-! =======================
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveDirMod_None                  = 0      ! WaveDirMod = 0 [Directional spreading function is NONE] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveDirMod_COS2S                 = 1      ! WaveDirMod = 1 [Directional spreading function is COS2S] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_None                     = 0      ! WaveMod = 0   [Incident wave kinematics model: NONE (still water)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_Regular                  = 1      ! WaveMod = 1   [Incident wave kinematics model: Regular (periodic)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_RegularUsrPh             = 10      ! WaveMod = 1P# [Incident wave kinematics model: Regular (user specified phase)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_JONSWAP                  = 2      ! WaveMod = 2   [Incident wave kinematics model: JONSWAP/Pierson-Moskowitz spectrum (irregular)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_WhiteNoise               = 3      ! WaveMod = 3   [Incident wave kinematics model: White noise spectrum (irregular)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_UserSpctrm               = 4      ! WaveMod = 4   [Incident wave kinematics model: user-defined spectrum from routine UserWaveSpctrm (irregular)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtElev                  = 5      ! WaveMod = 5   [Incident wave kinematics model: Externally generated wave-elevation time series] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtFull                  = 6      ! WaveMod = 6   [Incident wave kinematics model: Externally generated full wave-kinematics time series (invalid for PotMod/=0)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_UserFreq                 = 7      ! WaveMod = 7   [Incident wave kinematics model: user-defined wave frequency components] [-]
 ! =========  SeaSt_WaveFieldType  =======
   TYPE, PUBLIC :: SeaSt_WaveFieldType
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveTime      !< Time array [(s)]

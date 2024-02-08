@@ -33,6 +33,8 @@ MODULE IceFloe_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: IceFloe_u_iceMesh                = 1      ! Mesh number for IceFloe IceFloe_u_iceMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: IceFloe_y_iceMesh                = 2      ! Mesh number for IceFloe IceFloe_y_iceMesh mesh [-]
 ! =========  IceFloe_InitInputType  =======
   TYPE, PUBLIC :: IceFloe_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
@@ -1021,5 +1023,49 @@ SUBROUTINE IceFloe_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
    END IF ! check if allocated
 END SUBROUTINE
+
+function IceFloe_InputMeshPointer(u, ML) result(Mesh)
+   type(IceFloe_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (IceFloe_u_iceMesh)
+       Mesh => u%iceMesh
+   end select
+end function
+
+function IceFloe_InputMeshName(u, ML) result(Name)
+   type(IceFloe_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (IceFloe_u_iceMesh)
+       Name = "u%iceMesh"
+   end select
+end function
+
+function IceFloe_OutputMeshPointer(y, ML) result(Mesh)
+   type(IceFloe_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (IceFloe_y_iceMesh)
+       Mesh => y%iceMesh
+   end select
+end function
+
+function IceFloe_OutputMeshName(y, ML) result(Name)
+   type(IceFloe_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (IceFloe_y_iceMesh)
+       Name = "y%iceMesh"
+   end select
+end function
 END MODULE IceFloe_Types
 !ENDOFREGISTRYGENERATEDFILE

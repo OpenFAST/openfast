@@ -971,5 +971,41 @@ SUBROUTINE Conv_Rdtn_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrSt
       y_out%F_Rdtn = a1*y1%F_Rdtn + a2*y2%F_Rdtn + a3*y3%F_Rdtn
    END IF ! check if allocated
 END SUBROUTINE
+
+function Conv_Rdtn_InputMeshPointer(u, ML) result(Mesh)
+   type(Conv_Rdtn_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function Conv_Rdtn_InputMeshName(u, ML) result(Name)
+   type(Conv_Rdtn_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
+
+function Conv_Rdtn_OutputMeshPointer(y, ML) result(Mesh)
+   type(Conv_Rdtn_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function Conv_Rdtn_OutputMeshName(y, ML) result(Name)
+   type(Conv_Rdtn_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
 END MODULE Conv_Radiation_Types
 !ENDOFREGISTRYGENERATEDFILE

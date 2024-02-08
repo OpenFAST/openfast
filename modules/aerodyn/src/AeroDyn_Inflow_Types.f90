@@ -34,7 +34,18 @@ MODULE AeroDyn_Inflow_Types
 USE AeroDyn_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ADI_Version = 1      !  [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ADI_Version                      = 1      !  [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ADI_u_AD_rotors_NacelleMotion    = 1      ! Mesh number for ADI ADI_u_AD_rotors_NacelleMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ADI_u_AD_rotors_TowerMotion      = 2      ! Mesh number for ADI ADI_u_AD_rotors_TowerMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ADI_u_AD_rotors_HubMotion        = 3      ! Mesh number for ADI ADI_u_AD_rotors_HubMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ADI_u_AD_rotors_BladeRootMotion  = 4      ! Mesh number for ADI ADI_u_AD_rotors_BladeRootMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ADI_u_AD_rotors_BladeMotion      = 5      ! Mesh number for ADI ADI_u_AD_rotors_BladeMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ADI_u_AD_rotors_TFinMotion       = 6      ! Mesh number for ADI ADI_u_AD_rotors_TFinMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ADI_y_AD_rotors_NacelleLoad      = 7      ! Mesh number for ADI ADI_y_AD_rotors_NacelleLoad mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ADI_y_AD_rotors_HubLoad          = 8      ! Mesh number for ADI ADI_y_AD_rotors_HubLoad mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ADI_y_AD_rotors_TowerLoad        = 9      ! Mesh number for ADI ADI_y_AD_rotors_TowerLoad mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ADI_y_AD_rotors_BladeLoad        = 10      ! Mesh number for ADI ADI_y_AD_rotors_BladeLoad mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ADI_y_AD_rotors_TFinLoad         = 11      ! Mesh number for ADI ADI_y_AD_rotors_TFinLoad mesh [-]
 ! =========  ADI_InflowWindData  =======
   TYPE, PUBLIC :: ADI_InflowWindData
     TYPE(InflowWind_ContinuousStateType)  :: x      !< Continuous states [-]
@@ -1749,5 +1760,85 @@ subroutine ADI_UnPackFED_Data(RF, OutData)
       end do
    end if
 end subroutine
+
+function ADI_InputMeshPointer(u, ML) result(Mesh)
+   type(ADI_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (ADI_u_AD_rotors_NacelleMotion)
+       Mesh => u%AD%rotors(ML%i1)%NacelleMotion
+   case (ADI_u_AD_rotors_TowerMotion)
+       Mesh => u%AD%rotors(ML%i1)%TowerMotion
+   case (ADI_u_AD_rotors_HubMotion)
+       Mesh => u%AD%rotors(ML%i1)%HubMotion
+   case (ADI_u_AD_rotors_BladeRootMotion)
+       Mesh => u%AD%rotors(ML%i1)%BladeRootMotion(ML%i2)
+   case (ADI_u_AD_rotors_BladeMotion)
+       Mesh => u%AD%rotors(ML%i1)%BladeMotion(ML%i2)
+   case (ADI_u_AD_rotors_TFinMotion)
+       Mesh => u%AD%rotors(ML%i1)%TFinMotion
+   end select
+end function
+
+function ADI_InputMeshName(u, ML) result(Name)
+   type(ADI_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (ADI_u_AD_rotors_NacelleMotion)
+       Name = "u%AD%rotors("//trim(Num2LStr(ML%i1))//")%NacelleMotion"
+   case (ADI_u_AD_rotors_TowerMotion)
+       Name = "u%AD%rotors("//trim(Num2LStr(ML%i1))//")%TowerMotion"
+   case (ADI_u_AD_rotors_HubMotion)
+       Name = "u%AD%rotors("//trim(Num2LStr(ML%i1))//")%HubMotion"
+   case (ADI_u_AD_rotors_BladeRootMotion)
+       Name = "u%AD%rotors("//trim(Num2LStr(ML%i1))//")%BladeRootMotion("//trim(Num2LStr(ML%i2))//")"
+   case (ADI_u_AD_rotors_BladeMotion)
+       Name = "u%AD%rotors("//trim(Num2LStr(ML%i1))//")%BladeMotion("//trim(Num2LStr(ML%i2))//")"
+   case (ADI_u_AD_rotors_TFinMotion)
+       Name = "u%AD%rotors("//trim(Num2LStr(ML%i1))//")%TFinMotion"
+   end select
+end function
+
+function ADI_OutputMeshPointer(y, ML) result(Mesh)
+   type(ADI_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (ADI_y_AD_rotors_NacelleLoad)
+       Mesh => y%AD%rotors(ML%i1)%NacelleLoad
+   case (ADI_y_AD_rotors_HubLoad)
+       Mesh => y%AD%rotors(ML%i1)%HubLoad
+   case (ADI_y_AD_rotors_TowerLoad)
+       Mesh => y%AD%rotors(ML%i1)%TowerLoad
+   case (ADI_y_AD_rotors_BladeLoad)
+       Mesh => y%AD%rotors(ML%i1)%BladeLoad(ML%i2)
+   case (ADI_y_AD_rotors_TFinLoad)
+       Mesh => y%AD%rotors(ML%i1)%TFinLoad
+   end select
+end function
+
+function ADI_OutputMeshName(y, ML) result(Name)
+   type(ADI_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (ADI_y_AD_rotors_NacelleLoad)
+       Name = "y%AD%rotors("//trim(Num2LStr(ML%i1))//")%NacelleLoad"
+   case (ADI_y_AD_rotors_HubLoad)
+       Name = "y%AD%rotors("//trim(Num2LStr(ML%i1))//")%HubLoad"
+   case (ADI_y_AD_rotors_TowerLoad)
+       Name = "y%AD%rotors("//trim(Num2LStr(ML%i1))//")%TowerLoad"
+   case (ADI_y_AD_rotors_BladeLoad)
+       Name = "y%AD%rotors("//trim(Num2LStr(ML%i1))//")%BladeLoad("//trim(Num2LStr(ML%i2))//")"
+   case (ADI_y_AD_rotors_TFinLoad)
+       Name = "y%AD%rotors("//trim(Num2LStr(ML%i1))//")%TFinLoad"
+   end select
+end function
 END MODULE AeroDyn_Inflow_Types
 !ENDOFREGISTRYGENERATEDFILE

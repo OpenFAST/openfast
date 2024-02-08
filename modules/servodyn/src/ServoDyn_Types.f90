@@ -34,6 +34,15 @@ MODULE ServoDyn_Types
 USE StrucCtrl_Types
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SrvD_u_PtfmMotionMesh            = 1      ! Mesh number for SrvD SrvD_u_PtfmMotionMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SrvD_u_BStCMotionMesh            = 2      ! Mesh number for SrvD SrvD_u_BStCMotionMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SrvD_u_NStCMotionMesh            = 3      ! Mesh number for SrvD SrvD_u_NStCMotionMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SrvD_u_TStCMotionMesh            = 4      ! Mesh number for SrvD SrvD_u_TStCMotionMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SrvD_u_SStCMotionMesh            = 5      ! Mesh number for SrvD SrvD_u_SStCMotionMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SrvD_y_BStCLoadMesh              = 6      ! Mesh number for SrvD SrvD_y_BStCLoadMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SrvD_y_NStCLoadMesh              = 7      ! Mesh number for SrvD SrvD_y_NStCLoadMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SrvD_y_TStCLoadMesh              = 8      ! Mesh number for SrvD SrvD_y_TStCLoadMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SrvD_y_SStCLoadMesh              = 9      ! Mesh number for SrvD SrvD_y_SStCLoadMesh mesh [-]
 ! =========  SrvD_InitInputType  =======
   TYPE, PUBLIC :: SrvD_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
@@ -90,6 +99,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
     INTEGER(IntKi)  :: CouplingScheme = 0_IntKi      !< Switch that indicates if a particular coupling scheme is required [-]
     LOGICAL  :: UseHSSBrake = .false.      !< flag to determine if high-speed shaft brake is potentially used (true=yes) [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
@@ -351,29 +361,6 @@ IMPLICIT NONE
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SStC_Frc2_y_SStC      !< Map loads: m%y_SStCLoadMesh to y%SStC%LoadMesh [-]
   END TYPE SrvD_ModuleMapType
 ! =======================
-! =========  SrvD_MiscVarType  =======
-  TYPE, PUBLIC :: SrvD_MiscVarType
-    REAL(DbKi)  :: LastTimeCalled = 0.0_R8Ki      !< last time the CalcOutput/Bladed DLL was called [s]
-    TYPE(BladedDLLType)  :: dll_data      !< data used for Bladed DLL [-]
-    LOGICAL  :: FirstWarn = .false.      !< Whether or not this is the first warning about the DLL being called without Explicit-Loose coupling. [-]
-    REAL(DbKi)  :: LastTimeFiltered = 0.0_R8Ki      !< last time the CalcOutput/Bladed DLL was filtered [s]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: xd_BlPitchFilter      !< blade pitch filter [-]
-    TYPE(StC_MiscVarType) , DIMENSION(:), ALLOCATABLE  :: BStC      !< StC module misc vars - blade [-]
-    TYPE(StC_MiscVarType) , DIMENSION(:), ALLOCATABLE  :: NStC      !< StC module misc vars - nacelle [-]
-    TYPE(StC_MiscVarType) , DIMENSION(:), ALLOCATABLE  :: TStC      !< StC module misc vars - tower [-]
-    TYPE(StC_MiscVarType) , DIMENSION(:), ALLOCATABLE  :: SStC      !< StC module misc vars - substructure [-]
-    TYPE(StC_InputType) , DIMENSION(:,:), ALLOCATABLE  :: u_BStC      !< StC module inputs - blade          size:(interpOrder,NumBStC) [-]
-    TYPE(StC_InputType) , DIMENSION(:,:), ALLOCATABLE  :: u_NStC      !< StC module inputs - nacelle        size:(interpOrder,NumNStC) [-]
-    TYPE(StC_InputType) , DIMENSION(:,:), ALLOCATABLE  :: u_TStC      !< StC module inputs - tower          size:(interpOrder,NumTStC) [-]
-    TYPE(StC_InputType) , DIMENSION(:,:), ALLOCATABLE  :: u_SStC      !< StC module inputs - substructure   size:(interpOrder,NumSStC) [-]
-    TYPE(StC_OutputType) , DIMENSION(:), ALLOCATABLE  :: y_BStC      !< StC module outputs - blade [-]
-    TYPE(StC_OutputType) , DIMENSION(:), ALLOCATABLE  :: y_NStC      !< StC module outputs - nacelle [-]
-    TYPE(StC_OutputType) , DIMENSION(:), ALLOCATABLE  :: y_TStC      !< StC module outputs - tower [-]
-    TYPE(StC_OutputType) , DIMENSION(:), ALLOCATABLE  :: y_SStC      !< StC module outputs - substructure [-]
-    TYPE(SrvD_ModuleMapType)  :: SrvD_MeshMap      !< Mesh mapping from inputs/output meshes to StC input/output meshes [-]
-    INTEGER(IntKi)  :: PrevTstepNcall = -1      !< Previous timestep N for tracking when in predictor/corrector loop for setting StC u values [-]
-  END TYPE SrvD_MiscVarType
-! =======================
 ! =========  SrvD_ParameterType  =======
   TYPE, PUBLIC :: SrvD_ParameterType
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [seconds]
@@ -499,6 +486,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumPulseGate = 0_IntKi      !< Number of pulse gates [-]
     REAL(ReKi)  :: PulseSpacing = 0.0_ReKi      !< Distance between range gates [m]
     REAL(ReKi)  :: URefLid = 0.0_ReKi      !< Reference average wind speed for the lidar [m/s]
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
   END TYPE SrvD_ParameterType
 ! =======================
 ! =========  SrvD_InputType  =======
@@ -575,6 +563,34 @@ IMPLICIT NONE
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: SStCLoadMesh      !< StC module substructure output load mesh [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: toSC      !< A swap array: used to pass output data from the DLL controller to the supercontroller [-]
   END TYPE SrvD_OutputType
+! =======================
+! =========  SrvD_MiscVarType  =======
+  TYPE, PUBLIC :: SrvD_MiscVarType
+    REAL(DbKi)  :: LastTimeCalled = 0.0_R8Ki      !< last time the CalcOutput/Bladed DLL was called [s]
+    TYPE(BladedDLLType)  :: dll_data      !< data used for Bladed DLL [-]
+    LOGICAL  :: FirstWarn = .false.      !< Whether or not this is the first warning about the DLL being called without Explicit-Loose coupling. [-]
+    REAL(DbKi)  :: LastTimeFiltered = 0.0_R8Ki      !< last time the CalcOutput/Bladed DLL was filtered [s]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: xd_BlPitchFilter      !< blade pitch filter [-]
+    TYPE(StC_MiscVarType) , DIMENSION(:), ALLOCATABLE  :: BStC      !< StC module misc vars - blade [-]
+    TYPE(StC_MiscVarType) , DIMENSION(:), ALLOCATABLE  :: NStC      !< StC module misc vars - nacelle [-]
+    TYPE(StC_MiscVarType) , DIMENSION(:), ALLOCATABLE  :: TStC      !< StC module misc vars - tower [-]
+    TYPE(StC_MiscVarType) , DIMENSION(:), ALLOCATABLE  :: SStC      !< StC module misc vars - substructure [-]
+    TYPE(StC_InputType) , DIMENSION(:,:), ALLOCATABLE  :: u_BStC      !< StC module inputs - blade          size:(interpOrder,NumBStC) [-]
+    TYPE(StC_InputType) , DIMENSION(:,:), ALLOCATABLE  :: u_NStC      !< StC module inputs - nacelle        size:(interpOrder,NumNStC) [-]
+    TYPE(StC_InputType) , DIMENSION(:,:), ALLOCATABLE  :: u_TStC      !< StC module inputs - tower          size:(interpOrder,NumTStC) [-]
+    TYPE(StC_InputType) , DIMENSION(:,:), ALLOCATABLE  :: u_SStC      !< StC module inputs - substructure   size:(interpOrder,NumSStC) [-]
+    TYPE(StC_OutputType) , DIMENSION(:), ALLOCATABLE  :: y_BStC      !< StC module outputs - blade [-]
+    TYPE(StC_OutputType) , DIMENSION(:), ALLOCATABLE  :: y_NStC      !< StC module outputs - nacelle [-]
+    TYPE(StC_OutputType) , DIMENSION(:), ALLOCATABLE  :: y_TStC      !< StC module outputs - tower [-]
+    TYPE(StC_OutputType) , DIMENSION(:), ALLOCATABLE  :: y_SStC      !< StC module outputs - substructure [-]
+    TYPE(SrvD_ModuleMapType)  :: SrvD_MeshMap      !< Mesh mapping from inputs/output meshes to StC input/output meshes [-]
+    INTEGER(IntKi)  :: PrevTstepNcall = -1      !< Previous timestep N for tracking when in predictor/corrector loop for setting StC u values [-]
+    TYPE(ModJacType)  :: Jac      !< Jacobian matrices and arrays corresponding to module variables [-]
+    TYPE(SrvD_ContinuousStateType)  :: x_perturb      !< Continuous state for perturbation in Jacobian routines [-]
+    TYPE(SrvD_ContinuousStateType)  :: dxdt_lin      !< Continuous state derivative for output in Jacobian routines [-]
+    TYPE(SrvD_InputType)  :: u_perturb      !< Input for perturbation in Jacobian routines [-]
+    TYPE(SrvD_OutputType)  :: y_lin      !< Output for output in Jacobian routines [-]
+  END TYPE SrvD_MiscVarType
 ! =======================
 CONTAINS
 
@@ -973,6 +989,7 @@ subroutine SrvD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInitOutputData%Vars => SrcInitOutputData%Vars
    DstInitOutputData%CouplingScheme = SrcInitOutputData%CouplingScheme
    DstInitOutputData%UseHSSBrake = SrcInitOutputData%UseHSSBrake
    if (allocated(SrcInitOutputData%LinNames_y)) then
@@ -1090,6 +1107,7 @@ subroutine SrvD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   nullify(InitOutputData%Vars)
    if (allocated(InitOutputData%LinNames_y)) then
       deallocate(InitOutputData%LinNames_y)
    end if
@@ -1120,10 +1138,18 @@ subroutine SrvD_PackInitOutput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(SrvD_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SrvD_PackInitOutput'
+   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
+   call RegPack(RF, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
+      end if
+   end if
    call RegPack(RF, InData%CouplingScheme)
    call RegPack(RF, InData%UseHSSBrake)
    call RegPackAlloc(RF, InData%LinNames_y)
@@ -1144,10 +1170,30 @@ subroutine SrvD_UnPackInitOutput(RF, OutData)
    integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(B8Ki)   :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
    call RegUnpack(RF, OutData%CouplingScheme); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UseHSSBrake); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LinNames_y); if (RegCheckErr(RF, RoutineName)) return
@@ -3791,694 +3837,6 @@ subroutine SrvD_UnPackModuleMapType(RF, OutData)
    end if
 end subroutine
 
-subroutine SrvD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
-   type(SrvD_MiscVarType), intent(inout) :: SrcMiscData
-   type(SrvD_MiscVarType), intent(inout) :: DstMiscData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)                  :: LB(2), UB(2)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'SrvD_CopyMisc'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   DstMiscData%LastTimeCalled = SrcMiscData%LastTimeCalled
-   call SrvD_CopyBladedDLLType(SrcMiscData%dll_data, DstMiscData%dll_data, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   DstMiscData%FirstWarn = SrcMiscData%FirstWarn
-   DstMiscData%LastTimeFiltered = SrcMiscData%LastTimeFiltered
-   if (allocated(SrcMiscData%xd_BlPitchFilter)) then
-      LB(1:1) = lbound(SrcMiscData%xd_BlPitchFilter, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%xd_BlPitchFilter, kind=B8Ki)
-      if (.not. allocated(DstMiscData%xd_BlPitchFilter)) then
-         allocate(DstMiscData%xd_BlPitchFilter(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%xd_BlPitchFilter.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%xd_BlPitchFilter = SrcMiscData%xd_BlPitchFilter
-   end if
-   if (allocated(SrcMiscData%BStC)) then
-      LB(1:1) = lbound(SrcMiscData%BStC, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%BStC, kind=B8Ki)
-      if (.not. allocated(DstMiscData%BStC)) then
-         allocate(DstMiscData%BStC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BStC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call StC_CopyMisc(SrcMiscData%BStC(i1), DstMiscData%BStC(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcMiscData%NStC)) then
-      LB(1:1) = lbound(SrcMiscData%NStC, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%NStC, kind=B8Ki)
-      if (.not. allocated(DstMiscData%NStC)) then
-         allocate(DstMiscData%NStC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%NStC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call StC_CopyMisc(SrcMiscData%NStC(i1), DstMiscData%NStC(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcMiscData%TStC)) then
-      LB(1:1) = lbound(SrcMiscData%TStC, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%TStC, kind=B8Ki)
-      if (.not. allocated(DstMiscData%TStC)) then
-         allocate(DstMiscData%TStC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%TStC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call StC_CopyMisc(SrcMiscData%TStC(i1), DstMiscData%TStC(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcMiscData%SStC)) then
-      LB(1:1) = lbound(SrcMiscData%SStC, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%SStC, kind=B8Ki)
-      if (.not. allocated(DstMiscData%SStC)) then
-         allocate(DstMiscData%SStC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%SStC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call StC_CopyMisc(SrcMiscData%SStC(i1), DstMiscData%SStC(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcMiscData%u_BStC)) then
-      LB(1:2) = lbound(SrcMiscData%u_BStC, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%u_BStC, kind=B8Ki)
-      if (.not. allocated(DstMiscData%u_BStC)) then
-         allocate(DstMiscData%u_BStC(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%u_BStC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call StC_CopyInput(SrcMiscData%u_BStC(i1,i2), DstMiscData%u_BStC(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
-         end do
-      end do
-   end if
-   if (allocated(SrcMiscData%u_NStC)) then
-      LB(1:2) = lbound(SrcMiscData%u_NStC, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%u_NStC, kind=B8Ki)
-      if (.not. allocated(DstMiscData%u_NStC)) then
-         allocate(DstMiscData%u_NStC(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%u_NStC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call StC_CopyInput(SrcMiscData%u_NStC(i1,i2), DstMiscData%u_NStC(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
-         end do
-      end do
-   end if
-   if (allocated(SrcMiscData%u_TStC)) then
-      LB(1:2) = lbound(SrcMiscData%u_TStC, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%u_TStC, kind=B8Ki)
-      if (.not. allocated(DstMiscData%u_TStC)) then
-         allocate(DstMiscData%u_TStC(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%u_TStC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call StC_CopyInput(SrcMiscData%u_TStC(i1,i2), DstMiscData%u_TStC(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
-         end do
-      end do
-   end if
-   if (allocated(SrcMiscData%u_SStC)) then
-      LB(1:2) = lbound(SrcMiscData%u_SStC, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%u_SStC, kind=B8Ki)
-      if (.not. allocated(DstMiscData%u_SStC)) then
-         allocate(DstMiscData%u_SStC(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%u_SStC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call StC_CopyInput(SrcMiscData%u_SStC(i1,i2), DstMiscData%u_SStC(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
-         end do
-      end do
-   end if
-   if (allocated(SrcMiscData%y_BStC)) then
-      LB(1:1) = lbound(SrcMiscData%y_BStC, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%y_BStC, kind=B8Ki)
-      if (.not. allocated(DstMiscData%y_BStC)) then
-         allocate(DstMiscData%y_BStC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%y_BStC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call StC_CopyOutput(SrcMiscData%y_BStC(i1), DstMiscData%y_BStC(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcMiscData%y_NStC)) then
-      LB(1:1) = lbound(SrcMiscData%y_NStC, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%y_NStC, kind=B8Ki)
-      if (.not. allocated(DstMiscData%y_NStC)) then
-         allocate(DstMiscData%y_NStC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%y_NStC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call StC_CopyOutput(SrcMiscData%y_NStC(i1), DstMiscData%y_NStC(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcMiscData%y_TStC)) then
-      LB(1:1) = lbound(SrcMiscData%y_TStC, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%y_TStC, kind=B8Ki)
-      if (.not. allocated(DstMiscData%y_TStC)) then
-         allocate(DstMiscData%y_TStC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%y_TStC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call StC_CopyOutput(SrcMiscData%y_TStC(i1), DstMiscData%y_TStC(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcMiscData%y_SStC)) then
-      LB(1:1) = lbound(SrcMiscData%y_SStC, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%y_SStC, kind=B8Ki)
-      if (.not. allocated(DstMiscData%y_SStC)) then
-         allocate(DstMiscData%y_SStC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%y_SStC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call StC_CopyOutput(SrcMiscData%y_SStC(i1), DstMiscData%y_SStC(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   call SrvD_CopyModuleMapType(SrcMiscData%SrvD_MeshMap, DstMiscData%SrvD_MeshMap, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   DstMiscData%PrevTstepNcall = SrcMiscData%PrevTstepNcall
-end subroutine
-
-subroutine SrvD_DestroyMisc(MiscData, ErrStat, ErrMsg)
-   type(SrvD_MiscVarType), intent(inout) :: MiscData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'SrvD_DestroyMisc'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   call SrvD_DestroyBladedDLLType(MiscData%dll_data, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(MiscData%xd_BlPitchFilter)) then
-      deallocate(MiscData%xd_BlPitchFilter)
-   end if
-   if (allocated(MiscData%BStC)) then
-      LB(1:1) = lbound(MiscData%BStC, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%BStC, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call StC_DestroyMisc(MiscData%BStC(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(MiscData%BStC)
-   end if
-   if (allocated(MiscData%NStC)) then
-      LB(1:1) = lbound(MiscData%NStC, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%NStC, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call StC_DestroyMisc(MiscData%NStC(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(MiscData%NStC)
-   end if
-   if (allocated(MiscData%TStC)) then
-      LB(1:1) = lbound(MiscData%TStC, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%TStC, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call StC_DestroyMisc(MiscData%TStC(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(MiscData%TStC)
-   end if
-   if (allocated(MiscData%SStC)) then
-      LB(1:1) = lbound(MiscData%SStC, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%SStC, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call StC_DestroyMisc(MiscData%SStC(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(MiscData%SStC)
-   end if
-   if (allocated(MiscData%u_BStC)) then
-      LB(1:2) = lbound(MiscData%u_BStC, kind=B8Ki)
-      UB(1:2) = ubound(MiscData%u_BStC, kind=B8Ki)
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call StC_DestroyInput(MiscData%u_BStC(i1,i2), ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         end do
-      end do
-      deallocate(MiscData%u_BStC)
-   end if
-   if (allocated(MiscData%u_NStC)) then
-      LB(1:2) = lbound(MiscData%u_NStC, kind=B8Ki)
-      UB(1:2) = ubound(MiscData%u_NStC, kind=B8Ki)
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call StC_DestroyInput(MiscData%u_NStC(i1,i2), ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         end do
-      end do
-      deallocate(MiscData%u_NStC)
-   end if
-   if (allocated(MiscData%u_TStC)) then
-      LB(1:2) = lbound(MiscData%u_TStC, kind=B8Ki)
-      UB(1:2) = ubound(MiscData%u_TStC, kind=B8Ki)
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call StC_DestroyInput(MiscData%u_TStC(i1,i2), ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         end do
-      end do
-      deallocate(MiscData%u_TStC)
-   end if
-   if (allocated(MiscData%u_SStC)) then
-      LB(1:2) = lbound(MiscData%u_SStC, kind=B8Ki)
-      UB(1:2) = ubound(MiscData%u_SStC, kind=B8Ki)
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call StC_DestroyInput(MiscData%u_SStC(i1,i2), ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         end do
-      end do
-      deallocate(MiscData%u_SStC)
-   end if
-   if (allocated(MiscData%y_BStC)) then
-      LB(1:1) = lbound(MiscData%y_BStC, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%y_BStC, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call StC_DestroyOutput(MiscData%y_BStC(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(MiscData%y_BStC)
-   end if
-   if (allocated(MiscData%y_NStC)) then
-      LB(1:1) = lbound(MiscData%y_NStC, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%y_NStC, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call StC_DestroyOutput(MiscData%y_NStC(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(MiscData%y_NStC)
-   end if
-   if (allocated(MiscData%y_TStC)) then
-      LB(1:1) = lbound(MiscData%y_TStC, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%y_TStC, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call StC_DestroyOutput(MiscData%y_TStC(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(MiscData%y_TStC)
-   end if
-   if (allocated(MiscData%y_SStC)) then
-      LB(1:1) = lbound(MiscData%y_SStC, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%y_SStC, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call StC_DestroyOutput(MiscData%y_SStC(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(MiscData%y_SStC)
-   end if
-   call SrvD_DestroyModuleMapType(MiscData%SrvD_MeshMap, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-end subroutine
-
-subroutine SrvD_PackMisc(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(SrvD_MiscVarType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'SrvD_PackMisc'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
-   if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, InData%LastTimeCalled)
-   call SrvD_PackBladedDLLType(RF, InData%dll_data) 
-   call RegPack(RF, InData%FirstWarn)
-   call RegPack(RF, InData%LastTimeFiltered)
-   call RegPackAlloc(RF, InData%xd_BlPitchFilter)
-   call RegPack(RF, allocated(InData%BStC))
-   if (allocated(InData%BStC)) then
-      call RegPackBounds(RF, 1, lbound(InData%BStC, kind=B8Ki), ubound(InData%BStC, kind=B8Ki))
-      LB(1:1) = lbound(InData%BStC, kind=B8Ki)
-      UB(1:1) = ubound(InData%BStC, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call StC_PackMisc(RF, InData%BStC(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%NStC))
-   if (allocated(InData%NStC)) then
-      call RegPackBounds(RF, 1, lbound(InData%NStC, kind=B8Ki), ubound(InData%NStC, kind=B8Ki))
-      LB(1:1) = lbound(InData%NStC, kind=B8Ki)
-      UB(1:1) = ubound(InData%NStC, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call StC_PackMisc(RF, InData%NStC(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%TStC))
-   if (allocated(InData%TStC)) then
-      call RegPackBounds(RF, 1, lbound(InData%TStC, kind=B8Ki), ubound(InData%TStC, kind=B8Ki))
-      LB(1:1) = lbound(InData%TStC, kind=B8Ki)
-      UB(1:1) = ubound(InData%TStC, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call StC_PackMisc(RF, InData%TStC(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%SStC))
-   if (allocated(InData%SStC)) then
-      call RegPackBounds(RF, 1, lbound(InData%SStC, kind=B8Ki), ubound(InData%SStC, kind=B8Ki))
-      LB(1:1) = lbound(InData%SStC, kind=B8Ki)
-      UB(1:1) = ubound(InData%SStC, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call StC_PackMisc(RF, InData%SStC(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%u_BStC))
-   if (allocated(InData%u_BStC)) then
-      call RegPackBounds(RF, 2, lbound(InData%u_BStC, kind=B8Ki), ubound(InData%u_BStC, kind=B8Ki))
-      LB(1:2) = lbound(InData%u_BStC, kind=B8Ki)
-      UB(1:2) = ubound(InData%u_BStC, kind=B8Ki)
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call StC_PackInput(RF, InData%u_BStC(i1,i2)) 
-         end do
-      end do
-   end if
-   call RegPack(RF, allocated(InData%u_NStC))
-   if (allocated(InData%u_NStC)) then
-      call RegPackBounds(RF, 2, lbound(InData%u_NStC, kind=B8Ki), ubound(InData%u_NStC, kind=B8Ki))
-      LB(1:2) = lbound(InData%u_NStC, kind=B8Ki)
-      UB(1:2) = ubound(InData%u_NStC, kind=B8Ki)
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call StC_PackInput(RF, InData%u_NStC(i1,i2)) 
-         end do
-      end do
-   end if
-   call RegPack(RF, allocated(InData%u_TStC))
-   if (allocated(InData%u_TStC)) then
-      call RegPackBounds(RF, 2, lbound(InData%u_TStC, kind=B8Ki), ubound(InData%u_TStC, kind=B8Ki))
-      LB(1:2) = lbound(InData%u_TStC, kind=B8Ki)
-      UB(1:2) = ubound(InData%u_TStC, kind=B8Ki)
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call StC_PackInput(RF, InData%u_TStC(i1,i2)) 
-         end do
-      end do
-   end if
-   call RegPack(RF, allocated(InData%u_SStC))
-   if (allocated(InData%u_SStC)) then
-      call RegPackBounds(RF, 2, lbound(InData%u_SStC, kind=B8Ki), ubound(InData%u_SStC, kind=B8Ki))
-      LB(1:2) = lbound(InData%u_SStC, kind=B8Ki)
-      UB(1:2) = ubound(InData%u_SStC, kind=B8Ki)
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call StC_PackInput(RF, InData%u_SStC(i1,i2)) 
-         end do
-      end do
-   end if
-   call RegPack(RF, allocated(InData%y_BStC))
-   if (allocated(InData%y_BStC)) then
-      call RegPackBounds(RF, 1, lbound(InData%y_BStC, kind=B8Ki), ubound(InData%y_BStC, kind=B8Ki))
-      LB(1:1) = lbound(InData%y_BStC, kind=B8Ki)
-      UB(1:1) = ubound(InData%y_BStC, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call StC_PackOutput(RF, InData%y_BStC(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%y_NStC))
-   if (allocated(InData%y_NStC)) then
-      call RegPackBounds(RF, 1, lbound(InData%y_NStC, kind=B8Ki), ubound(InData%y_NStC, kind=B8Ki))
-      LB(1:1) = lbound(InData%y_NStC, kind=B8Ki)
-      UB(1:1) = ubound(InData%y_NStC, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call StC_PackOutput(RF, InData%y_NStC(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%y_TStC))
-   if (allocated(InData%y_TStC)) then
-      call RegPackBounds(RF, 1, lbound(InData%y_TStC, kind=B8Ki), ubound(InData%y_TStC, kind=B8Ki))
-      LB(1:1) = lbound(InData%y_TStC, kind=B8Ki)
-      UB(1:1) = ubound(InData%y_TStC, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call StC_PackOutput(RF, InData%y_TStC(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%y_SStC))
-   if (allocated(InData%y_SStC)) then
-      call RegPackBounds(RF, 1, lbound(InData%y_SStC, kind=B8Ki), ubound(InData%y_SStC, kind=B8Ki))
-      LB(1:1) = lbound(InData%y_SStC, kind=B8Ki)
-      UB(1:1) = ubound(InData%y_SStC, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call StC_PackOutput(RF, InData%y_SStC(i1)) 
-      end do
-   end if
-   call SrvD_PackModuleMapType(RF, InData%SrvD_MeshMap) 
-   call RegPack(RF, InData%PrevTstepNcall)
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine SrvD_UnPackMisc(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(SrvD_MiscVarType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'SrvD_UnPackMisc'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
-   integer(IntKi)  :: stat
-   logical         :: IsAllocAssoc
-   if (RF%ErrStat /= ErrID_None) return
-   call RegUnpack(RF, OutData%LastTimeCalled); if (RegCheckErr(RF, RoutineName)) return
-   call SrvD_UnpackBladedDLLType(RF, OutData%dll_data) ! dll_data 
-   call RegUnpack(RF, OutData%FirstWarn); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%LastTimeFiltered); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%xd_BlPitchFilter); if (RegCheckErr(RF, RoutineName)) return
-   if (allocated(OutData%BStC)) deallocate(OutData%BStC)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%BStC(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%BStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call StC_UnpackMisc(RF, OutData%BStC(i1)) ! BStC 
-      end do
-   end if
-   if (allocated(OutData%NStC)) deallocate(OutData%NStC)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%NStC(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%NStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call StC_UnpackMisc(RF, OutData%NStC(i1)) ! NStC 
-      end do
-   end if
-   if (allocated(OutData%TStC)) deallocate(OutData%TStC)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%TStC(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%TStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call StC_UnpackMisc(RF, OutData%TStC(i1)) ! TStC 
-      end do
-   end if
-   if (allocated(OutData%SStC)) deallocate(OutData%SStC)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%SStC(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%SStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call StC_UnpackMisc(RF, OutData%SStC(i1)) ! SStC 
-      end do
-   end if
-   if (allocated(OutData%u_BStC)) deallocate(OutData%u_BStC)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%u_BStC(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%u_BStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call StC_UnpackInput(RF, OutData%u_BStC(i1,i2)) ! u_BStC 
-         end do
-      end do
-   end if
-   if (allocated(OutData%u_NStC)) deallocate(OutData%u_NStC)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%u_NStC(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%u_NStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call StC_UnpackInput(RF, OutData%u_NStC(i1,i2)) ! u_NStC 
-         end do
-      end do
-   end if
-   if (allocated(OutData%u_TStC)) deallocate(OutData%u_TStC)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%u_TStC(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%u_TStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call StC_UnpackInput(RF, OutData%u_TStC(i1,i2)) ! u_TStC 
-         end do
-      end do
-   end if
-   if (allocated(OutData%u_SStC)) deallocate(OutData%u_SStC)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%u_SStC(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%u_SStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call StC_UnpackInput(RF, OutData%u_SStC(i1,i2)) ! u_SStC 
-         end do
-      end do
-   end if
-   if (allocated(OutData%y_BStC)) deallocate(OutData%y_BStC)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%y_BStC(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%y_BStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call StC_UnpackOutput(RF, OutData%y_BStC(i1)) ! y_BStC 
-      end do
-   end if
-   if (allocated(OutData%y_NStC)) deallocate(OutData%y_NStC)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%y_NStC(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%y_NStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call StC_UnpackOutput(RF, OutData%y_NStC(i1)) ! y_NStC 
-      end do
-   end if
-   if (allocated(OutData%y_TStC)) deallocate(OutData%y_TStC)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%y_TStC(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%y_TStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call StC_UnpackOutput(RF, OutData%y_TStC(i1)) ! y_TStC 
-      end do
-   end if
-   if (allocated(OutData%y_SStC)) deallocate(OutData%y_SStC)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%y_SStC(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%y_SStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call StC_UnpackOutput(RF, OutData%y_SStC(i1)) ! y_SStC 
-      end do
-   end if
-   call SrvD_UnpackModuleMapType(RF, OutData%SrvD_MeshMap) ! SrvD_MeshMap 
-   call RegUnpack(RF, OutData%PrevTstepNcall); if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
 subroutine SrvD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    type(SrvD_ParameterType), intent(in) :: SrcParamData
    type(SrvD_ParameterType), intent(inout) :: DstParamData
@@ -4932,6 +4290,18 @@ subroutine SrvD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%NumPulseGate = SrcParamData%NumPulseGate
    DstParamData%PulseSpacing = SrcParamData%PulseSpacing
    DstParamData%URefLid = SrcParamData%URefLid
+   if (associated(SrcParamData%Vars)) then
+      if (.not. associated(DstParamData%Vars)) then
+         allocate(DstParamData%Vars, stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Vars.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end if
 end subroutine
 
 subroutine SrvD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -5058,6 +4428,12 @@ subroutine SrvD_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%Jac_Idx_SStC_y)) then
       deallocate(ParamData%Jac_Idx_SStC_y)
    end if
+   if (associated(ParamData%Vars)) then
+      call NWTC_Library_DestroyModVarsType(ParamData%Vars, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      deallocate(ParamData%Vars)
+      ParamData%Vars => null()
+   end if
 end subroutine
 
 subroutine SrvD_PackParam(RF, Indata)
@@ -5066,6 +4442,7 @@ subroutine SrvD_PackParam(RF, Indata)
    character(*), parameter         :: RoutineName = 'SrvD_PackParam'
    integer(B8Ki)   :: i1, i2, i3
    integer(B8Ki)   :: LB(3), UB(3)
+   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%DT)
    call RegPack(RF, InData%HSSBrDT)
@@ -5230,6 +4607,13 @@ subroutine SrvD_PackParam(RF, Indata)
    call RegPack(RF, InData%NumPulseGate)
    call RegPack(RF, InData%PulseSpacing)
    call RegPack(RF, InData%URefLid)
+   call RegPack(RF, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
+      end if
+   end if
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -5241,6 +4625,8 @@ subroutine SrvD_UnPackParam(RF, OutData)
    integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(B8Ki)   :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HSSBrDT); if (RegCheckErr(RF, RoutineName)) return
@@ -5425,6 +4811,24 @@ subroutine SrvD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NumPulseGate); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PulseSpacing); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%URefLid); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
 end subroutine
 
 subroutine SrvD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -6378,6 +5782,729 @@ subroutine SrvD_UnPackOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%toSC); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
+subroutine SrvD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
+   type(SrvD_MiscVarType), intent(inout) :: SrcMiscData
+   type(SrvD_MiscVarType), intent(inout) :: DstMiscData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SrvD_CopyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstMiscData%LastTimeCalled = SrcMiscData%LastTimeCalled
+   call SrvD_CopyBladedDLLType(SrcMiscData%dll_data, DstMiscData%dll_data, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstMiscData%FirstWarn = SrcMiscData%FirstWarn
+   DstMiscData%LastTimeFiltered = SrcMiscData%LastTimeFiltered
+   if (allocated(SrcMiscData%xd_BlPitchFilter)) then
+      LB(1:1) = lbound(SrcMiscData%xd_BlPitchFilter, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%xd_BlPitchFilter, kind=B8Ki)
+      if (.not. allocated(DstMiscData%xd_BlPitchFilter)) then
+         allocate(DstMiscData%xd_BlPitchFilter(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%xd_BlPitchFilter.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%xd_BlPitchFilter = SrcMiscData%xd_BlPitchFilter
+   end if
+   if (allocated(SrcMiscData%BStC)) then
+      LB(1:1) = lbound(SrcMiscData%BStC, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%BStC, kind=B8Ki)
+      if (.not. allocated(DstMiscData%BStC)) then
+         allocate(DstMiscData%BStC(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BStC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call StC_CopyMisc(SrcMiscData%BStC(i1), DstMiscData%BStC(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcMiscData%NStC)) then
+      LB(1:1) = lbound(SrcMiscData%NStC, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%NStC, kind=B8Ki)
+      if (.not. allocated(DstMiscData%NStC)) then
+         allocate(DstMiscData%NStC(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%NStC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call StC_CopyMisc(SrcMiscData%NStC(i1), DstMiscData%NStC(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcMiscData%TStC)) then
+      LB(1:1) = lbound(SrcMiscData%TStC, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%TStC, kind=B8Ki)
+      if (.not. allocated(DstMiscData%TStC)) then
+         allocate(DstMiscData%TStC(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%TStC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call StC_CopyMisc(SrcMiscData%TStC(i1), DstMiscData%TStC(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcMiscData%SStC)) then
+      LB(1:1) = lbound(SrcMiscData%SStC, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%SStC, kind=B8Ki)
+      if (.not. allocated(DstMiscData%SStC)) then
+         allocate(DstMiscData%SStC(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%SStC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call StC_CopyMisc(SrcMiscData%SStC(i1), DstMiscData%SStC(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcMiscData%u_BStC)) then
+      LB(1:2) = lbound(SrcMiscData%u_BStC, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%u_BStC, kind=B8Ki)
+      if (.not. allocated(DstMiscData%u_BStC)) then
+         allocate(DstMiscData%u_BStC(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%u_BStC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call StC_CopyInput(SrcMiscData%u_BStC(i1,i2), DstMiscData%u_BStC(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         end do
+      end do
+   end if
+   if (allocated(SrcMiscData%u_NStC)) then
+      LB(1:2) = lbound(SrcMiscData%u_NStC, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%u_NStC, kind=B8Ki)
+      if (.not. allocated(DstMiscData%u_NStC)) then
+         allocate(DstMiscData%u_NStC(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%u_NStC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call StC_CopyInput(SrcMiscData%u_NStC(i1,i2), DstMiscData%u_NStC(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         end do
+      end do
+   end if
+   if (allocated(SrcMiscData%u_TStC)) then
+      LB(1:2) = lbound(SrcMiscData%u_TStC, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%u_TStC, kind=B8Ki)
+      if (.not. allocated(DstMiscData%u_TStC)) then
+         allocate(DstMiscData%u_TStC(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%u_TStC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call StC_CopyInput(SrcMiscData%u_TStC(i1,i2), DstMiscData%u_TStC(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         end do
+      end do
+   end if
+   if (allocated(SrcMiscData%u_SStC)) then
+      LB(1:2) = lbound(SrcMiscData%u_SStC, kind=B8Ki)
+      UB(1:2) = ubound(SrcMiscData%u_SStC, kind=B8Ki)
+      if (.not. allocated(DstMiscData%u_SStC)) then
+         allocate(DstMiscData%u_SStC(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%u_SStC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call StC_CopyInput(SrcMiscData%u_SStC(i1,i2), DstMiscData%u_SStC(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         end do
+      end do
+   end if
+   if (allocated(SrcMiscData%y_BStC)) then
+      LB(1:1) = lbound(SrcMiscData%y_BStC, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%y_BStC, kind=B8Ki)
+      if (.not. allocated(DstMiscData%y_BStC)) then
+         allocate(DstMiscData%y_BStC(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%y_BStC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call StC_CopyOutput(SrcMiscData%y_BStC(i1), DstMiscData%y_BStC(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcMiscData%y_NStC)) then
+      LB(1:1) = lbound(SrcMiscData%y_NStC, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%y_NStC, kind=B8Ki)
+      if (.not. allocated(DstMiscData%y_NStC)) then
+         allocate(DstMiscData%y_NStC(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%y_NStC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call StC_CopyOutput(SrcMiscData%y_NStC(i1), DstMiscData%y_NStC(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcMiscData%y_TStC)) then
+      LB(1:1) = lbound(SrcMiscData%y_TStC, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%y_TStC, kind=B8Ki)
+      if (.not. allocated(DstMiscData%y_TStC)) then
+         allocate(DstMiscData%y_TStC(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%y_TStC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call StC_CopyOutput(SrcMiscData%y_TStC(i1), DstMiscData%y_TStC(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcMiscData%y_SStC)) then
+      LB(1:1) = lbound(SrcMiscData%y_SStC, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%y_SStC, kind=B8Ki)
+      if (.not. allocated(DstMiscData%y_SStC)) then
+         allocate(DstMiscData%y_SStC(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%y_SStC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call StC_CopyOutput(SrcMiscData%y_SStC(i1), DstMiscData%y_SStC(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   call SrvD_CopyModuleMapType(SrcMiscData%SrvD_MeshMap, DstMiscData%SrvD_MeshMap, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstMiscData%PrevTstepNcall = SrcMiscData%PrevTstepNcall
+   call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SrvD_CopyContState(SrcMiscData%x_perturb, DstMiscData%x_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SrvD_CopyContState(SrcMiscData%dxdt_lin, DstMiscData%dxdt_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SrvD_CopyInput(SrcMiscData%u_perturb, DstMiscData%u_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SrvD_CopyOutput(SrcMiscData%y_lin, DstMiscData%y_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
+
+subroutine SrvD_DestroyMisc(MiscData, ErrStat, ErrMsg)
+   type(SrvD_MiscVarType), intent(inout) :: MiscData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SrvD_DestroyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call SrvD_DestroyBladedDLLType(MiscData%dll_data, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(MiscData%xd_BlPitchFilter)) then
+      deallocate(MiscData%xd_BlPitchFilter)
+   end if
+   if (allocated(MiscData%BStC)) then
+      LB(1:1) = lbound(MiscData%BStC, kind=B8Ki)
+      UB(1:1) = ubound(MiscData%BStC, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call StC_DestroyMisc(MiscData%BStC(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%BStC)
+   end if
+   if (allocated(MiscData%NStC)) then
+      LB(1:1) = lbound(MiscData%NStC, kind=B8Ki)
+      UB(1:1) = ubound(MiscData%NStC, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call StC_DestroyMisc(MiscData%NStC(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%NStC)
+   end if
+   if (allocated(MiscData%TStC)) then
+      LB(1:1) = lbound(MiscData%TStC, kind=B8Ki)
+      UB(1:1) = ubound(MiscData%TStC, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call StC_DestroyMisc(MiscData%TStC(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%TStC)
+   end if
+   if (allocated(MiscData%SStC)) then
+      LB(1:1) = lbound(MiscData%SStC, kind=B8Ki)
+      UB(1:1) = ubound(MiscData%SStC, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call StC_DestroyMisc(MiscData%SStC(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%SStC)
+   end if
+   if (allocated(MiscData%u_BStC)) then
+      LB(1:2) = lbound(MiscData%u_BStC, kind=B8Ki)
+      UB(1:2) = ubound(MiscData%u_BStC, kind=B8Ki)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call StC_DestroyInput(MiscData%u_BStC(i1,i2), ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         end do
+      end do
+      deallocate(MiscData%u_BStC)
+   end if
+   if (allocated(MiscData%u_NStC)) then
+      LB(1:2) = lbound(MiscData%u_NStC, kind=B8Ki)
+      UB(1:2) = ubound(MiscData%u_NStC, kind=B8Ki)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call StC_DestroyInput(MiscData%u_NStC(i1,i2), ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         end do
+      end do
+      deallocate(MiscData%u_NStC)
+   end if
+   if (allocated(MiscData%u_TStC)) then
+      LB(1:2) = lbound(MiscData%u_TStC, kind=B8Ki)
+      UB(1:2) = ubound(MiscData%u_TStC, kind=B8Ki)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call StC_DestroyInput(MiscData%u_TStC(i1,i2), ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         end do
+      end do
+      deallocate(MiscData%u_TStC)
+   end if
+   if (allocated(MiscData%u_SStC)) then
+      LB(1:2) = lbound(MiscData%u_SStC, kind=B8Ki)
+      UB(1:2) = ubound(MiscData%u_SStC, kind=B8Ki)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call StC_DestroyInput(MiscData%u_SStC(i1,i2), ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         end do
+      end do
+      deallocate(MiscData%u_SStC)
+   end if
+   if (allocated(MiscData%y_BStC)) then
+      LB(1:1) = lbound(MiscData%y_BStC, kind=B8Ki)
+      UB(1:1) = ubound(MiscData%y_BStC, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call StC_DestroyOutput(MiscData%y_BStC(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%y_BStC)
+   end if
+   if (allocated(MiscData%y_NStC)) then
+      LB(1:1) = lbound(MiscData%y_NStC, kind=B8Ki)
+      UB(1:1) = ubound(MiscData%y_NStC, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call StC_DestroyOutput(MiscData%y_NStC(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%y_NStC)
+   end if
+   if (allocated(MiscData%y_TStC)) then
+      LB(1:1) = lbound(MiscData%y_TStC, kind=B8Ki)
+      UB(1:1) = ubound(MiscData%y_TStC, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call StC_DestroyOutput(MiscData%y_TStC(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%y_TStC)
+   end if
+   if (allocated(MiscData%y_SStC)) then
+      LB(1:1) = lbound(MiscData%y_SStC, kind=B8Ki)
+      UB(1:1) = ubound(MiscData%y_SStC, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call StC_DestroyOutput(MiscData%y_SStC(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%y_SStC)
+   end if
+   call SrvD_DestroyModuleMapType(MiscData%SrvD_MeshMap, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SrvD_DestroyContState(MiscData%x_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SrvD_DestroyContState(MiscData%dxdt_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SrvD_DestroyInput(MiscData%u_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SrvD_DestroyOutput(MiscData%y_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+end subroutine
+
+subroutine SrvD_PackMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(SrvD_MiscVarType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'SrvD_PackMisc'
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%LastTimeCalled)
+   call SrvD_PackBladedDLLType(RF, InData%dll_data) 
+   call RegPack(RF, InData%FirstWarn)
+   call RegPack(RF, InData%LastTimeFiltered)
+   call RegPackAlloc(RF, InData%xd_BlPitchFilter)
+   call RegPack(RF, allocated(InData%BStC))
+   if (allocated(InData%BStC)) then
+      call RegPackBounds(RF, 1, lbound(InData%BStC, kind=B8Ki), ubound(InData%BStC, kind=B8Ki))
+      LB(1:1) = lbound(InData%BStC, kind=B8Ki)
+      UB(1:1) = ubound(InData%BStC, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call StC_PackMisc(RF, InData%BStC(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%NStC))
+   if (allocated(InData%NStC)) then
+      call RegPackBounds(RF, 1, lbound(InData%NStC, kind=B8Ki), ubound(InData%NStC, kind=B8Ki))
+      LB(1:1) = lbound(InData%NStC, kind=B8Ki)
+      UB(1:1) = ubound(InData%NStC, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call StC_PackMisc(RF, InData%NStC(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%TStC))
+   if (allocated(InData%TStC)) then
+      call RegPackBounds(RF, 1, lbound(InData%TStC, kind=B8Ki), ubound(InData%TStC, kind=B8Ki))
+      LB(1:1) = lbound(InData%TStC, kind=B8Ki)
+      UB(1:1) = ubound(InData%TStC, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call StC_PackMisc(RF, InData%TStC(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%SStC))
+   if (allocated(InData%SStC)) then
+      call RegPackBounds(RF, 1, lbound(InData%SStC, kind=B8Ki), ubound(InData%SStC, kind=B8Ki))
+      LB(1:1) = lbound(InData%SStC, kind=B8Ki)
+      UB(1:1) = ubound(InData%SStC, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call StC_PackMisc(RF, InData%SStC(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%u_BStC))
+   if (allocated(InData%u_BStC)) then
+      call RegPackBounds(RF, 2, lbound(InData%u_BStC, kind=B8Ki), ubound(InData%u_BStC, kind=B8Ki))
+      LB(1:2) = lbound(InData%u_BStC, kind=B8Ki)
+      UB(1:2) = ubound(InData%u_BStC, kind=B8Ki)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call StC_PackInput(RF, InData%u_BStC(i1,i2)) 
+         end do
+      end do
+   end if
+   call RegPack(RF, allocated(InData%u_NStC))
+   if (allocated(InData%u_NStC)) then
+      call RegPackBounds(RF, 2, lbound(InData%u_NStC, kind=B8Ki), ubound(InData%u_NStC, kind=B8Ki))
+      LB(1:2) = lbound(InData%u_NStC, kind=B8Ki)
+      UB(1:2) = ubound(InData%u_NStC, kind=B8Ki)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call StC_PackInput(RF, InData%u_NStC(i1,i2)) 
+         end do
+      end do
+   end if
+   call RegPack(RF, allocated(InData%u_TStC))
+   if (allocated(InData%u_TStC)) then
+      call RegPackBounds(RF, 2, lbound(InData%u_TStC, kind=B8Ki), ubound(InData%u_TStC, kind=B8Ki))
+      LB(1:2) = lbound(InData%u_TStC, kind=B8Ki)
+      UB(1:2) = ubound(InData%u_TStC, kind=B8Ki)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call StC_PackInput(RF, InData%u_TStC(i1,i2)) 
+         end do
+      end do
+   end if
+   call RegPack(RF, allocated(InData%u_SStC))
+   if (allocated(InData%u_SStC)) then
+      call RegPackBounds(RF, 2, lbound(InData%u_SStC, kind=B8Ki), ubound(InData%u_SStC, kind=B8Ki))
+      LB(1:2) = lbound(InData%u_SStC, kind=B8Ki)
+      UB(1:2) = ubound(InData%u_SStC, kind=B8Ki)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call StC_PackInput(RF, InData%u_SStC(i1,i2)) 
+         end do
+      end do
+   end if
+   call RegPack(RF, allocated(InData%y_BStC))
+   if (allocated(InData%y_BStC)) then
+      call RegPackBounds(RF, 1, lbound(InData%y_BStC, kind=B8Ki), ubound(InData%y_BStC, kind=B8Ki))
+      LB(1:1) = lbound(InData%y_BStC, kind=B8Ki)
+      UB(1:1) = ubound(InData%y_BStC, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call StC_PackOutput(RF, InData%y_BStC(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%y_NStC))
+   if (allocated(InData%y_NStC)) then
+      call RegPackBounds(RF, 1, lbound(InData%y_NStC, kind=B8Ki), ubound(InData%y_NStC, kind=B8Ki))
+      LB(1:1) = lbound(InData%y_NStC, kind=B8Ki)
+      UB(1:1) = ubound(InData%y_NStC, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call StC_PackOutput(RF, InData%y_NStC(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%y_TStC))
+   if (allocated(InData%y_TStC)) then
+      call RegPackBounds(RF, 1, lbound(InData%y_TStC, kind=B8Ki), ubound(InData%y_TStC, kind=B8Ki))
+      LB(1:1) = lbound(InData%y_TStC, kind=B8Ki)
+      UB(1:1) = ubound(InData%y_TStC, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call StC_PackOutput(RF, InData%y_TStC(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%y_SStC))
+   if (allocated(InData%y_SStC)) then
+      call RegPackBounds(RF, 1, lbound(InData%y_SStC, kind=B8Ki), ubound(InData%y_SStC, kind=B8Ki))
+      LB(1:1) = lbound(InData%y_SStC, kind=B8Ki)
+      UB(1:1) = ubound(InData%y_SStC, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call StC_PackOutput(RF, InData%y_SStC(i1)) 
+      end do
+   end if
+   call SrvD_PackModuleMapType(RF, InData%SrvD_MeshMap) 
+   call RegPack(RF, InData%PrevTstepNcall)
+   call NWTC_Library_PackModJacType(RF, InData%Jac) 
+   call SrvD_PackContState(RF, InData%x_perturb) 
+   call SrvD_PackContState(RF, InData%dxdt_lin) 
+   call SrvD_PackInput(RF, InData%u_perturb) 
+   call SrvD_PackOutput(RF, InData%y_lin) 
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine SrvD_UnPackMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(SrvD_MiscVarType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'SrvD_UnPackMisc'
+   integer(B8Ki)   :: i1, i2
+   integer(B8Ki)   :: LB(2), UB(2)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%LastTimeCalled); if (RegCheckErr(RF, RoutineName)) return
+   call SrvD_UnpackBladedDLLType(RF, OutData%dll_data) ! dll_data 
+   call RegUnpack(RF, OutData%FirstWarn); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LastTimeFiltered); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%xd_BlPitchFilter); if (RegCheckErr(RF, RoutineName)) return
+   if (allocated(OutData%BStC)) deallocate(OutData%BStC)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%BStC(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%BStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call StC_UnpackMisc(RF, OutData%BStC(i1)) ! BStC 
+      end do
+   end if
+   if (allocated(OutData%NStC)) deallocate(OutData%NStC)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%NStC(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%NStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call StC_UnpackMisc(RF, OutData%NStC(i1)) ! NStC 
+      end do
+   end if
+   if (allocated(OutData%TStC)) deallocate(OutData%TStC)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%TStC(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%TStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call StC_UnpackMisc(RF, OutData%TStC(i1)) ! TStC 
+      end do
+   end if
+   if (allocated(OutData%SStC)) deallocate(OutData%SStC)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%SStC(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%SStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call StC_UnpackMisc(RF, OutData%SStC(i1)) ! SStC 
+      end do
+   end if
+   if (allocated(OutData%u_BStC)) deallocate(OutData%u_BStC)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%u_BStC(LB(1):UB(1),LB(2):UB(2)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%u_BStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call StC_UnpackInput(RF, OutData%u_BStC(i1,i2)) ! u_BStC 
+         end do
+      end do
+   end if
+   if (allocated(OutData%u_NStC)) deallocate(OutData%u_NStC)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%u_NStC(LB(1):UB(1),LB(2):UB(2)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%u_NStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call StC_UnpackInput(RF, OutData%u_NStC(i1,i2)) ! u_NStC 
+         end do
+      end do
+   end if
+   if (allocated(OutData%u_TStC)) deallocate(OutData%u_TStC)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%u_TStC(LB(1):UB(1),LB(2):UB(2)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%u_TStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call StC_UnpackInput(RF, OutData%u_TStC(i1,i2)) ! u_TStC 
+         end do
+      end do
+   end if
+   if (allocated(OutData%u_SStC)) deallocate(OutData%u_SStC)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%u_SStC(LB(1):UB(1),LB(2):UB(2)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%u_SStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call StC_UnpackInput(RF, OutData%u_SStC(i1,i2)) ! u_SStC 
+         end do
+      end do
+   end if
+   if (allocated(OutData%y_BStC)) deallocate(OutData%y_BStC)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%y_BStC(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%y_BStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call StC_UnpackOutput(RF, OutData%y_BStC(i1)) ! y_BStC 
+      end do
+   end if
+   if (allocated(OutData%y_NStC)) deallocate(OutData%y_NStC)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%y_NStC(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%y_NStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call StC_UnpackOutput(RF, OutData%y_NStC(i1)) ! y_NStC 
+      end do
+   end if
+   if (allocated(OutData%y_TStC)) deallocate(OutData%y_TStC)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%y_TStC(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%y_TStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call StC_UnpackOutput(RF, OutData%y_TStC(i1)) ! y_TStC 
+      end do
+   end if
+   if (allocated(OutData%y_SStC)) deallocate(OutData%y_SStC)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%y_SStC(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%y_SStC.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call StC_UnpackOutput(RF, OutData%y_SStC(i1)) ! y_SStC 
+      end do
+   end if
+   call SrvD_UnpackModuleMapType(RF, OutData%SrvD_MeshMap) ! SrvD_MeshMap 
+   call RegUnpack(RF, OutData%PrevTstepNcall); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
+   call SrvD_UnpackContState(RF, OutData%x_perturb) ! x_perturb 
+   call SrvD_UnpackContState(RF, OutData%dxdt_lin) ! dxdt_lin 
+   call SrvD_UnpackInput(RF, OutData%u_perturb) ! u_perturb 
+   call SrvD_UnpackOutput(RF, OutData%y_lin) ! y_lin 
+end subroutine
+
 subroutine SrvD_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)
    !
    ! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
@@ -7013,5 +7140,77 @@ SUBROUTINE SrvD_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, E
       y_out%toSC = a1*y1%toSC + a2*y2%toSC + a3*y3%toSC
    END IF ! check if allocated
 END SUBROUTINE
+
+function SrvD_InputMeshPointer(u, ML) result(Mesh)
+   type(SrvD_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (SrvD_u_PtfmMotionMesh)
+       Mesh => u%PtfmMotionMesh
+   case (SrvD_u_BStCMotionMesh)
+       Mesh => u%BStCMotionMesh(ML%i1, ML%i2)
+   case (SrvD_u_NStCMotionMesh)
+       Mesh => u%NStCMotionMesh(ML%i1)
+   case (SrvD_u_TStCMotionMesh)
+       Mesh => u%TStCMotionMesh(ML%i1)
+   case (SrvD_u_SStCMotionMesh)
+       Mesh => u%SStCMotionMesh(ML%i1)
+   end select
+end function
+
+function SrvD_InputMeshName(u, ML) result(Name)
+   type(SrvD_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (SrvD_u_PtfmMotionMesh)
+       Name = "u%PtfmMotionMesh"
+   case (SrvD_u_BStCMotionMesh)
+       Name = "u%BStCMotionMesh("//trim(Num2LStr(ML%i1))//", "//trim(Num2LStr(ML%i2))//")"
+   case (SrvD_u_NStCMotionMesh)
+       Name = "u%NStCMotionMesh("//trim(Num2LStr(ML%i1))//")"
+   case (SrvD_u_TStCMotionMesh)
+       Name = "u%TStCMotionMesh("//trim(Num2LStr(ML%i1))//")"
+   case (SrvD_u_SStCMotionMesh)
+       Name = "u%SStCMotionMesh("//trim(Num2LStr(ML%i1))//")"
+   end select
+end function
+
+function SrvD_OutputMeshPointer(y, ML) result(Mesh)
+   type(SrvD_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (SrvD_y_BStCLoadMesh)
+       Mesh => y%BStCLoadMesh(ML%i1, ML%i2)
+   case (SrvD_y_NStCLoadMesh)
+       Mesh => y%NStCLoadMesh(ML%i1)
+   case (SrvD_y_TStCLoadMesh)
+       Mesh => y%TStCLoadMesh(ML%i1)
+   case (SrvD_y_SStCLoadMesh)
+       Mesh => y%SStCLoadMesh(ML%i1)
+   end select
+end function
+
+function SrvD_OutputMeshName(y, ML) result(Name)
+   type(SrvD_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (SrvD_y_BStCLoadMesh)
+       Name = "y%BStCLoadMesh("//trim(Num2LStr(ML%i1))//", "//trim(Num2LStr(ML%i2))//")"
+   case (SrvD_y_NStCLoadMesh)
+       Name = "y%NStCLoadMesh("//trim(Num2LStr(ML%i1))//")"
+   case (SrvD_y_TStCLoadMesh)
+       Name = "y%TStCLoadMesh("//trim(Num2LStr(ML%i1))//")"
+   case (SrvD_y_SStCLoadMesh)
+       Name = "y%SStCLoadMesh("//trim(Num2LStr(ML%i1))//")"
+   end select
+end function
 END MODULE ServoDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

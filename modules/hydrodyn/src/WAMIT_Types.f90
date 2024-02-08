@@ -36,6 +36,8 @@ USE SS_Radiation_Types
 USE SS_Excitation_Types
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WAMIT_u_Mesh                     = 1      ! Mesh number for WAMIT WAMIT_u_Mesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WAMIT_y_Mesh                     = 2      ! Mesh number for WAMIT WAMIT_y_Mesh mesh [-]
 ! =========  WAMIT_InitInputType  =======
   TYPE, PUBLIC :: WAMIT_InitInputType
     INTEGER(IntKi)  :: NBody = 0_IntKi      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
@@ -1424,5 +1426,49 @@ SUBROUTINE WAMIT_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, 
    CALL MeshExtrapInterp2(y1%Mesh, y2%Mesh, y3%Mesh, tin, y_out%Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 END SUBROUTINE
+
+function WAMIT_InputMeshPointer(u, ML) result(Mesh)
+   type(WAMIT_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (WAMIT_u_Mesh)
+       Mesh => u%Mesh
+   end select
+end function
+
+function WAMIT_InputMeshName(u, ML) result(Name)
+   type(WAMIT_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (WAMIT_u_Mesh)
+       Name = "u%Mesh"
+   end select
+end function
+
+function WAMIT_OutputMeshPointer(y, ML) result(Mesh)
+   type(WAMIT_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (WAMIT_y_Mesh)
+       Mesh => y%Mesh
+   end select
+end function
+
+function WAMIT_OutputMeshName(y, ML) result(Name)
+   type(WAMIT_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (WAMIT_y_Mesh)
+       Name = "y%Mesh"
+   end select
+end function
 END MODULE WAMIT_Types
 !ENDOFREGISTRYGENERATEDFILE

@@ -166,7 +166,6 @@ typedef   ^        ^             ^           mEta       :::    - - "Center of ma
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 
 typedef   ^        ParameterType ModVarsType   &Vars             -         - -  "Module Variables"
-typedef   ^        ParameterType VarsIdxType    IdxAeroMap       -         - -  "Module variable index for AeroMap"
 typedef   ^        ParameterType IntKi          iVarRootMotion   -         - -  "Root motion variable index"
 typedef   ^        ParameterType IntKi          iVarPointLoad    -         - -  "Point load variable index"
 typedef   ^        ParameterType IntKi          iVarDistrLoad    -         - -  "Distributed load variable index"
@@ -381,8 +380,8 @@ typedef   ^        MiscVarType    ^            LP_RHS_LU    {:}           - - "R
 typedef   ^        MiscVarType    IntKi        LP_indx      {:}           - - "Index vector for LU" -
 typedef   ^        MiscVarType    BD_InputType u             -            - - "Inputs converted to the internal BD coordinate system" -
 typedef   ^        MiscVarType    BD_InputType u2            -            - - "Inputs in the FAST coordinate system, possibly modified by pitch actuator" -
-typedef   ^        MiscVarType    ModLinType   Lin           -            - - "Values corresponding to module variables"
+typedef   ^        MiscVarType    ModJacType   Jac           -            - - "Jacobian matrices and arrays corresponding to module variables"
 typedef   ^        MiscVarType    BD_ContinuousStateType    x_perturb   - - - "" -
-typedef   ^        MiscVarType    BD_ContinuousStateType    dx_perturb  - - - "" -
+typedef   ^        MiscVarType    BD_ContinuousStateType    dxdt_lin  - - - "" -
 typedef   ^        MiscVarType    BD_InputType  u_perturb    -            - - "" -
-typedef   ^        MiscVarType    BD_OutputType y_perturb    -            - - "" -
+typedef   ^        MiscVarType    BD_OutputType y_lin    -            - - "" -

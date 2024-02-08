@@ -33,6 +33,10 @@ MODULE FEAMooring_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: FEAM_u_HydroForceLineMesh        = 1      ! Mesh number for FEAM FEAM_u_HydroForceLineMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: FEAM_u_PtFairleadDisplacement    = 2      ! Mesh number for FEAM FEAM_u_PtFairleadDisplacement mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: FEAM_y_PtFairleadLoad            = 3      ! Mesh number for FEAM FEAM_y_PtFairleadLoad mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: FEAM_y_LineMeshPosition          = 4      ! Mesh number for FEAM FEAM_y_LineMeshPosition mesh [-]
 ! =========  FEAM_InputFile  =======
   TYPE, PUBLIC :: FEAM_InputFile
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Communication interval for mooring dynamics [s]
@@ -2410,5 +2414,57 @@ SUBROUTINE FEAM_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, E
    CALL MeshExtrapInterp2(y1%LineMeshPosition, y2%LineMeshPosition, y3%LineMeshPosition, tin, y_out%LineMeshPosition, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 END SUBROUTINE
+
+function FEAM_InputMeshPointer(u, ML) result(Mesh)
+   type(FEAM_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (FEAM_u_HydroForceLineMesh)
+       Mesh => u%HydroForceLineMesh
+   case (FEAM_u_PtFairleadDisplacement)
+       Mesh => u%PtFairleadDisplacement
+   end select
+end function
+
+function FEAM_InputMeshName(u, ML) result(Name)
+   type(FEAM_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (FEAM_u_HydroForceLineMesh)
+       Name = "u%HydroForceLineMesh"
+   case (FEAM_u_PtFairleadDisplacement)
+       Name = "u%PtFairleadDisplacement"
+   end select
+end function
+
+function FEAM_OutputMeshPointer(y, ML) result(Mesh)
+   type(FEAM_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (FEAM_y_PtFairleadLoad)
+       Mesh => y%PtFairleadLoad
+   case (FEAM_y_LineMeshPosition)
+       Mesh => y%LineMeshPosition
+   end select
+end function
+
+function FEAM_OutputMeshName(y, ML) result(Name)
+   type(FEAM_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (FEAM_y_PtFairleadLoad)
+       Name = "y%PtFairleadLoad"
+   case (FEAM_y_LineMeshPosition)
+       Name = "y%LineMeshPosition"
+   end select
+end function
 END MODULE FEAMooring_Types
 !ENDOFREGISTRYGENERATEDFILE

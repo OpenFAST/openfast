@@ -2989,5 +2989,41 @@ subroutine AA_UnPackOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WriteOutputSep); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputNode); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
+function AA_InputMeshPointer(u, ML) result(Mesh)
+   type(AA_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function AA_InputMeshName(u, ML) result(Name)
+   type(AA_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
+
+function AA_OutputMeshPointer(y, ML) result(Mesh)
+   type(AA_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function AA_OutputMeshName(y, ML) result(Name)
+   type(AA_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
 END MODULE AeroAcoustics_Types
 !ENDOFREGISTRYGENERATEDFILE

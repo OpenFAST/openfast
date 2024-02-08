@@ -34,13 +34,13 @@ MODULE UnsteadyAero_Types
 USE AirfoilInfo_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Baseline = 1      ! UAMod = 1 [Baseline model (Original)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Gonzalez = 2      ! UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_MinnemaPierce = 3      ! [Minnema/Pierce variant (changes in Cc and Cm)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGM = 4      ! [continuous variant of HGM (Hansen) model] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGMV = 5      ! [continuous variant of HGM (Hansen) model with vortex modifications] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Oye = 6      ! Stieg Oye dynamic stall model [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_BV = 7      ! Boeing-Vertol dynamic stall model (e.g. used in CACTUS) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Baseline                      = 1      ! UAMod = 1 [Baseline model (Original)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Gonzalez                      = 2      ! UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_MinnemaPierce                 = 3      ! [Minnema/Pierce variant (changes in Cc and Cm)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGM                           = 4      ! [continuous variant of HGM (Hansen) model] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGMV                          = 5      ! [continuous variant of HGM (Hansen) model with vortex modifications] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Oye                           = 6      ! Stieg Oye dynamic stall model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_BV                            = 7      ! Boeing-Vertol dynamic stall model (e.g. used in CACTUS) [-]
 ! =========  UA_InitInputType  =======
   TYPE, PUBLIC :: UA_InitInputType
     REAL(DbKi)  :: dt = 0.0_R8Ki      !< time step [s]
@@ -2503,5 +2503,41 @@ SUBROUTINE UA_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Err
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
    END IF ! check if allocated
 END SUBROUTINE
+
+function UA_InputMeshPointer(u, ML) result(Mesh)
+   type(UA_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function UA_InputMeshName(u, ML) result(Name)
+   type(UA_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
+
+function UA_OutputMeshPointer(y, ML) result(Mesh)
+   type(UA_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function UA_OutputMeshName(y, ML) result(Name)
+   type(UA_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
 END MODULE UnsteadyAero_Types
 !ENDOFREGISTRYGENERATEDFILE

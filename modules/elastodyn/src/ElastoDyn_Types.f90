@@ -33,7 +33,24 @@ MODULE ElastoDyn_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_NMX = 4      ! Used in updating predictor-corrector values (size of state history) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_NMX                           = 4      ! Used in updating predictor-corrector values (size of state history) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_u_BladePtLoads                = 1      ! Mesh number for ED ED_u_BladePtLoads mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_u_PlatformPtMesh              = 2      ! Mesh number for ED ED_u_PlatformPtMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_u_TowerPtLoads                = 3      ! Mesh number for ED ED_u_TowerPtLoads mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_u_HubPtLoad                   = 4      ! Mesh number for ED ED_u_HubPtLoad mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_u_NacelleLoads                = 5      ! Mesh number for ED ED_u_NacelleLoads mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_u_TFinCMLoads                 = 6      ! Mesh number for ED ED_u_TFinCMLoads mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_BladeLn2Mesh                = 7      ! Mesh number for ED ED_y_BladeLn2Mesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_PlatformPtMesh              = 8      ! Mesh number for ED ED_y_PlatformPtMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_TowerLn2Mesh                = 9      ! Mesh number for ED ED_y_TowerLn2Mesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_HubPtMotion14               = 10      ! Mesh number for ED ED_y_HubPtMotion14 mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_HubPtMotion                 = 11      ! Mesh number for ED ED_y_HubPtMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_BladeRootMotion14           = 12      ! Mesh number for ED ED_y_BladeRootMotion14 mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_BladeRootMotion             = 13      ! Mesh number for ED ED_y_BladeRootMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_RotorFurlMotion14           = 14      ! Mesh number for ED ED_y_RotorFurlMotion14 mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_NacelleMotion               = 15      ! Mesh number for ED ED_y_NacelleMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_TowerBaseMotion14           = 16      ! Mesh number for ED ED_y_TowerBaseMotion14 mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_TFinCMMotion                = 17      ! Mesh number for ED ED_y_TFinCMMotion mesh [-]
 ! =========  ED_InitInputType  =======
   TYPE, PUBLIC :: ED_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
@@ -525,7 +542,6 @@ IMPLICIT NONE
 ! =========  ED_ParameterType  =======
   TYPE, PUBLIC :: ED_ParameterType
     TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
-    TYPE(VarsIdxType)  :: IdxAeroMap      !< Module variable index for AeroMap [-]
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [seconds]
     REAL(DbKi)  :: DT24 = 0.0_R8Ki      !< =DT/24 (used in loose coupling) [seconds]
     INTEGER(IntKi)  :: BldNodes = 0_IntKi      !< Number of blade nodes used in the analysis [-]
@@ -768,7 +784,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: iVarYaw = 0_IntKi      !< Index of variable [-]
     INTEGER(IntKi)  :: iVarYawRate = 0_IntKi      !< Index of variable [-]
     INTEGER(IntKi)  :: iVarHSS_Spd = 0_IntKi      !< Index of variable [-]
-    INTEGER(IntKi)  :: iVarOutput = 0_IntKi      !< Index of variable [-]
+    INTEGER(IntKi)  :: iVarWriteOut = 0_IntKi      !< Index of variable [-]
   END TYPE ED_ParameterType
 ! =======================
 ! =========  ED_InputType  =======
@@ -842,11 +858,11 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: OgnlGeAzRo      !< Original DOF_GeAz row in AugMat [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QD2T      !< Solution (acceleration) vector; the first time derivative of QDT [-]
     LOGICAL  :: IgnoreMod = .false.      !< whether to ignore the modulo in ED outputs (necessary for linearization perturbations) [-]
-    TYPE(ModLinType)  :: Lin      !< Values corresponding to module variables [-]
+    TYPE(ModJacType)  :: Jac      !< Values corresponding to module variables [-]
     TYPE(ED_ContinuousStateType)  :: x_perturb      !<  [-]
-    TYPE(ED_ContinuousStateType)  :: dx_perturb      !<  [-]
+    TYPE(ED_ContinuousStateType)  :: dxdt_lin      !<  [-]
     TYPE(ED_InputType)  :: u_perturb      !<  [-]
-    TYPE(ED_OutputType)  :: y_perturb      !<  [-]
+    TYPE(ED_OutputType)  :: y_lin      !<  [-]
   END TYPE ED_MiscVarType
 ! =======================
 CONTAINS
@@ -4823,9 +4839,6 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end if
-   call NWTC_Library_CopyVarsIdxType(SrcParamData%IdxAeroMap, DstParamData%IdxAeroMap, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    DstParamData%DT = SrcParamData%DT
    DstParamData%DT24 = SrcParamData%DT24
    DstParamData%BldNodes = SrcParamData%BldNodes
@@ -5749,7 +5762,7 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%iVarYaw = SrcParamData%iVarYaw
    DstParamData%iVarYawRate = SrcParamData%iVarYawRate
    DstParamData%iVarHSS_Spd = SrcParamData%iVarHSS_Spd
-   DstParamData%iVarOutput = SrcParamData%iVarOutput
+   DstParamData%iVarWriteOut = SrcParamData%iVarWriteOut
 end subroutine
 
 subroutine ED_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -5769,8 +5782,6 @@ subroutine ED_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%Vars)
       ParamData%Vars => null()
    end if
-   call NWTC_Library_DestroyVarsIdxType(ParamData%IdxAeroMap, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%PH)) then
       deallocate(ParamData%PH)
    end if
@@ -5985,7 +5996,6 @@ subroutine ED_PackParam(RF, Indata)
          call NWTC_Library_PackModVarsType(RF, InData%Vars) 
       end if
    end if
-   call NWTC_Library_PackVarsIdxType(RF, InData%IdxAeroMap) 
    call RegPack(RF, InData%DT)
    call RegPack(RF, InData%DT24)
    call RegPack(RF, InData%BldNodes)
@@ -6244,7 +6254,7 @@ subroutine ED_PackParam(RF, Indata)
    call RegPack(RF, InData%iVarYaw)
    call RegPack(RF, InData%iVarYawRate)
    call RegPack(RF, InData%iVarHSS_Spd)
-   call RegPack(RF, InData%iVarOutput)
+   call RegPack(RF, InData%iVarWriteOut)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -6277,7 +6287,6 @@ subroutine ED_UnPackParam(RF, OutData)
    else
       OutData%Vars => null()
    end if
-   call NWTC_Library_UnpackVarsIdxType(RF, OutData%IdxAeroMap) ! IdxAeroMap 
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DT24); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BldNodes); if (RegCheckErr(RF, RoutineName)) return
@@ -6544,7 +6553,7 @@ subroutine ED_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%iVarYaw); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarYawRate); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarHSS_Spd); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarOutput); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarWriteOut); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ED_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -7145,19 +7154,19 @@ subroutine ED_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%QD2T = SrcMiscData%QD2T
    end if
    DstMiscData%IgnoreMod = SrcMiscData%IgnoreMod
-   call NWTC_Library_CopyModLinType(SrcMiscData%Lin, DstMiscData%Lin, CtrlCode, ErrStat2, ErrMsg2)
+   call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call ED_CopyContState(SrcMiscData%x_perturb, DstMiscData%x_perturb, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call ED_CopyContState(SrcMiscData%dx_perturb, DstMiscData%dx_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call ED_CopyContState(SrcMiscData%dxdt_lin, DstMiscData%dxdt_lin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call ED_CopyInput(SrcMiscData%u_perturb, DstMiscData%u_perturb, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call ED_CopyOutput(SrcMiscData%y_perturb, DstMiscData%y_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call ED_CopyOutput(SrcMiscData%y_lin, DstMiscData%y_lin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 end subroutine
@@ -7196,15 +7205,15 @@ subroutine ED_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%QD2T)) then
       deallocate(MiscData%QD2T)
    end if
-   call NWTC_Library_DestroyModLinType(MiscData%Lin, ErrStat2, ErrMsg2)
+   call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call ED_DestroyContState(MiscData%x_perturb, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call ED_DestroyContState(MiscData%dx_perturb, ErrStat2, ErrMsg2)
+   call ED_DestroyContState(MiscData%dxdt_lin, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call ED_DestroyInput(MiscData%u_perturb, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call ED_DestroyOutput(MiscData%y_perturb, ErrStat2, ErrMsg2)
+   call ED_DestroyOutput(MiscData%y_lin, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
@@ -7223,11 +7232,11 @@ subroutine ED_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%OgnlGeAzRo)
    call RegPackAlloc(RF, InData%QD2T)
    call RegPack(RF, InData%IgnoreMod)
-   call NWTC_Library_PackModLinType(RF, InData%Lin) 
+   call NWTC_Library_PackModJacType(RF, InData%Jac) 
    call ED_PackContState(RF, InData%x_perturb) 
-   call ED_PackContState(RF, InData%dx_perturb) 
+   call ED_PackContState(RF, InData%dxdt_lin) 
    call ED_PackInput(RF, InData%u_perturb) 
-   call ED_PackOutput(RF, InData%y_perturb) 
+   call ED_PackOutput(RF, InData%y_lin) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -7249,11 +7258,11 @@ subroutine ED_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%OgnlGeAzRo); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%QD2T); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%IgnoreMod); if (RegCheckErr(RF, RoutineName)) return
-   call NWTC_Library_UnpackModLinType(RF, OutData%Lin) ! Lin 
+   call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
    call ED_UnpackContState(RF, OutData%x_perturb) ! x_perturb 
-   call ED_UnpackContState(RF, OutData%dx_perturb) ! dx_perturb 
+   call ED_UnpackContState(RF, OutData%dxdt_lin) ! dxdt_lin 
    call ED_UnpackInput(RF, OutData%u_perturb) ! u_perturb 
-   call ED_UnpackOutput(RF, OutData%y_perturb) ! y_perturb 
+   call ED_UnpackOutput(RF, OutData%y_lin) ! y_lin 
 end subroutine
 
 subroutine ED_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)
@@ -7759,5 +7768,109 @@ SUBROUTINE ED_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Err
    y_out%LSShftFys = a1*y1%LSShftFys + a2*y2%LSShftFys + a3*y3%LSShftFys
    y_out%LSShftFzs = a1*y1%LSShftFzs + a2*y2%LSShftFzs + a3*y3%LSShftFzs
 END SUBROUTINE
+
+function ED_InputMeshPointer(u, ML) result(Mesh)
+   type(ED_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (ED_u_BladePtLoads)
+       Mesh => u%BladePtLoads(ML%i1)
+   case (ED_u_PlatformPtMesh)
+       Mesh => u%PlatformPtMesh
+   case (ED_u_TowerPtLoads)
+       Mesh => u%TowerPtLoads
+   case (ED_u_HubPtLoad)
+       Mesh => u%HubPtLoad
+   case (ED_u_NacelleLoads)
+       Mesh => u%NacelleLoads
+   case (ED_u_TFinCMLoads)
+       Mesh => u%TFinCMLoads
+   end select
+end function
+
+function ED_InputMeshName(u, ML) result(Name)
+   type(ED_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (ED_u_BladePtLoads)
+       Name = "u%BladePtLoads("//trim(Num2LStr(ML%i1))//")"
+   case (ED_u_PlatformPtMesh)
+       Name = "u%PlatformPtMesh"
+   case (ED_u_TowerPtLoads)
+       Name = "u%TowerPtLoads"
+   case (ED_u_HubPtLoad)
+       Name = "u%HubPtLoad"
+   case (ED_u_NacelleLoads)
+       Name = "u%NacelleLoads"
+   case (ED_u_TFinCMLoads)
+       Name = "u%TFinCMLoads"
+   end select
+end function
+
+function ED_OutputMeshPointer(y, ML) result(Mesh)
+   type(ED_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (ED_y_BladeLn2Mesh)
+       Mesh => y%BladeLn2Mesh(ML%i1)
+   case (ED_y_PlatformPtMesh)
+       Mesh => y%PlatformPtMesh
+   case (ED_y_TowerLn2Mesh)
+       Mesh => y%TowerLn2Mesh
+   case (ED_y_HubPtMotion14)
+       Mesh => y%HubPtMotion14
+   case (ED_y_HubPtMotion)
+       Mesh => y%HubPtMotion
+   case (ED_y_BladeRootMotion14)
+       Mesh => y%BladeRootMotion14
+   case (ED_y_BladeRootMotion)
+       Mesh => y%BladeRootMotion(ML%i1)
+   case (ED_y_RotorFurlMotion14)
+       Mesh => y%RotorFurlMotion14
+   case (ED_y_NacelleMotion)
+       Mesh => y%NacelleMotion
+   case (ED_y_TowerBaseMotion14)
+       Mesh => y%TowerBaseMotion14
+   case (ED_y_TFinCMMotion)
+       Mesh => y%TFinCMMotion
+   end select
+end function
+
+function ED_OutputMeshName(y, ML) result(Name)
+   type(ED_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (ED_y_BladeLn2Mesh)
+       Name = "y%BladeLn2Mesh("//trim(Num2LStr(ML%i1))//")"
+   case (ED_y_PlatformPtMesh)
+       Name = "y%PlatformPtMesh"
+   case (ED_y_TowerLn2Mesh)
+       Name = "y%TowerLn2Mesh"
+   case (ED_y_HubPtMotion14)
+       Name = "y%HubPtMotion14"
+   case (ED_y_HubPtMotion)
+       Name = "y%HubPtMotion"
+   case (ED_y_BladeRootMotion14)
+       Name = "y%BladeRootMotion14"
+   case (ED_y_BladeRootMotion)
+       Name = "y%BladeRootMotion("//trim(Num2LStr(ML%i1))//")"
+   case (ED_y_RotorFurlMotion14)
+       Name = "y%RotorFurlMotion14"
+   case (ED_y_NacelleMotion)
+       Name = "y%NacelleMotion"
+   case (ED_y_TowerBaseMotion14)
+       Name = "y%TowerBaseMotion14"
+   case (ED_y_TFinCMMotion)
+       Name = "y%TFinCMMotion"
+   end select
+end function
 END MODULE ElastoDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

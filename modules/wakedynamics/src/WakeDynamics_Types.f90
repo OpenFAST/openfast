@@ -33,13 +33,13 @@ MODULE WakeDynamics_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeDiamMod_RotDiam = 1      ! Wake diameter calculation model: rotor diameter [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeDiamMod_Velocity = 2      ! Wake diameter calculation model: velocity-based [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeDiamMod_MassFlux = 3      ! Wake diameter calculation model: mass-flux based [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeDiamMod_MtmFlux = 4      ! Wake diameter calculation model: momentum-flux based [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Polar = 1      ! Wake model [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Curl = 2      ! Wake model [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Cartesian = 3      ! Wake model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeDiamMod_RotDiam              = 1      ! Wake diameter calculation model: rotor diameter [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeDiamMod_Velocity             = 2      ! Wake diameter calculation model: velocity-based [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeDiamMod_MassFlux             = 3      ! Wake diameter calculation model: mass-flux based [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeDiamMod_MtmFlux              = 4      ! Wake diameter calculation model: momentum-flux based [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Polar                   = 1      ! Wake model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Curl                    = 2      ! Wake model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Cartesian               = 3      ! Wake model [-]
 ! =========  WD_InputFileType  =======
   TYPE, PUBLIC :: WD_InputFileType
     REAL(ReKi)  :: dr = 0.0_ReKi      !< Radial increment of radial finite-difference grid [>0.0] [m]
@@ -1847,5 +1847,41 @@ subroutine WD_UnPackOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%x_plane); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WAT_k_mt); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
+function WD_InputMeshPointer(u, ML) result(Mesh)
+   type(WD_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function WD_InputMeshName(u, ML) result(Name)
+   type(WD_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
+
+function WD_OutputMeshPointer(y, ML) result(Mesh)
+   type(WD_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function WD_OutputMeshName(y, ML) result(Name)
+   type(WD_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
 END MODULE WakeDynamics_Types
 !ENDOFREGISTRYGENERATEDFILE

@@ -36,13 +36,13 @@ USE UnsteadyAero_Types
 USE DBEMT_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_Orthogonal = 0      ! Inflow orthogonal to rotor [-] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_Uncoupled = 1      ! Uncoupled (no correction) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_PittPeters = 2      ! Pitt/Peters [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_Coupled = 3      ! Coupled [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_PittPeters_Cont = 4      ! Pitt/Peters continuous formulation [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BEMMod_2D = 0      ! 2D BEM assuming Cx, Cy, phi, L, D are in the same plane [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BEMMod_3D = 2      ! 3D BEM assuming a momentum balance system, and an airfoil system [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_Orthogonal               = 0      ! Inflow orthogonal to rotor [-] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_Uncoupled                = 1      ! Uncoupled (no correction) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_PittPeters               = 2      ! Pitt/Peters [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_Coupled                  = 3      ! Coupled [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_PittPeters_Cont          = 4      ! Pitt/Peters continuous formulation [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BEMMod_2D                        = 0      ! 2D BEM assuming Cx, Cy, phi, L, D are in the same plane [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BEMMod_3D                        = 2      ! 3D BEM assuming a momentum balance system, and an airfoil system [-]
 ! =========  BEMT_InitInputType  =======
   TYPE, PUBLIC :: BEMT_InitInputType
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: chord      !< Chord length at node [m]
@@ -2643,5 +2643,41 @@ SUBROUTINE BEMT_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, E
       y_out%Cpmin = a1*y1%Cpmin + a2*y2%Cpmin + a3*y3%Cpmin
    END IF ! check if allocated
 END SUBROUTINE
+
+function BEMT_InputMeshPointer(u, ML) result(Mesh)
+   type(BEMT_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function BEMT_InputMeshName(u, ML) result(Name)
+   type(BEMT_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
+
+function BEMT_OutputMeshPointer(y, ML) result(Mesh)
+   type(BEMT_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function BEMT_OutputMeshName(y, ML) result(Name)
+   type(BEMT_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
 END MODULE BEMT_Types
 !ENDOFREGISTRYGENERATEDFILE

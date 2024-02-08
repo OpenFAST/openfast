@@ -36,18 +36,18 @@ USE InflowWind_IO_Types
 USE Lidar_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Undef_WindNumber = 0      ! This is the code for an undefined WindFileType [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Steady_WindNumber = 1      ! Steady wind.  Calculated internally. [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Uniform_WindNumber = 2      ! Uniform wind.  Formally known as a Hub-Height wind file. [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: TSFF_WindNumber = 3      ! TurbSim full-field binary file. [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BladedFF_WindNumber = 4      ! Bladed style binary full-field file.  Includes native bladed format [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: HAWC_WindNumber = 5      ! HAWC wind file. [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: User_WindNumber = 6      ! User defined wind. [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BladedFF_Shr_WindNumber = 7      ! Native Bladed binary full-field file. [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: FDext_WindNumber = 8      ! 4D wind from external souce (i.e., FAST.Farm). [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Point_WindNumber = 9      ! 1D wind components from ExtInflow [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Highest_WindNumber = 9      ! Highest wind number supported. [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: IfW_NumPtsAvg = 144      ! Number of points averaged for rotor-average wind speed [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Undef_WindNumber                 = 0      ! This is the code for an undefined WindFileType [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Steady_WindNumber                = 1      ! Steady wind.  Calculated internally. [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Uniform_WindNumber               = 2      ! Uniform wind.  Formally known as a Hub-Height wind file. [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: TSFF_WindNumber                  = 3      ! TurbSim full-field binary file. [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BladedFF_WindNumber              = 4      ! Bladed style binary full-field file.  Includes native bladed format [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: HAWC_WindNumber                  = 5      ! HAWC wind file. [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: User_WindNumber                  = 6      ! User defined wind. [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BladedFF_Shr_WindNumber          = 7      ! Native Bladed binary full-field file. [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: FDext_WindNumber                 = 8      ! 4D wind from external souce (i.e., FAST.Farm). [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Point_WindNumber                 = 9      ! 1D wind components from ExtInflow [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Highest_WindNumber               = 9      ! Highest wind number supported. [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: IfW_NumPtsAvg                    = 144      ! Number of points averaged for rotor-average wind speed [-]
 ! =========  InflowWind_InputFile  =======
   TYPE, PUBLIC :: InflowWind_InputFile
     LOGICAL  :: EchoFlag = .false.      !< Echo the input file [-]
@@ -1848,5 +1848,41 @@ SUBROUTINE InflowWind_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrS
    CALL Lidar_Output_ExtrapInterp2( y1%lidar, y2%lidar, y3%lidar, tin, y_out%lidar, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 END SUBROUTINE
+
+function InflowWind_InputMeshPointer(u, ML) result(Mesh)
+   type(InflowWind_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function InflowWind_InputMeshName(u, ML) result(Name)
+   type(InflowWind_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
+
+function InflowWind_OutputMeshPointer(y, ML) result(Mesh)
+   type(InflowWind_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function InflowWind_OutputMeshName(y, ML) result(Name)
+   type(InflowWind_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
 END MODULE InflowWind_Types
 !ENDOFREGISTRYGENERATEDFILE

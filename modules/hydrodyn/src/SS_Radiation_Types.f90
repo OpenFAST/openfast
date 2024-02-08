@@ -1072,5 +1072,41 @@ SUBROUTINE SS_Rad_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat,
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
    END IF ! check if allocated
 END SUBROUTINE
+
+function SS_Rad_InputMeshPointer(u, ML) result(Mesh)
+   type(SS_Rad_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function SS_Rad_InputMeshName(u, ML) result(Name)
+   type(SS_Rad_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
+
+function SS_Rad_OutputMeshPointer(y, ML) result(Mesh)
+   type(SS_Rad_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function SS_Rad_OutputMeshName(y, ML) result(Name)
+   type(SS_Rad_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
 END MODULE SS_Radiation_Types
 !ENDOFREGISTRYGENERATEDFILE

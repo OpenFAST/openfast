@@ -33,6 +33,8 @@ MODULE ExtPtfm_MCKF_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ExtPtfm_u_PtfmMesh               = 1      ! Mesh number for ExtPtfm ExtPtfm_u_PtfmMesh mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ExtPtfm_y_PtfmMesh               = 2      ! Mesh number for ExtPtfm ExtPtfm_y_PtfmMesh mesh [-]
 ! =========  ExtPtfm_InitInputType  =======
   TYPE, PUBLIC :: ExtPtfm_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file; remove if there is no file [-]
@@ -1858,5 +1860,49 @@ SUBROUTINE ExtPtfm_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
    END IF ! check if allocated
 END SUBROUTINE
+
+function ExtPtfm_InputMeshPointer(u, ML) result(Mesh)
+   type(ExtPtfm_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (ExtPtfm_u_PtfmMesh)
+       Mesh => u%PtfmMesh
+   end select
+end function
+
+function ExtPtfm_InputMeshName(u, ML) result(Name)
+   type(ExtPtfm_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (ExtPtfm_u_PtfmMesh)
+       Name = "u%PtfmMesh"
+   end select
+end function
+
+function ExtPtfm_OutputMeshPointer(y, ML) result(Mesh)
+   type(ExtPtfm_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (ExtPtfm_y_PtfmMesh)
+       Mesh => y%PtfmMesh
+   end select
+end function
+
+function ExtPtfm_OutputMeshName(y, ML) result(Name)
+   type(ExtPtfm_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (ExtPtfm_y_PtfmMesh)
+       Name = "y%PtfmMesh"
+   end select
+end function
 END MODULE ExtPtfm_MCKF_Types
 !ENDOFREGISTRYGENERATEDFILE

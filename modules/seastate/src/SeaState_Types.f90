@@ -1274,5 +1274,41 @@ subroutine SeaSt_UnPackOutput(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%WriteOutput); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
+function SeaSt_InputMeshPointer(u, ML) result(Mesh)
+   type(SeaSt_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function SeaSt_InputMeshName(u, ML) result(Name)
+   type(SeaSt_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
+
+function SeaSt_OutputMeshPointer(y, ML) result(Mesh)
+   type(SeaSt_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function SeaSt_OutputMeshName(y, ML) result(Name)
+   type(SeaSt_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
 END MODULE SeaState_Types
 !ENDOFREGISTRYGENERATEDFILE

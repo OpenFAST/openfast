@@ -518,7 +518,6 @@ typedef	^	OtherStateType	IntKi	SgnLSTQ	{ED_NMX}	-	-	"history of sign of LSTQ"
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef	^	ParameterType	ModVarsType	&Vars	-	-	-	"Module Variables"
-typedef	^	ParameterType	VarsIdxType	IdxAeroMap	-	-	-	"Module variable index for AeroMap"
 typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
 typedef	^	ParameterType	DbKi	DT24	-	-	-	"=DT/24 (used in loose coupling)"	seconds
 typedef	^	ParameterType	IntKi	BldNodes	-	-	-	"Number of blade nodes used in the analysis"	-
@@ -768,7 +767,7 @@ typedef	^	ParameterType	IntKi	iVarNacelleMotion	-	-	-	"Index of variable"	-
 typedef	^	ParameterType	IntKi	iVarYaw	-	-	-	"Index of variable"	-
 typedef	^	ParameterType	IntKi	iVarYawRate	-	-	-	"Index of variable"	-
 typedef	^	ParameterType	IntKi	iVarHSS_Spd	-	-	-	"Index of variable"	-
-typedef	^	ParameterType	IntKi	iVarOutput	-	-	-	"Index of variable"	-
+typedef	^	ParameterType	IntKi	iVarWriteOut	-	-	-	"Index of variable"	-
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
@@ -841,8 +840,8 @@ typedef	^	MiscVarType	IntKi	AugMat_pivot	{:}	-	-	"Pivot column for AugMat in LAP
 typedef	^	MiscVarType	ReKi	OgnlGeAzRo	{:}	-	-	"Original DOF_GeAz row in AugMat"	-
 typedef	^	MiscVarType	R8Ki	QD2T	{:}	-	-	"Solution (acceleration) vector; the first time derivative of QDT"
 typedef	^	MiscVarType	Logical	IgnoreMod	-	-	-	"whether to ignore the modulo in ED outputs (necessary for linearization perturbations)"	-
-typedef	^	MiscVarType	ModLinType	Lin	-	-	-   "Values corresponding to module variables"
+typedef	^	MiscVarType	ModJacType	Jac	-	-	-   "Values corresponding to module variables"
 typedef	^	MiscVarType	ED_ContinuousStateType	x_perturb	-	-	-	""	-
-typedef	^	MiscVarType	ED_ContinuousStateType	dx_perturb	-	-	-	""	-
+typedef	^	MiscVarType	ED_ContinuousStateType	dxdt_lin	-	-	-	""	-
 typedef	^	MiscVarType	ED_InputType	u_perturb	-	-	-	""	-
-typedef	^	MiscVarType	ED_OutputType	y_perturb	-	-	-	""	-
+typedef	^	MiscVarType	ED_OutputType	y_lin	-	-	-	""	-
