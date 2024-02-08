@@ -25,12 +25,10 @@ MODULE WAMIT
    USE WAMIT_Types 
    USE WAMIT_Interp
    USE NWTC_Library
-  ! USE Waves_Types
    USE Conv_Radiation
    USE SS_Radiation
    USE SS_Excitation
    USE NWTC_FFTPACK
-   use SeaState_Interp
    
    IMPLICIT NONE
    
@@ -976,13 +974,13 @@ end if
                END IF
 
                if (p%ExctnDisp > 0 ) then
-                  ALLOCATE ( WaveExctnCGrid(0:p%WaveField%NStepWave2 ,p%WaveField%SeaSt_Interp_p%n(2)*p%WaveField%SeaSt_Interp_p%n(3),6*p%NBody) , STAT=ErrStat2 )
+                  ALLOCATE ( WaveExctnCGrid(0:p%WaveField%NStepWave2 ,p%WaveField%GridParams%n(2)*p%WaveField%GridParams%n(3),6*p%NBody) , STAT=ErrStat2 )
                   IF ( ErrStat2 /= 0 )  THEN
                      CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctnC array.', ErrStat, ErrMsg, RoutineName)
                      CALL Cleanup()
                      RETURN            
                   END IF
-                  ALLOCATE ( p%WaveExctnGrid (0:p%WaveField%NStepWave,p%WaveField%SeaSt_Interp_p%n(2),p%WaveField%SeaSt_Interp_p%n(3), 6*p%NBody) , STAT=ErrStat2 )
+                  ALLOCATE ( p%WaveExctnGrid (0:p%WaveField%NStepWave,p%WaveField%GridParams%n(2),p%WaveField%GridParams%n(3), 6*p%NBody) , STAT=ErrStat2 )
                   IF ( ErrStat2 /= 0 )  THEN
                      CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctn array.', ErrStat, ErrMsg, RoutineName)
                      CALL Cleanup()
@@ -1141,7 +1139,7 @@ end if
                         CALL Cleanup()
                         RETURN
                      END IF
-                     do iGrid = 1, p%WaveField%SeaSt_Interp_p%n(2)*p%WaveField%SeaSt_Interp_p%n(3)
+                     do iGrid = 1, p%WaveField%GridParams%n(2)*p%WaveField%GridParams%n(3)
                         WaveExctnCGrid(I,iGrid,J) = WaveExctnC(I,J) * CMPLX(p%WaveField%WaveElevC(1,I,iGrid), p%WaveField%WaveElevC(2,I,iGrid))
                      end do
                   END DO                ! J - All wave excitation forces and moments
@@ -1158,9 +1156,9 @@ end if
                   END IF
          
                DO J = 1,6*p%NBody           ! Loop through all wave excitation forces and moments
-                  do iGrid = 1, p%WaveField%SeaSt_Interp_p%n(2)*p%WaveField%SeaSt_Interp_p%n(3)
-                        iX = mod(iGrid-1, p%WaveField%SeaSt_Interp_p%n(2)) + 1  ! 1st n index is time
-                        iY = (iGrid-1) / p%WaveField%SeaSt_Interp_p%n(2) + 1
+                  do iGrid = 1, p%WaveField%GridParams%n(2)*p%WaveField%GridParams%n(3)
+                        iX = mod(iGrid-1, p%WaveField%GridParams%n(2)) + 1  ! 1st n index is time
+                        iY = (iGrid-1) / p%WaveField%GridParams%n(2) + 1
                         CALL ApplyFFT_cx ( p%WaveExctnGrid(0:p%WaveField%NStepWave-1,iX,iY,J), WaveExctnCGrid(:,iGrid,J), FFT_Data, ErrStat2 )
                         CALL SetErrStat( ErrStat2, ' An error occured while applying an FFT to WaveExctnC.', ErrStat, ErrMsg, RoutineName)
                         IF ( ErrStat >= AbortErrLev) THEN
@@ -1842,7 +1840,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
                END IF
                iStart = (iBody-1)*6+1
                ! WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: Force component for each WAMIT Body
-               m%F_Waves1(iStart:iStart+5) = SeaSt_Interp_3D_Vec6( Time, bodyPosition, p%WaveExctnGrid(:,:,:,iStart:iStart+5), p%WaveField%SeaSt_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+               m%F_Waves1(iStart:iStart+5) = WAMIT_ForceWaves_Interp( Time, bodyPosition, p%WaveExctnGrid(:,:,:,iStart:iStart+5), p%WaveField%GridParams, m%WaveField_m, ErrStat2, ErrMsg2 )
                   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
             END DO
          end if
@@ -1931,8 +1929,9 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       
       ! Output channels will be dealt with by the HydroDyn module
              
-
 END SUBROUTINE WAMIT_CalcOutput
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for computing derivatives of continuous states
 SUBROUTINE WAMIT_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )  

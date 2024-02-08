@@ -16,7 +16,6 @@ include   Registry_NWTC_Library.txt
 usefrom   Conv_Radiation.txt
 usefrom   SS_Radiation.txt
 usefrom   SS_Excitation.txt
-usefrom   SeaState_Interp.txt
 usefrom   SeaSt_WaveField.txt
 
 typedef   WAMIT/WAMIT                  InitInputType                 INTEGER                  NBody                           -          -        -         "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
@@ -93,7 +92,7 @@ typedef   ^                            ^                             SS_Exc_Outp
 typedef   ^                            ^                             Conv_Rdtn_MiscVarType    Conv_Rdtn                       -              -         -         ""   -
 typedef   ^                            ^                             Conv_Rdtn_InputType      Conv_Rdtn_u                     -              -         -         ""   -
 typedef   ^                            ^                             Conv_Rdtn_OutputType     Conv_Rdtn_y                     -              -         -         ""   -
-typedef   ^                            ^                             SeaSt_Interp_MiscVarType SeaSt_Interp_m                  -              -         -         "misc var information from the SeaState Interpolation module"   -
+typedef   ^                            ^                          SeaSt_WaveField_MiscVarType WaveField_m                     -              -         -         "misc var information from the SeaState Interpolation module"   -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:

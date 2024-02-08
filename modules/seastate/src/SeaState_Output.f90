@@ -273,7 +273,7 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, WaveField, WaveDT, X_
       y_gridPts(i+1) = -Y_HalfWidth + deltaGrid(2)*i
    end do
    do i = 0, NGrid(3)-1
-      z_gridPts(i+1) =  - ( 1.0 - cos( real((NGrid(3) - 1) - i, ReKi) * deltaGrid(3) )  ) * WaveField%SeaSt_Interp_p%Z_Depth
+      z_gridPts(i+1) =  - ( 1.0 - cos( real((NGrid(3) - 1) - i, ReKi) * deltaGrid(3) )  ) * WaveField%GridParams%Z_Depth
    end do
    
    ! Write the increments from [0, NStepWave] even though for OpenFAST data, NStepWave = 0, but for arbitrary user data this may not be true.

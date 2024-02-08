@@ -1,8 +1,6 @@
 #---------------------------------------------------------------------------------------------------------------------------------------------------------
 # Data structures for representing wave fields.
 #
-usefrom SeaState_Interp.txt
-
 param     SeaSt_WaveField      -                INTEGER             WaveDirMod_None          -        0   -   "WaveDirMod = 0 [Directional spreading function is NONE]" -
 param     SeaSt_WaveField      -                INTEGER             WaveDirMod_COS2S         -        1   -   "WaveDirMod = 1 [Directional spreading function is COS2S]" -
 
@@ -19,6 +17,18 @@ param     SeaSt_WaveField      -                INTEGER             WaveMod_User
 #---------------------------------------------------------------------------------------------------------------------------------------------------------
 #<Key Word> <Module>         <TypeName>            <FieldType>                   <FieldName>     <Dims>           <Ctrl>   <DNA ME> <Description> <Units>
 #---------------------------------------------------------------------------------------------------------------------------------------------------------
+typedef     ^             ParameterType         IntKi                n                4               -        -        "number of evenly-spaced grid points in the t, x, y, and z directions"      -
+typedef     ^             ParameterType         ReKi                 delta            4               -        -        "size between 2 consecutive grid points in each grid direction"            "s,m,m,m"
+typedef     ^             ParameterType         ReKi                 pZero            4               -        -        "fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))" "m"
+typedef     ^             ParameterType         ReKi                 Z_Depth          -               -        -        "grid depth" m
+
+typedef     ^             MiscVarType           SiKi                 N3D             {8}              -        -        "this is the weighting function for 3-d velocity field" -
+typedef     ^             MiscVarType           SiKi                 N4D             {16}             -        -        "this is the weighting function for 4-d velocity field" -
+typedef     ^             MiscVarType           integer              Indx_Lo          4               -        -        "this is the index into the 4-d velocity field for each wave component" -
+typedef     ^             MiscVarType           integer              Indx_Hi          4               -        -        "this is the index into the 4-d velocity field for each wave component" -
+typedef     ^             MiscVarType           logical              FirstWarn_Clamp  -            .true.      -        "used to avoid too many 'Position has been clamped to the grid boundary' warning messages " -
+
+
 typedef  SeaSt_WaveField  SeaSt_WaveFieldType   SiKi                 WaveTime        {:}              -        -        "Time array"   (s)
 typedef     ^                 ^                 SiKi                 WaveDynP        {:}{:}{:}{:}     -        -        "Incident wave dynamic pressure" (N/m^2)
 typedef     ^                 ^                 SiKi                 WaveAcc         {:}{:}{:}{:}{:}  -        -        "Incident wave acceleration"     (m/s^2)
@@ -31,7 +41,7 @@ typedef     ^                 ^                 SiKi                 PWaveVel0  
 typedef     ^                 ^                 SiKi                 WaveElev0       {:}              -        -        "Instantaneous elevation time-series of incident waves at the platform reference point (NOTE THAT THIS CAN GET MODIFIED IN WAMIT)" (m) 
 typedef     ^                 ^                 SiKi                 WaveElev1       {:}{:}{:}        -        -        "First order wave elevation"  (m)
 typedef     ^                 ^                 SiKi                 WaveElev2       {:}{:}{:}        -        -        "Second order wave elevation" (m)
-typedef     ^                 ^      SeaSt_Interp_ParameterType      SeaSt_Interp_p  -                -        -        "Parameter information from the SeaState Interpolation module" (-)
+typedef     ^                 ^      SeaSt_WaveField_ParameterType   GridParams      -                -        -        "Parameters for grid spacing" (-)
 typedef     ^                 ^                 IntKi                WaveStMod       -                -        -        "Wave stretching model"
 typedef     ^                 ^                 ReKi                 EffWtrDpth      -                -        -        "Water depth" (-)
 typedef     ^                 ^                 ReKi                 MSL2SWL         -                -        -        "Vertical distance from mean sea level to still water level" (m)
