@@ -787,6 +787,40 @@ END FUNCTION WaveField_Interp_4D_Vec
 
 
 !====================================================================================================
+!> This routine interpolates a 4-d dataset.
+!! This method is described here: http://rjwagner49.com/Mathematics/Interpolation.pdf
+function WaveField_Interp_4D_Vec6( pKinXX, m)
+   real(SiKi),                         intent(in   )  :: pKinXX(0:,:,:,:,:)
+   type(SeaSt_WaveField_MiscVarType),  intent(in   )  :: m                    !< misc vars for interpolation
+
+   real(SiKi)                                         :: WaveField_Interp_4D_Vec6(6)
+   real(SiKi)                                         :: u(16)   ! size 2^n
+   integer(IntKi)                                     :: iDir
+
+   ! interpolate
+   do iDir = 1,6
+      u( 1) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
+      u( 2) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
+      u( 3) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
+      u( 4) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
+      u( 5) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
+      u( 6) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
+      u( 7) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
+      u( 8) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
+      u( 9) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
+      u(10) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
+      u(11) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
+      u(12) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
+      u(13) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
+      u(14) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
+      u(15) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
+      u(16) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
+      WaveField_Interp_4D_Vec6(iDir) = SUM ( m%N4D * u )
+   end do
+END FUNCTION WaveField_Interp_4D_Vec6
+
+
+!====================================================================================================
 !> This routine interpolates a 3-d dataset with index 1 = time (zero-based indexing), 2 = x-coordinate (1-based indexing), 3 = y-coordinate (1-based indexing)
 !! This method is described here: http://rjwagner49.com/Mathematics/Interpolation.pdf
 !FIXME: do like the above and call the WaveField_Interp_Setup3D routine ahead

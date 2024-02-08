@@ -30,7 +30,7 @@ MODULE WAMIT_Interp
 
    USE NWTC_Library
    use SeaSt_WaveField_Types, only: SeaSt_WaveField_ParameterType, SeaSt_WaveField_MiscVarType
-   use SeaSt_WaveField, only: WaveField_Interp_Setup3D
+   use SeaSt_WaveField, only: WaveField_Interp_Setup3D, WaveField_Interp_Setup4D
    IMPLICIT NONE
 
    PRIVATE
@@ -41,6 +41,13 @@ MODULE WAMIT_Interp
    PUBLIC   :: WAMIT_Interp4D_Cplx
    public   :: WAMIT_ForceWaves_Interp
 
+
+
+   ! 3D and 4D interpolations using WaveField indexing
+   interface WAMIT_ForceWaves_Interp
+      module procedure WAMIT_ForceWaves_Interp_3D_vec6
+      module procedure WAMIT_ForceWaves_Interp_4D_vec6
+   end interface
 
 CONTAINS
 
@@ -627,16 +634,16 @@ END SUBROUTINE CalcIsoparCoords
 
 !> retrieve indices from the WaveField info, and do interpolation for this point.
 !! NOTE: the WAMIT field passed in here through pKinXX is based on WaveField sizing, which is why we can do this.
-function WAMIT_ForceWaves_Interp(Time, pos, pKinXX, WF_p, WF_m, ErrStat3, ErrMsg3)
+function WAMIT_ForceWaves_Interp_3D_vec6(Time, pos, pKinXX, WF_p, WF_m, ErrStat3, ErrMsg3)
    real(DbKi),                            intent(in   ) :: Time
-   real(ReKi),                            intent(in   ) :: pos(*)             !< position
+   real(ReKi),                            intent(in   ) :: pos(2)             !< position
    real(SiKi),                            intent(in   ) :: pKinXX(0:,:,:,:)   !< 3D Wave excitation data (SiKi for storage space reasons)
    type(SeaSt_WaveField_ParameterType),   intent(in   ) :: WF_p               !< wavefield parameters
    type(SeaSt_WaveField_MiscVarType),     intent(inout) :: WF_m               !< wavefield misc/optimization variables
    integer(IntKi),                        intent(  out) :: ErrStat3
    character(*),                          intent(  out) :: ErrMsg3
 
-   real(SiKi)                             :: WAMIT_ForceWaves_Interp(6)
+   real(SiKi)                             :: WAMIT_ForceWaves_Interp_3D_vec6(6)
    real(SiKi)                             :: u(8)
    integer(IntKi)                         :: i
 
@@ -653,7 +660,48 @@ function WAMIT_ForceWaves_Interp(Time, pos, pKinXX, WF_p, WF_m, ErrStat3, ErrMsg
       u(6)  = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Hi(2), WF_m%Indx_Hi(3), i )
       u(7)  = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Hi(2), WF_m%Indx_Hi(3), i )
       u(8)  = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Lo(2), WF_m%Indx_Hi(3), i )
-      WAMIT_ForceWaves_Interp(i) = SUM ( WF_m%N3D * u )
+      WAMIT_ForceWaves_Interp_3D_vec6(i) = SUM ( WF_m%N3D * u )
+   end do
+end function
+
+
+!> retrieve indices from the WaveField info, and do interpolation for this point.  This is for interpolating on 4D
+!! NOTE: the WAMIT field passed in here through pKinXX is based on WaveField sizing, which is why we can do this.
+function WAMIT_ForceWaves_Interp_4D_vec6(Time, pos, pKinXX, WF_p, WF_m, ErrStat3, ErrMsg3)
+   real(DbKi),                            intent(in   ) :: Time
+   real(ReKi),                            intent(in   ) :: pos(3)             !< position
+   real(SiKi),                            intent(in   ) :: pKinXX(0:,:,:,:,:) !< 4D Wave excitation data (SiKi for storage space reasons)
+   type(SeaSt_WaveField_ParameterType),   intent(in   ) :: WF_p               !< wavefield parameters
+   type(SeaSt_WaveField_MiscVarType),     intent(inout) :: WF_m               !< wavefield misc/optimization variables
+   integer(IntKi),                        intent(  out) :: ErrStat3
+   character(*),                          intent(  out) :: ErrMsg3
+
+   real(SiKi)                             :: WAMIT_ForceWaves_Interp_4D_vec6(6)
+   real(SiKi)                             :: u(16)
+   integer(IntKi)                         :: i
+
+   ! get the bounding indices from the WaveField info (same indexing used in WAMIT)
+   call WaveField_Interp_Setup4D( Time, pos, WF_p, WF_m, ErrStat3, ErrMsg3 )
+
+   ! interpolate
+   do i = 1,6
+      u( 1) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Lo(2), WF_m%Indx_Lo(3), WF_m%Indx_Lo(4), i )
+      u( 2) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Lo(2), WF_m%Indx_Lo(3), WF_m%Indx_Hi(4), i )
+      u( 3) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Lo(2), WF_m%Indx_Hi(3), WF_m%Indx_Lo(4), i )
+      u( 4) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Lo(2), WF_m%Indx_Hi(3), WF_m%Indx_Hi(4), i )
+      u( 5) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Hi(2), WF_m%Indx_Lo(3), WF_m%Indx_Lo(4), i )
+      u( 6) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Hi(2), WF_m%Indx_Lo(3), WF_m%Indx_Hi(4), i )
+      u( 7) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Hi(2), WF_m%Indx_Hi(3), WF_m%Indx_Lo(4), i )
+      u( 8) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Hi(2), WF_m%Indx_Hi(3), WF_m%Indx_Hi(4), i )
+      u( 9) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Lo(2), WF_m%Indx_Lo(3), WF_m%Indx_Lo(4), i )
+      u(10) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Lo(2), WF_m%Indx_Lo(3), WF_m%Indx_Hi(4), i )
+      u(11) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Lo(2), WF_m%Indx_Hi(3), WF_m%Indx_Lo(4), i )
+      u(12) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Lo(2), WF_m%Indx_Hi(3), WF_m%Indx_Hi(4), i )
+      u(13) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Hi(2), WF_m%Indx_Lo(3), WF_m%Indx_Lo(4), i )
+      u(14) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Hi(2), WF_m%Indx_Lo(3), WF_m%Indx_Hi(4), i )
+      u(15) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Hi(2), WF_m%Indx_Hi(3), WF_m%Indx_Lo(4), i )
+      u(16) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Hi(2), WF_m%Indx_Hi(3), WF_m%Indx_Hi(4), i )
+      WAMIT_ForceWaves_Interp_4D_vec6(i) = SUM ( WF_m%N4D * u )
    end do
 end function
 

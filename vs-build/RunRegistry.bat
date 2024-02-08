@@ -224,7 +224,6 @@ GOTO checkError
 :Current
 :Waves
 :Waves2
-:SeaState_Interp
 :SeaSt_WaveField
 
 SET CURR_LOC=%SEAST_Loc%
