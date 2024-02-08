@@ -18,6 +18,8 @@ PUBLIC WaveField_GetWaveKin
 
 public WaveField_SetParam
 
+public WaveField_Interp_Setup3D, WaveField_Interp_Setup4D
+
 CONTAINS
 
 !-------------------- Subroutine for wave elevation ------------------!
@@ -39,8 +41,9 @@ function WaveField_GetNodeWaveElev1( WaveField, WaveField_m, Time, pos, ErrStat,
    ErrMsg    = ""
 
    IF (ALLOCATED(WaveField%WaveElev1)) THEN
-      Zeta = WaveField_Interp_3D( Time, pos(1:2), WaveField%WaveElev1, WaveField%GridParams, WaveField_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL WaveField_Interp_Setup3D( Time, pos, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Zeta = WaveField_Interp_3D( WaveField%WaveElev1, WaveField_m )
    ELSE
       Zeta = 0.0_SiKi
    END IF
@@ -68,8 +71,9 @@ function WaveField_GetNodeWaveElev2( WaveField, WaveField_m, Time, pos, ErrStat,
    ErrMsg    = ""
 
    IF (ALLOCATED(WaveField%WaveElev2)) THEN
-      Zeta = WaveField_Interp_3D( Time, pos(1:2), WaveField%WaveElev2, WaveField%GridParams, WaveField_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL WaveField_Interp_Setup3D( Time, pos, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Zeta = WaveField_Interp_3D( WaveField%WaveElev2, WaveField_m )
    ELSE
       Zeta = 0.0_SiKi
    END IF
@@ -188,7 +192,7 @@ SUBROUTINE WaveField_GetNodeWaveKin( WaveField, WaveField_m, Time, pos, forceNod
       IF ( pos(3) <= 0.0_ReKi) THEN ! Node is at or below the SWL
          nodeInWater = 1_IntKi
          ! Use location to obtain interpolated values of kinematics
-         CALL WaveField_Interp_Setup( Time, pos, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+         CALL WaveField_Interp_Setup4D( Time, pos, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
          FV(:) = WaveField_Interp_4D_Vec( WaveField%WaveVel,  WaveField_m )
          FA(:) = WaveField_Interp_4D_Vec( WaveField%WaveAcc,  WaveField_m )
          FDynP = WaveField_Interp_4D    ( WaveField%WaveDynP, WaveField_m )
@@ -214,7 +218,7 @@ SUBROUTINE WaveField_GetNodeWaveKin( WaveField, WaveField_m, Time, pos, forceNod
             IF ( pos(3) <= 0.0_SiKi) THEN ! Node is below the SWL - evaluate wave dynamics as usual
 
                ! Use location to obtain interpolated values of kinematics
-               CALL WaveField_Interp_Setup( Time, pos, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+               CALL WaveField_Interp_Setup4D( Time, pos, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
                FV(:) = WaveField_Interp_4D_Vec( WaveField%WaveVel,  WaveField_m )
                FA(:) = WaveField_Interp_4D_Vec( WaveField%WaveAcc,  WaveField_m )
                FDynP = WaveField_Interp_4D    ( WaveField%WaveDynP, WaveField_m )
@@ -225,7 +229,7 @@ SUBROUTINE WaveField_GetNodeWaveKin( WaveField, WaveField_m, Time, pos, forceNod
             ELSE ! Node is above SWL - need wave stretching
 
                ! Vertical wave stretching
-               CALL WaveField_Interp_Setup( Time, posXY0, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+               CALL WaveField_Interp_Setup4D( Time, posXY0, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
                FV(:) = WaveField_Interp_4D_vec( WaveField%WaveVel,  WaveField_m )
                FA(:) = WaveField_Interp_4D_vec( WaveField%WaveAcc,  WaveField_m )
                FDynP = WaveField_Interp_4D    ( WaveField%WaveDynP, WaveField_m )
@@ -235,11 +239,12 @@ SUBROUTINE WaveField_GetNodeWaveKin( WaveField, WaveField_m, Time, pos, forceNod
 
                ! Extrapoled wave stretching
                IF (WaveField%WaveStMod == 2) THEN
-                  FV(:) = FV(:) + WaveField_Interp_3D_vec( Time, posXY, WaveField%PWaveVel0,  WaveField%GridParams, WaveField_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * pos(3); if (Failed()) return;
-                  FA(:) = FA(:) + WaveField_Interp_3D_vec( Time, posXY, WaveField%PWaveAcc0,  WaveField%GridParams, WaveField_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * pos(3); if (Failed()) return;
-                  FDynP = FDynP + WaveField_Interp_3D    ( Time, posXY, WaveField%PWaveDynP0, WaveField%GridParams, WaveField_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * pos(3); if (Failed()) return;
+                  CALL WaveField_Interp_Setup3D( Time, posXY, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+                  FV(:) = FV(:) + WaveField_Interp_3D_vec( WaveField%PWaveVel0,  WaveField_m ) * pos(3)
+                  FA(:) = FA(:) + WaveField_Interp_3D_vec( WaveField%PWaveAcc0,  WaveField_m ) * pos(3)
+                  FDynP = FDynP + WaveField_Interp_3D    ( WaveField%PWaveDynP0, WaveField_m ) * pos(3)
                   IF ( ALLOCATED(WaveField%WaveAccMCF) ) THEN
-                     FAMCF(:) = FAMCF(:) + WaveField_Interp_3D_vec( Time, posXY, WaveField%PWaveAccMCF0, WaveField%GridParams, WaveField_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * pos(3); if (Failed()) return;
+                     FAMCF(:) = FAMCF(:) + WaveField_Interp_3D_vec( WaveField%PWaveAccMCF0, WaveField_m ) * pos(3)
                   END IF
                END IF
 
@@ -253,7 +258,7 @@ SUBROUTINE WaveField_GetNodeWaveKin( WaveField, WaveField_m, Time, pos, forceNod
             posPrime(3) = MIN( posPrime(3), 0.0_ReKi) ! Clamp z-position to zero. Needed when forceNodeInWater=.TRUE.
 
             ! Obtain the wave-field variables by interpolation with the mapped position.
-            CALL WaveField_Interp_Setup( Time, posPrime, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+            CALL WaveField_Interp_Setup4D( Time, posPrime, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
             FV(:) = WaveField_Interp_4D_Vec( WaveField%WaveVel,  WaveField_m )
             FA(:) = WaveField_Interp_4D_Vec( WaveField%WaveAcc,  WaveField_m )
             FDynP = WaveField_Interp_4D    ( WaveField%WaveDynP, WaveField_m )
@@ -314,7 +319,7 @@ SUBROUTINE WaveField_GetNodeWaveVel( WaveField, WaveField_m, Time, pos, forceNod
       IF ( pos(3) <= 0.0_ReKi) THEN ! Node is at or below the SWL
          nodeInWater = 1_IntKi
          ! Use location to obtain interpolated values of kinematics
-         CALL WaveField_Interp_Setup( Time, pos, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+         CALL WaveField_Interp_Setup4D( Time, pos, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
          FV(:) = WaveField_Interp_4D_Vec( WaveField%WaveVel,  WaveField_m )
       ELSE ! Node is above the SWL
          nodeInWater = 0_IntKi
@@ -332,19 +337,19 @@ SUBROUTINE WaveField_GetNodeWaveVel( WaveField, WaveField_m, Time, pos, forceNod
             IF ( pos(3) <= 0.0_SiKi) THEN ! Node is below the SWL - evaluate wave dynamics as usual
 
                ! Use location to obtain interpolated values of kinematics
-               CALL WaveField_Interp_Setup( Time, pos, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+               CALL WaveField_Interp_Setup4D( Time, pos, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
                FV(:) = WaveField_Interp_4D_Vec( WaveField%WaveVel,  WaveField_m )
 
             ELSE ! Node is above SWL - need wave stretching
 
                ! Vertical wave stretching
-               CALL WaveField_Interp_Setup( Time, posXY0, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+               CALL WaveField_Interp_Setup4D( Time, posXY0, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
                FV(:) = WaveField_Interp_4D_vec( WaveField%WaveVel,  WaveField_m )
 
                ! Extrapoled wave stretching
                IF (WaveField%WaveStMod == 2) THEN
-                  FV(:) = FV(:) + WaveField_Interp_3D_vec( Time, posXY, WaveField%PWaveVel0,  WaveField%GridParams, WaveField_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * pos(3)
-                  if (Failed()) return;
+                  CALL WaveField_Interp_Setup3D( Time, posXY, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+                  FV(:) = FV(:) + WaveField_Interp_3D_vec( WaveField%PWaveVel0, WaveField_m ) * pos(3)
                END IF
 
             END IF ! Node is submerged
@@ -357,7 +362,7 @@ SUBROUTINE WaveField_GetNodeWaveVel( WaveField, WaveField_m, Time, pos, forceNod
             posPrime(3) = MIN( posPrime(3), 0.0_ReKi) ! Clamp z-position to zero. Needed when forceNodeInWater=.TRUE.
 
             ! Obtain the wave-field variables by interpolation with the mapped position.
-            CALL WaveField_Interp_Setup( Time, posPrime, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+            CALL WaveField_Interp_Setup4D( Time, posPrime, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
             FV(:) = WaveField_Interp_4D_Vec( WaveField%WaveVel,  WaveField_m )
 
          END IF
@@ -607,7 +612,7 @@ end subroutine SetTimeIndex
 !====================================================================================================
 !> This routine sets up interpolation of a 3-d or 4-d dataset.
 !! This method is described here: http://rjwagner49.com/Mathematics/Interpolation.pdf
-subroutine WaveField_Interp_Setup( Time, Position, p, m, ErrStat, ErrMsg )
+subroutine WaveField_Interp_Setup4D( Time, Position, p, m, ErrStat, ErrMsg )
    real(DbKi),                          intent(in   )  :: Time              !< time from the start of the simulation
    real(ReKi),                          intent(in   )  :: Position(3)       !< Array of XYZ coordinates, 3
    type(SeaSt_WaveField_ParameterType), intent(in   )  :: p                 !< Parameters
@@ -616,7 +621,7 @@ subroutine WaveField_Interp_Setup( Time, Position, p, m, ErrStat, ErrMsg )
    character(*),                        intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
 
-   character(*), parameter              :: RoutineName = 'WaveField_Interp_Setup'
+   character(*), parameter              :: RoutineName = 'WaveField_Interp_Setup4D'
    integer(IntKi)                       :: i
    real(SiKi)                           :: isopc(4)           ! isoparametric coordinates
    integer(IntKi)                       :: ErrStat2
@@ -625,30 +630,22 @@ subroutine WaveField_Interp_Setup( Time, Position, p, m, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   !-------------------------------------------------------------------------------------------------
    ! Find the bounding indices for time
-   !-------------------------------------------------------------------------------------------------
    call SetTimeIndex(Time, p%delta(1), p%n(1), m%Indx_Lo(1), m%Indx_Hi(1), isopc(1), ErrStat2, ErrMsg2)
    if (Failed()) return;
 
-   !-------------------------------------------------------------------------------------------------
    ! Find the bounding indices for XY position
-   !-------------------------------------------------------------------------------------------------
    do i=2,3  ! x and y components
       call SetCartesianXYIndex(Position(i-1), p%pZero(i), p%delta(i), p%n(i), m%Indx_Lo(i), m%Indx_Hi(i), isopc(i), m%FirstWarn_Clamp, ErrStat2, ErrMsg2)
       if (Failed()) return;
    enddo
 
-   !-------------------------------------------------------------------------------------------------
    ! Find the bounding indices for Z position
-   !-------------------------------------------------------------------------------------------------
    i=4 ! z component
    call SetCartesianZIndex(Position(i-1), p%Z_Depth, p%delta(i), p%n(i), m%Indx_Lo(i), m%Indx_Hi(i), isopc(i), m%FirstWarn_Clamp, ErrStat2, ErrMsg2)
    if (Failed()) return;
 
-   !-------------------------------------------------------------------------------------------------
    ! compute weighting factors
-   !-------------------------------------------------------------------------------------------------
    m%N4D( 1) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi - isopc(4) )
    m%N4D( 2) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi + isopc(4) )
    m%N4D( 3) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi - isopc(4) )
@@ -672,7 +669,53 @@ contains
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
    end function
-END Subroutine WaveField_Interp_Setup
+END Subroutine WaveField_Interp_Setup4D
+
+
+subroutine WaveField_Interp_Setup3D( Time, Position, p, m, ErrStat, ErrMsg )
+   real(DbKi),                          intent(in   )  :: Time              !< time from the start of the simulation
+   real(ReKi),                          intent(in   )  :: Position(2)       !< Array of XYZ coordinates, 3
+   type(SeaSt_WaveField_ParameterType), intent(in   )  :: p                 !< Parameters
+   type(SeaSt_WaveField_MiscVarType),   intent(inout)  :: m                 !< MiscVars
+   integer(IntKi),                      intent(  out)  :: ErrStat           !< Error status
+   character(*),                        intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter              :: RoutineName = 'WaveField_Interp_Setup3D'
+   integer(IntKi)                       :: i
+   real(SiKi)                           :: isopc(4)           ! isoparametric coordinates
+   integer(IntKi)                       :: ErrStat2
+   character(ErrMsgLen)                 :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! Find the bounding indices for time
+   call SetTimeIndex(Time, p%delta(1), p%n(1), m%Indx_Lo(1), m%Indx_Hi(1), isopc(1), ErrStat2, ErrMsg2)
+   if (Failed()) return;
+
+   ! Find the bounding indices for XY position
+   do i=2,3  ! x and y components
+      call SetCartesianXYIndex(Position(i-1), p%pZero(i), p%delta(i), p%n(i), m%Indx_Lo(i), m%Indx_Hi(i), isopc(i), m%FirstWarn_Clamp, ErrStat2, ErrMsg2)
+      if (Failed()) return;
+   enddo
+
+   ! compute weighting factors
+   m%N3D(1)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi - isopc(3) )
+   m%N3D(2)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi - isopc(3) )
+   m%N3D(3)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi - isopc(3) )
+   m%N3D(4)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi - isopc(3) )
+   m%N3D(5)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi + isopc(3) )
+   m%N3D(6)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi + isopc(3) )
+   m%N3D(7)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi + isopc(3) )
+   m%N3D(8)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi + isopc(3) )
+   m%N3D     = m%N3D / REAL( SIZE(m%N3D), ReKi )  ! normalize
+
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function
+END Subroutine WaveField_Interp_Setup3D
 
 
 !====================================================================================================
@@ -684,8 +727,6 @@ function WaveField_Interp_4D( pKinXX, m )
 
    real(SiKi)                          :: WaveField_Interp_4D
    real(SiKi)                          :: u(16)    ! size 2^n
-
-   WaveField_Interp_4D = 0.0_SiKi
 
    ! interpolate
    u( 1) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4) )
@@ -704,9 +745,7 @@ function WaveField_Interp_4D( pKinXX, m )
    u(14) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4) )
    u(15) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4) )
    u(16) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4) )
-
    WaveField_Interp_4D = SUM ( m%N4D * u )
-
 end function WaveField_Interp_4D
 
 
@@ -720,8 +759,6 @@ function WaveField_Interp_4D_Vec( pKinXX, m)
    real(SiKi)                                         :: WaveField_Interp_4D_Vec(3)
    real(SiKi)                                         :: u(16)   ! size 2^n
    integer(IntKi)                                     :: iDir
-
-   WaveField_Interp_4D_Vec = 0.0_SiKi
 
    ! interpolate
    do iDir = 1,3
@@ -741,7 +778,6 @@ function WaveField_Interp_4D_Vec( pKinXX, m)
       u(14) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
       u(15) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
       u(16) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
-
       WaveField_Interp_4D_Vec(iDir) = SUM ( m%N4D * u )
    end do
 END FUNCTION WaveField_Interp_4D_Vec
@@ -750,192 +786,74 @@ END FUNCTION WaveField_Interp_4D_Vec
 !====================================================================================================
 !> This routine interpolates a 3-d dataset with index 1 = time (zero-based indexing), 2 = x-coordinate (1-based indexing), 3 = y-coordinate (1-based indexing)
 !! This method is described here: http://rjwagner49.com/Mathematics/Interpolation.pdf
-function WaveField_Interp_3D( Time, Position, pKinXX, p, FirstWarn_Clamp, ErrStat, ErrMsg )
-   real(DbKi),                            intent(in   )  :: Time              !< time from the start of the simulation
-   real(ReKi),                            intent(in   )  :: Position(2)       !< Array of XYZ coordinates, 3
+!FIXME: do like the above and call the WaveField_Interp_Setup3D routine ahead
+function WaveField_Interp_3D( pKinXX, m )
    real(SiKi),                            intent(in   )  :: pKinXX(0:,:,:)    !< 3D Wave elevation data (SiKi for storage space reasons)
-   type(SeaSt_WaveField_ParameterType),   intent(in   )  :: p                 !< Parameters
-   logical,                               intent(inout)  :: FirstWarn_Clamp   !< first warning
-   integer(IntKi),                        intent(  out)  :: ErrStat           !< Error status
-   character(*),                          intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+   type(SeaSt_WaveField_MiscVarType),     intent(inout)  :: m                 !< MiscVars
 
    character(*), parameter                :: RoutineName = 'WaveField_Interp_3D'
    real(SiKi)                             :: WaveField_Interp_3D
-   real(SiKi)                             :: u(8)                             ! size 2^n
-   real(ReKi)                             :: N3D(8)
-   integer(IntKi)                         :: Indx_Lo(3), Indx_Hi(3)
-   integer(IntKi)                         :: i                                ! loop counter
-   real(SiKi)                             :: isopc(3)                         ! isoparametric coordinates
-   integer(IntKi)                         :: ErrStat2
-   character(ErrMsgLen)                   :: ErrMsg2
-
-   WaveField_Interp_3D = 0.0_SiKi
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-   ! Find the bounding indices for time
-   call SetTimeIndex(Time, p%delta(1), p%n(1), Indx_Lo(1), Indx_Hi(1), isopc(1), ErrStat2, ErrMsg2)
-   if (Failed()) return;
-
-   ! Find the bounding indices for XY position
-   do i=2,3
-      call SetCartesianXYIndex(Position(i-1), p%pZero(i), p%delta(i), p%n(i), Indx_Lo(i), Indx_Hi(i), isopc(i), FirstWarn_Clamp, ErrStat2, ErrMsg2)
-      if (Failed()) return;
-   end do
-
-   N3D(1)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi - isopc(3) )
-   N3D(2)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi - isopc(3) )
-   N3D(3)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi - isopc(3) )
-   N3D(4)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi - isopc(3) )
-   N3D(5)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi + isopc(3) )
-   N3D(6)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi + isopc(3) )
-   N3D(7)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi + isopc(3) )
-   N3D(8)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi + isopc(3) )
-   N3D     = N3D / REAL( SIZE(N3D), ReKi )  ! normalize
+   real(SiKi)                             :: u(8)
+   integer(IntKi)                         :: i
 
    ! interpolate
-   u(1)  = pKinXX( Indx_Hi(1), Indx_Lo(2), Indx_Lo(3) )
-   u(2)  = pKinXX( Indx_Hi(1), Indx_Hi(2), Indx_Lo(3) )
-   u(3)  = pKinXX( Indx_Lo(1), Indx_Hi(2), Indx_Lo(3) )
-   u(4)  = pKinXX( Indx_Lo(1), Indx_Lo(2), Indx_Lo(3) )
-   u(5)  = pKinXX( Indx_Hi(1), Indx_Lo(2), Indx_Hi(3) )
-   u(6)  = pKinXX( Indx_Hi(1), Indx_Hi(2), Indx_Hi(3) )
-   u(7)  = pKinXX( Indx_Lo(1), Indx_Hi(2), Indx_Hi(3) )
-   u(8)  = pKinXX( Indx_Lo(1), Indx_Lo(2), Indx_Hi(3) )
-
-   WaveField_Interp_3D = SUM ( N3D * u )
-
-contains
-   logical function Failed()
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
-   end function
+   u(1)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3) )
+   u(2)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3) )
+   u(3)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3) )
+   u(4)  = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3) )
+   u(5)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3) )
+   u(6)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3) )
+   u(7)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3) )
+   u(8)  = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3) )
+   WaveField_Interp_3D = SUM ( m%N3D * u )
 end function WaveField_Interp_3D
 
 
-FUNCTION WaveField_Interp_3D_VEC( Time, Position, pKinXX, p, FirstWarn_Clamp, ErrStat, ErrMsg )
-   real(DbKi),                            intent(in   )  :: Time              !< time from the start of the simulation
-   real(ReKi),                            intent(in   )  :: Position(2)       !< Array of XYZ coordinates, 3
+FUNCTION WaveField_Interp_3D_VEC( pKinXX, m )
    real(SiKi),                            intent(in   )  :: pKinXX(0:,:,:,:)  !< 3D Wave excitation data (SiKi for storage space reasons)
-   type(SeaSt_WaveField_ParameterType),   intent(in   )  :: p                 !< Parameters
-   logical,                               intent(inout)  :: FirstWarn_Clamp   !< first warning
-   integer(IntKi),                        intent(  out)  :: ErrStat           !< Error status
-   character(*),                          intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+   type(SeaSt_WaveField_MiscVarType),     intent(inout)  :: m                 !< MiscVars
 
    character(*), parameter                :: RoutineName = 'WaveField_Interp_3D_VEC'
    real(SiKi)                             :: WaveField_Interp_3D_VEC(3)
-   real(SiKi)                             :: u(8)                                     ! size 2^n
-   real(ReKi)                             :: N3D(8)
-   integer(IntKi)                         :: Indx_Lo(3), Indx_Hi(3)
-   integer(IntKi)                         :: i                                        ! loop counter
-   real(SiKi)                             :: isopc(3)                                 ! isoparametric coordinates
-   integer(IntKi)                         :: ErrStat2
-   character(ErrMsgLen)                   :: ErrMsg2
-
-   WaveField_Interp_3D_VEC = 0.0_SiKi
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-   ! Find the bounding indices for time
-   call SetTimeIndex(Time, p%delta(1), p%n(1), Indx_Lo(1), Indx_Hi(1), isopc(1), ErrStat2, ErrMsg2)
-   if (Failed()) return;
-
-   ! Find the bounding indices for XY position
-   do i=2,3
-      call SetCartesianXYIndex(Position(i-1), p%pZero(i), p%delta(i), p%n(i), Indx_Lo(i), Indx_Hi(i), isopc(i), FirstWarn_Clamp, ErrStat2, ErrMsg2)
-      if (Failed()) return;
-   end do
-
-   N3D(1)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi - isopc(3) )
-   N3D(2)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi - isopc(3) )
-   N3D(3)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi - isopc(3) )
-   N3D(4)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi - isopc(3) )
-   N3D(5)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi + isopc(3) )
-   N3D(6)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi + isopc(3) )
-   N3D(7)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi + isopc(3) )
-   N3D(8)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi + isopc(3) )
-   N3D     = N3D / REAL( SIZE(N3D), ReKi )  ! normalize
+   real(SiKi)                             :: u(8)
+   integer(IntKi)                         :: i
 
    ! interpolate
    do i = 1,3
-      u(1)  = pKinXX( Indx_Hi(1), Indx_Lo(2), Indx_Lo(3), i )
-      u(2)  = pKinXX( Indx_Hi(1), Indx_Hi(2), Indx_Lo(3), i )
-      u(3)  = pKinXX( Indx_Lo(1), Indx_Hi(2), Indx_Lo(3), i )
-      u(4)  = pKinXX( Indx_Lo(1), Indx_Lo(2), Indx_Lo(3), i )
-      u(5)  = pKinXX( Indx_Hi(1), Indx_Lo(2), Indx_Hi(3), i )
-      u(6)  = pKinXX( Indx_Hi(1), Indx_Hi(2), Indx_Hi(3), i )
-      u(7)  = pKinXX( Indx_Lo(1), Indx_Hi(2), Indx_Hi(3), i )
-      u(8)  = pKinXX( Indx_Lo(1), Indx_Lo(2), Indx_Hi(3), i )
-
-      WaveField_Interp_3D_VEC(i) = SUM ( N3D * u )
+      u(1)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), i )
+      u(2)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), i )
+      u(3)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), i )
+      u(4)  = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), i )
+      u(5)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), i )
+      u(6)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), i )
+      u(7)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), i )
+      u(8)  = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), i )
+      WaveField_Interp_3D_VEC(i) = SUM ( m%N3D * u )
    end do
-contains
-   logical function Failed()
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
-   end function
 end function WaveField_Interp_3D_VEC
 
 
-function Wavefield_Interp_3D_VEC6( Time, Position, pKinXX, p, FirstWarn_Clamp, ErrStat, ErrMsg )
-   real(DbKi),                            intent(in   )  :: Time              !< time from the start of the simulation
-   real(ReKi),                            intent(in   )  :: Position(2)       !< Array of XYZ coordinates, 3
+function Wavefield_Interp_3D_VEC6( pKinXX, m )
    real(SiKi),                            intent(in   )  :: pKinXX(0:,:,:,:)  !< 3D Wave excitation data (SiKi for storage space reasons)
-   type(SeaSt_WaveField_ParameterType),   intent(in   )  :: p                 !< Parameters
-   logical,                               intent(inout)  :: FirstWarn_Clamp   !< first warning
-   integer(IntKi),                        intent(  out)  :: ErrStat           !< Error status
-   character(*),                          intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+   type(SeaSt_WaveField_MiscVarType),     intent(inout)  :: m                 !< Miscvars
 
    character(*), parameter                :: RoutineName = 'Wavefield_Interp_3D_VEC6'
    real(SiKi)                             :: Wavefield_Interp_3D_VEC6(6)
-   real(SiKi)                             :: u(8)                   ! size 2^n
-   real(ReKi)                             :: N3D(8)
-   integer(IntKi)                         :: Indx_Lo(3), Indx_Hi(3)
-   integer(IntKi)                         :: i                      ! loop counter
-   real(SiKi)                             :: isopc(3)               ! isoparametric coordinates
-   integer(IntKi)                         :: ErrStat2
-   character(ErrMsgLen)                   :: ErrMsg2
-
-   Wavefield_Interp_3D_VEC6 = 0.0_SiKi
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-   ! Find the bounding indices for time
-   call SetTimeIndex(Time, p%delta(1), p%n(1), Indx_Lo(1), Indx_Hi(1), isopc(1), ErrStat2, ErrMsg2)
-
-   ! Find the bounding indices for XY position
-   do i=2,3
-      call SetCartesianXYIndex(Position(i-1), p%pZero(i), p%delta(i), p%n(i), Indx_Lo(i), Indx_Hi(i), isopc(i), FirstWarn_Clamp, ErrStat2, ErrMsg2)
-   end do
-
-   N3D(1)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi - isopc(3) )
-   N3D(2)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi - isopc(3) )
-   N3D(3)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi - isopc(3) )
-   N3D(4)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi - isopc(3) )
-   N3D(5)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi + isopc(3) )
-   N3D(6)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi + isopc(3) )
-   N3D(7)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi + isopc(3) )
-   N3D(8)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi + isopc(3) )
-   N3D     = N3D / REAL( SIZE(N3D), ReKi )  ! normalize
+   real(SiKi)                             :: u(8)
+   integer(IntKi)                         :: i
 
    ! interpolate
    do i = 1,6
-      u(1)  = pKinXX( Indx_Hi(1), Indx_Lo(2), Indx_Lo(3), i )
-      u(2)  = pKinXX( Indx_Hi(1), Indx_Hi(2), Indx_Lo(3), i )
-      u(3)  = pKinXX( Indx_Lo(1), Indx_Hi(2), Indx_Lo(3), i )
-      u(4)  = pKinXX( Indx_Lo(1), Indx_Lo(2), Indx_Lo(3), i )
-      u(5)  = pKinXX( Indx_Hi(1), Indx_Lo(2), Indx_Hi(3), i )
-      u(6)  = pKinXX( Indx_Hi(1), Indx_Hi(2), Indx_Hi(3), i )
-      u(7)  = pKinXX( Indx_Lo(1), Indx_Hi(2), Indx_Hi(3), i )
-      u(8)  = pKinXX( Indx_Lo(1), Indx_Lo(2), Indx_Hi(3), i )
-
-      Wavefield_Interp_3D_VEC6(i) = SUM ( N3D * u )
+      u(1)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), i )
+      u(2)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), i )
+      u(3)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), i )
+      u(4)  = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), i )
+      u(5)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), i )
+      u(6)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), i )
+      u(7)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), i )
+      u(8)  = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), i )
+      Wavefield_Interp_3D_VEC6(i) = SUM ( m%N3D * u )
    end do
-contains
-   logical function Failed()
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
-   end function
 end function Wavefield_Interp_3D_VEC6
 
 
