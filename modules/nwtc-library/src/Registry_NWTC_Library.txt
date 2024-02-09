@@ -82,16 +82,7 @@ typedef     ^       ^           IntKi           MeshID              -   0   -   
 typedef     ^       ^           R8Ki            Perturb             -   0   -   "perturbation"  -
 typedef     ^       ^           character(LinChanLen)   LinNames    :   -   -   ""  -
 
-typedef     ^       ModVarsType IntKi           ModNum              -   0   -   ""  -
-typedef     ^       ^           character(6)    ModAbbr             -   -   -   ""  -
-typedef     ^       ^           ModVarType      x                   :   -   -   "Module state variable array"  -
-typedef     ^       ^           ModVarType      u                   :   -   -   "Module input variable array"  -
-typedef     ^       ^           ModVarType      y                   :   -   -   "Module output variable array"  -
-typedef     ^       ^           IntKi           Nx                  -   -   -   ""  -
-typedef     ^       ^           IntKi           Nu                  -   -   -   ""  -
-typedef     ^       ^           IntKi           Ny                  -   -   -   ""  -
-
-typedef     ^       ModIdxType  IntKi           FlagFilter          -   -   -   ""  -
+typedef     ^       VarsIdxType IntKi           FlagFilter          -   -   -   ""  -
 typedef     ^       ^           IntKi           Nx                  -   -   -   ""  -
 typedef     ^       ^           IntKi           Nu                  -   -   -   ""  -
 typedef     ^       ^           IntKi           Ny                  -   -   -   ""  -
@@ -99,6 +90,14 @@ typedef     ^       ^           IntKi           ix                  :   -   -   
 typedef     ^       ^           IntKi           idx                 :   -   -   ""  -
 typedef     ^       ^           IntKi           iu                  :   -   -   ""  -
 typedef     ^       ^           IntKi           iy                  :   -   -   ""  -
+
+typedef     ^       ModVarsType IntKi           Nx                  -   -   -   ""  -
+typedef     ^       ^           IntKi           Nu                  -   -   -   ""  -
+typedef     ^       ^           IntKi           Ny                  -   -   -   ""  -
+typedef     ^       ^           ModVarType      x                   :   -   -   "Module state variable array"  -
+typedef     ^       ^           ModVarType      u                   :   -   -   "Module input variable array"  -
+typedef     ^       ^           ModVarType      y                   :   -   -   "Module output variable array"  -
+typedef     ^       ^           VarsIdxType     SolverIdx           -   -   -   ""  -
 
 typedef     ^       ModLinType  R8Ki            x                   :   -   -   ""  -
 typedef     ^       ^           R8Ki            dx                  :   -   -   ""  -

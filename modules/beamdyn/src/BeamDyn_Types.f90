@@ -61,6 +61,9 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: kp_coordinate      !< Key point coordinates array [-]
+    INTEGER(IntKi)  :: kp_total = 0_IntKi      !< Total number of key points [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_x      !< Names of the continuous states used in linearization [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_u      !< Names of the inputs used in linearization [-]
@@ -108,7 +111,6 @@ IMPLICIT NONE
     REAL(R8Ki)  :: pitchC = 0.0_R8Ki      !< Pitch actuator damping [-]
     LOGICAL  :: Echo = .false.      !< Echo [-]
     LOGICAL  :: RotStates = .TRUE.      !< Orient states in rotating frame during linearization? (flag) [-]
-    LOGICAL  :: RelStates = .FALSE.      !< Define states relative to root motion during linearization? (flag) [-]
     LOGICAL  :: tngt_stf_fd = .false.      !< Flag to compute tangent stifness matrix via finite difference [-]
     LOGICAL  :: tngt_stf_comp = .false.      !< Flag to compare finite differenced and analytical tangent stifness [-]
     INTEGER(IntKi)  :: NNodeOuts = 0_IntKi      !< Number of node outputs [0 - 9] [-]
@@ -159,6 +161,14 @@ IMPLICIT NONE
 ! =======================
 ! =========  BD_ParameterType  =======
   TYPE, PUBLIC :: BD_ParameterType
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
+    TYPE(VarsIdxType)  :: IdxAeroMap      !< Module variable index for AeroMap [-]
+    INTEGER(IntKi)  :: iVarRootMotion = 0_IntKi      !< Root motion variable index [-]
+    INTEGER(IntKi)  :: iVarPointLoad = 0_IntKi      !< Point load variable index [-]
+    INTEGER(IntKi)  :: iVarDistrLoad = 0_IntKi      !< Distributed load variable index [-]
+    INTEGER(IntKi)  :: iVarReactionForce = 0_IntKi      !< Reaction force variable index [-]
+    INTEGER(IntKi)  :: iVarBldMotion = 0_IntKi      !< Blade motion variable index [-]
+    INTEGER(IntKi)  :: iVarWriteOutput = 0_IntKi      !< Write output variable index [-]
     REAL(DbKi)  :: dt = 0.0_R8Ki      !< module dt [s]
     REAL(DbKi) , DIMENSION(1:9)  :: coef = 0.0_R8Ki      !< GA2 Coefficient [-]
     REAL(DbKi)  :: rhoinf = 0.0_R8Ki      !< Numerical Damping Coefficient for GA2 [-]
@@ -235,7 +245,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix [-]
     INTEGER(IntKi)  :: Jac_nx = 0_IntKi      !< half the number of continuous states in jacobian matrix [-]
     LOGICAL  :: RotStates = .false.      !< Orient states in rotating frame during linearization? (flag) [-]
-    LOGICAL  :: RelStates = .false.      !< Define states relative to root motion during linearization? (flag) [-]
     LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false) [-]
   END TYPE BD_ParameterType
 ! =======================
@@ -331,6 +340,11 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: LP_indx      !< Index vector for LU [-]
     TYPE(BD_InputType)  :: u      !< Inputs converted to the internal BD coordinate system [-]
     TYPE(BD_InputType)  :: u2      !< Inputs in the FAST coordinate system, possibly modified by pitch actuator [-]
+    TYPE(ModLinType)  :: Lin      !< Values corresponding to module variables [-]
+    TYPE(BD_ContinuousStateType)  :: x_perturb      !<  [-]
+    TYPE(BD_ContinuousStateType)  :: dx_perturb      !<  [-]
+    TYPE(BD_InputType)  :: u_perturb      !<  [-]
+    TYPE(BD_OutputType)  :: y_perturb      !<  [-]
   END TYPE BD_MiscVarType
 ! =======================
 CONTAINS
@@ -448,6 +462,20 @@ subroutine BD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInitOutputData%Vars => SrcInitOutputData%Vars
+   if (allocated(SrcInitOutputData%kp_coordinate)) then
+      LB(1:2) = lbound(SrcInitOutputData%kp_coordinate, kind=B8Ki)
+      UB(1:2) = ubound(SrcInitOutputData%kp_coordinate, kind=B8Ki)
+      if (.not. allocated(DstInitOutputData%kp_coordinate)) then
+         allocate(DstInitOutputData%kp_coordinate(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%kp_coordinate.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%kp_coordinate = SrcInitOutputData%kp_coordinate
+   end if
+   DstInitOutputData%kp_total = SrcInitOutputData%kp_total
    if (allocated(SrcInitOutputData%LinNames_y)) then
       LB(1:1) = lbound(SrcInitOutputData%LinNames_y, kind=B8Ki)
       UB(1:1) = ubound(SrcInitOutputData%LinNames_y, kind=B8Ki)
@@ -563,6 +591,10 @@ subroutine BD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   nullify(InitOutputData%Vars)
+   if (allocated(InitOutputData%kp_coordinate)) then
+      deallocate(InitOutputData%kp_coordinate)
+   end if
    if (allocated(InitOutputData%LinNames_y)) then
       deallocate(InitOutputData%LinNames_y)
    end if
@@ -593,10 +625,20 @@ subroutine BD_PackInitOutput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(BD_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'BD_PackInitOutput'
+   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
+   call RegPack(RF, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
+      end if
+   end if
+   call RegPackAlloc(RF, InData%kp_coordinate)
+   call RegPack(RF, InData%kp_total)
    call RegPackAlloc(RF, InData%LinNames_y)
    call RegPackAlloc(RF, InData%LinNames_x)
    call RegPackAlloc(RF, InData%LinNames_u)
@@ -615,10 +657,32 @@ subroutine BD_UnPackInitOutput(RF, OutData)
    integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(B8Ki)   :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
+   call RegUnpackAlloc(RF, OutData%kp_coordinate); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%kp_total); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LinNames_y); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LinNames_x); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LinNames_u); if (RegCheckErr(RF, RoutineName)) return
@@ -792,7 +856,6 @@ subroutine BD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%pitchC = SrcInputFileData%pitchC
    DstInputFileData%Echo = SrcInputFileData%Echo
    DstInputFileData%RotStates = SrcInputFileData%RotStates
-   DstInputFileData%RelStates = SrcInputFileData%RelStates
    DstInputFileData%tngt_stf_fd = SrcInputFileData%tngt_stf_fd
    DstInputFileData%tngt_stf_comp = SrcInputFileData%tngt_stf_comp
    DstInputFileData%NNodeOuts = SrcInputFileData%NNodeOuts
@@ -897,7 +960,6 @@ subroutine BD_PackInputFile(RF, Indata)
    call RegPack(RF, InData%pitchC)
    call RegPack(RF, InData%Echo)
    call RegPack(RF, InData%RotStates)
-   call RegPack(RF, InData%RelStates)
    call RegPack(RF, InData%tngt_stf_fd)
    call RegPack(RF, InData%tngt_stf_comp)
    call RegPack(RF, InData%NNodeOuts)
@@ -945,7 +1007,6 @@ subroutine BD_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%pitchC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Echo); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RotStates); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%RelStates); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%tngt_stf_fd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%tngt_stf_comp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NNodeOuts); if (RegCheckErr(RF, RoutineName)) return
@@ -1289,6 +1350,27 @@ subroutine BD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'BD_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (associated(SrcParamData%Vars)) then
+      if (.not. associated(DstParamData%Vars)) then
+         allocate(DstParamData%Vars, stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Vars.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end if
+   call NWTC_Library_CopyVarsIdxType(SrcParamData%IdxAeroMap, DstParamData%IdxAeroMap, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstParamData%iVarRootMotion = SrcParamData%iVarRootMotion
+   DstParamData%iVarPointLoad = SrcParamData%iVarPointLoad
+   DstParamData%iVarDistrLoad = SrcParamData%iVarDistrLoad
+   DstParamData%iVarReactionForce = SrcParamData%iVarReactionForce
+   DstParamData%iVarBldMotion = SrcParamData%iVarBldMotion
+   DstParamData%iVarWriteOutput = SrcParamData%iVarWriteOutput
    DstParamData%dt = SrcParamData%dt
    DstParamData%coef = SrcParamData%coef
    DstParamData%rhoinf = SrcParamData%rhoinf
@@ -1683,7 +1765,6 @@ subroutine BD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%Jac_ny = SrcParamData%Jac_ny
    DstParamData%Jac_nx = SrcParamData%Jac_nx
    DstParamData%RotStates = SrcParamData%RotStates
-   DstParamData%RelStates = SrcParamData%RelStates
    DstParamData%CompAeroMaps = SrcParamData%CompAeroMaps
 end subroutine
 
@@ -1698,6 +1779,14 @@ subroutine BD_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'BD_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (associated(ParamData%Vars)) then
+      call NWTC_Library_DestroyModVarsType(ParamData%Vars, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      deallocate(ParamData%Vars)
+      ParamData%Vars => null()
+   end if
+   call NWTC_Library_DestroyVarsIdxType(ParamData%IdxAeroMap, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%uuN0)) then
       deallocate(ParamData%uuN0)
    end if
@@ -1804,7 +1893,22 @@ subroutine BD_PackParam(RF, Indata)
    character(*), parameter         :: RoutineName = 'BD_PackParam'
    integer(B8Ki)   :: i1, i2, i3, i4
    integer(B8Ki)   :: LB(4), UB(4)
+   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
+      end if
+   end if
+   call NWTC_Library_PackVarsIdxType(RF, InData%IdxAeroMap) 
+   call RegPack(RF, InData%iVarRootMotion)
+   call RegPack(RF, InData%iVarPointLoad)
+   call RegPack(RF, InData%iVarDistrLoad)
+   call RegPack(RF, InData%iVarReactionForce)
+   call RegPack(RF, InData%iVarBldMotion)
+   call RegPack(RF, InData%iVarWriteOutput)
    call RegPack(RF, InData%dt)
    call RegPack(RF, InData%coef)
    call RegPack(RF, InData%rhoinf)
@@ -1897,7 +2001,6 @@ subroutine BD_PackParam(RF, Indata)
    call RegPack(RF, InData%Jac_ny)
    call RegPack(RF, InData%Jac_nx)
    call RegPack(RF, InData%RotStates)
-   call RegPack(RF, InData%RelStates)
    call RegPack(RF, InData%CompAeroMaps)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -1910,7 +2013,34 @@ subroutine BD_UnPackParam(RF, OutData)
    integer(B8Ki)   :: LB(4), UB(4)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(B8Ki)   :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
+   call NWTC_Library_UnpackVarsIdxType(RF, OutData%IdxAeroMap) ! IdxAeroMap 
+   call RegUnpack(RF, OutData%iVarRootMotion); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarPointLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarDistrLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarReactionForce); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarBldMotion); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarWriteOutput); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%dt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%coef); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%rhoinf); if (RegCheckErr(RF, RoutineName)) return
@@ -2011,7 +2141,6 @@ subroutine BD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%Jac_ny); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Jac_nx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RotStates); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%RelStates); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompAeroMaps); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -3123,6 +3252,21 @@ subroutine BD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call BD_CopyInput(SrcMiscData%u2, DstMiscData%u2, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyModLinType(SrcMiscData%Lin, DstMiscData%Lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call BD_CopyContState(SrcMiscData%x_perturb, DstMiscData%x_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call BD_CopyContState(SrcMiscData%dx_perturb, DstMiscData%dx_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call BD_CopyInput(SrcMiscData%u_perturb, DstMiscData%u_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call BD_CopyOutput(SrcMiscData%y_perturb, DstMiscData%y_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine BD_DestroyMisc(MiscData, ErrStat, ErrMsg)
@@ -3238,6 +3382,16 @@ subroutine BD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call BD_DestroyInput(MiscData%u2, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyModLinType(MiscData%Lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call BD_DestroyContState(MiscData%x_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call BD_DestroyContState(MiscData%dx_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call BD_DestroyInput(MiscData%u_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call BD_DestroyOutput(MiscData%y_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine BD_PackMisc(RF, Indata)
@@ -3283,6 +3437,11 @@ subroutine BD_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%LP_indx)
    call BD_PackInput(RF, InData%u) 
    call BD_PackInput(RF, InData%u2) 
+   call NWTC_Library_PackModLinType(RF, InData%Lin) 
+   call BD_PackContState(RF, InData%x_perturb) 
+   call BD_PackContState(RF, InData%dx_perturb) 
+   call BD_PackInput(RF, InData%u_perturb) 
+   call BD_PackOutput(RF, InData%y_perturb) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -3332,6 +3491,11 @@ subroutine BD_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%LP_indx); if (RegCheckErr(RF, RoutineName)) return
    call BD_UnpackInput(RF, OutData%u) ! u 
    call BD_UnpackInput(RF, OutData%u2) ! u2 
+   call NWTC_Library_UnpackModLinType(RF, OutData%Lin) ! Lin 
+   call BD_UnpackContState(RF, OutData%x_perturb) ! x_perturb 
+   call BD_UnpackContState(RF, OutData%dx_perturb) ! dx_perturb 
+   call BD_UnpackInput(RF, OutData%u_perturb) ! u_perturb 
+   call BD_UnpackOutput(RF, OutData%y_perturb) ! y_perturb 
 end subroutine
 
 subroutine BD_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)

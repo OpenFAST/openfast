@@ -42,6 +42,7 @@ typedef   ^         InitInputType LOGICAL         CompAeroMaps -   .FALSE. - "fl
 typedef   ^        InitOutputType CHARACTER(ChanLen)  WriteOutputHdr {:}  -   -   "Names of the output-to-file channels"   -
 typedef   ^        InitOutputType CHARACTER(ChanLen)  WriteOutputUnt {:}  -   -   "Units of the output-to-file channels"   -
 typedef   ^        InitOutputType ProgDesc            Ver             -   -   -   "This module's name, version, and date"  -
+typedef	  ^	       InitOutputType ModVarsType        *Vars            -   -   -   "Module Variables"
 typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_y   {:}  -   -   "Names of the outputs used in linearization" -
 #typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_z   {:}  -   -   "Names of the constraint states used in linearization" -
 typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_x   {:}  -   -   "Names of the continuous states used in linearization" -
@@ -98,7 +99,6 @@ typedef   ^        BD_InputFile     ^       pitchC - - -     "Pitch actuator dam
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 typedef   ^        BD_InputFile    Logical             Echo        -  - - "Echo" -
 typedef   ^        BD_InputFile    Logical             RotStates -  .TRUE. - "Orient states in rotating frame during linearization? (flag)" -
-typedef   ^        BD_InputFile    Logical             RelStates -  .FALSE. - "Define states relative to root motion during linearization? (flag)" -
 typedef   ^        BD_InputFile    Logical             tngt_stf_fd -  - - "Flag to compute tangent stifness matrix via finite difference" - 
 typedef   ^        BD_InputFile    Logical             tngt_stf_comp -  - - "Flag to compare finite differenced and analytical tangent stifness" -
 typedef   ^        BD_InputFile    IntKi               NNodeOuts   -  - - "Number of node outputs [0 - 9]"	-
@@ -165,6 +165,14 @@ typedef   ^        ^             ^           mEta       :::    - - "Center of ma
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 
+typedef   ^        ParameterType ModVarsType   &Vars             -         - -  "Module Variables"
+typedef   ^        ParameterType VarsIdxType    IdxAeroMap       -         - -  "Module variable index for AeroMap"
+typedef   ^        ParameterType IntKi          iVarRootMotion   -         - -  "Root motion variable index"
+typedef   ^        ParameterType IntKi          iVarPointLoad    -         - -  "Point load variable index"
+typedef   ^        ParameterType IntKi          iVarDistrLoad    -         - -  "Distributed load variable index"
+typedef   ^        ParameterType IntKi          iVarReactionForce  -       - -  "Reaction force variable index"
+typedef   ^        ParameterType IntKi          iVarBldMotion    -         - -  "Blade motion variable index"
+typedef   ^        ParameterType IntKi          iVarWriteOutput  -         - -  "Write output variable index"
 typedef   ^        ParameterType DbKi           dt               -         - -  "module dt" s
 typedef   ^        ParameterType DbKi           coef             {9}       - -  "GA2 Coefficient" -
 typedef   ^        ParameterType DbKi           rhoinf           -         - -  "Numerical Damping Coefficient for GA2"
@@ -248,7 +256,6 @@ typedef   ^        ParameterType    R8Ki        dx                     {6}      
 typedef   ^        ParameterType    Integer     Jac_ny                  -            - - "number of outputs in jacobian matrix" -
 typedef   ^        ParameterType    Integer     Jac_nx                  -            - - "half the number of continuous states in jacobian matrix" -
 typedef   ^        ParameterType    logical     RotStates               -            - - "Orient states in rotating frame during linearization? (flag)" -
-typedef   ^        ParameterType    Logical     RelStates               -            - - "Define states relative to root motion during linearization? (flag)" -
 typedef   ^        ParameterType    LOGICAL     CompAeroMaps            -   .FALSE.    - "flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false)"	-
 
 
@@ -374,4 +381,8 @@ typedef   ^        MiscVarType    ^            LP_RHS_LU    {:}           - - "R
 typedef   ^        MiscVarType    IntKi        LP_indx      {:}           - - "Index vector for LU" -
 typedef   ^        MiscVarType    BD_InputType u             -            - - "Inputs converted to the internal BD coordinate system" -
 typedef   ^        MiscVarType    BD_InputType u2            -            - - "Inputs in the FAST coordinate system, possibly modified by pitch actuator" -
-
+typedef   ^        MiscVarType    ModLinType   Lin           -            - - "Values corresponding to module variables"
+typedef   ^        MiscVarType    BD_ContinuousStateType    x_perturb   - - - "" -
+typedef   ^        MiscVarType    BD_ContinuousStateType    dx_perturb  - - - "" -
+typedef   ^        MiscVarType    BD_InputType  u_perturb    -            - - "" -
+typedef   ^        MiscVarType    BD_OutputType y_perturb    -            - - "" -

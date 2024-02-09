@@ -525,8 +525,7 @@ IMPLICIT NONE
 ! =========  ED_ParameterType  =======
   TYPE, PUBLIC :: ED_ParameterType
     TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
-    TYPE(ModIdxType)  :: IdxAeroMap      !< Module variable index for AeroMap [-]
-    TYPE(ModIdxType)  :: IdxSolver      !< Module variable index for Solver [-]
+    TYPE(VarsIdxType)  :: IdxAeroMap      !< Module variable index for AeroMap [-]
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [seconds]
     REAL(DbKi)  :: DT24 = 0.0_R8Ki      !< =DT/24 (used in loose coupling) [seconds]
     INTEGER(IntKi)  :: BldNodes = 0_IntKi      !< Number of blade nodes used in the analysis [-]
@@ -4824,10 +4823,7 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end if
-   call NWTC_Library_CopyModIdxType(SrcParamData%IdxAeroMap, DstParamData%IdxAeroMap, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyModIdxType(SrcParamData%IdxSolver, DstParamData%IdxSolver, CtrlCode, ErrStat2, ErrMsg2)
+   call NWTC_Library_CopyVarsIdxType(SrcParamData%IdxAeroMap, DstParamData%IdxAeroMap, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstParamData%DT = SrcParamData%DT
@@ -5773,9 +5769,7 @@ subroutine ED_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%Vars)
       ParamData%Vars => null()
    end if
-   call NWTC_Library_DestroyModIdxType(ParamData%IdxAeroMap, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyModIdxType(ParamData%IdxSolver, ErrStat2, ErrMsg2)
+   call NWTC_Library_DestroyVarsIdxType(ParamData%IdxAeroMap, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%PH)) then
       deallocate(ParamData%PH)
@@ -5991,8 +5985,7 @@ subroutine ED_PackParam(RF, Indata)
          call NWTC_Library_PackModVarsType(RF, InData%Vars) 
       end if
    end if
-   call NWTC_Library_PackModIdxType(RF, InData%IdxAeroMap) 
-   call NWTC_Library_PackModIdxType(RF, InData%IdxSolver) 
+   call NWTC_Library_PackVarsIdxType(RF, InData%IdxAeroMap) 
    call RegPack(RF, InData%DT)
    call RegPack(RF, InData%DT24)
    call RegPack(RF, InData%BldNodes)
@@ -6284,8 +6277,7 @@ subroutine ED_UnPackParam(RF, OutData)
    else
       OutData%Vars => null()
    end if
-   call NWTC_Library_UnpackModIdxType(RF, OutData%IdxAeroMap) ! IdxAeroMap 
-   call NWTC_Library_UnpackModIdxType(RF, OutData%IdxSolver) ! IdxSolver 
+   call NWTC_Library_UnpackVarsIdxType(RF, OutData%IdxAeroMap) ! IdxAeroMap 
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DT24); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BldNodes); if (RegCheckErr(RF, RoutineName)) return

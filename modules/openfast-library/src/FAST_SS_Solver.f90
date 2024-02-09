@@ -1370,9 +1370,7 @@ SUBROUTINE GetModuleJacobians( caseData, dxdotdy, p_FAST, y_FAST, m_FAST, ED, BD
             ! get the jacobians
             call BD_JacobianPInput( SS_t_global, BD%Input(1,k), BD%p(k), BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), BD%OtherSt(k,STATE_CURR), &
                                        BD%y(k), BD%m(k), ErrStat2, ErrMsg2, dYdu=y_FAST%Lin%Modules(Module_BD)%Instance(k)%D, &
-                                       dXdu=y_FAST%Lin%Modules(Module_BD)%Instance(k)%B, &
-                                       StateRel_x   =y_FAST%Lin%Modules(Module_BD)%Instance(k)%StateRel_x, &
-                                       StateRel_xdot=y_FAST%Lin%Modules(Module_BD)%Instance(k)%StateRel_xdot )
+                                       dXdu=y_FAST%Lin%Modules(Module_BD)%Instance(k)%B)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
             call BD_JacobianPContState( SS_t_global, BD%Input(1,k), BD%p(k), BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), BD%OtherSt(k,STATE_CURR), &

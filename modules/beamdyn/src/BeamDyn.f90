@@ -53,6 +53,9 @@ MODULE BeamDyn
    PUBLIC :: BD_UpdateGlobalRef      !< update the BeamDyn reference.  The reference for the calculations follows u%RootMotionMesh
                                                !  and therefore x%q must be updated from T -> T+DT to include the root motion from T->T+DT
 
+   PUBLIC :: BD_PackStateValues, BD_UnpackStateValues
+   PUBLIC :: BD_PackInputValues, BD_UnpackInputValues
+
    ! The original formulation kept all states in the inertial reference frame.  This has been leading to convergence issues
    ! when there is a large rotational change from the reference frame (i.e. large turbine yaw, large blade pitch).  During
    ! the development of the tight coupling algorithm for OpenFAST, we decided to try changing all the states in BeamDyn to
@@ -249,16 +252,18 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
 
       !............................................................................................
-      ! Initialize Jacobian:
+      ! Module Variables
       !............................................................................................
-   if (InitInp%Linearize) then
-      call Init_Jacobian( p, u, y, MiscVar, InitOut, ErrStat2, ErrMsg2); if (Failed()) return
-   end if
 
-   
+   call BD_InitVars(u, p, x, y, MiscVar, InitOut, InitInp%Linearize, ErrStat2, ErrMsg2)
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      !............................................................................................
+      ! Summary and cleanup
+      !............................................................................................
+
    call Cleanup()
 
-   return
 CONTAINS
    SUBROUTINE Cleanup()
       if (allocated(GLL_nodes )) deallocate(GLL_nodes )
@@ -929,7 +934,6 @@ subroutine SetParameters(InitInp, InputFileData, p, OtherState, ErrStat, ErrMsg)
 
 
    p%RotStates      = InputFileData%RotStates      ! Rotate states in linearization?
-   p%RelStates      = InputFileData%RelStates      ! Define states relative to root motion in linearization?
    
    p%rhoinf         = InputFileData%rhoinf         ! Numerical damping coefficient: [0,1].  No numerical damping if rhoinf = 1; maximum numerical damping if rhoinf = 0.
    p%dt             = InputFileData%DTBeam         ! Time step size
@@ -5779,13 +5783,327 @@ SUBROUTINE PitchActuator_SetBC(p, u, xd, AllOuts)
 
 END SUBROUTINE PitchActuator_SetBC
 
+
+subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
+   type(BD_InputType),           intent(inout)  :: u           !< An initial guess for the input; input mesh must be defined
+   type(BD_ParameterType),       intent(inout)  :: p           !< Parameters
+   type(BD_ContinuousStateType), intent(inout)  :: x           !< Continuous state
+   type(BD_OutputType),          intent(inout)  :: y           !< Initial system outputs (outputs are not calculated;
+   type(BD_MiscVarType),         intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
+   type(BD_InitOutputType),      intent(inout)  :: InitOut     !< Output for initialization routine
+   logical,                      intent(in   )  :: Linearize   !< Flag to initialize linearization variables
+   integer(IntKi),               intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter :: RoutineName = 'BD_InitVars'
+   INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
+
+   integer(IntKi)          :: i, j, Flags, idx
+   REAL(R8Ki)              :: MaxThrust, MaxTorque
+   CHARACTER(200)          :: label
+
+   ! Allocate space for variables (deallocate if already allocated)
+   if (associated(p%Vars)) deallocate(p%Vars)
+   allocate(p%Vars, stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Add pointers to vars to inititialization output
+   InitOut%Vars => p%Vars
+
+   !----------------------------------------------------------------------------
+   ! Continuous State Variables
+   !----------------------------------------------------------------------------
+
+   ! Set flags to none, if rotating states is true, set flags to rotating states
+   Flags = VF_AeroMap
+   if (p%RotStates) call SetFlags(Flags, VF_RotFrame)
+
+   ! Add translation displacement and orientation variables at blade nodes
+   ! Note: the first node is not included as it is a constraint state
+   do i = 2, p%node_total
+      label = 'finite element node '//trim(num2lstr(i))//' (number of elements = '//&
+                  trim(num2lstr(p%elem_total))//'; element order = '//trim(num2lstr(p%nodes_per_elem-1))//')'
+      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), VF_TransDisp, &
+                     VarIdx=idx, &
+                     Num=3, &
+                     Flags=flags, &
+                     iUsr=i, &
+                     Perturb=0.2_BDKi*D2R_D * p%blade_length, &
+                     LinNames=[trim(label)//' translational displacement in X, m', &
+                               trim(label)//' translational displacement in Y, m', &
+                               trim(label)//' translational displacement in Z, m'])
+      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), VF_Orientation, &
+                     VarIdx=idx, &
+                     Num=3, &
+                     Flags=flags, &
+                     iUsr=i, &
+                     Perturb=0.2_BDKi*D2R_D, &
+                     LinNames=[trim(label)//' rotational displacement in X, rad', &
+                               trim(label)//' rotational displacement in Y, rad', &
+                               trim(label)//' rotational displacement in Z, rad'])
+   end do
+   ! Add translation velocity and angular velocity at blade nodes
+   do i = 2, p%node_total
+      label = 'First time derivative of finite element node '//trim(num2lstr(i))//' (number of elements = '//&
+                  trim(num2lstr(p%elem_total))//'; element order = '//trim(num2lstr(p%nodes_per_elem-1))//')'
+      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), VF_TransVel, &
+                     VarIdx=idx, &
+                     Num=3, &
+                     Flags=flags, &
+                     iUsr=i, &
+                     Perturb=0.2_BDKi*D2R_D * p%blade_length, &
+                     LinNames=[trim(label)//' translational displacement in X, m/s', &
+                               trim(label)//' translational displacement in Y, m/s', &
+                               trim(label)//' translational displacement in Z, m/s'])
+      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), VF_AngularVel, &
+                     VarIdx=idx, &
+                     Num=3, &
+                     Flags=flags, &
+                     iUsr=i, &
+                     Perturb=0.2_BDKi*D2R_D, &
+                     LinNames=[trim(label)//' rotational displacement in X, rad/s', &
+                               trim(label)//' rotational displacement in Y, rad/s', &
+                               trim(label)//' rotational displacement in Z, rad/s'])
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Input variables
+   !----------------------------------------------------------------------------
+   
+   MaxThrust = 170.0_R8Ki*p%blade_length**2
+   MaxTorque =  14.0_R8Ki*p%blade_length**3
+
+   call MV_AddMeshVar(p%Vars%u, "RootMotion", MotionFields, &
+                      VarIdx=p%iVarRootMotion, &
+                      Mesh=u%RootMotion, &
+                      Perturbs=[0.2_R8Ki*D2R_D * p%blade_length, &    ! VF_TransDisp
+                                0.2_R8Ki*D2R_D, &                     ! VF_Orientation
+                                0.2_R8Ki*D2R_D * p%blade_length, &    ! VF_TransVel
+                                0.2_R8Ki*D2R_D, &                     ! VF_AngularVel
+                                0.2_R8Ki*D2R_D * p%blade_length, &    ! VF_TransAcc
+                                0.2_R8Ki*D2R_D])                      ! VF_AngularAcc
+   call MV_AddMeshVar(p%Vars%u, "PointLoad", LoadFields, &
+                      VarIdx=p%iVarPointLoad, &
+                      Mesh=u%PointLoad, &
+                      Perturbs=[MaxThrust/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes), &  ! VF_Force
+                                MaxTorque/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes)])   ! VF_Moment
+   call MV_AddMeshVar(p%Vars%u, "DistrLoad", LoadFields, &
+                      VarIdx=p%iVarDistrLoad, &
+                      Flags=ior(VF_Line, VF_AeroMap), &
+                      Mesh=u%DistrLoad, &
+                      Perturbs=[MaxThrust/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes), &  ! VF_Force
+                                MaxTorque/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes)])   ! VF_Moment
+
+   !----------------------------------------------------------------------------
+   ! Output variables
+   !----------------------------------------------------------------------------
+
+   call MV_AddMeshVar(p%Vars%y, 'Reaction force', LoadFields, &
+                      VarIdx=p%iVarReactionForce, &
+                      Mesh=y%ReactionForce)
+
+   call MV_AddMeshVar(p%Vars%y, 'Blade motion', MotionFields, &
+                      VarIdx=p%iVarBldMotion, &
+                      Mesh=y%BldMotion)
+   if (p%CompAeroMaps) then
+      do i = p%iVarBldMotion, size(p%Vars%y)
+         select case (p%Vars%y(i)%Field)
+         case (VF_TransDisp, VF_Orientation, VF_TransVel, VF_AngularVel)
+            call SetFlags(p%Vars%y(i)%Flags, VF_AeroMap)
+         end select
+      end do
+   end if
+
+   p%iVarWriteOutput = size(p%Vars%y) + 1
+   do i = 1, p%NumOuts
+      call MV_AddVar(p%Vars%y, p%OutParam(i)%Name, VF_Scalar, &
+                     VarIdx = j, &
+                     Flags=OutParamFlags(p%OutParam(i)%Indx), &
+                     iUsr=i, &
+                     LinNames=[trim(p%OutParam(i)%Name)//', '//trim(p%OutParam(i)%Units)], &
+                     Active=p%OutParam(i)%Indx > 0)
+   end do
+   idx = p%NumOuts + 1
+   do i = 1, p%BldNd_NumOuts
+      call MV_AddVar(p%Vars%y, p%BldNd_OutParam(i)%Name, VF_Scalar, &
+                     VarIdx = j, &
+                     Num=size(p%BldNd_BlOutNd), &
+                     Flags=BldNd_OutParamFlags(p%BldNd_OutParam(i)%Name), &
+                     iUsr=idx, &
+                     LinNames=[(BldNd_LinChan(p%BldNd_OutParam(i), j), j=1,size(p%BldNd_BlOutNd))], &
+                     Active=p%BldNd_OutParam(i)%Indx > 0)
+      idx = idx + size(p%BldNd_BlOutNd)
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Initialize Variables and Values
+   !----------------------------------------------------------------------------
+
+   CALL MV_InitVarsLin(p%Vars, m%Lin, Linearize .or. p%CompAeroMaps, ErrStat2, ErrMsg2); if (Failed()) return
+
+   call BD_CopyContState(x, m%x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call BD_CopyContState(x, m%dx_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call BD_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call BD_CopyOutput(y, m%y_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+
+   !----------------------------------------------------------------------------
+   ! Linearization
+   !----------------------------------------------------------------------------
+
+      ! If linearization is requested, initialize arrays
+   if (Linearize .or. p%CompAeroMaps) then
+      call MV_InitLinArrays(p%Vars, 2, &
+                        InitOut%LinNames_x, InitOut%RotFrame_x, InitOut%DerivOrder_x, &
+                        InitOut%LinNames_u, InitOut%RotFrame_u, InitOut%IsLoad_u, &
+                        InitOut%LinNames_y, InitOut%RotFrame_y, ErrStat2, ErrMsg2)
+      if (Failed()) return
+   end if
+
+   !----------------------------------------------------------------------------
+   ! AeroMap
+   !----------------------------------------------------------------------------
+
+   if (p%CompAeroMaps) then
+
+      ! Initialize index for variables flagged with VF_AeroMap
+      call MV_InitVarIdx(p%Vars, p%IdxAeroMap, VF_AeroMap, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+      ! Get subset of linearization arrays
+      InitOut%LinNames_x = InitOut%LinNames_x(p%IdxAeroMap%ix)
+      InitOut%RotFrame_x = InitOut%RotFrame_x(p%IdxAeroMap%ix)
+      InitOut%DerivOrder_x = InitOut%DerivOrder_x(p%IdxAeroMap%ix)
+      InitOut%LinNames_u = InitOut%LinNames_u(p%IdxAeroMap%iu)
+      InitOut%RotFrame_u = InitOut%RotFrame_u(p%IdxAeroMap%iu)
+      InitOut%IsLoad_u = InitOut%IsLoad_u(p%IdxAeroMap%iu)
+      InitOut%LinNames_y = InitOut%LinNames_y(p%IdxAeroMap%iy)
+      InitOut%RotFrame_y = InitOut%RotFrame_y(p%IdxAeroMap%iy)
+   end if
+
+contains
+
+   pure integer(IntKi) function OutParamFlags(indx)
+      integer(IntKi), intent(in) :: indx
+      integer(IntKi), parameter  :: GlobalFrameIndices(*) = [&
+         TipTVXg, TipTVYg, TipTVZg, TipRVXg, TipRVYg, TipRVZg, NTVg, NRVg]
+      if (any(GlobalFrameIndices == indx)) then
+         OutParamFlags = VF_None
+      else
+         OutParamFlags = VF_RotFrame
+      end if
+   end function
+
+   pure integer(IntKi) function BldNd_OutParamFlags(ChannelName)
+      character(*), intent(in)   :: ChannelName
+      integer(IntKi)             :: k
+      ! Get index of last character in channel name
+      k = len_trim(ChannelName)
+      ! If last letter is uppercase or lowercase G, then frame is global
+      if (ChannelName(k:k) == 'G' .or. ChannelName(k:k) == 'g') then
+         BldNd_OutParamFlags = VF_None
+      else
+         BldNd_OutParamFlags = VF_RotFrame
+      end if
+   end function
+
+   pure character(LinChanLen) function BldNd_LinChan(BldNd_OutParam, IdxNode) result(name)
+      type(OutParmType), intent(in) :: BldNd_OutParam
+      integer(IntKi), intent(in)    :: IdxNode
+      write(name, '("N",I3.3,A,", ",A)') IdxNode, trim(BldNd_OutParam%Name), trim(BldNd_OutParam%Units)
+   end function
+
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
+
+subroutine BD_PackStateValues(p, x, Values)
+   type(BD_ParameterType), intent(in)        :: p
+   type(BD_ContinuousStateType), intent(in)  :: x
+   real(R8Ki), intent(out)                   :: Values(:)
+   integer(IntKi)                            :: i
+   do i = 1, size(p%Vars%x)
+      associate (Var => p%Vars%x(i))
+         select case(Var%Field)
+         case (VF_TransDisp)
+            Values(Var%iLoc(1):Var%iLoc(2)) = x%q(1:3,Var%iUsr(1))      ! XYZ displacement
+         case (VF_Orientation)
+            Values(Var%iLoc(1):Var%iLoc(2)) = x%q(4:6,Var%iUsr(1))      ! WM Parameters
+         case (VF_TransVel)
+            Values(Var%iLoc(1):Var%iLoc(2)) = x%dqdt(1:3,Var%iUsr(1))   ! XYZ velocity
+         case (VF_AngularVel)
+            Values(Var%iLoc(1):Var%iLoc(2)) = x%dqdt(4:6,Var%iUsr(1))   ! Angular velocity
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine BD_UnpackStateValues(p, Values, x)
+   type(BD_ParameterType), intent(in)           :: p
+   real(R8Ki), intent(in)                       :: Values(:)
+   type(BD_ContinuousStateType), intent(inout)  :: x
+   integer(IntKi)                               :: i
+   do i = 1, size(p%Vars%x)
+      associate (Var => p%Vars%x(i))
+         select case(Var%Field)
+         case (VF_TransDisp)
+            x%q(1:3,Var%iUsr(1)) = Values(Var%iLoc(1):Var%iLoc(2))      ! XYZ displacement
+         case (VF_Orientation)
+            x%q(4:6,Var%iUsr(1)) = Values(Var%iLoc(1):Var%iLoc(2))      ! WM parameters
+         case (VF_TransVel)
+            x%dqdt(1:3,Var%iUsr(1)) = Values(Var%iLoc(1):Var%iLoc(2))   ! XYZ velocity
+         case (VF_AngularVel)
+            x%dqdt(4:6,Var%iUsr(1)) = Values(Var%iLoc(1):Var%iLoc(2))   ! Angular velocity
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine BD_PackInputValues(p, u, Values)
+   type(BD_ParameterType), intent(in)  :: p
+   type(BD_InputType), intent(in)      :: u
+   real(R8Ki), intent(out)             :: Values(:)
+   call MV_Pack(p%Vars%u, p%iVarRootMotion, u%RootMotion, Values)
+   call MV_Pack(p%Vars%u, p%iVarPointLoad, u%PointLoad, Values)
+   call MV_Pack(p%Vars%u, p%iVarDistrLoad, u%DistrLoad, Values)
+end subroutine
+
+subroutine BD_UnpackInputValues(p, Ary, u)
+   type(BD_ParameterType), intent(in)  :: p
+   real(R8Ki), intent(in)              :: Ary(:)
+   type(BD_InputType), intent(inout)   :: u
+   call MV_Unpack(p%Vars%u, p%iVarRootMotion, Ary, u%RootMotion)
+   call MV_Unpack(p%Vars%u, p%iVarPointLoad, Ary, u%PointLoad)
+   call MV_Unpack(p%Vars%u, p%iVarDistrLoad, Ary, u%DistrLoad)
+end subroutine
+
+subroutine BD_PackOutputValues(p, y, Ary, PackOut)
+   type(BD_ParameterType), intent(in)  :: p
+   type(BD_OutputType), intent(in)     :: y
+   real(R8Ki), intent(out)             :: Ary(:)
+   logical, intent(in)                 :: PackOut
+   integer(IntKi)                      :: i
+   call MV_Pack(p%Vars%y, p%iVarReactionForce, y%ReactionForce, Ary)
+   call MV_Pack(p%Vars%y, p%iVarBldMotion, y%BldMotion, Ary)
+   if (PackOut) then
+      do i = p%iVarWriteOutput, size(p%Vars%y)
+         call MV_Pack(p%Vars%y, i, y%WriteOutput(p%Vars%y(i)%iUsr(1):p%Vars%y(i)%iUsr(2)), Ary)
+      end do
+   end if
+end subroutine
+
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! ###### The following four routines are Jacobian routines for linearization capabilities #######
 ! If the module does not implement them, set ErrStat = ErrID_Fatal in BD_Init() when InitInp%Linearize is .true.
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
-SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu, StateRel_x, StateRel_xdot)
+SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu, ModIdx)
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -5802,236 +6120,140 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    TYPE(BD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect
-                                                                               !!   to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with
-                                                                               !!   respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with
-                                                                               !!   respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with
-                                                                               !!   respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: StateRel_x(:,:)    !< Matrix by which the displacement states are optionally converted relative to root
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: StateRel_xdot(:,:) !< Matrix by which the velocity states are optionally converted relative to root
-
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with respect to the inputs (u) [intent in to avoid deallocation]
+   TYPE(VarsIdxType), OPTIONAL,          INTENT(IN   )           :: ModIdx     !< Module linearization type
    
-      ! local variables
-   TYPE(BD_OutputType)                                           :: y_p
-   TYPE(BD_OutputType)                                           :: y_m
-   TYPE(BD_ContinuousStateType)                                  :: x_p
-   TYPE(BD_ContinuousStateType)                                  :: x_m
-   TYPE(BD_InputType)                                            :: u_perturb
-   REAL(R8Ki)                                                    :: delta_p, delta_m  ! delta change in input (plus, minus)
-   INTEGER(IntKi)                                                :: i
-   REAL(R8Ki)                                                    :: RotateStates(3,3)
-   REAL(R8Ki), ALLOCATABLE                                       :: RelState_x(:,:)   
-   REAL(R8Ki), ALLOCATABLE                                       :: RelState_xdot(:,:)
-   
-   integer(intKi)                                                :: ErrStat2
-   character(ErrMsgLen)                                          :: ErrMsg2
-   character(*), parameter                                       :: RoutineName = 'BD_JacobianPInput'
-
-
-      ! Initialize ErrStat
+   character(*), parameter    :: RoutineName = 'BD_JacobianPInput'
+   integer(intKi)             :: ErrStat2
+   character(ErrMsgLen)       :: ErrMsg2
+   INTEGER(IntKi)             :: i, j, col
+   REAL(R8Ki)                 :: RotateStates(3,3)
+   logical                    :: PackOut
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
+   ! Set flag to pack write outputs
+   PackOut = .not. present(ModIdx)
+
+   ! Get OP values here
+   call BD_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2); if (Failed()) return
    
-      ! get OP values here:
-   call BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   ! Make a copy of the inputs to perturb
+   call BD_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call BD_PackInputValues(p, u, m%Lin%u)
    
-      ! make a copy of the inputs to perturb
-   call BD_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if (ErrStat>=AbortErrLev) then
-         call cleanup()
-         return
-      end if
-
-   if (p%RelStates) then
-      if (.not. allocated(RelState_x)) then
-         call AllocAry(RelState_x, p%Jac_nx * 2, size(p%Jac_u_indx,1), 'RelState_x', ErrStat2, ErrMsg2) ! 18=6 motion fields on mesh x 3 directions for each field
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      end if
-      if (.not. allocated(RelState_xdot)) then
-         call AllocAry(RelState_xdot, size(RelState_x,1), size(RelState_x,2), 'RelState_xdot', ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      end if
-      if (ErrStat>=AbortErrLev) then
-         call cleanup()
-         return
-      end if
+   ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
+   if (present(dYdu)) then
       
-      call Compute_RelState_Matrix(p, u, x, OtherState, RelState_x, RelState_xdot)
-
-      if ( present(StateRel_x) ) then
-         if (.not. allocated(StateRel_x)) then
-            call AllocAry(StateRel_x, size(RelState_x,1), size(RelState_x,2), 'StateRel_x', ErrStat2, ErrMsg2)
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-               if (ErrStat>=AbortErrLev) then
-                  call cleanup()
-                  return
-               end if
+      ! Allocate dYdu if not allocated
+      if (.not. allocated(dYdu)) then
+         if (present(ModIdx)) then
+            call AllocAry(dYdu, ModIdx%Ny, ModIdx%Nu, 'dYdu', ErrStat2, ErrMsg2)
+         else
+            call AllocAry(dYdu, p%Vars%Ny, p%Vars%Nu, 'dYdu', ErrStat2, ErrMsg2)
          end if
-         StateRel_x = RelState_x
+         if (Failed()) return
       end if
-      if ( present(StateRel_xdot) ) then
-         if (.not. allocated(StateRel_xdot)) then
-            call AllocAry(StateRel_xdot, size(RelState_xdot,1), size(RelState_xdot,2), 'StateRel_xdot', ErrStat2, ErrMsg2)
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-               if (ErrStat>=AbortErrLev) then
-                  call cleanup()
-                  return
-               end if
-         end if
-         StateRel_xdot = RelState_xdot
-      end if
-   else
-      if ( present(StateRel_x) ) then
-         if (allocated(StateRel_x)) deallocate(StateRel_x)
-      end if
-      if ( present(StateRel_xdot) ) then
-         if (allocated(StateRel_xdot)) deallocate(StateRel_xdot)
-      end if
-   end if
       
+      ! If not computing aero maps
+      if (.not. p%CompAeroMaps) then
+     
+         ! Loop through input variables
+         do i = 1, size(p%Vars%u)
 
-   IF ( PRESENT( dYdu ) ) THEN
-      ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
-      
-      ! allocate dYdu
-      if (.not. allocated(dYdu) ) then
-         call AllocAry(dYdu,p%Jac_ny, size(p%Jac_u_indx,1),'dYdu', ErrStat2, ErrMsg2)
-         call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
-      end if
-      
-      if (p%CompAeroMaps) then
-         dYdu = 0.0_R8Ki
-      else
-      
-            ! make a copy of outputs because we will need two for the central difference computations (with orientations)
-         call BD_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call BD_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            if (ErrStat>=AbortErrLev) then
-               call cleanup()
-               return
+            ! If variable flag not in flag filter, skip
+            if (present(ModIdx)) then
+               if (iand(p%Vars%u(i)%Flags, ModIdx%FlagFilter) == 0) cycle
             end if
-         
-         do i=1,size(p%Jac_u_indx,1)
-         
-               ! get u_op + delta_p u
-            call BD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-            call Perturb_u( p, i, 1, u_perturb, delta_p )
-      
-               ! compute y at u_op + delta_p u
-            call BD_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ) 
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-            
-               ! get u_op - delta_m u
-            call BD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-            call Perturb_u( p, i, -1, u_perturb, delta_m )
-         
-               ! compute y at u_op - delta_m u
-            call BD_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ) 
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-      
-               ! get central difference:
-            call Compute_dY( p, y_p, y_m, delta_p, dYdu(:,i) )
-         
+
+            ! Loop through number of linearization perturbations in variable
+            do j = 1, p%Vars%u(i)%Num
+
+               ! Calculate positive perturbation
+               call MV_Perturb(p%Vars%u(i), j, 1, m%Lin%u, m%Lin%u_perturb)
+               call BD_UnpackInputValues(p, m%Lin%u_perturb, m%u_perturb)
+               call BD_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2, NeedWriteOutput=PackOut); if (Failed()) return
+               call BD_PackOutputValues(p, m%y_perturb, m%Lin%y_pos, PackOut)
+
+               ! Calculate negative perturbation
+               call MV_Perturb(p%Vars%u(i), j, -1, m%Lin%u, m%Lin%u_perturb)
+               call BD_UnpackInputValues(p, m%Lin%u_perturb, m%u_perturb)
+               call BD_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2, NeedWriteOutput=PackOut); if (Failed()) return
+               call BD_PackOutputValues(p, m%y_perturb, m%Lin%y_neg, PackOut)
+
+               ! Calculate column index
+               col = p%Vars%u(i)%iLoc(1) + j - 1
+
+               ! Get partial derivative via central difference and store in full linearization array
+               call MV_ComputeCentralDiff(p%Vars%y, p%Vars%u(i)%Perturb, m%Lin%y_pos, m%Lin%y_neg, m%Lin%dYdu(:,col))
+            end do
          end do
       
-      
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
+         ! If ModIdx is present, copy subset of Jacobian to output 
+         if (present(ModIdx)) then
+            dYdu = m%Lin%dYdu(ModIdx%iy, ModIdx%iu)
+         else
+            dYdu = m%Lin%dYdu
          end if
-         call BD_DestroyOutput( y_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
-         call BD_DestroyOutput( y_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
-      
-         if (p%RelStates) then
-            call BD_JacobianPContState_noRotate( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx=m%lin_C )
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-               if (ErrStat>=AbortErrLev) then
-                  call cleanup()
-                  return
-               end if
-            dYdu = dYdu + matmul(m%lin_C, RelState_x)
-         end if
-         
+      else
+         dYdu = 0.0_R8Ki
       end if ! CompAeroMaps
       
    END IF
 
-   IF ( PRESENT( dXdu ) ) THEN
-      ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
+   ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
+   if (present(dXdu)) then
 
-      ! allocate dXdu if necessary
+      ! Allocate dXdu if not allocated
       if (.not. allocated(dXdu)) then
-         call AllocAry(dXdu, p%Jac_nx * 2, size(p%Jac_u_indx,1), 'dXdu', ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
+         if (present(ModIdx)) then
+            call AllocAry(dXdu, ModIdx%Nx, ModIdx%Nu, 'dXdu', ErrStat2, ErrMsg2)
+         else
+            call AllocAry(dXdu, p%Vars%Nx, p%Vars%Nu, 'dXdu', ErrStat2, ErrMsg2)
          end if
+         if (Failed()) return
       end if
-      
-         
-      do i=1,size(p%Jac_u_indx,1)
-         
-            ! get u_op + delta u
-         call BD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         call Perturb_u( p, i, 1, u_perturb, delta_p )
+   
+      ! Loop through input variables
+      do i = 1, size(p%Vars%u)
 
-            ! compute x at u_op + delta u
-         call BD_CalcContStateDeriv( t, u_perturb, p, x, xd, z, OtherState, m, x_p, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            
-                                         
-            ! get u_op - delta u
-         call BD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-            
-         call Perturb_u( p, i, -1, u_perturb, delta_m )
-         
-            ! compute x at u_op - delta u
-         call BD_CalcContStateDeriv( t, u_perturb, p, x, xd, z, OtherState, m, x_m, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-            
-            
-            ! get central difference:
-            
-            ! we may have had an error allocating memory, so we'll check
-         if (ErrStat>=AbortErrLev) then 
-            call cleanup()
-            return
+         ! If variable flag not in flag filter, skip
+         if (present(ModIdx)) then
+            if (iand(p%Vars%u(i)%Flags, ModIdx%FlagFilter) == 0) cycle
          end if
-         
-            ! get central difference:
-         call Compute_dX( p, x_p, x_m, delta_p, dXdu(:,i) )
-         
-      end do
-      
-      call BD_DestroyContState( x_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
-      call BD_DestroyContState( x_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
 
-      if (p%RelStates) then
-         call BD_JacobianPContState_noRotate( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dXdx=m%lin_A )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            if (ErrStat>=AbortErrLev) then
-               call cleanup()
-               return
-            end if
-         dXdu = dXdu + matmul(m%lin_A, RelState_x) - RelState_xdot
+         ! Loop through number of linearization perturbations in variable
+         do j = 1, p%Vars%u(i)%Num
+
+            ! Calculate positive perturbation
+            call MV_Perturb(p%Vars%u(i), j, 1, m%Lin%u, m%Lin%u_perturb)
+            call BD_UnpackInputValues(p, m%Lin%u_perturb, m%u_perturb)
+            call BD_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dx_perturb, ErrStat2, ErrMsg2); if (Failed()) return
+            call BD_PackStateValues(p, m%dx_perturb, m%Lin%x_pos)
+
+            ! Calculate negative perturbation
+            call MV_Perturb(p%Vars%u(i), j, -1, m%Lin%u, m%Lin%u_perturb)
+            call BD_UnpackInputValues(p, m%Lin%u_perturb, m%u_perturb)
+            call BD_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dx_perturb, ErrStat2, ErrMsg2); if (Failed()) return
+            call BD_PackStateValues(p, m%dx_perturb, m%Lin%x_neg)
+
+            ! Calculate column index
+            col = p%Vars%u(i)%iLoc(1) + j - 1
+
+            ! Get partial derivative via central difference and store in full linearization array
+            m%Lin%dXdu(:,col) = (m%Lin%x_pos - m%Lin%x_neg) / (2.0_R8Ki * p%Vars%u(i)%Perturb)
+         end do
+      end do
+
+      ! If ModIdx is present, copy subset of Jacobian to output 
+      if (present(ModIdx)) then
+         dXdu = m%Lin%dXdu(ModIdx%iy, ModIdx%iu)
+      else
+         dXdu = m%Lin%dXdu
       end if
       
       if (p%RotStates) then
@@ -6040,33 +6262,26 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             dXdu(i:i+2, :) = matmul( RotateStates, dXdu(i:i+2, :) )
          end do
       end if
+   end if ! dXdu
 
-   END IF ! dXdu
-
-   IF ( PRESENT( dXddu ) ) THEN
+   if (present(dXddu)) then
       if (allocated(dXddu)) deallocate(dXddu)
-   END IF
+   end if
 
-   IF ( PRESENT( dZdu ) ) THEN
+   if (present(dZdu)) then
       if (allocated(dZdu)) deallocate(dZdu)
-   END IF
+   end if
    
-   call cleanup()
 contains
-   subroutine cleanup()
-      call BD_DestroyOutput(      y_p, ErrStat2, ErrMsg2 )
-      call BD_DestroyOutput(      y_m, ErrStat2, ErrMsg2 )
-      call BD_DestroyInput( u_perturb, ErrStat2, ErrMsg2 )
-      
-      if (allocated(RelState_x))    deallocate(RelState_x)
-      if (allocated(RelState_xdot)) deallocate(RelState_xdot)
-   end subroutine cleanup
-
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
 END SUBROUTINE BD_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
-SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx, StateRotation )
+SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx, ModIdx, StateRotation )
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )      :: t                  !< Time in seconds at operating point
@@ -6083,65 +6298,40 @@ SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    TYPE(BD_MiscVarType),                 INTENT(INOUT)      :: m                  !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)      :: ErrStat            !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)      :: ErrMsg             !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dYdx(:,:)          !< Partial derivatives of output functions
-                                                                                  !!   (Y) with respect to the continuous
-                                                                                  !!   states (x) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dXdx(:,:)          !< Partial derivatives of continuous state
-                                                                                  !!   functions (X) with respect to
-                                                                                  !!   the continuous states (x) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dXddx(:,:)         !< Partial derivatives of discrete state
-                                                                                  !!   functions (Xd) with respect to
-                                                                                  !!   the continuous states (x) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dZdx(:,:)          !< Partial derivatives of constraint state
-                                                                                  !!   functions (Z) with respect to
-                                                                                  !!   the continuous states (x) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dYdx(:,:)          !< Partial derivatives of output functions (Y) with respect to the continuous states (x)
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dXdx(:,:)          !< Partial derivatives of continuous state functions (X) with respect to the continuous states (x)
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dXddx(:,:)         !< Partial derivatives of discrete state functions (Xd) with respect to the continuous states (x)
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dZdx(:,:)          !< Partial derivatives of constraint state functions (Z) with respect to the continuous states (x)
+   TYPE(VarsIdxType), OPTIONAL,          INTENT(IN   )      :: ModIdx             !< Module linearization type
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: StateRotation(:,:) !< Matrix by which the states are optionally rotated
 
-
-      ! local variables
-   TYPE(BD_OutputType)                               :: y_p
-   TYPE(BD_OutputType)                               :: y_m
-   TYPE(BD_ContinuousStateType)                      :: x_p
-   TYPE(BD_ContinuousStateType)                      :: x_m
-   TYPE(BD_ContinuousStateType)                      :: x_perturb
-   INTEGER(IntKi)                                    :: i
-   REAL(R8Ki)                                        :: RotateStates(3,3)
-   REAL(R8Ki)                                        :: RotateStatesTranspose(3,3)
-   
-   INTEGER(IntKi)                                    :: ErrStat2
-   CHARACTER(ErrMsgLen)                              :: ErrMsg2
-   CHARACTER(*), PARAMETER                           :: RoutineName = 'BD_JacobianPContState'
-   
-   
-      ! Initialize ErrStat
+   CHARACTER(*), PARAMETER    :: RoutineName = 'BD_JacobianPContState'
+   INTEGER(IntKi)             :: ErrStat2
+   CHARACTER(ErrMsgLen)       :: ErrMsg2
+   INTEGER(IntKi)             :: i, j, col
+   REAL(R8Ki)                 :: RotateStates(3,3)
+   REAL(R8Ki)                 :: RotateStatesTranspose(3,3)
+   logical                    :: PackOut
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   IF ( PRESENT( dYdx ) .AND. PRESENT( dXdx )) THEN
-      call BD_JacobianPContState_noRotate(t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2, dYdx, dXdx)
-!      call BD_JacobianPContState_noRotate(t, u, p, x, xd, z, OtherState, y, m, LIN_X_CALLED_FIRST, ErrStat2, ErrMsg2, dYdx, dXdx)
-   ELSEIF ( PRESENT( dYdx ) ) THEN
-      call BD_JacobianPContState_noRotate(t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2, dYdx=dYdx )
-!      call BD_JacobianPContState_noRotate(t, u, p, x, xd, z, OtherState, y, m, LIN_X_CALLED_FIRST, ErrStat2, ErrMsg2, dYdx=dYdx )
-   ELSEIF ( PRESENT( dXdx ) ) THEN
-      call BD_JacobianPContState_noRotate(t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2, dXdx=dXdx)
-!      call BD_JacobianPContState_noRotate(t, u, p, x, xd, z, OtherState, y, m, LIN_X_CALLED_FIRST, ErrStat2, ErrMsg2, dXdx=dXdx)
-   END IF
-   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   ! Set flag to pack write outputs
+   PackOut = .not. present(ModIdx)
+
+   ! Copy state values
+   call BD_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call BD_PackStateValues(p, x, m%Lin%x)
    
+   ! If rotate states is enabled
    if (p%RotStates) then
-      RotateStates          = matmul( u%RootMotion%Orientation(:,:,1), transpose( u%RootMotion%RefOrientation(:,:,1) ) )
+
+      RotateStates = matmul(u%RootMotion%Orientation(:,:,1), transpose(u%RootMotion%RefOrientation(:,:,1)))
       RotateStatesTranspose = transpose( RotateStates )
 
-      if ( present(StateRotation) ) then
+      if (present(StateRotation)) then
          if (.not. allocated(StateRotation)) then
-            call AllocAry(StateRotation, 3, 3, 'StateRotation', ErrStat2, ErrMsg2)
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-               if (ErrStat>=AbortErrLev) then
-                  call cleanup()
-                  return
-               end if
+            call AllocAry(StateRotation, 3, 3, 'StateRotation', ErrStat2, ErrMsg2); if (Failed()) return
          end if
          StateRotation = RotateStates
       end if
@@ -6151,30 +6341,125 @@ SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       end if
    end if
 
-   IF ( PRESENT( dYdx ) ) THEN
+   ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
+   if (present(dYdx)) then
 
+      ! Allocate dYdx if not allocated
+      if (.not. allocated(dYdx)) then
+         if (present(ModIdx)) then
+            call AllocAry(dYdx, ModIdx%Ny, ModIdx%Nx, 'dYdx', ErrStat2, ErrMsg2)
+         else
+            call AllocAry(dYdx, p%Vars%Ny, p%Vars%Nx, 'dYdx', ErrStat2, ErrMsg2)
+         end if
+         if (Failed()) return
+      end if
+
+      ! Loop through input variables
+      do i = 1, size(p%Vars%x)
+
+         ! If variable flag not in flag filter, skip
+         if (present(ModIdx)) then
+            if (iand(p%Vars%x(i)%Flags, ModIdx%FlagFilter) == 0) cycle
+         end if
+
+         ! Loop through number of linearization perturbations in variable
+         do j = 1, p%Vars%x(i)%Num
+
+            ! Calculate positive perturbation
+            call MV_Perturb(p%Vars%x(i), j, 1, m%Lin%x, m%Lin%x_perturb)
+            call BD_UnpackStateValues(p, m%Lin%x_perturb, m%x_perturb)
+            call BD_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2, NeedWriteOutput=PackOut); if (Failed()) return
+            call BD_PackOutputValues(p, m%y_perturb, m%Lin%y_pos, PackOut)
+
+            ! Calculate negative perturbation
+            call MV_Perturb(p%Vars%x(i), j, -1, m%Lin%x, m%Lin%x_perturb)
+            call BD_UnpackStateValues(p, m%Lin%x_perturb, m%x_perturb)
+            call BD_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2, NeedWriteOutput=PackOut); if (Failed()) return
+            call BD_PackOutputValues(p, m%y_perturb, m%Lin%y_neg, PackOut)
+
+            ! Calculate column index
+            col = p%Vars%x(i)%iLoc(1) + j - 1
+
+            ! Get partial derivative via central difference and store in full linearization array
+            call MV_ComputeCentralDiff(p%Vars%y, p%Vars%x(i)%Perturb, m%Lin%y_pos, m%Lin%y_neg, m%Lin%dYdx(:,col))
+         end do
+      end do
+            
+      ! If ModIdx is present, copy subset of Jacobian to output 
+      if (present(ModIdx)) then
+         dYdx = m%Lin%dYdx(ModIdx%iy, ModIdx%ix)
+      else
+         dYdx = m%Lin%dYdx
+      end if
+
+      ! If rotate state is enabled, rotate
       if (p%RotStates) then
          do i=1,size(dYdx,2),3
-            dYdx(:, i:i+2) = matmul( dYdx(:, i:i+2), RotateStatesTranspose )
+            dYdx(:, i:i+2) = matmul( dYdx(:, i:i+2), RotateStatesTranspose)
          end do
       end if
-      
-   END IF
+   end if
 
-   IF ( PRESENT( dXdx ) ) THEN
+   ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
+   if (present(dXdx)) then
 
-      ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
+      ! Allocate dXdx if not allocated
+      if (.not. allocated(dXdx)) then
+         if (present(ModIdx)) then
+            call AllocAry(dXdx, ModIdx%Nx, ModIdx%Nx, 'dXdx', ErrStat2, ErrMsg2)
+         else
+            call AllocAry(dXdx, p%Vars%Nx, p%Vars%Nx, 'dXdx', ErrStat2, ErrMsg2)
+         end if
+         if (Failed()) return
+      end if
+
+      ! Loop through input variables
+      do i = 1, size(p%Vars%x)
+
+         ! If variable flag not in flag filter, skip
+         if (present(ModIdx)) then
+            if (iand(p%Vars%x(i)%Flags, ModIdx%FlagFilter) == 0) cycle
+         end if
+
+         ! Loop through number of linearization perturbations in variable
+         do j = 1, p%Vars%x(i)%Num
+
+            ! Calculate positive perturbation
+            call MV_Perturb(p%Vars%x(i), j, 1, m%Lin%x, m%Lin%x_perturb)
+            call BD_UnpackStateValues(p, m%Lin%x_perturb, m%x_perturb)
+            call BD_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dx_perturb, ErrStat2, ErrMsg2); if (Failed()) return
+            call BD_PackStateValues(p, m%dx_perturb, m%Lin%x_pos)
+
+            ! Calculate negative perturbation
+            call MV_Perturb(p%Vars%x(i), j, -1, m%Lin%x, m%Lin%x_perturb)
+            call BD_UnpackStateValues(p, m%Lin%x_perturb, m%x_perturb)
+            call BD_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dx_perturb, ErrStat2, ErrMsg2); if (Failed()) return
+            call BD_PackStateValues(p, m%dx_perturb, m%Lin%x_neg)
+
+            ! Calculate column index
+            col = p%Vars%x(i)%iLoc(1) + j - 1
+
+            ! Get partial derivative via central difference and store in full linearization array
+            m%Lin%dXdx(:,col) = (m%Lin%x_pos - m%Lin%x_neg) / (2.0_R8Ki * p%Vars%x(i)%Perturb)
+         end do
+      end do
+
+      ! If ModIdx is present, copy subset of Jacobian to output 
+      if (present(ModIdx)) then
+         dXdx = m%Lin%dXdx(ModIdx%idx, ModIdx%ix)
+      else
+         dXdx = m%Lin%dXdx
+      end if
 
       if (p%RotStates) then
          do i=1,size(dXdx,1),3
-            dXdx(i:i+2,:) = matmul( RotateStates, dXdx(i:i+2,:) )
+            dXdx(i:i+2,:) = matmul(RotateStates, dXdx(i:i+2,:))
          end do
          do i=1,size(dXdx,2),3
-            dXdx(:, i:i+2) = matmul( dXdx(:, i:i+2), RotateStatesTranspose )
+            dXdx(:, i:i+2) = matmul(dXdx(:, i:i+2), RotateStatesTranspose)
          end do
       end if
-      
-   END IF
+   end if
 
    IF ( PRESENT( dXddx ) ) THEN
       if (allocated(dXddx)) deallocate(dXddx)
@@ -6184,219 +6469,12 @@ SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       if (allocated(dZdx)) deallocate(dZdx)
    END IF
 
-   call cleanup()
-   
 contains
-   subroutine cleanup()
-      call BD_DestroyOutput(         y_p, ErrStat2, ErrMsg2 )
-      call BD_DestroyOutput(         y_m, ErrStat2, ErrMsg2 )
-      call BD_DestroyContState(      x_p, ErrStat2, ErrMsg2 )
-      call BD_DestroyContState(      x_m, ErrStat2, ErrMsg2 )
-      call BD_DestroyContState(x_perturb, ErrStat2, ErrMsg2 )
-   end subroutine cleanup
-
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
 END SUBROUTINE BD_JacobianPContState
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-!! with respect to the continuous states (x). The partial derivatives dY/dx, and dX/dx are returned.
-!SUBROUTINE BD_JacobianPContState_noRotate( t, u, p, x, xd, z, OtherState, y, m, calledFrom, ErrStat, ErrMsg, dYdx, dXdx )
-SUBROUTINE BD_JacobianPContState_noRotate( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx )
-!..................................................................................................................................
-
-   REAL(DbKi),                           INTENT(IN   )      :: t                  !< Time in seconds at operating point
-   TYPE(BD_InputType),                   INTENT(INOUT)      :: u                  !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(BD_ParameterType),               INTENT(IN   )      :: p                  !< Parameters
-   TYPE(BD_ContinuousStateType),         INTENT(IN   )      :: x                  !< Continuous states at operating point
-   TYPE(BD_DiscreteStateType),           INTENT(IN   )      :: xd                 !< Discrete states at operating point
-   TYPE(BD_ConstraintStateType),         INTENT(IN   )      :: z                  !< Constraint states at operating point
-   TYPE(BD_OtherStateType),              INTENT(IN   )      :: OtherState         !< Other states at operating point
-   TYPE(BD_OutputType),                  INTENT(INOUT)      :: y                  !< Output (change to inout if a mesh copy is required);
-                                                                                  !!   Output fields are not used by this routine, but type is
-                                                                                  !!   available here so that mesh parameter information (i.e.,
-                                                                                  !!   connectivity) does not have to be recalculated for dYdx.
-   TYPE(BD_MiscVarType),                 INTENT(INOUT)      :: m                  !< Misc/optimization variables
-   !INTEGER(IntKi),                       INTENT(IN   )      :: calledFrom         !< flag to help determine logic for when these matrices need to be recalculated
-   INTEGER(IntKi),                       INTENT(  OUT)      :: ErrStat            !< Error status of the operation
-   CHARACTER(*),                         INTENT(  OUT)      :: ErrMsg             !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dYdx(:,:)          !< Partial derivatives of output functions
-                                                                                  !!   (Y) with respect to the continuous
-                                                                                  !!   states (x) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dXdx(:,:)          !< Partial derivatives of continuous state
-                                                                                  !!   functions (X) with respect to
-                                                                                  !!   the continuous states (x) [intent in to avoid deallocation]
-
-
-      ! local variables
-   TYPE(BD_OutputType)                               :: y_p
-   TYPE(BD_OutputType)                               :: y_m
-   TYPE(BD_ContinuousStateType)                      :: x_p
-   TYPE(BD_ContinuousStateType)                      :: x_m
-   TYPE(BD_ContinuousStateType)                      :: x_perturb
-   REAL(R8Ki)                                        :: delta        ! delta change in input or state
-   INTEGER(IntKi)                                    :: i, k
-   INTEGER(IntKi)                                    :: index
-   INTEGER(IntKi)                                    :: dof
-   
-   INTEGER(IntKi)                                    :: ErrStat2
-   CHARACTER(ErrMsgLen)                              :: ErrMsg2
-   CHARACTER(*), PARAMETER                           :: RoutineName = 'BD_JacobianPContState_noRotate'
-   
-   
-      ! Initialize ErrStat
-
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-
-      ! make a copy of the continuous states to perturb
-   call BD_CopyContState( x, x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if (ErrStat>=AbortErrLev) then
-         call cleanup()
-         return
-      end if
-
-   IF ( PRESENT( dYdx ) ) THEN
-
-      ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
-
-      ! allocate dYdx if necessary
-      if (.not. allocated(dYdx)) then
-         call AllocAry(dYdx, p%Jac_ny, p%Jac_nx*2, 'dYdx', ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
-      end if
-      
-         ! make a copy of outputs because we will need two for the central difference computations (with orientations)
-      call BD_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call BD_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
-         
-         
-      index = 1
-      do k=1,2
-         do i=2,p%node_total
-            do dof=1,p%dof_node
-            
-                  ! get x_op + delta x
-               call BD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-               call perturb_x(p, k, i, dof, 1, x_perturb, delta )
-
-                  ! compute y at x_op + delta x
-               call BD_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ) 
-                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         
-            
-               ! get x_op - delta x
-               call BD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-               call perturb_x(p, k, i, dof, -1, x_perturb, delta )
-         
-                  ! compute y at x_op - delta x
-               call BD_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ) 
-                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         
-            
-                  ! get central difference:
-               call Compute_dY( p, y_p, y_m, delta, dYdx(:,index) )
-         
-               index = index+1
-            end do
-         end do
-      end do
-         
-      
-      if (ErrStat>=AbortErrLev) then
-         call cleanup()
-         return
-      end if
-      call BD_DestroyOutput( y_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
-      call BD_DestroyOutput( y_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
-
-      
-   END IF
-
-   IF ( PRESENT( dXdx ) ) THEN
-
-      ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
-
-      ! allocate dXdu if necessary
-      if (.not. allocated(dXdx)) then
-         call AllocAry(dXdx, p%Jac_nx * 2, p%Jac_nx * 2, 'dXdx', ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
-      end if
-      
-      index = 1 ! counter into dXdx
-      do k=1,2 ! 1=positions (x_perturb%q); 2=velocities (x_perturb%dqdt)
-         do i=2,p%node_total
-            do dof=1,p%dof_node
-         
-                  ! get x_op + delta x
-               call BD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-               call perturb_x(p, k, i, dof, 1, x_perturb, delta )
-
-                  ! compute x at x_op + delta x
-               call BD_CalcContStateDeriv( t, u, p, x_perturb, xd, z, OtherState, m, x_p, ErrStat2, ErrMsg2 ) 
-                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-
-                  ! get x_op - delta x
-               call BD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-               call perturb_x(p, k, i, dof, -1, x_perturb, delta )
-         
-                  ! compute x at x_op - delta x
-               call BD_CalcContStateDeriv( t, u, p, x_perturb, xd, z, OtherState, m, x_m, ErrStat2, ErrMsg2 )
-                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-
-            
-                  ! get central difference:
-            
-                  ! we may have had an error allocating memory, so we'll check
-               if (ErrStat>=AbortErrLev) then 
-                  call cleanup()
-                  return
-               end if
-         
-                  ! get central difference:
-               call Compute_dX( p, x_p, x_m, delta, dXdx(:,index) )
-         
-               index = index+1
-            end do
-         end do
-      end do
-      
-      call BD_DestroyContState( x_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
-      call BD_DestroyContState( x_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
-      
-   END IF
-      
-
-   call cleanup()
-   
-contains
-   subroutine cleanup()
-      call BD_DestroyOutput(         y_p, ErrStat2, ErrMsg2 )
-      call BD_DestroyOutput(         y_m, ErrStat2, ErrMsg2 )
-      call BD_DestroyContState(      x_p, ErrStat2, ErrMsg2 )
-      call BD_DestroyContState(      x_m, ErrStat2, ErrMsg2 )
-      call BD_DestroyContState(x_perturb, ErrStat2, ErrMsg2 )
-   end subroutine cleanup
-
-END SUBROUTINE BD_JacobianPContState_noRotate
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and DZ/dxd are returned.
@@ -6532,7 +6610,7 @@ SUBROUTINE BD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
 END SUBROUTINE BD_JacobianPConstrState
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedTrimOP )
+SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, ModIdx, NeedTrimOP )
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(BD_InputType),                   INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
@@ -6552,54 +6630,51 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
    LOGICAL,                 OPTIONAL,    INTENT(IN   )           :: NeedTrimOP !< whether a y_op values should contain values for trim solution (3-value representation instead of full orientation matrices, no rotation acc)
+   TYPE(VarsIdxType), OPTIONAL,          INTENT(IN   )           :: ModIdx     !< Module linearization type
 
-   INTEGER(IntKi)                                                :: index, i, dof
-   INTEGER(IntKi)                                                :: nu
-   INTEGER(IntKi)                                                :: ny
-   INTEGER(IntKi)                                                :: ErrStat2
-   CHARACTER(ErrMsgLen)                                          :: ErrMsg2
-   CHARACTER(*), PARAMETER                                       :: RoutineName = 'BD_GetOP'
-   LOGICAL                                                       :: FieldMask(FIELDMASK_SIZE)
-   LOGICAL                                                       :: ReturnTrimOP
-   TYPE(BD_ContinuousStateType)                                  :: dx          ! derivative of continuous states at operating point
-
-   
-      ! Initialize ErrStat
+   INTEGER(IntKi)             :: index, i, dof
+   INTEGER(IntKi)             :: nu
+   INTEGER(IntKi)             :: ny
+   INTEGER(IntKi)             :: ErrStat2
+   CHARACTER(ErrMsgLen)       :: ErrMsg2
+   CHARACTER(*), PARAMETER    :: RoutineName = 'BD_GetOP'
+   LOGICAL                    :: FieldMask(FIELDMASK_SIZE)
+   LOGICAL                    :: ReturnTrimOP
+   logical                    :: PackOut
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   IF ( PRESENT( u_op ) ) THEN
-      
-      nu = size(p%Jac_u_indx,1) + u%RootMotion%NNodes * 6  ! Jac_u_indx has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
-      
-      if (.not. allocated(u_op)) then
-         call AllocAry(u_op, nu, 'u_op', ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
-      end if
-      
-   
-      index = 1
-      if (.not. p%CompAeroMaps) then
-         FieldMask = .false.
-         FieldMask(MASKID_TranslationDisp) = .true.
-         FieldMask(MASKID_Orientation)     = .true.
-         FieldMask(MASKID_TranslationVel)  = .true.
-         FieldMask(MASKID_RotationVel)     = .true.
-         FieldMask(MASKID_TranslationAcc)  = .true.
-         FieldMask(MASKID_RotationAcc)     = .true.
-         call PackMotionMesh(u%RootMotion, u_op, index, FieldMask=FieldMask)
-   
-         call PackLoadMesh(u%PointLoad, u_op, index)
-      end if
-      
-      call PackLoadMesh(u%DistrLoad, u_op, index)
-      
-   END IF
+   ! Set flag to pack write outputs
+   PackOut = .not. present(ModIdx)
 
+   ! If inputs requested
+   if (present(u_op)) then
+      
+      ! Allocate array if not allocated
+      if (.not. allocated(u_op)) then   
+         if (present(ModIdx)) then
+            call AllocAry(u_op, ModIdx%Nu, 'u_op', ErrStat2, ErrMsg2)
+         else
+            call AllocAry(u_op, p%Vars%Nu, 'u_op', ErrStat2, ErrMsg2)
+         end if
+         if (Failed()) return      
+      end if
+      
+      ! Pack input type into array
+      call BD_PackInputValues(p, u, m%Lin%u)
    
-   IF ( PRESENT( y_op ) ) THEN
+      ! If ModIdx is present
+      if (present(ModIdx)) then
+         u_op = m%Lin%u(ModIdx%iu)  ! copy subset of array
+      else
+         u_op = m%Lin%u             ! copy full array
+      end if
+   end if
+
+   ! If outputs requested
+   if (present(y_op)) then
+
       ! Only the y operating points need to potentially return a smaller array than the "normal" call to this return. In the trim solution, we use a smaller array for y.
       if (present(NeedTrimOP)) then
          ReturnTrimOP = NeedTrimOP
@@ -6607,112 +6682,84 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          ReturnTrimOP = .false.
       end if
       
-      if (.not. allocated(y_op)) then
-         ny = p%Jac_ny + y%BldMotion%NNodes * 6  ! Jac_ny has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
-   
-         call AllocAry(y_op, ny, 'y_op', ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
-      end if
-
-      if (ReturnTrimOP) y_op = 0.0_ReKi ! initialize in case we are returning packed orientations and don't fill the entire array
-      
-      index = 1
-      FieldMask = .false.
-      FieldMask(MASKID_TranslationDisp) = .true.
-      FieldMask(MASKID_Orientation)     = .true.
-      FieldMask(MASKID_TranslationVel)  = .true.
-
-      if (.not. p%CompAeroMaps) then
-      
-         call PackLoadMesh(y%ReactionForce, y_op, index)
-
-         FieldMask(MASKID_RotationVel)     = .true.
-         FieldMask(MASKID_TranslationAcc)  = .true.
-         FieldMask(MASKID_RotationAcc)     = .true.
-      end if
-      call PackMotionMesh(y%BldMotion, y_op, index, FieldMask=FieldMask, TrimOP=ReturnTrimOP)
-   
-      if (.not. p%CompAeroMaps) then
-         index = index - 1
-         do i=1,p%NumOuts + p%BldNd_TotNumOuts
-            y_op(i+index) = y%WriteOutput(i)
-         end do
-      end if
-      
-      
-   END IF
-
-   IF ( PRESENT( x_op ) ) THEN
-
-      if (.not. allocated(x_op)) then
-         call AllocAry(x_op, p%Jac_nx * 2,'x_op',ErrStat2,ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) return
-      end if
-
-      index = 1
-      do i=2,p%node_total
-         do dof=1,p%dof_node
-            x_op(index) = x%q( dof, i )
-            index = index+1
-         end do
-      end do
-
-      do i=2,p%node_total
-         do dof=1,p%dof_node
-            x_op(index) = x%dqdt( dof, i )
-            index = index+1
-         end do
-      end do
-
-   END IF
-
-   IF ( PRESENT( dx_op ) ) THEN
-
-      if (.not. allocated(dx_op)) then
-         call AllocAry(dx_op, p%Jac_nx * 2,'dx_op',ErrStat2,ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) return
-      end if
-      
-      call BD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dx, ErrStat2, ErrMsg2 ) 
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-         if (ErrStat>=AbortErrLev) then
-            call BD_DestroyContState( dx, ErrStat2, ErrMsg2)
-            return
+      ! Allocate array if not allocated
+      if (.not. allocated(y_op)) then 
+         if (present(ModIdx)) then
+            call AllocAry(y_op, ModIdx%Ny, 'y_op', ErrStat2, ErrMsg2)
+         else
+            call AllocAry(y_op, p%Vars%Ny, 'y_op', ErrStat2, ErrMsg2)
          end if
+         if (Failed()) return
+      end if
 
-      index = 1
-      do i=2,p%node_total
-         do dof=1,p%dof_node
-            dx_op(index) = dx%q( dof, i )
-            index = index+1
-         end do
-      end do
+      call BD_PackOutputValues(p, y, m%Lin%y, PackOut)
+            
+      ! If ModIdx is present
+      if (present(ModIdx)) then
+         y_op = m%Lin%y(ModIdx%iy)  ! copy subset of array
+      else
+         y_op = m%Lin%y             ! copy full array
+      end if     
+   end if
 
-      do i=2,p%node_total
-         do dof=1,p%dof_node
-            dx_op(index) = dx%dqdt( dof, i )
-            index = index+1
-         end do
-      end do
+   ! If continuous states requested
+   if (present(x_op)) then
 
-      call BD_DestroyContState( dx, ErrStat2, ErrMsg2)
+      ! Allocate array if not allocated
+      if (.not. allocated(x_op)) then                           
+         if (present(ModIdx)) then
+            call AllocAry(x_op, ModIdx%Nx, 'x_op', ErrStat2, ErrMsg2)
+         else
+            call AllocAry(x_op, p%Vars%Nx, 'x_op', ErrStat2, ErrMsg2)
+         end if
+         if (Failed()) return
+      end if
 
-   END IF
+      call BD_PackStateValues(p, x, m%Lin%x)
+      
+      ! If ModIdx is present
+      if (present(ModIdx)) then
+         x_op = m%Lin%x(ModIdx%ix)  ! copy subset of array
+      else
+         x_op = m%Lin%x             ! copy full array
+      end if 
+   end if
 
-   IF ( PRESENT( xd_op ) ) THEN
+   ! If continuous state derivatives requested
+   if (present(dx_op)) then
 
-   END IF
+      ! Allocate array if not allocated
+      if (.not. allocated(dx_op)) then
+         if (present(ModIdx)) then
+            call AllocAry(dx_op, ModIdx%Nx, 'dx_op', ErrStat2, ErrMsg2)
+         else
+            call AllocAry(dx_op, p%Vars%Nx, 'dx_op', ErrStat2, ErrMsg2)
+         end if
+         if (Failed()) return
+      end if
+      
+      call BD_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, m%dx_perturb, ErrStat2, ErrMsg2) 
+      if (Failed()) return
+
+      call BD_PackStateValues(p, m%dx_perturb, m%Lin%dx)
+
+      ! If ModIdx is present
+      if (present(ModIdx)) then
+         dx_op = m%Lin%dx(ModIdx%idx) ! copy subset of array
+      else
+         dx_op = m%Lin%dx             ! copy full array
+      end if 
+   end if
+
+   if (present(xd_op)) then
+   end if
    
-   IF ( PRESENT( z_op ) ) THEN
    ! this is a little weird, but seems to be how BD has implemented the first node in the continuous state array.
+   if (present(z_op)) then
 
       if (.not. allocated(z_op)) then
          call AllocAry(z_op, p%dof_node * 2,'z_op',ErrStat2,ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) return
+         if (Failed()) return
       end if
 
       index = 1
@@ -6725,9 +6772,13 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          z_op(index) = x%dqdt( dof, 1 )
          index = index+1
       end do
-   
-   END IF
+   end if
 
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
 END SUBROUTINE BD_GetOP
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++   
 
@@ -6832,6 +6883,7 @@ END SUBROUTINE BD_WriteMassStiffInFirstNodeFrame
 !> Update the state information to follow the blade rootmotion mesh.
 !!    - move the state information in x from the previous reference frame at time T (u(2)%rootmotion) to the new reference frame at T+dt (u(1)%rootmation)
 !!    - the GlbRot, GlbPos, and Glb_crv values are stored as otherstates and updated
+!!    - 
 subroutine BD_UpdateGlobalRef(u, p, x, OtherState, ErrStat, ErrMsg)
    type(BD_InputType),           intent(in   ) :: u          !< Inputs at utimes
    type(BD_ParameterType),       intent(in   ) :: p          !< Parameters
@@ -6846,7 +6898,6 @@ subroutine BD_UpdateGlobalRef(u, p, x, OtherState, ErrStat, ErrMsg)
    real(R8Ki)                    :: GlbWM_old(3), GlbWM_new(3), GlbWM_diff(3)
    real(R8Ki)                    :: GlbRot_old(3, 3), GlbRot_new(3, 3), GlbRot_diff(3, 3)
    real(R8Ki)                    :: GlbPos_old(3), GlbPos_new(3)
-   real(R8Ki)                    :: pos(3), rot(3), trans_vel(3), rot_vel(3), uuN0(3)
    integer(IntKi)                :: i, j, temp_id
 
    ErrStat  = ErrID_None

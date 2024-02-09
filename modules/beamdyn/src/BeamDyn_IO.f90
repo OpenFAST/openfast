@@ -756,10 +756,6 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    END IF
    if (InputFileData%tngt_stf_fd) CALL WrScr( 'Using finite difference to compute tangent stiffness matrix'//NewLine )
-   !   ! RelStates - Define states relative to root motion during linearization? (flag) [used only when linearizing]
-   !CALL ReadVar(UnIn,InputFile,InputFileData%RelStates,"RelStates", "Define states relative to root motion during linearization? (flag) [used only when linearizing]",ErrStat2,ErrMsg2,UnEc)
-   !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   InputFileData%RelStates = .false.  ! this doesn't seem to be needed anymore (and I think there is a problem with using it in MBC3)
 
    Line = ""
    CALL ReadVar(UnIn, InputFile, Line, 'tngt_stf_comp','compare tangent stiffness using finite difference flag', ErrStat2, ErrMsg2, UnEc)
@@ -2557,104 +2553,6 @@ SUBROUTINE Compute_dX(p, x_p, x_m, delta, dX)
    dX = dX / ( 2.0_R8Ki*delta)
    
 END SUBROUTINE Compute_dX
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine uses values of two output types to compute an array of differences.
-!! Do not change this packing without making sure subroutine beamdyn::init_jacobian is consistant with this routine!
-SUBROUTINE Compute_RelState_Matrix(p, u, x, OtherState, RelState_x, RelState_xdot)
-   
-   TYPE(BD_ParameterType)            , INTENT(IN   ) :: p                  !< parameters
-   TYPE(BD_InputType)                , INTENT(IN   ) :: u                  !< BD inputs
-   TYPE(BD_ContinuousStateType)      , INTENT(IN   ) :: x                  !< BD continuous states
-   TYPE(BD_OtherStateType)           , INTENT(IN   ) :: OtherState         !< Other states at t
-   REAL(R8Ki)                        , INTENT(INOUT) :: RelState_x(:,:)    !< 
-   REAL(R8Ki)                        , INTENT(INOUT) :: RelState_xdot(:,:) !< 
-   
-      ! local variables:
-   INTEGER(IntKi)                                    :: i              ! loop counter
-   INTEGER(IntKi)                                    :: j              ! loop counter
-   INTEGER(IntKi)                                    :: dof            ! loop over dofs
-   INTEGER(IntKi)                                    :: q_index        ! index into the state arrays
-   INTEGER(IntKi)                                    :: dqdt_index     ! index into the state arrays
-   INTEGER(IntKi)                                    :: node           ! node in the state arrays
-   
-   REAL(R8Ki)                                        :: dp             ! temporary dot product
-   REAL(R8Ki)                                        :: cp(3)          ! temporary cross product
-   REAL(R8Ki)                                        :: RotVel(3)      ! temporary velocity
-   REAL(R8Ki)                                        :: RotAcc(3)      ! temporary acceleration
-   REAL(R8Ki)                                        :: DisplacedPosition(3)
-   REAL(R8Ki)                                        :: fx_p(3,3)
-   
-   RelState_x    = 0.0_ReKi
-   RelState_xdot = 0.0_ReKi
-   
-   !-----------------------------------
-   do i=1,p%elem_total
-      do j=2,p%nodes_per_elem
-
-         node       = (i-1)*(p%nodes_per_elem-1) + j  ! index to state array (rows of conversion matrices)
-         q_index    = (node - 2)*p%dof_node + 1       ! index into displacement portion of x (skipping node 1)
-         dqdt_index = p%Jac_nx + q_index
-         
-         DisplacedPosition = u%RootMotion%Position(:,1) + u%RootMotion%TranslationDisp(:,1) &
-                           - OtherState%GlbPos - MATMUL(OtherState%GlbRot, p%uuN0(1:3,j,i) + x%q(1:3,node) )
-
-         RotVel = real(u%RootMotion%RotationVel(:,1),R8Ki)
-         RotAcc = real(u%RootMotion%RotationAcc(:,1),R8Ki)
-
-         fx_p = SkewSymMat(DisplacedPosition)
-         
-         do dof=0,5
-            RelState_x( q_index+dof, 1+dof   ) = 1.0_R8Ki      ! root displacements to node displacements
-         end do
-         do dof=0,5
-            RelState_x( dqdt_index+dof, 7+dof   ) = 1.0_R8Ki   ! root velocities to node velocities
-         end do
-         
-         
-         RelState_x( q_index:q_index+2,        4: 6 ) = fx_p                                                            ! root rotational displacement to node translational displacement
-         RelState_x( dqdt_index:dqdt_index+2, 10:12 ) = fx_p                                                            ! root rotational velocity to node translational velocity
-
-            ! root rotational displacement to node translational velocity:
-         RelState_x( dqdt_index:dqdt_index+2, 4:6   ) = OuterProduct( DisplacedPosition, RotVel )
-         dp = dot_product( DisplacedPosition, RotVel )
-         do dof=0,2
-            RelState_x( dqdt_index+dof, 4+dof   ) = RelState_x( dqdt_index+dof, 4+dof   ) - dp                          ! root rotational displacement to node translational velocity 
-         end do
-         !----------
-         
-         
-         !.............................................
-         ! The first p%Jac_nx rows of RelState_xdot are the same as the last p%Jac_nx rows of RelState_x, so I'm not going to recalculate these rows, we'll set them after the loops:
-         !do dof=0,5
-         !   RelState_xdot( q_index+dof, 7+dof   ) = 1.0_ReKi      ! root velocities to node velocities
-         !end do
-         !RelState_xdot( q_index:q_index+2, 4:6 )         = RelState_x( dqdt_index:dqdt_index+2, 4:6 )                  ! root rotational displacement to node translational velocity
-         !RelState_xdot( q_index:q_index+2,       10:12 ) = fx_p                                                        ! root rotational velocity to node translational velocity
-         
-         do dof=0,5
-            RelState_xdot( dqdt_index+dof, 13+dof   ) = 1.0_R8Ki   ! root accelerations to node accelerations
-         end do
-         
-         
-            ! root translational velocity to node translational acceleration:
-         cp = cross_product(u%RootMotion%RotationVel(:,1), DisplacedPosition)
-         RelState_xdot( dqdt_index:dqdt_index+2, 7:9   ) = OuterProduct( DisplacedPosition, RotAcc )  &
-                                                         + OuterProduct( cp, RotVel ) - dp*SkewSymMat(RotVel)
-         dp = dot_product( DisplacedPosition, RotAcc )
-         do dof=0,2
-            RelState_xdot( dqdt_index+dof, 7+dof   ) = RelState_xdot( dqdt_index+dof, 7+dof   ) - dp
-         end do
-         !-----------
-         
-         RelState_xdot( dqdt_index:dqdt_index+2, 10:12 ) = RelState_x( dqdt_index:dqdt_index+2, 4:6 ) + SkewSymMat(cp)  ! root rotational velocity to node translational acceleration
-         RelState_xdot( dqdt_index:dqdt_index+2, 16:18 ) = fx_p                                                         ! root rotational acceleration to node translational acceleration
-         
-      end do
-   end do
-   RelState_xdot(1:p%Jac_nx,:) = RelState_x(p%Jac_nx+1:,:)
-
-END SUBROUTINE Compute_RelState_Matrix
-!----------------------------------------------------------------------------------------------------------------------------------
 
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE BeamDyn_IO

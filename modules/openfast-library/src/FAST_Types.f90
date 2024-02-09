@@ -325,8 +325,6 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: C      !< C matrix [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: D      !< D matrix [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: StateRotation      !< Matrix that rotates the continuous states [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: StateRel_x      !< Matrix that defines the continuous states relative to root motion [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: StateRel_xdot      !< Matrix that defines the continuous states relative to root motion [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Whether the input is a load (used for scaling for potentially ill-conditioned G matrix) [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Whether corresponding input is in rotating frame [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_y      !< Whether corresponding output is in rotating frame [-]
@@ -5159,30 +5157,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
       end if
       DstLinTypeData%StateRotation = SrcLinTypeData%StateRotation
    end if
-   if (allocated(SrcLinTypeData%StateRel_x)) then
-      LB(1:2) = lbound(SrcLinTypeData%StateRel_x, kind=B8Ki)
-      UB(1:2) = ubound(SrcLinTypeData%StateRel_x, kind=B8Ki)
-      if (.not. allocated(DstLinTypeData%StateRel_x)) then
-         allocate(DstLinTypeData%StateRel_x(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%StateRel_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%StateRel_x = SrcLinTypeData%StateRel_x
-   end if
-   if (allocated(SrcLinTypeData%StateRel_xdot)) then
-      LB(1:2) = lbound(SrcLinTypeData%StateRel_xdot, kind=B8Ki)
-      UB(1:2) = ubound(SrcLinTypeData%StateRel_xdot, kind=B8Ki)
-      if (.not. allocated(DstLinTypeData%StateRel_xdot)) then
-         allocate(DstLinTypeData%StateRel_xdot(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%StateRel_xdot.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%StateRel_xdot = SrcLinTypeData%StateRel_xdot
-   end if
    if (allocated(SrcLinTypeData%IsLoad_u)) then
       LB(1:1) = lbound(SrcLinTypeData%IsLoad_u, kind=B8Ki)
       UB(1:1) = ubound(SrcLinTypeData%IsLoad_u, kind=B8Ki)
@@ -5327,12 +5301,6 @@ subroutine FAST_DestroyLinType(LinTypeData, ErrStat, ErrMsg)
    if (allocated(LinTypeData%StateRotation)) then
       deallocate(LinTypeData%StateRotation)
    end if
-   if (allocated(LinTypeData%StateRel_x)) then
-      deallocate(LinTypeData%StateRel_x)
-   end if
-   if (allocated(LinTypeData%StateRel_xdot)) then
-      deallocate(LinTypeData%StateRel_xdot)
-   end if
    if (allocated(LinTypeData%IsLoad_u)) then
       deallocate(LinTypeData%IsLoad_u)
    end if
@@ -5378,8 +5346,6 @@ subroutine FAST_PackLinType(RF, Indata)
    call RegPackAlloc(RF, InData%C)
    call RegPackAlloc(RF, InData%D)
    call RegPackAlloc(RF, InData%StateRotation)
-   call RegPackAlloc(RF, InData%StateRel_x)
-   call RegPackAlloc(RF, InData%StateRel_xdot)
    call RegPackAlloc(RF, InData%IsLoad_u)
    call RegPackAlloc(RF, InData%RotFrame_u)
    call RegPackAlloc(RF, InData%RotFrame_y)
@@ -5420,8 +5386,6 @@ subroutine FAST_UnPackLinType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%C); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%D); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%StateRotation); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%StateRel_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%StateRel_xdot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%IsLoad_u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%RotFrame_u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%RotFrame_y); if (RegCheckErr(RF, RoutineName)) return

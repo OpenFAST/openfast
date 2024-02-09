@@ -518,8 +518,7 @@ typedef	^	OtherStateType	IntKi	SgnLSTQ	{ED_NMX}	-	-	"history of sign of LSTQ"
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef	^	ParameterType	ModVarsType	&Vars	-	-	-	"Module Variables"
-typedef	^	ParameterType	ModIdxType	IdxAeroMap	-	-	-	"Module variable index for AeroMap"
-typedef	^	ParameterType	ModIdxType	IdxSolver	-	-	-	"Module variable index for Solver"
+typedef	^	ParameterType	VarsIdxType	IdxAeroMap	-	-	-	"Module variable index for AeroMap"
 typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
 typedef	^	ParameterType	DbKi	DT24	-	-	-	"=DT/24 (used in loose coupling)"	seconds
 typedef	^	ParameterType	IntKi	BldNodes	-	-	-	"Number of blade nodes used in the analysis"	-

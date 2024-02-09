@@ -452,7 +452,6 @@ subroutine MV_Perturb(Var, iLin, PerturbSign, BaseAry, PerturbAry)
    real(R8Ki), intent(in)           :: BaseAry(:)
    real(R8Ki), intent(inout)        :: PerturbAry(:)
 
-   integer(IntKi)                   :: iAry
    real(R8Ki)                       :: Perturb
    real(R8Ki)                       :: WM(3), rotvec(3)
    integer(IntKi)                   :: i, j
@@ -461,21 +460,21 @@ subroutine MV_Perturb(Var, iLin, PerturbSign, BaseAry, PerturbAry)
    PerturbAry = BaseAry
 
    ! Get variable perturbation and combine with sign
-   Perturb = Var%Perturb*real(PerturbSign, R8Ki)
+   Perturb = Var%Perturb*real(PerturbSign, R8Ki) 
 
-   ! Perturbation index within array
-   iAry = Var%iLoc(1) + iLin - 1
+   ! Index of perturbation value in array
+   i = Var%iLoc(1) + iLin - 1
 
    ! If variable field is orientation, perturbation is in WM parameters
    if (Var%Field == VF_Orientation) then
       j = mod(iLin - 1, 3)                                        ! component being modified (0, 1, 2)
-      i = iLin - j                                                ! index of start of WM parameters (3)
       rotvec = 0.0_R8Ki                                           ! Init WM perturbation to zero
       rotvec(j + 1) = Perturb                                     ! WM perturbation around X,Y,Z axis
+      i = i - j                                                   ! index of start of WM parameters (3)
       WM = PerturbAry(i:i + 2)                                    ! Current WM parameters value
-      PerturbAry(i:i + 2) = wm_compose(WM, wm_from_rvec(rotvec))   ! Compose value and perturbation
+      PerturbAry(i:i + 2) = wm_compose(WM, wm_from_rvec(rotvec))  ! Compose value and perturbation
    else
-      PerturbAry(iAry) = PerturbAry(iAry) + Perturb
+      PerturbAry(i) = PerturbAry(i) + Perturb                     ! Add perturbation
    end if
 
 end subroutine
@@ -794,7 +793,7 @@ end subroutine
 
 subroutine MV_InitVarIdx(Vars, Idx, FlagFilter, ErrStat, ErrMsg)
    type(ModVarsType), intent(in)       :: Vars
-   type(ModIdxType), intent(out)       :: Idx
+   type(VarsIdxType), intent(out)      :: Idx
    integer(IntKi), intent(in)          :: FlagFilter
    integer(IntKi), intent(out)         :: ErrStat
    character(ErrMsgLen), intent(out)   :: ErrMsg

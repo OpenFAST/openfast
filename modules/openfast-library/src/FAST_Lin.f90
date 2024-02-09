@@ -679,9 +679,7 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
             ! get the jacobians
             call BD_JacobianPInput( t_global, BD%Input(1,k), BD%p(k), BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), BD%OtherSt(k,STATE_CURR), &
                                        BD%y(k), BD%m(k), ErrStat2, ErrMsg2, dYdu=y_FAST%Lin%Modules(Module_BD)%Instance(k)%D, &
-                                       dXdu=y_FAST%Lin%Modules(Module_BD)%Instance(k)%B, &
-                                       StateRel_x   =y_FAST%Lin%Modules(Module_BD)%Instance(k)%StateRel_x, &
-                                       StateRel_xdot=y_FAST%Lin%Modules(Module_BD)%Instance(k)%StateRel_xdot )
+                                       dXdu=y_FAST%Lin%Modules(Module_BD)%Instance(k)%B)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
             call BD_JacobianPContState( t_global, BD%Input(1,k), BD%p(k), BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), BD%OtherSt(k,STATE_CURR), &
@@ -1191,10 +1189,6 @@ SUBROUTINE WrLinFile_txt_End(Un, p_FAST, LinData)
    ! StateRotation matrix
    if (allocated(LinData%StateRotation)) call WrPartialMatrix( LinData%StateRotation, Un, p_FAST%OutFmt, 'StateRotation' )
 
-   ! RelState matrices
-   if (allocated(LinData%StateRel_x))    call WrPartialMatrix( LinData%StateRel_x,    Un, p_FAST%OutFmt, 'State_Rel_x' )
-   if (allocated(LinData%StateRel_xdot)) call WrPartialMatrix( LinData%StateRel_xdot, Un, p_FAST%OutFmt, 'State_Rel_xdot' )
-
    close(Un)
    Un = -1
    
@@ -1233,13 +1227,6 @@ SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, ModuleID, rotFrame
    real(R8Ki)                              :: DCM(3,3)
    integer(IntKi)                          :: row
 
-   select case (ModuleID)
-   case (Module_ED)
-      UsesWM = .true.
-   case default
-      UsesWM = .false.
-   end select
-   
    if (present(deriv) ) then
       UseDerivNames = deriv
    else
@@ -1291,8 +1278,9 @@ SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, ModuleID, rotFrame
 
       select case (ModuleID)
       case (Module_Glue)
-         UsesWM = index(names(i), "ED") == 1
-      case (Module_ED)
+         UsesWM = (index(names(i), "ED") == 1) .or. &
+                  (index(names(i), "BD") == 1)
+      case (Module_ED, Module_BD)
          UsesWM = .true.
       case default
          UsesWM = .false.
