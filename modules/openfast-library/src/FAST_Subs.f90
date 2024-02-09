@@ -23,7 +23,7 @@ MODULE FAST_Subs
 
    USE FAST_ModLin
    USE FAST_Solver
-   USE FAST_Linear
+   ! USE FAST_Linear
    USE SC_DataEx
    USE VersionInfo
 
@@ -9353,10 +9353,11 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
 
       t_global      = t_initial + n_t_global*Turbine%p_FAST%dt
 
-      call FAST_CalcSteady( n_t_global, t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, Turbine%ED, Turbine%BD, Turbine%SrvD, &
-                      Turbine%AD, Turbine%IfW, Turbine%ExtInfw, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, &
-                      Turbine%Orca, Turbine%IceF, Turbine%IceD, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      ! TODO: migrate to ModLin
+      ! call FAST_CalcSteady( n_t_global, t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, Turbine%ED, Turbine%BD, Turbine%SrvD, &
+      !                 Turbine%AD, Turbine%IfW, Turbine%ExtInfw, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, &
+      !                 Turbine%Orca, Turbine%IceF, Turbine%IceD, ErrStat2, ErrMsg2 )
+      !       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       if (Turbine%m_FAST%Lin%FoundSteady) then
          if (Turbine%m_FAST%Lin%ForceLin) then
@@ -9366,10 +9367,11 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
          do iLinTime=1,Turbine%p_FAST%NLinTimes
             t_global = Turbine%m_FAST%Lin%LinTimes(iLinTime)
 
-            call SetOperatingPoint(iLinTime, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, Turbine%ED, Turbine%BD, Turbine%SrvD, &
-                                      Turbine%AD, Turbine%IfW, Turbine%ExtInfw, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, &
-                                    Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, Turbine%IceF, Turbine%IceD, ErrStat2, ErrMsg2 )
-               CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            ! TODO: migrate to ModLin
+            ! call SetOperatingPoint(iLinTime, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, Turbine%ED, Turbine%BD, Turbine%SrvD, &
+            !                           Turbine%AD, Turbine%IfW, Turbine%ExtInfw, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, &
+            !                         Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, Turbine%IceF, Turbine%IceD, ErrStat2, ErrMsg2 )
+            !    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
             if (Turbine%p_FAST%DT_UJac < Turbine%p_FAST%TMax) then
                Turbine%m_FAST%calcJacobian = .true.
@@ -9382,12 +9384,18 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                IF (ErrStat >= AbortErrLev) RETURN
 
-            CALL FAST_Linearize_OP(t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
-                     Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD, Turbine%IfW, Turbine%ExtInfw, &
-                     Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
-                     Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat2, ErrMsg2 )
-               CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               IF (ErrStat >= AbortErrLev) RETURN
+            call ModLin_Linearize_OP(Turbine, Turbine%y_FAST%ModGlue, Turbine%y_FAST%Modules, &
+               Turbine%p_FAST%ModLin, Turbine%m_FAST%ModLin, Turbine%p_FAST, Turbine%m_FAST, &
+               Turbine%y_FAST, t_global, ErrStat2, ErrMsg2)
+               call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               if (ErrStat >= AbortErrLev) return
+
+            ! CALL FAST_Linearize_OP(t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
+            !          Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD, Turbine%IfW, Turbine%ExtInfw, &
+            !          Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+            !          Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat2, ErrMsg2 )
+            !    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            !    IF (ErrStat >= AbortErrLev) RETURN
 
          end do
 
@@ -10431,15 +10439,16 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, p_FAST, y_FAST, m_FAST, ED, 
                m_FAST%NextJacCalcTime = m_FAST%Lin%LinTimes(iLinTime)
             end if
 
-            call SetOperatingPoint(iLinTime, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, &
-                                    MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat2, ErrMsg2 )
-               CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            ! TODO: migrate to ModLin
+            ! call SetOperatingPoint(iLinTime, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, &
+            !                         MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat2, ErrMsg2 )
+            !    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               ! set perturbation of states based on x_eig magnitude and phase
-            call PerturbOP(tprime, iLinTime, ModeNo, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
-                        IceF, IceD, ErrStat2, ErrMsg2 )
-               CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               IF (ErrStat >= AbortErrLev) RETURN
+            !    ! set perturbation of states based on x_eig magnitude and phase
+            ! call PerturbOP(tprime, iLinTime, ModeNo, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
+            !             IceF, IceD, ErrStat2, ErrMsg2 )
+            !    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            !    IF (ErrStat >= AbortErrLev) RETURN
 
             CALL CalcOutputs_And_SolveForInputs( -1,  m_FAST%Lin%LinTimes(iLinTime),  STATE_CURR, m_FAST%calcJacobian, m_FAST%NextJacCalcTime, &
                p_FAST, m_FAST, .true., ED, BD, SrvD, AD14, AD, ExtLd, IfW, ExtInfw, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )
@@ -10463,15 +10472,16 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, p_FAST, y_FAST, m_FAST, ED, 
             do it = 1,nt
                tprime = (it-1)*dt
 
-               call SetOperatingPoint(iLinTime, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, &
-                                     MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat2, ErrMsg2 )
-                  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               ! TODO: migrate to ModLin
+               ! call SetOperatingPoint(iLinTime, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, &
+               !                       MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat2, ErrMsg2 )
+               !    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-                  ! set perturbation of states based on x_eig magnitude and phase
-               call PerturbOP(tprime, iLinTime, ModeNo, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
-                         IceF, IceD, ErrStat2, ErrMsg2 )
-                  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  IF (ErrStat >= AbortErrLev) RETURN
+               !    ! set perturbation of states based on x_eig magnitude and phase
+               ! call PerturbOP(tprime, iLinTime, ModeNo, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
+               !           IceF, IceD, ErrStat2, ErrMsg2 )
+               !    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               !    IF (ErrStat >= AbortErrLev) RETURN
 
                CALL CalcOutputs_And_SolveForInputs( -1, m_FAST%Lin%LinTimes(iLinTime),  STATE_CURR, m_FAST%calcJacobian, m_FAST%NextJacCalcTime, &
                   p_FAST, m_FAST, .true., ED, BD, SrvD, AD14, AD, ExtLd, IfW, ExtInfw, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )

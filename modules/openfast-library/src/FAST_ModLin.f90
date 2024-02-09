@@ -449,7 +449,7 @@ subroutine ModLin_Linearize_OP(Turbine, ModGlue, Mods, p, m, p_FAST, m_FAST, y_F
    if (Failed()) return
 
    ! Calculate the glue code state matrices (A, B, C, D)
-   call ModLin_StateMatrices(ModGlue, p_FAST%UJacSclFact, ErrStat2, ErrMsg2)
+   call ModLin_StateMatrices(ModGlue, real(p_FAST%UJacSclFact, R8Ki), ErrStat2, ErrMsg2)
    if (Failed()) return
 
    ! Write glue code data
@@ -792,7 +792,7 @@ subroutine WrLinFile_txt_Table(VarAry, FlagFilter, p_FAST, Un, RowCol, op, IsDer
    type(FAST_ParameterType)      :: p_FAST      !< Parameters
    integer(IntKi), intent(in)    :: Un          !< unit number
    character(*), intent(in)      :: RowCol      !< Row/Column description
-   real(ReKi), intent(in)        :: op(:)       !< operating point values (possibly different size that Desc because of orientations)
+   real(R8Ki), intent(in)        :: op(:)       !< operating point values (possibly different size that Desc because of orientations)
    logical, optional, intent(in) :: IsDeriv     !< flag that tells us if we need to modify the channel names for derivatives (xdot)
    logical, optional, intent(in) :: ShowRot     !< flag to show rotation matrix if field is orientation
 
