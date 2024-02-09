@@ -5227,7 +5227,7 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
    character(4)            :: RotorLabel
    character(64)           :: NodeLabel
    character(1), parameter :: UVW(3) = ['U','V','W']
-   real(ReKi)              :: Perturb, PerturbTower, PerturbBlade(MaxBl)
+   real(R8Ki)              :: Perturb, PerturbAng, PerturbTower, PerturbBlade(MaxBl)
    integer(IntKi)          :: i, j, k
 
    ! Allocate space for variables (deallocate if already allocated)
@@ -5257,7 +5257,7 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
          call MV_AddVar(p%Vars%x, "DBEMT%Element", VF_Scalar, &
                         Num=p%NumBlNds*2, &
                         Flags=ior(VF_DerivOrder2, VF_RotFrame), &
-                        Perturb=2.0_ReKi * D2R, &
+                        Perturb=PerturbAng, &
                         LinNames=[(['vind (axial) at blade '//trim(Num2LStr(j))//', node '//trim(Num2LStr(i))//', m/s', &
                                     'vind (tangential) at blade '//trim(Num2LStr(j))//', node '//trim(Num2LStr(i))//', m/s'], i = 1, p%NumBlNds)])
       end do
@@ -5265,7 +5265,7 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
          call MV_AddVar(p%Vars%x, "DBEMT%Element", VF_Scalar, &
                         Num=p%NumBlNds*2, &
                         Flags=ior(VF_DerivOrder2, VF_RotFrame), &
-                        Perturb=2.0_ReKi * D2R, &
+                        Perturb=PerturbAng, &
                         LinNames=[(['First time derivative of vind (axial) at blade '//trim(Num2LStr(j))//', node '//trim(Num2LStr(i))//', m/s/s', &
                                     'First time derivative of vind (tangential) at blade '//trim(Num2LStr(j))//', node '//trim(Num2LStr(i))//', m/s/s'], i = 1, p%NumBlNds)])
       end do
@@ -5280,21 +5280,21 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
             if (p%BEMT%UA%UAMod/=UA_OYE) then
                call MV_AddVar(p%Vars%x, "DBEMT%Element", VF_Scalar, &
                               Flags=ior(VF_DerivOrder1, VF_RotFrame), &
-                              Perturb=2.0_ReKi * D2R, &
+                              Perturb=PerturbAng, &
                               LinNames=['x1 '//trim(NodeLabel)//', rad'])
                call MV_AddVar(p%Vars%x, "DBEMT%Element", VF_Scalar, &
                               Flags=ior(VF_DerivOrder1, VF_RotFrame), &
-                              Perturb=2.0_ReKi * D2R, &
+                              Perturb=PerturbAng, &
                               LinNames=['x2 '//trim(NodeLabel)//', rad'])
                call MV_AddVar(p%Vars%x, "DBEMT%Element", VF_Scalar, &
                               Flags=ior(VF_DerivOrder1, VF_RotFrame), &
-                              Perturb=2.0_ReKi * D2R, &
+                              Perturb=PerturbAng, &
                               LinNames=['x3 '//trim(NodeLabel)//', -'])
             endif
 
             call MV_AddVar(p%Vars%x, "DBEMT%Element", VF_Scalar, &
                            Flags=ior(VF_DerivOrder1, VF_RotFrame), &
-                           Perturb=0.001_ReKi, &  ! x4 is a number between 0 and 1, so we need this to be small
+                           Perturb=0.001_R8Ki, &  ! x4 is a number between 0 and 1, so we need this to be small
                            LinNames=['x4 '//trim(NodeLabel)//', -'])
          end do
       end do
@@ -5316,14 +5316,16 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
    call AllocAry(p%iVarUserProp, p%NumBlades, "iVarUserProp", ErrStat2, ErrMsg2); if (Failed()) return
    p%iVarUserProp = 0
 
+   PerturbAng = 2.0_R8Ki * D2R_D
+
    do k = 1, p%NumBlades
-      PerturbBlade(k) = 0.2_ReKi * D2R * InputFileData%BladeProps(k)%BlSpn(InputFileData%BladeProps(k)%NumBlNds)
+      PerturbBlade(k) = 0.2_R8Ki * D2R_D * InputFileData%BladeProps(k)%BlSpn(InputFileData%BladeProps(k)%NumBlNds)
    end do
 
    if (u%TowerMotion%NNodes > 0) then
-      PerturbTower = 0.2_ReKi*D2R * u%TowerMotion%Position(3, u%TowerMotion%NNodes)
+      PerturbTower = 0.2_R8Ki * D2R_D * u%TowerMotion%Position(3, u%TowerMotion%NNodes)
    else
-      PerturbTower = 0.0_ReKi
+      PerturbTower = 0.0_R8Ki
    end if   
 
    ! Add tower motion
@@ -5332,7 +5334,7 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
                       Mesh=u%TowerMotion, &
                       Fields=[VF_TransDisp, VF_Orientation, VF_TransVel], &
                       Perturbs=[PerturbTower, &    ! VF_TransDisp
-                                2.0_ReKi * D2R, &  ! VF_Orientation
+                                PerturbAng, &      ! VF_Orientation
                                 PerturbTower])     ! VF_TransVel
    
    ! Add hub motion
@@ -5341,8 +5343,8 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
                       Mesh=u%HubMotion, &
                       Fields=[VF_TransDisp, VF_Orientation, VF_AngularVel], &
                       Perturbs=[PerturbBlade(1), & ! VF_TransDisp
-                                2.0_ReKi * D2R, &  ! VF_Orientation
-                                2.0_ReKi * D2R])   ! VF_AngularVel
+                                PerturbAng, &      ! VF_Orientation
+                                PerturbAng])       ! VF_AngularVel
 
    ! Add blade root motion
    do j = 1, p%NumBlades
@@ -5351,7 +5353,7 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
                          Flags=VF_Linearize, &
                          Mesh=u%BladeRootMotion(j), &
                          Fields=[VF_Orientation], &
-                         Perturbs=[2.0_ReKi * D2R])
+                         Perturbs=[PerturbAng])
    end do
 
    ! Add blade motion
@@ -5360,11 +5362,11 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
                          VarIdx=p%iVarBladeMotion(j), &
                          Mesh=u%BladeMotion(j), &
                          Fields=[VF_TransDisp, VF_Orientation, VF_TransVel, VF_AngularVel, VF_TransAcc], &
-                         Perturbs=[PerturbBlade(j), &   ! VF_TransDisp
-                                   2.0_ReKi * D2R, &    ! VF_Orientation
-                                   PerturbBlade(j), &   ! VF_TransVel
-                                   2.0_ReKi * D2R, &    ! VF_AngularVel
-                                   PerturbBlade(j)])    ! VF_TransAcc
+                         Perturbs=[PerturbBlade(j), &    ! VF_TransDisp
+                                   PerturbAng, &         ! VF_Orientation
+                                   PerturbBlade(j), &    ! VF_TransVel
+                                   PerturbAng, &         ! VF_AngularVel
+                                   PerturbBlade(j)])     ! VF_TransAcc
       ! Set AeroMap flag on subset of first blade fields
       if (j == 1) then
          do k = p%iVarBladeMotion(j), size(p%Vars%u)
@@ -5389,7 +5391,7 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
    call MV_AddVar(p%Vars%u, trim(RotorLabel)//"InflowOnTower", VF_Scalar, &
                   VarIdx=p%iVarInflowOnTower, &
                   Num=p%NumTwrNds*3, &
-                  Perturb=2.0_ReKi * D2R, &
+                  Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=[((UVW(i)//'-component inflow on tower node '//trim(Num2LStr(j))//', m/s', i = 1, 3), j = 1, p%NumTwrNds)])
 
    ! Add user props
@@ -5398,7 +5400,7 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
                      VarIdx=p%iVarUserProp(j), &
                      Flags=VF_RotFrame, &
                      Num=p%NumBlNds, &
-                     Perturb=2.0_ReKi * D2R, &
+                     Perturb=2.0_R8Ki * D2R_D, &
                      LinNames=[('User property on blade '//trim(Num2LStr(j))//', node '//trim(Num2LStr(k))//', -', k = 1, p%NumBlNds)])
    end do
 
@@ -6331,12 +6333,12 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: u_op(:)    !< values of linearized inputs
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: y_op(:)    !< values of linearized outputs
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: x_op(:)    !< values of linearized continuous states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: u_op(:)    !< values of linearized inputs
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: y_op(:)    !< values of linearized outputs
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: x_op(:)    !< values of linearized continuous states
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
    INTEGER(IntKi),          OPTIONAL,    INTENT(IN   )           :: FlagFilter  !< Skip vars that don't include these flags
 
    integer(IntKi), parameter :: iR =1 ! Rotor index
@@ -6367,12 +6369,12 @@ SUBROUTINE RotGetOP(t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    TYPE(RotMiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: u_op(:)    !< values of linearized inputs
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: y_op(:)    !< values of linearized outputs
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: x_op(:)    !< values of linearized continuous states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: u_op(:)    !< values of linearized inputs
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: y_op(:)    !< values of linearized outputs
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: x_op(:)    !< values of linearized continuous states
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
    INTEGER(IntKi),          OPTIONAL,    INTENT(IN   )           :: FlagFilter  !< Skip vars that don't include these flags
 
    CHARACTER(*), PARAMETER          :: RoutineName = 'AD_GetOP'

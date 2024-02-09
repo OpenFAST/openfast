@@ -716,7 +716,7 @@ subroutine IfW_UniformWind_GetOP(UF, t, InterpCubic, OP_out)
    type(UniformFieldType), intent(IN)  :: UF             !< Parameters
    real(DbKi), intent(IN)              :: t              !< Current simulation time in seconds
    logical, intent(in)                 :: InterpCubic    !< flag for using cubic interpolation
-   real(ReKi), intent(OUT)             :: OP_out(2)      !< operating point (HWindSpeed and PLexp
+   real(R8Ki), intent(OUT)             :: OP_out(2)      !< operating point (HWindSpeed and PLexp
 
    type(UniformField_Interp)           :: op         ! interpolated values of InterpParams
 
@@ -727,8 +727,8 @@ subroutine IfW_UniformWind_GetOP(UF, t, InterpCubic, OP_out)
       op = UniformField_InterpLinear(UF, t)
    end if
 
-   OP_out(1) = op%VelH
-   OP_out(2) = op%ShrV
+   OP_out(1) = real(op%VelH, R8Ki)
+   OP_out(2) = real(op%ShrV, R8Ki)
 
 end subroutine
 

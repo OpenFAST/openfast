@@ -2713,7 +2713,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
    SUBROUTINE PackLoadMesh(M, Ary, indx_first)
    
       TYPE(MeshType)                    , INTENT(IN   ) :: M                          !< Load mesh
-      REAL(ReKi)                        , INTENT(INOUT) :: Ary(:)                     !< array to pack this mesh into 
+      REAL(R8Ki)                        , INTENT(INOUT) :: Ary(:)                     !< array to pack this mesh into 
       INTEGER(IntKi)                    , INTENT(INOUT) :: indx_first                 !< index into Ary; gives location of next array position to fill
    
          ! local variables:
@@ -2857,7 +2857,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
    SUBROUTINE PackMotionMesh(M, Ary, indx_first, FieldMask, TrimOP)
    
       TYPE(MeshType)                    , INTENT(IN   ) :: M                          !< Motion mesh
-      REAL(ReKi)                        , INTENT(INOUT) :: Ary(:)                     !< array to pack this mesh into 
+      REAL(R8Ki)                        , INTENT(INOUT) :: Ary(:)                     !< array to pack this mesh into 
       INTEGER(IntKi)                    , INTENT(INOUT) :: indx_first                 !< index into Ary; gives location of next array position to fill
       LOGICAL, OPTIONAL                 , INTENT(IN   ) :: FieldMask(FIELDMASK_SIZE)  !< flags to determine if this field is part of the packing
       LOGICAL, OPTIONAL                 , INTENT(IN   ) :: TrimOP                     !< flag to determine if the orientation should be packed as a DCM or a log map
