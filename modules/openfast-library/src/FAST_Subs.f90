@@ -21,6 +21,7 @@
 !**********************************************************************************************************************************
 MODULE FAST_Subs
 
+   USE FAST_ModLin
    USE FAST_Solver
    USE FAST_Linear
    USE SC_DataEx
@@ -66,6 +67,11 @@ SUBROUTINE FAST_InitializeAll_T( t_initial, TurbID, Turbine, ErrStat, ErrMsg, In
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, CompAeroMaps, ErrStat, ErrMsg )
    END IF
 
+   if(ErrStat >= AbortErrLev) return
+
+   call ModLin_Init(Turbine%y_FAST%ModGlue, Turbine%y_FAST%Modules, &
+                    Turbine%p_FAST%ModLin, Turbine%m_FAST%ModLin, &
+                    Turbine%p_FAST, Turbine%m_FAST, Turbine, ErrStat, ErrMsg)
 
 END SUBROUTINE FAST_InitializeAll_T
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -292,6 +298,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       if (allocated(Init%OutData_ED%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%NumOutputs = size(Init%OutData_ED%WriteOutputHdr)
    end if
 
+      ! Add module to array of modules
+      CALL MV_AddModule(y_FAST%Modules, Module_ED, 'ED', 1, p_FAST%dt_module(Module_ED), p_FAST%DT, &
+                        Init%OutData_ED%Vars, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
       RETURN
@@ -427,6 +438,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
             if (allocated(Init%OutData_BD(k)%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%NumOutputs = size(Init%OutData_BD(k)%WriteOutputHdr)
          end if
 
+         ! Add module instance to array of modules
+         CALL MV_AddModule(y_FAST%Modules, Module_BD, 'BD', k, p_FAST%dt_module(Module_BD), p_FAST%DT, Init%OutData_BD(k)%Vars, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         
       END DO
 
       IF (ErrStat >= AbortErrLev) THEN
@@ -565,6 +580,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       p_FAST%ModuleInitialized(Module_AD) = .TRUE.
       CALL SetModuleSubstepTime(Module_AD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      ! Initialize a module instance for each rotor
+      do i = 1, size(Init%OutData_AD%rotors)
+         CALL MV_AddModule(y_FAST%Modules, Module_AD, 'AD', i, p_FAST%dt_module(Module_AD), p_FAST%DT, &
+                           Init%OutData_AD%rotors(i)%Vars, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
 
       allocate( y_FAST%Lin%Modules(MODULE_AD)%Instance(1), stat=ErrStat2)
       if (ErrStat2 /= 0 ) then
@@ -1527,6 +1549,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       CALL SetModuleSubstepTime(Module_SrvD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
+      CALL MV_AddModule(y_FAST%Modules, Module_SrvD, 'SrvD', 1, p_FAST%dt_module(Module_SrvD), p_FAST%DT, &
+                        Init%OutData_SrvD%Vars, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
       !! initialize SrvD%y%ElecPwr and SrvD%y%GenTq because they are one timestep different (used as input for the next step)?
 
       allocate( y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1), stat=ErrStat2)
@@ -1604,24 +1630,24 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    if ( p_FAST%Linearize .or. p_FAST%CompAeroMaps) then
       ! NOTE: In the following call, we use Init%OutData_AD%BladeProps(1)%NumBlNds as the number of aero nodes on EACH blade, which
       !       is consistent with the current AD implementation, but if AD changes this, then it must be handled here, too!
-      if (p_FAST%CompAero == MODULE_AD) then
-         call Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, NumBl, Init%OutData_AD%rotors(1)%BladeProps(1)%NumBlNds, ErrStat2, ErrMsg2)
-      else
-         call Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, NumBl, -1, ErrStat2, ErrMsg2)
-      endif
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat >= AbortErrLev) then
-            call Cleanup()
-            return
-         end if
-
-      if (p_FAST%CompAeroMaps)  then
-         p_FAST%SizeJac_Opt1(1) = y_FAST%Lin%Glue%SizeLin(LIN_ContSTATE_COL) + y_FAST%Lin%Glue%SizeLin(LIN_INPUT_COL)
-         p_FAST%TolerSquared = p_FAST%TolerSquared * (p_FAST%SizeJac_Opt1(1)**2) ! do this calculation here so we don't have to keep dividing by the size of the array later
-         p_FAST%NumBl_Lin = 1
-      else
-         p_FAST%NumBl_Lin = NumBl
-      end if
+      ! if (p_FAST%CompAero == MODULE_AD) then
+      !    call Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, NumBl, Init%OutData_AD%rotors(1)%BladeProps(1)%NumBlNds, ErrStat2, ErrMsg2) 
+      ! else
+      !    call Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, NumBl, -1, ErrStat2, ErrMsg2) 
+      ! endif     
+      !    call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      !    if (ErrStat >= AbortErrLev) then
+      !       call Cleanup()
+      !       return
+      !    end if
+         
+      ! if (p_FAST%CompAeroMaps)  then
+      !    p_FAST%SizeJac_Opt1(1) = y_FAST%Lin%Glue%SizeLin(LIN_ContSTATE_COL) + y_FAST%Lin%Glue%SizeLin(LIN_INPUT_COL)
+      !    p_FAST%TolerSquared = p_FAST%TolerSquared * (p_FAST%SizeJac_Opt1(1)**2) ! do this calculation here so we don't have to keep dividing by the size of the array later
+      !    p_FAST%NumBl_Lin = 1
+      ! else
+      !    p_FAST%NumBl_Lin = NumBl
+      ! end if
 
    end if
 
@@ -9302,12 +9328,18 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
 
          if ( EqualRealNos( t_global, next_lin_time ) .or. t_global > next_lin_time ) then
 
-            CALL FAST_Linearize_OP(t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
-                     Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD, Turbine%IfW, Turbine%ExtInfw, &
-                     Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
-                     Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat2, ErrMsg2 )
-               CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               IF (ErrStat >= AbortErrLev) RETURN
+            call ModLin_Linearize_OP(Turbine, Turbine%y_FAST%ModGlue, Turbine%y_FAST%Modules, &
+                                     Turbine%p_FAST%ModLin, Turbine%m_FAST%ModLin, Turbine%p_FAST, Turbine%m_FAST, &
+                                     Turbine%y_FAST, t_global, ErrStat2, ErrMsg2)
+               call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               if (ErrStat >= AbortErrLev) return
+
+            ! CALL FAST_Linearize_OP(t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
+            !          Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD, Turbine%IfW, Turbine%ExtInfw, &
+            !          Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+            !          Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat2, ErrMsg2 )
+            !    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            !    IF (ErrStat >= AbortErrLev) RETURN
 
             if (Turbine%p_FAST%WrVTK == VTK_ModeShapes) then
                if (Turbine%m_FAST%Lin%NextLinTimeIndx > Turbine%p_FAST%NLinTimes) call WrVTKCheckpoint()
