@@ -10358,7 +10358,7 @@ END SUBROUTINE FixHSSBrTq
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and dZ/du are returned.
-SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu, ModIdx )
+SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu, FlagFilter )
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -10379,152 +10379,119 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with respect to the inputs (u) [intent in to avoid deallocation]
-   TYPE(VarsIdxType), OPTIONAL,          INTENT(IN   )           :: ModIdx     !< Module linearization type
+   integer(IntKi), OPTIONAL,             INTENT(IN   )           :: FlagFilter !< Flag filter for variable calculation
    
-   INTEGER(IntKi)                                    :: ErrStat2
-   CHARACTER(ErrMsgLen)                              :: ErrMsg2
-   CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_JacobianPInput'
-   integer(IntKi)                                    :: i, j, col
-   logical                                           :: CalcWriteOutput
+   INTEGER(IntKi)                :: ErrStat2
+   CHARACTER(ErrMsgLen)          :: ErrMsg2
+   CHARACTER(*), PARAMETER       :: RoutineName = 'ED_JacobianPInput'
+   logical                       :: IsFullLin
+   integer(IntKi)                :: FlagFilterLoc
+   integer(IntKi)                :: i, j, col
    
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
    m%IgnoreMod = .true. ! to compute perturbations, we need to ignore the modulo function
 
-   ! Set flag to pack write outputs
-   CalcWriteOutput = .not. present(ModIdx)
+   ! Set full linearization flag and local filter flag
+   if (present(FlagFilter)) then
+      IsFullLin = FlagFilter == VF_None
+      FlagFilterLoc = FlagFilter
+   else
+      IsFullLin = .true.
+      FlagFilterLoc = VF_None
+   end if
 
    ! Update copy of the inputs to perturb
    call ED_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-   call ED_PackInputValues(p, u, m%Lin%u)
+   call ED_PackInputValues(p, u, m%Jac%u)
 
    ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
    if (present(dYdu)) then
 
       ! Allocate dYdu if not allocated
       if (.not. allocated(dYdu)) then
-         if (present(ModIdx)) then
-            call AllocAry(dYdu, ModIdx%Ny, ModIdx%Nu, 'dYdu', ErrStat2, ErrMsg2)
-         else
-            call AllocAry(dYdu, p%Vars%Ny, p%Vars%Nu, 'dYdu', ErrStat2, ErrMsg2)
-         end if
-         if (Failed()) return
+         call AllocAry(dYdu, p%Vars%Ny, p%Vars%Nu, 'dYdu', ErrStat2, ErrMsg2); if (Failed()) return
       end if
 
-      ! If not computing aero maps
-      if (.not. p%CompAeroMaps) then
+      ! Loop through input variables
+      do i = 1, size(p%Vars%u)
 
-         ! Loop through input variables
-         do i = 1, size(p%Vars%u)
+         ! If variable flag not in flag filter, skip
+         if (.not. MV_HasFlags(p%Vars%u(i), FlagFilterLoc)) cycle
 
-            ! If variable flag not in flag filter, skip
-            if (present(ModIdx)) then
-               if (iand(p%Vars%u(i)%Flags, ModIdx%FlagFilter) == 0) cycle
-            end if
+         ! Loop through number of linearization perturbations in variable
+         do j = 1, p%Vars%u(i)%Num
 
-            ! Loop through number of linearization perturbations in variable
-            do j = 1, p%Vars%u(i)%Num
+            ! Calculate positive perturbation
+            call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
+            call ED_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call ED_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call ED_PackOutputValues(p, m%y_lin, m%Jac%y_pos, IsFullLin)
 
-               ! Calculate positive perturbation
-               call MV_Perturb(p%Vars%u(i), j, 1, m%Lin%u, m%Lin%u_perturb)
-               call ED_UnpackInputValues(p, m%Lin%u_perturb, m%u_perturb)
-               call ED_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2); if (Failed()) return
-               call ED_PackOutputValues(p, m%y_perturb, m%Lin%y_pos, CalcWriteOutput)
+            ! Calculate negative perturbation
+            call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
+            call ED_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call ED_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call ED_PackOutputValues(p, m%y_lin, m%Jac%y_neg, IsFullLin)
 
-               ! Calculate negative perturbation
-               call MV_Perturb(p%Vars%u(i), j, -1, m%Lin%u, m%Lin%u_perturb)
-               call ED_UnpackInputValues(p, m%Lin%u_perturb, m%u_perturb)
-               call ED_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2); if (Failed()) return
-               call ED_PackOutputValues(p, m%y_perturb, m%Lin%y_neg, CalcWriteOutput)
+            ! Calculate column index
+            col = p%Vars%u(i)%iLoc(1) + j - 1
 
-               ! Calculate column index
-               col = p%Vars%u(i)%iLoc(1) + j - 1
-
-               ! Get partial derivative via central difference and store in full linearization array
-               call MV_ComputeCentralDiff(p%Vars%y, p%Vars%u(i)%Perturb, m%Lin%y_pos, m%Lin%y_neg, m%Lin%dYdu(:,col))
-            end do
+            ! Get partial derivative via central difference and store in full linearization array
+            call MV_ComputeCentralDiff(p%Vars%y, p%Vars%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,col))
          end do
-               
-         ! Only include extended variables in full linearization
-         if (.not. present(ModIdx)) then
+      end do
 
-            ! Extended: BlPitchComC is the sum of BlPitchCom across all blades
-            associate (Var => p%Vars%u(p%iVarBlPitchCom))
-               m%Lin%dYdu(:,p%Vars%u(p%iVarBlPitchComC)%iLoc(1)) = sum(m%Lin%dYdu(:,Var%iLoc(1):Var%iLoc(2)), dim=2)
-            end associate
-         end if
+      ! Extended: BlPitchComC is the sum of BlPitchCom across all blades
+      associate (Var => p%Vars%u(p%iVarBlPitchCom))
+         dYdu(:,p%Vars%u(p%iVarBlPitchComC)%iLoc(1)) = sum(dYdu(:,Var%iLoc(1):Var%iLoc(2)), dim=2)
+      end associate
 
-         ! If ModIdx is present, copy subset of Jacobian to output 
-         if (present(ModIdx)) then
-            dYdu = m%Lin%dYdu(ModIdx%iy, ModIdx%iu)
-         else
-            dYdu = m%Lin%dYdu
-         end if
-      else
-         dYdu = 0.0_R8Ki
-      end if
    end if
    
    ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
-   if (present(dXdu)) then
+   if (present(dXdu) .and. (p%Vars%Nx > 0)) then
 
       ! Allocate dXdu if not allocated
       if (.not. allocated(dXdu)) then
-         if (present(ModIdx)) then
-            call AllocAry(dXdu, ModIdx%Nx, ModIdx%Nu, 'dXdu', ErrStat2, ErrMsg2)
-         else
-            call AllocAry(dXdu, p%Vars%Nx, p%Vars%Nu, 'dXdu', ErrStat2, ErrMsg2)
-         end if
-         if (Failed()) return
+         call AllocAry(dXdu, p%Vars%Nx, p%Vars%Nu, 'dXdu', ErrStat2, ErrMsg2); if (Failed()) return
       end if
    
       ! Loop through input variables
       do i = 1, size(p%Vars%u)
 
          ! If variable flag not in flag filter, skip
-         if (present(ModIdx)) then
-            if (iand(p%Vars%u(i)%Flags, ModIdx%FlagFilter) == 0) cycle
-         end if
+         if (.not. MV_HasFlags(p%Vars%u(i), FlagFilterLoc)) cycle
 
          ! Loop through number of linearization perturbations in variable
          do j = 1, p%Vars%u(i)%Num
 
             ! Calculate positive perturbation
-            call MV_Perturb(p%Vars%u(i), j, 1, m%Lin%u, m%Lin%u_perturb)
-            call ED_UnpackInputValues(p, m%Lin%u_perturb, m%u_perturb)
-            call ED_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%x_perturb, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackStateValues(p, m%x_perturb, m%Lin%x_pos)
+            call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
+            call ED_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call ED_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call ED_PackStateValues(p, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation
-            call MV_Perturb(p%Vars%u(i), j, -1, m%Lin%u, m%Lin%u_perturb)
-            call ED_UnpackInputValues(p, m%Lin%u_perturb, m%u_perturb)
-            call ED_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%x_perturb, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackStateValues(p, m%x_perturb, m%Lin%x_neg)
+            call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
+            call ED_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call ED_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call ED_PackStateValues(p, m%dxdt_lin, m%Jac%x_neg)
 
             ! Calculate column index
             col = p%Vars%u(i)%iLoc(1) + j - 1
 
             ! Get partial derivative via central difference and store in full linearization array
-            m%Lin%dXdu(:,col) = (m%Lin%x_pos - m%Lin%x_neg) / (2.0_R8Ki * p%Vars%u(i)%Perturb)
+            dXdu(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * p%Vars%u(i)%Perturb)
          end do
       end do
             
-      ! Only include extended variables in full linearization
-      if (.not. present(ModIdx)) then
+      ! Extended: BlPitchComC is the sum of BlPitchCom across all blades
+      associate (Var => p%Vars%u(p%iVarBlPitchCom))
+         dXdu(:,p%Vars%u(p%iVarBlPitchComC)%iLoc(1)) = sum(dXdu(:,Var%iLoc(1):Var%iLoc(2)), dim=2)
+      end associate
 
-         ! Extended: BlPitchComC is the sum of BlPitchCom across all blades
-         associate (Var => p%Vars%u(p%iVarBlPitchCom))
-            m%Lin%dXdu(:,p%Vars%u(p%iVarBlPitchComC)%iLoc(1)) = sum(m%Lin%dXdu(:,Var%iLoc(1):Var%iLoc(2)), dim=2)
-         end associate
-      end if
-
-      ! If ModIdx is present, copy subset of Jacobian to output 
-      if (present(ModIdx)) then
-         dXdu = m%Lin%dXdu(ModIdx%idx, ModIdx%iu)
-      else
-         dXdu = m%Lin%dXdu
-      end if   
    end if
    
    if ( present( dXddu ) ) then
@@ -10551,7 +10518,7 @@ END SUBROUTINE ED_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
-SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx, ModIdx )
+SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, FlagFilter, dYdx, dXdx, dXddx, dZdx )
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -10568,145 +10535,122 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    TYPE(ED_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions (Y) with respect 
-                                                                               !!   to the continuous states (x) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdx(:,:)  !< Partial derivatives of continuous state functions (X) with respect 
-                                                                               !!   to the continuous states (x) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddx(:,:) !< Partial derivatives of discrete state functions (Xd) with respect 
-                                                                               !!   to the continuous states (x) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state functions (Z) with respect 
-                                                                               !!   to the continuous states (x) [intent in to avoid deallocation]
-   TYPE(VarsIdxType), OPTIONAL,           INTENT(IN   )           :: ModIdx     !< Module linearization type
+   INTEGER(IntKi), OPTIONAL,             INTENT(IN   )           :: FlagFilter  !< Variable indexing number
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions (Y) with respect to the continuous states (x) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdx(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the continuous states (x) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddx(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the continuous states (x) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state functions (Z) with respect to the continuous states (x) [intent in to avoid deallocation]
 
+   CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_JacobianPContState'
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
-   CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_JacobianPContState'
+   logical                                           :: IsFullLin
+   integer(IntKi)                :: FlagFilterLoc
    INTEGER(IntKi)                                    :: i, j, col
-   logical                                           :: CalcWriteOutput
 
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
    m%IgnoreMod = .true. ! to get true perturbations, we can't use the modulo function
 
-   ! Set flag to pack write outputs
-   CalcWriteOutput = .not. present(ModIdx)
+   ! Set full linearization flag and local filter flag
+   if (present(FlagFilter)) then
+      IsFullLin = FlagFilter == VF_None
+      FlagFilterLoc = FlagFilter
+   else
+      IsFullLin = .true.
+      FlagFilterLoc = VF_None
+   end if
 
    ! Copy state values
    call ED_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-   call ED_PackStateValues(p, x, m%Lin%x)
+   call ED_PackStateValues(p, x, m%Jac%x)
 
    ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
    if (present(dYdx)) then
 
       ! Allocate dYdx if not allocated
       if (.not. allocated(dYdx)) then
-         if (present(ModIdx)) then
-            call AllocAry(dYdx, ModIdx%Ny, ModIdx%Nx, 'dYdx', ErrStat2, ErrMsg2)
-         else
-            call AllocAry(dYdx, p%Vars%Ny, p%Vars%Nx, 'dYdx', ErrStat2, ErrMsg2)
-         end if
-         if (Failed()) return
+         call AllocAry(dYdx, p%Vars%Ny, p%Vars%Nx, 'dYdx', ErrStat2, ErrMsg2); if (Failed()) return
       end if
 
-      ! Loop through input variables
+      ! Loop through state variables
       do i = 1, size(p%Vars%x)
 
          ! If variable flag not in flag filter, skip
-         if (present(ModIdx)) then
-            if (iand(p%Vars%x(i)%Flags, ModIdx%FlagFilter) == 0) cycle
-         end if
+         if (.not. MV_HasFlags(p%Vars%x(i), FlagFilterLoc)) cycle
 
          ! Loop through number of linearization perturbations in variable
          do j = 1, p%Vars%x(i)%Num
 
             ! Calculate positive perturbation
-            call MV_Perturb(p%Vars%x(i), j, 1, m%Lin%x, m%Lin%x_perturb)
-            call ED_UnpackStateValues(p, m%Lin%x_perturb, m%x_perturb)
-            call ED_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackOutputValues(p, m%y_perturb, m%Lin%y_pos, CalcWriteOutput)
+            call MV_Perturb(p%Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
+            call ED_UnpackStateValues(p, m%Jac%x_perturb, m%x_perturb)
+            call ED_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call ED_PackOutputValues(p, m%y_lin, m%Jac%y_pos, IsFullLin)
 
             ! Calculate negative perturbation
-            call MV_Perturb(p%Vars%x(i), j, -1, m%Lin%x, m%Lin%x_perturb)
-            call ED_UnpackStateValues(p, m%Lin%x_perturb, m%x_perturb)
-            call ED_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_perturb, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackOutputValues(p, m%y_perturb, m%Lin%y_neg, CalcWriteOutput)
+            call MV_Perturb(p%Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
+            call ED_UnpackStateValues(p, m%Jac%x_perturb, m%x_perturb)
+            call ED_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call ED_PackOutputValues(p, m%y_lin, m%Jac%y_neg, IsFullLin)
 
             ! Calculate column index
             col = p%Vars%x(i)%iLoc(1) + j - 1
 
             ! Get partial derivative via central difference and store in full linearization array
-            call MV_ComputeCentralDiff(p%Vars%y, p%Vars%x(i)%Perturb, m%Lin%y_pos, m%Lin%y_neg, m%Lin%dYdx(:,col))
+            call MV_ComputeCentralDiff(p%Vars%y, p%Vars%x(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdx(:,col))
          end do
       end do
             
-      ! If ModIdx is present, copy subset of Jacobian to output 
-      if (present(ModIdx)) then
-         dYdx = m%Lin%dYdx(ModIdx%iy, ModIdx%ix)
-      else
-         dYdx = m%Lin%dYdx
-      end if
    end if
 
    ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
-   if ( present( dXdx ) ) then
+   if (present(dXdx) .and. (p%Vars%Nx > 0)) then
 
       ! Allocate dXdx if not allocated
       if (.not. allocated(dXdx)) then
-         if (present(ModIdx)) then
-            call AllocAry(dXdx, ModIdx%Nx, ModIdx%Nx, 'dXdx', ErrStat2, ErrMsg2)
-         else
-            call AllocAry(dXdx, p%Vars%Nx, p%Vars%Nx, 'dXdx', ErrStat2, ErrMsg2)
-         end if
-         if (Failed()) return
+         call AllocAry(dXdx, p%Vars%Nx, p%Vars%Nx, 'dXdx', ErrStat2, ErrMsg2); if (Failed()) return
       end if
 
-      ! Loop through input variables
+      ! Loop through state variables
       do i = 1, size(p%Vars%x)
 
          ! If variable flag not in flag filter, skip
-         if (present(ModIdx)) then
-            if (iand(p%Vars%x(i)%Flags, ModIdx%FlagFilter) == 0) cycle
-         end if
+         if (.not. MV_HasFlags(p%Vars%x(i), FlagFilterLoc)) cycle
 
          ! Loop through number of linearization perturbations in variable
          do j = 1, p%Vars%x(i)%Num
 
             ! Calculate positive perturbation
-            call MV_Perturb(p%Vars%x(i), j, 1, m%Lin%x, m%Lin%x_perturb)
-            call ED_UnpackStateValues(p, m%Lin%x_perturb, m%x_perturb)
-            call ED_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dx_perturb, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackStateValues(p, m%dx_perturb, m%Lin%x_pos)
+            call MV_Perturb(p%Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
+            call ED_UnpackStateValues(p, m%Jac%x_perturb, m%x_perturb)
+            call ED_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call ED_PackStateValues(p, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation
-            call MV_Perturb(p%Vars%x(i), j, -1, m%Lin%x, m%Lin%x_perturb)
-            call ED_UnpackStateValues(p, m%Lin%x_perturb, m%x_perturb)
-            call ED_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dx_perturb, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackStateValues(p, m%dx_perturb, m%Lin%x_neg)
+            call MV_Perturb(p%Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
+            call ED_UnpackStateValues(p, m%Jac%x_perturb, m%x_perturb)
+            call ED_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call ED_PackStateValues(p, m%dxdt_lin, m%Jac%x_neg)
 
             ! Calculate column index
             col = p%Vars%x(i)%iLoc(1) + j - 1
 
             ! Get partial derivative via central difference and store in full linearization array
-            m%Lin%dXdx(:,col) = (m%Lin%x_pos - m%Lin%x_neg) / (2.0_R8Ki * p%Vars%x(i)%Perturb)
+            dXdx(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * p%Vars%x(i)%Perturb)
          end do
       end do
 
-      ! If ModIdx is present, copy subset of Jacobian to output 
-      if (present(ModIdx)) then
-         dXdx = m%Lin%dXdx(ModIdx%idx, ModIdx%ix)
-      else
-         dXdx = m%Lin%dXdx
-      end if
    end if
 
-   IF ( PRESENT( dXddx ) ) THEN
+   if (present(dXddx)) then
       if (allocated(dXddx)) deallocate(dXddx)
-   END IF
+   end if
 
-   IF ( PRESENT( dZdx ) ) THEN
+   if (present(dZdx)) then
       if (allocated(dZdx)) deallocate(dZdx)
-   END IF
+   end if
 
    call cleanup()
    
@@ -10719,7 +10663,6 @@ contains
    subroutine cleanup()
       m%IgnoreMod = .false.
    end subroutine cleanup
-
 END SUBROUTINE ED_JacobianPContState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
@@ -10868,7 +10811,7 @@ END SUBROUTINE ED_JacobianPConstrState
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedTrimOP, ModIdx )
+SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedTrimOP, FlagFilter )
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(ED_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
@@ -10881,56 +10824,51 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    TYPE(ED_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: u_op(:)    !< values of linearized inputs
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: y_op(:)    !< values of linearized outputs
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: x_op(:)    !< values of linearized continuous states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: u_op(:)    !< values of linearized inputs
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: y_op(:)    !< values of linearized outputs
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: x_op(:)    !< values of linearized continuous states
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
    LOGICAL,                 OPTIONAL,    INTENT(IN   )           :: NeedTrimOP !< whether a y_op values should contain values for trim solution (3-value representation instead of full orientation matrices, no rotation acc)
-   TYPE(VarsIdxType), OPTIONAL,           INTENT(IN   )          :: ModIdx     !< Module linearization type
+   INTEGER(IntKi), OPTIONAL,             INTENT(IN   )           :: FlagFilter !< Filter variables by flag
 
-   INTEGER(IntKi)                                    :: i, k, index
-   INTEGER(IntKi)                                    :: ny
-   INTEGER(IntKi)                                    :: ErrStat2
-   CHARACTER(ErrMsgLen)                              :: ErrMsg2
-   CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_GetOP'
+   CHARACTER(*), PARAMETER          :: RoutineName = 'ED_GetOP'
+   INTEGER(IntKi)                   :: ErrStat2
+   CHARACTER(ErrMsgLen)             :: ErrMsg2
+   logical                          :: IsFullLin
+   INTEGER(IntKi)                   :: i, k
 
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
+
+   ! Set full linearization flag and local filter flag
+   if (present(FlagFilter)) then
+      IsFullLin = FlagFilter == VF_None
+   else
+      IsFullLin = .true.
+   end if
      
    !..................................
-   if ( present( u_op ) ) then
+   if (present(u_op)) then
 
       if (.not. allocated(u_op)) then   
-         if (present(ModIdx)) then
-            call AllocAry(u_op, ModIdx%Nu, 'u_op', ErrStat2, ErrMsg2)
-         else
-            call AllocAry(u_op, p%Vars%Nu, 'u_op', ErrStat2, ErrMsg2)
-         end if
-         if (Failed()) return      
+         call AllocAry(u_op, p%Vars%Nu, 'u_op', ErrStat2, ErrMsg2); if (Failed()) return      
       end if
 
       ! Pack input type into array
-      call ED_PackInputValues(p, u, m%Lin%u)
+      call ED_PackInputValues(p, u, u_op)
            
       ! If full linearization, check extended inputs
-      if (.not. present(ModIdx)) then
+      if (IsFullLin) then
          do k = 2,p%NumBl
             if (.not. EqualRealNos( u%BlPitchCom(1), u%BlPitchCom(k) ) ) then
-               call SetErrStat(ErrID_Info,"Operating point of collective pitch extended input is invalid because "// &
+               call SetErrStat(ErrID_Info, "Operating point of collective pitch extended input is invalid because "// &
                         "the commanded blade pitch angles are not the same for each blade.", ErrStat, ErrMsg, RoutineName)
                exit
             end if
          end do
-      end if
-
-      ! If ModIdx is present
-      if (present(ModIdx)) then
-         u_op = m%Lin%u(ModIdx%iu)  ! copy subset of array
-      else
-         u_op = m%Lin%u             ! copy full array
       end if
    end if
 
@@ -10938,69 +10876,34 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    if (present(y_op)) then
       
       if (.not. allocated(y_op)) then 
-         if (present(ModIdx)) then
-            call AllocAry(y_op, ModIdx%Ny, 'y_op', ErrStat2, ErrMsg2)
-         else
-            call AllocAry(y_op, p%Vars%Ny, 'y_op', ErrStat2, ErrMsg2)
-         end if
-         if (Failed()) return
+         call AllocAry(y_op, p%Vars%Ny, 'y_op', ErrStat2, ErrMsg2); if (Failed()) return
       end if
 
-      call ED_PackOutputValues(p, y, m%Lin%y, .not. present(ModIdx))
-            
-      ! If ModIdx is present
-      if (present(ModIdx)) then
-         y_op = m%Lin%y(ModIdx%iy)  ! copy subset of array
-      else
-         y_op = m%Lin%y             ! copy full array
-      end if 
+      call ED_PackOutputValues(p, y, y_op, IsFullLin)
+
    end if
 
    !..................................
    if (present(x_op)) then
 
       if (.not. allocated(x_op)) then                           
-         if (present(ModIdx)) then
-            call AllocAry(x_op, ModIdx%Nx, 'x_op', ErrStat2, ErrMsg2)
-         else
-            call AllocAry(x_op, p%Vars%Nx, 'x_op', ErrStat2, ErrMsg2)
-         end if
-         if (Failed()) return
+         call AllocAry(x_op, p%Vars%Nx, 'x_op', ErrStat2, ErrMsg2); if (Failed()) return
       end if
 
-      call ED_PackStateValues(p, x, m%Lin%x)
-      
-      ! If ModIdx is present
-      if (present(ModIdx)) then
-         x_op = m%Lin%x(ModIdx%ix)  ! copy subset of array
-      else
-         x_op = m%Lin%x             ! copy full array
-      end if 
+      call ED_PackStateValues(p, x, x_op)     
+
    end if
 
    !..................................
    if (present(dx_op)) then
 
       if (.not. allocated(dx_op)) then
-         if (present(ModIdx)) then
-            call AllocAry(dx_op, ModIdx%Nx, 'dx_op', ErrStat2, ErrMsg2)
-         else
-            call AllocAry(dx_op, p%Vars%Nx, 'dx_op', ErrStat2, ErrMsg2)
-         end if
-         if (Failed()) return
+         call AllocAry(dx_op, p%Vars%Nx, 'dx_op', ErrStat2, ErrMsg2); if (Failed()) return
       end if
       
-      call ED_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, m%dx_perturb, ErrStat2, ErrMsg2) 
-      if (Failed()) return
-
-      call ED_PackStateValues(p, m%dx_perturb, m%Lin%dx)
-                     
-      ! If ModIdx is present
-      if (present(ModIdx)) then
-         dx_op = m%Lin%dx(ModIdx%idx) ! copy subset of array
-      else
-         dx_op = m%Lin%dx             ! copy full array
-      end if 
+      call ED_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+      call ED_PackStateValues(p, m%dxdt_lin, dx_op)
+      
    end if
 
    !..................................
@@ -11038,11 +10941,11 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
 
-   integer(IntKi)                :: i, j, k, idx
+   integer(IntKi)                :: i, j, k
    integer(IntKi), allocatable   :: BladeMeshFields(:)
    real(R8Ki)                    :: MaxThrust, MaxTorque, ScaleLength
-   type(ModVarType)              :: Var
-   integer(IntKi)                :: Flags
+   integer(IntKi)                :: Flags, Field
+   type(VarsIdxType), pointer    :: VarIdx
 
    ! Allocate space for variables (deallocate if already allocated)
    if (associated(p%Vars)) deallocate(p%Vars)
@@ -11052,132 +10955,130 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
       return
    end if
 
+   ! Associate pointer in init output
+   InitOut%Vars => p%Vars
+
    !----------------------------------------------------------------------------
    ! Continuous State Variables
    !----------------------------------------------------------------------------
 
-   allocate(p%Vars%x(0))
-
    ! Add continuous state variables (translation and rotation)
    call MV_AddVar(p%Vars%x, 'PlatformSurge', VF_TransDisp, &
-                  VarIdx=idx, &
+                  Flags=VF_DerivOrder2, &
                   iUsr=DOF_Sg, &
                   Perturb=0.2_R8Ki * D2R_D * max(p%TowerHt, 1.0_ReKi), &
                   LinNames=['Platform horizontal surge translation DOF (internal DOF index = DOF_Sg), m'], &
                   Active=InputFileData%PtfmSgDOF)
 
    call MV_AddVar(p%Vars%x, 'PlatformSway', VF_TransDisp, &
-                  VarIdx=idx, &
+                  Flags=VF_DerivOrder2, &
                   iUsr=DOF_Sw, &
                   Perturb=0.2_R8Ki * D2R_D * max(p%TowerHt, 1.0_ReKi), &
                   LinNames=['Platform horizontal sway translation DOF (internal DOF index = DOF_Sw), m'], &
                   Active=InputFileData%PtfmSwDOF)
 
    call MV_AddVar(p%Vars%x, 'PlatformHeave', VF_TransDisp, &
-                  VarIdx=idx, &
+                  Flags=VF_DerivOrder2, &
                   iUsr=DOF_Hv, &
                   Perturb=0.2_R8Ki * D2R_D * max(p%TowerHt, 1.0_ReKi), &
                   LinNames=['Platform vertical heave translation DOF (internal DOF index = DOF_Hv), m'], &
                   Active=InputFileData%PtfmHvDOF)
 
    call MV_AddVar(p%Vars%x, 'PlatformRoll', VF_AngularDisp, &
-                  VarIdx=idx, &
+                  Flags=VF_DerivOrder2, &
                   iUsr=DOF_R, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Platform roll tilt rotation DOF (internal DOF index = DOF_R), rad'], &
                   Active=InputFileData%PtfmRDOF)
 
    call MV_AddVar(p%Vars%x, 'PlatformPitch', VF_AngularDisp, &
-                  VarIdx=idx, &
+                  Flags=VF_DerivOrder2, &
                   iUsr=DOF_P, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Platform pitch tilt rotation DOF (internal DOF index = DOF_P), rad'], &
                   Active=InputFileData%PtfmPDOF)
 
    call MV_AddVar(p%Vars%x, 'PlatformYaw', VF_AngularDisp, &
-                  VarIdx=idx, &
+                  Flags=VF_DerivOrder2, &
                   iUsr=DOF_Y, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Platform yaw rotation DOF (internal DOF index = DOF_Y), rad'], &
                   Active=InputFileData%PtfmYDOF)
 
    call MV_AddVar(p%Vars%x, 'TowerFA1', VF_TransDisp, &
-                  VarIdx=idx, &
+                  Flags=VF_DerivOrder2, &
                   iUsr=DOF_TFA1, &
                   Perturb=0.020_R8Ki * D2R_D * p%TwrFlexL, &
                   LinNames=['1st tower fore-aft bending mode DOF (internal DOF index = DOF_TFA1), m'], &
                   Active=InputFileData%TwFADOF1)
 
    call MV_AddVar(p%Vars%x, 'TowerSS1', VF_TransDisp, &
-                  VarIdx=idx, &
+                  Flags=VF_DerivOrder2, &
                   iUsr=DOF_TSS1, &
                   Perturb=0.020_R8Ki * D2R_D * p%TwrFlexL, &
                   LinNames=['1st tower side-to-side bending mode DOF (internal DOF index = DOF_TSS1), m'], &
                   Active=InputFileData%TwSSDOF1)
 
    call MV_AddVar(p%Vars%x, 'TowerFA2', VF_TransDisp, &
-                  VarIdx=idx, &
+                  Flags=VF_DerivOrder2, &
                   iUsr=DOF_TFA2, &
                   Perturb=0.002_R8Ki * D2R_D * p%TwrFlexL, &
                   LinNames=['2nd tower fore-aft bending mode DOF (internal DOF index = DOF_TFA2), m'], &
                   Active=InputFileData%TwFADOF2)
 
    call MV_AddVar(p%Vars%x, 'TowerSS2', VF_TransDisp, &
-                  VarIdx=idx, &
+                  Flags=VF_DerivOrder2, &
                   iUsr=DOF_TSS2, &
                   Perturb=0.002_R8Ki * D2R_D * p%TwrFlexL, &
                   LinNames=['2nd tower side-to-side bending mode DOF (internal DOF index = DOF_TSS2), m'], &
                   Active=InputFileData%TwSSDOF2)
 
    call MV_AddVar(p%Vars%x, 'NacelleYaw', VF_AngularDisp, &
-                  VarIdx=idx, &
+                  Flags=VF_DerivOrder2, &
                   iUsr=DOF_Yaw, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Nacelle yaw DOF (internal DOF index = DOF_Yaw), rad'], &
                   Active=InputFileData%YawDOF)
 
    call MV_AddVar(p%Vars%x, 'RotorFurl', VF_AngularDisp, &
-                  VarIdx=idx, &
-                  Flags=VF_AeroMap, &
+                  Flags=VF_DerivOrder2 + VF_AeroMap, &
                   iUsr=DOF_RFrl, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Rotor-furl DOF (internal DOF index = DOF_RFrl), rad'], &
                   Active=InputFileData%RFrlDOF)
 
    call MV_AddVar(p%Vars%x, 'GeneratorAzimuth', VF_AngularDisp, &
-                  VarIdx=idx, &
+                  Flags=VF_DerivOrder2, &
                   iUsr=DOF_GeAz, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Variable speed generator DOF (internal DOF index = DOF_GeAz), rad'], &
                   Active=InputFileData%GenDOF)
 
    call MV_AddVar(p%Vars%x, 'DrivetrainFlexibility', VF_AngularDisp, &
-                  VarIdx=idx, &
+                  Flags=VF_DerivOrder2, &
                   iUsr=DOF_DrTr, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Drivetrain rotational-flexibility DOF (internal DOF index = DOF_DrTr), rad'], &
                   Active=InputFileData%DrTrDOF)
 
    call MV_AddVar(p%Vars%x, 'TailFurl', VF_AngularDisp, &
-                  VarIdx=idx, &
-                  Flags=VF_AeroMap, &
+                  Flags=VF_DerivOrder2 + VF_AeroMap, &
                   iUsr=DOF_TFrl, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Tail-furl DOF (internal DOF index = DOF_TFrl), rad'], &
                   Active=InputFileData%TFrlDOF)
 
    call MV_AddVar(p%Vars%x, 'RotorTeeter', VF_AngularDisp, &
-                  VarIdx=idx, &
+                  Flags=VF_DerivOrder2, &
                   iUsr=DOF_Teet, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Hub teetering DOF (internal DOF index = DOF_Teet), rad'], &
                   Active=InputFileData%TeetDOF)
 
    do i = 1, p%NumBl
-      Flags = VF_RotFrame
-      if (i == 1) call SetFlags(Flags, VF_AeroMap)
+      Flags = ior(VF_RotFrame, VF_DerivOrder2)
+      if (i == 1) Flags = ior(Flags, VF_AeroMap)
       call MV_AddVar(p%Vars%x, 'Blade'//trim(Num2LStr(i))//'Flap1', VF_TransDisp, &
-                     VarIdx=idx, &
                      Flags=Flags, &
                      iUsr=DOF_BF(i,1), &
                      Perturb=0.20_R8Ki * D2R_D * p%BldFlexL, &
@@ -11187,10 +11088,9 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
    end do
 
    do i = 1, p%NumBl
-      Flags = VF_RotFrame
-      if (i == 1) call SetFlags(Flags, VF_AeroMap)
+      Flags = ior(VF_RotFrame, VF_DerivOrder2)
+      if (i == 1) Flags = ior(Flags, VF_AeroMap)
       call MV_AddVar(p%Vars%x, 'Blade'//trim(Num2LStr(i))//'Edge1', VF_TransDisp, &
-                     VarIdx=idx, &
                      Flags=Flags, &
                      iUsr=DOF_BE(i,1), &
                      Perturb=0.20_R8Ki * D2R_D * p%BldFlexL, &
@@ -11200,10 +11100,9 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
    end do
 
    do i = 1, p%NumBl
-      Flags = VF_RotFrame
-      if (i == 1) call SetFlags(Flags, VF_AeroMap)
+      Flags = ior(VF_RotFrame, VF_DerivOrder2)
+      if (i == 1) Flags = ior(Flags, VF_AeroMap)
       call MV_AddVar(p%Vars%x, 'Blade'//trim(Num2LStr(i))//'Flap2', VF_TransDisp, &
-                     VarIdx=idx, &
                      Flags=Flags, &
                      iUsr=DOF_BF(i,2), &
                      Perturb=0.02_R8Ki * D2R_D * p%BldFlexL, &
@@ -11213,33 +11112,29 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
    end do
 
    ! Derivatives of continuous state variables
-   do i = 1, size(p%Vars%x)
+   if (allocated(p%Vars%x)) then
+      do i = 1, size(p%Vars%x)
 
-      ! Increase variable perturbation if below minimum
-      p%Vars%x(i)%Perturb = max(p%Vars%x(i)%Perturb, MinPerturb)
+         ! Increase variable perturbation if below minimum
+         p%Vars%x(i)%Perturb = max(p%Vars%x(i)%Perturb, MinPerturb)
 
-      ! Make a copy of variable
-      Var = p%Vars%x(i)
-      
-      ! Update linearization name
-      Var%LinNames(1) = 'First time derivative of '//trim(Var%LinNames(1))//'/s'
+         ! Update from position to velocity
+         if (p%Vars%x(i)%Field == VF_TransDisp) Field = VF_TransVel
+         if (p%Vars%x(i)%Field == VF_AngularDisp) Field = VF_AngularVel
+         
+         ! Add variable (only active variables are in x)
+         call MV_AddVar(p%Vars%x, p%Vars%x(i)%Name, Field, &
+                        VarIdx=j, &
+                        Flags=p%Vars%x(i)%Flags, &
+                        iUsr=p%Vars%x(i)%iUsr(1), &
+                        Perturb=p%Vars%x(i)%Perturb, &
+                        LinNames=['First time derivative of '//trim(p%Vars%x(i)%LinNames(1))//'/s'])
 
-      ! Update from position to velocity
-      if (Var%Field == VF_TransDisp) Var%Field = VF_TransVel
-      if (Var%Field == VF_AngularDisp) Var%Field = VF_AngularVel
+         ! Remove aero map flag from newly created variable
+         call MV_UnsetFlags(p%Vars%x(j), VF_AeroMap)
 
-      ! Get flags from variable and remove aero map flag
-      Flags = Var%Flags
-      call UnsetFlags(Flags, VF_AeroMap)
-      
-      ! Add variable (only active variables are in x)
-      call MV_AddVar(p%Vars%x, Var%Name, Var%Field, &
-                     VarIdx=idx, &
-                     Flags=Flags, &
-                     iUsr=Var%iUsr(1), &
-                     Perturb=Var%Perturb, &
-                     LinNames=Var%LinNames)
-   end do
+      end do
+   end if
 
    !----------------------------------------------------------------------------
    ! Input variables
@@ -11297,20 +11192,22 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
    call MV_AddVar(p%Vars%u, "BlPitchCom", VF_Scalar, &
                   VarIdx=p%iVarBlPitchCom, &
                   Num=p%NumBl, &
-                  Flags=VF_RotFrame, &
+                  Flags=VF_RotFrame + VF_Linearize, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=[('Blade '//trim(num2lstr(i))//' pitch command, rad', i=1,p%NumBl)])
    call MV_AddVar(p%Vars%u, "YawMom", VF_Scalar, &
                   VarIdx=p%iVarYawMom, &
+                  Flags=VF_Linearize, &
                   Perturb=MaxTorque / 100.0_R8Ki, &
                   LinNames=['Yaw moment, Nm'])
    call MV_AddVar(p%Vars%u, "GenTrq", VF_Scalar, &
                   VarIdx=p%iVarGenTrq, &
+                  Flags=VF_Linearize, &
                   Perturb=MaxTorque / (100.0_R8Ki*p%GBRatio), &
                   LinNames=['Generator torque, Nm'])
    call MV_AddVar(p%Vars%u, "BlPitchComC", VF_Scalar, &
                   VarIdx=p%iVarBlPitchComC, &
-                  Flags=VF_Ext, &
+                  Flags=VF_ExtLin + VF_Linearize, &
                   LinNames=['Extended input: collective blade-pitch command, rad'])
    
    ! Set minimum input perturbations
@@ -11335,9 +11232,10 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
          ! Add aero map flag if first blade and field is translation/angular displacement/velocity
          if (i == 1) then
             do j = p%iVarBladeMotion(i), size(p%Vars%y)
-               if (iand(p%Vars%y(j)%Field, VF_TransDisp+VF_AngularDisp+VF_TransVel+VF_AngularVel) > 0) then
-                  p%Vars%y(j)%Flags = ior(p%Vars%y(j)%Flags, VF_AeroMap)
-               end if
+               select case (p%Vars%y(j)%Field)
+               case (VF_TransDisp, VF_AngularDisp, VF_TransVel, VF_AngularVel)
+                  call MV_SetFlags(p%Vars%y(j), VF_AeroMap)
+               end select
             end do
          end if
       end do
@@ -11379,11 +11277,10 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
                   LinNames=['HSS_Spd, rad/s'])
 
    ! Write output variables
-   p%iVarOutput = size(p%Vars%y) + 1
+   p%iVarWriteOut = size(p%Vars%y) + 1
    do i = 1, p%NumOuts
       call MV_AddVar(p%Vars%y, p%OutParam(i)%Name, VF_Scalar, &
-                     VarIdx=idx, &
-                     Flags=OutParamFlags(p%OutParam(i)%Indx), &
+                     Flags=VF_WriteOut + OutParamFlags(p%OutParam(i)%Indx), &
                      iUsr=i, &
                      LinNames=[trim(p%OutParam(i)%Name)//', '//trim(p%OutParam(i)%Units)], &
                      Active=(p%OutParam(i)%Indx > 0))
@@ -11393,8 +11290,7 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
       do j = 1, p%BldNd_BladesOut
          call MV_AddVar(p%Vars%y, p%BldNd_OutParam(i)%Name, VF_Scalar, &
                         Num=p%BldNodes, &
-                        VarIdx=idx, &
-                        Flags=VF_RotFrame, &
+                        Flags=VF_WriteOut + VF_RotFrame, &
                         iUsr=k, &
                         LinNames=[(BldOutLinName(p%BldNd_OutParam(i), j, k), k=1, p%BldNodes)], &
                         Active=(p%BldNd_OutParam(i)%Indx > 0))
@@ -11403,28 +11299,15 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
    end do
 
    !----------------------------------------------------------------------------
-   ! Initialize Variables and Linearization data
+   ! Initialize Variables and Jacobian data
    !----------------------------------------------------------------------------
 
-   call MV_InitVarsLin(p%Vars, m%Lin, Linearize .or. p%CompAeroMaps, ErrStat2, ErrMsg2); if (Failed()) return
+   call MV_InitVarsJac(p%Vars, m%Jac, Linearize .or. p%CompAeroMaps, ErrStat2, ErrMsg2); if (Failed()) return
 
    call ED_CopyContState(x, m%x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
-   call ED_CopyContState(x, m%dx_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call ED_CopyContState(x, m%dxdt_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
    call ED_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
-   call ED_CopyOutput(y, m%y_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
-
-   !----------------------------------------------------------------------------
-   ! Linearization
-   !----------------------------------------------------------------------------
-
-   ! If linearization is requested, initialize arrays
-   if (Linearize .or. p%CompAeroMaps) then
-      call MV_InitLinArrays(p%Vars, 2, &
-                        InitOut%LinNames_x, InitOut%RotFrame_x, InitOut%DerivOrder_x, &
-                        InitOut%LinNames_u, InitOut%RotFrame_u, InitOut%IsLoad_u, &
-                        InitOut%LinNames_y, InitOut%RotFrame_y, ErrStat2, ErrMsg2)
-      if (Failed()) return
-   end if
+   call ED_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
 
    !----------------------------------------------------------------------------
    ! AeroMap
@@ -11433,26 +11316,11 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
    if (p%CompAeroMaps) then
 
       ! Initialize index for variables flagged with VF_AeroMap
-      call MV_InitVarIdx(p%Vars, p%IdxAeroMap, VF_AeroMap, ErrStat2, ErrMsg2)
-      if (Failed()) return
+      call MV_InitVarIdx(p%Vars, p%Vars%IdxAeroMap, VF_AeroMap, ErrStat2, ErrMsg2); if (Failed()) return
 
       ! Update dx indices to select the accelerations
-      p%IdxAeroMap%idx = p%IdxAeroMap%idx + p%Vars%Nx/2
+      p%Vars%IdxAeroMap%idx = p%Vars%IdxAeroMap%idx + size(p%Vars%IdxAeroMap%idx)/2
 
-      ! Set parameters
-      p%NActvDOF_Lin = p%DOFs%NActvDOF / p%NumBl ! we have only blade DOFs, and we are going to use only 1 of the blades
-      p%NActvDOF_Stride = p%NumBl
-      p%NActvVelDOF_Lin = 0 ! we do NOT have velocity states
-
-      ! Get subset of linearization arrays
-      InitOut%LinNames_x = InitOut%LinNames_x(p%IdxAeroMap%ix)
-      InitOut%RotFrame_x = InitOut%RotFrame_x(p%IdxAeroMap%ix)
-      InitOut%DerivOrder_x = InitOut%DerivOrder_x(p%IdxAeroMap%ix)
-      InitOut%LinNames_u = InitOut%LinNames_u(p%IdxAeroMap%iu)
-      InitOut%RotFrame_u = InitOut%RotFrame_u(p%IdxAeroMap%iu)
-      InitOut%IsLoad_u = InitOut%IsLoad_u(p%IdxAeroMap%iu)
-      InitOut%LinNames_y = InitOut%LinNames_y(p%IdxAeroMap%iy)
-      InitOut%RotFrame_y = InitOut%RotFrame_y(p%IdxAeroMap%iy)
    end if
 
 contains
@@ -11497,6 +11365,8 @@ subroutine ED_PackStateValues(p, x, ary)
          ary(p%Vars%x(i)%iLoc(1)) = x%QT(p%Vars%x(i)%iUsr(1))
       case (VF_TransVel, VF_AngularVel)
          ary(p%Vars%x(i)%iLoc(1)) = x%QDT(p%Vars%x(i)%iUsr(1))
+      case default
+         ary(p%Vars%x(i)%iLoc(1)) = 0.0_R8Ki
       end select
    end do
 end subroutine
@@ -11579,7 +11449,7 @@ subroutine ED_PackOutputValues(p, y, Ary, PackWriteOutput)
    call MV_Pack(p%Vars%y, p%iVarYawRate, y%YawRate, Ary)
    call MV_Pack(p%Vars%y, p%iVarHSS_Spd, y%HSS_Spd, Ary)
    if (PackWriteOutput) then
-      do i = p%iVarOutput, size(p%Vars%y)
+      do i = p%iVarWriteOut, size(p%Vars%y)
          call MV_Pack(p%Vars%y, i, y%WriteOutput(p%Vars%y(i)%iUsr(1):p%Vars%y(i)%iUsr(2)), Ary)
       end do
    end if
