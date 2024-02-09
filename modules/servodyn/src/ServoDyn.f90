@@ -586,6 +586,11 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       InitOut%CouplingScheme = ExplicitLoose
    END IF
 
+      !............................................................................................
+      ! Initialize module variables
+      !............................................................................................
+   call SrvD_InitVars( InitInp, u, p, x, y, m, InitOut, InitInp%Linearize, ErrStat2, ErrMsg2 )
+   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       !............................................................................................
       ! Close summary file:
@@ -615,6 +620,211 @@ contains
       CALL StC_DestroyCtrlChanInitInfoType(StC_CtrlChanInitInfo, ErrStat2, ErrMsg2 )
    end subroutine Cleanup
 END SUBROUTINE SrvD_Init
+
+!----------------------------------------------------------------------------------------------------------------------------------   
+!> This routine initializes module variables for use by the solver and linearization.
+subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
+   type(SrvD_InitInputType),        intent(in)     :: InitInp     !< Initialization input
+   type(SrvD_InputType),            intent(inout)  :: u           !< An initial guess for the input; input mesh must be defined
+   type(SrvD_ParameterType),        intent(inout)  :: p           !< Parameters
+   type(SrvD_ContinuousStateType),  intent(inout)  :: x           !< Continuous state
+   type(SrvD_OutputType),           intent(inout)  :: y           !< Initial system outputs (outputs are not calculated;
+   type(SrvD_MiscVarType),          intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
+   type(SrvD_InitOutputType),       intent(inout)  :: InitOut     !< Output for initialization routine
+   logical,                         intent(in)     :: Linearize   !< Flag to initialize linearization variables
+   integer(IntKi),                  intent(out)    :: ErrStat     !< Error status of the operation
+   character(*),                    intent(out)    :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter    :: RoutineName = 'SrvD_InitVars'
+   integer(IntKi)             :: ErrStat2                     ! Temporary Error status
+   character(ErrMsgLen)       :: ErrMsg2                      ! Temporary Error message
+   character(ChanLen)         :: Desc
+   integer(IntKi)             :: i, j, k, iUser
+   character(36), parameter   :: StCLabels(*) = [&
+                                    ' local displacement state X  m      ', &
+                                    ' local displacement state Y  m      ', &
+                                    ' local displacement state Z  m      ', &
+                                    ' local displacement state dX/dt  m/s', &
+                                    ' local displacement state dY/dt  m/s', &
+                                    ' local displacement state dZ/dt  m/s']
+   real(R8Ki)                 :: xPerturb, uPerturbTrans, uPerturbAng, uPerturbs(6)
+
+   ! Allocate space for variables (deallocate if already allocated)
+   if (associated(p%Vars)) deallocate(p%Vars)
+   allocate(p%Vars, stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Add pointers to vars to inititialization output
+   InitOut%Vars => p%Vars
+
+   !----------------------------------------------------------------------------
+   ! Continuous State Variables
+   !----------------------------------------------------------------------------
+
+   ! Calculate perturbations
+   xPerturb = 0.2_R8Ki*Pi/180.0_R8Ki * max(TwoNorm(InitInp%NacRefPos - InitInp%TwrBaseRefPos), 1.0_R8Ki)
+
+   ! Blade Structural Controller
+   do i = 1, p%NumBStC
+      do j = 1, p%NumBl
+         Desc = 'Blade '//trim(Num2LStr(i))//' StC '//Num2LStr(j)
+         call MV_AddVar(p%Vars%x, Desc, VF_Scalar, Num=6, &
+                        Flags=VF_DerivOrder2+VF_RotFrame, &
+                        LinNames=[(trim(Desc)//StCLabels(k), k = 1, 6)], &
+                        Perturb=xPerturb)
+      end do
+   end do
+
+   ! Nacelle Structural Controller
+   do j = 1, p%NumNStC
+      Desc = 'Nacelle StC '//Num2LStr(j)
+      call MV_AddVar(p%Vars%x, Desc, VF_Scalar, Num=6, &
+                     Flags=VF_DerivOrder2, &
+                     LinNames=[(trim(Desc)//StCLabels(k), k = 1, 6)], &
+                     Perturb=xPerturb)
+   enddo
+
+   ! Tower Structural Controller
+   do j = 1, p%NumTStC
+      Desc = 'Tower StC '//Num2LStr(j)
+      call MV_AddVar(p%Vars%x, Desc, VF_Scalar, Num=6, &
+                     Flags=VF_DerivOrder2, &
+                     LinNames=[(trim(Desc)//StCLabels(k), k = 1, 6)], &
+                     Perturb=xPerturb)
+   enddo
+
+   ! Substructure Structural Controller
+   do j = 1, p%NumSStC
+      Desc = 'Substructure StC '//Num2LStr(j)
+      call MV_AddVar(p%Vars%x, Desc, VF_Scalar, Num=6, &
+                     Flags=VF_DerivOrder2, &
+                     LinNames=[(trim(Desc)//StCLabels(k), k = 1, 6)], &
+                     Perturb=xPerturb)
+   enddo
+
+   !----------------------------------------------------------------------------
+   ! Input variables
+   !----------------------------------------------------------------------------
+
+   uPerturbTrans = 0.2_R8Ki*Pi_R8/180.0_R8Ki * max(real(TwoNorm(InitInp%NacRefPos - InitInp%TwrBaseRefPos),R8Ki), 1.0_R8Ki)
+   uPerturbAng = 0.2_R8Ki * Pi_R8 / 180.0_R8Ki
+   uPerturbs = [uPerturbTrans, uPerturbAng, uPerturbTrans, uPerturbAng, uPerturbTrans, uPerturbAng]
+
+   call MV_AddVar(p%Vars%u, "Yaw", VF_Scalar, LinNames=['Yaw, Nm'])
+
+   call MV_AddVar(p%Vars%u, "YawRate", VF_Scalar, LinNames=['YawRate, Nm'])
+
+   call MV_AddVar(p%Vars%u, "HSS_Spd", VF_Scalar, LinNames=['HSS_Spd, W'])
+
+   ! Structural controllers
+   do i = 1, p%NumBStC
+      do j = 1, p%NumBl
+         call MV_AddMeshVar(p%Vars%u, 'Blade '//trim(Num2LStr(i))//' StC '//Num2LStr(j), MotionFields, &
+                              Mesh=u%BStCMotionMesh(i, j), &
+                              Perturbs=uPerturbs)
+      end do
+   end do
+
+   do j = 1, p%NumNStC
+      call MV_AddMeshVar(p%Vars%u, 'Nacelle StC '//Num2LStr(j), MotionFields, &
+                           Mesh=u%NStCMotionMesh(j), &
+                           Perturbs=uPerturbs)
+   enddo
+
+   do j = 1, p%NumTStC
+      call MV_AddMeshVar(p%Vars%u, 'Tower StC '//Num2LStr(j), MotionFields, &
+                           Mesh=u%TStCMotionMesh(j), &
+                           Perturbs=uPerturbs)
+   enddo
+
+   do j = 1, p%NumSStC
+      call MV_AddMeshVar(p%Vars%u, 'Substructure StC '//Num2LStr(j), MotionFields, &
+                           Mesh=u%SStCMotionMesh(j), &
+                           Perturbs=uPerturbs)
+   enddo
+
+   !----------------------------------------------------------------------------
+   ! Output variables
+   !----------------------------------------------------------------------------
+
+   call MV_AddVar(p%Vars%y, "BlPitchCom", VF_Scalar, &
+                  Flags=VF_RotFrame, &
+                  Num=size(y%BlPitchCom), &
+                  LinNames=[('BlPitchCom('//trim(Num2LStr(i))//'), rad', i = 1, size(y%BlPitchCom))])
+
+   call MV_AddVar(p%Vars%y, "YawMom", VF_Scalar, &
+                  LinNames=['YawMom, Nm'])
+
+   call MV_AddVar(p%Vars%y, "GenTrq", VF_Scalar, &
+                  LinNames=['GenTrq, Nm'])
+
+   call MV_AddVar(p%Vars%y, "ElecPwr", VF_Scalar, &
+                  LinNames=['ElecPwr, W'])
+
+   ! Structural controllers
+   do i = 1, p%NumBStC
+      do j = 1, p%NumBl
+         call MV_AddMeshVar(p%Vars%y, 'Blade '//trim(Num2LStr(i))//' StC '//Num2LStr(j), LoadFields, &
+                            Mesh=y%BStCLoadMesh(i,j))
+      end do
+   end do
+
+   do j = 1, p%NumNStC
+      call MV_AddMeshVar(p%Vars%y, 'Nacelle StC '//Num2LStr(j), LoadFields, &
+                         Mesh=y%NStCLoadMesh(j))
+   enddo
+
+   do j = 1, p%NumTStC
+      call MV_AddMeshVar(p%Vars%y, 'Tower StC '//Num2LStr(j), LoadFields, &
+                         Mesh=y%TStCLoadMesh(j))
+   enddo
+
+   do j = 1, p%NumSStC
+      call MV_AddMeshVar(p%Vars%y, 'Substructure StC '//Num2LStr(j), LoadFields, &
+                         Mesh=y%SStCLoadMesh(j))
+   enddo
+
+   ! Outputs
+   do i = 1, p%NumOuts
+      call MV_AddVar(p%Vars%y, p%OutParam(i)%Name, VF_Scalar, &
+                     Flags=VF_WriteOut + OutParamFlags(p%OutParam(i)%Indx), &
+                     iUsr=i, &
+                     LinNames=[trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units], &
+                     Active=(p%OutParam(i)%Indx > 0))
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Initialize Variables and Jacobian data
+   !----------------------------------------------------------------------------
+
+   CALL MV_InitVarsJac(p%Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+
+   call SrvD_CopyContState(x, m%x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call SrvD_CopyContState(x, m%dxdt_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call SrvD_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call SrvD_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+
+contains
+   function OutParamFlags(indx) result(flagsRes)
+      integer(IntKi), intent(in) :: indx
+      integer(IntKi)             :: flagsRes
+      integer(IntKi), parameter  :: RotatingFrameIndices(*) = [&
+      BlPitchC, BStC_XQ, BStC_XQD, BStC_YQ, BStC_YQD, BStC_ZQ, BStC_ZQD, &
+      BStC_Fxl, BStC_Fyl, BStC_Fzl, BStC_Mxl, BStC_Myl, BStC_Mzl]
+      if (any(indx == RotatingFrameIndices)) then
+         flagsRes = VF_RotFrame
+      else
+         flagsRes = VF_None
+      end if
+   end function
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Initialize everything needed for linearization
@@ -4252,12 +4462,12 @@ SUBROUTINE SrvD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_o
    TYPE(SrvD_MiscVarType),             INTENT(INOUT)  :: m          !< Misc/optimization variables
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat    !< Error status of the operation
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: u_op(:)    !< values of linearized inputs
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: y_op(:)    !< values of linearized outputs
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: x_op(:)    !< values of linearized continuous states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: dx_op(:)   !< values of first time derivatives of linearized continuous states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: xd_op(:)   !< values of linearized discrete states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: z_op(:)    !< values of linearized constraint states
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: u_op(:)    !< values of linearized inputs
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: y_op(:)    !< values of linearized outputs
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: x_op(:)    !< values of linearized continuous states
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: dx_op(:)   !< values of first time derivatives of linearized continuous states
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: xd_op(:)   !< values of linearized discrete states
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: z_op(:)    !< values of linearized constraint states
 
    INTEGER(IntKi)                                     :: ErrStat2        ! Error status of the operation (occurs after initial error)
    CHARACTER(ErrMsgLen)                               :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
@@ -4301,40 +4511,50 @@ CONTAINS
 
    !> Get the operating point inputs and pack
    subroutine Get_u_op()
-      integer(IntKi)    :: nu,i,j,index_next
+      integer(IntKi)    :: i, j, iVar
 
       if (.not. allocated(u_op)) then
-            ! our operating point includes DCM (orientation) matrices, not just small angles like the perturbation matrices do
-         nu = p%Jac_nu                 &
-            + p%NumBStC  * 6 * p%NumBl &  ! Jac_nu has 3 for Orientation, but we need 9 at each BStC instance on each blade
-            + p%NumNStC  * 6           &  ! Jac_nu has 3 for Orientation, but we need 9 at each NStC instance
-            + p%NumTStC  * 6           &  ! Jac_nu has 3 for Orientation, but we need 9 at each TStC instance
-            + p%NumSStC  * 6              ! Jac_nu has 3 for Orientation, but we need 9 at each SStC instance
-         CALL AllocAry( u_op, nu, 'u_op', ErrStat2, ErrMsg2 )
-         if (Failed())  return;
+         call AllocAry( u_op, p%Vars%Nu, 'u_op', ErrStat2, ErrMsg2 ); if (Failed()) return
       end if
 
-      index_next=1
-      ! Fixed inputs
-      u_op(index_next) = u%Yaw;        index_next = index_next + 1
-      u_op(index_next) = u%YawRate;    index_next = index_next + 1
-      u_op(index_next) = u%HSS_Spd;    index_next = index_next + 1
+      iVar = 1
+      call MV_Pack(p%Vars%u, iVar, u%Yaw, u_op)
+      iVar = iVar + 1
+      call MV_Pack(p%Vars%u, iVar, u%YawRate, u_op)
+      iVar = iVar + 1
+      call MV_Pack(p%Vars%u, iVar, u%HSS_Spd, u_op)
+      iVar = iVar + 1
 
+      !---------------------
       ! StC related inputs
-      do j=1,p%NumBStC     ! Blade
-         do i=1,p%NumBl
-            call PackMotionMesh( u%BStCMotionMesh(i,j), u_op, index_next )
+      !---------------------
+
+      ! Blade
+      do j = 1, p%NumBStC
+         do i = 1, p%NumBl
+            call MV_Pack(p%Vars%u, iVar, u%BStCMotionMesh(i,j), u_op)
+            iVar = iVar + 6
          enddo
       enddo
-      do j=1,p%NumNStC     ! Nacelle
-         call PackMotionMesh( u%NStCMotionMesh(j), u_op, index_next )
+      
+      ! Nacelle
+      do j = 1, p%NumNStC
+         call MV_Pack(p%Vars%u, iVar, u%NStCMotionMesh(j), u_op)
+         iVar = iVar + 6
       enddo
-      do j=1,p%NumTStC     ! Tower
-         call PackMotionMesh( u%TStCMotionMesh(j), u_op, index_next )
+      
+      ! Tower
+      do j = 1, p%NumTStC
+         call MV_Pack(p%Vars%u, iVar, u%TStCMotionMesh(j), u_op)
+         iVar = iVar + 6
       enddo
-      do j=1,p%NumSStC     ! Sub-structure
-         call PackMotionMesh( u%SStCMotionMesh(j), u_op, index_next )
+      
+      ! Sub-structure
+      do j = 1, p%NumSStC
+         call MV_Pack(p%Vars%u, iVar, u%SStCMotionMesh(j), u_op)
+         iVar = iVar + 6
       enddo
+
    end subroutine Get_u_op
 
    !> Get the operating point outputs and pack
