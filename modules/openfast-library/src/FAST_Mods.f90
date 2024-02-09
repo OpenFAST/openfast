@@ -70,6 +70,7 @@ MODULE FAST_ModTypes
 
    LOGICAL,        PARAMETER :: BD_Solve_Option1 = .TRUE.
 
+   INTEGER(IntKi), PARAMETER :: TC_Modules(*) = [Module_ED, Module_BD, Module_SD]   !< Tight coupling module IDs
 
 END MODULE FAST_ModTypes
 !=======================================================================
