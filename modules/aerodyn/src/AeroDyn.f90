@@ -61,6 +61,10 @@ module AeroDyn
                                                !   (Xd), and constraint - state(Z) functions all with respect to the constraint
                                                !   states(z)
    PUBLIC :: AD_GetOP                          !< Routine to pack the operating point values (for linearization) into arrays
+
+   PUBLIC :: AD_PackStateValues, AD_UnpackStateValues
+   PUBLIC :: AD_PackInputValues, AD_UnpackInputValues
+   PUBLIC :: AD_PackOutputValues
   
 contains    
 !----------------------------------------------------------------------------------------------------------------------------------   
@@ -499,16 +503,27 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
          if (allocated(p%AFI(i)%Y_Coord)) deallocate( p%AFI(i)%Y_Coord) 
       end do
    end if
+
+
+      !............................................................................................
+      ! Module Variables
+      !............................................................................................
+
+   do iR = 1, nRotors
+      call AD_InitVars(iR, u%rotors(iR), p%rotors(iR), x%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), InitOut%rotors(iR), &
+                       InputFileData%rotors(iR), InitInp%Linearize, InitInp%CompAeroMaps, ErrStat2, ErrMsg2)
+      if (Failed()) return;
+   end do
    
       !............................................................................................
       ! Initialize Jacobian:
       !............................................................................................
-   if (InitInp%Linearize .or. InitInp%CompAeroMaps) then
-      do iR = 1, nRotors
-         call Init_Jacobian(InputFileData%rotors(iR), p%rotors(iR), p, u%rotors(iR), y%rotors(iR), m%rotors(iR), InitOut%rotors(iR), errStat2, errMsg2)
-         if (Failed()) return;
-      enddo
-   end if
+   ! if (InitInp%Linearize .or. InitInp%CompAeroMaps) then
+   !    do iR = 1, nRotors
+   !       call Init_Jacobian(InputFileData%rotors(iR), p%rotors(iR), p, u%rotors(iR), y%rotors(iR), m%rotors(iR), InitOut%rotors(iR), errStat2, errMsg2)
+   !       if (Failed()) return;
+   !    enddo
+   ! end if
    
       !............................................................................................
       ! Print the summary file if requested:
@@ -5190,13 +5205,307 @@ SUBROUTINE TwrInfl_NearestPoint(p, u, BladeNodePosition, r_TowerBlade, theta_tow
 END SUBROUTINE TwrInfl_NearestPoint
 !----------------------------------------------------------------------------------------------------------------------------------
 
+subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileData, Linearize, CompAeroMaps, ErrStat, ErrMsg)
+   integer(IntKi),               intent(in)     :: Rotnum         !< Rotor number
+   type(RotInputType),           intent(inout)  :: u              !< An initial guess for the input; input mesh must be defined
+   type(RotParameterType),       intent(inout)  :: p              !< Parameters
+   type(RotContinuousStateType), intent(inout)  :: x              !< States
+   type(RotConstraintStateType), intent(inout)  :: z              !< Constraint state type
+   type(RotOtherStateType),      intent(inout)  :: OtherState     !< Other state type
+   type(RotOutputType),          intent(inout)  :: y              !< Initial system outputs (outputs are not calculated;
+   type(RotMiscVarType),         intent(inout)  :: m              !< Misc variables for optimization (not copied in glue code)
+   type(RotInitOutputType),      intent(inout)  :: InitOut        !< Output for initialization routine
+   type(RotInputFile),           intent(in)     :: InputFileData  !< Input file data
+   logical,                      intent(in)     :: Linearize      !< Flag to initialize linearization variables
+   logical,                      intent(in)     :: CompAeroMaps   !< Flag to compute aero maps
+   integer(IntKi),               intent(out)    :: ErrStat        !< Error status of the operation
+   character(*),                 intent(out)    :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter :: RoutineName = 'Init_ModuleVars'
+   integer(IntKi)          :: ErrStat2                     
+   character(ErrMsgLen)    :: ErrMsg2                      
+   character(4)            :: RotorLabel
+   character(64)           :: NodeLabel
+   character(1), parameter :: UVW(3) = ['U','V','W']
+   real(ReKi)              :: Perturb, PerturbTower, PerturbBlade(MaxBl)
+   integer(IntKi)          :: i, j, k
+
+   ! Allocate space for variables (deallocate if already allocated)
+   if (associated(p%Vars)) deallocate(p%Vars)
+   allocate(p%Vars, stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Add pointers to vars to inititialization output
+   InitOut%Vars => p%Vars
+
+   ! Create rotor label
+   RotorLabel = 'R'//trim(Num2LStr(RotNum))
+
+   !----------------------------------------------------------------------------
+   ! Continuous State Variables
+   !----------------------------------------------------------------------------
+
+   allocate(p%Vars%x(0))
+
+   ! DBEMT
+   if (p%BEMT%DBEMT%lin_nx/2 > 0) then
+      p%iVarDBEMT = 1
+      do j = 1, p%NumBlades
+         call MV_AddVar(p%Vars%x, "DBEMT%Element", VF_Scalar, &
+                        Num=p%NumBlNds*2, &
+                        Flags=ior(VF_DerivOrder2, VF_RotFrame), &
+                        Perturb=2.0_ReKi * D2R, &
+                        LinNames=[(['vind (axial) at blade '//trim(Num2LStr(j))//', node '//trim(Num2LStr(i))//', m/s', &
+                                    'vind (tangential) at blade '//trim(Num2LStr(j))//', node '//trim(Num2LStr(i))//', m/s'], i = 1, p%NumBlNds)])
+      end do
+      do j = 1, p%NumBlades
+         call MV_AddVar(p%Vars%x, "DBEMT%Element", VF_Scalar, &
+                        Num=p%NumBlNds*2, &
+                        Flags=ior(VF_DerivOrder2, VF_RotFrame), &
+                        Perturb=2.0_ReKi * D2R, &
+                        LinNames=[(['First time derivative of vind (axial) at blade '//trim(Num2LStr(j))//', node '//trim(Num2LStr(i))//', m/s/s', &
+                                    'First time derivative of vind (tangential) at blade '//trim(Num2LStr(j))//', node '//trim(Num2LStr(i))//', m/s/s'], i = 1, p%NumBlNds)])
+      end do
+   end if
+
+   ! Unsteady Aero
+   if (p%BEMT%UA%lin_nx > 0) then
+      p%iVarUA = size(p%Vars%x) + 1
+      do j = 1, p%NumBlades      ! size(x%BEMT%DBEMT%element,2)
+         do i = 1, p%NumBlNds    ! size(x%BEMT%DBEMT%element,1)
+            NodeLabel = 'blade '//trim(num2lstr(j))//', node '//trim(num2lstr(i))
+            if (p%BEMT%UA%UAMod/=UA_OYE) then
+               call MV_AddVar(p%Vars%x, "DBEMT%Element", VF_Scalar, &
+                              Flags=ior(VF_DerivOrder1, VF_RotFrame), &
+                              Perturb=2.0_ReKi * D2R, &
+                              LinNames=['x1 '//trim(NodeLabel)//', rad'])
+               call MV_AddVar(p%Vars%x, "DBEMT%Element", VF_Scalar, &
+                              Flags=ior(VF_DerivOrder1, VF_RotFrame), &
+                              Perturb=2.0_ReKi * D2R, &
+                              LinNames=['x2 '//trim(NodeLabel)//', rad'])
+               call MV_AddVar(p%Vars%x, "DBEMT%Element", VF_Scalar, &
+                              Flags=ior(VF_DerivOrder1, VF_RotFrame), &
+                              Perturb=2.0_ReKi * D2R, &
+                              LinNames=['x3 '//trim(NodeLabel)//', -'])
+            endif
+
+            call MV_AddVar(p%Vars%x, "DBEMT%Element", VF_Scalar, &
+                           Flags=ior(VF_DerivOrder1, VF_RotFrame), &
+                           Perturb=0.001_ReKi, &  ! x4 is a number between 0 and 1, so we need this to be small
+                           LinNames=['x4 '//trim(NodeLabel)//', -'])
+         end do
+      end do
+
+   end if
+
+
+   !----------------------------------------------------------------------------
+   ! Input variables
+   !----------------------------------------------------------------------------
+
+   ! Allocate variable indices
+   call AllocAry(p%iVarBladeRootMotion, p%NumBlades, "iVarBladeRootMotion", ErrStat2, ErrMsg2); if (Failed()) return
+   p%iVarBladeRootMotion = 0
+   call AllocAry(p%iVarBladeMotion, p%NumBlades, "iVarBladeMotion", ErrStat2, ErrMsg2); if (Failed()) return
+   p%iVarBladeMotion = 0
+   call AllocAry(p%iVarInflowOnBlade, p%NumBlades, "iVarInflowOnBlade", ErrStat2, ErrMsg2); if (Failed()) return
+   p%iVarInflowOnBlade = 0
+   call AllocAry(p%iVarUserProp, p%NumBlades, "iVarUserProp", ErrStat2, ErrMsg2); if (Failed()) return
+   p%iVarUserProp = 0
+
+   do k = 1, p%NumBlades
+      PerturbBlade(k) = 0.2_ReKi * D2R * InputFileData%BladeProps(k)%BlSpn(InputFileData%BladeProps(k)%NumBlNds)
+   end do
+
+   if (u%TowerMotion%NNodes > 0) then
+      PerturbTower = 0.2_ReKi*D2R * u%TowerMotion%Position(3, u%TowerMotion%NNodes)
+   else
+      PerturbTower = 0.0_ReKi
+   end if   
+
+   ! Add tower motion
+   call MV_AddMeshVar(p%Vars%u, trim(RotorLabel)//"TowerMotion", &
+                      VarIdx=p%iVarTowerMotion, &
+                      Mesh=u%TowerMotion, &
+                      Fields=[VF_TransDisp, VF_Orientation, VF_TransVel], &
+                      Perturbs=[PerturbTower, &    ! VF_TransDisp
+                                2.0_ReKi * D2R, &  ! VF_Orientation
+                                PerturbTower])     ! VF_TransVel
+   
+   ! Add hub motion
+   call MV_AddMeshVar(p%Vars%u, trim(RotorLabel)//"HubMotion", &
+                      VarIdx=p%iVarHubMotion, &
+                      Mesh=u%HubMotion, &
+                      Fields=[VF_TransDisp, VF_Orientation, VF_AngularVel], &
+                      Perturbs=[PerturbBlade(1), & ! VF_TransDisp
+                                2.0_ReKi * D2R, &  ! VF_Orientation
+                                2.0_ReKi * D2R])   ! VF_AngularVel
+
+   ! Add blade root motion
+   do j = 1, p%NumBlades
+      call MV_AddMeshVar(p%Vars%u, trim(RotorLabel)//"BladeRootMotion"//IdxStr(j), &
+                         VarIdx=p%iVarBladeRootMotion(j), &
+                         Flags=VF_Linearize, &
+                         Mesh=u%BladeRootMotion(j), &
+                         Fields=[VF_Orientation], &
+                         Perturbs=[2.0_ReKi * D2R])
+   end do
+
+   ! Add blade motion
+   do j = 1, p%NumBlades
+      call MV_AddMeshVar(p%Vars%u, trim(RotorLabel)//"BladeMotion"//IdxStr(j), &
+                         VarIdx=p%iVarBladeMotion(j), &
+                         Mesh=u%BladeMotion(j), &
+                         Fields=[VF_TransDisp, VF_Orientation, VF_TransVel, VF_AngularVel, VF_TransAcc], &
+                         Perturbs=[PerturbBlade(j), &   ! VF_TransDisp
+                                   2.0_ReKi * D2R, &    ! VF_Orientation
+                                   PerturbBlade(j), &   ! VF_TransVel
+                                   2.0_ReKi * D2R, &    ! VF_AngularVel
+                                   PerturbBlade(j)])    ! VF_TransAcc
+      ! Set AeroMap flag on subset of first blade fields
+      if (j == 1) then
+         do k = p%iVarBladeMotion(j), size(p%Vars%u)
+            select case (p%Vars%u(k)%Field)
+            case (VF_TransDisp, VF_Orientation, VF_TransVel)
+               call MV_SetFlags(p%Vars%u(k), VF_AeroMap)
+            end select
+         end do
+      end if
+   end do
+
+   ! u%Bld(j)%InflowOnBlade
+   do j = 1, p%NumBlades
+      call MV_AddVar(p%Vars%u, trim(RotorLabel)//"InflowOnBlade"//IdxStr(j), VF_Scalar, &
+                     VarIdx=p%iVarInflowOnBlade(j), &
+                     Num=p%NumBlNds*3, &
+                     Perturb=PerturbBlade(j), &
+                     LinNames=[((UVW(i)//'-component inflow on blade '//trim(Num2LStr(j))//', node '//trim(Num2LStr(k))//', m/s', i = 1, 3), k = 1, p%NumBlNds)])
+   end do
+   
+   ! u%InflowOnTower
+   call MV_AddVar(p%Vars%u, trim(RotorLabel)//"InflowOnTower", VF_Scalar, &
+                  VarIdx=p%iVarInflowOnTower, &
+                  Num=p%NumTwrNds*3, &
+                  Perturb=2.0_ReKi * D2R, &
+                  LinNames=[((UVW(i)//'-component inflow on tower node '//trim(Num2LStr(j))//', m/s', i = 1, 3), j = 1, p%NumTwrNds)])
+
+   ! Add user props
+   do j = 1, p%NumBlades
+      call MV_AddVar(p%Vars%u, trim(RotorLabel)//"UserProp Blade"//IdxStr(k), VF_Scalar, &
+                     VarIdx=p%iVarUserProp(j), &
+                     Flags=VF_RotFrame, &
+                     Num=p%NumBlNds, &
+                     Perturb=2.0_ReKi * D2R, &
+                     LinNames=[('User property on blade '//trim(Num2LStr(j))//', node '//trim(Num2LStr(k))//', -', k = 1, p%NumBlNds)])
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Output variables
+   !----------------------------------------------------------------------------
+
+   call AllocAry(p%iVarBladeLoad, p%NumBlades, "iVarBladeLoad", ErrStat2, ErrMsg2); if (Failed()) return
+
+   ! Add tower load
+   call MV_AddMeshVar(p%Vars%y, trim(RotorLabel)//"TowerLoad", LoadFields, &
+                      VarIdx=p%iVarTowerLoad, &
+                      Mesh=y%TowerLoad)
+
+   ! Add nacelle load
+   call MV_AddMeshVar(p%Vars%y, trim(RotorLabel)//"HubLoad", LoadFields, &
+                      VarIdx=p%iVarHubLoad, &
+                      Mesh=y%HubLoad)
+
+   ! Add nacelle load
+   call MV_AddMeshVar(p%Vars%y, trim(RotorLabel)//"NacelleLoad", LoadFields, &
+                      VarIdx=p%iVarNacelleLoad, &
+                      Mesh=y%NacelleLoad)
+   
+   ! Loop through blades, add blade loads
+   do j = 1, p%NumBlades
+      call MV_AddMeshVar(p%Vars%y, trim(RotorLabel)//"BladeLoad"//IdxStr(j), LoadFields, &
+                         VarIdx=p%iVarBladeLoad(j), &
+                         Flags=VF_AeroMap, &
+                         Mesh=y%BladeLoad(j))
+   end do
+
+   p%iVarWriteOutput = size(p%Vars%y) + 1
+
+   ! Rotor outputs
+   do j = 1, p%NumOuts
+      call MV_AddVar(p%Vars%y, InitOut%WriteOutputHdr(j), VF_Scalar, &
+                     Flags=VF_WriteOut + OutParamFlags(p%OutParam(j)%Indx), &
+                     iUsr=j, &
+                     LinNames=[trim(InitOut%WriteOutputHdr(j))//', '//trim(InitOut%WriteOutputUnt(j))])
+   end do    
+   
+   ! Blade node outputs
+   do j = p%NumOuts + 1, p%NumOuts + p%BldNd_TotNumOuts
+      call MV_AddVar(p%Vars%y, InitOut%WriteOutputHdr(j), VF_Scalar, &
+                     Flags=VF_WriteOut + VF_RotFrame, &
+                     iUsr=k, &
+                     LinNames=[trim(InitOut%WriteOutputHdr(j))//', '//trim(InitOut%WriteOutputUnt(j))])
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Initialize Variables and Linearization data
+   !----------------------------------------------------------------------------
+
+   call MV_InitVarsJac(p%Vars, m%Jac, Linearize .or. CompAeroMaps, ErrStat2, ErrMsg2); if (Failed()) return
+
+   call AD_CopyRotContinuousStateType(x, m%x_init, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call AD_CopyRotContinuousStateType(x, m%x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call AD_CopyRotContinuousStateType(x, m%dxdt_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call AD_CopyRotInputType(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call AD_CopyRotOutputType(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call AD_CopyRotOtherStateType(OtherState, m%OtherState_init, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call AD_CopyRotOtherStateType(OtherState, m%OtherState_jac, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call AD_CopyRotConstraintStateType(z, m%z_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+
+   !----------------------------------------------------------------------------
+   ! AeroMap
+   !----------------------------------------------------------------------------
+
+   if (CompAeroMaps) then
+
+      ! Initialize index for variables flagged with VF_AeroMap
+      call MV_InitVarIdx(p%Vars, p%Vars%IdxAeroMap, VF_AeroMap, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+   end if
+
+contains    
+
+   pure integer(IntKi) function OutParamFlags(ind)
+      integer(IntKi), intent(in) :: ind
+      integer(IntKi), parameter  :: RotFrameInds(*) = [&
+         BAzimuth, BPitch, &
+         BNVUndx, BNVUndy, BNVUndz, BNVDisx, BNVDisy, BNVDisz, BNSTVx, BNSTVy, &
+         BNSTVz, BNVRel, BNDynP, BNRe, BNM, BNVIndx, BNVIndy, BNAxInd, BNTnInd, &
+         BNAlpha, BNTheta, BNPhi, BNCurve, BNCl, BNCd, BNCm, BNCx, BNCy, BNCn, &
+         BNCt, BNFl, BNFd, BNMm, BNFx, BNFy, BNFn, BNFt, BNClrnc]
+      if (any(RotFrameInds == ind)) then
+         OutParamFlags = VF_RotFrame
+      else
+         OutParamFlags = VF_None
+      end if
+   end function
+
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
+
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! ###### The following four routines are Jacobian routines for linearization capabilities #######
 ! If the module does not implement them, set ErrStat = ErrID_Fatal in AD_Init() when InitInp%Linearize is .true.
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and dZ/du are returned.
-SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu, FlagFilter)
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -5213,14 +5522,12 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect
-                                                                               !!   to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with
-                                                                               !!   respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with
-                                                                               !!   respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with
-   !
+   INTEGER(IntKi),          OPTIONAL,    INTENT(IN   )           :: FlagFilter  !< Variable index number
+
    integer(IntKi), parameter :: iR =1 ! Rotor index
 
    if (size(p%rotors)>1) then
@@ -5229,14 +5536,14 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       return
    endif
 
-   call Rot_JacobianPInput( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+   call Rot_JacobianPInput( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu, FlagFilter)
 
 END SUBROUTINE AD_JacobianPInput
                                                                                !!   respect to the inputs (u) [intent in to avoid deallocation]
 
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and dZ/du are returned.
-SUBROUTINE Rot_JacobianPInput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+SUBROUTINE Rot_JacobianPInput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu, FlagFilter )
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -5256,257 +5563,167 @@ SUBROUTINE Rot_JacobianPInput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, 
    INTEGER,                              INTENT(IN   )           :: iRot       !< Rotor index, needed for OLAF
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect
-                                                                               !!   to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with
-                                                                               !!   respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with
-                                                                               !!   respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with
-                                                                               !!   respect to the inputs (u) [intent in to avoid deallocation]
-      ! local variables
-   TYPE(RotOutputType)                                           :: y_p
-   TYPE(RotOutputType)                                           :: y_m
-   TYPE(RotContinuousStateType)                                  :: x_p
-   TYPE(RotContinuousStateType)                                  :: x_m
-   TYPE(RotContinuousStateType)                                  :: x_init
-   TYPE(RotConstraintStateType)                                  :: z_copy
-   TYPE(RotOtherStateType)                                       :: OtherState_copy
-   TYPE(RotOtherStateType)                                       :: OtherState_init
-   TYPE(RotInputType)                                            :: u_perturb
-   REAL(R8Ki)                                                    :: delta_p, delta_m  ! delta change in input
-   INTEGER(IntKi)                                                :: i
-   
-   integer, parameter                                            :: indx = 1      ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
-   integer(intKi)                                                :: ErrStat2
-   character(ErrMsgLen)                                          :: ErrMsg2
-   character(*), parameter                                       :: RoutineName = 'AD_JacobianPInput'
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with respect to the inputs (u) [intent in to avoid deallocation]
+   INTEGER(IntKi),          OPTIONAL,    INTENT(IN   )           :: FlagFilter  !< Variable index number
 
-
-      ! Initialize ErrStat
+   character(*), parameter       :: RoutineName = 'AD_JacobianPInput'
+   integer, parameter            :: indx = 1      ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
+   integer(intKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
+   TYPE(RotOtherStateType)       :: OtherState_copy
+   logical                       :: IsFullLin
+   integer(IntKi)                :: FlagFilterLoc
+   INTEGER(IntKi)                :: i, j, col
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
+   ! Set full linearization flag and local filter flag
+   if (present(FlagFilter)) then
+      IsFullLin = FlagFilter == VF_None
+      FlagFilterLoc = FlagFilter
+   else
+      IsFullLin = .true.
+      FlagFilterLoc = VF_None
+   end if
 
-      ! get OP values here (i.e., set inputs for BEMT):
-   if ( p%FrozenWake ) then
-      call SetInputs(p, p_AD, u, m, indx, errStat2, errMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         
-            ! compare m%BEMT_y arguments with call to BEMT_CalcOutput
-      call computeFrozenWake(m%BEMT_u(indx), p%BEMT, m%BEMT_y, m%BEMT )
+   ! Get OP values here (i.e., set inputs for BEMT):
+   if (p%FrozenWake) then
+      call SetInputs(p, p_AD, u, m, indx, errStat2, errMsg2); if (Failed()) return
+
+      ! compare m%BEMT_y arguments with call to BEMT_CalcOutput
+      call computeFrozenWake(m%BEMT_u(indx), p%BEMT, m%BEMT_y, m%BEMT)
       m%BEMT%UseFrozenWake = .true.
    end if
+
+   ! Copy inputs and pack them for perturbation
+   call AD_CopyRotInputType(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call AD_PackInputValues(p, u, m%Jac%u)
    
-   
-   call AD_CopyRotContinuousStateType( x, x_init, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   call AD_CopyRotOtherStateType( OtherState, OtherState_init, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      
-      if (ErrStat>=AbortErrLev) then
-         call cleanup()
-         return
-      end if
-      
-   ! initialize x_init so that we get accurrate values for first step
-   if (.not. OtherState%BEMT%nodesInitialized ) then
-      call SetInputs(p, p_AD, u, m, indx, errStat2, errMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         
-      call BEMT_InitStates(t, m%BEMT_u(indx), p%BEMT, x_init%BEMT, xd%BEMT, z%BEMT, OtherState_init%BEMT, m%BEMT, p_AD%AFI, ErrStat2, ErrMsg2 ) ! changes values only if states haven't been initialized
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   ! Copy continuous and other states for initialization
+   call AD_CopyRotContinuousStateType(x, m%x_init, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call AD_CopyRotOtherStateType(OtherState, m%OtherState_init, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+
+   ! Initialize x_init so that we get accurrate values for first step
+   ! changes values only if states haven't been initialized
+   if (.not. OtherState%BEMT%nodesInitialized) then
+      call SetInputs(p, p_AD, u, m, indx, errStat2, errMsg2); if (Failed()) return
+      call BEMT_InitStates(t, m%BEMT_u(indx), p%BEMT, m%x_init%BEMT, xd%BEMT, z%BEMT, &
+                           m%OtherState_init%BEMT, m%BEMT, p_AD%AFI, ErrStat2, ErrMsg2); if (Failed()) return 
    end if
    
-   
-      ! make a copy of the inputs to perturb
-   call AD_CopyRotInputType( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if (ErrStat>=AbortErrLev) then
-         call cleanup()
-         return
+   ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
+   if (present(dYdu)) then
+      
+      ! Allocate dYdu if not allocated
+      if (.not. allocated(dYdu)) then
+         call AllocAry(dYdu, p%Vars%Ny, p%Vars%Nu, 'dYdu', ErrStat2, ErrMsg2); if (Failed()) return
       end if
    
+      ! Loop through input variables
+      do i = 1, size(p%Vars%u)
 
-   IF ( PRESENT( dYdu ) ) THEN
-      ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
-      
-      ! allocate dYdu
-      if (.not. allocated(dYdu) ) then
-         call AllocAry(dYdu,p%Jac_ny, size(p%Jac_u_indx,1),'dYdu', ErrStat2, ErrMsg2)
-         call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
-      end if
-   
-      
-         ! make a copy of outputs because we will need two for the central difference computations (with orientations)
-      call AD_CopyRotOutputType( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call AD_CopyRotOutputType( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         ! make a copy of the states to perturb
-      call AD_CopyRotConstraintStateType( z, z_copy, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call AD_CopyRotOtherStateType( OtherState_init, OtherState_copy, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
-         
-      do i=1,size(p%Jac_u_indx,1)
-         
-            ! get u_op + delta_p u
-         call AD_CopyRotInputType( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         call Perturb_u( p, i, 1, u_perturb, delta_p )
+         ! If variable flag not in flag filter, skip
+         if (.not. MV_HasFlags(p%Vars%u(i), FlagFilterLoc)) cycle
 
-         call AD_CopyRotConstraintStateType( z, z_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call AD_CopyRotOtherStateType( OtherState_init, OtherState_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         ! Loop through number of linearization perturbations in variable
+         do j = 1, p%Vars%u(i)%Num
+            
+            ! Calculate positive perturbation
+            call AD_CopyRotConstraintStateType(z, m%z_lin, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+            call AD_CopyRotOtherStateType(m%OtherState_init, m%OtherState_jac, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+            call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
+            call AD_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call SetInputs(p, p_AD, m%u_perturb, m, indx, ErrStat2, ErrMsg2); if (Failed()) return
+            call UpdatePhi(m%BEMT_u(indx), p%BEMT, m%z_lin%BEMT%phi, p_AD%AFI, m%BEMT, m%OtherState_jac%BEMT%ValidPhi, ErrStat2, ErrMsg2); if (Failed()) return
+            call RotCalcOutput(t, m%u_perturb, p, p_AD, m%x_init, xd, m%z_lin, m%OtherState_jac, m%y_lin, m, m_AD, iRot, ErrStat2, ErrMsg2); if (Failed()) return
+            call AD_PackOutputValues(p, m%y_lin, m%Jac%y_pos, IsFullLin)
          
-            ! get updated z%phi values:
-         !call AD_UpdateStates( t, 1, (/u_perturb/), (/t/), p, x_copy, xd_copy, z_copy, OtherState_copy, m, errStat2, errMsg2 )
-         !   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         !bjj: this is what we want to do instead of the overkill of calling AD_UpdateStates
-         call SetInputs(p, p_AD, u_perturb, m, indx, errStat2, errMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         call UpdatePhi( m%BEMT_u(indx), p%BEMT, z_copy%BEMT%phi, p_AD%AFI, m%BEMT, OtherState_copy%BEMT%ValidPhi, errStat2, errMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
+            ! Calculate negative perturbation
+            call AD_CopyRotConstraintStateType(z, m%z_lin, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+            call AD_CopyRotOtherStateType(m%OtherState_init, m%OtherState_jac, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+            call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
+            call AD_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call SetInputs(p, p_AD, m%u_perturb, m, indx, ErrStat2, ErrMsg2); if (Failed()) return
+            call UpdatePhi(m%BEMT_u(indx), p%BEMT, m%z_lin%BEMT%phi, p_AD%AFI, m%BEMT, m%OtherState_jac%BEMT%ValidPhi, ErrStat2, ErrMsg2); if (Failed()) return
+            call RotCalcOutput(t, m%u_perturb, p, p_AD, m%x_init, xd, m%z_lin, m%OtherState_jac, m%y_lin, m, m_AD, iRot, ErrStat2, ErrMsg2); if (Failed()) return
+            call AD_PackOutputValues(p, m%y_lin, m%Jac%y_pos, IsFullLin)
 
-            ! compute y at u_op + delta_p u
-         call RotCalcOutput( t, u_perturb, p, p_AD, x_init, xd, z_copy, OtherState_copy, y_p, m, m_AD, iRot, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         
+            ! Calculate column index
+            col = p%Vars%u(i)%iLoc(1) + j - 1
             
-            ! get u_op - delta_m u
-         call AD_CopyRotInputType( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         call Perturb_u( p, i, -1, u_perturb, delta_m )
-         
-         call AD_CopyRotConstraintStateType( z, z_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call AD_CopyRotOtherStateType( OtherState, OtherState_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            
-            ! get updated z%phi values:
-         !call RotUpdateStates( t, 1, (/u_perturb/), (/t/), p, x_copy, xd_copy, z_copy, OtherState_copy, m, errStat2, errMsg2 )
-         !   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call SetInputs(p, p_AD, u_perturb, m, indx, errStat2, errMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         call UpdatePhi( m%BEMT_u(indx), p%BEMT, z_copy%BEMT%phi, p_AD%AFI, m%BEMT, OtherState_copy%BEMT%ValidPhi, errStat2, errMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-            
-            ! compute y at u_op - delta_m u
-         call RotCalcOutput( t, u_perturb, p, p_AD, x_init, xd, z_copy, OtherState_copy, y_m, m, m_AD, iRot, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         
-            
-            ! get central difference:
-         call Compute_dY( p, p_AD, y_p, y_m, delta_p, delta_m, dYdu(:,i) )
-         
+            ! Get partial derivative via central difference and store in full linearization array
+            call MV_ComputeCentralDiff(p%Vars%y, p%Vars%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,col))
+         end do
+
       end do
-      
+   end if
 
-      if (ErrStat>=AbortErrLev) then
-         call cleanup()
-         return
-      end if
-      
-   END IF
+   ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
+   if (present(dXdu)) then
 
-   IF ( PRESENT( dXdu ) ) THEN
-
-      ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
-
-      ! allocate dXdu if necessary
+      ! Allocate dXdu if not allocated
       if (.not. allocated(dXdu)) then
-         call AllocAry(dXdu, size(p%dx), size(p%Jac_u_indx,1), 'dXdu', ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
+         call AllocAry(dXdu, p%Vars%Nx, p%Vars%Nu, 'dXdu', ErrStat2, ErrMsg2); if (Failed()) return
       end if
-      
-         
-      do i=1,size(p%Jac_u_indx,1)
-         
-            ! get u_op + delta u
-         call AD_CopyRotInputType( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         call Perturb_u( p, i, 1, u_perturb, delta_p )
 
-            ! compute x at u_op + delta u
-         ! note that this routine updates z%phi instead of using the actual state value, so we don't need to call UpdateStates/UpdatePhi here to get z_op + delta_z:
-         call RotCalcContStateDeriv( t, u_perturb, p, p_AD, x_init, xd, z, OtherState_init, m, x_p, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            
-                                         
-            ! get u_op - delta u
-         call AD_CopyRotInputType( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         call Perturb_u( p, i, -1, u_perturb, delta_m )
-         
-            ! compute x at u_op - delta u
-         ! note that this routine updates z%phi instead of using the actual state value, so we don't need to call UpdateStates here to get z_op + delta_z:
-         call RotCalcContStateDeriv( t, u_perturb, p, p_AD, x_init, xd, z, OtherState_init, m, x_m, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-            
-            
-            ! get central difference:
-            
-            ! we may have had an error allocating memory, so we'll check
-         if (ErrStat>=AbortErrLev) then 
-            call cleanup()
-            return
-         end if         
-         
-            ! get central difference:
-         call Compute_dX( p, x_p, x_m, delta_p, delta_m, dXdu(:,i) )
+      ! Loop through input variables
+      do i = 1, size(p%Vars%u)
 
+         ! If variable flag not in flag filter, skip
+         if (.not. MV_HasFlags(p%Vars%u(i), FlagFilterLoc)) cycle
+
+         ! Loop through number of linearization perturbations in variable
+         do j = 1, p%Vars%u(i)%Num
+
+            ! Calculate positive perturbation
+            call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
+            call AD_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call RotCalcContStateDeriv(t, m%u_perturb, p, p_AD, m%x_init, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2) ; if (Failed()) return
+            call AD_PackStateValues(p, m%dxdt_lin, m%Jac%x_pos)
+
+            ! Calculate negative perturbation
+            call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
+            call AD_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call RotCalcContStateDeriv(t, m%u_perturb, p, p_AD, m%x_init, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2) ; if (Failed()) return
+            call AD_PackStateValues(p, m%dxdt_lin, m%Jac%x_neg)
+
+            ! Calculate column index
+            col = p%Vars%u(i)%iLoc(1) + j - 1
+
+            ! Get partial derivative via central difference and store in full linearization array
+            dXdu(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * p%Vars%u(i)%Perturb)
+         end do
       end do
+         
+   end if
 
-      call AD_DestroyRotContinuousStateType( x_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
-      call AD_DestroyRotContinuousStateType( x_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
-   END IF
-
-   IF ( PRESENT( dXddu ) ) THEN
+   if (present(dXddu)) then
       if (allocated(dXddu)) deallocate(dXddu)
-   END IF
+   end if
 
-   IF ( PRESENT( dZdu ) ) THEN
+   if (present(dZdu)) then
       if (allocated(dZdu)) deallocate(dZdu)
-   END IF
+   end if
    
    call cleanup()
 contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+      if (Failed) call cleanup()
+   end function
    subroutine cleanup()
       m%BEMT%UseFrozenWake = .false.
-   
-      call AD_DestroyRotOutputType(                y_p,  ErrStat2, ErrMsg2)
-      call AD_DestroyRotOutputType(                y_m,  ErrStat2, ErrMsg2)
-      call AD_DestroyRotContinuousStateType(        x_p,  ErrStat2, ErrMsg2)
-      call AD_DestroyRotContinuousStateType(        x_m,  ErrStat2, ErrMsg2)
-      call AD_DestroyRotContinuousStateType(     x_init,  ErrStat2, ErrMsg2)
-      call AD_DestroyRotConstraintStateType(         z_copy, ErrStat2, ErrMsg2)
-      call AD_DestroyRotOtherStateType( OtherState_copy, ErrStat2, ErrMsg2)
-      call AD_DestroyRotOtherStateType( OtherState_init, ErrStat2, ErrMsg2)
-                        
-      call AD_DestroyRotInputType( u_perturb, ErrStat2, ErrMsg2 )
    end subroutine cleanup
-
-END SUBROUTINE Rot_JacobianPInput
+end subroutine Rot_JacobianPInput
 
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
-SUBROUTINE AD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
+SUBROUTINE AD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx, FlagFilter )
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -5535,8 +5752,8 @@ SUBROUTINE AD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state
                                                                                !!   functions (Z) with respect to
                                                                                !!   the continuous states (x) [intent in to avoid deallocation]
-   !
-   integer(IntKi), parameter :: iR =1 ! Rotor index
+   INTEGER, OPTIONAL,                    INTENT(IN   )           :: FlagFilter
+   integer(IntKi), parameter :: iR = 1 ! Rotor index
 
    if (size(p%rotors)>1) then
       errStat = ErrID_Fatal
@@ -5544,15 +5761,14 @@ SUBROUTINE AD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       return
    endif
 
-   call RotJacobianPContState( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
-
+   call RotJacobianPContState( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx, FlagFilter )
 
 END SUBROUTINE AD_JacobianPContState
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
-SUBROUTINE RotJacobianPContState( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
+SUBROUTINE RotJacobianPContState( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx, FlagFilter )
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -5572,233 +5788,154 @@ SUBROUTINE RotJacobianPContState( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_A
    INTEGER,                              INTENT(IN   )           :: iRot       !< Rotor index, needed for OLAF
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions
-                                                                               !!   (Y) with respect to the continuous
-                                                                               !!   states (x) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdx(:,:)  !< Partial derivatives of continuous state
-                                                                               !!   functions (X) with respect to
-                                                                               !!   the continuous states (x) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddx(:,:) !< Partial derivatives of discrete state
-                                                                               !!   functions (Xd) with respect to
-                                                                               !!   the continuous states (x) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state
-                                                                               !!   functions (Z) with respect to
-                                                                               !!   the continuous states (x) [intent in to avoid deallocation]
-
-   ! local variables
-   TYPE(RotOutputType)                                           :: y_p
-   TYPE(RotOutputType)                                           :: y_m
-   TYPE(RotContinuousStateType)                                  :: x_p
-   TYPE(RotContinuousStateType)                                  :: x_m
-   TYPE(RotContinuousStateType)                                  :: x_perturb
-   TYPE(RotContinuousStateType)                                  :: x_init
-   TYPE(RotOtherStateType)                                       :: OtherState_init
-   REAL(R8Ki)                                                    :: delta_p, delta_m  ! delta change in state
-   INTEGER(IntKi)                                                :: i
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions (Y) with respect to the continuous states (x) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdx(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the continuous states (x) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddx(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the continuous states (x) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state functions (Z) with respect to the continuous states (x) [intent in to avoid deallocation]
+   INTEGER(IntKi),          OPTIONAL,    INTENT(IN   )           :: FlagFilter  !< Skip vars that don't include these flags
    
-   integer, parameter                                            :: indx = 1      ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
-   integer(intKi)                                                :: ErrStat2
-   character(ErrMsgLen)                                          :: ErrMsg2
-   character(*), parameter                                       :: RoutineName = 'AD_JacobianPContState'
+   character(*), parameter       :: RoutineName = 'AD_JacobianPContState'
+   integer(intKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
+   integer, parameter            :: indx = 1      ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
+   logical                       :: IsFullLin
+   integer(IntKi)                :: FlagFilterLoc
+   integer(IntKi)                :: i, j, col
    
-
-      ! Initialize ErrStat
-
+   ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
 
+   ! Set full linearization flag and local filter flag
+   if (present(FlagFilter)) then
+      IsFullLin = FlagFilter == VF_None
+      FlagFilterLoc = FlagFilter
+   else
+      IsFullLin = .true.
+      FlagFilterLoc = VF_None
+   end if
 
-   if ( p%FrozenWake ) then
-      call SetInputs(p, p_AD, u, m, indx, errStat2, errMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         
-         ! compare arguments with call to BEMT_CalcOutput
-      call computeFrozenWake(m%BEMT_u(indx), p%BEMT, m%BEMT_y, m%BEMT )
+   ! Get OP values here (i.e., set inputs for BEMT):
+   if (p%FrozenWake) then
+      call SetInputs(p, p_AD, u, m, indx, errStat2, errMsg2); if (Failed()) return
+
+      ! compare m%BEMT_y arguments with call to BEMT_CalcOutput
+      call computeFrozenWake(m%BEMT_u(indx), p%BEMT, m%BEMT_y, m%BEMT)
       m%BEMT%UseFrozenWake = .true.
    end if
 
-
-   call AD_CopyRotContinuousStateType( x, x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   ! Copy continuous and other states for initialization
+   call AD_CopyRotContinuousStateType(x, m%x_init, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call AD_CopyRotOtherStateType(OtherState, m%OtherState_init, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
       
-   call AD_CopyRotContinuousStateType( x, x_init, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   call AD_CopyRotOtherStateType( OtherState, OtherState_init, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      
-      if (ErrStat>=AbortErrLev) then
-         call cleanup()
-         return
-      end if
-      
-   ! initialize x_init so that we get accurrate values for 
-   if (.not. OtherState%BEMT%nodesInitialized ) then
-      call SetInputs(p, p_AD, u, m, indx, errStat2, errMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         
-      call BEMT_InitStates(t, m%BEMT_u(indx), p%BEMT, x_init%BEMT, xd%BEMT, z%BEMT, OtherState_init%BEMT, m%BEMT, p_AD%AFI, ErrStat2, ErrMsg2 ) ! changes values only if states haven't been initialized
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   ! Initialize x_init so that we get accurrate values for first step
+   ! changes values only if states haven't been initialized
+   if (.not. OtherState%BEMT%nodesInitialized) then
+      call SetInputs(p, p_AD, u, m, indx, errStat2, errMsg2); if (Failed()) return
+      call BEMT_InitStates(t, m%BEMT_u(indx), p%BEMT, m%x_init%BEMT, xd%BEMT, z%BEMT, &
+                           m%OtherState_init%BEMT, m%BEMT, p_AD%AFI, ErrStat2, ErrMsg2); if (Failed()) return 
    end if
-   
-   
-   IF ( PRESENT( dYdx ) ) THEN
 
-      ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
+   ! Copy and pack states for perturbation
+   call AD_CopyRotContinuousStateType(m%x_init, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call AD_PackStateValues(p, m%x_init, m%Jac%x)
+   
+   ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
+   if (present(dYdx)) then
 
-      ! allocate dYdx if necessary
+      ! Allocate dYdx if not allocated
       if (.not. allocated(dYdx)) then
-         call AllocAry(dYdx, p%Jac_ny, size(p%dx), 'dYdx', ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
+         call AllocAry(dYdx, p%Vars%Ny, p%Vars%Nx, 'dYdx', ErrStat2, ErrMsg2); if (Failed()) return
       end if
       
-         ! make a copy of outputs because we will need two for the central difference computations (with orientations)
-      call AD_CopyRotOutputType( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call AD_CopyRotOutputType( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
+      ! Loop through state variables
+      do i = 1, size(p%Vars%x)
 
-      do i=1,size(p%dx)
-         
-            ! get x_op + delta_p x
-         call AD_CopyRotContinuousStateType( x_init, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-         call Perturb_x( p, i, 1, x_perturb, delta_p )
+         ! If variable flag not in flag filter, skip
+         if (.not. MV_HasFlags(p%Vars%x(i), FlagFilterLoc)) cycle
 
+         ! Loop through number of linearization perturbations in variable
+         do j = 1, p%Vars%x(i)%Num
 
-            ! compute y at x_op + delta_p x
-         ! NOTE: z_op is the same as z because x_perturb does not affect the values of phi, thus I am not updating the states or calling UpdatePhi to get z_perturb.
-         call RotCalcOutput( t, u, p, p_AD, x_perturb, xd, z, OtherState_init, y_p, m, m_AD, iRot, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-         
-            
-            ! get x_op - delta_m x
-         call AD_CopyRotContinuousStateType( x_init, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         call Perturb_x( p, i, -1, x_perturb, delta_m )
-         
-            ! compute y at x_op - delta_m x
-         ! NOTE: z_op is the same as z because x_perturb does not affect the values of phi, thus I am not updating the states or calling UpdatePhi to get z_perturb.
-         call RotCalcOutput( t, u, p, p_AD, x_perturb, xd, z, OtherState_init, y_m, m, m_AD, iRot, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-         
-            
-            ! get central difference:            
-         call Compute_dY( p, p_AD, y_p, y_m, delta_p, delta_m, dYdx(:,i) )
-         
+            ! Calculate positive perturbation
+            call MV_Perturb(p%Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
+            call AD_UnpackStateValues(p, m%Jac%x_perturb, m%x_perturb)
+            call RotCalcOutput( t, u, p, p_AD, m%x_perturb, xd, z, m%OtherState_init, m%y_lin, m, m_AD, iRot, ErrStat2, ErrMsg2 ) ; if (Failed()) return
+            call AD_PackOutputValues(p, m%y_lin, m%Jac%y_pos, IsFullLin)
+
+            ! Calculate negative perturbation
+            call MV_Perturb(p%Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
+            call AD_UnpackStateValues(p, m%Jac%x_perturb, m%x_perturb)
+            call RotCalcOutput( t, u, p, p_AD, m%x_perturb, xd, z, m%OtherState_init, m%y_lin, m, m_AD, iRot, ErrStat2, ErrMsg2 ) ; if (Failed()) return
+            call AD_PackOutputValues(p, m%y_lin, m%Jac%y_neg, IsFullLin)
+
+            ! Calculate column index
+            col = p%Vars%x(i)%iLoc(1) + j - 1
+
+            ! Get partial derivative via central difference and store in full linearization array
+            call MV_ComputeCentralDiff(p%Vars%y, p%Vars%x(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdx(:,col))
+         end do
       end do
-      
+            
+   end if
 
-      if (ErrStat>=AbortErrLev) then
-         call cleanup()
-         return
-      end if
-      call AD_DestroyRotOutputType( y_p, ErrStat2, ErrMsg2 ) ! we don't need this any more   
-      call AD_DestroyRotOutputType( y_m, ErrStat2, ErrMsg2 ) ! we don't need this any more         
+   ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
+   if (present(dXdx)) then
 
-   END IF
-
-   IF ( PRESENT( dXdx ) ) THEN
-
-      ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
-
-      ! allocate and set dXdx
-
-      ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
-
-      ! allocate dXdx if necessary
+      ! Allocate dXdx if not allocated
       if (.not. allocated(dXdx)) then
-         call AllocAry(dXdx, size(p%dx), size(p%dx), 'dXdx', ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
+         call AllocAry(dXdx, p%Vars%Nx, p%Vars%Nx, 'dXdx', ErrStat2, ErrMsg2); if (Failed()) return
       end if
-      
-         
-      do i=1,size(p%dx,1)
-         
-            ! get x_op + delta x
-         call AD_CopyRotContinuousStateType( x_init, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         call Perturb_x( p, i, 1, x_perturb, delta_p )
 
-            ! compute X at x_op + delta x
-         ! NOTE: z_op is the same as z because x_perturb does not affect the values of phi, thus I am not updating the states or calling UpdatePhi to get z_perturb.
-         call RotCalcContStateDeriv( t, u, p, p_AD, x_perturb, xd, z, OtherState_init, m, x_p, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            
-                                         
-            ! get x_op - delta x
-         call AD_CopyRotContinuousStateType( x_init, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         call Perturb_x( p, i, -1, x_perturb, delta_m )
-         
-            ! compute x at u_op - delta u
-         ! NOTE: z_op is the same as z because x_perturb does not affect the values of phi, thus I am not updating the states or calling UpdatePhi to get z_perturb.
-         call RotCalcContStateDeriv( t, u, p, p_AD, x_perturb, xd, z, OtherState_init, m, x_m, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-            
-            
-            ! get central difference:
-            
-            ! we may have had an error allocating memory, so we'll check
-         if (ErrStat>=AbortErrLev) then 
-            call cleanup()
-            return
-         end if         
-         
-            ! get central difference:
-         call Compute_dX( p, x_p, x_m, delta_p, delta_m, dXdx(:,i) )
+      ! Loop through state variables
+      do i = 1, size(p%Vars%x)
 
+         ! If variable flag not in flag filter, skip
+         if (.not. MV_HasFlags(p%Vars%x(i), FlagFilterLoc)) cycle
+
+         ! Loop through number of linearization perturbations in variable
+         do j = 1, p%Vars%x(i)%Num
+
+            ! Calculate positive perturbation
+            call MV_Perturb(p%Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
+            call AD_UnpackStateValues(p, m%Jac%x_perturb, m%x_perturb)
+            call RotCalcContStateDeriv(t, u, p, p_AD, m%x_perturb, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call AD_PackStateValues(p, m%dxdt_lin, m%Jac%x_pos)
+
+            ! Calculate negative perturbation
+            call MV_Perturb(p%Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
+            call AD_UnpackStateValues(p, m%Jac%x_perturb, m%x_perturb)
+            call RotCalcContStateDeriv(t, u, p, p_AD, m%x_perturb, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call AD_PackStateValues(p, m%dxdt_lin, m%Jac%x_neg)
+
+            ! Calculate column index
+            col = p%Vars%x(i)%iLoc(1) + j - 1
+
+            ! Get partial derivative via central difference and store in full linearization array
+            dXdx(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * p%Vars%x(i)%Perturb)
+         end do
       end do
 
-      call AD_DestroyRotContinuousStateType( x_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
-      call AD_DestroyRotContinuousStateType( x_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
-   
-   
-   END IF
+   end if
 
-   IF ( PRESENT( dXddx ) ) THEN
+   ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the continuous states (x) here:
+   if (present(dXddx)) then
+   end if
 
-      ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the continuous states (x) here:
-
-      ! allocate and set dXddx
-
-   END IF
-
-   IF ( PRESENT( dZdx ) ) THEN
-
-
-      ! Calculate the partial derivative of the constraint state functions (Z) with respect to the continuous states (x) here:
-
-      ! allocate and set dZdx
-
-   END IF
+   ! Calculate the partial derivative of the constraint state functions (Z) with respect to the continuous states (x) here:
+   if (present(dZdx)) then
+   end if
 
    call cleanup()
 contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+      if (Failed) call cleanup()
+   end function
    subroutine cleanup()
       m%BEMT%UseFrozenWake = .false.
-   
-      call AD_DestroyRotOutputType(    y_p,       ErrStat2, ErrMsg2)
-      call AD_DestroyRotOutputType(    y_m,       ErrStat2, ErrMsg2)
-      call AD_DestroyRotContinuousStateType( x_p,       ErrStat2, ErrMsg2)
-      call AD_DestroyRotContinuousStateType( x_m,       ErrStat2, ErrMsg2)
-      
-      call AD_DestroyRotContinuousStateType( x_perturb, ErrStat2, ErrMsg2 )
-      call AD_DestroyRotContinuousStateType( x_init,    ErrStat2, ErrMsg2 )
-      call AD_DestroyRotOtherStateType( OtherState_init, ErrStat2, ErrMsg2 )
    end subroutine cleanup
-
 END SUBROUTINE RotJacobianPContState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
@@ -5963,11 +6100,11 @@ SUBROUTINE RotJacobianPConstrState( t, u, p, p_AD, x, xd, z, OtherState, y, m, m
    REAL(R8Ki)                                                    :: delta_p, delta_m  ! delta change in state
    INTEGER(IntKi)                                                :: i, j, k, n, k2, j2   
 
-   integer, parameter                                            :: indx = 1      ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
-   integer, parameter                                            :: op_indx = 2   ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt or the input at OP
+   character(*), parameter                                       :: RoutineName = 'AD_JacobianPConstrState'
    integer(intKi)                                                :: ErrStat2
    character(ErrMsgLen)                                          :: ErrMsg2
-   character(*), parameter                                       :: RoutineName = 'AD_JacobianPConstrState'
+   integer, parameter                                            :: indx = 1      ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
+   integer, parameter                                            :: op_indx = 2   ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt or the input at OP
 
    
       ! local variables
@@ -6181,7 +6318,7 @@ contains
 END SUBROUTINE RotJacobianPConstrState
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
+SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, FlagFilter )
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(AD_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
@@ -6200,7 +6337,8 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
-   !
+   INTEGER(IntKi),          OPTIONAL,    INTENT(IN   )           :: FlagFilter  !< Skip vars that don't include these flags
+
    integer(IntKi), parameter :: iR =1 ! Rotor index
 
    if (size(p%rotors)>1) then
@@ -6209,13 +6347,13 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       return
    endif
 
-   call RotGetOP( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), errStat, errMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
+   call RotGetOP(t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), errStat, errMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, FlagFilter)
 
 END SUBROUTINE AD_GetOP
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE RotGetOP( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
+SUBROUTINE RotGetOP(t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, FlagFilter)
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(RotInputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
@@ -6235,269 +6373,84 @@ SUBROUTINE RotGetOP( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
+   INTEGER(IntKi),          OPTIONAL,    INTENT(IN   )           :: FlagFilter  !< Skip vars that don't include these flags
 
-   INTEGER(IntKi)                                                :: index, i, j, k, n
-   INTEGER(IntKi)                                                :: nu
-   INTEGER(IntKi)                                                :: ErrStat2
-   CHARACTER(ErrMsgLen)                                          :: ErrMsg2
-   CHARACTER(*), PARAMETER                                       :: RoutineName = 'AD_GetOP'
-   LOGICAL                                                       :: FieldMask(FIELDMASK_SIZE)
-   TYPE(RotContinuousStateType)                                  :: dxdt
-
-   
-      ! Initialize ErrStat
+   CHARACTER(*), PARAMETER          :: RoutineName = 'AD_GetOP'
+   INTEGER(IntKi)                   :: ErrStat2
+   CHARACTER(ErrMsgLen)             :: ErrMsg2
+   logical                          :: IsFullLin
+   integer(IntKi)                   :: FlagFilterLoc
+   INTEGER(IntKi)                   :: ind, i, j, k, n
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   IF ( PRESENT( u_op ) ) THEN
-      nu = size(p%Jac_u_indx,1)
-      do i=1,p%NumBl_Lin
-         nu = nu + u%BladeMotion(i)%NNodes * 6  ! Jac_u_indx has 3 orientation angles, but the OP needs the full 9 elements of the DCM
-      end do      
+   ! Set full linearization flag and local filter flag
+   if (present(FlagFilter)) then
+      IsFullLin = FlagFilter == VF_None
+      FlagFilterLoc = FlagFilter
+   else
+      IsFullLin = .true.
+      FlagFilterLoc = VF_None
+   end if
 
-      if (.not. p_AD%CompAeroMaps) then
-         nu = nu + u%TowerMotion%NNodes * 6 & ! Jac_u_indx has 3 orientation angles, but the OP needs the full 9 elements of the DCM
-                 + u%hubMotion%NNodes * 6     ! Jac_u_indx has 3 orientation angles, but the OP needs the full 9 elements of the DCM
-         do i=1,p%NumBlades
-            nu = nu + u%BladeRootMotion(i)%NNodes * 6   ! Jac_u_indx has 3 orientation angles, but the OP needs the full 9 elements of the DCM
-         end do      
+   !----------------------------------------------------------------------------
+
+   if (present(u_op)) then
+
+      if (.not. allocated(u_op)) then   
+         call AllocAry(u_op, p%Vars%Nu, 'u_op', ErrStat2, ErrMsg2); if (Failed()) return      
       end if
-                        
-      if (.not. allocated(u_op)) then
-         call AllocAry(u_op, nu, 'u_op', ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
+
+      call AD_PackInputValues(p, u, u_op)
+
+   END IF
+
+   !----------------------------------------------------------------------------
+
+   if (present(y_op)) then
+
+      if (.not. allocated(y_op)) then   
+         call AllocAry(y_op, p%Vars%Ny, 'y_op', ErrStat2, ErrMsg2); if (Failed()) return      
       end if
+
+      call AD_PackOutputValues(p, y, y_op, IsFullLin)
       
+   END IF
 
-      index = 1
-      if (.not. p_AD%CompAeroMaps) then
-         FieldMask = .false.
-         FieldMask(MASKID_TRANSLATIONDISP) = .true.
-         FieldMask(MASKID_Orientation) = .true.
-         FieldMask(MASKID_TRANSLATIONVel) = .true.
-         call PackMotionMesh(u%TowerMotion, u_op, index, FieldMask=FieldMask)
+   !----------------------------------------------------------------------------
+
+   if (present(x_op)) then
    
-         FieldMask(MASKID_TRANSLATIONVel) = .false.
-         FieldMask(MASKID_RotationVel) = .true.
-         call PackMotionMesh(u%HubMotion, u_op, index, FieldMask=FieldMask)
-   
-         FieldMask = .false.
-         FieldMask(MASKID_Orientation) = .true.
-         do k = 1,p%NumBlades
-            call PackMotionMesh(u%BladeRootMotion(k), u_op, index, FieldMask=FieldMask)
-         end do
-   
-         FieldMask(MASKID_TRANSLATIONDISP) = .true.
-         FieldMask(MASKID_Orientation) = .true.
-         FieldMask(MASKID_TRANSLATIONVel)  = .true.
-         FieldMask(MASKID_RotationVel) = .true.
-         FieldMask(MASKID_TRANSLATIONAcc) = .true.
-      else
-         FieldMask = .false.
-         FieldMask(MASKID_TRANSLATIONDISP) = .true.
-         FieldMask(MASKID_Orientation) = .true.
-         FieldMask(MASKID_TRANSLATIONVel)  = .true.
+      if (.not. allocated(x_op)) then   
+         call AllocAry(x_op, p%Vars%Nx, 'x_op', ErrStat2, ErrMsg2); if (Failed()) return      
       end if
-      
-      do k=1,p%NumBl_Lin
-         call PackMotionMesh(u%BladeMotion(k), u_op, index, FieldMask=FieldMask)
-      end do
-   
-      if (.not. p_AD%CompAeroMaps) then
-         do k=1,p%NumBlades
-            do i=1,p%NumBlNds
-               do j=1,3
-                  u_op(index) = u%Bld(k)%InflowOnBlade(j,i)
-                  index = index + 1
-               end do            
-            end do
-         end do
 
-         do i=1,p%NumTwrNds
-            do j=1,3
-               u_op(index) = u%InflowOnTower(j,i)
-               index = index + 1
-            end do            
-         end do
-         ! UserProp
-         do k=1,p%NumBlades
-            do j = 1, size(u%UserProp,1) ! Number of nodes for a blade
-               u_op(index) = u%UserProp(j,k)
-               index = index + 1
-            end do
-         end do
+      call AD_PackStateValues(p, x, x_op)
          
-         ! AvgDiskVel
-         !do i=1,3
-         !   u_op(index) = u%AvgDiskVel(i)
-         !   index = index + 1
-         !end do
-         
-         ! I'm not including this in the linearization yet
-         !do i=1,u%NacelleMotion%NNodes ! 1 or 0
-         !   do j=1,3
-         !      u_op(index) = u%InflowOnNacelle(j)
-         !      index = index + 1
-         !   end do
-         !end do
-         !
-         !do i=1,u%HubMotion%NNodes ! 1
-         !   do j=1,3
-         !      u_op(index) = u%InflowOnHub(j)
-         !      index = index + 1
-         !   end do
-         !end do
-         
-      end if
-   END IF
+   end if
 
-   IF ( PRESENT( y_op ) ) THEN
-      
-      if (.not. allocated(y_op)) then
-         call AllocAry(y_op, p%Jac_ny, 'y_op', ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
-      end if
-      
-      
+   !----------------------------------------------------------------------------
 
-      index = 1
-      if (.not. p_AD%CompAeroMaps) call PackLoadMesh(y%TowerLoad, y_op, index)
-      do k=1,p%NumBl_Lin
-         call PackLoadMesh(y%BladeLoad(k), y_op, index)                  
-      end do
+   if (present(dx_op)) then
    
-      if (.not. p_AD%CompAeroMaps) then
-         index = index - 1
-         do i=1,p%NumOuts + p%BldNd_TotNumOuts
-            y_op(i+index) = y%WriteOutput(i)
-         end do   
+      if (.not. allocated(dx_op)) then   
+         call AllocAry(dx_op, p%Vars%Nx, 'dx_op', ErrStat2, ErrMsg2); if (Failed()) return      
       end if
+
+      call RotCalcContStateDeriv(t, u, p, p_AD, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); If (Failed()) return
+      call AD_PackStateValues(p, m%dxdt_lin, dx_op)
       
    END IF
 
-   IF ( PRESENT( x_op ) ) THEN
+   !----------------------------------------------------------------------------
+
+   if (present(xd_op)) then
+   end if
    
-      if (.not. allocated(x_op)) then
-         call AllocAry(x_op, p%BEMT%DBEMT%lin_nx + p%BEMT%UA%lin_nx + p%BEMT%lin_nx,'x_op',ErrStat2,ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) return
-      end if
+   !----------------------------------------------------------------------------
 
-      index = 1
-         ! set linearization operating points:
-      if (p%BEMT%DBEMT%lin_nx>0) then
-         do j=1,p%NumBlades ! size(x%BEMT%DBEMT%element,2)
-            do i=1,p%NumBlNds ! size(x%BEMT%DBEMT%element,1)
-               do k=1,size(x%BEMT%DBEMT%element(i,j)%vind)
-                  x_op(index) = x%BEMT%DBEMT%element(i,j)%vind(k)
-                  index = index + 1
-               end do
-            end do
-         end do
-   
-         do j=1,p%NumBlades ! size(x%BEMT%DBEMT%element,2)
-            do i=1,p%NumBlNds ! size(x%BEMT%DBEMT%element,1)
-               do k=1,size(x%BEMT%DBEMT%element(i,j)%vind_1)
-                  x_op(index) = x%BEMT%DBEMT%element(i,j)%vind_1(k)
-                  index = index + 1
-               end do
-            end do
-         end do
-      
-      end if
-      ! UA states
-      if (p%BEMT%UA%lin_nx>0) then
-         do n=1,p%BEMT%UA%lin_nx
-            i = p%BEMT%UA%lin_xIndx(n,1)
-            j = p%BEMT%UA%lin_xIndx(n,2)
-            k = p%BEMT%UA%lin_xIndx(n,3)
-            x_op(index) = x%BEMT%UA%element(i,j)%x(k)
-            
-            index = index + 1
-         end do
-      
-      end if
-      ! BEMT states
-      if (p%BEMT%lin_nx>0) then
-         !do k = 1,size(x%BEMT%V_w)
-         !   x_op(index) = x%BEMT%v_w(k)
-         !   index = index + 1
-         !end do
-      end if
-         
-   END IF
-
-   IF ( PRESENT( dx_op ) ) THEN
-   
-      if (.not. allocated(dx_op)) then
-         call AllocAry(dx_op, p%BEMT%DBEMT%lin_nx + p%BEMT%UA%lin_nx + p%BEMT%lin_nx,'dx_op',ErrStat2,ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            if (ErrStat>=AbortErrLev) return
-      end if
-
-      call RotCalcContStateDeriv(t, u, p, p_AD, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call AD_DestroyRotContinuousStateType( dxdt, ErrStat2, ErrMsg2)
-            return
-         end if
-      
-      index = 1
-         ! set linearization operating points:
-      if (p%BEMT%DBEMT%lin_nx>0) then
-
-         do j=1,p%NumBlades ! size(dxdt%BEMT%DBEMT%element,2)
-            do i=1,p%NumBlNds ! size(dxdt%BEMT%DBEMT%element,1)
-               do k=1,size(dxdt%BEMT%DBEMT%element(i,j)%vind)
-                  dx_op(index) = dxdt%BEMT%DBEMT%element(i,j)%vind(k)
-                  index = index + 1
-               end do
-            end do
-         end do
-   
-         do j=1,p%NumBlades ! size(dxdt%BEMT%DBEMT%element,2)
-            do i=1,p%NumBlNds ! size(dxdt%BEMT%DBEMT%element,1)
-               do k=1,size(dxdt%BEMT%DBEMT%element(i,j)%vind_1)
-                  dx_op(index) = dxdt%BEMT%DBEMT%element(i,j)%vind_1(k)
-                  index = index + 1
-               end do
-            end do
-         end do
-      
-      end if
-      ! UA states derivatives
-      if (p%BEMT%UA%lin_nx>0) then
-         do n=1,p%BEMT%UA%lin_nx
-            i = p%BEMT%UA%lin_xIndx(n,1)
-            j = p%BEMT%UA%lin_xIndx(n,2)
-            k = p%BEMT%UA%lin_xIndx(n,3)
-            dx_op(index) = dxdt%BEMT%UA%element(i,j)%x(k)
-            
-            index = index + 1
-         end do
-      end if
-      ! BEMT states derivatives   
-      if (p%BEMT%lin_nx>0) then
-         call SetErrStat(ErrID_Fatal,'Number of lin states for bem should be zero for now.', ErrStat, ErrMsg, RoutineName)
-         return
-         !do k = 1,size(x%BEMT%V_w)
-         !   dx_op(index) = dxdt%BEMT%v_w(k)
-         !   index = index + 1
-         !end do
-      end if
-      
-      call AD_DestroyRotContinuousStateType( dxdt, ErrStat2, ErrMsg2)
-      
-   END IF
-
-   IF ( PRESENT( xd_op ) ) THEN
-
-   END IF
-   
-   IF ( PRESENT( z_op ) ) THEN
+   if (present(z_op)) then
 
       if (.not. allocated(z_op)) then
          call AllocAry(z_op, p%NumBlades*p%NumBlNds, 'z_op', ErrStat2, ErrMsg2)
@@ -6505,17 +6458,21 @@ SUBROUTINE RotGetOP( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
             if (ErrStat >= AbortErrLev) return
       end if
       
-   
-      index = 1
+      ind = 1
       do k=1,p%NumBlades ! size(z%BEMT%Phi,2)
          do i=1,p%NumBlNds ! size(z%BEMT%Phi,1)
-            z_op(index) = z%BEMT%phi(i,k)
-            index = index + 1
+            z_op(ind) = z%BEMT%phi(i,k)
+            ind = ind + 1
          end do
       end do
       
-   END IF
+   end if
 
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
 END SUBROUTINE RotGetOP
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++   
 SUBROUTINE Init_Jacobian_y( p, p_AD, y, InitOut, ErrStat, ErrMsg)
@@ -7399,5 +7356,157 @@ SUBROUTINE Compute_dX(p, x_p, x_m, delta_p, delta_m, dX)
    dX = dX / (delta_p + delta_m)
    
 END SUBROUTINE Compute_dX
+
+subroutine AD_PackStateValues(p, x, Ary)
+   type(RotParameterType), intent(in)        :: p
+   type(RotContinuousStateType), intent(in)  :: x
+   real(R8Ki), intent(out)                   :: Ary(:)
+   integer(IntKi)                            :: i, j, k, ind
+   if (p%BEMT%DBEMT%lin_nx > 0) then
+      do j = 1,p%NumBlades    ! size(x%BEMT%DBEMT%element,2)
+         do i = 1,p%NumBlNds ! size(x%BEMT%DBEMT%element,1)
+            do k = 1, size(x%BEMT%DBEMT%element(i,j)%vind)
+               Ary(ind) = x%BEMT%DBEMT%element(i,j)%vind(k)
+               ind = ind + 1
+            end do
+         end do
+      end do
+      do j = 1, p%NumBlades   ! size(x%BEMT%DBEMT%element,2)
+         do i = 1, p%NumBlNds ! size(x%BEMT%DBEMT%element,1)
+            do k = 1, size(x%BEMT%DBEMT%element(i,j)%vind_1)
+               Ary(ind) = x%BEMT%DBEMT%element(i,j)%vind_1(k)
+               ind = ind + 1
+            end do
+         end do
+      end do
+   end if
+
+   if (p%BEMT%UA%lin_nx > 0) then
+      if (p%BEMT%UA%UAMod == UA_OYE) then
+         do j = 1, p%NumBlades   ! size(x%BEMT%UA%element,2)
+            do i = 1, p%NumBlNds ! size(x%BEMT%UA%element,1)
+               Ary(ind) = x%BEMT%UA%element(i,j)%x(4)
+               ind = ind + 1
+            end do
+         end do
+      else
+         do j = 1, p%NumBlades ! size(x%BEMT%UA%element,2)
+            do i = 1, p%NumBlNds ! size(x%BEMT%UA%element,1)
+               do k = 1, 4 !size(x%BEMT%UA%element(i,j)%x) !linearize only first 4 states (5th is vortex)
+                  Ary(ind) = x%BEMT%UA%element(i,j)%x(k)
+                  ind = ind + 1
+               end do
+            end do
+         end do
+      endif
+   end if
+end subroutine
+
+subroutine AD_UnpackStateValues(p, Ary, x)
+   type(RotParameterType), intent(in)           :: p
+   real(R8Ki), intent(in)                       :: ary(:)
+   type(RotContinuousStateType), intent(inout)  :: x
+   integer(IntKi)                               :: i, j, k, ind
+
+   if (p%BEMT%DBEMT%lin_nx > 0) then
+      do j = 1,p%NumBlades    ! size(x%BEMT%DBEMT%element,2)
+         do i = 1,p%NumBlNds ! size(x%BEMT%DBEMT%element,1)
+            do k = 1, size(x%BEMT%DBEMT%element(i,j)%vind)
+               x%BEMT%DBEMT%element(i,j)%vind(k) = Ary(ind)
+               ind = ind + 1
+            end do
+         end do
+      end do
+      do j = 1, p%NumBlades   ! size(x%BEMT%DBEMT%element,2)
+         do i = 1, p%NumBlNds ! size(x%BEMT%DBEMT%element,1)
+            do k = 1, size(x%BEMT%DBEMT%element(i,j)%vind_1)
+               x%BEMT%DBEMT%element(i,j)%vind_1(k) = Ary(ind)
+               ind = ind + 1
+            end do
+         end do
+      end do
+   end if
+
+   if (p%BEMT%UA%lin_nx > 0) then
+      if (p%BEMT%UA%UAMod == UA_OYE) then
+         do j = 1, p%NumBlades   ! size(x%BEMT%UA%element,2)
+            do i = 1, p%NumBlNds ! size(x%BEMT%UA%element,1)
+               x%BEMT%UA%element(i,j)%x(4) = Ary(ind)
+               ind = ind + 1
+            end do
+         end do
+      else
+         do j = 1, p%NumBlades ! size(x%BEMT%UA%element,2)
+            do i = 1, p%NumBlNds ! size(x%BEMT%UA%element,1)
+               do k = 1, 4 !size(x%BEMT%UA%element(i,j)%x) !linearize only first 4 states (5th is vortex)
+                  x%BEMT%UA%element(i,j)%x(k) = Ary(ind)
+                  ind = ind + 1
+               end do
+            end do
+         end do
+      endif
+   end if
+end subroutine
+
+subroutine AD_PackInputValues(p, u, Ary)
+   type(RotParameterType), intent(in)  :: p
+   type(RotInputType), intent(in)      :: u
+   real(R8Ki), intent(out)             :: Ary(:)
+   integer(IntKi)                      :: k
+   call MV_Pack(p%Vars%u, p%iVarTowerMotion, u%TowerMotion,  Ary)
+   call MV_Pack(p%Vars%u, p%iVarHubMotion, u%HubMotion,  Ary)
+   do k = 1,p%NumBlades
+      call MV_Pack(p%Vars%u, p%iVarBladeRootMotion(k), u%BladeRootMotion(k),  Ary)
+   end do
+   do k = 1,p%NumBlades
+      call MV_Pack(p%Vars%u, p%iVarBladeMotion(k), u%BladeMotion(k),  Ary)
+   end do
+   do k = 1,p%NumBlades
+      call MV_Pack(p%Vars%u, p%iVarInflowOnBlade(k), u%Bld(k)%InflowOnBlade,  Ary)
+   end do
+   call MV_Pack(p%Vars%u, p%iVarInflowOnTower, u%InflowOnTower,  Ary)
+   do k = 1,p%NumBlades
+      call MV_Pack(p%Vars%u, p%iVarUserProp(k), u%UserProp(:,k),  Ary)
+   end do
+end subroutine
+
+subroutine AD_UnpackInputValues(p, Ary, u)
+   type(RotParameterType), intent(in)  :: p
+   real(R8Ki), intent(in)              :: Ary(:)
+   type(RotInputType), intent(inout)   :: u
+   integer(IntKi)                      :: k
+   call MV_Unpack(p%Vars%u, p%iVarTowerMotion, Ary, u%TowerMotion)
+   call MV_Unpack(p%Vars%u, p%iVarHubMotion, Ary, u%HubMotion)
+   do k = 1,p%NumBlades
+      call MV_Unpack(p%Vars%u, p%iVarBladeRootMotion(k), Ary, u%BladeRootMotion(k))
+   end do
+   do k = 1,p%NumBlades
+      call MV_Unpack(p%Vars%u, p%iVarBladeMotion(k), Ary, u%BladeMotion(k))
+   end do
+   do k = 1,p%NumBlades
+      call MV_Unpack(p%Vars%u, p%iVarInflowOnBlade(k), Ary, u%Bld(k)%InflowOnBlade)
+   end do
+   call MV_Unpack(p%Vars%u, p%iVarInflowOnTower, Ary, u%InflowOnTower)
+   do k = 1,p%NumBlades
+      call MV_Unpack(p%Vars%u, p%iVarUserProp(k), Ary, u%UserProp(:,k))
+   end do
+end subroutine
+
+subroutine AD_PackOutputValues(p, y, Ary, PackWriteOutput)
+   type(RotParameterType), intent(in)  :: p
+   type(RotOutputType), intent(in)     :: y
+   real(R8Ki), intent(out)             :: Ary(:)
+   logical, intent(in)                 :: PackWriteOutput
+   integer(IntKi)                      :: k
+   call MV_Pack(p%Vars%y, p%iVarTowerLoad, y%TowerLoad, Ary)
+   do k = 1, p%NumBlades
+      call MV_Pack(p%Vars%y, p%iVarBladeLoad(k), y%BladeLoad(k), Ary)
+   end do
+   if (PackWriteOutput) then
+      ! do k = p%iVarWriteOut, size(p%Vars%y)
+      !    call MV_Pack(p%Vars%y, i, y%WriteOutput(p%Vars%y(i)%iUsr(1):p%Vars%y(i)%iUsr(2)), Ary)
+      ! end do
+   end if
+end subroutine
 
 END MODULE AeroDyn
