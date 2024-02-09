@@ -1601,5 +1601,41 @@ SUBROUTINE ExtLdDX_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat
       y_out%bldLd = a1*y1%bldLd + a2*y2%bldLd + a3*y3%bldLd
    END IF ! check if allocated
 END SUBROUTINE
+
+function ExtLdDX_InputMeshPointer(u, ML) result(Mesh)
+   type(ExtLdDX_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function ExtLdDX_InputMeshName(u, ML) result(Name)
+   type(ExtLdDX_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
+
+function ExtLdDX_OutputMeshPointer(y, ML) result(Mesh)
+   type(ExtLdDX_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function ExtLdDX_OutputMeshName(y, ML) result(Name)
+   type(ExtLdDX_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
 END MODULE ExtLoadsDX_Types
 !ENDOFREGISTRYGENERATEDFILE

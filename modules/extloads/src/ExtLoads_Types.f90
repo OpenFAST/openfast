@@ -34,6 +34,15 @@ MODULE ExtLoads_Types
 USE ExtLoadsDX_Types
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ExtLd_u_TowerMotion              = 1      ! Mesh number for ExtLd ExtLd_u_TowerMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ExtLd_u_HubMotion                = 2      ! Mesh number for ExtLd ExtLd_u_HubMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ExtLd_u_NacelleMotion            = 3      ! Mesh number for ExtLd ExtLd_u_NacelleMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ExtLd_u_BladeRootMotion          = 4      ! Mesh number for ExtLd ExtLd_u_BladeRootMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ExtLd_u_BladeMotion              = 5      ! Mesh number for ExtLd ExtLd_u_BladeMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ExtLd_y_TowerLoad                = 6      ! Mesh number for ExtLd ExtLd_y_TowerLoad mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ExtLd_y_BladeLoad                = 7      ! Mesh number for ExtLd ExtLd_y_BladeLoad mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ExtLd_y_TowerLoadAD              = 8      ! Mesh number for ExtLd ExtLd_y_TowerLoadAD mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ExtLd_y_BladeLoadAD              = 9      ! Mesh number for ExtLd ExtLd_y_BladeLoadAD mesh [-]
 ! =========  ExtLd_InitInputType  =======
   TYPE, PUBLIC :: ExtLd_InitInputType
     INTEGER(IntKi)  :: NumBlades = 0_IntKi      !< Number of blades on the turbine [-]
@@ -1504,5 +1513,77 @@ SUBROUTINE ExtLd_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, 
       END DO
    END IF ! check if allocated
 END SUBROUTINE
+
+function ExtLd_InputMeshPointer(u, ML) result(Mesh)
+   type(ExtLd_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (ExtLd_u_TowerMotion)
+       Mesh => u%TowerMotion
+   case (ExtLd_u_HubMotion)
+       Mesh => u%HubMotion
+   case (ExtLd_u_NacelleMotion)
+       Mesh => u%NacelleMotion
+   case (ExtLd_u_BladeRootMotion)
+       Mesh => u%BladeRootMotion(ML%i1)
+   case (ExtLd_u_BladeMotion)
+       Mesh => u%BladeMotion(ML%i1)
+   end select
+end function
+
+function ExtLd_InputMeshName(u, ML) result(Name)
+   type(ExtLd_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (ExtLd_u_TowerMotion)
+       Name = "u%TowerMotion"
+   case (ExtLd_u_HubMotion)
+       Name = "u%HubMotion"
+   case (ExtLd_u_NacelleMotion)
+       Name = "u%NacelleMotion"
+   case (ExtLd_u_BladeRootMotion)
+       Name = "u%BladeRootMotion("//trim(Num2LStr(ML%i1))//")"
+   case (ExtLd_u_BladeMotion)
+       Name = "u%BladeMotion("//trim(Num2LStr(ML%i1))//")"
+   end select
+end function
+
+function ExtLd_OutputMeshPointer(y, ML) result(Mesh)
+   type(ExtLd_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   case (ExtLd_y_TowerLoad)
+       Mesh => y%TowerLoad
+   case (ExtLd_y_BladeLoad)
+       Mesh => y%BladeLoad(ML%i1)
+   case (ExtLd_y_TowerLoadAD)
+       Mesh => y%TowerLoadAD
+   case (ExtLd_y_BladeLoadAD)
+       Mesh => y%BladeLoadAD(ML%i1)
+   end select
+end function
+
+function ExtLd_OutputMeshName(y, ML) result(Name)
+   type(ExtLd_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   case (ExtLd_y_TowerLoad)
+       Name = "y%TowerLoad"
+   case (ExtLd_y_BladeLoad)
+       Name = "y%BladeLoad("//trim(Num2LStr(ML%i1))//")"
+   case (ExtLd_y_TowerLoadAD)
+       Name = "y%TowerLoadAD"
+   case (ExtLd_y_BladeLoadAD)
+       Name = "y%BladeLoadAD("//trim(Num2LStr(ML%i1))//")"
+   end select
+end function
 END MODULE ExtLoads_Types
 !ENDOFREGISTRYGENERATEDFILE

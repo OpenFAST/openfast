@@ -44,6 +44,23 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtElev                  = 5      ! WaveMod = 5   [Incident wave kinematics model: Externally generated wave-elevation time series] [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtFull                  = 6      ! WaveMod = 6   [Incident wave kinematics model: Externally generated full wave-kinematics time series (invalid for PotMod/=0)] [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_UserFreq                 = 7      ! WaveMod = 7   [Incident wave kinematics model: user-defined wave frequency components] [-]
+! =========  SeaSt_WaveField_ParameterType  =======
+  TYPE, PUBLIC :: SeaSt_WaveField_ParameterType
+    INTEGER(IntKi) , DIMENSION(1:4)  :: n = 0_IntKi      !< number of evenly-spaced grid points in the t, x, y, and z directions [-]
+    REAL(ReKi) , DIMENSION(1:4)  :: delta = 0.0_ReKi      !< size between 2 consecutive grid points in each grid direction [s,m,m,m]
+    REAL(ReKi) , DIMENSION(1:4)  :: pZero = 0.0_ReKi      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
+    REAL(ReKi)  :: Z_Depth = 0.0_ReKi      !< grid depth [m]
+  END TYPE SeaSt_WaveField_ParameterType
+! =======================
+! =========  SeaSt_WaveField_MiscVarType  =======
+  TYPE, PUBLIC :: SeaSt_WaveField_MiscVarType
+    REAL(SiKi) , DIMENSION(1:8)  :: N3D = 0.0_R4Ki      !< this is the weighting function for 3-d velocity field [-]
+    REAL(SiKi) , DIMENSION(1:16)  :: N4D = 0.0_R4Ki      !< this is the weighting function for 4-d velocity field [-]
+    INTEGER(IntKi) , DIMENSION(1:4)  :: Indx_Lo = 0_IntKi      !< this is the index into the 4-d velocity field for each wave component [-]
+    INTEGER(IntKi) , DIMENSION(1:4)  :: Indx_Hi = 0_IntKi      !< this is the index into the 4-d velocity field for each wave component [-]
+    LOGICAL  :: FirstWarn_Clamp = .true.      !< used to avoid too many 'Position has been clamped to the grid boundary' warning messages  [-]
+  END TYPE SeaSt_WaveField_MiscVarType
+! =======================
 ! =========  SeaSt_WaveFieldType  =======
   TYPE, PUBLIC :: SeaSt_WaveFieldType
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveTime      !< Time array [(s)]
