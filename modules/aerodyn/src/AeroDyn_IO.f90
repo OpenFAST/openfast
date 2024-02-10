@@ -202,7 +202,7 @@ CONTAINS
          m%AllOuts( HbMbz ) = tmpHubMB(3)
       end if
    
-         ! nacelle outputs
+         ! nacelle buoyancy outputs
       if ( p%Buoyancy ) then
          tmp = matmul( u%NacelleMotion%Orientation(:,:,1) , m%NacFB )
          m%AllOuts( NcFbx ) = tmp(1)
@@ -213,6 +213,24 @@ CONTAINS
          m%AllOuts( NcMbx ) = tmp(1)
          m%AllOuts( NcMby ) = tmp(2)
          m%AllOuts( NcMbz ) = tmp(3)
+      end if
+
+         ! nacelle drag outputs
+      if ( p%NacelleDrag ) then
+         tmp = matmul( u%NacelleMotion%Orientation(:,:,1) , u%InflowOnNacelle )
+         m%AllOuts( NcVUndx ) = tmp(1)
+         m%AllOuts( NcVUndy ) = tmp(2)
+         m%AllOuts( NcVUndz ) = tmp(3)
+
+         tmp = m%NacDragF 
+         m%AllOuts( NcFdx ) = tmp(1)
+         m%AllOuts( NcFdy ) = tmp(2)
+         m%AllOuts( NcFdz ) = tmp(3)
+   
+         tmp = m%NacDragM 
+         m%AllOuts( NcMdx ) = tmp(1)
+         m%AllOuts( NcMdy ) = tmp(2)
+         m%AllOuts( NcMdz ) = tmp(3)
       end if
 
          ! blade outputs
@@ -726,6 +744,9 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       ! Buoyancy - Include buoyancy effects? (flag)
    call ParseVar( FileInfo_In, CurLine, "Buoyancy", InputFileData%Buoyancy, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
+      ! NacelleDrag - Include Nacelle Drag effects? (flag)
+   call ParseVar( FileInfo_In, CurLine, "NacelleDrag", InputFileData%NacelleDrag, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
       ! CompAA - Flag to compute AeroAcoustics calculation [only used when WakeMod=1 or 2]
    call ParseVar( FileInfo_In, CurLine, "CompAA", InputFileData%CompAA, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
@@ -896,6 +917,16 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
          if (Failed()) return
          ! NacCenB - Nacelle center of buoyancy x,y,z direction offsets (m)
       call ParseAry( FileInfo_In, CurLine, 'NacCenB', InputFileData%rotors(iR)%NacCenB, 3 , ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return
+
+         ! NacArea - Projected area of the nacelle in X, Y, Z in the nacelle coordinate system (m^2)
+      call ParseAry( FileInfo_In, CurLine, "NacArea", InputFileData%rotors(iR)%NacArea, 3, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return
+         ! NacCd - Drag cefficient for the nacelle areas defied above (-)
+         call ParseAry( FileInfo_In, CurLine, "NacCd", InputFileData%rotors(iR)%NacCd, 3, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return
+         ! NacDragAC - Position of aerodynamic center of nacelle drag in nacelle coordinates (m)
+         call ParseAry( FileInfo_In, CurLine, "NacDragAC", InputFileData%rotors(iR)%NacDragAC, 3, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return
    end do
 
@@ -1413,6 +1444,14 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
    end if   
    WRITE (UnSu,Ec_LgFrmt) p%Buoyancy, 'Buoyancy', 'Include buoyancy effects? '//TRIM(Msg)
 
+      ! Nacelle Drag
+   if (p%NacelleDrag) then
+      Msg = 'Yes'
+   else
+      Msg = 'No'
+   end if   
+   WRITE (UnSu,Ec_LgFrmt) p%NacelleDrag, 'NacelleDrag', 'Include NacelleDrag effects? '//TRIM(Msg)
+
 
    if (p_AD%WakeMod/=WakeMod_none) then
       WRITE (UnSu,'(A)') '======  Blade-Element/Momentum Theory Options  ======================================================'
@@ -1693,7 +1732,19 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
          InvalidOutput( BNMbs(:,i) ) = .true.
       end do
    end if
-   
+
+   if (.not. p%NacelleDrag) then  ! Invalid Nacelle Drag loads
+      InvalidOutput( NcVUndx ) = .true.
+      InvalidOutput( NcVUndy ) = .true.
+      InvalidOutput( NcVUndz ) = .true.
+      InvalidOutput( NcFdx ) = .true.
+      InvalidOutput( NcFdy ) = .true.
+      InvalidOutput( NcFdz ) = .true.
+      InvalidOutput( NcMdx ) = .true.
+      InvalidOutput( NcMdy ) = .true.
+      InvalidOutput( NcMdz ) = .true.   
+   end if
+
    DO i = p%NTwOuts+1,9  ! Invalid tower nodes
    
       InvalidOutput( TwNVUnd(:,i) ) = .true.
