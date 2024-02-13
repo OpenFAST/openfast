@@ -445,13 +445,12 @@ py_ifw_regression("py_ifw_turbsimff"                          "inflowwind;python
 # SeaState regression tests
 seast_regression("seastate_1"                                "seastate")
 seast_regression("seastate_wavemod5"                         "seastate")
-seast_regression("seastate_wavemod7"                         "seastate")
 seast_regression("seastate_wr_kin1"                          "seastate")
 seast_regression("seastate_CNW1"                             "seastate")
 seast_regression("seastate_CNW2"                             "seastate")
-seast_regression("seastate_WaveStMod1"                       "seastate")
-seast_regression("seastate_WaveStMod2"                       "seastate")
-seast_regression("seastate_WaveStMod3"                       "seastate")
+seast_regression("seastate_WaveMod7_WaveStMod1"              "seastate")
+seast_regression("seastate_WaveMod7_WaveStMod2"              "seastate")
+seast_regression("seastate_WaveMod7_WaveStMod3"              "seastate")
 
 # MoorDyn regression tests
 md_regression("md_5MW_OC4Semi"                                "moordyn")
