@@ -114,8 +114,7 @@ typedef	^	FAST_SS_CaseType	ReKi	Pitch	-	-	-	"Pitch angle for this case of the st
 param	^ -                 IntKi                   Map_LoadMesh    -  1  -     "Load mesh mapping type"	-
 param	^ -                 IntKi                   Map_MotionMesh  -  2  -     "Motion mesh mapping type"	-
 param	^ -                 IntKi                   Map_NonMesh     -  3  -     "Non mesh mapping type"	-
-typedef ^ TC_MappingType    IntKi                   i1              -  0  -     "Optional index for specifying transfers" -
-typedef ^ ^                 IntKi                   i2              -  0  -     "Optional index for specifying transfers" -
+typedef ^ TC_MappingType    character(128)          Desc            -  -  -     "Description of mapping (used to lookup non-mesh maps)" -
 typedef ^ ^                 IntKi                   SrcModIdx       -  0  -     "Source module index in ModData array" -
 typedef ^ ^                 IntKi                   DstModIdx       -  0  -     "Destination module index in ModData array" -
 typedef ^ ^                 IntKi                   SrcModID        -  0  -     "Source module ID" -
@@ -132,9 +131,14 @@ typedef ^ ^                 MeshLocType             SrcDispMeshLoc  -  -  -     
 typedef ^ ^                 MeshLocType             DstDispMeshLoc  -  -  -     "Destination displacement mesh locator (number and indices)" -
 typedef ^ ^                 IntKi                   MapType         -  0  -     "Integer denoting mapping type (1=Load Mesh, 2=Motion Mesh, 3=Non-Mesh)" -
 typedef ^ ^                 IntKi                   XfrType         -  0  -     "Integer denoting transfer type (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L)" -
+typedef ^ ^                 IntKi                   XfrTypeAux      -  0  -     "Integer denoting transfer type (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L)" -
 typedef ^ ^                 logical                 Ready           -  F  -     "Flag indicating Source has been ready to be transferred" -
-typedef ^ ^                 MeshType                MeshTmp         -  -  -     "Temporary mesh for intermediate transfers" -
+typedef ^ ^                 logical                 DstUsesSibling  -  F  -     "Flag indicating the destination displacement mesh is a sibling of the destination load mesh" -
+typedef ^ ^                 MeshType                TmpLoadMesh     -  -  -     "Temporary load mesh for intermediate transfers" -
+typedef ^ ^                 MeshType                TmpMotionMesh   -  -  -     "Temporary motion mesh for intermediate transfers" -
+typedef ^ ^                 R8Ki                    TmpMatrix       :: -  -     "Temporary matrix for performing transfer for destination load meshes without sibling motion meshes" -
 typedef ^ ^                 MeshMapType             MeshMap         -  -  -     "Mesh mapping from Source variable to Destination variable" -
+typedef ^ ^                 MeshMapType             MeshMapAux      -  -  -     "Auxiliary mesh mapping for destination load meshes without sibling motion mesh" -
 typedef ^ ^                 IntKi                   iLocSrcTransDisp      2 - - "Data indices of linearized mesh mapping"
 typedef ^ ^                 IntKi                   iLocSrcTransVel       2 - - "Data indices of linearized mesh mapping"
 typedef ^ ^                 IntKi                   iLocSrcTransAcc       2 - - "Data indices of linearized mesh mapping"
@@ -153,10 +157,7 @@ typedef ^ ^                 IntKi                   iLocDstAngularAcc     2 - - 
 typedef ^ ^                 IntKi                   iLocDstForce          2 - - "Data indices of linearized mesh mapping"
 typedef ^ ^                 IntKi                   iLocDstMoment         2 - - "Data indices of linearized mesh mapping"
 typedef ^ ^                 IntKi                   iLocDstDispTransDisp  2 - - "Data indices of linearized mesh mapping"
-#typedef ^ ^                 IntKi                   SrcVarIdx       :  -  -     "Source motion variable index" -
-#typedef ^ ^                 IntKi                   DstVarIdx       :  -  -     "Destination motion variable index" -
-#typedef ^ ^                 IntKi                   SrcDispVarIdx   -  0  -     "Source displacement var index [if Typ=Map_LoadMesh]" -
-#typedef ^ ^                 IntKi                   DstDispVarIdx   -  0  -     "Destination displacement var index [if Typ=Map_LoadMesh]" -
+typedef ^ ^                 IntKi                   iLocDstDispOrientation 2 - - "Data indices of linearized mesh mapping"
 
 # Parameters 
 typedef ^ TC_ParameterType  R8Ki            DT                     -  -  -      "solution time step" -
@@ -746,6 +747,7 @@ typedef	^	^	MAP_OtherStateType	OtherSt	-	-	-	"Other/optimization states"
 typedef	^	^	MAP_ParameterType	p	-	-	-	"Parameters"
 typedef	^	^	MAP_InputType	u	-	-	-	"System inputs"
 typedef	^	^	MAP_OutputType	y	-	-	-	"System outputs"
+typedef	^	^	MAP_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	MAP_OtherStateType	OtherSt_old	-	-	-	"Other/optimization states (copied for the case of subcycling)"
 typedef	^	^	MAP_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
 typedef	^	^	MAP_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"

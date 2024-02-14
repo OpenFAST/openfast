@@ -649,6 +649,9 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
                                     ' local displacement state dZ/dt  m/s']
    real(R8Ki)                 :: xPerturb, uPerturbTrans, uPerturbAng, uPerturbs(6)
 
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
    ! Allocate space for variables (deallocate if already allocated)
    if (associated(p%Vars)) deallocate(p%Vars)
    allocate(p%Vars, stat=ErrStat2)

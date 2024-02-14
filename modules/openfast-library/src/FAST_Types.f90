@@ -132,8 +132,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  TC_MappingType  =======
   TYPE, PUBLIC :: TC_MappingType
-    INTEGER(IntKi)  :: i1 = 0      !< Optional index for specifying transfers [-]
-    INTEGER(IntKi)  :: i2 = 0      !< Optional index for specifying transfers [-]
+    character(128)  :: Desc      !< Description of mapping (used to lookup non-mesh maps) [-]
     INTEGER(IntKi)  :: SrcModIdx = 0      !< Source module index in ModData array [-]
     INTEGER(IntKi)  :: DstModIdx = 0      !< Destination module index in ModData array [-]
     INTEGER(IntKi)  :: SrcModID = 0      !< Source module ID [-]
@@ -150,9 +149,14 @@ IMPLICIT NONE
     TYPE(MeshLocType)  :: DstDispMeshLoc      !< Destination displacement mesh locator (number and indices) [-]
     INTEGER(IntKi)  :: MapType = 0      !< Integer denoting mapping type (1=Load Mesh, 2=Motion Mesh, 3=Non-Mesh) [-]
     INTEGER(IntKi)  :: XfrType = 0      !< Integer denoting transfer type (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L) [-]
+    INTEGER(IntKi)  :: XfrTypeAux = 0      !< Integer denoting transfer type (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L) [-]
     LOGICAL  :: Ready = .false.      !< Flag indicating Source has been ready to be transferred [-]
-    TYPE(MeshType)  :: MeshTmp      !< Temporary mesh for intermediate transfers [-]
+    LOGICAL  :: DstUsesSibling = .false.      !< Flag indicating the destination displacement mesh is a sibling of the destination load mesh [-]
+    TYPE(MeshType)  :: TmpLoadMesh      !< Temporary load mesh for intermediate transfers [-]
+    TYPE(MeshType)  :: TmpMotionMesh      !< Temporary motion mesh for intermediate transfers [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: TmpMatrix      !< Temporary matrix for performing transfer for destination load meshes without sibling motion meshes [-]
     TYPE(MeshMapType)  :: MeshMap      !< Mesh mapping from Source variable to Destination variable [-]
+    TYPE(MeshMapType)  :: MeshMapAux      !< Auxiliary mesh mapping for destination load meshes without sibling motion mesh [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iLocSrcTransDisp = 0_IntKi      !< Data indices of linearized mesh mapping [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iLocSrcTransVel = 0_IntKi      !< Data indices of linearized mesh mapping [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iLocSrcTransAcc = 0_IntKi      !< Data indices of linearized mesh mapping [-]
@@ -171,6 +175,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:2)  :: iLocDstForce = 0_IntKi      !< Data indices of linearized mesh mapping [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iLocDstMoment = 0_IntKi      !< Data indices of linearized mesh mapping [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iLocDstDispTransDisp = 0_IntKi      !< Data indices of linearized mesh mapping [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocDstDispOrientation = 0_IntKi      !< Data indices of linearized mesh mapping [-]
   END TYPE TC_MappingType
 ! =======================
 ! =========  TC_ParameterType  =======
@@ -776,6 +781,7 @@ IMPLICIT NONE
     TYPE(MAP_ParameterType)  :: p      !< Parameters [-]
     TYPE(MAP_InputType)  :: u      !< System inputs [-]
     TYPE(MAP_OutputType)  :: y      !< System outputs [-]
+    TYPE(MAP_MiscVarType)  :: m      !< Misc/optimization variables [-]
     TYPE(MAP_OtherStateType)  :: OtherSt_old      !< Other/optimization states (copied for the case of subcycling) [-]
     TYPE(MAP_OutputType) , DIMENSION(:), ALLOCATABLE  :: Output      !< Array of outputs associated with CalcSteady Azimuths [-]
     TYPE(MAP_OutputType)  :: y_interp      !< interpolated system outputs for CalcSteady [-]
@@ -1509,13 +1515,13 @@ subroutine FAST_CopyTC_MappingType(SrcTC_MappingTypeData, DstTC_MappingTypeData,
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FAST_CopyTC_MappingType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   DstTC_MappingTypeData%i1 = SrcTC_MappingTypeData%i1
-   DstTC_MappingTypeData%i2 = SrcTC_MappingTypeData%i2
+   DstTC_MappingTypeData%Desc = SrcTC_MappingTypeData%Desc
    DstTC_MappingTypeData%SrcModIdx = SrcTC_MappingTypeData%SrcModIdx
    DstTC_MappingTypeData%DstModIdx = SrcTC_MappingTypeData%DstModIdx
    DstTC_MappingTypeData%SrcModID = SrcTC_MappingTypeData%SrcModID
@@ -1540,11 +1546,31 @@ subroutine FAST_CopyTC_MappingType(SrcTC_MappingTypeData, DstTC_MappingTypeData,
    if (ErrStat >= AbortErrLev) return
    DstTC_MappingTypeData%MapType = SrcTC_MappingTypeData%MapType
    DstTC_MappingTypeData%XfrType = SrcTC_MappingTypeData%XfrType
+   DstTC_MappingTypeData%XfrTypeAux = SrcTC_MappingTypeData%XfrTypeAux
    DstTC_MappingTypeData%Ready = SrcTC_MappingTypeData%Ready
-   call MeshCopy(SrcTC_MappingTypeData%MeshTmp, DstTC_MappingTypeData%MeshTmp, CtrlCode, ErrStat2, ErrMsg2 )
+   DstTC_MappingTypeData%DstUsesSibling = SrcTC_MappingTypeData%DstUsesSibling
+   call MeshCopy(SrcTC_MappingTypeData%TmpLoadMesh, DstTC_MappingTypeData%TmpLoadMesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call MeshCopy(SrcTC_MappingTypeData%TmpMotionMesh, DstTC_MappingTypeData%TmpMotionMesh, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcTC_MappingTypeData%TmpMatrix)) then
+      LB(1:2) = lbound(SrcTC_MappingTypeData%TmpMatrix, kind=B8Ki)
+      UB(1:2) = ubound(SrcTC_MappingTypeData%TmpMatrix, kind=B8Ki)
+      if (.not. allocated(DstTC_MappingTypeData%TmpMatrix)) then
+         allocate(DstTC_MappingTypeData%TmpMatrix(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_MappingTypeData%TmpMatrix.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTC_MappingTypeData%TmpMatrix = SrcTC_MappingTypeData%TmpMatrix
+   end if
    call NWTC_Library_CopyMeshMapType(SrcTC_MappingTypeData%MeshMap, DstTC_MappingTypeData%MeshMap, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyMeshMapType(SrcTC_MappingTypeData%MeshMapAux, DstTC_MappingTypeData%MeshMapAux, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstTC_MappingTypeData%iLocSrcTransDisp = SrcTC_MappingTypeData%iLocSrcTransDisp
@@ -1565,6 +1591,7 @@ subroutine FAST_CopyTC_MappingType(SrcTC_MappingTypeData, DstTC_MappingTypeData,
    DstTC_MappingTypeData%iLocDstForce = SrcTC_MappingTypeData%iLocDstForce
    DstTC_MappingTypeData%iLocDstMoment = SrcTC_MappingTypeData%iLocDstMoment
    DstTC_MappingTypeData%iLocDstDispTransDisp = SrcTC_MappingTypeData%iLocDstDispTransDisp
+   DstTC_MappingTypeData%iLocDstDispOrientation = SrcTC_MappingTypeData%iLocDstDispOrientation
 end subroutine
 
 subroutine FAST_DestroyTC_MappingType(TC_MappingTypeData, ErrStat, ErrMsg)
@@ -1584,9 +1611,16 @@ subroutine FAST_DestroyTC_MappingType(TC_MappingTypeData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call NWTC_Library_DestroyMeshLocType(TC_MappingTypeData%DstDispMeshLoc, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( TC_MappingTypeData%MeshTmp, ErrStat2, ErrMsg2)
+   call MeshDestroy( TC_MappingTypeData%TmpLoadMesh, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( TC_MappingTypeData%TmpMotionMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(TC_MappingTypeData%TmpMatrix)) then
+      deallocate(TC_MappingTypeData%TmpMatrix)
+   end if
    call NWTC_Library_DestroyMeshMapType(TC_MappingTypeData%MeshMap, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(TC_MappingTypeData%MeshMapAux, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
@@ -1595,8 +1629,7 @@ subroutine FAST_PackTC_MappingType(RF, Indata)
    type(TC_MappingType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FAST_PackTC_MappingType'
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, InData%i1)
-   call RegPack(RF, InData%i2)
+   call RegPack(RF, InData%Desc)
    call RegPack(RF, InData%SrcModIdx)
    call RegPack(RF, InData%DstModIdx)
    call RegPack(RF, InData%SrcModID)
@@ -1613,9 +1646,14 @@ subroutine FAST_PackTC_MappingType(RF, Indata)
    call NWTC_Library_PackMeshLocType(RF, InData%DstDispMeshLoc) 
    call RegPack(RF, InData%MapType)
    call RegPack(RF, InData%XfrType)
+   call RegPack(RF, InData%XfrTypeAux)
    call RegPack(RF, InData%Ready)
-   call MeshPack(RF, InData%MeshTmp) 
+   call RegPack(RF, InData%DstUsesSibling)
+   call MeshPack(RF, InData%TmpLoadMesh) 
+   call MeshPack(RF, InData%TmpMotionMesh) 
+   call RegPackAlloc(RF, InData%TmpMatrix)
    call NWTC_Library_PackMeshMapType(RF, InData%MeshMap) 
+   call NWTC_Library_PackMeshMapType(RF, InData%MeshMapAux) 
    call RegPack(RF, InData%iLocSrcTransDisp)
    call RegPack(RF, InData%iLocSrcTransVel)
    call RegPack(RF, InData%iLocSrcTransAcc)
@@ -1634,6 +1672,7 @@ subroutine FAST_PackTC_MappingType(RF, Indata)
    call RegPack(RF, InData%iLocDstForce)
    call RegPack(RF, InData%iLocDstMoment)
    call RegPack(RF, InData%iLocDstDispTransDisp)
+   call RegPack(RF, InData%iLocDstDispOrientation)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1641,9 +1680,11 @@ subroutine FAST_UnPackTC_MappingType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(TC_MappingType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FAST_UnPackTC_MappingType'
+   integer(B8Ki)   :: LB(2), UB(2)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpack(RF, OutData%i1); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%i2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Desc); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SrcModIdx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DstModIdx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SrcModID); if (RegCheckErr(RF, RoutineName)) return
@@ -1660,9 +1701,14 @@ subroutine FAST_UnPackTC_MappingType(RF, OutData)
    call NWTC_Library_UnpackMeshLocType(RF, OutData%DstDispMeshLoc) ! DstDispMeshLoc 
    call RegUnpack(RF, OutData%MapType); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%XfrType); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%XfrTypeAux); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Ready); if (RegCheckErr(RF, RoutineName)) return
-   call MeshUnpack(RF, OutData%MeshTmp) ! MeshTmp 
+   call RegUnpack(RF, OutData%DstUsesSibling); if (RegCheckErr(RF, RoutineName)) return
+   call MeshUnpack(RF, OutData%TmpLoadMesh) ! TmpLoadMesh 
+   call MeshUnpack(RF, OutData%TmpMotionMesh) ! TmpMotionMesh 
+   call RegUnpackAlloc(RF, OutData%TmpMatrix); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackMeshMapType(RF, OutData%MeshMap) ! MeshMap 
+   call NWTC_Library_UnpackMeshMapType(RF, OutData%MeshMapAux) ! MeshMapAux 
    call RegUnpack(RF, OutData%iLocSrcTransDisp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iLocSrcTransVel); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iLocSrcTransAcc); if (RegCheckErr(RF, RoutineName)) return
@@ -1681,6 +1727,7 @@ subroutine FAST_UnPackTC_MappingType(RF, OutData)
    call RegUnpack(RF, OutData%iLocDstForce); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iLocDstMoment); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iLocDstDispTransDisp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iLocDstDispOrientation); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine FAST_CopyTC_ParameterType(SrcTC_ParameterTypeData, DstTC_ParameterTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -12492,6 +12539,9 @@ subroutine FAST_CopyMAP_Data(SrcMAP_DataData, DstMAP_DataData, CtrlCode, ErrStat
    call MAP_CopyOutput(SrcMAP_DataData%y, DstMAP_DataData%y, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call MAP_CopyMisc(SrcMAP_DataData%m, DstMAP_DataData%m, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    call MAP_CopyOtherState(SrcMAP_DataData%OtherSt_old, DstMAP_DataData%OtherSt_old, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -12609,6 +12659,8 @@ subroutine FAST_DestroyMAP_Data(MAP_DataData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call MAP_DestroyOutput(MAP_DataData%y, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MAP_DestroyMisc(MAP_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call MAP_DestroyOtherState(MAP_DataData%OtherSt_old, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MAP_DataData%Output)) then
@@ -12674,6 +12726,7 @@ subroutine FAST_PackMAP_Data(RF, Indata)
    call MAP_PackParam(RF, InData%p) 
    call MAP_PackInput(RF, InData%u) 
    call MAP_PackOutput(RF, InData%y) 
+   call MAP_PackMisc(RF, InData%m) 
    call MAP_PackOtherState(RF, InData%OtherSt_old) 
    call RegPack(RF, allocated(InData%Output))
    if (allocated(InData%Output)) then
@@ -12736,6 +12789,7 @@ subroutine FAST_UnPackMAP_Data(RF, OutData)
    call MAP_UnpackParam(RF, OutData%p) ! p 
    call MAP_UnpackInput(RF, OutData%u) ! u 
    call MAP_UnpackOutput(RF, OutData%y) ! y 
+   call MAP_UnpackMisc(RF, OutData%m) ! m 
    call MAP_UnpackOtherState(RF, OutData%OtherSt_old) ! OtherSt_old 
    if (allocated(OutData%Output)) deallocate(OutData%Output)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
