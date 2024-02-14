@@ -10945,7 +10945,9 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
    integer(IntKi), allocatable   :: BladeMeshFields(:)
    real(R8Ki)                    :: MaxThrust, MaxTorque, ScaleLength
    integer(IntKi)                :: Flags, Field
-   type(VarsIdxType), pointer    :: VarIdx
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
 
    ! Allocate space for variables (deallocate if already allocated)
    if (associated(p%Vars)) deallocate(p%Vars)

@@ -5230,6 +5230,9 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
    real(R8Ki)              :: Perturb, PerturbAng, PerturbTower, PerturbBlade(MaxBl)
    integer(IntKi)          :: i, j, k
 
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
    ! Allocate space for variables (deallocate if already allocated)
    if (associated(p%Vars)) deallocate(p%Vars)
    allocate(p%Vars, stat=ErrStat2)

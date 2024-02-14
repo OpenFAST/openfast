@@ -5804,6 +5804,9 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    REAL(R8Ki)              :: MaxThrust, MaxTorque
    CHARACTER(200)          :: label
 
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
    ! Allocate space for variables (deallocate if already allocated)
    if (associated(p%Vars)) deallocate(p%Vars)
    allocate(p%Vars, stat=ErrStat2)
@@ -6097,7 +6100,7 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    TYPE(BD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   INTEGER(IntKi),          OPTIONAL,    INTENT(IN   )           :: FlagFilter !< Variable index number
+   INTEGER(IntKi),          OPTIONAL,    INTENT(IN   )           :: FlagFilter !< Filter variables by flag value
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the inputs (u) [intent in to avoid deallocation]
@@ -6129,8 +6132,6 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    ! Make a copy of the inputs to perturb
    call BD_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
    call BD_PackInputValues(p, u, m%Jac%u)
-
-   !----------------------------------------------------------------------------
    
    ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
    if (present(dYdu)) then
@@ -6170,8 +6171,6 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       end do
         
    end if
-
-   !----------------------------------------------------------------------------
 
    ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
    if (present(dXdu)) then
@@ -6222,12 +6221,14 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
    !----------------------------------------------------------------------------
 
+   ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the inputs (u) here:
    if (present(dXddu)) then
       if (allocated(dXddu)) deallocate(dXddu)
    end if
 
    !----------------------------------------------------------------------------
 
+   ! Calculate the partial derivative of the constraint state functions (Z) with respect to the inputs (u) here:
    if (present(dZdu)) then
       if (allocated(dZdu)) deallocate(dZdu)
    end if
