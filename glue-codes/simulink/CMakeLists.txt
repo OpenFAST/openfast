@@ -54,10 +54,12 @@ matlab_add_mex(
   SRC 
     src/FAST_SFunc.c
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Subs.f90
-    ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Lin.f90
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Mods.f90
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Solver.f90
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Library.f90
+    ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Funcs.f90
+    ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_ModLin.f90
+    ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Mesh.f90
   LINK_TO 
     ${MEX_LIBS}
     ${MEX_LIBS} # DO NOT REMOVE (needed to ensure no unresolved symbols)
