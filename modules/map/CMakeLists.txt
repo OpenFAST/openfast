@@ -27,7 +27,6 @@ endif()
 if (GENERATE_TYPES)
   generate_f90_types(src/MAP_Fortran_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/MAP_Fortran_Types.f90 -noextrap)
   generate_f90_types(src/MAP_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/MAP_Types.f90 -ccode)
-  generate_f90_types(src/MAP_Fortran_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/MAP_Fortran_Types.f90 -noextrap)
 endif()
 
 file(GLOB MAP_CLIB_SOURCES src/*.c src/*.cc src/*/*.c src/*/*.cc)
