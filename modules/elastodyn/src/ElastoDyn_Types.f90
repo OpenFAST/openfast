@@ -525,7 +525,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: SgnPrvLSTQ      !< The sign of the low-speed shaft torque from the previous call to RtHS().  This is calculated at the end of RtHS().  NOTE: The low-speed shaft torque is assumed to be positive at the beginning of the run! [-]
     INTEGER(IntKi) , DIMENSION(ED_NMX)  :: SgnLSTQ      !< history of sign of LSTQ [-]
     REAL(ReKi)  :: Mfhat      !< Final Yaw Friction Torque [N-m]
-    REAL(ReKi)  :: Mfp      !< Yaw Friction Torque to bring yaw system to a stop at current time step [N-m]
+    REAL(ReKi)  :: YawFriMfp      !< Yaw Friction Torque to bring yaw system to a stop at current time step [N-m]
     REAL(R8Ki)  :: OmegaTn      !< Yaw rate at t_n used to calculate friction torque and yaw rate at t_n+1 [rad/s]
     REAL(R8Ki)  :: OmegaDotTn      !< Yaw acceleration at t_n used to calculate friction torque and yaw rate at t_n+1 [rad/s^2]
   END TYPE ED_OtherStateType
@@ -544,7 +544,7 @@ IMPLICIT NONE
     LOGICAL  :: IgnoreMod      !< whether to ignore the modulo in ED outputs (necessary for linearization perturbations) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: OgnlYawRow      !< Original DOF_Yaw row in AugMat [-]
     REAL(ReKi)  :: FrcONcRt      !< Fz acting on yaw bearing including inertial contributions [N]
-    REAL(ReKi)  :: Mz      !< External loading on yaw bearing not including inertial contributions [N-m]
+    REAL(ReKi)  :: YawFriMz      !< External loading on yaw bearing not including inertial contributions [N-m]
   END TYPE ED_MiscVarType
 ! =======================
 ! =========  ED_ParameterType  =======
@@ -14530,7 +14530,7 @@ ENDIF
     DstOtherStateData%SgnPrvLSTQ = SrcOtherStateData%SgnPrvLSTQ
     DstOtherStateData%SgnLSTQ = SrcOtherStateData%SgnLSTQ
     DstOtherStateData%Mfhat = SrcOtherStateData%Mfhat
-    DstOtherStateData%Mfp = SrcOtherStateData%Mfp
+    DstOtherStateData%YawFriMfp = SrcOtherStateData%YawFriMfp
     DstOtherStateData%OmegaTn = SrcOtherStateData%OmegaTn
     DstOtherStateData%OmegaDotTn = SrcOtherStateData%OmegaDotTn
  END SUBROUTINE ED_CopyOtherState
@@ -14631,7 +14631,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! SgnPrvLSTQ
       Int_BufSz  = Int_BufSz  + SIZE(InData%SgnLSTQ)  ! SgnLSTQ
       Re_BufSz   = Re_BufSz   + 1  ! Mfhat
-      Re_BufSz   = Re_BufSz   + 1  ! Mfp
+      Re_BufSz   = Re_BufSz   + 1  ! YawFriMfp
       Db_BufSz   = Db_BufSz   + 1  ! OmegaTn
       Db_BufSz   = Db_BufSz   + 1  ! OmegaDotTn
   IF ( Re_BufSz  .GT. 0 ) THEN 
@@ -14720,7 +14720,7 @@ ENDIF
     END DO
     ReKiBuf(Re_Xferred) = InData%Mfhat
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%Mfp
+    ReKiBuf(Re_Xferred) = InData%YawFriMfp
     Re_Xferred = Re_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%OmegaTn
     Db_Xferred = Db_Xferred + 1
@@ -14833,7 +14833,7 @@ ENDIF
     END DO
     OutData%Mfhat = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%Mfp = ReKiBuf(Re_Xferred)
+    OutData%YawFriMfp = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%OmegaTn = REAL(DbKiBuf(Db_Xferred), R8Ki)
     Db_Xferred = Db_Xferred + 1
@@ -14965,7 +14965,7 @@ IF (ALLOCATED(SrcMiscData%OgnlYawRow)) THEN
     DstMiscData%OgnlYawRow = SrcMiscData%OgnlYawRow
 ENDIF
     DstMiscData%FrcONcRt = SrcMiscData%FrcONcRt
-    DstMiscData%Mz = SrcMiscData%Mz
+    DstMiscData%YawFriMz = SrcMiscData%YawFriMz
  END SUBROUTINE ED_CopyMisc
 
  SUBROUTINE ED_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -15131,7 +15131,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%OgnlYawRow)  ! OgnlYawRow
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! FrcONcRt
-      Re_BufSz   = Re_BufSz   + 1  ! Mz
+      Re_BufSz   = Re_BufSz   + 1  ! YawFriMz
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -15349,7 +15349,7 @@ ENDIF
   END IF
     ReKiBuf(Re_Xferred) = InData%FrcONcRt
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%Mz
+    ReKiBuf(Re_Xferred) = InData%YawFriMz
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ED_PackMisc
 
@@ -15619,7 +15619,7 @@ ENDIF
   END IF
     OutData%FrcONcRt = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%Mz = ReKiBuf(Re_Xferred)
+    OutData%YawFriMz = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ED_UnPackMisc
 
