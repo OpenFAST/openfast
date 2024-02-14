@@ -252,6 +252,9 @@ subroutine ModLin_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, Er
          ! Loop through added variables and add name prefix to linearization names
          call AddLinNamePrefix(ModGlue%Vars%y(k:), NamePrefix)
 
+         ! Initialize module linearization variable indexing
+         call MV_InitVarIdx(ModData%Vars, ModData%Vars%IdxLin, VF_Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+
       end associate
    end do
 
