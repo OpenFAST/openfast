@@ -668,7 +668,7 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
    !----------------------------------------------------------------------------
 
    ! Calculate perturbations
-   xPerturb = 0.2_R8Ki*Pi/180.0_R8Ki * max(TwoNorm(InitInp%NacRefPos - InitInp%TwrBaseRefPos), 1.0_R8Ki)
+   xPerturb = 0.2_R8Ki*Pi/180.0_R8Ki * max(real(TwoNorm(InitInp%NacRefPos - InitInp%TwrBaseRefPos), R8Ki), 1.0_R8Ki)
 
    ! Blade Structural Controller
    do i = 1, p%NumBStC

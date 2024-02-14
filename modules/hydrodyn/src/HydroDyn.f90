@@ -1000,7 +1000,7 @@ subroutine HydroDyn_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, E
    !----------------------------------------------------------------------------
 
    ! Translation and rotation perturbations
-   PerturbTrans = 0.02_R8Ki*D2R * max(p%WaveField%EffWtrDpth, 1.0_R8Ki) 
+   PerturbTrans = 0.02_R8Ki*D2R * max(real(p%WaveField%EffWtrDpth, R8Ki), 1.0_R8Ki) 
    PerturbRot = 2*D2R
 
    ! Create perturbation array (order based on MotionFields)
