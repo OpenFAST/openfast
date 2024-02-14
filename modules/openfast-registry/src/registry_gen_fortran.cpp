@@ -380,9 +380,8 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
         // Mesh name routine
         indent = "\n";
         routine_name = mod.nickname + (is_input ? "_Input" : "_Output") + "MeshName";
-        w << indent << "function " << routine_name << "(" << u_or_y << ", ML) result(Name)";
+        w << indent << "function " << routine_name << "(ML) result(Name)";
         indent += "   ";
-        w << indent << "type(" << ddt.type_fortran << "), target, intent(in) :: " << u_or_y;
         w << indent << "type(MeshLocType), intent(in)      :: ML";
         w << indent << "character(32)                      :: Name";
         w << indent << "Name = \"\"";

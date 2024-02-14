@@ -1872,8 +1872,7 @@ function ExtPtfm_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function ExtPtfm_InputMeshName(u, ML) result(Name)
-   type(ExtPtfm_InputType), target, intent(in) :: u
+function ExtPtfm_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -1894,8 +1893,7 @@ function ExtPtfm_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function ExtPtfm_OutputMeshName(y, ML) result(Name)
-   type(ExtPtfm_OutputType), target, intent(in) :: y
+function ExtPtfm_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

@@ -1284,8 +1284,7 @@ function SeaSt_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function SeaSt_InputMeshName(u, ML) result(Name)
-   type(SeaSt_InputType), target, intent(in) :: u
+function SeaSt_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -1302,8 +1301,7 @@ function SeaSt_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function SeaSt_OutputMeshName(y, ML) result(Name)
-   type(SeaSt_OutputType), target, intent(in) :: y
+function SeaSt_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

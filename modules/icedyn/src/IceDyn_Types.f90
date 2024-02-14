@@ -1753,8 +1753,7 @@ function IceD_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function IceD_InputMeshName(u, ML) result(Name)
-   type(IceD_InputType), target, intent(in) :: u
+function IceD_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -1775,8 +1774,7 @@ function IceD_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function IceD_OutputMeshName(y, ML) result(Name)
-   type(IceD_OutputType), target, intent(in) :: y
+function IceD_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

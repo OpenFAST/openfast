@@ -4100,8 +4100,7 @@ function FVW_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function FVW_InputMeshName(u, ML) result(Name)
-   type(FVW_InputType), target, intent(in) :: u
+function FVW_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -4120,8 +4119,7 @@ function FVW_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function FVW_OutputMeshName(y, ML) result(Name)
-   type(FVW_OutputType), target, intent(in) :: y
+function FVW_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

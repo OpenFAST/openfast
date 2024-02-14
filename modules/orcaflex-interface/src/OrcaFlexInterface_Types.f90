@@ -1068,8 +1068,7 @@ function Orca_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function Orca_InputMeshName(u, ML) result(Name)
-   type(Orca_InputType), target, intent(in) :: u
+function Orca_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -1090,8 +1089,7 @@ function Orca_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function Orca_OutputMeshName(y, ML) result(Name)
-   type(Orca_OutputType), target, intent(in) :: y
+function Orca_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

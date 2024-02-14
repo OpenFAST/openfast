@@ -2999,8 +2999,7 @@ function AA_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function AA_InputMeshName(u, ML) result(Name)
-   type(AA_InputType), target, intent(in) :: u
+function AA_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -3017,8 +3016,7 @@ function AA_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function AA_OutputMeshName(y, ML) result(Name)
-   type(AA_OutputType), target, intent(in) :: y
+function AA_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

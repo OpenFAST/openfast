@@ -2504,8 +2504,7 @@ function AWAE_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function AWAE_InputMeshName(u, ML) result(Name)
-   type(AWAE_InputType), target, intent(in) :: u
+function AWAE_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -2522,8 +2521,7 @@ function AWAE_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function AWAE_OutputMeshName(y, ML) result(Name)
-   type(AWAE_OutputType), target, intent(in) :: y
+function AWAE_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

@@ -1161,8 +1161,7 @@ function SS_Exc_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function SS_Exc_InputMeshName(u, ML) result(Name)
-   type(SS_Exc_InputType), target, intent(in) :: u
+function SS_Exc_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -1179,8 +1178,7 @@ function SS_Exc_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function SS_Exc_OutputMeshName(y, ML) result(Name)
-   type(SS_Exc_OutputType), target, intent(in) :: y
+function SS_Exc_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

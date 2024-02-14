@@ -1035,8 +1035,7 @@ function IceFloe_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function IceFloe_InputMeshName(u, ML) result(Name)
-   type(IceFloe_InputType), target, intent(in) :: u
+function IceFloe_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -1057,8 +1056,7 @@ function IceFloe_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function IceFloe_OutputMeshName(y, ML) result(Name)
-   type(IceFloe_OutputType), target, intent(in) :: y
+function IceFloe_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

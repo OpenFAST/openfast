@@ -7790,8 +7790,7 @@ function ED_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function ED_InputMeshName(u, ML) result(Name)
-   type(ED_InputType), target, intent(in) :: u
+function ED_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -7842,8 +7841,7 @@ function ED_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function ED_OutputMeshName(y, ML) result(Name)
-   type(ED_OutputType), target, intent(in) :: y
+function ED_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

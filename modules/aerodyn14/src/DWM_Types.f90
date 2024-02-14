@@ -3175,8 +3175,7 @@ function DWM_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function DWM_InputMeshName(u, ML) result(Name)
-   type(DWM_InputType), target, intent(in) :: u
+function DWM_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -3193,8 +3192,7 @@ function DWM_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function DWM_OutputMeshName(y, ML) result(Name)
-   type(DWM_OutputType), target, intent(in) :: y
+function DWM_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

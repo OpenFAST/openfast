@@ -2513,8 +2513,7 @@ function UA_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function UA_InputMeshName(u, ML) result(Name)
-   type(UA_InputType), target, intent(in) :: u
+function UA_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -2531,8 +2530,7 @@ function UA_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function UA_OutputMeshName(y, ML) result(Name)
-   type(UA_OutputType), target, intent(in) :: y
+function UA_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

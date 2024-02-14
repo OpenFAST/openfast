@@ -644,8 +644,7 @@ function WAMIT2_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function WAMIT2_OutputMeshName(y, ML) result(Name)
-   type(WAMIT2_OutputType), target, intent(in) :: y
+function WAMIT2_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

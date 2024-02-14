@@ -1106,8 +1106,7 @@ function Lidar_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function Lidar_InputMeshName(u, ML) result(Name)
-   type(Lidar_InputType), target, intent(in) :: u
+function Lidar_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -1124,8 +1123,7 @@ function Lidar_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function Lidar_OutputMeshName(y, ML) result(Name)
-   type(Lidar_OutputType), target, intent(in) :: y
+function Lidar_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

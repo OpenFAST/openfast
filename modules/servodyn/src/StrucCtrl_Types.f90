@@ -2314,8 +2314,7 @@ function StC_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function StC_InputMeshName(u, ML) result(Name)
-   type(StC_InputType), target, intent(in) :: u
+function StC_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -2336,8 +2335,7 @@ function StC_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function StC_OutputMeshName(y, ML) result(Name)
-   type(StC_OutputType), target, intent(in) :: y
+function StC_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

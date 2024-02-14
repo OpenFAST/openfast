@@ -3833,8 +3833,7 @@ function BD_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function BD_InputMeshName(u, ML) result(Name)
-   type(BD_InputType), target, intent(in) :: u
+function BD_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -3863,8 +3862,7 @@ function BD_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function BD_OutputMeshName(y, ML) result(Name)
-   type(BD_OutputType), target, intent(in) :: y
+function BD_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

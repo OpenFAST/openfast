@@ -2428,8 +2428,7 @@ function FEAM_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function FEAM_InputMeshName(u, ML) result(Name)
-   type(FEAM_InputType), target, intent(in) :: u
+function FEAM_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -2454,8 +2453,7 @@ function FEAM_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function FEAM_OutputMeshName(y, ML) result(Name)
-   type(FEAM_OutputType), target, intent(in) :: y
+function FEAM_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

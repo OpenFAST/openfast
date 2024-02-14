@@ -1082,8 +1082,7 @@ function SS_Rad_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function SS_Rad_InputMeshName(u, ML) result(Name)
-   type(SS_Rad_InputType), target, intent(in) :: u
+function SS_Rad_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -1100,8 +1099,7 @@ function SS_Rad_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function SS_Rad_OutputMeshName(y, ML) result(Name)
-   type(SS_Rad_OutputType), target, intent(in) :: y
+function SS_Rad_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

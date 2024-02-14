@@ -1533,8 +1533,7 @@ function ExtLd_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function ExtLd_InputMeshName(u, ML) result(Name)
-   type(ExtLd_InputType), target, intent(in) :: u
+function ExtLd_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -1569,8 +1568,7 @@ function ExtLd_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function ExtLd_OutputMeshName(y, ML) result(Name)
-   type(ExtLd_OutputType), target, intent(in) :: y
+function ExtLd_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

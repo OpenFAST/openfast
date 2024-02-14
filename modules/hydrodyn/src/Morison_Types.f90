@@ -4672,8 +4672,7 @@ function Morison_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function Morison_InputMeshName(u, ML) result(Name)
-   type(Morison_InputType), target, intent(in) :: u
+function Morison_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -4696,8 +4695,7 @@ function Morison_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function Morison_OutputMeshName(y, ML) result(Name)
-   type(Morison_OutputType), target, intent(in) :: y
+function Morison_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

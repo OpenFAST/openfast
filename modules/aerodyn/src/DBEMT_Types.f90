@@ -1423,8 +1423,7 @@ function DBEMT_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function DBEMT_InputMeshName(u, ML) result(Name)
-   type(DBEMT_InputType), target, intent(in) :: u
+function DBEMT_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -1441,8 +1440,7 @@ function DBEMT_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function DBEMT_OutputMeshName(y, ML) result(Name)
-   type(DBEMT_OutputType), target, intent(in) :: y
+function DBEMT_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""

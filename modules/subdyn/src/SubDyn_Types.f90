@@ -4420,8 +4420,7 @@ function SD_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function SD_InputMeshName(u, ML) result(Name)
-   type(SD_InputType), target, intent(in) :: u
+function SD_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -4448,8 +4447,7 @@ function SD_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function SD_OutputMeshName(y, ML) result(Name)
-   type(SD_OutputType), target, intent(in) :: y
+function SD_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
