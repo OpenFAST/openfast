@@ -10420,6 +10420,14 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          ! If variable flag not in flag filter, skip
          if (.not. MV_HasFlags(p%Vars%u(i), FlagFilterLoc)) cycle
 
+         ! Extended input: BlPitchComC is the sum of BlPitchCom across all blades
+         if (i == p%iVarBlPitchComC) then
+            associate (Var => p%Vars%u(p%iVarBlPitchCom))
+               dYdu(:,p%Vars%u(p%iVarBlPitchComC)%iLoc(1)) = sum(dYdu(:,Var%iLoc(1):Var%iLoc(2)), dim=2)
+            end associate
+            cycle
+         end if
+
          ! Loop through number of linearization perturbations in variable
          do j = 1, p%Vars%u(i)%Num
 
@@ -10442,11 +10450,6 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             call MV_ComputeCentralDiff(p%Vars%y, p%Vars%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,col))
          end do
       end do
-
-      ! Extended: BlPitchComC is the sum of BlPitchCom across all blades
-      associate (Var => p%Vars%u(p%iVarBlPitchCom))
-         dYdu(:,p%Vars%u(p%iVarBlPitchComC)%iLoc(1)) = sum(dYdu(:,Var%iLoc(1):Var%iLoc(2)), dim=2)
-      end associate
 
    end if
    
