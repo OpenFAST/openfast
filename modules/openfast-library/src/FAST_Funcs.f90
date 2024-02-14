@@ -32,6 +32,7 @@ use InflowWind
 use SeaState
 use ServoDyn
 use SubDyn
+use MAP
 
 implicit none
 
@@ -527,7 +528,7 @@ subroutine FAST_GetOP(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg, FlagFilt
    real(R8Ki), allocatable, optional, intent(inout)   :: xd_op(:)    !< values of linearized discrete states
    real(R8Ki), allocatable, optional, intent(inout)   :: z_op(:)     !< values of linearized constraint states
 
-   character(*), parameter    :: RoutineName = 'FAST_CalcOutput'
+   character(*), parameter    :: RoutineName = 'FAST_GetOP'
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
    integer(IntKi)             :: i
@@ -553,12 +554,15 @@ subroutine FAST_GetOP(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg, FlagFilt
       call ED_GetOP(ThisTime, T%ED%Input(1), T%ED%p, T%ED%x(ThisState), T%ED%xd(ThisState), &
                     T%ED%z(ThisState), T%ED%OtherSt(ThisState), T%ED%y, T%ED%m, ErrStat2, ErrMsg2, &
                     FlagFilter=FlagFilter, u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+
 !  case (Module_ExtPtfm)
+
 !  case (Module_FEAM)
+
    case (Module_HD)
-      ! call HydroDyn_GetOP(ThisTime, T%HD%Input(1), T%HD%p, T%HD%x(ThisState), T%HD%xd(ThisState), &
-      !                     T%HD%z(ThisState), T%HD%OtherSt(ThisState), T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
-      !                     u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+      call HD_GetOP(ThisTime, T%HD%Input(1), T%HD%p, T%HD%x(ThisState), T%HD%xd(ThisState), &
+                    T%HD%z(ThisState), T%HD%OtherSt(ThisState), T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
+                    u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
 
 !  case (Module_IceD)
 !  case (Module_IceF)
@@ -567,7 +571,11 @@ subroutine FAST_GetOP(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg, FlagFilt
                             T%IfW%OtherSt(ThisState), T%IfW%y, T%IfW%m, ErrStat2, ErrMsg2, &
                             u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
 
-!  case (Module_MAP)
+   case (Module_MAP)
+      call MAP_GetOP(ThisTime, T%MAP%Input(1), T%MAP%p, T%MAP%x(ThisState), T%MAP%xd(ThisState), T%MAP%z(ThisState), &
+                     T%MAP%OtherSt, T%MAP%y, ErrStat2, ErrMsg2, &
+                     u_op=u_op, y_op=y_op) !, x_op=x_op, dx_op=dx_op) MAP doesn't have states
+
 !  case (Module_MD)
 !  case (Module_OpFM)
 !  case (Module_Orca)
@@ -585,7 +593,7 @@ subroutine FAST_GetOP(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg, FlagFilt
    case default
       ! Unknown module
       ErrStat2 = ErrID_Fatal
-      ErrMsg2 = "Unknown module ID "//trim(Num2LStr(ModData%ID))
+      ErrMsg2 = "Unsupported module: "//trim(ModData%Abbr)
    end select
 
    ! Check for errors during calc output call
@@ -600,7 +608,7 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg,
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
-   integer(IntKi), optional, intent(in)               :: FlagFilter   !< Variable index number
+   integer(IntKi), optional, intent(in)               :: FlagFilter  !< Variable index number
    real(R8Ki), allocatable, optional, intent(inout)   :: dYdu(:, :), dXdu(:, :)
 
    character(*), parameter    :: RoutineName = 'FAST_JacobianPInput'
@@ -614,6 +622,7 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg,
    select case (ModData%ID)
 
 !  case (Module_AD)
+
    case (Module_BD)
       call BD_JacobianPInput(ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, ThisState), T%BD%xd(ModData%Ins, ThisState), &
                              T%BD%z(ModData%Ins, ThisState), T%BD%OtherSt(ModData%Ins, ThisState), T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
@@ -625,26 +634,25 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg,
                              FlagFilter=FlagFilter, dYdu=dYdu, dXdu=dXdu)
 
 !  case (Module_ExtPtfm)
-!  case (Module_FEAM)
+
    case (Module_HD)
-      ! call HD_JacobianPInput(ThisTime, T%HD%Input(1), T%HD%p, T%HD%x(ThisState), T%HD%xd(ThisState), &
-      !                        T%HD%z(ThisState), T%HD%OtherSt(ThisState), T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
-      !                        FlagFilter=FlagFilter, dYdu=dYdu, dXdu=dXdu)
+      call HD_JacobianPInput(ThisTime, T%HD%Input(1), T%HD%p, T%HD%x(ThisState), T%HD%xd(ThisState), &
+                             T%HD%z(ThisState), T%HD%OtherSt(ThisState), T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
+                             dYdu=dYdu, dXdu=dXdu)
 
-!  case (Module_IceD)
-!  case (Module_IceF)
 !  case (Module_IfW)
-!  case (Module_MAP)
+
+   case (Module_MAP)
+      call MAP_JacobianPInput(ThisTime, T%MAP%Input(1), T%MAP%p, T%MAP%x(ThisState), T%MAP%xd(ThisState), &
+                              T%MAP%z(ThisState), T%MAP%OtherSt, T%MAP%y, T%MAP%m, ErrStat2, ErrMsg2, &
+                              dYdu=dYdu, dXdu=dXdu)
+
 !  case (Module_MD)
-!  case (Module_OpFM)
-!  case (Module_Orca)
 
-   case (Module_SD)
-      ! call SD_JacobianPInput(ThisTime, T%SD%Input(1), T%SD%p, T%SD%x(ThisState), T%SD%xd(ThisState), &
-      !                        T%SD%z(ThisState), T%SD%OtherSt(ThisState), T%SD%y, T%SD%m, &
-      !                        ErrStat2, ErrMsg2, FlagFilter=FlagFilter, dYdu=dYdu, dXdu=dXdu)
-
-!  case (Module_SeaSt)
+!  case (Module_SD)
+!     call SD_JacobianPInput(ThisTime, T%SD%Input(1), T%SD%p, T%SD%x(ThisState), T%SD%xd(ThisState), &
+!                            T%SD%z(ThisState), T%SD%OtherSt(ThisState), T%SD%y, T%SD%m, &
+!                            ErrStat2, ErrMsg2, FlagFilter=FlagFilter, dYdu=dYdu, dXdu=dXdu)
 
    case (Module_SrvD)
       call SrvD_JacobianPInput(ThisTime, T%SrvD%Input(1), T%SrvD%p, T%SrvD%x(ThisState), T%SrvD%xd(ThisState), &
@@ -653,7 +661,7 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg,
 
    case default
       ErrStat2 = ErrID_Fatal
-      ErrMsg2 = "Unknown module ID "//trim(Num2LStr(ModData%ID))
+      ErrMsg2 = "Unsupported module: "//ModData%Abbr
    end select
 
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -682,6 +690,7 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, ThisState, T, ErrStat, Err
    select case (ModData%ID)
 
 !  case (Module_AD)
+
    case (Module_BD)
       call BD_JacobianPContState(ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), &
                                  T%BD%x(ModData%Ins, ThisState), T%BD%xd(ModData%Ins, ThisState), &
@@ -697,29 +706,30 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, ThisState, T, ErrStat, Err
                                  FlagFilter=FlagFilter, dYdx=dYdx, dXdx=dXdx)
 
 !  case (Module_ExtPtfm)
-!  case (Module_FEAM)
+
    case (Module_HD)
-      ! call HD_JacobianPContState(ThisTime, T%HD%Input(1), T%HD%p, &
-      !                            T%HD%x(ThisState), T%HD%xd(ThisState), &
-      !                            T%HD%z(ThisState), T%HD%OtherSt(ThisState), &
-      !                            T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
-      !                            FlagFilter=FlagFilter, dYdx=dYdx, dXdx=dXdx)
+      call HD_JacobianPContState(ThisTime, T%HD%Input(1), T%HD%p, &
+                                 T%HD%x(ThisState), T%HD%xd(ThisState), &
+                                 T%HD%z(ThisState), T%HD%OtherSt(ThisState), &
+                                 T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
+                                 FlagFilter=FlagFilter, dYdx=dYdx, dXdx=dXdx)
 
-!  case (Module_IceD)
-!  case (Module_IceF)
 !  case (Module_IfW)
-!  case (Module_MAP)
-!  case (Module_MD)
-!  case (Module_OpFM)
-!  case (Module_Orca)
-   case (Module_SD)
-      ! call SD_JacobianPContState(ThisTime, T%SD%Input(1), T%SD%p, &
-      !                            T%SD%x(ThisState), T%SD%xd(ThisState), &
-      !                            T%SD%z(ThisState), T%SD%OtherSt(ThisState), &
-      !                            T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
-      !                            FlagFilter=FlagFilter, dYdx=dYdx, dXdx=dXdx)
 
-!  case (Module_SeaSt)
+   case (Module_MAP)
+      ! MAP doesn't have a JacobianPContState subroutine
+      ErrStat2 = ErrID_None
+      ErrMsg2 = ''
+
+!  case (Module_MD)
+
+!   case (Module_SD)
+!      call SD_JacobianPContState(ThisTime, T%SD%Input(1), T%SD%p, &
+!                                 T%SD%x(ThisState), T%SD%xd(ThisState), &
+!                                 T%SD%z(ThisState), T%SD%OtherSt(ThisState), &
+!                                 T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
+!                                 FlagFilter=FlagFilter, dYdx=dYdx, dXdx=dXdx)
+
    case (Module_SrvD)
       call SrvD_JacobianPContState(ThisTime, T%SrvD%Input(1), T%SrvD%p, &
                                    T%SrvD%x(ThisState), T%SrvD%xd(ThisState), &
@@ -729,7 +739,7 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, ThisState, T, ErrStat, Err
 
    case default
       ErrStat2 = ErrID_Fatal
-      ErrMsg2 = "Unknown module ID "//trim(Num2LStr(ModData%ID))
+      ErrMsg2 = "Unsupported module: "//ModData%Abbr
    end select
 
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -744,38 +754,6 @@ subroutine FAST_SaveStates(ModData, T, ErrStat, ErrMsg)
 
    ! Copy state from predicted to current with MESH_UPDATECOPY
    call FAST_CopyStates(ModData, T, STATE_PRED, STATE_CURR, MESH_UPDATECOPY, ErrStat, ErrMsg)
-end subroutine
-
-subroutine XferLocToGbl1D(Inds, Loc, Gbl)
-   integer(IntKi), intent(in) :: Inds(:, :)
-   real(R8Ki), intent(in)     :: Loc(:)
-   real(R8Ki), intent(inout)  :: Gbl(:)
-   integer(IntKi)             :: i
-   do i = 1, size(Inds, dim=2)
-      Gbl(Inds(2, i)) = Loc(Inds(1, i))
-   end do
-end subroutine
-
-subroutine XferGblToLoc1D(Inds, Gbl, Loc)
-   integer(IntKi), intent(in) :: Inds(:, :)
-   real(R8Ki), intent(in)     :: Gbl(:)
-   real(R8Ki), intent(inout)  :: Loc(:)
-   integer(IntKi)             :: i
-   do i = 1, size(Inds, dim=2)
-      Loc(Inds(1, i)) = Gbl(Inds(2, i))
-   end do
-end subroutine
-
-subroutine XferLocToGbl2D(RowInds, ColInds, Loc, Gbl)
-   integer(IntKi), intent(in) :: RowInds(:, :), ColInds(:, :)
-   real(R8Ki), intent(in)     :: Loc(:, :)
-   real(R8Ki), intent(inout)  :: Gbl(:, :)
-   integer(IntKi)             :: i, j
-   do i = 1, size(ColInds, dim=2)
-      do j = 1, size(RowInds, dim=2)
-         Gbl(RowInds(2, j), ColInds(2, i)) = Loc(RowInds(1, j), ColInds(1, i))
-      end do
-   end do
 end subroutine
 
 subroutine FAST_CopyStates(ModData, T, Src, Dst, CtrlCode, ErrStat, ErrMsg)
