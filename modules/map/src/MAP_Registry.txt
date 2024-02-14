@@ -33,7 +33,8 @@ typedef         ^       ^                   CHARACTER(24)    compilingData      
 typedef         ^       ^                   CHARACTER(15)    writeOutputHdr    {:}        ""                  -            "first line output file contents: output variable names"
 typedef         ^       ^                   CHARACTER(15)    writeOutputUnt    {:}        ""                  -            "second line of output file contents: units"
 typedef         ^       ^                   ProgDesc         Ver                -         ""                  -            "this module's name, version, and date"
-typedef         ^       ^                   Lin_InitOutputType  LinInitOut         -          -                  -            "Init Output linearization data (fortran-only)" -
+typedef         ^       ^                   Lin_InitOutputType  LinInitOut      -          -                  -            "Init Output linearization data (fortran-only)" -
+typedef         ^       ^                   ModVarsType     *Vars               -          -                  -            "Module Variables"  -
 
 ## ============================== Define Continuous states here: =====================================================================================================================================
 typedef         ^       ContinuousStateType R8Ki             dummy              -         -                   -            "Remove this variable if you have continuous states" -
@@ -71,7 +72,11 @@ typedef        ^        ^                   R8Ki             z                 {
 
 
 ## ============================== Parameters ============================================================================================================================================
-typedef         ^        ParameterType       R8Ki             g                  -         -                   -            "gravitational constant"                          "[kg/m^2]"
+typedef         ^        ParameterType       ModVarsType     &Vars               -         -                   -            "Module Variables"
+typedef         ^        ^                   IntKi        iVarPtFairDisplacement -         -                   -            "Variable index for fairlead displacement mesh"
+typedef         ^        ^                   IntKi            iVarPtFairleadLoad -         -                   -            "Variable index for fairlead loads mesh"
+typedef         ^        ^                   IntKi            iVarWriteOutput    -         -                   -            "Variable index for write outputs"
+typedef         ^        ^                   R8Ki             g                  -         -                   -            "gravitational constant"                          "[kg/m^2]"
 typedef         ^        ^                   R8Ki             depth              -         -                   -            "distance to seabed"                              "[m]"
 typedef         ^        ^                   R8Ki             rho_sea            -         -                   -            "density of seawater"                             "[m]"
 typedef         ^        ^                   R8Ki             dt                 -         -                   -            "time step coupling interval"                     "[sec]"
@@ -83,7 +88,7 @@ typedef         ^        ^                   R8Ki             dt                
 typedef          ^       ^                   CHARACTER(255)   InputLines         {500}     -                   -            "input file line for restart"
 typedef          ^       ^                   CHARACTER(1)     InputLineType      {500}     -                   -            "input file line type for restart"
 typedef          ^       ^                   INTEGER          numOuts           -          0                   -            "Number of write outputs" -
-typedef          ^       ^                   Lin_ParamType    LinParams         -          -                  -             "Parameter linearization data (fortran-only)" -
+typedef          ^       ^                   Lin_ParamType    LinParams         -          -                  -             "Parameter linearization data (fortran-only)"
 
 # ============================== Inputs ============================================================================================================================================    
 typedef         ^       InputType           R8Ki             x                 {:}        -                   -            "fairlead x displacement"  "[m]"                 
@@ -100,4 +105,7 @@ typedef        ^        ^                   ReKi             WriteOutput        
 typedef        ^        ^                   R8Ki             wrtOutput          {:}        -                   -            "outpur vector" ""
 typedef        ^        ^                   MeshType         ptFairleadLoad      -         -                   -            "point mesh for forces in X,Y,Z"         "[N]"
 
-
+## ============================== MiscVar ============================================================================================================================================
+typedef        ^        MiscVarType         ModJacType       Jac                 -         -                   -            "Values corresponding to module variables"
+typedef        ^        ^                   MAP_InputType    u_perturb           -         -                   -            "Temporary variables for Jacobian calculations"
+typedef        ^        ^                   MAP_ConstraintStateType   z_lin      -         -                   -            "Temporary variables for Jacobian calculations"

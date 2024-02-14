@@ -81,6 +81,9 @@ typedef struct MAP_ConstraintStateType {
 
 typedef struct MAP_ParameterType {
 	void *object;
+	int iVarPtFairDisplacement;
+	int iVarPtFairleadLoad;
+	int iVarWriteOutput;
 	double g;
 	double depth;
 	double rho_sea;
@@ -104,6 +107,10 @@ typedef struct MAP_OutputType {
 	double *wrtOutput;          int wrtOutput_Len;
 } MAP_OutputType_t;
 
+typedef struct MAP_MiscVarType {
+	void *object;
+} MAP_MiscVarType_t;
+
 typedef struct MAP_UserData {
 	MAP_InitInputType_t          MAP_InitInput;
 	MAP_InitOutputType_t         MAP_InitOutput;
@@ -114,6 +121,7 @@ typedef struct MAP_UserData {
 	MAP_ParameterType_t          MAP_Param;
 	MAP_InputType_t              MAP_Input;
 	MAP_OutputType_t             MAP_Output;
+	MAP_MiscVarType_t            MAP_Misc;
 } MAP_t;
 
 #endif // _MAP_TYPES_H

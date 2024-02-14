@@ -497,7 +497,7 @@ MODULE MAP
   END SUBROUTINE MAP_Restart
    
   !==========   MAP_Init   ======     <----------------------------------------------------------------------+
-  SUBROUTINE MAP_Init( InitInp, u, p, x, xd, z, other, y, Interval, InitOut, ErrStat, ErrMsg )    
+  SUBROUTINE MAP_Init( InitInp, u, p, x, xd, z, other, y, m, Interval, InitOut, ErrStat, ErrMsg )    
     IMPLICIT NONE
     TYPE( MAP_InitInputType ),       INTENT(INOUT)  :: InitInp     ! INTENT(IN  ) : Input data for initialization routine
     TYPE( MAP_InputType ),           INTENT(  OUT)  :: u           ! INTENT(  OUT) : An initial guess for the input; input mesh must be defined
@@ -507,6 +507,7 @@ MODULE MAP
     TYPE( MAP_ConstraintStateType ), INTENT(  OUT)  :: z           ! INTENT(  OUT) : Initial guess of the constraint states
     TYPE( MAP_OtherStateType ),      INTENT(  OUT)  :: other       ! INTENT(  OUT) : Initial other/optimization states
     TYPE( MAP_OutputType ),          INTENT(  OUT)  :: y           ! INTENT(  OUT) : Initial system outputs (outputs are not calculated; only the output mesh is initialized)
+    TYPE( MAP_MiscVarType ),         INTENT(  OUT)  :: m           ! INTENT(  OUT) : Initial system mischellaneous vars
     REAL(DbKi),                      INTENT(INOUT)  :: Interval    ! Coupling interval in seconds: the rate that Output is the actual coupling interval 
     TYPE( MAP_InitOutputType ),      INTENT(INOUT)  :: InitOut     ! Output for initialization routine
     INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
@@ -686,18 +687,108 @@ IF (ErrStat >= AbortErrLev) RETURN
        allocate( y%WriteOutput(p%numOuts), STAT=N)
        if (N/=0) call SetErrStat(ErrID_Fatal, 'Failed to allocate y%WriteOutput',ErrStat, ErrMsg, RoutineName)   
     end if
+
+    !............................................................................................
+    ! Module Variables
+    !............................................................................................
+    call MAP_InitVars(InitInp, u, p, x, z, y, m, InitOut, InitInp%LinInitInp%Linearize, ErrStat2, ErrMsg2)
+    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
     
     !............................................................................................
     ! Initialize Jacobian information:
     !............................................................................................
-    if (InitInp%LinInitInp%Linearize) then      
-       call map_Init_Jacobian( p, u, y, InitOut, ErrStat2, ErrMsg2)
-       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-    end if
+   !  if (InitInp%LinInitInp%Linearize) then      
+   !     call map_Init_Jacobian( p, u, y, InitOut, ErrStat2, ErrMsg2)
+   !     call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   !  end if
   
   END SUBROUTINE MAP_Init                                                                        !   -------+
   !==========================================================================================================
 
+
+   !----------------------------------------------------------------------------------------------------------------------------------   
+   !> This routine initializes module variables for use by the solver and linearization.
+   subroutine MAP_InitVars(InitInp, u, p, x, z, y, m, InitOut, Linearize, ErrStat, ErrMsg)
+      type(MAP_InitInputType),        intent(in)     :: InitInp     !< Initialization input
+      type(MAP_InputType),            intent(inout)  :: u           !< An initial guess for the input; input mesh must be defined
+      type(MAP_ParameterType),        intent(inout)  :: p           !< Parameters
+      type(MAP_ContinuousStateType),  intent(inout)  :: x           !< Continuous state
+      type(MAP_ConstraintStateType),  intent(inout)  :: z           !< Constraint state
+      type(MAP_OutputType),           intent(inout)  :: y           !< Initial system outputs (outputs are not calculated;
+      type(MAP_MiscVarType),          intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
+      type(MAP_InitOutputType),       intent(inout)  :: InitOut     !< Output for initialization routine
+      logical,                        intent(in)     :: Linearize   !< Flag to initialize linearization variables
+      integer(IntKi),                 intent(out)    :: ErrStat     !< Error status of the operation
+      character(*),                   intent(out)    :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+      character(*), parameter    :: RoutineName = 'MAP_InitVars'
+      integer(IntKi)             :: ErrStat2                     ! Temporary Error status
+      character(ErrMsgLen)       :: ErrMsg2                      ! Temporary Error message
+      integer(IntKi)             :: i
+      real(R8Ki)                 :: Perturb
+
+      ErrStat = ErrID_None
+      ErrMsg = ""
+
+      ! Allocate space for variables (deallocate if already allocated)
+      if (associated(p%Vars)) deallocate(p%Vars)
+      allocate(p%Vars, stat=ErrStat2)
+      if (ErrStat2 /= 0) then
+         call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+
+      ! Add pointers to vars to inititialization output
+      InitOut%Vars => p%Vars
+
+      !-------------------------------------------------------------------------
+      ! Continuous State Variables
+      !-------------------------------------------------------------------------
+
+
+      !-------------------------------------------------------------------------
+      ! Input variables
+      !-------------------------------------------------------------------------
+
+      call MV_AddMeshVar(p%Vars%u, "PtFairDisplacement", [VF_TransDisp], &
+                         VarIdx=p%iVarPtFairDisplacement, &
+                         Mesh=u%PtFairDisplacement, &
+                         Perturbs=[0.2_R8Ki*D2R * max(p%depth,1.0_R8Ki)])
+
+      !-------------------------------------------------------------------------
+      ! Output variables
+      !-------------------------------------------------------------------------
+
+      call MV_AddMeshVar(p%Vars%y, "FairleadLoads", [VF_Force], &
+                         VarIdx=p%iVarPtFairleadLoad, &
+                         Mesh=y%ptFairleadLoad)
+
+      ! Write outputs
+      call MV_AddVar(p%Vars%y, "WriteOutput", VF_Scalar, &
+                     VarIdx=p%iVarWriteOutput, &
+                     Num=p%numOuts,&
+                     Flags=VF_WriteOut, &
+                     LinNames=[(WriteOutputLinName(i), i = 1, p%numOuts)])
+
+      !-------------------------------------------------------------------------
+      ! Initialize Variables and Jacobian data
+      !-------------------------------------------------------------------------
+
+      CALL MV_InitVarsJac(p%Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+
+      call MAP_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+      call MAP_CopyConstrState(z, m%z_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+
+   contains
+      character(LinChanLen) function WriteOutputLinName(idx)
+         integer(IntKi), intent(in) :: idx
+         WriteOutputLinName = trim(InitOut%WriteOutputHdr(idx))//', '//trim(InitOut%WriteOutputUnt(idx))
+      end function
+      logical function Failed()
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+         Failed =  ErrStat >= AbortErrLev
+      end function Failed
+   end subroutine
 
   !==========   MAP_UpdateStates   ======     <-------------------------------------------------------------+
   SUBROUTINE MAP_UpdateStates( t, n, u, utimes, p, x, xd, z, O, ErrStat, ErrMsg)    
@@ -1257,7 +1348,7 @@ SUBROUTINE MAP_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
   
 END SUBROUTINE MAP_Init_Jacobian  
    
-SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg, dYdu )
+SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu, FlagFilter)
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(map_InputType),                  INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(map_ParameterType),              INTENT(INOUT)           :: p          !< Parameters
@@ -1269,230 +1360,221 @@ SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg
                                                                                !!   Output fields are not used by this routine, but type is   
                                                                                !!   available here so that mesh parameter information (i.e.,  
                                                                                !!   connectivity) does not have to be recalculated for dYdu.
+   TYPE(map_MiscVarType),                INTENT(INOUT)           :: m          !< Misc/optimization variables
+   INTEGER(IntKi),          OPTIONAL,    INTENT(IN   )           :: FlagFilter !< Filter variables by flag value
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect 
-                                                                               !!   to the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with respect to the inputs (u) [intent in to avoid deallocation]
    
-   
-      ! local variables
-   INTEGER(KIND=C_INT)                             :: status_from_MAP 
-   CHARACTER(KIND=C_CHAR), DIMENSION(1024)         :: message_from_MAP 
-   REAL(KIND=C_FLOAT)                              :: time 
-   INTEGER(KIND=C_INT)                             :: interval 
-
-   TYPE(map_OutputType)                               :: y_p
-   TYPE(map_OutputType)                               :: y_m
-   TYPE(map_ConstraintStateType)                      :: z_perturb
-   TYPE(map_InputType)                                :: u_perturb
-   REAL(R8Ki)                                         :: delta        ! delta change in input or state
-   INTEGER(IntKi)                                     :: i, j, NN, offsetI, offsetJ
-   
+   CHARACTER(*), PARAMETER                            :: RoutineName = 'map_JacobianPInput'
    INTEGER(IntKi)                                     :: ErrStat2
    CHARACTER(ErrMsgLen)                               :: ErrMsg2
-   CHARACTER(*), PARAMETER                            :: RoutineName = 'map_JacobianPInput'
+   logical                                            :: IsFullLin
+   integer(IntKi)                                     :: FlagFilterLoc
+   INTEGER(KIND=C_INT)                                :: status_from_MAP 
+   CHARACTER(KIND=C_CHAR), DIMENSION(1024)            :: message_from_MAP 
+   REAL(KIND=C_FLOAT)                                 :: time 
+   INTEGER(KIND=C_INT)                                :: interval 
+   INTEGER(IntKi)                                     :: i, j, NN, offsetI, offsetJ, col
    
-   
-      ! Initialize ErrStat
-
    ErrStat = ErrID_None
    ErrMsg  = ''
+
    time = t
    interval = t / p%dt
-   
-   if ( present( dYdu ) ) then
 
-      ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
+   ! Set full linearization flag and local filter flag
+   if (present(FlagFilter)) then
+      IsFullLin = FlagFilter == VF_None
+      FlagFilterLoc = FlagFilter
+   else
+      IsFullLin = .true.
+      FlagFilterLoc = VF_None
+   end if
+   
+   ! Make a copy of the inputs to perturb
+   call map_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+   call MAP_PackInputValues(p, u, m%Jac%u)
+
+   ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
+   if (present(dYdu)) then
 
       ! allocate dYdu if necessary
       if (.not. allocated(dYdu)) then
-         call AllocAry(dYdu, p%LinParams%Jac_ny, size(p%LinParams%Jac_u_indx,1), 'dYdu', ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
+         call AllocAry(dYdu, p%Vars%Ny, p%Vars%Nu, 'dYdu', ErrStat2, ErrMsg2); if (Failed()) return
       end if
-      
-    
-      do i=1,size(p%LinParams%Jac_u_indx,1)
-         
-            ! get u_op + delta u
-         call map_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-         call map_Perturb_u( p, i, 1, u_perturb, delta )
 
-         call MAP_CopyConstrState( z, z_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later   
+      ! Loop through input variables
+      do i = 1, size(p%Vars%u)
+
+         ! If variable flag not in flag filter, skip
+         if (.not. MV_HasFlags(p%Vars%u(i), FlagFilterLoc)) cycle
+
+         ! Loop through number of linearization perturbations in variable
+         do j = 1, p%Vars%u(i)%Num
+
+            ! Calculate positive perturbation
+            call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
+            call MAP_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call MAP_CopyConstrState(z, m%z_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
             
-         DO j = 1,u_perturb%PtFairDisplacement%NNodes
-             u_perturb%X(j) = u_perturb%PtFairDisplacement%Position(1,j) + u_perturb%PtFairDisplacement%TranslationDisp(1,j)
-             u_perturb%Y(j) = u_perturb%PtFairDisplacement%Position(2,j) + u_perturb%PtFairDisplacement%TranslationDisp(2,j)
-             u_perturb%Z(j) = u_perturb%PtFairDisplacement%Position(3,j) + u_perturb%PtFairDisplacement%TranslationDisp(3,j)
-         END DO
+            ! Calculate absolute position of each node
+            m%u_perturb%X = m%u_perturb%PtFairDisplacement%Position(1,:) + m%u_perturb%PtFairDisplacement%TranslationDisp(1,:)
+            m%u_perturb%Y = m%u_perturb%PtFairDisplacement%Position(2,:) + m%u_perturb%PtFairDisplacement%TranslationDisp(2,:)
+            m%u_perturb%Z = m%u_perturb%PtFairDisplacement%Position(3,:) + m%u_perturb%PtFairDisplacement%TranslationDisp(3,:)
          
-            ! compute constraint state for u_op + delta u
-         call MSQS_UpdateStates( time       , &
-                            interval        , & 
-                            u_perturb%C_obj , &
-                            p%C_obj         , &
-                            x%C_obj         , &
-                            xd%C_obj        , &
-                            z_perturb%C_obj , &
-                            OtherState%C_obj         , &
-                            status_from_MAP , &
-                            message_from_MAP  )
+            ! Compute constraint state for u_op + delta u
+            call MSQS_UpdateStates(time, &
+                                   interval, & 
+                                   m%u_perturb%C_obj, &
+                                   p%C_obj, &
+                                   x%C_obj, &
+                                   xd%C_obj, &
+                                   m%z_lin%C_obj, &
+                                   OtherState%C_obj, &
+                                   status_from_MAP, &
+                                   message_from_MAP  )
 
-          call MAP_ERROR_CHECKER(message_from_MAP,status_from_MAP,ErrMsg2,ErrStat2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+            call MAP_ERROR_CHECKER(message_from_MAP, status_from_MAP, ErrMsg2, ErrStat2); if (Failed()) return
 
-    
-         
             ! compute y at u_op + delta u
-         call map_CalcOutput( t, u_perturb, p, x, xd, z_perturb, OtherState, y, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later  
+            ! MAP++ (in the c-code) requires that the output data structure be y, which was used when MAP++ was initialized.
+            call map_CalcOutput(t, m%u_perturb, p, x, xd, m%z_lin, OtherState, y, ErrStat2, ErrMsg2); if (Failed()) return
+            call MAP_PackOutputValues(p, y, m%Jac%y_pos, IsFullLin)
             
-            ! We need to do this copy inside the loop because MAP++ (in the c-code) requires that the output data structure be y, which was used when MAP++ was initialized.
-         call map_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)    
+            ! Calculate negative perturbation
+            call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
+            call MAP_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call MAP_CopyConstrState(z, m%z_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
             
-            ! get u_op - delta u
-         call map_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-            
-         ! Minus perturbation
-         call map_Perturb_u( p, i, -1, u_perturb, delta )
-
-         call MAP_CopyConstrState( z, z_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later  
-            
-         
-          DO j = 1,u_perturb%PtFairDisplacement%NNodes
-             u_perturb%X(j) = u_perturb%PtFairDisplacement%Position(1,j) + u_perturb%PtFairDisplacement%TranslationDisp(1,j)
-             u_perturb%Y(j) = u_perturb%PtFairDisplacement%Position(2,j) + u_perturb%PtFairDisplacement%TranslationDisp(2,j)
-             u_perturb%Z(j) = u_perturb%PtFairDisplacement%Position(3,j) + u_perturb%PtFairDisplacement%TranslationDisp(3,j)
-          END DO
+            ! Calculate absolute position of each node
+            m%u_perturb%X = m%u_perturb%PtFairDisplacement%Position(1,:) + m%u_perturb%PtFairDisplacement%TranslationDisp(1,:)
+            m%u_perturb%Y = m%u_perturb%PtFairDisplacement%Position(2,:) + m%u_perturb%PtFairDisplacement%TranslationDisp(2,:)
+            m%u_perturb%Z = m%u_perturb%PtFairDisplacement%Position(3,:) + m%u_perturb%PtFairDisplacement%TranslationDisp(3,:)
           
-                        ! compute constraint state for u_op + delta u
-         call MSQS_UpdateStates( time       , &
-                            interval        , & 
-                            u_perturb%C_obj , &
-                            p%C_obj         , &
-                            x%C_obj         , &
-                            xd%C_obj        , &
-                            z_perturb%C_obj , &
-                            OtherState%C_obj         , &
-                            status_from_MAP , &
-                            message_from_MAP  )
+            ! compute constraint state for u_op - delta u
+            call MSQS_UpdateStates( time, &
+                              interval, & 
+                              m%u_perturb%C_obj, &
+                              p%C_obj, &
+                              x%C_obj, &
+                              xd%C_obj, &
+                              m%z_lin%C_obj, &
+                              OtherState%C_obj, &
+                              status_from_MAP, &
+                              message_from_MAP  )
 
-          call MAP_ERROR_CHECKER(message_from_MAP,status_from_MAP,ErrMsg2,ErrStat2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
-
+            call MAP_ERROR_CHECKER(message_from_MAP,status_from_MAP,ErrMsg2,ErrStat2); if (Failed()) return
+            
             ! compute y at u_op - delta u
-         call map_CalcOutput( t, u_perturb, p, x, xd, z_perturb, OtherState, y, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later         
+            ! MAP++ (in the c-code) requires that the output data structure be y, which was used when MAP++ was initialized.
+            call map_CalcOutput(t, m%u_perturb, p, x, xd, m%z_lin, OtherState, y, ErrStat2, ErrMsg2 ); if (Failed()) return
+            call MAP_PackOutputValues(p, y, m%Jac%y_pos, IsFullLin)
             
-            ! We need to do this copy inside the loop because MAP++ (in the c-code) requires that the output data structure be y, which was used when MAP++ was initialized.
-         call map_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)       
-            
-            ! get central difference:  note: assumes delta is equivalent for both perturb_u calls.           
-         call Compute_dY( p, y_p, y_m, delta, dYdu(:,i) )
-         
+            ! Calculate column index
+            col = p%Vars%u(i)%iLoc(1) + j - 1
+
+            ! Get partial derivative via central difference and store in full linearization array
+            call MV_ComputeCentralDiff(p%Vars%y, p%Vars%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,col))
+         end do
       end do
    end if
-   call cleanup()
+
+   ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
+   if (present(dXdu)) then
+      if (allocated(dXdu)) deallocate(dXdu)
+   end if
+
+   ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the inputs (u) here:
+   if (present(dXddu)) then
+      if (allocated(dXddu)) deallocate(dXddu)
+   end if
+
+   ! Calculate the partial derivative of the constraint state functions (Z) with respect to the inputs (u) here:
+   if (present(dZdu)) then
+      if (allocated(dZdu)) deallocate(dZdu)
+   end if
    
    ! Calling CalcOutput at operating point to ensure that "y" does not have the values of y_m (MAP specific issue)
-   call map_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat2, ErrMsg2 ) 
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later  
-contains
-   subroutine cleanup()
-      call map_DestroyOutput(       y_p, ErrStat2, ErrMsg2 )
-      call map_DestroyOutput(       y_m, ErrStat2, ErrMsg2 )
-      call map_DestroyConstrState(    z_perturb, ErrStat2, ErrMsg2 )
-      call map_DestroyInput(  u_perturb, ErrStat2, ErrMsg2 )
+   call map_CalcOutput(t, u, p, x, xd, z, OtherState, y, ErrStat2, ErrMsg2); if (Failed()) return
 
-   end subroutine cleanup
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
 END SUBROUTINE MAP_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE MAP_GetOP( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg, u_op, y_op)
-
+SUBROUTINE MAP_GetOP(t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg, u_op, y_op)
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
-   TYPE(map_InputType),                   INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(map_ParameterType),               INTENT(IN   )           :: p          !< Parameters
-   TYPE(map_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
-   TYPE(map_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
-   TYPE(map_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
-   TYPE(map_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
-   TYPE(map_OutputType),                  INTENT(IN   )           :: y          !< Output at operating point
+   TYPE(map_InputType),                  INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(map_ParameterType),              INTENT(IN   )           :: p          !< Parameters
+   TYPE(map_ContinuousStateType),        INTENT(IN   )           :: x          !< Continuous states at operating point
+   TYPE(map_DiscreteStateType),          INTENT(IN   )           :: xd         !< Discrete states at operating point
+   TYPE(map_ConstraintStateType),        INTENT(IN   )           :: z          !< Constraint states at operating point
+   TYPE(map_OtherStateType),             INTENT(IN   )           :: OtherState !< Other states at operating point
+   TYPE(map_OutputType),                 INTENT(IN   )           :: y          !< Output at operating point
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: u_op(:)    !< values of linearized inputs
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: y_op(:)    !< values of linearized outputs
   
-
-
-   INTEGER(IntKi)                                    :: i, k, index, nu
-   INTEGER(IntKi)                                    :: ny
-   INTEGER(IntKi)                                    :: ErrStat2
-   CHARACTER(ErrMsgLen)                              :: ErrMsg2
-   CHARACTER(*), PARAMETER                           :: RoutineName = 'map_GetOP'
-   TYPE(map_ContinuousStateType)                     :: dx          !< derivative of continuous states at operating point
-   LOGICAL                                           :: Mask(FIELDMASK_SIZE)               !< flags to determine if this field is part of the packing
-   
-   !LIN-TODO:  Need to review and implement this routine per plan.  Do not understand how to implement at the moment, GJH.
-      ! Initialize ErrStat
+   CHARACTER(*), PARAMETER       :: RoutineName = 'map_GetOP'
+   INTEGER(IntKi)                :: ErrStat2
+   CHARACTER(ErrMsgLen)          :: ErrMsg2
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-    !..................................
-   IF ( PRESENT( u_op ) ) THEN
-      
-      if (.not. allocated(u_op)) then 
-         
-         nu = size(p%LinParams%Jac_u_indx,1)      
-         
-         call AllocAry(u_op, nu,'u_op',ErrStat2,ErrMsg2) ! 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) return
-         
+   !..................................
+   if (present(u_op)) then
+      if (.not. allocated(u_op)) then   
+         call AllocAry(u_op, p%Vars%Nu, 'u_op', ErrStat2, ErrMsg2); if (Failed()) return      
       end if
-            
-      Mask  = .false.
-      Mask(MASKID_TRANSLATIONDISP) = .true.
-     
-      index = 1
-      if ( u%PtFairDisplacement%Committed ) then
-         call PackMotionMesh(u%PtFairDisplacement, u_op, index, FieldMask=Mask)    
-      end if
-               
-   END IF
+      call MAP_PackInputValues(p, u, u_op)                
+   end if
 
    !..................................
-   if ( PRESENT( y_op ) ) then
-      
-      if (.not. allocated(y_op)) then
-         call AllocAry(y_op, p%LinParams%Jac_ny, 'y_op', ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
+   if (present(y_op)) then
+      if (.not. allocated(y_op)) then 
+         call AllocAry(y_op, p%Vars%Ny, 'y_op', ErrStat2, ErrMsg2); if (Failed()) return
       end if
-         
-      index = 1               
-      if ( y%ptFairleadLoad%Committed ) then
-         call PackLoadMesh(y%ptFairleadLoad, y_op, index)   
-      end if
-      
-      index = index - 1
-      do i=1,p%numOuts
-         y_op(i+index) = y%WriteOutput(i)
-      end do   
-      
+      call MAP_PackOutputValues(p, y, y_op, .true.)
    end if   
 
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
 END SUBROUTINE MAP_GetOP   
+
+subroutine MAP_PackInputValues(p, u, Ary)
+   type(MAP_ParameterType), intent(in) :: p
+   type(MAP_InputType), intent(in)     :: u
+   real(R8Ki), intent(out)             :: Ary(:)
+   call MV_Pack(p%Vars%u, p%iVarPtFairDisplacement, u%PtFairDisplacement, Ary)
+end subroutine
+
+subroutine MAP_UnpackInputValues(p, Ary, u)
+   type(MAP_ParameterType), intent(in) :: p
+   real(R8Ki), intent(in)              :: Ary(:)
+   type(MAP_InputType), intent(inout)  :: u
+   call MV_Unpack(p%Vars%u, p%iVarPtFairDisplacement, Ary, u%PtFairDisplacement)
+end subroutine
+
+subroutine MAP_PackOutputValues(p, y, Ary, PackWriteOutput)
+   type(MAP_ParameterType), intent(in) :: p
+   type(MAP_OutputType), intent(in)    :: y
+   real(R8Ki), intent(out)             :: Ary(:)
+   logical, intent(in)                 :: PackWriteOutput
+   call MV_Pack(p%Vars%y, p%iVarPtFairleadLoad, y%ptFairleadLoad, Ary)
+   if (PackWriteOutput) call MV_Pack(p%Vars%y, p%iVarWriteOutput, y%WriteOutput, Ary)
+end subroutine
 
  !==========================================================================================================
    

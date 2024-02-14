@@ -83,6 +83,7 @@ IMPLICIT NONE
     CHARACTER(15) , DIMENSION(:), ALLOCATABLE  :: writeOutputUnt      !< second line of output file contents: units [-]
     TYPE(ProgDesc)  :: Ver      !< this module's name, version, and date [-]
     TYPE(Lin_InitOutputType)  :: LinInitOut      !< Init Output linearization data (fortran-only) [-]
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
   END TYPE MAP_InitOutputType
 ! =======================
 ! =========  MAP_ContinuousStateType_C  =======
@@ -187,6 +188,9 @@ IMPLICIT NONE
 ! =========  MAP_ParameterType_C  =======
   TYPE, BIND(C) :: MAP_ParameterType_C
    TYPE(C_PTR) :: object = C_NULL_PTR
+    INTEGER(KIND=C_INT) :: iVarPtFairDisplacement 
+    INTEGER(KIND=C_INT) :: iVarPtFairleadLoad 
+    INTEGER(KIND=C_INT) :: iVarWriteOutput 
     REAL(KIND=C_DOUBLE) :: g 
     REAL(KIND=C_DOUBLE) :: depth 
     REAL(KIND=C_DOUBLE) :: rho_sea 
@@ -195,6 +199,10 @@ IMPLICIT NONE
   END TYPE MAP_ParameterType_C
   TYPE, PUBLIC :: MAP_ParameterType
     TYPE( MAP_ParameterType_C ) :: C_obj
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
+    INTEGER(IntKi)  :: iVarPtFairDisplacement = 0_IntKi      !< Variable index for fairlead displacement mesh [-]
+    INTEGER(IntKi)  :: iVarPtFairleadLoad = 0_IntKi      !< Variable index for fairlead loads mesh [-]
+    INTEGER(IntKi)  :: iVarWriteOutput = 0_IntKi      !< Variable index for write outputs [-]
     REAL(R8Ki)  :: g = 0.0_R8Ki      !< gravitational constant [[kg/m^2]]
     REAL(R8Ki)  :: depth = 0.0_R8Ki      !< distance to seabed [[m]]
     REAL(R8Ki)  :: rho_sea = 0.0_R8Ki      !< density of seawater [[m]]
@@ -246,6 +254,17 @@ IMPLICIT NONE
     REAL(KIND=C_DOUBLE) , DIMENSION(:), POINTER  :: wrtOutput => NULL()      !< outpur vector []
     TYPE(MeshType)  :: ptFairleadLoad      !< point mesh for forces in X,Y,Z [[N]]
   END TYPE MAP_OutputType
+! =======================
+! =========  MAP_MiscVarType_C  =======
+  TYPE, BIND(C) :: MAP_MiscVarType_C
+   TYPE(C_PTR) :: object = C_NULL_PTR
+  END TYPE MAP_MiscVarType_C
+  TYPE, PUBLIC :: MAP_MiscVarType
+    TYPE( MAP_MiscVarType_C ) :: C_obj
+    TYPE(ModJacType)  :: Jac      !< Values corresponding to module variables [-]
+    TYPE(MAP_InputType)  :: u_perturb      !< Temporary variables for Jacobian calculations [-]
+    TYPE(MAP_ConstraintStateType)  :: z_lin      !< Temporary variables for Jacobian calculations [-]
+  END TYPE MAP_MiscVarType
 ! =======================
 CONTAINS
 
@@ -444,6 +463,7 @@ subroutine MAP_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Er
    call MAP_Fortran_CopyLin_InitOutputType(SrcInitOutputData%LinInitOut, DstInitOutputData%LinInitOut, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInitOutputData%Vars => SrcInitOutputData%Vars
 end subroutine
 
 subroutine MAP_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -465,12 +485,14 @@ subroutine MAP_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call MAP_Fortran_DestroyLin_InitOutputType(InitOutputData%LinInitOut, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   nullify(InitOutputData%Vars)
 end subroutine
 
 subroutine MAP_PackInitOutput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(MAP_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MAP_PackInitOutput'
+   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
       call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
@@ -483,6 +505,13 @@ subroutine MAP_PackInitOutput(RF, Indata)
    call RegPackAlloc(RF, InData%writeOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
    call MAP_Fortran_PackLin_InitOutputType(RF, InData%LinInitOut) 
+   call RegPack(RF, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
+      end if
+   end if
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -493,6 +522,8 @@ subroutine MAP_UnPackInitOutput(RF, OutData)
    integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(B8Ki)   :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%progName); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%progName = transfer(OutData%progName, OutData%C_obj%progName )
@@ -504,6 +535,24 @@ subroutine MAP_UnPackInitOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%writeOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
    call MAP_Fortran_UnpackLin_InitOutputType(RF, OutData%LinInitOut) ! LinInitOut 
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
 end subroutine
 
 SUBROUTINE MAP_C2Fary_CopyInitOutput(InitOutputData, ErrStat, ErrMsg, SkipPointers)
@@ -1798,11 +1847,30 @@ subroutine MAP_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'MAP_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (associated(SrcParamData%Vars)) then
+      if (.not. associated(DstParamData%Vars)) then
+         allocate(DstParamData%Vars, stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Vars.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end if
+   DstParamData%iVarPtFairDisplacement = SrcParamData%iVarPtFairDisplacement
+   DstParamData%C_obj%iVarPtFairDisplacement = SrcParamData%C_obj%iVarPtFairDisplacement
+   DstParamData%iVarPtFairleadLoad = SrcParamData%iVarPtFairleadLoad
+   DstParamData%C_obj%iVarPtFairleadLoad = SrcParamData%C_obj%iVarPtFairleadLoad
+   DstParamData%iVarWriteOutput = SrcParamData%iVarWriteOutput
+   DstParamData%C_obj%iVarWriteOutput = SrcParamData%C_obj%iVarWriteOutput
    DstParamData%g = SrcParamData%g
    DstParamData%C_obj%g = SrcParamData%C_obj%g
    DstParamData%depth = SrcParamData%depth
@@ -1829,6 +1897,12 @@ subroutine MAP_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'MAP_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (associated(ParamData%Vars)) then
+      call NWTC_Library_DestroyModVarsType(ParamData%Vars, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      deallocate(ParamData%Vars)
+      ParamData%Vars => null()
+   end if
    call MAP_Fortran_DestroyLin_ParamType(ParamData%LinParams, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
@@ -1837,11 +1911,22 @@ subroutine MAP_PackParam(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(MAP_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MAP_PackParam'
+   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
       call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
+   call RegPack(RF, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
+      end if
+   end if
+   call RegPack(RF, InData%iVarPtFairDisplacement)
+   call RegPack(RF, InData%iVarPtFairleadLoad)
+   call RegPack(RF, InData%iVarWriteOutput)
    call RegPack(RF, InData%g)
    call RegPack(RF, InData%depth)
    call RegPack(RF, InData%rho_sea)
@@ -1857,7 +1942,36 @@ subroutine MAP_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(MAP_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MAP_UnPackParam'
+   integer(B8Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   integer(B8Ki)   :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
+   call RegUnpack(RF, OutData%iVarPtFairDisplacement); if (RegCheckErr(RF, RoutineName)) return
+   OutData%C_obj%iVarPtFairDisplacement = OutData%iVarPtFairDisplacement
+   call RegUnpack(RF, OutData%iVarPtFairleadLoad); if (RegCheckErr(RF, RoutineName)) return
+   OutData%C_obj%iVarPtFairleadLoad = OutData%iVarPtFairleadLoad
+   call RegUnpack(RF, OutData%iVarWriteOutput); if (RegCheckErr(RF, RoutineName)) return
+   OutData%C_obj%iVarWriteOutput = OutData%iVarWriteOutput
    call RegUnpack(RF, OutData%g); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%g = OutData%g
    call RegUnpack(RF, OutData%depth); if (RegCheckErr(RF, RoutineName)) return
@@ -1888,6 +2002,9 @@ SUBROUTINE MAP_C2Fary_CopyParam(ParamData, ErrStat, ErrMsg, SkipPointers)
    ELSE
       SkipPointers_local = .false.
    END IF
+   ParamData%iVarPtFairDisplacement = ParamData%C_obj%iVarPtFairDisplacement
+   ParamData%iVarPtFairleadLoad = ParamData%C_obj%iVarPtFairleadLoad
+   ParamData%iVarWriteOutput = ParamData%C_obj%iVarWriteOutput
    ParamData%g = ParamData%C_obj%g
    ParamData%depth = ParamData%C_obj%depth
    ParamData%rho_sea = ParamData%C_obj%rho_sea
@@ -1910,6 +2027,9 @@ SUBROUTINE MAP_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
    ELSE
       SkipPointers_local = .false.
    END IF
+   ParamData%C_obj%iVarPtFairDisplacement = ParamData%iVarPtFairDisplacement
+   ParamData%C_obj%iVarPtFairleadLoad = ParamData%iVarPtFairleadLoad
+   ParamData%C_obj%iVarWriteOutput = ParamData%iVarWriteOutput
    ParamData%C_obj%g = ParamData%g
    ParamData%C_obj%depth = ParamData%depth
    ParamData%C_obj%rho_sea = ParamData%rho_sea
@@ -2424,6 +2544,104 @@ SUBROUTINE MAP_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
    END IF
 END SUBROUTINE
 
+subroutine MAP_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
+   type(MAP_MiscVarType), intent(inout) :: SrcMiscData
+   type(MAP_MiscVarType), intent(inout) :: DstMiscData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'MAP_CopyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call MAP_CopyInput(SrcMiscData%u_perturb, DstMiscData%u_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call MAP_CopyConstrState(SrcMiscData%z_lin, DstMiscData%z_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
+
+subroutine MAP_DestroyMisc(MiscData, ErrStat, ErrMsg)
+   type(MAP_MiscVarType), intent(inout) :: MiscData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'MAP_DestroyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MAP_DestroyInput(MiscData%u_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MAP_DestroyConstrState(MiscData%z_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+end subroutine
+
+subroutine MAP_PackMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(MAP_MiscVarType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'MAP_PackMisc'
+   if (RF%ErrStat >= AbortErrLev) return
+   if (c_associated(InData%C_obj%object)) then
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
+      return
+   end if
+   call NWTC_Library_PackModJacType(RF, InData%Jac) 
+   call MAP_PackInput(RF, InData%u_perturb) 
+   call MAP_PackConstrState(RF, InData%z_lin) 
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine MAP_UnPackMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(MAP_MiscVarType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'MAP_UnPackMisc'
+   if (RF%ErrStat /= ErrID_None) return
+   call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
+   call MAP_UnpackInput(RF, OutData%u_perturb) ! u_perturb 
+   call MAP_UnpackConstrState(RF, OutData%z_lin) ! z_lin 
+end subroutine
+
+SUBROUTINE MAP_C2Fary_CopyMisc(MiscData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(MAP_MiscVarType), INTENT(INOUT) :: MiscData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+END SUBROUTINE
+
+SUBROUTINE MAP_F2C_CopyMisc( MiscData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(MAP_MiscVarType), INTENT(INOUT) :: MiscData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+END SUBROUTINE
+
 subroutine MAP_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)
    !
    ! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
@@ -2803,8 +3021,7 @@ function MAP_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function MAP_InputMeshName(u, ML) result(Name)
-   type(MAP_InputType), target, intent(in) :: u
+function MAP_InputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
@@ -2825,8 +3042,7 @@ function MAP_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function MAP_OutputMeshName(y, ML) result(Name)
-   type(MAP_OutputType), target, intent(in) :: y
+function MAP_OutputMeshName(ML) result(Name)
    type(MeshLocType), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
