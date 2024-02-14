@@ -79,6 +79,7 @@ typedef     ^                          ^                     SeaSt_WaveFieldType
 #
 # Define outputs from the initialization routine here:
 #
+typedef   ^                            InitOutputType                ModVarsType             *Vars                            -          -        -         "Module Variables"  -
 typedef   ^                            InitOutputType                Morison_InitOutputType   Morison                         -          -        -         "Initialization output from the Morison module"    -
 typedef   ^                            InitOutputType                CHARACTER(ChanLen)       WriteOutputHdr                  {:}        -        -         "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
 typedef   ^                            ^                             CHARACTER(ChanLen)       WriteOutputUnt                  {:}        -        -         "The is the list of all HD-related output channel unit strings (includes all sub-module channels)"    -
@@ -117,25 +118,20 @@ typedef   ^                            ConstraintStateType           Morison_Con
 #
 typedef   ^                            OtherStateType                WAMIT_OtherStateType     WAMIT                           {:}        -          -         "OtherState information from the WAMIT module"   -
 typedef   ^                            ^                             Morison_OtherStateType   Morison                         -          -          -         "OtherState information from the Morison module"   -
-# ..... Misc/Optimization variables.................................................................................................
-# Define any data that are used only for efficiency purposes (these variables are not associated with time):
-#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef   ^                            MiscVarType                   MeshType                 AllHdroOrigin                   -          -          -         "An intermediate mesh used to transfer hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh" -
-typedef   ^                            ^                             HD_ModuleMapType         HD_MeshMap                      -          -          -
-typedef   ^                            ^                             INTEGER                  Decimate                        -          -          -         "The output decimation counter" -
-typedef   ^                            ^                             DbKi                     LastOutTime                     -          -          -         "Last time step which was written to the output file (sec)"    -
-typedef   ^                            ^                             ReKi                     F_PtfmAdd                       {:}        -          -         "The total forces and moments due to additional pre-load, stiffness, and damping"   -
-typedef   ^                            ^                             ReKi                     F_Hydro                         {6}        -          -         "The total hydrodynamic forces and moments integrated about the (0,0,0) platform reference point"   -
-typedef   ^                            ^                             ReKi                     F_Waves                         {:}        -          -         "The total waves forces on a WAMIT body calculated by first and second order methods (WAMIT and WAMIT2 modules)"   -
-typedef   ^                            ^                             WAMIT_MiscVarType        WAMIT                           {:}        -          -          "misc var information from the WAMIT module"   -
-typedef   ^                            ^                             WAMIT2_MiscVarType       WAMIT2                          {:}        -          -         "misc var information from the WAMIT2 module"   -
-typedef   ^                            ^                             Morison_MiscVarType      Morison                         -          -          -         "misc var information from the Morison module"   -
-typedef   ^                            ^                             WAMIT_InputType          u_WAMIT                        {:}         -          -         "WAMIT module inputs" -
+#
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
-typedef   ^                            ParameterType                 INTEGER                  nWAMITObj                       -          -          -         "number of WAMIT input files and matrices.  If NBodyMod = 1 then nPotFiles will be 1 even if NBody > 1" -
+typedef   ^                            ParameterType                 ModVarsType             &Vars                            -          -          -         "Module Variables" -
+typedef   ^                            ^                             IntKi                    iVarMorisonMotionMesh           -          0          -         "Morison Motion Mesh variable index"
+typedef   ^                            ^                             IntKi                    iVarWAMITMotionMesh             -          0          -         "WAMIT Motion Mesh variable index"
+typedef   ^                            ^                             IntKi                    iVarPRPMotionMesh               -          0          -         "PRP Motion Mesh variable index"
+typedef   ^                            ^                             IntKi                    iVarWaveElev0                   -          0          -         "Wave Elevation variable index"
+typedef   ^                            ^                             IntKi                    iVarMorisonLoadMesh             -          0          -         "Morison Load Mesh variable index"
+typedef   ^                            ^                             IntKi                    iVarWAMITLoadMesh               -          0          -         "WAMIT Load Mesh variable index"
+typedef   ^                            ^                             IntKi                    iVarWriteOut                    -          0          -         "Write Output variable index"
+typedef   ^                            ^                             INTEGER                  nWAMITObj                       -          -          -         "number of WAMIT input files and matrices.  If NBodyMod = 1 then nPotFiles will be 1 even if NBody > 1" -
 typedef   ^                            ^                             INTEGER                  vecMultiplier                   -          -          -         "multiplier for the WAMIT vectors and matrices.  If NBodyMod=1 then this = NBody, else 1" -
 typedef   ^                            ^                             WAMIT_ParameterType      WAMIT                           {:}        -          -         "Parameter data for the WAMIT module"  -
 typedef   ^                            ^                             WAMIT2_ParameterType     WAMIT2                          {:}        -          -         "Parameter data for the WAMIT2 module"  -
@@ -184,3 +180,24 @@ typedef   ^                            OutputType                   WAMIT2_Outpu
 typedef   ^                            ^                            Morison_OutputType        Morison                         -          -          -         "Morison module outputs"  -
 typedef   ^                            OutputType                   MeshType                  WAMITMesh                       -        -          -           "Point Loads at the WAMIT reference point(s) in the inertial frame" -
 typedef   ^                            ^                            ReKi                      WriteOutput                    {:}         -          -         "Outputs to be written to the output file(s)"  -
+#
+#
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef   ^                            MiscVarType                   ModJacType                     Jac                       -          -          -         "Values corresponding to module variables" -
+typedef   ^                            ^                             HydroDyn_ContinuousStateType   x_perturb                 -          -          -         "Temporary variables for Jacobian calculations"  -
+typedef   ^                            ^                             HydroDyn_InputType             u_perturb                 -          -          -         "Temporary variables for Jacobian calculations"  -
+typedef   ^                            ^                             HydroDyn_ContinuousStateType   dxdt_lin                  -          -          -         "Temporary variables for Jacobian calculations"  -
+typedef   ^                            ^                             HydroDyn_OutputType            y_lin                     -          -          -         "Temporary variables for Jacobian calculations"  -
+typedef   ^                            ^                             MeshType                 AllHdroOrigin                   -          -          -         "An intermediate mesh used to transfer hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh" -
+typedef   ^                            ^                             HD_ModuleMapType         HD_MeshMap                      -          -          -
+typedef   ^                            ^                             INTEGER                  Decimate                        -          -          -         "The output decimation counter" -
+typedef   ^                            ^                             DbKi                     LastOutTime                     -          -          -         "Last time step which was written to the output file (sec)"    -
+typedef   ^                            ^                             ReKi                     F_PtfmAdd                       {:}        -          -         "The total forces and moments due to additional pre-load, stiffness, and damping"   -
+typedef   ^                            ^                             ReKi                     F_Hydro                         {6}        -          -         "The total hydrodynamic forces and moments integrated about the (0,0,0) platform reference point"   -
+typedef   ^                            ^                             ReKi                     F_Waves                         {:}        -          -         "The total waves forces on a WAMIT body calculated by first and second order methods (WAMIT and WAMIT2 modules)"   -
+typedef   ^                            ^                             WAMIT_MiscVarType        WAMIT                           {:}        -          -          "misc var information from the WAMIT module"   -
+typedef   ^                            ^                             WAMIT2_MiscVarType       WAMIT2                          {:}        -          -         "misc var information from the WAMIT2 module"   -
+typedef   ^                            ^                             Morison_MiscVarType      Morison                         -          -          -         "misc var information from the Morison module"   -
+typedef   ^                            ^                             WAMIT_InputType          u_WAMIT                        {:}         -          -         "WAMIT module inputs" -

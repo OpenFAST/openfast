@@ -823,12 +823,19 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          
       
       !............................................................................................
+      ! Module Variables:
+      !............................................................................................
+
+      call HydroDyn_InitVars(u, p, x, y, m, InitOut, InputFileData, InitInp%Linearize, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      !............................................................................................
       ! Initialize Jacobian:
       !............................................................................................
-      if (InitInp%Linearize) then      
-         call HD_Init_Jacobian( p, u, y, InitOut, ErrStat2, ErrMsg2)
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      end if
+      ! if (InitInp%Linearize) then      
+      !    call HD_Init_Jacobian( p, u, y, InitOut, ErrStat2, ErrMsg2)
+      !    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      ! end if
 
       IF ( p%OutSwtch == 1 ) THEN ! Only HD-level output writing
          ! HACK  WE can tell FAST not to write any HD outputs by simply deallocating the WriteOutputHdr array!
@@ -916,6 +923,147 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       
 
 END SUBROUTINE HydroDyn_End
+
+subroutine HydroDyn_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat, ErrMsg)
+   type(HydroDyn_InputType),           intent(inout)  :: u              !< An initial guess for the input; input mesh must be defined
+   type(HydroDyn_ParameterType),       intent(inout)  :: p              !< Parameters
+   type(HydroDyn_ContinuousStateType), intent(inout)  :: x              !< Continuous state
+   type(HydroDyn_OutputType),          intent(inout)  :: y              !< Initial system outputs (outputs are not calculated;
+   type(HydroDyn_MiscVarType),         intent(inout)  :: m              !< Misc variables for optimization (not copied in glue code)
+   type(HydroDyn_InitOutputType),      intent(inout)  :: InitOut        !< Output for initialization routine
+   type(HydroDyn_InputFile),           intent(in)     :: InputFileData  !< Input file data
+   logical,                      intent(in)     :: Linearize      !< Flag to initialize linearization variables
+   integer(IntKi),               intent(out)    :: ErrStat        !< Error status of the operation
+   character(*),                 intent(out)    :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter       :: RoutineName = 'HydroDyn_InitVars'
+   integer(IntKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
+
+   integer(IntKi)                :: i, j, k
+   real(R8Ki)                    :: PerturbTrans, PerturbRot, Perturbs(6)
+   character(10)                 :: BodyDesc
+   character(10), parameter      :: dofLabels(6) = &
+      ['PtfmSg', 'PtfmSw', 'PtfmHv', 'PtfmR ', 'PtfmP ', 'PtfmY ']
+
+   ! Allocate space for variables (deallocate if already allocated)
+   if (associated(p%Vars)) deallocate(p%Vars)
+   allocate(p%Vars, stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat(ErrID_Fatal, "Error allocating vars", ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   ! Associate pointer in init output
+   InitOut%Vars => p%Vars
+
+   !----------------------------------------------------------------------------
+   ! Continuous State Variables
+   !----------------------------------------------------------------------------
+
+   ! Need to determine how many wamit body objects there are
+   p%totalExctnStates = 0
+   p%totalRdtnStates = 0
+   do j = 1, p%nWAMITObj
+      p%totalExctnStates = p%totalExctnStates + p%WAMIT(j)%SS_Exctn%numStates  ! numStates defaults to zero in the case where ExctnMod = 0 instead of 2
+      p%totalRdtnStates  = p%totalRdtnStates  + p%WAMIT(j)%SS_Rdtn%numStates   ! numStates defaults to zero in the case where RdtnMod  = 0 instead of 2
+   end do
+   p%totalStates = p%totalExctnStates + p%totalRdtnStates
+   
+   ! Initialize body description to empty
+   BodyDesc = ""
+
+   ! Get excitation
+   do k = 1, p%nWAMITObj
+      if (p%NBody > 1) BodyDesc = 'B'//trim(Num2LStr(k))
+      call MV_AddVar(p%Vars%x, "WAMIT("//trim(Num2LStr(k))//")%SS_Exctn", VF_Scalar, &
+                     Flags=VF_DerivOrder1, &
+                     Num=p%WAMIT(k)%SS_Exctn%numStates, &
+                     Perturb=20000.0_R8Ki * D2R_D, &
+                     LinNames=[((trim(BodyDesc)//'Exctn'//trim(dofLabels(j))//Num2LStr(i), i = 1, p%WAMIT(k)%SS_Exctn%spDOF(j)), j = 1, 6)])
+   end do
+
+   do k = 1, p%nWAMITObj
+      if (p%NBody > 1) BodyDesc = 'B'//trim(Num2LStr(k))
+      call MV_AddVar(p%Vars%x, "WAMIT("//trim(Num2LStr(k))//")%SS_Rdtn", VF_Scalar, &
+                     Flags=VF_DerivOrder1, &
+                     Num=p%WAMIT(k)%SS_Rdtn%numStates, &
+                     Perturb=2.0_R8Ki * D2R_D , &
+                     LinNames=[((trim(BodyDesc)//'Rdtn'//trim(dofLabels(j))//Num2LStr(i), i = 1, p%WAMIT(k)%SS_Rdtn%spDOF(j)), j = 1, 6)])
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Input variables
+   !----------------------------------------------------------------------------
+
+   ! Translation and rotation perturbations
+   PerturbTrans = 0.02_R8Ki*D2R * max(p%WaveField%EffWtrDpth, 1.0_R8Ki) 
+   PerturbRot = 2*D2R
+
+   ! Create perturbation array (order based on MotionFields)
+   Perturbs = [PerturbTrans, &  ! VF_TransDisp
+               PerturbRot, &    ! VF_Orientation
+               PerturbTrans, &  ! VF_TransVel
+               PerturbRot, &    ! VF_AngularVel
+               PerturbTrans, &  ! VF_TransAcc
+               PerturbRot]      ! VF_AngularAcc
+
+   call MV_AddMeshVar(p%Vars%u, "Morison", MotionFields, u%Morison%Mesh, &
+                      VarIdx=p%iVarMorisonMotionMesh, &
+                      Perturbs=Perturbs)
+
+   call MV_AddMeshVar(p%Vars%u, "WAMIT", MotionFields, u%WAMITMesh, &
+                      VarIdx=p%iVarWAMITMotionMesh, &
+                      Perturbs=Perturbs)
+
+   call MV_AddMeshVar(p%Vars%u, "Platform-RefPt", MotionFields, u%PRPMesh, &
+                      VarIdx=p%iVarPRPMotionMesh, &
+                      Perturbs=Perturbs)
+
+   call MV_AddVar(p%Vars%u, "WaveElev0", VF_Scalar, &
+                  VarIdx=p%iVarWaveElev0, &
+                  Flags=VF_ExtLin + VF_Linearize, &
+                  Perturb=1.0_R8Ki, &
+                  LinNames=['Extended input: wave elevation at platform ref point, m'])
+
+   !----------------------------------------------------------------------------
+   ! Output variables
+   !----------------------------------------------------------------------------
+
+   call MV_AddMeshVar(p%Vars%y, "MorisonLoads", LoadFields, y%Morison%Mesh, VarIdx=p%iVarMorisonLoadMesh)
+
+   call MV_AddMeshVar(p%Vars%y, "WAMITLoads", LoadFields, y%WAMITMesh, VarIdx=p%iVarWAMITLoadMesh)
+
+   if (p%NumTotalOuts > 0) then
+      p%iVarWriteOut = size(p%Vars%y) + 1
+      call MV_AddVar(p%Vars%y, "WriteOutput", VF_Scalar, &
+                     Flags=VF_WriteOut, &
+                     Num=p%NumTotalOuts, &
+                     LinNames=[(trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i)), i = 1, p%NumTotalOuts)])
+   else
+      p%iVarWriteOut = 0
+   end if
+
+   !----------------------------------------------------------------------------
+   ! Initialize Variables and Jacobian data
+   !----------------------------------------------------------------------------
+
+   call MV_InitVarsJac(p%Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+
+   call HydroDyn_CopyContState(x, m%x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call HydroDyn_CopyContState(x, m%dxdt_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call HydroDyn_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call HydroDyn_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1507,7 +1655,7 @@ end function CalcLoadsAtWRP
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and dZ/du are returned.
-SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu )
+SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu, FlagFilter )
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -1532,120 +1680,92 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
                                                                                !!   respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with 
                                                                                !!   respect to the inputs (u) [intent in to avoid deallocation]
+   integer(IntKi), OPTIONAL,             INTENT(IN   )           :: FlagFilter !< Flag filter for variable calculation
 
+   CHARACTER(*), PARAMETER       :: RoutineName = 'HD_JacobianPInput'
+   INTEGER(IntKi)                :: ErrStat2
+   CHARACTER(ErrMsgLen)          :: ErrMsg2
+   logical                       :: IsFullLin
+   integer(IntKi)                :: FlagFilterLoc
+   INTEGER(IntKi)                :: i, j, k, col
+   INTEGER(IntKi)                :: startingI, startingJ, bOffset, offsetI
    
-      ! local variables
-   TYPE(HydroDyn_OutputType)                               :: y_p
-   TYPE(HydroDyn_OutputType)                               :: y_m
-   TYPE(HydroDyn_ContinuousStateType)                      :: x_p
-   TYPE(HydroDyn_ContinuousStateType)                      :: x_m
-   TYPE(HydroDyn_InputType)                                :: u_perturb
-   REAL(R8Ki)                                        :: delta        ! delta change in input or state
-   INTEGER(IntKi)                                    :: i, j, k, startingI, startingJ, bOffset, offsetI, n_du_plus1
-   
-   INTEGER(IntKi)                                    :: ErrStat2
-   CHARACTER(ErrMsgLen)                              :: ErrMsg2
-   CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_JacobianPInput'
-   
-   
-      ! Initialize ErrStat
-
    ErrStat = ErrID_None
    ErrMsg  = ''
-   
-   n_du_plus1 = size(p%Jac_u_indx,1)+1
-   
-      ! make a copy of the inputs to perturb
-   call HydroDyn_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if (ErrStat>=AbortErrLev) then
-         call cleanup()
-         return
-      end if
-      
-   
 
+   ! Set full linearization flag and local filter flag
+   if (present(FlagFilter)) then
+      IsFullLin = FlagFilter == VF_None
+      FlagFilterLoc = FlagFilter
+   else
+      IsFullLin = .true.
+      FlagFilterLoc = VF_None
+   end if
+   
+   ! make a copy of the inputs to perturb
+   call HydroDyn_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+   if (Failed()) return
+   
+   ! Pack inputs into array
+   call HD_PackInputValues(p, u, m%Jac%u)
+   if (Failed()) return
+
+   ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
    IF ( PRESENT( dYdu ) ) THEN
-
-      ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
 
       ! allocate dYdu if necessary
       if (.not. allocated(dYdu)) then
-         call AllocAry(dYdu, p%Jac_ny, n_du_plus1, 'dYdu', ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
+         call AllocAry(dYdu, p%Vars%Ny, p%Vars%Nu, 'dYdu', ErrStat2, ErrMsg2)
+         if (Failed()) return
       end if
       
-         ! make a copy of outputs because we will need two for the central difference computations (with orientations)
-      call HydroDyn_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call HydroDyn_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
+      ! Loop through input variables
+      do i = 1, size(p%Vars%u)
+
+         ! If variable flag not in flag filter, skip
+         if (.not. MV_HasFlags(p%Vars%u(i), FlagFilterLoc)) cycle
+
+         ! If this is the Wave elevation extended input
+         if (i == p%iVarWaveElev0) then
+            dYdu(:, p%Vars%u(i)%iLoc(1)) = 0
+            cycle
          end if
-         
-      do i=1,size(p%Jac_u_indx,1)
-         
-            ! get u_op + delta u
-         call HydroDyn_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-         call HD_Perturb_u( p, i, 1, u_perturb, delta )
 
-            ! compute y at u_op + delta u
-         call HydroDyn_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-         
-            
-            ! get u_op - delta u
-         call HydroDyn_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         call HD_Perturb_u( p, i, -1, u_perturb, delta )
-         
-            ! compute y at u_op - delta u
-         call HydroDyn_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-         
-            
-            ! get central difference:            
-         call Compute_dY( p, y_p, y_m, delta, dYdu(:,i) )
-         
-      end do
-      
-         ! p%WaveElev0 column
-      dYdu(:,n_du_plus1) = 0
-      
+         ! Loop through number of linearization perturbations in variable
+         do j = 1, p%Vars%u(i)%Num
 
-      if (ErrStat>=AbortErrLev) then
-         call cleanup()
-         return
-      end if
-      call HydroDyn_DestroyOutput( y_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
-      call HydroDyn_DestroyOutput( y_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
-      
+            ! Calculate positive perturbation
+            call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
+            call HD_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call HydroDyn_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call HD_PackOutputValues(p, m%y_lin, m%Jac%y_pos, IsFullLin)
 
+            ! Calculate negative perturbation
+            call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
+            call HD_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call HydroDyn_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call HD_PackOutputValues(p, m%y_lin, m%Jac%y_neg, IsFullLin)
+
+            ! Calculate column index
+            col = p%Vars%u(i)%iLoc(1) + j - 1
+
+            ! Get partial derivative via central difference and store in full linearization array
+            call MV_ComputeCentralDiff(p%Vars%y, p%Vars%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,col))
+         end do
+      end do     
+      
    END IF
    
-
+   ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
    IF ( PRESENT( dXdu ) ) THEN
 
       ! For the case where either RdtnMod=0 and ExtcnMod=0 and hence %SS_Rdtn data or %SS_Exctn data is not valid then we do not have states, so simply return
       ! The key here is to never allocate the dXdu and related state Jacobian arrays because then the glue-code will behave properly
       
-      ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
-
       ! allocate dXdu if necessary
       if (.not. allocated(dXdu)) then
-         call AllocAry(dXdu, p%totalStates, n_du_plus1, 'dXdu', ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
+         call AllocAry(dXdu, p%Vars%Nx, p%Vars%Nu, 'dXdu', ErrStat2, ErrMsg2)
+         if (Failed()) return
       end if
       
       offsetI = 0
@@ -1653,13 +1773,13 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       
       do j = 1,p%nWAMITObj
          do i = 1,p%WAMIT(j)%SS_Exctn%numStates
-            dXdu(offsetI+i,n_du_plus1) = p%WAMIT(j)%SS_Exctn%B(i) ! B is numStates by 1
+            dXdu(offsetI+i,p%Vars%Nu) = p%WAMIT(j)%SS_Exctn%B(i) ! B is numStates by 1
          end do
          offsetI = offsetI + p%WAMIT(j)%SS_Exctn%numStates
       end do
 
       startingI = p%totalStates - p%totalRdtnStates
-      startingJ = n_du_plus1 - 1 - 18 - 4*3*p%NBody !  subtract 1 for WaveElev0, then 6*3 for PRPMesh and then 4*3*NBody to place us at the beginning of the velocity inputs
+      startingJ = p%Vars%Nu - 1 - 18 - 4*3*p%NBody !  subtract 1 for WaveElev0, then 6*3 for PRPMesh and then 4*3*NBody to place us at the beginning of the velocity inputs
       ! B is numStates by 6*NBody where NBody =1 if NBodyMod=2 or 3, but could be >1 for NBodyMod=1
       if ( p%NBodyMod == 1 ) then
          ! Example for NBodyMod=1 and NBody = 2,
@@ -1710,7 +1830,6 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          ! dXdu(:,startingIndx +11) = p%WAMIT(2)%SS_Rdtn%B(:,5)
          ! dXdu(:,startingIndx +12) = p%WAMIT(2)%SS_Rdtn%B(:,6)
 
-         
          k=0
          offsetI=0
          ! First set all translationalVel components
@@ -1738,8 +1857,6 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       
    END IF
 
-   
-   
    IF ( PRESENT( dXddu ) ) THEN
       if (allocated(dXddu)) deallocate(dXddu)
    END IF
@@ -1748,22 +1865,16 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       if (allocated(dZdu)) deallocate(dZdu)
    END IF
    
-   call cleanup()
-   
 contains
-   subroutine cleanup()
-      call HydroDyn_DestroyOutput(       y_p, ErrStat2, ErrMsg2 )
-      call HydroDyn_DestroyOutput(       y_m, ErrStat2, ErrMsg2 )
-      call HydroDyn_DestroyContState(    x_p, ErrStat2, ErrMsg2 )
-      call HydroDyn_DestroyContState(    x_m, ErrStat2, ErrMsg2 )
-      call HydroDyn_DestroyInput(  u_perturb, ErrStat2, ErrMsg2 )
-   end subroutine cleanup
-   
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed  
 END SUBROUTINE HD_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
-SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
+SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx, FlagFilter )
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -1788,96 +1899,69 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
                                                                                !!   to the continuous states (x) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state functions (Z) with respect 
                                                                                !!   to the continuous states (x) [intent in to avoid deallocation]
+   integer(IntKi), OPTIONAL,             INTENT(IN   )           :: FlagFilter !< Flag filter for variable calculation
    
-      ! local variables
-   TYPE(HydroDyn_OutputType)                               :: y_p
-   TYPE(HydroDyn_OutputType)                               :: y_m
-   TYPE(HydroDyn_ContinuousStateType)                      :: x_p
-   TYPE(HydroDyn_ContinuousStateType)                      :: x_m
-   TYPE(HydroDyn_ContinuousStateType)                      :: x_perturb
-   REAL(R8Ki)                                        :: delta        ! delta change in input or state
-   INTEGER(IntKi)                                    :: i, j, k, sOffset
-   
+   CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_JacobianPContState'
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
-   CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_JacobianPContState'
-   
-   
-      ! Initialize ErrStat
+   logical                                           :: IsFullLin
+   integer(IntKi)                                    :: FlagFilterLoc
+   INTEGER(IntKi)                                    :: i, j, k, col, sOffset
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
+      ! Set full linearization flag and local filter flag
+   if (present(FlagFilter)) then
+      IsFullLin = FlagFilter == VF_None
+      FlagFilterLoc = FlagFilter
+   else
+      IsFullLin = .true.
+      FlagFilterLoc = VF_None
+   end if
    
-      
-      ! make a copy of the continuous states to perturb
-   call HydroDyn_CopyContState( x, x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if (ErrStat>=AbortErrLev) then
-         call cleanup()
-         return
-      end if
+   ! Copy State values to perturb
+   call HydroDyn_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call HD_PackStateValues(p, x, m%Jac%x)
+   
+   ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
+   if (present(dYdx)) then
 
-   IF ( PRESENT( dYdx ) ) THEN
-
-      
       ! allocate dYdx if necessary
       if (.not. allocated(dYdx)) then
-         call AllocAry(dYdx, p%Jac_ny, p%totalStates, 'dYdx', ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
+         call AllocAry(dYdx, p%Vars%Ny, p%Vars%Nx, 'dYdx', ErrStat2, ErrMsg2); if (Failed()) return
       end if
       
-         ! make a copy of outputs because we will need two for the central difference computations (with orientations)
-      call HydroDyn_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call HydroDyn_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
-         
-         
-      do i=1,p%totalStates
+      ! Loop through state variables
+      do i = 1, size(p%Vars%x)
 
-            ! get x_op + delta x
-         call HydroDyn_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-         call HD_Perturb_x( p, i, 1, x_perturb, delta )
+         ! If variable flag not in flag filter, skip
+         if (.not. MV_HasFlags(p%Vars%x(i), FlagFilterLoc)) cycle
 
-            ! compute y at x_op + delta x
-         call HydroDyn_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-         
-            
-            ! get x_op - delta x
-         call HydroDyn_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         call HD_Perturb_x( p, i, -1, x_perturb, delta )
-         
-            ! compute y at x_op - delta x
-         call HydroDyn_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-         
-            
-            ! get central difference:            
-         call Compute_dY( p, y_p, y_m, delta, dYdx(:,i) )
-         
+         ! Loop through number of linearization perturbations in variable
+         do j = 1, p%Vars%x(i)%Num
+
+            ! Calculate positive perturbation
+            call MV_Perturb(p%Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
+            call HD_UnpackStateValues(p, m%Jac%x_perturb, m%x_perturb)
+            call HydroDyn_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call HD_PackOutputValues(p, m%y_lin, m%Jac%y_pos, IsFullLin)
+
+            ! Calculate negative perturbation
+            call MV_Perturb(p%Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
+            call HD_UnpackStateValues(p, m%Jac%x_perturb, m%x_perturb)
+            call HydroDyn_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call HD_PackOutputValues(p, m%y_lin, m%Jac%y_neg, IsFullLin)
+
+            ! Calculate column index
+            col = p%Vars%x(i)%iLoc(1) + j - 1
+
+            ! Get partial derivative via central difference and store in full linearization array
+            call MV_ComputeCentralDiff(p%Vars%y, p%Vars%x(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdx(:,col))
+         end do
       end do
-      
-      if (ErrStat>=AbortErrLev) then
-         call cleanup()
-         return
-      end if
-      call HydroDyn_DestroyOutput( y_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
-      call HydroDyn_DestroyOutput( y_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
-      
-   END IF
+            
+   end if
 
    IF ( PRESENT( dXdx ) ) THEN
 
@@ -1885,13 +1969,9 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
       ! allocate dXdu if necessary
       if (.not. allocated(dXdx)) then
-         call AllocAry(dXdx, p%totalStates, p%totalStates, 'dXdx', ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
+         call AllocAry(dXdx, p%Vars%Nx, p%Vars%Nx, 'dXdx', ErrStat2, ErrMsg2); if (Failed()) return
       end if
+
       dXdx = 0.0_R8Ki
       
       ! Analytical Jacobians from State-space models
@@ -1927,18 +2007,12 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    IF ( PRESENT( dZdx ) ) THEN
       if (allocated(dZdx)) deallocate(dZdx)
    END IF
-
-   call cleanup()
    
 contains
-   subroutine cleanup()
-      call HydroDyn_DestroyOutput(         y_p, ErrStat2, ErrMsg2 )
-      call HydroDyn_DestroyOutput(         y_m, ErrStat2, ErrMsg2 )
-      call HydroDyn_DestroyContState(      x_p, ErrStat2, ErrMsg2 )
-      call HydroDyn_DestroyContState(      x_m, ErrStat2, ErrMsg2 )
-      call HydroDyn_DestroyContState(x_perturb, ErrStat2, ErrMsg2 )
-   end subroutine cleanup
-
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed  
 END SUBROUTINE HD_JacobianPContState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
@@ -1972,46 +2046,28 @@ SUBROUTINE HD_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdxd(:,:) !< Partial derivatives of constraint state
                                                                                !!   functions (Z) with respect to the
                                                                                !!   discrete states (xd) [intent in to avoid deallocation]
-
-
-      ! Initialize ErrStat
-
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-
+   ! Calculate the partial derivative of the output functions (Y) with respect to the discrete states (xd) here:
    IF ( PRESENT( dYdxd ) ) THEN
-
-      ! Calculate the partial derivative of the output functions (Y) with respect to the discrete states (xd) here:
-
       ! allocate and set dYdxd
-
    END IF
 
+   ! Calculate the partial derivative of the continuous state functions (X) with respect to the discrete states (xd) here:
    IF ( PRESENT( dXdxd ) ) THEN
-
-      ! Calculate the partial derivative of the continuous state functions (X) with respect to the discrete states (xd) here:
-
       ! allocate and set dXdxd
-
    END IF
 
+   ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the discrete states (xd) here:
    IF ( PRESENT( dXddxd ) ) THEN
-
-      ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the discrete states (xd) here:
-
       ! allocate and set dXddxd
-
    END IF
 
+   ! Calculate the partial derivative of the constraint state functions (Z) with respect to the discrete states (xd) here:
    IF ( PRESENT( dZdxd ) ) THEN
-
-      ! Calculate the partial derivative of the constraint state functions (Z) with respect to the discrete states (xd) here:
-
       ! allocate and set dZdxd
-
    END IF
-
 
 END SUBROUTINE HD_JacobianPDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2042,655 +2098,33 @@ SUBROUTINE HD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
                                                                                !!  to the constraint states (z) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdz(:,:)  !< Partial derivatives of constraint state functions (Z) with respect 
                                                                                !! to the constraint states (z) [intent in to avoid deallocation]
-
-
-      ! Initialize ErrStat
-
    ErrStat = ErrID_None
    ErrMsg  = ''
 
+   ! Calculate the partial derivative of the output functions (Y) with respect to the constraint states (z) here:
    IF ( PRESENT( dYdz ) ) THEN
-
-         ! Calculate the partial derivative of the output functions (Y) with respect to the constraint states (z) here:
-
       ! allocate and set dYdz
-
    END IF
 
+   ! Calculate the partial derivative of the continuous state functions (X) with respect to the constraint states (z) here:
    IF ( PRESENT( dXdz ) ) THEN
-
-         ! Calculate the partial derivative of the continuous state functions (X) with respect to the constraint states (z) here:
-
       ! allocate and set dXdz
-
    END IF
 
+   ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the constraint states (z) here:
    IF ( PRESENT( dXddz ) ) THEN
-
-         ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the constraint states (z) here:
-
       ! allocate and set dXddz
-
    END IF
 
+   ! Calculate the partial derivative of the constraint state functions (Z) with respect to the constraint states (z) here:
    IF ( PRESENT( dZdz ) ) THEN
-
-         ! Calculate the partial derivative of the constraint state functions (Z) with respect to the constraint states (z) here:
-
       ! allocate and set dZdz
-
    END IF
 
 
 END SUBROUTINE HD_JacobianPConstrState
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine initializes the Jacobian parameters and initialization outputs for the linearized outputs.
-SUBROUTINE HD_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
-
-   TYPE(HydroDyn_ParameterType)            , INTENT(INOUT) :: p                     !< parameters
-   TYPE(HydroDyn_OutputType)               , INTENT(IN   ) :: y                     !< outputs
-   TYPE(HydroDyn_InitOutputType)           , INTENT(INOUT) :: InitOut               !< Output for initialization routine   
-   
-   INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat               !< Error status of the operation
-   CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
-   
-      ! local variables:
-   INTEGER(IntKi)                :: i,index_last, index_next
-   INTEGER(IntKi)                                    :: ErrStat2
-   CHARACTER(ErrMsgLen)                              :: ErrMsg2
-   CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_Init_Jacobian_y'
-   
-   
-   
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-   
-   
-      ! determine how many outputs there are in the Jacobians      
-   p%Jac_ny = 0         
-   if ( y%Morison%Mesh%Committed ) then
-      p%Jac_ny = p%Jac_ny + y%Morison%Mesh%NNodes * 6        ! 3 Force, Moment, at each node on the morison mesh       
-   end if
-   if ( y%WAMITMesh%Committed ) then
-      p%Jac_ny = p%Jac_ny + y%WAMITMesh%NNodes    * 6        ! 3 Force, Moment, at the WAMIT reference Point(s)
-   end if
-   
-   p%Jac_ny = p%Jac_ny + p%NumTotalOuts                      ! WriteOutput values 
-      
-
-      !.................   
-      ! set linearization output names:
-      !.................   
-   CALL AllocAry(InitOut%LinNames_y, p%Jac_ny, 'LinNames_y', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   ! We do not need RotFrame_y for this module and the glue code with handle the fact that we did not allocate the array and hence set all values to false at the glue-code level
-   ! Same with RotFrame_x
-   !CALL AllocAry(InitOut%RotFrame_y, p%Jac_ny, 'RotFrame_y', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   
-   
-      
-   
-   index_next = 1
-   if ( y%Morison%Mesh%Committed ) then
-      index_last = index_next
-      call PackLoadMesh_Names(y%Morison%Mesh, 'MorisonLoads', InitOut%LinNames_y, index_next)
-   end if
-
-   if ( y%WAMITMesh%Committed ) then
-      index_last = index_next
-      call PackLoadMesh_Names(y%WAMITMesh, 'WAMITLoads', InitOut%LinNames_y, index_next)
-   end if
-   
-   index_last = index_next
-         
-   do i=1,p%NumTotalOuts
-      InitOut%LinNames_y(i+index_next-1) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i)) !trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
-   end do   
-   
-     
-   
-END SUBROUTINE HD_Init_Jacobian_y
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine initializes the Jacobian parameters and initialization outputs for the linearized continuous states.
-SUBROUTINE HD_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
-
-   TYPE(HydroDyn_ParameterType)            , INTENT(INOUT) :: p                     !< parameters
-   TYPE(HydroDyn_InitOutputType)           , INTENT(INOUT) :: InitOut               !< Output for initialization routine   
-   
-   INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat               !< Error status of the operation
-   CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
-   
-   INTEGER(IntKi)                                    :: ErrStat2
-   CHARACTER(ErrMsgLen)                              :: ErrMsg2
-   CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_Init_Jacobian_x'
-   
-      ! local variables:
-   INTEGER(IntKi)                :: i, j, k, l, spdof, indx
-   CHARACTER(10)                 :: dofLabels(6)
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-   indx = 1
-   
-   ! Need to determine how many wamit body objects there are
-   p%totalExctnStates = 0
-   p%totalRdtnStates = 0
-   do j = 1, p%nWAMITObj
-      p%totalExctnStates = p%totalExctnStates + p%WAMIT(j)%SS_Exctn%numStates  !numStates defaults to zero in the case where ExctnMod = 0 instead of 2
-      p%totalRdtnStates  = p%totalRdtnStates  + p%WAMIT(j)%SS_Rdtn%numStates   !numStates defaults to zero in the case where RdtnMod  = 0 instead of 2
-   end do
-   p%totalStates = p%totalExctnStates + p%totalRdtnStates
-   
-   if ( p%totalStates == 0 ) return  ! No states, so return and do not allocate the following arrays.  This lets the glue-code know that the module does not have states
-   
-      ! allocate space for the row/column names and for perturbation sizes
-   call allocAry(p%dx,                 p%totalStates, 'p%dx',         ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call AllocAry(InitOut%LinNames_x,   p%totalStates, 'LinNames_x'  , ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   CALL AllocAry(InitOut%DerivOrder_x, p%totalStates, 'DerivOrder_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-   
-      ! All Hydrodyn continuous states are max order = 1
-   if ( allocated(InitOut%DerivOrder_x) ) InitOut%DerivOrder_x = 1
-   
-   ! set perturbation sizes: p%dx
-   k = 1
-   do j = 1, p%nWAMITObj
-      do i = 1, p%WAMIT(j)%SS_Exctn%numStates    
-         p%dx(k)  = 20000.0_R8Ki * D2R_D 
-         k=k+1
-      end do
-   end do
-   do j = 1, p%nWAMITObj
-      do i = 1, p%WAMIT(j)%SS_Rdtn%numStates
-         p%dx(k)  = 2.0_R8Ki * D2R_D 
-         k=k+1
-      end do
-   end do
-
-   !----------------
-   ! SS_Exctn states
-
-   dofLabels = (/'PtfmSg    ','PtfmSw    ','PtfmHv    ','PtfmR     ','PtfmP     ','PtfmY     '/)
-   if (p%totalExctnStates>0) then
-      do l=1,p%nWAMITObj
-         ! set linearization state names:   
-         do j = 1, 6
-            spdof = p%WAMIT(l)%SS_Exctn%spdof(j)
-            if ( p%NBodyMod == 1 ) then
-               do i = 1,spdof
-                  InitOut%LinNames_x(indx) = 'Exctn'//trim(dofLabels(j))//trim(num2lstr(i))
-                  indx = indx + 1
-               end do
-            else  
-               do i = 1,spdof
-                  InitOut%LinNames_x(indx) = 'B'//trim(num2lstr(l))//'Exctn'//trim(dofLabels(j))//trim(num2lstr(i))
-                  indx = indx + 1
-               end do
-            end if
-         end do
-      end do
-   endif
-
-   !----------------
-   ! SS_Rdtn states
-
-   if (p%totalRdtnStates>0) then
-      do l=1,p%nWAMITObj
-         ! set linearization state names:   
-         do j = 1, 6
-            spdof = p%WAMIT(l)%SS_Rdtn%spdof(j)
-            if ( p%NBodyMod == 1 ) then
-               do i = 1,spdof
-                  InitOut%LinNames_x(indx) = 'Rdtn'//trim(dofLabels(j))//trim(num2lstr(i))
-                  indx = indx + 1
-               end do
-            else  
-               do i = 1,spdof
-                  InitOut%LinNames_x(indx) = 'B'//trim(num2lstr(l))//'Rdtn'//trim(dofLabels(j))//trim(num2lstr(i))
-                  indx = indx + 1
-               end do
-            end if
-         end do
-      end do
-   endif
-END SUBROUTINE HD_Init_Jacobian_x
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine initializes the array that maps rows/columns of the Jacobian to specific mesh fields.
-!! Do not change the order of this packing without changing corresponding linearization routines !
-SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
-
-   TYPE(HydroDyn_ParameterType)            , INTENT(INOUT) :: p                     !< parameters
-   TYPE(HydroDyn_InputType)                , INTENT(IN   ) :: u                     !< inputs
-   TYPE(HydroDyn_OutputType)               , INTENT(IN   ) :: y                     !< outputs
-   TYPE(HydroDyn_InitOutputType)           , INTENT(INOUT) :: InitOut               !< Output for initialization routine   
-   INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat               !< Error status of the operation
-   CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
-   
-   INTEGER(IntKi)                                    :: ErrStat2
-   CHARACTER(ErrMsgLen)                              :: ErrMsg2
-   CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_Init_Jacobian'
-   
-      ! local variables:
-   INTEGER(IntKi)                :: i, j, index, nu, i_meshField, m, meshFieldCount
-   REAL(R8Ki)                    :: perturb_t, perturb
-   LOGICAL                       :: FieldMask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
-
-   
-   
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-         
-   
-   call HD_Init_Jacobian_y( p, y, InitOut, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         
-   call HD_Init_Jacobian_x( p, InitOut, ErrStat2, ErrMsg2)      
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   
-      
-      
-      ! determine how many inputs there are in the Jacobians
-   nu = 0;
-   if ( u%Morison%Mesh%Committed ) then
-      nu = u%Morison%Mesh%NNodes   * 18   ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node     
-   end if
-   if ( u%WAMITMesh%Committed ) then
-      nu = nu + u%WAMITMesh%NNodes * 18   ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node     
-   end if
-   
-   nu = nu + u%PRPMesh%NNodes * 18   ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
-   
-   ! DO NOT Add the extended input WaveElev0 when computing the size of p%Jac_u_indx
-      
-         
-   ! note: all other inputs are ignored
-      
-   !....................                        
-   ! fill matrix to store index to help us figure out what the ith value of the u vector really means
-   ! (see hydrodyn::HD_perturb_u ... these MUST match )
-   ! column 1 indicates module's mesh and field
-   ! column 2 indicates the first index of the acceleration/load field
-   ! column 3 is the node
-   !....................
-      
-   !...............
-   ! HD input mappings stored in p%Jac_u_indx:   
-   !...............
-   call AllocAry(p%Jac_u_indx, nu, 3, 'p%Jac_u_indx', ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
-   if (ErrStat >= AbortErrLev) return
-     
-   index = 1
-   meshFieldCount = 0
-   
-   if ( u%Morison%Mesh%Committed ) then
-      !Module/Mesh/Field: u%Morison%Mesh%TranslationDisp  = 1;
-      !Module/Mesh/Field: u%Morison%Mesh%Orientation      = 2;
-      !Module/Mesh/Field: u%Morison%Mesh%TranslationVel   = 3;
-      !Module/Mesh/Field: u%Morison%Mesh%RotationVel      = 4;
-      !Module/Mesh/Field: u%Morison%Mesh%TranslationAcc   = 5;
-      !Module/Mesh/Field: u%Morison%Mesh%RotationAcc      = 6;
-         
-      do i_meshField = 1,6
-         do i=1,u%Morison%Mesh%NNodes
-            do j=1,3
-               p%Jac_u_indx(index,1) =  i_meshField  !Module/Mesh/Field: u%Morison%Mesh%{TranslationDisp/Orientation/TranslationVel/RotationVel/TranslationAcc/RotationAcc} = m
-               p%Jac_u_indx(index,2) =  j !index:  j
-               p%Jac_u_indx(index,3) =  i !Node:   i
-               index = index + 1
-            end do !j      
-         end do !i   
-            
-      end do !i_meshField                                             
-      meshFieldCount = 6 
-         
-   end if
-   
-   if ( u%WAMITMesh%Committed ) then      
-      !Module/Mesh/Field: u%WAMITMesh%TranslationDisp  = 7   or 1;
-      !Module/Mesh/Field: u%WAMITMesh%Orientation      = 8   or 2;
-      !Module/Mesh/Field: u%WAMITMesh%TranslationVel   = 9   or 3;
-      !Module/Mesh/Field: u%WAMITMesh%RotationVel      = 10  or 4;
-      !Module/Mesh/Field: u%WAMITMesh%TranslationAcc   = 11  or 5;
-      !Module/Mesh/Field: u%WAMITMesh%RotationAcc      = 12  or 6;
-      do i_meshField = 1,6
-         do i=1,u%WAMITMesh%NNodes
-            do j=1,3
-               p%Jac_u_indx(index,1) =  meshFieldCount + i_meshField 
-               p%Jac_u_indx(index,2) =  j !index:  j
-               p%Jac_u_indx(index,3) =  i !Node:   i
-               index = index + 1
-            end do !j      
-         end do !i         
-      end do !i_meshField   
-      meshFieldCount = meshFieldCount + 6 
-   end if
-   
-   !Module/Mesh/Field: u%PRPMesh%TranslationDisp  = 13 or 7  or 1;
-   !Module/Mesh/Field: u%PRPMesh%Orientation      = 14 or 8  or 2;
-   !Module/Mesh/Field: u%PRPMesh%TranslationVel   = 15 or 9  or 3;
-   !Module/Mesh/Field: u%PRPMesh%RotationVel      = 16 or 10 or 4;
-   !Module/Mesh/Field: u%PRPMesh%TranslationAcc   = 17 or 11 or 5;
-   !Module/Mesh/Field: u%PRPMesh%RotationAcc      = 18 or 12 or 6;
-   do i_meshField = 1,6
-      do i=1,u%PRPMesh%NNodes
-         do j=1,3
-            p%Jac_u_indx(index,1) =  meshFieldCount + i_meshField 
-            p%Jac_u_indx(index,2) =  j !index:  j
-            p%Jac_u_indx(index,3) =  i !Node:   i
-            index = index + 1
-         end do !j      
-      end do !i         
-   end do !i_meshField  
-   meshFieldCount = meshFieldCount + 6 
-   
-   !................
-   ! input perturbations, du:
-   !................
-   
-   call AllocAry(p%du, meshFieldCount, 'p%du', ErrStat2, ErrMsg2) ! number of unique values in p%Jac_u_indx(:,1)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-   if (ErrStat >= AbortErrLev) return
-  
-   
-   perturb_t = 0.02_ReKi*D2R * max(p%WaveField%EffWtrDpth,1.0_ReKi) ! translation input scaling  
-   perturb   = 2*D2R                 ! rotational input scaling
-   
-   index = 0
-   if ( u%Morison%Mesh%Committed ) then     
-      p%du(1) = perturb_t                    ! u%Morison%Mesh%TranslationDisp 
-      p%du(2) = perturb                      ! u%Morison%Mesh%Orientation     
-      p%du(3) = perturb_t                    ! u%Morison%Mesh%TranslationVel  
-      p%du(4) = perturb                      ! u%Morison%Mesh%RotationVel
-      p%du(5) = perturb_t                    ! u%Morison%Mesh%TranslationAcc      
-      p%du(6) = perturb                      ! u%Morison%Mesh%RotationAcc    
-      index = 6     
-   end if
-   
-   if ( u%WAMITMesh%Committed ) then    
-      p%du(index + 1) = perturb_t            ! u%WAMITMesh%TranslationDisp 
-      p%du(index + 2) = perturb              ! u%WAMITMesh%Orientation     
-      p%du(index + 3) = perturb_t            ! u%WAMITMesh%TranslationVel  
-      p%du(index + 4) = perturb              ! u%WAMITMesh%RotationVel
-      p%du(index + 5) = perturb_t            ! u%WAMITMesh%TranslationAcc   
-      p%du(index + 6) = perturb              ! u%WAMITMesh%RotationAcc    
-      index = index + 6
-   end if
-   
-   p%du(index + 1) = perturb_t               ! u%PRPMesh%TranslationDisp 
-   p%du(index + 2) = perturb                 ! u%PRPMesh%Orientation     
-   p%du(index + 3) = perturb_t               ! u%PRPMesh%TranslationVel  
-   p%du(index + 4) = perturb                 ! u%PRPMesh%RotationVel
-   p%du(index + 5) = perturb_t               ! u%PRPMesh%TranslationAcc   
-   p%du(index + 6) = perturb                 ! u%PRPMesh%RotationAcc    
-   
-   !................
-   ! names of the columns, InitOut%LinNames_u:
-   !................
-   call AllocAry(InitOut%LinNames_u, nu+1, 'LinNames_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   ! We do not need RotFrame_u for this module and the glue code with handle the fact that we did not allocate the array and hence set all values to false at the glue-code level
-   !call AllocAry(InitOut%RotFrame_u, nu+1, 'RotFrame_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   
-   call AllocAry(InitOut%IsLoad_u,   nu+1, 'IsLoad_u',   ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-      
-   InitOut%IsLoad_u   = .false.  ! HD's inputs are NOT loads
-
-   index = 1
-   if ( u%Morison%Mesh%Committed ) then
-      FieldMask = .false.
-      FieldMask(MASKID_TRANSLATIONDISP) = .true.
-      FieldMask(MASKID_Orientation) = .true.
-      FieldMask(MASKID_TRANSLATIONVEL) = .true.
-      FieldMask(MASKID_ROTATIONVEL) = .true.
-      FieldMask(MASKID_TRANSLATIONACC) = .true.
-      FieldMask(MASKID_ROTATIONACC) = .true.
-      call PackMotionMesh_Names(u%Morison%Mesh, 'Morison', InitOut%LinNames_u, index, FieldMask=FieldMask)
-   
-   end if
-
-   if ( u%WAMITMesh%Committed ) then
-      FieldMask = .false.
-      FieldMask(MASKID_TRANSLATIONDISP) = .true.
-      FieldMask(MASKID_Orientation) = .true.
-      FieldMask(MASKID_TRANSLATIONVel) = .true.
-      FieldMask(MASKID_ROTATIONVel) = .true.
-      FieldMask(MASKID_TRANSLATIONACC) = .true.
-      FieldMask(MASKID_ROTATIONACC) = .true.
-      call PackMotionMesh_Names(u%WAMITMesh, 'WAMIT', InitOut%LinNames_u, index, FieldMask=FieldMask)
-   end if
-   
-   FieldMask = .false.
-   FieldMask(MASKID_TRANSLATIONDISP) = .true.
-   FieldMask(MASKID_Orientation) = .true.
-   FieldMask(MASKID_TRANSLATIONVel) = .true.
-   FieldMask(MASKID_ROTATIONVel) = .true.
-   FieldMask(MASKID_TRANSLATIONACC) = .true.
-   FieldMask(MASKID_ROTATIONACC) = .true.
-   call PackMotionMesh_Names(u%PRPMesh, 'Platform-RefPt', InitOut%LinNames_u, index, FieldMask=FieldMask)
-   
-   InitOut%LinNames_u(index) = 'Extended input: wave elevation at platform ref point, m'
-   
-END SUBROUTINE HD_Init_Jacobian
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine perturbs the nth element of the u array (and mesh/field it corresponds to)
-!! Do not change this without making sure subroutine hydrodyn::HD_init_jacobian is consistant with this routine!
-SUBROUTINE HD_Perturb_u( p, n, perturb_sign, u, du )
-
-   TYPE(HydroDyn_ParameterType)        , INTENT(IN   ) :: p                      !< parameters
-   INTEGER( IntKi )                    , INTENT(IN   ) :: n                      !< number of array element to use 
-   INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign           !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
-   TYPE(HydroDyn_InputType)            , INTENT(INOUT) :: u                      !< perturbed HD inputs
-   REAL( R8Ki )                        , INTENT(  OUT) :: du                     !< amount that specific input was perturbed
-   
-
-   ! local variables
-   integer                                             :: fieldIndx
-   integer                                             :: node, index
-
-   index = 0  
-   fieldIndx = p%Jac_u_indx(n,2) 
-   node      = p%Jac_u_indx(n,3) 
-   
-   du = p%du(  p%Jac_u_indx(n,1) )
-   
-      ! determine which mesh we're trying to perturb and perturb the input:
-   
-      ! If we do not have Morison meshes, then the following select cases will vary
-   if ( u%Morison%Mesh%Committed ) then
-      SELECT CASE( p%Jac_u_indx(n,1) )
-         CASE ( 1) !Module/Mesh/Field: u%Morison%Mesh%TranslationDisp = 1      
-            u%Morison%Mesh%TranslationDisp (fieldIndx,node) = u%Morison%Mesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
-         CASE ( 2) !Module/Mesh/Field: u%Morison%Mesh%Orientation = 2
-            CALL PerturbOrientationMatrix( u%Morison%Mesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
-         CASE ( 3) !Module/Mesh/Field: u%Morison%Mesh%TranslationVel = 3
-            u%Morison%Mesh%TranslationVel( fieldIndx,node) = u%Morison%Mesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
-         CASE ( 4) !Module/Mesh/Field: u%Morison%Mesh%RotationVel = 4
-            u%Morison%Mesh%RotationVel (fieldIndx,node) = u%Morison%Mesh%RotationVel (fieldIndx,node) + du * perturb_sign               
-         CASE ( 5) !Module/Mesh/Field: u%Morison%Mesh%TranslationAcc = 5
-            u%Morison%Mesh%TranslationAcc( fieldIndx,node) = u%Morison%Mesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
-         CASE ( 6) !Module/Mesh/Field: u%Morison%Mesh%RotationAcc = 6
-            u%Morison%Mesh%RotationAcc(fieldIndx,node) = u%Morison%Mesh%RotationAcc(fieldIndx,node) + du * perturb_sign    
-      end select  
-      if ( u%WAMITMesh%Committed ) then    
-         SELECT CASE( p%Jac_u_indx(n,1) )      
-            CASE ( 7) !Module/Mesh/Field: u%WAMITMesh%TranslationDisp = 7     
-               u%WAMITMesh%TranslationDisp (fieldIndx,node) = u%WAMITMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
-            CASE ( 8) !Module/Mesh/Field: u%WAMITMesh%Orientation = 8
-               CALL PerturbOrientationMatrix( u%WAMITMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
-            CASE ( 9) !Module/Mesh/Field: u%WAMITMesh%TranslationVel = 9
-               u%WAMITMesh%TranslationVel( fieldIndx,node) = u%WAMITMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
-            CASE (10) !Module/Mesh/Field: u%WAMITMesh%RotationVel = 10
-               u%WAMITMesh%RotationVel (fieldIndx,node) = u%WAMITMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
-            CASE (11) !Module/Mesh/Field: u%WAMITMesh%TranslationAcc = 11
-               u%WAMITMesh%TranslationAcc( fieldIndx,node) = u%WAMITMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
-            CASE (12) !Module/Mesh/Field: u%WAMITMesh%RotationAcc = 12
-               u%WAMITMesh%RotationAcc(fieldIndx,node) = u%WAMITMesh%RotationAcc(fieldIndx,node) + du * perturb_sign               
-         END SELECT
-         SELECT CASE( p%Jac_u_indx(n,1) )     
-            CASE (13) !Module/Mesh/Field: u%PRPMesh%TranslationDisp = 13    
-               u%PRPMesh%TranslationDisp (fieldIndx,node) = u%PRPMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
-            CASE (14) !Module/Mesh/Field: u%PRPMesh%Orientation = 14
-               CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
-            CASE (15) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 15
-               u%PRPMesh%TranslationVel( fieldIndx,node) = u%PRPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
-            CASE (16) !Module/Mesh/Field: u%PRPMesh%RotationVel = 16
-               u%PRPMesh%RotationVel (fieldIndx,node) = u%PRPMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
-            CASE (17) !Module/Mesh/Field: u%PRPMesh%TranslationAcc = 17
-               u%PRPMesh%TranslationAcc( fieldIndx,node) = u%PRPMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
-            CASE (18) !Module/Mesh/Field: u%PRPMesh%RotationAcc = 18
-               u%PRPMesh%RotationAcc(fieldIndx,node) = u%PRPMesh%RotationAcc(fieldIndx,node) + du * perturb_sign 
-         END SELECT
-      else
-         SELECT CASE( p%Jac_u_indx(n,1) )     
-            CASE ( 7) !Module/Mesh/Field: u%PRPMesh%TranslationDisp = 7     
-               u%PRPMesh%TranslationDisp (fieldIndx,node) = u%PRPMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
-            CASE ( 8) !Module/Mesh/Field: u%PRPMesh%Orientation = 8
-               CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
-            CASE ( 9) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 9
-               u%PRPMesh%TranslationVel( fieldIndx,node) = u%PRPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
-            CASE (10) !Module/Mesh/Field: u%PRPMesh%RotationVel = 10
-               u%PRPMesh%RotationVel (fieldIndx,node) = u%PRPMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
-            CASE (11) !Module/Mesh/Field: u%PRPMesh%TranslationAcc = 11
-               u%PRPMesh%TranslationAcc( fieldIndx,node) = u%PRPMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
-            CASE (12) !Module/Mesh/Field: u%PRPMesh%RotationAcc = 12
-               u%PRPMesh%RotationAcc(fieldIndx,node) = u%PRPMesh%RotationAcc(fieldIndx,node) + du * perturb_sign 
-         END SELECT
-      end if
-   else if ( u%WAMITMesh%Committed ) then   
-      SELECT CASE( p%Jac_u_indx(n,1) )
-         CASE (1) !Module/Mesh/Field: u%WAMITMesh%TranslationDisp = 1     
-            u%WAMITMesh%TranslationDisp (fieldIndx,node) = u%WAMITMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
-         CASE (2) !Module/Mesh/Field: u%WAMITMesh%Orientation = 2
-            CALL PerturbOrientationMatrix( u%WAMITMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
-         CASE (3) !Module/Mesh/Field: u%WAMITMesh%TranslationVel = 3
-            u%WAMITMesh%TranslationVel( fieldIndx,node) = u%WAMITMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
-         CASE (4) !Module/Mesh/Field: u%WAMITMesh%RotationVel = 4
-            u%WAMITMesh%RotationVel (fieldIndx,node) = u%WAMITMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
-         CASE (5) !Module/Mesh/Field: u%WAMITMesh%TranslationAcc = 5
-            u%WAMITMesh%TranslationAcc( fieldIndx,node) = u%WAMITMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
-         CASE (6) !Module/Mesh/Field: u%WAMITMesh%RotationAcc = 6
-            u%WAMITMesh%RotationAcc(fieldIndx,node) = u%WAMITMesh%RotationAcc(fieldIndx,node) + du * perturb_sign            
-      END SELECT
-      SELECT CASE( p%Jac_u_indx(n,1) )      
-         CASE ( 7) !Module/Mesh/Field: u%PRPMesh%TranslationDisp = 7     
-            u%PRPMesh%TranslationDisp (fieldIndx,node) = u%PRPMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
-         CASE ( 8) !Module/Mesh/Field: u%PRPMesh%Orientation = 8
-            CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
-         CASE ( 9) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 9
-            u%PRPMesh%TranslationVel( fieldIndx,node) = u%PRPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
-         CASE (10) !Module/Mesh/Field: u%PRPMesh%RotationVel = 10
-            u%PRPMesh%RotationVel (fieldIndx,node) = u%PRPMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
-         CASE (11) !Module/Mesh/Field: u%PRPMesh%TranslationAcc = 11
-            u%PRPMesh%TranslationAcc( fieldIndx,node) = u%PRPMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
-         CASE (12) !Module/Mesh/Field: u%PRPMesh%RotationAcc = 12
-            u%PRPMesh%RotationAcc(fieldIndx,node) = u%PRPMesh%RotationAcc(fieldIndx,node) + du * perturb_sign               
-      END SELECT
-   else
-      SELECT CASE( p%Jac_u_indx(n,1) )      
-         CASE ( 1) !Module/Mesh/Field: u%PRPMesh%TranslationDisp = 1     
-            u%PRPMesh%TranslationDisp (fieldIndx,node) = u%PRPMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
-         CASE ( 2) !Module/Mesh/Field: u%PRPMesh%Orientation = 2
-            CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
-         CASE ( 3) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 3
-            u%PRPMesh%TranslationVel( fieldIndx,node) = u%PRPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
-         CASE ( 4) !Module/Mesh/Field: u%PRPMesh%RotationVel = 4
-            u%PRPMesh%RotationVel (fieldIndx,node) = u%PRPMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
-         CASE ( 5) !Module/Mesh/Field: u%PRPMesh%TranslationAcc = 5
-            u%PRPMesh%TranslationAcc( fieldIndx,node) = u%PRPMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
-         CASE ( 6) !Module/Mesh/Field: u%PRPMesh%RotationAcc = 6
-            u%PRPMesh%RotationAcc(fieldIndx,node) = u%PRPMesh%RotationAcc(fieldIndx,node) + du * perturb_sign               
-      END SELECT   
-   end if
-                                             
-END SUBROUTINE HD_Perturb_u
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine perturbs the nth element of the continuous state array.
-!! Do not change this without making sure subroutine HD_init_jacobian is consistant with this routine!
-SUBROUTINE HD_Perturb_x( p, n, perturb_sign, x, dx )
-
-   TYPE(HydroDyn_ParameterType)        , INTENT(IN   ) :: p                      !< parameters
-   INTEGER( IntKi )                    , INTENT(IN   ) :: n                      !< number of array element to use 
-   INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign           !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
-   TYPE(HydroDyn_ContinuousStateType)  , INTENT(INOUT) :: x                      !< perturbed ED states
-   REAL( R8Ki )                        , INTENT(  OUT) :: dx                     !< amount that specific state was perturbed
-   
-
-   ! local variables
-   integer(intKi)                                      :: i, offset1, offset2, n2
-  
-   if ( p%totalStates == 0 ) return
-   
-   !Note: All excitation states for all bodies are stored 1st, then all radiation states
-   dx = p%dx(n)
-   offset1 = 1
-   if ( n <= p%totalExctnStates ) then
-      
-      ! Find body index for exctn states
-      do i=1,p%nWAMITObj 
-         offset2 = offset1 + p%WAMIT(i)%SS_Exctn%numStates
-         if ( n >= offset1 .and. n < offset2) then
-            n2 = n - offset1 + 1
-            x%WAMIT(i)%SS_Exctn%x( n2 ) = x%WAMIT(i)%SS_Exctn%x( n2 ) + dx * perturb_sign 
-            exit
-         end if
-         offset1 = offset2
-      end do
-      
-   else
-      offset1 = p%totalExctnStates + 1
-      ! Find body index for rdtn states
-      do i=1,p%nWAMITObj
-         offset2 = offset1 + p%WAMIT(i)%SS_Exctn%numStates
-         if ( n >= offset1 .and. n < offset2) then
-            n2 = n - offset1 + 1
-            x%WAMIT(i)%SS_Rdtn%x( n2 ) = x%WAMIT(i)%SS_Rdtn%x( n2 ) + dx * perturb_sign 
-            exit
-         end if
-         offset1 = offset2
-      end do
-   end if
-                                                
-END SUBROUTINE HD_Perturb_x
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine uses values of two output types to compute an array of differences.
-!! Do not change this packing without making sure subroutine hydrodyn::HD_init_jacobian is consistant with this routine!
-SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
-   
-   TYPE(HydroDyn_ParameterType)      , INTENT(IN   ) :: p         !< parameters
-   TYPE(HydroDyn_OutputType)         , INTENT(IN   ) :: y_p       !< HD outputs at \f$ u + \Delta u \f$ or \f$ x + \Delta x \f$ (p=plus)
-   TYPE(HydroDyn_OutputType)         , INTENT(IN   ) :: y_m       !< HD outputs at \f$ u - \Delta u \f$ or \f$ x - \Delta x \f$ (m=minus)   
-   REAL(R8Ki)                        , INTENT(IN   ) :: delta     !< difference in inputs or states \f$ delta = \Delta u \f$ or \f$ delta = \Delta x \f$
-   REAL(R8Ki)                        , INTENT(INOUT) :: dY(:)     !< column of dYdu or dYdx: \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial Y}{\partial x_i} = \frac{y_p - y_m}{2 \, \Delta x}\f$
-   
-      ! local variables:
-
-   integer(IntKi)                                    :: indx_first             ! index indicating next value of dY to be filled 
-   integer(IntKi)                                    :: k
-   
-   
-   
-   
-   indx_first = 1     
-   if ( y_p%Morison%Mesh%Committed ) then
-      call PackLoadMesh_dY(y_p%Morison%Mesh, y_m%Morison%Mesh, dY, indx_first)   
-   end if
-   if ( y_p%WAMITMesh%Committed ) then
-      call PackLoadMesh_dY(y_p%WAMITMesh, y_m%WAMITMesh, dY, indx_first)   
-   end if
-   
-   do k=1,p%NumTotalOuts
-      dY(k+indx_first-1) = y_p%WriteOutput(k) - y_m%WriteOutput(k)
-   end do   
-   
-   
-   
-   dY = dY / (2.0_R8Ki*delta)
-   
-END SUBROUTINE Compute_dY
    
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
@@ -2714,153 +2148,55 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
 
-
-
-   INTEGER(IntKi)                                    :: i, j, index, nu
+   CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_GetOP'
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
-   CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_GetOP'
-   TYPE(HydroDyn_ContinuousStateType)                      :: dx          !< derivative of continuous states at operating point
-   LOGICAL                                           :: Mask(FIELDMASK_SIZE)               !< flags to determine if this field is part of the packing
-   
-   
-      ! Initialize ErrStat
+   INTEGER(IntKi)                                    :: i, j, index
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
    !..................................
    IF ( PRESENT( u_op ) ) THEN
-      
-      if (.not. allocated(u_op)) then 
-         
-         nu = size(p%Jac_u_indx,1)
-         
-             ! our operating point includes DCM (orientation) matrices, not just small angles like the perturbation matrices do
-         if ( u%Morison%Mesh%Committed ) then          
-            nu = nu + u%Morison%Mesh%NNodes  * 6   ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
-         end if
-         if ( u%WAMITMesh%Committed ) then
-            nu = nu + u%WAMITMesh%NNodes     * 6   ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
-         end if
-         
-         nu = nu + u%PRPMesh%NNodes          * 6   ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
-         nu = nu + 1   ! Extended input
-         
-         call AllocAry(u_op, nu,'u_op',ErrStat2,ErrMsg2) ! 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) return
-         
+      if (.not. allocated(u_op)) then
+         call AllocAry(u_op, p%Vars%Nu, 'u_op', ErrStat2, ErrMsg2)
+         if (Failed()) return
       end if
-            
-      Mask  = .false.
-      Mask(MASKID_TRANSLATIONDISP) = .true.
-      Mask(MASKID_ORIENTATION)     = .true.
-      Mask(MASKID_TRANSLATIONVEL)  = .true.
-      Mask(MASKID_ROTATIONVEL)     = .true.
-      Mask(MASKID_TRANSLATIONACC)  = .true.
-      Mask(MASKID_ROTATIONACC)     = .true.
-      
-      index = 1
-      if ( u%Morison%Mesh%Committed ) then
-         call PackMotionMesh(u%Morison%Mesh, u_op, index, FieldMask=Mask)    
-      end if
-
-      if ( u%WAMITMesh%Committed ) then
-         call PackMotionMesh(u%WAMITMesh, u_op, index, FieldMask=Mask)   
-      end if
-      
-      call PackMotionMesh(u%PRPMesh, u_op, index, FieldMask=Mask) 
-      
-         ! extended input:
-      u_op(index) = 0.0_R8Ki
-          
-      
+      call HD_PackInputValues(p, u, u_op)
    END IF
 
    !..................................
    if ( PRESENT( y_op ) ) then
-      
       if (.not. allocated(y_op)) then
-         call AllocAry(y_op, p%Jac_ny, 'y_op', ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
+         call AllocAry(y_op, p%Vars%Ny, 'y_op', ErrStat2, ErrMsg2)
+         if (Failed()) return
       end if
-         
-      index = 1               
-      if ( y%Morison%Mesh%Committed ) then
-         call PackLoadMesh(y%Morison%Mesh, y_op, index)   
-      end if
-      if ( y%WAMITMesh%Committed ) then
-         call PackLoadMesh(y%WAMITMesh, y_op, index)
-      end if
-      
-      index = index - 1
-      do i=1,p%NumTotalOuts
-         y_op(i+index) = y%WriteOutput(i)
-      end do   
-      
+      call HD_PackOutputValues(p, y, y_op, .true.)
    end if   
 
    !..................................
    IF ( PRESENT( x_op ) ) THEN
-      
-      if ( p%totalStates == 0 ) return
-      
+      if (p%Vars%Nx == 0) return
       if ( y%WAMITMesh%Committed ) then
          if (.not. allocated(x_op)) then 
-            call AllocAry(x_op, p%totalStates,'x_op',ErrStat2,ErrMsg2)
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            if (ErrStat>=AbortErrLev) return
+            call AllocAry(x_op, p%Vars%Nx, 'x_op', ErrStat2, ErrMsg2)
+            if (Failed()) return
          end if
-         index = 1
-         do j=1, p%nWAMITObj
-            do i=1,p%WAMIT(j)%SS_Exctn%numStates ! Loop through all DOFs
-               x_op(index) = x%WAMIT(j)%SS_Exctn%x(i)
-               index = index + 1
-            end do
-         end do
-         do j=1, p%nWAMITObj
-            do i=1,p%WAMIT(j)%SS_Rdtn%numStates ! Loop through all DOFs
-               x_op(index) = x%WAMIT(j)%SS_Rdtn%x(i)
-               index = index + 1
-            end do
-         end do
+         call HD_PackStateValues(p, x, x_op)
       end if
    END IF
 
    !..................................
    IF ( PRESENT( dx_op ) ) THEN
-      
-      if ( p%totalStates == 0 ) return
-      
+      if (p%Vars%Nx == 0) return
       if ( y%WAMITMesh%Committed ) then
          if (.not. allocated(dx_op)) then 
-            call AllocAry(dx_op, p%totalStates,'dx_op',ErrStat2,ErrMsg2)
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            if (ErrStat>=AbortErrLev) return
+            call AllocAry(dx_op, p%Vars%Nx, 'dx_op', ErrStat2, ErrMsg2)
+            if (Failed()) return
          end if
-      
-         call HydroDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dx, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-            if (ErrStat>=AbortErrLev) then
-               call HydroDyn_DestroyContState( dx, ErrStat2, ErrMsg2)
-               return
-            end if
-         index = 1
-         do j=1, p%nWAMITObj            
-            do i=1,p%WAMIT(j)%SS_Exctn%numStates ! Loop through all DOFs
-               dx_op(index) = dx%WAMIT(j)%SS_Exctn%x(i)
-               index = index + 1
-            end do
-         end do
-         do j=1, p%nWAMITObj
-            do i=1,p%WAMIT(j)%SS_Rdtn%numStates ! Loop through all DOFs
-               dx_op(index) = dx%WAMIT(j)%SS_Rdtn%x(i)
-               index = index + 1
-            end do                                 
-         end do
-         call HydroDyn_DestroyContState( dx, ErrStat2, ErrMsg2)
+         call HydroDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2 ) 
+         if (Failed()) return
+         call HD_PackStateValues(p, m%dxdt_lin, dx_op)
       end if    
    END IF
 
@@ -2872,8 +2208,86 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    IF ( PRESENT( z_op ) ) THEN
    END IF
 
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
 END SUBROUTINE HD_GetOP
 
+
+subroutine HD_PackStateValues(p, x, ary)
+   type(HydroDyn_ParameterType), intent(in)        :: p
+   type(HydroDyn_ContinuousStateType), intent(in)  :: x
+   real(R8Ki), intent(out)                         :: ary(:)
+   integer(IntKi)                                  :: i, j, k
+   k = 1
+   do j = 1, p%nWAMITObj
+      do i = 1,p%WAMIT(j)%SS_Exctn%numStates ! Loop through all DOFs
+         ary(k) = x%WAMIT(j)%SS_Exctn%x(i)
+         k = k + 1
+      end do
+   end do
+   do j = 1, p%nWAMITObj
+      do i = 1,p%WAMIT(j)%SS_Rdtn%numStates ! Loop through all DOFs
+         ary(k) = x%WAMIT(j)%SS_Rdtn%x(i)
+         k = k + 1
+      end do
+   end do
+end subroutine
+
+subroutine HD_UnpackStateValues(p, ary, x)
+   type(HydroDyn_ParameterType), intent(in)           :: p
+   real(R8Ki), intent(in)                             :: ary(:)
+   type(HydroDyn_ContinuousStateType), intent(inout)  :: x
+   integer(IntKi)                                     :: i, j, k
+   k = 1
+   do j = 1, p%nWAMITObj
+      do i = 1,p%WAMIT(j)%SS_Exctn%numStates ! Loop through all DOFs
+         x%WAMIT(j)%SS_Exctn%x(i) = ary(k)
+         k = k + 1
+      end do
+   end do
+   do j = 1, p%nWAMITObj
+      do i = 1,p%WAMIT(j)%SS_Rdtn%numStates ! Loop through all DOFs
+         x%WAMIT(j)%SS_Rdtn%x(i) = ary(k)
+         k = k + 1
+      end do
+   end do
+end subroutine
+
+subroutine HD_PackInputValues(p, u, Ary)
+   type(HydroDyn_ParameterType), intent(in)  :: p
+   type(HydroDyn_InputType), intent(in)      :: u
+   real(R8Ki), intent(out)                   :: Ary(:)
+   integer(IntKi)                            :: i
+   call MV_Pack(p%Vars%u, p%iVarMorisonMotionMesh, u%Morison%Mesh, Ary)
+   call MV_Pack(p%Vars%u, p%iVarWAMITMotionMesh, u%WAMITMesh, Ary)
+   call MV_Pack(p%Vars%u, p%iVarPRPMotionMesh, u%PRPMesh, Ary)
+   call MV_Pack(p%Vars%u, p%iVarWaveElev0, 0.0_R8Ki, Ary)   ! Extended input
+end subroutine
+
+subroutine HD_UnpackInputValues(p, Ary, u)
+   type(HydroDyn_ParameterType), intent(in)  :: p
+   real(R8Ki), intent(in)                    :: Ary(:)
+   type(HydroDyn_InputType), intent(inout)   :: u
+   integer(IntKi)                            :: i
+   call MV_Unpack(p%Vars%u, p%iVarMorisonMotionMesh, Ary, u%Morison%Mesh)
+   call MV_Unpack(p%Vars%u, p%iVarWAMITMotionMesh, Ary, u%WAMITMesh)
+   call MV_Unpack(p%Vars%u, p%iVarPRPMotionMesh, Ary, u%PRPMesh)
+   ! call MV_Unpack(p%Vars%u, p%iVarWaveElev0, Ary, )   ! Extended input
+end subroutine
+
+subroutine HD_PackOutputValues(p, y, Ary, PackWriteOutput)
+   type(HydroDyn_ParameterType), intent(in)  :: p
+   type(HydroDyn_OutputType), intent(in)     :: y
+   real(R8Ki), intent(out)                   :: Ary(:)
+   logical, intent(in)                       :: PackWriteOutput
+   integer(IntKi)                            :: i
+   call MV_Pack(p%Vars%y, p%iVarMorisonLoadMesh, y%Morison%Mesh, Ary)
+   call MV_Pack(p%Vars%y, p%iVarWAMITLoadMesh, y%WAMITMesh, Ary)
+   call MV_Pack(p%Vars%y, p%iVarWriteOut, y%WriteOutput, Ary)
+end subroutine
 
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE HydroDyn
