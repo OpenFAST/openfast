@@ -154,9 +154,6 @@ subroutine MV_InitVarsJac(Vars, Jac, Linearize, ErrStat, ErrMsg)
    end do
    Vars%Ny = sum(Vars%y%Num)
 
-   ! Initialize full linearization variable indexing (all variables)
-   call MV_InitVarIdx(Vars, Vars%IdxLin, VF_None, ErrStat2, ErrMsg2); if (Failed()) return
-
    ! Allocate arrays
    if (Vars%Nx > 0) then
       call AllocAry(Jac%x, Vars%Nx, "Lin%x", ErrStat2, ErrMsg2); if (Failed()) return
@@ -770,8 +767,13 @@ subroutine MV_AddVar(VarAry, Name, Field, Num, Flags, iUsr, jUsr, DerivOrder, Pe
    ! Initialize var with default values
    Var = ModVarType(Name=Name, Field=Field)
 
+   ! If number of values is zero, return
+   if (present(Num)) then 
+      if (Num == 0) return
+      Var%Num = Num
+   end if
+
    ! Set optional values
-   if (present(Num)) Var%Num = Num
    if (present(Flags)) Var%Flags = Flags
    if (present(iUsr)) Var%iUsr = [iUsr, iUsr + Var%Num - 1]
    if (present(jUsr)) Var%jUsr = jUsr
