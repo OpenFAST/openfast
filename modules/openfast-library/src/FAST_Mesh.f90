@@ -334,12 +334,32 @@ subroutine FAST_InitMappings(Mods, Mappings, Turbine, ErrStat, ErrMsg)
             call BD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
          case (Module_ED)
             call ED_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+         case (Module_ExtInfw)
+            ! call ExtInfw_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+         case (Module_ExtLd)
+            call ExtLd_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+         case (Module_ExtPtfm)
+            call ExtPtfm_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+         case (Module_FEAM)
+            call FEAM_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
          case (Module_HD)
             call HD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+         case (Module_IceD)
+            call IceD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+         case (Module_IceF)
+            call IceF_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
          case (Module_IfW)
             call IfW_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+         case (Module_MAP)
+            call MAP_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+         case (Module_MD)
+            call MD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+         case (Module_Orca)
+            call Orca_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
          case (Module_SD)
-            call IfW_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+            call SD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+         case (Module_SeaSt)
+            ! call SeaSt_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
          case (Module_SrvD)
             call SrvD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
          end select
@@ -363,6 +383,8 @@ subroutine FAST_InitMappings(Mods, Mappings, Turbine, ErrStat, ErrMsg)
          ! Add mapping index to sorce and destination module mapping arrays
          SrcMod%SrcMaps = [SrcMod%SrcMaps, iMap]
          DstMod%DstMaps = [DstMod%DstMaps, iMap]
+
+         write (*, *) Mappings(iMap)%Desc
 
       end associate
    end do
@@ -531,17 +553,6 @@ subroutine ED_InitInputMappings(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrM
 
    case (Module_AD)
 
-      if (Turbine%p_FAST%CompElast == Module_ED) then
-         do i = 1, size(Turbine%ED%Input(1)%BladePtLoads)
-            call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                             SrcMeshLoc=MeshLocType(), &                                  ! AD%y%rotors(1)%BladeLoad(i)
-                             SrcDispMeshLoc=MeshLocType(), &                              ! AD%u%rotors(1)%BladeMotion(i)
-                             DstMeshLoc=MeshLocType(), &                                  ! ED%u%BladePtLoads(i)
-                             DstDispMeshLoc=MeshLocType(), &                              ! ED%y%BladeLn2Mesh(i)
-                             ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
-         end do
-      end if
-
       call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                        SrcMeshLoc=MeshLocType(AD_y_rotors_HubLoad, AD_Rotor), &           ! AD%y%rotors(1)%HubLoad
                        SrcDispMeshLoc=MeshLocType(AD_u_rotors_HubMotion, AD_rotor), &     ! AD%u%rotors(1)%HubMotion
@@ -582,46 +593,7 @@ subroutine ED_InitInputMappings(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrM
    case (Module_ExtLd)
 
       ! TODO
-      ! CALL MeshMapCreate( ExtLd%y%BladeLoad(K), ED%Input(1)%BladePtLoads(K),  MeshMapData%ExtLd_P_2_BDED_B(K), ErrStat2, ErrMsg2 )
       ! CALL MeshMapCreate( ExtLd%y%TowerLoad, ED%Input(1)%TowerPtLoads,  MeshMapData%ExtLd_P_2_ED_P_T, ErrStat2, ErrMsg2 )
-
-   case (Module_ExtPtfm)
-
-      call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                       SrcMeshLoc=MeshLocType(ExtPtfm_y_PtfmMesh), &             ! ExtPtfm%y%PtfmMesh
-                       SrcDispMeshLoc=MeshLocType(ExtPtfm_u_PtfmMesh), &         ! ExtPtfm%u%PtfmMesh
-                       DstMeshLoc=MeshLocType(ED_u_PlatformPtMesh), &            ! ED%Input(1)%PlatformPtMesh
-                       DstDispMeshLoc=MeshLocType(ED_y_PlatformPtMesh), &        ! ED%y%PlatformPtMesh
-                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
-
-   case (Module_FEAM)
-
-      ! MeshMapCreate( FEAM%y%PtFairleadLoad, ED%Input(1)%PlatformPtMesh,  MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2 )
-
-   case (Module_HD)
-      ! MeshMapCreate( HD%y%Morison%Mesh, ED%Input(1)%PlatformPtMesh, MeshMapData%HD_M_P_2_SubStructure, ErrStat2, ErrMsg2 )
-      ! MeshMapCreate( HD%y%WAMITMesh, ED%Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_SubStructure, ErrStat2, ErrMsg2 )
-
-   case (Module_IceD)
-      ! MeshMapCreate( IceD%y(i)%PointMesh, ED%Input(1)%PlatformPtMesh,  MeshMapData%IceD_P_2_SD_P(i), ErrStat2, ErrMsg2 )
-
-   case (Module_IceF)
-      ! MeshMapCreate( IceF%y%iceMesh, ED%Input(1)%PlatformPtMesh,  MeshMapData%IceF_P_2_SD_P, ErrStat2, ErrMsg2 )
-
-   case (Module_MAP)
-      ! MeshMapCreate( MAPp%y%PtFairleadLoad, ED%Input(1)%PlatformPtMesh,  MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2 )
-
-   case (Module_MD)
-      ! MeshMapCreate( MD%y%CoupledLoads(1), ED%Input(1)%PlatformPtMesh,  MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2 )
-
-   case (Module_Orca)
-
-      call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                       SrcMeshLoc=MeshLocType(Orca_y_PtfmMesh), &                ! Orca%y%PtfmMesh
-                       SrcDispMeshLoc=MeshLocType(Orca_u_PtfmMesh), &            ! Orca%u%PtfmMesh
-                       DstMeshLoc=MeshLocType(ED_u_PlatformPtMesh), &            ! ED%Input(1)%PlatformPtMesh
-                       DstDispMeshLoc=MeshLocType(ED_y_PlatformPtMesh), &        ! ED%y%PlatformPtMesh
-                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
    case (Module_SD)
 
@@ -633,20 +605,6 @@ subroutine ED_InitInputMappings(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrM
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
    case (Module_SrvD)
-
-      ! Blade Structural Controller (if ElastoDyn is used for blades)
-      if (Turbine%p_FAST%CompElast == Module_ED) then
-         do i = 1, Turbine%SrvD%p%NumBStC
-            do j = 1, Turbine%ED%p%NumBl
-               call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                                SrcMeshLoc=MeshLocType(SrvD_y_BStCLoadMesh, i, j), &        ! SrvD%y%BStCLoadMesh(i, j), &
-                                SrcDispMeshLoc=MeshLocType(SrvD_u_BStCMotionMesh, i, j), &  ! SrvD%u%BStCMotionMesh(i, j)
-                                DstMeshLoc=MeshLocType(ED_u_BladePtLoads, j), &             ! ED%Input(1)%BladePtLoads(j)
-                                DstDispMeshLoc=MeshLocType(ED_y_BladeLn2Mesh, j), &         ! ED%y%BladeLn2Mesh(j)
-                                ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
-            end do
-         end do
-      end if
 
       ! Nacelle Structural Controller
       do j = 1, Turbine%SrvD%p%NumNStC
@@ -668,8 +626,128 @@ subroutine ED_InitInputMappings(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrM
                           ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
       end do
 
-      ! Substructure Structural Controller (if not using SubDyn)
-      if (Turbine%p_FAST%CompSub /= Module_SD) then
+      call NonMeshMap(Mappings, "SrvD Data -> ED Data", SrcMod=SrcMod, DstMod=DstMod)  ! TODO
+
+   end select
+
+   !----------------------------------------------------------------------------
+   ! ElastoDyn Blades
+   !----------------------------------------------------------------------------
+
+   ! If ElastoDyn is calculating blade motion
+   if (Turbine%p_FAST%CompElast == Module_ED) then
+
+      select case (SrcMod%ID)
+
+      case (Module_AD)
+
+         do i = 1, size(Turbine%ED%Input(1)%BladePtLoads)
+            call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                             SrcMeshLoc=MeshLocType(), &                            ! AD%y%rotors(1)%BladeLoad(i)
+                             SrcDispMeshLoc=MeshLocType(), &                        ! AD%u%rotors(1)%BladeMotion(i)
+                             DstMeshLoc=MeshLocType(), &                            ! ED%u%BladePtLoads(i)
+                             DstDispMeshLoc=MeshLocType(), &                        ! ED%y%BladeLn2Mesh(i)
+                             ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+         end do
+
+      case (Module_ExtLd)
+
+         ! TODO
+         ! CALL MeshMapCreate( ExtLd%y%BladeLoad(K), ED%Input(1)%BladePtLoads(K),  MeshMapData%ExtLd_P_2_BDED_B(K), ErrStat2, ErrMsg2 )
+
+      case (Module_SrvD)
+
+         ! Blade Structural Controller (if ElastoDyn is used for blades)
+         do i = 1, Turbine%SrvD%p%NumBStC
+            do j = 1, Turbine%ED%p%NumBl
+               call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                                SrcMeshLoc=MeshLocType(SrvD_y_BStCLoadMesh, i, j), &        ! SrvD%y%BStCLoadMesh(i, j), &
+                                SrcDispMeshLoc=MeshLocType(SrvD_u_BStCMotionMesh, i, j), &  ! SrvD%u%BStCMotionMesh(i, j)
+                                DstMeshLoc=MeshLocType(ED_u_BladePtLoads, j), &             ! ED%Input(1)%BladePtLoads(j)
+                                DstDispMeshLoc=MeshLocType(ED_y_BladeLn2Mesh, j), &         ! ED%y%BladeLn2Mesh(j)
+                                ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+            end do
+         end do
+
+      end select
+   end if
+
+   !----------------------------------------------------------------------------
+   ! Substructure and Platform
+   !----------------------------------------------------------------------------
+
+   ! If SubDyn is not active map following modules to ElastoDyn
+   if (Turbine%p_FAST%CompSub /= Module_SD) then
+
+      select case (SrcMod%ID)
+
+      case (Module_ExtPtfm)
+
+         call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                          SrcMeshLoc=MeshLocType(ExtPtfm_y_PtfmMesh), &             ! ExtPtfm%y%PtfmMesh
+                          SrcDispMeshLoc=MeshLocType(ExtPtfm_u_PtfmMesh), &         ! ExtPtfm%u%PtfmMesh
+                          DstMeshLoc=MeshLocType(ED_u_PlatformPtMesh), &            ! ED%Input(1)%PlatformPtMesh
+                          DstDispMeshLoc=MeshLocType(ED_y_PlatformPtMesh), &        ! ED%y%PlatformPtMesh
+                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+      case (Module_FEAM)
+
+         ! MeshMapCreate( FEAM%y%PtFairleadLoad, ED%Input(1)%PlatformPtMesh,  MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2 )
+
+      case (Module_HD)
+
+         call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                          SrcMeshLoc=MeshLocType(HydroDyn_y_Morison_Mesh), &        ! HD%y%Morison%Mesh
+                          SrcDispMeshLoc=MeshLocType(HydroDyn_u_Morison_Mesh), &    ! HD%u%Morison%Mesh
+                          DstMeshLoc=MeshLocType(ED_u_PlatformPtMesh), &            ! ED%u%PlatformPtMesh
+                          DstDispMeshLoc=MeshLocType(ED_y_PlatformPtMesh), &        ! ED%y%PlatformPtMesh
+                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+         call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                          SrcMeshLoc=MeshLocType(HydroDyn_y_WAMITMesh), &           ! HD%y%WAMITMesh
+                          SrcDispMeshLoc=MeshLocType(HydroDyn_u_WAMITMesh), &       ! HD%u%WAMITMesh
+                          DstMeshLoc=MeshLocType(ED_u_PlatformPtMesh), &            ! ED%u%PlatformPtMesh
+                          DstDispMeshLoc=MeshLocType(ED_y_PlatformPtMesh), &        ! ED%y%PlatformPtMesh
+                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+      case (Module_IceD)
+
+         ! MeshMapCreate( IceD%y(i)%PointMesh, ED%Input(1)%PlatformPtMesh,  MeshMapData%IceD_P_2_SD_P(i), ErrStat2, ErrMsg2 )
+
+      case (Module_IceF)
+
+         ! MeshMapCreate( IceF%y%iceMesh, ED%Input(1)%PlatformPtMesh,  MeshMapData%IceF_P_2_SD_P, ErrStat2, ErrMsg2 )
+
+      case (Module_MAP)
+
+         call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                          SrcMeshLoc=MeshLocType(MAP_y_ptFairleadLoad), &           ! MAP%y%PtFairleadLoad
+                          SrcDispMeshLoc=MeshLocType(MAP_u_PtFairDisplacement), &   ! MAP%u%PtFairDisplacement
+                          DstMeshLoc=MeshLocType(ED_u_PlatformPtMesh), &            ! ED%Input(1)%PlatformPtMesh
+                          DstDispMeshLoc=MeshLocType(ED_y_PlatformPtMesh), &        ! ED%y%PlatformPtMesh
+                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+      case (Module_MD)
+
+         call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                          SrcMeshLoc=MeshLocType(MD_y_CoupledLoads, 1), &           ! MD%y%CoupledLoads(1)
+                          SrcDispMeshLoc=MeshLocType(MD_u_CoupledKinematics, 1), &  ! MD%u%CoupledKinematics(1)
+                          DstMeshLoc=MeshLocType(ED_u_PlatformPtMesh), &            ! ED%Input(1)%PlatformPtMesh
+                          DstDispMeshLoc=MeshLocType(ED_y_PlatformPtMesh), &        ! ED%y%PlatformPtMesh
+                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+      case (Module_Orca)
+
+         call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                          SrcMeshLoc=MeshLocType(Orca_y_PtfmMesh), &                ! Orca%y%PtfmMesh
+                          SrcDispMeshLoc=MeshLocType(Orca_u_PtfmMesh), &            ! Orca%u%PtfmMesh
+                          DstMeshLoc=MeshLocType(ED_u_PlatformPtMesh), &            ! ED%Input(1)%PlatformPtMesh
+                          DstDispMeshLoc=MeshLocType(ED_y_PlatformPtMesh), &        ! ED%y%PlatformPtMesh
+                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+      case (Module_SrvD)
+
+         ! Substructure Structural Controller
          do j = 1, Turbine%SrvD%p%NumSStC
             call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                              SrcMeshLoc=MeshLocType(SrvD_y_SStCLoadMesh, j), &         ! SrvD%y%SStCLoadMesh(j), &
@@ -678,11 +756,9 @@ subroutine ED_InitInputMappings(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrM
                              DstDispMeshLoc=MeshLocType(ED_y_PlatformPtMesh), &        ! ED%y%PlatformPtMesh
                              ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
          end do
-      end if
 
-      call NonMeshMap(Mappings, "SrvD Data -> ED Data", SrcMod=SrcMod, DstMod=DstMod)  ! TODO
-
-   end select
+      end select
+   end if
 
 contains
    logical function Failed()
@@ -1249,10 +1325,10 @@ subroutine MapLoadMesh(Turbine, Mappings, SrcMod, SrcMeshLoc, SrcDispMeshLoc, &
    call FAST_OutputMeshPointer(DstMod, Turbine, DstDispMeshLoc, DstDispMesh, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Create mapping description
-   Mapping%Desc = trim(FAST_OutputMeshName(SrcMod, SrcMeshLoc))// &
-                  " ["//trim(FAST_InputMeshName(SrcMod, SrcDispMeshLoc))//"] -> "// &
+   Mapping%Desc = trim(FAST_OutputMeshName(SrcMod, SrcMeshLoc))//" -> "// &
                   trim(FAST_InputMeshName(DstMod, DstMeshLoc))// &
-                  " ["//trim(FAST_OutputMeshName(DstMod, DstDispMeshLoc))//"] (Load)"
+                  " ["//trim(FAST_InputMeshName(SrcMod, SrcDispMeshLoc))// &
+                  " -> "//trim(FAST_OutputMeshName(DstMod, DstDispMeshLoc))//"]"
 
    ! Initialize mapping structure
    Mapping%MapType = Map_LoadMesh
@@ -1381,7 +1457,7 @@ subroutine MapMotionMesh(Turbine, Mappings, SrcMod, SrcMeshLoc, DstMod, DstMeshL
 
    ! Create mapping description
    Mapping%Desc = trim(FAST_OutputMeshName(SrcMod, SrcMeshLoc))//" -> "// &
-                  trim(FAST_InputMeshName(DstMod, DstMeshLoc))//" (Motion)"
+                  trim(FAST_InputMeshName(DstMod, DstMeshLoc))
 
    ! Initialize mapping structure
    Mapping%MapType = Map_MotionMesh
@@ -1422,6 +1498,7 @@ subroutine NonMeshMap(Maps, Key, SrcMod, DstMod, Active)
    end if
 
    ! Initialize mapping structure
+   Mapping%Desc = Key
    Mapping%MapType = Map_NonMesh
    Mapping%SrcModIdx = SrcMod%Idx
    Mapping%SrcModID = SrcMod%ID
