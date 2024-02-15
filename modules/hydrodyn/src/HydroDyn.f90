@@ -978,6 +978,7 @@ subroutine HydroDyn_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, E
 
    ! Get excitation
    do k = 1, p%nWAMITObj
+      if (p%WAMIT(k)%SS_Exctn%numStates == 0) cycle
       if (p%NBody > 1) BodyDesc = 'B'//trim(Num2LStr(k))
       call MV_AddVar(p%Vars%x, "WAMIT("//trim(Num2LStr(k))//")%SS_Exctn", VF_Scalar, &
                      Flags=VF_DerivOrder1, &
@@ -987,6 +988,7 @@ subroutine HydroDyn_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, E
    end do
 
    do k = 1, p%nWAMITObj
+      if (p%WAMIT(k)%SS_Rdtn%numStates == 0) cycle
       if (p%NBody > 1) BodyDesc = 'B'//trim(Num2LStr(k))
       call MV_AddVar(p%Vars%x, "WAMIT("//trim(Num2LStr(k))//")%SS_Rdtn", VF_Scalar, &
                      Flags=VF_DerivOrder1, &
@@ -1037,15 +1039,11 @@ subroutine HydroDyn_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, E
 
    call MV_AddMeshVar(p%Vars%y, "WAMITLoads", LoadFields, y%WAMITMesh, VarIdx=p%iVarWAMITLoadMesh)
 
-   if (p%NumTotalOuts > 0) then
-      p%iVarWriteOut = size(p%Vars%y) + 1
-      call MV_AddVar(p%Vars%y, "WriteOutput", VF_Scalar, &
-                     Flags=VF_WriteOut, &
-                     Num=p%NumTotalOuts, &
-                     LinNames=[(trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i)), i = 1, p%NumTotalOuts)])
-   else
-      p%iVarWriteOut = 0
-   end if
+   call MV_AddVar(p%Vars%y, "WriteOutput", VF_Scalar, &
+                  VarIdx=p%iVarWriteOut, &
+                  Flags=VF_WriteOut, &
+                  Num=p%NumTotalOuts, &
+                  LinNames=[(WriteOutputLinName(i), i = 1, p%NumTotalOuts)])
 
    !----------------------------------------------------------------------------
    ! Initialize Variables and Jacobian data
@@ -1059,6 +1057,10 @@ subroutine HydroDyn_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, E
    call HydroDyn_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
 
 contains
+   character(LinChanLen) function WriteOutputLinName(idx)
+      integer(IntKi), intent(in) :: idx
+      WriteOutputLinName = trim(InitOut%WriteOutputHdr(idx))//', '//trim(InitOut%WriteOutputUnt(idx))
+   end function
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
       Failed =  ErrStat >= AbortErrLev
