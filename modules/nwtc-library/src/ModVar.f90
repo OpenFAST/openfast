@@ -352,6 +352,7 @@ subroutine MV_PackVarRank1R4(VarAry, iVar, Vals, Ary)
    integer(IntKi), intent(in)    :: iVar
    real(R4Ki), intent(in)        :: Vals(:)
    real(R8Ki), intent(inout)     :: Ary(:)
+   if (iVar == 0) return
    associate (iLoc => VarAry(iVar)%iLoc)
       Ary(iLoc(1):iLoc(2)) = real(Vals, R8Ki)
    end associate
@@ -395,6 +396,7 @@ subroutine MV_UnpackVarRank0R4(VarAry, iVar, Ary, Val)
    integer(IntKi), intent(in)    :: iVar
    real(R8Ki), intent(in)        :: Ary(:)
    real(R4Ki), intent(inout)     :: Val
+   if (iVar == 0) return
    Val = Ary(VarAry(iVar)%iLoc(1))
 end subroutine
 
@@ -403,6 +405,7 @@ subroutine MV_UnpackVarRank0R8(VarAry, iVar, Ary, Vals)
    integer(IntKi), intent(in)    :: iVar
    real(R8Ki), intent(in)        :: Ary(:)
    real(R8Ki), intent(inout)     :: Vals
+   if (iVar == 0) return
    Vals = Ary(VarAry(iVar)%iLoc(1))
 end subroutine
 
@@ -493,6 +496,7 @@ subroutine MV_UnpackMesh(VarAry, iVar, Values, Mesh)
    real(R8Ki), intent(in)        :: Values(:)
    type(MeshType), intent(inout) :: Mesh
    integer(IntKi)                :: MeshID, i, j
+   if (iVar == 0) return
    MeshID = VarAry(iVar)%MeshID
    do i = iVar, size(VarAry)
       if (VarAry(i)%MeshID /= MeshID) exit
