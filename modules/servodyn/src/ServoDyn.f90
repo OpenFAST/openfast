@@ -716,11 +716,11 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
    uPerturbAng = 0.2_R8Ki * Pi_R8 / 180.0_R8Ki
    uPerturbs = [uPerturbTrans, uPerturbAng, uPerturbTrans, uPerturbAng, uPerturbTrans, uPerturbAng]
 
-   call MV_AddVar(p%Vars%u, "Yaw", VF_Scalar, LinNames=['Yaw, Nm'])
+   call MV_AddVar(p%Vars%u, "Yaw", VF_Scalar, LinNames=['Yaw, rad'])
 
-   call MV_AddVar(p%Vars%u, "YawRate", VF_Scalar, LinNames=['YawRate, Nm'])
+   call MV_AddVar(p%Vars%u, "YawRate", VF_Scalar, LinNames=['YawRate, rad/s'])
 
-   call MV_AddVar(p%Vars%u, "HSS_Spd", VF_Scalar, LinNames=['HSS_Spd, W'])
+   call MV_AddVar(p%Vars%u, "HSS_Spd", VF_Scalar, LinNames=['HSS_Spd, rad/s'])
 
    ! Structural controllers
    do i = 1, p%NumBStC
