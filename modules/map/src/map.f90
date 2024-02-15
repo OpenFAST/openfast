@@ -766,8 +766,8 @@ IF (ErrStat >= AbortErrLev) RETURN
       ! Write outputs
       call MV_AddVar(p%Vars%y, "WriteOutput", VF_Scalar, &
                      VarIdx=p%iVarWriteOutput, &
-                     Num=p%numOuts,&
                      Flags=VF_WriteOut, &
+                     Num=p%numOuts,&
                      LinNames=[(WriteOutputLinName(i), i = 1, p%numOuts)])
 
       !-------------------------------------------------------------------------
@@ -1396,7 +1396,7 @@ SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    end if
    
    ! Make a copy of the inputs to perturb
-   call map_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+   call MAP_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
    call MAP_PackInputValues(p, u, m%Jac%u)
 
    ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
@@ -1419,7 +1419,7 @@ SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
             call MAP_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
-            call MAP_CopyConstrState(z, m%z_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+            call MAP_CopyConstrState(z, m%z_lin, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
             
             ! Calculate absolute position of each node
             m%u_perturb%X = m%u_perturb%PtFairDisplacement%Position(1,:) + m%u_perturb%PtFairDisplacement%TranslationDisp(1,:)
@@ -1448,7 +1448,7 @@ SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
             ! Calculate negative perturbation
             call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
             call MAP_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
-            call MAP_CopyConstrState(z, m%z_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+            call MAP_CopyConstrState(z, m%z_lin, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
             
             ! Calculate absolute position of each node
             m%u_perturb%X = m%u_perturb%PtFairDisplacement%Position(1,:) + m%u_perturb%PtFairDisplacement%TranslationDisp(1,:)
@@ -1457,22 +1457,22 @@ SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
           
             ! compute constraint state for u_op - delta u
             call MSQS_UpdateStates( time, &
-                              interval, & 
-                              m%u_perturb%C_obj, &
-                              p%C_obj, &
-                              x%C_obj, &
-                              xd%C_obj, &
-                              m%z_lin%C_obj, &
-                              OtherState%C_obj, &
-                              status_from_MAP, &
-                              message_from_MAP  )
+                                    interval, & 
+                                    m%u_perturb%C_obj, &
+                                    p%C_obj, &
+                                    x%C_obj, &
+                                    xd%C_obj, &
+                                    m%z_lin%C_obj, &
+                                    OtherState%C_obj, &
+                                    status_from_MAP, &
+                                    message_from_MAP)
 
             call MAP_ERROR_CHECKER(message_from_MAP,status_from_MAP,ErrMsg2,ErrStat2); if (Failed()) return
             
             ! compute y at u_op - delta u
             ! MAP++ (in the c-code) requires that the output data structure be y, which was used when MAP++ was initialized.
             call map_CalcOutput(t, m%u_perturb, p, x, xd, m%z_lin, OtherState, y, ErrStat2, ErrMsg2 ); if (Failed()) return
-            call MAP_PackOutputValues(p, y, m%Jac%y_pos, IsFullLin)
+            call MAP_PackOutputValues(p, y, m%Jac%y_neg, IsFullLin)
             
             ! Calculate column index
             col = p%Vars%u(i)%iLoc(1) + j - 1
