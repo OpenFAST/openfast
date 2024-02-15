@@ -66,11 +66,11 @@ IMPLICIT NONE
     REAL(ReKi)  :: TFinArea      !< Tail fin planform area [used only when TFinMod=1] [m^2]
     INTEGER(IntKi)  :: TFinIndMod      !< Model for induced velocity calculation {0=none, 1=rotor-average} [(switch)]
     INTEGER(IntKi)  :: TFinAFID      !< Index of Tail fin airfoil number [1 to NumAFfiles] [-]
-    REAL(ReKi)  :: TFinKp      !< Tail fin potential flow constant [used only when TFMod=2] [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: TFinSigma      !< Tail fin emperical constants for vortex separation functions [used only when TFMod=2] [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: TFinAStar      !< Tail fin initial angles for vortex separation functions [used only when TFMod=2] [deg]
-    REAL(ReKi)  :: TFinKv      !< Tail fin vortex lift coefficient [used only when TFMod=2] [-]
-    REAL(ReKi)  :: TFinCDc      !< Tail fin drag coefficient [used only when TFMod=2] [-]
+    REAL(ReKi)  :: TFinKp      !< Tail fin potential lift coefficient for unsteady aerodynamics [used only when TFMod=2] [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: TFinSigma      !< Tail fin empirical constants characterizing the decay of separation functions [used only when TFMod=2] [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: TFinAStar      !< Tail fin characteristics angles for separation functions [used only when TFMod=2] [deg]
+    REAL(ReKi)  :: TFinKv      !< Tail fin vortex lift coefficient for unsteady aerodynamics [used only when TFMod=2] [-]
+    REAL(ReKi)  :: TFinCDc      !< Tail fin drag coefficient for unsteady aerodynamics [used only when TFMod=2] [-]
   END TYPE TFinParameterType
 ! =======================
 ! =========  TFinInputFileType  =======
@@ -82,11 +82,11 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: TFinAngles      !< Tail fin chordline skew, tilt, and bank angles about the reference point [(deg)]
     INTEGER(IntKi)  :: TFinIndMod      !< Model for induced velocity calculation {0=none, 1=rotor-average} [(switch)]
     INTEGER(IntKi)  :: TFinAFID      !< Index of Tail fin airfoil number [1 to NumAFfiles] [-]
-    REAL(ReKi)  :: TFinKp      !< Tail fin potential flow constant [used only when TFMod=2] [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: TFinSigma      !< Tail fin emperical constants for vortex separation functions [used only when TFMod=2] [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: TFinAStar      !< Tail fin initial angles for vortex separation functions [used only when TFMod=2] [deg]
-    REAL(ReKi)  :: TFinKv      !< Tail fin vortex lift coefficient [used only when TFMod=2] [-]
-    REAL(ReKi)  :: TFinCDc      !< Tail fin drag coefficient [used only when TFMod=2] [-]
+    REAL(ReKi)  :: TFinKp      !< Tail fin potential lift coefficient for unsteady aerodynamics [used only when TFMod=2] [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: TFinSigma      !< Tail fin empirical constants characterizing the decay of separation functions [used only when TFMod=2] [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: TFinAStar      !< Tail fin characteristics angles for separation functions [used only when TFMod=2] [deg]
+    REAL(ReKi)  :: TFinKv      !< Tail fin vortex lift coefficient for unsteady aerodynamics [used only when TFMod=2] [-]
+    REAL(ReKi)  :: TFinCDc      !< Tail fin drag coefficient for unsteady aerodynamics [used only when TFMod=2] [-]
   END TYPE TFinInputFileType
 ! =======================
 ! =========  AD_VTK_BLSurfaceType  =======
