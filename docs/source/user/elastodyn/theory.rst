@@ -159,7 +159,41 @@ The total moment on the given degree of freedom is:
 
    
 
+.. _ed_yawfriction_theory:
 
+Yaw-friction
+------------
+A yaw-friction model is implemented in ElastoDyn based on a Coulomb-viscous approach.
+The yaw-friction moment as a function of yaw rate (:math:`\omega`) is shown below in :numref:`figYawFriction`
+
+.. _figYawFriction:
+.. figure:: figs/YawFrictionModel.jpg
+   :width: 60%
+           
+   Yaw-friction model
+
+The yaw-friction torque :math:`M_f` can be calcualated as follows.
+
+if :math:`\omega\neq0`:
+
+.. math::
+   M_f = \mu_d\bar{D}\times\text{min}(0,F_z)\times\text{sign}(\omega) - \sigma_v\times\omega  
+ 
+if :math:`\omega=0` and :math:`\dot{\omega}\neq 0`:
+
+.. math::
+   M_f = \mu_d\bar{D}\times\text{min}(0,F_z)\times\text{sign}(\dot{\omega})
+
+if :math:`\omega=0` and :math:`\dot{\omega}=0`:
+
+.. math::
+   M_f = -\text{min}(\mu_s\bar{D}\times|\text{min}(0,F_z)|,|M_z|)\times\text{sign}(M_z)
+
+
+where :math:`\bar{D}` is the effective yaw-bearing race diameter, :math:`\mu_d` is the dynamic friction coefficient, :math:`\mu_s` is the static friction coefficient,:math:`F_z` is effective axial load on yaw-bearing, :math:`M-z` is the external torque on yaw-bearing.
+The static 'stiction' (where the static contribution exceeds the dynamic Coulomb friction) is only applied if both the yaw rotational velocity and acceleration at the current time-step are zero.
+The static portion of the friction is omitted if the rotational acceleration is not null, (sign(0) is taken as 1).
+This is to account for the fact that a 'warm' joint may not feel stiction when crossing through zero velocity in a dynamic sense :cite:`ed-hammam2023`
 
 
 .. _ed_dev_notes:
