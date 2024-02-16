@@ -25,7 +25,7 @@ use NWTC_LAPACK
 
 use FAST_Types
 use FAST_Funcs
-use FAST_Mesh
+use FAST_Mapping
 
 implicit none
 

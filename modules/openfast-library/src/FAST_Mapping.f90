@@ -1,4 +1,4 @@
-module FAST_Mesh
+module FAST_Mapping
 
 use FAST_ModTypes
 
