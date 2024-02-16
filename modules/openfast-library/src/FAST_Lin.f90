@@ -3443,31 +3443,32 @@ SUBROUTINE Linear_AD_InputSolve_IfW_dy( p_FAST, y_FAST, u_AD, dUdy )
       
       AD_Start = Indx_u_AD_BladeInflow_Start(u_AD, y_FAST) ! start of u_AD%rotors(1)%InflowOnBlade array
       
-      do k=1,size(u_AD%rotors(1)%Bld) ! blades
-         do j=1,size(u_AD%rotors(1)%Bld(k)%InflowOnBlade,2) ! nodes
-            do i=1,3 !velocity component
-               dUdy( AD_Start + i - 1, y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + (node-1)*3 + i - 1 ) = -1.0_R8Ki
-            end do
-            node = node + 1
-            AD_Start = AD_Start + 3
-         end do         
-      end do
-                  
-      if ( allocated(u_AD%rotors(1)%InflowOnTower) ) then         
-         do j=1,size(u_AD%rotors(1)%InflowOnTower,2) !nodes
-            do i=1,3 !velocity component
-               dUdy( AD_Start + i - 1, y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + (node-1)*3 + i - 1 ) = -1.0_R8Ki
-            end do
-            node = node + 1
-            AD_Start = AD_Start + 3
-         end do      
-      end if
-
-      do i=1,3 !rotor-disk velocity component (DiskVel)
-         dUdy( AD_Start + i - 1, y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + (node-1)*3 + i - 1 ) = -1.0_R8Ki
-      end do
-      node = node + 1
-      AD_Start = AD_Start + 3
+!FIXME: move these to extended inputs!
+!      do k=1,size(o_AD%RotInflow(1)%Bld) ! blades
+!         do j=1,size(o_AD%RotInflow(1)%Bld(k)%InflowOnBlade,2) ! nodes
+!            do i=1,3 !velocity component
+!               dUdy( AD_Start + i - 1, y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + (node-1)*3 + i - 1 ) = -1.0_R8Ki
+!            end do
+!            node = node + 1
+!            AD_Start = AD_Start + 3
+!         end do         
+!      end do
+!                  
+!      if ( allocated(o_AD%RotInflow(1)%InflowOnTower) ) then         
+!         do j=1,size(o_AD%RotInflow(1)%InflowOnTower,2) !nodes
+!            do i=1,3 !velocity component
+!               dUdy( AD_Start + i - 1, y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + (node-1)*3 + i - 1 ) = -1.0_R8Ki
+!            end do
+!            node = node + 1
+!            AD_Start = AD_Start + 3
+!         end do      
+!      end if
+!
+!      do i=1,3 !rotor-disk velocity component (DiskVel)
+!         dUdy( AD_Start + i - 1, y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + (node-1)*3 + i - 1 ) = -1.0_R8Ki
+!      end do
+!      node = node + 1
+!      AD_Start = AD_Start + 3
 
    !END IF
    
