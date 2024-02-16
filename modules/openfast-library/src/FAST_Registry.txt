@@ -113,7 +113,7 @@ typedef	^	FAST_SS_CaseType	ReKi	Pitch	-	-	-	"Pitch angle for this case of the st
 # Mapping Type
 param	^ -                 IntKi                   Map_LoadMesh    -  1  -     "Load mesh mapping type"	-
 param	^ -                 IntKi                   Map_MotionMesh  -  2  -     "Motion mesh mapping type"	-
-param	^ -                 IntKi                   Map_NonMesh     -  3  -     "Non mesh mapping type"	-
+param	^ -                 IntKi                   Map_Variable    -  3  -     "Individual variable mapping type"	-
 typedef ^ TC_MappingType    character(128)          Desc            -  -  -     "Description of mapping (used to lookup non-mesh maps)" -
 typedef ^ ^                 IntKi                   SrcModIdx       -  0  -     "Source module index in ModData array" -
 typedef ^ ^                 IntKi                   DstModIdx       -  0  -     "Destination module index in ModData array" -
@@ -123,6 +123,8 @@ typedef ^ ^                 IntKi                   SrcIns          -  0  -     
 typedef ^ ^                 IntKi                   DstIns          -  0  -     "Destination module Instance" -
 typedef ^ ^                 IntKi                   SrcMeshID       -  0  -     "Source mesh identifier" -
 typedef ^ ^                 IntKi                   DstMeshID       -  0  -     "Destination mesh identifier" -
+typedef ^ ^                 IntKi                   iVarSrc         -  0  -     "Source variable index" -
+typedef ^ ^                 IntKi                   iVarDst         -  0  -     "Destination variable index" -
 typedef ^ ^                 IntKi                   SrcDispMeshID   -  0  -     "Source displacement mesh identifier" -
 typedef ^ ^                 IntKi                   DstDispMeshID   -  0  -     "Destination displacement mesh identifier" -
 typedef ^ ^                 MeshLocType             SrcMeshLoc      -  -  -     "Source mesh locator (number and indices)" -

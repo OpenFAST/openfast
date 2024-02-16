@@ -475,6 +475,13 @@ typedef	^	ParameterType	ReKi	PulseSpacing	 -   -	-	"Distance between range gates
 typedef	^	ParameterType	ReKi	URefLid     	 -   -	-	"Reference average wind speed for the lidar"  m/s
 # parameters for variables
 typedef	^	ParameterType	ModVarsType &Vars	-	-	-	"Module Variables"	-
+typedef	^	ParameterType	IntKi iVarYaw	-	-	-	"Yaw Variable Index"	-
+typedef	^	ParameterType	IntKi iVarYawRate	-	-	-	"YawRate Variable Index"	-
+typedef	^	ParameterType	IntKi iVarHSS_Spd	-	-	-	"HSS_Spd Variable Index"	-
+typedef	^	ParameterType	IntKi iVarBlPitchCom	-	-	-	"BlPitchCom Variable Index"	-
+typedef	^	ParameterType	IntKi iVarYawMom	-	-	-	"YawMom Variable Index"	-
+typedef	^	ParameterType	IntKi iVarGenTrq	-	-	-	"GenTrq Variable Index"	-
+typedef	^	ParameterType	IntKi iVarElecPwr	-	-	-	"ElecPwr Variable Index"	-
 
 
 # ..... Inputs ....................................................................................................................

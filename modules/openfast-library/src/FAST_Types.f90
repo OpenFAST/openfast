@@ -84,7 +84,7 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: NumStateTimes                    = 4      ! size of arrays of state derived types (Continuous state type etc). (STATE_CURR, STATE_PRED, STATE_SAVED_CURR, STATE_SAVED_PRED) [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Map_LoadMesh                     = 1      ! Load mesh mapping type [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Map_MotionMesh                   = 2      ! Motion mesh mapping type [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Map_NonMesh                      = 3      ! Non mesh mapping type [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Map_Variable                     = 3      ! Individual variable mapping type [-]
 ! =========  FAST_VTK_BLSurfaceType  =======
   TYPE, PUBLIC :: FAST_VTK_BLSurfaceType
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AirfoilCoords      !< x,y coordinates for airfoil around each blade node on a blade (relative to reference) [-]
@@ -141,6 +141,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: DstIns = 0      !< Destination module Instance [-]
     INTEGER(IntKi)  :: SrcMeshID = 0      !< Source mesh identifier [-]
     INTEGER(IntKi)  :: DstMeshID = 0      !< Destination mesh identifier [-]
+    INTEGER(IntKi)  :: iVarSrc = 0      !< Source variable index [-]
+    INTEGER(IntKi)  :: iVarDst = 0      !< Destination variable index [-]
     INTEGER(IntKi)  :: SrcDispMeshID = 0      !< Source displacement mesh identifier [-]
     INTEGER(IntKi)  :: DstDispMeshID = 0      !< Destination displacement mesh identifier [-]
     TYPE(MeshLocType)  :: SrcMeshLoc      !< Source mesh locator (number and indices) [-]
@@ -1530,6 +1532,8 @@ subroutine FAST_CopyTC_MappingType(SrcTC_MappingTypeData, DstTC_MappingTypeData,
    DstTC_MappingTypeData%DstIns = SrcTC_MappingTypeData%DstIns
    DstTC_MappingTypeData%SrcMeshID = SrcTC_MappingTypeData%SrcMeshID
    DstTC_MappingTypeData%DstMeshID = SrcTC_MappingTypeData%DstMeshID
+   DstTC_MappingTypeData%iVarSrc = SrcTC_MappingTypeData%iVarSrc
+   DstTC_MappingTypeData%iVarDst = SrcTC_MappingTypeData%iVarDst
    DstTC_MappingTypeData%SrcDispMeshID = SrcTC_MappingTypeData%SrcDispMeshID
    DstTC_MappingTypeData%DstDispMeshID = SrcTC_MappingTypeData%DstDispMeshID
    call NWTC_Library_CopyMeshLocType(SrcTC_MappingTypeData%SrcMeshLoc, DstTC_MappingTypeData%SrcMeshLoc, CtrlCode, ErrStat2, ErrMsg2)
@@ -1638,6 +1642,8 @@ subroutine FAST_PackTC_MappingType(RF, Indata)
    call RegPack(RF, InData%DstIns)
    call RegPack(RF, InData%SrcMeshID)
    call RegPack(RF, InData%DstMeshID)
+   call RegPack(RF, InData%iVarSrc)
+   call RegPack(RF, InData%iVarDst)
    call RegPack(RF, InData%SrcDispMeshID)
    call RegPack(RF, InData%DstDispMeshID)
    call NWTC_Library_PackMeshLocType(RF, InData%SrcMeshLoc) 
@@ -1693,6 +1699,8 @@ subroutine FAST_UnPackTC_MappingType(RF, OutData)
    call RegUnpack(RF, OutData%DstIns); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SrcMeshID); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DstMeshID); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarSrc); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarDst); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SrcDispMeshID); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DstDispMeshID); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackMeshLocType(RF, OutData%SrcMeshLoc) ! SrcMeshLoc 

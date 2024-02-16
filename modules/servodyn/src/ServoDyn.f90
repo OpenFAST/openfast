@@ -716,11 +716,11 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
    uPerturbAng = 0.2_R8Ki * Pi_R8 / 180.0_R8Ki
    uPerturbs = [uPerturbTrans, uPerturbAng, uPerturbTrans, uPerturbAng, uPerturbTrans, uPerturbAng]
 
-   call MV_AddVar(p%Vars%u, "Yaw", VF_Scalar, LinNames=['Yaw, rad'])
+   call MV_AddVar(p%Vars%u, "Yaw", VF_Scalar, VarIdx=p%iVarYaw, LinNames=['Yaw, rad'])
 
-   call MV_AddVar(p%Vars%u, "YawRate", VF_Scalar, LinNames=['YawRate, rad/s'])
+   call MV_AddVar(p%Vars%u, "YawRate", VF_Scalar, VarIdx=p%iVarYawRate, LinNames=['YawRate, rad/s'])
 
-   call MV_AddVar(p%Vars%u, "HSS_Spd", VF_Scalar, LinNames=['HSS_Spd, rad/s'])
+   call MV_AddVar(p%Vars%u, "HSS_Spd", VF_Scalar, VarIdx=p%iVarHSS_Spd, LinNames=['HSS_Spd, rad/s'])
 
    ! Structural controllers
    do i = 1, p%NumBStC
@@ -754,17 +754,21 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
    !----------------------------------------------------------------------------
 
    call MV_AddVar(p%Vars%y, "BlPitchCom", VF_Scalar, &
+                  VarIdx=p%iVarBlPitchCom, &
                   Flags=VF_RotFrame, &
                   Num=size(y%BlPitchCom), &
                   LinNames=[('BlPitchCom('//trim(Num2LStr(i))//'), rad', i = 1, size(y%BlPitchCom))])
 
    call MV_AddVar(p%Vars%y, "YawMom", VF_Scalar, &
+                  VarIdx=p%iVarYawMom, &
                   LinNames=['YawMom, Nm'])
 
    call MV_AddVar(p%Vars%y, "GenTrq", VF_Scalar, &
+                  VarIdx=p%iVarGenTrq, &
                   LinNames=['GenTrq, Nm'])
 
    call MV_AddVar(p%Vars%y, "ElecPwr", VF_Scalar, &
+                  VarIdx=p%iVarElecPwr, &
                   LinNames=['ElecPwr, W'])
 
    ! Structural controllers
@@ -4520,17 +4524,16 @@ CONTAINS
          call AllocAry( u_op, p%Vars%Nu, 'u_op', ErrStat2, ErrMsg2 ); if (Failed()) return
       end if
 
-      iVar = 1
-      call MV_Pack(p%Vars%u, iVar, u%Yaw, u_op)
-      iVar = iVar + 1
-      call MV_Pack(p%Vars%u, iVar, u%YawRate, u_op)
-      iVar = iVar + 1
-      call MV_Pack(p%Vars%u, iVar, u%HSS_Spd, u_op)
-      iVar = iVar + 1
+      call MV_Pack(p%Vars%u, p%iVarYaw, u%Yaw, u_op)
+      call MV_Pack(p%Vars%u, p%iVarYawRate, u%YawRate, u_op)
+      call MV_Pack(p%Vars%u, p%iVarHSS_Spd, u%HSS_Spd, u_op)
 
       !---------------------
       ! StC related inputs
       !---------------------
+
+      ! TODO: add variable indices for these meshes instead of manually counting
+      iVar = p%iVarHSS_Spd + 1
 
       ! Blade
       do j = 1, p%NumBStC

@@ -1,5 +1,6 @@
 module FAST_Mapping
 
+use FAST_Types
 use FAST_ModTypes
 
 implicit none
@@ -329,40 +330,41 @@ subroutine FAST_InitMappings(Mods, Mappings, Turbine, ErrStat, ErrMsg)
          ! Switch by destination module (inputs)
          select case (Mods(IModDst)%ID)
          case (Module_AD)
-            call AD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+            call AD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_BD)
-            call BD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+            call BD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_ED)
-            call ED_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+            call ED_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_ExtInfw)
-            ! call ExtInfw_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+            ! call ExtInfw_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_ExtLd)
-            call ExtLd_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+            call ExtLd_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_ExtPtfm)
-            call ExtPtfm_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+            call ExtPtfm_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_FEAM)
-            call FEAM_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+            call FEAM_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_HD)
-            call HD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+            call HD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_IceD)
-            call IceD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+            call IceD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_IceF)
-            call IceF_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+            call IceF_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_IfW)
-            call IfW_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+            call IfW_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_MAP)
-            call MAP_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+            call MAP_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_MD)
-            call MD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+            call MD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_Orca)
-            call Orca_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+            call Orca_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_SD)
-            call SD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+            call SD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_SeaSt)
-            ! call SeaSt_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+            ! call SeaSt_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_SrvD)
-            call SrvD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat, ErrMsg)
+            call SrvD_InitInputMappings(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          end select
+         if (Failed()) return
       end do
    end do
 
@@ -373,7 +375,7 @@ subroutine FAST_InitMappings(Mods, Mappings, Turbine, ErrStat, ErrMsg)
    ! Reorder the mappings so that motion maps come before the load maps
    Mappings = [pack(Mappings, Mappings%MapType == Map_MotionMesh), &
                pack(Mappings, Mappings%MapType == Map_LoadMesh), &
-               pack(Mappings, Mappings%MapType == Map_NonMesh)]
+               pack(Mappings, Mappings%MapType == Map_Variable)]
 
    ! Loop through mappings
    do iMap = 1, size(Mappings)
@@ -460,7 +462,7 @@ subroutine AD_InitInputMappings(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrM
 
    case (Module_SrvD)
 
-      call NonMeshMap(Mappings, Key='SrvD BlAirfoilCom -> AD UserProp', SrcMod=SrcMod, DstMod=DstMod)
+      ! call MapVariable(Mappings, Key='SrvD BlAirfoilCom -> AD UserProp', SrcMod=SrcMod, DstMod=DstMod)
 
    end select
 
@@ -626,7 +628,20 @@ subroutine ED_InitInputMappings(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrM
                           ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
       end do
 
-      call NonMeshMap(Mappings, "SrvD Data -> ED Data", SrcMod=SrcMod, DstMod=DstMod)  ! TODO
+      call MapVariable(Mappings, "SrvD BlPitchCom -> ED BlPitchCom", &
+                       SrcMod=SrcMod, iVarSrc=Turbine%SrvD%p%iVarBlPitchCom, &
+                       DstMod=DstMod, iVarDst=Turbine%ED%p%iVarBlPitchCom, &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+      call MapVariable(Mappings, "SrvD YawMom -> ED YawMom", &
+                       SrcMod=SrcMod, iVarSrc=Turbine%SrvD%p%iVarYawMom, &
+                       DstMod=DstMod, iVarDst=Turbine%ED%p%iVarYawMom, &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+      call MapVariable(Mappings, "SrvD GenTrq -> ED GenTrq", &
+                       SrcMod=SrcMod, iVarSrc=Turbine%SrvD%p%iVarGenTrq, &
+                       DstMod=DstMod, iVarDst=Turbine%ED%p%iVarGenTrq, &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
    end select
 
@@ -999,7 +1014,10 @@ subroutine IfW_InitInputMappings(Mappings, SrcMod, DstMod, T, ErrStat, ErrMsg)
 
    select case (SrcMod%ID)
    case (Module_ED)
-      call NonMeshMap(Mappings, "ED HubMotion -> IfW HubMotion", SrcMod=SrcMod, DstMod=DstMod)
+
+      ! TODO
+      ! call MapVariable(Mappings, "ED HubMotion -> IfW HubMotion", SrcMod=SrcMod, DstMod=DstMod)
+
    end select
 
 contains
@@ -1200,14 +1218,16 @@ subroutine SrvD_InitInputMappings(Mappings, SrcMod, DstMod, Turbine, ErrStat, Er
 
    select case (SrcMod%ID)
    case (Module_BD)
-      call NonMeshMap(Mappings, "BD Data -> SrvD Data", SrcMod=SrcMod, DstMod=DstMod)
-      call NonMeshMap(Mappings, "BD RootM -> SrvD RootM", SrcMod=SrcMod, DstMod=DstMod)
+
+      ! TODO
+      ! call MapVariable(Mappings, "BD Data -> SrvD Data", SrcMod=SrcMod, DstMod=DstMod)
+      ! call MapVariable(Mappings, "BD RootM -> SrvD RootM", SrcMod=SrcMod, DstMod=DstMod)
 
    case (Module_ED)
 
-      call NonMeshMap(Mappings, "ED Data -> SrvD Data", SrcMod=SrcMod, DstMod=DstMod)
       if (Turbine%p_FAST%CompElast == Module_ED) then
-         call NonMeshMap(Mappings, "ED RootM -> SrvD RootM", SrcMod=SrcMod, DstMod=DstMod)
+         ! TODO
+         ! call MapVariable(Mappings, "ED RootM -> SrvD RootM", SrcMod=SrcMod, DstMod=DstMod)
       end if
 
       ! Nacelle Structural Controller
@@ -1248,8 +1268,30 @@ subroutine SrvD_InitInputMappings(Mappings, SrcMod, DstMod, Turbine, ErrStat, Er
          end do
       end if
 
+      call MapVariable(Mappings, "ED Yaw -> SrvD Yaw", &
+                       SrcMod=SrcMod, iVarSrc=Turbine%ED%p%iVarYaw, &
+                       DstMod=DstMod, iVarDst=Turbine%SrvD%p%iVarYaw, &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+      call MapVariable(Mappings, "ED YawRate -> SrvD YawRate", &
+                       SrcMod=SrcMod, iVarSrc=Turbine%ED%p%iVarYawRate, &
+                       DstMod=DstMod, iVarDst=Turbine%SrvD%p%iVarYawRate, &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+      call MapVariable(Mappings, "ED HSS_Spd -> SrvD HSS_Spd", &
+                       SrcMod=SrcMod, iVarSrc=Turbine%ED%p%iVarHSS_Spd, &
+                       DstMod=DstMod, iVarDst=Turbine%SrvD%p%iVarHSS_Spd, &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+      call MapVariable(Mappings, "ED HSS_Spd -> SrvD HSS_Spd", &
+                       SrcMod=SrcMod, iVarSrc=Turbine%ED%p%iVarHSS_Spd, &
+                       DstMod=DstMod, iVarDst=Turbine%SrvD%p%iVarHSS_Spd, &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
    case (Module_IfW)
-      call NonMeshMap(Mappings, "IfW Data -> SrvD Data", SrcMod=SrcMod, DstMod=DstMod)
+
+      ! TODO
+      ! call MapVariable(Mappings, "IfW Data -> SrvD Data", SrcMod=SrcMod, DstMod=DstMod)
 
    case (Module_SD)
 
@@ -1486,26 +1528,52 @@ contains
    end function
 end subroutine
 
-subroutine NonMeshMap(Maps, Key, SrcMod, DstMod, Active)
+subroutine MapVariable(Maps, Key, SrcMod, DstMod, iVarSrc, iVarDst, ErrStat, ErrMsg, Active)
    type(TC_MappingType), allocatable      :: Maps(:)
    character(*), intent(in)               :: Key
    type(ModDataType), intent(in)          :: SrcMod, DstMod
+   integer(IntKi), intent(in)             :: iVarSrc, iVarDst
+   integer(IntKi), intent(out)            :: ErrStat
+   character(*), intent(out)              :: ErrMsg
    logical, optional, intent(in)          :: Active
    type(TC_MappingType)                   :: Mapping
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
 
    if (present(Active)) then
       if (.not. Active) return
    end if
 
+   ! If either variable index is zero, return error
+   if (iVarSrc == 0) then
+      ErrStat = ErrID_Fatal
+      ErrMsg = "Source variable in mapping '"//Key//"' is not active"
+      return
+   else if (iVarDst == 0) then
+      ErrStat = ErrID_Fatal
+      ErrMsg = "Destination variable in mapping '"//Key//"' is not active"
+      return
+   end if
+
+   ! Verify that variables have the same size
+   if (SrcMod%Vars%y(iVarSrc)%Num /= DstMod%Vars%u(iVarDst)%Num) then
+      ErrStat = ErrID_Fatal
+      ErrMsg = "Variables in mapping '"//Key//"' have different sizes"
+      return
+   end if
+
    ! Initialize mapping structure
    Mapping%Desc = Key
-   Mapping%MapType = Map_NonMesh
+   Mapping%MapType = Map_Variable
    Mapping%SrcModIdx = SrcMod%Idx
-   Mapping%SrcModID = SrcMod%ID
-   Mapping%SrcIns = SrcMod%Ins
    Mapping%DstModIdx = DstMod%Idx
+   Mapping%SrcModID = SrcMod%ID
    Mapping%DstModID = DstMod%ID
+   Mapping%SrcIns = SrcMod%Ins
    Mapping%DstIns = DstMod%Ins
+   Mapping%iVarSrc = iVarSrc
+   Mapping%iVarDst = iVarDst
 
    Maps = [Maps, Mapping]
 end subroutine
@@ -1618,8 +1686,18 @@ subroutine FAST_LinearizeMappings(Turbine, Mods, Mappings, ModOrder, ErrStat, Er
 
             ! Select based on type of mapping
             select case (Mapping%MapType)
-            case (Map_NonMesh)
-               cycle
+            case (Map_Variable)
+               
+               if (.not. present(dUdy)) cycle
+
+               associate (SrcMod => Mods(Mapping%SrcModIdx), &
+                          DstMod => Mods(Mapping%DstModIdx), &
+                          SrcVar => Mods(Mapping%SrcModIdx)%Vars%y(Mapping%iVarSrc), &
+                          DstVar => Mods(Mapping%DstModIdx)%Vars%u(Mapping%iVarDst))
+                  do k = 0, SrcVar%Num - 1
+                     dUdy(DstMod%iug + DstVar%iLoc(1) + k - 1, SrcMod%iyg + SrcVar%iLoc(1) + k - 1) = -1.0_R8Ki
+                  end do
+               end associate
 
             case (Map_MotionMesh)
 
@@ -1816,7 +1894,7 @@ subroutine FAST_InputSolve(Turbine, Mods, Mappings, iMod, ErrStat, ErrMsg, UseU)
 
          ! Select based on type of mapping
          select case (Mapping%MapType)
-         case (Map_NonMesh)
+         case (Map_Variable)
             call NonMesh_InputSolve(Turbine, Mapping, ErrStat2, ErrMsg2, UseU)
             if (Failed()) return
 

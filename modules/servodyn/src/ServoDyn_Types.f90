@@ -487,6 +487,13 @@ IMPLICIT NONE
     REAL(ReKi)  :: PulseSpacing = 0.0_ReKi      !< Distance between range gates [m]
     REAL(ReKi)  :: URefLid = 0.0_ReKi      !< Reference average wind speed for the lidar [m/s]
     TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
+    INTEGER(IntKi)  :: iVarYaw = 0_IntKi      !< Yaw Variable Index [-]
+    INTEGER(IntKi)  :: iVarYawRate = 0_IntKi      !< YawRate Variable Index [-]
+    INTEGER(IntKi)  :: iVarHSS_Spd = 0_IntKi      !< HSS_Spd Variable Index [-]
+    INTEGER(IntKi)  :: iVarBlPitchCom = 0_IntKi      !< BlPitchCom Variable Index [-]
+    INTEGER(IntKi)  :: iVarYawMom = 0_IntKi      !< YawMom Variable Index [-]
+    INTEGER(IntKi)  :: iVarGenTrq = 0_IntKi      !< GenTrq Variable Index [-]
+    INTEGER(IntKi)  :: iVarElecPwr = 0_IntKi      !< ElecPwr Variable Index [-]
   END TYPE SrvD_ParameterType
 ! =======================
 ! =========  SrvD_InputType  =======
@@ -4302,6 +4309,13 @@ subroutine SrvD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end if
+   DstParamData%iVarYaw = SrcParamData%iVarYaw
+   DstParamData%iVarYawRate = SrcParamData%iVarYawRate
+   DstParamData%iVarHSS_Spd = SrcParamData%iVarHSS_Spd
+   DstParamData%iVarBlPitchCom = SrcParamData%iVarBlPitchCom
+   DstParamData%iVarYawMom = SrcParamData%iVarYawMom
+   DstParamData%iVarGenTrq = SrcParamData%iVarGenTrq
+   DstParamData%iVarElecPwr = SrcParamData%iVarElecPwr
 end subroutine
 
 subroutine SrvD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -4614,6 +4628,13 @@ subroutine SrvD_PackParam(RF, Indata)
          call NWTC_Library_PackModVarsType(RF, InData%Vars) 
       end if
    end if
+   call RegPack(RF, InData%iVarYaw)
+   call RegPack(RF, InData%iVarYawRate)
+   call RegPack(RF, InData%iVarHSS_Spd)
+   call RegPack(RF, InData%iVarBlPitchCom)
+   call RegPack(RF, InData%iVarYawMom)
+   call RegPack(RF, InData%iVarGenTrq)
+   call RegPack(RF, InData%iVarElecPwr)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -4829,6 +4850,13 @@ subroutine SrvD_UnPackParam(RF, OutData)
    else
       OutData%Vars => null()
    end if
+   call RegUnpack(RF, OutData%iVarYaw); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarYawRate); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarHSS_Spd); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarBlPitchCom); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarYawMom); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarGenTrq); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarElecPwr); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine SrvD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
