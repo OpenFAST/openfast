@@ -1565,7 +1565,7 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
 
       REAL(DbKi),                         INTENT(IN   ) :: t               !< Current simulation time in seconds
       INTEGER(IntKi),                     INTENT(IN   ) :: n               !< Current step of the simulation: t = n*Interval
-      TYPE(WAMIT_InputType),              INTENT(IN   ) :: Inputs(:)       !< Inputs at InputTimes
+      TYPE(WAMIT_InputType),              INTENT(INOUT) :: Inputs(:)       !< Inputs at InputTimes
       REAL(DbKi),                         INTENT(IN   ) :: InputTimes(:)   !< Times in seconds associated with Inputs
       TYPE(WAMIT_ParameterType),          INTENT(IN   ) :: p               !< Parameters
       TYPE(WAMIT_ContinuousStateType),    INTENT(INOUT) :: x               !< Input: Continuous states at t;
@@ -1598,7 +1598,6 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
       
       TYPE(SS_Rad_InputType), ALLOCATABLE    :: SS_Rdtn_u(:)           ! Inputs
       TYPE(SS_Exc_InputType), ALLOCATABLE    :: SS_Exctn_u(:)          ! Inputs
-      TYPE(WAMIT_InputType),  ALLOCATABLE    :: WAMIT_u(:)             ! Inputs
       TYPE(WAMIT_InputType)                  :: WAMIT_u_t
       
                         
@@ -1669,23 +1668,9 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
       END IF
       
       IF ( (p%ExctnMod>0).AND.(p%ExctnDisp==2) ) THEN
-         ALLOCATE( WAMIT_u(nTime), STAT = ErrStat )
-         IF (ErrStat /=0) THEN
-            ErrMsg = ' Failed to allocate array WAMIT_u.'
-            RETURN
-         END IF
-         DO I=1,nTime
-            ALLOCATE( WAMIT_u(I)%Mesh%TranslationDisp(3,p%NBody), STAT = ErrStat  )
-            IF (ErrStat /=0) THEN
-               ErrMsg = ' Failed to allocate array WAMIT_u(I)%Mesh%TranslationDisp.'
-               RETURN
-            END IF
-            DO iBody=1,p%NBody
-               WAMIT_u(I)%Mesh%TranslationDisp(:,iBody) = Inputs(I)%Mesh%TranslationDisp(:,iBody)
-            END DO
-         END DO
          ! Interpolate WAMIT input at time t+dt
-         CALL WAMIT_Input_ExtrapInterp(WAMIT_u, InputTimes, WAMIT_u_t, t+p%dt, ErrStat, ErrMsg)
+         CALL WAMIT_CopyInput(Inputs(1), WAMIT_u_t, MESH_NEWCOPY, ErrStat, ErrMsg)
+         CALL WAMIT_Input_ExtrapInterp(Inputs, InputTimes, WAMIT_u_t, t+p%dt, ErrStat, ErrMsg)
          DO iBody = 1,p%NBody
             ! Current unfiltered body position at time t+dt
             bodyPosition(1) = WAMIT_u_t%Mesh%TranslationDisp(1,iBody)
@@ -1697,10 +1682,6 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
             xd%BdyPosFilt(2,iBody,1) = p%ExctnFiltConst * xd%BdyPosFilt(2,iBody,1) + (1.0_ReKi - p%ExctnFiltConst) * bodyPosition(2)  
          END DO
          CALL WAMIT_DestroyInput( WAMIT_u_t, ErrStat, ErrMsg)
-         DO I=1,nTime
-            CALL WAMIT_DestroyInput( WAMIT_u(I), ErrStat, ErrMsg)
-         END DO
-         DEALLOCATE(WAMIT_u)
       END IF
       IF ( p%ExctnMod == 2 )  THEN       ! Update the state-space wave excitation sub-module's states      
           
@@ -1835,8 +1816,8 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
                   bodyPosition(2) = u%Mesh%TranslationDisp(2,iBody)
                ELSE IF ( p%ExctnDisp == 2 ) THEN
                   ! Use filtered body position
-                  bodyPosition(1) = xd%BdyPosFilt(1,iBody,1)
-                  bodyPosition(2) = xd%BdyPosFilt(2,iBody,1)
+                  bodyPosition(1) = p%ExctnFiltConst * xd%BdyPosFilt(1,iBody,1) + (1.0_ReKi - p%ExctnFiltConst) * u%Mesh%TranslationDisp(1,iBody)
+                  bodyPosition(2) = p%ExctnFiltConst * xd%BdyPosFilt(2,iBody,1) + (1.0_ReKi - p%ExctnFiltConst) * u%Mesh%TranslationDisp(2,iBody)
                END IF
                iStart = (iBody-1)*6+1
                ! WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: Force component for each WAMIT Body
