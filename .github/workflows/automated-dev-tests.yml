@@ -21,6 +21,7 @@ env:
   C_COMPILER: gcc-12
   GCOV_EXE: gcov-12
   CMAKE_BUILD_PARALLEL_LEVEL: 8
+  CTEST_PARALLEL_LEVEL: 2
 
 
 jobs:
@@ -35,7 +36,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Setup Python
@@ -86,7 +87,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Install dependencies
@@ -121,7 +122,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Setup Python
@@ -167,7 +168,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Setup Python
@@ -337,7 +338,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Setup Python
@@ -382,7 +383,7 @@ jobs:
           ctest -VV -R "^ua_" 
 
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-uadriver
@@ -441,7 +442,7 @@ jobs:
       - name: Run SubDyn tests
         uses: ./.github/actions/tests-module-subdyn
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-module-drivers
@@ -499,7 +500,7 @@ jobs:
       - name: Run VersionInfo tests
         uses: ./.github/actions/tests-module-version
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-modules-debug
@@ -542,7 +543,7 @@ jobs:
         run: |
           ctest -VV -L "cpp|python|fastlib"
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-interfaces
@@ -589,12 +590,12 @@ jobs:
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j4 \
+          ctest -VV \
           -L openfast \
           -LE "cpp|linear|python|fastlib" \
           -E "5MW_OC4Semi_WSt_WavesWN|5MW_OC3Mnpl_DLL_WTurb_WavesIrr|5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth|5MW_OC3Trpd_DLL_WSt_WavesReg|5MW_Land_BD_DLL_WTurb"
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-OF
@@ -644,7 +645,7 @@ jobs:
         run: |
           ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC4Semi_WSt_WavesWN
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-OF-5MW_OC4Semi_WSt_WavesWN
@@ -694,7 +695,7 @@ jobs:
         run: |
           ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC3Mnpl_DLL_WTurb_WavesIrr
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-OF-5MW_OC3Mnpl_DLL_WTurb_WavesIrr
@@ -744,7 +745,7 @@ jobs:
         run: |
           ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-OF-5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth
@@ -794,7 +795,7 @@ jobs:
         run: |
           ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC3Trpd_DLL_WSt_WavesReg
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-OF-5MW_OC3Trpd_DLL_WSt_WavesReg
@@ -844,7 +845,7 @@ jobs:
         run: |
           ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_Land_BD_DLL_WTurb
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-OF-5MW_Land_BD_DLL_WTurb
@@ -892,9 +893,9 @@ jobs:
       - name: Run OpenFAST linearization tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j4 -L linear
+          ctest -VV -L linear
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-OF-linearization
@@ -946,7 +947,7 @@ jobs:
           set OMP_NUM_THREADS=2
           ctest -VV -L fastfarm --verbose
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-FF
