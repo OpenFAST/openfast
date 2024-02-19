@@ -237,22 +237,20 @@ try:
             else:
 
                 #if verbose:
-                print(CasePrefix+'freq_ref:', np.around(freq_bas[:8]    ,5), '[Hz]')
-                print(CasePrefix+'freq_new:', np.around(freq_loc[:8]    ,5),'[Hz]')
-                print(CasePrefix+'damp_ref:', np.around(zeta_bas[:8]*100,5), '[%]')
-                print(CasePrefix+'damp_new:', np.around(zeta_loc[:8]*100,5), '[%]')
+                print(CasePrefix+'freq_ref:', np.around(freq_bas[:10]    ,5), '[Hz]')
+                print(CasePrefix+'freq_new:', np.around(freq_loc[:10]    ,5), '[Hz]')
+                print(CasePrefix+'damp_ref:', np.around(zeta_bas[:10]*100,5), '[%]')
+                print(CasePrefix+'damp_new:', np.around(zeta_loc[:10]*100,5), '[%]')
 
                 try:
                     np.testing.assert_allclose(freq_loc[:10], freq_bas[:10], rtol=rtol_f, atol=atol_f)
                 except Exception as e:
                     raise Exception('Failed to compare A-matrix frequencies\n\tLinfile: {}.\n\tException: {}'.format(local_file, indent(e.args[0])))
 
-
                 if caseName=='Ideal_Beam_Free_Free_Linear':
-                    # The free-free case is a bit weird, smae frequencies but dampings are +/- a value
-                    zeta_loc=np.abs(zeta_loc)
-                    zeta_bas=np.abs(zeta_bas)
-
+                    # The free-free case is a bit weird, same frequencies but damping values are +/- a value
+                    zeta_loc = np.abs(zeta_loc)
+                    zeta_bas = np.abs(zeta_bas)
 
                 try:
                     # Note: damping ratios in [%]
@@ -294,17 +292,17 @@ try:
                 except Exception as e:
                     sElem = f'Element [{i+1},{j+1}], new: {Mloc[i,j]}, baseline: {Mbas[i,j]}'
                     if k in ['dXdx', 'A', 'dXdu', 'B']:
-                        sElem += '\n  row:', fbas['x_info']['Description'][i]
+                        sElem += '\n\t\t  row: ' + fbas['x_info']['Description'][i]
                     if k in ['dYdx', 'C', 'dYdu', 'D']:
-                        sElem += '\n  row:', fbas['y_info']['Description'][i]
+                        sElem += '\n\t\t  row: ' + fbas['y_info']['Description'][i]
                     if k in ['dUdu', 'dUdy']:
-                        sElem += '\n  row:', fbas['u_info']['Description'][i]
+                        sElem += '\n\t\t  row: ' + fbas['u_info']['Description'][i]
                     if k in ['dXdx', 'A', 'dYdx', 'C']:
-                        sElem += '\n  col:', fbas['x_info']['Description'][j]
+                        sElem += '\n\t\t  col: ' + fbas['x_info']['Description'][j]
                     if k in ['dXdu', 'B', 'dYdu', 'D', 'dUdu']:
-                        sElem += '\n  col:', fbas['u_info']['Description'][j]
+                        sElem += '\n\t\t  col: ' + fbas['u_info']['Description'][j]
                     if k in ['dUdy']:
-                        sElem += '\n  col:', fbas['y_info']['Description'][j]
+                        sElem += '\n\t\t  col: ' + fbas['y_info']['Description'][j]
                     raise Exception('Failed to compare matrix `{}`, {} \n\tLinfile: {}.\n\tException: {}'.format(k, sElem, local_file, indent(e.args[0])))
 
 
