@@ -413,6 +413,8 @@ hd_regression("hd_MCF_WaveStMod0"                           "hydrodyn;offshore")
 hd_regression("hd_MCF_WaveStMod1"                           "hydrodyn;offshore")
 hd_regression("hd_MCF_WaveStMod2"                           "hydrodyn;offshore")
 hd_regression("hd_MCF_WaveStMod3"                           "hydrodyn;offshore")
+hd_regression("hd_ExctnMod1_ExctnDisp1"                     "hydrodyn;offshore")
+hd_regression("hd_ExctnMod1_ExctnDisp2"                     "hydrodyn;offshore")
 
 # Py-HydroDyn regression tests
 py_hd_regression("py_hd_5MW_OC4Semi_WSt_WavesWN"            "hydrodyn;offshore;python")
