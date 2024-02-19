@@ -263,40 +263,50 @@ try:
 
 
         # --- Compare individual matrices/vectors
-        KEYS= ['A','B','C','D','dUdu','dUdy']
-        KEYS+=['x','y','u','xdot']
+        KEYS = ['A','B','C','D','dUdu','dUdy', 'x','y','u','xdot']
         for k,v in fbas.items():
-            if k in KEYS and v is not None:
-                if verbose:
-                    print(CasePrefix+'key:', k)
-                # Arrays
-                Mloc=np.atleast_2d(floc[k])
-                Mbas=np.atleast_2d(fbas[k])
+            if k not in KEYS or v is None:
+                continue
+            if verbose:
+                print(CasePrefix+'key:', k)
+            # Arrays
+            Mloc=np.atleast_2d(floc[k])
+            Mbas=np.atleast_2d(fbas[k])
 
-                # --- Compare dimensions
+            # --- Compare dimensions
+            try:
+                np.testing.assert_equal(Mloc.shape, Mbas.shape)
+            except Exception as e:
+                Err = 'Different dimensions for variable `{k}`.\n'
+                Err += f'\tNew:{Mloc.shape}\n'
+                Err += f'\tRef:{Mbas.shape}\n'
+                Err += f'\tLinfile: {local_file}.\n'
+                raise Exception(Err)
+
+            # Get boolean matrix where Mloc is within tolerance of Mbas
+            M_in_tol = np.isclose(Mloc, Mbas, rtol=rtol, atol=atol)
+
+            # Loop through elements where Mloc is not within tolerance of Mbas
+            # Retest to get error message
+            for n, (i,j) in enumerate(zip(*np.where(M_in_tol == False)), 1):
                 try:
-                    np.testing.assert_equal(Mloc.shape, Mbas.shape)
+                    np.testing.assert_allclose(Mloc[i,j], Mbas[i,j], rtol=rtol, atol=atol)
                 except Exception as e:
-                    Err = 'Different dimensions for variable `{}`.\n'.format(k)
-                    Err+= '\tNew:{}\n'.format(Mloc.shape)
-                    Err+= '\tRef:{}\n'.format(Mbas.shape)
-                    Err+= '\tLinfile: {}.\n'.format(local_file)
-                    raise Exception(Err)
+                    sElem = f'Element [{i+1},{j+1}], new: {Mloc[i,j]}, baseline: {Mbas[i,j]}'
+                    if k in ['dXdx', 'A', 'dXdu', 'B']:
+                        sElem += '\n  row:', fbas['x_info']['Description'][i]
+                    if k in ['dYdx', 'C', 'dYdu', 'D']:
+                        sElem += '\n  row:', fbas['y_info']['Description'][i]
+                    if k in ['dUdu', 'dUdy']:
+                        sElem += '\n  row:', fbas['u_info']['Description'][i]
+                    if k in ['dXdx', 'A', 'dYdx', 'C']:
+                        sElem += '\n  col:', fbas['x_info']['Description'][j]
+                    if k in ['dXdu', 'B', 'dYdu', 'D', 'dUdu']:
+                        sElem += '\n  col:', fbas['u_info']['Description'][j]
+                    if k in ['dUdy']:
+                        sElem += '\n  col:', fbas['y_info']['Description'][j]
+                    raise Exception('Failed to compare matrix `{}`, {} \n\tLinfile: {}.\n\tException: {}'.format(k, sElem, local_file, indent(e.args[0])))
 
-
-                # We for loop below to get the first element that mismatch
-                # Otherwise, do: np.testing.assert_allclose(floc[k], fbas[k], rtol=rtol, atol=atol)
-                for i in range(Mbas.shape[0]):
-                    for j in range(Mbas.shape[1]):
-                        # Old method:
-                        #if not isclose(Mloc[i,j], Mbas[i,j], rtol=rtol, atol=atol):
-                        #    sElem = 'Element [{},{}], new : {}, baseline: {}'.format(i+1,j+1,Mloc[i,j], Mbas[i,j])
-                        #    raise Exception('Failed to compare variable `{}`, {} \n\tLinfile: {}.'.format(k, sElem, local_file)) #, e.args[0]))
-                        try:
-                            np.testing.assert_allclose(Mloc[i,j], Mbas[i,j], rtol=rtol, atol=atol)
-                        except Exception as e:
-                            sElem = 'Element [{},{}], new : {}, baseline: {}'.format(i+1,j+1,Mloc[i,j], Mbas[i,j])
-                            raise Exception('Failed to compare variable `{}`, {} \n\tLinfile: {}.\n\tException: {}'.format(k, sElem, local_file, indent(e.args[0])))
 
 except Exception as e:
     exitWithError(e.args[0])
