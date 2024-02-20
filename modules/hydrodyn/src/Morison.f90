@@ -23,7 +23,6 @@ MODULE Morison
    USE Waves
    USE Morison_Types  
    USE Morison_Output
-   USE SeaState_Interp
    USE SeaSt_WaveField
   ! USE HydroDyn_Output_Types
    USE NWTC_Library
@@ -2603,7 +2602,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    
    !===============================================================================================
    ! Calculate the fluid kinematics at all mesh nodes and store for use in the equations below
-   CALL WaveField_GetWaveKin( p%WaveField, m%SeaSt_Interp_m, Time, m%DispNodePosHdn, .FALSE., m%nodeInWater, m%WaveElev1, m%WaveElev2, m%WaveElev, m%FDynP, m%FV, m%FA, m%FAMCF, ErrStat2, ErrMsg2 )
+   CALL WaveField_GetWaveKin( p%WaveField, m%WaveField_m, Time, m%DispNodePosHdn, .FALSE., m%nodeInWater, m%WaveElev1, m%WaveElev2, m%WaveElev, m%FDynP, m%FV, m%FA, m%FAMCF, ErrStat2, ErrMsg2 )
      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ! Compute fluid velocity relative to the structure
    DO j = 1, p%NNodes
@@ -3037,7 +3036,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         ! Compute the distributed loads at the point of intersection between the member and the free surface !
         !----------------------------------------------------------------------------------------------------!   
         ! Get wave kinematics at the free-surface intersection. Set forceNodeInWater=.TRUE. to guarantee the free-surface intersection is in water.
-        CALL WaveField_GetNodeWaveKin( p%WaveField, m%SeaSt_Interp_m, Time, FSInt, .TRUE., nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat2, ErrMsg2 )
+        CALL WaveField_GetNodeWaveKin( p%WaveField, m%WaveField_m, Time, FSInt, .TRUE., nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat2, ErrMsg2 )
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         FDynPFSInt = REAL(FDynP,ReKi)
         FVFSInt    = REAL(FV,   ReKi)
@@ -3579,7 +3578,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ErrStat   = ErrID_None
       ErrMsg    = ""
 
-      Zeta = WaveField_GetNodeTotalWaveElev( p%WaveField, m%SeaSt_Interp_m, Time, pos, ErrStat2, ErrMsg2 )
+      Zeta = WaveField_GetNodeTotalWaveElev( p%WaveField, m%WaveField_m, Time, pos, ErrStat2, ErrMsg2 )
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END SUBROUTINE GetTotalWaveElev
@@ -3597,7 +3596,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ErrStat   = ErrID_None
       ErrMsg    = ""
 
-      CALL WaveField_GetNodeWaveNormal( p%WaveField, m%SeaSt_Interp_m, Time, pos, r, n, ErrStat2, ErrMsg2 )
+      CALL WaveField_GetNodeWaveNormal( p%WaveField, m%WaveField_m, Time, pos, r, n, ErrStat2, ErrMsg2 )
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END SUBROUTINE GetFreeSurfaceNormal
@@ -4212,7 +4211,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
       END IF
 
       ! Get fluid velocity at the joint
-      CALL WaveField_GetNodeWaveVel( p%WaveField, m%SeaSt_Interp_m, Time, pos, .FALSE., nodeInWater, FVTmp, ErrStat2, ErrMsg2 )
+      CALL WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, pos, .FALSE., nodeInWater, FVTmp, ErrStat2, ErrMsg2 )
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       FV   = REAL(FVTmp, ReKi)
       vrel = ( FV - u%Mesh%TranslationVel(:,J) ) * nodeInWater
