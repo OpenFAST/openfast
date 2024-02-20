@@ -340,46 +340,56 @@ def compareLin(f,file_freq_ref,file_freq_new):
                 newError(Err)
 
     # --- Compare individual matrices/vectors
-    KEYS= ['A','B','C','D','dUdu','dUdy']
-    KEYS+=['x','y','u','xdot']
+    KEYS= ['A','B','C','D','dUdu','dUdy', 'x','y','u','xdot']
     for k,v in fbas.items():
         if k in KEYS and v is not None:
             if verbose:
                 print(errPrefix+'key:', k)
+
             # Arrays
-            Mloc=np.atleast_2d(floc[k])
-            Mbas=np.atleast_2d(fbas[k])
+            Mloc = np.atleast_2d(floc[k])
+            Mbas = np.atleast_2d(fbas[k])
 
             # --- Compare dimensions
             try:
                 np.testing.assert_equal(Mloc.shape, Mbas.shape)
                 dimEqual=True
             except Exception as e:
-                Err = 'Different dimensions for variable `{}`.\n'.format(k)
-                Err+= '\tNew:{}\n'.format(Mloc.shape)
-                Err+= '\tRef:{}\n'.format(Mbas.shape)
-                Err+= '\tLinfile: {}.\n'.format(local_file2)
+                Err = f'Different dimensions for variable `{k}`.\n'
+                Err+= f'\tNew: {Mloc.shape}\n'
+                Err+= f'\tRef: {Mbas.shape}\n'
+                Err+= f'\tLinfile: {local_file2}.\n'
                 newError(Err)
                 dimEqual=False
 
             if not dimEqual:
                 # We don't compare elements if shapes are different
                 continue
+            
+            # Get matrix of which M elements are in/not in tolerance
+            M_diff_in_tol = np.isclose(Mloc, Mbas, rtol=rtol, atol=atol)
 
-            # We for loop below to get the first element that mismatch
-            # Otherwise, do: np.testing.assert_allclose(floc[k], fbas[k], rtol=rtol, atol=atol)
-            for i in range(Mbas.shape[0]):
-                for j in range(Mbas.shape[1]):
-                    # Old method:
-                    #if not isclose(Mloc[i,j], Mbas[i,j], rtol=rtol, atol=atol):
-                    #    sElem = 'Element [{},{}], new : {}, baseline: {}'.format(i+1,j+1,Mloc[i,j], Mbas[i,j])
-                    #    raise Exception('Failed to compare variable `{}`, {} \n\tLinfile: {}.'.format(k, sElem, local_file)) #, e.args[0]))
-                    try:
-                        np.testing.assert_allclose(Mloc[i,j], Mbas[i,j], rtol=rtol, atol=atol)
-                    except Exception as e:
-                        sElem = 'Element [{},{}], new : {}, baseline: {}'.format(i+1,j+1,Mloc[i,j], Mbas[i,j])
-                        Err=errPrefix+'Failed to compare variable `{}`, {} \n\tLinfile: {}.\n\tException: {}'.format(k, sElem, local_file2, indent(e.args[0]))
-                        ElemErrors.append(Err)
+            # Loop through indices of elements not in tolerance
+            for (i,j) in zip(*np.where(M_diff_in_tol == False)):
+                try:
+                    # Redo compare to get error message
+                    np.testing.assert_allclose(Mloc[i,j], Mbas[i,j], rtol=rtol, atol=atol)
+                except Exception as e:
+                    sElem = f'Element [{i+1},{j+1}], new: {Mloc[i,j]}, baseline: {Mbas[i,j]}'
+                    if k in ['dXdx', 'A', 'dXdu', 'B']:
+                        sElem += '\n\t\t  row: ' + fbas['x_info']['Description'][i]
+                    if k in ['dYdx', 'C', 'dYdu', 'D']:
+                        sElem += '\n\t\t  row: ' + fbas['y_info']['Description'][i]
+                    if k in ['dUdu', 'dUdy']:
+                        sElem += '\n\t\t  row: ' + fbas['u_info']['Description'][i]
+                    if k in ['dXdx', 'A', 'dYdx', 'C']:
+                        sElem += '\n\t\t  col: ' + fbas['x_info']['Description'][j]
+                    if k in ['dXdu', 'B', 'dYdu', 'D', 'dUdu']:
+                        sElem += '\n\t\t  col: ' + fbas['u_info']['Description'][j]
+                    if k in ['dUdy']:
+                        sElem += '\n\t\t  col: ' + fbas['y_info']['Description'][j]
+                    Err = errPrefix + f'Failed to compare variable `{k}`, {sElem} \n\tLinfile: {local_file2}.\n\tException: {indent(e.args[0])}'
+                    ElemErrors.append(Err)
     return Errors, ElemErrors
 
 
