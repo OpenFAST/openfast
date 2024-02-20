@@ -3968,6 +3968,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    INTEGER                      :: I                                               ! Generic loop-counting index
    INTEGER                      :: J                                               ! Generic loop-counting index
    INTEGER                      :: INDX                                            ! Index for valid arrays
+   INTEGER                      :: startIndx                                       ! Index for using BeamDyn for Blades
    LOGICAL                      :: InvalidOutput(0:MaxOutPts)                      ! This array determines if the output channel is valid for this configuration
    CHARACTER(*), PARAMETER      :: RoutineName = "SetOutParam"
    
