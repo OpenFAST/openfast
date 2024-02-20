@@ -104,6 +104,7 @@ typedef ^   InitInputType   ReKi    defPatm     -   -   -   "Default atmospheric
 typedef ^   InitInputType   ReKi    defPvap     -   -   -   "Default vapor pressure from the driver; may be overwritten" Pa
 typedef ^   InitInputType   ReKi    WtrDpth -  -   -    "Water depth" m
 typedef ^   InitInputType   ReKi    MSL2SWL -  -   -    "Offset between still-water level and mean sea level" m
+typedef ^   InitInputType   FlowFieldType *FlowField -  -   -    "Pointer of InflowWinds flow field data type" - 
 
 # This is data defined in the Input File for this module (or could otherwise be passed in)
 # ..... Blade Input file data .....................................................................................................
@@ -258,6 +259,92 @@ typedef	^	OtherStateType	FVW_OtherStateType	FVW	-	-	-	"OtherStates from the FVW 
 typedef	^	OtherStateType	ReKi	WakeLocationPoints	{:}{:}	-	-	"wake points velocity"	m/s
 
 
+# Define misc/optimization variables (any data that are not considered actual states) here:
+typedef	^	RotMiscVarType	BEMT_MiscVarType	BEMT	-	-	-	"MiscVars from the BEMT module"	-
+typedef	^	RotMiscVarType	BEMT_OutputType	BEMT_y	-	-	-	"Outputs from the BEMT module"	-
+typedef	^	RotMiscVarType	BEMT_InputType	BEMT_u	2	-	-	"Inputs to the BEMT module"	-
+typedef	^	RotMiscVarType	AA_MiscVarType	AA	-	-	-	"MiscVars from the AA module"	-
+typedef	^	RotMiscVarType	AA_OutputType	AA_y	-	-	-	"Outputs from the AA module"	-
+typedef	^	RotMiscVarType	AA_InputType	AA_u	-	-	-	"Inputs to the AA module"	-
+
+typedef	^	RotMiscVarType	ReKi	DisturbedInflow	{:}{:}{:}	-	-	"InflowOnBlade values modified by tower influence"	m/s
+typedef	^	RotMiscVarType	R8Ki	orientationAnnulus	{:}{:}{:}{:}	-	-	"Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles"	-
+typedef	^	RotMiscVarType	R8Ki	R_li              	{:}{:}{:}{:}	-	-	"Transformation matrix from inertial system to the staggered polar coordinate system of a given section"	-
+typedef	^	RotMiscVarType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	-
+typedef	^	RotMiscVarType	ReKi	W_Twr	{:}	-	-	"relative wind speed normal to the tower at node j"	m/s
+typedef	^	RotMiscVarType	ReKi	X_Twr	{:}	-	-	"local x-component of force per unit length of the jth node in the tower"	m/s
+typedef	^	RotMiscVarType	ReKi	Y_Twr	{:}	-	-	"local y-component of force per unit length of the jth node in the tower"	m/s
+typedef	^	RotMiscVarType	ReKi	Curve	{:}{:}	-	-	"curvature angle, saved for possible output to file"	rad
+typedef	^	RotMiscVarType	ReKi	TwrClrnc	{:}{:}	-	-	"Distance between tower (including tower radius) and blade node (not including blade width), saved for possible output to file"	m
+typedef	^	RotMiscVarType	ReKi	X	{:}{:}	-	-	"normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade"	N/m
+typedef	^	RotMiscVarType	ReKi	Y	{:}{:}	-	-	"tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade"	N/m
+typedef	^	RotMiscVarType	ReKi	Z	{:}{:}	-	-	"axial force per unit length (tangential to the plane, not chord) of the jth node in the kth blade"	N/m
+typedef	^	RotMiscVarType	ReKi	M	{:}{:}	-	-	"pitching moment per unit length of the jth node in the kth blade"	Nm/m
+typedef	^	RotMiscVarType	ReKi	Mx	{:}{:}	-	-	"pitching moment per unit length of the jth node in the kth blade (in x direction)"	Nm/m
+typedef	^	RotMiscVarType	ReKi	My	{:}{:}	-	-	"pitching moment per unit length of the jth node in the kth blade  (in y direction)"	Nm/m
+typedef	^	RotMiscVarType	ReKi	Mz	{:}{:}	-	-	"pitching moment per unit length of the jth node in the kth blade  (in z direction)"	Nm/m
+typedef	^	RotMiscVarType	ReKi	Vind_i	{:}{:}{:}	-	-	"Induced velocities at jth node and kth blade (3xnSpanxnB)"	m/s
+typedef	^	RotMiscVarType	ReKi	V_DiskAvg	{3}	-	-	"disk-average relative wind speed"	m/s
+typedef	^	RotMiscVarType	ReKi	yaw			-	-	-	    "Yaw calculated in  SetInputsForBEMT"	rad
+typedef	^	RotMiscVarType	ReKi	tilt		-	-	-	    "tilt calculated in  SetInputsForBEMT"	rad
+typedef	^	RotMiscVarType	ReKi	hub_theta_x_root	{:}	-	-	"angles saved for FAST.Farm"	rad
+typedef	^	RotMiscVarType	ReKi	V_dot_x	-	-	-
+typedef	^	RotMiscVarType	MeshType	HubLoad	-	-	-	"mesh at hub; used to compute an integral for mapping the output blade loads to a single point (for writing to file only)"	-
+typedef	^	RotMiscVarType	MeshMapType	B_L_2_H_P	{:}	-	-	"mapping data structure to map each bladeLoad output mesh to the MiscVar%HubLoad mesh"
+typedef	^	RotMiscVarType	ReKi	SigmaCavitCrit	{:}{:}	-	-	 "critical cavitation number-  inception value (above which cavit will occur)"   -
+typedef	^	RotMiscVarType	ReKi	SigmaCavit	{:}{:}	-	-	  "cavitation number at node "   -
+typedef	^	RotMiscVarType	Logical	CavitWarnSet {:}{:}	-	-	  "cavitation warning issued "   -
+typedef	^	RotMiscVarType	ReKi	TwrFB	{:}{:}	    -	-	  "buoyant force per unit length at tower node"   N/m
+typedef	^	RotMiscVarType	ReKi	TwrMB	{:}{:}	    -	-	  "buoyant moment per unit length at tower node"   Nm/m
+typedef	^	RotMiscVarType	ReKi	HubFB	{:}	        -	-	  "buoyant force at hub node"   N
+typedef	^	RotMiscVarType	ReKi	HubMB	{:}  	    -	-	  "buoyant moment at hub node"   Nm
+typedef	^	RotMiscVarType	ReKi	NacFB	{:}	        -	-	  "buoyant force at nacelle (tower top) node"   N
+typedef	^	RotMiscVarType	ReKi	NacMB	{:}  	    -	-	  "buoyant moment at nacelle (tower top) node"   Nm
+typedef	^	RotMiscVarType	MeshType	BladeRootLoad	{:}	-	-	"meshes at blade root; used to compute an integral for mapping the output blade loads to single points (for writing to file only)"	-
+typedef	^	RotMiscVarType	MeshMapType	B_L_2_R_P	{:}	-	-	"mapping data structure to map each bladeLoad output mesh to corresponding MiscVar%BladeRootLoad mesh"
+typedef	^	RotMiscVarType	MeshType	BladeBuoyLoadPoint	{:}	-	-	"point mesh for lumped buoyant blade loads"	-
+typedef	^	RotMiscVarType	MeshType	BladeBuoyLoad	{:}	-	-	"line mesh for per unit length buoyant blade loads"	-
+typedef	^	RotMiscVarType	MeshMapType	B_P_2_B_L	{:}	-	-	"mapping data structure to map buoyant blade point loads (m%BladeBuoyLoadPoint) to buoyant blade line loads (m%BladeBuoyLoad)"
+typedef	^	RotMiscVarType	MeshType	TwrBuoyLoadPoint	-	-	-	"point mesh for lumped buoyant tower loads"	-
+typedef	^	RotMiscVarType	MeshType	TwrBuoyLoad	-	-	-	"line mesh for per unit length buoyant tower loads"	-
+typedef	^	RotMiscVarType	MeshMapType	T_P_2_T_L	-	-	-	"mapping data structure to map buoyant tower point loads (m%TwrBuoyLoadPoint) to buoyant tower line loads (m%TwrBuoyLoad)"
+typedef	^	RotMiscVarType	Logical	FirstWarn_TowerStrike	-	-	-	"flag to avoid printing tower strike multiple times" -
+typedef	^	RotMiscVarType	ReKi	AvgDiskVel	{3}	-	-	"disk-averaged U,V,W (undisturbed)"	m/s
+typedef	^	RotMiscVarType	ReKi	AvgDiskVelDist	{3}	-	-	"disk-averaged U,V,W (disturbed)"	m/s
+# TailFin
+typedef	^	RotMiscVarType	ReKi	TFinAlpha	-	-	-	"Angle of attack for tailfin"
+typedef	^	RotMiscVarType	ReKi	TFinRe   	-	-	-	"Reynolds number for tailfin"
+typedef	^	RotMiscVarType	ReKi	TFinVrel 	-	-	-	"Orthogonal relative velocity nrom at the reference point"
+typedef	^	RotMiscVarType	ReKi	TFinVund_i 	3	-	-	"Undisturbed wind velocity at the reference point of the fin in the inertial system"
+typedef	^	RotMiscVarType	ReKi	TFinVind_i 	3	-	-	"Induced velocity at the reference point of the fin in the inertial system"
+typedef	^	RotMiscVarType	ReKi	TFinVrel_i 	3	-	-	"Relative velocity at the reference point of the fin in the inertial system"
+typedef	^	RotMiscVarType	ReKi	TFinSTV_i 	3	-	-	"Structural velocity at the reference point of the fin in the inertial system"
+typedef	^	RotMiscVarType	ReKi	TFinF_i 	3	-	-	"Forces at the reference point of the fin in the inertial system"
+typedef	^	RotMiscVarType	ReKi	TFinM_i 	3	-	-	"Moments at the reference point of the fin in the inertial system"
+
+typedef	^	MiscVarType	RotMiscVarType	rotors	{:} -	-	"MiscVars for each rotor"	-
+typedef	^	MiscVarType	FVW_InputType	FVW_u	:	-	-	"Inputs to the FVW module"	-
+typedef	^	MiscVarType	FVW_OutputType	FVW_y	-	-	-	"Outputs from the FVW module"	-
+typedef	^	MiscVarType	FVW_MiscVarType	FVW	-	-	-	"MiscVars from the FVW module"	-
+typedef	^	MiscVarType	ReKi            WindPos	{:}{:} - -	"XYZ coordinates to query for wind velocity/acceleration"	-
+typedef	^	MiscVarType	ReKi            WindVel	{:}{:} - -	"XYZ components of wind velocity"	-
+typedef	^	MiscVarType	ReKi            WindAcc	{:}{:} - -	"XYZ components of wind acceleration"	-
+
+# Inflow data storage
+typedef	^	BldInflowType	ReKi	InflowOnBlade	{:}{:}	-	-	"U,V,W at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
+typedef	^	BldInflowType	ReKi	AccelOnBlade	{:}{:}	-	-	"Wind acceleration at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
+typedef	^	RotInflowType	BldInflowType    Bld		{:}	-	-	"Blade Inputs"	-
+typedef	^	RotInflowType	ReKi	InflowOnTower	{:}{:}	-	-	"U,V,W at nodes on the tower"	m/s
+typedef	^	RotInflowType	ReKi	AccelOnTower	{:}{:}	-	-	"Wind acceleration at nodes on the tower"	m/s
+typedef	^	RotInflowType	ReKi	InflowOnHub 	{3}{1}	-	-	"U,V,W at hub"	m/s
+typedef	^	RotInflowType	ReKi	InflowOnNacelle	{3}{1}	-	-	"U,V,W at nacelle"	m/s
+typedef	^	RotInflowType	ReKi	InflowOnTailFin	{3}{1}	-	-	"U,V,W at tailfin"	m/s
+typedef	^	RotInflowType	ReKi	AvgDiskVel	{3}	-	0.0	"disk-averaged U,V,W"	m/s
+typedef	^	AD_InflowType	ReKi	InflowWakeVel	{:}{:}	-	-	"U,V,W at wake points"	m/s
+typedef	^	AD_InflowType	RotInflowType	RotInflow	{:}	-	-	"Inflow on rotor"	-
+typedef	^	MiscVarType	AD_InflowType	Inflow	{:}	-	-	"Inflow storage (size of u for history of inputs)"	-
+
+
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 
@@ -309,6 +396,9 @@ typedef ^   RotParameterType	ReKi	TwrAxCent {:}	    -	-	"Array of tower element 
 typedef	^	RotParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
 typedef	^	RotParameterType	AA_ParameterType	AA	-	-	-	"Parameters for AA module"
 typedef	^	RotParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
+typedef	^	RotParameterType	Jac_u_idxStarts Jac_u_idxStartList	-	-	-	"Starting indices for all Jac_u compenents" -
+typedef	^	RotParameterType	Jac_y_idxStarts Jac_y_idxStartList	-	-	-	"Starting indices for all Jac_u compenents" -
+typedef	^	RotParameterType	Integer	NumExtendedInputs	-	-	-	"number of extended inputs" -
 typedef	^	RotParameterType	ReKi	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
 typedef	^	RotParameterType	ReKi	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states)"
 typedef	^	RotParameterType	Integer	Jac_ny	-	-	-	"number of outputs in jacobian matrix"	-
@@ -365,8 +455,6 @@ typedef ^   ParameterType   FlowFieldType *FlowField -  -   -    "Pointer of Inf
 
 
 # ..... Inputs ....................................................................................................................
-typedef	^	BldInputType	ReKi	InflowOnBlade	{:}{:}	-	-	"U,V,W at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
-typedef	^	BldInputType	ReKi	AccelOnBlade	{:}{:}	-	-	"Wind acceleration at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
 # Define inputs that are contained on a mesh here:
 typedef	^	RotInputType	MeshType	NacelleMotion	-	-	-	"motion on the nacelle"	-
 typedef	^	RotInputType	MeshType	TowerMotion	-	-	-	"motion on the tower"	-
@@ -375,18 +463,10 @@ typedef	^	RotInputType	MeshType	BladeRootMotion	{:}	-	-	"motion on each blade ro
 typedef	^	RotInputType	MeshType	BladeMotion	{:}	-	-	"motion on each blade"	-
 typedef	^	RotInputType	MeshType	TFinMotion	- 	-	-	"motion of tail fin (at tail fin ref point)"	-
 # Define inputs that are not on a mesh here:
-typedef	^	RotInputType	BldInputType    Bld		{:}	-	-	"Blade Inputs"	-
-typedef	^	RotInputType	ReKi	InflowOnTower	{:}{:}	-	-	"U,V,W at nodes on the tower"	m/s
-typedef	^	RotInputType	ReKi	AccelOnTower	{:}{:}	-	-	"Wind acceleration at nodes on the tower"	m/s
-typedef	^	RotInputType	ReKi	InflowOnHub 	{3}{1}	-	-	"U,V,W at hub"	m/s
-typedef	^	RotInputType	ReKi	InflowOnNacelle	{3}{1}	-	-	"U,V,W at nacelle"	m/s
-typedef	^	RotInputType	ReKi	InflowOnTailFin	{3}{1}	-	-	"U,V,W at tailfin"	m/s
-typedef	^	RotInputType	ReKi	AvgDiskVel	{3}	-	0.0	"disk-averaged U,V,W"	m/s
 typedef	^	RotInputType	ReKi	UserProp	{:}{:}	-	-	"Optional user property for interpolating airfoils (per element per blade)" -
 
 
 typedef	^	InputType	RotInputType	rotors	{:}	-	-	"Inputs for each rotor"	-
-typedef	^	InputType	ReKi	InflowWakeVel	{:}{:}	-	-	"U,V,W at wake points"	m/s
 
 
 # ..... Outputs ...................................................................................................................

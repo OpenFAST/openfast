@@ -340,6 +340,10 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
         // Generate extrap/interp routines for module input and output types
         gen_ExtrapInterp(w, mod, "InputType", "DbKi", 1);
         gen_ExtrapInterp(w, mod, "OutputType", "DbKi", 1);
+
+        // If this is the AD15 module make extrap/interp for InflowType
+        if (tolower(mod.name).compare("aerodyn") == 0)
+            gen_ExtrapInterp(w, mod, "InflowType", "DbKi", 1);
     }
 
     // Loop through input and output types if in module

@@ -1153,24 +1153,14 @@ SUBROUTINE SteadyStatePrescribedInputs( caseData, p_FAST, y_FAST, m_FAST, ED, BD
       !AD%Input(1)%rotors(1)%BladeMotion(k)%RotationAcc = 0.0_ReKi
       AD%Input(1)%rotors(1)%BladeMotion(k)%TranslationAcc = 0.0_ReKi
    END DO
-   
-   !> begin @todo <This needs to be updated for the new InflowWind pointers... possibly with the ADI module?>
-   do  k = 1,size(AD%Input(1)%rotors(1)%Bld)
-      AD%Input(1)%rotors(1)%Bld(k)%InflowOnBlade(  1,  :) = caseData%WindSpeed
-      AD%Input(1)%rotors(1)%Bld(k)%InflowOnBlade(  2:3,:) = 0.0_ReKi
-   end do
-   AD%Input(1)%rotors(1)%InflowOnHub(    1  ,1) = caseData%WindSpeed
-   AD%Input(1)%rotors(1)%InflowOnHub(    2:3,1) = 0.0_ReKi
-   AD%Input(1)%rotors(1)%InflowOnNacelle(1  ,1) = caseData%WindSpeed
-   AD%Input(1)%rotors(1)%InflowOnNacelle(2:3,1) = 0.0_ReKi
-   AD%Input(1)%rotors(1)%InflowOnTailFin(1  ,1) = caseData%WindSpeed
-   AD%Input(1)%rotors(1)%InflowOnTailFin(2:3,1) = 0.0_ReKi
-   AD%Input(1)%rotors(1)%InflowOnTower = 0.0_ReKi
-   !> end @todo <This needs to be updated for the new InflowWind pointers... possibly with the ADI module?>
-   
-   AD%Input(1)%rotors(1)%UserProp      = 0.0_ReKi
-   
-   AD%Input(1)%rotors(1)%AvgDiskVel    = AD%Input(1)%rotors(1)%Bld(1)%InflowOnBlade(:,1)
+  
+   ! Set FlowField information -- AD calculates everything from the data stored in the FlowField pointer
+   AD%p%FlowField%Uniform%VelH(:)    = caseData%WindSpeed
+   AD%p%FlowField%Uniform%LinShrV(:) = 0.0_ReKi
+   AD%p%FlowField%Uniform%AngleH(:)  = 0.0_ReKi
+   AD%p%FlowField%PropagationDir     = 0.0_ReKi
+
+   AD%Input(1)%rotors(1)%UserProp       = 0.0_ReKi
    
    
 END SUBROUTINE SteadyStatePrescribedInputs
@@ -2084,6 +2074,7 @@ SUBROUTINE LinearSS_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, y_ED, BD, Mesh
    INTEGER(IntKi)                               :: AD_Start    ! starting index of dUdy (column) where particular AD fields are located
    INTEGER(IntKi)                               :: ED_Out_Start! starting index of dUdy (row) where particular ED fields are located
    INTEGER(IntKi)                               :: BD_Out_Start! starting index of dUdy (row) where particular BD fields are located
+   LOGICAL                                      :: FieldMask(FIELDMASK_SIZE)
 !   INTEGER(IntKi)                               :: ErrStat2
 !   CHARACTER(ErrMsgLen)                         :: ErrMsg2 
    CHARACTER(*), PARAMETER                      :: RoutineName = 'LinearSS_AD_InputSolve_NoIfW_dy'
@@ -2091,7 +2082,15 @@ SUBROUTINE LinearSS_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, y_ED, BD, Mesh
    
    ErrStat = ErrID_None
    ErrMsg  = ""
-               
+
+   ! Only assemble from the following source fields
+   FieldMask(MASKID_TRANSLATIONDISP) = .true.
+   FieldMask(MASKID_ORIENTATION)     = .true.
+   FieldMask(MASKID_TRANSLATIONVEL)  = .true.
+   FieldMask(MASKID_ROTATIONVEL)     = .false.
+   FieldMask(MASKID_TRANSLATIONACC)  = .false.
+   FieldMask(MASKID_ROTATIONACC)     = .false.
+
    !-------------------------------------------------------------------------------------------------
    ! Set the inputs from ElastoDyn and/or BeamDyn:
    !-------------------------------------------------------------------------------------------------
@@ -2107,7 +2106,7 @@ SUBROUTINE LinearSS_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, y_ED, BD, Mesh
          
          AD_Start = SS_Indx_u_AD_Blade_Start(u_AD, p_FAST, y_FAST, k)   ! start of u_AD%BladeMotion(k)%TranslationDisp field
          ED_Out_Start = SS_Indx_y_ED_Blade_Start(y_ED, p_FAST, y_FAST, k) ! start of y_ED%BladeLn2Mesh(k)%TranslationDisp field
-         CALL Assemble_dUdy_Motions(y_ED%BladeLn2Mesh(k), u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), AD_Start, ED_Out_Start, dUdy, skipRotVel=.true.)
+         CALL Assemble_dUdy_Motions(y_ED%BladeLn2Mesh(k), u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), AD_Start, ED_Out_Start, dUdy, FieldMask)
          
       END DO
       
@@ -2120,7 +2119,7 @@ SUBROUTINE LinearSS_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, y_ED, BD, Mesh
          AD_Start     = SS_Indx_u_AD_Blade_Start(u_AD, p_FAST, y_FAST, k)     ! start of u_AD%BladeMotion(k)%TranslationDisp field
          BD_Out_Start = y_FAST%Lin%Modules(Module_BD)%Instance(k)%LinStartIndx(LIN_OUTPUT_COL)
          
-         CALL Assemble_dUdy_Motions(BD%y(k)%BldMotion, u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), AD_Start, BD_Out_Start, dUdy, skipRotVel=.true.)
+         CALL Assemble_dUdy_Motions(BD%y(k)%BldMotion, u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), AD_Start, BD_Out_Start, dUdy, FieldMask)
       END DO
       
    END IF

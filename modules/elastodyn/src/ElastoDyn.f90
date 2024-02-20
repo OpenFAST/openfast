@@ -9000,8 +9000,8 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
                  , Orientation     = .TRUE.    &
                  , TranslationVel  = .TRUE.    &
                  , RotationVel     = .TRUE.    &
-                 , TranslationAcc  = .TRUE.    &
-                 , RotationAcc     = .TRUE.    &   
+                 , TranslationAcc  = .FALSE.   &
+                 , RotationAcc     = .FALSE.   &   
                  , ErrStat  = ErrStat2         &
                  , ErrMess  = ErrMsg2          )
 

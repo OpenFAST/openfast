@@ -26,7 +26,7 @@ implicit none
 
 public IfW_FlowField_GetVelAcc
 public IfW_UniformField_CalcAccel, IfW_Grid3DField_CalcAccel
-public IfW_UniformWind_GetOP
+public IfW_UniformWind_GetOP, IfW_UniformWind_Perturb       ! for linearization
 public Grid3D_to_Uniform, Uniform_to_Grid3D
 
 integer(IntKi), parameter  :: WindProfileType_None = -1     !< don't add wind profile; already included in input
@@ -729,8 +729,10 @@ subroutine IfW_UniformWind_GetOP(UF, t, InterpCubic, OP_out)
 
    OP_out(1) = real(op%VelH, R8Ki)
    OP_out(2) = real(op%ShrV, R8Ki)
+   OP_out(3) = real(op%AngleH, R8Ki)
 
 end subroutine
+
 
 subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, AllowExtrap, &
                                VelCell, AccCell, Xi, Is3D, ErrStat, ErrMsg)
