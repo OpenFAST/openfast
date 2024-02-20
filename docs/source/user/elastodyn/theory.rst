@@ -190,7 +190,7 @@ if :math:`\omega=0` and :math:`\dot{\omega}=0`:
    M_f = -\text{min}(\mu_s\bar{D}\times|\text{min}(0,F_z)|,|M_z|)\times\text{sign}(M_z)
 
 
-where :math:`\bar{D}` is the effective yaw-bearing race diameter, :math:`\mu_d` is the dynamic friction coefficient, :math:`\mu_s` is the static friction coefficient,:math:`F_z` is effective axial load on yaw-bearing, :math:`M-z` is the external torque on yaw-bearing.
+where :math:`\bar{D}` is the effective yaw-bearing race diameter, :math:`\mu_d` is the dynamic friction coefficient, :math:`\mu_s` is the static friction coefficient, :math:`F_z` is effective axial load on yaw-bearing, :math:`M-z` is the external torque on yaw-bearing.
 The static 'stiction' (where the static contribution exceeds the dynamic Coulomb friction) is only applied if both the yaw rotational velocity and acceleration at the current time-step are zero.
 The static portion of the friction is omitted if the rotational acceleration is not null, (sign(0) is taken as 1).
 This is to account for the fact that a 'warm' joint may not feel stiction when crossing through zero velocity in a dynamic sense :cite:`ed-hammam2023`

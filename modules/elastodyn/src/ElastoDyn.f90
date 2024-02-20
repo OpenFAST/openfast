@@ -4463,9 +4463,228 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 
 
 !   ..... Developer must add checking for invalid inputs here: .....
+if (p%BD4Blades) then
+   startIndx = 1
+else
+   startIndx = p%NumBl+1
+end if
 
+   DO I = startIndx,3  ! Invalid blades
+
+         ! motions
+
+      InvalidOutput(   TipDxc(  I) ) = .TRUE.
+      InvalidOutput(   TipDyc(  I) ) = .TRUE.
+      InvalidOutput(   TipDzc(  I) ) = .TRUE.
+      InvalidOutput(   TipDxb(  I) ) = .TRUE.
+      InvalidOutput(   TipDyb(  I) ) = .TRUE.
+      InvalidOutput(  TipALxb(  I) ) = .TRUE.
+      InvalidOutput(  TipALyb(  I) ) = .TRUE.
+      InvalidOutput(  TipALzb(  I) ) = .TRUE.
+      InvalidOutput(  TipALgxb(  I) ) = .TRUE.
+      InvalidOutput(  TipALgyb(  I) ) = .TRUE.
+      InvalidOutput(  TipALgzb(  I) ) = .TRUE.
+      InvalidOutput(  TipRDxb(  I) ) = .TRUE.
+      InvalidOutput(  TipRDyb(  I) ) = .TRUE.
+      InvalidOutput(  TipRDzc(  I) ) = .TRUE.
+      InvalidOutput( TipClrnc(  I) ) = .TRUE.
+
+         ! loads
+
+      InvalidOutput(  RootFxc(  I) ) = .TRUE.
+      InvalidOutput(  RootFyc(  I) ) = .TRUE.
+      InvalidOutput(  RootFzc(  I) ) = .TRUE.
+      InvalidOutput(  RootFxb(  I) ) = .TRUE.
+      InvalidOutput(  RootFyb(  I) ) = .TRUE.
+      InvalidOutput(  RootMxc(  I) ) = .TRUE.
+      InvalidOutput(  RootMyc(  I) ) = .TRUE.
+      InvalidOutput(  RootMzc(  I) ) = .TRUE.
+      InvalidOutput(  RootMxb(  I) ) = .TRUE.
+      InvalidOutput(  RootMyb(  I) ) = .TRUE.
+
+         ! Blade node motions
+
+      InvalidOutput(  SpnALxb(:,I) ) = .TRUE.
+      InvalidOutput(  SpnALyb(:,I) ) = .TRUE.
+      InvalidOutput(  SpnALzb(:,I) ) = .TRUE.
+
+      InvalidOutput(  SpnALgxb(:,I) ) = .TRUE.
+      InvalidOutput(  SpnALgyb(:,I) ) = .TRUE.
+      InvalidOutput(  SpnALgzb(:,I) ) = .TRUE.
+
+      InvalidOutput(  SpnTDxb(:,I) ) = .TRUE.
+      InvalidOutput(  SpnTDyb(:,I) ) = .TRUE.
+      InvalidOutput(  SpnTDzb(:,I) ) = .TRUE.
+
+      InvalidOutput(  SpnRDxb(:,I) ) = .TRUE.
+      InvalidOutput(  SpnRDyb(:,I) ) = .TRUE.
+      InvalidOutput(  SpnRDzb(:,I) ) = .TRUE.
+
+         ! Blade node loads
+
+      InvalidOutput(  SpnMLxb(:,I) ) = .TRUE.
+      InvalidOutput(  SpnMLyb(:,I) ) = .TRUE.
+      InvalidOutput(  SpnMLzb(:,I) ) = .TRUE.
+
+      InvalidOutput(  SpnFLxb(:,I) ) = .TRUE.
+      InvalidOutput(  SpnFLyb(:,I) ) = .TRUE.
+      InvalidOutput(  SpnFLzb(:,I) ) = .TRUE.
+
+   END DO
+
+
+   DO I = 1,p%NumBl
+
+      DO J = p%NBlGages+1,9 ! Invalid blade gages
+
+         InvalidOutput(  SpnALxb(J,I) ) = .TRUE.
+         InvalidOutput(  SpnALyb(J,I) ) = .TRUE.
+         InvalidOutput(  SpnALzb(J,I) ) = .TRUE.
+
+         InvalidOutput(  SpnALgxb(J,I) ) = .TRUE.
+         InvalidOutput(  SpnALgyb(J,I) ) = .TRUE.
+         InvalidOutput(  SpnALgzb(J,I) ) = .TRUE.
+
+         InvalidOutput(  SpnTDxb(J,I) ) = .TRUE.
+         InvalidOutput(  SpnTDyb(J,I) ) = .TRUE.
+         InvalidOutput(  SpnTDzb(J,I) ) = .TRUE.
+
+         InvalidOutput(  SpnRDxb(J,I) ) = .TRUE.
+         InvalidOutput(  SpnRDyb(J,I) ) = .TRUE.
+         InvalidOutput(  SpnRDzb(J,I) ) = .TRUE.
+
+            ! Loads
+
+         InvalidOutput(  SpnMLxb(J,I) ) = .TRUE.
+         InvalidOutput(  SpnMLyb(J,I) ) = .TRUE.
+         InvalidOutput(  SpnMLzb(J,I) ) = .TRUE.
+
+         InvalidOutput(  SpnFLxb(J,I) ) = .TRUE.
+         InvalidOutput(  SpnFLyb(J,I) ) = .TRUE.
+         InvalidOutput(  SpnFLzb(J,I) ) = .TRUE.
+
+
+      END DO !J
+
+   END DO !I
+
+   DO J = p%NTwGages+1,9 !Invalid tower gages
+
+         ! Motions
+
+      InvalidOutput( TwHtALxt(J) ) = .TRUE.
+      InvalidOutput( TwHtALyt(J) ) = .TRUE.
+      InvalidOutput( TwHtALzt(J) ) = .TRUE.
+
+      InvalidOutput( TwHtALgxt(J) ) = .TRUE.
+      InvalidOutput( TwHtALgyt(J) ) = .TRUE.
+      InvalidOutput( TwHtALgzt(J) ) = .TRUE.
+
+      InvalidOutput( TwHtTDxt(J) ) = .TRUE.
+      InvalidOutput( TwHtTDyt(J) ) = .TRUE.
+      InvalidOutput( TwHtTDzt(J) ) = .TRUE.
+
+      InvalidOutput( TwHtRDxt(J) ) = .TRUE.
+      InvalidOutput( TwHtRDyt(J) ) = .TRUE.
+      InvalidOutput( TwHtRDzt(J) ) = .TRUE.
+
+      InvalidOutput( TwHtTPxi(J) ) = .TRUE.
+      InvalidOutput( TwHtTPyi(J) ) = .TRUE.
+      InvalidOutput( TwHtTPzi(J) ) = .TRUE.
+
+      InvalidOutput( TwHtRPxi(J) ) = .TRUE.
+      InvalidOutput( TwHtRPyi(J) ) = .TRUE.
+      InvalidOutput( TwHtRPzi(J) ) = .TRUE.
+
+         ! Loads
+
+      InvalidOutput( TwHtMLxt(J) ) = .TRUE.
+      InvalidOutput( TwHtMLyt(J) ) = .TRUE.
+      InvalidOutput( TwHtMLzt(J) ) = .TRUE.
+
+      InvalidOutput( TwHtFLxt(J) ) = .TRUE.
+      InvalidOutput( TwHtFLyt(J) ) = .TRUE.
+      InvalidOutput( TwHtFLzt(J) ) = .TRUE.
+
+   END DO
+
+
+   ! Invalid outputs based on number of blades
+   IF ( p%NumBl < 3 ) THEN
+         InvalidOutput(PtchPMzc3) = .TRUE.
+         InvalidOutput(   Q_B3E1) = .TRUE.
+         InvalidOutput(   Q_B3F1) = .TRUE.
+         InvalidOutput(   Q_B3F2) = .TRUE.
+         InvalidOutput(  QD_B3E1) = .TRUE.
+         InvalidOutput(  QD_B3F1) = .TRUE.
+         InvalidOutput(  QD_B3F2) = .TRUE.
+         InvalidOutput( QD2_B3E1) = .TRUE.
+         InvalidOutput( QD2_B3F1) = .TRUE.
+         InvalidOutput( QD2_B3F2) = .TRUE.      
+   ENDIF
+   IF ( p%NumBl < 2 ) THEN
+         InvalidOutput(PtchPMzc2) = .TRUE.
+         InvalidOutput(   Q_B2E1) = .TRUE.
+         InvalidOutput(   Q_B2F1) = .TRUE.
+         InvalidOutput(   Q_B2F2) = .TRUE.
+         InvalidOutput(  QD_B2E1) = .TRUE.
+         InvalidOutput(  QD_B2F1) = .TRUE.
+         InvalidOutput(  QD_B2F2) = .TRUE.
+         InvalidOutput( QD2_B2E1) = .TRUE.
+         InvalidOutput( QD2_B2F1) = .TRUE.
+         InvalidOutput( QD2_B2F2) = .TRUE.      
+   ENDIF
+   ! 1-bladed or 3-bladed, no teeter
+   IF ( p%NumBl /= 2 ) THEN
+      InvalidOutput(  TeetPya) = .TRUE.
+      InvalidOutput(  TeetVya) = .TRUE.
+      InvalidOutput(  TeetAya) = .TRUE.
+
+      InvalidOutput(   Q_Teet) = .TRUE.
+      InvalidOutput(  QD_Teet) = .TRUE.
+      InvalidOutput( QD2_Teet) = .TRUE.
+   END IF
+   
+   InvalidOutput(HSSBrTq) = p%method == Method_RK4
+
+    IF ( p%BD4Blades ) THEN
+      InvalidOutput(   Q_B1E1) = .TRUE.
+      InvalidOutput(   Q_B1F1) = .TRUE.
+      InvalidOutput(   Q_B1F2) = .TRUE.
+
+      InvalidOutput(  QD_B1E1) = .TRUE.
+      InvalidOutput(  QD_B1F1) = .TRUE.
+      InvalidOutput(  QD_B1F2) = .TRUE.
+
+      InvalidOutput( QD2_B1E1) = .TRUE.
+      InvalidOutput( QD2_B1F1) = .TRUE.
+      InvalidOutput( QD2_B1F2) = .TRUE.      
+      
+      InvalidOutput(   Q_B2E1) = .TRUE.
+      InvalidOutput(   Q_B2F1) = .TRUE.
+      InvalidOutput(   Q_B2F2) = .TRUE.
+
+      InvalidOutput(  QD_B2E1) = .TRUE.
+      InvalidOutput(  QD_B2F1) = .TRUE.
+      InvalidOutput(  QD_B2F2) = .TRUE.
+
+      InvalidOutput( QD2_B2E1) = .TRUE.
+      InvalidOutput( QD2_B2F1) = .TRUE.
+      InvalidOutput( QD2_B2F2) = .TRUE.
+      
+      InvalidOutput(   Q_B3E1) = .TRUE.
+      InvalidOutput(   Q_B3F1) = .TRUE.
+      InvalidOutput(   Q_B3F2) = .TRUE.
+
+      InvalidOutput(  QD_B3E1) = .TRUE.
+      InvalidOutput(  QD_B3F1) = .TRUE.
+      InvalidOutput(  QD_B3F2) = .TRUE.
+
+      InvalidOutput( QD2_B3E1) = .TRUE.
+      InvalidOutput( QD2_B3F1) = .TRUE.
+      InvalidOutput( QD2_B3F2) = .TRUE.      
+   END IF
 !   ................. End of validity checking .................
-
 
    !-------------------------------------------------------------------------------------------------
    ! Allocate and set index, name, and units for the output channels
@@ -6403,7 +6622,7 @@ SUBROUTINE YawFriction( t, p, Fz, Mzz, Omg, OmgDot, YawFriMf )
       ! Passed Variables:
    REAL(DbKi), INTENT(IN)             :: t                                       !< simulation time
    TYPE(ED_ParameterType), INTENT(IN) :: p                                       !< parameters from the structural dynamics module
-   REAL(R8Ki), INTENT(IN )            :: Fz, Mzz                                 !< The teeter deflection, x%QT(DOF_Teet).
+   REAL(R8Ki), INTENT(IN )            :: Fz, Mzz                                 !< Effective yaw bearing force and external yaw bearing torque
    REAL(R8Ki), INTENT(IN )            :: Omg                                !< The yaw rate (rotational speed), x%QDT(DOF_Yaw).
    REAL(R8Ki), INTENT(IN )            :: OmgDot                             !< The yaw acceleration (derivative of rotational speed), x%QD2T(DOF_Yaw).
    
@@ -6413,7 +6632,8 @@ SUBROUTINE YawFriction( t, p, Fz, Mzz, Omg, OmgDot, YawFriMf )
    REAL(ReKi)                         :: temp                                   ! It takes teh value of Fz or -1.
 
    
-   SELECT CASE ( p%YawFrctMod  ) ! Which friction model are we using? 0=None, 1=does not use Fz, 2=does use Fz
+   SELECT CASE ( p%YawFrctMod  ) 
+   ! Yaw-friction model {0: none, 1: does not use Fz at yaw bearing, 2: does, 3: user defined model} (switch)
 
    CASE ( 0_IntKi )              ! None!
 
@@ -6426,7 +6646,7 @@ SUBROUTINE YawFriction( t, p, Fz, Mzz, Omg, OmgDot, YawFriMf )
       temp = -1.0_ReKi  !In the case of YawFrctMod=1 
       
       IF  (p%YawFrctMod .EQ. 2) THEN   
-        temp = MIN(0.0_R8Ki, Fz)  !In the case of YawFrctMod=1 
+        temp = MIN(0.0_R8Ki, Fz)  !In the case of YawFrctMod=2 
       ENDIF
       
       IF  (EqualRealNos( Omg, 0.0_R8Ki ) )THEN

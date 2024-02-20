@@ -234,11 +234,11 @@ Rotor-Teeter
 Yaw-Friction
 ~~~~~~~~~~~~
 
-**YawFrctMod**  - Yaw-friction model {0: none, 1: does not use Fz at yaw bearing, 2: does, 3: user defined model}
+**YawFrctMod**  - Yaw-friction model {0: none, 1: friction without Fz term at the yaw bearing, 2: friction includes Fz term at yaw bearing, 3: user defined model} 
 
-**M_CSmax**     - Maximum Coulomb friction torque (N-m)[Fz*mu_s*D_eff when YawFrctMod=1 and mu_s*D_eff when YawFrctMod=2]
+**M_CSmax**     - Maximum Coulomb friction torque (N-m)[mu_s*D_eff when YawFrctMod=1 and Fz*mu_s*D_eff when YawFrctMod=2]
 
-**M_CD**        - Dynamic friction moment at null yaw rate (N-m) [Fz*mu_d*D_eff when YawFrctMod=1 and mu_d*D_eff when YawFrctMod=2]
+**M_CD**        - Dynamic friction moment at null yaw rate (N-m) [mu_d*D_eff when YawFrctMod=1 and Fz*mu_d*D_eff when YawFrctMod=2]
 
 **sig_v**       - Viscous friction coefficient (N-m/(rad/s))
 
