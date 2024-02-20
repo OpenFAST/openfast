@@ -314,17 +314,20 @@ IMPLICIT NONE
     TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
     INTEGER(IntKi)  :: iVarDBEMT = 0      !<  [-]
     INTEGER(IntKi)  :: iVarUA = 0      !<  [-]
-    INTEGER(IntKi)  :: iVarTowerMotion = 0      !<  [-]
     INTEGER(IntKi)  :: iVarNacelleMotion = 0      !<  [-]
     INTEGER(IntKi)  :: iVarHubMotion = 0      !<  [-]
+    INTEGER(IntKi)  :: iVarTFinMotion = 0      !<  [-]
+    INTEGER(IntKi)  :: iVarTowerMotion = 0      !<  [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladeRootMotion      !<  [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladeMotion      !<  [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarInflowOnBlade      !<  [-]
-    INTEGER(IntKi)  :: iVarInflowOnTower = 0      !<  [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarUserProp      !<  [-]
-    INTEGER(IntKi)  :: iVarTowerLoad = 0      !<  [-]
-    INTEGER(IntKi)  :: iVarHubLoad = 0      !<  [-]
+    INTEGER(IntKi)  :: iVarHWindSpeed = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: iVarPLexp = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: iVarPropagationDir = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: iVarNacelleLoad = 0      !<  [-]
+    INTEGER(IntKi)  :: iVarHubLoad = 0      !<  [-]
+    INTEGER(IntKi)  :: iVarTFinLoad = 0      !<  [-]
+    INTEGER(IntKi)  :: iVarTowerLoad = 0      !<  [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladeLoad      !<  [-]
     INTEGER(IntKi)  :: iVarWriteOutput = 0      !<  [-]
     INTEGER(IntKi)  :: NumBlades = 0_IntKi      !< Number of blades on the turbine [-]
@@ -3002,9 +3005,10 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
    end if
    DstRotParameterTypeData%iVarDBEMT = SrcRotParameterTypeData%iVarDBEMT
    DstRotParameterTypeData%iVarUA = SrcRotParameterTypeData%iVarUA
-   DstRotParameterTypeData%iVarTowerMotion = SrcRotParameterTypeData%iVarTowerMotion
    DstRotParameterTypeData%iVarNacelleMotion = SrcRotParameterTypeData%iVarNacelleMotion
    DstRotParameterTypeData%iVarHubMotion = SrcRotParameterTypeData%iVarHubMotion
+   DstRotParameterTypeData%iVarTFinMotion = SrcRotParameterTypeData%iVarTFinMotion
+   DstRotParameterTypeData%iVarTowerMotion = SrcRotParameterTypeData%iVarTowerMotion
    if (allocated(SrcRotParameterTypeData%iVarBladeRootMotion)) then
       LB(1:1) = lbound(SrcRotParameterTypeData%iVarBladeRootMotion, kind=B8Ki)
       UB(1:1) = ubound(SrcRotParameterTypeData%iVarBladeRootMotion, kind=B8Ki)
@@ -3029,19 +3033,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
       end if
       DstRotParameterTypeData%iVarBladeMotion = SrcRotParameterTypeData%iVarBladeMotion
    end if
-   if (allocated(SrcRotParameterTypeData%iVarInflowOnBlade)) then
-      LB(1:1) = lbound(SrcRotParameterTypeData%iVarInflowOnBlade, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotParameterTypeData%iVarInflowOnBlade, kind=B8Ki)
-      if (.not. allocated(DstRotParameterTypeData%iVarInflowOnBlade)) then
-         allocate(DstRotParameterTypeData%iVarInflowOnBlade(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%iVarInflowOnBlade.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotParameterTypeData%iVarInflowOnBlade = SrcRotParameterTypeData%iVarInflowOnBlade
-   end if
-   DstRotParameterTypeData%iVarInflowOnTower = SrcRotParameterTypeData%iVarInflowOnTower
    if (allocated(SrcRotParameterTypeData%iVarUserProp)) then
       LB(1:1) = lbound(SrcRotParameterTypeData%iVarUserProp, kind=B8Ki)
       UB(1:1) = ubound(SrcRotParameterTypeData%iVarUserProp, kind=B8Ki)
@@ -3054,9 +3045,13 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
       end if
       DstRotParameterTypeData%iVarUserProp = SrcRotParameterTypeData%iVarUserProp
    end if
-   DstRotParameterTypeData%iVarTowerLoad = SrcRotParameterTypeData%iVarTowerLoad
-   DstRotParameterTypeData%iVarHubLoad = SrcRotParameterTypeData%iVarHubLoad
+   DstRotParameterTypeData%iVarHWindSpeed = SrcRotParameterTypeData%iVarHWindSpeed
+   DstRotParameterTypeData%iVarPLexp = SrcRotParameterTypeData%iVarPLexp
+   DstRotParameterTypeData%iVarPropagationDir = SrcRotParameterTypeData%iVarPropagationDir
    DstRotParameterTypeData%iVarNacelleLoad = SrcRotParameterTypeData%iVarNacelleLoad
+   DstRotParameterTypeData%iVarHubLoad = SrcRotParameterTypeData%iVarHubLoad
+   DstRotParameterTypeData%iVarTFinLoad = SrcRotParameterTypeData%iVarTFinLoad
+   DstRotParameterTypeData%iVarTowerLoad = SrcRotParameterTypeData%iVarTowerLoad
    if (allocated(SrcRotParameterTypeData%iVarBladeLoad)) then
       LB(1:1) = lbound(SrcRotParameterTypeData%iVarBladeLoad, kind=B8Ki)
       UB(1:1) = ubound(SrcRotParameterTypeData%iVarBladeLoad, kind=B8Ki)
@@ -3403,9 +3398,6 @@ subroutine AD_DestroyRotParameterType(RotParameterTypeData, ErrStat, ErrMsg)
    if (allocated(RotParameterTypeData%iVarBladeMotion)) then
       deallocate(RotParameterTypeData%iVarBladeMotion)
    end if
-   if (allocated(RotParameterTypeData%iVarInflowOnBlade)) then
-      deallocate(RotParameterTypeData%iVarInflowOnBlade)
-   end if
    if (allocated(RotParameterTypeData%iVarUserProp)) then
       deallocate(RotParameterTypeData%iVarUserProp)
    end if
@@ -3512,17 +3504,20 @@ subroutine AD_PackRotParameterType(RF, Indata)
    end if
    call RegPack(RF, InData%iVarDBEMT)
    call RegPack(RF, InData%iVarUA)
-   call RegPack(RF, InData%iVarTowerMotion)
    call RegPack(RF, InData%iVarNacelleMotion)
    call RegPack(RF, InData%iVarHubMotion)
+   call RegPack(RF, InData%iVarTFinMotion)
+   call RegPack(RF, InData%iVarTowerMotion)
    call RegPackAlloc(RF, InData%iVarBladeRootMotion)
    call RegPackAlloc(RF, InData%iVarBladeMotion)
-   call RegPackAlloc(RF, InData%iVarInflowOnBlade)
-   call RegPack(RF, InData%iVarInflowOnTower)
    call RegPackAlloc(RF, InData%iVarUserProp)
-   call RegPack(RF, InData%iVarTowerLoad)
-   call RegPack(RF, InData%iVarHubLoad)
+   call RegPack(RF, InData%iVarHWindSpeed)
+   call RegPack(RF, InData%iVarPLexp)
+   call RegPack(RF, InData%iVarPropagationDir)
    call RegPack(RF, InData%iVarNacelleLoad)
+   call RegPack(RF, InData%iVarHubLoad)
+   call RegPack(RF, InData%iVarTFinLoad)
+   call RegPack(RF, InData%iVarTowerLoad)
    call RegPackAlloc(RF, InData%iVarBladeLoad)
    call RegPack(RF, InData%iVarWriteOutput)
    call RegPack(RF, InData%NumBlades)
@@ -3638,17 +3633,20 @@ subroutine AD_UnPackRotParameterType(RF, OutData)
    end if
    call RegUnpack(RF, OutData%iVarDBEMT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarUA); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarTowerMotion); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarNacelleMotion); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarHubMotion); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarTFinMotion); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarTowerMotion); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%iVarBladeRootMotion); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%iVarBladeMotion); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iVarInflowOnBlade); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarInflowOnTower); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%iVarUserProp); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarTowerLoad); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarHubLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarHWindSpeed); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarPLexp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarPropagationDir); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarNacelleLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarHubLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarTFinLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarTowerLoad); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%iVarBladeLoad); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarWriteOutput); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumBlades); if (RegCheckErr(RF, RoutineName)) return

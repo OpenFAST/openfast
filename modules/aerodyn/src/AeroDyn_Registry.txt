@@ -266,17 +266,20 @@ typedef	^	OtherStateType	ReKi	WakeLocationPoints	{:}{:}	-	-	"wake points velocit
 typedef	^	RotParameterType	ModVarsType	&Vars	-	-	-	"Module Variables"
 typedef	^	RotParameterType	IntKi	iVarDBEMT	-	0	-	""	-
 typedef	^	RotParameterType	IntKi	iVarUA	-	0	-	""	-
-typedef	^	RotParameterType	IntKi	iVarTowerMotion	-	0	-	""	-
 typedef	^	RotParameterType	IntKi	iVarNacelleMotion	-	0	-	""	-
 typedef	^	RotParameterType	IntKi	iVarHubMotion	-	0	-	""	-
+typedef	^	RotParameterType	IntKi	iVarTFinMotion	-	0	-	""	-
+typedef	^	RotParameterType	IntKi	iVarTowerMotion	-	0	-	""	-
 typedef	^	RotParameterType	IntKi	iVarBladeRootMotion	{:}	-	-	""	-
 typedef	^	RotParameterType	IntKi	iVarBladeMotion	{:}	-	-	""	-
-typedef	^	RotParameterType	IntKi	iVarInflowOnBlade	{:}	-	-	""	-
-typedef	^	RotParameterType	IntKi	iVarInflowOnTower	-	0	-	""	-
 typedef	^	RotParameterType	IntKi	iVarUserProp	{:}	-	-	""	-
-typedef	^	RotParameterType	IntKi	iVarTowerLoad	-	0	-	""	-
-typedef	^	RotParameterType	IntKi	iVarHubLoad	-	0	-	""	-
+typedef	^	RotParameterType	IntKi	iVarHWindSpeed	-	-	-	""	-
+typedef	^	RotParameterType	IntKi	iVarPLexp	-	-	-	""	-
+typedef	^	RotParameterType	IntKi	iVarPropagationDir	-	-	-	""	-
 typedef	^	RotParameterType	IntKi	iVarNacelleLoad	-	0	-	""	-
+typedef	^	RotParameterType	IntKi	iVarHubLoad	-	0	-	""	-
+typedef	^	RotParameterType	IntKi	iVarTFinLoad	-	0	-	""	-
+typedef	^	RotParameterType	IntKi	iVarTowerLoad	-	0	-	""	-
 typedef	^	RotParameterType	IntKi	iVarBladeLoad	{:}	-	-	""	-
 typedef	^	RotParameterType	IntKi	iVarWriteOutput	-	0	-	""	-
 typedef	^	RotParameterType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"	-
