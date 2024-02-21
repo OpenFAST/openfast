@@ -4486,14 +4486,19 @@ SUBROUTINE Assemble_dUdy_Motions(y, u, MeshMap, BlockRowStart, BlockColStart, dU
    TYPE(MeshType),    INTENT(IN)     :: y                      !< the output (source) mesh that is transfering motions
    TYPE(MeshType),    INTENT(IN)     :: u                      !< the input (destination) mesh that is receiving motions
    TYPE(MeshMapType), INTENT(IN)     :: MeshMap                !< the mesh mapping from y to u
-   INTEGER(IntKi),    INTENT(IN)     :: BlockRowStart          !< the index of the row defining the block of dUdy to be set
-   INTEGER(IntKi),    INTENT(IN)     :: BlockColStart          !< the index of the column defining the block of dUdy to be set
+   INTEGER(IntKi),    INTENT(IN)     :: BlockRowStart          !< the index of the row defining the block of dUdy to be set (u)
+   INTEGER(IntKi),    INTENT(IN)     :: BlockColStart          !< the index of the column defining the block of dUdy to be set (y)
    REAL(R8Ki),        INTENT(INOUT)  :: dUdy(:,:)              !< full Jacobian matrix
    LOGICAL, OPTIONAL, INTENT(IN   )  :: FieldMaskIn(FIELDMASK_SIZE) !< which source fields to do
    
    INTEGER(IntKi)                    :: row
    INTEGER(IntKi)                    :: col
    LOGICAL                           :: FieldMask(FIELDMASK_SIZE) !< which source fields to do
+
+   ! Fields: destination u mesh (row) may not have all fields.  For some modules, a field may be skipped in
+   !         the sequence. A separate counting of fields before the current field must be tracked.
+   !         It is assumed that the source mesh is complete and contains all fields
+   integer(IntKi)                    :: uFieldsBefore
 
    if (present(FieldMaskIn)) then
       FieldMask = FieldMaskIn
@@ -4514,90 +4519,97 @@ SUBROUTINE Assemble_dUdy_Motions(y, u, MeshMap, BlockRowStart, BlockColStart, dU
 !! \f$M_{ta\_uS}\f$ is modmesh_mapping::meshmaplinearizationtype::ta_uS \n
 !! \f$M_{ta\_rv}\f$ is modmesh_mapping::meshmaplinearizationtype::ta_rv \n
 
-      !*** row for translational displacement ***
-      if (FieldMask(MASKID_TRANSLATIONDISP)) then
-         ! source translational displacement to destination translational displacement:
-         row = BlockRowStart                    ! start of u%TranslationDisp field
-         col = BlockColStart                    ! start of y%TranslationDisp field
-         call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+   uFieldsBefore = 0
 
-         ! source orientation to destination translational displacement:
-         row = BlockRowStart                    ! start of u%TranslationDisp field
-         col = BlockColStart + y%NNodes*3       ! start of y%Orientation field [skip 1 field with 3 components]
-         call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
-      endif
+   !*** row for translational displacement ***
+   if (FieldMask(MASKID_TRANSLATIONDISP)) then
+      ! source translational displacement to destination translational displacement:
+      row = BlockRowStart                    ! start of u%TranslationDisp field
+      col = BlockColStart                    ! start of y%TranslationDisp field
+      call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
 
-
-
-      !*** row for orientation ***
-      if (FieldMask(MASKID_ORIENTATION)) then
-         ! source orientation to destination orientation:
-         row = BlockRowStart + u%NNodes*3       ! start of u%Orientation field [skip 1 field with 3 components]
-         col = BlockColStart + y%NNodes*3       ! start of y%Orientation field [skip 1 field with 3 components]
-         call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
-      endif
-
-
-      !*** row for translational velocity ***
-      if (FieldMask(MASKID_TRANSLATIONVEL)) then
-         ! source translational displacement to destination translational velocity:
-         row = BlockRowStart + u%NNodes*6       ! start of u%TranslationVel field [skip 2 fields with 3 components]
-         col = BlockColStart                    ! start of y%TranslationDisp field
-         call SetBlockMatrix( dUdy, MeshMap%dM%tv_us, row, col )
-
-         ! source translational velocity to destination translational velocity:
-         row = BlockRowStart + u%NNodes*6       ! start of u%TranslationVel field [skip 2 fields with 3 components]
-         col = BlockColStart + y%NNodes*6       ! start of y%TranslationVel field [skip 2 fields with 3 components]
-         call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
-
-         ! source rotational velocity to destination translational velocity:
-         row = BlockRowStart + u%NNodes*6       ! start of u%TranslationVel field [skip 2 fields with 3 components]
-         col = BlockColStart + y%NNodes*9       ! start of y%RotationVel field [skip 3 fields with 3 components]
-         call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
-      endif
+      ! source orientation to destination translational displacement:
+      row = BlockRowStart                    ! start of u%TranslationDisp field
+      col = BlockColStart + y%NNodes*3       ! start of y%Orientation field [skip 1 field with 3 components]
+      call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
+      uFieldsBefore = uFieldsBefore + 1
+   endif
 
 
 
-      !*** row for rotational velocity ***
-      if (FieldMask(MASKID_ROTATIONVEL)) then
-         ! source rotational velocity to destination rotational velocity:
-         row = BlockRowStart + u%NNodes*9       ! start of u%RotationVel field [skip 3 fields with 3 components]
-         col = BlockColStart + y%NNodes*9       ! start of y%RotationVel field [skip 3 fields with 3 components]
-         call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
-      endif
+   !*** row for orientation ***
+   if (FieldMask(MASKID_ORIENTATION)) then
+      ! source orientation to destination orientation:
+      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%Orientation field [skip 1 field with 3 components]
+      col = BlockColStart + y%NNodes*3                ! start of y%Orientation field [skip 1 field with 3 components]
+      call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+      uFieldsBefore = uFieldsBefore + 1
+   endif
 
 
-      !*** row for translational acceleration ***
-      if (FieldMask(MASKID_TRANSLATIONACC)) then
-         ! source translational displacement to destination translational acceleration:
-         row = BlockRowStart + u%NNodes*12      ! start of u%TranslationAcc field [skip 4 fields with 3 components]
-         col = BlockColStart                    ! start of y%TranslationDisp field
-         call SetBlockMatrix( dUdy, MeshMap%dM%ta_us, row, col )
+   !*** row for translational velocity ***
+   if (FieldMask(MASKID_TRANSLATIONVEL)) then
+      ! source translational displacement to destination translational velocity:
+      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%TranslationVel field [skip 2 fields with 3 components]
+      col = BlockColStart                             ! start of y%TranslationDisp field
+      call SetBlockMatrix( dUdy, MeshMap%dM%tv_us, row, col )
 
-         ! source rotational velocity to destination translational acceleration:
-         row = BlockRowStart + u%NNodes*12      ! start of u%TranslationAcc field [skip 4 fields with 3 components]
-         col = BlockColStart + y%NNodes*9       ! start of y%RotationVel field [skip 3 fields with 3 components]
-         call SetBlockMatrix( dUdy, MeshMap%dM%ta_rv, row, col )
+      ! source translational velocity to destination translational velocity:
+      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%TranslationVel field [skip 2 fields with 3 components]
+      col = BlockColStart + y%NNodes*6                ! start of y%TranslationVel field [skip 2 fields with 3 components]
+      call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
 
-         ! source translational acceleration to destination translational acceleration:
-         row = BlockRowStart + u%NNodes*12      ! start of u%TranslationAcc field [skip 4 fields with 3 components]
-         col = BlockColStart + y%NNodes*12      ! start of y%TranslationAcc field [skip 4 fields with 3 components]
-         call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
-
-         ! source rotational acceleration to destination translational acceleration:
-         row = BlockRowStart + u%NNodes*12      ! start of u%TranslationAcc field [skip 4 fields with 3 components]
-         col = BlockColStart + y%NNodes*15      ! start of y%RotationAcc field [skip 5 fields with 3 components]
-         call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
-      endif
+      ! source rotational velocity to destination translational velocity:
+      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%TranslationVel field [skip 2 fields with 3 components]
+      col = BlockColStart + y%NNodes*9                ! start of y%RotationVel field [skip 3 fields with 3 components]
+      call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
+      uFieldsBefore = uFieldsBefore + 1
+   endif
 
 
-      !*** row for rotational acceleration ***
-      if (FieldMask(MASKID_ROTATIONACC)) then
-         ! source rotational acceleration to destination rotational acceleration
-         row = BlockRowStart + u%NNodes*15      ! start of u%RotationAcc field [skip 5 fields with 3 components]
-         col = BlockColStart + y%NNodes*15      ! start of y%RotationAcc field [skip 5 fields with 3 components]
-         call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
-      endif
+
+   !*** row for rotational velocity ***
+   if (FieldMask(MASKID_ROTATIONVEL)) then
+      ! source rotational velocity to destination rotational velocity:
+      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%RotationVel field [skip 3 fields with 3 components]
+      col = BlockColStart + y%NNodes*9                ! start of y%RotationVel field [skip 3 fields with 3 components]
+      call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+      uFieldsBefore = uFieldsBefore + 1
+   endif
+
+
+   !*** row for translational acceleration ***
+   if (FieldMask(MASKID_TRANSLATIONACC)) then
+      ! source translational displacement to destination translational acceleration:
+      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%TranslationAcc field [skip 4 fields with 3 components]
+      col = BlockColStart                             ! start of y%TranslationDisp field
+      call SetBlockMatrix( dUdy, MeshMap%dM%ta_us, row, col )
+
+      ! source rotational velocity to destination translational acceleration:
+      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%TranslationAcc field [skip 4 fields with 3 components]
+      col = BlockColStart + y%NNodes*9                ! start of y%RotationVel field [skip 3 fields with 3 components]
+      call SetBlockMatrix( dUdy, MeshMap%dM%ta_rv, row, col )
+
+      ! source translational acceleration to destination translational acceleration:
+      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%TranslationAcc field [skip 4 fields with 3 components]
+      col = BlockColStart + y%NNodes*12               ! start of y%TranslationAcc field [skip 4 fields with 3 components]
+      call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+
+      ! source rotational acceleration to destination translational acceleration:
+      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%TranslationAcc field [skip 4 fields with 3 components]
+      col = BlockColStart + y%NNodes*15               ! start of y%RotationAcc field [skip 5 fields with 3 components]
+      call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
+      uFieldsBefore = uFieldsBefore + 1
+   endif
+
+
+   !*** row for rotational acceleration ***
+   if (FieldMask(MASKID_ROTATIONACC)) then
+      ! source rotational acceleration to destination rotational acceleration
+      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%RotationAcc field [skip 5 fields with 3 components]
+      col = BlockColStart + y%NNodes*15               ! start of y%RotationAcc field [skip 5 fields with 3 components]
+      call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+   endif
 
 
 END SUBROUTINE Assemble_dUdy_Motions

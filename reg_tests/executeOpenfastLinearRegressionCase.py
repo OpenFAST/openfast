@@ -296,7 +296,7 @@ def compareLin(f,file_freq_ref,file_freq_new):
                 pass    # ignore all writing errors
 
 
-            for j in range(min(10,max(len(freq_bas),len(freq_loc)))):
+            for j in range(min(13,max(len(freq_bas),len(freq_loc)))):
                 if j<len(freq_bas):
                     str_freq_bas='{:14.9f}'.format(freq_bas[j])
                     str_zeta_bas='{:14.9f}'.format(zeta_bas[j])
@@ -320,7 +320,7 @@ def compareLin(f,file_freq_ref,file_freq_new):
 
 
             try:
-                np.testing.assert_allclose(freq_loc[:10], freq_bas[:10], rtol=rtol_f, atol=atol_f)
+                np.testing.assert_allclose(freq_loc[:13], freq_bas[:13], rtol=rtol_f, atol=atol_f)
             except Exception as e:
                 Err = 'Failed to compare A-matrix frequencies\n\tLinfile: {}.\n\tException: {}'.format(local_file2, indent(e.args[0]))
                 newError(Err)
