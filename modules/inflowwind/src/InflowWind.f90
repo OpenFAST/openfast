@@ -1188,7 +1188,7 @@ SUBROUTINE InflowWind_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
 
    INTEGER(IntKi)                                    :: i
-   real(ReKi)                                        :: tmp_op(NumExtendedIO)
+   real(R8Ki)                                        :: tmp_op(NumExtendedIO)
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'InflowWind_GetOP'
