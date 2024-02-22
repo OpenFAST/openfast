@@ -5430,7 +5430,7 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
          
             ! get u_op + delta_p u
          call IfW_FlowField_CopyFlowFieldType(p_AD%FlowField, FlowField_perturb_p, MESH_UPDATECOPY, ErrStat2, ErrMsg2);   if (Failed()) return
-!         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
          call AD_CopyRotInputType( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed()) return
          call Perturb_u( p, i, 1, u_perturb, delta_p )
          call Perturb_uExtend( t, u_perturb, FlowField_perturb_p, RotInflow_perturb, p, OtherState, i, 1, u_perturb, delta_p, ErrStat2, ErrMsg2); if (Failed()) return
@@ -5448,10 +5448,10 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
             
             ! get u_op - delta_m u
          call IfW_FlowField_CopyFlowFieldType(p_AD%FlowField, FlowField_perturb_p, MESH_UPDATECOPY, ErrStat2, ErrMsg2);   if (Failed()) return
-!         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
          call AD_CopyRotInputType( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed()) return
          call Perturb_u( p, i, -1, u_perturb, delta_m )
-         call Perturb_uExtend( t, u_perturb, FlowField_perturb_p, RotInflow_perturb, p, OtherState, i, -1, u_perturb, delta_p, ErrStat2, ErrMsg2); if (Failed()) return
+         call Perturb_uExtend( t, u_perturb, FlowField_perturb_p, RotInflow_perturb, p, OtherState, i, -1, u_perturb, delta_m, ErrStat2, ErrMsg2); if (Failed()) return
          
          call AD_CopyRotConstraintStateType( z, z_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
          call AD_CopyRotOtherStateType( OtherState, OtherState_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
@@ -5490,7 +5490,7 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
          
             ! get u_op + delta u
          call IfW_FlowField_CopyFlowFieldType(p_AD%FlowField, FlowField_perturb_p, MESH_UPDATECOPY, ErrStat2, ErrMsg2);   if (Failed()) return
-!         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
          call AD_CopyRotInputType( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed()) return
          call Perturb_u( p, i, 1, u_perturb, delta_p )
          call Perturb_uExtend( t, u_perturb, FlowField_perturb_p, RotInflow_perturb, p, OtherState, i, 1, u_perturb, delta_p, ErrStat2, ErrMsg2); if (Failed()) return
@@ -5501,10 +5501,10 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
                                          
             ! get u_op - delta u
          call IfW_FlowField_CopyFlowFieldType(p_AD%FlowField, FlowField_perturb_p, MESH_UPDATECOPY, ErrStat2, ErrMsg2);   if (Failed()) return
-!         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
          call AD_CopyRotInputType( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed()) return
          call Perturb_u( p, i, -1, u_perturb, delta_m )
-         call Perturb_uExtend( t, u_perturb, FlowField_perturb_p, RotInflow_perturb, p, OtherState, i, -1, u_perturb, delta_p, ErrStat2, ErrMsg2); if (Failed()) return
+         call Perturb_uExtend( t, u_perturb, FlowField_perturb_p, RotInflow_perturb, p, OtherState, i, -1, u_perturb, delta_m, ErrStat2, ErrMsg2); if (Failed()) return
 
             ! compute x at u_op - delta u
          ! note that this routine updates z%phi instead of using the actual state value, so we don't need to call UpdateStates here to get z_op + delta_z:
@@ -7210,11 +7210,9 @@ subroutine Perturb_uExtend( t, u_perturb, FlowField_perturb, RotInflow_perturb, 
             case (38);  FlowField_du(2) = du *perturb_sign
             case (39);  FlowField_du(3) = du *perturb_sign
          end select
-         FlowField_du = FlowField_du * perturb_sign
          call IfW_UniformWind_Perturb(FlowField_perturb, FlowField_du) 
-         call AD_CalcWind_Rotor(t, u_perturb, FlowField_perturb, p, RotInflow_perturb, ErrStat, ErrMsg)
-
    end select
+   call AD_CalcWind_Rotor(t, u_perturb, FlowField_perturb, p, RotInflow_perturb, ErrStat, ErrMsg)
 end subroutine Perturb_uExtend
 
 
