@@ -739,9 +739,9 @@ end subroutine
 subroutine IfW_UniformWind_Perturb(FF_perturb, du)
    type(FlowFieldType),    intent(INOUT)  :: FF_perturb     !< Parameters to be modified
    real(R8Ki),             intent(IN   )  :: du(3)          !< perturbations to apply
-   FF_perturb%Uniform%VelH(:)    = FF_perturb%Uniform%VelH(:)    + du(1)
-   FF_perturb%Uniform%LinShrV(:) = FF_perturb%Uniform%LinShrV(:) + du(2)
-   FF_perturb%PropagationDir     = FF_perturb%PropagationDir     + du(3)
+   FF_perturb%Uniform%VelH(:) = FF_perturb%Uniform%VelH(:) + du(1)
+   FF_perturb%Uniform%ShrV(:) = FF_perturb%Uniform%ShrV(:) + du(2)
+   FF_perturb%PropagationDir  = FF_perturb%PropagationDir  + du(3)
 end subroutine
 
 
