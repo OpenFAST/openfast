@@ -5335,7 +5335,7 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
    character(64)           :: NodeLabel
    character(1), parameter :: UVW(3) = ['U','V','W']
    real(R8Ki)              :: Perturb, PerturbTower, PerturbBlade(MaxBl)
-   integer(IntKi)          :: i, j
+   integer(IntKi)          :: i, j, n, state
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -5400,34 +5400,30 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
    end if
 
    ! Unsteady Aero
-   if (p%BEMT%UA%lin_nx > 0) then
-      p%iVarUA = size(p%Vars%x) + 1
-      do j = 1, p%NumBlades      ! size(x%BEMT%DBEMT%element,2)
-         do i = 1, p%NumBlNds    ! size(x%BEMT%DBEMT%element,1)
-            NodeLabel = 'blade '//trim(num2lstr(j))//', node '//trim(num2lstr(i))
-            if (p%BEMT%UA%UAMod/=UA_OYE) then
-               call MV_AddVar(p%Vars%x, "DBEMT%Element", VF_Scalar, &
-                              Flags=ior(VF_DerivOrder1, VF_RotFrame), &
-                              Perturb=Perturb, &
-                              LinNames=['x1 '//trim(NodeLabel)//', rad'])
-               call MV_AddVar(p%Vars%x, "DBEMT%Element", VF_Scalar, &
-                              Flags=ior(VF_DerivOrder1, VF_RotFrame), &
-                              Perturb=Perturb, &
-                              LinNames=['x2 '//trim(NodeLabel)//', rad'])
-               call MV_AddVar(p%Vars%x, "DBEMT%Element", VF_Scalar, &
-                              Flags=ior(VF_DerivOrder1, VF_RotFrame), &
-                              Perturb=Perturb, &
-                              LinNames=['x3 '//trim(NodeLabel)//', -'])
-            endif
-
-            call MV_AddVar(p%Vars%x, "DBEMT%Element", VF_Scalar, &
-                           Flags=ior(VF_DerivOrder1, VF_RotFrame), &
-                           Perturb=0.001_R8Ki, &  ! x4 is a number between 0 and 1, so we need this to be small
-                           LinNames=['x4 '//trim(NodeLabel)//', -'])
-         end do
-      end do
-   else
+   if (p%BEMT%UA%lin_nx == 0) then
       p%iVarUA = 0
+   else
+      p%iVarUA = size(p%Vars%x) + 1
+
+      ! Loop through UA elements
+      do n = 1, p%BEMT%UA%lin_nx
+         
+         i     = p%BEMT%UA%lin_xIndx(n,1)
+         j     = p%BEMT%UA%lin_xIndx(n,2)
+         state = p%BEMT%UA%lin_xIndx(n,3)
+
+         select case (state)
+         case (1, 2)    ! x1 and x2 are radians
+            NodeLabel = 'x'//trim(Num2Lstr(state))//' blade '//trim(Num2Lstr(j))//', node '//trim(Num2Lstr(i))//', rad'
+         case (3, 4, 5) ! x3, x4 (and x5) are units of cl or cn
+            NodeLabel = 'x'//trim(Num2Lstr(state))//' blade '//trim(Num2Lstr(j))//', node '//trim(Num2Lstr(i))//', -'
+         end select
+      
+         call MV_AddVar(p%Vars%x, NodeLabel, VF_Scalar, &
+                        Flags=ior(VF_DerivOrder1, VF_RotFrame), &
+                        Perturb=p%BEMT%UA%dx(state), &
+                        LinNames=[NodeLabel])
+      end do
    end if
 
    ! BEMT states
@@ -5507,7 +5503,7 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
                      VarIdx=p%iVarUserProp(j), &
                      Flags=ior(VF_Linearize, VF_RotFrame), &
                      Num=p%NumBlNds, &
-                     Perturb=2.0_R8Ki*D2R_D, &
+                     Perturb=Perturb, &
                      LinNames=[('User property on blade '//trim(Num2LStr(j))//', node '//trim(Num2LStr(i))//', -', i = 1, p%NumBlNds)])
    end do
 
@@ -5515,19 +5511,19 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
    call MV_AddVar(p%Vars%u, "HWindSpeed", VF_Scalar, &
                   VarIdx=p%iVarHWindSpeed, &
                   Flags=VF_ExtLin + VF_Linearize, &
-                  Perturb=2.0_R8Ki*D2R_D, &
+                  Perturb=Perturb, &
                   LinNames=['Extended input: horizontal wind speed (steady/uniform wind), m/s'])
 
    call MV_AddVar(p%Vars%u, "PLExp", VF_Scalar, &
                   VarIdx=p%iVarPLexp, &
                   Flags=VF_ExtLin + VF_Linearize, &
-                  Perturb=2.0_R8Ki*D2R_D, &
+                  Perturb=Perturb, &
                   LinNames=['Extended input: vertical power-law shear exponent, -'])
 
    call MV_AddVar(p%Vars%u, "PropagationDir", VF_Scalar, &
                   VarIdx=p%iVarPropagationDir, &
                   Flags=VF_ExtLin + VF_Linearize, &
-                  Perturb=2.0_R8Ki*D2R_D, &
+                  Perturb=Perturb, &
                   LinNames=['Extended input: propagation direction, rad'])
 
    !----------------------------------------------------------------------------
@@ -5674,6 +5670,8 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       return
    endif
 
+   call AD_CalcWind_Rotor(t, u%rotors(iR), p%FlowField, p%rotors(iR), m%Inflow(1)%RotInflow(iR), ErrStat, ErrMsg)
+   if (ErrStat >= AbortErrLev) return
    call Rot_JacobianPInput( t, u%rotors(iR), m%Inflow(1)%RotInflow(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu, FlagFilter)
 
 END SUBROUTINE AD_JacobianPInput
@@ -5792,7 +5790,7 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
             call AD_CopyRotOtherStateType(m%OtherState_init, m%OtherState_jac, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
             call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
             call AD_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
-            if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(p, i, FF_perturb, p_AD%FlowField, 1)
+            if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(i, p_AD%FlowField, 1, FF_ptr)
             call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, ErrStat2, ErrMsg2); if (Failed()) return
             call SetInputs(p, p_AD, m%u_perturb, RotInflow_perturb, m, indx, ErrStat2, ErrMsg2); if (Failed()) return
             call UpdatePhi(m%BEMT_u(indx), p%BEMT, m%z_lin%BEMT%phi, p_AD%AFI, m%BEMT, m%OtherState_jac%BEMT%ValidPhi, ErrStat2, ErrMsg2); if (Failed()) return
@@ -5804,7 +5802,7 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
             call AD_CopyRotOtherStateType(m%OtherState_init, m%OtherState_jac, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
             call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
             call AD_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
-            if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(p, i, FF_perturb, p_AD%FlowField, -1)
+            if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(i, p_AD%FlowField, -1, FF_ptr)
             call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, ErrStat2, ErrMsg2); if (Failed()) return
             call SetInputs(p, p_AD, m%u_perturb, RotInflow_perturb, m, indx, ErrStat2, ErrMsg2); if (Failed()) return
             call UpdatePhi(m%BEMT_u(indx), p%BEMT, m%z_lin%BEMT%phi, p_AD%AFI, m%BEMT, m%OtherState_jac%BEMT%ValidPhi, ErrStat2, ErrMsg2); if (Failed()) return
@@ -5841,12 +5839,16 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
             call AD_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(i, p_AD%FlowField, 1, FF_ptr)
+            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, ErrStat2, ErrMsg2); if (Failed()) return
             call RotCalcContStateDeriv(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2) ; if (Failed()) return
             call AD_PackStateValues(p, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
             call AD_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(i, p_AD%FlowField, -1, FF_ptr)
+            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, ErrStat2, ErrMsg2); if (Failed()) return
             call RotCalcContStateDeriv(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2) ; if (Failed()) return
             call AD_PackStateValues(p, m%dxdt_lin, m%Jac%x_neg)
 
@@ -5870,21 +5872,20 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
    
    call cleanup()
 contains
-   subroutine PerturbFlowField(p, iVar, PerturbFF, BaseFF, PerturbSign)
-      type(RotParameterType), intent(in)  :: p
+   subroutine PerturbFlowField(iVar, BaseFF, PerturbSign, PerturbFF)
       integer(IntKi), intent(in)          :: iVar
-      type(FlowFieldType), intent(inout)  :: PerturbFF
       type(FlowFieldType), intent(in)     :: BaseFF
       integer(IntKi), intent(in)          :: PerturbSign
+      type(FlowFieldType), intent(inout)  :: PerturbFF
       PerturbFF%Uniform%VelH = BaseFF%Uniform%VelH
       PerturbFF%Uniform%ShrV = BaseFF%Uniform%ShrV
       PerturbFF%PropagationDir = BaseFF%PropagationDir
       if (iVar == p%iVarHWindSpeed) then
-         PerturbFF%Uniform%VelH = BaseFF%Uniform%VelH - p%Vars%u(iVar)%Perturb
+         PerturbFF%Uniform%VelH = BaseFF%Uniform%VelH + p%Vars%u(iVar)%Perturb*PerturbSign
       else if (iVar == p%iVarPLexp) then
-         PerturbFF%Uniform%ShrV = BaseFF%Uniform%ShrV - p%Vars%u(iVar)%Perturb
+         PerturbFF%Uniform%ShrV = BaseFF%Uniform%ShrV + p%Vars%u(iVar)%Perturb*PerturbSign
       else if (iVar == p%iVarPropagationDir) then
-         PerturbFF%PropagationDir = BaseFF%PropagationDir - p%Vars%u(iVar)%Perturb
+         PerturbFF%PropagationDir = BaseFF%PropagationDir + p%Vars%u(iVar)%Perturb*PerturbSign
       end if
    end subroutine
    logical function Failed()
@@ -6597,7 +6598,7 @@ subroutine AD_PackStateValues(p, x, Ary)
    type(RotParameterType), intent(in)        :: p
    type(RotContinuousStateType), intent(in)  :: x
    real(R8Ki), intent(out)                   :: Ary(:)
-   integer(IntKi)                            :: i, j, k, ind
+   integer(IntKi)                            :: i, j, k, n, ind
    ind = 1
    if (p%BEMT%DBEMT%lin_nx > 0) then
       do j = 1,p%NumBlades    ! size(x%BEMT%DBEMT%element,2)
@@ -6619,23 +6620,13 @@ subroutine AD_PackStateValues(p, x, Ary)
    end if
 
    if (p%BEMT%UA%lin_nx > 0) then
-      if (p%BEMT%UA%UAMod == UA_OYE) then
-         do j = 1, p%NumBlades   ! size(x%BEMT%UA%element,2)
-            do i = 1, p%NumBlNds ! size(x%BEMT%UA%element,1)
-               Ary(ind) = x%BEMT%UA%element(i,j)%x(4)
-               ind = ind + 1
-            end do
-         end do
-      else
-         do j = 1, p%NumBlades ! size(x%BEMT%UA%element,2)
-            do i = 1, p%NumBlNds ! size(x%BEMT%UA%element,1)
-               do k = 1, 4 !size(x%BEMT%UA%element(i,j)%x) !linearize only first 4 states (5th is vortex)
-                  Ary(ind) = x%BEMT%UA%element(i,j)%x(k)
-                  ind = ind + 1
-               end do
-            end do
-         end do
-      endif
+      do n = 1, p%BEMT%UA%lin_nx
+         i = p%BEMT%UA%lin_xIndx(n,1)
+         j = p%BEMT%UA%lin_xIndx(n,2)
+         k = p%BEMT%UA%lin_xIndx(n,3)
+         Ary(ind) = x%BEMT%UA%element(i,j)%x(k)
+         ind = ind + 1
+      end do
    end if
 end subroutine
 
@@ -6643,7 +6634,7 @@ subroutine AD_UnpackStateValues(p, Ary, x)
    type(RotParameterType), intent(in)           :: p
    real(R8Ki), intent(in)                       :: ary(:)
    type(RotContinuousStateType), intent(inout)  :: x
-   integer(IntKi)                               :: i, j, k, ind
+   integer(IntKi)                               :: i, j, k, n, ind
    ind = 1
    if (p%BEMT%DBEMT%lin_nx > 0) then
       do j = 1,p%NumBlades    ! size(x%BEMT%DBEMT%element,2)
@@ -6665,23 +6656,13 @@ subroutine AD_UnpackStateValues(p, Ary, x)
    end if
 
    if (p%BEMT%UA%lin_nx > 0) then
-      if (p%BEMT%UA%UAMod == UA_OYE) then
-         do j = 1, p%NumBlades   ! size(x%BEMT%UA%element,2)
-            do i = 1, p%NumBlNds ! size(x%BEMT%UA%element,1)
-               x%BEMT%UA%element(i,j)%x(4) = Ary(ind)
-               ind = ind + 1
-            end do
-         end do
-      else
-         do j = 1, p%NumBlades ! size(x%BEMT%UA%element,2)
-            do i = 1, p%NumBlNds ! size(x%BEMT%UA%element,1)
-               do k = 1, 4 !size(x%BEMT%UA%element(i,j)%x) !linearize only first 4 states (5th is vortex)
-                  x%BEMT%UA%element(i,j)%x(k) = Ary(ind)
-                  ind = ind + 1
-               end do
-            end do
-         end do
-      endif
+      do n = 1, p%BEMT%UA%lin_nx
+         i = p%BEMT%UA%lin_xIndx(n,1)
+         j = p%BEMT%UA%lin_xIndx(n,2)
+         k = p%BEMT%UA%lin_xIndx(n,3)
+         x%BEMT%UA%element(i,j)%x(k) = Ary(ind)
+         ind = ind + 1
+      end do
    end if
 end subroutine
 
