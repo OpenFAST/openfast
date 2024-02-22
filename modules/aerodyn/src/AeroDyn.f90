@@ -5326,6 +5326,7 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       return
    endif
 
+   call AD_CalcWind_Rotor(  t, u%rotors(iR), p%FLowField, p%rotors(iR), m%Inflow(1)%RotInflow(iR), ErrStat, ErrMsg)
    call Rot_JacobianPInput( t, u%rotors(iR), m%Inflow(1)%RotInflow(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
 
 END SUBROUTINE AD_JacobianPInput
@@ -5429,7 +5430,7 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
          
             ! get u_op + delta_p u
          call IfW_FlowField_CopyFlowFieldType(p_AD%FlowField, FlowField_perturb_p, MESH_UPDATECOPY, ErrStat2, ErrMsg2);   if (Failed()) return
-         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+!         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
          call AD_CopyRotInputType( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed()) return
          call Perturb_u( p, i, 1, u_perturb, delta_p )
          call Perturb_uExtend( t, u_perturb, FlowField_perturb_p, RotInflow_perturb, p, OtherState, i, 1, u_perturb, delta_p, ErrStat2, ErrMsg2); if (Failed()) return
@@ -5438,16 +5439,16 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
          call AD_CopyRotOtherStateType( OtherState_init, OtherState_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
          
             ! get updated z%phi values:
-         call SetInputs(p, p_AD, u_perturb, RotInflow, m, indx, errStat2, errMsg2); if (Failed()) return
+         call SetInputs(p, p_AD, u_perturb, RotInflow_perturb, m, indx, errStat2, errMsg2); if (Failed()) return
          call UpdatePhi( m%BEMT_u(indx), p%BEMT, z_copy%BEMT%phi, p_AD%AFI, m%BEMT, OtherState_copy%BEMT%ValidPhi, errStat2, errMsg2 ); if (Failed()) return
 
             ! compute y at u_op + delta_p u
-         call RotCalcOutput( t, u_perturb, RotInflow, p, p_AD, x_init, xd, z_copy, OtherState_copy, y_p, m, m_AD, iRot, ErrStat2, ErrMsg2 ); if (Failed()) return
+         call RotCalcOutput( t, u_perturb, RotInflow_perturb, p, p_AD, x_init, xd, z_copy, OtherState_copy, y_p, m, m_AD, iRot, ErrStat2, ErrMsg2 ); if (Failed()) return
          
             
             ! get u_op - delta_m u
          call IfW_FlowField_CopyFlowFieldType(p_AD%FlowField, FlowField_perturb_p, MESH_UPDATECOPY, ErrStat2, ErrMsg2);   if (Failed()) return
-         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+!         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
          call AD_CopyRotInputType( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed()) return
          call Perturb_u( p, i, -1, u_perturb, delta_m )
          call Perturb_uExtend( t, u_perturb, FlowField_perturb_p, RotInflow_perturb, p, OtherState, i, -1, u_perturb, delta_p, ErrStat2, ErrMsg2); if (Failed()) return
@@ -5456,11 +5457,11 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
          call AD_CopyRotOtherStateType( OtherState, OtherState_copy, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
             
             ! get updated z%phi values:
-         call SetInputs(p, p_AD, u_perturb, RotInflow, m, indx, errStat2, errMsg2); if (Failed()) return
+         call SetInputs(p, p_AD, u_perturb, RotInflow_perturb, m, indx, errStat2, errMsg2); if (Failed()) return
          call UpdatePhi( m%BEMT_u(indx), p%BEMT, z_copy%BEMT%phi, p_AD%AFI, m%BEMT, OtherState_copy%BEMT%ValidPhi, errStat2, errMsg2 ); if (Failed()) return
             
             ! compute y at u_op - delta_m u
-         call RotCalcOutput( t, u_perturb, RotInflow, p, p_AD, x_init, xd, z_copy, OtherState_copy, y_m, m, m_AD, iRot, ErrStat2, ErrMsg2 ); if (Failed()) return
+         call RotCalcOutput( t, u_perturb, RotInflow_perturb, p, p_AD, x_init, xd, z_copy, OtherState_copy, y_m, m, m_AD, iRot, ErrStat2, ErrMsg2 ); if (Failed()) return
          
             ! get central difference:
          call Compute_dY( p, p_AD, y_p, y_m, delta_p, delta_m, dYdu(:,i) )
@@ -5489,25 +5490,25 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
          
             ! get u_op + delta u
          call IfW_FlowField_CopyFlowFieldType(p_AD%FlowField, FlowField_perturb_p, MESH_UPDATECOPY, ErrStat2, ErrMsg2);   if (Failed()) return
-         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+!         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
          call AD_CopyRotInputType( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed()) return
          call Perturb_u( p, i, 1, u_perturb, delta_p )
          call Perturb_uExtend( t, u_perturb, FlowField_perturb_p, RotInflow_perturb, p, OtherState, i, 1, u_perturb, delta_p, ErrStat2, ErrMsg2); if (Failed()) return
 
             ! compute x at u_op + delta u
          ! note that this routine updates z%phi instead of using the actual state value, so we don't need to call UpdateStates/UpdatePhi here to get z_op + delta_z:
-         call RotCalcContStateDeriv( t, u_perturb, RotInflow, p, p_AD, x_init, xd, z, OtherState_init, m, x_p, ErrStat2, ErrMsg2 ); if (Failed()) return
+         call RotCalcContStateDeriv( t, u_perturb, RotInflow_perturb, p, p_AD, x_init, xd, z, OtherState_init, m, x_p, ErrStat2, ErrMsg2 ); if (Failed()) return
                                          
             ! get u_op - delta u
          call IfW_FlowField_CopyFlowFieldType(p_AD%FlowField, FlowField_perturb_p, MESH_UPDATECOPY, ErrStat2, ErrMsg2);   if (Failed()) return
-         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+!         call AD_CopyRotInflowType( RotInflow, RotInflow_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
          call AD_CopyRotInputType( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed()) return
          call Perturb_u( p, i, -1, u_perturb, delta_m )
          call Perturb_uExtend( t, u_perturb, FlowField_perturb_p, RotInflow_perturb, p, OtherState, i, -1, u_perturb, delta_p, ErrStat2, ErrMsg2); if (Failed()) return
 
             ! compute x at u_op - delta u
          ! note that this routine updates z%phi instead of using the actual state value, so we don't need to call UpdateStates here to get z_op + delta_z:
-         call RotCalcContStateDeriv( t, u_perturb, RotInflow, p, p_AD, x_init, xd, z, OtherState_init, m, x_m, ErrStat2, ErrMsg2 ); if (Failed()) return
+         call RotCalcContStateDeriv( t, u_perturb, RotInflow_perturb, p, p_AD, x_init, xd, z, OtherState_init, m, x_m, ErrStat2, ErrMsg2 ); if (Failed()) return
             
             
             ! get central difference:
@@ -5547,10 +5548,10 @@ contains
       m%BEMT%UseFrozenWake = .false.
       call AD_DestroyRotOutputType(                y_p,  ErrStat2, ErrMsg2)
       call AD_DestroyRotOutputType(                y_m,  ErrStat2, ErrMsg2)
-      call AD_DestroyRotContinuousStateType(        x_p,  ErrStat2, ErrMsg2)
-      call AD_DestroyRotContinuousStateType(        x_m,  ErrStat2, ErrMsg2)
-      call AD_DestroyRotContinuousStateType(     x_init,  ErrStat2, ErrMsg2)
-      call AD_DestroyRotConstraintStateType(         z_copy, ErrStat2, ErrMsg2)
+      call AD_DestroyRotContinuousStateType(       x_p,  ErrStat2, ErrMsg2)
+      call AD_DestroyRotContinuousStateType(       x_m,  ErrStat2, ErrMsg2)
+      call AD_DestroyRotContinuousStateType(    x_init,  ErrStat2, ErrMsg2)
+      call AD_DestroyRotConstraintStateType(     z_copy, ErrStat2, ErrMsg2)
       call AD_DestroyRotOtherStateType( OtherState_copy, ErrStat2, ErrMsg2)
       call AD_DestroyRotOtherStateType( OtherState_init, ErrStat2, ErrMsg2)
       call AD_DestroyRotInputType( u_perturb, ErrStat2, ErrMsg2 )
