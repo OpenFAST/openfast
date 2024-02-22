@@ -1839,7 +1839,7 @@ contains
          call SumBlock(Mapping%iLocDstMoment, Mapping%iLocSrcForce, dM%m_f, dUdy)
       end if
 
-      ! Destination translation displacement to Moment
+      ! Destination Translation Displacement to Moment
       if (allocated(dM%m_uD)) then
          if (Mapping%DstUsesSibling) then
             ! Direct transfer

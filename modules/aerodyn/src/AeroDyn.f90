@@ -5514,19 +5514,19 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
    ! Extended inputs
    call MV_AddVar(p%Vars%u, "HWindSpeed", VF_Scalar, &
                   VarIdx=p%iVarHWindSpeed, &
-                  Flags=VF_ExtLin, &
+                  Flags=VF_ExtLin + VF_Linearize, &
                   Perturb=2.0_R8Ki*D2R_D, &
                   LinNames=['Extended input: horizontal wind speed (steady/uniform wind), m/s'])
 
    call MV_AddVar(p%Vars%u, "PLExp", VF_Scalar, &
                   VarIdx=p%iVarPLexp, &
-                  Flags=VF_ExtLin, &
+                  Flags=VF_ExtLin + VF_Linearize, &
                   Perturb=2.0_R8Ki*D2R_D, &
                   LinNames=['Extended input: vertical power-law shear exponent, -'])
 
    call MV_AddVar(p%Vars%u, "PropagationDir", VF_Scalar, &
                   VarIdx=p%iVarPropagationDir, &
-                  Flags=VF_ExtLin, &
+                  Flags=VF_ExtLin + VF_Linearize, &
                   Perturb=2.0_R8Ki*D2R_D, &
                   LinNames=['Extended input: propagation direction, rad'])
 
