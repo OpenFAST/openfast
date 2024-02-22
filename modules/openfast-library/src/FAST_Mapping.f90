@@ -526,10 +526,11 @@ subroutine BD_InitInputMappings(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrM
                          DstMeshLoc=MeshLocType(BD_u_RootMotion), &                    ! BD%u(DstMod%Ins)%RootMotion
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
-      call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                         SrcMeshLoc=MeshLocType(ED_y_HubPtMotion), &                   ! ED%y%HubED_y_HubPtMotion
-                         DstMeshLoc=MeshLocType(BD_u_RootMotion), &                    ! BD%Input(1, DstMod%Ins)%RootMotion
-                         ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+      ! Hub motion not used
+      ! call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+      !                    SrcMeshLoc=MeshLocType(ED_y_HubPtMotion), &                   ! ED%y%HubED_y_HubPtMotion
+      !                    DstMeshLoc=MeshLocType(BD_u_HubMotion), &                     ! BD%Input(1, DstMod%Ins)%HubMotion
+      !                    ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
    case (Module_ExtLd)
 
@@ -1381,16 +1382,20 @@ subroutine MapLoadMesh(Turbine, Mappings, SrcMod, SrcMeshLoc, SrcDispMeshLoc, &
 
    ! Check that all meshes in mapping have nonzero identifiers
    if (SrcMesh%ID == 0) then
-      call SetErrStat(ErrID_Fatal, 'SrcMesh not in module variable', ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, 'SrcMesh "'//trim(FAST_OutputMeshName(SrcMod, SrcMeshLoc))//'" not in module variables', &
+                      ErrStat, ErrMsg, RoutineName)
       return
    else if (SrcDispMesh%ID == 0) then
-      call SetErrStat(ErrID_Fatal, 'SrcDispMesh not in module variable', ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, 'SrcDispMesh "'//trim(FAST_InputMeshName(SrcMod, SrcDispMeshLoc))//'" not in module variables', &
+                      ErrStat, ErrMsg, RoutineName)
       return
    else if (DstMesh%ID == 0) then
-      call SetErrStat(ErrID_Fatal, 'DstMesh not in module variable', ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, 'DstMesh "'//trim(FAST_InputMeshName(DstMod, DstMeshLoc))//'" not in module variables', &
+                      ErrStat, ErrMsg, RoutineName)
       return
    else if (DstDispMesh%ID == 0) then
-      call SetErrStat(ErrID_Fatal, 'DstDispMesh not in module variable', ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, 'DstDispMesh "'//trim(FAST_OutputMeshName(DstMod, DstDispMeshLoc))//'" not in module variables', &
+                      ErrStat, ErrMsg, RoutineName)
       return
    end if
 
@@ -1521,10 +1526,12 @@ subroutine MapMotionMesh(Turbine, Mappings, SrcMod, SrcMeshLoc, DstMod, DstMeshL
 
    ! Check that all meshes in mapping have nonzero identifiers
    if (SrcMesh%ID == 0) then
-      call SetErrStat(ErrID_Fatal, 'SrcMesh not in module variable', ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, 'SrcMesh "'//trim(FAST_OutputMeshName(SrcMod, SrcMeshLoc))//'" not in module variables', &
+                      ErrStat, ErrMsg, RoutineName)
       return
    else if (DstMesh%ID == 0) then
-      call SetErrStat(ErrID_Fatal, 'DstMesh not in module variable', ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, 'DstMesh "'//trim(FAST_InputMeshName(DstMod, DstMeshLoc))//'" not in module variables', &
+                      ErrStat, ErrMsg, RoutineName)
       return
    end if
 
@@ -1762,6 +1769,9 @@ subroutine FAST_LinearizeMappings(Turbine, Mods, Mappings, ModOrder, ErrStat, Er
 
                else
 
+                  ! Transfer destination displacement mesh to temporary motion mesh (cousin of destionation load mesh)
+                  call TransferMesh(Mapping%XfrTypeAux, DstDispMesh, Mapping%TmpMotionMesh, Mapping%MeshMapAux); if (Failed()) return
+
                   ! Linearize the motion mesh transfer
                   call LinearizeMeshTransfer(Mapping%XfrTypeAux, DstDispMesh, Mapping%TmpMotionMesh, Mapping%MeshMapAux); if (Failed()) return
 
@@ -1802,6 +1812,29 @@ contains
       case default
          ErrStat2 = ErrID_Fatal
          ErrMsg2 = "LinearizeMeshTransfer: unknown transfer type: "//Num2LStr(Typ)
+      end select
+   end subroutine
+
+   ! MeshTransfer calls the specific transfer function based on 
+   ! transfer type (Point_to_Point, Point_to_Line2, etc.)
+   subroutine TransferMesh(Typ, Src, Dst, MMap, SrcDisp, DstDisp)
+      integer(IntKi), intent(in)             :: Typ
+      type(MeshType), intent(in)             :: Src
+      type(MeshType), intent(inout)          :: Dst
+      type(MeshMapType), intent(inout)       :: MMap
+      type(MeshType), optional, intent(in)   :: SrcDisp, DstDisp
+      select case (Typ)
+      case (Xfr_Point_to_Point)
+         call Transfer_Point_to_Point(Src, Dst, MMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
+      case (Xfr_Point_to_Line2)
+         call Transfer_Point_to_Line2(Src, Dst, MMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
+      case (Xfr_Line2_to_Point)
+         call Transfer_Line2_to_Point(Src, Dst, MMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
+      case (Xfr_Line2_to_Line2)
+         call Transfer_Line2_to_Line2(Src, Dst, MMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
+      case default
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2 = "TransferMeshTransfer: unknown transfer type: "//Num2LStr(Typ)
       end select
    end subroutine
 
@@ -1858,6 +1891,7 @@ subroutine Assemble_dUdy_Loads(Mapping, dUdy)
          ! Direct transfer
          call SumBlock(Mapping%iLocDstMoment, Mapping%iLocDstDispTransDisp, Mapping%MeshMap%dM%m_uD, dUdy)
       else
+         ! call SumBlock(Mapping%iLocDstMoment, [Mapping%iLocDstDispTransDisp(1), Mapping%iLocDstDispTransDisp(1)  + size(Mapping%MeshMap%dM%m_uD,2) - 1], Mapping%MeshMap%dM%m_uD, dUdy)
          ! Compose linearization of motion and loads
          Mapping%TmpMatrix = matmul(Mapping%MeshMap%dM%m_uD, Mapping%MeshMapAux%dM%mi)
          call SumBlock(Mapping%iLocDstMoment, Mapping%iLocDstDispTransDisp, Mapping%TmpMatrix, dUdy)
