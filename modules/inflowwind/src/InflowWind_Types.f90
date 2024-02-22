@@ -133,10 +133,19 @@ IMPLICIT NONE
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
     TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Flow field data to represent all wind types [-]
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
   END TYPE InflowWind_InitOutputType
 ! =======================
 ! =========  InflowWind_ParameterType  =======
   TYPE, PUBLIC :: InflowWind_ParameterType
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
+    INTEGER(IntKi)  :: iVarHWindSpeed = 0_IntKi      !< Horizontal wind speed variable index [-]
+    INTEGER(IntKi)  :: iVarPLExp = 0_IntKi      !< Vertical power-law shear exponent variable index [-]
+    INTEGER(IntKi)  :: iVarPropagationDir = 0_IntKi      !< Propagation direction variable index [-]
+    INTEGER(IntKi)  :: iVarHWindSpeedY = 0_IntKi      !< Horizontal wind speed variable index [-]
+    INTEGER(IntKi)  :: iVarPLExpY = 0_IntKi      !< Vertical power-law shear exponent variable index [-]
+    INTEGER(IntKi)  :: iVarPropagationDirY = 0_IntKi      !< Propagation direction variable index [-]
+    INTEGER(IntKi)  :: iVarWriteOutput = 0_IntKi      !< Write output variable index [-]
     CHARACTER(1024)  :: RootFileName      !< Root of the InflowWind input   filename [-]
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for cont. state integration & disc. state update [seconds]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindViXYZprime      !< List of XYZ coordinates for velocity measurements, translated to the wind coordinate system (prime coordinates).  This equals MATMUL( RotToWind, ParamData%WindViXYZ ) [meters]
@@ -198,6 +207,7 @@ IMPLICIT NONE
     TYPE(InflowWind_OutputType)  :: y_Avg      !< outputs for computing rotor-averaged values [-]
     TYPE(InflowWind_InputType)  :: u_Hub      !< inputs for computing hub values [-]
     TYPE(InflowWind_OutputType)  :: y_Hub      !< outputs for computing hub values [-]
+    TYPE(ModJacType)  :: Jac      !< Values corresponding to module variables [-]
   END TYPE InflowWind_MiscVarType
 ! =======================
 CONTAINS
@@ -700,6 +710,7 @@ subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlC
       DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
    end if
    DstInitOutputData%FlowField => SrcInitOutputData%FlowField
+   DstInitOutputData%Vars => SrcInitOutputData%Vars
 end subroutine
 
 subroutine InflowWind_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -737,6 +748,7 @@ subroutine InflowWind_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
       deallocate(InitOutputData%IsLoad_u)
    end if
    nullify(InitOutputData%FlowField)
+   nullify(InitOutputData%Vars)
 end subroutine
 
 subroutine InflowWind_PackInitOutput(RF, Indata)
@@ -759,6 +771,13 @@ subroutine InflowWind_PackInitOutput(RF, Indata)
       call RegPackPointer(RF, c_loc(InData%FlowField), PtrInIndex)
       if (.not. PtrInIndex) then
          call IfW_FlowField_PackFlowFieldType(RF, InData%FlowField) 
+      end if
+   end if
+   call RegPack(RF, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
       end if
    end if
    if (RegCheckErr(RF, RoutineName)) return
@@ -801,6 +820,24 @@ subroutine InflowWind_UnPackInitOutput(RF, OutData)
    else
       OutData%FlowField => null()
    end if
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
 end subroutine
 
 subroutine InflowWind_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -816,6 +853,25 @@ subroutine InflowWind_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, E
    character(*), parameter        :: RoutineName = 'InflowWind_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (associated(SrcParamData%Vars)) then
+      if (.not. associated(DstParamData%Vars)) then
+         allocate(DstParamData%Vars, stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Vars.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end if
+   DstParamData%iVarHWindSpeed = SrcParamData%iVarHWindSpeed
+   DstParamData%iVarPLExp = SrcParamData%iVarPLExp
+   DstParamData%iVarPropagationDir = SrcParamData%iVarPropagationDir
+   DstParamData%iVarHWindSpeedY = SrcParamData%iVarHWindSpeedY
+   DstParamData%iVarPLExpY = SrcParamData%iVarPLExpY
+   DstParamData%iVarPropagationDirY = SrcParamData%iVarPropagationDirY
+   DstParamData%iVarWriteOutput = SrcParamData%iVarWriteOutput
    DstParamData%RootFileName = SrcParamData%RootFileName
    DstParamData%DT = SrcParamData%DT
    if (allocated(SrcParamData%WindViXYZprime)) then
@@ -913,6 +969,12 @@ subroutine InflowWind_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'InflowWind_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (associated(ParamData%Vars)) then
+      call NWTC_Library_DestroyModVarsType(ParamData%Vars, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      deallocate(ParamData%Vars)
+      ParamData%Vars => null()
+   end if
    if (allocated(ParamData%WindViXYZprime)) then
       deallocate(ParamData%WindViXYZprime)
    end if
@@ -952,6 +1014,20 @@ subroutine InflowWind_PackParam(RF, Indata)
    integer(B8Ki)   :: LB(2), UB(2)
    logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
+      end if
+   end if
+   call RegPack(RF, InData%iVarHWindSpeed)
+   call RegPack(RF, InData%iVarPLExp)
+   call RegPack(RF, InData%iVarPropagationDir)
+   call RegPack(RF, InData%iVarHWindSpeedY)
+   call RegPack(RF, InData%iVarPLExpY)
+   call RegPack(RF, InData%iVarPropagationDirY)
+   call RegPack(RF, InData%iVarWriteOutput)
    call RegPack(RF, InData%RootFileName)
    call RegPack(RF, InData%DT)
    call RegPackAlloc(RF, InData%WindViXYZprime)
@@ -992,6 +1068,31 @@ subroutine InflowWind_UnPackParam(RF, OutData)
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
+   call RegUnpack(RF, OutData%iVarHWindSpeed); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarPLExp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarPropagationDir); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarHWindSpeedY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarPLExpY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarPropagationDirY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarWriteOutput); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RootFileName); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WindViXYZprime); if (RegCheckErr(RF, RoutineName)) return
@@ -1427,6 +1528,9 @@ subroutine InflowWind_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrM
    call InflowWind_CopyOutput(SrcMiscData%y_Hub, DstMiscData%y_Hub, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine InflowWind_DestroyMisc(MiscData, ErrStat, ErrMsg)
@@ -1455,6 +1559,8 @@ subroutine InflowWind_DestroyMisc(MiscData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call InflowWind_DestroyOutput(MiscData%y_Hub, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine InflowWind_PackMisc(RF, Indata)
@@ -1469,6 +1575,7 @@ subroutine InflowWind_PackMisc(RF, Indata)
    call InflowWind_PackOutput(RF, InData%y_Avg) 
    call InflowWind_PackInput(RF, InData%u_Hub) 
    call InflowWind_PackOutput(RF, InData%y_Hub) 
+   call NWTC_Library_PackModJacType(RF, InData%Jac) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1487,6 +1594,7 @@ subroutine InflowWind_UnPackMisc(RF, OutData)
    call InflowWind_UnpackOutput(RF, OutData%y_Avg) ! y_Avg 
    call InflowWind_UnpackInput(RF, OutData%u_Hub) ! u_Hub 
    call InflowWind_UnpackOutput(RF, OutData%y_Hub) ! y_Hub 
+   call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
 end subroutine
 
 subroutine InflowWind_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)

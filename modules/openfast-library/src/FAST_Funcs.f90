@@ -29,10 +29,11 @@ use BeamDyn
 use ElastoDyn
 use HydroDyn
 use InflowWind
+use MAP
+use MoorDyn
 use SeaState
 use ServoDyn
 use SubDyn
-use MAP
 
 implicit none
 
@@ -389,15 +390,15 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
 !  case (Module_IceF)
    case (Module_IfW)
 
-      do j_ss = 1, ModData%SubSteps
-         n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
-         t_module = n_t_module*ModData%DT + t_initial
-         call InflowWind_UpdateStates(t_module, n_t_module, T%IfW%Input, T%IfW%InputTimes, T%IfW%p, &
-                                      T%IfW%x(STATE_PRED), T%IfW%xd(STATE_PRED), &
-                                      T%IfW%z(STATE_PRED), T%IfW%OtherSt(STATE_PRED), &
-                                      T%IfW%m, ErrStat2, ErrMsg2)
-         if (Failed()) return
-      end do
+      ! do j_ss = 1, ModData%SubSteps
+      !    n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
+      !    t_module = n_t_module*ModData%DT + t_initial
+      !    call InflowWind_UpdateStates(t_module, n_t_module, T%IfW%Input, T%IfW%InputTimes, T%IfW%p, &
+      !                                 T%IfW%x(STATE_PRED), T%IfW%xd(STATE_PRED), &
+      !                                 T%IfW%z(STATE_PRED), T%IfW%OtherSt(STATE_PRED), &
+      !                                 T%IfW%m, ErrStat2, ErrMsg2)
+      !    if (Failed()) return
+      ! end do
 
 !  case (Module_MAP)
 !  case (Module_MD)
@@ -621,7 +622,10 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg,
    ! Select based on module ID
    select case (ModData%ID)
 
-!  case (Module_AD)
+   case (Module_AD)
+      call AD_JacobianPInput(ThisTime, T%AD%Input(1), T%AD%p, T%AD%x(ThisState), T%AD%xd(ThisState), &
+                             T%AD%z(ThisState), T%AD%OtherSt(ThisState), T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
+                             FlagFilter=FlagFilter, dYdu=dYdu, dXdu=dXdu)
 
    case (Module_BD)
       call BD_JacobianPInput(ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, ThisState), T%BD%xd(ModData%Ins, ThisState), &
@@ -640,14 +644,20 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg,
                              T%HD%z(ThisState), T%HD%OtherSt(ThisState), T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
                              dYdu=dYdu, dXdu=dXdu)
 
-!  case (Module_IfW)
+   case (Module_IfW)
+      call InflowWind_JacobianPInput(ThisTime, T%IfW%Input(1), T%IfW%p, T%IfW%x(ThisState), T%IfW%xd(ThisState), &
+                                     T%IfW%z(ThisState), T%IfW%OtherSt(ThisState), T%IfW%y, T%IfW%m, ErrStat2, ErrMsg2, &
+                                     dYdu=dYdu, dXdu=dXdu)
 
    case (Module_MAP)
       call MAP_JacobianPInput(ThisTime, T%MAP%Input(1), T%MAP%p, T%MAP%x(ThisState), T%MAP%xd(ThisState), &
                               T%MAP%z(ThisState), T%MAP%OtherSt, T%MAP%y, T%MAP%m, ErrStat2, ErrMsg2, &
                               dYdu=dYdu, dXdu=dXdu)
 
-!  case (Module_MD)
+   case (Module_MD)
+      call MD_JacobianPInput(ThisTime, T%MD%Input(1), T%MD%p, T%MD%x(ThisState), T%MD%xd(ThisState), &
+                             T%MD%z(ThisState), T%MD%OtherSt(ThisState), T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
+                             dYdu=dYdu, dXdu=dXdu)
 
 !  case (Module_SD)
 !     call SD_JacobianPInput(ThisTime, T%SD%Input(1), T%SD%p, T%SD%x(ThisState), T%SD%xd(ThisState), &
@@ -689,7 +699,12 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, ThisState, T, ErrStat, Err
    ! Select based on module ID
    select case (ModData%ID)
 
-!  case (Module_AD)
+   case (Module_AD)
+      call AD_JacobianPContState(ThisTime, T%AD%Input(1), T%AD%p, &
+                                 T%AD%x(ThisState), T%AD%xd(ThisState), &
+                                 T%AD%z(ThisState), T%AD%OtherSt(ThisState), &
+                                 T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
+                                 FlagFilter=FlagFilter, dYdx=dYdx, dXdx=dXdx)
 
    case (Module_BD)
       call BD_JacobianPContState(ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), &
@@ -714,14 +729,24 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, ThisState, T, ErrStat, Err
                                  T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
                                  FlagFilter=FlagFilter, dYdx=dYdx, dXdx=dXdx)
 
-!  case (Module_IfW)
+   case (Module_IfW)
+      call InflowWind_JacobianPContState(ThisTime, T%IfW%Input(1), T%IfW%p, &
+                                         T%IfW%x(ThisState), T%IfW%xd(ThisState), &
+                                         T%IfW%z(ThisState), T%IfW%OtherSt(ThisState), &
+                                         T%IfW%y, T%IfW%m, ErrStat2, ErrMsg2, &
+                                         dYdx=dYdx, dXdx=dXdx)
 
    case (Module_MAP)
       ! MAP doesn't have a JacobianPContState subroutine
       ErrStat2 = ErrID_None
       ErrMsg2 = ''
 
-!  case (Module_MD)
+   case (Module_MD)
+      call MD_JacobianPContState(ThisTime, T%MD%Input(1), T%MD%p, &
+                                 T%MD%x(ThisState), T%MD%xd(ThisState), &
+                                 T%MD%z(ThisState), T%MD%OtherSt(ThisState), &
+                                 T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
+                                 dYdx=dYdx, dXdx=dXdx)
 
 !   case (Module_SD)
 !      call SD_JacobianPContState(ThisTime, T%SD%Input(1), T%SD%p, &

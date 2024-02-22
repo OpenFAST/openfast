@@ -112,13 +112,22 @@ typedef  ^                       ^                 CHARACTER(LinChanLen)  LinNam
 typedef  ^                       ^                 LOGICAL                RotFrame_y       {:}  -   -    "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
 typedef  ^                       ^                 LOGICAL                RotFrame_u       {:}  -   -    "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
 typedef  ^                       ^                 LOGICAL                IsLoad_u         {:}  -   -    "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
-typedef  ^                       ^                 FlowFieldType         *FlowField        -   -   -    "Flow field data to represent all wind types"  -
+typedef  ^                       ^                 FlowFieldType         *FlowField        -    -   -    "Flow field data to represent all wind types"  -
+typedef	 ^                       ^                 ModVarsType           *Vars             -    -   -    "Module Variables"
 
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef  ^                    ParameterType        CHARACTER(1024)   RootFileName      -     -     -     "Root of the InflowWind input   filename"                -
+typedef  ^                    ParameterType        ModVarsType      &Vars              -     -     -     "Module Variables"
+typedef  ^                       ^                 IntKi             iVarHWindSpeed    -     -     -     "Horizontal wind speed variable index" -
+typedef  ^                       ^                 IntKi             iVarPLExp         -     -     -     "Vertical power-law shear exponent variable index" -
+typedef  ^                       ^                 IntKi             iVarPropagationDir -    -     -     "Propagation direction variable index" -
+typedef  ^                       ^                 IntKi             iVarHWindSpeedY    -     -     -     "Horizontal wind speed variable index" -
+typedef  ^                       ^                 IntKi             iVarPLExpY         -     -     -     "Vertical power-law shear exponent variable index" -
+typedef  ^                       ^                 IntKi             iVarPropagationDirY -    -     -     "Propagation direction variable index" -
+typedef  ^                       ^                 IntKi             iVarWriteOutput   -     -     -     "Write output variable index" -
+typedef  ^                       ^                 CHARACTER(1024)   RootFileName      -     -     -     "Root of the InflowWind input   filename"                -
 typedef  ^                       ^                 DbKi              DT                -     -     -     "Time step for cont. state integration & disc. state update"   seconds
 typedef  ^                       ^                 ReKi              WindViXYZprime    ::    -     -     "List of XYZ coordinates for velocity measurements, translated to the wind coordinate system (prime coordinates).  This equals MATMUL( RotToWind, ParamData%WindViXYZ )"  meters
 typedef  ^                       ^                 ReKi              WindViXYZ         ::    -     -     "List of XYZ coordinates for wind velocity measurements, 3xNWindVel" meters
@@ -166,3 +175,4 @@ typedef  ^                       ^                 InflowWind_InputType  u_Avg  
 typedef  ^                       ^                 InflowWind_OutputType y_Avg         -     -     -     "outputs for computing rotor-averaged values"  -
 typedef  ^                       ^                 InflowWind_InputType  u_Hub         -     -     -     "inputs for computing hub values"  -
 typedef  ^                       ^                 InflowWind_OutputType y_Hub         -     -     -     "outputs for computing hub values"  -
+typedef  ^                       ^                 ModJacType        Jac               -     -     -     "Values corresponding to module variables" -

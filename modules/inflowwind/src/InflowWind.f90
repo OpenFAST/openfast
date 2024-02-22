@@ -549,6 +549,13 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    InitOutData%WriteOutputUnt = p%OutParam(1:p%NumOuts)%Units     
 
    !----------------------------------------------------------------------------
+   ! Module Variables
+   !----------------------------------------------------------------------------
+
+   call IfW_InitVars(InitInp, p, y, m, InitOutData, InitInp%Linearize, TmpErrStat, TmpErrMsg)
+   call SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+
+   !----------------------------------------------------------------------------
    ! Linearization
    !----------------------------------------------------------------------------
       
@@ -631,6 +638,101 @@ CONTAINS
    END SUBROUTINE CleanUp
    
 END SUBROUTINE InflowWind_Init
+
+subroutine IfW_InitVars(InitInp, p, y, m, InitOut, Linearize, ErrStat, ErrMsg)
+   type(InflowWind_InitInputType),        intent(in)     :: InitInp     !< Initialization input
+   type(InflowWind_ParameterType),        intent(inout)  :: p           !< Parameters
+   type(InflowWind_OutputType),           intent(inout)  :: y           !< Initial system outputs (outputs are not calculated;
+   type(InflowWind_MiscVarType),          intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
+   type(InflowWind_InitOutputType),       intent(inout)  :: InitOut     !< Output for initialization routine
+   logical,                        intent(in)     :: Linearize   !< Flag to initialize linearization variables
+   integer(IntKi),                 intent(out)    :: ErrStat     !< Error status of the operation
+   character(*),                   intent(out)    :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter    :: RoutineName = 'MAP_InitVars'
+   integer(IntKi)             :: ErrStat2                     ! Temporary Error status
+   character(ErrMsgLen)       :: ErrMsg2                      ! Temporary Error message
+   integer(IntKi)             :: i
+   real(R8Ki)                 :: Perturb
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   ! Allocate space for variables (deallocate if already allocated)
+   if (associated(p%Vars)) deallocate(p%Vars)
+   allocate(p%Vars, stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Add pointers to vars to inititialization output
+   InitOut%Vars => p%Vars
+
+   !----------------------------------------------------------------------------
+   ! Continuous State Variables
+   !----------------------------------------------------------------------------
+
+   !----------------------------------------------------------------------------
+   ! Input variables
+   !----------------------------------------------------------------------------
+
+   call MV_AddVar(p%Vars%u, "HWindSpeed", VF_Scalar, &
+                  VarIdx=p%iVarHWindSpeed, &
+                  Flags=ior(VF_ExtLin, VF_Linearize), &
+                  LinNames=['Extended input: horizontal wind speed (steady/uniform wind), m/s'])
+
+   call MV_AddVar(p%Vars%u, "PLExp", VF_Scalar, &
+                  VarIdx=p%iVarPLExp, &
+                  Flags=ior(VF_ExtLin, VF_Linearize), &
+                  LinNames=['Extended input: vertical power-law shear exponent, -'])
+
+   call MV_AddVar(p%Vars%u, "PropagationDir", VF_Scalar, &
+                  VarIdx=p%iVarPropagationDir, &
+                  Flags=ior(VF_ExtLin, VF_Linearize), &
+                  LinNames=['Extended input: propagation direction, rad'])
+
+   !----------------------------------------------------------------------------
+   ! Output variables
+   !----------------------------------------------------------------------------
+
+   call MV_AddVar(p%Vars%y, "HWindSpeed", VF_Scalar, &
+                  VarIdx=p%iVarHWindSpeedY, &
+                  Flags=VF_ExtLin, &
+                  LinNames=['Extended output: horizontal wind speed (steady/uniform wind), m/s'])
+
+   call MV_AddVar(p%Vars%y, "PLExp", VF_Scalar, &
+                  VarIdx=p%iVarPLExpY, &
+                  Flags=VF_ExtLin, &
+                  LinNames=['Extended output: vertical power-law shear exponent, -'])
+
+   call MV_AddVar(p%Vars%y, "PropagationDir", VF_Scalar, &
+                  VarIdx=p%iVarPropagationDirY, &
+                  Flags=VF_ExtLin, &
+                  LinNames=['Extended output: propagation direction, rad'])
+
+   call MV_AddVar(p%Vars%y, "WriteOutput", VF_Scalar, &
+                  VarIdx=p%iVarWriteOutput, &
+                  Flags=VF_WriteOut, &
+                  Num=p%NumOuts, &
+                  LinNames=[(WriteOutputLinName(i), i = 1, p%NumOuts)])
+
+   !----------------------------------------------------------------------------
+   ! Initialize Variables and Jacobian data
+   !----------------------------------------------------------------------------
+
+   CALL MV_InitVarsJac(p%Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+
+contains
+   character(LinChanLen) function WriteOutputLinName(idx)
+      integer(IntKi), intent(in) :: idx
+      WriteOutputLinName = trim(InitOut%WriteOutputHdr(idx))//', '//trim(InitOut%WriteOutputUnt(idx))
+   end function
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
 
 
 !====================================================================================================
@@ -798,20 +900,21 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) 
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z)  
  
-      ! local variables: 
-   INTEGER(IntKi)                                                 :: ErrStat2
-   CHARACTER(ErrMsgLen)                                           :: ErrMsg2            ! temporary error message
-   CHARACTER(*), PARAMETER                                        :: RoutineName = 'InflowWind_JacobianPInput'
-   REAL(R8Ki)                                                     :: local_dYdu(3,NumExtendedIO)
-   integer                                                        :: i,j, n
-   integer                                                        :: i_start, i_end  ! indices for input/output start and end
-   integer                                                        :: node, comp
+   CHARACTER(*), PARAMETER    :: RoutineName = 'InflowWind_JacobianPInput'
+   INTEGER(IntKi)             :: ErrStat2
+   CHARACTER(ErrMsgLen)       :: ErrMsg2            ! temporary error message
+   REAL(R8Ki)                 :: local_dYdu(3, NumExtendedIO)
+   integer                    :: i, j, n
+   integer                    :: i_start, i_end  ! indices for input/output start and end
+   integer                    :: node, comp
       
-      ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   IF ( PRESENT( dYdu ) ) THEN
+   ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
+   !  -  inputs are extended inputs only
+   !  -  outputs are the extended outputs and the WriteOutput values
+   if (present(dYdu)) then
 
       ! If dYdu is allocated, make sure it is the correct size
       if (allocated(dYdu)) then
@@ -819,54 +922,59 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
          if (size(dYdu,2) /= NumExtendedIO)              deallocate (dYdu)
       endif
 
-      ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
-      !  -  inputs are extended inputs only
-      !  -  outputs are the extended outputs and the WriteOutput values
-      if (.not. ALLOCATED(dYdu)) then
-         CALL AllocAry( dYdu, NumExtendedIO + p%NumOuts, NumExtendedIO, 'dYdu', ErrStat2, ErrMsg2 )
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (.not. allocated(dYdu)) then
+         call AllocAry(dYdu, NumExtendedIO + p%NumOuts, NumExtendedIO, 'dYdu', ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end if
          
-         
-      SELECT CASE ( p%FlowField%FieldType )
-      CASE (Uniform_FieldType)
-         dYdu = 0.0_R8Ki ! initialize all non-diagonal entries to zero (position of node effects the output of only that node) 
+      ! Switch based on type of flowfield
+      select case (p%FlowField%FieldType)
+      case (Uniform_FieldType)
+
+         ! Initialize all non-diagonal entries to zero (position of node effects the output of only that node) 
+         dYdu = 0.0_R8Ki 
 
          ! Extended inputs to extended outputs (direct pass-through)
-         do i=1,NumExtendedIO
+         do i = 1, NumExtendedIO
             dYdu(i,i) = 1.0_R8Ki
          enddo
 
          ! WriteOutput velocities (note: may not have all of the components of each point) 
-         do i=1, p%NumOuts
+         do i = 1, p%NumOuts
+            
             node  = p%OutParamLinIndx(1,i) ! output node
             comp  = p%OutParamLinIndx(2,i) ! component of output node
 
             if (node > 0) then
-               call IfW_UniformWind_JacobianPInput( p%FlowField%Uniform, t, p%WindViXYZ(:,node), p%FlowField%RotToWind(1,1), p%FlowField%RotToWind(2,1), local_dYdu )
+               call IfW_UniformWind_JacobianPInput(p%FlowField%Uniform, t, p%WindViXYZ(:,node), &
+                                                   p%FlowField%RotToWind(1,1), &
+                                                   p%FlowField%RotToWind(2,1), &
+                                                   local_dYdu)
             else
                local_dYdu = 0.0_R8Ki
                comp = 1
             end if
-            dYdu(NumExtendedIO+i, 1:NumExtendedIO) = p%OutParam(i)%SignM * local_dYdu( comp , 1:NumExtendedIO)
+
+            dYdu(NumExtendedIO+i, 1:NumExtendedIO) = p%OutParam(i)%SignM * local_dYdu(comp, 1:NumExtendedIO)
+
          end do
 
-      CASE DEFAULT
-      END SELECT
-   END IF
+      end select
+   end if
 
-   IF ( PRESENT( dXdu ) ) THEN
+   if (present(dXdu)) then
       if (allocated(dXdu)) deallocate(dXdu) 
-   END IF
+   end if
 
-   IF ( PRESENT( dXddu ) ) THEN
+   if (present(dXddu)) then
       if (allocated(dXddu)) deallocate(dXddu) 
-   END IF
+   end if
 
-   IF ( PRESENT( dZdu ) ) THEN
+   if (present(dZdu)) then
       if (allocated(dZdu)) deallocate(dZdu) 
-   END IF
+   end if
+
 END SUBROUTINE InflowWind_JacobianPInput
 
 

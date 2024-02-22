@@ -460,6 +460,26 @@ subroutine AD_InitInputMappings(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrM
                          DstMeshLoc=MeshLocType(AD_u_rotors_TFinMotion, AD_rotor), &      ! AD%u%rotors(1)%TFinMotion
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
+   case (Module_IfW)
+
+      call MapVariable(Mappings, "IfW HWindSpeed -> AD HWindSpeed", &
+                       SrcMod=SrcMod, DstMod=DstMod, &
+                       iVarSrc=Turbine%IfW%p%iVarHWindSpeed, &
+                       iVarDst=Turbine%AD%p%rotors(DstMod%Ins)%iVarHWindSpeed, &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
+
+      call MapVariable(Mappings, "IfW PLExp -> AD PLExp", &
+                       SrcMod=SrcMod, DstMod=DstMod, &
+                       iVarSrc=Turbine%IfW%p%iVarPLExp, &
+                       iVarDst=Turbine%AD%p%rotors(DstMod%Ins)%iVarPLExp, &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
+
+      call MapVariable(Mappings, "IfW PropagationDir -> AD PropagationDir", &
+                       SrcMod=SrcMod, DstMod=DstMod, &
+                       iVarSrc=Turbine%IfW%p%iVarPropagationDir, &
+                       iVarDst=Turbine%AD%p%rotors(DstMod%Ins)%iVarPropagationDir, &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
+
    case (Module_SrvD)
 
       ! call MapVariable(Mappings, Key='SrvD BlAirfoilCom -> AD UserProp', SrcMod=SrcMod, DstMod=DstMod)
@@ -597,6 +617,30 @@ subroutine ED_InitInputMappings(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrM
       ! TODO
       ! CALL MeshMapCreate( ExtLd%y%TowerLoad, ED%Input(1)%TowerPtLoads,  MeshMapData%ExtLd_P_2_ED_P_T, ErrStat2, ErrMsg2 )
 
+   case (Module_HD)
+
+      ! Coupling with HydroDyn if no substructure module is used
+      if (Turbine%p_FAST%CompSub == Module_None) then
+
+         call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                          SrcMeshLoc=MeshLocType(HydroDyn_y_Morison_Mesh), &        ! HD%y%Morison%Mesh
+                          SrcDispMeshLoc=MeshLocType(HydroDyn_u_Morison_Mesh), &    ! HD%u%Morison%Mesh
+                          DstMeshLoc=MeshLocType(ED_u_PlatformPtMesh), &            ! ED%u%PlatformPtMesh
+                          DstDispMeshLoc=MeshLocType(ED_y_PlatformPtMesh), &        ! ED%y%PlatformPtMesh
+                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+         call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                          SrcMeshLoc=MeshLocType(HydroDyn_y_WAMITMesh), &           ! HD%y%WAMITMesh
+                          SrcDispMeshLoc=MeshLocType(HydroDyn_u_WAMITMesh), &       ! HD%u%WAMITMesh
+                          DstMeshLoc=MeshLocType(ED_u_PlatformPtMesh), &            ! ED%u%PlatformPtMesh
+                          DstDispMeshLoc=MeshLocType(ED_y_PlatformPtMesh), &        ! ED%y%PlatformPtMesh
+                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+      end if
+
+   case (Module_MAP)
+
+
+
    case (Module_SD)
 
       call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
@@ -631,17 +675,17 @@ subroutine ED_InitInputMappings(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrM
       call MapVariable(Mappings, "SrvD BlPitchCom -> ED BlPitchCom", &
                        SrcMod=SrcMod, iVarSrc=Turbine%SrvD%p%iVarBlPitchCom, &
                        DstMod=DstMod, iVarDst=Turbine%ED%p%iVarBlPitchCom, &
-                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
       call MapVariable(Mappings, "SrvD YawMom -> ED YawMom", &
                        SrcMod=SrcMod, iVarSrc=Turbine%SrvD%p%iVarYawMom, &
                        DstMod=DstMod, iVarDst=Turbine%ED%p%iVarYawMom, &
-                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
       call MapVariable(Mappings, "SrvD GenTrq -> ED GenTrq", &
                        SrcMod=SrcMod, iVarSrc=Turbine%SrvD%p%iVarGenTrq, &
                        DstMod=DstMod, iVarDst=Turbine%ED%p%iVarGenTrq, &
-                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
    end select
 
@@ -658,10 +702,10 @@ subroutine ED_InitInputMappings(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrM
 
          do i = 1, size(Turbine%ED%Input(1)%BladePtLoads)
             call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                             SrcMeshLoc=MeshLocType(), &                            ! AD%y%rotors(1)%BladeLoad(i)
-                             SrcDispMeshLoc=MeshLocType(), &                        ! AD%u%rotors(1)%BladeMotion(i)
-                             DstMeshLoc=MeshLocType(), &                            ! ED%u%BladePtLoads(i)
-                             DstDispMeshLoc=MeshLocType(), &                        ! ED%y%BladeLn2Mesh(i)
+                             SrcMeshLoc=MeshLocType(AD_y_rotors_BladeLoad, AD_rotor, i), &         ! AD%y%rotors(iR)%BladeLoad(i)
+                             SrcDispMeshLoc=MeshLocType(AD_u_rotors_BladeMotion, AD_rotor, i), &   ! AD%u%rotors(iR)%BladeMotion(i)
+                             DstMeshLoc=MeshLocType(ED_u_BladePtLoads, i), &                       ! ED%u%BladePtLoads(i)
+                             DstDispMeshLoc=MeshLocType(ED_y_BladeLn2Mesh, i), &                   ! ED%y%BladeLn2Mesh(i)
                              ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
          end do
 
@@ -708,22 +752,6 @@ subroutine ED_InitInputMappings(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrM
       case (Module_FEAM)
 
          ! MeshMapCreate( FEAM%y%PtFairleadLoad, ED%Input(1)%PlatformPtMesh,  MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2 )
-
-      case (Module_HD)
-
-         call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                          SrcMeshLoc=MeshLocType(HydroDyn_y_Morison_Mesh), &        ! HD%y%Morison%Mesh
-                          SrcDispMeshLoc=MeshLocType(HydroDyn_u_Morison_Mesh), &    ! HD%u%Morison%Mesh
-                          DstMeshLoc=MeshLocType(ED_u_PlatformPtMesh), &            ! ED%u%PlatformPtMesh
-                          DstDispMeshLoc=MeshLocType(ED_y_PlatformPtMesh), &        ! ED%y%PlatformPtMesh
-                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
-
-         call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                          SrcMeshLoc=MeshLocType(HydroDyn_y_WAMITMesh), &           ! HD%y%WAMITMesh
-                          SrcDispMeshLoc=MeshLocType(HydroDyn_u_WAMITMesh), &       ! HD%u%WAMITMesh
-                          DstMeshLoc=MeshLocType(ED_u_PlatformPtMesh), &            ! ED%u%PlatformPtMesh
-                          DstDispMeshLoc=MeshLocType(ED_y_PlatformPtMesh), &        ! ED%y%PlatformPtMesh
-                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
       case (Module_IceD)
 
@@ -1209,16 +1237,24 @@ subroutine SrvD_InitInputMappings(Mappings, SrcMod, DstMod, Turbine, ErrStat, Er
    ErrStat = ErrID_None
    ErrMsg = ''
 
-   ! MeshMapCreate( BD%y(k)%BldMotion, SrvD%Input(1)%BStCMotionMesh(K,j), MeshMapData%BD_L_2_BStC_P_B(K,j), ErrStat2, ErrMsg2 )
-   ! MeshMapCreate( ED%y%BladeLn2Mesh(K), SrvD%Input(1)%BStCMotionMesh(K,j), MeshMapData%ED_L_2_BStC_P_B(K,j), ErrStat2, ErrMsg2 )
-   ! MeshMapCreate( ED%y%NacelleMotion, SrvD%Input(1)%NStCMotionMesh(j), MeshMapData%ED_P_2_NStC_P_N(j), ErrStat2, ErrMsg2 )
-   ! MeshMapCreate( ED%y%TowerLn2Mesh, SrvD%Input(1)%TStCMotionMesh(j), MeshMapData%ED_L_2_TStC_P_T(j), ErrStat2, ErrMsg2 )
+
+   
+   
    ! MeshMapCreate( PlatformMotion, SrvD%Input(1)%PtfmMotionMesh, MeshMapData%ED_P_2_SrvD_P_P, ErrStat2, ErrMsg2 )
    ! MeshMapCreate( SubStructureMotion, SrvD%Input(1)%SStCMotionMesh(j), MeshMapData%SubStructure_2_SStC_P_P(j), ErrStat2, ErrMsg2 )
 
    select case (SrcMod%ID)
+
    case (Module_BD)
 
+      ! Blade Structural Controller
+      do i = 1, Turbine%SrvD%p%NumBStC
+         call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                            SrcMeshLoc=MeshLocType(BD_y_BldMotion), &                         ! BD%y%BldMotion
+                            DstMeshLoc=MeshLocType(SrvD_u_BStCMotionMesh, i, DstMod%Ins), &   ! SrvD%u%BStCMotionMesh(i, j)
+                            ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+      end do
+   
       ! TODO
       ! call MapVariable(Mappings, "BD Data -> SrvD Data", SrcMod=SrcMod, DstMod=DstMod)
       ! call MapVariable(Mappings, "BD RootM -> SrvD RootM", SrcMod=SrcMod, DstMod=DstMod)
@@ -1271,22 +1307,22 @@ subroutine SrvD_InitInputMappings(Mappings, SrcMod, DstMod, Turbine, ErrStat, Er
       call MapVariable(Mappings, "ED Yaw -> SrvD Yaw", &
                        SrcMod=SrcMod, iVarSrc=Turbine%ED%p%iVarYaw, &
                        DstMod=DstMod, iVarDst=Turbine%SrvD%p%iVarYaw, &
-                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
       call MapVariable(Mappings, "ED YawRate -> SrvD YawRate", &
                        SrcMod=SrcMod, iVarSrc=Turbine%ED%p%iVarYawRate, &
                        DstMod=DstMod, iVarDst=Turbine%SrvD%p%iVarYawRate, &
-                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
       call MapVariable(Mappings, "ED HSS_Spd -> SrvD HSS_Spd", &
                        SrcMod=SrcMod, iVarSrc=Turbine%ED%p%iVarHSS_Spd, &
                        DstMod=DstMod, iVarDst=Turbine%SrvD%p%iVarHSS_Spd, &
-                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
       call MapVariable(Mappings, "ED HSS_Spd -> SrvD HSS_Spd", &
                        SrcMod=SrcMod, iVarSrc=Turbine%ED%p%iVarHSS_Spd, &
                        DstMod=DstMod, iVarDst=Turbine%SrvD%p%iVarHSS_Spd, &
-                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
    case (Module_IfW)
 
@@ -1687,7 +1723,7 @@ subroutine FAST_LinearizeMappings(Turbine, Mods, Mappings, ModOrder, ErrStat, Er
             ! Select based on type of mapping
             select case (Mapping%MapType)
             case (Map_Variable)
-               
+
                if (.not. present(dUdy)) cycle
 
                associate (SrcMod => Mods(Mapping%SrcModIdx), &
@@ -1772,17 +1808,17 @@ contains
       type(TC_MappingType), intent(inout)          :: Mapping  !< Mapping
       type(MeshMapLinearizationType), intent(in)   :: dM       !< Mesh Map Linearization data
 
-      ! Effect of input Translation Velocity on input Translation Displacement
+      ! Effect of input Translation Displacement on input Translation Velocity
       if (allocated(dM%tv_uD)) then
          call SumBlock(Mapping%iLocDstTransVel, Mapping%iLocDstTransDisp, dM%tv_uD, dUdU)
       end if
 
-      ! Effect of input Translation Acceleration on input Translation Displacement
+      ! Effect of input Translation Displacement on input Translation Acceleration
       if (allocated(dM%ta_uD)) then
          call SumBlock(Mapping%iLocDstTransAcc, Mapping%iLocDstTransDisp, dM%ta_uD, dUdU)
       end if
 
-      ! Effect of input Moments on input Translation Displacement
+      ! Effect of input Translation Displacement on input Moments
       if (allocated(dM%M_uS)) then
          call SumBlock(Mapping%iLocDstMoment, Mapping%iLocSrcDispTransDisp, dM%M_uS, dUdU)
       end if
@@ -1798,12 +1834,12 @@ contains
          call SumBlock(Mapping%iLocDstMoment, Mapping%iLocSrcMoment, dM%li, dUdy)
       end if
 
-      ! Moment to Force
+      ! Force to Moment
       if (allocated(dM%m_f)) then
          call SumBlock(Mapping%iLocDstMoment, Mapping%iLocSrcForce, dM%m_f, dUdy)
       end if
 
-      ! Moment to destination translation displacement
+      ! Destination translation displacement to Moment
       if (allocated(dM%m_uD)) then
          if (Mapping%DstUsesSibling) then
             ! Direct transfer
@@ -1827,24 +1863,24 @@ contains
          call SumBlock(Mapping%iLocDstAngularAcc, Mapping%iLocSrcAngularAcc, dM%mi, dUdy)
       end if
 
-      ! Translation to Rotation
+      ! Rotation to Translation
       if (allocated(dM%fx_p)) then
          call SumBlock(Mapping%iLocDstTransDisp, Mapping%iLocSrcOrientation, dM%fx_p, dUdy)
          call SumBlock(Mapping%iLocDstTransVel, Mapping%iLocSrcAngularVel, dM%fx_p, dUdy)
          call SumBlock(Mapping%iLocDstTransAcc, Mapping%iLocSrcAngularAcc, dM%fx_p, dUdy)
       end if
 
-      ! Translation velocity to translation displacement
+      ! Translation displacement to Translation velocity
       if (allocated(dM%tv_us)) then
-         call SumBlock(Mapping%iLocDstTransVel, Mapping%iLocDstDispTransDisp, dM%tv_us, dUdy)
+         call SumBlock(Mapping%iLocDstTransVel, Mapping%iLocSrcTransDisp, dM%tv_us, dUdy)
       end if
 
-      ! Translation acceleration to translation displacement
+      ! Translation displacement to Translation acceleration
       if (allocated(dM%ta_us)) then
          call SumBlock(Mapping%iLocDstTransAcc, Mapping%iLocSrcTransDisp, dM%ta_us, dUdy)
       end if
 
-      ! Translation acceleration to angular velocity
+      ! Angular velocity to Translation acceleration
       if (allocated(dM%ta_rv)) then
          call SumBlock(Mapping%iLocDstTransAcc, Mapping%iLocSrcAngularVel, dM%ta_rv, dUdy)
       end if
@@ -1860,7 +1896,6 @@ contains
             DstSubM = DstSubM - SrcM
          end associate
       end if
-
    end subroutine
 
    logical function Failed()

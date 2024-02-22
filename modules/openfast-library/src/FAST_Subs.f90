@@ -584,6 +584,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          y_FAST%Lin%WindSpeed = Init%OutData_IfW%WindFileInfo%MWS
       end if
 
+      CALL MV_AddModule(y_FAST%Modules, Module_IfW, 'IfW', 1, p_FAST%dt_module(Module_IfW), p_FAST%DT, &
+                        Init%OutData_IfW%Vars, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN

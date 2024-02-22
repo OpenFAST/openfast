@@ -26,7 +26,7 @@ implicit none
 
 public IfW_FlowField_GetVelAcc
 public IfW_UniformField_CalcAccel, IfW_Grid3DField_CalcAccel
-public IfW_UniformWind_GetOP, IfW_UniformWind_Perturb       ! for linearization
+public IfW_UniformWind_GetOP  ! for linearization
 public Grid3D_to_Uniform, Uniform_to_Grid3D
 
 integer(IntKi), parameter  :: WindProfileType_None = -1     !< don't add wind profile; already included in input
@@ -716,7 +716,7 @@ subroutine IfW_UniformWind_GetOP(UF, t, InterpCubic, OP_out)
    type(UniformFieldType), intent(IN)  :: UF             !< Parameters
    real(DbKi), intent(IN)              :: t              !< Current simulation time in seconds
    logical, intent(in)                 :: InterpCubic    !< flag for using cubic interpolation
-   real(R8Ki), intent(OUT)             :: OP_out(2)      !< operating point (HWindSpeed and PLexp
+   real(R8Ki), intent(OUT)             :: OP_out(3)      !< operating point (HWindSpeed and PLexp
 
    type(UniformField_Interp)           :: op         ! interpolated values of InterpParams
 

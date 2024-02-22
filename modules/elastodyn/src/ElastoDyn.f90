@@ -11193,6 +11193,14 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
                       Mesh=u%NacelleLoads, &
                       Perturbs=[MaxThrust / 100.0_R8Ki, &
                                 MaxTorque / 100.0_R8Ki])
+                   
+   ! TFinCM point loads
+   call MV_AddMeshVar(p%Vars%u, "Tailfin", LoadFields, &
+                      VarIdx=p%iVarTFinCMLoads, &
+                      Mesh=u%TFinCMLoads, &
+                      Perturbs=[MaxThrust / 100.0_R8Ki, &
+                                MaxTorque / 100.0_R8Ki])
+
    ! Non-mesh input variables
    call MV_AddVar(p%Vars%u, "BlPitchCom", VF_Scalar, &
                   VarIdx=p%iVarBlPitchCom, &
@@ -11200,16 +11208,19 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
                   Flags=VF_RotFrame + VF_Linearize, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=[('Blade '//trim(num2lstr(i))//' pitch command, rad', i=1,p%NumBl)])
+
    call MV_AddVar(p%Vars%u, "YawMom", VF_Scalar, &
                   VarIdx=p%iVarYawMom, &
                   Flags=VF_Linearize, &
                   Perturb=MaxTorque / 100.0_R8Ki, &
                   LinNames=['Yaw moment, Nm'])
+
    call MV_AddVar(p%Vars%u, "GenTrq", VF_Scalar, &
                   VarIdx=p%iVarGenTrq, &
                   Flags=VF_Linearize, &
                   Perturb=MaxTorque / (100.0_R8Ki*p%GBRatio), &
                   LinNames=['Generator torque, Nm'])
+
    call MV_AddVar(p%Vars%u, "BlPitchComC", VF_Scalar, &
                   VarIdx=p%iVarBlPitchComC, &
                   Flags=VF_ExtLin + VF_Linearize, &
@@ -11255,7 +11266,8 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
                       Mesh=y%TowerLn2Mesh, &
                       Flags=VF_Line)
 
-   call MV_AddMeshVar(p%Vars%y, 'Hub', [VF_TransDisp, VF_Orientation, VF_AngularVel], &
+   call MV_AddMeshVar(p%Vars%y, 'Hub', &
+                      Fields=[VF_TransDisp, VF_Orientation, VF_AngularVel], &
                       VarIdx=p%iVarHubMotion, &
                       Mesh=y%HubPtMotion)
 
@@ -11268,6 +11280,11 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
    call MV_AddMeshVar(p%Vars%y, 'Nacelle', MotionFields, &
                       VarIdx=p%iVarNacelleMotion, &
                       Mesh=y%NacelleMotion)
+
+   call MV_AddMeshVar(p%Vars%y, 'TailFin', &
+                      Fields=[VF_TransDisp, VF_Orientation, VF_TransVel, VF_AngularVel], &
+                      VarIdx=p%iVarTFinCMMotion, &
+                      Mesh=y%TFinCMMotion)
 
    call MV_AddVar(p%Vars%y, 'Yaw', VF_AngularDisp, &
                   VarIdx=p%iVarYaw, &
@@ -11405,6 +11422,7 @@ subroutine ED_PackInputValues(p, u, Ary)
    call MV_Pack(p%Vars%u, p%iVarTowerPtLoads, u%TowerPtLoads, Ary)
    call MV_Pack(p%Vars%u, p%iVarHubPtLoad, u%HubPtLoad, Ary)
    call MV_Pack(p%Vars%u, p%iVarNacelleLoads, u%NacelleLoads, Ary)
+   call MV_Pack(p%Vars%u, p%iVarTFinCMLoads, u%TFinCMLoads, Ary)
    call MV_Pack(p%Vars%u, p%iVarBlPitchCom, u%BlPitchCom, Ary)
    call MV_Pack(p%Vars%u, p%iVarYawMom, u%YawMom, Ary)
    call MV_Pack(p%Vars%u, p%iVarGenTrq, u%GenTrq, Ary)
@@ -11425,6 +11443,7 @@ subroutine ED_UnpackInputValues(p, Ary, u)
    call MV_Unpack(p%Vars%u, p%iVarTowerPtLoads, Ary, u%TowerPtLoads)
    call MV_Unpack(p%Vars%u, p%iVarHubPtLoad, Ary, u%HubPtLoad)
    call MV_Unpack(p%Vars%u, p%iVarNacelleLoads, Ary, u%NacelleLoads)
+   call MV_Unpack(p%Vars%u, p%iVarTFinCMLoads, Ary, u%TFinCMLoads)
    call MV_Unpack(p%Vars%u, p%iVarBlPitchCom, Ary, u%BlPitchCom)
    call MV_Unpack(p%Vars%u, p%iVarYawMom, Ary, u%YawMom)
    call MV_Unpack(p%Vars%u, p%iVarGenTrq, Ary, u%GenTrq)
@@ -11450,6 +11469,7 @@ subroutine ED_PackOutputValues(p, y, Ary, PackWriteOutput)
       end do
    end if
    call MV_Pack(p%Vars%y, p%iVarNacelleMotion, y%NacelleMotion, Ary)
+   call MV_Pack(p%Vars%y, p%iVarTFinCMMotion, y%TFinCMMotion, Ary)
    call MV_Pack(p%Vars%y, p%iVarYaw, y%Yaw, Ary)
    call MV_Pack(p%Vars%y, p%iVarYawRate, y%YawRate, Ary)
    call MV_Pack(p%Vars%y, p%iVarHSS_Spd, y%HSS_Spd, Ary)

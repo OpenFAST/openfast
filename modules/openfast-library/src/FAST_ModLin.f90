@@ -399,6 +399,7 @@ subroutine ModLin_Linearize_OP(Turbine, ModGlue, Mods, p, m, p_FAST, m_FAST, y_F
                                   dYdu=ModData%Lin%dYdu, dXdu=ModData%Lin%dXdu)
          if (Failed()) return
 
+
          ! Derivatives wrt continuous state
          call FAST_JacobianPContState(ModData, t_global, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
                                       dYdx=ModData%Lin%dYdx, dXdx=ModData%Lin%dXdx, &
@@ -440,6 +441,36 @@ subroutine ModLin_Linearize_OP(Turbine, ModGlue, Mods, p, m, p_FAST, m_FAST, y_F
             call WriteModuleLinearMatrices(ModData, ModData%Vars%IdxLin, p_FAST, y_FAST, t_global, Un, OutFileName, ErrStat2, ErrMsg2)
             if (Failed()) return
 
+         end if
+         
+         ! Check for NaNs or infinity in module Jacobian matrices
+         if (allocated(ModData%Lin%dYdu)) then
+            if (any(isnan(ModData%Lin%dYdu))) then
+               ErrStat = ErrID_Fatal
+               ErrMsg = 'NaNs detected in dYdu for module '//ModData%Abbr
+               return
+            end if
+         end if
+         if (allocated(ModData%Lin%dXdu)) then
+            if (any(isnan(ModData%Lin%dXdu))) then
+               ErrStat = ErrID_Fatal
+               ErrMsg = 'NaNs detected in dXdu for module '//ModData%Abbr
+               return
+            end if
+         end if
+         if (allocated(ModData%Lin%dYdx)) then
+            if (any(isnan(ModData%Lin%dYdx))) then
+               ErrStat = ErrID_Fatal
+               ErrMsg = 'NaNs detected in dYdx for module '//ModData%Abbr
+               return
+            end if
+         end if
+         if (allocated(ModData%Lin%dXdx)) then
+            if (any(isnan(ModData%Lin%dXdx))) then
+               ErrStat = ErrID_Fatal
+               ErrMsg = 'NaNs detected in dXdx for module '//ModData%Abbr
+               return
+            end if
          end if
 
       end associate

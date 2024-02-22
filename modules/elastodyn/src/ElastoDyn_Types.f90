@@ -771,6 +771,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: iVarTowerPtLoads = 0_IntKi      !< Index of tower point loads mesh variable [-]
     INTEGER(IntKi)  :: iVarHubPtLoad = 0_IntKi      !< Index of hub point load mesh variable [-]
     INTEGER(IntKi)  :: iVarNacelleLoads = 0_IntKi      !< Index of nacelle loads mesh variable [-]
+    INTEGER(IntKi)  :: iVarTFinCMLoads = 0_IntKi      !< Index of tail fin CM loads mesh variable [-]
     INTEGER(IntKi)  :: iVarBlPitchCom = 0_IntKi      !< Index of blade pitch command variable [-]
     INTEGER(IntKi)  :: iVarYawMom = 0_IntKi      !< Index of yaw moment variable [-]
     INTEGER(IntKi)  :: iVarGenTrq = 0_IntKi      !< Index of generator torque variable [-]
@@ -781,6 +782,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: iVarHubMotion = 0_IntKi      !< Index of variable [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladeRootMotion      !< Indices of variable [-]
     INTEGER(IntKi)  :: iVarNacelleMotion = 0_IntKi      !< Index of variable [-]
+    INTEGER(IntKi)  :: iVarTFinCMMotion = 0_IntKi      !< Index of variable [-]
     INTEGER(IntKi)  :: iVarYaw = 0_IntKi      !< Index of variable [-]
     INTEGER(IntKi)  :: iVarYawRate = 0_IntKi      !< Index of variable [-]
     INTEGER(IntKi)  :: iVarHSS_Spd = 0_IntKi      !< Index of variable [-]
@@ -5727,6 +5729,7 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%iVarTowerPtLoads = SrcParamData%iVarTowerPtLoads
    DstParamData%iVarHubPtLoad = SrcParamData%iVarHubPtLoad
    DstParamData%iVarNacelleLoads = SrcParamData%iVarNacelleLoads
+   DstParamData%iVarTFinCMLoads = SrcParamData%iVarTFinCMLoads
    DstParamData%iVarBlPitchCom = SrcParamData%iVarBlPitchCom
    DstParamData%iVarYawMom = SrcParamData%iVarYawMom
    DstParamData%iVarGenTrq = SrcParamData%iVarGenTrq
@@ -5759,6 +5762,7 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%iVarBladeRootMotion = SrcParamData%iVarBladeRootMotion
    end if
    DstParamData%iVarNacelleMotion = SrcParamData%iVarNacelleMotion
+   DstParamData%iVarTFinCMMotion = SrcParamData%iVarTFinCMMotion
    DstParamData%iVarYaw = SrcParamData%iVarYaw
    DstParamData%iVarYawRate = SrcParamData%iVarYawRate
    DstParamData%iVarHSS_Spd = SrcParamData%iVarHSS_Spd
@@ -6241,6 +6245,7 @@ subroutine ED_PackParam(RF, Indata)
    call RegPack(RF, InData%iVarTowerPtLoads)
    call RegPack(RF, InData%iVarHubPtLoad)
    call RegPack(RF, InData%iVarNacelleLoads)
+   call RegPack(RF, InData%iVarTFinCMLoads)
    call RegPack(RF, InData%iVarBlPitchCom)
    call RegPack(RF, InData%iVarYawMom)
    call RegPack(RF, InData%iVarGenTrq)
@@ -6251,6 +6256,7 @@ subroutine ED_PackParam(RF, Indata)
    call RegPack(RF, InData%iVarHubMotion)
    call RegPackAlloc(RF, InData%iVarBladeRootMotion)
    call RegPack(RF, InData%iVarNacelleMotion)
+   call RegPack(RF, InData%iVarTFinCMMotion)
    call RegPack(RF, InData%iVarYaw)
    call RegPack(RF, InData%iVarYawRate)
    call RegPack(RF, InData%iVarHSS_Spd)
@@ -6540,6 +6546,7 @@ subroutine ED_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%iVarTowerPtLoads); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarHubPtLoad); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarNacelleLoads); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarTFinCMLoads); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarBlPitchCom); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarYawMom); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarGenTrq); if (RegCheckErr(RF, RoutineName)) return
@@ -6550,6 +6557,7 @@ subroutine ED_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%iVarHubMotion); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%iVarBladeRootMotion); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarNacelleMotion); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarTFinCMMotion); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarYaw); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarYawRate); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarHSS_Spd); if (RegCheckErr(RF, RoutineName)) return

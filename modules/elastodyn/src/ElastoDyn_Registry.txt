@@ -753,6 +753,7 @@ typedef	^	ParameterType	IntKi	iVarPlatformPtMesh	-	-	-	"Index of platform point 
 typedef	^	ParameterType	IntKi	iVarTowerPtLoads	-	-	-	"Index of tower point loads mesh variable"	-
 typedef	^	ParameterType	IntKi	iVarHubPtLoad	-	-	-	"Index of hub point load mesh variable"	-
 typedef	^	ParameterType	IntKi	iVarNacelleLoads	-	-	-	"Index of nacelle loads mesh variable"	-
+typedef	^	ParameterType	IntKi	iVarTFinCMLoads	-	-	-	"Index of tail fin CM loads mesh variable"	-
 typedef	^	ParameterType	IntKi	iVarBlPitchCom	-	-	-	"Index of blade pitch command variable"	-
 typedef	^	ParameterType	IntKi	iVarYawMom	-	-	-	"Index of yaw moment variable"	-
 typedef	^	ParameterType	IntKi	iVarGenTrq	-	-	-	"Index of generator torque variable"	-
@@ -764,6 +765,7 @@ typedef	^	ParameterType	IntKi	iVarTowerMotion	-	-	-	"Index of variable"	-
 typedef	^	ParameterType	IntKi	iVarHubMotion	-	-	-	"Index of variable"	-
 typedef	^	ParameterType	IntKi	iVarBladeRootMotion	{:}	-	-	"Indices of variable"	-
 typedef	^	ParameterType	IntKi	iVarNacelleMotion	-	-	-	"Index of variable"	-
+typedef	^	ParameterType	IntKi	iVarTFinCMMotion	-	-	-	"Index of variable"	-
 typedef	^	ParameterType	IntKi	iVarYaw	-	-	-	"Index of variable"	-
 typedef	^	ParameterType	IntKi	iVarYawRate	-	-	-	"Index of variable"	-
 typedef	^	ParameterType	IntKi	iVarHSS_Spd	-	-	-	"Index of variable"	-
