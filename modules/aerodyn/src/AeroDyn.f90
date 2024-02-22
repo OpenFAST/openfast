@@ -5335,7 +5335,7 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
    character(64)           :: NodeLabel
    character(1), parameter :: UVW(3) = ['U','V','W']
    real(R8Ki)              :: Perturb, PerturbTower, PerturbBlade(MaxBl)
-   integer(IntKi)          :: i, j, k
+   integer(IntKi)          :: i, j
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -5360,8 +5360,8 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
 
    Perturb = 2.0_R8Ki * D2R_D
 
-   do k = 1, p%NumBlades
-      PerturbBlade(k) = 0.2_R8Ki * D2R_D * InputFileData%BladeProps(k)%BlSpn(InputFileData%BladeProps(k)%NumBlNds)
+   do i = 1, p%NumBlades
+      PerturbBlade(i) = 0.2_R8Ki * D2R_D * InputFileData%BladeProps(i)%BlSpn(InputFileData%BladeProps(i)%NumBlNds)
    end do
 
    if (u%TowerMotion%NNodes > 0) then
@@ -5490,10 +5490,10 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
                          Perturbs=[PerturbBlade(j), Perturb, PerturbBlade(j), Perturb, PerturbBlade(j), Perturb]) 
       ! Set AeroMap flag on subset of fields for first blade
       if (j == 1) then
-         do k = p%iVarBladeMotion(j), size(p%Vars%u)
-            select case (p%Vars%u(k)%Field)
+         do i = p%iVarBladeMotion(j), size(p%Vars%u)
+            select case (p%Vars%u(i)%Field)
             case (VF_TransDisp, VF_Orientation, VF_TransVel)
-               call MV_SetFlags(p%Vars%u(k), VF_AeroMap)
+               call MV_SetFlags(p%Vars%u(i), VF_AeroMap)
             end select
          end do
       end if
@@ -5503,12 +5503,12 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
    call AllocAry(p%iVarUserProp, p%NumBlades, "iVarUserProp", ErrStat2, ErrMsg2); if (Failed()) return
    p%iVarUserProp = 0
    do j = 1, p%NumBlades
-      call MV_AddVar(p%Vars%u, "UserProp Blade"//IdxStr(k), VF_Scalar, &
+      call MV_AddVar(p%Vars%u, "UserProp Blade"//IdxStr(j), VF_Scalar, &
                      VarIdx=p%iVarUserProp(j), &
                      Flags=ior(VF_Linearize, VF_RotFrame), &
                      Num=p%NumBlNds, &
                      Perturb=2.0_R8Ki*D2R_D, &
-                     LinNames=[('User property on blade '//trim(Num2LStr(j))//', node '//trim(Num2LStr(k))//', -', k = 1, p%NumBlNds)])
+                     LinNames=[('User property on blade '//trim(Num2LStr(j))//', node '//trim(Num2LStr(i))//', -', i = 1, p%NumBlNds)])
    end do
 
    ! Extended inputs
@@ -5578,7 +5578,7 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
    do j = p%NumOuts + 1, p%NumOuts + p%BldNd_TotNumOuts
       call MV_AddVar(p%Vars%y, InitOut%WriteOutputHdr(j), VF_Scalar, &
                      Flags=VF_WriteOut + VF_RotFrame, &
-                     iUsr=k, &
+                     iUsr=j, &
                      LinNames=[trim(InitOut%WriteOutputHdr(j))//', '//trim(InitOut%WriteOutputUnt(j))])
    end do
 
