@@ -541,7 +541,7 @@ subroutine FAST_GetOP(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg, FlagFilt
    select case (ModData%ID)
 
    case (Module_AD)
-      call AD_GetOP(ThisTime, T%AD%Input(1), T%AD%p, T%AD%x(ThisState), T%AD%xd(ThisState), T%AD%z(ThisState), &
+      call AD_GetOP(ModData%Ins, ThisTime, T%AD%Input(1), T%AD%p, T%AD%x(ThisState), T%AD%xd(ThisState), T%AD%z(ThisState), &
                     T%AD%OtherSt(ThisState), T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
                     FlagFilter=FlagFilter, u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
 
