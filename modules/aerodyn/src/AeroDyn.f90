@@ -6599,6 +6599,46 @@ contains
    end function
 end subroutine
 
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine uses values of two output types to compute an array of differences.
+!! Do not change this packing without making sure subroutine aerodyn::init_jacobian is consistant with this routine!
+SUBROUTINE Compute_dY(p, p_AD, y_p, y_m, delta_p, delta_m, dY)
+   TYPE(RotParameterType)            , INTENT(IN   ) :: p         !< parameters
+   TYPE(AD_ParameterType)            , INTENT(IN   ) :: p_AD      !< parameters
+   TYPE(RotOutputType)               , INTENT(IN   ) :: y_p       !< AD outputs at \f$ u + \Delta_p u \f$ or \f$ x + \Delta_p x \f$ (p=plus)
+   TYPE(RotOutputType)               , INTENT(IN   ) :: y_m       !< AD outputs at \f$ u - \Delta_m u \f$ or \f$ x - \Delta_m x \f$ (m=minus)   
+   REAL(R8Ki)                        , INTENT(IN   ) :: delta_p   !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p x \f$
+   REAL(R8Ki)                        , INTENT(IN   ) :: delta_m   !< difference in inputs or states \f$ delta_m = \Delta_m u \f$ or \f$ delta_m = \Delta_m x \f$
+   REAL(R8Ki)                        , INTENT(INOUT) :: dY(:)     !< column of dYdu or dYdx: \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial Y}{\partial x_i} = \frac{y_p - y_m}{2 \, \Delta x}\f$
+   
+      ! local variables:
+   INTEGER(IntKi)    :: k              ! loop over blades
+   INTEGER(IntKi)    :: indx_first     ! index indicating next value of dY to be filled 
+   
+   
+   indx_first = 1
+   if (.not. p_AD%CompAeroMaps) then
+      call PackLoadMesh_dY(y_p%NacelleLoad, y_m%NacelleLoad, dY, indx_first)
+      call PackLoadMesh_dY(y_p%HubLoad,     y_m%HubLoad,     dY, indx_first)
+      call PackLoadMesh_dY(y_p%TFinLoad,    y_m%TFinLoad,    dY, indx_first)
+      call PackLoadMesh_dY(y_p%TowerLoad,   y_m%TowerLoad,   dY, indx_first)
+   endif
+   
+   do k=1,p%NumBl_Lin
+      call PackLoadMesh_dY(y_p%BladeLoad(k), y_m%BladeLoad(k), dY, indx_first)
+   end do
+   
+   if (.not. p_AD%CompAeroMaps) then
+      do k=1,p%NumOuts + p%BldNd_TotNumOuts
+         dY(k+indx_first-1) = y_p%WriteOutput(k) - y_m%WriteOutput(k)
+      end do
+   end if
+   
+   dY = dY / (delta_p + delta_m)
+   
+END SUBROUTINE Compute_dY
+
 subroutine AD_PackContStateOP(p, x, op)
    type(RotParameterType), intent(in)        :: p
    type(RotContinuousStateType), intent(in)  :: x
