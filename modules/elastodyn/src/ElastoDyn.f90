@@ -10967,13 +10967,16 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    index_next = 1
    if (allocated(y%BladeLn2Mesh)) then
       index_last = index_next
+      p%Jac_y_idxStartList%Blade = index_next
       do i=1,p%NumBl_Lin
          call PackMotionMesh_Names(y%BladeLn2Mesh(i), 'Blade '//trim(num2lstr(i)), InitOut%LinNames_y, index_next, FieldMask=BladeMask)
       end do      
    end if
    
    if (.not. p%CompAeroMaps) then
+      p%Jac_y_idxStartList%Platform = index_next
       call PackMotionMesh_Names(y%PlatformPtMesh, 'Platform', InitOut%LinNames_y, index_next)
+      p%Jac_y_idxStartList%Tower = index_next
       call PackMotionMesh_Names(y%TowerLn2Mesh, 'Tower', InitOut%LinNames_y, index_next)
       
       ! note that this Mask is for the y%HubPtMotion mesh ONLY. The others pack *all* of the motion fields
@@ -10982,12 +10985,15 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       Mask(MASKID_ORIENTATION) = .true.
       Mask(MASKID_ROTATIONVEL) = .true.
       
+      p%Jac_y_idxStartList%Hub = index_next
       call PackMotionMesh_Names(y%HubPtMotion, 'Hub', InitOut%LinNames_y, index_next, FieldMask=Mask)
       index_last = index_next
+      p%Jac_y_idxStartList%BladeRoot = index_next
       do i=1,p%NumBl_Lin
          call PackMotionMesh_Names(y%BladeRootMotion(i), 'Blade root '//trim(num2lstr(i)), InitOut%LinNames_y, index_next)
       end do   
 
+      p%Jac_y_idxStartList%Nacelle = index_next
       call PackMotionMesh_Names(y%NacelleMotion, 'Nacelle', InitOut%LinNames_y, index_next)
 
       Mask  = .false.
@@ -10995,6 +11001,7 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       Mask(MASKID_ORIENTATION)     = .true.
       Mask(MASKID_TRANSLATIONVEL)  = .true.
       Mask(MASKID_ROTATIONVEL)     = .true.
+      p%Jac_y_idxStartList%TFin = index_next
       call PackMotionMesh_Names(y%TFinCMMotion,  'TailFin', InitOut%LinNames_y, index_next, FieldMask=Mask)
 
       InitOut%LinNames_y(index_next) = 'Yaw, rad'; index_next = index_next+1
@@ -11244,6 +11251,7 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       
    index = 1
    if (allocated(u%BladePtLoads)) then
+      p%Jac_u_idxStartList%BladeLoad = index
       !Module/Mesh/Field: u%BladePtLoads(1)%Force  = 1;
       !Module/Mesh/Field: u%BladePtLoads(1)%Moment = 2;
       !Module/Mesh/Field: u%BladePtLoads(2)%Force  = 3;
@@ -11266,9 +11274,9 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       end do !k
                         
    end if
-   
+
    if (.not. p%CompAeroMaps) then
-      !if MaxBl ever changes (i.e., MaxBl /=3), we need to modify this accordingly:
+      p%Jac_u_idxStartList%PlatformLoad = index
       do i_meshField = 7,8
          do i=1,u%PlatformPtMesh%NNodes
             do j=1,3
@@ -11279,7 +11287,8 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
             end do !j      
          end do !i
       end do
-  
+
+      p%Jac_u_idxStartList%TowerLoad = index
       do i_meshField = 9,10
          do i=1,u%TowerPtLoads%NNodes
             do j=1,3
@@ -11290,7 +11299,8 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
             end do !j      
          end do !i
       end do
-         
+
+      p%Jac_u_idxStartList%HubLoad = index
       do i_meshField = 11,12
          do i=1,u%HubPtLoad%NNodes
             do j=1,3
@@ -11301,7 +11311,8 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
             end do !j      
          end do !i
       end do   
-   
+
+      p%Jac_u_idxStartList%NacelleLoad = index
       do i_meshField = 13,14
          do i=1,u%NacelleLoads%NNodes
             do j=1,3
@@ -11312,7 +11323,8 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
             end do !j      
          end do !i
       end do
-   
+
+      p%Jac_u_idxStartList%TFinLoad = index
       do i_meshField = 15,16
          do i=1,u%TFinCMLoads%NNodes
             do j=1,3
@@ -11324,6 +11336,7 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
          end do !i
       end do
    
+      p%Jac_u_idxStartList%BlPitchCom = index
       do i_meshField = 1,p%NumBl ! scalars   
          p%Jac_u_indx(index,1) =  17 !Module/Mesh/Field: u%BlPitchCom = 17;
          p%Jac_u_indx(index,2) =  1 !index:  n/a

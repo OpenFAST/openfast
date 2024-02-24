@@ -1520,7 +1520,7 @@ SUBROUTINE GetGlueJacobians( dUdu, dUdy, p_FAST, y_FAST, m_FAST, ED, BD, AD, Mes
    
 
    if (p_FAST%CompElast == Module_ED) then
-      call LinearSS_ED_InputSolve_dy( p_FAST, y_FAST, ED%Input(1), ED%y, AD%y, AD%Input(1), MeshMapData, dUdy, ErrStat2, ErrMsg2 )
+      call LinearSS_ED_InputSolve_dy( p_FAST, y_FAST, ED%p, ED%Input(1), ED%y, AD%y, AD%Input(1), MeshMapData, dUdy, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    elseif (p_FAST%CompElast == MODULE_BD) then
       call LinearSS_BD_InputSolve_dy( p_FAST, y_FAST, AD%y, AD%Input(1), BD, MeshMapData, dUdy, ErrStat2, ErrMsg2 )
@@ -1854,27 +1854,23 @@ END SUBROUTINE LinearSS_BD_InputSolve_du
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine forms the dU^{AD}/du^{AD} block of dUdu. (i.e., how do changes in the AD inputs affect the AD inputs?)
 SUBROUTINE LinearSS_AD_InputSolve_du( p_FAST, y_FAST, u_AD, y_ED, BD, MeshMapData, dUdu, ErrStat, ErrMsg )
-
-      ! Passed variables
    TYPE(FAST_ParameterType),    INTENT(IN   )   :: p_FAST      !< FAST parameter data    
    TYPE(FAST_OutputFileType),   INTENT(IN   )   :: y_FAST      !< FAST output file data (for linearization)
    TYPE(AD_InputType),          INTENT(INOUT)   :: u_AD        !< The inputs to AeroDyn14
-   TYPE(ED_OutputType),         INTENT(IN)      :: y_ED        !< The outputs from the structural dynamics module
+   TYPE(ED_OutputType),         INTENT(IN   )   :: y_ED        !< The outputs from the structural dynamics module
    TYPE(BeamDyn_Data),          INTENT(INOUT)   :: BD          !< BD data at t
    TYPE(FAST_ModuleMapType),    INTENT(INOUT)   :: MeshMapData !< Data for mapping between modules
    REAL(R8Ki),                  INTENT(INOUT)   :: dUdu(:,:)   !< Jacobian matrix of which we are computing the dU^(ED)/du^(AD) block
-   
-   INTEGER(IntKi)                               :: ErrStat     !< Error status of the operation
-   CHARACTER(*)                                 :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),              INTENT(INOUT)   :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                INTENT(INOUT)   :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! Local variables:
-
    INTEGER(IntKi)                               :: K              ! Loops through blades
    INTEGER(IntKi)                               :: AD_Start_td    ! starting index of dUdu (column) where AD translation displacements are located
    INTEGER(IntKi)                               :: AD_Start_tv    ! starting index of dUdu (column) where AD translation velocities are located
    INTEGER(IntKi)                               :: ErrStat2
    CHARACTER(ErrMsgLen)                         :: ErrMsg2
-   CHARACTER(*), PARAMETER                      :: RoutineName = 'LinearSS_ED_InputSolve_dy'
+   CHARACTER(*), PARAMETER                      :: RoutineName = 'LinearSS_AD_InputSolve_du'
 
    
    ErrStat = ErrID_None
@@ -1928,10 +1924,10 @@ END SUBROUTINE LinearSS_AD_InputSolve_du
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine forms the dU^{ED}/dy^{SrvD}, dU^{ED}/dy^{ED}, dU^{ED}/dy^{BD},  dU^{ED}/dy^{AD}, dU^{ED}/dy^{HD}, and dU^{ED}/dy^{MAP}
 !! blocks of dUdy. (i.e., how do changes in the SrvD, ED, BD, AD, HD, and MAP outputs effect the ED inputs?)
-SUBROUTINE LinearSS_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, MeshMapData, dUdy, ErrStat, ErrMsg )
-
+SUBROUTINE LinearSS_ED_InputSolve_dy( p_FAST, y_FAST, p_ED, u_ED, y_ED, y_AD, u_AD, MeshMapData, dUdy, ErrStat, ErrMsg )
    TYPE(FAST_ParameterType),       INTENT(IN   )  :: p_FAST           !< Glue-code simulation parameters
    TYPE(FAST_OutputFileType),      INTENT(IN   )  :: y_FAST           !< FAST output file data (for linearization)
+   TYPE(ED_ParameterType),         INTENT(IN   )  :: p_ED             !< ElastoDyn parameters
    TYPE(ED_InputType),             INTENT(INOUT)  :: u_ED             !< ED Inputs at t
    TYPE(ED_OutputType),            INTENT(IN   )  :: y_ED             !< ElastoDyn outputs (need translation displacement on meshes for loads mapping)
    TYPE(AD_OutputType),            INTENT(IN   )  :: y_AD             !< AeroDyn outputs
@@ -1967,11 +1963,11 @@ SUBROUTINE LinearSS_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, Me
       !CALL Linearize_Line2_to_Point( y_AD%rotors(1)%BladeLoad(k), u_ED%BladePtLoads(k), MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), y_ED%BladeLn2Mesh(k) )
                
          ! AD loads-to-ED loads transfer (dU^{ED}/dy^{AD}):
-      ED_Start = Indx_u_ED_Blade_Start(u_ED, y_FAST, k) ! start of u_ED%BladePtLoads(k)%Force field
+      ED_Start = Indx_u_ED_Blade_Start(p_ED, u_ED, y_FAST, k) ! start of u_ED%BladePtLoads(k)%Force field
       call Assemble_dUdy_Loads(y_AD%rotors(1)%BladeLoad(k), u_ED%BladePtLoads(k), MeshMapData%AD_L_2_BDED_B(k), ED_Start, AD_Out_Start, dUdy)
 
          ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
-      ED_Start = Indx_u_ED_Blade_Start(u_ED, y_FAST, k) + u_ED%BladePtLoads(k)%NNodes*3   ! start of u_ED%BladePtLoads(k)%Moment field (skip the ED forces)
+      ED_Start = Indx_u_ED_Blade_Start(p_ED, u_ED, y_FAST, k) + u_ED%BladePtLoads(k)%NNodes*3   ! start of u_ED%BladePtLoads(k)%Moment field (skip the ED forces)
       ED_Out_Start = SS_Indx_y_ED_Blade_Start(y_ED, p_FAST, y_FAST, k) ! start of y_ED%BladeLn2Mesh(1)%TranslationDisp field
       call SetBlockMatrix( dUdy, MeshMapData%AD_L_2_BDED_B(k)%dM%m_uD, ED_Start, ED_Out_Start )
 
