@@ -572,8 +572,8 @@ subroutine InitMappings_BD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
       do i = 1, Turbine%SrvD%p%NumBStC
          call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                          SrcMeshLoc=MeshLocType(SrvD_y_BStCLoadMesh, i, DstMod%Ins), &        ! SrvD%y%BStCLoadMesh(i, DstMod%Ins), &
-                          SrcDispMeshLoc=MeshLocType(SrvD_u_BStCMotionMesh, i, DstMod%Ins), &  ! SrvD%u%BStCMotionMesh(i, DstMod%Ins)
+                          SrcMeshLoc=MeshLocType(SrvD_y_BStCLoadMesh, DstMod%Ins, i), &        ! SrvD%y%BStCLoadMesh(DstMod%Ins, i), &
+                          SrcDispMeshLoc=MeshLocType(SrvD_u_BStCMotionMesh, DstMod%Ins, i), &  ! SrvD%u%BStCMotionMesh(DstMod%Ins, i)
                           DstMeshLoc=MeshLocType(BD_u_DistrLoad), &                            ! BD%Input(1, DstMod%Ins)%DistrLoad
                           DstDispMeshLoc=MeshLocType(BD_y_BldMotion), &                        ! BD%y(DstMod%Ins)%BldMotion
                           ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
@@ -781,8 +781,8 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
       ! Blade Structural Controller (if ElastoDyn is used for blades)
-      do i = 1, Turbine%SrvD%p%NumBStC
-         do j = 1, Turbine%ED%p%NumBl
+      do j = 1, Turbine%SrvD%p%NumBStC
+         do i = 1, Turbine%ED%p%NumBl
             call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                              SrcMeshLoc=MeshLocType(SrvD_y_BStCLoadMesh, i, j), &        ! SrvD%y%BStCLoadMesh(i, j), &
                              SrcDispMeshLoc=MeshLocType(SrvD_u_BStCMotionMesh, i, j), &  ! SrvD%u%BStCMotionMesh(i, j)
@@ -1415,7 +1415,7 @@ subroutine InitMappings_SrvD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       do i = 1, Turbine%SrvD%p%NumBStC
          call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                             SrcMeshLoc=MeshLocType(BD_y_BldMotion), &                         ! BD%y%BldMotion
-                            DstMeshLoc=MeshLocType(SrvD_u_BStCMotionMesh, i, DstMod%Ins), &   ! SrvD%u%BStCMotionMesh(i, j)
+                            DstMeshLoc=MeshLocType(SrvD_u_BStCMotionMesh, DstMod%Ins, i), &   ! SrvD%u%BStCMotionMesh(i, j)
                             ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
       end do
 
@@ -1460,10 +1460,10 @@ subroutine InitMappings_SrvD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       end do
 
       ! Blade Structural Controller (if ElastoDyn blades)
-      do i = 1, Turbine%SrvD%p%NumBStC
-         do j = 1, Turbine%ED%p%NumBl
+      do j = 1, Turbine%SrvD%p%NumBStC
+         do i = 1, Turbine%ED%p%NumBl
             call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                               SrcMeshLoc=MeshLocType(ED_y_BladeLn2Mesh, j), &         ! ED%y%BladeLn2Mesh(j)
+                               SrcMeshLoc=MeshLocType(ED_y_BladeLn2Mesh, i), &         ! ED%y%BladeLn2Mesh(i)
                                DstMeshLoc=MeshLocType(SrvD_u_BStCMotionMesh, i, j), &  ! SrvD%u%BStCMotionMesh(i, j)
                                Active=Turbine%p_FAST%CompElast == Module_ED, &
                                ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return

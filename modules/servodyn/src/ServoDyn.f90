@@ -723,8 +723,8 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
    call MV_AddVar(p%Vars%u, "HSS_Spd", VF_Scalar, VarIdx=p%iVarHSS_Spd, LinNames=['HSS_Spd, rad/s'])
 
    ! Structural controllers
-   do i = 1, p%NumBStC
-      do j = 1, p%NumBl
+   do j = 1, p%NumBStC
+      do i = 1, p%NumBl
          call MV_AddMeshVar(p%Vars%u, 'Blade '//trim(Num2LStr(i))//' StC '//Num2LStr(j), MotionFields, &
                               Mesh=u%BStCMotionMesh(i, j), &
                               Perturbs=uPerturbs)
@@ -773,11 +773,12 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
 
    ! Structural controllers
    if (p%NumBStC > 0) then
-      call AllocAry(p%iVarBStCLoadMesh, p%NumBStC, p%NumBl, "iVarBStCLoadMesh", ErrStat2, ErrMsg2); if (Failed()) return;
-      do i = 1, p%NumBStC
-         do j = 1, p%NumBl
+      call AllocAry(p%iVarBStCLoadMesh, p%NumBl,  p%NumBStC, "iVarBStCLoadMesh", ErrStat2, ErrMsg2); if (Failed()) return;
+      do j = 1, p%NumBStC
+         do i = 1, p%NumBl
             call MV_AddMeshVar(p%Vars%y, 'Blade '//trim(Num2LStr(i))//' StC '//Num2LStr(j), LoadFields, &
-                              Mesh=y%BStCLoadMesh(i,j))
+                               VarIdx=p%iVarBStCLoadMesh(i,j), &
+                               Mesh=y%BStCLoadMesh(i,j))
          end do
       end do
    end if
@@ -787,7 +788,8 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
       p%iVarNStCLoadMesh = 0
       do j = 1, p%NumNStC
          call MV_AddMeshVar(p%Vars%y, 'Nacelle StC '//Num2LStr(j), LoadFields, &
-                           Mesh=y%NStCLoadMesh(j))
+                            VarIdx=p%iVarNStCLoadMesh(j), &
+                            Mesh=y%NStCLoadMesh(j))
       enddo
    end if
 
@@ -796,6 +798,7 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
       p%iVarTStCLoadMesh = 0
       do j = 1, p%NumTStC
          call MV_AddMeshVar(p%Vars%y, 'Tower StC '//Num2LStr(j), LoadFields, &
+                            VarIdx=p%iVarTStCLoadMesh(j), &
                             Mesh=y%TStCLoadMesh(j))
       enddo
    end if
@@ -805,6 +808,7 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
       p%iVarSStCLoadMesh = 0
       do j = 1, p%NumSStC
          call MV_AddMeshVar(p%Vars%y, 'Substructure StC '//Num2LStr(j), LoadFields, &
+                            VarIdx=p%iVarSStCLoadMesh(j), &
                             Mesh=y%SStCLoadMesh(j))
       enddo
    end if
