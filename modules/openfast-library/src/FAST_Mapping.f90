@@ -396,7 +396,28 @@ subroutine FAST_InitMappings(Mods, Mappings, Turbine, ErrStat, ErrMsg)
          SrcMod%SrcMaps = [SrcMod%SrcMaps, iMap]
          DstMod%DstMaps = [DstMod%DstMaps, iMap]
 
-         write (*, *) Mappings(iMap)%Desc
+         write (*, *) "Mapping: ", Mappings(iMap)%Desc
+         ! write (*, *) " Src: ", trim(SrcMod%Abbr), SrcMod%Ins
+         ! if (Mappings(iMap)%iLocSrcTransDisp(1) > 0) write (*, *) "   iLocTransDisp       ", Mappings(iMap)%iLocSrcTransDisp + SrcMod%iyg - 1
+         ! if (Mappings(iMap)%iLocSrcTransVel(1) > 0) write (*, *) "   iLocTransVel        ", Mappings(iMap)%iLocSrcTransVel + SrcMod%iyg - 1
+         ! if (Mappings(iMap)%iLocSrcTransAcc(1) > 0) write (*, *) "   iLocTransAcc        ", Mappings(iMap)%iLocSrcTransAcc + SrcMod%iyg - 1
+         ! if (Mappings(iMap)%iLocSrcOrientation(1) > 0) write (*, *) "   iLocOrientation     ", Mappings(iMap)%iLocSrcOrientation + SrcMod%iyg - 1
+         ! if (Mappings(iMap)%iLocSrcAngularVel(1) > 0) write (*, *) "   iLocAngularVel      ", Mappings(iMap)%iLocSrcAngularVel + SrcMod%iyg - 1
+         ! if (Mappings(iMap)%iLocSrcAngularAcc(1) > 0) write (*, *) "   iLocAngularAcc      ", Mappings(iMap)%iLocSrcAngularAcc + SrcMod%iyg - 1
+         ! if (Mappings(iMap)%iLocSrcForce(1) > 0) write (*, *) "   iLocForce           ", Mappings(iMap)%iLocSrcForce + SrcMod%iyg - 1
+         ! if (Mappings(iMap)%iLocSrcMoment(1) > 0) write (*, *) "   iLocMoment          ", Mappings(iMap)%iLocSrcMoment + SrcMod%iyg - 1
+         ! if (Mappings(iMap)%iLocSrcDispTransDisp(1) > 0) write (*, *) "   iLocDispTransDisp   ", Mappings(iMap)%iLocSrcDispTransDisp + SrcMod%iyg - 1
+         ! write (*, *) " Dst: ", trim(DstMod%Abbr), DstMod%Ins
+         ! if (Mappings(iMap)%iLocDstTransDisp(1) > 0) write (*, *) "   iLocTransDisp       ", Mappings(iMap)%iLocDstTransDisp
+         ! if (Mappings(iMap)%iLocDstTransVel(1) > 0) write (*, *) "   iLocTransVel        ", Mappings(iMap)%iLocDstTransVel
+         ! if (Mappings(iMap)%iLocDstTransAcc(1) > 0) write (*, *) "   iLocTransAcc        ", Mappings(iMap)%iLocDstTransAcc
+         ! if (Mappings(iMap)%iLocDstOrientation(1) > 0) write (*, *) "   iLocOrientation     ", Mappings(iMap)%iLocDstOrientation
+         ! if (Mappings(iMap)%iLocDstAngularVel(1) > 0) write (*, *) "   iLocAngularVel      ", Mappings(iMap)%iLocDstAngularVel
+         ! if (Mappings(iMap)%iLocDstAngularAcc(1) > 0) write (*, *) "   iLocAngularAcc      ", Mappings(iMap)%iLocDstAngularAcc
+         ! if (Mappings(iMap)%iLocDstForce(1) > 0) write (*, *) "   iLocForce           ", Mappings(iMap)%iLocDstForce
+         ! if (Mappings(iMap)%iLocDstMoment(1) > 0) write (*, *) "   iLocMoment          ", Mappings(iMap)%iLocDstMoment
+         ! if (Mappings(iMap)%iLocDstDispTransDisp(1) > 0) write (*, *) "   iLocDispTransDisp   ", Mappings(iMap)%iLocDstDispTransDisp
+         ! if (Mappings(iMap)%iLocDstDispOrientation(1) > 0) write (*, *) "   iLocDispOrientation ", Mappings(iMap)%iLocDstDispOrientation
 
       end associate
    end do

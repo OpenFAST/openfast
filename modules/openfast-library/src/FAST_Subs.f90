@@ -1078,6 +1078,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          if (allocated(Init%OutData_SD%DerivOrder_x)) call move_alloc(Init%OutData_SD%DerivOrder_x,y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%DerivOrder_x)
       end if
 
+      CALL MV_AddModule(y_FAST%Modules, Module_SD, 'SD', 1, p_FAST%dt_module(Module_SD), p_FAST%DT, &
+                        Init%OutData_SD%Vars, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN

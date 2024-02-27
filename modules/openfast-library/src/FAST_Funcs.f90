@@ -663,10 +663,10 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg,
                              T%MD%z(ThisState), T%MD%OtherSt(ThisState), T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
                              dYdu=dYdu, dXdu=dXdu)
 
-!  case (Module_SD)
-!     call SD_JacobianPInput(ThisTime, T%SD%Input(1), T%SD%p, T%SD%x(ThisState), T%SD%xd(ThisState), &
-!                            T%SD%z(ThisState), T%SD%OtherSt(ThisState), T%SD%y, T%SD%m, &
-!                            ErrStat2, ErrMsg2, FlagFilter=FlagFilter, dYdu=dYdu, dXdu=dXdu)
+   case (Module_SD)
+      call SD_JacobianPInput(ThisTime, T%SD%Input(1), T%SD%p, T%SD%x(ThisState), T%SD%xd(ThisState), &
+                             T%SD%z(ThisState), T%SD%OtherSt(ThisState), T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
+                             FlagFilter=FlagFilter, dYdu=dYdu, dXdu=dXdu)
 
    case (Module_SrvD)
       call SrvD_JacobianPInput(ThisTime, T%SrvD%Input(1), T%SrvD%p, T%SrvD%x(ThisState), T%SrvD%xd(ThisState), &
@@ -752,12 +752,12 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, ThisState, T, ErrStat, Err
                                  T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
                                  dYdx=dYdx, dXdx=dXdx)
 
-!   case (Module_SD)
-!      call SD_JacobianPContState(ThisTime, T%SD%Input(1), T%SD%p, &
-!                                 T%SD%x(ThisState), T%SD%xd(ThisState), &
-!                                 T%SD%z(ThisState), T%SD%OtherSt(ThisState), &
-!                                 T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
-!                                 FlagFilter=FlagFilter, dYdx=dYdx, dXdx=dXdx)
+   case (Module_SD)
+      call SD_JacobianPContState(ThisTime, T%SD%Input(1), T%SD%p, &
+                                 T%SD%x(ThisState), T%SD%xd(ThisState), &
+                                 T%SD%z(ThisState), T%SD%OtherSt(ThisState), &
+                                 T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
+                                 FlagFilter=FlagFilter, dYdx=dYdx, dXdx=dXdx)
 
    case (Module_SrvD)
       call SrvD_JacobianPContState(ThisTime, T%SrvD%Input(1), T%SrvD%p, &
