@@ -388,22 +388,22 @@ subroutine ModLin_Linearize_OP(Turbine, ModGlue, Mods, p, m, p_FAST, m_FAST, y_F
    do i = 1, size(p%iMod)
       associate (ModData => Mods(p%iMod(i)))
 
-         ! Operating point values
-         call FAST_GetOP(ModData, t_global, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
-                         u_op=ModData%Lin%u, y_op=ModData%Lin%y, &
-                         x_op=ModData%Lin%x, dx_op=ModData%Lin%dx)
-         if (Failed()) return
-
          ! Derivatives wrt input
          call FAST_JacobianPInput(ModData, t_global, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
                                   dYdu=ModData%Lin%dYdu, dXdu=ModData%Lin%dXdu)
          if (Failed()) return
 
-
          ! Derivatives wrt continuous state
          call FAST_JacobianPContState(ModData, t_global, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
                                       dYdx=ModData%Lin%dYdx, dXdx=ModData%Lin%dXdx, &
                                       StateRotation=ModData%Lin%StateRotation)
+         if (Failed()) return
+
+         ! Operating point values (must come after Jacobian routines because 
+         ! some modules calculate OP in those routines [MD])
+         call FAST_GetOP(ModData, t_global, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
+                         u_op=ModData%Lin%u, y_op=ModData%Lin%y, &
+                         x_op=ModData%Lin%x, dx_op=ModData%Lin%dx)
          if (Failed()) return
 
          ! Copy module linearization arrays into glue linearization arrays
