@@ -1443,11 +1443,6 @@ subroutine InitMappings_SrvD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                        DstMod=DstMod, iVarDst=Turbine%SrvD%p%iVarHSS_Spd, &
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
-      call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                         SrcMeshLoc=MeshLocType(ED_y_PlatformPtMesh), &            ! ED%y%PlatformPtMesh
-                         DstMeshLoc=MeshLocType(SrvD_u_PtfmMotionMesh, 1), &       ! SrvD%u%PtfmMotionMesh
-                         ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
-
       ! Nacelle Structural Controller
       do j = 1, Turbine%SrvD%p%NumNStC
          call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
