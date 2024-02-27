@@ -494,6 +494,11 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: iVarYawMom = 0_IntKi      !< YawMom Variable Index [-]
     INTEGER(IntKi)  :: iVarGenTrq = 0_IntKi      !< GenTrq Variable Index [-]
     INTEGER(IntKi)  :: iVarElecPwr = 0_IntKi      !< ElecPwr Variable Index [-]
+    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: iVarBStCLoadMesh      !< BStCLoadMesh Variable Index [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarNStCLoadMesh      !< NStCLoadMesh Variable Index [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarTStCLoadMesh      !< TStCLoadMesh Variable Index [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarSStCLoadMesh      !< SStCLoadMesh Variable Index [-]
+    INTEGER(IntKi)  :: iVarWriteOutput = 0_IntKi      !< WriteOutput Variable Index [-]
   END TYPE SrvD_ParameterType
 ! =======================
 ! =========  SrvD_InputType  =======
@@ -4316,6 +4321,55 @@ subroutine SrvD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%iVarYawMom = SrcParamData%iVarYawMom
    DstParamData%iVarGenTrq = SrcParamData%iVarGenTrq
    DstParamData%iVarElecPwr = SrcParamData%iVarElecPwr
+   if (allocated(SrcParamData%iVarBStCLoadMesh)) then
+      LB(1:2) = lbound(SrcParamData%iVarBStCLoadMesh, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%iVarBStCLoadMesh, kind=B8Ki)
+      if (.not. allocated(DstParamData%iVarBStCLoadMesh)) then
+         allocate(DstParamData%iVarBStCLoadMesh(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iVarBStCLoadMesh.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%iVarBStCLoadMesh = SrcParamData%iVarBStCLoadMesh
+   end if
+   if (allocated(SrcParamData%iVarNStCLoadMesh)) then
+      LB(1:1) = lbound(SrcParamData%iVarNStCLoadMesh, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%iVarNStCLoadMesh, kind=B8Ki)
+      if (.not. allocated(DstParamData%iVarNStCLoadMesh)) then
+         allocate(DstParamData%iVarNStCLoadMesh(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iVarNStCLoadMesh.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%iVarNStCLoadMesh = SrcParamData%iVarNStCLoadMesh
+   end if
+   if (allocated(SrcParamData%iVarTStCLoadMesh)) then
+      LB(1:1) = lbound(SrcParamData%iVarTStCLoadMesh, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%iVarTStCLoadMesh, kind=B8Ki)
+      if (.not. allocated(DstParamData%iVarTStCLoadMesh)) then
+         allocate(DstParamData%iVarTStCLoadMesh(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iVarTStCLoadMesh.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%iVarTStCLoadMesh = SrcParamData%iVarTStCLoadMesh
+   end if
+   if (allocated(SrcParamData%iVarSStCLoadMesh)) then
+      LB(1:1) = lbound(SrcParamData%iVarSStCLoadMesh, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%iVarSStCLoadMesh, kind=B8Ki)
+      if (.not. allocated(DstParamData%iVarSStCLoadMesh)) then
+         allocate(DstParamData%iVarSStCLoadMesh(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iVarSStCLoadMesh.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%iVarSStCLoadMesh = SrcParamData%iVarSStCLoadMesh
+   end if
+   DstParamData%iVarWriteOutput = SrcParamData%iVarWriteOutput
 end subroutine
 
 subroutine SrvD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -4447,6 +4501,18 @@ subroutine SrvD_DestroyParam(ParamData, ErrStat, ErrMsg)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       deallocate(ParamData%Vars)
       ParamData%Vars => null()
+   end if
+   if (allocated(ParamData%iVarBStCLoadMesh)) then
+      deallocate(ParamData%iVarBStCLoadMesh)
+   end if
+   if (allocated(ParamData%iVarNStCLoadMesh)) then
+      deallocate(ParamData%iVarNStCLoadMesh)
+   end if
+   if (allocated(ParamData%iVarTStCLoadMesh)) then
+      deallocate(ParamData%iVarTStCLoadMesh)
+   end if
+   if (allocated(ParamData%iVarSStCLoadMesh)) then
+      deallocate(ParamData%iVarSStCLoadMesh)
    end if
 end subroutine
 
@@ -4635,6 +4701,11 @@ subroutine SrvD_PackParam(RF, Indata)
    call RegPack(RF, InData%iVarYawMom)
    call RegPack(RF, InData%iVarGenTrq)
    call RegPack(RF, InData%iVarElecPwr)
+   call RegPackAlloc(RF, InData%iVarBStCLoadMesh)
+   call RegPackAlloc(RF, InData%iVarNStCLoadMesh)
+   call RegPackAlloc(RF, InData%iVarTStCLoadMesh)
+   call RegPackAlloc(RF, InData%iVarSStCLoadMesh)
+   call RegPack(RF, InData%iVarWriteOutput)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -4857,6 +4928,11 @@ subroutine SrvD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%iVarYawMom); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarGenTrq); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarElecPwr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iVarBStCLoadMesh); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iVarNStCLoadMesh); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iVarTStCLoadMesh); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iVarSStCLoadMesh); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarWriteOutput); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine SrvD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)

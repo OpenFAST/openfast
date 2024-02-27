@@ -772,29 +772,49 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
                   LinNames=['ElecPwr, W'])
 
    ! Structural controllers
-   do i = 1, p%NumBStC
-      do j = 1, p%NumBl
-         call MV_AddMeshVar(p%Vars%y, 'Blade '//trim(Num2LStr(i))//' StC '//Num2LStr(j), LoadFields, &
-                            Mesh=y%BStCLoadMesh(i,j))
+   if (p%NumBStC > 0) then
+      call AllocAry(p%iVarBStCLoadMesh, p%NumBStC, p%NumBl, "iVarBStCLoadMesh", ErrStat2, ErrMsg2); if (Failed()) return;
+      do i = 1, p%NumBStC
+         do j = 1, p%NumBl
+            call MV_AddMeshVar(p%Vars%y, 'Blade '//trim(Num2LStr(i))//' StC '//Num2LStr(j), LoadFields, &
+                              Mesh=y%BStCLoadMesh(i,j))
+         end do
       end do
-   end do
+   end if
 
-   do j = 1, p%NumNStC
-      call MV_AddMeshVar(p%Vars%y, 'Nacelle StC '//Num2LStr(j), LoadFields, &
-                         Mesh=y%NStCLoadMesh(j))
-   enddo
+   if (p%NumNStC > 0) then
+      call AllocAry(p%iVarNStCLoadMesh, p%NumNStC, "iVarNStCLoadMesh", ErrStat2, ErrMsg2); if (Failed()) return;
+      p%iVarNStCLoadMesh = 0
+      do j = 1, p%NumNStC
+         call MV_AddMeshVar(p%Vars%y, 'Nacelle StC '//Num2LStr(j), LoadFields, &
+                           Mesh=y%NStCLoadMesh(j))
+      enddo
+   end if
 
-   do j = 1, p%NumTStC
-      call MV_AddMeshVar(p%Vars%y, 'Tower StC '//Num2LStr(j), LoadFields, &
-                         Mesh=y%TStCLoadMesh(j))
-   enddo
+   if (p%NumTStC > 0) then
+      call AllocAry(p%iVarTStCLoadMesh, p%NumTStC, "iVarTStCLoadMesh", ErrStat2, ErrMsg2); if (Failed()) return;
+      p%iVarTStCLoadMesh = 0
+      do j = 1, p%NumTStC
+         call MV_AddMeshVar(p%Vars%y, 'Tower StC '//Num2LStr(j), LoadFields, &
+                            Mesh=y%TStCLoadMesh(j))
+      enddo
+   end if
 
-   do j = 1, p%NumSStC
-      call MV_AddMeshVar(p%Vars%y, 'Substructure StC '//Num2LStr(j), LoadFields, &
-                         Mesh=y%SStCLoadMesh(j))
-   enddo
+   if (p%NumSStC > 0) then
+      call AllocAry(p%iVarSStCLoadMesh, p%NumSStC, "iVarSStCLoadMesh", ErrStat2, ErrMsg2); if (Failed()) return;
+      p%iVarSStCLoadMesh = 0
+      do j = 1, p%NumSStC
+         call MV_AddMeshVar(p%Vars%y, 'Substructure StC '//Num2LStr(j), LoadFields, &
+                            Mesh=y%SStCLoadMesh(j))
+      enddo
+   end if
 
-   ! Outputs
+   ! Write Outputs
+   if (p%NumOuts > 0) then
+      p%iVarWriteOutput = size(p%Vars%y) + 1
+   else
+      p%iVarWriteOutput = 0
+   end if
    do i = 1, p%NumOuts
       call MV_AddVar(p%Vars%y, p%OutParam(i)%Name, VF_Scalar, &
                      Flags=VF_WriteOut + OutParamFlags(p%OutParam(i)%Indx), &
@@ -4568,40 +4588,33 @@ CONTAINS
       integer(IntKi)    :: i,j,index_next
 
       if (.not. allocated(y_op)) then
-         CALL AllocAry( y_op, p%Jac_ny, 'y_op', ErrStat2, ErrMsg2 )
-         if (Failed())  return;
+         CALL AllocAry(y_op, p%Vars%ny, 'y_op', ErrStat2, ErrMsg2); if (Failed()) return
       end if
 
-      index_next=1
-      do i=1,size(y%BlPitchCom)
-         y_op(index_next) = y%BlPitchCom(i)
-         index_next = index_next + 1
-      end do
-
-      y_op(index_next) = y%YawMom;     index_next = index_next + 1
-      y_op(index_next) = y%GenTrq;     index_next = index_next + 1
-      y_op(index_next) = y%ElecPwr;    index_next = index_next + 1
+      call MV_Pack(p%Vars%y, p%iVarBlPitchCom, y%BlPitchCom, y_op)
+      call MV_Pack(p%Vars%y, p%iVarYawMom, y%YawMom, y_op)
+      call MV_Pack(p%Vars%y, p%iVarGenTrq, y%GenTrq, y_op)
+      call MV_Pack(p%Vars%y, p%iVarElecPwr, y%ElecPwr, y_op)
 
       ! StC related outputs
-      do j=1,p%NumBStC     ! Blade
-         do i=1,p%NumBl
-            call PackLoadMesh( y%BStCLoadMesh(i,j), y_op, index_next )
+      do j = 1, p%NumBStC     ! Blade
+         do i = 1, p%NumBl
+            call MV_Pack(p%Vars%y, p%iVarBStCLoadMesh(i,j), y%BStCLoadMesh(i,j), y_op)
          enddo
       enddo
-      do j=1,p%NumNStC     ! Nacelle
-         call PackLoadMesh( y%NStCLoadMesh(j), y_op, index_next )
+      do j = 1, p%NumNStC     ! Nacelle
+         call MV_Pack(p%Vars%y, p%iVarNStCLoadMesh(j), y%NStCLoadMesh(j), y_op)
       enddo
-      do j=1,p%NumTStC     ! Tower
-         call PackLoadMesh( y%TStCLoadMesh(j), y_op, index_next )
+      do j = 1, p%NumTStC     ! Tower
+         call MV_Pack(p%Vars%y, p%iVarTStCLoadMesh(j), y%TStCLoadMesh(j), y_op)
       enddo
-      do j=1,p%NumSStC     ! Sub-structure
-         call PackLoadMesh( y%SStCLoadMesh(j), y_op, index_next )
+      do j = 1, p%NumSStC     ! Sub-structure
+         call MV_Pack(p%Vars%y, p%iVarSStCLoadMesh(j), y%SStCLoadMesh(j), y_op)
       enddo
 
       ! y%outputs
-      do i=1,p%NumOuts
-         y_op(index_next) = y%WriteOutput(i)
-         index_next = index_next + 1
+      do i = p%iVarWriteOutput, size(p%Vars%y)
+         call MV_Pack(p%Vars%y, i, y%WriteOutput(p%Vars%y(i)%iUsr(1)), y_op)
       end do
    end subroutine Get_y_op
 

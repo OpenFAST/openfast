@@ -482,6 +482,11 @@ typedef	^	ParameterType	IntKi iVarBlPitchCom	-	-	-	"BlPitchCom Variable Index"	-
 typedef	^	ParameterType	IntKi iVarYawMom	-	-	-	"YawMom Variable Index"	-
 typedef	^	ParameterType	IntKi iVarGenTrq	-	-	-	"GenTrq Variable Index"	-
 typedef	^	ParameterType	IntKi iVarElecPwr	-	-	-	"ElecPwr Variable Index"	-
+typedef	^	ParameterType	IntKi iVarBStCLoadMesh	::	-	-	"BStCLoadMesh Variable Index"	-
+typedef	^	ParameterType	IntKi iVarNStCLoadMesh	:	-	-	"NStCLoadMesh Variable Index"	-
+typedef	^	ParameterType	IntKi iVarTStCLoadMesh	:	-	-	"TStCLoadMesh Variable Index"	-
+typedef	^	ParameterType	IntKi iVarSStCLoadMesh	:	-	-	"SStCLoadMesh Variable Index"	-
+typedef	^	ParameterType	IntKi iVarWriteOutput	-	-	-	"WriteOutput Variable Index"	-
 
 
 # ..... Inputs ....................................................................................................................
