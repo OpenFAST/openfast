@@ -3454,7 +3454,8 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, p_AD, u_AD, p_ED, y_ED
    INTEGER(IntKi)                               :: AD_Start    ! starting index of dUdy (column) where particular AD fields are located
    INTEGER(IntKi)                               :: ED_Out_Start! starting index of dUdy (row) where particular ED fields are located
    INTEGER(IntKi)                               :: BD_Out_Start! starting index of dUdy (row) where particular BD fields are located
-   LOGICAL                                      :: FieldMask(FIELDMASK_SIZE) !< which source fields to assemble 
+   LOGICAL                                      :: uFieldMask(FIELDMASK_SIZE) !< which destinationfields from u to assemble 
+   LOGICAL                                      :: yFieldMask(FIELDMASK_SIZE) !< which fields from y to assemble
    INTEGER(IntKi)                               :: ErrStat2
    CHARACTER(ErrMsgLen)                         :: ErrMsg2 
    CHARACTER(*), PARAMETER                      :: RoutineName = 'Linear_AD_InputSolve_NoIfW_dy'
@@ -3479,10 +3480,10 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, p_AD, u_AD, p_ED, y_ED
       AD_Start = Indx_u_AD_Nacelle_Start(p_AD, u_AD, y_FAST) ! start of u_AD%rotors(1)%NacelleMotion%TranslationDisp field   
       ED_Out_Start = Indx_y_ED_Nacelle_Start(p_ED, y_ED, y_FAST) ! start of y_ED%NacelleMotion%TranslationDisp field
       
-      FieldMask = .false.
-      FieldMask(MASKID_TRANSLATIONDISP) = .true.
-      FieldMask(MASKID_ORIENTATION)     = .true.
-      call Assemble_dUdy_Motions(y_ED%NacelleMotion, u_AD%rotors(1)%NacelleMotion, MeshMapData%ED_P_2_AD_P_N, AD_Start, ED_Out_Start, dUdy, FieldMask)
+      uFieldMask = .false.
+      uFieldMask(MASKID_TRANSLATIONDISP) = .true.
+      uFieldMask(MASKID_ORIENTATION)     = .true.
+      call Assemble_dUdy_Motions(y_ED%NacelleMotion, u_AD%rotors(1)%NacelleMotion, MeshMapData%ED_P_2_AD_P_N, AD_Start, ED_Out_Start, dUdy, uFieldMask)
    endif
  
 
@@ -3498,11 +3499,15 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, p_AD, u_AD, p_ED, y_ED
       AD_Start = Indx_u_AD_Hub_Start(p_AD, u_AD, y_FAST) ! start of u_AD%rotors(1)%HubMotion%TranslationDisp field   
       ED_Out_Start = Indx_y_ED_Hub_Start(p_ED, y_ED, y_FAST) ! start of y_ED%HubPtMotion%TranslationDisp field
       
-      FieldMask = .false.
-      FieldMask(MASKID_TRANSLATIONDISP) = .true.
-      FieldMask(MASKID_ORIENTATION)     = .true.
-      FieldMask(MASKID_ROTATIONVEL)     = .true.
-      call Assemble_dUdy_Motions(y_ED%HubPtMotion, u_AD%rotors(1)%HubMotion, MeshMapData%ED_P_2_AD_P_H, AD_Start, ED_Out_Start, dUdy, FieldMask)
+      uFieldMask = .false.
+      uFieldMask(MASKID_TRANSLATIONDISP) = .true.
+      uFieldMask(MASKID_ORIENTATION)     = .true.
+      uFieldMask(MASKID_ROTATIONVEL)     = .true.
+      yFieldMask = .false.
+      yFieldMask(MASKID_TRANSLATIONDISP) = .true.
+      yFieldMask(MASKID_ORIENTATION)     = .true.
+      yFieldMask(MASKID_ROTATIONVEL)     = .true.
+      call Assemble_dUdy_Motions(y_ED%HubPtMotion, u_AD%rotors(1)%HubMotion, MeshMapData%ED_P_2_AD_P_H, AD_Start, ED_Out_Start, dUdy, uFieldMask, yFieldMask)
    endif
       
 
@@ -3518,11 +3523,11 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, p_AD, u_AD, p_ED, y_ED
       AD_Start = Indx_u_AD_TFin_Start(p_AD, u_AD, y_FAST) ! start of u_AD%rotors(1)%TFinMotion%TranslationDisp field   
       ED_Out_Start = Indx_y_ED_TFin_Start(p_ED, y_ED, y_FAST) ! start of y_ED%TFinCMMotion%TranslationDisp field
       
-      FieldMask = .false.
-      FieldMask(MASKID_TRANSLATIONDISP) = .true.
-      FieldMask(MASKID_ORIENTATION)     = .true.
-      FieldMask(MASKID_TRANSLATIONVEL)  = .true.
-      call Assemble_dUdy_Motions(y_ED%TFinCMMotion, u_AD%rotors(1)%TFinMotion, MeshMapData%ED_P_2_AD_P_TF, AD_Start, ED_Out_Start, dUdy, FieldMask)
+      uFieldMask = .false.
+      uFieldMask(MASKID_TRANSLATIONDISP) = .true.
+      uFieldMask(MASKID_ORIENTATION)     = .true.
+      uFieldMask(MASKID_TRANSLATIONVEL)  = .true.
+      call Assemble_dUdy_Motions(y_ED%TFinCMMotion, u_AD%rotors(1)%TFinMotion, MeshMapData%ED_P_2_AD_P_TF, AD_Start, ED_Out_Start, dUdy, uFieldMask)
    endif
  
 
@@ -3536,12 +3541,12 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, p_AD, u_AD, p_ED, y_ED
       AD_Start = Indx_u_AD_Tower_Start(p_AD, u_AD, y_FAST) ! start of u_AD%rotors(1)%TowerMotion%TranslationDisp field
       ED_Out_Start = Indx_y_ED_Tower_Start(p_ED, y_ED, y_FAST) ! start of y_ED%TowerLn2Mesh%TranslationDisp field
       
-      FieldMask = .false.
-      FieldMask(MASKID_TRANSLATIONDISP) = .true.
-      FieldMask(MASKID_ORIENTATION)     = .true.
-      FieldMask(MASKID_TRANSLATIONVEL)  = .true.
-      FieldMask(MASKID_TRANSLATIONACC)  = .true.
-      call Assemble_dUdy_Motions(y_ED%TowerLn2Mesh, u_AD%rotors(1)%TowerMotion, MeshMapData%ED_L_2_AD_L_T, AD_Start, ED_Out_Start, dUdy, FieldMask)
+      uFieldMask = .false.
+      uFieldMask(MASKID_TRANSLATIONDISP) = .true.
+      uFieldMask(MASKID_ORIENTATION)     = .true.
+      uFieldMask(MASKID_TRANSLATIONVEL)  = .true.
+      uFieldMask(MASKID_TRANSLATIONACC)  = .true.
+      call Assemble_dUdy_Motions(y_ED%TowerLn2Mesh, u_AD%rotors(1)%TowerMotion, MeshMapData%ED_L_2_AD_L_T, AD_Start, ED_Out_Start, dUdy, uFieldMask)
    END IF
 
 
@@ -3555,12 +3560,15 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, p_AD, u_AD, p_ED, y_ED
             
       ! *** AD orientation: from ED orientation
       AD_Start = Indx_u_AD_BladeRoot_Start(p_AD, u_AD, y_FAST, k)       ! start of u_AD%rotors(1)%BladeRootMotion(k)%Orientation field
-      ED_Out_Start = Indx_y_ED_BladeRoot_Start(p_ED, y_ED, y_FAST, k) & ! start of y_ED%BladeRootMotion(k)%TranslationDisp field
-                   + y_ED%BladeRootMotion(k)%NNodes * 3           ! start of y_ED%BladeRootMotion(k)%Orientation field
+      ED_Out_Start = Indx_y_ED_BladeRoot_Start(p_ED, y_ED, y_FAST, k)   ! start of y_ED%BladeRootMotion(k)%TranslationDisp field
 
-      FieldMask = .false.
-      FieldMask(MASKID_ORIENTATION)     = .true.
-      call Assemble_dUdy_Motions(y_ED%BladeRootMotion(k), u_AD%rotors(1)%BladeRootMotion(k), MeshMapData%ED_P_2_AD_P_R(k), AD_Start, ED_Out_Start, dUdy, FieldMask)
+      uFieldMask = .false.
+      uFieldMask(MASKID_ORIENTATION)     = .true.
+      yFieldMask = .false.
+      yFieldMask(MASKID_TRANSLATIONDISP) = .true.
+      yFieldMask(MASKID_ORIENTATION)     = .true.
+      yFieldMask(MASKID_ROTATIONVEL)     = .true.
+      call Assemble_dUdy_Motions(y_ED%BladeRootMotion(k), u_AD%rotors(1)%BladeRootMotion(k), MeshMapData%ED_P_2_AD_P_R(k), AD_Start, ED_Out_Start, dUdy, uFieldMask, yFieldMask)
    END DO
    
    
@@ -3577,8 +3585,8 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, p_AD, u_AD, p_ED, y_ED
          AD_Start = Indx_u_AD_Blade_Start(p_AD, u_AD, y_FAST, k)     ! start of u_AD%rotors(1)%BladeMotion(k)%TranslationDisp field
          ED_Out_Start = Indx_y_ED_Blade_Start(p_ED, y_ED, y_FAST, k) ! start of y_ED%BladeLn2Mesh(k)%TranslationDisp field
 
-         FieldMask = .true.   ! all fields
-         CALL Assemble_dUdy_Motions(y_ED%BladeLn2Mesh(k), u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), AD_Start, ED_Out_Start, dUdy, FieldMask)
+         uFieldMask = .true.   ! all fields
+         CALL Assemble_dUdy_Motions(y_ED%BladeLn2Mesh(k), u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), AD_Start, ED_Out_Start, dUdy, uFieldMask)
       END DO
       
    ELSEIF (p_FAST%CompElast == Module_BD ) THEN
@@ -3590,8 +3598,8 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, p_AD, u_AD, p_ED, y_ED
          AD_Start     = Indx_u_AD_Blade_Start(p_AD, u_AD, y_FAST, k)     ! start of u_AD%rotors(1)%BladeMotion(k)%TranslationDisp field
          BD_Out_Start = y_FAST%Lin%Modules(Module_BD)%Instance(k)%LinStartIndx(LIN_OUTPUT_COL)
 
-         FieldMask = .true.   ! all fields
-         CALL Assemble_dUdy_Motions(BD%y(k)%BldMotion, u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), AD_Start, BD_Out_Start, dUdy, FieldMask)
+         uFieldMask = .true.   ! all fields
+         CALL Assemble_dUdy_Motions(BD%y(k)%BldMotion, u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), AD_Start, BD_Out_Start, dUdy, uFieldMask)
       END DO
    
    END IF
@@ -4456,35 +4464,51 @@ END SUBROUTINE SumBlockMatrix
 !!      \vec{a}^S \\
 !!      \vec{\alpha}^S \\
 !! \end{matrix} \right\} \f$
-SUBROUTINE Assemble_dUdy_Motions(y, u, MeshMap, BlockRowStart, BlockColStart, dUdy, FieldMaskIn)
+SUBROUTINE Assemble_dUdy_Motions(y, u, MeshMap, BlockRowStart, BlockColStart, dUdy, uFieldMaskIn, yFieldMaskIn)
    TYPE(MeshType),    INTENT(IN)     :: y                      !< the output (source) mesh that is transfering motions
    TYPE(MeshType),    INTENT(IN)     :: u                      !< the input (destination) mesh that is receiving motions
    TYPE(MeshMapType), INTENT(IN)     :: MeshMap                !< the mesh mapping from y to u
    INTEGER(IntKi),    INTENT(IN)     :: BlockRowStart          !< the index of the row defining the block of dUdy to be set (u)
    INTEGER(IntKi),    INTENT(IN)     :: BlockColStart          !< the index of the column defining the block of dUdy to be set (y)
    REAL(R8Ki),        INTENT(INOUT)  :: dUdy(:,:)              !< full Jacobian matrix
-   LOGICAL, OPTIONAL, INTENT(IN   )  :: FieldMaskIn(FIELDMASK_SIZE) !< which source fields to do
+   LOGICAL, OPTIONAL, INTENT(IN   )  :: uFieldMaskIn(FIELDMASK_SIZE) !< which row fields to do
+   LOGICAL, OPTIONAL, INTENT(IN   )  :: yFieldMaskIn(FIELDMASK_SIZE) !< which col fields to do
    
    INTEGER(IntKi)                    :: row
    INTEGER(IntKi)                    :: col
-   LOGICAL                           :: FieldMask(FIELDMASK_SIZE) !< which source fields to do
+   LOGICAL                           :: uFieldMask(FIELDMASK_SIZE) !< which row fields to do
+   LOGICAL                           :: yFieldMask(FIELDMASK_SIZE) !< which row fields to do
 
    ! Fields: destination u mesh (row) may not have all fields.  For some modules, a field may be skipped in
    !         the sequence. A separate counting of fields before the current field must be tracked.
    !         It is assumed that the source mesh is complete and contains all fields
-   integer(IntKi)                    :: uFieldsBefore
+   integer(IntKi)                    :: uFieldIdx(FIELDMASK_SIZE)   ! index 0 based
+   integer(IntKi)                    :: yFieldIdx(FIELDMASK_SIZE)   ! index 0 based
 
-   if (present(FieldMaskIn)) then
-      FieldMask = FieldMaskIn
+   if (present(uFieldMaskIn)) then
+      uFieldMask = uFieldMaskIn
    else
-      FieldMask(MASKID_TRANSLATIONDISP) = .true.
-      FieldMask(MASKID_ORIENTATION)     = .true.
-      FieldMask(MASKID_TRANSLATIONVEL)  = .true.
-      FieldMask(MASKID_ROTATIONVEL)     = .true.
-      FieldMask(MASKID_TRANSLATIONACC)  = .true.
-      FieldMask(MASKID_ROTATIONACC)     = .true.
+      uFieldMask(MASKID_TRANSLATIONDISP) = .true.
+      uFieldMask(MASKID_ORIENTATION)     = .true.
+      uFieldMask(MASKID_TRANSLATIONVEL)  = .true.
+      uFieldMask(MASKID_ROTATIONVEL)     = .true.
+      uFieldMask(MASKID_TRANSLATIONACC)  = .true.
+      uFieldMask(MASKID_ROTATIONACC)     = .true.
    endif
- 
+   call SetFieldIdx(uFieldMask,u%NNodes,uFieldIdx)
+
+   if (present(yFieldMaskIn)) then
+      yFieldMask = yFieldMaskIn
+   else
+      yFieldMask(MASKID_TRANSLATIONDISP) = .true.
+      yFieldMask(MASKID_ORIENTATION)     = .true.
+      yFieldMask(MASKID_TRANSLATIONVEL)  = .true.
+      yFieldMask(MASKID_ROTATIONVEL)     = .true.
+      yFieldMask(MASKID_TRANSLATIONACC)  = .true.
+      yFieldMask(MASKID_ROTATIONACC)     = .true.
+   endif
+   call SetFieldIdx(yFieldMask,y%NNodes,yFieldIdx)
+
 !! \f$M_{mi}\f$ is modmesh_mapping::meshmaplinearizationtype::mi (motion identity)\n
 !! \f$M_{f_{\times p}}\f$ is modmesh_mapping::meshmaplinearizationtype::fx_p \n
 !! \f$M_{tv\_uD}\f$ is modmesh_mapping::meshmaplinearizationtype::tv_uD \n
@@ -4493,100 +4517,126 @@ SUBROUTINE Assemble_dUdy_Motions(y, u, MeshMap, BlockRowStart, BlockColStart, dU
 !! \f$M_{ta\_uS}\f$ is modmesh_mapping::meshmaplinearizationtype::ta_uS \n
 !! \f$M_{ta\_rv}\f$ is modmesh_mapping::meshmaplinearizationtype::ta_rv \n
 
-   uFieldsBefore = 0
 
    !*** row for translational displacement ***
-   if (FieldMask(MASKID_TRANSLATIONDISP)) then
+   if (uFieldMask(MASKID_TRANSLATIONDISP)) then
+      row = BlockRowStart + uFieldIdx(MASKID_TRANSLATIONDISP)        ! start of u%TranslationDisp field
+
       ! source translational displacement to destination translational displacement:
-      row = BlockRowStart                    ! start of u%TranslationDisp field
-      col = BlockColStart                    ! start of y%TranslationDisp field
-      call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+      if (yFieldMask(MASKID_TRANSLATIONDISP)) then
+         col = BlockColStart + yFieldIdx(MASKID_TRANSLATIONDISP)     ! start of y%TranslationDisp field
+         call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+      endif
 
       ! source orientation to destination translational displacement:
-      row = BlockRowStart                    ! start of u%TranslationDisp field
-      col = BlockColStart + y%NNodes*3       ! start of y%Orientation field [skip 1 field with 3 components]
-      call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
-      uFieldsBefore = uFieldsBefore + 1
+      if (yFieldMask(MASKID_ORIENTATION)) then
+         col = BlockColStart + yFieldIdx(MASKID_ORIENTATION)         ! start of y%Orientation field
+         call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
+      endif
    endif
 
 
 
    !*** row for orientation ***
-   if (FieldMask(MASKID_ORIENTATION)) then
+   if (uFieldMask(MASKID_ORIENTATION) .and. yFieldMask(MASKID_ORIENTATION)) then
       ! source orientation to destination orientation:
-      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%Orientation field [skip 1 field with 3 components]
-      col = BlockColStart + y%NNodes*3                ! start of y%Orientation field [skip 1 field with 3 components]
+      row = BlockRowStart + uFieldIdx(MASKID_ORIENTATION)            ! start of u%Orientation field
+      col = BlockColStart + yFieldIdx(MASKID_ORIENTATION)            ! start of y%Orientation field
       call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
-      uFieldsBefore = uFieldsBefore + 1
    endif
 
 
    !*** row for translational velocity ***
-   if (FieldMask(MASKID_TRANSLATIONVEL)) then
+   if (uFieldMask(MASKID_TRANSLATIONVEL)) then
+      row = BlockRowStart + uFieldIdx(MASKID_TRANSLATIONVEL)         ! start of u%TranslationVel field
+
       ! source translational displacement to destination translational velocity:
-      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%TranslationVel field [skip 2 fields with 3 components]
-      col = BlockColStart                             ! start of y%TranslationDisp field
-      call SetBlockMatrix( dUdy, MeshMap%dM%tv_us, row, col )
+      if (yFieldMask(MASKID_TRANSLATIONDISP)) then
+         col = BlockColStart + yFieldIdx(MASKID_TRANSLATIONDISP)     ! start of y%TranslationDisp field
+         call SetBlockMatrix( dUdy, MeshMap%dM%tv_us, row, col )
+      endif
 
       ! source translational velocity to destination translational velocity:
-      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%TranslationVel field [skip 2 fields with 3 components]
-      col = BlockColStart + y%NNodes*6                ! start of y%TranslationVel field [skip 2 fields with 3 components]
-      call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+      if (yFieldMask(MASKID_TRANSLATIONVEL)) then
+         col = BlockColStart + yFieldIdx(MASKID_TRANSLATIONVEL)      ! start of y%TranslationVel field
+         call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+      endif
 
       ! source rotational velocity to destination translational velocity:
-      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%TranslationVel field [skip 2 fields with 3 components]
-      col = BlockColStart + y%NNodes*9                ! start of y%RotationVel field [skip 3 fields with 3 components]
-      call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
-      uFieldsBefore = uFieldsBefore + 1
+      if (yFieldMask(MASKID_ROTATIONVEL)) then
+         col = BlockColStart + yFieldIdx(MASKID_ROTATIONVEL)         ! start of y%RotationVel field
+         call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
+      endif
    endif
 
 
 
    !*** row for rotational velocity ***
-   if (FieldMask(MASKID_ROTATIONVEL)) then
+   if (uFieldMask(MASKID_ROTATIONVEL) .and. yFieldMask(MASKID_ROTATIONVEL)) then
       ! source rotational velocity to destination rotational velocity:
-      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%RotationVel field [skip 3 fields with 3 components]
-      col = BlockColStart + y%NNodes*9                ! start of y%RotationVel field [skip 3 fields with 3 components]
+      row = BlockRowStart + uFieldIdx(MASKID_ROTATIONVEL)            ! start of u%RotationVel field
+      col = BlockColStart + yFieldIdx(MASKID_ROTATIONVEL)            ! start of y%RotationVel field
       call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
-      uFieldsBefore = uFieldsBefore + 1
    endif
 
 
    !*** row for translational acceleration ***
-   if (FieldMask(MASKID_TRANSLATIONACC)) then
+   if (uFieldMask(MASKID_TRANSLATIONACC)) then
+      row = BlockRowStart + uFieldIdx(MASKID_TRANSLATIONACC)         ! start of u%TranslationAcc field
+
       ! source translational displacement to destination translational acceleration:
-      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%TranslationAcc field [skip 4 fields with 3 components]
-      col = BlockColStart                             ! start of y%TranslationDisp field
-      call SetBlockMatrix( dUdy, MeshMap%dM%ta_us, row, col )
+      if (yFieldMask(MASKID_TRANSLATIONDISP)) then
+         col = BlockColStart + yFieldIdx(MASKID_TRANSLATIONDISP)     ! start of y%TranslationDisp field
+         call SetBlockMatrix( dUdy, MeshMap%dM%ta_us, row, col )
+      endif
 
       ! source rotational velocity to destination translational acceleration:
-      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%TranslationAcc field [skip 4 fields with 3 components]
-      col = BlockColStart + y%NNodes*9                ! start of y%RotationVel field [skip 3 fields with 3 components]
-      call SetBlockMatrix( dUdy, MeshMap%dM%ta_rv, row, col )
+      if (yFieldMask(MASKID_ROTATIONVEL)) then
+         col = BlockColStart + yFieldIdx(MASKID_ROTATIONVEL)         ! start of y%RotationVel field
+         call SetBlockMatrix( dUdy, MeshMap%dM%ta_rv, row, col )
+      endif
 
       ! source translational acceleration to destination translational acceleration:
-      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%TranslationAcc field [skip 4 fields with 3 components]
-      col = BlockColStart + y%NNodes*12               ! start of y%TranslationAcc field [skip 4 fields with 3 components]
-      call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+      if (yFieldMask(MASKID_TRANSLATIONACC)) then
+         col = BlockColStart + yFieldIdx(MASKID_TRANSLATIONACC)      ! start of y%TranslationAcc field
+         call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
+      endif
 
       ! source rotational acceleration to destination translational acceleration:
-      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%TranslationAcc field [skip 4 fields with 3 components]
-      col = BlockColStart + y%NNodes*15               ! start of y%RotationAcc field [skip 5 fields with 3 components]
-      call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
-      uFieldsBefore = uFieldsBefore + 1
+      if (yFieldMask(MASKID_ROTATIONACC)) then
+         col = BlockColStart + yFieldIdx(MASKID_ROTATIONACC)         ! start of y%RotationAcc field
+         call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
+      endif
    endif
 
 
    !*** row for rotational acceleration ***
-   if (FieldMask(MASKID_ROTATIONACC)) then
+   if (uFieldMask(MASKID_ROTATIONACC) .and. yFieldMask(MASKID_ROTATIONACC)) then
       ! source rotational acceleration to destination rotational acceleration
-      row = BlockRowStart + u%NNodes*uFieldsBefore*3  ! start of u%RotationAcc field [skip 5 fields with 3 components]
-      col = BlockColStart + y%NNodes*15               ! start of y%RotationAcc field [skip 5 fields with 3 components]
+      row = BlockRowStart + uFieldIdx(MASKID_ROTATIONACC    )     ! start of u%RotationAcc field
+      col = BlockColStart + yFieldIdx(MASKID_ROTATIONACC    )     ! start of y%RotationAcc field
       call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
    endif
 
 
+contains
+   subroutine SetFieldIdx(FMask,NNodes,FIdx)
+      logical, intent(in   )  :: FMask(FIELDMASK_SIZE)
+      integer, intent(in   )  :: NNodes
+      integer, intent(  out)  :: FIdx(FIELDMASK_SIZE)
+      integer :: idxNext
+      FIdx = 0
+      idxNext = 0       ! index 0 based
+      if (FMask(MASKID_TRANSLATIONDISP)) then;    FIdx(MASKID_TRANSLATIONDISP) = idxNext;   idxNext = FIdx(MASKID_TRANSLATIONDISP) + 3*NNodes; endif  ! 3 fields for TRANSLATIONDISP
+      if (FMask(MASKID_ORIENTATION    )) then;    FIdx(MASKID_ORIENTATION    ) = idxNext;   idxNext = FIdx(MASKID_ORIENTATION    ) + 3*NNodes; endif  ! 3 fields for ORIENTATION
+      if (FMask(MASKID_TRANSLATIONVEL )) then;    FIdx(MASKID_TRANSLATIONVEL ) = idxNext;   idxNext = FIdx(MASKID_TRANSLATIONVEL ) + 3*NNodes; endif  ! 3 fields for TRANSLATIONVEL
+      if (FMask(MASKID_ROTATIONVEL    )) then;    FIdx(MASKID_ROTATIONVEL    ) = idxNext;   idxNext = FIdx(MASKID_ROTATIONVEL    ) + 3*NNodes; endif  ! 3 fields for ROTATIONVEL
+      if (FMask(MASKID_TRANSLATIONACC )) then;    FIdx(MASKID_TRANSLATIONACC ) = idxNext;   idxNext = FIdx(MASKID_TRANSLATIONACC ) + 3*NNodes; endif  ! 3 fields for TRANSLATIONACC
+      if (FMask(MASKID_ROTATIONACC    )) then;    FIdx(MASKID_ROTATIONACC    ) = idxNext;   idxNext = FIdx(MASKID_ROTATIONACC    ) + 3*NNodes; endif  ! 3 fields for ROTATIONACC
+   end subroutine SetFieldIdx
 END SUBROUTINE Assemble_dUdy_Motions
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine assembles the linearization matrices for transfer of load fields between two meshes.
 !> It set the following block matrix, which is the dUdy block for transfering output (source) mesh \f$y\f$ to the
@@ -4758,7 +4808,7 @@ FUNCTION Indx_y_ED_BladeRoot_Start(p_ED, y_ED, y_FAST, BladeNum) RESULT(ED_Out_S
    INTEGER                                      :: ED_Out_Start     !< starting index of this blade mesh in ElastoDyn outputs
    ED_Out_Start = y_FAST%Lin%Modules(Module_ED)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + (p_ED%Jac_y_idxStartList%BladeRoot - 1)   ! index starts at 1
    do k = 1,min(BladeNum-1,size(y_ED%BladeRootMotion))
-      ED_Out_Start = ED_Out_Start + y_ED%BladeRootMotion(k)%NNodes*18
+      ED_Out_Start = ED_Out_Start + y_ED%BladeRootMotion(k)%NNodes*18      ! all fields
    end do
 END FUNCTION Indx_y_ED_BladeRoot_Start
 !----------------------------------------------------------------------------------------------------------------------------------
