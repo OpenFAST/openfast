@@ -82,6 +82,8 @@ INTEGER(IntKi)                        :: Restart_step                           
       ! TODO: migrate to ModLin
       ! this runs the steady-state solver driver and ENDS the program:
       ! CALL FAST_RunSteadyStateDriver( Turbine(1) )
+
+      CALL ExitThisProgram_T( Turbine(1), ErrID_None, .true. )
    
    ELSEIF ( LEN( TRIM(FlagArg) ) > 0 ) THEN ! Any other flag, end normally
       CALL NormStop()
