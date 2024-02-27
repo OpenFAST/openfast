@@ -114,6 +114,7 @@ typedef	^	FAST_SS_CaseType	ReKi	Pitch	-	-	-	"Pitch angle for this case of the st
 param	^ -                 IntKi                   Map_LoadMesh    -  1  -     "Load mesh mapping type"	-
 param	^ -                 IntKi                   Map_MotionMesh  -  2  -     "Motion mesh mapping type"	-
 param	^ -                 IntKi                   Map_Variable    -  3  -     "Individual variable mapping type"	-
+param	^ -                 IntKi                   Map_Custom      -  4  -     "Custom mapping not used for linearization"	-
 typedef ^ TC_MappingType    character(128)          Desc            -  -  -     "Description of mapping (used to lookup non-mesh maps)" -
 typedef ^ ^                 IntKi                   SrcModIdx       -  0  -     "Source module index in ModData array" -
 typedef ^ ^                 IntKi                   DstModIdx       -  0  -     "Destination module index in ModData array" -

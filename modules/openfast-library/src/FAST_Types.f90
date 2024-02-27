@@ -85,6 +85,7 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Map_LoadMesh                     = 1      ! Load mesh mapping type [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Map_MotionMesh                   = 2      ! Motion mesh mapping type [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Map_Variable                     = 3      ! Individual variable mapping type [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Map_Custom                       = 4      ! Custom mapping not used for linearization [-]
 ! =========  FAST_VTK_BLSurfaceType  =======
   TYPE, PUBLIC :: FAST_VTK_BLSurfaceType
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AirfoilCoords      !< x,y coordinates for airfoil around each blade node on a blade (relative to reference) [-]
