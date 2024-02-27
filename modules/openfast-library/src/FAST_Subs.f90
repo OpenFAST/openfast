@@ -19,6 +19,197 @@
 ! See the License for the specific language governing permissions and
 ! limitations under the License.
 !**********************************************************************************************************************************
+! Define here subroutine to get zmq value
+module zmq_client_module
+   use iso_c_binding
+   implicit none
+
+      interface 
+         function zmq_req_rep(socket_address, request) result(out) bind(C, name='zmq_req_rep')
+            use, intrinsic :: iso_c_binding
+            character(kind=c_char), dimension(*), intent(in)              :: socket_address(*)
+            character(kind=c_char), dimension(*), intent(in)              :: request(*)
+            type(c_ptr) :: out
+         end function zmq_req_rep
+      end interface
+   !    interface 
+   !    FUNCTION zmq_req_rep(socket_address, request) BIND(C, NAME="zmq_req_rep")
+   !       IMPORT :: C_PTR, C_CHAR
+   !       CHARACTER(KIND=C_CHAR), INTENT(IN) :: socket_address, request
+   !       TYPE(C_PTR) :: zmq_req_rep  ! Return a C pointer
+   !   END FUNCTION zmq_req_rep
+   !    end interface 
+      ! interface 
+      !       function zmq_broadcast(message) result(out) bind(C, name='zmq_broadcast')
+      !       use, intrinsic :: iso_c_binding
+      !       character(kind=c_char), dimension(*), intent(in) :: message
+      !       type(c_ptr) :: out 
+      !    end function zmq_broadcast
+      ! end interface
+
+      interface
+         function zmq_broadcast(arr, names) result(zmq_broadcast_out) bind(C, name='zmq_broadcast')
+            use, intrinsic :: iso_c_binding
+
+            ! real(c_double), intent(in)                                    :: arr(:)
+            character(kind=c_char), dimension(*), intent(in)              :: arr(*)
+            character(kind=c_char), dimension(*), intent(in)              :: names(*)
+            integer(c_int)                                                :: zmq_broadcast_out
+         end function zmq_broadcast
+      end interface
+
+      interface 
+         function zmq_init_pub(req_address) result(out_pub) bind(C, name='zmq_init_pub')
+         use, intrinsic :: iso_c_binding
+         character(kind=c_char), dimension(*), intent(in) :: req_address
+         integer(c_int) :: out_pub 
+      end function zmq_init_pub
+      end interface 
+
+      interface 
+         function zmq_init_req(reqrep_address) result(out_req) bind(C, name='zmq_init_req_rep')
+         use, intrinsic :: iso_c_binding
+         character(kind=c_char), dimension(*), intent(in) :: reqrep_address
+         integer(c_int) :: out_req 
+      end function zmq_init_req
+      end interface
+
+end module zmq_client_module
+!----------------------------------------------------------------------------------------------------------------------------------
+function strcat(input_strings, num_strings) result(output_string)
+   character(len=*), dimension(:) :: input_strings
+   character(len=1000) :: output_string
+   integer :: num_strings, i
+
+   output_string = ''
+
+   do i = 1, num_strings
+       if (i /= 1) then
+           output_string = trim(adjustl(output_string)) // ';'
+       end if
+       output_string = output_string // trim(adjustl(input_strings(i)))
+   end do
+
+end function strcat
+! ----- ZMQ Requester ----------------------------------------------------------------------------------------------------------------------------------
+subroutine zmq_req(socket_address, request, request_size, values_array)
+use iso_c_binding
+use zmq_client_module, only: zmq_req_rep
+implicit none    
+
+character(len=300)                         :: socket_address
+integer, intent(in)                        :: request_size
+character(len=*), dimension(request_size)  :: request       ! array of strings with requests
+real, dimension(request_size)              :: values_array  ! empty (or not) array to be overwritten
+! --------------------------------------------------------------
+real(c_double), dimension(:), pointer      :: received_values
+type(c_ptr)                                :: response_ptr
+integer                                    :: num_values, i, str_len
+integer, parameter                         :: max_string_length = 1024
+real(kind=c_float), dimension(:), pointer :: float_array
+! --------------------------------------------------------------
+
+character(len=300) :: concatreq = ''
+do i = 1, request_size
+    concatreq = trim(adjustl(concatreq)) // trim(adjustl(request(i))) // ";"
+end do
+
+concatreq = trim(concatreq) // c_null_char
+socket_address = trim(socket_address) // c_null_char ! to be moved in initialization
+
+response_ptr = zmq_req_rep(socket_address, concatreq)
+
+call c_f_pointer(response_ptr, float_array, [request_size])
+
+! Print the received C string (for debugging purposes)
+print *, "Received measurements: ", float_array
+
+do i= 1, request_size
+   values_array(i) = float_array(i)
+end do 
+
+   ! received_float = tmp_float
+   ! Set as ErrStat // ErrMsg for consistency with openfast ""ErrId_Severe, Fatal, None""
+   ! - FATAL -> if missing requested data 
+   ! - SEVERE -> In broadcasting because simulation keeps running 
+
+end subroutine zmq_req
+! -------------------------------------------------------------------------------------------------------------------------------
+! subroutine zmq_pub(message)
+!    use iso_c_binding
+!    use zmq_client_module, only: zmq_broadcast
+!    implicit none 
+
+!    character(*)                            :: message
+!    type(c_ptr)                             :: response_ptr_pub 
+!    real(c_float), pointer                  :: tmp_float_pub
+!    real(c_float)                           :: received_float_pub
+
+!    response_ptr_pub = zmq_broadcast(message)
+
+! end subroutine zmq_pub
+! ---------------------------------------------
+subroutine zmq_pub(array, names, ZmqOutNbr)
+   use iso_c_binding
+   use zmq_client_module, only: zmq_broadcast
+   implicit none
+   ! Fixed-size buffer for concatenated names
+   character(len=2048) :: concatenated_names = ""
+   integer :: totalLength, totalLength_ary, i, offset, ZmqOutNbr
+   integer(c_int)                                              :: response_ptr_pub
+   ! real(c_double),   dimension(ZmqOutNbr + 2), intent(out)      :: array
+   character(len=*), dimension(ZmqOutNbr + 2), intent(in)      :: names
+
+   real(kind=C_DOUBLE), dimension(ZmqOutNbr + 2) :: array
+   character(len=1), parameter :: delimiter = ";"
+   character(len=1000) :: concatenatedString = ""
+   ! -----------------------------------------------------
+   totalLength = 0 
+   totalLength_ary = 0
+
+   do i = 1, ZmqOutNbr + 2
+      concatenated_names(totalLength + 1 : totalLength + len_trim(names(i)) + 1) = trim(names(i)) // ";"
+      totalLength = totalLength + len_trim(names(i)) + 2
+
+      write(concatenatedString(totalLength_ary+1:), '(f0.6,a)') array(i), delimiter
+      totalLength_ary = len_trim(trim(concatenatedString))
+   end do
+
+   concatenated_names = trim(concatenated_names) // c_null_char
+   concatenatedString = trim(concatenatedString) // c_null_char
+
+   response_ptr_pub = zmq_broadcast(concatenatedString, concatenated_names)
+
+end subroutine zmq_pub
+! ---------------------------------------------
+subroutine zmq_pub_init(req_address)
+   use iso_c_binding
+   use zmq_client_module, only: zmq_init_pub
+   implicit none 
+
+   character(*)                               :: req_address
+   integer(c_int)                             :: response_ptr_pub_init 
+
+   print *, "Atempting connection from Fortran at ", req_address
+
+   response_ptr_pub_init = zmq_init_pub(trim(req_address))
+
+end subroutine zmq_pub_init
+! ----------------------------------------------
+subroutine zmq_req_init(reqrep_address)
+   use iso_c_binding
+   use zmq_client_module, only: zmq_init_req
+   implicit none 
+
+   character(*)                               :: reqrep_address
+   integer(c_int)                             :: response_ptr_req_init 
+
+   print *, "Atempting connection from Fortran at ", reqrep_address
+
+   response_ptr_req_init = zmq_init_req(trim(reqrep_address))
+
+end subroutine zmq_req_init
+! ----------------------------------------------
 MODULE FAST_Subs
 
    USE FAST_Solver
@@ -1613,7 +1804,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! Set up output for glue code (must be done after all modules are initialized so we have their WriteOutput information)
    ! ........................
 
-   CALL FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat2, ErrMsg2 )
+   CALL FAST_InitOutput( p_FAST, y_FAST, Init, p_FAST%ZmqOutChnlsIdx, p_FAST%ZmqOutChannelsNames, p_FAST%ZmqOutChannelsAry, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
 
@@ -2078,6 +2269,16 @@ SUBROUTINE FAST_Init( p, m_FAST, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, 
    call ValidateInputData(p, m_FAST, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+   if (p%ZmqOn) then
+      ! 1. We open the Broadcast socket (or, if already open, we connect to it)
+      call zmq_pub_init(p%ZmqOutAddress)
+      call zmq_req_init(p%ZmqInAddress)
+      ! 1. We open the REQ-REP socket (or, if already open, we connect to it)
+      ! call zmq_pub_init(Turbine%p_FAST%ZmqInAddress)
+      ! p%ZmqOutChannelsAry(1) = TurbID
+      
+   end if 
+
 
    IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -2306,11 +2507,49 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
       end if
 
    end if
+   
+   ! Query of ZMQ broadcast channels idx
+
+   if (p_FAST%ZmqOn) then
+      CALL AllocAry( ZmqOutChnlsIdx, p_FAST%ZmqOutNbr, 'ZmqOutChnlsIdx', ErrStat, ErrMsg )
+      CALL AllocAry( ZmqOutChannelsNames, p_FAST%ZmqOutNbr + 2, 'ZmqOutChannelNames', ErrStat, ErrMsg )
+
+      ZmqOutChnlsIdx    = 0_IntKi
+
+      do i = 1, SIZE(ZmqOutChnlsIdx) 
+         tmp_string = p_FAST%ZmqOutChannels(i)
+         call Conv2UC(tmp_string)
+
+         do j = 1, SIZE(y_FAST%ChannelNames)
+            tmp_string2 = y_FAST%ChannelNames(j)
+            call Conv2UC(tmp_string2)
+
+            if (trim(tmp_string) == trim(tmp_string2)) then 
+               ZmqOutChnlsIdx(i) = j 
+               exit 
+            end if 
+
+         end do 
+      end do 
+
+      if (minval(ZmqOutChnlsIdx) == 0) then 
+         call WrScr('Warning: one channel requested from ZMQ was not identified') ! CU = unit number for the output 
+      end if 
+
+      ! Augmenting ZMQ output to handle wind turbine id and current time stamp
+      ZmqOutChannelsNames(1) = 'TurbId'
+      ZmqOutChannelsNames(2) = 'Time'
+
+      do i = 1,p_FAST%ZmqOutNbr
+         ZmqOutChannelsNames(2 + i) = trim(y_FAST%ChannelNames(ZmqOutChnlsIdx(i))) ! Up to here everything OK! 
+      end do
+
+   end if 
 
 END SUBROUTINE ValidateInputData
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes the output for the glue code, including writing the header for the primary output file.
-SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat, ErrMsg )
+SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, Init,  ZmqOutChnlsIdx, ZmqOutChannelsNames, ZmqOutChannelsAry, ErrStat, ErrMsg )
 
    IMPLICIT NONE
 
@@ -2319,6 +2558,11 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat, ErrMsg )
    TYPE(FAST_OutputFileType),      INTENT(INOUT)        :: y_FAST                                !< Glue-code simulation outputs
    TYPE(FAST_InitData),            INTENT(IN)           :: Init                                  !< Initialization data for all modules
 
+   INTEGER(IntKi), allocatable, intent(inout)            :: ZmqOutChnlsIdx(:)
+   CHARACTER(*), allocatable, intent(inout)              :: ZmqOutChannelsNames(:)
+   REAL(DbKi), allocatable, intent(inout)                :: ZmqOutChannelsAry(:)
+
+   
    INTEGER(IntKi),                 INTENT(OUT)          :: ErrStat                               !< Error status
    CHARACTER(*),                   INTENT(OUT)          :: ErrMsg                                !< Error message corresponding to ErrStat
 
@@ -2330,7 +2574,8 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat, ErrMsg )
    INTEGER(IntKi)                   :: NumOuts                                         ! number of channels to be written to the output file(s)
 
 
-
+   CHARACTER(ChanLen)               :: tmp_string                                      ! zmq auxiliarry string 
+   CHARACTER(ChanLen)               :: tmp_string2                                     ! zmq auxiliarry string 
    !......................................................
    ! Set the description lines to be printed in the output file
    !......................................................
@@ -2598,6 +2843,45 @@ end do
          END DO ! J
       END DO ! I
    END IF
+
+
+   ! Query of ZMQ broadcast channels idx
+
+   if (p_FAST%ZmqOn) then
+      CALL AllocAry( ZmqOutChnlsIdx, p_FAST%ZmqOutNbr, 'ZmqOutChnlsIdx', ErrStat, ErrMsg )
+      CALL AllocAry( ZmqOutChannelsNames, p_FAST%ZmqOutNbr + 2, 'ZmqOutChannelNames', ErrStat, ErrMsg )
+
+      ZmqOutChnlsIdx    = 0_IntKi
+
+      do i = 1, SIZE(ZmqOutChnlsIdx) 
+         tmp_string = p_FAST%ZmqOutChannels(i)
+         call Conv2UC(tmp_string)
+
+         do j = 1, SIZE(y_FAST%ChannelNames)
+            tmp_string2 = y_FAST%ChannelNames(j)
+            call Conv2UC(tmp_string2)
+
+            if (trim(tmp_string) == trim(tmp_string2)) then 
+               ZmqOutChnlsIdx(i) = j 
+               exit 
+            end if 
+
+         end do 
+      end do 
+
+      if (minval(ZmqOutChnlsIdx) == 0) then 
+         call WrScr('Warning: one channel requested from ZMQ was not identified') ! CU = unit number for the output 
+      end if 
+
+      ! Augmenting ZMQ output to handle wind turbine id and current time stamp
+      ZmqOutChannelsNames(1) = 'TurbId'
+      ZmqOutChannelsNames(2) = 'Time'
+
+      do i = 1,p_FAST%ZmqOutNbr
+         ZmqOutChannelsNames(2 + i) = trim(y_FAST%ChannelNames(ZmqOutChnlsIdx(i))) ! Up to here everything OK! 
+      end do
+
+   end if 
 
 
    !......................................................
@@ -3653,6 +3937,109 @@ END DO
 
    call cleanup()
    RETURN
+
+   ! --------------------- ZMQ Communication ------------------------ ! 
+   CALL ReadCom( UnIn, InputFile, 'Section Header: ZMQ Communication', ErrStat2, ErrMsg2, UnEc )
+
+   if ( ErrStat2 >= AbortErrLev ) then
+      CALL SetErrStat( ErrId_Warn, "ZMQ section not found, turning off ZMQ communication", ErrStat, ErrMsg, RoutineName)
+      call cleanup()
+      RETURN
+   end if
+
+   CALL ReadVar( UnIn, InputFile, p%ZmqOn, "ZmqOn", "ZMQ communication (flag)", ErrStat2, ErrMsg2, UnEc)
+   if ( ErrStat2 >= AbortErrLev ) then
+      CALL SetErrStat( ErrId_Warn, "ZMQ section not found, turning off ZMQ communication", ErrStat, ErrMsg, RoutineName)
+      call cleanup()
+      RETURN
+   end if
+
+   CALL ReadVar( UnIn, InputFile, p%ZmqInAddress, "ZmqInAddress", "REQ-REP localhost address", ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if ( ErrStat >= AbortErrLev ) then
+      call cleanup()
+      RETURN
+   end if
+
+   p%ZmqInAddress = trim(p%ZmqInAddress) // c_null_char
+
+   ! check valid address to be put here  
+   
+   CALL ReadVar( UnIn, InputFile, p%ZmqInNbr, "ZmqInNbr", "Number of parameters to be requested ", ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if ( ErrStat >= AbortErrLev ) then
+      call cleanup()
+      RETURN
+   end if
+
+   CALL AllocAry(p%ZmqInChannels, p%ZmqInNbr, "ZmqInChannels", Errstat2, ErrMsg2)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if ( ErrStat >= AbortErrLev ) then
+      call cleanup()
+      RETURN
+   end if
+
+   CALL ReadAry( UnIn, InputFile, p%ZmqInChannels, p%ZmqInNbr, "ZmqInChannels", "Channels to be requested at communication time", ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if ( ErrStat >= AbortErrLev ) then
+      call cleanup()
+      RETURN
+   end if
+
+
+   ! -------------------------------------------   Broadcasting settings ----------------------------------------------------       
+   CALL ReadVar( UnIn, InputFile, p%ZmqOutAddress, "ZmqOutAddress", "PUB-SUB localhost address ", ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if ( ErrStat >= AbortErrLev ) then
+      call cleanup()
+      RETURN
+   end if
+
+   p%ZmqOutAddress = trim(p%ZmqOutAddress) // c_null_char
+
+   ! check valid address 
+
+   CALL ReadVar( UnIn, InputFile, p%ZmqOutNbr, "ZmqOutNbr", "Number of channels to be broadcasted", ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if ( ErrStat >= AbortErrLev ) then
+      call cleanup()
+      RETURN
+   end if
+
+   ! Read channel names to be broadcasted 
+   
+   CALL AllocAry(p%ZmqOutChannels, p%ZmqOutNbr, "ZmqOutChannels", Errstat2, ErrMsg2) 
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if ( ErrStat >= AbortErrLev ) then
+      call cleanup()
+      RETURN
+   end if
+   
+   CALL ReadAry( UnIn, InputFile, p%ZmqOutChannels, p%ZmqOutNbr, "ZmqOutChannels", "Channels to be broadcasterd at communication time", ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if ( ErrStat >= AbortErrLev ) then
+      call cleanup()
+      RETURN
+   end if
+   ! Create broadcasting array and name tag, actually used by the Message Passing Interface. We add 2 slots, for wind turbine ID and time, to be always broadcasted
+
+   CALL AllocAry(p%ZmqOutChannelsNames, p%ZmqOutNbr + 2, "ZmqOutChannelsNames", Errstat2, ErrMsg2) 
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if ( ErrStat >= AbortErrLev ) then
+      call cleanup()
+      RETURN
+   end if
+
+   CALL AllocAry(p%ZmqOutChannelsAry,  p%ZmqOutNbr + 2, "ZmqOutChannelsAry"  , Errstat2, ErrMsg2) 
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if ( ErrStat >= AbortErrLev ) then
+      call cleanup()
+      RETURN
+   end if
+
+call cleanup()
+RETURN
+
 
 CONTAINS
    !...............................................................................................................................
@@ -5093,7 +5480,6 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, ExtLd,
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_Solution0'
-
 
    !NOTE: m_FAST%t_global is t_initial in this routine
 
@@ -7397,13 +7783,13 @@ SUBROUTINE FAST_Solution_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg )
    CALL FAST_Solution(t_initial, n_t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                   Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%ExtLd, Turbine%IfW, Turbine%ExtInfw, Turbine%SC_DX, &
                   Turbine%SeaSt, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
-                  Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )
+                  Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, Turbine%p_FAST%ZmqOutChannelsAry, Turbine%TurbID, ErrStat, ErrMsg )
 
 END SUBROUTINE FAST_Solution_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine takes data from n_t_global and gets values at n_t_global + 1
 SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, ExtLd, IfW, ExtInfw, SC_DX, SeaSt, HD, SD, ExtPtfm, &
-                         MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
+                         MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ZmqOutChannelsAry, TurbID, ErrStat, ErrMsg )
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           !< initial time
    INTEGER(IntKi),           INTENT(IN   ) :: n_t_global          !< loop counter
@@ -7453,6 +7839,13 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_Solution'
+   INTEGER(IntKi)                          :: TurbID                    !< Grab Turbine ID for messages-tagging purposes (ZMQ)
+
+   ! ! -----------------------------------------------------------------------------
+   ! REAL(DbKi), allocatable, intent(inout)           :: ZmqOutChannelsAry(:)
+   ! REAL(DbKi)                                       :: ZmqInChannelsAry(p_FAST%ZmqInNbr)
+   ! character(len=1024)                              :: tmp_str 
+   ! ! -----------------------------------------------------------------------------
 
 
    ErrStat = ErrID_None
@@ -7822,6 +8215,11 @@ SUBROUTINE FAST_AdvanceToNextTimeStep(t_initial, n_t_global, p_FAST, y_FAST, m_F
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_AdvanceToNextTimeStep'
 
+   ! -----------------------------------------------------------------------------
+   REAL(DbKi), allocatable, intent(inout)           :: ZmqOutChannelsAry(:)
+   REAL(DbKi)                                       :: ZmqInChannelsAry(p_FAST%ZmqInNbr)
+   character(len=1024)                              :: tmp_str 
+   ! -----------------------------------------------------------------------------
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -8017,6 +8415,48 @@ SUBROUTINE FAST_AdvanceToNextTimeStep(t_initial, n_t_global, p_FAST, y_FAST, m_F
 
    m_FAST%t_global = t_global_next
 
+   if (p_FAST%ZmqOn) then 
+
+      ZmqInChannelsAry = 0.0_DbKi
+
+      call zmq_req(p_FAST%ZmqInAddress, p_FAST%ZmqInChannels, p_FAST%ZmqInNbr, ZmqInChannelsAry)
+
+      If (ZmqInChannelsAry(1) == TurbID) then 
+
+         do i = 1, p_FAST%ZmqInNbr
+            tmp_str = trim(p_FAST%ZmqInChannels(i)) 
+
+            select case (tmp_str) ! Be careful with dependencies 
+               case('VelH')
+                  IfW%p%FlowField%Uniform%VelH = ZmqInChannelsAry(i)
+               case('VelV')
+                  IfW%p%FlowField%Uniform%VelV = ZmqInChannelsAry(i)
+               case('VelGust')
+                  IfW%p%FlowField%Uniform%VelGust = ZmqInChannelsAry(i)
+               case('AngleV')
+                  IfW%p%FlowField%Uniform%AngleV = ZmqInChannelsAry(i)
+               case('AngleH')
+                  IfW%p%FlowField%Uniform%AngleH = ZmqInChannelsAry(i)
+               case('BldPitchCom1')
+                  SrvD%y%BlPitchCom(1) = ZmqInChannelsAry(i)
+               case('BldPitchCom2')
+                  SrvD%y%BlPitchCom(2) = ZmqInChannelsAry(i)
+               case('BldPitchCom3')
+                  SrvD%y%BlPitchCom(3) = ZmqInChannelsAry(i)
+               case('YawMom') 
+                  SrvD%y%YawMom = ZmqInChannelsAry(i)
+               case('GenTrq')
+                  SrvD%y%GenTrq  = ZmqInChannelsAry(i)
+               case('HSSBrFrac')
+                  SrvD%y%hssbrtrqc  = ZmqInChannelsAry(i)
+            end select 
+            
+         end do 
+      
+      end if 
+   
+   end if 
+
 END SUBROUTINE FAST_AdvanceToNextTimeStep
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that calls FAST_WriteOutput for one instance of a Turbine data structure. This is a separate subroutine so that the FAST
@@ -8185,7 +8625,7 @@ END SUBROUTINE WriteOutputToFile
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes the module output to the primary output file(s).
 SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, ExtInfwOutput, EDOutput, y_AD, SrvDOutput, SeaStOutput, HDOutput, SDOutput, ExtPtfmOutput,&
-                        MAPOutput, FEAMOutput, MDOutput, OrcaOutput, IceFOutput, y_IceD, y_BD, ErrStat, ErrMsg)
+                        MAPOutput, FEAMOutput, MDOutput, OrcaOutput, IceFOutput, y_IceD, y_BD, ZmqOutChannelsAry, TurbID, ErrStat, ErrMsg)
 
    IMPLICIT                        NONE
 
@@ -8225,8 +8665,35 @@ SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, ExtInfwOutput, EDOutput, 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
+   ! ---- ZMQ Definitions ----- 
+   REAL(ReKi), ALLOCATABLE           :: ZmqOutChannelsAry(:)
+
+
    CALL FillOutputAry(p_FAST, y_FAST, IfWOutput, ExtInfwOutput, EDOutput, y_AD, SrvDOutput, SeaStOutput, HDOutput, SDOutput, ExtPtfmOutput, &
                       MAPOutput, FEAMOutput, MDOutput, OrcaOutput, IceFOutput, y_IceD, y_BD, OutputAry)
+
+
+   ! ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+   ! ! End of simulation time step. Broadcast results to ZMQ (assuming that we broadcast at every time step, to be modified later)
+   ! ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+   if (p_FAST%ZmqOn) then 
+
+      CALL AllocAry( ZmqOutChannelsAry, p_FAST%ZmqOutNbr + 2, 'ZmqOutChannelsAry', ErrStat, ErrMsg )
+      
+      ZmqOutChannelsAry = 0.0_ReKi                                   !< Reset to zero all values prior to allocation and broadcasting
+
+      ZmqOutChannelsAry(1) = TurbID
+      ZmqOutChannelsAry(2) = t 
+
+      do i = 1, p_FAST%ZmqOutNbr 
+         ZmqOutChannelsAry(2 + i) = OutputAry(p_FAST%ZmqOutChnlsIdx(i) - 1)
+      end do
+
+      call zmq_pub(ZmqOutChannelsAry, p_FAST%ZmqOutChannelsNames, p_FAST%ZmqOutNbr)
+
+   end if 
+
+
 
    IF (p_FAST%WrTxtOutFile) THEN
 
