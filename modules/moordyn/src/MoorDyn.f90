@@ -2507,8 +2507,8 @@ CONTAINS
       character(ErrMsgLen)       :: ErrMsg2                      ! Temporary Error message
       integer(IntKi)             :: i, j, l, N
       real(R8Ki)                 :: Perturb
-      real(ReKi)                 :: dl_slack     ! how much a given line segment is stretched [m] 
-      real(ReKi)                 :: dl_slack_min ! minimum change in a node position for the least-strained segment in the simulation to go slack [m]
+      real(R8Ki)                 :: dl_slack     ! how much a given line segment is stretched [m] 
+      real(R8Ki)                 :: dl_slack_min ! minimum change in a node position for the least-strained segment in the simulation to go slack [m]
       character(32)              :: LinStr       ! Used for constructing linearization variable names
       logical                    :: LinCtrl      ! Is the current DeltaL channel associated with a line?
       type(ModVarType)           :: VarTmp       ! Temporary variable for velocity states

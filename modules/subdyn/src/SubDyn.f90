@@ -433,7 +433,7 @@ subroutine SD_InitVars(Init, u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
 
    integer(IntKi)          :: i, j
-   real(ReKi)              :: dx, dy, dz, maxDim
+   real(R8Ki)              :: dx, dy, dz, maxDim
 
    ! Allocate space for variables (deallocate if already allocated)
    if (associated(p%Vars)) deallocate(p%Vars)
