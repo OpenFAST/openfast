@@ -64,9 +64,9 @@ MODULE ElastoDyn
 
    PUBLIC :: ED_GetOP                          ! Routine to pack the operating point values (for linearization) into arrays
 
-   PUBLIC :: ED_PackStateValues, ED_UnpackStateValues
-   PUBLIC :: ED_PackInputValues, ED_UnpackInputValues
-   PUBLIC :: ED_PackOutputValues
+   PUBLIC :: ED_PackContStateOP, ED_UnpackStateOP
+   PUBLIC :: ED_PackInputOP, ED_UnpackInputOP
+   PUBLIC :: ED_PackOutputOP
 
    PUBLIC :: ED_UpdateAzimuth
    
@@ -10404,7 +10404,7 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
    ! Update copy of the inputs to perturb
    call ED_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-   call ED_PackInputValues(p, u, m%Jac%u)
+   call ED_PackInputOP(p, u, m%Jac%u)
 
    ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
    if (present(dYdu)) then
@@ -10433,15 +10433,15 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call ED_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call ED_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
             call ED_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackOutputValues(p, m%y_lin, m%Jac%y_pos, IsFullLin)
+            call ED_PackOutputOP(p, m%y_lin, m%Jac%y_pos, IsFullLin)
 
             ! Calculate negative perturbation
             call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call ED_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call ED_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
             call ED_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackOutputValues(p, m%y_lin, m%Jac%y_neg, IsFullLin)
+            call ED_PackOutputOP(p, m%y_lin, m%Jac%y_neg, IsFullLin)
 
             ! Calculate column index
             col = p%Vars%u(i)%iLoc(1) + j - 1
@@ -10472,15 +10472,15 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call ED_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call ED_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
             call ED_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackStateValues(p, m%dxdt_lin, m%Jac%x_pos)
+            call ED_PackContStateOP(p, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call ED_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call ED_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
             call ED_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackStateValues(p, m%dxdt_lin, m%Jac%x_neg)
+            call ED_PackContStateOP(p, m%dxdt_lin, m%Jac%x_neg)
 
             ! Calculate column index
             col = p%Vars%u(i)%iLoc(1) + j - 1
@@ -10538,7 +10538,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    TYPE(ED_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   INTEGER(IntKi), OPTIONAL,             INTENT(IN   )           :: FlagFilter  !< Variable indexing number
+   INTEGER(IntKi), OPTIONAL,             INTENT(IN   )           :: FlagFilter !< Variable flag filter
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions (Y) with respect to the continuous states (x) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdx(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the continuous states (x) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddx(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the continuous states (x) [intent in to avoid deallocation]
@@ -10548,7 +10548,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    logical                                           :: IsFullLin
-   integer(IntKi)                :: FlagFilterLoc
+   integer(IntKi)                                    :: FlagFilterLoc
    INTEGER(IntKi)                                    :: i, j, col
 
    ! Initialize ErrStat
@@ -10567,7 +10567,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
    ! Copy state values
    call ED_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-   call ED_PackStateValues(p, x, m%Jac%x)
+   call ED_PackContStateOP(p, x, m%Jac%x)
 
    ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
    if (present(dYdx)) then
@@ -10588,15 +10588,15 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-            call ED_UnpackStateValues(p, m%Jac%x_perturb, m%x_perturb)
+            call ED_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
             call ED_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackOutputValues(p, m%y_lin, m%Jac%y_pos, IsFullLin)
+            call ED_PackOutputOP(p, m%y_lin, m%Jac%y_pos, IsFullLin)
 
             ! Calculate negative perturbation
             call MV_Perturb(p%Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-            call ED_UnpackStateValues(p, m%Jac%x_perturb, m%x_perturb)
+            call ED_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
             call ED_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackOutputValues(p, m%y_lin, m%Jac%y_neg, IsFullLin)
+            call ED_PackOutputOP(p, m%y_lin, m%Jac%y_neg, IsFullLin)
 
             ! Calculate column index
             col = p%Vars%x(i)%iLoc(1) + j - 1
@@ -10627,15 +10627,15 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-            call ED_UnpackStateValues(p, m%Jac%x_perturb, m%x_perturb)
+            call ED_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
             call ED_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackStateValues(p, m%dxdt_lin, m%Jac%x_pos)
+            call ED_PackContStateOP(p, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(p%Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-            call ED_UnpackStateValues(p, m%Jac%x_perturb, m%x_perturb)
+            call ED_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
             call ED_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackStateValues(p, m%dxdt_lin, m%Jac%x_neg)
+            call ED_PackContStateOP(p, m%dxdt_lin, m%Jac%x_neg)
 
             ! Calculate column index
             col = p%Vars%x(i)%iLoc(1) + j - 1
@@ -10861,7 +10861,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       end if
 
       ! Pack input type into array
-      call ED_PackInputValues(p, u, u_op)
+      call ED_PackInputOP(p, u, u_op)
            
       ! If full linearization, check extended inputs
       if (IsFullLin) then
@@ -10882,7 +10882,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          call AllocAry(y_op, p%Vars%Ny, 'y_op', ErrStat2, ErrMsg2); if (Failed()) return
       end if
 
-      call ED_PackOutputValues(p, y, y_op, IsFullLin)
+      call ED_PackOutputOP(p, y, y_op, IsFullLin)
 
    end if
 
@@ -10893,7 +10893,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          call AllocAry(x_op, p%Vars%Nx, 'x_op', ErrStat2, ErrMsg2); if (Failed()) return
       end if
 
-      call ED_PackStateValues(p, x, x_op)     
+      call ED_PackContStateOP(p, x, x_op)     
 
    end if
 
@@ -10905,7 +10905,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       end if
       
       call ED_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-      call ED_PackStateValues(p, m%dxdt_lin, dx_op)
+      call ED_PackContStateOP(p, m%dxdt_lin, dx_op)
       
    end if
 
@@ -11376,7 +11376,7 @@ contains
    end function Failed
 end subroutine
 
-subroutine ED_PackStateValues(p, x, ary)
+subroutine ED_PackContStateOP(p, x, ary)
    type(ED_ParameterType), intent(in)        :: p
    type(ED_ContinuousStateType), intent(in)  :: x
    real(R8Ki), intent(out)                   :: ary(:)
@@ -11393,7 +11393,7 @@ subroutine ED_PackStateValues(p, x, ary)
    end do
 end subroutine
 
-subroutine ED_UnpackStateValues(p, ary, x)
+subroutine ED_UnpackStateOP(p, ary, x)
    type(ED_ParameterType), intent(in)           :: p
    real(R8Ki), intent(in)                       :: ary(:)
    type(ED_ContinuousStateType), intent(inout)  :: x
@@ -11408,7 +11408,7 @@ subroutine ED_UnpackStateValues(p, ary, x)
    end do
 end subroutine
 
-subroutine ED_PackInputValues(p, u, Ary)
+subroutine ED_PackInputOP(p, u, Ary)
    type(ED_ParameterType), intent(in)  :: p
    type(ED_InputType), intent(in)      :: u
    real(R8Ki), intent(out)             :: Ary(:)
@@ -11429,7 +11429,7 @@ subroutine ED_PackInputValues(p, u, Ary)
    call MV_Pack(p%Vars%u, p%iVarBlPitchComC, u%BlPitchCom(1), Ary)
 end subroutine
 
-subroutine ED_UnpackInputValues(p, Ary, u)
+subroutine ED_UnpackInputOP(p, Ary, u)
    type(ED_ParameterType), intent(in)  :: p
    real(R8Ki), intent(in)              :: Ary(:)
    type(ED_InputType), intent(inout)   :: u
@@ -11449,7 +11449,7 @@ subroutine ED_UnpackInputValues(p, Ary, u)
    call MV_Unpack(p%Vars%u, p%iVarGenTrq, Ary, u%GenTrq)
 end subroutine
 
-subroutine ED_PackOutputValues(p, y, Ary, PackWriteOutput)
+subroutine ED_PackOutputOP(p, y, Ary, PackWriteOutput)
    type(ED_ParameterType), intent(in)  :: p
    type(ED_OutputType), intent(in)     :: y
    real(R8Ki), intent(out)             :: Ary(:)

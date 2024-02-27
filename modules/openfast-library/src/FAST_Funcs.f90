@@ -315,9 +315,9 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
                  os_BD => T%BD%OtherSt(ModData%Ins, STATE_PRED))
 
          ! Transfer tight coupling states to module
-         call BD_PackStateValues(p_BD, x_BD, m_BD%Jac%x)
+         call BD_PackStateOP(p_BD, x_BD, m_BD%Jac%x)
          ! call XferGblToLoc1D(ModData%ixs, x_TC, m_BD%Jac%x)
-         call BD_UnpackStateValues(p_BD, m_BD%Jac%x, x_BD)
+         call BD_UnpackStateOP(p_BD, m_BD%Jac%x, x_BD)
 
          ! TODO: Fix state reset
          ! Set BD accelerations and algorithmic accelerations from q matrix
@@ -349,7 +349,7 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
          ! end do
 
          ! Transfer updated states to solver
-         call BD_PackStateValues(p_BD, x_BD, m_BD%Jac%x)
+         call BD_PackStateOP(p_BD, x_BD, m_BD%Jac%x)
          ! call XferLocToGbl1D(ModData%ixs, m_BD%Jac%x, x_TC)
       end associate
 
@@ -359,15 +359,15 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
                  u_ED => T%ED%Input(1), x_ED => T%ED%x(STATE_PRED))
 
          ! Transfer tight coupling states to module
-         call ED_PackStateValues(p_ED, x_ED, m_ED%Jac%x)
+         call ED_PackContStateOP(p_ED, x_ED, m_ED%Jac%x)
          ! call XferGblToLoc1D(ModData%ixs, x_TC, m_ED%Jac%x)
-         call ED_UnpackStateValues(p_ED, m_ED%Jac%x, x_ED)
+         call ED_UnpackStateOP(p_ED, m_ED%Jac%x, x_ED)
 
          ! Update the azimuth angle
          call ED_UpdateAzimuth(p_ED, x_ED, T%p_FAST%DT)
 
          ! Transfer updated states to solver
-         call ED_PackStateValues(p_ED, x_ED, m_ED%Jac%x)
+         call ED_PackContStateOP(p_ED, x_ED, m_ED%Jac%x)
          ! call XferLocToGbl1D(ModData%ixs, m_ED%Jac%x, x_TC)
 
       end associate
@@ -577,7 +577,11 @@ subroutine FAST_GetOP(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg, FlagFilt
                      T%MAP%OtherSt, T%MAP%y, ErrStat2, ErrMsg2, &
                      u_op=u_op, y_op=y_op) !, x_op=x_op, dx_op=dx_op) MAP doesn't have states
 
-!  case (Module_MD)
+   case (Module_MD)
+      call MD_GetOP(ThisTime, T%MD%Input(1), T%MD%p, T%MD%x(ThisState), T%MD%xd(ThisState), T%MD%z(ThisState), &
+                    T%MD%OtherSt(ThisState), T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
+                    FlagFilter=FlagFilter, u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+
 !  case (Module_OpFM)
 !  case (Module_Orca)
    case (Module_SD)

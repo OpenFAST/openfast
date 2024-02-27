@@ -53,9 +53,9 @@ MODULE BeamDyn
    PUBLIC :: BD_UpdateGlobalRef      !< update the BeamDyn reference.  The reference for the calculations follows u%RootMotionMesh
                                                !  and therefore x%q must be updated from T -> T+DT to include the root motion from T->T+DT
 
-   PUBLIC :: BD_PackStateValues, BD_UnpackStateValues
-   PUBLIC :: BD_PackInputValues, BD_UnpackInputValues
-   PUBLIC :: BD_PackOutputValues
+   PUBLIC :: BD_PackStateOP, BD_UnpackStateOP
+   PUBLIC :: BD_PackInputOP, BD_UnpackInputOP
+   PUBLIC :: BD_PackOutputOP
 
    ! The original formulation kept all states in the inertial reference frame.  This has been leading to convergence issues
    ! when there is a large rotational change from the reference frame (i.e. large turbine yaw, large blade pitch).  During
@@ -6002,7 +6002,7 @@ contains
    end function Failed
 end subroutine
 
-subroutine BD_PackStateValues(p, x, Values)
+subroutine BD_PackStateOP(p, x, Values)
    type(BD_ParameterType), intent(in)        :: p
    type(BD_ContinuousStateType), intent(in)  :: x
    real(R8Ki), intent(out)                   :: Values(:)
@@ -6023,7 +6023,7 @@ subroutine BD_PackStateValues(p, x, Values)
    end do
 end subroutine
 
-subroutine BD_UnpackStateValues(p, Values, x)
+subroutine BD_UnpackStateOP(p, Values, x)
    type(BD_ParameterType), intent(in)           :: p
    real(R8Ki), intent(in)                       :: Values(:)
    type(BD_ContinuousStateType), intent(inout)  :: x
@@ -6044,7 +6044,7 @@ subroutine BD_UnpackStateValues(p, Values, x)
    end do
 end subroutine
 
-subroutine BD_PackInputValues(p, u, Values)
+subroutine BD_PackInputOP(p, u, Values)
    type(BD_ParameterType), intent(in)  :: p
    type(BD_InputType), intent(in)      :: u
    real(R8Ki), intent(out)             :: Values(:)
@@ -6053,7 +6053,7 @@ subroutine BD_PackInputValues(p, u, Values)
    call MV_Pack(p%Vars%u, p%iVarDistrLoad, u%DistrLoad, Values)
 end subroutine
 
-subroutine BD_UnpackInputValues(p, Ary, u)
+subroutine BD_UnpackInputOP(p, Ary, u)
    type(BD_ParameterType), intent(in)  :: p
    real(R8Ki), intent(in)              :: Ary(:)
    type(BD_InputType), intent(inout)   :: u
@@ -6062,7 +6062,7 @@ subroutine BD_UnpackInputValues(p, Ary, u)
    call MV_Unpack(p%Vars%u, p%iVarDistrLoad, Ary, u%DistrLoad)
 end subroutine
 
-subroutine BD_PackOutputValues(p, y, Ary, PackWriteOutput)
+subroutine BD_PackOutputOP(p, y, Ary, PackWriteOutput)
    type(BD_ParameterType), intent(in)  :: p
    type(BD_OutputType), intent(in)     :: y
    real(R8Ki), intent(out)             :: Ary(:)
@@ -6131,7 +6131,7 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    
    ! Make a copy of the inputs to perturb
    call BD_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-   call BD_PackInputValues(p, u, m%Jac%u)
+   call BD_PackInputOP(p, u, m%Jac%u)
    
    ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
    if (present(dYdu)) then
@@ -6152,15 +6152,15 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call BD_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call BD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
             call BD_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2, NeedWriteOutput=IsFullLin); if (Failed()) return
-            call BD_PackOutputValues(p, m%y_lin, m%Jac%y_pos, IsFullLin)
+            call BD_PackOutputOP(p, m%y_lin, m%Jac%y_pos, IsFullLin)
 
             ! Calculate negative perturbation
             call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call BD_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call BD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
             call BD_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2, NeedWriteOutput=IsFullLin); if (Failed()) return
-            call BD_PackOutputValues(p, m%y_lin, m%Jac%y_neg, IsFullLin)
+            call BD_PackOutputOP(p, m%y_lin, m%Jac%y_neg, IsFullLin)
 
             ! Calculate column index
             col = p%Vars%u(i)%iLoc(1) + j - 1
@@ -6191,15 +6191,15 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call BD_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call BD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
             call BD_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call BD_PackStateValues(p, m%dxdt_lin, m%Jac%x_pos)
+            call BD_PackStateOP(p, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call BD_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call BD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
             call BD_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call BD_PackStateValues(p, m%dxdt_lin, m%Jac%x_neg)
+            call BD_PackStateOP(p, m%dxdt_lin, m%Jac%x_neg)
 
             ! Calculate column index
             col = p%Vars%u(i)%iLoc(1) + j - 1
@@ -6289,7 +6289,7 @@ SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
    ! Copy state values
    call BD_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-   call BD_PackStateValues(p, x, m%Jac%x)
+   call BD_PackStateOP(p, x, m%Jac%x)
    
    ! If rotate states is enabled
    if (p%RotStates) then
@@ -6330,15 +6330,15 @@ SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-            call BD_UnpackStateValues(p, m%Jac%x_perturb, m%x_perturb)
+            call BD_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
             call BD_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2, NeedWriteOutput=IsFullLin); if (Failed()) return
-            call BD_PackOutputValues(p, m%y_lin, m%Jac%y_pos, IsFullLin)
+            call BD_PackOutputOP(p, m%y_lin, m%Jac%y_pos, IsFullLin)
 
             ! Calculate negative perturbation
             call MV_Perturb(p%Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-            call BD_UnpackStateValues(p, m%Jac%x_perturb, m%x_perturb)
+            call BD_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
             call BD_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2, NeedWriteOutput=IsFullLin); if (Failed()) return
-            call BD_PackOutputValues(p, m%y_lin, m%Jac%y_neg, IsFullLin)
+            call BD_PackOutputOP(p, m%y_lin, m%Jac%y_neg, IsFullLin)
 
             ! Calculate column index
             col = p%Vars%x(i)%iLoc(1) + j - 1
@@ -6378,15 +6378,15 @@ SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-            call BD_UnpackStateValues(p, m%Jac%x_perturb, m%x_perturb)
+            call BD_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
             call BD_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call BD_PackStateValues(p, m%dxdt_lin, m%Jac%x_pos)
+            call BD_PackStateOP(p, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(p%Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-            call BD_UnpackStateValues(p, m%Jac%x_perturb, m%x_perturb)
+            call BD_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
             call BD_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call BD_PackStateValues(p, m%dxdt_lin, m%Jac%x_neg)
+            call BD_PackStateOP(p, m%dxdt_lin, m%Jac%x_neg)
 
             ! Calculate column index
             col = p%Vars%x(i)%iLoc(1) + j - 1
@@ -6608,7 +6608,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, FlagF
          call AllocAry(u_op, p%Vars%Nu, 'u_op', ErrStat2, ErrMsg2); if (Failed()) return      
       end if
 
-      call BD_PackInputValues(p, u, u_op)
+      call BD_PackInputOP(p, u, u_op)
 
    end if
 
@@ -6620,7 +6620,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, FlagF
          call AllocAry(y_op, p%Vars%Ny, 'y_op', ErrStat2, ErrMsg2); if (Failed()) return
       end if
 
-      call BD_PackOutputValues(p, y, y_op, IsFullLin)
+      call BD_PackOutputOP(p, y, y_op, IsFullLin)
 
    end if
 
@@ -6632,7 +6632,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, FlagF
          call AllocAry(x_op, p%Vars%Nx, 'x_op', ErrStat2, ErrMsg2); if (Failed()) return
       end if
 
-      call BD_PackStateValues(p, x, x_op)
+      call BD_PackStateOP(p, x, x_op)
 
    end if
 
@@ -6645,7 +6645,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, FlagF
       end if
       
       call BD_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-      call BD_PackStateValues(p, m%dxdt_lin, dx_op)
+      call BD_PackStateOP(p, m%dxdt_lin, dx_op)
 
    end if
 
