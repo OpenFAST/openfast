@@ -3596,7 +3596,7 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, p_AD, u_AD, p_ED, y_ED
       
       DO k=1,p_FAST%nBeams
          AD_Start     = Indx_u_AD_Blade_Start(p_AD, u_AD, y_FAST, k)     ! start of u_AD%rotors(1)%BladeMotion(k)%TranslationDisp field
-         BD_Out_Start = y_FAST%Lin%Modules(Module_BD)%Instance(k)%LinStartIndx(LIN_OUTPUT_COL)
+         BD_Out_Start = y_FAST%Lin%Modules(Module_BD)%Instance(k)%LinStartIndx(LIN_OUTPUT_COL) + 6    ! skip the reaction forces
 
          uFieldMask = .true.   ! all fields
          CALL Assemble_dUdy_Motions(BD%y(k)%BldMotion, u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), AD_Start, BD_Out_Start, dUdy, uFieldMask)
