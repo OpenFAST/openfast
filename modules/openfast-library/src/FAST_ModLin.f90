@@ -264,30 +264,33 @@ subroutine ModLin_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, Er
    call MV_InitVarIdx(ModGlue%Vars, ModGlue%Vars%IdxLin, VF_Linearize, ErrStat2, ErrMsg2); if (Failed()) return
 
    !----------------------------------------------------------------------------
-   ! Allocate linearization arrays and matrices
-   !----------------------------------------------------------------------------
-
-   ! Allocate linearization arrays
-   call AllocAry(ModGlue%Lin%x, ModGlue%Vars%Nx, "x", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(ModGlue%Lin%dx, ModGlue%Vars%Nx, "dx", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(ModGlue%Lin%xd, ModGlue%Vars%Nxd, "xd", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(ModGlue%Lin%z, ModGlue%Vars%Nz, "z", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(ModGlue%Lin%u, ModGlue%Vars%Nu, "u", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(ModGlue%Lin%y, ModGlue%Vars%Ny, "y", ErrStat2, ErrMsg2); if (Failed()) return
-
-   ! Allocate full Jacobian matrices
-   call AllocAry(ModGlue%Lin%dYdu, ModGlue%Vars%Ny, ModGlue%Vars%Nu, "dYdu", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(ModGlue%Lin%dXdu, ModGlue%Vars%Nx, ModGlue%Vars%Nu, "dXdu", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(ModGlue%Lin%dYdx, ModGlue%Vars%Ny, ModGlue%Vars%Nx, "dYdx", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(ModGlue%Lin%dXdx, ModGlue%Vars%Nx, ModGlue%Vars%Nx, "dXdx", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(ModGlue%Lin%dUdu, ModGlue%Vars%Nu, ModGlue%Vars%Nu, "dUdu", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(ModGlue%Lin%dUdy, ModGlue%Vars%Nu, ModGlue%Vars%Ny, "dUdy", ErrStat2, ErrMsg2); if (Failed()) return
-
-   !----------------------------------------------------------------------------
    ! Mesh Mapping
    !----------------------------------------------------------------------------
 
    call FAST_InitMappings(Mods, m%Mappings, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+
+   !----------------------------------------------------------------------------
+   ! Allocate linearization arrays and matrices
+   !----------------------------------------------------------------------------
+
+   if (p_FAST%Linearize) then
+
+      ! Allocate linearization arrays
+      call AllocAry(ModGlue%Lin%x, ModGlue%Vars%Nx, "x", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(ModGlue%Lin%dx, ModGlue%Vars%Nx, "dx", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(ModGlue%Lin%xd, ModGlue%Vars%Nxd, "xd", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(ModGlue%Lin%z, ModGlue%Vars%Nz, "z", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(ModGlue%Lin%u, ModGlue%Vars%Nu, "u", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(ModGlue%Lin%y, ModGlue%Vars%Ny, "y", ErrStat2, ErrMsg2); if (Failed()) return
+
+      ! Allocate full Jacobian matrices
+      call AllocAry(ModGlue%Lin%dYdu, ModGlue%Vars%Ny, ModGlue%Vars%Nu, "dYdu", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(ModGlue%Lin%dXdu, ModGlue%Vars%Nx, ModGlue%Vars%Nu, "dXdu", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(ModGlue%Lin%dYdx, ModGlue%Vars%Ny, ModGlue%Vars%Nx, "dYdx", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(ModGlue%Lin%dXdx, ModGlue%Vars%Nx, ModGlue%Vars%Nx, "dXdx", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(ModGlue%Lin%dUdu, ModGlue%Vars%Nu, ModGlue%Vars%Nu, "dUdu", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(ModGlue%Lin%dUdy, ModGlue%Vars%Nu, ModGlue%Vars%Ny, "dUdy", ErrStat2, ErrMsg2); if (Failed()) return
+   end if
 
 contains
    logical function Failed()
