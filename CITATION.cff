@@ -4,15 +4,16 @@ authors:
 - family-names: Schena
   given-names: Lorenzo
 - family-names: Branlard
-given-names: Emmanuel
+  given-names: Emmanuel
 - family-names: Jonkman
   given-names: Jason
 - family-names: Platt
   given-names: Andrew
 - family-names: Slaughter
   given-names: Derek
-title: "OpenFAST ZMQ mod - temporary reference"
+title: "Real time OpenFAST communication"
 version: 1.0
 identifiers:
-  - type: doi
+  - type: url
+  - url: "https://github.com/lorenzoschena/openfast/"
 date-released: 2024-02-01
