@@ -756,6 +756,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: BldNd_TotNumOuts = 0_IntKi      !< Total number of requested output channels of blade node information (BldNd_NumOuts * BldNd_BlOutNd * BldNd_BladesOut -- ED_AllBldNdOuts) [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: BldNd_OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
     INTEGER(IntKi)  :: BldNd_BladesOut = 0_IntKi      !< The blades to output (ED_AllBldNdOuts) [-]
+    TYPE(Jac_u_idxStarts)  :: Jac_u_idxStartList      !< Starting indices for all Jac_u compenents [-]
+    TYPE(Jac_y_idxStarts)  :: Jac_y_idxStartList      !< Starting indices for all Jac_u compenents [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
@@ -5670,6 +5672,12 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    DstParamData%BldNd_BladesOut = SrcParamData%BldNd_BladesOut
+   call ED_CopyJac_u_idxStarts(SrcParamData%Jac_u_idxStartList, DstParamData%Jac_u_idxStartList, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call ED_CopyJac_y_idxStarts(SrcParamData%Jac_y_idxStartList, DstParamData%Jac_y_idxStartList, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcParamData%Jac_u_indx)) then
       LB(1:2) = lbound(SrcParamData%Jac_u_indx, kind=B8Ki)
       UB(1:2) = ubound(SrcParamData%Jac_u_indx, kind=B8Ki)
@@ -5965,6 +5973,10 @@ subroutine ED_DestroyParam(ParamData, ErrStat, ErrMsg)
       end do
       deallocate(ParamData%BldNd_OutParam)
    end if
+   call ED_DestroyJac_u_idxStarts(ParamData%Jac_u_idxStartList, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ED_DestroyJac_y_idxStarts(ParamData%Jac_y_idxStartList, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%Jac_u_indx)) then
       deallocate(ParamData%Jac_u_indx)
    end if
@@ -6230,6 +6242,8 @@ subroutine ED_PackParam(RF, Indata)
       end do
    end if
    call RegPack(RF, InData%BldNd_BladesOut)
+   call ED_PackJac_u_idxStarts(RF, InData%Jac_u_idxStartList) 
+   call ED_PackJac_y_idxStarts(RF, InData%Jac_y_idxStartList) 
    call RegPackAlloc(RF, InData%Jac_u_indx)
    call RegPackAlloc(RF, InData%du)
    call RegPackAlloc(RF, InData%dx)
@@ -6531,6 +6545,8 @@ subroutine ED_UnPackParam(RF, OutData)
       end do
    end if
    call RegUnpack(RF, OutData%BldNd_BladesOut); if (RegCheckErr(RF, RoutineName)) return
+   call ED_UnpackJac_u_idxStarts(RF, OutData%Jac_u_idxStartList) ! Jac_u_idxStartList 
+   call ED_UnpackJac_y_idxStarts(RF, OutData%Jac_y_idxStartList) ! Jac_y_idxStartList 
    call RegUnpackAlloc(RF, OutData%Jac_u_indx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%du); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%dx); if (RegCheckErr(RF, RoutineName)) return
