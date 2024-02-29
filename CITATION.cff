@@ -1,0 +1,23 @@
+cff-version: 1.0.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Schena
+    given-names: Lorenzo
+    orcid: https: XXX
+  - family-names: Branlard
+  given-names: Emmanuel
+  orcid: https: XXX
+  - family-names: Jonkman
+    given-names: Jason
+    orcid: https: XXX
+  - family-names: Platt
+    given-names: Andrew
+    orcid: https: XXX
+  - family-names: Slaughter
+    given-names: Derek
+    orcid: https: XXX
+title: "OpenFAST ZMQ mod - temporary reference"
+version: 1.0
+identifiers:
+  - type: doi
+date-released: 2024-02-01
