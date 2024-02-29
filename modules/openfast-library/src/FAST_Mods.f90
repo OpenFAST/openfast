@@ -70,7 +70,14 @@ MODULE FAST_ModTypes
 
    LOGICAL,        PARAMETER :: BD_Solve_Option1 = .TRUE.
 
-   INTEGER(IntKi), PARAMETER :: TC_Modules(*) = [Module_ED, Module_BD, Module_SD]   !< Tight coupling module IDs
+   !< Tight coupling module IDs
+   INTEGER(IntKi), PARAMETER :: TC_Modules(*) = &
+      [Module_ED, Module_BD, Module_SD]   
+
+   !< Linearization module ID array (order determines Jacobian layout)
+   integer(IntKi), parameter :: LinMods(*) = &
+      [Module_IfW, Module_SrvD, Module_ED, Module_BD, Module_AD, &
+       Module_HD, Module_SD, Module_MAP, Module_MD]      
 
 END MODULE FAST_ModTypes
 !=======================================================================

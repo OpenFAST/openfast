@@ -23,6 +23,7 @@ module FAST_ModLin
 use NWTC_Library
 use NWTC_LAPACK
 
+use FAST_ModTypes
 use FAST_Types
 use FAST_Funcs
 use FAST_Mapping
@@ -90,16 +91,10 @@ subroutine ModLin_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, Er
    modIDs = [(Mods(i)%ID, i=1, size(Mods))]
 
    ! Establish module index order for linearization
-   p%iMod = [pack(modIdx, ModIDs == Module_IfW), &   ! InflowWind
-             pack(modIdx, ModIDs == Module_SrvD), &  ! ServoDyn
-             pack(modIdx, ModIDs == Module_ED), &    ! ElastoDyn
-             pack(modIdx, ModIDs == Module_BD), &    ! BeamDyn
-             pack(modIdx, ModIDs == Module_AD), &    ! AeroDyn
-             pack(modIdx, ModIDs == Module_SeaSt), & ! SeaState
-             pack(modIdx, ModIDs == Module_HD), &    ! HydroDyn
-             pack(modIdx, ModIDs == Module_SD), &    ! SubDyn
-             pack(modIdx, ModIDs == Module_MAP), &   ! MAP++
-             pack(modIdx, ModIDs == Module_MD)]      ! MoorDyn
+   allocate(p%iMod(0))
+   do i = 1, size(LinMods)
+      p%iMod = [p%iMod, pack(modIdx, ModIDs == LinMods(i))]
+   end do
 
    ! Loop through modules, if module is not in index, return with error
    do i = 1, size(Mods)
