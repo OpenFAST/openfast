@@ -935,6 +935,7 @@ subroutine SetParameters(InitInp, InputFileData, p, OtherState, ErrStat, ErrMsg)
 
 
    p%RotStates      = InputFileData%RotStates      ! Rotate states in linearization?
+   if (ChangeRefFrame) p%RotStates = .true.
    
    p%rhoinf         = InputFileData%rhoinf         ! Numerical damping coefficient: [0,1].  No numerical damping if rhoinf = 1; maximum numerical damping if rhoinf = 0.
    p%dt             = InputFileData%DTBeam         ! Time step size
@@ -6211,7 +6212,8 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
       ! If rotate states is enabled, modify Jacobian
       if (p%RotStates) then
-         RotateStates = matmul(u%RootMotion%Orientation(:,:,1), transpose(u%RootMotion%RefOrientation(:,:,1)))
+         ! Calculate difference between input root orientation and root reference orientation
+         RotateStates = matmul(u%RootMotion%Orientation(:,:,1), OtherState%GlbRot)
          do i=1,size(dXdu,1),3
             dXdu(i:i+2, :) = matmul(RotateStates, dXdu(i:i+2, :))
          end do
@@ -6293,8 +6295,8 @@ SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    
    ! If rotate states is enabled
    if (p%RotStates) then
-
-      RotateStates = matmul(u%RootMotion%Orientation(:,:,1), transpose(u%RootMotion%RefOrientation(:,:,1)))
+      ! Calculate difference between input root orientation and root reference orientation
+      RotateStates = matmul(u%RootMotion%Orientation(:,:,1), OtherState%GlbRot)
       RotateStatesTranspose = transpose( RotateStates )
 
       if (present(StateRotation)) then
