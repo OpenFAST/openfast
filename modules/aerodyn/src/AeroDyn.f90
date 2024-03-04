@@ -1789,6 +1789,13 @@ subroutine AD_CalcWind(t, u, FLowField, p, o, Inflow, ErrStat, ErrMsg)
 
    ! OLAF points
    if (allocated(o%WakeLocationPoints) .and. allocated(Inflow%InflowWakeVel)) then
+      ! If rotor is MHK, add water depth to z coordinate
+      if (p%FVW%MHK > 0) then
+         PosOffset = [0.0_ReKi, 0.0_ReKi, p%FVW%WtrDpth]
+      else
+         PosOffset = 0.0_ReKi
+      end if
+
       call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
                                    o%WakeLocationPoints, &
                                    Inflow%InflowWakeVel, &
