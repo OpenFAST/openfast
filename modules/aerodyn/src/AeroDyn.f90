@@ -1783,7 +1783,7 @@ subroutine AD_CalcWind(t, u, FLowField, p, o, Inflow, ErrStat, ErrMsg)
    StartNode = 1
 
    do iWT = 1, size(u%rotors)
-      call AD_CalcWind_Rotor(t, u%rotors(iWT), FLowField, p%rotors(iWT), Inflow%RotInflow(iWT), ErrStat, ErrMsg)
+      call AD_CalcWind_Rotor(t, u%rotors(iWT), FLowField, p%rotors(iWT), Inflow%RotInflow(iWT), StartNode, ErrStat, ErrMsg)
    enddo
 
    ! OLAF points
@@ -1804,18 +1804,19 @@ contains
    end function Failed
 end subroutine
 
-subroutine AD_CalcWind_Rotor(t, u, FlowField, p, RotInflow, ErrStat, ErrMsg)
+subroutine AD_CalcWind_Rotor(t, u, FlowField, p, RotInflow, StartNode, ErrStat, ErrMsg)
    real(DbKi),                   intent(in   )  :: t           !< Current simulation time in seconds
    type(RotInputType),           intent(in   )  :: u           !< Inputs at Time t
    type(FlowFieldType),pointer,  intent(in   )  :: FlowField
    type(RotParameterType),       intent(in   )  :: p           !< Parameters
    type(RotInflowType),          intent(inout)  :: RotInflow   !< calculated inflow for rotor
+   integer(IntKi),               intent(inout)  :: StartNode   !< starting node for rotor wind
    integer(IntKi),               intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
                                  
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
-   integer(intKi)                               :: StartNode, k
+   integer(intKi)                               :: k
    real(ReKi)                                   :: PosOffset(3)
    real(ReKi), allocatable                      :: NoAcc(:,:)
 
@@ -5319,14 +5320,16 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with
    integer(IntKi), parameter :: iR =1 ! Rotor index
+   integer(intKi)  :: StartNode
 
+   StartNode = 1  ! ignored during linearization since cannot linearize with ExtInflow
    if (size(p%rotors)>1) then
       errStat = ErrID_Fatal
       errMsg = 'Linearization with more than one rotor not supported'
       return
    endif
 
-   call AD_CalcWind_Rotor(  t, u%rotors(iR), p%FLowField, p%rotors(iR), m%Inflow(1)%RotInflow(iR), ErrStat, ErrMsg)
+   call AD_CalcWind_Rotor(  t, u%rotors(iR), p%FLowField, p%rotors(iR), m%Inflow(1)%RotInflow(iR), StartNode, ErrStat, ErrMsg)
    call Rot_JacobianPInput( t, u%rotors(iR), m%Inflow(1)%RotInflow(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
 
 END SUBROUTINE AD_JacobianPInput
@@ -7188,6 +7191,7 @@ subroutine Perturb_uExtend( t, u_perturb, FlowField_perturb, RotInflow_perturb, 
    integer                                     :: fieldIndx
    integer                                     :: node
    real(R8Ki)                                  :: FlowField_du(3)    !< vector of perturbations to apply to flow field
+   integer(intKi)  :: StartNode
 
    ! Error handling
    ErrStat = ErrID_None
@@ -7196,6 +7200,7 @@ subroutine Perturb_uExtend( t, u_perturb, FlowField_perturb, RotInflow_perturb, 
    fieldIndx = p%Jac_u_indx(n,2)
    node      = p%Jac_u_indx(n,3)
    du = p%du(  p%Jac_u_indx(n,1) )
+   StartNode = 1  ! ignored during linearization since cannot linearize with ExtInflow
 
    ! determine which mesh we're trying to perturb and perturb the input:
    select case( p%Jac_u_indx(n,1) )
@@ -7212,7 +7217,7 @@ subroutine Perturb_uExtend( t, u_perturb, FlowField_perturb, RotInflow_perturb, 
          end select
          call IfW_UniformWind_Perturb(FlowField_perturb, FlowField_du) 
    end select
-   call AD_CalcWind_Rotor(t, u_perturb, FlowField_perturb, p, RotInflow_perturb, ErrStat, ErrMsg)
+   call AD_CalcWind_Rotor(t, u_perturb, FlowField_perturb, p, RotInflow_perturb, StartNode, ErrStat, ErrMsg)
 end subroutine Perturb_uExtend
 
 
