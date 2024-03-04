@@ -237,7 +237,7 @@ contains
    subroutine CleanUp()
       !call ADI_DestroyConstrState(z_guess, errStat2, errMsg2); if(Failed()) return
       do it=1,size(utimes)
-         call AD_DestroyInput(u_AD(it), errStat2, errMsg2); if(Failed()) return
+         call AD_DestroyInput(u_AD(it), errStat2, errMsg2)  ! ignore errors here
       enddo
    end subroutine
 
@@ -369,7 +369,7 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
       call IfW_SteadyWind_Init(Steady_InitInput, 0, IW%p%FlowField%Uniform, &
                                FileDat, errStat2, errMsg2)
       if(Failed()) return
-      if (i_IW%MHK == 1 .or. i_IW%MHK == 2) then
+      if (i_IW%MHK == MHK_FixedBottom .or. i_IW%MHK == MHK_FLoating) then
          call IfW_UniformField_CalcAccel(IW%p%FlowField%Uniform, errStat2, errMsg2)
          if(Failed()) return
          IW%p%FlowField%AccFieldValid = .true.
