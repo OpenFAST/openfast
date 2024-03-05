@@ -58,7 +58,7 @@ matlab_add_mex(
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Solver.f90
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Library.f90
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Funcs.f90
-    ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_ModLin.f90
+    ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_ModGlue.f90
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Mapping.f90
   LINK_TO 
     ${MEX_LIBS}
