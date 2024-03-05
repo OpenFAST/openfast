@@ -73,7 +73,7 @@ add_library(openfast_postlib STATIC
   # src/FAST_SS_Solver.f90
   
   src/FAST_Funcs.f90
-  src/FAST_ModLin.f90
+  src/FAST_ModGlue.f90
   src/FAST_Mapping.f90
 )
 target_link_libraries(openfast_postlib openfast_prelib extinflowlib scfastlib)

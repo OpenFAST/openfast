@@ -31,12 +31,11 @@ implicit none
 private
 public :: MV_InitVarsJac, MV_Pack, MV_Unpack
 public :: MV_ComputeCentralDiff, MV_Perturb, MV_ComputeDiff
-public :: MV_AddVar, MV_AddMeshVar, MV_AddModule
+public :: MV_AddVar, MV_AddMeshVar
 public :: MV_HasFlags, MV_SetFlags, MV_UnsetFlags, MV_NumVars
 public :: LoadFields, MotionFields, TransFields, AngularFields
 public :: wm_to_dcm, wm_compose, wm_from_dcm, wm_inv, wm_to_rvec, wm_from_rvec
 public :: MV_FieldString, IdxStr
-public :: MV_InitVarIdx
 
 integer(IntKi), parameter :: &
    LoadFields(*) = [VF_Force, VF_Moment], &
@@ -96,7 +95,6 @@ subroutine MV_InitVarsJac(Vars, Jac, Linearize, ErrStat, ErrMsg)
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
    integer(IntKi)                :: i, StartIndex
-   type(VarsIdxType), pointer    :: VarIdx
 
    ! Initialize error outputs
    ErrStat = ErrID_None
@@ -614,80 +612,8 @@ subroutine MV_ComputeCentralDiff(VarAry, Delta, PosAry, NegAry, DerivAry)
 end subroutine
 
 !-------------------------------------------------------------------------------
-! Functions for adding Variables an Modules
+! Functions for adding Variables
 !-------------------------------------------------------------------------------
-
-subroutine MV_AddModule(ModAry, ModID, ModAbbr, Instance, ModDT, SolverDT, Vars, ErrStat, ErrMsg)
-   type(ModDataType), allocatable, intent(inout)   :: ModAry(:)
-   integer(IntKi), intent(in)                      :: ModID
-   character(*), intent(in)                        :: ModAbbr
-   integer(IntKi), intent(in)                      :: Instance
-   real(R8Ki), intent(in)                          :: ModDT
-   real(R8Ki), intent(in)                          :: SolverDT
-   type(ModVarsType), pointer, intent(in)          :: Vars
-   integer(IntKi), intent(out)                     :: ErrStat
-   character(ErrMsgLen), intent(out)               :: ErrMsg
-
-   character(*), parameter                         :: RoutineName = 'MV_AddModule'
-   integer(IntKi)                                  :: ErrStat2
-   character(ErrMsgLen)                            :: ErrMsg2
-   type(ModDataType)                               :: ModData
-
-   ErrStat = ErrID_None
-   ErrMsg = ''
-
-   ! If module array hasn't been allocated, allocate with zero size
-   if (.not. allocated(ModAry)) allocate (ModAry(0))
-
-   ! Populate ModuleDataType derived type
-   ModData = ModDataType(Idx=size(ModAry) + 1, ID=ModID, Abbr=ModAbbr, &
-                         Ins=Instance, DT=ModDT, Vars=Vars)
-
-   ! Allocate source and destination mapping arrays
-   call AllocAry(ModData%SrcMaps, 0, "ModData%SrcMaps", ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call AllocAry(ModData%DstMaps, 0, "ModData%DstMaps", ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-
-   !----------------------------------------------------------------------------
-   ! Calculate Module Substepping
-   !----------------------------------------------------------------------------
-
-   ! If module time step is same as global time step, set substeps to 1
-   if (EqualRealNos(ModData%DT, SolverDT)) then
-      ModData%SubSteps = 1
-   else
-      ! If the module time step is greater than the global time step, set error
-      if (ModData%DT > SolverDT) then
-         call SetErrStat(ErrID_Fatal, "The "//trim(ModData%Abbr)// &
-                         " module time step ("//trim(Num2LStr(ModData%DT))//" s) "// &
-                         "cannot be larger than FAST time step ("//trim(Num2LStr(SolverDT))//" s).", &
-                         ErrStat, ErrMsg, RoutineName)
-         return
-      end if
-
-      ! Calculate the number of substeps
-      ModData%SubSteps = nint(SolverDT/ModData%DT)
-
-      ! If the module DT is not an exact integer divisor of the global time step, set error
-      if (.not. EqualRealNos(SolverDT, ModData%DT*ModData%SubSteps)) then
-         call SetErrStat(ErrID_Fatal, "The "//trim(ModData%Abbr)// &
-                         " module time step ("//trim(Num2LStr(ModData%DT))//" s) "// &
-                         "must be an integer divisor of the FAST time step ("//trim(Num2LStr(SolverDT))//" s).", &
-                         ErrStat, ErrMsg, RoutineName)
-         return
-      end if
-   end if
-
-   !----------------------------------------------------------------------------
-   ! Add module data to array
-   !----------------------------------------------------------------------------
-
-   ModAry = [ModAry, ModData]
-
-end subroutine
 
 subroutine MV_AddMeshVar(VarAry, Name, Fields, Mesh, Flags, Perturbs, VarIdx, Active)
    type(ModVarType), allocatable, intent(inout) :: VarAry(:)
@@ -814,71 +740,6 @@ subroutine MV_AddVar(VarAry, Name, Field, Num, Flags, iUsr, jUsr, DerivOrder, Pe
 
    ! Set variable index if present
    if (present(VarIdx)) VarIdx = size(VarAry)
-end subroutine
-
-subroutine MV_InitVarIdx(Vars, VarIdx, FlagFilter, ErrStat, ErrMsg)
-   type(ModVarsType), intent(in)       :: Vars
-   type(VarsIdxType), intent(out)      :: VarIdx
-   integer(IntKi), intent(in)          :: FlagFilter
-   integer(IntKi), intent(out)         :: ErrStat
-   character(ErrMsgLen), intent(out)   :: ErrMsg
-
-   character(*), parameter             :: RoutineName = 'MV_InitVarIdx'
-   integer(IntKi)                      :: ErrStat2
-   character(ErrMsgLen)                :: ErrMsg2
-   type(ModDataType)                   :: ModData
-   integer(IntKi)                      :: ivar, inum
-
-   ! Initialize error return
-   ErrStat = ErrID_None
-   ErrMsg = ""
-
-   ! Save filter in index
-   VarIdx%FlagFilter = FlagFilter
-
-   ! Get number of filtered variables
-   VarIdx%Nx = MV_NumVars(Vars%x, FlagFilter)
-   VarIdx%Nu = MV_NumVars(Vars%u, FlagFilter)
-   VarIdx%Ny = MV_NumVars(Vars%y, FlagFilter)
-
-   ! Allocate index arrays
-   call AllocAry(VarIdx%ix, VarIdx%Nx, "ix", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(VarIdx%idx, VarIdx%Nx, "idx", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(VarIdx%ixd, VarIdx%Nxd, "ixd", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(VarIdx%iz, VarIdx%Nz, "iz", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(VarIdx%iu, VarIdx%Nu, "iu", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(VarIdx%iy, VarIdx%Ny, "iy", ErrStat2, ErrMsg2); if (Failed()) return
-
-   ! Get filtered value indices
-   call GetIndices(Vars%x, VarIdx%ix, FlagFilter)
-   call GetIndices(Vars%xd, VarIdx%ixd, FlagFilter)
-   call GetIndices(Vars%z, VarIdx%iz, FlagFilter)
-   call GetIndices(Vars%u, VarIdx%iu, FlagFilter)
-   call GetIndices(Vars%y, VarIdx%iy, FlagFilter)
-
-   ! Copy state variable indices to state variable derivative indices
-   VarIdx%idx = VarIdx%ix
-
-contains
-   logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      Failed = ErrStat >= AbortErrLev
-   end function
-end subroutine
-
-subroutine GetIndices(VarAry, Indices, Mask)
-   type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(in)    :: Mask
-   integer(IntKi), intent(inout) :: Indices(:)
-   integer(IntKi)                :: i, j, k
-   k = 1
-   do i = 1, size(VarAry)
-      if (.not. MV_HasFlags(VarAry(i), Mask)) cycle
-      do j = 0, VarAry(i)%Num - 1
-         Indices(k) = VarAry(i)%iLoc(1) + j
-         k = k + 1
-      end do
-   end do
 end subroutine
 
 function MV_NumVars(VarAry, FlagFilter) result(Num)

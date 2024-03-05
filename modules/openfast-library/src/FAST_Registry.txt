@@ -196,9 +196,63 @@ typedef ^ ^                 IntKi           iModOpt1US             :  -  -      
 typedef ^ ^                 IntKi           iModOpt2               :  -  -      "ModData index order for option 2 modules" -
 typedef ^ ^                 IntKi           iModPost               :  -  -      "ModData index order for post option 1 modules" -
 
+# Variable indexing
+typedef ^ VarIdxType        IntKi           ModIdx                 -  -  -      ""  -
+typedef ^ ^                 IntKi           iVar                   -  -  -      ""  -
+typedef ^ ^                 IntKi           iLoc                   2  -  -      ""  -
+typedef ^ ^                 IntKi           iGbl                   2  -  -      ""  -
+
+typedef ^ VarsIdxType       IntKi           FlagFilter             -  -  -      ""  -
+typedef ^ ^                 IntKi           Nx                     -  -  -      ""  -
+typedef ^ ^                 IntKi           Nxd                    -  -  -      ""  -
+typedef ^ ^                 IntKi           Nz                     -  -  -      ""  -
+typedef ^ ^                 IntKi           Nu                     -  -  -      ""  -
+typedef ^ ^                 IntKi           Ny                     -  -  -      ""  -
+typedef ^ ^                 VarIdxType      ix                     :  -  -      ""  -
+typedef ^ ^                 VarIdxType      ixd                    :  -  -      ""  -
+typedef ^ ^                 VarIdxType      iz                     :  -  -      ""  -
+typedef ^ ^                 VarIdxType      iu                     :  -  -      ""  -
+typedef ^ ^                 VarIdxType      iy                     :  -  -      ""  -
+
+typedef ^ ModLinTCType      R8Ki            x                      :  -  -      ""  -
+typedef ^ ^                 R8Ki            dx                     :  -  -      ""  -
+typedef ^ ^                 R8Ki            xd                     :  -  -      ""  -
+typedef ^ ^                 R8Ki            z                      :  -  -      ""  -
+typedef ^ ^                 R8Ki            u                      :  -  -      ""  -
+typedef ^ ^                 R8Ki            y                      :  -  -      ""  -
+typedef ^ ^                 R8Ki            u_perturb              :  -  -      ""  -
+typedef ^ ^                 R8Ki            x_perturb              :  -  -      ""  -
+typedef ^ ^                 R8Ki            x_pos                  :  -  -      ""  -
+typedef ^ ^                 R8Ki            x_neg                  :  -  -      ""  -
+typedef ^ ^                 R8Ki            y_pos                  :  -  -      ""  -
+typedef ^ ^                 R8Ki            y_neg                  :  -  -      ""  -
+typedef ^ ^                 R8Ki            dYdx                   :: -  -      ""  -
+typedef ^ ^                 R8Ki            dXdx                   :: -  -      ""  -
+typedef ^ ^                 R8Ki            dYdu                   :: -  -      ""  -
+typedef ^ ^                 R8Ki            dXdu                   :: -  -      ""  -
+typedef ^ ^                 R8Ki            dUdu                   :: -  -      ""  -
+typedef ^ ^                 R8Ki            dUdy                   :: -  -      ""  -
+typedef ^ ^                 R8Ki            StateRotation          :: -  -      ""  -
+
+typedef ^ ModDataType       character(ChanLen) Abbr                -  -  -      "Module name abbreviation"  -
+typedef ^ ^                 IntKi           ID                     -  0  -      "Module identification number"  -
+typedef ^ ^                 IntKi           Idx                    -  0  -      "Module index in array of modules"  -
+typedef ^ ^                 IntKi           Ins                    -  0  -      "Module instance number"  -
+typedef ^ ^                 R8Ki            DT                     -  0  -      "Module time step"  -
+typedef ^ ^                 IntKi           SubSteps               -  0  -      "Module number of substeps per solver time step"  -
+typedef ^ ^                 IntKi           ixg                    -  -  -      "starting index for continuous state values in global arrays" -
+typedef ^ ^                 IntKi           ixdg                   -  -  -      "starting index for discrete state values in global arrays" -
+typedef ^ ^                 IntKi           izg                    -  -  -      "starting index for constraint state values in global arrays" -
+typedef ^ ^                 IntKi           iug                    -  -  -      "starting index for input values in global arrays" -
+typedef ^ ^                 IntKi           iyg                    -  -  -      "starting index for output values in global arrays" -
+typedef ^ ^                 ModVarsType    *Vars                   -  -  -      "Pointer to module variables type"  -
+typedef ^ ^                 ModLinTCType    Lin                    -  -  -      "Module linearization data"  -
+typedef ^ ^                 IntKi           SrcMaps                :  -  -      "Indices of mappings where module is the source"
+typedef ^ ^                 IntKi           DstMaps                :  -  -      "Indices of mappings where module is the destination"
+
 typedef ^ ML_ParameterType  IntKi           iMod                   :  -  -      "ModData index order for linearization" -
 typedef ^ ML_MiscVarType    TC_MappingType  Mappings               :  -  -      "Module mesh mapping" -
-typedef ^ ML_OutputType     ModLinType      Lin                    :  -  -      "Module linearization type" -
+typedef ^ ML_OutputType     ModLinTCType    Lin                    :  -  -      "Module linearization type" -
 
 # Misc/Optimization variables 
 typedef ^ TC_MiscVarType    R8Ki            q                      :: -  -      "" -
