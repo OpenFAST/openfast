@@ -4617,9 +4617,11 @@ CONTAINS
       enddo
 
       ! y%outputs
-      do i = p%iVarWriteOutput, size(p%Vars%y)
-         call MV_Pack(p%Vars%y, i, y%WriteOutput(p%Vars%y(i)%iUsr(1)), y_op)
-      end do
+      if (p%iVarWriteOutput > 0) then
+         do i = p%iVarWriteOutput, size(p%Vars%y)
+            call MV_Pack(p%Vars%y, i, y%WriteOutput(p%Vars%y(i)%iUsr(1)), y_op)
+         end do
+      end if
    end subroutine Get_y_op
 
    !> Get the operating point continuous states and pack
