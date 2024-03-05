@@ -278,7 +278,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: iyg = 0_IntKi      !< starting index for output values in global arrays [-]
     TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Pointer to module variables type [-]
     TYPE(ModLinTCType)  :: Lin      !< Module linearization data [-]
-    TYPE(VarsIdxType)  :: IdxLin      !< Module linearization index [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: SrcMaps      !< Indices of mappings where module is the source [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DstMaps      !< Indices of mappings where module is the destination [-]
   END TYPE ModDataType
@@ -2806,9 +2805,6 @@ subroutine FAST_CopyModDataType(SrcModDataTypeData, DstModDataTypeData, CtrlCode
    call FAST_CopyModLinTCType(SrcModDataTypeData%Lin, DstModDataTypeData%Lin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call FAST_CopyVarsIdxType(SrcModDataTypeData%IdxLin, DstModDataTypeData%IdxLin, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcModDataTypeData%SrcMaps)) then
       LB(1:1) = lbound(SrcModDataTypeData%SrcMaps, kind=B8Ki)
       UB(1:1) = ubound(SrcModDataTypeData%SrcMaps, kind=B8Ki)
@@ -2847,8 +2843,6 @@ subroutine FAST_DestroyModDataType(ModDataTypeData, ErrStat, ErrMsg)
    nullify(ModDataTypeData%Vars)
    call FAST_DestroyModLinTCType(ModDataTypeData%Lin, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call FAST_DestroyVarsIdxType(ModDataTypeData%IdxLin, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ModDataTypeData%SrcMaps)) then
       deallocate(ModDataTypeData%SrcMaps)
    end if
@@ -2882,7 +2876,6 @@ subroutine FAST_PackModDataType(RF, Indata)
       end if
    end if
    call FAST_PackModLinTCType(RF, InData%Lin) 
-   call FAST_PackVarsIdxType(RF, InData%IdxLin) 
    call RegPackAlloc(RF, InData%SrcMaps)
    call RegPackAlloc(RF, InData%DstMaps)
    if (RegCheckErr(RF, RoutineName)) return
@@ -2928,7 +2921,6 @@ subroutine FAST_UnPackModDataType(RF, OutData)
       OutData%Vars => null()
    end if
    call FAST_UnpackModLinTCType(RF, OutData%Lin) ! Lin 
-   call FAST_UnpackVarsIdxType(RF, OutData%IdxLin) ! IdxLin 
    call RegUnpackAlloc(RF, OutData%SrcMaps); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%DstMaps); if (RegCheckErr(RF, RoutineName)) return
 end subroutine

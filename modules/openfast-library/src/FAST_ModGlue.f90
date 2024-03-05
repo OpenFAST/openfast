@@ -246,13 +246,6 @@ subroutine ModGlue_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, E
          ! Loop through added variables and add name prefix to linearization names
          call AddLinNamePrefix(ModGlue%Vars%y(k:), NamePrefix)
 
-         !----------------------------------------------------------------------
-         ! Linearization index
-         !----------------------------------------------------------------------
-
-         ! Initialize module linearization variable indexing
-         call MV_InitModuleVarIdx(ModData, ModData%IdxLin, VF_Linearize, ErrStat2, ErrMsg2); if (Failed()) return
-
       end associate
    end do
 
@@ -262,9 +255,6 @@ subroutine ModGlue_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, E
    call CalcVarDataLoc(ModGlue%Vars%z, ModGlue%Vars%Nz)
    call CalcVarDataLoc(ModGlue%Vars%u, ModGlue%Vars%Nu)
    call CalcVarDataLoc(ModGlue%Vars%y, ModGlue%Vars%Ny)
-
-   ! Initialize linearization index filtering
-   call MV_InitModuleVarIdx(ModGlue, ModGlue%IdxLin, VF_Linearize, ErrStat2, ErrMsg2); if (Failed()) return
 
    !----------------------------------------------------------------------------
    ! Mesh Mapping
