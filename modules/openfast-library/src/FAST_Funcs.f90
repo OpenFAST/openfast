@@ -52,7 +52,6 @@ subroutine FAST_ExtrapInterp(ModData, t_global_next, T, ErrStat, ErrMsg)
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
    integer(IntKi)                         :: i, j
-   type(VarsIdxType), pointer             :: VarIdx
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -833,7 +832,6 @@ subroutine FAST_CopyStates(ModData, T, Src, Dst, CtrlCode, ErrStat, ErrMsg)
 !  case (Module_FEAM)
    case (Module_HD)
 
-      ! TODO: Fix inconsistent function name
       call HydroDyn_CopyContState(T%HD%x(Src), T%HD%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
       ! call HydroDyn_CopyDiscState(T%HD%xd(Src), T%HD%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
       ! call HydroDyn_CopyConstrState(T%HD%z(Src), T%HD%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
@@ -877,6 +875,124 @@ contains
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       Failed = ErrStat >= AbortErrLev
    end function
+end subroutine
+
+subroutine FAST_CopyInputs(ModData, T, DstInputTime, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
+   type(ModDataType), intent(in)                      :: ModData        !< Module data
+   type(FAST_TurbineType), intent(inout)              :: T              !< Turbine type
+   real(DbKi), intent(in)                             :: DstInputTime   !< Destination input time
+   integer(IntKi), intent(in)                         :: iSrc, iDst     !< Input indices
+   integer(IntKi), intent(in)                         :: CtrlCode       !< Mesh copy code
+   integer(IntKi), intent(out)                        :: ErrStat
+   character(*), intent(out)                          :: ErrMsg
+
+   character(*), parameter    :: RoutineName = 'FAST_CopyInputs'
+   integer(IntKi)             :: ErrStat2
+   character(ErrMsgLen)       :: ErrMsg2
+
+   integer(IntKi)             :: i, j, k
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   ! Select based on module ID
+   select case (ModData%ID)
+
+   case (Module_AD)
+
+      if (iDst > 0) T%AD%InputTimes(iDst) = DstInputTime
+      if (iSrc > 0 .and. iDst > 0) then
+         call AD_CopyInput(T%AD%Input(iSrc), T%AD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+      else if (iSrc > 0) then
+         call AD_CopyInput(T%AD%Input(iSrc), T%AD%u, CtrlCode, Errstat2, ErrMsg2)
+      else
+         call AD_CopyInput(T%AD%u, T%AD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+      end if
+
+   case (Module_BD)
+
+      if (iDst > 0) T%BD%InputTimes(iDst, ModData%Ins) = DstInputTime
+      if (iSrc > 0 .and. iDst > 0) then
+         call BD_CopyInput(T%BD%Input(iSrc, ModData%Ins), T%BD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
+      else if (iSrc > 0) then
+         call BD_CopyInput(T%BD%Input(iSrc, ModData%Ins), T%BD%u(ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
+      else
+         call BD_CopyInput(T%BD%u(ModData%Ins), T%BD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
+      end if
+
+   case (Module_ED)
+
+      if (iDst > 0) T%ED%InputTimes(iDst) = DstInputTime
+      if (iSrc > 0 .and. iDst > 0) then
+         call ED_CopyInput(T%ED%Input(iSrc), T%ED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+      else if (iSrc > 0) then
+         call ED_CopyInput(T%ED%Input(iSrc), T%ED%u, CtrlCode, Errstat2, ErrMsg2)
+      else
+         call ED_CopyInput(T%ED%u, T%ED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+      end if
+
+!  case (Module_ExtPtfm)
+!  case (Module_FEAM)
+   case (Module_HD)
+
+      if (iDst > 0) T%HD%InputTimes(iDst) = DstInputTime
+      if (iSrc > 0 .and. iDst > 0) then
+         call HydroDyn_CopyInput(T%HD%Input(iSrc), T%HD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+      else if (iSrc > 0) then
+         call HydroDyn_CopyInput(T%HD%Input(iSrc), T%HD%u, CtrlCode, Errstat2, ErrMsg2)
+      else
+         call HydroDyn_CopyInput(T%HD%u, T%HD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+      end if
+
+!  case (Module_IceD)
+!  case (Module_IceF)
+
+   case (Module_IfW)
+
+      if (iDst > 0) T%IfW%InputTimes(iDst) = DstInputTime
+      if (iSrc > 0 .and. iDst > 0) then
+         call InflowWind_CopyInput(T%IfW%Input(iSrc), T%IfW%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+      else if (iSrc > 0) then
+         call InflowWind_CopyInput(T%IfW%Input(iSrc), T%IfW%u, CtrlCode, Errstat2, ErrMsg2)
+      else
+         call InflowWind_CopyInput(T%IfW%u, T%IfW%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+      end if
+
+!  case (Module_MAP)
+!  case (Module_MD)
+!  case (Module_OpFM)
+!  case (Module_Orca)
+   case (Module_SD)
+
+      if (iDst > 0) T%SD%InputTimes(iDst) = DstInputTime
+      if (iSrc > 0 .and. iDst > 0) then
+         call SD_CopyInput(T%SD%Input(iSrc), T%SD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+      else if (iSrc > 0) then
+         call SD_CopyInput(T%SD%Input(iSrc), T%SD%u, CtrlCode, Errstat2, ErrMsg2)
+      else
+         call SD_CopyInput(T%SD%u, T%SD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+      end if
+
+!  case (Module_SeaSt)
+   case (Module_SrvD)
+
+      if (iDst > 0) T%SrvD%InputTimes(iDst) = DstInputTime
+      if (iSrc > 0 .and. iDst > 0) then
+         call SrvD_CopyInput(T%SrvD%Input(iSrc), T%SrvD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+      else if (iSrc > 0) then
+         call SrvD_CopyInput(T%SrvD%Input(iSrc), T%SrvD%u, CtrlCode, Errstat2, ErrMsg2)
+      else
+         call SrvD_CopyInput(T%SrvD%u, T%SrvD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+      end if
+
+   case default
+      ErrStat2 = ErrID_Fatal
+      ErrMsg2 = "Unknown module ID "//trim(Num2LStr(ModData%ID))
+   end select
+
+   ! Set error
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
 end subroutine
 
 end module
