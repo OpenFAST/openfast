@@ -2715,9 +2715,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             
             ! lower node
             Ioffset   = mem%h_cmg_l(i)*mem%h_cmg_l(i)*mem%m_mg_l(i)
+            Imat      = 0.0_ReKi
             Imat(1,1) = mem%I_rmg_l(i) - Ioffset
             Imat(2,2) = mem%I_rmg_l(i) - Ioffset
-            Imat(3,3) = mem%I_lmg_l(i) - Ioffset
+            Imat(3,3) = mem%I_lmg_l(i)
             Imat      =  matmul(matmul(CMatrix, Imat), CTrans)
             iArm = mem%h_cmg_l(i) * k_hat
             iTerm     = ( -a_s1 - cross_product(omega_s1, cross_product(omega_s1,iArm )) - cross_product(alpha_s1,iArm) ) * mem%m_mg_l(i)
@@ -2730,9 +2731,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             
             ! upper node
             Ioffset   = mem%h_cmg_u(i)*mem%h_cmg_u(i)*mem%m_mg_u(i)
+            Imat      = 0.0_ReKi
             Imat(1,1) = mem%I_rmg_u(i) - Ioffset
             Imat(2,2) = mem%I_rmg_u(i) - Ioffset
-            Imat(3,3) = mem%I_lmg_u(i) - Ioffset
+            Imat(3,3) = mem%I_lmg_u(i)
             Imat      =  matmul(matmul(CMatrix, Imat), CTrans)
             iArm = mem%h_cmg_u(i) * k_hat
             iTerm     = ( -a_s2 - cross_product(omega_s2, cross_product(omega_s2,iArm )) - cross_product(alpha_s2,iArm) ) * mem%m_mg_u(i)
@@ -2828,9 +2830,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          ! ------------------ flooded ballast inertia: sides: Section 6.1.1 : Always compute regardless of PropPot setting ---------------------
          ! lower node
          Ioffset   = mem%h_cfb_l(i)*mem%h_cfb_l(i)*mem%m_fb_l(i)
+         Imat      = 0.0_ReKi
          Imat(1,1) = mem%I_rfb_l(i) - Ioffset
          Imat(2,2) = mem%I_rfb_l(i) - Ioffset
-         Imat(3,3) = mem%I_lfb_l(i) - Ioffset
+         Imat(3,3) = mem%I_lfb_l(i)
          iArm = mem%h_cfb_l(i) * k_hat
          iTerm     = ( -a_s1  - cross_product(omega_s1, cross_product(omega_s1,iArm ))  -  cross_product(alpha_s1,iArm) ) * mem%m_fb_l(i)
          F_If(1:3) =  iTerm
@@ -2842,9 +2845,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          
          ! upper node
          Ioffset   = mem%h_cfb_u(i)*mem%h_cfb_u(i)*mem%m_fb_u(i)
+         Imat      = 0.0_ReKi
          Imat(1,1) = mem%I_rfb_u(i) - Ioffset
          Imat(2,2) = mem%I_rfb_u(i) - Ioffset
-         Imat(3,3) = mem%I_lfb_u(i) - Ioffset
+         Imat(3,3) = mem%I_lfb_u(i)
          iArm = mem%h_cfb_u(i) * k_hat
          iTerm     = ( -a_s2  - cross_product(omega_s2, cross_product(omega_s2,iArm ))  -  cross_product(alpha_s2,iArm) ) * mem%m_fb_u(i)
          F_If(1:3) = iTerm
