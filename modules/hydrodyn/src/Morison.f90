@@ -2834,6 +2834,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          Imat(1,1) = mem%I_rfb_l(i) - Ioffset
          Imat(2,2) = mem%I_rfb_l(i) - Ioffset
          Imat(3,3) = mem%I_lfb_l(i)
+         Imat      =  matmul(matmul(CMatrix, Imat), CTrans)
          iArm = mem%h_cfb_l(i) * k_hat
          iTerm     = ( -a_s1  - cross_product(omega_s1, cross_product(omega_s1,iArm ))  -  cross_product(alpha_s1,iArm) ) * mem%m_fb_l(i)
          F_If(1:3) =  iTerm
@@ -2849,6 +2850,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          Imat(1,1) = mem%I_rfb_u(i) - Ioffset
          Imat(2,2) = mem%I_rfb_u(i) - Ioffset
          Imat(3,3) = mem%I_lfb_u(i)
+         Imat      =  matmul(matmul(CMatrix, Imat), CTrans)
          iArm = mem%h_cfb_u(i) * k_hat
          iTerm     = ( -a_s2  - cross_product(omega_s2, cross_product(omega_s2,iArm ))  -  cross_product(alpha_s2,iArm) ) * mem%m_fb_u(i)
          F_If(1:3) = iTerm
