@@ -651,7 +651,6 @@ jobs:
       - name: Run MATLAB tests and generate artifacts
         uses: matlab-actions/run-tests@v2
         with:
-          products: Simulink
           source-folder: ${{runner.workspace}}/openfast/build/glue-codes/simulink; ${{runner.workspace}}/openfast/glue-codes/simulink/examples
           test-results-junit: test-results/results.xml
           code-coverage-cobertura: code-coverage/coverage.xml
