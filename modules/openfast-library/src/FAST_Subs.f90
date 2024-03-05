@@ -883,7 +883,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
       if (allocated(Init%OutData_SeaSt%WaveElevVisGrid)) then
          p_FAST%VTK_surface%NWaveElevPts(1) = size(Init%OutData_SeaSt%WaveElevVisX)
-         p_FAST%VTK_surface%NWaveElevPts(2) = size(Init%OutData_SeaSt%WaveElevVisX)
+         p_FAST%VTK_surface%NWaveElevPts(2) = size(Init%OutData_SeaSt%WaveElevVisY)
       else
          p_FAST%VTK_surface%NWaveElevPts(1) = 0
          p_FAST%VTK_surface%NWaveElevPts(2) = 0
@@ -4157,7 +4157,6 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_S
 
    !bjj: interpolate here instead of each time step?
    if ( allocated(InitOutData_SeaSt%WaveElevVisGrid) ) then
-print*,'Storing Wave surface visualization'
       call move_alloc( InitOutData_SeaSt%WaveElevVisX,   p_FAST%VTK_Surface%WaveElevVisX )
       call move_alloc( InitOutData_SeaSt%WaveElevVisY,   p_FAST%VTK_Surface%WaveElevVisY )
       call move_alloc( InitOutData_SeaSt%WaveElevVisGrid,p_FAST%VTK_Surface%WaveElevVisGrid )
