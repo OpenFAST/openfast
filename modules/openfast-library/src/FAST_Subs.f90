@@ -21,7 +21,7 @@
 !**********************************************************************************************************************************
 MODULE FAST_Subs
 
-   USE FAST_ModLin
+   USE FAST_ModGlue
    USE FAST_Solver
    ! USE FAST_Linear
    USE SC_DataEx
@@ -69,7 +69,7 @@ SUBROUTINE FAST_InitializeAll_T( t_initial, TurbID, Turbine, ErrStat, ErrMsg, In
 
    if(ErrStat >= AbortErrLev) return
 
-   call ModLin_Init(Turbine%y_FAST%ModGlue, Turbine%y_FAST%Modules, &
+   call ModGlue_Init(Turbine%y_FAST%ModGlue, Turbine%y_FAST%Modules, &
                     Turbine%p_FAST%ModLin, Turbine%m_FAST%ModLin, &
                     Turbine%p_FAST, Turbine%m_FAST, Turbine, ErrStat, ErrMsg)
 
