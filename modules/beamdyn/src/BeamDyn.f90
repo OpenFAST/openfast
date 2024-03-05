@@ -5953,18 +5953,6 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    call BD_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
    call BD_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
 
-   !----------------------------------------------------------------------------
-   ! AeroMap
-   !----------------------------------------------------------------------------
-
-   if (p%CompAeroMaps) then
-      
-      ! Initialize index for variables flagged with VF_AeroMap
-      call MV_InitVarIdx(p%Vars, p%Vars%IdxAeroMap, VF_AeroMap, ErrStat2, ErrMsg2)
-      if (Failed()) return
-
-   end if
-
 contains
 
    pure integer(IntKi) function OutParamFlags(indx)

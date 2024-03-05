@@ -11331,20 +11331,6 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
    call ED_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
    call ED_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
 
-   !----------------------------------------------------------------------------
-   ! AeroMap
-   !----------------------------------------------------------------------------
-
-   if (p%CompAeroMaps) then
-
-      ! Initialize index for variables flagged with VF_AeroMap
-      call MV_InitVarIdx(p%Vars, p%Vars%IdxAeroMap, VF_AeroMap, ErrStat2, ErrMsg2); if (Failed()) return
-
-      ! Update dx indices to select the accelerations
-      p%Vars%IdxAeroMap%idx = p%Vars%IdxAeroMap%idx + size(p%Vars%IdxAeroMap%idx)/2
-
-   end if
-
 contains
    function BldOutLinName(OutParam, iBlade, iNode) result(Name)
       integer(IntKi), intent(in)    :: iBlade, iNode

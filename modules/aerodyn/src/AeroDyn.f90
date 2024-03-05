@@ -5590,18 +5590,6 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
    call AD_CopyRotOtherStateType(OtherState, m%OtherState_jac, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
    call AD_CopyRotConstraintStateType(z, m%z_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
 
-   !----------------------------------------------------------------------------
-   ! AeroMap
-   !----------------------------------------------------------------------------
-
-   if (CompAeroMaps) then
-
-      ! Initialize index for variables flagged with VF_AeroMap
-      call MV_InitVarIdx(p%Vars, p%Vars%IdxAeroMap, VF_AeroMap, ErrStat2, ErrMsg2)
-      if (Failed()) return
-
-   end if
-
 contains
 
    character(LinChanLen) function DBEMTLinName(BladeNum, NodeNum, Direction, Deriv)
