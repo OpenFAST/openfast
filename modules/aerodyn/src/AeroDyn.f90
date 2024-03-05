@@ -1710,13 +1710,9 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
       call AD_Input_ExtrapInterp(u,utimes,uInterp,BEMT_utimes(i), errStat2, errMsg2)
       if (Failed()) return
 
-!Extrapolate Inflow (should match previous extrapolations)
-      call AD_InflowType_ExtrapInterp(m%Inflow(1:size(utimes)),utimes,InflowInterp,BEMT_utimes(i), errStat2, errMsg2)
+      ! Calculate wind using uInterp
+      call AD_CalcWind(utimes(i),uInterp, p%FLowField, p, OtherState, m%Inflow(1), ErrStat2, ErrMsg2)
       if (Failed()) return
-
-!Calculate using uInterp
-!      call AD_CalcWind(utimes(i),uInterp, p%FLowField, p, OtherState, m%Inflow(1), ErrStat2, ErrMsg2)
-!      if (Failed()) return
 
       do iR = 1,size(p%rotors)
          call SetInputs(p%rotors(iR), p, uInterp%rotors(iR), InflowInterp%RotInflow(iR), m%rotors(iR), i, errStat2, errMsg2)
