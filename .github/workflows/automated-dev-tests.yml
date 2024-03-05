@@ -46,6 +46,8 @@ jobs:
           cache: 'pip'
       - name: Set up MATLAB
         uses: matlab-actions/setup-matlab@v2
+        with:
+          products: Simulink
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -181,6 +183,8 @@ jobs:
           cache: 'pip'
       - name: Set up MATLAB
         uses: matlab-actions/setup-matlab@v2
+        with:
+          products: Simulink
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -635,6 +639,8 @@ jobs:
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev libopenblas-dev libopenblas-openmp-dev
       - name: Set up MATLAB
         uses: matlab-actions/setup-matlab@v2
+        with:
+          products: Simulink
       - name: Build FAST_SFunc
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -645,6 +651,7 @@ jobs:
       - name: Run MATLAB tests and generate artifacts
         uses: matlab-actions/run-tests@v2
         with:
+          products: Simulink
           source-folder: ${{runner.workspace}}/openfast/build/glue-codes/simulink; ${{runner.workspace}}/openfast/glue-codes/simulink/examples
           test-results-junit: test-results/results.xml
           code-coverage-cobertura: code-coverage/coverage.xml
