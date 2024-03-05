@@ -18,7 +18,7 @@
 ! See the License for the specific language governing permissions and
 ! limitations under the License.
 !**********************************************************************************************************************************
-module FAST_ModLin
+module FAST_ModGlue
 
 use NWTC_Library
 use NWTC_LAPACK
@@ -31,11 +31,11 @@ use FAST_Mapping
 implicit none
 
 private
-public :: ModLin_Init, ModLin_Linearize_OP
+public :: ModGlue_Init, ModLin_Linearize_OP, MV_AddModule
 
 contains
 
-subroutine ModLin_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
+subroutine ModGlue_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
 
    type(ModDataType), intent(inout)                :: ModGlue  !< Module data for glue code
    type(ModDataType), allocatable, intent(inout)   :: Mods(:)  !< Data for all modules
@@ -53,7 +53,6 @@ subroutine ModLin_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, Er
    integer(IntKi), allocatable                     :: modIDs(:), modIdx(:)
    integer(IntKi)                                  :: i, j, k
    integer(IntKi)                                  :: FlagFilters
-   character(LinChanLen), allocatable              :: xLinNames(:), uLinNames(:), yLinNames(:)
    character(20)                                   :: NamePrefix
 
    ! Initialize error return
@@ -91,7 +90,7 @@ subroutine ModLin_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, Er
    modIDs = [(Mods(i)%ID, i=1, size(Mods))]
 
    ! Establish module index order for linearization
-   allocate(p%iMod(0))
+   allocate (p%iMod(0))
    do i = 1, size(LinMods)
       p%iMod = [p%iMod, pack(modIdx, ModIDs == LinMods(i))]
    end do
@@ -194,7 +193,7 @@ subroutine ModLin_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, Er
                call MV_UnsetFlags(ModData%Vars%u(j), VF_Linearize)
             end do
          case (LIN_STANDARD)
-            ! For standard inputs, use VF_Linearize flag set in the module
+            ! For standard inputs, use VF_Linearize flag as set in the module
          case (LIN_ALL)
             do j = 1, size(ModData%Vars%u)
                call MV_SetFlags(ModData%Vars%u(j), VF_Linearize)
@@ -247,8 +246,12 @@ subroutine ModLin_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, Er
          ! Loop through added variables and add name prefix to linearization names
          call AddLinNamePrefix(ModGlue%Vars%y(k:), NamePrefix)
 
+         !----------------------------------------------------------------------
+         ! Linearization index
+         !----------------------------------------------------------------------
+
          ! Initialize module linearization variable indexing
-         call MV_InitVarIdx(ModData%Vars, ModData%Vars%IdxLin, VF_Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+         call MV_InitModuleVarIdx(ModData, ModData%IdxLin, VF_Linearize, ErrStat2, ErrMsg2); if (Failed()) return
 
       end associate
    end do
@@ -261,7 +264,7 @@ subroutine ModLin_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, Er
    call CalcVarDataLoc(ModGlue%Vars%y, ModGlue%Vars%Ny)
 
    ! Initialize linearization index filtering
-   call MV_InitVarIdx(ModGlue%Vars, ModGlue%Vars%IdxLin, VF_Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+   call MV_InitModuleVarIdx(ModGlue, ModGlue%IdxLin, VF_Linearize, ErrStat2, ErrMsg2); if (Failed()) return
 
    !----------------------------------------------------------------------------
    ! Mesh Mapping
@@ -273,7 +276,7 @@ subroutine ModLin_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, Er
    ! Allocate linearization arrays and matrices
    !----------------------------------------------------------------------------
 
-   if (p_FAST%Linearize) then
+   if (p_FAST%Linearize .or. p_FAST%CompAeroMaps) then
 
       ! Allocate linearization arrays
       call AllocAry(ModGlue%Lin%x, ModGlue%Vars%Nx, "x", ErrStat2, ErrMsg2); if (Failed()) return
@@ -397,7 +400,7 @@ subroutine ModLin_Linearize_OP(Turbine, ModGlue, Mods, p, m, p_FAST, m_FAST, y_F
                                       StateRotation=ModData%Lin%StateRotation)
          if (Failed()) return
 
-         ! Operating point values (must come after Jacobian routines because 
+         ! Operating point values (must come after Jacobian routines because
          ! some modules calculate OP in those routines [MD])
          call FAST_GetOP(ModData, t_global, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
                          u_op=ModData%Lin%u, y_op=ModData%Lin%y, &
@@ -436,11 +439,11 @@ subroutine ModLin_Linearize_OP(Turbine, ModGlue, Mods, p, m, p_FAST, m_FAST, y_F
             end if
 
             ! Write linearization matrices
-            call WriteModuleLinearMatrices(ModData, ModData%Vars%IdxLin, p_FAST, y_FAST, t_global, Un, OutFileName, ErrStat2, ErrMsg2)
+            call WriteModuleLinearMatrices(ModData, p_FAST, y_FAST, t_global, Un, OutFileName, ErrStat2, ErrMsg2)
             if (Failed()) return
 
          end if
-         
+
          ! Check for NaNs or infinity in module Jacobian matrices
          if (allocated(ModData%Lin%dYdu)) then
             if (any(isnan(ModData%Lin%dYdu))) then
@@ -486,7 +489,7 @@ subroutine ModLin_Linearize_OP(Turbine, ModGlue, Mods, p, m, p_FAST, m_FAST, y_F
 
    ! Write glue code data
    OutFileName = trim(LinRootName)//".lin"
-   call WriteModuleLinearMatrices(ModGlue, ModGlue%Vars%IdxLin, p_FAST, y_FAST, t_global, Un, OutFileName, ErrStat2, ErrMsg2, IsGlue=.true.)
+   call WriteModuleLinearMatrices(ModGlue, p_FAST, y_FAST, t_global, Un, OutFileName, ErrStat2, ErrMsg2, IsGlue=.true.)
    if (Failed()) return
 
    ! Update index for next linearization time
@@ -685,10 +688,9 @@ subroutine Postcondition(uVars, dUdu, dUdy, JacScaleFactor)
 
 end subroutine
 
-subroutine WriteModuleLinearMatrices(ModData, VarIdx, p_FAST, y_FAST, t_global, Un, OutFileName, ErrStat, ErrMsg, IsGlue)
+subroutine WriteModuleLinearMatrices(ModData, p_FAST, y_FAST, t_global, Un, OutFileName, ErrStat, ErrMsg, IsGlue)
 
    type(ModDataType), intent(in)    :: ModData        !< Module data
-   type(VarsIdxType), intent(in)    :: VarIdx         !< Variable index
    type(FAST_ParameterType)         :: p_FAST         !< Parameters
    type(FAST_OutputFileType)        :: y_FAST         !< Output variables
    real(DbKi), intent(in)           :: t_global       !< current time step (written in file)
@@ -703,6 +705,7 @@ subroutine WriteModuleLinearMatrices(ModData, VarIdx, p_FAST, y_FAST, t_global, 
    character(ErrMsgLen)             :: ErrMsg2
    character(32)                    :: Desc
    integer(IntKi)                   :: i
+   integer(IntKi)                   :: Nx, Nxd, Nz, Nu, Ny
    character(50)                    :: Fmt
    logical, allocatable             :: uUse(:), yUse(:)
    logical                          :: IsGlueLoc
@@ -716,6 +719,13 @@ subroutine WriteModuleLinearMatrices(ModData, VarIdx, p_FAST, y_FAST, t_global, 
 
    ! Open linearization file
    call OpenFOutFile(Un, OutFileName, ErrStat2, ErrMsg2); if (Failed()) return
+
+   ! Calculate number of values in variable after applying filter
+   Nx = MV_NumVars(ModData%Vars%x, VF_Linearize)
+   Nxd = MV_NumVars(ModData%Vars%xd, VF_Linearize)
+   Nz = MV_NumVars(ModData%Vars%z, VF_Linearize)
+   Nu = MV_NumVars(ModData%Vars%u, VF_Linearize)
+   Ny = MV_NumVars(ModData%Vars%y, VF_Linearize)
 
    !----------------------------------------------------------------------------
    ! Header
@@ -734,11 +744,11 @@ subroutine WriteModuleLinearMatrices(ModData, VarIdx, p_FAST, y_FAST, t_global, 
    Desc = 'Wind Speed:     '; write (Un, fmt) Desc, y_FAST%Lin%WindSpeed, 'm/s'
 
    fmt = '(3x,A,1x,I5)'
-   Desc = 'Number of continuous states: '; write (Un, fmt) Desc, VarIdx%Nx
-   Desc = 'Number of discrete states:   '; write (Un, fmt) Desc, VarIdx%Nxd
-   Desc = 'Number of constraint states: '; write (Un, fmt) Desc, VarIdx%Nz
-   Desc = 'Number of inputs:            '; write (Un, fmt) Desc, VarIdx%Nu
-   Desc = 'Number of outputs:           '; write (Un, fmt) Desc, VarIdx%Ny
+   Desc = 'Number of continuous states: '; write (Un, fmt) Desc, Nx
+   Desc = 'Number of discrete states:   '; write (Un, fmt) Desc, Nxd
+   Desc = 'Number of constraint states: '; write (Un, fmt) Desc, Nz
+   Desc = 'Number of inputs:            '; write (Un, fmt) Desc, Nu
+   Desc = 'Number of outputs:           '; write (Un, fmt) Desc, Ny
 
    Desc = 'Jacobians included in this file?'
    fmt = '(3x,A,1x,A5)'
@@ -750,41 +760,52 @@ subroutine WriteModuleLinearMatrices(ModData, VarIdx, p_FAST, y_FAST, t_global, 
 
    write (Un, '()')    !print a blank line
 
-   if (VarIdx%Nx > 0) then
+   if (Nx > 0) then
       write (Un, '(A)') 'Order of continuous states:'
-      call WrLinFile_txt_Table(ModData%Vars%x, VarIdx%FlagFilter, p_FAST, Un, "Row/Column", ModData%Lin%x)
+      call WrLinFile_txt_Table(ModData%Vars%x, VF_Linearize, p_FAST, Un, "Row/Column", ModData%Lin%x)
 
       write (Un, '(A)') 'Order of continuous state derivatives:'
-      call WrLinFile_txt_Table(ModData%Vars%x, VarIdx%FlagFilter, p_FAST, Un, "Row/Column", ModData%Lin%dx, IsDeriv=.true.)
+      call WrLinFile_txt_Table(ModData%Vars%x, VF_Linearize, p_FAST, Un, "Row/Column", ModData%Lin%dx, IsDeriv=.true.)
    end if
 
-   if (VarIdx%Nxd > 0) then
+   if (Nxd > 0) then
       write (Un, '(A)') 'Order of discrete states:'
-      call WrLinFile_txt_Table(ModData%Vars%xd, VarIdx%FlagFilter, p_FAST, Un, "Row/Column", ModData%Lin%xd)
+      call WrLinFile_txt_Table(ModData%Vars%xd, VF_Linearize, p_FAST, Un, "Row/Column", ModData%Lin%xd)
    end if
 
-   if (VarIdx%Nz > 0) then
+   if (Nz > 0) then
       write (Un, '(A)') 'Order of constraint states:'
-      call WrLinFile_txt_Table(ModData%Vars%z, VarIdx%FlagFilter, p_FAST, Un, "Row/Column", ModData%Lin%z)
+      call WrLinFile_txt_Table(ModData%Vars%z, VF_Linearize, p_FAST, Un, "Row/Column", ModData%Lin%z)
    end if
 
-   if (VarIdx%Nu > 0) then
+   if (Nu > 0) then
       write (Un, '(A)') 'Order of inputs:'
-      call WrLinFile_txt_Table(ModData%Vars%u, VarIdx%FlagFilter, p_FAST, Un, "Column  ", ModData%Lin%u, ShowRot=.true.)
+      call WrLinFile_txt_Table(ModData%Vars%u, VF_Linearize, p_FAST, Un, "Column  ", ModData%Lin%u, ShowRot=.true.)
    end if
 
-   if (VarIdx%Ny > 0) then
+   if (Ny > 0) then
       write (Un, '(A)') 'Order of outputs:'
-      call WrLinFile_txt_Table(ModData%Vars%y, VarIdx%FlagFilter, p_FAST, Un, "Row  ", ModData%Lin%y, ShowRot=.true.)
+      call WrLinFile_txt_Table(ModData%Vars%y, VF_Linearize, p_FAST, Un, "Row  ", ModData%Lin%y, ShowRot=.true.)
    end if
 
+   ! Create boolean array indicating which input values to write
+   ! (iLoc is used here because)
    allocate (uUse(ModData%Vars%Nu))
    uUse = .false.
-   uUse(VarIdx%iu) = .true.
+   do i = 1, size(ModData%Vars%u)
+      associate (Var => ModData%Vars%u(i))
+         if (MV_HasFlags(Var, VF_Linearize)) uUse(Var%iLoc(1):Var%iLoc(2)) = .true.
+      end associate
+   end do
 
+   ! Create boolean array indicating which output values to write
    allocate (yUse(ModData%Vars%Ny))
    yUse = .false.
-   yUse(VarIdx%iy) = .true.
+   do i = 1, size(ModData%Vars%y)
+      associate (Var => ModData%Vars%y(i))
+         if (MV_HasFlags(Var, VF_Linearize))  yUse(Var%iLoc(1):Var%iLoc(2)) = .true.
+      end associate
+   end do
 
    if (p_FAST%LinOutJac) then
       write (Un, '(/,A,/)') 'Jacobian matrices:'
@@ -927,5 +948,219 @@ subroutine WrLinFile_txt_Table(VarAry, FlagFilter, p_FAST, Un, RowCol, op, IsDer
    write (Un, '()')    !print a blank line
 
 end subroutine WrLinFile_txt_Table
+
+subroutine MV_InitModuleVarIdx(ModData, VarIdx, FlagFilter, ErrStat, ErrMsg)
+   type(ModDataType), intent(in)       :: ModData
+   type(VarsIdxType), intent(out)      :: VarIdx
+   integer(IntKi), intent(in)          :: FlagFilter
+   integer(IntKi), intent(out)         :: ErrStat
+   character(ErrMsgLen), intent(out)   :: ErrMsg
+
+   character(*), parameter             :: RoutineName = 'MV_InitModuleVarIdx'
+   integer(IntKi)                      :: ErrStat2
+   character(ErrMsgLen)                :: ErrMsg2
+   integer(IntKi)                      :: xNumVar, xdNumVar, zNumVar, uNumVar, yNumVar
+   integer(IntKi)                      :: IndCol
+
+   ! Initialize error return
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   ! Destroy VarIdx in case it has been previously used
+   call FAST_DestroyVarsIdxType(VarIdx, ErrStat2, ErrMsg2); if (Failed()) return
+
+   ! Save filter in index
+   VarIdx%FlagFilter = FlagFilter
+
+   ! Populate variable index arrays
+   call GetModVarLocs(ModData%Idx, ModData%Vars%x, VarIdx%ix, VarIdx%Nx, FlagFilter, ErrStat2, ErrMsg2); if (Failed()) return
+   call GetModVarLocs(ModData%Idx, ModData%Vars%xd, VarIdx%ixd, VarIdx%Nxd, FlagFilter, ErrStat2, ErrMsg2); if (Failed()) return
+   call GetModVarLocs(ModData%Idx, ModData%Vars%z, VarIdx%iz, VarIdx%Nz, FlagFilter, ErrStat2, ErrMsg2); if (Failed()) return
+   call GetModVarLocs(ModData%Idx, ModData%Vars%u, VarIdx%iu, VarIdx%Nu, FlagFilter, ErrStat2, ErrMsg2); if (Failed()) return
+   call GetModVarLocs(ModData%Idx, ModData%Vars%y, VarIdx%iy, VarIdx%Ny, FlagFilter, ErrStat2, ErrMsg2); if (Failed()) return
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
+end subroutine
+
+subroutine MV_InitGlueVarIdx(Mods, ModOrder, VarIdx, FlagFilter, ErrStat, ErrMsg)
+   type(ModDataType), intent(in)       :: Mods(:)
+   integer(IntKi), intent(in)          :: ModOrder(:)
+   type(VarsIdxType), intent(out)      :: VarIdx
+   integer(IntKi), intent(in)          :: FlagFilter
+   integer(IntKi), intent(out)         :: ErrStat
+   character(ErrMsgLen), intent(out)   :: ErrMsg
+
+   character(*), parameter             :: RoutineName = 'MV_InitVarIdx'
+   integer(IntKi)                      :: ErrStat2
+   character(ErrMsgLen)                :: ErrMsg2
+   type(ModDataType)                   :: ModData
+   integer(IntKi)                      :: ivar, inum
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
+end subroutine
+
+subroutine GetModVarLocs(ModIdx, VarAry, Idx, NumVals, FlagFilter, ErrStat, ErrMsg)
+   integer(IntKi), intent(in)                   :: ModIdx
+   type(ModVarType), intent(in)                 :: VarAry(:)
+   type(VarIdxType), allocatable, intent(inout) :: Idx(:)
+   integer(IntKi), intent(inout)                :: NumVals
+   integer(IntKi), intent(in)                   :: FlagFilter
+   integer(IntKi), intent(out)                  :: ErrStat
+   character(ErrMsgLen), intent(out)            :: ErrMsg
+
+   character(*), parameter       :: RoutineName = 'GetModIdx'
+   integer(IntKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
+   integer(IntKi)                :: i, j, iGbl(2), NumVarsOld, NumVarsNew
+   type(VarIdxType), allocatable :: IdxTmp(:)
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   ! Calculate number of vars to keep in VarAry
+   NumVarsNew = 0
+   do i = 1, size(VarAry)
+      if (MV_HasFlags(VarAry(i), FlagFilter)) NumVarsNew = NumVarsNew + 1
+   end do
+
+   ! If variable locations array currently has data
+   if (allocated(Idx)) then
+
+      ! Get number of variables currently in index
+      NumVarsOld = size(Idx)
+
+      ! Move Idx allocation to temporary so new array can be allocated with correct size
+      call move_alloc(Idx, IdxTmp)
+
+      ! Allocate new array to store previous and new variable data
+      allocate(Idx(NumVarsOld + NumVarsNew), stat=ErrStat2)
+      if (ErrStat2 /= 0) then
+         call SetErrStat(ErrID_Fatal, "Unable to allocate index", ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+
+      ! Move old variables to new array
+      Idx(1:NumVarsOld) = IdxTmp
+
+      ! Deallocate temporary array
+      deallocate(IdxTmp)
+
+   else
+
+      ! No old variables
+      NumVarsOld = 0
+
+      ! Initialize number of values
+      NumVals = 0
+
+      ! Allocate new array to store previous and new variable data
+      allocate(Idx(NumVarsNew), stat=ErrStat2)
+      if (ErrStat2 /= 0) then
+         call SetErrStat(ErrID_Fatal, "Unable to allocate index", ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+
+   end if
+
+   ! Determine starting index of variable in index array
+   if (NumVarsOld == 0) then
+      iGbl = 0
+   else
+      iGbl = Idx(NumVarsOld)%iGbl
+   end if
+
+   ! Store variable index data in array
+   j = NumVarsOld
+   do i = 1, size(VarAry)
+      if (MV_HasFlags(VarAry(i), FlagFilter)) then
+         j = j + 1
+         iGbl(1) = iGbl(2) + 1
+         iGbl(2) = iGbl(1) + VarAry(i)%Num - 1
+         Idx(j) = VarIdxType(ModIdx=ModIdx, iVar=i, iLoc=VarAry(i)%iLoc, iGbl=iGbl)
+         NumVals = NumVals + VarAry(i)%Num
+      end if
+   end do
+
+end subroutine
+
+subroutine MV_AddModule(ModAry, ModID, ModAbbr, Instance, ModDT, SolverDT, Vars, ErrStat, ErrMsg)
+   type(ModDataType), allocatable, intent(inout)   :: ModAry(:)
+   integer(IntKi), intent(in)                      :: ModID
+   character(*), intent(in)                        :: ModAbbr
+   integer(IntKi), intent(in)                      :: Instance
+   real(R8Ki), intent(in)                          :: ModDT
+   real(R8Ki), intent(in)                          :: SolverDT
+   type(ModVarsType), pointer, intent(in)          :: Vars
+   integer(IntKi), intent(out)                     :: ErrStat
+   character(ErrMsgLen), intent(out)               :: ErrMsg
+
+   character(*), parameter                         :: RoutineName = 'MV_AddModule'
+   integer(IntKi)                                  :: ErrStat2
+   character(ErrMsgLen)                            :: ErrMsg2
+   type(ModDataType)                               :: ModData
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   ! If module array hasn't been allocated, allocate with zero size
+   if (.not. allocated(ModAry)) allocate (ModAry(0))
+
+   ! Populate ModuleDataType derived type
+   ModData = ModDataType(Idx=size(ModAry) + 1, ID=ModID, Abbr=ModAbbr, &
+                         Ins=Instance, DT=ModDT, Vars=Vars)
+
+   ! Allocate source and destination mapping arrays
+   call AllocAry(ModData%SrcMaps, 0, "ModData%SrcMaps", ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call AllocAry(ModData%DstMaps, 0, "ModData%DstMaps", ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   !----------------------------------------------------------------------------
+   ! Calculate Module Substepping
+   !----------------------------------------------------------------------------
+
+   ! If module time step is same as global time step, set substeps to 1
+   if (EqualRealNos(ModData%DT, SolverDT)) then
+      ModData%SubSteps = 1
+   else
+      ! If the module time step is greater than the global time step, set error
+      if (ModData%DT > SolverDT) then
+         call SetErrStat(ErrID_Fatal, "The "//trim(ModData%Abbr)// &
+                         " module time step ("//trim(Num2LStr(ModData%DT))//" s) "// &
+                         "cannot be larger than FAST time step ("//trim(Num2LStr(SolverDT))//" s).", &
+                         ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+
+      ! Calculate the number of substeps
+      ModData%SubSteps = nint(SolverDT/ModData%DT)
+
+      ! If the module DT is not an exact integer divisor of the global time step, set error
+      if (.not. EqualRealNos(SolverDT, ModData%DT*ModData%SubSteps)) then
+         call SetErrStat(ErrID_Fatal, "The "//trim(ModData%Abbr)// &
+                         " module time step ("//trim(Num2LStr(ModData%DT))//" s) "// &
+                         "must be an integer divisor of the FAST time step ("//trim(Num2LStr(SolverDT))//" s).", &
+                         ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+   end if
+
+   !----------------------------------------------------------------------------
+   ! Add module data to array
+   !----------------------------------------------------------------------------
+
+   ModAry = [ModAry, ModData]
+
+end subroutine
 
 end module
