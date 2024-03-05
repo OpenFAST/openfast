@@ -352,6 +352,7 @@ of_regression_linear("5MW_Land_BD_Linear"             ""                "openfas
 of_regression_linear("5MW_Land_BD_Linear_Aero"        "-highpass=0.25"  "openfast;linear;beamdyn;servodyn;aerodyn")
 of_regression_linear("5MW_OC4Semi_Linear"             ""                "openfast;linear;hydrodyn;servodyn;map")
 of_regression_linear("5MW_OC4Semi_MD_Linear"          ""                "openfast;linear;hydrodyn;servodyn;moordyn")
+of_regression_linear("5MW_OC3Mnpl_Linear"             ""                "openfast;linear;hydrodyn;servodyn;moordyn")
 of_regression_linear("StC_test_OC4Semi_Linear_Nac"    ""                "openfast;linear;servodyn;stc")
 of_regression_linear("StC_test_OC4Semi_Linear_Tow"    ""                "openfast;linear;servodyn;stc")
 of_regression_linear("WP_Stationary_Linear"           ""                "openfast;linear;elastodyn")

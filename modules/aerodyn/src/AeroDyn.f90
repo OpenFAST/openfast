@@ -1796,11 +1796,19 @@ subroutine AD_CalcWind(t, u, FLowField, p, o, Inflow, ErrStat, ErrMsg)
    StartNode = 1
 
    do iWT = 1, size(u%rotors)
-      call AD_CalcWind_Rotor(t, u%rotors(iWT), FLowField, p%rotors(iWT), Inflow%RotInflow(iWT), ErrStat, ErrMsg)
+      call AD_CalcWind_Rotor(t, u%rotors(iWT), FLowField, p%rotors(iWT), Inflow%RotInflow(iWT), StartNode, ErrStat2, ErrMsg2)
+      if(Failed()) return
    enddo
 
    ! OLAF points
    if (allocated(o%WakeLocationPoints) .and. allocated(Inflow%InflowWakeVel)) then
+      ! If rotor is MHK, add water depth to z coordinate
+      if (p%FVW%MHK > 0) then
+         PosOffset = [0.0_ReKi, 0.0_ReKi, p%FVW%WtrDpth]
+      else
+         PosOffset = 0.0_ReKi
+      end if
+
       call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
                                    o%WakeLocationPoints, &
                                    Inflow%InflowWakeVel, &
@@ -1817,18 +1825,19 @@ contains
    end function Failed
 end subroutine
 
-subroutine AD_CalcWind_Rotor(t, u, FlowField, p, RotInflow, ErrStat, ErrMsg)
+subroutine AD_CalcWind_Rotor(t, u, FlowField, p, RotInflow, StartNode, ErrStat, ErrMsg)
    real(DbKi),                   intent(in   )  :: t           !< Current simulation time in seconds
    type(RotInputType),           intent(in   )  :: u           !< Inputs at Time t
    type(FlowFieldType),pointer,  intent(in   )  :: FlowField
    type(RotParameterType),       intent(in   )  :: p           !< Parameters
    type(RotInflowType),          intent(inout)  :: RotInflow   !< calculated inflow for rotor
+   integer(IntKi),               intent(inout)  :: StartNode   !< starting node for rotor wind
    integer(IntKi),               intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
                                  
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
-   integer(intKi)                               :: StartNode, k
+   integer(intKi)                               :: k
    real(ReKi)                                   :: PosOffset(3)
    real(ReKi), allocatable                      :: NoAcc(:,:)
 
@@ -5648,14 +5657,16 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    INTEGER(IntKi),          OPTIONAL,    INTENT(IN   )           :: FlagFilter  !< Variable index number
 
    integer(IntKi), parameter :: iR =1 ! Rotor index
+   integer(intKi)  :: StartNode
 
+   StartNode = 1  ! ignored during linearization since cannot linearize with ExtInflow
    if (size(p%rotors)>1) then
       errStat = ErrID_Fatal
       errMsg = 'Linearization with more than one rotor not supported'
       return
    endif
 
-   call AD_CalcWind_Rotor(t, u%rotors(iR), p%FlowField, p%rotors(iR), m%Inflow(1)%RotInflow(iR), ErrStat, ErrMsg)
+   call AD_CalcWind_Rotor(t, u%rotors(iR), p%FlowField, p%rotors(iR), m%Inflow(1)%RotInflow(iR), StartNode, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
    call Rot_JacobianPInput( t, u%rotors(iR), m%Inflow(1)%RotInflow(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu, FlagFilter)
 
@@ -5695,7 +5706,7 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
    TYPE(RotOtherStateType)       :: OtherState_copy
    logical                       :: IsFullLin
    integer(IntKi)                :: FlagFilterLoc
-   INTEGER(IntKi)                :: i, j, col
+   INTEGER(IntKi)                :: i, j, col, StartNode
    type(UniformField_Interp)     :: UF_op
    type(FlowFieldType),target    :: FF_perturb
    type(FlowFieldType),pointer   :: FF_ptr            ! need a pointer in the CalcWind_Rotor routine
@@ -5776,7 +5787,8 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
             call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
             call AD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
             if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(i, p_AD%FlowField, 1, FF_ptr)
-            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, ErrStat2, ErrMsg2); if (Failed()) return
+            StartNode = 1
+            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
             call SetInputs(p, p_AD, m%u_perturb, RotInflow_perturb, m, indx, ErrStat2, ErrMsg2); if (Failed()) return
             call UpdatePhi(m%BEMT_u(indx), p%BEMT, m%z_lin%BEMT%phi, p_AD%AFI, m%BEMT, m%OtherState_jac%BEMT%ValidPhi, ErrStat2, ErrMsg2); if (Failed()) return
             call RotCalcOutput(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, m%z_lin, m%OtherState_jac, m%y_lin, m, m_AD, iRot, ErrStat2, ErrMsg2); if (Failed()) return
@@ -5788,7 +5800,8 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
             call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
             call AD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
             if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(i, p_AD%FlowField, -1, FF_ptr)
-            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, ErrStat2, ErrMsg2); if (Failed()) return
+            StartNode = 1
+            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
             call SetInputs(p, p_AD, m%u_perturb, RotInflow_perturb, m, indx, ErrStat2, ErrMsg2); if (Failed()) return
             call UpdatePhi(m%BEMT_u(indx), p%BEMT, m%z_lin%BEMT%phi, p_AD%AFI, m%BEMT, m%OtherState_jac%BEMT%ValidPhi, ErrStat2, ErrMsg2); if (Failed()) return
             call RotCalcOutput(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, m%z_lin, m%OtherState_jac, m%y_lin, m, m_AD, iRot, ErrStat2, ErrMsg2); if (Failed()) return
@@ -5825,7 +5838,8 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
             call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
             call AD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
             if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(i, p_AD%FlowField, 1, FF_ptr)
-            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, ErrStat2, ErrMsg2); if (Failed()) return
+            StartNode = 1
+            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
             call RotCalcContStateDeriv(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2) ; if (Failed()) return
             call AD_PackContStateOP(p, m%dxdt_lin, m%Jac%x_pos)
 
@@ -5833,7 +5847,8 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
             call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
             call AD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
             if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(i, p_AD%FlowField, -1, FF_ptr)
-            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, ErrStat2, ErrMsg2); if (Failed()) return
+            StartNode = 1
+            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
             call RotCalcContStateDeriv(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2) ; if (Failed()) return
             call AD_PackContStateOP(p, m%dxdt_lin, m%Jac%x_neg)
 
@@ -5916,6 +5931,7 @@ SUBROUTINE AD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
                                                                                !!   the continuous states (x) [intent in to avoid deallocation]
    INTEGER, OPTIONAL,                    INTENT(IN   )           :: FlagFilter
    integer(IntKi), parameter :: iR = 1 ! Rotor index
+   integer(IntKi)             :: StartNode
 
    if (size(p%rotors)>1) then
       errStat = ErrID_Fatal
@@ -5923,7 +5939,8 @@ SUBROUTINE AD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       return
    endif
 
-   call AD_CalcWind_Rotor(t, u%rotors(iR), p%FlowField, p%rotors(iR), m%Inflow(1)%RotInflow(iR), ErrStat, ErrMsg)
+   StartNode = 1
+   call AD_CalcWind_Rotor(t, u%rotors(iR), p%FlowField, p%rotors(iR), m%Inflow(1)%RotInflow(iR), StartNode, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
    call RotJacobianPContState(t, u%rotors(iR), m%Inflow(1)%RotInflow(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx, FlagFilter)
 
@@ -6165,6 +6182,7 @@ SUBROUTINE AD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdz(:,:)  !< Partial derivatives of constraint
 
    integer(IntKi), parameter :: iR =1 ! Rotor index
+   integer(IntKi)            :: StartNode
 
    if (size(p%rotors)>1) then
       errStat = ErrID_Fatal
@@ -6172,7 +6190,8 @@ SUBROUTINE AD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
       return
    endif
 
-   call AD_CalcWind_Rotor(t, u%rotors(iR), p%FlowField, p%rotors(iR), m%Inflow(1)%RotInflow(iR), ErrStat, ErrMsg)
+   StartNode = 1
+   call AD_CalcWind_Rotor(t, u%rotors(iR), p%FlowField, p%rotors(iR), m%Inflow(1)%RotInflow(iR), StartNode, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
    call RotJacobianPConstrState(t, u%rotors(iR), m%Inflow(1)%RotInflow(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, errStat, errMsg, dYdz, dXdz, dXddz, dZdz)
 
@@ -6398,6 +6417,8 @@ SUBROUTINE AD_GetOP(iRotor, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
    INTEGER(IntKi),          OPTIONAL,    INTENT(IN   )           :: FlagFilter  !< Skip vars that don't include these flags
+   
+   integer(IntKi) :: StartNode
 
    if (iRotor < 1 .or. iRotor > size(p%rotors)) then
       ErrStat = ErrID_Fatal
@@ -6405,7 +6426,8 @@ SUBROUTINE AD_GetOP(iRotor, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       return
    end if
 
-   call AD_CalcWind_Rotor(t, u%rotors(iRotor), p%FlowField, p%rotors(iRotor), m%Inflow(1)%RotInflow(iRotor), ErrStat, ErrMsg)
+   StartNode = 1
+   call AD_CalcWind_Rotor(t, u%rotors(iRotor), p%FlowField, p%rotors(iRotor), m%Inflow(1)%RotInflow(iRotor), StartNode, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
    call RotGetOP(t, u%rotors(iRotor), m%Inflow(1)%RotInflow(iRotor), p%rotors(iRotor), p, x%rotors(iRotor), &
                  xd%rotors(iRotor), z%rotors(iRotor), OtherState%rotors(iRotor), y%rotors(iRotor), m%rotors(iRotor), &
