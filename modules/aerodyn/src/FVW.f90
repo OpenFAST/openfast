@@ -759,8 +759,9 @@ contains
    end subroutine RollBackPreviousTimeStep
 
    subroutine CleanUp()
-      call FVW_DestroyConstrState(z_guess, ErrStat2, ErrMsg2); if(Failed()) return
-      call FVW_DestroyInput(uInterp, ErrStat2, ErrMsg2); if(Failed()) return
+      ! note: errors not trapped here as leads to recursive use of Failed()
+      call FVW_DestroyConstrState(z_guess, ErrStat2, ErrMsg2)  !; if(Failed()) return
+      call FVW_DestroyInput(uInterp, ErrStat2, ErrMsg2)        !; if(Failed()) return
    end subroutine
 
    logical function Failed()

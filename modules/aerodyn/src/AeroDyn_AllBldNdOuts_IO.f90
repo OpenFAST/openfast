@@ -264,7 +264,7 @@ END SUBROUTINE AllBldNdOuts_InitOut
 !! NOTE: the equations here came from the output section of AeroDyn_IO.f90.  If anything changes in there, it needs to be reflected
 !!       here.
 
-SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx, iRot, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotInflow, Indx, iRot, ErrStat, ErrMsg )
    TYPE(RotParameterType),       INTENT(IN   )  :: p                                 ! The rotor parameters
    TYPE(AD_ParameterType),target,INTENT(IN   )  :: p_AD                              ! The module parameters
    TYPE(RotInputType), target,   INTENT(IN   )  :: u                                 ! inputs
@@ -273,6 +273,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
    TYPE(RotContinuousStateType), INTENT(IN   )  :: x                                 ! rotor Continuous states
    TYPE(RotOutputType),          INTENT(INOUT)  :: y                                 ! outputs (updates y%WriteOutput)
    TYPE(RotOtherStateType),      INTENT(IN   )  :: OtherState                        ! other states
+   TYPE(RotInflowType),          INTENT(IN   )  :: RotInflow                         ! other states%RotInflow(iRot)
    INTEGER,                      INTENT(IN   )  :: Indx                              ! index into m%BEMT_u(Indx) array; 1=t and 2=t+dt (but not checked here)
    INTEGER,                      INTENT(IN   )  :: iRot                              ! Rotor index, needed for OLAF
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat                           ! The error status code
@@ -335,26 +336,26 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE (0            ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = 0.0_ReKi; iOut = iOut + 1; enddo;enddo
 
          ! ***** Undisturbed wind velocity in inertial, polar, local and airfoil systems*****
-         CASE( BldNd_VUndxi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = u%Bld(iB)%InflowOnBlade(1,iNd); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndyi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = u%Bld(iB)%InflowOnBlade(2,iNd); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndzi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = u%Bld(iB)%InflowOnBlade(3,iNd); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndxi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = RotInflow%Bld(iB)%InflowOnBlade(1,iNd); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndyi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = RotInflow%Bld(iB)%InflowOnBlade(2,iNd); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndzi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = RotInflow%Bld(iB)%InflowOnBlade(3,iNd); iOut = iOut + 1; enddo;enddo
 
-         CASE( BldNd_VUndxp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%Bld(iB)%InflowOnBlade(:,iNd), R_pi(1,:,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndyp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%Bld(iB)%InflowOnBlade(:,iNd), R_pi(2,:,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndzp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%Bld(iB)%InflowOnBlade(:,iNd), R_pi(3,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndxp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Bld(iB)%InflowOnBlade(:,iNd), R_pi(1,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndyp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Bld(iB)%InflowOnBlade(:,iNd), R_pi(2,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndzp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Bld(iB)%InflowOnBlade(:,iNd), R_pi(3,:,iB) ); iOut = iOut + 1; enddo;enddo
          
-         CASE( BldNd_VUndxl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%Bld(iB)%InflowOnBlade(:,iNd), R_li(1,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndyl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%Bld(iB)%InflowOnBlade(:,iNd), R_li(2,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndzl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%Bld(iB)%InflowOnBlade(:,iNd), R_li(3,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndxl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Bld(iB)%InflowOnBlade(:,iNd), R_li(1,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndyl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Bld(iB)%InflowOnBlade(:,iNd), R_li(2,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndzl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Bld(iB)%InflowOnBlade(:,iNd), R_li(3,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
 
-         CASE( BldNd_VUndxa ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%Bld(iB)%InflowOnBlade(:,iNd), u%BladeMotion(iB)%Orientation(1,:,iNd) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndya ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%Bld(iB)%InflowOnBlade(:,iNd), u%BladeMotion(iB)%Orientation(2,:,iNd) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndza ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%Bld(iB)%InflowOnBlade(:,iNd), u%BladeMotion(iB)%Orientation(3,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndxa ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Bld(iB)%InflowOnBlade(:,iNd), u%BladeMotion(iB)%Orientation(1,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndya ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Bld(iB)%InflowOnBlade(:,iNd), u%BladeMotion(iB)%Orientation(2,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndza ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Bld(iB)%InflowOnBlade(:,iNd), u%BladeMotion(iB)%Orientation(3,:,iNd) ); iOut = iOut + 1; enddo;enddo
 
          ! TODO: deprecate this
-         CASE( BldNd_VUndx  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%Bld(iB)%InflowOnBlade(:,iNd), R_wi(1,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndy  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%Bld(iB)%InflowOnBlade(:,iNd), R_wi(2,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndz  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%Bld(iB)%InflowOnBlade(:,iNd), R_wi(3,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndx  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Bld(iB)%InflowOnBlade(:,iNd), R_wi(1,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndy  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Bld(iB)%InflowOnBlade(:,iNd), R_wi(2,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndz  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Bld(iB)%InflowOnBlade(:,iNd), R_wi(3,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
 
 
          ! ***** Disturbed wind velocity in inertial, polar, local and airfoil systems*****
