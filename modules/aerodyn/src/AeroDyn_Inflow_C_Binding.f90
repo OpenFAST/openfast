@@ -36,7 +36,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    PUBLIC :: ADI_C_CalcOutput
    PUBLIC :: ADI_C_UpdateStates
    PUBLIC :: ADI_C_End
-   PUBLIC :: ADI_C_PreInit     ! Initial call to setup number of turbines
+   PUBLIC :: ADI_C_PreInit            ! Initial call to setup number of turbines
    PUBLIC :: ADI_C_SetupRotor         ! Initial node positions etc for a rotor
    PUBLIC :: ADI_C_SetRotorMotion     ! Set motions for a given rotor
    PUBLIC :: ADI_C_GetRotorLoads      ! Retrieve loads for a given rotor
@@ -44,7 +44,6 @@ MODULE AeroDyn_Inflow_C_BINDING
    !------------------------------------------------------------------------------------
    !  Version info for display
    type(ProgDesc), parameter              :: version   = ProgDesc( 'AeroDyn-Inflow library', '', '' )
-
 
    !------------------------------------------------------------------------------------
    !  Debugging: debugverbose -- passed at PreInit
@@ -98,7 +97,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    type(ADI_InputType)                    :: ADI_u             !< ADI inputs -- set by AD_SetInputMotion.  Copied as needed (necessary for correction steps)
    !------------------------------
    !  Simulation data
-   type(Dvr_SimData)                      :: Sim               !< data about the simulation
+   type(Dvr_SimData)                      :: Sim                     !< Data about the simulation
    !------------------------------
    !  Outputs
    type(Dvr_Outputs)                      :: WrOutputsData           !< Data for writing outputs to file
@@ -167,15 +166,34 @@ MODULE AeroDyn_Inflow_C_BINDING
    !  Mesh mapping: loads
    !     The mapping of loads from the AD meshes to the corresponding external nodes
 
-   ! =========  BladePtMeshCoords  =======
-   TYPE, PUBLIC :: BladePtMeshCoords
-      real(ReKi), DIMENSION(:,:), ALLOCATABLE :: Pos  !< Position of each blade point (m)
-      real(ReKi), DIMENSION(:,:,:), ALLOCATABLE :: Ori !< Orientation of each blade point (m)
-   END TYPE BladePtMeshCoords
+   ! =========  BladeNodeToMeshPointMap  =======
+   type, public :: BladeNodeToMeshPointMap
+      integer(IntKi), allocatable         :: BladeNodeToMeshPoint(:)  !< Blade node -> mesh point mapping
+   end type BladeNodeToMeshPointMap
    ! =======================
 
-   type(MeshMapType), allocatable         :: Map_AD_BldLoad_P_2_BldPtLoad(:,:)  ! Mesh mapping between AD output blade line2 load to BldPtLoad for return
-   type(MeshMapType), allocatable         :: Map_AD_BldLoad_P_2_BldPtLoad_2D(:,:)  ! Mesh mapping between AD output blade line2 load to BldPtLoad for return
+   ! =========  StrucPtsToBladeMapType  =======
+   type, public :: StrucPtsToBladeMapType
+      integer(IntKi)                      :: NumBlades                ! number of blades on this rotor
+      integer(IntKi)                      :: NumMeshPts               ! number of structural mesh points we are interfacing motions/loads <--> AD for this rotor
+      integer(IntKi), allocatable         :: NumMeshPtsPerBld(:)      ! number of structural mesh points on each blade
+      integer(IntKi), allocatable         :: MP_To_BldNum(:)          ! Structural mesh point -> which blade on the rotor
+      type(BladeNodeToMeshPointMap), allocatable :: BldNd_To_MP(:)    ! blade node on blade -> structural mesh point
+   end type StrucPtsToBladeMapType
+   ! =======================
+
+   ! =========  BladePtMeshCoords  =======
+   type, public :: BladePtMeshCoords
+      real(ReKi), DIMENSION(:,:), ALLOCATABLE :: Pos     !< Position of each blade point (m)
+      real(ReKi), DIMENSION(:,:,:), ALLOCATABLE :: Ori   !< Orientation of each blade point
+      real(ReKi), DIMENSION(:,:), ALLOCATABLE :: Vel     !< Velocity of each blade point (m/s)
+      real(ReKi), DIMENSION(:,:), ALLOCATABLE :: Acc     !< Acceleration of each blade point (m/s^2)
+   end type BladePtMeshCoords
+   ! =======================
+
+   type(StrucPtsToBladeMapType), allocatable  :: StrucPts_2_Bld_Map(:)                 ! Array mapping info for structural mesh points to blades, and back
+   type(MeshMapType), allocatable             :: Map_AD_BldLoad_P_2_BldPtLoad(:,:)     ! Mesh mapping between AD output blade line2 load to BldPtLoad for return
+   type(MeshMapType), allocatable             :: Map_AD_BldLoad_P_2_BldPtLoad_2D(:,:)  ! Mesh mapping between AD output blade line2 load to BldPtLoad for return
 !   type(MeshMapType)                      :: Map_NacPtMotion_2_AD_Nac(:)       ! Mesh mapping between AD output nacelle pt  load to NacLoad   for return
    !  Motions input (so we don't have to reallocate all the time
    real(ReKi), allocatable                :: tmpBldPtMeshPos(:,:)       ! temp array.  Probably don't need this, but makes conversion from C clearer.
@@ -332,6 +350,10 @@ subroutine ADI_C_PreInit(NumTurbines_C,TransposeDCM_in,debuglevel,ErrStat_C,ErrM
    ! Map_BldPtMotion_2D_2_AD_Blade
    if (allocated(Map_BldPtMotion_2D_2_AD_Blade )) deallocate(Map_BldPtMotion_2D_2_AD_Blade  )
    if (allocated(Map_AD_BldLoad_P_2_BldPtLoad_2D )) deallocate(Map_AD_BldLoad_P_2_BldPtLoad_2D)
+
+   ! StrucPts_2_Bld_Map - sized by number of turbines
+   if ( allocated(StrucPts_2_Bld_Map) )   deallocate(StrucPts_2_Bld_Map)
+   allocate(StrucPts_2_Bld_Map( Sim%NumTurbines ), STAT=ErrStat2); if (Failed0('StrucPts_2_Bld_Map'  )) return
 
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
@@ -1407,18 +1429,6 @@ subroutine ADI_C_SetupRotor(iWT_c, TurbineIsHAWT_c, TurbOrigin_C,    &
       call ShowPassedData()
    endif
 
-   ! Print MeshPtToBladeNum_C
-   write(*,*) 'MeshPtToBladeNum_C:'
-   do i=1,NumMeshPts_C
-      write(*,*) MeshPtToBladeNum_C(i)
-   enddo
-
-   ! Print all the blade numbers
-   write(*,*) 'Blade numbers:'
-   do i=1,NumBlades_C
-      write(*,*) i
-   enddo
-
    ! turbine geometry
    iWT = int(iWT_c, IntKi)
    Sim%WT(iWT)%NumBlades         = int(NumBlades_C,   IntKi)
@@ -1565,14 +1575,6 @@ contains
       call AllocAry( tmpBldPtMeshPos,    3, NumMeshPts(iWT), "tmpBldPtMeshPos", ErrStat2, ErrMsg2 );    if (Failed())  return
       call AllocAry( tmpBldPtMeshOri, 3, 3, NumMeshPts(iWT), "tmpBldPtMeshOri", ErrStat2, ErrMsg2 );    if (Failed())  return
 
-      ! TODO (2)  tmpBldPtMeshPos -> modify this into a structure, then make array of NumBlades
-      if ( allocated(tmpBldPtMeshPosAndOri) )   deallocate(tmpBldPtMeshPosAndOri)
-      allocate(tmpBldPtMeshPosAndOri( Sim%WT(iWT)%NumBlades ), STAT=ErrStat2); if (Failed0('tmpBldPtMeshPosAndOri'  )) return
-      do i=1,Sim%WT(iWT)%NumBlades
-         call AllocAry( tmpBldPtMeshPosAndOri(i)%Pos, 3, NumMeshPts(iWT), "tmpBldPtMeshPosAndOri(i)%Pos", ErrStat2, ErrMsg2 );    if (Failed())  return
-         call AllocAry( tmpBldPtMeshPosAndOri(i)%Ori, 3, 3, NumMeshPts(iWT), "tmpBldPtMeshPosAndOri(i)%Ori", ErrStat2, ErrMsg2 );    if (Failed())  return
-      enddo
-
       ! Reshape mesh position, orientation, velocity, acceleration
       tmpBldPtMeshPos(1:3,1:NumMeshPts(iWT))      = reshape( real(InitMeshPos_C(1:3*NumMeshPts(iWT)),ReKi), (/3,  NumMeshPts(iWT)/) )
       tmpBldPtMeshOri(1:3,1:3,1:NumMeshPts(iWT))  = reshape( real(InitMeshOri_C(1:9*NumMeshPts(iWT)),R8Ki), (/3,3,NumMeshPts(iWT)/) )
@@ -1589,7 +1591,41 @@ contains
             endif
          enddo
          NumMeshPtsPerBlade(i) = count
-         write(*,*) 'NumMeshPtsPerBlade(i)=',NumMeshPtsPerBlade(i)
+         ! write(*,*) 'NumMeshPtsPerBlade(i)=',NumMeshPtsPerBlade(i)
+      enddo
+
+      ! Let's allocate the components of StrucPts_2_Bld_Map
+      StrucPts_2_Bld_Map( iWT )%NumBlades  = Sim%WT(iWT)%NumBlades
+      StrucPts_2_Bld_Map( iWT )%NumMeshPts = NumMeshPts(iWT)
+
+      call AllocAry( StrucPts_2_Bld_Map( iWT )%NumMeshPtsPerBld, Sim%WT(iWT)%NumBlades, "NumMeshPtsPerBld", ErrStat2, ErrMsg2 );    if (Failed())  return
+      call AllocAry( StrucPts_2_Bld_Map( iWT )%MP_To_BldNum, NumMeshPts(iWT), "MP_To_BldNum", ErrStat2, ErrMsg2 );    if (Failed())  return
+      allocate(StrucPts_2_Bld_Map( iWT )%BldNd_To_MP( Sim%WT(iWT)%NumBlades ), STAT=ErrStat2); if (Failed0('StrucPts_2_Bld_Map( iWT )%BldNd_To_MP'  )) return
+
+      StrucPts_2_Bld_Map( iWT )%NumMeshPtsPerBld(1:Sim%WT(iWT)%NumBlades) = NumMeshPtsPerBlade(1:Sim%WT(iWT)%NumBlades)
+      StrucPts_2_Bld_Map( iWT )%MP_To_BldNum(1:NumMeshPts(iWT)) = MeshPtToBladeNum_C(1:NumMeshPts(iWT))
+      do i=1,Sim%WT(iWT)%NumBlades
+         call AllocAry( StrucPts_2_Bld_Map( iWT )%BldNd_To_MP(i)%BladeNodeToMeshPoint, NumMeshPtsPerBlade(i), "BladeNodeToMeshPoint", ErrStat2, ErrMsg2 );    if (Failed())  return
+      enddo
+
+      do i=1,Sim%WT(iWT)%NumBlades
+         count = 0
+         do j=1,NumMeshPts(iWT)
+            if (MeshPtToBladeNum_C(j) == i) then
+               count = count + 1
+               StrucPts_2_Bld_Map( iWT )%BldNd_To_MP(i)%BladeNodeToMeshPoint(count) = j
+            endif
+         enddo
+      enddo
+
+      if ( allocated(tmpBldPtMeshPosAndOri) )   deallocate(tmpBldPtMeshPosAndOri)
+      allocate(tmpBldPtMeshPosAndOri( Sim%WT(iWT)%NumBlades ), STAT=ErrStat2); if (Failed0('tmpBldPtMeshPosAndOri'  )) return
+      do i=1,Sim%WT(iWT)%NumBlades
+         call AllocAry( tmpBldPtMeshPosAndOri(i)%Pos, 3, NumMeshPtsPerBlade(i), "tmpBldPtMeshPosAndOri(i)%Pos", ErrStat2, ErrMsg2 );    if (Failed())  return
+         call AllocAry( tmpBldPtMeshPosAndOri(i)%Ori, 3, 3, NumMeshPtsPerBlade(i), "tmpBldPtMeshPosAndOri(i)%Ori", ErrStat2, ErrMsg2 );    if (Failed())  return
+         ! allocate for velocity and acceleration
+         call AllocAry( tmpBldPtMeshPosAndOri(i)%Vel, 6, NumMeshPtsPerBlade(i), "tmpBldPtMeshPosAndOri(i)%Vel", ErrStat2, ErrMsg2 );    if (Failed())  return
+         call AllocAry( tmpBldPtMeshPosAndOri(i)%Acc, 6, NumMeshPtsPerBlade(i), "tmpBldPtMeshPosAndOri(i)%Acc", ErrStat2, ErrMsg2 );    if (Failed())  return
       enddo
 
       ! Convert iNode to iNode_2D which is of size NumMeshPts(iWT) x 2
@@ -1608,21 +1644,11 @@ contains
          enddo
       enddo
 
-      ! write the iNode_2D
-      write(*,*) 'iNode_2D:'
-      do i=1,NumMeshPts(iWT)
-         write(*,*) iNode_2D(i,1),iNode_2D(i,2)
-      enddo
-
       do i=1,Sim%WT(iWT)%NumBlades
-         ! ! Add this if it falls on this blade
-         ! do iNode=1,NumMeshPts(iWT)
-         !    if (MeshPtToBladeNum_C(iNode) == i) then
-         !       tmpBldPtMeshPosAndOri(i)%Pos(1:3,iNode) = tmpBldPtMeshPos(1:3,iNode)
-         !       tmpBldPtMeshPosAndOri(i)%Ori(1:3,1:3,iNode) = tmpBldPtMeshOri(1:3,1:3,iNode)
-         !    endif
-         tmpBldPtMeshPosAndOri(i)%Pos(1:3,1:NumMeshPts(iWT)) = reshape( real(InitMeshPos_C(1:3*NumMeshPts(iWT)),ReKi), (/3,  NumMeshPts(iWT)/) )
-         tmpBldPtMeshPosAndOri(i)%Ori(1:3,1:3,1:NumMeshPts(iWT)) = reshape( real(InitMeshOri_C(1:9*NumMeshPts(iWT)),R8Ki), (/3,3,NumMeshPts(iWT)/) )
+         do j=1,NumMeshPtsPerBlade(i)
+            tmpBldPtMeshPosAndOri(i)%Pos(1:3,j) = reshape( real(InitMeshPos_C(3 * StrucPts_2_Bld_Map( iWT )%BldNd_To_MP(i)%BladeNodeToMeshPoint(j) - 2 : 3 * StrucPts_2_Bld_Map( iWT )%BldNd_To_MP(i)%BladeNodeToMeshPoint(j)),ReKi), (/3/) )
+            tmpBldPtMeshPosAndOri(i)%Ori(1:3,1:3,j) = reshape( real(InitMeshOri_C(9 * StrucPts_2_Bld_Map( iWT )%BldNd_To_MP(i)%BladeNodeToMeshPoint(j) - 8 : 9 * StrucPts_2_Bld_Map( iWT )%BldNd_To_MP(i)%BladeNodeToMeshPoint(j)),R8Ki), (/3,3/) )
+         enddo
       enddo
 
       !-------------------------------------------------------------
@@ -1664,8 +1690,6 @@ contains
       !     note: CU is is output unit (platform dependent).
       if (debugverbose >= 4)  call MeshPrintInfo( CU, BldPtMotionMesh(iWT), MeshName='BldPtMotionMesh'//trim(Num2LStr(iWT)) )
 
-      ! write NumMeshPts(iWT)
-      write(*,*) 'NumMeshPts(iWT)=',NumMeshPts(iWT)
       do i=1,Sim%WT(iWT)%NumBlades
          call MeshCreate(  BldPtMotionMesh_2D(i, iWT)                ,  &
                            IOS              = COMPONENT_INPUT        ,  &
@@ -1679,25 +1703,22 @@ contains
       enddo
 
       do i=1,Sim%WT(iWT)%NumBlades
-         do iNode=1,NumMeshPts(iWT)
-            ! Proceed only if iNode_2D(iNode,1) == i
-            if (iNode_2D(iNode,1) == i) then
-               ! initial position and orientation of node
-               InitPos  = tmpBldPtMeshPos(1:3,iNode) + Sim%WT(iWT)%OriginInit(1:3)
-               if (TransposeDCM) then
-                  Orient   = transpose(tmpBldPtMeshOri(1:3,1:3,iNode))
-               else
-                  Orient   = tmpBldPtMeshOri(1:3,1:3,iNode)
-               endif
-               call OrientRemap(Orient)
-               call MeshPositionNode(  BldPtMotionMesh_2D(i, iWT)     , &
-                                       iNode_2D(iNode, 2)                         , &
-                                       InitPos                       , &  ! position
-                                       ErrStat2, ErrMsg2             , &
-                                       Orient                          )  ! orientation
-                  if(Failed()) return
-               call MeshConstructElement ( BldPtMotionMesh_2D(i, iWT), ELEMENT_POINT, ErrStat2, ErrMsg2, iNode_2D(iNode, 2) ); if(Failed()) return
+         do j=1,NumMeshPtsPerBlade(i)
+            ! initial position and orientation of node
+            InitPos  = tmpBldPtMeshPosAndOri(i)%Pos(1:3,j) + Sim%WT(iWT)%OriginInit(1:3)
+            if (TransposeDCM) then
+               Orient   = transpose(tmpBldPtMeshPosAndOri(i)%Ori(1:3,1:3,j))
+            else
+               Orient   = tmpBldPtMeshPosAndOri(i)%Ori(1:3,1:3,j)
             endif
+            call OrientRemap(Orient)
+            call MeshPositionNode(  BldPtMotionMesh_2D(i, iWT)    , &
+                                    j                             , &
+                                    InitPos                       , &  ! position
+                                    ErrStat2, ErrMsg2             , &
+                                    Orient                          )  ! orientation
+               if(Failed()) return
+            call MeshConstructElement ( BldPtMotionMesh_2D(i, iWT), ELEMENT_POINT, ErrStat2, ErrMsg2, j ); if(Failed()) return
          enddo
       enddo
 
@@ -1740,13 +1761,6 @@ contains
       ! clear the tmp stuff (will need to resize this later)
       if ( allocated(tmpBldPtMeshPos) )   deallocate(tmpBldPtMeshPos)
       if ( allocated(tmpBldPtMeshOri) )   deallocate(tmpBldPtMeshOri)
-      if ( allocated(tmpBldPtMeshPosAndOri) ) then
-         do i=1,Sim%WT(iWT)%NumBlades
-            if ( allocated(tmpBldPtMeshPosAndOri(i)%Pos) )   deallocate(tmpBldPtMeshPosAndOri(i)%Pos)
-            if ( allocated(tmpBldPtMeshPosAndOri(i)%Ori) )   deallocate(tmpBldPtMeshPosAndOri(i)%Ori)
-         enddo
-         deallocate(tmpBldPtMeshPosAndOri)
-      endif
    end subroutine SetupMotionMesh
 end subroutine ADI_C_SetupRotor
 
@@ -1791,7 +1805,7 @@ subroutine ADI_C_SetRotorMotion( iWT_c,                             &
    ! Local variables
    real(DbKi)                                :: Time
    integer(IntKi)                            :: iNode
-   integer(IntKi)                            :: iWT                           !< current wind turbine / rotor
+   integer(IntKi)                            :: iWT,i,j                       !< current wind turbine / rotor
    integer(IntKi)                            :: ErrStat                       !< aggregated error status
    character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
    integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
@@ -1823,6 +1837,14 @@ subroutine ADI_C_SetRotorMotion( iWT_c,                             &
    tmpBldPtMeshVel(1:6,1:NumMeshPts(iWT))      = reshape( real(MeshVel_C(1:6*NumMeshPts(iWT)),ReKi), (/6,  NumMeshPts(iWT)/) )
    tmpBldPtMeshAcc(1:6,1:NumMeshPts(iWT))      = reshape( real(MeshAcc_C(1:6*NumMeshPts(iWT)),ReKi), (/6,  NumMeshPts(iWT)/) )
 
+   do i=1,Sim%WT(iWT)%NumBlades
+      do j=1,NumMeshPtsPerBlade(i)
+         tmpBldPtMeshPosAndOri(i)%Pos(1:3,j) = reshape( real(MeshPos_C(3 * StrucPts_2_Bld_Map( iWT )%BldNd_To_MP(i)%BladeNodeToMeshPoint(j) - 2 : 3 * StrucPts_2_Bld_Map( iWT )%BldNd_To_MP(i)%BladeNodeToMeshPoint(j)),ReKi), (/3/) )
+         tmpBldPtMeshPosAndOri(i)%Ori(1:3,1:3,j) = reshape( real(MeshOri_C(9 * StrucPts_2_Bld_Map( iWT )%BldNd_To_MP(i)%BladeNodeToMeshPoint(j) - 8 : 9 * StrucPts_2_Bld_Map( iWT )%BldNd_To_MP(i)%BladeNodeToMeshPoint(j)),R8Ki), (/3,3/) )
+         tmpBldPtMeshPosAndOri(i)%Vel(1:6,j) = reshape( real(MeshVel_C(6 * StrucPts_2_Bld_Map( iWT )%BldNd_To_MP(i)%BladeNodeToMeshPoint(j) - 5 : 6 * StrucPts_2_Bld_Map( iWT )%BldNd_To_MP(i)%BladeNodeToMeshPoint(j)),ReKi), (/6/) )
+         tmpBldPtMeshPosAndOri(i)%Acc(1:6,j) = reshape( real(MeshAcc_C(6 * StrucPts_2_Bld_Map( iWT )%BldNd_To_MP(i)%BladeNodeToMeshPoint(j) - 5 : 6 * StrucPts_2_Bld_Map( iWT )%BldNd_To_MP(i)%BladeNodeToMeshPoint(j)),ReKi), (/6/) )
+      enddo
+   enddo
 
    ! Transfer motions to input meshes
    do iWT=1,Sim%NumTurbines
@@ -2033,19 +2055,15 @@ subroutine Set_MotionMesh(iWT, ErrStat3, ErrMsg3)
 
    ! Set mesh corresponding to input motions for BldPtMotionMesh_2D
    do i=1,Sim%WT(iWT)%NumBlades
-      do iNode=1,NumMeshPts(iWT)
-         ! Proceed only if iNode_2D(iNode,1) == i
-         if (iNode_2D(iNode,1) == i) then
-            BldPtMotionMesh_2D(i, iWT)%TranslationDisp(1:3,iNode_2D(iNode,2)) = tmpBldPtMeshPos(1:3,iNode) + Sim%WT(iWT)%OriginInit(1:3) - real(BldPtMotionMesh_2D(i, iWT)%Position(1:3,iNode_2D(iNode,2)), R8Ki)
-            BldPtMotionMesh_2D(i, iWT)%Orientation(1:3,1:3,iNode_2D(iNode,2)) = tmpBldPtMeshOri(1:3,1:3,iNode)
-            BldPtMotionMesh_2D(i, iWT)%TranslationVel( 1:3,iNode_2D(iNode,2)) = tmpBldPtMeshVel(1:3,iNode)
-            BldPtMotionMesh_2D(i, iWT)%RotationVel(    1:3,iNode_2D(iNode,2)) = tmpBldPtMeshVel(4:6,iNode)
-            BldPtMotionMesh_2D(i, iWT)%TranslationAcc( 1:3,iNode_2D(iNode,2)) = tmpBldPtMeshAcc(1:3,iNode)
-            !BldPtMotionMesh_2D(i, iWT)%RotationAcc(    1:3,iNode_2D(iNode,2)) = tmpBldPtMeshAcc(4:6,iNode)   ! Rotational acc not included
-            call OrientRemap(BldPtMotionMesh_2D(i, iWT)%Orientation(1:3,1:3,iNode_2D(iNode,2)))
-            if (TransposeDCM) then
-               BldPtMotionMesh_2D(i, iWT)%Orientation(1:3,1:3,iNode_2D(iNode,2)) = transpose(BldPtMotionMesh_2D(i, iWT)%Orientation(1:3,1:3,iNode))
-            endif
+      do j=1,NumMeshPtsPerBlade(i)
+         BldPtMotionMesh_2D(i, iWT)%TranslationDisp(1:3,j) = tmpBldPtMeshPosAndOri(i)%Pos(1:3,j) + Sim%WT(iWT)%OriginInit(1:3) - real(BldPtMotionMesh_2D(i, iWT)%Position(1:3,j), R8Ki)
+         BldPtMotionMesh_2D(i, iWT)%Orientation(1:3,1:3,j) = tmpBldPtMeshPosAndOri(i)%Ori(1:3,1:3,j)
+         BldPtMotionMesh_2D(i, iWT)%TranslationVel( 1:3,j) = tmpBldPtMeshPosAndOri(i)%Vel(1:3,j)
+         BldPtMotionMesh_2D(i, iWT)%RotationVel(    1:3,j) = tmpBldPtMeshPosAndOri(i)%Vel(4:6,j)
+         BldPtMotionMesh_2D(i, iWT)%TranslationAcc( 1:3,j) = tmpBldPtMeshPosAndOri(i)%Acc(1:3,j)
+         call OrientRemap(BldPtMotionMesh_2D(i, iWT)%Orientation(1:3,1:3,j))
+         if (TransposeDCM) then
+            BldPtMotionMesh_2D(i, iWT)%Orientation(1:3,1:3,j) = transpose(BldPtMotionMesh_2D(i, iWT)%Orientation(1:3,1:3,j))
          endif
       enddo
    enddo
@@ -2565,7 +2583,8 @@ contains
    end function Failed
 end subroutine SetTempStorage
 
-
+!--------------------------------------------------------------------
+!> Don't leave junk in memory.  So destroy meshes and mappings.
 subroutine ClearTmpStorage()
    INTEGER(IntKi)                :: errStat2
    CHARACTER(ErrMsgLen)          :: errMsg2
@@ -2573,9 +2592,9 @@ subroutine ClearTmpStorage()
    if (allocated(tmpBldPtMeshPos))  deallocate(tmpBldPtMeshPos)
    if (allocated(tmpBldPtMeshOri))  deallocate(tmpBldPtMeshOri)
    if (allocated(tmpBldPtMeshVel))  deallocate(tmpBldPtMeshVel)
-   if (allocated(tmpBldPtMeshPosAndOri))  deallocate(tmpBldPtMeshPosAndOri)
    if (allocated(tmpBldPtMeshAcc))  deallocate(tmpBldPtMeshAcc)
    if (allocated(tmpBldPtMeshFrc))  deallocate(tmpBldPtMeshFrc)
+   if (allocated(tmpBldPtMeshPosAndOri))  deallocate(tmpBldPtMeshPosAndOri)
    ! Meshes
    if (allocated(BldPtMotionMesh  ))   call ClearMeshArr1(BldPtMotionMesh  )
    if (allocated(BldPtLoadMesh    ))   call ClearMeshArr1(BldPtLoadMesh    )
@@ -2588,7 +2607,6 @@ subroutine ClearTmpStorage()
    if (allocated(Map_AD_BldLoad_P_2_BldPtLoad))   call ClearMeshMapArr2(Map_AD_BldLoad_P_2_BldPtLoad)
    if (allocated(Map_BldPtMotion_2D_2_AD_Blade  ))   call ClearMeshMapArr2(Map_BldPtMotion_2D_2_AD_Blade  )
 contains
-   !> Don't leave junk in memory.  So destroy meshes and mappings.
    subroutine ClearMeshArr1(MeshName)
       type(MeshType), allocatable :: MeshName(:)
       integer :: i
