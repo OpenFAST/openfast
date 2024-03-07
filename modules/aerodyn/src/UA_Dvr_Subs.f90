@@ -58,7 +58,7 @@ module UA_Dvr_Subs
       real(ReKi)      :: CC(3,3)
       real(ReKi)      :: KK(3,3)
       logical         :: activeDOFs(3)
-      real(ReKi)      :: GFScaling(3)
+      real(ReKi)      :: GFScaling(3,3)
       real(ReKi)      :: initPos(3)
       real(ReKi)      :: initVel(3)
       real(ReKi)      :: Vec_AQ(2)  ! Vector from A to quarter chord /aerodynamic center
@@ -263,7 +263,9 @@ subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
    call ParseAry(FI, iLine, 'activeDOFs'   , InitInp%activeDOFs, 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'initPos'      , InitInp%initPos   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'initVel'      , InitInp%initVel   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
-   call ParseAry(FI, iLine, 'GFScaling'    , InitInp%GFScaling , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseAry(FI, iLine, 'GFScaling1'   , InitInp%GFScaling(1,:) , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseAry(FI, iLine, 'GFScaling2'   , InitInp%GFScaling(2,:) , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseAry(FI, iLine, 'GFScaling3'   , InitInp%GFScaling(3,:) , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'MassMatrix1'  , InitInp%MM(1,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'MassMatrix2'  , InitInp%MM(2,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'MassMatrix3'  , InitInp%MM(3,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
@@ -607,9 +609,9 @@ subroutine AeroKinetics(U0, q, qd, C_dyn, p, m)
    !tau_A2 = tau_A2  + q_dyn *C_dyn(2)* ( p%Vec_AQ(1) * CA - p%Vec_AQ(2) * SA) 
 
    ! Generalized loads
-   m%GF(1) =  m%FxA    * p%GFScaling(1)
-   m%GF(2) =  m%FyA    * p%GFScaling(2)
-   m%GF(3) = -m%tau_A  * p%GFScaling(3) ! theta_t is negative about z
+   m%GF(1) =  m%FxA    * p%GFScaling(1,1) +   m%FyA * p%GFScaling(1,2) - m%tau_A  * p%GFScaling(1,3) 
+   m%GF(2) =  m%FxA    * p%GFScaling(2,1) +   m%FyA * p%GFScaling(2,2) - m%tau_A  * p%GFScaling(2,3) 
+   m%GF(3) =  m%FxA    * p%GFScaling(3,1) +   m%FyA * p%GFScaling(3,2) - m%tau_A  * p%GFScaling(3,3) 
 
 end subroutine AeroKinetics
 !----------------------------------------------------------------------------------------------------  
