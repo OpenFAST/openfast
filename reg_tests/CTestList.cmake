@@ -399,16 +399,27 @@ bd_regression("bd_static_twisted_with_k1"   "beamdyn;static")
 
 # HydroDyn regression tests
 hd_regression("hd_OC3tripod_offshore_fixedbottom_wavesirr"  "hydrodyn;offshore")
-#hd_regression("hd_5MW_ITIBarge_DLL_WTurb_WavesIrr"          "hydrodyn;offshore")
+#hd_regression("hd_5MW_ITIBarge_DLL_WTurb_WavesIrr"         "hydrodyn;offshore")
 hd_regression("hd_5MW_OC3Spar_DLL_WTurb_WavesIrr"           "hydrodyn;offshore")
-#hd_regression("hd_5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth"      "hydrodyn;offshore")
+#hd_regression("hd_5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth"  "hydrodyn;offshore")
 hd_regression("hd_5MW_OC4Semi_WSt_WavesWN"                  "hydrodyn;offshore")
 hd_regression("hd_5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti"    "hydrodyn;offshore")
 hd_regression("hd_TaperCylinderPitchMoment"                 "hydrodyn;offshore")
 hd_regression("hd_NBodyMod1"                                "hydrodyn;offshore")
 hd_regression("hd_NBodyMod2"                                "hydrodyn;offshore")
 hd_regression("hd_NBodyMod3"                                "hydrodyn;offshore")
-
+hd_regression("hd_WaveStMod1"                               "hydrodyn;offshore")
+hd_regression("hd_WaveStMod2"                               "hydrodyn;offshore")
+hd_regression("hd_WaveStMod3"                               "hydrodyn;offshore")
+hd_regression("hd_MHstLMod2"                                "hydrodyn;offshore")
+hd_regression("hd_MHstLMod1_compare"                        "hydrodyn;offshore")
+hd_regression("hd_MHstLMod2_compare"                        "hydrodyn;offshore")
+hd_regression("hd_MCF_WaveStMod0"                           "hydrodyn;offshore")
+hd_regression("hd_MCF_WaveStMod1"                           "hydrodyn;offshore")
+hd_regression("hd_MCF_WaveStMod2"                           "hydrodyn;offshore")
+hd_regression("hd_MCF_WaveStMod3"                           "hydrodyn;offshore")
+hd_regression("hd_ExctnMod1_ExctnDisp1"                     "hydrodyn;offshore")
+hd_regression("hd_ExctnMod1_ExctnDisp2"                     "hydrodyn;offshore")
 
 # Py-HydroDyn regression tests
 py_hd_regression("py_hd_5MW_OC4Semi_WSt_WavesWN"            "hydrodyn;offshore;python")
@@ -447,6 +458,11 @@ py_ifw_regression("py_ifw_turbsimff"                          "inflowwind;python
 seast_regression("seastate_1"                                "seastate")
 seast_regression("seastate_wavemod5"                         "seastate")
 seast_regression("seastate_wr_kin1"                          "seastate")
+seast_regression("seastate_CNW1"                             "seastate")
+seast_regression("seastate_CNW2"                             "seastate")
+seast_regression("seastate_WaveMod7_WaveStMod1"              "seastate")
+seast_regression("seastate_WaveMod7_WaveStMod2"              "seastate")
+seast_regression("seastate_WaveMod7_WaveStMod3"              "seastate")
 
 # MoorDyn regression tests
 md_regression("md_5MW_OC4Semi"                                "moordyn")
