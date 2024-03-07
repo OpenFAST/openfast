@@ -20,8 +20,8 @@
 !    
 !**********************************************************************************************************************************
 MODULE SS_Excitation
-   USE SeaState_Interp
-   USE SS_Excitation_Types   
+   USE SS_Excitation_Types
+   use SeaSt_WaveField, only: WaveField_GetNodeTotalWaveElev
    USE NWTC_Library
       
    IMPLICIT NONE
@@ -110,8 +110,9 @@ function GetWaveElevation ( time, u_in, t_in, p, m, ErrStat, ErrMsg )
       call SS_Exc_Input_ExtrapInterp(u_in, t_in, u_out, time, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
-      do iBody = 1, p%NBody  
-         GetWaveElevation(iBody) = SeaSt_Interp_3D( time, u_out%PtfmPos(1:2,iBody), p%WaveField%WaveElev1, p%WaveField%SeaSt_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+      do iBody = 1, p%NBody
+!FIXME: this is the total wave elevation.  Should it include second order, or should it only include first order?
+         GetWaveElevation(iBody) = WaveField_GetNodeTotalWaveElev(p%WaveField, m%WaveField_m, time, u_out%PtfmPos(1:2,iBody), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end do
 

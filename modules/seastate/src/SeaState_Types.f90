@@ -34,7 +34,6 @@ MODULE SeaState_Types
 USE Current_Types
 USE Waves_Types
 USE Waves2_Types
-USE SeaState_Interp_Types
 USE SeaSt_WaveField_Types
 USE NWTC_Library
 IMPLICIT NONE
@@ -112,7 +111,7 @@ IMPLICIT NONE
     TYPE(ProgDesc)  :: Ver      !< Version of SeaState [-]
     LOGICAL  :: InvalidWithSSExctn = .false.      !< Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2) [(-)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevVisX      !< X locations of grid output [m,-]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevVisY      !< X locations of grid output [m,-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevVisY      !< Y locations of grid output [m,-]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElevVisGrid      !< Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second/third dimensions are the grid of points. [(m)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
   END TYPE SeaSt_InitOutputType
@@ -142,7 +141,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Decimate = 0_IntKi      !< The output decimation counter [-]
     REAL(DbKi)  :: LastOutTime = 0.0_R8Ki      !< Last time step which was written to the output file (sec) [-]
     INTEGER(IntKi)  :: LastIndWave = 0_IntKi      !< The last index used in the wave kinematics arrays, used to optimize interpolation [-]
-    TYPE(SeaSt_Interp_MiscVarType)  :: SeaSt_Interp_m      !< misc var information from the SeaState Interpolation module [-]
+    TYPE(SeaSt_WaveField_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState Interpolation module [-]
   END TYPE SeaSt_MiscVarType
 ! =======================
 ! =========  SeaSt_ParameterType  =======
@@ -874,7 +873,7 @@ subroutine SeaSt_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    DstMiscData%Decimate = SrcMiscData%Decimate
    DstMiscData%LastOutTime = SrcMiscData%LastOutTime
    DstMiscData%LastIndWave = SrcMiscData%LastIndWave
-   call SeaSt_Interp_CopyMisc(SrcMiscData%SeaSt_Interp_m, DstMiscData%SeaSt_Interp_m, CtrlCode, ErrStat2, ErrMsg2)
+   call SeaSt_WaveField_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 end subroutine
@@ -888,7 +887,7 @@ subroutine SeaSt_DestroyMisc(MiscData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SeaSt_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   call SeaSt_Interp_DestroyMisc(MiscData%SeaSt_Interp_m, ErrStat2, ErrMsg2)
+   call SeaSt_WaveField_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
@@ -900,7 +899,7 @@ subroutine SeaSt_PackMisc(RF, Indata)
    call RegPack(RF, InData%Decimate)
    call RegPack(RF, InData%LastOutTime)
    call RegPack(RF, InData%LastIndWave)
-   call SeaSt_Interp_PackMisc(RF, InData%SeaSt_Interp_m) 
+   call SeaSt_WaveField_PackMisc(RF, InData%WaveField_m) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -912,7 +911,7 @@ subroutine SeaSt_UnPackMisc(RF, OutData)
    call RegUnpack(RF, OutData%Decimate); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LastOutTime); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LastIndWave); if (RegCheckErr(RF, RoutineName)) return
-   call SeaSt_Interp_UnpackMisc(RF, OutData%SeaSt_Interp_m) ! SeaSt_Interp_m 
+   call SeaSt_WaveField_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
 end subroutine
 
 subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
