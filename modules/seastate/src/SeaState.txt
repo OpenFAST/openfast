@@ -91,7 +91,7 @@ typedef   ^                  ^                      CHARACTER(ChanLen)       Wri
 typedef   ^                  ^                      ProgDesc                 Ver                -      -      -  "Version of SeaState"
 typedef   ^                  ^                      LOGICAL                  InvalidWithSSExctn -      -      -  "Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2)" (-)
 typedef   ^                  ^                      SiKi                     WaveElevVisX       {:}     -      -  "X locations of grid output"    "m,-"
-typedef   ^                  ^                      SiKi                     WaveElevVisY       {:}     -      -  "X locations of grid output"    "m,-"
+typedef   ^                  ^                      SiKi                     WaveElevVisY       {:}     -      -  "Y locations of grid output"    "m,-"
 typedef   ^                  ^                      SiKi                     WaveElevVisGrid    {:}{:}{:}  -   -  "Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second/third dimensions are the grid of points." (m)
 typedef   ^                  ^                      SeaSt_WaveFieldType     *WaveField          -      -      -  "Pointer to wave field"
 
