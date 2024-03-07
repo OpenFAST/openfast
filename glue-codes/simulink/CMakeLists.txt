@@ -35,6 +35,7 @@ set(MEX_LIBS
   $<TARGET_FILE:servodynlib-matlab> # MATLAB Specific
   $<TARGET_FILE:subdynlib>
   $<TARGET_FILE:extinflowlib>
+  $<TARGET_FILE:extloadslib>
   $<TARGET_FILE:ifwlib>
   $<TARGET_FILE:scfastlib>
   $<TARGET_FILE:extinflowtypeslib>
@@ -73,6 +74,7 @@ target_include_directories(FAST_SFunc PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/modules/openfast-library/src>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/modules/externalinflow/src>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/modules/supercontroller/src>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/modules/extloads/src>
 )
 if(APPLE OR UNIX)
    target_compile_definitions(FAST_SFunc PRIVATE IMPLICIT_DLLEXPORT)
