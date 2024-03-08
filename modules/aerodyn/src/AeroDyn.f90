@@ -393,8 +393,8 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       p%rotors(iR)%TFin%TFinIndMod  = InputFileData%rotors(iR)%TFin%TFinIndMod
       p%rotors(iR)%TFin%TFinAFID    = InputFileData%rotors(iR)%TFin%TFinAFID
       p%rotors(iR)%TFin%TFinKp      = InputFileData%rotors(iR)%TFin%TFinKp
-      p%rotors(iR)%TFin%TFinSigma      = InputFileData%rotors(iR)%TFin%TFinSigma
-      p%rotors(iR)%TFin%TFinAStar      = InputFileData%rotors(iR)%TFin%TFinAStar
+      p%rotors(iR)%TFin%TFinSigma   = InputFileData%rotors(iR)%TFin%TFinSigma
+      p%rotors(iR)%TFin%TFinAStar   = InputFileData%rotors(iR)%TFin%TFinAStar
       p%rotors(iR)%TFin%TFinKv      = InputFileData%rotors(iR)%TFin%TFinKv
       p%rotors(iR)%TFin%TFinCDc     = InputFileData%rotors(iR)%TFin%TFinCDc
    enddo
