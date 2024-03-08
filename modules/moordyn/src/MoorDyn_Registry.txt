@@ -87,7 +87,7 @@ typedef  ^            ^                DbKi               CaEnd          -      
 
 # this is the Body type, which holds data for each body object
 typedef  ^            MD_Body          IntKi              IdNum          -       -  -   "integer identifier of this Point"
-typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  0=free, 1=fixed, -1=vessel"
+typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  0=free, 1=fixed, -1=coupled, 2=coupledpinned"
 typedef  ^            ^                IntKi              AttachedC      {30}    -  -   "list of IdNums of points attached to this body"
 typedef  ^            ^                IntKi              AttachedR      {30}    -  -   "list of IdNums of rods attached to this body"
 typedef  ^            ^                IntKi              nAttachedC     -       0  -   "number of attached points"
@@ -116,7 +116,7 @@ typedef  ^            ^                DbKi               rCG            {3}    
 # this is the Point type, which holds data for each point object
 typedef  ^            MD_Point       IntKi              IdNum          -       -  -   "integer identifier of this point"
 typedef  ^            ^                CHARACTER(10)      type           -       -  -   "type of point: fix, vessel, point"
-typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  1=fixed, -1=vessel, 0=free"
+typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  1=fixed, -1=coupled, 0=free"
 typedef  ^            ^                IntKi              Attached       {10}    -  -   "list of IdNums of lines attached to this point node"
 typedef  ^            ^                IntKi              Top            {10}    -  -   "list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A)"
 typedef  ^            ^                IntKi              nAttached      -       0  -   "number of attached lines"
@@ -142,7 +142,7 @@ typedef  ^            ^                DbKi               M              {3}{3} 
 typedef  ^            MD_Rod           IntKi              IdNum         -        -  -   "integer identifier of this Line"
 typedef  ^            ^                CHARACTER(10)      type          -        -  -   "type of Rod.  should match one of RodProp names"
 typedef  ^            ^                IntKi              PropsIdNum    -        -  -   "the IdNum of the associated rod properties"     -
-typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  0=fixed, 1=vessel, 2=point"
+typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  0=free, 1=pinned, 2=fixed, -1=coupledpinned, -2=coupled"
 typedef  ^            ^                IntKi              AttachedA      {10}    -  -   "list of IdNums of lines attached to end A"
 typedef  ^            ^                IntKi              AttachedB      {10}    -  -   "list of IdNums of lines attached to end B"
 typedef  ^            ^                IntKi              TopA           {10}    -  -   "list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A)"
@@ -390,6 +390,7 @@ typedef   ^       ^                    DbKi                mu_kT          -     
 typedef   ^       ^                    DbKi                mu_kA          -     -    -   "axial kinetic friction coefficient" "(-)"
 typedef   ^       ^                    DbKi                mc             -     -    -   "ratio of the static friction coefficient to the kinetic friction coefficient" "(-)"
 typedef   ^       ^                    DbKi                cv             -     -    -   "saturated damping coefficient" "(-)"
+typedef   ^       ^                    IntKi        inertialF            -           0  -   "Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 1 if yes, 0 if no" - 
 # --- parameters for wave and current ---
 typedef   ^       ^                    IntKi        nxWave             -            -  -   "number of x wave grid points"            -
 typedef   ^       ^                    IntKi        nyWave             -            -  -   "number of y wave grid points"            -

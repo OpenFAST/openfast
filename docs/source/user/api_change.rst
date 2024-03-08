@@ -10,7 +10,7 @@ The line number corresponds to the resulting line number after all changes are i
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
 
-OpenFAST v3.5.1 to OpenFAST dev
+OpenFAST v3.5.2 to OpenFAST dev
 ----------------------------------
 
 The HydroDyn module was split into HydroDyn and SeaState.  This results in a
@@ -33,11 +33,16 @@ SubDyn                                        59\*                              
 \*Exact line number depends on number of entries in various preceeding tables.
 
 
+OpenFAST v3.5.1 to OpenFAST v3.5.2 
+----------------------------------
+
+No input file changes were made.
+
 
 OpenFAST v3.5.0 to OpenFAST v3.5.1 
 ----------------------------------
 
-No input files changes were made.  Some input files now include additional
+No input file changes were made.  Some input files now include additional
 output channels:  AeroDyn nodal outputs for another coordinate system, new
 MoorDyn output names (Connect changed to Point).
 

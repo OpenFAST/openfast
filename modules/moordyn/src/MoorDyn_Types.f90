@@ -104,7 +104,7 @@ IMPLICIT NONE
 ! =========  MD_Body  =======
   TYPE, PUBLIC :: MD_Body
     INTEGER(IntKi)  :: IdNum      !< integer identifier of this Point [-]
-    INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  0=free, 1=fixed, -1=vessel [-]
+    INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  0=free, 1=fixed, -1=coupled, 2=coupledpinned [-]
     INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedC      !< list of IdNums of points attached to this body [-]
     INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedR      !< list of IdNums of rods attached to this body [-]
     INTEGER(IntKi)  :: nAttachedC = 0      !< number of attached points [-]
@@ -135,7 +135,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: MD_Point
     INTEGER(IntKi)  :: IdNum      !< integer identifier of this point [-]
     CHARACTER(10)  :: type      !< type of point: fix, vessel, point [-]
-    INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  1=fixed, -1=vessel, 0=free [-]
+    INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  1=fixed, -1=coupled, 0=free [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: Attached      !< list of IdNums of lines attached to this point node [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: Top      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
     INTEGER(IntKi)  :: nAttached = 0      !< number of attached lines [-]
@@ -163,7 +163,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: IdNum      !< integer identifier of this Line [-]
     CHARACTER(10)  :: type      !< type of Rod.  should match one of RodProp names [-]
     INTEGER(IntKi)  :: PropsIdNum      !< the IdNum of the associated rod properties [-]
-    INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  0=fixed, 1=vessel, 2=point [-]
+    INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  0=free, 1=pinned, 2=fixed, -1=coupledpinned, -2=coupled [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedA      !< list of IdNums of lines attached to end A [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedB      !< list of IdNums of lines attached to end B [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: TopA      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
@@ -425,6 +425,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: mu_kA      !< axial kinetic friction coefficient [(-)]
     REAL(DbKi)  :: mc      !< ratio of the static friction coefficient to the kinetic friction coefficient [(-)]
     REAL(DbKi)  :: cv      !< saturated damping coefficient [(-)]
+    INTEGER(IntKi)  :: inertialF = 0      !< Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 1 if yes, 0 if no [-]
     INTEGER(IntKi)  :: nxWave      !< number of x wave grid points [-]
     INTEGER(IntKi)  :: nyWave      !< number of y wave grid points [-]
     INTEGER(IntKi)  :: nzWave      !< number of z wave grid points [-]
@@ -10785,6 +10786,7 @@ ENDIF
     DstParamData%mu_kA = SrcParamData%mu_kA
     DstParamData%mc = SrcParamData%mc
     DstParamData%cv = SrcParamData%cv
+    DstParamData%inertialF = SrcParamData%inertialF
     DstParamData%nxWave = SrcParamData%nxWave
     DstParamData%nyWave = SrcParamData%nyWave
     DstParamData%nzWave = SrcParamData%nzWave
@@ -11296,6 +11298,7 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! mu_kA
       Db_BufSz   = Db_BufSz   + 1  ! mc
       Db_BufSz   = Db_BufSz   + 1  ! cv
+      Int_BufSz  = Int_BufSz  + 1  ! inertialF
       Int_BufSz  = Int_BufSz  + 1  ! nxWave
       Int_BufSz  = Int_BufSz  + 1  ! nyWave
       Int_BufSz  = Int_BufSz  + 1  ! nzWave
@@ -11632,6 +11635,8 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%cv
     Db_Xferred = Db_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%inertialF
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nxWave
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nyWave
@@ -12328,6 +12333,8 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     OutData%cv = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
+    OutData%inertialF = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%nxWave = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%nyWave = IntKiBuf(Int_Xferred)
