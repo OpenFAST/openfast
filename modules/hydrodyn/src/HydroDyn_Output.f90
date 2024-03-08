@@ -25,6 +25,7 @@ MODULE HydroDyn_Output
    USE                              HydroDyn_Types
    !USE                              HydroDyn_Output_Types
    USE                              Waves
+   USE                              YawOffset
    IMPLICIT                         NONE
    
    PRIVATE
@@ -813,7 +814,7 @@ END SUBROUTINE HDOut_OpenSum
 
 
 !====================================================================================================
-SUBROUTINE HDOut_MapOutputs( p, y, m_WAMIT, m_WAMIT2, F_Add, F_Waves, F_Hydro, PRPmesh, q, qdot, qdotdot, ErrStat, ErrMsg )
+SUBROUTINE HDOut_MapOutputs( p, y, m_WAMIT, m_WAMIT2, F_Add, F_Waves, F_Hydro, PRPmesh, PtfmRefY, q, qdot, qdotdot, ErrStat, ErrMsg )
 ! This subroutine writes the data stored in the y variable to the correct indexed postions in WriteOutput
 ! This is called by HydroDyn_CalcOutput() at each time step.
 !---------------------------------------------------------------------------------------------------- 
@@ -825,6 +826,7 @@ SUBROUTINE HDOut_MapOutputs( p, y, m_WAMIT, m_WAMIT2, F_Add, F_Waves, F_Hydro, P
    REAL(ReKi),               ALLOCATABLE, INTENT( IN    )  :: F_Waves(:)
    REAL(ReKi),                            INTENT( IN    )  :: F_Hydro(:)     ! All hydrodynamic loads integrated at (0,0,0) in the global coordinate system
    type(MeshType),                        INTENT( IN    )  :: PRPmesh        ! the PRP mesh -- for motions output
+   REAL(ReKi),                            INTENT( IN    )  :: PtfmRefY       ! the PRP reference yaw offset
    REAL(ReKi),                            INTENT( IN    )  :: q(:)           ! WAMIT body translations and rotations
    REAL(ReKi),                            INTENT( IN    )  :: qdot(:)        ! WAMIT body translational and rotational velocities
    REAL(ReKi),                            INTENT( IN    )  :: qdotdot(:)     ! WAMIT body translational and rotational accelerations
@@ -843,7 +845,7 @@ SUBROUTINE HDOut_MapOutputs( p, y, m_WAMIT, m_WAMIT2, F_Add, F_Waves, F_Hydro, P
    ! Initialize all unused channels to zero (in case they don't get set, but are still requested)
    AllOuts  = 0.0_ReKi
 
-   rotdisp = GetSmllRotAngs ( PRPMesh%Orientation(:,:,1), ErrStat2, ErrMsg2 )
+   rotdisp = GetRotAngs ( PtfmRefY, PRPMesh%Orientation(:,:,1), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HDOut_MapOutputs' )
    AllOuts(PRPMotions)  = reshape((/real(PRPMesh%TranslationDisp(:,1),ReKi),rotdisp(:)/),(/6/))
    AllOuts(PRPVel)      = reshape((/PRPMesh%TranslationVel(:,1),PRPMesh%RotationVel(:,1)/),(/6/))

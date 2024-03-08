@@ -792,7 +792,7 @@ SUBROUTINE SetHDInputs_Constant(u_HD, mappingData, drvrData, ErrStat, ErrMsg)
       u_HD%PRPMesh%TranslationDisp(:,1)   = drvrData%uPRPInSteady(1:3) 
 
          ! Compute direction cosine matrix from the rotation angles
-      call GetOrientation('InputRotation',drvrData%PtfmRefY,drvrData%uPRPInSteady(4:6),u_HD%PRPMesh%Orientation(:,:,1), 'PRP orientation', ErrStat2, ErrMsg2)
+      call RotTrans('InputRotation',drvrData%PtfmRefY,drvrData%uPRPInSteady(4:6),u_HD%PRPMesh%Orientation(:,:,1), 'PRP orientation', ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
          ! Translation - No transformation needed
@@ -845,7 +845,7 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
 !         maxAngle = max( maxAngle, abs(yInterp(4:6)) )
 
       ! Obtain the orientation matrix for the small rotation part from the reference yaw orientation
-      call GetOrientation('InputRotation',drvrData%PtfmRefY,yInterp(4:6),u_HD%PRPMesh%Orientation(:,:,1), 'PRP orientation', ErrStat2, ErrMsg2)
+      call RotTrans('InputRotation',drvrData%PtfmRefY,yInterp(4:6),u_HD%PRPMesh%Orientation(:,:,1), 'PRP orientation', ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! Translation - No transformation needed
@@ -880,11 +880,11 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
       END DO
                
       ! PRP and body 1-NBody orientations (skipping the maxAngle stuff)
-      call GetOrientation('InputRotation',drvrData%PtfmRefY,drvrData%PRPin(n,4:6),u_HD%PRPMesh%Orientation(:,:,1), 'PRP orientation', ErrStat2, ErrMsg2)
+      call RotTrans('InputRotation',drvrData%PtfmRefY,drvrData%PRPin(n,4:6),u_HD%PRPMesh%Orientation(:,:,1), 'PRP orientation', ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             
       DO I=1, drvrData%NBody
-         call GetOrientation('InputRotation',drvrData%PtfmRefY,drvrData%PRPin(n,(6*I+4):(6*I+6)),u_HD%WAMITMesh%Orientation(:,:,I), 'body orientation', ErrStat2, ErrMsg2)
+         call RotTrans('InputRotation',drvrData%PtfmRefY,drvrData%PRPin(n,(6*I+4):(6*I+6)),u_HD%WAMITMesh%Orientation(:,:,I), 'body orientation', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       END DO
 

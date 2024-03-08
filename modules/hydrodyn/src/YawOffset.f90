@@ -10,7 +10,12 @@ INTEGER(IntKi), PARAMETER        :: h2i = 2_IntKi
 INTERFACE hiFrameTransform
    MODULE PROCEDURE hiFrameTransformVec3
    MODULE PROCEDURE hiFrameTransformMat
-END INTERFACE
+END INTERFACE hiFrameTransform
+
+INTERFACE GetRotAngs
+   MODULE PROCEDURE GetRotAngsR
+   MODULE PROCEDURE GetRotAngsD
+END INTERFACE GetRotAngs
 
 CONTAINS
 
@@ -37,9 +42,9 @@ SUBROUTINE GetPtfmRefYOrient(PtfmRefY, Orient, ErrStat, ErrMsg)
 
 END SUBROUTINE GetPtfmRefYOrient
 
-SUBROUTINE GetOrientation(RotationType,PtfmRefY,Rotation,Orientation,ErrTxt,ErrStat,ErrMsg)
-
+SUBROUTINE RotTrans(RotationType,PtfmRefY,Rotation,Orientation,ErrTxt,ErrStat,ErrMsg)
    ! Compute the orientation matrix with potentially large reference yaw offset
+   ! This subroutine essentially extends SmllRotTrans to accommodate a large yaw offset
    CHARACTER(*),   INTENT(IN   ) :: RotationType
    REAL(ReKi),     INTENT(IN   ) :: PtfmRefY
    REAL(R8Ki),     INTENT(IN   ) :: Rotation(3)
@@ -52,7 +57,7 @@ SUBROUTINE GetOrientation(RotationType,PtfmRefY,Rotation,Orientation,ErrTxt,ErrS
    REAL(R8Ki)                    :: SmllOMat(3,3)
    INTEGER(IntKi)                :: ErrStat2
    CHARACTER(ErrMsgLen)          :: ErrMsg2
-   CHARACTER(*), PARAMETER       :: RoutineName = 'GetOrientation'
+   CHARACTER(*), PARAMETER       :: RoutineName = 'RotTrans'
 
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -68,7 +73,65 @@ SUBROUTINE GetOrientation(RotationType,PtfmRefY,Rotation,Orientation,ErrTxt,ErrS
    ! Combine the contributions
    Orientation = matmul(SmllOMat,PtfmRefYOrient)
 
-END SUBROUTINE GetOrientation
+END SUBROUTINE RotTrans
+
+
+FUNCTION GetRotAngsR(PtfmRefY, DCMat, ErrStat, ErrMsg)
+   ! Compute the intrinsic Tait-Bryan angles (yaw first, pitch second, roll last) based on large yaw offset
+   ! The subroutine essentially extends GetSmllRotAngs to accommodate a large yaw offset
+   REAL(ReKi),     INTENT(IN   ) :: PtfmRefY
+   REAL(SiKi),     INTENT(IN   ) :: DCMat(3,3)
+   INTEGER(IntKi), INTENT(  OUT) :: ErrStat
+   CHARACTER(*),   INTENT(  OUT) :: ErrMsg
+
+   REAL(SiKi)                    :: GetRotAngsR( 3 )
+
+   REAL(ReKi)                    :: PtfmRefYOrient(3,3)
+   INTEGER(IntKi)                :: ErrStat2
+   CHARACTER(ErrMsgLen)          :: ErrMsg2
+   CHARACTER(*), PARAMETER       :: RoutineName = 'GetRotAngs'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   ! Orientation matrix associated with large reference yaw offset
+   call GetPtfmRefYOrient(PtfmRefY, PtfmRefYOrient, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   
+   GetRotAngsR = GetSmllRotAngsR ( matmul(DCMat,transpose(REAL(PtfmRefYOrient,SiKi))), ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   GetRotAngsR(3) = GetRotAngsR(3) + PtfmRefY   
+
+END FUNCTION GetRotAngsR
+
+FUNCTION GetRotAngsD(PtfmRefY, DCMat, ErrStat, ErrMsg)
+   ! Compute the intrinsic Tait-Bryan angles (yaw first, pitch second, roll last) based on large yaw offset
+   ! The subroutine essentially extends GetSmllRotAngs to accommodate a large yaw offset
+   REAL(ReKi),     INTENT(IN   ) :: PtfmRefY
+   REAL(DbKi),     INTENT(IN   ) :: DCMat(3,3)
+   INTEGER(IntKi), INTENT(  OUT) :: ErrStat
+   CHARACTER(*),   INTENT(  OUT) :: ErrMsg
+
+   REAL(DbKi)                    :: GetRotAngsD( 3 )
+
+   REAL(ReKi)                    :: PtfmRefYOrient(3,3)
+   INTEGER(IntKi)                :: ErrStat2
+   CHARACTER(ErrMsgLen)          :: ErrMsg2
+   CHARACTER(*), PARAMETER       :: RoutineName = 'GetRotAngs'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   ! Orientation matrix associated with large reference yaw offset
+   call GetPtfmRefYOrient(PtfmRefY, PtfmRefYOrient, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   GetRotAngsD = GetSmllRotAngsD ( matmul(DCMat,transpose(REAL(PtfmRefYOrient,DbKi))), ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   GetRotAngsD(3) = GetRotAngsD(3) + PtfmRefY   
+
+END FUNCTION GetRotAngsD
+
 
 SUBROUTINE hiFrameTransformVec3(Mode,PtfmRefY,VecIn,VecOut,ErrStat,ErrMsg)
    INTEGER(IntKi), INTENT(IN   ) :: Mode
