@@ -91,6 +91,7 @@ IMPLICIT NONE
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
     LOGICAL  :: InvalidWithSSExctn = .false.      !< Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2) [(-)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
   END TYPE HydroDyn_InitInputType
 ! =======================
 ! =========  HydroDyn_InitOutputType  =======
@@ -186,6 +187,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix [-]
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
   END TYPE HydroDyn_ParameterType
 ! =======================
 ! =========  HydroDyn_InputType  =======
@@ -193,6 +195,7 @@ IMPLICIT NONE
     TYPE(Morison_InputType)  :: Morison      !< Morison module inputs [-]
     TYPE(MeshType)  :: WAMITMesh      !< Motions at the WAMIT reference point(s) in the inertial frame [-]
     TYPE(MeshType)  :: PRPMesh      !< Motions at the Platform reference point in the inertial frame [-]
+    REAL(ReKi)  :: PtfmRefY = 0.0_ReKi      !< Reference yaw position of the PRP relative to the inertial frame [(radians)]
   END TYPE HydroDyn_InputType
 ! =======================
 ! =========  HydroDyn_OutputType  =======
@@ -597,6 +600,7 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
    DstInitInputData%VisMeshes = SrcInitInputData%VisMeshes
    DstInitInputData%InvalidWithSSExctn = SrcInitInputData%InvalidWithSSExctn
    DstInitInputData%WaveField => SrcInitInputData%WaveField
+   DstInitInputData%PtfmYMod = SrcInitInputData%PtfmYMod
 end subroutine
 
 subroutine HydroDyn_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -635,6 +639,7 @@ subroutine HydroDyn_PackInitInput(RF, Indata)
          call SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, InData%WaveField) 
       end if
    end if
+   call RegPack(RF, InData%PtfmYMod)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -675,6 +680,7 @@ subroutine HydroDyn_UnPackInitInput(RF, OutData)
    else
       OutData%WaveField => null()
    end if
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -1698,6 +1704,7 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
    DstParamData%Jac_ny = SrcParamData%Jac_ny
    DstParamData%VisMeshes = SrcParamData%VisMeshes
    DstParamData%WaveField => SrcParamData%WaveField
+   DstParamData%PtfmYMod = SrcParamData%PtfmYMod
 end subroutine
 
 subroutine HydroDyn_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -1834,6 +1841,7 @@ subroutine HydroDyn_PackParam(RF, Indata)
          call SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, InData%WaveField) 
       end if
    end if
+   call RegPack(RF, InData%PtfmYMod)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1933,6 +1941,7 @@ subroutine HydroDyn_UnPackParam(RF, OutData)
    else
       OutData%WaveField => null()
    end if
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine HydroDyn_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -1955,6 +1964,7 @@ subroutine HydroDyn_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, Err
    call MeshCopy(SrcInputData%PRPMesh, DstInputData%PRPMesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInputData%PtfmRefY = SrcInputData%PtfmRefY
 end subroutine
 
 subroutine HydroDyn_DestroyInput(InputData, ErrStat, ErrMsg)
@@ -1982,6 +1992,7 @@ subroutine HydroDyn_PackInput(RF, Indata)
    call Morison_PackInput(RF, InData%Morison) 
    call MeshPack(RF, InData%WAMITMesh) 
    call MeshPack(RF, InData%PRPMesh) 
+   call RegPack(RF, InData%PtfmRefY)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1993,6 +2004,7 @@ subroutine HydroDyn_UnPackInput(RF, OutData)
    call Morison_UnpackInput(RF, OutData%Morison) ! Morison 
    call MeshUnpack(RF, OutData%WAMITMesh) ! WAMITMesh 
    call MeshUnpack(RF, OutData%PRPMesh) ! PRPMesh 
+   call RegUnpack(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine HydroDyn_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -2270,6 +2282,7 @@ SUBROUTINE HydroDyn_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, Er
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    CALL MeshExtrapInterp1(u1%PRPMesh, u2%PRPMesh, tin, u_out%PRPMesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   u_out%PtfmRefY = a1*u1%PtfmRefY + a2*u2%PtfmRefY
 END SUBROUTINE
 
 SUBROUTINE HydroDyn_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
@@ -2331,6 +2344,7 @@ SUBROUTINE HydroDyn_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    CALL MeshExtrapInterp2(u1%PRPMesh, u2%PRPMesh, u3%PRPMesh, tin, u_out%PRPMesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   u_out%PtfmRefY = a1*u1%PtfmRefY + a2*u2%PtfmRefY + a3*u3%PtfmRefY
 END SUBROUTINE
 
 subroutine HydroDyn_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg)

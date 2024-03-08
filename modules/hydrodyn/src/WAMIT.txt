@@ -38,7 +38,7 @@ typedef   ^                            ^                             DbKi       
 typedef   ^                            ^                             CHARACTER(1024)          WAMITFile                       -          -        -         ""    -
 typedef   ^                            ^                             Conv_Rdtn_InitInputType  Conv_Rdtn                       -          -        -         ""    -
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                       -          -        -         "Pointer to wave field"
-
+typedef   ^                            ^                             INTEGER                  PtfmYMod                        -          -        -         "Large yaw model" -
 #
 #
 # Define outputs from the initialization routine here:
@@ -115,12 +115,14 @@ typedef   ^                            ^                             SS_Rad_Para
 typedef   ^                            ^                             SS_Exc_ParameterType     SS_Exctn                 -          -         -         ""        -
 typedef   ^                            ^                             DbKi                     DT                       -          -         -         ""        -
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                -          -        -         "Pointer to wave field"
+typedef   ^                            ^                             INTEGER                  PtfmYMod                        -          -        -         "Large yaw model" -
 #
 #
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 #
 typedef   ^                            InputType                     MeshType                 Mesh                    -          -         -         "Displacements at the WAMIT reference point in the inertial frame" -
+typedef   ^                            ^                             ReKi                     PtfmRefY                -          -         -         "Reference yaw offset" (rad)
 #
 #
 # ..... Outputs ...................................................................................................................

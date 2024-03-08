@@ -58,6 +58,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: WAMITFile      !<  [-]
     TYPE(Conv_Rdtn_InitInputType)  :: Conv_Rdtn      !<  [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
   END TYPE WAMIT_InitInputType
 ! =======================
 ! =========  WAMIT_ContinuousStateType  =======
@@ -127,11 +128,13 @@ IMPLICIT NONE
     TYPE(SS_Exc_ParameterType)  :: SS_Exctn      !<  [-]
     REAL(DbKi)  :: DT = 0.0_R8Ki      !<  [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
   END TYPE WAMIT_ParameterType
 ! =======================
 ! =========  WAMIT_InputType  =======
   TYPE, PUBLIC :: WAMIT_InputType
     TYPE(MeshType)  :: Mesh      !< Displacements at the WAMIT reference point in the inertial frame [-]
+    REAL(ReKi)  :: PtfmRefY = 0.0_ReKi      !< Reference yaw offset [(rad)]
   END TYPE WAMIT_InputType
 ! =======================
 ! =========  WAMIT_OutputType  =======
@@ -252,6 +255,7 @@ subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstInitInputData%WaveField => SrcInitInputData%WaveField
+   DstInitInputData%PtfmYMod = SrcInitInputData%PtfmYMod
 end subroutine
 
 subroutine WAMIT_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -321,6 +325,7 @@ subroutine WAMIT_PackInitInput(RF, Indata)
          call SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, InData%WaveField) 
       end if
    end if
+   call RegPack(RF, InData%PtfmYMod)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -371,6 +376,7 @@ subroutine WAMIT_UnPackInitInput(RF, OutData)
    else
       OutData%WaveField => null()
    end if
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WAMIT_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
@@ -908,6 +914,7 @@ subroutine WAMIT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    if (ErrStat >= AbortErrLev) return
    DstParamData%DT = SrcParamData%DT
    DstParamData%WaveField => SrcParamData%WaveField
+   DstParamData%PtfmYMod = SrcParamData%PtfmYMod
 end subroutine
 
 subroutine WAMIT_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -972,6 +979,7 @@ subroutine WAMIT_PackParam(RF, Indata)
          call SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, InData%WaveField) 
       end if
    end if
+   call RegPack(RF, InData%PtfmYMod)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1019,6 +1027,7 @@ subroutine WAMIT_UnPackParam(RF, OutData)
    else
       OutData%WaveField => null()
    end if
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WAMIT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -1035,6 +1044,7 @@ subroutine WAMIT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
    call MeshCopy(SrcInputData%Mesh, DstInputData%Mesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInputData%PtfmRefY = SrcInputData%PtfmRefY
 end subroutine
 
 subroutine WAMIT_DestroyInput(InputData, ErrStat, ErrMsg)
@@ -1056,6 +1066,7 @@ subroutine WAMIT_PackInput(RF, Indata)
    character(*), parameter         :: RoutineName = 'WAMIT_PackInput'
    if (RF%ErrStat >= AbortErrLev) return
    call MeshPack(RF, InData%Mesh) 
+   call RegPack(RF, InData%PtfmRefY)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1065,6 +1076,7 @@ subroutine WAMIT_UnPackInput(RF, OutData)
    character(*), parameter            :: RoutineName = 'WAMIT_UnPackInput'
    if (RF%ErrStat /= ErrID_None) return
    call MeshUnpack(RF, OutData%Mesh) ! Mesh 
+   call RegUnpack(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WAMIT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -1210,6 +1222,7 @@ SUBROUTINE WAMIT_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMs
    
    CALL MeshExtrapInterp1(u1%Mesh, u2%Mesh, tin, u_out%Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   u_out%PtfmRefY = a1*u1%PtfmRefY + a2*u2%PtfmRefY
 END SUBROUTINE
 
 SUBROUTINE WAMIT_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
@@ -1267,6 +1280,7 @@ SUBROUTINE WAMIT_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, E
    a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
    CALL MeshExtrapInterp2(u1%Mesh, u2%Mesh, u3%Mesh, tin, u_out%Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   u_out%PtfmRefY = a1*u1%PtfmRefY + a2*u2%PtfmRefY + a3*u3%PtfmRefY
 END SUBROUTINE
 
 subroutine WAMIT_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg)

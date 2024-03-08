@@ -42,8 +42,100 @@ MODULE Morison
    PUBLIC :: Morison_CalcOutput                     ! Routine for computing outputs
    PUBLIC :: Morison_UpdateDiscState                ! Routine for updating discrete states
    
+
+   INTERFACE hiFrameTransform
+      MODULE PROCEDURE hiFrameTransformVec3
+      MODULE PROCEDURE hiFrameTransformMat
+   END INTERFACE
+
+   INTEGER(IntKi), PARAMETER        :: i2h = 1_IntKi
+   INTEGER(IntKi), PARAMETER        :: h2i = 2_IntKi
+
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE hiFrameTransformVec3(Mode,PtfmRefY,VecIn,VecOut,ErrStat,ErrMsg)
+   INTEGER(IntKi), INTENT(IN   ) :: Mode
+   REAL(ReKi),     INTENT(IN   ) :: PtfmRefY
+   REAL(ReKi),     INTENT(IN   ) :: VecIn(3)
+   REAL(ReKi),     INTENT(  OUT) :: VecOut(3)
+   INTEGER(IntKi), INTENT(  OUT) :: ErrStat
+   CHARACTER(*),   INTENT(  OUT) :: ErrMsg
+
+   REAL(ReKi)                    :: PtfmRefYOrient(3,3)
+   INTEGER(IntKi)                :: ErrStat2
+   CHARACTER(ErrMsgLen)          :: ErrMsg2
+
+   CHARACTER(*),   PARAMETER     :: RoutineName = 'hiFrameTransformVec3'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   call GetPtfmRefYOrient(PtfmRefY, PtfmRefYOrient, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   if (Mode .EQ. i2h) then   ! i-frame to h-frame
+      VecOut = matmul(PtfmRefYOrient,VecIn)
+   else if (Mode .EQ. h2i) then  ! h-frame to i-frame
+      VecOut = matmul(transpose(PtfmRefYOrient),VecIn)
+   else
+      call SetErrStat(ErrID_Fatal, "Mode must be 1 or 2", ErrStat, ErrMsg, RoutineName) 
+   end if
+
+END SUBROUTINE hiFrameTransformVec3
+
+SUBROUTINE hiFrameTransformMat(Mode,PtfmRefY,MatIn,MatOut,ErrStat,ErrMsg)
+   INTEGER(IntKi), INTENT(IN   ) :: Mode
+   REAL(ReKi),     INTENT(IN   ) :: PtfmRefY
+   REAL(ReKi),     INTENT(IN   ) :: MatIn(3,3)
+   REAL(ReKi),     INTENT(  OUT) :: MatOut(3,3)
+   INTEGER(IntKi), INTENT(  OUT) :: ErrStat
+   CHARACTER(*),   INTENT(  OUT) :: ErrMsg
+
+   REAL(ReKi)                    :: PtfmRefYOrient(3,3)
+   INTEGER(IntKi)                :: ErrStat2
+   CHARACTER(ErrMsgLen)          :: ErrMsg2
+
+   CHARACTER(*), PARAMETER       :: RoutineName = 'hiFrameTransformMat'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   call GetPtfmRefYOrient(PtfmRefY, PtfmRefYOrient, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   
+   if (Mode .EQ. i2h) then   ! i-frame to h-frame
+      MatOut = matmul(matmul(PtfmRefYOrient,MatIn),transpose(PtfmRefYOrient))
+   else if (Mode .EQ. h2i) then  ! h-frame to i-frame
+      MatOut = matmul(matmul(transpose(PtfmRefYOrient),MatIn),PtfmRefYOrient)
+   else
+      call SetErrStat(ErrID_Fatal, "Mode must be 1 or 2", ErrStat, ErrMsg, RoutineName) 
+   end if   
+
+END SUBROUTINE hiFrameTransformMat
+
+SUBROUTINE GetPtfmRefYOrient(PtfmRefY, Orient, ErrStat, ErrMsg)
+
+   REAL(ReKi),     INTENT(IN   ) :: PtfmRefY
+   REAL(ReKi),     INTENT(  OUT) :: Orient(3,3)
+   INTEGER(IntKi), INTENT(  OUT) :: ErrStat
+   CHARACTER(*),   INTENT(  OUT) :: ErrMsg
+
+   REAL(ReKi)                    :: cosRefY
+   REAL(ReKi)                    :: sinRefY
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   call Eye(Orient, ErrStat, ErrMsg)
+   cosRefY = cos(PtfmRefY)
+   sinRefY = sin(PtfmRefY)
+   Orient(1,1) =  cosRefY
+   Orient(1,2) =  sinRefY
+   Orient(2,1) = -sinRefY
+   Orient(2,2) =  cosRefY
+
+END SUBROUTINE GetPtfmRefYOrient
+
 SUBROUTINE Morison_DirCosMtrx( pos0, pos1, DirCos )
 
 ! Compute the direction cosine matrix given two points along the axis of a cylinder
@@ -1925,6 +2017,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%WaveDisp   = InitInp%WaveDisp
    p%AMMod      = InitInp%AMMod
    p%VisMeshes  = InitInp%VisMeshes                       ! visualization mesh for morison elements
+   p%PtfmYMod   = InitInp%PtfmYMod
 
    ! Pointer to SeaState WaveField
    p%WaveField => InitInp%WaveField
@@ -2557,6 +2650,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: iArm(3), iTerm(3), Ioffset, h_c, dRdl_p, dRdl_pp, f_hydro(3), Am(3,3), lstar, deltal, deltalLeft, deltalRight
    REAL(ReKi)               :: h, h_c_AM, deltal_AM
    REAL(ReKi)               :: F_WMG(6), F_IMG(6), F_If(6), F_B0(6), F_B1(6), F_B2(6), F_B_End(6)
+   REAL(ReKi)               :: AM_End(3,3), An_End(3), DP_Const_End(3), I_MG_End(3,3)
 
    ! Local variables needed for wave stretching and load smoothing/redistribution
    INTEGER(IntKi)           :: FSElem
@@ -2622,8 +2716,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    
    ! Loop through each member
    DO im = 1, p%NMembers    
-      N   = p%Members(im)%NElements      
-      mem = p%Members(im)   !@mhall: does this have much overhead?
+      N   = p%Members(im)%NElements
+      mem = p%Members(im)
+      call YawMember(mem, u%PtfmRefY, ErrStat2, ErrMsg2)
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       !zero member loads
       m%memberLoads(im)%F_B   = 0.0_ReKi
@@ -3478,7 +3574,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    !TODO: Where's F_WMF_End computed?
       
    DO J = 1, p%NJoints
-     
       ! Obtain the node index because WaveVel, WaveAcc, and WaveDynP are defined in the node indexing scheme, not the markers (No longer relevant?)
       ! The first NJoints nodes are all the joints with the rest being the internal nodes. See Morison_GenerateSimulationNodes.
             
@@ -3489,25 +3584,35 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ! Therefore, no need to check PropPot here.
       
       ! Effect of wave stretching already baked into m%FDynP, m%FA, and m%vrel. No additional modification needed.
-         
+      
+      ! Effect of reference yaw offset
+      call hiFrameTransform(h2i,u%PtfmRefY,p%AM_End(:,:,j),AM_End,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call hiFrameTransform(h2i,u%PtfmRefY,p%An_End(:,j),An_End,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call hiFrameTransform(h2i,u%PtfmRefY,p%DP_Const_End(:,j),DP_Const_End,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call hiFrameTransform(h2i,u%PtfmRefY,p%I_MG_End(:,:,j),I_MG_End,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+ 
       ! Lumped added mass loads
       qdotdot                 = reshape((/u%Mesh%TranslationAcc(:,J),u%Mesh%RotationAcc(:,J)/),(/6/)) 
-      m%F_A_End(:,J)          = m%nodeInWater(j) * matmul( p%AM_End(:,:,J) , ( - qdotdot(1:3)) )
+      m%F_A_End(:,J)          = m%nodeInWater(j) * matmul( AM_End, ( - qdotdot(1:3)) )
          
       ! TODO: The original code did not multiply by nodeInWater, but should we? GJH
       ! Should be ok because m%FDynP and m%FA are both zeroed above the SWL (when WaveStMod=0) or the instantaneous free surface (when WaveStMod>0)
-      m%F_I_End(:,J) =   (p%DP_Const_End(:,j) * m%FDynP(j) + matmul(p%AM_End(:,:,j),m%FA(:,j)))
+      m%F_I_End(:,J) =   (DP_Const_End * m%FDynP(j) + matmul(AM_End,m%FA(:,j)))
          
       ! Marine growth inertia: ends: Section 4.2.2
       ! With wave stretching, m%nodeInWater is based on the instantaneous free surface and the current body position if (WaveDisp/=0).
       ! This should still be ok because with wave stretching, we do not allow joints to come out of water if initially submerged or 
       ! enter water if initially out of water. This is enforced when computing the side loads above.
       m%F_IMG_End(1:3,j) = -m%nodeInWater(j) * p%Mass_MG_End(j)*qdotdot(1:3)
-      m%F_IMG_End(4:6,j) = -m%nodeInWater(j) * (matmul(p%I_MG_End(:,:,j),qdotdot(4:6)) - cross_product(u%Mesh%RotationVel(:,J),matmul(p%I_MG_End(:,:,j),u%Mesh%RotationVel(:,J))))
+      m%F_IMG_End(4:6,j) = -m%nodeInWater(j) * (matmul(I_MG_End,qdotdot(4:6)) - cross_product(u%Mesh%RotationVel(:,J),matmul(I_MG_End,u%Mesh%RotationVel(:,J))))
 
       ! Compute the dot product of the relative velocity vector with the directional Area of the Joint
       ! m%nodeInWater(j) is probably not necessary because m%vrel is zeroed when the node is out of water
-      vmag  = m%nodeInWater(j) * ( m%vrel(1,j)*p%An_End(1,J) + m%vrel(2,j)*p%An_End(2,J) + m%vrel(3,j)*p%An_End(3,J) )
+      vmag  = m%nodeInWater(j) * ( m%vrel(1,j)*An_End(1) + m%vrel(2,j)*An_End(2) + m%vrel(3,j)*An_End(3) )
       ! High-pass filtering
       vmagf = p%VRelNFiltConst(J) * (vmag + xd%v_rel_n_FiltStat(J))
 
@@ -3520,12 +3625,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          IF (I < 4 ) THEN ! Three force components
             IF ( p%DragMod_End(J) .EQ. 0_IntKi ) THEN
                ! Note: vmag is zero if node is not in the water
-               m%F_D_End(i,j) = (1.0_ReKi - p%DragLoFSc_End(j)) * p%An_End(i,j) * p%DragConst_End(j) * abs(vmagf)*vmagf &   
-                                          + p%DragLoFSc_End(j)  * p%An_End(i,j) * p%DragConst_End(j) * abs(vmag )*vmag  
+               m%F_D_End(i,j) = (1.0_ReKi - p%DragLoFSc_End(j)) * An_End(i) * p%DragConst_End(j) * abs(vmagf)*vmagf &   
+                                          + p%DragLoFSc_End(j)  * An_End(i) * p%DragConst_End(j) * abs(vmag )*vmag  
             ELSE IF (p%DragMod_End(J) .EQ. 1_IntKi) THEN
                ! Note: vmag is zero if node is not in the water
-               m%F_D_End(i,j) = (1.0_ReKi - p%DragLoFSc_End(j)) * p%An_End(i,j) * p%DragConst_End(j) * abs(vmagf)*max(vmagf,0.0_ReKi) &
-                                          + p%DragLoFSc_End(j)  * p%An_End(i,j) * p%DragConst_End(j) * abs(vmag) *max(vmag, 0.0_ReKi)
+               m%F_D_End(i,j) = (1.0_ReKi - p%DragLoFSc_End(j)) * An_End(i) * p%DragConst_End(j) * abs(vmagf)*max(vmagf,0.0_ReKi) &
+                                          + p%DragLoFSc_End(j)  * An_End(i) * p%DragConst_End(j) * abs(vmag) *max(vmag, 0.0_ReKi)
                m%F_D_End(i,j) = 2.0_ReKi * m%F_D_End(i,j)
             END IF
             
@@ -4106,6 +4211,37 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       END IF
    END SUBROUTINE getElementHstLds_Mod1
 
+   SUBROUTINE YawMember(member, PtfmRefY, ErrStat, ErrMsg)
+      Type(Morison_MemberType), intent(inout) :: member
+      Real(ReKi),               intent(in   ) :: PtfmRefY
+      Integer(IntKi),           intent(  out) :: ErrStat
+      Character(*),             intent(  out) :: ErrMsg
+
+      Real(ReKi)                              :: k(3)
+      Real(ReKi)                              :: kkt(3,3)
+      Real(ReKi)                              :: Ak(3,3)
+      Integer(IntKi)                          :: ErrStat2
+      Character(ErrMsgLen)                    :: ErrMsg2
+
+      Character(*), parameter                 :: RoutineName = 'YawMember'
+
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+
+      call hiFrameTransform(h2i,PtfmRefY,member%k,k,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      member%k   = k
+
+      call hiFrameTransform(h2i,PtfmRefY,member%kkt,kkt,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      member%kkt = kkt
+
+      call hiFrameTransform(h2i,PtfmRefY,member%Ak,Ak,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      member%Ak  = Ak
+
+   END SUBROUTINE YawMember
+
 END SUBROUTINE Morison_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine LumpDistrHydroLoads( f_hydro, k_hat, dl, h_c, lumpedLoad )
@@ -4187,7 +4323,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
    CHARACTER(*),                      INTENT(  OUT)  :: errMsg      !< Error message if errStat /= ErrID_None
    INTEGER(IntKi)                                    :: J
    INTEGER(IntKi)                                    :: nodeInWater
-   REAL(ReKi)                                        :: pos(3), vrel(3), FV(3), vmag, vmagf
+   REAL(ReKi)                                        :: pos(3), vrel(3), FV(3), vmag, vmagf, An_End(3)
    REAL(SiKi)                                        :: FVTmp(3)
    INTEGER(IntKi)                                    :: errStat2
    CHARACTER(ErrMsgLen)                              :: errMsg2
@@ -4222,8 +4358,12 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
       FV   = REAL(FVTmp, ReKi)
       vrel = ( FV - u%Mesh%TranslationVel(:,J) ) * nodeInWater
 
+      ! Transform An_End based on reference yaw offset
+      call hiFrameTransform(h2i,u%PtfmRefY,p%An_End(:,j),An_End,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
       ! Compute the dot product of the relative velocity vector with the directional Area of the Joint
-      vmag  = vrel(1)*p%An_End(1,J) + vrel(2)*p%An_End(2,J) + vrel(3)*p%An_End(3,J)
+      vmag  = vrel(1)*An_End(1) + vrel(2)*An_End(2) + vrel(3)*An_End(3)
       ! High-pass filtering
       vmagf = p%VRelNFiltConst(J) * (vmag + xd%V_rel_n_FiltStat(J))
       ! Update relative normal velocity filter state for joint J 

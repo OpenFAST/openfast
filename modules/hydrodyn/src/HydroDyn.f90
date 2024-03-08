@@ -146,6 +146,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       
       p%WaveField    =>  InitInp%WaveField
 
+      p%PtfmYMod     =   InitInp%PtfmYMod
       
          ! Initialize the NWTC Subroutine Library
          
@@ -191,7 +192,9 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       InputFileData%WAMIT%WaveField   => InitInp%WaveField
       InputFileData%WAMIT2%WaveField  => InitInp%WaveField
 
-         
+      InputFileData%Morison%PtfmYMod  = InitInp%PtfmYMod
+      InputFileData%WAMIT%PtfmYMod    = InitInp%PtfmYMod
+      InputFileData%WAMIT2%PtfmYMod   = InitInp%PtfmYMod     
       
          ! Verify all the necessary initialization data. Do this at the HydroDynInput module-level 
          !   because the HydroDynInput module is also responsible for parsing all this 

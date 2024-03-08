@@ -30,7 +30,8 @@ typedef     ^                 ^                 R8Ki                 PtfmRefztRo
 typedef     ^                 ^                 ReKi                 WAMITULEN         -        -        -        "WAMIT unit length scale"    -
 typedef     ^                 ^                 ReKi                 Gravity           -        -        -        "Supplied by Driver:  Gravitational acceleration"  (m/s^2)
 
-typedef    ^                  ^                 SeaSt_WaveFieldType *WaveField         -        -        -        "Pointer to wave field"
+typedef     ^                 ^                 SeaSt_WaveFieldType *WaveField         -        -        -        "Pointer to wave field"
+typedef     ^                 ^                 INTEGER              PtfmYMod          -        -        -         "Large yaw model" -
 
 #[note: only one of MnDriff / NewmanApp / DiffQTF can be non-zero
 typedef     ^                 ^                 INTEGER              MnDrift           -        -        -        "Calculate the mean drift force {0: no mean drift; [7,8,9,10,11, or 12]: WAMIT file to use}"    -
@@ -73,8 +74,7 @@ typedef     ^                 ^                 LOGICAL              MnDriftF   
 typedef     ^                 ^                 LOGICAL              NewmanAppF        -        -        -        "Flag indicating Newman approximation should be calculated"    -
 typedef     ^                 ^                 LOGICAL              DiffQTFF          -        -        -        "Flag indicating the full difference QTF should be calculated" -
 typedef     ^                 ^                 LOGICAL              SumQTFF           -        -        -        "Flag indicating the full    sum     QTF should be calculated" -
-
-
+typedef     ^                 ^                 INTEGER              PtfmYMod          -        -        -        "Large yaw model" -
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:

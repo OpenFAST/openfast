@@ -48,6 +48,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: WAMITULEN = 0.0_ReKi      !< WAMIT unit length scale [-]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
     INTEGER(IntKi)  :: MnDrift = 0_IntKi      !< Calculate the mean drift force {0: no mean drift; [7,8,9,10,11, or 12]: WAMIT file to use} [-]
     INTEGER(IntKi)  :: NewmanApp = 0_IntKi      !< Slow drift forces computed with Newman approximation from WAMIT file:{0: No slow drift; [7,8,9,10,11, or 12]: WAMIT file to use} [-]
     INTEGER(IntKi)  :: DiffQTF = 0_IntKi      !< Full Difference-Frequency forces computed with full QTF's from WAMIT file: {0: No diff-QTF; [10,11, or 12]: WAMIT file to use} [-]
@@ -77,6 +78,7 @@ IMPLICIT NONE
     LOGICAL  :: NewmanAppF = .false.      !< Flag indicating Newman approximation should be calculated [-]
     LOGICAL  :: DiffQTFF = .false.      !< Flag indicating the full difference QTF should be calculated [-]
     LOGICAL  :: SumQTFF = .false.      !< Flag indicating the full    sum     QTF should be calculated [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
   END TYPE WAMIT2_ParameterType
 ! =======================
 ! =========  WAMIT2_OutputType  =======
@@ -153,6 +155,7 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    DstInitInputData%WAMITULEN = SrcInitInputData%WAMITULEN
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%WaveField => SrcInitInputData%WaveField
+   DstInitInputData%PtfmYMod = SrcInitInputData%PtfmYMod
    DstInitInputData%MnDrift = SrcInitInputData%MnDrift
    DstInitInputData%NewmanApp = SrcInitInputData%NewmanApp
    DstInitInputData%DiffQTF = SrcInitInputData%DiffQTF
@@ -210,6 +213,7 @@ subroutine WAMIT2_PackInitInput(RF, Indata)
          call SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, InData%WaveField) 
       end if
    end if
+   call RegPack(RF, InData%PtfmYMod)
    call RegPack(RF, InData%MnDrift)
    call RegPack(RF, InData%NewmanApp)
    call RegPack(RF, InData%DiffQTF)
@@ -259,6 +263,7 @@ subroutine WAMIT2_UnPackInitInput(RF, OutData)
    else
       OutData%WaveField => null()
    end if
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MnDrift); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NewmanApp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DiffQTF); if (RegCheckErr(RF, RoutineName)) return
@@ -376,6 +381,7 @@ subroutine WAMIT2_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
    DstParamData%NewmanAppF = SrcParamData%NewmanAppF
    DstParamData%DiffQTFF = SrcParamData%DiffQTFF
    DstParamData%SumQTFF = SrcParamData%SumQTFF
+   DstParamData%PtfmYMod = SrcParamData%PtfmYMod
 end subroutine
 
 subroutine WAMIT2_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -406,6 +412,7 @@ subroutine WAMIT2_PackParam(RF, Indata)
    call RegPack(RF, InData%NewmanAppF)
    call RegPack(RF, InData%DiffQTFF)
    call RegPack(RF, InData%SumQTFF)
+   call RegPack(RF, InData%PtfmYMod)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -428,6 +435,7 @@ subroutine WAMIT2_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NewmanAppF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DiffQTFF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SumQTFF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WAMIT2_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)

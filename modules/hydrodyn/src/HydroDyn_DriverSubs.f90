@@ -80,6 +80,10 @@ MODULE HydroDynDriverSubs
       REAL(DbKi)                       :: TimeInterval
       REAL(DbKi)                       :: TMax
       INTEGER                          :: PRPInputsMod
+      REAL(ReKi)                       :: PtfmRefzt
+      INTEGER                          :: PtfmYMod
+      REAL(ReKi)                       :: PtfmRefY
+      REAL(ReKi)                       :: PtfmYCutOff
       CHARACTER(1024)                  :: PRPInputsFile
       REAL(R8Ki)                       :: uPRPInSteady(6)
       REAL(R8Ki)                       :: uDotPRPInSteady(6)
@@ -87,7 +91,6 @@ MODULE HydroDynDriverSubs
       REAL(R8Ki), ALLOCATABLE          :: PRPin(:,:)           ! Variable for storing time, forces, and body velocities, in m/s or rad/s for PRP
       REAL(R8Ki), ALLOCATABLE          :: PRPinTime(:)         ! Variable for storing time, forces, and body velocities, in m/s or rad/s for PRP
       INTEGER(IntKi)                   :: NBody                ! Number of WAMIT bodies to work with if prescribing kinematics on each body (PRPInputsMod<0)
-      REAL(ReKi)                       :: PtfmRefzt
       TYPE(HD_Drvr_OutputFile)         :: OutData
       character(500)                   :: FTitle                  ! description from 2nd line of driver file
       
@@ -100,6 +103,13 @@ MODULE HydroDynDriverSubs
    TYPE(ProgDesc), PARAMETER        :: version   = ProgDesc( 'HydroDyn Driver', '', '' )  ! The version number of this program.
    character(*), parameter          :: Delim = Tab
 
+   INTERFACE hiFrameTransform
+      MODULE PROCEDURE hiFrameTransformVec3
+      MODULE PROCEDURE hiFrameTransformMat
+   END INTERFACE
+
+   INTEGER(IntKi), PARAMETER        :: i2h = 1_IntKi
+   INTEGER(IntKi), PARAMETER        :: h2i = 2_IntKi
 
 CONTAINS
 
@@ -254,8 +264,21 @@ SUBROUTINE ReadDriverInputFile( FileName, drvrData, ErrStat, ErrMsg )
        ! PtfmRefzt
    CALL ReadVar ( UnIn, FileName, drvrData%PtfmRefzt, 'PtfmRefzt', 'Vertical distance from the ground level to the platform reference point', ErrStat, ErrMsg, UnEchoLocal )
    if (Failed()) return
+
+       ! PtfmYMod
+   CALL ReadVar ( UnIn, FileName, drvrData%PtfmYMod, 'PtfmYMod', 'Model for large yaw offset', ErrStat2, ErrMsg2, UnEchoLocal )
+   if (Failed()) return
+
+       ! PtfmRefY
+   CALL ReadVar ( UnIn, FileName, drvrData%PtfmRefY, 'PtfmRefY', 'Constant or initial refernce yaw offset', ErrStat2, ErrMsg2, UnEchoLocal )
+   if (Failed()) return
+   !drvrData%PtfmRefY = drvrData%PtfmRefY * D2R_D
+
+       ! PtfmYCutOff
+   CALL ReadVar ( UnIn, FileName, drvrData%PtfmYCutOff, 'PtfmYCutOff', 'Cutoff frequency for low-pass filtering the PRP yaw motion', ErrStat2, ErrMsg2, UnEchoLocal )
+   if (Failed()) return
    
-      ! PRPInputsFile
+       ! PRPInputsFile
    CALL ReadVar ( UnIn, FileName, drvrData%PRPInputsFile, 'PRPInputsFile', 'Filename for the PRP HydroDyn inputs', ErrStat2, ErrMsg2, UnEchoLocal )
    if (Failed()) return
    IF ( PathIsRelative( drvrData%PRPInputsFile ) ) drvrData%PRPInputsFile = TRIM(PriPath)//TRIM(drvrData%PRPInputsFile)
@@ -776,14 +799,19 @@ SUBROUTINE SetHDInputs_Constant(u_HD, mappingData, drvrData, ErrStat, ErrMsg)
       u_HD%PRPMesh%TranslationDisp(:,1)   = drvrData%uPRPInSteady(1:3) 
 
          ! Compute direction cosine matrix from the rotation angles
-      CALL SmllRotTrans( 'InputRotation', drvrData%uPRPInSteady(4), drvrData%uPRPInSteady(5), drvrData%uPRPInSteady(6), u_HD%PRPMesh%Orientation(:,:,1), 'Junk', ErrStat2, ErrMsg2 )
+      call GetOrientation(drvrData%PtfmRefY,drvrData%uPRPInSteady(4:6),u_HD%PRPMesh%Orientation(:,:,1), 'PRP orientation', ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+         ! Translation - No transformation needed
+      u_HD%PRPMesh%TranslationVel(:,1)    = drvrData%uDotPRPInSteady(1:3)
+      u_HD%PRPMesh%TranslationAcc(:,1)    = drvrData%uDotDotPRPInSteady(1:3)
+         ! Rotation - Transform back to i-frame
+      call hiFrameTransform(h2i,drvrData%PtfmRefY,drvrData%uDotPRPInSteady(4:6),u_HD%PRPMesh%RotationVel(:,1),ErrStat2,ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call hiFrameTransform(h2i,drvrData%PtfmRefY,drvrData%uDotDotPRPInSteady(4:6),u_HD%PRPMesh%RotationAcc(:,1),ErrStat2,ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-      u_HD%PRPMesh%TranslationVel(:,1)    = drvrData%uDotPRPInSteady(1:3)
-      u_HD%PRPMesh%RotationVel(:,1)       = drvrData%uDotPRPInSteady(4:6)
-      u_HD%PRPMesh%TranslationAcc(:,1)    = drvrData%uDotDotPRPInSteady(1:3)
-      u_HD%PRPMesh%RotationAcc(:,1)       = drvrData%uDotDotPRPInSteady(4:6)
-      
+      u_HD%PtfmRefY                       = drvrData%PtfmRefY      
       CALL PRP_TransferToMotionInputs(u_HD, mappingData, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -801,6 +829,8 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
    INTEGER,                         INTENT(   OUT ) :: ErrStat                ! returns a non-zero value when an error occurs  
    CHARACTER(*),                    INTENT(   OUT ) :: ErrMsg                 ! Error message if ErrStat /= ErrID_None
    
+   REAL(ReKi)                                       :: tmp(3)
+
    integer(IntKi)                                   :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                             :: errMsg2       ! temporary error message 
    character(*), parameter                          :: RoutineName = 'SetHDInputs_Constant'
@@ -820,18 +850,24 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
          ! Compute direction cosine matrix from the rotation angles
                
 !         maxAngle = max( maxAngle, abs(yInterp(4:6)) )
-            
-      CALL SmllRotTrans( 'InputRotation', yInterp(4), yInterp(5), yInterp(6), u_HD%PRPMesh%Orientation(:,:,1), 'Junk', ErrStat2, ErrMsg2 )
+
+      ! Obtain the orientation matrix for the small rotation part from the reference yaw orientation
+      call GetOrientation(drvrData%PtfmRefY,yInterp(4:6),u_HD%PRPMesh%Orientation(:,:,1), 'PRP orientation', ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
+      ! Translation - No transformation needed
       u_HD%PRPMesh%TranslationVel(:,1)    = yInterp( 7: 9)
-      u_HD%PRPMesh%RotationVel(:,1)       = yInterp(10:12)
       u_HD%PRPMesh%TranslationAcc(:,1)    = yInterp(13:15)
-      u_HD%PRPMesh%RotationAcc(:,1)       = yInterp(16:18)
-            
+      ! Rotation - Transform back to i-frame
+      call hiFrameTransform(h2i,drvrData%PtfmRefY,yInterp(10:12),u_HD%PRPMesh%RotationVel(:,1),ErrStat2,ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call hiFrameTransform(h2i,drvrData%PtfmRefY,yInterp(16:18),u_HD%PRPMesh%RotationAcc(:,1),ErrStat2,ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      
+      u_HD%PtfmRefY                       = drvrData%PtfmRefY      
       CALL PRP_TransferToMotionInputs(u_HD, mappingData, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   
+
    ELSEIF ( drvrData%PRPInputsMod < 0 ) THEN
       
       !@mhall: new kinematics input for moving bodies individually
@@ -851,11 +887,11 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
       END DO
                
       ! PRP and body 1-NBody orientations (skipping the maxAngle stuff)
-      CALL SmllRotTrans(    'InputRotation', drvrData%PRPin(n,    4), drvrData%PRPin(n,    5), drvrData%PRPin(n,    6), u_HD%PRPMesh%Orientation(:,:,1), 'PRP orientation', ErrStat2, ErrMsg2 )
+      call GetOrientation(drvrData%PtfmRefY,drvrData%PRPin(n,4:6),u_HD%PRPMesh%Orientation(:,:,1), 'PRP orientation', ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             
       DO I=1, drvrData%NBody
-         CALL SmllRotTrans( 'InputRotation', drvrData%PRPin(n,6*I+4), drvrData%PRPin(n,6*I+5), drvrData%PRPin(n,6*I+6), u_HD%WAMITMesh%Orientation(:,:,I), 'body orientation', ErrStat2, ErrMsg2 )
+         call GetOrientation(drvrData%PtfmRefY,drvrData%PRPin(n,(6*I+4):(6*I+6)),u_HD%WAMITMesh%Orientation(:,:,I), 'body orientation', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       END DO
 
@@ -900,7 +936,8 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
          END DO
                
       END IF
-            
+
+      ! TO DO: Missing the first and last step below!            
       ! calculate accelerations based on displacements:
       u_HD%PRPMesh%TranslationAcc(:,1)      = (drvrData%PRPin(indxHigh, 1:3)         - 2*drvrData%PRPin(indxMid, 1:3)         + drvrData%PRPin(indxLow, 1:3))        /(drvrData%TimeInterval**2)
       u_HD%PRPMesh%RotationAcc(   :,1)      = (drvrData%PRPin(indxHigh, 4:6)         - 2*drvrData%PRPin(indxMid, 4:6)         + drvrData%PRPin(indxLow, 4:6))        /(drvrData%TimeInterval**2)
@@ -909,13 +946,33 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
          u_HD%WAMITMesh%TranslationAcc(:,I) = (drvrData%PRPin(indxHigh, 6*I+1:6*I+3) - 2*drvrData%PRPin(indxMid, 6*I+1:6*I+3) + drvrData%PRPin(indxLow, 6*I+1:6*I+3))/(drvrData%TimeInterval**2)
          u_HD%WAMITMesh%RotationAcc(   :,I) = (drvrData%PRPin(indxHigh, 6*I+4:6*I+6) - 2*drvrData%PRPin(indxMid, 6*I+4:6*I+6) + drvrData%PRPin(indxLow, 6*I+4:6*I+6))/(drvrData%TimeInterval**2)
       END DO
-               
+           
+      ! Rotation - Transform back to i-frame
+      call hiFrameTransform(h2i,drvrData%PtfmRefY,u_HD%PRPMesh%RotationVel(:,1),tmp,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      u_HD%PRPMesh%RotationVel(:,1) = tmp
+
+      call hiFrameTransform(h2i,drvrData%PtfmRefY,u_HD%PRPMesh%RotationAcc(:,1),tmp,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      u_HD%PRPMesh%RotationAcc(:,1) = tmp
+
+      DO I=1,drvrData%NBody
+         call hiFrameTransform(h2i,drvrData%PtfmRefY,u_HD%WAMITMesh%RotationVel(:,I),tmp,ErrStat2,ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         u_HD%WAMITMesh%RotationVel(:,I) = tmp
+
+         call hiFrameTransform(h2i,drvrData%PtfmRefY,u_HD%WAMITMesh%RotationAcc(:,I),tmp,ErrStat2,ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         u_HD%WAMITMesh%RotationAcc(:,I) = tmp
+      END DO
             
+      u_HD%PtfmRefY                       = drvrData%PtfmRefY
        ! half of the PRP_TransferToMotionInputs routine:
       IF ( u_HD%Morison%Mesh%Initialized ) THEN
          ! Map kinematics to the WAMIT mesh with 1 to NBody nodes
          CALL Transfer_Point_to_Point( u_HD%PRPMesh, u_HD%Morison%Mesh, mappingData%HD_Ref_2_M_P, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         u_HD%Morison%PtfmRefY = u_HD%PtfmRefY
       END IF
 
    ELSE
@@ -1096,6 +1153,7 @@ SUBROUTINE PRP_TransferToMotionInputs(u, mappingData, ErrStat, ErrMsg)
    if ( u%Morison%Mesh%Initialized ) then
       CALL Transfer_Point_to_Point( u%PRPMesh, u%Morison%Mesh, mappingData%HD_Ref_2_M_P, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      u%Morison%PtfmRefY = u%PtfmRefY
    end if
    
 END SUBROUTINE PRP_TransferToMotionInputs
@@ -1255,6 +1313,124 @@ contains
    end subroutine cleanup
    
 END SUBROUTINE LINEARIZATION
+
+SUBROUTINE GetOrientation(PtfmRefY,Rotation,Orientation,ErrTxt,ErrStat,ErrMsg)
+
+   ! Compute the orientation matrix with potentially large reference yaw offset
+   REAL(ReKi),     INTENT(IN   ) :: PtfmRefY
+   REAL(ReKi),     INTENT(IN   ) :: Rotation(3)
+   REAL(ReKi),     INTENT(  OUT) :: Orientation(3,3)
+   CHARACTER(*),   INTENT(IN   ) :: ErrTxt
+   INTEGER(IntKi), INTENT(  OUT) :: ErrStat
+   CHARACTER(*),   INTENT(  OUT) :: ErrMsg
+
+   REAL(ReKi)                    :: PtfmRefYOrient(3,3)
+   REAL(ReKi)                    :: cosRefY, sinRefY
+   INTEGER(IntKi)                :: ErrStat2
+   CHARACTER(ErrMsgLen)          :: ErrMsg2
+   CHARACTER(*), PARAMETER       :: RoutineName = 'GetOrientation'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   ! Orientation matrix associated with large reference yaw offset
+   call GetPtfmRefYOrient(PtfmRefY, PtfmRefYOrient, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        
+   ! Orientation matrix for the remaining small rotation from the large reference yaw offset
+   call SmllRotTrans( 'InputRotation', Rotation(1), Rotation(2), Rotation(3)-PtfmRefY, Orientation, ErrTxt, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   ! Combine the contributions
+   Orientation = matmul(Orientation,PtfmRefYOrient)
+
+END SUBROUTINE
+
+SUBROUTINE hiFrameTransformVec3(Mode,PtfmRefY,VecIn,VecOut,ErrStat,ErrMsg)
+   INTEGER(IntKi), INTENT(IN   ) :: Mode
+   REAL(ReKi),     INTENT(IN   ) :: PtfmRefY
+   REAL(ReKi),     INTENT(IN   ) :: VecIn(3)
+   REAL(ReKi),     INTENT(  OUT) :: VecOut(3)
+   INTEGER(IntKi), INTENT(  OUT) :: ErrStat
+   CHARACTER(*),   INTENT(  OUT) :: ErrMsg
+
+   REAL(ReKi)                    :: PtfmRefYOrient(3,3)
+   INTEGER(IntKi)                :: ErrStat2
+   CHARACTER(ErrMsgLen)          :: ErrMsg2
+
+   CHARACTER(*),   PARAMETER     :: RoutineName = 'hiFrameTransformVec3'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   call GetPtfmRefYOrient(PtfmRefY, PtfmRefYOrient, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   if (Mode .EQ. i2h) then   ! i-frame to h-frame
+      VecOut = matmul(PtfmRefYOrient,VecIn)
+   else if (Mode .EQ. h2i) then  ! h-frame to i-frame
+      VecOut = matmul(transpose(PtfmRefYOrient),VecIn)
+   else
+      call SetErrStat(ErrID_Fatal, "Mode must be 1 or 2", ErrStat, ErrMsg, RoutineName) 
+   end if
+
+END SUBROUTINE hiFrameTransformVec3
+
+SUBROUTINE hiFrameTransformMat(Mode,PtfmRefY,MatIn,MatOut,ErrStat,ErrMsg)
+   INTEGER(IntKi), INTENT(IN   ) :: Mode
+   REAL(ReKi),     INTENT(IN   ) :: PtfmRefY
+   REAL(ReKi),     INTENT(IN   ) :: MatIn(3,3)
+   REAL(ReKi),     INTENT(  OUT) :: MatOut(3,3)
+   INTEGER(IntKi), INTENT(  OUT) :: ErrStat
+   CHARACTER(*),   INTENT(  OUT) :: ErrMsg
+
+   REAL(ReKi)                    :: PtfmRefYOrient(3,3)
+   INTEGER(IntKi)                :: ErrStat2
+   CHARACTER(ErrMsgLen)          :: ErrMsg2
+
+   CHARACTER(*), PARAMETER       :: RoutineName = 'hiFrameTransformMat'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   call GetPtfmRefYOrient(PtfmRefY, PtfmRefYOrient, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   
+   if (Mode .EQ. i2h) then   ! i-frame to h-frame
+      MatOut = matmul(matmul(PtfmRefYOrient,MatIn),transpose(PtfmRefYOrient))
+   else if (Mode .EQ. h2i) then  ! h-frame to i-frame
+      MatOut = matmul(matmul(transpose(PtfmRefYOrient),MatIn),PtfmRefYOrient)
+   else
+      call SetErrStat(ErrID_Fatal, "Mode must be 1 or 2", ErrStat, ErrMsg, RoutineName) 
+   end if   
+
+END SUBROUTINE hiFrameTransformMat
+
+SUBROUTINE GetPtfmRefYOrient(PtfmRefY, Orient, ErrStat, ErrMsg)
+
+   REAL(ReKi),     INTENT(IN   ) :: PtfmRefY
+   REAL(ReKi),     INTENT(  OUT) :: Orient(3,3)
+   INTEGER(IntKi), INTENT(  OUT) :: ErrStat
+   CHARACTER(*),   INTENT(  OUT) :: ErrMsg
+
+   REAL(ReKi)                    :: cosRefY
+   REAL(ReKi)                    :: sinRefY
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   call Eye(Orient, ErrStat, ErrMsg)
+   cosRefY = cos(PtfmRefY)
+   sinRefY = sin(PtfmRefY)
+   Orient(1,1) =  cosRefY
+   Orient(1,2) =  sinRefY
+   Orient(2,1) = -sinRefY
+   Orient(2,2) =  cosRefY
+
+END SUBROUTINE GetPtfmRefYOrient
+
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE HydroDynDriverSubs
 

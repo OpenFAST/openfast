@@ -73,8 +73,9 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             DbKi                     TMax                            -          -          -         "Supplied by Driver:  The total simulation time"    "(sec)"
 typedef   ^                            ^                             logical                  VisMeshes                       -       .false.       -         "Output visualization meshes" -
 #
-typedef     ^                          ^                             LOGICAL                  InvalidWithSSExctn              -       -        -        "Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2)" (-)
-typedef     ^                          ^                     SeaSt_WaveFieldType             *WaveField                       -        -        -        "Pointer to SeaState wave field" -
+typedef   ^                            ^                             LOGICAL                  InvalidWithSSExctn              -          -          -         "Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2)" (-)
+typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                       -          -          -         "Pointer to SeaState wave field" -
+typedef   ^                            ^                             INTEGER                  PtfmYMod                        -          -          -         "Large yaw model" - 
 #
 #
 # Define outputs from the initialization routine here:
@@ -161,12 +162,13 @@ typedef   ^                            ^                             CHARACTER(2
 typedef   ^                            ^                             CHARACTER(ChanLen)       Delim                           -          -          -         "Delimiter string for outputs, defaults to tab-delimiters"        -
 typedef   ^                            ^                             INTEGER                  UnOutFile                       -          -          -         "File unit for the HydroDyn outputs"        -
 typedef   ^                            ^                             INTEGER                  OutDec                          -          -          -         "Write every OutDec time steps"  -
-typedef	 ^	                           ^                             Integer	              Jac_u_indx	              {:}{:}	     -	        -	      "matrix to help fill/pack the u vector in computing the jacobian"	-
-typedef	 ^	                           ^                             R8Ki	                  du	                         {:}	     -	        -	      "vector that determines size of perturbation for u (inputs)" -
-typedef	 ^	                           ^                             R8Ki	                  dx	                         {:}	     -	        -	      "vector that determines size of perturbation for x (continuous states)" -
-typedef	 ^	                           ^                             Integer	              Jac_ny	                      -	         -	        -	      "number of outputs in jacobian matrix"	-
+typedef	  ^                            ^                             Integer	              Jac_u_indx                  {:}{:}         -          -	      "matrix to help fill/pack the u vector in computing the jacobian"	-
+typedef	  ^                            ^                             R8Ki	              du                             {:}         -          -	      "vector that determines size of perturbation for u (inputs)" -
+typedef	  ^                            ^                             R8Ki	              dx                             {:}         -          -	      "vector that determines size of perturbation for x (continuous states)" -
+typedef	  ^                            ^                             Integer	              Jac_ny	                      -	         -          -	      "number of outputs in jacobian matrix"	-
 typedef   ^                            ^                             logical                  VisMeshes                       -       .false.       -         "Output visualization meshes" -
-typedef     ^                          ^                     SeaSt_WaveFieldType             *WaveField                       -        -            -         "Pointer to SeaState wave field" -
+typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                       -          -          -         "Pointer to SeaState wave field" -
+typedef   ^                            ^                             INTEGER                  PtfmYMod                        -          -          -         "Large yaw model" - 
 #
 #
 # ..... Inputs ....................................................................................................................
@@ -175,6 +177,7 @@ typedef     ^                          ^                     SeaSt_WaveFieldType
 typedef   ^                            InputType                     Morison_InputType        Morison                         -          -          -         "Morison module inputs" -
 typedef   ^                            InputType                     MeshType                 WAMITMesh                       -          -          -         "Motions at the WAMIT reference point(s) in the inertial frame" -
 typedef   ^                            InputType                     MeshType                 PRPMesh                         -          -          -         "Motions at the Platform reference point in the inertial frame" -
+typedef   ^                            InputType                     ReKi                     PtfmRefY                        -          -          -         "Reference yaw position of the PRP relative to the inertial frame" (radians) 
 #
 #
 # ..... Outputs ...................................................................................................................

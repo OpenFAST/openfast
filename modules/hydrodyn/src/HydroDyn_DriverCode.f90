@@ -172,6 +172,9 @@ PROGRAM HydroDynDriver
    InitInData_SeaSt%OutRootName  = trim(drvrData%OutRootName)//'.SEA'
    InitInData_SeaSt%TMax         = drvrData%TMax
    InitInData_SeaSt%Linearize    = drvrData%Linearize
+
+      ! Initialize the HydroDyn module
+   InitInData_HD%PtfmYMod        = drvrData%PtfmYMod
    
    Interval = drvrData%TimeInterval
    

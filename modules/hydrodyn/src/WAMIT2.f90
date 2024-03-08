@@ -3084,6 +3084,7 @@ END SUBROUTINE WAMIT2_Init
       !!
       !--------------------------------------------------------------------------------
 
+      p%PtfmYMod = InitInp%PtfmYMod
 
          !> 1. Check that we only specified one of MnDrift, NewmanApp, or DiffQTF
          !!        (compared pairwise -- if any two are both true, we have a problem)
