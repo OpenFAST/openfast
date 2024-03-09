@@ -8,7 +8,8 @@ INTEGER(IntKi), PARAMETER        :: i2h = 1_IntKi
 INTEGER(IntKi), PARAMETER        :: h2i = 2_IntKi
 
 INTERFACE hiFrameTransform
-   MODULE PROCEDURE hiFrameTransformVec3
+   MODULE PROCEDURE hiFrameTransformVec3R8
+   MODULE PROCEDURE hiFrameTransformVec3R4
    MODULE PROCEDURE hiFrameTransformMat
 END INTERFACE hiFrameTransform
 
@@ -133,11 +134,11 @@ FUNCTION GetRotAngsD(PtfmRefY, DCMat, ErrStat, ErrMsg)
 END FUNCTION GetRotAngsD
 
 
-SUBROUTINE hiFrameTransformVec3(Mode,PtfmRefY,VecIn,VecOut,ErrStat,ErrMsg)
+SUBROUTINE hiFrameTransformVec3R8(Mode,PtfmRefY,VecIn,VecOut,ErrStat,ErrMsg)
    INTEGER(IntKi), INTENT(IN   ) :: Mode
    REAL(ReKi),     INTENT(IN   ) :: PtfmRefY
-   REAL(ReKi),     INTENT(IN   ) :: VecIn(3)
-   REAL(ReKi),     INTENT(  OUT) :: VecOut(3)
+   REAL(R8Ki),     INTENT(IN   ) :: VecIn(3)
+   REAL(R8Ki),     INTENT(  OUT) :: VecOut(3)
    INTEGER(IntKi), INTENT(  OUT) :: ErrStat
    CHARACTER(*),   INTENT(  OUT) :: ErrMsg
 
@@ -161,7 +162,37 @@ SUBROUTINE hiFrameTransformVec3(Mode,PtfmRefY,VecIn,VecOut,ErrStat,ErrMsg)
       call SetErrStat(ErrID_Fatal, "Mode must be 1 or 2", ErrStat, ErrMsg, RoutineName) 
    end if
 
-END SUBROUTINE hiFrameTransformVec3
+END SUBROUTINE hiFrameTransformVec3R8
+
+SUBROUTINE hiFrameTransformVec3R4(Mode,PtfmRefY,VecIn,VecOut,ErrStat,ErrMsg)
+   INTEGER(IntKi), INTENT(IN   ) :: Mode
+   REAL(ReKi),     INTENT(IN   ) :: PtfmRefY
+   REAL(SiKi),     INTENT(IN   ) :: VecIn(3)
+   REAL(SiKi),     INTENT(  OUT) :: VecOut(3)
+   INTEGER(IntKi), INTENT(  OUT) :: ErrStat
+   CHARACTER(*),   INTENT(  OUT) :: ErrMsg
+
+   REAL(ReKi)                    :: PtfmRefYOrient(3,3)
+   INTEGER(IntKi)                :: ErrStat2
+   CHARACTER(ErrMsgLen)          :: ErrMsg2
+
+   CHARACTER(*),   PARAMETER     :: RoutineName = 'hiFrameTransformVec3'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   call GetPtfmRefYOrient(PtfmRefY, PtfmRefYOrient, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   if (Mode .EQ. i2h) then   ! i-frame to h-frame
+      VecOut = matmul(PtfmRefYOrient,VecIn)
+   else if (Mode .EQ. h2i) then  ! h-frame to i-frame
+      VecOut = matmul(transpose(PtfmRefYOrient),VecIn)
+   else
+      call SetErrStat(ErrID_Fatal, "Mode must be 1 or 2", ErrStat, ErrMsg, RoutineName) 
+   end if
+
+END SUBROUTINE hiFrameTransformVec3R4
 
 SUBROUTINE hiFrameTransformMat(Mode,PtfmRefY,MatIn,MatOut,ErrStat,ErrMsg)
    INTEGER(IntKi), INTENT(IN   ) :: Mode
@@ -192,5 +223,21 @@ SUBROUTINE hiFrameTransformMat(Mode,PtfmRefY,MatIn,MatOut,ErrStat,ErrMsg)
    end if   
 
 END SUBROUTINE hiFrameTransformMat
+
+FUNCTION WrapTo180(angle)
+
+   REAL(ReKi),    INTENT(IN) :: angle
+   REAL(ReKi)                :: WrapTo180
+   WrapTo180 = mod(angle + 180.0, 360.0) - 180.0
+
+END FUNCTION WrapTo180
+
+FUNCTION WrapToPi(angle)
+
+   REAL(ReKi),    INTENT(IN) :: angle
+   REAL(ReKi)                :: WrapToPi
+   WrapToPi = mod(angle + PI, TwoPi) - PI
+
+END FUNCTION WrapToPi
 
 END MODULE YawOffset

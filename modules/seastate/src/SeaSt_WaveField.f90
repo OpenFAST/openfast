@@ -16,7 +16,7 @@ PUBLIC WaveField_GetNodeWaveVel
 
 PUBLIC WaveField_GetWaveKin
 
-public WaveField_Interp_Setup3D, WaveField_Interp_Setup4D
+public WaveField_Interp_Setup3D, WaveField_Interp_Setup4D, WaveField_Interp_Setup4D_RegZ
 
 CONTAINS
 
@@ -656,6 +656,61 @@ contains
       Failed = ErrStat >= AbortErrLev
    end function
 END Subroutine WaveField_Interp_Setup4D
+
+
+subroutine WaveField_Interp_Setup4D_RegZ( Time, Position, p, m, ErrStat, ErrMsg )
+   real(DbKi),                          intent(in   )  :: Time              !< time from the start of the simulation
+   real(ReKi),                          intent(in   )  :: Position(3)       !< Array of XYZ coordinates, 3
+   type(SeaSt_WaveField_ParameterType), intent(in   )  :: p                 !< Parameters
+   type(SeaSt_WaveField_MiscVarType),   intent(inout)  :: m                 !< MiscVars
+   integer(IntKi),                      intent(  out)  :: ErrStat           !< Error status
+   character(*),                        intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+
+
+   character(*), parameter              :: RoutineName = 'WaveField_Interp_Setup4D'
+   integer(IntKi)                       :: i
+   real(SiKi)                           :: isopc(4)           ! isoparametric coordinates
+   integer(IntKi)                       :: ErrStat2
+   character(ErrMsgLen)                 :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! Find the bounding indices for time
+   call SetTimeIndex(Time, p%delta(1), p%n(1), m%Indx_Lo(1), m%Indx_Hi(1), isopc(1), ErrStat2, ErrMsg2)
+   if (Failed()) return;
+
+   ! Find the bounding indices for XYZ position
+   do i=2,4  ! x, y, and z components
+      call SetCartesianXYIndex(Position(i-1), p%pZero(i), p%delta(i), p%n(i), m%Indx_Lo(i), m%Indx_Hi(i), isopc(i), m%FirstWarn_Clamp, ErrStat2, ErrMsg2)
+      if (Failed()) return;
+   enddo
+
+   ! compute weighting factors
+   m%N4D( 1) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   m%N4D( 2) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   m%N4D( 3) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   m%N4D( 4) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   m%N4D( 5) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   m%N4D( 6) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   m%N4D( 7) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   m%N4D( 8) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   m%N4D( 9) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   m%N4D(10) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   m%N4D(11) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   m%N4D(12) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   m%N4D(13) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   m%N4D(14) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   m%N4D(15) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   m%N4D(16) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   m%N4D     = m%N4D / REAL( SIZE(m%N4D), SiKi )  ! normalize
+
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function
+END Subroutine WaveField_Interp_Setup4D_RegZ
 
 
 subroutine WaveField_Interp_Setup3D( Time, Position, p, m, ErrStat, ErrMsg )

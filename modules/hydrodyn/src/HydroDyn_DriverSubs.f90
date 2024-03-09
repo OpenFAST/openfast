@@ -95,6 +95,9 @@ MODULE HydroDynDriverSubs
       TYPE(HD_Drvr_OutputFile)         :: OutData
       character(500)                   :: FTitle                  ! description from 2nd line of driver file
       
+      REAL(R8Ki)                       :: PRPHdg
+      REAL(ReKi)                       :: CYawFilt
+
    END TYPE HD_Drvr_Data
    
 ! -----------------------------------------------------------------------------------   
@@ -1306,6 +1309,51 @@ contains
    end subroutine cleanup
    
 END SUBROUTINE LINEARIZATION
+
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE GetPRPHdg(time, n, mappingData, drvrData, ErrStat, ErrMsg)
+   REAL(DbKi),                      INTENT( IN    ) :: time
+   INTEGER(IntKi),                  INTENT( IN    ) :: n
+   TYPE(HD_Drvr_MappingData),       INTENT( INOUT ) :: mappingData
+   TYPE(HD_Drvr_Data),              INTENT( INOUT ) :: drvrData
+   
+   INTEGER,                         INTENT(   OUT ) :: ErrStat                ! returns a non-zero value when an error occurs  
+   CHARACTER(*),                    INTENT(   OUT ) :: ErrMsg                 ! Error message if ErrStat /= ErrID_None
+
+   integer(IntKi)                                   :: errStat2      ! temporary error status of the operation
+   character(ErrMsgLen)                             :: errMsg2       ! temporary error message 
+   character(*), parameter                          :: RoutineName = 'GetPRPHdg'
+   real(R8Ki)                                       :: yInterp(size(drvrData%PRPin,2))
+   integer(intKi)                                   :: i
+   
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   ! PRPInputsMod 2: Reads time series of positions, velocities, and accelerations for the platform reference point
+   IF ( drvrData%PRPInputsMod == 2 ) THEN
+
+      call InterpStpMat( time, drvrData%PRPinTime, drvrData%PRPin, mappingData%Ind, size(drvrData%PRPinTime), yInterp )
+      drvrData%PRPHdg = yInterp(6) 
+
+   ELSEIF ( drvrData%PRPInputsMod < 0 ) THEN
+      
+      !@mhall: new kinematics input for moving bodies individually
+      ! PRPInputsMod < 0: Reads time series of positions for each body individually, and uses finite differences to also get velocities and accelerations.
+      ! The number of bodies is the negative of PRPInputsMod.
+      
+      i = min(n,drvrData%NSteps)
+      if (n <= drvrData%NSteps .and. .not. EqualRealNos( time, drvrData%PRPinTime(i) ) ) then
+         call SetErrStat(ErrID_Fatal, 'time does not match PRP input file data', ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+      drvrData%PRPHdg = drvrData%PRPin(n,6)
+
+   ELSE
+      ! constant inputs are not recalculated at each time step. Instead this is called at initialization
+      ! CALL SetHDInputs_Constant()
+   END IF
+      
+END SUBROUTINE
 
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE HydroDynDriverSubs

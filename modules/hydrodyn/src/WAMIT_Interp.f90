@@ -30,7 +30,7 @@ MODULE WAMIT_Interp
 
    USE NWTC_Library
    use SeaSt_WaveField_Types, only: SeaSt_WaveField_ParameterType, SeaSt_WaveField_MiscVarType
-   use SeaSt_WaveField, only: WaveField_Interp_Setup3D, WaveField_Interp_Setup4D
+   use SeaSt_WaveField, only: WaveField_Interp_Setup3D, WaveField_Interp_Setup4D, WaveField_Interp_Setup4D_RegZ
    IMPLICIT NONE
 
    PRIVATE
@@ -681,7 +681,7 @@ function WAMIT_ForceWaves_Interp_4D_vec6(Time, pos, pKinXX, WF_p, WF_m, ErrStat3
    integer(IntKi)                         :: i
 
    ! get the bounding indices from the WaveField info (same indexing used in WAMIT)
-   call WaveField_Interp_Setup4D( Time, pos, WF_p, WF_m, ErrStat3, ErrMsg3 )
+   call WaveField_Interp_Setup4D_RegZ( Time, pos, WF_p, WF_m, ErrStat3, ErrMsg3 )
 
    ! interpolate
    do i = 1,6
