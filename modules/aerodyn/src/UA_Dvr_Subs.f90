@@ -362,7 +362,7 @@ subroutine Dvr_SetParameters(p, errStat, errMsg)
       
    else if ( p%SimMod == 2 ) then
       ! Read time-series data file with columns:( time,  Angle-of-attack, Vrel, omega )
-      call WrScr( ' Opening prescribe-aero time-series input file: '//trim(p%AeroTSFile) )
+      call WrScr( ' Opening prescribed-aero time-series input file: '//trim(p%AeroTSFile) )
       call ReadDelimFile(p%AeroTSFile, 4, p%vPrescrAero, errStat2, errMsg2); if(Failed()) return
       p%vPrescrAero(:,2) = p%vPrescrAero(:,2)*D2R ! Deg 2 rad
       p%dt       = p%dt_PA
@@ -711,9 +711,9 @@ subroutine setUAinputsAlphaSim(n, u, t, p, m, errStat, errMsg)
    else
       ! Interpolate at current time
       call interpTimeValue(p%vPrescrAero, t, m%iPALast, m%uPA)
-      u%alpha = m%uPA(2) ! rad
-      u%U     = m%uPA(3)
-      u%omega = m%uPA(4)
+      u%alpha = m%uPA(1) ! rad
+      u%U     = m%uPA(2)
+      u%omega = m%uPA(3)
       u%v_ac(1) = sin(u%alpha)*u%U
       u%v_ac(2) = cos(u%alpha)*u%U
       u%Re = u%U * p%chord  / p%KinVisc

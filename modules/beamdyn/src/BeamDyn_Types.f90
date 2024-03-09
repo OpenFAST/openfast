@@ -61,8 +61,6 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: kp_coordinate      !< Key point coordinates array [-]
-    INTEGER(IntKi)  :: kp_total      !< Total number of key points [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_x      !< Names of the continuous states used in linearization [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_u      !< Names of the inputs used in linearization [-]
@@ -636,7 +634,6 @@ CONTAINS
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'BD_CopyInitOutput'
@@ -670,21 +667,6 @@ ENDIF
       CALL NWTC_Library_Copyprogdesc( SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcInitOutputData%kp_coordinate)) THEN
-  i1_l = LBOUND(SrcInitOutputData%kp_coordinate,1)
-  i1_u = UBOUND(SrcInitOutputData%kp_coordinate,1)
-  i2_l = LBOUND(SrcInitOutputData%kp_coordinate,2)
-  i2_u = UBOUND(SrcInitOutputData%kp_coordinate,2)
-  IF (.NOT. ALLOCATED(DstInitOutputData%kp_coordinate)) THEN 
-    ALLOCATE(DstInitOutputData%kp_coordinate(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%kp_coordinate.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%kp_coordinate = SrcInitOutputData%kp_coordinate
-ENDIF
-    DstInitOutputData%kp_total = SrcInitOutputData%kp_total
 IF (ALLOCATED(SrcInitOutputData%LinNames_y)) THEN
   i1_l = LBOUND(SrcInitOutputData%LinNames_y,1)
   i1_u = UBOUND(SrcInitOutputData%LinNames_y,1)
@@ -812,9 +794,6 @@ IF (ALLOCATED(InitOutputData%WriteOutputUnt)) THEN
 ENDIF
   CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(InitOutputData%kp_coordinate)) THEN
-  DEALLOCATE(InitOutputData%kp_coordinate)
-ENDIF
 IF (ALLOCATED(InitOutputData%LinNames_y)) THEN
   DEALLOCATE(InitOutputData%LinNames_y)
 ENDIF
@@ -904,12 +883,6 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-  Int_BufSz   = Int_BufSz   + 1     ! kp_coordinate allocated yes/no
-  IF ( ALLOCATED(InData%kp_coordinate) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! kp_coordinate upper/lower bounds for each dimension
-      Db_BufSz   = Db_BufSz   + SIZE(InData%kp_coordinate)  ! kp_coordinate
-  END IF
-      Int_BufSz  = Int_BufSz  + 1  ! kp_total
   Int_BufSz   = Int_BufSz   + 1     ! LinNames_y allocated yes/no
   IF ( ALLOCATED(InData%LinNames_y) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! LinNames_y upper/lower bounds for each dimension
@@ -1039,28 +1012,6 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-  IF ( .NOT. ALLOCATED(InData%kp_coordinate) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%kp_coordinate,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%kp_coordinate,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%kp_coordinate,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%kp_coordinate,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%kp_coordinate,2), UBOUND(InData%kp_coordinate,2)
-        DO i1 = LBOUND(InData%kp_coordinate,1), UBOUND(InData%kp_coordinate,1)
-          DbKiBuf(Db_Xferred) = InData%kp_coordinate(i1,i2)
-          Db_Xferred = Db_Xferred + 1
-        END DO
-      END DO
-  END IF
-    IntKiBuf(Int_Xferred) = InData%kp_total
-    Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%LinNames_y) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -1203,7 +1154,6 @@ ENDIF
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'BD_UnPackInitOutput'
@@ -1297,31 +1247,6 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! kp_coordinate not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%kp_coordinate)) DEALLOCATE(OutData%kp_coordinate)
-    ALLOCATE(OutData%kp_coordinate(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%kp_coordinate.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%kp_coordinate,2), UBOUND(OutData%kp_coordinate,2)
-        DO i1 = LBOUND(OutData%kp_coordinate,1), UBOUND(OutData%kp_coordinate,1)
-          OutData%kp_coordinate(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
-          Db_Xferred = Db_Xferred + 1
-        END DO
-      END DO
-  END IF
-    OutData%kp_total = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LinNames_y not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
