@@ -238,6 +238,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       p%ExctnGridParams%n(4)     =  p%NExctnHdg+1
       p%ExctnGridParams%delta(4) =  TwoPi/Real(MAX(p%NExctnHdg,1_IntKi),ReKi)
       p%ExctnGridParams%pZero(4) = -Pi
+      p%ExctnGridParams%Z_depth  = -1.0   ! Set to Z_depth to a negative value to indicate uniform "z" grid for platform heading
 
          ! This module's implementation requires that if NBodyMod = 2 or 3, then there is one instance of a WAMIT module for each body, therefore, HydroDyn may have NBody > 1, but this WAMIT module will have NBody = 1
       if ( (p%NBodyMod > 1) .and. (p%NBody > 1) ) then
