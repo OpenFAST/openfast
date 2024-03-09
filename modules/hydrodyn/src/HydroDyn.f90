@@ -33,6 +33,7 @@ MODULE HydroDyn
    USE SeaState
    USE HydroDyn_Input
    USE HydroDyn_Output
+   USE YawOffset
 
 #ifdef USE_FIT
    USE FIT_MODULES
@@ -1203,7 +1204,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       if ( p%PotMod == 1 ) then
          do iBody = 1, p%NBody
                ! Determine the rotational angles from the direction-cosine matrix
-            rotdisp = GetSmllRotAngs ( u%WAMITMesh%Orientation(:,:,iBody), ErrStat2, ErrMsg2 )
+            rotdisp = GetRotAngs ( u%PtfmRefY, u%WAMITMesh%Orientation(:,:,iBody), ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
             indxStart = (iBody-1)*6+1
             indxEnd   = indxStart+5

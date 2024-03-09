@@ -1662,7 +1662,8 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
 !      INTEGER(IntKi)                                    :: ErrStat2        ! Error status of the operation (secondary error)
 !      CHARACTER(ErrMsgLen)                              :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
       REAL(ReKi)                                        :: bodyPosition(2)
-      
+      REAL(ReKi)                                        :: tmpVec6(6)      
+
           ! Create dummy variables required by framework but which are not used by the module
       
       TYPE(Conv_Rdtn_InputType), ALLOCATABLE :: Conv_Rdtn_u(:)         ! Inputs
@@ -1698,8 +1699,10 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
             END IF
             do iBody=1,p%NBody
                indxStart = (iBody-1)*6+1
-               indxEnd   = indxStart+5        
-               Conv_Rdtn_u(I)%Velocity(indxStart:indxEnd) = (/Inputs(I)%Mesh%TranslationVel(:,iBody), Inputs(I)%Mesh%RotationVel(:,iBody)/) 
+               indxEnd   = indxStart+5 
+               call hiFrameTransform( i2h, Inputs(I)%PtfmRefY, Inputs(I)%Mesh%TranslationVel(:,iBody), tmpVec6(1:3), ErrStat, ErrMsg)
+               call hiFrameTransform( i2h, Inputs(I)%PtfmRefY, Inputs(I)%Mesh%RotationVel(:,iBody),    tmpVec6(4:6), ErrStat, ErrMsg)
+               Conv_Rdtn_u(I)%Velocity(indxStart:indxEnd) = tmpVec6
             end do
          END DO
                  
@@ -1725,10 +1728,10 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
                RETURN
             END IF
             do iBody=1,p%NBody
-               indxStart = (iBody-1)*6+1 
-               SS_Rdtn_u(I)%dq(indxStart:indxStart+2)   = Inputs(I)%Mesh%TranslationVel(:,iBody)
-               SS_Rdtn_u(I)%dq(indxStart+3:indxStart+5) = Inputs(I)%Mesh%RotationVel(:,iBody)
-               !SS_Rdtn_u(I)%dq = reshape((/Inputs(I)%Mesh%TranslationVel(:,1), Inputs(I)%Mesh%RotationVel(:,1)/), (/6,1/)) !reshape(u%Velocity, (/6,1/)) ! dq is a 6x1 matrix
+               indxStart = (iBody-1)*6+1
+               call hiFrameTransform( i2h, Inputs(I)%PtfmRefY, Inputs(I)%Mesh%TranslationVel(:,iBody), tmpVec6(1:3), ErrStat, ErrMsg)
+               call hiFrameTransform( i2h, Inputs(I)%PtfmRefY, Inputs(I)%Mesh%RotationVel(:,iBody),    tmpVec6(4:6), ErrStat, ErrMsg)
+               SS_Rdtn_u(I)%dq(indxStart:indxStart+5)   = tmpVec6
             end do
          END DO
          
@@ -1839,7 +1842,8 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       integer(IntKi)                       :: iBody                                   ! Counter for WAMIT bodies.  If NBodyMod > 1 then NBody = 1, and hence iBody = 1
       integer(IntKi)                       :: indxStart, indxEnd                      ! Starting and ending indices for the iBody_th sub vector in an NBody long vector
       real(ReKi)                           :: bodyPosition(3)                         ! x-y displaced location of a WAMIT body (relative to 
-               ! Error handling
+      real(ReKi)                           :: tmpVec3(3),tmpVec6(6)
+        ! Error handling
       CHARACTER(1024)                        :: ErrMsg2                              ! Temporary error message for calls
       INTEGER(IntKi)                         :: ErrStat2                             ! Temporary error status for calls
 
@@ -1920,24 +1924,45 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       
       do iBody = 1, p%NBody
          
-            ! Determine the rotational angles from the direction-cosine matrix
-         rotdisp   = GetSmllRotAngs ( u%Mesh%Orientation(:,:,iBody), ErrStat, ErrMsg )
+         ! Determine the rotational angles from the direction-cosine matrix
+         rotdisp   = GetRotAngs ( u%PtfmRefY, u%Mesh%Orientation(:,:,iBody), ErrStat, ErrMsg )
+         rotdisp(3) = rotdisp(3) - u%PtfmRefY ! Remove the large yaw offset
+
          indxStart = (iBody-1)*6+1
          indxEnd   = indxStart+5
+
+         ! Displacement: does not contain the large yaw offset; Small rotation about reference yaw only
          q      (indxStart:indxEnd)   = reshape((/real(u%Mesh%TranslationDisp(:,iBody),ReKi),rotdisp(:)/),(/6/))
-         qdot   (indxStart:indxEnd)   = reshape((/u%Mesh%TranslationVel(:,iBody),u%Mesh%RotationVel(:,iBody)/),(/6/))
-         qdotdot(indxStart:indxEnd)   = reshape((/u%Mesh%TranslationAcc(:,iBody),u%Mesh%RotationAcc(:,iBody)/),(/6/))
+
+         ! Get velocity and acceleration in the heading frame
+         call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%TranslationVel(:,iBody), tmpVec6(1:3), ErrStat, ErrMsg)
+         call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%RotationVel(:,iBody),    tmpVec6(4:6), ErrStat, ErrMsg)
+         qdot   (indxStart:indxEnd)   = tmpVec6
+         call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%TranslationAcc(:,iBody), tmpVec6(1:3), ErrStat, ErrMsg)
+         call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%RotationAcc(:,iBody),    tmpVec6(4:6), ErrStat, ErrMsg)
+         qdotdot(indxStart:indxEnd)   = tmpVec6
          
       end do
       
-         ! Compute the load contribution from hydrostatics:
-
+      ! Compute the load contribution from hydrostatics:
+      ! Hydrostatic load in the yaw-offset frame
       m%F_HS = -matmul(p%HdroSttc,q)
-      
       do iBody = 1, p%NBody
          indxStart = (iBody-1)*6+1
          indxEnd   = indxStart+5
-         m%F_HS(indxStart:indxEnd) =  m%F_HS(indxStart:indxEnd) + p%F_HS_Moment_Offset(:,iBody)  ! except for the hydrostatic buoyancy force from Archimede's Principle when the support platform is in its undisplaced position
+         m%F_HS(indxStart:indxEnd) =  m%F_HS(indxStart:indxEnd) + p%F_HS_Moment_Offset(:,iBody)
+      end do 
+
+      ! Transform hydrostatic loads back to the inertial frame
+      do iBody = 1, p%NBody
+         indxStart = (iBody-1)*6+1
+         indxEnd   = indxStart+2
+         call hiFrameTransform( h2i, u%PtfmRefY, m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
+         m%F_HS(indxStart:indxEnd) = tmpVec3
+         indxStart = indxEnd+1
+         indxEnd   = indxStart+2
+         call hiFrameTransform( h2i, u%PtfmRefY, m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
+         m%F_HS(indxStart:indxEnd) = tmpVec3
       end do   
       
      
@@ -1957,15 +1982,24 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          m%F_Rdtn  (:) = m%SS_Rdtn_y%y
       ELSE ! We must not be modeling wave radiation damping.
 
-
       ! Set the total load contribution from radiation damping to zero:
 
          m%F_Rdtn        (:) = 0.0
 
-
       END IF       
       
-      
+      do iBody = 1, p%NBody
+         indxStart = (iBody-1)*6+1
+         indxEnd   = indxStart+2
+         call hiFrameTransform( h2i, u%PtfmRefY, m%F_Rdtn(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
+         m%F_Rdtn(indxStart:indxEnd) = tmpVec3
+
+         indxStart = indxEnd+1
+         indxEnd   = indxStart+2
+         call hiFrameTransform( h2i, u%PtfmRefY, m%F_Rdtn(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
+         m%F_Rdtn(indxStart:indxEnd) = tmpVec3
+      end do
+
       ! Compute Added Mass Forces
       
          ! Set the platform added mass matrix, PtfmAM, to be the infinite-frequency
@@ -1974,9 +2008,18 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          
          !added mass:
 
-      m%F_PtfmAM     =   -matmul(p%HdroAdMsI, qdotdot)
+      m%F_PtfmAM     =   -matmul(p%HdroAdMsI, qdotdot) ! In h-frame
+      do iBody = 1, p%NBody
+         indxStart = (iBody-1)*6+1
+         indxEnd   = indxStart+2
+         call hiFrameTransform( h2i, u%PtfmRefY, m%F_PtfmAM(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
+         m%F_PtfmAM(indxStart:indxEnd) = tmpVec3
 
-      
+         indxStart = indxEnd+1
+         indxEnd   = indxStart+2
+         call hiFrameTransform( h2i, u%PtfmRefY, m%F_PtfmAM(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
+         m%F_PtfmAM(indxStart:indxEnd) = tmpVec3
+      end do
       
          ! Compute outputs here:
       do iBody = 1, p%NBody
