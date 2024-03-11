@@ -195,7 +195,9 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 
       InputFileData%Morison%PtfmYMod  = InitInp%PtfmYMod
       InputFileData%WAMIT%PtfmYMod    = InitInp%PtfmYMod
-      InputFileData%WAMIT2%PtfmYMod   = InitInp%PtfmYMod     
+      InputFileData%WAMIT%PtfmRefY    = InitInp%PtfmRefY
+      InputFileData%WAMIT2%PtfmYMod   = InitInp%PtfmYMod  
+      InputFileData%WAMIT2%PtfmRefY   = InitInp%PtfmRefY
       
          ! Verify all the necessary initialization data. Do this at the HydroDynInput module-level 
          !   because the HydroDynInput module is also responsible for parsing all this 
@@ -1022,6 +1024,7 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
                   ! Copy the inputs from the HD mesh into the WAMIT mesh         
                call MeshCopy( Inputs(I)%WAMITMesh, Inputs_WAMIT(I)%Mesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
+               Inputs_WAMIT(I)%PtfmRefY = Inputs(I)%PtfmRefY
             end do
          
             if (ErrStat < AbortErrLev) then    ! if there was an error copying the input meshes, we'll skip this step and then cleanup the temporary input meshes     
@@ -1043,6 +1046,7 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
                      ! We need to create to valid mesh data structures in our Inputs_WAMIT(I)%Mesh using the miscvar version as a template, but the actually data will be generated below      
                   call MeshCopy( m%u_WAMIT(iWAMIT)%Mesh, Inputs_WAMIT(I)%Mesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
                   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  Inputs_WAMIT(I)%PtfmRefY = Inputs(I)%PtfmRefY
                end do
                if (ErrStat > AbortErrLev) exit
                

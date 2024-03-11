@@ -32,6 +32,7 @@ typedef     ^                 ^                 ReKi                 Gravity    
 
 typedef     ^                 ^                 SeaSt_WaveFieldType *WaveField         -        -        -        "Pointer to wave field"
 typedef     ^                 ^                 INTEGER              PtfmYMod          -        -        -         "Large yaw model" -
+typedef     ^                 ^                 ReKi                 PtfmRefY          -        -        -         "Initial reference yaw offset" (rad)
 
 #[note: only one of MnDriff / NewmanApp / DiffQTF can be non-zero
 typedef     ^                 ^                 INTEGER              MnDrift           -        -        -        "Calculate the mean drift force {0: no mean drift; [7,8,9,10,11, or 12]: WAMIT file to use}"    -

@@ -176,6 +176,7 @@ PROGRAM HydroDynDriver
 
       ! Initialize the HydroDyn module
    InitInData_HD%PtfmYMod        = drvrData%PtfmYMod
+   InitInData_HD%PtfmRefY        = drvrData%PtfmRefY
    
    Interval = drvrData%TimeInterval
    

@@ -49,6 +49,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
     INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
+    REAL(ReKi)  :: PtfmRefY = 0.0_ReKi      !< Initial reference yaw offset [(rad)]
     INTEGER(IntKi)  :: MnDrift = 0_IntKi      !< Calculate the mean drift force {0: no mean drift; [7,8,9,10,11, or 12]: WAMIT file to use} [-]
     INTEGER(IntKi)  :: NewmanApp = 0_IntKi      !< Slow drift forces computed with Newman approximation from WAMIT file:{0: No slow drift; [7,8,9,10,11, or 12]: WAMIT file to use} [-]
     INTEGER(IntKi)  :: DiffQTF = 0_IntKi      !< Full Difference-Frequency forces computed with full QTF's from WAMIT file: {0: No diff-QTF; [10,11, or 12]: WAMIT file to use} [-]
@@ -156,6 +157,7 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%WaveField => SrcInitInputData%WaveField
    DstInitInputData%PtfmYMod = SrcInitInputData%PtfmYMod
+   DstInitInputData%PtfmRefY = SrcInitInputData%PtfmRefY
    DstInitInputData%MnDrift = SrcInitInputData%MnDrift
    DstInitInputData%NewmanApp = SrcInitInputData%NewmanApp
    DstInitInputData%DiffQTF = SrcInitInputData%DiffQTF
@@ -214,6 +216,7 @@ subroutine WAMIT2_PackInitInput(RF, Indata)
       end if
    end if
    call RegPack(RF, InData%PtfmYMod)
+   call RegPack(RF, InData%PtfmRefY)
    call RegPack(RF, InData%MnDrift)
    call RegPack(RF, InData%NewmanApp)
    call RegPack(RF, InData%DiffQTF)
@@ -264,6 +267,7 @@ subroutine WAMIT2_UnPackInitInput(RF, OutData)
       OutData%WaveField => null()
    end if
    call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MnDrift); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NewmanApp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DiffQTF); if (RegCheckErr(RF, RoutineName)) return

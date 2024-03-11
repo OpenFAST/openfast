@@ -239,7 +239,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       if ( InitInp%PtfmYMod .EQ. 0) then      ! Constant reference yaw offset
          p%NExctnHdg = 0_IntKi
          p%ExctnGridParams%delta(4) = 0.0
-         p%ExctnGridParams%pZero(4) = u%PtfmRefY
+         p%ExctnGridParams%pZero(4) = InitInp%PtfmRefY
       else if ( InitInp%PtfmYMod .EQ. 1 ) then      ! Drifting reference yaw offset
          p%ExctnGridParams%delta(4) =  TwoPi/Real(MAX(p%NExctnHdg,1_IntKi),ReKi)
          p%ExctnGridParams%pZero(4) = -Pi
@@ -1092,7 +1092,7 @@ end if
                   DO iHdg = 1,p%NExctnHdg+1
                      ! Compute the PRP heading angle
                      IF (p%PtfmYMod .EQ. 0) THEN
-                        PRPHdg = u%PtfmRefY
+                        PRPHdg = InitInp%PtfmRefY
                      ELSE IF (p%PtfmYMod .EQ. 1) THEN
                         PRPHdg = -PI + (iHdg-1) * TwoPi/REAL(p%NExctnHdg,ReKi)
                      END IF
@@ -1144,7 +1144,7 @@ end if
                DO iHdg = 1,p%NExctnHdg+1
                   ! Compute the PRP heading angle
                   IF (p%PtfmYMod .EQ. 0) THEN
-                     PRPHdg = u%PtfmRefY
+                     PRPHdg = InitInp%PtfmRefY
                   ELSE IF (p%PtfmYMod .EQ. 1) THEN
                      PRPHdg = -PI + (iHdg-1) * TwoPi/REAL(p%NExctnHdg,ReKi)
                   END IF
@@ -1164,7 +1164,7 @@ end if
                   DO iHdg = 1,p%ExctnGridParams%n(4)
                      ! Compute the current PRP heading
                      IF (p%PtfmYMod .EQ. 0) THEN
-                        PRPHdg = u%PtfmRefY
+                        PRPHdg = InitInp%PtfmRefY
                      ELSE IF (p%PtfmYMod .EQ. 1) THEN
                         PRPHdg = -PI + (iHdg-1) * TwoPi/REAL(p%NExctnHdg,ReKi)
                      END IF
@@ -1224,7 +1224,7 @@ end if
                DO iHdg = 1,p%NExctnHdg+1
                   ! Compute the PRP heading angle
                   IF (p%PtfmYMod .EQ. 0) THEN
-                     PRPHdg = u%PtfmRefY
+                     PRPHdg = InitInp%PtfmRefY
                   ELSE IF (p%PtfmYMod .EQ. 1) THEN
                      PRPHdg = -PI + (iHdg-1) * TwoPi/REAL(p%NExctnHdg,ReKi)
                   END IF
@@ -2044,7 +2044,10 @@ SUBROUTINE WAMIT_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, 
 
       integer(IntKi)                                    :: iBody                ! WAMIT body index
       integer(IntKi)                                    :: indxStart            ! Starting and ending indices for the iBody_th sub vector in an NBody long vector
-      real(SiKi)   :: waveElev0(p%NBody)   
+      real(SiKi)                                        :: waveElev0(p%NBody)   
+      real(ReKi)                                        :: tmpVec6(6)
+
+
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
@@ -2055,8 +2058,9 @@ SUBROUTINE WAMIT_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, 
       if (p%RdtnMod == 2) then
          do iBody = 1, p%NBody
             indxStart = (iBody-1)*6+1 
-            m%SS_Rdtn_u%dq(indxStart:indxStart+2)   = u%Mesh%TranslationVel(:,iBody) 
-            m%SS_Rdtn_u%dq(indxStart+3:indxStart+5) = u%Mesh%RotationVel(:,iBody) 
+            call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%TranslationVel(:,iBody), tmpVec6(1:3), ErrStat, ErrMsg)
+            call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%RotationVel(:,iBody),    tmpVec6(4:6), ErrStat, ErrMsg)
+            m%SS_Rdtn_u%dq(indxStart:indxStart+5) = tmpVec6
          end do
       
          CALL SS_Rad_CalcContStateDeriv( Time, m%SS_Rdtn_u, p%SS_Rdtn, x%SS_Rdtn, xd%SS_Rdtn, z%SS_Rdtn, OtherState%SS_Rdtn, m%SS_Rdtn, dxdt%SS_Rdtn, ErrStat, ErrMsg )      
@@ -2091,6 +2095,8 @@ SUBROUTINE WAMIT_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, ErrSta
       integer(IntKi)                                     :: iBody               ! WAMIT body index
       integer(IntKi)                                     :: indxStart, indxEnd  ! Starting and ending indices for the iBody_th sub vector in an NBody long vector
 
+      REAL(ReKi)                                         :: tmpVec6(6)
+
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
@@ -2101,8 +2107,10 @@ SUBROUTINE WAMIT_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, ErrSta
       IF ( p%RdtnMod == 1 )  THEN ! .TRUE. when we will be modeling wave radiation damping.   
          do iBody=1,p%NBody
                indxStart = (iBody-1)*6+1
-               indxEnd   = indxStart+5    
-               m%Conv_Rdtn_u%Velocity(indxStart:indxEnd) = (/u%Mesh%TranslationVel(:,iBody), u%Mesh%RotationVel(:,iBody)/)
+               indxEnd   = indxStart+5
+               call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%TranslationVel(:,iBody), tmpVec6(1:3), ErrStat, ErrMsg)
+               call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%RotationVel(:,iBody),    tmpVec6(4:6), ErrStat, ErrMsg)
+               m%Conv_Rdtn_u%Velocity(indxStart:indxEnd) = tmpVec6
          end do
          CALL Conv_Rdtn_UpdateDiscState( Time, n, m%Conv_Rdtn_u, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn, z%Conv_Rdtn, &
                                          OtherState%Conv_Rdtn, m%Conv_Rdtn, ErrStat, ErrMsg )
