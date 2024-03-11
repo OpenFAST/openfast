@@ -450,7 +450,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     INTEGER(IntKi)  :: NumOuts_DLL      !< Number of logging channels output from the DLL (set at initialization) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
-    CHARACTER(1024)  :: PriPath      !< Path of the primary SD input file  [-]
+    CHARACTER(1024)  :: PriPath      !< Path of the primary SrvD input file  [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
     CHARACTER(1)  :: Delim      !< Column delimiter for output text files [-]
     LOGICAL  :: UseBladedInterface      !< Flag that determines if BladedInterface was used [-]
