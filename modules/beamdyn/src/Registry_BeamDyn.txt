@@ -171,8 +171,7 @@ typedef   ^        ParameterType DbKi           coef             {9}       - -  
 typedef   ^        ParameterType DbKi           rhoinf           -         - -  "Numerical Damping Coefficient for GA2"
 #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 #the following are BDKi = R8Ki
-typedef   ^        ParameterType R8Ki           uuN0             {:}{:}{:} - -  "Initial Position Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)" -
-typedef   ^        ParameterType  ^             twN0             {:}{:}    - -  "Initial Twist of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)" -
+typedef   ^        ParameterType R8Ki           uuN0             {:}{:}{:} - -  "Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)" -
 typedef   ^        ParameterType  ^             Stif0_QP         {:}{:}{:} - -  "Sectional Stiffness Properties at quadrature points (6x6xqp)" -
 typedef   ^        ParameterType  ^             Mass0_QP         {:}{:}{:} - -  "Sectional Mass Properties at quadrature points (6x6xqp)" -
 typedef   ^        ParameterType  ^             gravity          {3}       - -  "Gravitational acceleration -- intertial frame!!!" m/s^2
@@ -190,6 +189,7 @@ typedef   ^        ParameterType  ^             Shp              {:}{:}    - -  
 typedef   ^        ParameterType  ^             ShpDer           {:}{:}    - -  "Derivative of shape function matrix (index 1 = FE nodes; index 2=quadrature points)" -
 typedef   ^        ParameterType  ^             Jacobian         {:}{:}    - -  "Jacobian value at each quadrature point" -
 typedef   ^        ParameterType  ^             uu0              {:}{:}{:} - -  "Initial Disp/Rot value at quadrature point (at T=0)" -
+typedef   ^        ParameterType  ^             rrN0             {:}{:}{:} - -  "Initial relative rotation array, relative to root (at T=0) (index 1=rot DOF; index 2=FE nodes; index 3=element)" -
 typedef   ^        ParameterType  ^             E10              {:}{:}{:} - -  "Initial E10 at quadrature point" -
 #end of BDKi-type variables
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
