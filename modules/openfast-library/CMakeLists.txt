@@ -55,7 +55,6 @@ target_link_libraries(openfast_prelib
   icedynlib
   icefloelib
   ifwlib
-  lindynlib
   maplib
   moordynlib
   orcaflexlib
