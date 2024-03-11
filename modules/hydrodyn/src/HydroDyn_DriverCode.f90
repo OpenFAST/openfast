@@ -305,8 +305,8 @@ PROGRAM HydroDynDriver
 
       CALL HydroDyn_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, m, ErrStat, ErrMsg ); CALL CheckError()
       
-      ! Update PtfmRefY
-      if (n<drvrData%NSteps) then
+      ! Update PtfmRefY if PtfmYMod = 1 by low-pass filtering the instantaneous PRP heading/yaw angle
+      if (n<drvrData%NSteps .AND. p%PtfmYMod == 1) then
          call GetPRPHdg(Time+drvrData%TimeInterval, n+1, mappingData, drvrData, ErrStat, ErrMsg);  CALL CheckError()
          drvrData%PtfmRefY = drvrData%CYawFilt*drvrData%PtfmRefY + (1.0-drvrData%CYawFilt)*drvrData%PRPHdg
       end if
