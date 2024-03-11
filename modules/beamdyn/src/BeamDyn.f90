@@ -59,7 +59,7 @@ MODULE BeamDyn
    ! follow the moving BladeRootMotion mesh.  This requires changing the states after an UpdateStates call to be relative to
    ! the new BladeRootMotion mesh orientation and position.
    ! Upadate the reference frame after each State update (or use the old method)?
-   LOGICAL, PARAMETER :: ChangeRefFrame = .true.
+   LOGICAL, PARAMETER :: ChangeRefFrame = .false.
 
 CONTAINS
 
