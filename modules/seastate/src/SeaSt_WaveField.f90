@@ -454,6 +454,12 @@ subroutine SetCartesianXYIndex(p, pZero, delta, nMax, Indx_Lo, Indx_Hi, isopc, F
    Indx_Lo = 0
    Indx_Hi = 0
 
+   if ( nMax .EQ. 1_IntKi ) then ! Only one grid point
+      Indx_Lo = 1_IntKi
+      Indx_Hi = 1_IntKi
+      isopc   = 0_SiKi
+      return
+   end if
 
    Tmp =  (p-pZero) / delta
    Indx_Lo = INT( Tmp ) + 1    ! convert REAL to INTEGER, then add one since our grid indices start at 1, not 0
