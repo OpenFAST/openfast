@@ -2755,6 +2755,8 @@ contains
       REAL(BDKi)                                   :: e1s
       REAL(BDKi)                                   :: eee(6)      !< intermediate array for calculation Strain and curvature terms of Fc
       REAL(BDKi)                                   :: fff(6)      !< intermediate array for calculation of the elastic force, Fc
+      REAL(BDKi)                                   :: R(3,3)      !< rotation matrix at quatrature point
+      REAL(BDKi)                                   :: Rx0p(3)     !< \f$ \underline{R} \underline{x}^\prime_0 \f$
      !REAL(BDKi)                                   :: Wrk(3)
       
    
@@ -2768,8 +2770,10 @@ contains
          !!
          !! Note: \f$ \underline{\underline{R}}\underline{\underline{R}}_0 \f$ is used to go from the material basis into the inertial basis
          !!       and the transpose for the other direction.
-      eee(1:3) = m%qp%E1(1:3,idx_qp,nelem) - m%qp%RR0(1:3,3,idx_qp,nelem)     ! Using RR0 z direction in IEC coords
-
+      ! eee(1:3) = m%qp%E1(1:3,idx_qp,nelem) - m%qp%RR0(1:3,3,idx_qp,nelem)     ! Using RR0 z direction in IEC coords
+      call BD_CrvMatrixR(m%qp%uuu(4:6,idx_qp,nelem), R)  ! Get rotation at QP as a matrix
+      Rx0p = matmul(R,p%E10(:,idx_qp,nelem))             ! Calculate rotated initial tangent
+      eee(1:3) = m%qp%E1(1:3,idx_qp,nelem) - Rx0p        ! Use rotated initial tangent in place of RR0*i1 to eliminate likely mismatch between R0*i1 and x0'
       
          !> ### Set the 1D sectional curvature, \f$ \underline{\kappa} \f$, equation (5)
          !! \f$ \underline{\kappa} = \underline{k} + \underline{\underline{R}}\underline{k}_i \f$
