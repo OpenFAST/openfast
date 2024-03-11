@@ -339,7 +339,7 @@ jobs:
   ### BUILD AND TEST JOBS
 
   build-test-uadriver-debug:
-    # UA driver requires -DUA_OUTS, cannot be compiled with other
+    # UA driver used to require -DUA_OUTS
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -374,7 +374,6 @@ jobs:
             -DVARIABLE_TRACKING=OFF \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
-            -DCMAKE_Fortran_FLAGS="-DUA_OUTS=ON" \
             ${GITHUB_WORKSPACE}
       - name: Build all
         working-directory: ${{runner.workspace}}/openfast/build

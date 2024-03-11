@@ -2815,7 +2815,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    !..........................
    do k=1,p%NumBlades
       do j=1,p%NumBlNds         
-         ! Velocity in "p" or "w" system (depending) on AeroProjMod
+         ! Velocity in "l" or "w" system (depending) on AeroProjMod
          tmp   = m%DisturbedInflow(:,j,k) - u%BladeMotion(k)%TranslationVel(:,j) ! rel_V(j)_Blade(k)
          m%BEMT_u(indx)%Vx(j,k) = dot_product( tmp, m%orientationAnnulus(1,:,j,k) ) ! normal component (normal to the plane, not chord) of the inflow velocity of the jth node in the kth blade
          m%BEMT_u(indx)%Vy(j,k) = dot_product( tmp, m%orientationAnnulus(2,:,j,k) ) !+ TwoNorm(m%DisturbedInflow(:,j,k))*(sin()*sin(tilt)*)! tangential component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
@@ -2834,6 +2834,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    do k=1,p%NumBlades
       do j=1,p%NumBlNds
          ! inputs for CUA (and CDBEMT):
+         ! TODO Here we should take the rotation in the airfoil coordinate system instead of the "l" or "w" system
          m%BEMT_u(indx)%omega_z(j,k)       = dot_product( u%BladeMotion(k)%RotationVel(   :,j), m%orientationAnnulus(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
          
       end do !j=nodes

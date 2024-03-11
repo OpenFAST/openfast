@@ -1592,7 +1592,7 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
             Init_UA_Data%c(i,1)      = p%W(iW)%chord_LL(i) ! NOTE: InitInp chord move-allocd to p
          end do
          Init_UA_Data%dt              = interval          
-         Init_UA_Data%OutRootName     = trim(InitInp%RootName)//'W'//num2lstr(iW)
+         Init_UA_Data%OutRootName     = trim(InitInp%RootName)//'W'//num2lstr(iW)//'.UA'
          Init_UA_Data%numBlades       = 1
          Init_UA_Data%nNodesPerBlade  = InitInp%numBladeNodes ! At AeroDyn ndoes, not CP
 
@@ -1601,6 +1601,9 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
          Init_UA_Data%a_s             = InitInp%a_s ! Speed of sound, m/s  
          Init_UA_Data%ShedEffect      = .False. ! Important, when coupling UA wih vortex code, shed vorticity is inherently accounted for
          Init_UA_Data%WrSum           = InitInp%SumPrint
+         Init_UA_Data%UA_OUTS         = 0
+         Init_UA_Data%d_34_to_ac      = 0.5_ReKi
+
          allocate(Init_UA_Data%UAOff_innerNode(1), stat=errStat2)
          allocate(Init_UA_Data%UAOff_outerNode(1), stat=errStat2)
          Init_UA_Data%UAOff_innerNode(1) = InitInp%W(iW)%UAOff_innerNode
