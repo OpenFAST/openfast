@@ -14,6 +14,10 @@ param     SeaSt_WaveField      -                INTEGER             WaveMod_ExtE
 param     SeaSt_WaveField      -                INTEGER             WaveMod_ExtFull          -        6   -   "WaveMod = 6   [Incident wave kinematics model: Externally generated full wave-kinematics time series (invalid for PotMod/=0)]" -
 param     SeaSt_WaveField      -                INTEGER             WaveMod_UserFreq         -        7   -   "WaveMod = 7   [Incident wave kinematics model: user-defined wave frequency components]" -
 
+param     SeaSt_WaveField      -                INTEGER             ConstWaveMod_None        -        0   -   "ConstWaveMod = 0 [Constrained wave model: No constrained waves]" -
+param     SeaSt_WaveField      -                INTEGER             ConstWaveMod_CrestElev   -        1   -   "ConstWaveMod = 1 [Constrained wave model: Constrained wave with specified crest elevation, alpha]" -
+param     SeaSt_WaveField      -                INTEGER             ConstWaveMod_Peak2Trough -        2   -   "ConstWaveMod = 2 [Constrained wave model: Constrained wave with guaranteed peak-to-trough crest height, HCrest]" -
+
 #---------------------------------------------------------------------------------------------------------------------------------------------------------
 #<Key Word> <Module>         <TypeName>            <FieldType>                   <FieldName>     <Dims>           <Ctrl>   <DNA ME> <Description> <Units>
 #---------------------------------------------------------------------------------------------------------------------------------------------------------

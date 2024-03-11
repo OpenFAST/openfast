@@ -329,7 +329,10 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
             call SetErrStat( ErrID_Fatal, 'Cannot use full summation-frequency 2nd-order wave kinematics for linearization. Set WvSumQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
          end if
 
-         
+         if ( InputFileData%Waves%ConstWaveMod /= WaveMod_None ) then
+            call SetErrStat( ErrID_Fatal, 'Constrained wave conditions cannot be used for linearization. Set ConstWaveMod=0.', ErrStat, ErrMsg, RoutineName )
+         end if
+
       end if
 
 
