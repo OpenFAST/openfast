@@ -228,17 +228,24 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       p%PtfmYMod     = InitInp%PtfmYMod 
       
       ! Set up wave excitation grid - Can no longer use the WaveField parameters due to different headings
-      ! If PtfmYMod = 0 (constant reference yaw offset), set NExctnHdg to one.
-      if ( InitInp%PtfmYMod .EQ. 0) then
-         p%NExctnHdg = 1_IntKi
-      end if
       ! Copy WaveField grid parameters
       call SeaSt_WaveField_CopyParam(p%WaveField%GridParams, p%ExctnGridParams, 0, ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      ! Set the last index based on the different headings
-      p%ExctnGridParams%n(4)     =  p%NExctnHdg+1
-      p%ExctnGridParams%delta(4) =  TwoPi/Real(MAX(p%NExctnHdg,1_IntKi),ReKi)
-      p%ExctnGridParams%pZero(4) = -Pi
-      p%ExctnGridParams%Z_depth  = -1.0   ! Set to Z_depth to a negative value to indicate uniform "z" grid for platform heading
+      if ( p%ExctnDisp == 0 ) then
+         p%ExctnGridParams%n(2:3)     =  1_IntKi
+         p%ExctnGridParams%delta(2:3) =  0.0_SiKi
+         p%ExctnGridParams%pZero(2:3) =  0.0_SiKi
+      end if
+      ! Set the fourth index based on PRP heading
+      if ( InitInp%PtfmYMod .EQ. 0) then      ! Constant reference yaw offset
+         p%NExctnHdg = 0_IntKi
+         p%ExctnGridParams%delta(4) = 0.0
+         p%ExctnGridParams%pZero(4) = u%PtfmRefY
+      else if ( InitInp%PtfmYMod .EQ. 1 ) then      ! Drifting reference yaw offset
+         p%ExctnGridParams%delta(4) =  TwoPi/Real(MAX(p%NExctnHdg,1_IntKi),ReKi)
+         p%ExctnGridParams%pZero(4) = -Pi
+      end if
+      p%ExctnGridParams%n(4)    =  p%NExctnHdg+1
+      p%ExctnGridParams%Z_depth = -1.0   ! Set to Z_depth to a negative value to indicate uniform "z" grid for platform heading
 
          ! This module's implementation requires that if NBodyMod = 2 or 3, then there is one instance of a WAMIT module for each body, therefore, HydroDyn may have NBody > 1, but this WAMIT module will have NBody = 1
       if ( (p%NBodyMod > 1) .and. (p%NBody > 1) ) then
@@ -912,26 +919,25 @@ end if
 
       if ( ( p%ExctnMod == 0 ) ) then
          
-         ! no need to allocate the p%WaveExctn array because it won't be used
+         ! no need to allocate the p%WaveExctnGrid array because it won't be used
          
       else
            ! Initialize the variables associated with the incident wave:
 
          SELECT CASE ( p%WaveField%WaveMod ) ! Which incident wave kinematics model are we using?
          
-         CASE ( WaveMod_None )  ! No waves, NOTE: for this case we are forcing ExctnDisp = 0, so only p%WaveExctn needs to be allocated, not p%WaveExctnGrid
+         CASE ( WaveMod_None )  ! No waves, NOTE: for this case we are forcing ExctnDisp = 0
             if ( p%ExctnMod == 1 ) then
 
                   ! Initialize everything to zero:
-
-               ALLOCATE ( p%WaveExctn (0:p%WaveField%NStepWave,p%NExctnHdg+1,6*p%NBody) , STAT=ErrStat2 )
+               ALLOCATE ( p%WaveExctnGrid (0:p%WaveField%NStepWave, p%ExctnGridParams%n(2),p%ExctnGridParams%n(3),p%ExctnGridParams%n(4),6*p%NBody) , STAT=ErrStat2 )
                IF ( ErrStat2 /= 0 )  THEN
-                  CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctn array.', ErrStat, ErrMsg, RoutineName)
+                  CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctnGrid array.', ErrStat, ErrMsg, RoutineName)
                   CALL Cleanup()
                   RETURN
                END IF
 
-               p%WaveExctn = 0.0   
+               p%WaveExctnGrid = 0.0   
          
             else if ( p%ExctnMod == 2 ) then
                Interval_Sub                  = InitInp%Conv_Rdtn%RdtnDT
@@ -994,31 +1000,18 @@ end if
                if (p%ExctnDisp > 0 ) then
                   ALLOCATE (  WaveExctnCGrid (0:p%WaveField%NStepWave2,p%ExctnGridParams%n(2)*p%ExctnGridParams%n(3),p%ExctnGridParams%n(4),6*p%NBody) , STAT=ErrStat2 )
                   IF ( ErrStat2 /= 0 )  THEN
-                     CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctnC array.', ErrStat, ErrMsg, RoutineName)
-                     CALL Cleanup()
-                     RETURN            
-                  END IF
-                  ALLOCATE ( p%WaveExctnGrid (0:p%WaveField%NStepWave, p%ExctnGridParams%n(2),p%ExctnGridParams%n(3),p%ExctnGridParams%n(4),6*p%NBody) , STAT=ErrStat2 )
-                  IF ( ErrStat2 /= 0 )  THEN
-                     CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctn array.', ErrStat, ErrMsg, RoutineName)
-                     CALL Cleanup()
-                     RETURN            
-                  END IF
-               else
-                  ALLOCATE ( p%WaveExctn (0:p%WaveField%NStepWave,p%NExctnHdg+1,6*p%NBody) , STAT=ErrStat2 )
-                  IF ( ErrStat2 /= 0 )  THEN
-                     CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctn array.', ErrStat, ErrMsg, RoutineName)
-                     CALL Cleanup()
-                     RETURN            
-                  END IF
-                  ALLOCATE ( p%WaveExctnGrid (0:p%WaveField%NStepWave, 1, 1,p%NExctnHdg+1,6*p%NBody) , STAT=ErrStat2 )
-                  IF ( ErrStat2 /= 0 )  THEN
-                     CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctn array.', ErrStat, ErrMsg, RoutineName)
+                     CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctnCGrid array.', ErrStat, ErrMsg, RoutineName)
                      CALL Cleanup()
                      RETURN            
                   END IF
                end if
-              
+               
+               ALLOCATE ( p%WaveExctnGrid (0:p%WaveField%NStepWave, p%ExctnGridParams%n(2),p%ExctnGridParams%n(3),p%ExctnGridParams%n(4),6*p%NBody) , STAT=ErrStat2 )
+               IF ( ErrStat2 /= 0 )  THEN
+                  CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctnGrid array.', ErrStat, ErrMsg, RoutineName)
+                  CALL Cleanup()
+                  RETURN            
+               END IF
 
                !====================================
                ! Transform the wave excitation coefs
@@ -1129,7 +1122,7 @@ end if
                   END IF
                DO iHdg = 1,p%NExctnHdg+1
                   DO J = 1,6*p%NBody           ! Loop through all wave excitation forces and moments
-                     CALL ApplyFFT_cx ( p%WaveExctn(0:p%WaveField%NStepWave-1,iHdg,J), WaveExctnC(:,iHdg,J), FFT_Data, ErrStat2 )
+                     CALL ApplyFFT_cx ( p%WaveExctnGrid(0:p%WaveField%NStepWave-1,1_IntKi,1_IntKi,iHdg,J), WaveExctnC(:,iHdg,J), FFT_Data, ErrStat2 )
                      CALL SetErrStat( ErrStat2, ' An error occured while applying an FFT to WaveExctnC.', ErrStat, ErrMsg, RoutineName)
                      IF ( ErrStat >= AbortErrLev) THEN
                         CALL Cleanup()
@@ -1137,7 +1130,7 @@ end if
                      END IF
             
                      ! Append first datpoint as the last as aid for repeated wave data
-                     p%WaveExctn(p%WaveField%NStepWave,iHdg,J) = p%WaveExctn(0,iHdg,J)
+                     p%WaveExctnGrid(p%WaveField%NStepWave,1_IntKi,1_IntKi,iHdg,J) = p%WaveExctnGrid(0,1_IntKi,1_IntKi,iHdg,J)
                   END DO                ! J - All wave excitation forces and moments
                END DO                 ! iHdg - All PRP headings
 
@@ -1156,15 +1149,13 @@ end if
                      PRPHdg = -PI + (iHdg-1) * TwoPi/REAL(p%NExctnHdg,ReKi)
                   END IF
                   DO J = 0,p%WaveField%NStepWave
-                     call hiFrameTransform(h2i,PRPHdg,p%WaveExctn(J,iHdg,1:3),tmpVec3,ErrStat2,ErrMsg2);  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-                     p%WaveExctn(J,iHdg,1:3) = tmpVec3
-                     call hiFrameTransform(h2i,PRPHdg,p%WaveExctn(J,iHdg,4:6),tmpVec3,ErrStat2,ErrMsg2);  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-                     p%WaveExctn(J,iHdg,4:6) = tmpVec3
+                     call hiFrameTransform(h2i,PRPHdg,p%WaveExctnGrid(J,1_IntKi,1_IntKi,iHdg,1:3),tmpVec3,ErrStat2,ErrMsg2);  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+                     p%WaveExctnGrid(J,1_IntKi,1_IntKi,iHdg,1:3) = tmpVec3
+                     call hiFrameTransform(h2i,PRPHdg,p%WaveExctnGrid(J,1_IntKi,1_IntKi,iHdg,4:6),tmpVec3,ErrStat2,ErrMsg2);  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+                     p%WaveExctnGrid(J,1_IntKi,1_IntKi,iHdg,4:6) = tmpVec3
                   END DO
                END DO
-
-               p%WaveExctnGrid(:,1,1,:,:) = p%WaveExctn
-            else
+            else  ! p%ExctnDisp > 0
                DO I = 0,p%WaveField%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transform
 
                   ! Compute the frequency of this component:
@@ -1866,16 +1857,11 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
 
          if ( p%ExctnDisp == 0 ) then         
                ! Abort if the wave excitation loads have not been computed yet:
-            IF ( .NOT. ALLOCATED ( p%WaveExctn ) )  THEN
+            IF ( .NOT. ALLOCATED ( p%WaveExctnGrid ) )  THEN
                ErrMsg  = ' Routine WAMIT_Init() must be called before routine WAMIT_CalcOutput().'
                ErrStat = ErrID_Fatal
                RETURN
             END IF
-         
-            ! DO I = 1,6*p%NBody     ! Loop through all wave excitation forces and moments
-            !    m%F_Waves1(I) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveField%WaveTime, p%WaveExctn(:,iHdg,I), &
-            !                                             m%LastIndWave, p%WaveField%NStepWave + 1       )
-            ! END DO          ! I - All wave excitation forces and moments
 
             DO iBody  = 1,p%NBody
                bodyPosition(1) = 0.0
