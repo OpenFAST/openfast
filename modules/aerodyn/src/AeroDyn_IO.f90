@@ -706,7 +706,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    call ParseVarWDefault ( FileInfo_In, CurLine, "DTAero", InputFileData%DTAero, interval, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
    ! WakeMod - LEGACY 
-   call ParseVar( FileInfo_In, CurLine, "WakeMod", InputFileData%WakeMod, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+   call ParseVar( FileInfo_In, CurLine, "WakeMod", InputFileData%WakeMod, ErrStat2, ErrMsg2, UnEc)
    wakeModProvided = legacyInputPresent('WakeMod', CurLine, ErrStat2, ErrMsg2, 'Wake_Mod=0 (WakeMod=0), Wake_Mod=1 (WakeMod=1), DBEMT_Mod>0 (WakeMod=2, Wake_Mod=3 (WakeMod=3)')
    ! Wake_Mod- Type of wake/induction model (switch) {0=none, 1=BEMT, 2=TBD, 3=OLAF}
    call ParseVar( FileInfo_In, CurLine, "Wake_Mod", InputFileData%Wake_Mod, ErrStat2, ErrMsg2, UnEc )
@@ -722,7 +722,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
 
    ! AFAeroMod - Type of blade airfoil aerodynamics model (switch) {1=steady model, 2=Beddoes-Leishman unsteady model} [AFAeroMod must be 1 when linearizing]
    call ParseVar( FileInfo_In, CurLine, "AFAeroMod", InputFileData%AFAeroMod, ErrStat2, ErrMsg2, UnEc )
-   AFAeroModProvided = legacyInputPresent('AFAeroMod', CurLine, ErrStat2, ErrMsg2, 'UAMod=0 (AFAeroMod=1), UAMod>1 (AFAeroMod=2)')
+   AFAeroModProvided = legacyInputPresent('AFAeroMod', CurLine, ErrStat2, ErrMsg2, 'UAMod=0 (AFAeroMod=1) or UAMod>1 (AFAeroMod=2)')
       ! TwrPotent - Type of tower influence on wind based on potential flow around the tower (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
    call ParseVar( FileInfo_In, CurLine, "TwrPotent", InputFileData%TwrPotent, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
@@ -734,7 +734,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       if (Failed()) return
    ! FrozenWake - Assume frozen wake during linearization? (flag) [used only when WakeMod=1 and when linearizing]
    call ParseVar( FileInfo_In, CurLine, "FrozenWake", InputFileData%FrozenWake, ErrStat2, ErrMsg2, UnEc )
-   frozenWakeProvided = legacyInputPresent('FrozenWake', Curline, ErrStat2, ErrMsg2, 'DBEMTMod=-1 (FrozenWake=True), DBEMTMod>-1 (FrozenWake=False)')
+   frozenWakeProvided = legacyInputPresent('FrozenWake', Curline, ErrStat2, ErrMsg2, 'DBEMTMod=-1 (FrozenWake=True) or DBEMTMod>-1 (FrozenWake=False)')
       ! CavitCheck - Perform cavitation check? (flag) [AFAeroMod must be 1 when CavitCheck=true]
    call ParseVar( FileInfo_In, CurLine, "CavitCheck", InputFileData%CavitCheck, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
@@ -1130,10 +1130,23 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    ! Prevent segfault when no blades specified.  All logic tests on BldNd_NumOuts at present.
    if (InputFileData%BldNd_BladesOut <= 0)   InputFileData%BldNd_NumOuts = 0
 
+   ! Temporary HACK, for WakeMod=10, 11 or 12 use AeroProjMod 2 (will trigger PolarBEM)
+   if (InputFileData%Wake_Mod==10) then
+      call WrScr('   WARNING: Wake_Mod=10 is a temporary hack. Setting BEM_Mod to 0')
+      InputFileData%BEM_Mod = 0
+   elseif (InputFileData%Wake_Mod==11) then
+      call WrScr('   WARNING: Wake_Mod=11 is a temporary hack. Setting BEM_Mod to 2')
+      InputFileData%BEM_Mod = 2
+   elseif (InputFileData%Wake_Mod==12) then
+      call WrScr('   WARNING: Wake_Mod=12 is a temporary hack. Setting BEM_Mod to 2')
+      InputFileData%BEM_Mod = 2
+   endif
+
+
    !====== Summary of new AeroDyn options ===============================================================
    ! NOTE: remove me in future release
    call WrScr('-------------- New AeroDyn inputs (with new meaning):')
-   write (*,'(A20,I0)') 'WakeMod:  '         , InputFileData%WakeMod
+   write (*,'(A20,I0)') 'Wake_Mod: '         , InputFileData%Wake_Mod
    write (*,'(A20,I0)') 'BEM_Mod:  '         , InputFileData%BEM_Mod
    write (*,'(A20,L0)') 'SectAvg:  '         , InputFileData%SectAvg
    write (*,'(A20,I0)') 'SectAvgWeighting:  ', InputFileData%SA_Weighting
@@ -1145,6 +1158,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    write (*,'(A20,L0)') 'AoA34:    '         , InputFileData%AoA34
    write (*,'(A20,I0)') 'UAMod:    '         , InputFileData%UAMod
    call WrScr('-------------- Old AeroDyn inputs:')
+   write (*,'(A20,I0)') 'WakeMod:  ', InputFileData%WakeMod
    write (*,'(A20,I0)') 'SkewMod:  ', InputFileData%SkewMod
    write (*,'(A20,I0)') 'AFAeroMod:', InputFileData%AFAeroMod
    write (*,'(A20,L0)') 'FrozenWake:', InputFileData%FrozenWake
@@ -1200,12 +1214,10 @@ CONTAINS
       character(len=*), intent(in) :: Message
       if (.not.FirstWarn) then
          call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-         call WrScr('!!!!!!!  Warning: the AeroDyn input file is not at the latest format!' )
-         call WrScr('         Visit: https://openfast.readthedocs.io/en/dev/source/user/api_change.html')
+         call WrScr('[WARN] The AeroDyn input file is not at the latest format!' )
+         call WrScr('       Visit: https://openfast.readthedocs.io/en/dev/source/user/api_change.html')
          call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
          FirstWarn=.true.
-      else
-         call WrScr('!!!!!!!  Warning: the AeroDyn input file is not at the latest format!' )
       endif
       call WrScr('> Issue: '//trim(Message))
    end subroutine LegacyWarning

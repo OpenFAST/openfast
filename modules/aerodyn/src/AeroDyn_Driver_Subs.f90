@@ -496,7 +496,8 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
          if (wt%projMod==-1)then
             !call WrScr('>>> Using HAWTprojection to determine projMod')
             if (wt%HAWTprojection) then
-               InitInp%AD%rotors(iWT)%AeroProjMod = APM_BEM_NoSweepPitchTwist ! default, with WithoutSweepPitchTwist
+               !InitInp%AD%rotors(iWT)%AeroProjMod = APM_BEM_NoSweepPitchTwist ! default, with WithoutSweepPitchTwist
+               InitInp%AD%rotors(iWT)%AeroProjMod = -1 ! We let the code decide based on BEM_Mod
             else
                InitInp%AD%rotors(iWT)%AeroProjMod = APM_LiftingLine
             endif

@@ -319,18 +319,47 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
    ! Temporary HACK, for WakeMod=10, 11 or 12 use AeroProjMod 2 (will trigger PolarBEM)
    if (InputFileData%Wake_Mod==10) then
-      call WrScr('   WARNING: Wake_Mod=10 is a temporary hack. Using new projection method with Wake_Mod=0.')
+      call WrScr('[WARN] Wake_Mod=10 is a temporary hack. Using new projection method with Wake_Mod=0 and DBEMT_Mod=0')
+      if (InputFileData%DBEMT_Mod/=0) then
+         call Fatal('DBEMT_Mod should be =0 when using the temporary hack Wake_Mod=10.'); return
+      endif
       InputFileData%Wake_Mod = 0
-      AeroProjMod(:) = 2
+      AeroProjMod(:) = APM_BEM_Polar
+
    elseif (InputFileData%Wake_Mod==11) then
-      call WrScr('   WARNING: Wake_Mod=11 is a temporary hack. Using new projection method with Wake_Mod=1.')
+      call WrScr('[WARN] Wake_Mod=11 is a temporary hack. Using new projection method with Wake_Mod=1 (BEM) and DBEMT_Mod=0.')
+      if (InputFileData%DBEMT_Mod/=0) then
+         call Fatal('DBEMT_Mod should be 0 when using the temporary hack Wake_Mod=11.'); return
+      endif
       InputFileData%Wake_Mod = 1
-      AeroProjMod(:) = 2
+      AeroProjMod(:) = APM_BEM_Polar
+
    elseif (InputFileData%Wake_Mod==12) then
-      call WrScr('   WARNING: Wake_Mod=12 is a temporary hack. Using new projection method with Wake_Mod=2.')
-      InputFileData%Wake_Mod = 2
-      AeroProjMod(:) = 2
+      call WrScr('[WARN] Wake_Mod=12 is a temporary hack. Using new projection method with Wake_Mod=1 (BEM) and DBEMT_Mod>=1.')
+      if (InputFileData%DBEMT_Mod<1) then
+         call Fatal('DBEMT_Mod should be >=1 when using the temporary hack Wake_Mod=12.'); return
+      endif
+      InputFileData%Wake_Mod = 1
+      AeroProjMod(:) = APM_BEM_Polar
    endif
+
+   ! --- "Automatic handling of AeroProjMod
+   do iR = 1, nRotors
+      if (AeroProjMod(iR) == -1) then
+         if (InputFileData%Wake_Mod /= WakeMod_BEMT) then
+            ! For BEMT, we don't throw a warning
+            call WrScr('[INFO] Using the input file input `BEMT_Mod` to match BEM coordinate system outputs')
+         endif
+         select case (InputFileData%BEM_Mod)
+         case (BEMMod_2D); AeroProjMod(ir) = APM_BEM_NoSweepPitchTwist
+         case (BEMMod_3D); AeroProjMod(ir) = APM_BEM_Polar
+         case default;     call Fatal('Input `BEMT_Mod` not supported'); return
+         end select
+
+      endif
+   enddo
+
+   print*,'AD_Init: AeroProjMod B:',AeroProjMod
 
       ! -----------------------------------------------------------------
       ! Read the AeroDyn blade files, or copy from passed input
@@ -367,13 +396,8 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! set the rest of the parameters
    p%Skew_Mod = InputFileData%Skew_Mod
    do iR = 1, nRotors
-      p%rotors(iR)%AeroProjMod = InitInp%rotors(iR)%AeroProjMod
-      !p%rotors(iR)%AeroProjMod = AeroProjMod(iR)
+      p%rotors(iR)%AeroProjMod = AeroProjMod(iR)
       call WrScr('   AeroDyn: projMod: '//trim(num2lstr(p%rotors(iR)%AeroProjMod)))
-      if (AeroProjMod(iR) == APM_BEM_Polar .and. InputFileData%Wake_Mod==WakeMod_FVW) then
-         call WrScr('AeroProj cannot be 2 (somehow) when using OLAF - Aborting')
-         STOP
-      endif
       call SetParameters( InitInp, InputFileData, InputFileData%rotors(iR), p%rotors(iR), p, ErrStat2, ErrMsg2 )
       if (Failed()) return;
    enddo
@@ -528,6 +552,12 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    call Cleanup() 
       
 contains
+   subroutine Fatal(errMsg_in)
+      character(*), intent(in) :: errMsg_in
+      call SetErrStat(ErrID_Fatal, errMsg_in, ErrStat, ErrMsg, RoutineName )
+      call Cleanup()
+   end subroutine Fatal
+
    logical function Failed()
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
@@ -3426,10 +3456,22 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
          ! Get disk average values and orientations
          ! NOTE: needed because it sets m%V_diskAvg and m%V_dot_x, needed by CalcOutput..
          call DiskAvgValues(p%rotors(iR), u(tIndx)%rotors(iR), m%rotors(iR), x_hat_disk) ! also sets m%V_diskAvg and m%V_dot_x
+
+         ! Compute Orientation similar to BEM, only to have consistent outputs...
+         ! TODO TODO TODO All this below is mostly a calcOutput thing, we should move it somewhere else!
+         !                orientation annulus is only used for Outputs with OLAF, same for pitch and azimuth
          if (p%rotors(iR)%AeroProjMod==APM_BEM_NoSweepPitchTwist) then
-            call Calculate_MeshOrientation_NoSweepPitchTwist(p%rotors(iR),u(tIndx)%rotors(iR),  m%rotors(iR), thetaBladeNds,ErrStat=ErrStat2,ErrMsg=ErrMsg2) ! sets m%orientationAnnulus, m%Curve
+            call Calculate_MeshOrientation_NoSweepPitchTwist(p%rotors(iR), u(tIndx)%rotors(iR),  m%rotors(iR), thetaBladeNds,ErrStat=ErrStat2,ErrMsg=ErrMsg2) ! sets m%orientationAnnulus, m%Curve
+
+         elseif (p%rotors(iR)%AeroProjMod==APM_BEM_Polar) then
+            do k=1,p%rotors(iR)%numBlades
+               call Calculate_MeshOrientation_Rel2Hub(u(tIndx)%rotors(iR)%BladeMotion(k), u(tIndx)%rotors(iR)%HubMotion, x_hat_disk, m%rotors(iR)%orientationAnnulus(:,:,:,k))
+            enddo
+
          else if (p%rotors(iR)%AeroProjMod==APM_LiftingLine) then
             call Calculate_MeshOrientation_LiftingLine      (p%rotors(iR),u(tIndx)%rotors(iR), m%rotors(iR), thetaBladeNds,ErrStat=ErrStat2,ErrMsg=ErrMsg2) ! sets m%orientationAnnulus, m%Curve
+         else
+            call SetErrStat(ErrID_Fatal, 'Aero Projection Method not implemented' ,ErrStat, ErrMsg, RoutineName)
          endif
          call StorePitchAndAzimuth(p%rotors(iR), u(tIndx)%rotors(iR), m%rotors(iR), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
