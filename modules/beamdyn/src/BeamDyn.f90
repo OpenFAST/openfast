@@ -94,7 +94,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
    REAL(BDKi)              :: temp_CRV(3)
    REAL(BDKi),ALLOCATABLE  :: GLL_nodes(:)
    REAL(BDKi)              :: TmpDCM(3,3)
-   REAL(BDKi)              :: denom
    LOGICAL                 :: QuasiStaticInitialized      !< True if quasi-static solution was found
 
 
@@ -163,29 +162,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
    CALL BD_ComputeBladeMassNew( p, ErrStat2, ErrMsg2 ); if (Failed()) return !computes p%blade_mass,p%blade_CG,p%blade_IN
 
 
-      ! Actuator
-   p%UsePitchAct = InputFileData%UsePitchAct
-
    if (p%UsePitchAct) then
-
-      p%pitchK = InputFileData%pitchK
-      p%pitchC = InputFileData%pitchC
-      p%pitchJ = InputFileData%pitchJ
-
-         ! calculate (I-hA)^-1
-
-      p%torqM(1,1) =  p%pitchJ + p%pitchC*p%dt
-      p%torqM(2,1) = -p%pitchK * p%dt
-      p%torqM(1,2) =  p%pitchJ * p%dt
-      p%torqM(2,2) =  p%pitchJ
-      denom        =  p%pitchJ + p%pitchC*p%dt + p%pitchK*p%dt**2
-      if (EqualRealNos(denom,0.0_BDKi)) then
-         call SetErrStat(ErrID_Fatal,"Cannot invert matrix for pitch actuator: J+c*dt+k*dt^2 is zero.",ErrStat,ErrMsg,RoutineName)
-         call Cleanup()
-         return
-      else
-         p%torqM(:,:) =  p%torqM / denom
-      end if
 
          ! Calculate the pitch angle
       TmpDCM(:,:) = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(u%HubMotion%Orientation(:,:,1)))
@@ -914,7 +891,7 @@ subroutine SetParameters(InitInp, InputFileData, p, OtherState, ErrStat, ErrMsg)
    INTEGER(IntKi)                               :: i, j              ! generic counter index
    INTEGER(IntKi)                               :: indx              ! counter into index array (p%NdIndx)
    INTEGER(IntKi)                               :: nUniqueQP         ! number of unique quadrature points (not double-counting nodes at element boundaries)
-
+   REAL(BDKi)                                   :: denom
    integer(intKi)                               :: ErrStat2          ! temporary Error status
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'SetParameters'
@@ -1140,6 +1117,26 @@ subroutine SetParameters(InitInp, InputFileData, p, OtherState, ErrStat, ErrMsg)
    ! set parameters for pitch actuator:
    !...............................................
 
+      ! Actuator
+   p%UsePitchAct = InputFileData%UsePitchAct
+   if (p%UsePitchAct) then
+      p%pitchK = InputFileData%pitchK
+      p%pitchC = InputFileData%pitchC
+      p%pitchJ = InputFileData%pitchJ
+
+         ! calculate (I-hA)^-1
+      p%torqM(1,1) =  p%pitchJ + p%pitchC*p%dt
+      p%torqM(2,1) = -p%pitchK * p%dt
+      p%torqM(1,2) =  p%pitchJ * p%dt
+      p%torqM(2,2) =  p%pitchJ
+      denom        =  p%pitchJ + p%pitchC*p%dt + p%pitchK*p%dt**2
+      if (EqualRealNos(denom,0.0_BDKi)) then
+         call SetErrStat(ErrID_Fatal, "Cannot invert matrix for pitch actuator: J+c*dt+k*dt^2 is zero.", ErrStat, ErrMsg, RoutineName)
+         return
+      else
+         p%torqM(:,:) =  p%torqM / denom
+      end if
+   end if
 
    !...............................................
    ! set parameters for File I/O data:
