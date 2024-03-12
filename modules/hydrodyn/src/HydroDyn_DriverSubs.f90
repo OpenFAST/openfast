@@ -299,7 +299,6 @@ SUBROUTINE ReadDriverInputFile( FileName, drvrData, ErrStat, ErrMsg )
       ! uDotDotPRPInSteady
    CALL ReadAry ( UnIn, FileName, drvrData%uDotDotPRPInSteady, 6, 'uDotDotPRPInSteady', 'PRP Steady-state translational and rotational accelerations.', ErrStat2,  ErrMsg2, UnEchoLocal)
    if (Failed()) return
-
       
    IF ( drvrData%PRPInputsMod /= 1 ) THEN
       drvrData%uPRPInSteady       = 0.0
@@ -309,8 +308,14 @@ SUBROUTINE ReadDriverInputFile( FileName, drvrData, ErrStat, ErrMsg )
 
    drvrData%WrTxtOutFile = .true.
    drvrData%WrBinOutFile = .false.
-   
 
+   !--------------- Check validity of driver inputs -----------------------------
+   if (drvrData%PtfmYMod /= 0 .AND. drvrData%PtfmYMod /= 1) then
+      ErrStat2=ErrID_Fatal
+      ErrMsg2='PtfmYMod must be 0 or 1.'
+      if (Failed()) return
+   end if
+   
    CALL cleanup()
    
 CONTAINS

@@ -3494,16 +3494,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       
       ! Effect of wave stretching already baked into m%FDynP, m%FA, and m%vrel. No additional modification needed.
       
-      ! Effect of reference yaw offset
-      call hiFrameTransform(h2i,u%PtfmRefY,p%AM_End(:,:,j),AM_End,ErrStat2,ErrMsg2)
+      ! Joint yaw offset
+      call YawJoint(J,u%PtfmRefY,AM_End,An_End,DP_Const_End,I_MG_End,ErrStat2,ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call hiFrameTransform(h2i,u%PtfmRefY,p%An_End(:,j),An_End,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call hiFrameTransform(h2i,u%PtfmRefY,p%DP_Const_End(:,j),DP_Const_End,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call hiFrameTransform(h2i,u%PtfmRefY,p%I_MG_End(:,:,j),I_MG_End,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
- 
+      
       ! Lumped added mass loads
       qdotdot                 = reshape((/u%Mesh%TranslationAcc(:,J),u%Mesh%RotationAcc(:,J)/),(/6/)) 
       m%F_A_End(:,J)          = m%nodeInWater(j) * matmul( AM_End, ( - qdotdot(1:3)) )
@@ -4150,6 +4144,36 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       member%Ak  = Ak
 
    END SUBROUTINE YawMember
+
+   SUBROUTINE YawJoint(JointNo,PtfmRefY,AM_End,An_End,DP_Const_End,I_MG_End,ErrStat,ErrMsg)
+      Integer(IntKi),           intent(in   ) :: JointNo
+      Real(ReKi),               intent(in   ) :: PtfmRefY
+      Real(ReKi),               intent(  out) :: AM_End(3,3)
+      Real(ReKi),               intent(  out) :: An_End(3)
+      Real(ReKi),               intent(  out) :: DP_Const_End(3)
+      Real(ReKi),               intent(  out) :: I_MG_End(3,3)
+      Integer(IntKi),           intent(  out) :: ErrStat
+      Character(*),             intent(  out) :: ErrMsg
+      
+      Integer(IntKi)                          :: ErrStat2
+      Character(ErrMsgLen)                    :: ErrMsg2
+
+      Character(*), parameter                 :: RoutineName = 'YawJoint'
+      
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+
+      call hiFrameTransform(h2i,PtfmRefY,p%AM_End(:,:,jointNo),AM_End,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call hiFrameTransform(h2i,PtfmRefY,p%An_End(:,jointNo),An_End,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call hiFrameTransform(h2i,PtfmRefY,p%DP_Const_End(:,jointNo),DP_Const_End,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call hiFrameTransform(h2i,PtfmRefY,p%I_MG_End(:,:,jointNo),I_MG_End,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+   END SUBROUTINE YawJoint
+
 
 END SUBROUTINE Morison_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------

@@ -1542,6 +1542,10 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       CALL SetErrStat( ErrID_Fatal,'AMMod must be 0 or 1',ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
+   IF ( InputFileData%Morison%WaveDisp .EQ. 0_IntKi .AND. InitInp%PtfmYMod .EQ. 1_IntKi) THEN
+      CALL SetErrStat( ErrID_Fatal,'When PtfmYMod=1, WaveDisp must also be 1.',ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF
 
    !-------------------------------------------------------------------------------------------------
    ! Member Joints Section
