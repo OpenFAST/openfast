@@ -3,6 +3,19 @@
 Input Files
 ===========
 
+Important changes introduced in v4.0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Some important changes have been introduced starting from version 4.0.
+Please refer to :ref:`api_change_ad4x` to understand the link between the old and new inputs.
+
+The documentation below has been updated to incorporate these changes.
+
+
+
+Introduction
+~~~~~~~~~~~~
+
 The user configures the aerodynamic model parameters via a primary
 AeroDyn input file, as well as separate input files for airfoil and
 blade data. When used in standalone mode, an additional driver input
@@ -43,6 +56,10 @@ primary input file is given in
 The input file begins with two lines of header information which is for
 your use, but is not used by the software.
 
+
+
+
+
 General Options
 ~~~~~~~~~~~~~~~
 
@@ -65,17 +82,12 @@ for ``DTAero`` may be used to indicate that AeroDyn should employ the
 time step prescribed by the driver code (OpenFAST or the standalone driver
 program).
 
-Set ``WakeMod`` to 0 if you want to disable rotor wake/induction effects or 1 to
-include these effects using the (quasi-steady) BEM theory model. When
-``WakeMod`` is set to 2, a dynamic BEM theory model (DBEMT) is used (also
-referred to as dynamic inflow or dynamic wake model, see :numref:`AD_DBEMT`).  When ``WakeMod`` is set
-to 3, the free vortex wake model is used, also referred to as OLAF (see
-:numref:`OLAF`). ``WakeMod`` cannot be set to 2 or 3 during linearization
+Set ``Wake_Mod`` to 0 if you want to disable rotor wake/induction effects or 1 to
+include these effects using the BEM theory model. 
+When ``Wake_Mod`` is set to 3, the free vortex wake model is used, also referred to as OLAF (see
+:numref:`OLAF`). ``Wake_Mod`` cannot be set to 3 during linearization
 analyses.
 
-Set ``AFAeroMod`` to 1 to include steady blade airfoil aerodynamics or 2
-to enable UA; ``AFAeroMod`` must be 1 during linearization analyses
-with AeroDyn coupled to OpenFAST. 
 
 Set ``TwrPotent`` to 0 to disable the
 potential-flow influence of the tower on the fluid flow local to the
@@ -219,11 +231,9 @@ for this input file.
 Unsteady Airfoil Aerodynamics Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The input parameters in this section are used only when ``AFAeroMod
-= 2``.
+``UA_Mod`` determines the UA model. It has the following options:
 
-``UAMod`` determines the UA model. It has the following options:
-
+- ``0``: no unsteady arifoil aerodynamics,
 - ``1``: the discrete-time model of Beddoes-Leishman (B-L) (**not currently functional**), 
 - ``2``: the extensions to B-L developed by González  (changes in Cn, Cc, Cm)
 - ``3``: the extensions to B-L developed by Minnema/Pierce (changes in Cc and Cm)
@@ -232,7 +242,7 @@ The input parameters in this section are used only when ``AFAeroMod
 - ``6``: 1-state continuous-time developed by Oye
 - ``7``: discrete-time Boeing-Vertol (BV) model
 
-Linearization is supported with ``UAMod=4,5,6`` (which use continuous-time states) but not with the other models. The different models are described in :numref:`AD_UA`.
+Linearization is supported with ``UA_Mod=4,5,6`` (which use continuous-time states) but not with the other models. The different models are described in :numref:`AD_UA`.
 
 
 **While all of the UA models are documented in this
@@ -256,7 +266,7 @@ is determined via a lookup into the static lift-force coefficient and
 drag-force coefficient data. **Using best-fit exponential equations
 (``FLookup = FALSE``) is not yet available, so ``FLookup`` must be
 ``TRUE`` in this version of AeroDyn.** Note, ``FLookup`` is not used 
-when ``UAMod=4`` or ``UAMod=5``.
+when ``UA_Mod=4`` or ``UA_Mod=5``.
 
 ``UAStartRad`` is the starting rotor radius where dynamic stall
 will be turned on. Enter a number between 0 and 1, representing a fraction of rotor radius,
@@ -528,7 +538,7 @@ if the keyword ``DEFAULT`` is entered in place of a numerical value,
 ``RelThickness`` is the non-dimensional thickness of the airfoil 
 (thickness over chord ratio), expressed as a fraction (not a percentage), 
 typically between 0.1 and 1. 
-The parameter is currently used when ``UAMod=7``, but might be used more in the future.
+The parameter is currently used when ``UA_Mod=7``, but might be used more in the future.
 The default value of 0.2 if provided for convenience.
 
 ``NonDimArea`` is the nondimensional airfoil area (normalized by the
@@ -583,24 +593,24 @@ or calculating it based on the polar coefficient data in the airfoil table:
 
 -  ``alphaUpper`` specifies the AoA (in degrees) of the upper boundary of 
    fully-attached region of the cn or cl curve. It is used to 
-   compute the separation function when ``UAMod=5``.
+   compute the separation function when ``UA_Mod=5``.
 
 -  ``alphaLower`` specifies the AoA (in degrees) of the lower boundary of 
    fully-attached region of the cn or cl curve. It is used to 
-   compute the separation function when ``UAMod=5``. (The separation function
+   compute the separation function when ``UA_Mod=5``. (The separation function
    will have a value of 1 between ``alphaUpper`` and ``alphaLower``.)   
 
 -  ``eta_e`` is the recovery factor and typically has a value in the
-   range [0.85 to 0.95] for ``UAMod = 1``; if the keyword ``DEFAULT`` is
+   range [0.85 to 0.95] for ``UA_Mod = 1``; if the keyword ``DEFAULT`` is
    entered in place of a numerical value, ``eta_e`` is set to 0.9 for
-   ``UAMod = 1``, but ``eta_e`` is set to 1.0 for other ``UAMod``
+   ``UA_Mod = 1``, but ``eta_e`` is set to 1.0 for other ``UA_Mod``
    values and whenever ``FLookup = TRUE``;
 
 -  ``C_nalpha`` is the slope of the 2D normal force coefficient curve
    in the linear region;
 
 -  ``C_lalpha`` is the slope of the 2D normal lift coefficient curve
-   in the linear region; Used for ``UAMod=4,6``.
+   in the linear region; Used for ``UA_Mod=4,6``.
 
 -  ``T_f0`` is the initial value of the time constant associated with
    *Df* in the expressions of *Df* and *f’*; if the keyword ``DEFAULT`` is
@@ -661,19 +671,19 @@ or calculating it based on the polar coefficient data in the airfoil table:
    to 1, based on experimental results;
 
 -  ``S1`` is the constant in the best fit curve of *f* for
-   ``alpha0`` :math:`\le` AoA :math:`\le` ``alpha1`` for ``UAMod = 1`` (and is unused
+   ``alpha0`` :math:`\le` AoA :math:`\le` ``alpha1`` for ``UA_Mod = 1`` (and is unused
    otherwise); by definition, it depends on the airfoil;
 
 -  ``S2`` is the constant in the best fit curve of *f* for AoA >
-   ``alpha1`` for ``UAMod = 1`` (and is unused otherwise); by
+   ``alpha1`` for ``UA_Mod = 1`` (and is unused otherwise); by
    definition, it depends on the airfoil;
 
 -  ``S3`` is the constant in the best fit curve of *f* for
-   ``alpha2`` :math:`\le` AoA :math:`\le` ``alpha0`` for ``UAMod = 1`` (and is unused
+   ``alpha2`` :math:`\le` AoA :math:`\le` ``alpha0`` for ``UA_Mod = 1`` (and is unused
    otherwise); by definition, it depends on the airfoil;
 
 -  ``S4`` is the constant in the best fit curve of *f* for AoA <
-   ``alpha2`` for ``UAMod = 1`` (and is unused otherwise); by
+   ``alpha2`` for ``UA_Mod = 1`` (and is unused otherwise); by
    definition, it depends on the airfoil;
 
 -  ``Cn1`` is the critical value of :math:`C^{\prime}_n` at leading-edge separation for
@@ -700,22 +710,22 @@ or calculating it based on the polar coefficient data in the airfoil table:
    location at zero-lift AoA, positive for nose up;
 
 -  ``k0`` is a constant in the best fit curve of :math:`\hat{x}_{cp}` and equals for :math:`\hat{x}_{AC}-0.25`
-   ``UAMod = 1`` (and is unused otherwise);
+   ``UA_Mod = 1`` (and is unused otherwise);
 
--  ``k1`` is a constant in the best fit curve of :math:`\hat{x}_{cp}` for ``UAMod = 1``
+-  ``k1`` is a constant in the best fit curve of :math:`\hat{x}_{cp}` for ``UA_Mod = 1``
    (and is unused otherwise);
 
--  ``k2`` is a constant in the best fit curve of :math:`\hat{x}_{cp}` for ``UAMod = 1``
+-  ``k2`` is a constant in the best fit curve of :math:`\hat{x}_{cp}` for ``UA_Mod = 1``
    (and is unused otherwise);
 
--  ``k3`` is a constant in the best fit curve of :math:`\hat{x}_{cp}` for ``UAMod = 1``
+-  ``k3`` is a constant in the best fit curve of :math:`\hat{x}_{cp}` for ``UA_Mod = 1``
    (and is unused otherwise);
 
 -  ``k1_hat`` is a constant in the expression of *Cc* due to
-   leading-edge vortex effects for ``UAMod = 1`` (and is unused
+   leading-edge vortex effects for ``UA_Mod = 1`` (and is unused
    otherwise);
 
--  ``x_cp_bar`` is a constant in the expression of :math:`\hat{x}_{cp}^{\nu}` for ``UAMod =
+-  ``x_cp_bar`` is a constant in the expression of :math:`\hat{x}_{cp}^{\nu}` for ``UA_Mod =
    1`` (and is unused otherwise); if the keyword ``DEFAULT`` is entered in
    place of a numerical value, ``x_cp_bar`` is set to 0.2; and
 

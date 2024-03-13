@@ -33,6 +33,44 @@ SubDyn                                        59\*                              
 \*Exact line number depends on number of entries in various preceeding tables.
 
 
+.. _api_change_ad4x:
+
+AeroDyn changes starting from v4.x
+----------------------------------
+
+The table below shows how to convert from the Old AeroDyn inputs to the new AeroDyn inputs.
+
+
+- Please see :ref:`ad_input` for more details on the new inputs.
+
+- Please refer to the discussion `here <https://github.com/OpenFAST/openfast/discussions/1895>`__
+
+- Please refer to the following directory for a complete example of AeroDyn input file:
+     `here <https://github.com/OpenFAST/r-test/blob/dev/modules/aerodyn/ad_BAR_OLAF/OpenFAST_BAR_00_AeroDyn15.dat>`__
+
+
+=========================== ========================================================= 
+Old inputs                  Corresponding new inputs                                  
+=========================== ========================================================= 
+`WakeMod=0`                 `Wake_Mod=0`                                              
+`WakeMod=1` ("BEM")         `Wake_Mod=1` and `DBEMT_Mod=0` and `BEM_Mod=1`            
+`WakeMod=2` ("DBEMT")       `Wake_Mod=1` and `DBEMT_Mod={1,2,3}`                      
+`WakeMod=3` ("OLAF")        `Wake_Mod=3`                                              
+`AFAeroMod=1`               `UA_Mod=0` and `AoA34=False`                              
+`AFAeroMod=2`               `UA_Mod>0` and `AoA34=False`  and `UA_Mod=UAMod`          
+`FrozenWake=True`           `DBEMT_Mod=-1`                                            
+`FrozenWake=False`          `DBEMT_Mod=0` (quasi-steady) or `DBEMT_Mod>0` (dynamic)   
+`SkewMod=2` (Glauert)       `Skew_Mod=1` and `SkewRedistr_Mod=1`                      
+`SkewMod=0` (Orthogonal)    `Skew_Mod=-1`                                             
+`UAMod={2-7}`               `UA_Mod={2-7}` and `AoA34=True`                           
+=========================== ========================================================= 
+
+
+
+
+
+
+
 OpenFAST v3.5.1 to OpenFAST v3.5.2 
 ----------------------------------
 
