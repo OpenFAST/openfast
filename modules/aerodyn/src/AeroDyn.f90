@@ -227,8 +227,9 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    
 
       ! Local variables
-   integer(IntKi)                              :: i             ! loop counter
+   integer(IntKi)                              :: i,k           ! loop counter
    integer(IntKi)                              :: iR            ! loop on rotors
+   integer(IntKi)                              :: nNodesVelRot  ! number of nodes associated with the rotor that need wind velocity (for CFD coupling)
    
    integer(IntKi)                              :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                        :: errMsg2       ! temporary error message 
@@ -521,6 +522,18 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       end do
    end if
    
+   ! number of nodes velocity is required at (for coupling to cfd)
+   InitOut%nNodesVel = 0
+   do iR = 1, nRotors
+      if (u%rotors(iR)%HubMotion%committed)           InitOut%nNodesVel = InitOut%nNodesVel + u%rotors(iR)%HubMotion%nNodes
+      do k = 1,size(u%rotors(iR)%BladeMotion)
+         if (u%rotors(iR)%BladeMotion(k)%committed)   InitOut%nNodesVel = InitOut%nNodesVel + u%rotors(iR)%BladeMotion(k)%nNodes
+      enddo
+      if (u%rotors(iR)%TowerMotion%committed)         InitOut%nNodesVel = InitOut%nNodesVel + u%rotors(iR)%TowerMotion%nNodes
+      if (u%rotors(iR)%NacelleMotion%committed)       InitOut%nNodesVel = InitOut%nNodesVel + u%rotors(iR)%NacelleMotion%nNodes
+      if (u%rotors(iR)%TFinMotion%committed)          InitOut%nNodesVel = InitOut%nNodesVel + u%rotors(iR)%TFinMotion%nNodes
+   enddo
+
       !............................................................................................
       ! Initialize Jacobian:
       !............................................................................................

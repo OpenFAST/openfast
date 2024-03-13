@@ -140,6 +140,7 @@ typedef	^	RotInitOutputType	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m
 
 typedef	^	InitOutputType	RotInitOutputType	 rotors	{:}	-	-	"Rotor init output type"	-
 typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
+typedef	^	InitOutputType	IntKi	nNodesVel	-	-	-	"number of nodes velocity values are needed at (for ExtLoads coupling)"	-
 # ..... Input file data ...........................................................................................................
 
 # ..... Primary Input file data ...................................................................................................

@@ -362,7 +362,7 @@ CONTAINS
          Point%Attached(Point%nAttached) = lineID
          Point%Top(Point%nAttached) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
       ELSE
-         Print*, "Too many lines connected to Point ", Point%IdNum, " in MoorDyn!"
+         call WrScr("Too many lines connected to Point "//trim(num2lstr(Point%IdNum))//" in MoorDyn!")
       END IF
 
    END SUBROUTINE Point_AddLine
@@ -399,7 +399,7 @@ CONTAINS
                   rdEnd(J) = Point%rd(J)
                END DO
                
-               print*, "Detached line ", lineID, " from Point ", Point%IdNum
+               call WrScr( "Detached line "//trim(num2lstr(lineID))//" from Point "//trim(num2lstr(Point%IdNum)))
                
                EXIT
             END DO

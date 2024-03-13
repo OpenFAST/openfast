@@ -119,34 +119,31 @@ subroutine SC_DX_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine SC_DX_PackInitInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine SC_DX_PackInitInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(SC_DX_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SC_DX_PackInitInput'
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call RegPack(Buf, InData%NumSC2Ctrl)
-   call RegPack(Buf, InData%NumSC2CtrlGlob)
-   call RegPack(Buf, InData%NumCtrl2SC)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPack(RF, InData%NumSC2Ctrl)
+   call RegPack(RF, InData%NumSC2CtrlGlob)
+   call RegPack(RF, InData%NumCtrl2SC)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SC_DX_UnPackInitInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine SC_DX_UnPackInitInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(SC_DX_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_DX_UnPackInitInput'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%NumSC2Ctrl)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%NumSC2Ctrl); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NumSC2Ctrl = OutData%NumSC2Ctrl
-   call RegUnpack(Buf, OutData%NumSC2CtrlGlob)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NumSC2CtrlGlob); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NumSC2CtrlGlob = OutData%NumSC2CtrlGlob
-   call RegUnpack(Buf, OutData%NumCtrl2SC)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NumCtrl2SC); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NumCtrl2SC = OutData%NumCtrl2SC
 end subroutine
 
@@ -219,25 +216,25 @@ subroutine SC_DX_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine SC_DX_PackInitOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine SC_DX_PackInitOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(SC_DX_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SC_DX_PackInitOutput'
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
-   if (RegCheckErr(Buf, RoutineName)) return
+   call NWTC_Library_PackProgDesc(RF, InData%Ver) 
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SC_DX_UnPackInitOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine SC_DX_UnPackInitOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(SC_DX_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_DX_UnPackInitOutput'
-   if (Buf%ErrStat /= ErrID_None) return
-   call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
+   if (RF%ErrStat /= ErrID_None) return
+   call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
 end subroutine
 
 SUBROUTINE SC_DX_C2Fary_CopyInitOutput(InitOutputData, ErrStat, ErrMsg, SkipPointers)
@@ -296,26 +293,25 @@ subroutine SC_DX_DestroyParam(ParamData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine SC_DX_PackParam(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine SC_DX_PackParam(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(SC_DX_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SC_DX_PackParam'
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call RegPack(Buf, InData%useSC)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPack(RF, InData%useSC)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SC_DX_UnPackParam(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine SC_DX_UnPackParam(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(SC_DX_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_DX_UnPackParam'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%useSC)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%useSC); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%useSC = OutData%useSC
 end subroutine
 
@@ -361,14 +357,14 @@ subroutine SC_DX_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'SC_DX_CopyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (associated(SrcInputData%toSC)) then
-      LB(1:1) = lbound(SrcInputData%toSC)
-      UB(1:1) = ubound(SrcInputData%toSC)
+      LB(1:1) = lbound(SrcInputData%toSC, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputData%toSC, kind=B8Ki)
       if (.not. associated(DstInputData%toSC)) then
          allocate(DstInputData%toSC(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -398,63 +394,31 @@ subroutine SC_DX_DestroyInput(InputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine SC_DX_PackInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine SC_DX_PackInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(SC_DX_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SC_DX_PackInput'
    logical         :: PtrInIndex
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call RegPack(Buf, associated(InData%toSC))
-   if (associated(InData%toSC)) then
-      call RegPackBounds(Buf, 1, lbound(InData%toSC), ubound(InData%toSC))
-      call RegPackPointer(Buf, c_loc(InData%toSC), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%toSC)
-      end if
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPackPtr(RF, InData%toSC)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SC_DX_UnPackInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine SC_DX_UnPackInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(SC_DX_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_DX_UnPackInput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(IntKi)  :: PtrIdx
+   integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
-   if (Buf%ErrStat /= ErrID_None) return
-   if (associated(OutData%toSC)) deallocate(OutData%toSC)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%toSC, UB(1:1)-LB(1:1))
-         OutData%toSC(LB(1):) => OutData%toSC
-      else
-         allocate(OutData%toSC(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%toSC.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%toSC)
-         OutData%C_obj%toSC_Len = size(OutData%toSC)
-         if (OutData%C_obj%toSC_Len > 0) OutData%C_obj%toSC = c_loc(OutData%toSC(LB(1)))
-         call RegUnpack(Buf, OutData%toSC)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%toSC => null()
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackPtr(RF, OutData%toSC); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 SUBROUTINE SC_DX_C2Fary_CopyInput(InputData, ErrStat, ErrMsg, SkipPointers)
@@ -507,7 +471,7 @@ SUBROUTINE SC_DX_F2C_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          InputData%C_obj%toSC_Len = SIZE(InputData%toSC)
          IF (InputData%C_obj%toSC_Len > 0) &
-            InputData%C_obj%toSC = C_LOC(InputData%toSC(LBOUND(InputData%toSC,1)))
+            InputData%C_obj%toSC = C_LOC(InputData%toSC(LBOUND(InputData%toSC,1, kind=B8Ki)))
       END IF
    END IF
 END SUBROUTINE
@@ -518,14 +482,14 @@ subroutine SC_DX_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'SC_DX_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (associated(SrcOutputData%fromSC)) then
-      LB(1:1) = lbound(SrcOutputData%fromSC)
-      UB(1:1) = ubound(SrcOutputData%fromSC)
+      LB(1:1) = lbound(SrcOutputData%fromSC, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%fromSC, kind=B8Ki)
       if (.not. associated(DstOutputData%fromSC)) then
          allocate(DstOutputData%fromSC(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -539,8 +503,8 @@ subroutine SC_DX_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
       DstOutputData%fromSC = SrcOutputData%fromSC
    end if
    if (associated(SrcOutputData%fromSCglob)) then
-      LB(1:1) = lbound(SrcOutputData%fromSCglob)
-      UB(1:1) = ubound(SrcOutputData%fromSCglob)
+      LB(1:1) = lbound(SrcOutputData%fromSCglob, kind=B8Ki)
+      UB(1:1) = ubound(SrcOutputData%fromSCglob, kind=B8Ki)
       if (.not. associated(DstOutputData%fromSCglob)) then
          allocate(DstOutputData%fromSCglob(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -576,97 +540,33 @@ subroutine SC_DX_DestroyOutput(OutputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine SC_DX_PackOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine SC_DX_PackOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(SC_DX_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SC_DX_PackOutput'
    logical         :: PtrInIndex
-   if (Buf%ErrStat >= AbortErrLev) return
+   if (RF%ErrStat >= AbortErrLev) return
    if (c_associated(InData%C_obj%object)) then
-      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
-   call RegPack(Buf, associated(InData%fromSC))
-   if (associated(InData%fromSC)) then
-      call RegPackBounds(Buf, 1, lbound(InData%fromSC), ubound(InData%fromSC))
-      call RegPackPointer(Buf, c_loc(InData%fromSC), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%fromSC)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%fromSCglob))
-   if (associated(InData%fromSCglob)) then
-      call RegPackBounds(Buf, 1, lbound(InData%fromSCglob), ubound(InData%fromSCglob))
-      call RegPackPointer(Buf, c_loc(InData%fromSCglob), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%fromSCglob)
-      end if
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPackPtr(RF, InData%fromSC)
+   call RegPackPtr(RF, InData%fromSCglob)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SC_DX_UnPackOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine SC_DX_UnPackOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(SC_DX_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_DX_UnPackOutput'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(IntKi)  :: PtrIdx
+   integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
-   if (Buf%ErrStat /= ErrID_None) return
-   if (associated(OutData%fromSC)) deallocate(OutData%fromSC)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%fromSC, UB(1:1)-LB(1:1))
-         OutData%fromSC(LB(1):) => OutData%fromSC
-      else
-         allocate(OutData%fromSC(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%fromSC.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%fromSC)
-         OutData%C_obj%fromSC_Len = size(OutData%fromSC)
-         if (OutData%C_obj%fromSC_Len > 0) OutData%C_obj%fromSC = c_loc(OutData%fromSC(LB(1)))
-         call RegUnpack(Buf, OutData%fromSC)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%fromSC => null()
-   end if
-   if (associated(OutData%fromSCglob)) deallocate(OutData%fromSCglob)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%fromSCglob, UB(1:1)-LB(1:1))
-         OutData%fromSCglob(LB(1):) => OutData%fromSCglob
-      else
-         allocate(OutData%fromSCglob(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%fromSCglob.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%fromSCglob)
-         OutData%C_obj%fromSCglob_Len = size(OutData%fromSCglob)
-         if (OutData%C_obj%fromSCglob_Len > 0) OutData%C_obj%fromSCglob = c_loc(OutData%fromSCglob(LB(1)))
-         call RegUnpack(Buf, OutData%fromSCglob)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%fromSCglob => null()
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackPtr(RF, OutData%fromSC); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%fromSCglob); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 SUBROUTINE SC_DX_C2Fary_CopyOutput(OutputData, ErrStat, ErrMsg, SkipPointers)
@@ -728,7 +628,7 @@ SUBROUTINE SC_DX_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          OutputData%C_obj%fromSC_Len = SIZE(OutputData%fromSC)
          IF (OutputData%C_obj%fromSC_Len > 0) &
-            OutputData%C_obj%fromSC = C_LOC(OutputData%fromSC(LBOUND(OutputData%fromSC,1)))
+            OutputData%C_obj%fromSC = C_LOC(OutputData%fromSC(LBOUND(OutputData%fromSC,1, kind=B8Ki)))
       END IF
    END IF
    
@@ -740,7 +640,7 @@ SUBROUTINE SC_DX_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          OutputData%C_obj%fromSCglob_Len = SIZE(OutputData%fromSCglob)
          IF (OutputData%C_obj%fromSCglob_Len > 0) &
-            OutputData%C_obj%fromSCglob = C_LOC(OutputData%fromSCglob(LBOUND(OutputData%fromSCglob,1)))
+            OutputData%C_obj%fromSCglob = C_LOC(OutputData%fromSCglob(LBOUND(OutputData%fromSCglob,1, kind=B8Ki)))
       END IF
    END IF
 END SUBROUTINE
