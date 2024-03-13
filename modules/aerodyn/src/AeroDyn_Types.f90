@@ -48,6 +48,7 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrShadow_none = 0      ! no tower shadow [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrShadow_Powles = 1      ! Powles tower shadow model [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrShadow_Eames = 2      ! Eames tower shadow model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SA_Wgt_Uniform = 1      ! Sector average weighting - Uniform [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinAero_none = 0      ! no tail fin aero [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinAero_polar = 1      ! polar-based tail fin aerodynamics [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinAero_USB = 2      ! unsteady slender body tail fin aerodynamics model [-]
@@ -459,6 +460,7 @@ IMPLICIT NONE
     LOGICAL  :: UA_Flag = .false.      !< logical flag indicating whether to use UnsteadyAero [-]
     TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Pointer of InflowWinds flow field data type [-]
     LOGICAL  :: SectAvg = .false.      !< Use Sector average for BEM inflow velocity calculation [-]
+    INTEGER(IntKi)  :: SA_Weighting = 0_IntKi      !< Sector Average - Weighting function for sector average  {1=Uniform, 2=Impulse}  within a 360/nB sector centered on the blade (switch) [used only when SectAvg=True] [-]
     REAL(ReKi)  :: SA_PsiBwd = 0.0_ReKi      !< Sector Average - Backard Azimuth (<0) [deg]
     REAL(ReKi)  :: SA_PsiFwd = 0.0_ReKi      !< Sector Average - Forward Azimuth (>0) [deg]
     INTEGER(IntKi)  :: SA_nPerSec = 0_IntKi      !< Sector Average - Number of points per sector (>1) [-]
@@ -6439,6 +6441,7 @@ subroutine AD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%UA_Flag = SrcParamData%UA_Flag
    DstParamData%FlowField => SrcParamData%FlowField
    DstParamData%SectAvg = SrcParamData%SectAvg
+   DstParamData%SA_Weighting = SrcParamData%SA_Weighting
    DstParamData%SA_PsiBwd = SrcParamData%SA_PsiBwd
    DstParamData%SA_PsiFwd = SrcParamData%SA_PsiFwd
    DstParamData%SA_nPerSec = SrcParamData%SA_nPerSec
@@ -6519,6 +6522,7 @@ subroutine AD_PackParam(Buf, Indata)
       end if
    end if
    call RegPack(Buf, InData%SectAvg)
+   call RegPack(Buf, InData%SA_Weighting)
    call RegPack(Buf, InData%SA_PsiBwd)
    call RegPack(Buf, InData%SA_PsiFwd)
    call RegPack(Buf, InData%SA_nPerSec)
@@ -6600,6 +6604,8 @@ subroutine AD_UnPackParam(Buf, OutData)
       OutData%FlowField => null()
    end if
    call RegUnpack(Buf, OutData%SectAvg)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%SA_Weighting)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%SA_PsiBwd)
    if (RegCheckErr(Buf, RoutineName)) return

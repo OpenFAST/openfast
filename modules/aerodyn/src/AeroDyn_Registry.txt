@@ -32,6 +32,9 @@ param    ^              -  IntKi    TwrShadow_none          -  0  -  "no tower s
 param    ^              -  IntKi    TwrShadow_Powles        -  1  -  "Powles tower shadow model"                  -
 param    ^              -  IntKi    TwrShadow_Eames         -  2  -  "Eames tower shadow model"                   -
 
+param    ^              -  IntKi    SA_Wgt_Uniform          -  1  -  "Sector average weighting - Uniform"                            -
+#param    ^              -  IntKi    SA_Wgt_Impulse          -  1  -  "Sector average weighting - Impulse"                            -
+
 param    ^              -  IntKi    TFinAero_none           -  0  -  "no tail fin aero"                                   -
 param    ^              -  IntKi    TFinAero_polar          -  1  -  "polar-based tail fin aerodynamics"                  -
 param    ^              -  IntKi    TFinAero_USB            -  2  -  "unsteady slender body tail fin aerodynamics model"  -
@@ -422,6 +425,7 @@ typedef   ^     ParameterType LOGICAL         CompAeroMaps   -  .FALSE. -   "fla
 typedef   ^     ParameterType LOGICAL         UA_Flag       -  -  -  "logical flag indicating whether to use UnsteadyAero"        - 
 typedef ^   ParameterType   FlowFieldType *FlowField -  -   -    "Pointer of InflowWinds flow field data type" - 
 typedef ^      ^            Logical        SectAvg   -  -   -    "Use Sector average for BEM inflow velocity calculation"	-
+typedef ^      ^            IntKi          SA_Weighting - - 1    "Sector Average - Weighting function for sector average  {1=Uniform, 2=Impulse}  within a 360/nB sector centered on the blade (switch) [used only when SectAvg=True]" -
 typedef ^      ^            ReKi           SA_PsiBwd -  -   -    "Sector Average - Backard Azimuth (<0)"	deg
 typedef ^      ^            ReKi           SA_PsiFwd -  -   -    "Sector Average - Forward Azimuth (>0)"	deg
 typedef ^      ^            IntKi          SA_nPerSec -  -   -    "Sector Average - Number of points per sector (>1)"	-

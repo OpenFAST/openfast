@@ -1349,6 +1349,7 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    p_AD%CompAeroMaps  = InitInp%CompAeroMaps
 
    p_AD%SectAvg        = InputFileData%SectAvg
+   p_AD%SA_Weighting   = InputFileData%SA_Weighting
    p_AD%SA_PsiBwd      = InputFileData%SA_PsiBwd*D2R
    p_AD%SA_PsiFwd      = InputFileData%SA_PsiFwd*D2R
    p_AD%SA_nPerSec     = InputFileData%SA_nPerSec
@@ -2771,7 +2772,12 @@ subroutine SetSectAvgInflow(t, p, p_AD, u, m, errStat, errMsg)
    if (allocated(SectAcc)) deallocate(SectAcc) ! IfW_FlowField_GetVelAcc some logic for Acc, so we ensure it's deallocated
    SectVel = 0.0_ReKi
    SectPos = 0.0_ReKi
-   SectWgt = 1.0_ReKi/p_AD%SA_nPerSec ! TODO, potentially do a smart weighting function based on psi
+   if (p_AD%SA_Weighting == SA_Wgt_Uniform)  then
+      SectWgt = 1.0_ReKi/p_AD%SA_nPerSec
+   else
+      errStat2 = errID_Fatal; errMsg2 = 'Sector averaging weighting (`SA_Weighting`) should be Uniform'
+      if (Failed()) return
+   endif
    dpsi = (p_AD%SA_PsiFwd-p_AD%SA_PsiBwd)/(p_AD%SA_nPerSec-1)
 
    ! Hub 
@@ -3864,6 +3870,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
          if ( maxval(InputFileData%rotors(iR)%TwrTI) >  0.4 .and. maxval(InputFileData%rotors(iR)%TwrTI) <  1.0) call SetErrStat ( ErrID_Warn,  'The turbulence intensity for the Eames tower shadow model above 0.4 may return unphysical results.  Interpret with caution.', ErrStat, ErrMsg, RoutineName )
       enddo
    endif
+   if (Failed()) return
    
    if (InitInp%MHK == MHK_None .and. InputFileData%CavitCheck) call SetErrStat ( ErrID_Fatal, 'A cavitation check can only be performed for an MHK turbine.', ErrStat, ErrMsg, RoutineName )
    if (InitInp%MHK == MHK_None .and. InputFileData%Buoyancy) call SetErrStat ( ErrID_Fatal, 'Buoyancy can only be calculated for an MHK turbine.', ErrStat, ErrMsg, RoutineName )
@@ -3880,24 +3887,30 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
 
       
    
-      ! BEMT/DBEMT inputs
-      ! bjj: these checks should probably go into BEMT where they are used...
-   if (InputFileData%Wake_Mod /= WakeMod_none .and. InputFileData%Wake_Mod /= WakeMod_FVW) then
+   ! NOTE: this check is done here because it is used for all kind of Wake Mod
+   if (.not.any(InputFileData%BEM_Mod == (/BEMMod_2D, BEMMod_3D/))) call Fatal('BEM_Mod must be 1 or 2.')
+
+   ! --- BEMT/DBEMT inputs
+   ! bjj: these checks should probably go into BEMT where they are used...
+   if (InputFileData%Wake_Mod == WakeMod_BEMT) then
       if ( InputFileData%MaxIter < 1 ) call SetErrStat( ErrID_Fatal, 'MaxIter must be greater than 0.', ErrStat, ErrMsg, RoutineName )
       
       if ( InputFileData%IndToler < 0.0 .or. EqualRealNos(InputFileData%IndToler, 0.0_ReKi) ) &
          call SetErrStat( ErrID_Fatal, 'IndToler must be greater than 0.', ErrStat, ErrMsg, RoutineName )
    
-      if ( InputFileData%Skew_Mod /= Skew_Mod_Orthogonal .and. InputFileData%Skew_Mod /= Skew_Mod_None .and. InputFileData%Skew_Mod /= Skew_Mod_Active) & 
-           call SetErrStat( ErrID_Fatal, 'Skew_Mod must be -1, 0, or 1.', ErrStat, ErrMsg, RoutineName )      
+      if (.not.any(InputFileData%Skew_Mod == (/Skew_Mod_Orthogonal, Skew_Mod_None, Skew_Mod_Active/)))   call Fatal('Skew_Mod must be -1, 0, or 1.')
+      if (.not.any(InputFileData%SkewRedistr_Mod == (/SkewRedistrMod_None, SkewRedistrMod_PittPeters/))) call Fatal('SkewRedistr_Mod should be 0 or 1')
 
       if ( InputFileData%SectAvg) then
-         if (InputFileData%SA_nPerSec <= 1) call SetErrStat(ErrID_Fatal, 'SA_nPerSec must be >=1', ErrStat, ErrMsg, RoutineName)
-         if (InputFileData%SA_PsiBwd > 0)   call SetErrStat(ErrID_Fatal, 'SA_PsiBwd must be negative', ErrStat, ErrMsg, RoutineName)
-         if (InputFileData%SA_PsiFwd < 0)   call SetErrStat(ErrID_Fatal, 'SA_PsiFwd must be positive', ErrStat, ErrMsg, RoutineName)
-         if (InputFileData%SA_PsiFwd <= InputFileData%SA_PsiBwd ) call SetErrStat(ErrID_Fatal, 'SA_PsiFwd must be strictly higher than SA_PsiBwd', ErrStat, ErrMsg, RoutineName)
+         if (InputFileData%SA_Weighting /= SA_Wgt_Uniform) call Fatal('SectAvgWeighting should be Uniform (=1) for now.')
+         if (InputFileData%SA_nPerSec <= 1)                call Fatal('SectAvgNPoints must be >=1')
+         if (InputFileData%SA_PsiBwd > 0)                  call Fatal('SectAvgPsiBwd must be negative')
+         if (InputFileData%SA_PsiFwd < 0)                  call Fatal('SectAvgPsiFwd must be positive')
+         if (InputFileData%SA_PsiFwd <= InputFileData%SA_PsiBwd ) call Fatal('SectAvgPsiFwd must be strictly higher than SA_PsiBwd')
       endif
       
+      ! Good to return once in a while..
+      if (Failed()) return
    end if !BEMT/DBEMT checks
    
    
@@ -3966,6 +3979,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
          end do ! k=blades
       end if
    end do ! iR rotor
+   if (Failed()) return
 
       ! .............................
       ! check tower mesh data:
@@ -4008,6 +4022,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
 
       end if
    end do ! iR rotor
+   if (Failed()) return
             
 
 
@@ -4059,6 +4074,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       enddo ! iR
    
    end if
+   if (Failed()) return
          
          
    if ( ( InputFileData%NBlOuts < 0_IntKi ) .OR. ( InputFileData%NBlOuts > 9_IntKi ) )  then
@@ -4078,6 +4094,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       end do ! iR, rotor
       
    end if   
+   if (Failed()) return
 
    !..................
    ! Tail fin checks
@@ -4092,6 +4109,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
          endif
       endif
    enddo ! iR, rotor
+   if (Failed()) return
    
    !..................
    ! check for linearization
@@ -4117,6 +4135,10 @@ contains
       character(*), intent(in) :: ErrMsg_in
       call SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, RoutineName)
    END SUBROUTINE Fatal
+
+   logical function Failed()
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
    
 END SUBROUTINE ValidateInputData
 !----------------------------------------------------------------------------------------------------------------------------------
