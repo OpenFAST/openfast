@@ -659,7 +659,9 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    integer(IntKi)                                  :: CurLine           !< current entry in FileInfo_In%Lines array
    real(ReKi)                                      :: TmpRe5(5)         !< temporary 8 number array for reading values in
    character(1024)                                 :: sDummy            !< temporary string
-   logical :: wakeModProvided, frozenWakeProvided, skewModProvided, AFAeroModProvided, isLegalComment, firstWarn !< Temporary for legacy purposes
+   logical :: wakeModProvided, frozenWakeProvided, skewModProvided, AFAeroModProvided, UAModProvided, isLegalComment, firstWarn !< Temporary for legacy purposes
+   logical :: AoA34_Missing
+   integer :: UAMod_Old
 
    character(*), parameter                         :: RoutineName = 'ParsePrimaryFileInfo'
 
@@ -707,11 +709,11 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       if (Failed()) return
    ! WakeMod - LEGACY 
    call ParseVar( FileInfo_In, CurLine, "WakeMod", InputFileData%WakeMod, ErrStat2, ErrMsg2, UnEc)
-   wakeModProvided = legacyInputPresent('WakeMod', CurLine, ErrStat2, ErrMsg2, 'Wake_Mod=0 (WakeMod=0), Wake_Mod=1 (WakeMod=1), DBEMT_Mod>0 (WakeMod=2, Wake_Mod=3 (WakeMod=3)')
+   wakeModProvided = legacyInputPresent('WakeMod', CurLine, ErrStat2, ErrMsg2, 'Wake_Mod=0 (WakeMod=0), Wake_Mod=1 (WakeMod=1), DBEMT_Mod>0 (WakeMod=2), Wake_Mod=3 (WakeMod=3)')
    ! Wake_Mod- Type of wake/induction model (switch) {0=none, 1=BEMT, 2=TBD, 3=OLAF}
    call ParseVar( FileInfo_In, CurLine, "Wake_Mod", InputFileData%Wake_Mod, ErrStat2, ErrMsg2, UnEc )
-   if (newInputAbsent('Wake_Mod', CurLine, errStat2, errMsg2)) then
-      call WrScr('         Setting Wake_Mod to 1 (BEM active) as the input is absent (typical behavior).')
+   if (newInputMissing('Wake_Mod', CurLine, errStat2, errMsg2)) then
+      call WrScr('         Setting Wake_Mod to 1 (BEM active) as the input is Missing (typical behavior).')
       InputFileData%Wake_Mod = WakeMod_BEMT
    else
       if (wakeModProvided) then
@@ -722,7 +724,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
 
    ! AFAeroMod - Type of blade airfoil aerodynamics model (switch) {1=steady model, 2=Beddoes-Leishman unsteady model} [AFAeroMod must be 1 when linearizing]
    call ParseVar( FileInfo_In, CurLine, "AFAeroMod", InputFileData%AFAeroMod, ErrStat2, ErrMsg2, UnEc )
-   AFAeroModProvided = legacyInputPresent('AFAeroMod', CurLine, ErrStat2, ErrMsg2, 'UAMod=0 (AFAeroMod=1) or UAMod>1 (AFAeroMod=2)')
+   AFAeroModProvided = legacyInputPresent('AFAeroMod', CurLine, ErrStat2, ErrMsg2, 'UA_Mod=0 (AFAeroMod=1) or UA_Mod>1 (AFAeroMod=2)')
       ! TwrPotent - Type of tower influence on wind based on potential flow around the tower (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
    call ParseVar( FileInfo_In, CurLine, "TwrPotent", InputFileData%TwrPotent, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
@@ -773,8 +775,8 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
 
    ! BEM_Mod
    call ParseVar( FileInfo_In, CurLine, "BEM_Mod", InputFileData%BEM_Mod, ErrStat2, ErrMsg2, UnEc )
-   if (newInputAbsent('BEM_Mod', CurLine, errStat2, errMsg2)) then
-      call WrScr('         Setting BEM_Mod to 1 (NoPitchSweepPitch) as the input is absent (legacy behavior).')
+   if (newInputMissing('BEM_Mod', CurLine, errStat2, errMsg2)) then
+      call WrScr('         Setting BEM_Mod to 1 (NoPitchSweepPitch) as the input is Missing (legacy behavior).')
       InputFileData%BEM_Mod = BEMMod_2D
    endif
 
@@ -783,8 +785,8 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    skewModProvided = legacyInputPresent('SkewMod', CurLine, ErrStat2, ErrMsg2, 'Skew_Mod=-1 (SkewMod=0), Skew_Mod=0 (SkewMod=1), Skew_Mod=1 (SkewMod>=2)')
    ! Skew_Mod-  Select skew model {0: No skew model at all, -1:Throw away non-normal component for linearization, 1: Glauert skew model, }
    call ParseVar( FileInfo_In, CurLine, "Skew_Mod", InputFileData%Skew_Mod, ErrStat2, ErrMsg2, UnEc )
-   if (newInputAbsent('Skew_Mod', CurLine, errStat2, errMsg2)) then
-      call WrScr('         Setting Skew_Mod to 1 (skew active) as the input is absent (typical behavior).')
+   if (newInputMissing('Skew_Mod', CurLine, errStat2, errMsg2)) then
+      call WrScr('         Setting Skew_Mod to 1 (skew active) as the input is Missing (typical behavior).')
       InputFileData%Skew_Mod = Skew_Mod_Active
    else
       if (skewModProvided) then
@@ -795,16 +797,16 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
 
    ! SkewMomCorr - Turn the skew momentum correction on or off [used only when SkewMod=1]
    call ParseVar( FileInfo_In, CurLine, "SkewMomCorr", InputFileData%SkewMomCorr, ErrStat2, ErrMsg2, UnEc )
-   if (newInputAbsent('SkewMomCorr', CurLine, errStat2, errMsg2)) then
-      call WrScr('         Setting SkewMomCorr to False as the input is absent (legacy behavior).')
+   if (newInputMissing('SkewMomCorr', CurLine, errStat2, errMsg2)) then
+      call WrScr('         Setting SkewMomCorr to False as the input is Missing (legacy behavior).')
       InputFileData%SkewMomCorr = .False.
    endif
 
-   ! SkewRedistrMod - Type of skewed-wake correction model (switch) {0: no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1]
-   call ParseVar( FileInfo_In, CurLine, "SkewRedistrMod", InputFileData%SkewRedistrMod, ErrStat2, ErrMsg2, UnEc )
-   if (newInputAbsent('SkewRedistrMod', CurLine, errStat2, errMsg2)) then
-      call WrScr('         Setting SkewRedistrMod to 1 as the input is absent (legacy behavior).')
-      InputFileData%SkewRedistrMod = 1
+   ! SkewRedistr_Mod - Type of skewed-wake correction model (switch) {0: no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1]
+   call ParseVar( FileInfo_In, CurLine, "SkewRedistr_Mod", InputFileData%SkewRedistr_Mod, ErrStat2, ErrMsg2, UnEc )
+   if (newInputMissing('SkewRedistr_Mod', CurLine, errStat2, errMsg2)) then
+      call WrScr('         Setting SkewRedistr_Mod to 1 as the input is Missing (legacy behavior).')
+      InputFileData%SkewRedistr_Mod = 1
    endif
 
       ! SkewModFactor - Constant used in Pitt/Peters skewed wake model {or "default" is 15/32*pi} (-) [used only when SkewMod=2; unused when WakeMod=0 or 3]
@@ -838,8 +840,8 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    ! ---  Shear
    call ParseCom (FileInfo_in, CurLine, sDummy, errStat2, errMsg2, UnEc, isLegalComment); if (Failed()) return
    call ParseVar( FileInfo_In, CurLine, "SectAvg"         , InputFileData%SectAvg, ErrStat2, ErrMsg2, UnEc ); 
-   if (newInputAbsent('SectAvg', CurLine, errStat2, errMsg2)) then
-      call WrScr('         Setting SectAvg to False as the input is absent (legacy behavior).')
+   if (newInputMissing('SectAvg', CurLine, errStat2, errMsg2)) then
+      call WrScr('         Setting SectAvg to False as the input is Missing (legacy behavior).')
       InputFileData%SectAvg = .false.
    else
       call ParseVar( FileInfo_In, CurLine, "SectAvgWeighting", InputFileData%SA_Weighting, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
@@ -867,13 +869,26 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    call ParseCom (FileInfo_in, CurLine, sDummy, errStat2, errMsg2, UnEc, isLegalComment); if (Failed()) return
    ! AoA34 Sample the angle of attack (AoA) at the 3/4 chord or the AC point {default=True} [always used]
    call ParseVar( FileInfo_In, CurLine, "AoA34", InputFileData%AoA34, ErrStat2, ErrMsg2, UnEc )
-   if (newInputAbsent('AoA34', CurLine, errStat2, errMsg2)) then
-      call WrScr('         Setting AoA34 to False as the input is absent (legacy behavior).')
-      InputFileData%AoA34=.false.
+   AoA34_Missing = newInputMissing('AoA34', CurLine, errStat2, errMsg2)
+   ! UAMod (Legacy)
+   UAMod_Old=-1
+   call ParseVar( FileInfo_In, CurLine, "UAMod", UAMod_Old, ErrStat2, ErrMsg2, UnEc )
+   UAModProvided = legacyInputPresent('UAMod', CurLine, ErrStat2, ErrMsg2, 'UA_Mod=0 (AFAeroMod=1), UA_Mod>1 (AFAeroMod=2 and UA_Mod=UAMod')
+   ! UA_Mod - Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA),  2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} 
+   call ParseVar( FileInfo_In, CurLine, "UA_Mod", InputFileData%UAMod, ErrStat2, ErrMsg2, UnEc )
+   if (newInputMissing('UA_Mod', CurLine, errStat2, errMsg2)) then
+      ! We'll deal with it when we deal with AFAeroMod
+      InputFileData%UAMod = UAMod_Old
+      if (.not. UAModProvided) then
+         call LegacyAbort('Need to provide either UA_Mod or UAMod in the input file'); return
+      endif
+   else
+      if (UAModProvided) then
+         call LegacyAbort('Cannot have both UA_Mod and UAMod in the input file'); return
+      endif
    endif
-   ! UAMod - Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA),  2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} 
-   call ParseVar( FileInfo_In, CurLine, "UAMod", InputFileData%UAMod, ErrStat2, ErrMsg2, UnEc )
-      if (Failed()) return
+
+
       ! FLookup - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when AFAeroMod=2]
    call ParseVar( FileInfo_In, CurLine, "FLookup", InputFileData%FLookup, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
@@ -1053,34 +1068,41 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    ! NOTE: remove me in future release
    if (frozenWakeProvided) then
       if (InputFileData%FrozenWake) then
-         call WrScr('   FrozenWake=True     -> Setting DBEMT_Mod=-1')
+         call WrScr('> FrozenWake=True  -> Setting DBEMT_Mod=-1')
          InputFileData%DBEMT_Mod = DBEMT_frozen
       else
-         call WrScr('   FrozenWake=False    -> Not changing DBEMT_Mod')
+         call WrScr('> FrozenWake=False -> Not changing DBEMT_Mod')
       endif
    endif
    if (wakeModProvided) then
       InputFileData%Wake_Mod = InputFileData%WakeMod
       if (InputFileData%WakeMod==1) then
-         call WrScr('   WakeMod=1           -> Setting DBEMT_Mod=0')
+         call WrScr('> WakeMod=1        -> Setting DBEMT_Mod=0')
          ! Turn off DBEMT
          InputFileData%DBEMT_Mod=DBEMT_none
       else if (InputFileData%WakeMod==2) then
-         call WrScr('   WakeMod=2           -> Setting Wake_Mod=1 (BEMT) (DBEMT_Mod needs to be >0)')
+         call WrScr('> WakeMod=2        -> Setting Wake_Mod=1 (BEMT) (DBEMT_Mod needs to be >0)')
          InputFileData%Wake_Mod = WakeMod_BEMT
          if (InputFileData%DBEMT_Mod < DBEMT_none) then
-            call LegacyAbort('DBEMT should be >0 when using legacy input WakeMod=2')
+            call LegacyAbort('DBEMT should be >0 when using legacy input WakeMod=2'); return
          endif
       endif
    endif
    if (AFAeroModProvided) then
       if (InputFileData%AFAeroMod==1) then
-         call WrScr('   AFAeroMod=1         -> Setting UAMod=0')
+         call WrScr('> AFAeroMod=1      -> Setting UA_Mod=0')
          InputFileData%UAMod = UA_None
+         if (AoA34_Missing) then
+            call WrScr('> Setting AoA34 to False as the input is Missing (legacy behavior).')
+            InputFileData%AoA34=.false.
+         endif
       else if (InputFileData%AFAeroMod==2) then
-         call WrScr('   AFAeroMod=2         -> Not changing DBEMT_Mod')
+         call WrScr('> AFAeroMod=2      -> Not changing DBEMT_Mod')
          if (InputFileData%UAMod==0) then
-            call LegacyAbort('Cannot set UAMod=0 with legacy option AFAeroMod=2 (inconsistent behavior).')
+            call LegacyAbort('Cannot set UA_Mod=0 with legacy option AFAeroMod=2 (inconsistent behavior).'); return
+         else if (AoA34_Missing) then
+            call WrScr('> Setting AoA34 to True as the input is Missing (legacy behavior).')
+            InputFileData%AoA34=.true.
          endif
       else
          call LegacyAbort('AFAeroMod should be 1 or 2'); return
@@ -1094,7 +1116,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       else if (InputFileData%SkewMod==2) then
          InputFileData%Skew_Mod = Skew_Mod_Active
       else
-         call LegacyAbort('Legacy option SkewMod is not 0, 1,2  which is not supported.')
+         call LegacyAbort('Legacy option SkewMod is not 0, 1,2  which is not supported.'); return
       endif
    endif
 
@@ -1130,39 +1152,9 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    ! Prevent segfault when no blades specified.  All logic tests on BldNd_NumOuts at present.
    if (InputFileData%BldNd_BladesOut <= 0)   InputFileData%BldNd_NumOuts = 0
 
-   ! Temporary HACK, for WakeMod=10, 11 or 12 use AeroProjMod 2 (will trigger PolarBEM)
-   if (InputFileData%Wake_Mod==10) then
-      call WrScr('   WARNING: Wake_Mod=10 is a temporary hack. Setting BEM_Mod to 0')
-      InputFileData%BEM_Mod = 0
-   elseif (InputFileData%Wake_Mod==11) then
-      call WrScr('   WARNING: Wake_Mod=11 is a temporary hack. Setting BEM_Mod to 2')
-      InputFileData%BEM_Mod = 2
-   elseif (InputFileData%Wake_Mod==12) then
-      call WrScr('   WARNING: Wake_Mod=12 is a temporary hack. Setting BEM_Mod to 2')
-      InputFileData%BEM_Mod = 2
-   endif
 
-
-   !====== Summary of new AeroDyn options ===============================================================
-   ! NOTE: remove me in future release
-   call WrScr('-------------- New AeroDyn inputs (with new meaning):')
-   write (*,'(A20,I0)') 'Wake_Mod: '         , InputFileData%Wake_Mod
-   write (*,'(A20,I0)') 'BEM_Mod:  '         , InputFileData%BEM_Mod
-   write (*,'(A20,L0)') 'SectAvg:  '         , InputFileData%SectAvg
-   write (*,'(A20,I0)') 'SectAvgWeighting:  ', InputFileData%SA_Weighting
-   write (*,'(A20,I0)') 'SectAvgNPoints:    ', InputFileData%SA_nPerSec
-   write (*,'(A20,I0)') 'DBEMT_Mod:'         , InputFileData%DBEMT_Mod
-   write (*,'(A20,I0)') 'Skew_Mod:  '        , InputFileData%Skew_Mod
-   write (*,'(A20,L0)') 'SkewMomCorr:'       , InputFileData%SkewMomCorr
-   write (*,'(A20,I0)') 'SkewRedistrMod:'    , InputFileData%SkewRedistrMod
-   write (*,'(A20,L0)') 'AoA34:    '         , InputFileData%AoA34
-   write (*,'(A20,I0)') 'UAMod:    '         , InputFileData%UAMod
-   call WrScr('-------------- Old AeroDyn inputs:')
-   write (*,'(A20,I0)') 'WakeMod:  ', InputFileData%WakeMod
-   write (*,'(A20,I0)') 'SkewMod:  ', InputFileData%SkewMod
-   write (*,'(A20,I0)') 'AFAeroMod:', InputFileData%AFAeroMod
-   write (*,'(A20,L0)') 'FrozenWake:', InputFileData%FrozenWake
-   call WrScr('------------------------------------------------------')
+   !====== Print new and old inputs =====================================================================
+   call printNewOldInputs()
 
    !====== Advanced Options =============================================================================
    if ((CurLine) >= size(FileInfo_In%Lines)) RETURN
@@ -1203,11 +1195,13 @@ CONTAINS
    end function Failed
    logical function FailedNodal()
       ErrMsg_NoAllBldNdOuts='AD15 Nodal Outputs: Nodal output section of AeroDyn input file not found or improperly formatted. Skipping nodal outputs.'
-      FailedNodal = ErrStat2 >= AbortErrLev
+      ! TODO Use and ErrID_Fatal here
+      FailedNodal = ErrStat2 >= AbortErrLev 
       if ( FailedNodal ) then
          InputFileData%BldNd_BladesOut = 0
          InputFileData%BldNd_NumOuts = 0
          call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
+         call printNewOldInputs()
       endif
    end function FailedNodal
    subroutine LegacyWarning(Message)
@@ -1248,14 +1242,14 @@ CONTAINS
       errMsg  = ''
    end function legacyInputPresent
    !-------------------------------------------------------------------------------------------------
-   logical function newInputAbsent(varName, iLine, errStat, errMsg, varNameSubs)
+   logical function newInputMissing(varName, iLine, errStat, errMsg, varNameSubs)
       character(len=*),           intent(in  )  :: varName     !< Variable being read
       integer(IntKi),             intent(in   ) :: iLine       !< Line number
       integer(IntKi),             intent(inout) :: errStat     !< Error status
       character(ErrMsgLen),       intent(inout) :: errMsg      !< Error message
       character(len=*), optional, intent(in  )  :: varNameSubs !< Substituted variable
-      newInputAbsent = errStat == ErrID_Fatal
-      if (newInputAbsent) then
+      newInputMissing = errStat == ErrID_Fatal
+      if (newInputMissing) then
          call LegacyWarning(trim(varName)//' should be present on line '//trim(num2lstr(iLine))//'.')
       else
          ! We are happy
@@ -1263,7 +1257,44 @@ CONTAINS
       ! We erase the error
       errStat = ErrID_None
       errMsg  = ''
-   end function newInputAbsent
+   end function newInputMissing
+
+   !-------------------------------------------------------------------------------------------------
+   subroutine printNewOldInputs()
+      ! Temporary HACK, for WakeMod=10, 11 or 12 use AeroProjMod 2 (will trigger PolarBEM)
+      if (InputFileData%Wake_Mod==10) then
+         call WrScr('[WARN] Wake_Mod=10 is a temporary hack. Setting BEM_Mod to 0')
+         InputFileData%BEM_Mod = 0
+      elseif (InputFileData%Wake_Mod==11) then
+         call WrScr('[WARN] Wake_Mod=11 is a temporary hack. Setting BEM_Mod to 2')
+         InputFileData%BEM_Mod = 2
+      elseif (InputFileData%Wake_Mod==12) then
+         call WrScr('[WARN] Wake_Mod=12 is a temporary hack. Setting BEM_Mod to 2')
+         InputFileData%BEM_Mod = 2
+      endif
+      !====== Summary of new AeroDyn options ===============================================================
+      ! NOTE: remove me in future release
+      call WrScr('-------------- New AeroDyn inputs (with new meaning):')
+      write (*,'(A20,I0)') 'Wake_Mod: '         , InputFileData%Wake_Mod
+      write (*,'(A20,I0)') 'BEM_Mod:  '         , InputFileData%BEM_Mod
+      write (*,'(A20,L0)') 'SectAvg:  '         , InputFileData%SectAvg
+      write (*,'(A20,I0)') 'SectAvgWeighting:  ', InputFileData%SA_Weighting
+      write (*,'(A20,I0)') 'SectAvgNPoints:    ', InputFileData%SA_nPerSec
+      write (*,'(A20,I0)') 'DBEMT_Mod:'         , InputFileData%DBEMT_Mod
+      write (*,'(A20,I0)') 'Skew_Mod:  '        , InputFileData%Skew_Mod
+      write (*,'(A20,L0)') 'SkewMomCorr:'       , InputFileData%SkewMomCorr
+      write (*,'(A20,I0)') 'SkewRedistr_Mod:'   , InputFileData%SkewRedistr_Mod
+      write (*,'(A20,L0)') 'AoA34:    '         , InputFileData%AoA34
+      write (*,'(A20,I0)') 'UA_Mod:   '         , InputFileData%UAMod
+      call WrScr('-------------- Old AeroDyn inputs:')
+      write (*,'(A20,I0)') 'WakeMod:  ', InputFileData%WakeMod
+      write (*,'(A20,I0)') 'SkewMod:  ', InputFileData%SkewMod
+      write (*,'(A20,I0)') 'AFAeroMod:', InputFileData%AFAeroMod
+      write (*,'(A20,L0)') 'FrozenWake:', InputFileData%FrozenWake
+      write (*,'(A20,I0)') 'UAMod:     ', UAMod_Old
+      call WrScr('------------------------------------------------------')
+   end subroutine printNewOldInputs
+
 END SUBROUTINE ParsePrimaryFileInfo
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, ErrStat, ErrMsg )

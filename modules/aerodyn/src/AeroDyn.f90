@@ -4336,7 +4336,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
    InitInp%airDens          = InputFileData%AirDens 
    InitInp%kinVisc          = InputFileData%KinVisc
    InitInp%skewWakeMod      = InputFileData%Skew_Mod
-   InitInp%skewRedistrMod   = InputFileData%SkewRedistrMod
+   InitInp%skewRedistrMod   = InputFileData%SkewRedistr_Mod
    InitInp%yawCorrFactor    = InputFileData%SkewModFactor
    InitInp%aTol             = InputFileData%IndToler
    InitInp%useTipLoss       = InputFileData%TipLoss

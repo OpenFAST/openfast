@@ -210,7 +210,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: SkewMod = 0_IntKi      !< LEGACY - Skew Mod [-]
     INTEGER(IntKi)  :: Skew_Mod = 0_IntKi      !< Select skew model {0=No skew model at all, -1=Throw away non-normal component for linearization, 1=Glauert skew model} [-]
     LOGICAL  :: SkewMomCorr = .false.      !< Turn the skew momentum correction on or off [used only when SkewMod=1] [-]
-    INTEGER(IntKi)  :: SkewRedistrMod = 0_IntKi      !< Type of skewed-wake redistribution model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1] [-]
+    INTEGER(IntKi)  :: SkewRedistr_Mod = 0_IntKi      !< Type of skewed-wake redistribution model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1] [-]
     REAL(ReKi)  :: SkewModFactor = 0.0_ReKi      !< Constant used in Pitt/Peters skewed wake model (default is 15*pi/32) [-]
     LOGICAL  :: TipLoss = .false.      !< Use the Prandtl tip-loss model? [unused when Wake_Mod=0] [flag]
     LOGICAL  :: HubLoss = .false.      !< Use the Prandtl hub-loss model? [unused when Wake_Mod=0] [flag]
@@ -2608,7 +2608,7 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%SkewMod = SrcInputFileData%SkewMod
    DstInputFileData%Skew_Mod = SrcInputFileData%Skew_Mod
    DstInputFileData%SkewMomCorr = SrcInputFileData%SkewMomCorr
-   DstInputFileData%SkewRedistrMod = SrcInputFileData%SkewRedistrMod
+   DstInputFileData%SkewRedistr_Mod = SrcInputFileData%SkewRedistr_Mod
    DstInputFileData%SkewModFactor = SrcInputFileData%SkewModFactor
    DstInputFileData%TipLoss = SrcInputFileData%TipLoss
    DstInputFileData%HubLoss = SrcInputFileData%HubLoss
@@ -2769,7 +2769,7 @@ subroutine AD_PackInputFile(Buf, Indata)
    call RegPack(Buf, InData%SkewMod)
    call RegPack(Buf, InData%Skew_Mod)
    call RegPack(Buf, InData%SkewMomCorr)
-   call RegPack(Buf, InData%SkewRedistrMod)
+   call RegPack(Buf, InData%SkewRedistr_Mod)
    call RegPack(Buf, InData%SkewModFactor)
    call RegPack(Buf, InData%TipLoss)
    call RegPack(Buf, InData%HubLoss)
@@ -2902,7 +2902,7 @@ subroutine AD_UnPackInputFile(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%SkewMomCorr)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%SkewRedistrMod)
+   call RegUnpack(Buf, OutData%SkewRedistr_Mod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%SkewModFactor)
    if (RegCheckErr(Buf, RoutineName)) return
