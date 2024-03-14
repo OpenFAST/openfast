@@ -913,12 +913,12 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now check the limits for the first wave direction
                !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-            IF ( InitInp%WaveField%WaveDirMin < MINVAL(MnDriftData%Data3D%WvDir1) ) THEN
+            IF ( (InitInp%WaveField%WaveDirMin-InitInp%PtfmRefY*R2D) < (MINVAL(MnDriftData%Data3D%WvDir1)-1.0e-4) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(MnDriftData%Data3D%WvDir1) ) THEN
+            IF ( (InitInp%WaveField%WaveDirMax-InitInp%PtfmRefY*R2D) > (MAXVAL(MnDriftData%Data3D%WvDir1)+1.0e-4) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
@@ -927,12 +927,12 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now check the limits for the second wave direction
                !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-            IF ( InitInp%WaveField%WaveDirMin < MINVAL(MnDriftData%Data3D%WvDir2) ) THEN
+            IF ( (InitInp%WaveField%WaveDirMin-InitInp%PtfmRefY*R2D) < (MINVAL(MnDriftData%Data3D%WvDir2)-1.0e-4) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(MnDriftData%Data3D%WvDir2) ) THEN
+            IF ( (InitInp%WaveField%WaveDirMax-InitInp%PtfmRefY*R2D) > (MAXVAL(MnDriftData%Data3D%WvDir2)+1.0e-4) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
@@ -970,12 +970,12 @@ END SUBROUTINE WAMIT2_Init
                ! Now check the limits for the first wave direction
                !  --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
                !  --> FIXME: modify to allow shifting values by TwoPi before comparing
-            IF ( InitInp%WaveField%WaveDirMin < MINVAL(MnDriftData%Data4D%WvDir1) ) THEN
+            IF ( (InitInp%WaveField%WaveDirMin-InitInp%PtfmRefY*R2D) < (MINVAL(MnDriftData%Data4D%WvDir1)-1.0e-4) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(MnDriftData%Data4D%WvDir1) ) THEN
+            IF ( (InitInp%WaveField%WaveDirMax-InitInp%PtfmRefY*R2D) > (MAXVAL(MnDriftData%Data4D%WvDir1)+1.0e-4) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
@@ -984,12 +984,12 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now check the limits for the second wave direction
                !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-            IF ( InitInp%WaveField%WaveDirMin < MINVAL(MnDriftData%Data4D%WvDir2) ) THEN
+            IF ( (InitInp%WaveField%WaveDirMin-InitInp%PtfmRefY*R2D) < (MINVAL(MnDriftData%Data4D%WvDir2)-1.0e-4) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(MnDriftData%Data4D%WvDir2) ) THEN
+            IF ( (InitInp%WaveField%WaveDirMax-InitInp%PtfmRefY*R2D) > (MAXVAL(MnDriftData%Data4D%WvDir2)+1.0e-4) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
@@ -1233,8 +1233,8 @@ END SUBROUTINE WAMIT2_Init
             END IF
             ! Correct for body rotation (applies to all NBodyMod because WAMIT always output loads in the body frame) and heading change
             ! NOTE: RotateZMatrixT is the rotation from local to global.
-            RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(IBody)+PRPHdg), -sin(InitInp%PtfmRefztRot(IBody)+PRPHdg) /)
-            RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)+PRPHdg),  cos(InitInp%PtfmRefztRot(IBody)+PRPHdg) /)
+            RotateZMatrixT(1,:) = (/  cos(InitInp%PtfmRefztRot(IBody)+PRPHdg), -sin(InitInp%PtfmRefztRot(IBody)+PRPHdg) /)
+            RotateZMatrixT(2,:) = (/  sin(InitInp%PtfmRefztRot(IBody)+PRPHdg),  cos(InitInp%PtfmRefztRot(IBody)+PRPHdg) /)
 
             ! Now rotate the force components with platform orientation
             Idx = (IBody-1)*6
@@ -1451,12 +1451,12 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now check the limits for the first wave direction
                !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-            IF ( InitInp%WaveField%WaveDirMin < MINVAL(NewmanAppData%Data3D%WvDir1) ) THEN
+            IF ( (InitInp%WaveField%WaveDirMin-InitInp%PtfmRefY*R2D) < (MINVAL(NewmanAppData%Data3D%WvDir1)-1.0e-4) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(NewmanAppData%Data3D%WvDir1) ) THEN
+            IF ( (InitInp%WaveField%WaveDirMax-InitInp%PtfmRefY*R2D) > (MAXVAL(NewmanAppData%Data3D%WvDir1)+1.0e-4) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
@@ -1465,12 +1465,12 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now check the limits for the second wave direction
                !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-            IF ( InitInp%WaveField%WaveDirMin < MINVAL(NewmanAppData%Data3D%WvDir2) ) THEN
+            IF ( (InitInp%WaveField%WaveDirMin-InitInp%PtfmRefY*R2D) < (MINVAL(NewmanAppData%Data3D%WvDir2)-1.0e-4) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(NewmanAppData%Data3D%WvDir2) ) THEN
+            IF ( (InitInp%WaveField%WaveDirMax-InitInp%PtfmRefY*R2D) > (MAXVAL(NewmanAppData%Data3D%WvDir2)+1.0e-4) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
@@ -1508,12 +1508,12 @@ END SUBROUTINE WAMIT2_Init
                ! Now check the limits for the first wave direction
                !  --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
                !  --> FIXME: modify to allow shifting values by TwoPi before comparing
-            IF ( InitInp%WaveField%WaveDirMin < MINVAL(NewmanAppData%Data4D%WvDir1) ) THEN
+            IF ( (InitInp%WaveField%WaveDirMin-InitInp%PtfmRefY*R2D) < (MINVAL(NewmanAppData%Data4D%WvDir1)-1.0e-4) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(NewmanAppData%Data4D%WvDir1) ) THEN
+            IF ( (InitInp%WaveField%WaveDirMax-InitInp%PtfmRefY*R2D) > (MAXVAL(NewmanAppData%Data4D%WvDir1)+1.0e-4) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
@@ -1522,12 +1522,12 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now check the limits for the second wave direction
                !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-            IF ( InitInp%WaveField%WaveDirMin < MINVAL(NewmanAppData%Data4D%WvDir2) ) THEN
+            IF ( (InitInp%WaveField%WaveDirMin-InitInp%PtfmRefY*R2D) < (MINVAL(NewmanAppData%Data4D%WvDir2)-1.0e-4) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(NewmanAppData%Data4D%WvDir2) ) THEN
+            IF ( (InitInp%WaveField%WaveDirMax-InitInp%PtfmRefY*R2D) > (MAXVAL(NewmanAppData%Data4D%WvDir2)+1.0e-4) ) THEN
                CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
@@ -1831,8 +1831,8 @@ END SUBROUTINE WAMIT2_Init
             END IF
             ! Set rotation
             ! NOTE: RotateZMatrixT is the rotation from local to global.
-            RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(IBody)+PRPHdg), -sin(InitInp%PtfmRefztRot(IBody)+PRPHdg) /)
-            RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)+PRPHdg),  cos(InitInp%PtfmRefztRot(IBody)+PRPHdg) /)
+            RotateZMatrixT(1,:) = (/  cos(InitInp%PtfmRefztRot(IBody)+PRPHdg), -sin(InitInp%PtfmRefztRot(IBody)+PRPHdg) /)
+            RotateZMatrixT(2,:) = (/  sin(InitInp%PtfmRefztRot(IBody)+PRPHdg),  cos(InitInp%PtfmRefztRot(IBody)+PRPHdg) /)
 
             ! Loop through all the frequencies
             DO J=1,InitInp%WaveField%NStepWave2
@@ -2118,12 +2118,12 @@ END SUBROUTINE WAMIT2_Init
             ! Now check the limits for the first wave direction
             !  --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
             !  --> FIXME: modify to allow shifting values by TwoPi before comparing
-         IF ( InitInp%WaveField%WaveDirMin < MINVAL(DiffQTFData%Data4D%WvDir1) ) THEN
+         IF ( (InitInp%WaveField%WaveDirMin-InitInp%PtfmRefY*R2D) < (MINVAL(DiffQTFData%Data4D%WvDir1)-1.0e-4) ) THEN
             CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                   'found in the WAMIT data file '//TRIM(DiffQTFData%Filename)//' for the first wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
-         IF ( InitInp%WaveField%WaveDirMax > MAXVAL(DiffQTFData%Data4D%WvDir1) ) THEN
+         IF ( (InitInp%WaveField%WaveDirMax-InitInp%PtfmRefY*R2D) > (MAXVAL(DiffQTFData%Data4D%WvDir1)+1.0e-4) ) THEN
             CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                   'found in the WAMIT data file '//TRIM(DiffQTFData%Filename)//' for the first wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
@@ -2132,12 +2132,12 @@ END SUBROUTINE WAMIT2_Init
 
             ! Now check the limits for the second wave direction
             !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-         IF ( InitInp%WaveField%WaveDirMin < MINVAL(DiffQTFData%Data4D%WvDir2) ) THEN
+         IF ( (InitInp%WaveField%WaveDirMin-InitInp%PtfmRefY*R2D) < (MINVAL(DiffQTFData%Data4D%WvDir2)-1.0e-4 ) ) THEN
             CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                   'found in the WAMIT data file '//TRIM(DiffQTFData%Filename)//' for the second wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
-         IF ( InitInp%WaveField%WaveDirMax > MAXVAL(DiffQTFData%Data4D%WvDir2) ) THEN
+         IF ( (InitInp%WaveField%WaveDirMax-InitInp%PtfmRefY*R2D) > (MAXVAL(DiffQTFData%Data4D%WvDir2)+1.03e-4 ) ) THEN
             CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                   'found in the WAMIT data file '//TRIM(DiffQTFData%Filename)//' for the second wave direction.', &
                     ErrStat, ErrMsg, RoutineName)
@@ -2360,8 +2360,8 @@ END SUBROUTINE WAMIT2_Init
 
             ! Set rotation
             ! NOTE: RotateZMatrixT is the rotation from local to global.
-         RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY), -sin(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY) /)
-         RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY),  cos(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY) /)
+         RotateZMatrixT(1,:) = (/  cos(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY), -sin(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY) /)
+         RotateZMatrixT(2,:) = (/  sin(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY),  cos(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY) /)
 
             ! Loop through all the frequencies
          DO J=1,InitInp%WaveField%NStepWave2
@@ -2625,12 +2625,12 @@ END SUBROUTINE WAMIT2_Init
             ! Now check the limits for the first wave direction
             !  --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
             !  --> FIXME: modify to allow shifting values by TwoPi before comparing
-         IF ( InitInp%WaveField%WaveDirMin < MINVAL(SumQTFData%Data4D%WvDir1) ) THEN
+         IF ( (InitInp%WaveField%WaveDirMin-InitInp%PtfmRefY*R2D) < (MINVAL(SumQTFData%Data4D%WvDir1)-1.0e-4) ) THEN
             CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                   'found in the WAMIT data file '//TRIM(SumQTFData%Filename)//' for the first wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
-         IF ( InitInp%WaveField%WaveDirMax > MAXVAL(SumQTFData%Data4D%WvDir1) ) THEN
+         IF ( (InitInp%WaveField%WaveDirMax-InitInp%PtfmRefY*R2D) > (MAXVAL(SumQTFData%Data4D%WvDir1)+1.0e-4) ) THEN
             CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                   'found in the WAMIT data file '//TRIM(SumQTFData%Filename)//' for the first wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
@@ -2639,12 +2639,12 @@ END SUBROUTINE WAMIT2_Init
 
             ! Now check the limits for the second wave direction
             !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-         IF ( InitInp%WaveField%WaveDirMin < MINVAL(SumQTFData%Data4D%WvDir2) ) THEN
+         IF ( (InitInp%WaveField%WaveDirMin-InitInp%PtfmRefY*R2D) < (MINVAL(SumQTFData%Data4D%WvDir2)-1.0e-4) ) THEN
             CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                   'found in the WAMIT data file '//TRIM(SumQTFData%Filename)//' for the second wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
-         IF ( InitInp%WaveField%WaveDirMax > MAXVAL(SumQTFData%Data4D%WvDir2) ) THEN
+         IF ( (InitInp%WaveField%WaveDirMax-InitInp%PtfmRefY*R2D) > (MAXVAL(SumQTFData%Data4D%WvDir2)+1.0e-4) ) THEN
             CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                   'found in the WAMIT data file '//TRIM(SumQTFData%Filename)//' for the second wave direction.', &
                     ErrStat, ErrMsg, RoutineName)
@@ -2961,8 +2961,8 @@ END SUBROUTINE WAMIT2_Init
 
             ! Set rotation
             ! NOTE: RotateZMatrixT is the rotation from local to global.
-         RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY), -sin(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY) /)
-         RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY),  cos(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY) /)
+         RotateZMatrixT(1,:) = (/  cos(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY), -sin(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY) /)
+         RotateZMatrixT(2,:) = (/  sin(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY),  cos(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY) /)
 
             ! Loop through all the frequencies
          DO J=1,InitInp%WaveField%NStepWave2
