@@ -82,12 +82,23 @@ for ``DTAero`` may be used to indicate that AeroDyn should employ the
 time step prescribed by the driver code (OpenFAST or the standalone driver
 program).
 
-Set ``Wake_Mod`` to 0 if you want to disable rotor wake/induction effects or 1 to
-include these effects using the BEM theory model. 
-When ``Wake_Mod`` is set to 3, the free vortex wake model is used, also referred to as OLAF (see
-:numref:`OLAF`). ``Wake_Mod`` cannot be set to 3 during linearization
-analyses.
 
+**Wake_Mod** 
+Set ``Wake_Mod`` to 0 if you want to have zero induced velocities.
+Set it to 1 to include these effects using the BEM theory model. 
+When ``Wake_Mod`` is set to 3, the free vortex wake model is used, also referred to as OLAF (see
+:numref:`OLAF`). ``Wake_Mod`` cannot be set to 3 during linearization analyses.
+
+.. note::
+    Link to old inputs: The previous input `WakeMod` is removed, `WakeMod=2` used to mean DBEMT, but this now controled using `DBEMT_Mod`. 
+    `WakeMod=2` is a placeholder for future induction calculation method. 
+
+
+**~~AFAeroMod~~**
+This input has been removed. See ``UA_Mod`` below.
+
+**~~FrozenWake~~**
+This input has been removed. See ``DBEMT_Mod`` below.
 
 Set ``TwrPotent`` to 0 to disable the
 potential-flow influence of the tower on the fluid flow local to the
@@ -113,7 +124,7 @@ or
 
 Set the ``CavitCheck`` flag to TRUE to perform a cavitation check for MHK
 turbines or FALSE to disable this calculation. If ``CavitCheck`` is
-TRUE, ``AFAeroMod`` must be set to 1 because the cavitation check does
+TRUE, ``UA_Mod`` must be set to 0 because the cavitation check does
 not function with unsteady airfoil aerodynamics. If ``CavitCheck`` is
 TRUE, the ``MHK`` flag in the AeroDyn or OpenFAST driver input file must be set
 to 1 or 2 to indicate an MHK turbine is being modeled.
@@ -124,13 +135,14 @@ If ``Buoyancy`` is TRUE, the ``MHK`` flag in the AeroDyn or OpenFAST driver
 input file must be set to 1 or 2 to indicate an MHK turbine is being modeled.
 
 Set the ``CompAA`` flag to TRUE to run aero-acoustic calculations.  This
-option is only available for ``WakeMod = 1`` or ``2`` and is not available for
+option is only available for ``Wake_Mod = 1`` and is not available for
 an MHK turbine.  See section :numref:`AeroAcoustics` for information on how to 
 use this feature.
 
 The ``AA_InputFile`` is used to specify the input file for the aeroacoustics
 sub-module. See :numref:`AeroAcoustics` for information on how to use this
 feature.
+
 
 
 Environmental Conditions
@@ -159,17 +171,56 @@ around 2,000 Pa.
 Blade-Element/Momentum Theory Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The input parameters in this section are not used when ``WakeMod = 0``.
+**BEM_Mod** 
+Determines the kind of BEM algorithm to use.
 
-``SkewMod`` determines the skewed-wake correction model. Set
-``SkewMod`` to 1 to use the uncoupled BEM solution technique without
-an additional skewed-wake correction. Set ``SkewMod`` to 2 to include
-the Pitt/Peters correction model. **The coupled model ``SkewMod=
-3`` is not available in this version of AeroDyn.**
+- ``BEM_Mod=2`` (recommended) uses the new AeroDyn BEM implementation using the local staggered polar grid coordinate system, which is more suitable for large coning. It also includes an optional momentum correction that is important for large skew (see ``SkewMomCorr``). The feature will be documented at a later time.
+- ``BEM_Mod=1`` (for backward compatibility) uses the old AeroDyn BEM implementation using the NoSweepPitchTwist coordinate system.
 
-``SkewModFactor`` is used only when  ``SkewMod = 2``. Enter a scaling factor to use
-in the Pitt/Peters correction model, or enter ``"default"`` to use the default 
-value of :math:`\frac{15 \pi}{32}`.
+
+.. note::
+    Link to old inputs: previous implementation would have ``BEM_Mod=1`` implied.
+
+
+.. warning::
+
+    ``BEM_Mod`` currently governs the coordinate system used for "ill-defined" outputs (outputs that don't have a specified coordinate system) such as the ones that ends with "x" and "y". Other ill-defined outputs are the typical BEM quantities such as "AxInd", "TnInd", "Phi", etc. These are defined in a different coordinate system depending on `BEM_Mod`. For consistency accross differents `Wake_Mod` (even when `Wake_Mod/=1`), we use `BEM_Mod` to determine the coordinate system of the ill-defined outputs. 
+
+The following inputs in this section are only used when ``WakeMod = 1``.
+
+
+
+**Skew_Mod**
+``Skew_Mod`` determines the skew correction model (for yaw and tilt):
+
+- ``Skew_Mod=1``: activates Glauert's skew model (recommended).  This model has two components: a momentum correction (``SkewMomCorr` `), and a velocity redistribution model (``SkewRedistr_Mod``). 
+- ``Skew_Mod=0`` means no skew model at all (not recommended) 
+- ``Skew_Mod=-1`` throws away non-normal component (for linearization). This setting makes sure the wind speed is always normal to the rotor to limit periodic variation of the wind speed if the rotor is not perpendicular to the wind (e.g. tower top tilting or tilt). This is mostly needed for linearization. 
+
+.. note::
+    Link to old inputs: Previous implementations always had the skew model on. `Skew_Mod=-1` replaces the old `SkewMod=0` (an option that few users were using). 
+
+
+**SkewMomCorr**
+Turns the skew momentum correction on or off [used only when ``Skew_Mod=1``]
+The feature will be documented at a later time.
+
+.. note::
+    Link to old inputs: the previous behavior would be `SkewMomCorr=False`
+
+**SkewRedistr_Mod**
+``SkewRedistr_Mod`` allows to turn on and off the induced velocity redistribution model, and give room for other models to be selected/implemented.
+
+ - 0: no redistribution
+ - 1: Glauert (Pitt-Peters) redistribution model
+
+**SkewModFactor** 
+Defines the constant used in the Gluaert redistribution model (``SkewRedistr_Mod=1``). 
+Use ``"default"`` to use the default value of :math:`\frac{15 \pi}{32}`.
+
+
+BEM Algorithm options
+~~~~~~~~~~~~~~~~~~~~~
 
 Set ``TipLoss`` to TRUE to include the Prandtl tip-loss model or FALSE
 to disable it. Likewise, set ``HubLoss`` to TRUE to include the
@@ -197,22 +248,50 @@ the BEM solve is not less than or equal to ``IndToler`` in
 ``MaxIter``, AeroDyn will exit the BEM solver and return an error
 message.
 
-Dynamic Blade-Element/Momentum Theory Options
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The input parameters in this section are used only when ``WakeMod = 2``.
+Shear corrections
+~~~~~~~~~~~~~~~~~
+
+The BEM algorithm may need to be corrected to account for shear.
+Currently, a sector average correction is implemented, as a beta feature, to limit fluctuations associtated with variations of wind speed as the blade rotates.
+
+The feature will be documented at a later time.
+
+**SectAvg**  Use Sector Averaging (flag)
+
+**SectAvgWeighting** Weighting function for sector average. 
+1=Uniform  within a sector centered on the blade (switch) [used only when ``SectAvg=True``] 
+
+**SectAvgNPoints** Number of points per sectors (-) [used only when ``SectAvg=True``] 
+
+
+
+
+
+Dynamic Wake / Dynamic inflow model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The input parameters in this section are used only when ``Wake_Mod = 1``.
 The theory is described in :numref:`AD_DBEMT`.
 
-There are three options available for ``DBEMT_Mod``:
+The dynamic wake (also called dynamic inflow) model is governed by the input ``DBEMT_Mod``:
 
+- ``0``: no dynamic wake, also called quasi-steady wake model (not recommended).
+- ``-1``: frozen wake, the induced velocities at a given operating point will remain constant (useful for simplified linearization only). 
 - ``1``: discrete-time Oye's model, with constant :math:`\tau_1`
 - ``2``: discrete-time Oye's model, with varying :math:`\tau_1`, automatically adjusted based on inflow. (recommended for time-domain simulations)
 - ``3``: continuous-time Oye's model, with constant :math:`\tau_1` (recommended for linearization)
 
 For ``DBEMT_Mod=1`` or ``DBEMT_Mod=3`` it is the user responsability to set the value of :math:`\tau_1` (i.e. ``tau1_const``) according to the expression given in :numref:`AD_DBEMT`, using an estimate of what the mean axial induction (:math:`\overline{a}`) and the mean relative wind velocity across the rotor (:math:`\overline{U_0}`) are for a given simulation. 
 
-The option ``DBEMT_Mod=3`` is the only one that can be used for linearization.
+Only the options ``DBEMT_Mod={-1,3}`` can be used for linearization.
 
+
+.. note::
+    Link to old inputs: 
+    The option `DBEMT_Mod=-1` has the same behavior as the old `FrozenWake=True`.
+    `DBEMT_Mod=0` has the same behavior as the previous `WakeMod=1` option.
+    `DBEMT_Mod=J` (`J` in `1,2,3`)  , has the same behavior as the previous `WakeMod=2` & `DBEMT_Mod=J` 
 
 
 
@@ -231,6 +310,20 @@ for this input file.
 Unsteady Airfoil Aerodynamics Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
+
+**AoA34** 
+Determine whether the baseline angle of attack is sampled at the 3/4 chord or at the aerodynamic center point. 
+Most ``UA_Mod`` will require `AoA34` to be set to true. But when using quasi-steady aerodynamics, the user may want to set it to true or false. 
+
+.. warning::
+    This feature is currently not implemented due to a lag between the `dev` and `dev-unstable`  branch.
+
+.. note::
+    Link to previous inputs: `AFAeroMod=1` implies `AoA34=False`. But to have a fair comparison between steady and unsteady aerodynamics model, it would be best to set `AoA34=True` when when doing quasi-steady aero.
+
+
+
 ``UA_Mod`` determines the UA model. It has the following options:
 
 - ``0``: no unsteady arifoil aerodynamics,
@@ -244,6 +337,8 @@ Unsteady Airfoil Aerodynamics Options
 
 Linearization is supported with ``UA_Mod=4,5,6`` (which use continuous-time states) but not with the other models. The different models are described in :numref:`AD_UA`.
 
+.. note::
+    Link to old inputs: If `UA_Mod>0`, then this is equivalent to the old `AFAeroMod=2`. 
 
 **While all of the UA models are documented in this
 manual, the original B-L model is not yet functional. Testing has shown

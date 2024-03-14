@@ -39,14 +39,13 @@ AeroDyn changes starting from v4.x
 ----------------------------------
 
 The table below shows how to convert from the Old AeroDyn inputs to the new AeroDyn inputs.
+Additional ressources:
 
+- The AeroDyn input file description (:numref:`ad_input`) for more details on the new inputs.
 
-- Please see :ref:`ad_input` for more details on the new inputs.
+- The `discussion <https://github.com/OpenFAST/openfast/discussions/1895>`__ that led to these new inputs.
 
-- Please refer to the discussion `here <https://github.com/OpenFAST/openfast/discussions/1895>`__
-
-- Please refer to the following directory for a complete example of AeroDyn input file:
-     `here <https://github.com/OpenFAST/r-test/blob/dev/modules/aerodyn/ad_BAR_OLAF/OpenFAST_BAR_00_AeroDyn15.dat>`__
+- A directory with an example of AeroDyn input file: `here <https://github.com/OpenFAST/r-test/blob/dev/modules/aerodyn/ad_BAR_OLAF/OpenFAST_BAR_00_AeroDyn15.dat>`__
 
 
 =========================== ========================================================= 
