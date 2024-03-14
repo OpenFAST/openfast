@@ -2296,8 +2296,8 @@ END SUBROUTINE WAMIT2_Init
                         Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega2,SiKi), InitInp%WaveField%WaveDirArr(J+K), InitInp%WaveField%WaveDirArr(K) /)
 
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
-                        Coord4(3) = Coord4(3) - RotateZdegOffset
-                        Coord4(4) = Coord4(4) - RotateZdegOffset
+                        Coord4(3) = Coord4(3) - RotateZdegOffset - InitInp%PtfmRefY*R2D
+                        Coord4(4) = Coord4(4) - RotateZdegOffset - InitInp%PtfmRefY*R2D
 
                            ! get the interpolated value for F(omega1,omega2,beta1,beta2)  --> QTF_Value
                         CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, DiffQTFData%Data4D%WvFreq1, DiffQTFData%Data4D%WvFreq2, &
@@ -2359,8 +2359,8 @@ END SUBROUTINE WAMIT2_Init
 
             ! Set rotation
             ! NOTE: RotateZMatrixT is the rotation from local to global.
-         RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(IBody)), -sin(InitInp%PtfmRefztRot(IBody)) /)
-         RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
+         RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY), -sin(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY) /)
+         RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY),  cos(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY) /)
 
             ! Loop through all the frequencies
          DO J=1,InitInp%WaveField%NStepWave2
@@ -2394,7 +2394,7 @@ END SUBROUTINE WAMIT2_Init
                ! NOTE: phase shift and orientations on the MnDriftForce term have already been applied
                ! NOTE: the "-1" since TmpDiffQTFForce(InitInp%WaveField%NStepWave) is not set and DiffQTFForce(InitInp%WaveField%NStepWave,Idx) gets overwritten
             DO K=0,InitInp%WaveField%NStepWave-1
-               DiffQTFForce(K,Idx) = 2.0_SiKi * TmpDiffQTFForce(K) + MnDriftForce(Idx,1)
+               DiffQTFForce(K,Idx) = 2.0_SiKi * TmpDiffQTFForce(K) + MnDriftForce(1,Idx)
             ENDDO
 
                ! Copy the last first term to the first so that it is cyclic
@@ -2790,8 +2790,8 @@ END SUBROUTINE WAMIT2_Init
                      Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveField%WaveDirArr(J), InitInp%WaveField%WaveDirArr(J) /)
 
                         ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
-                     Coord4(3) = Coord4(3) - RotateZdegOffset
-                     Coord4(4) = Coord4(4) - RotateZdegOffset
+                     Coord4(3) = Coord4(3) - RotateZdegOffset - InitInp%PtfmRefY*R2D
+                     Coord4(4) = Coord4(4) - RotateZdegOffset - InitInp%PtfmRefY*R2D
 
                         ! get the interpolated value for F(omega1,omega2,beta1,beta2)  --> QTF_Value
                      CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, SumQTFData%Data4D%WvFreq1, SumQTFData%Data4D%WvFreq2, &
@@ -2904,8 +2904,8 @@ END SUBROUTINE WAMIT2_Init
                         Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega2,SiKi), InitInp%WaveField%WaveDirArr(K), InitInp%WaveField%WaveDirArr(J-K) /)
 
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
-                        Coord4(3) = Coord4(3) - RotateZdegOffset
-                        Coord4(4) = Coord4(4) - RotateZdegOffset
+                        Coord4(3) = Coord4(3) - RotateZdegOffset - InitInp%PtfmRefY*R2D
+                        Coord4(4) = Coord4(4) - RotateZdegOffset - InitInp%PtfmRefY*R2D
 
                            ! get the interpolated value for F(omega1,omega2,beta1,beta2)  --> QTF_Value
                         CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, SumQTFData%Data4D%WvFreq1, SumQTFData%Data4D%WvFreq2, &
@@ -2960,8 +2960,8 @@ END SUBROUTINE WAMIT2_Init
 
             ! Set rotation
             ! NOTE: RotateZMatrixT is the rotation from local to global.
-         RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(IBody)), -sin(InitInp%PtfmRefztRot(IBody)) /)
-         RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
+         RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY), -sin(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY) /)
+         RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY),  cos(InitInp%PtfmRefztRot(IBody)+InitInp%PtfmRefY) /)
 
             ! Loop through all the frequencies
          DO J=1,InitInp%WaveField%NStepWave2
