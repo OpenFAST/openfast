@@ -1,14 +1,12 @@
 ------- AERODYN for OpenFAST INPUT FILE -------------------------------------------------------------
 Description line that will be printed in the output file and written to the screen.
 ======  General Options  ============================================================================
-True          Echo               - Echo the input to "<rootname>.AD.ech"?  (flag)
+False         Echo               - Echo the input to "<rootname>.AD.ech"?  (flag)
 "default"     DTAero             - Time interval for aerodynamic calculations {or "default"} (s)
-          1   WakeMod            - Type of wake/induction model (switch) {0=none, 1=BEMT, 2=DBEMT, 3=OLAF} [WakeMod cannot be 2 or 3 when linearizing]
-          1   AFAeroMod          - Type of blade airfoil aerodynamics model (switch) {1=steady model, 2=Beddoes-Leishman unsteady model} [AFAeroMod must be 1 when linearizing]
-          0   TwrPotent          - Type of tower influence on wind based on potential flow around the tower (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
+          1   Wake_Mod           - Wake/induction model (switch) {0=none, 1=BEMT, 3=OLAF} [WakeMod cannot be 2 or 3 when linearizing]
+          1   TwrPotent          - Type tower influence on wind based on potential flow around the tower (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
           0   TwrShadow          - Calculate tower influence on wind based on downstream tower shadow (switch) {0=none, 1=Powles model, 2=Eames model}
 False         TwrAero            - Calculate tower aerodynamic loads? (flag)
-False         FrozenWake         - Assume frozen wake during linearization? (flag) [used only when WakeMod=1 and when linearizing]
 False         CavitCheck         - Perform cavitation check? (flag) [AFAeroMod must be 1 when CavitCheck=true]
 False         Buoyancy           - Include buoyancy effects? (flag)
 False         CompAA             - Flag to compute AeroAcoustics calculation [used only when WakeMod = 1 or 2]
@@ -20,7 +18,7 @@ False         CompAA             - Flag to compute AeroAcoustics calculation [us
 "default"     Patm               - Atmospheric pressure (Pa) [used only when CavitCheck=True]
 "default"     Pvap               - Vapour pressure of working fluid (Pa) [used only when CavitCheck=True]
 ======  Blade-Element/Momentum Theory Options  ====================================================== [unused when WakeMod=0 or 3, except for BEM_Mod]
-          1   BEM_Mod            - BEM model {1=legacy NoSweepPitchTwist, 2=polar} (switch) [used for all Wake_Mod to determine output coordinate system]
+          2   BEM_Mod            - BEM model {1=legacy NoSweepPitchTwist, 2=polar} (switch) [used for all Wake_Mod to determine output coordinate system]
 --- Skew correction
           1   Skew_Mod           - Skew model {0=No skew model, -1=Remove non-normal component for linearization, 1=skew model active}
 True          SkewMomCorr        - Turn the skew momentum correction on or off [used only when Skew_Mod=1]
@@ -39,13 +37,13 @@ False         SectAvg           - Use sector averaging (flag)
 1             SectAvgWeighting  - Weighting function for sector average  {1=Uniform}  within a sector centered on the blade (switch) [used only when SectAvg=True] 
 5             SectAvgNPoints    - Number of points per sectors (-) [used only when SectAvg=True] 
 --- Dynamic wake/inflow
-          0   DBEMT_Mod          - Type of dynamic BEMT (DBEMT) model {0=No Dynamic Wake, -1=Frozen Wake for linearization, 1:constant tau1, 2=time-dependent tau1, 3=constant tau1 with continuous formulation} (-)
+          2   DBEMT_Mod          - Type of dynamic BEMT (DBEMT) model {0=No Dynamic Wake, -1=Frozen Wake for linearization, 1:constant tau1, 2=time-dependent tau1, 3=constant tau1 with continuous formulation} (-)
          20   tau1_const         - Time constant for DBEMT (s) [used only when DBEMT_Mod=1 or 3]
 ======  OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options  ================== [used only when WakeMod=3]
 "unused"      OLAFInputFileName  - Input file for OLAF [used only when WakeMod=3]
 ======  Unsteady Airfoil Aerodynamics Options  ====================================================
 True          AoA34              - Sample the angle of attack (AoA) at the 3/4 chord or the AC point {default=True} [always used]
-0             UA_Mod             - Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA), 2=B-L Gonzalez, 3=B-L Minnema/Pierce, 4=B-L HGM 4-states, 5=B-L HGM+vortex 5 states, 6=Oye, 7=Boeing-Vertol}
+          3   UA_Mod             - Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA), 2=B-L Gonzalez, 3=B-L Minnema/Pierce, 4=B-L HGM 4-states, 5=B-L HGM+vortex 5 states, 6=Oye, 7=Boeing-Vertol}
 True          FLookup            - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when AFAeroMod=2]
           0   UAStartRad         - Starting radius for dynamic stall (fraction of rotor radius [0.0,1.0]) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
           1   UAEndRad           - Ending radius for dynamic stall (fraction of rotor radius [0.0,1.0]) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
