@@ -1230,7 +1230,7 @@ end if
                      RETURN
                   END IF
                   
-               DO iHdg = 1,p%NExctnHdg+1
+               DO iHdg = 1,p%ExctnGridParams%n(4)
                   ! Compute the PRP heading angle
                   IF (p%PtfmYMod .EQ. 0) THEN
                      PRPHdg = InitInp%PtfmRefY

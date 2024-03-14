@@ -147,6 +147,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
       ! NExctnHdg  - Number of PRP headings/yaw offset evenly distributed in the range of [-180, 180) deg to precompute [used only when PtfmYMod = 1 in the HD driver or ElastoDyn]
    call ParseVar( FileInfo_In, CurLine, 'NExctnHdg', InputFileData%WAMIT%NExctnHdg, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
+   InputFileData%WAMIT2%NExctnHdg = InputFileData%WAMIT%NExctnHdg
 
       ! RdtnMod  - Radiation memory-effect model {1: convolution, 2: state-space} (switch)
       ! [STATE-SPACE REQUIRES *.ss INPUT FILE]
