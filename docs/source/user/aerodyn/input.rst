@@ -214,8 +214,8 @@ The feature will be documented at a later time.
  - 0: no redistribution
  - 1: Glauert (Pitt-Peters) redistribution model
 
-**SkewModFactor** 
-Defines the constant used in the Gluaert redistribution model (``SkewRedistr_Mod=1``). 
+**SkewRedistrFactor** 
+Defines the constant used in the Glauert redistribution model (``SkewRedistr_Mod=1``). 
 Use ``"default"`` to use the default value of :math:`\frac{15 \pi}{32}`.
 
 

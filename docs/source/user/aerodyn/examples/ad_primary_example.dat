@@ -1,4 +1,4 @@
-------- AERODYN v15 for OpenFAST INPUT FILE -----------------------------------------------
+------- AERODYN for OpenFAST INPUT FILE -------------------------------------------------------------
 Description line that will be printed in the output file and written to the screen.
 ======  General Options  ============================================================================
 True          Echo               - Echo the input to "<rootname>.AD.ech"?  (flag)
@@ -19,26 +19,36 @@ False         CompAA             - Flag to compute AeroAcoustics calculation [us
 "default"     SpdSound           - Speed of sound in working fluid (m/s)
 "default"     Patm               - Atmospheric pressure (Pa) [used only when CavitCheck=True]
 "default"     Pvap               - Vapour pressure of working fluid (Pa) [used only when CavitCheck=True]
-======  Blade-Element/Momentum Theory Options  ====================================================== [unused when WakeMod=0 or 3]
-          1   SkewMod            - Type of skewed-wake correction model (switch) {1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0 or 3]
-"default"     SkewModFactor      - Constant used in Pitt/Peters skewed wake model {or "default" is 15/32*pi} (-) [used only when SkewMod=2; unused when WakeMod=0 or 3]
-f             TipLoss            - Use the Prandtl tip-loss model? (flag) [unused when WakeMod=0 or 3]
-f             HubLoss            - Use the Prandtl hub-loss model? (flag) [unused when WakeMod=0 or 3]
+======  Blade-Element/Momentum Theory Options  ====================================================== [unused when WakeMod=0 or 3, except for BEM_Mod]
+          1   BEM_Mod            - BEM model {1=legacy NoSweepPitchTwist, 2=polar} (switch) [used for all Wake_Mod to determine output coordinate system]
+--- Skew correction
+          1   Skew_Mod           - Skew model {0=No skew model, -1=Remove non-normal component for linearization, 1=skew model active}
+True          SkewMomCorr        - Turn the skew momentum correction on or off [used only when Skew_Mod=1]
+          1   SkewRedistr_Mod    - Type of skewed-wake correction model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters} [used only when Skew_Mod=1]
+"default"     SkewRedistrFactor  - Constant used in Pitt/Peters skewed wake model {or "default" is 15/32*pi} (-) [used only when Skew_Mod=1 and SkewRedistr_Mod=1]
+--- BEM algorithm 
+True          TipLoss            - Use the Prandtl tip-loss model? (flag) [unused when WakeMod=0 or 3]
+True          HubLoss            - Use the Prandtl hub-loss model? (flag) [unused when WakeMod=0 or 3]
 True          TanInd             - Include tangential induction in BEMT calculations? (flag) [unused when WakeMod=0 or 3]
 True          AIDrag             - Include the drag term in the axial-induction calculation? (flag) [unused when WakeMod=0 or 3]
 True          TIDrag             - Include the drag term in the tangential-induction calculation? (flag) [unused when WakeMod=0,3 or TanInd=FALSE]
-      1E-05   IndToler           - Convergence tolerance for BEMT nonlinear solve residual equation {or "default"} (-) [unused when WakeMod=0 or 3]
+"Default"     IndToler           - Convergence tolerance for BEMT nonlinear solve residual equation {or "default"} (-) [unused when WakeMod=0 or 3]
         100   MaxIter            - Maximum number of iteration steps (-) [unused when WakeMod=0]
-======  Dynamic Blade-Element/Momentum Theory Options  ============================================== [used only when WakeMod=2]
-          2   DBEMT_Mod          - Type of dynamic BEMT (DBEMT) model {1=constant tau1, 2=time-dependent tau1, 3=constant tau1 with continuous formulation} (-) [used only when WakeMod=2]
-          4   tau1_const         - Time constant for DBEMT (s) [used only when WakeMod=2 and DBEMT_Mod=1 or 3]
+--- Shear correction 
+False         SectAvg           - Use sector averaging (flag)
+1             SectAvgWeighting  - Weighting function for sector average  {1=Uniform}  within a sector centered on the blade (switch) [used only when SectAvg=True] 
+5             SectAvgNPoints    - Number of points per sectors (-) [used only when SectAvg=True] 
+--- Dynamic wake/inflow
+          0   DBEMT_Mod          - Type of dynamic BEMT (DBEMT) model {0=No Dynamic Wake, -1=Frozen Wake for linearization, 1:constant tau1, 2=time-dependent tau1, 3=constant tau1 with continuous formulation} (-)
+         20   tau1_const         - Time constant for DBEMT (s) [used only when DBEMT_Mod=1 or 3]
 ======  OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options  ================== [used only when WakeMod=3]
 "unused"      OLAFInputFileName  - Input file for OLAF [used only when WakeMod=3]
-======  Beddoes-Leishman Unsteady Airfoil Aerodynamics Options  ===================================== [used only when AFAeroMod=2]
-          1   UAMod              - Unsteady Aero Model Switch (switch) {2=B-L Gonzalez, 3=B-L Minnema/Pierce, 4=B-L HGM 4-states, 5=B-L HGM+vortex 5 states, 6=Oye, 7=Boeing-Vertol} [used only when AFAeroMod=2]
-FALSE         FLookup            - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when AFAeroMod=2]
-       0.25   UAStartRad         - Starting radius for dynamic stall (fraction of rotor radius [0.0,1.0]) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
-       0.95   UAEndRad           - Ending radius for dynamic stall (fraction of rotor radius [0.0,1.0]) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
+======  Unsteady Airfoil Aerodynamics Options  ====================================================
+True          AoA34              - Sample the angle of attack (AoA) at the 3/4 chord or the AC point {default=True} [always used]
+0             UA_Mod             - Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA), 2=B-L Gonzalez, 3=B-L Minnema/Pierce, 4=B-L HGM 4-states, 5=B-L HGM+vortex 5 states, 6=Oye, 7=Boeing-Vertol}
+True          FLookup            - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when AFAeroMod=2]
+          0   UAStartRad         - Starting radius for dynamic stall (fraction of rotor radius [0.0,1.0]) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
+          1   UAEndRad           - Ending radius for dynamic stall (fraction of rotor radius [0.0,1.0]) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
 ======  Airfoil Information =========================================================================
           1   AFTabMod           - Interpolation method for multiple airfoil tables {1=1D interpolation on AoA (first table only); 2=2D interpolation on AoA and Re; 3=2D interpolation on AoA and UserProp} (-)
           1   InCol_Alfa         - The column in the airfoil tables that contains the angle of attack (-)

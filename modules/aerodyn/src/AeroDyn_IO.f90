@@ -778,6 +778,8 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    if (newInputMissing('BEM_Mod', CurLine, errStat2, errMsg2)) then
       call WrScr('         Setting BEM_Mod to 1 (NoPitchSweepPitch) as the input is Missing (legacy behavior).')
       InputFileData%BEM_Mod = BEMMod_2D
+   else
+      call ParseCom (FileInfo_in, CurLine, sDummy, errStat2, errMsg2, UnEc, isLegalComment); if (Failed()) return
    endif
 
    ! SkewMod Legacy
@@ -811,7 +813,13 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
 
       ! SkewModFactor - Constant used in Pitt/Peters skewed wake model {or "default" is 15/32*pi} (-) [used only when SkewMod=2; unused when WakeMod=0 or 3]
    call ParseVarWDefault( FileInfo_In, CurLine, "SkewModFactor", InputFileData%SkewModFactor, (15.0_ReKi * pi / 32.0_ReKi), ErrStat2, ErrMsg2, UnEc )
-      if (Failed()) return
+   if( legacyInputPresent('SkewModFactor', CurLine, ErrStat2, ErrMsg2, 'Rename this parameter to SkewRedistrFactor')) then
+
+   else
+      call ParseVarWDefault( FileInfo_In, CurLine, "SkewRedistrFactor", InputFileData%SkewModFactor, (15.0_ReKi * pi / 32.0_ReKi), ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+      call ParseCom (FileInfo_in, CurLine, sDummy, errStat2, errMsg2, UnEc, isLegalComment); if (Failed()) return
+   endif
+
       ! TipLoss - Use the Prandtl tip-loss model? (flag) [unused when WakeMod=0 or 3]
    call ParseVar( FileInfo_In, CurLine, "TipLoss", InputFileData%TipLoss, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return

@@ -25,7 +25,7 @@ param     BEMT/BEMT                   -                              INTEGER    
 param     BEMT/BEMT                   -                              INTEGER                 SkewRedistrMod_PittPeters   -      1     -   "Pitt/Peters/Glauert redistribution" -
 #param     BEMT/BEMT                   -                              INTEGER                 SkewRedistrMod_VCyl        -      2     -   "Vortex cylinder redistribution" -
 
-param     BEMT/BEMT                   -                              INTEGER                 BEMMod_2D                   -      0     -   "2D BEM assuming Cx, Cy, phi, L, D are in the same plane" -
+param     BEMT/BEMT                   -                              INTEGER                 BEMMod_2D                   -      1     -   "2D BEM assuming Cx, Cy, phi, L, D are in the same plane" -
 param     BEMT/BEMT                   -                              INTEGER                 BEMMod_3D                   -      2     -   "3D BEM assuming a momentum balance system, and an airfoil system" -
 
 #

@@ -349,12 +349,12 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       if (AeroProjMod(iR) == -1) then
          if (InputFileData%Wake_Mod /= WakeMod_BEMT) then
             ! For BEMT, we don't throw a warning
-            call WrScr('[INFO] Using the input file input `BEMT_Mod` to match BEM coordinate system outputs')
+            call WrScr('[INFO] Using the input file input `BEM_Mod` to match BEM coordinate system outputs')
          endif
          select case (InputFileData%BEM_Mod)
          case (BEMMod_2D); AeroProjMod(ir) = APM_BEM_NoSweepPitchTwist
          case (BEMMod_3D); AeroProjMod(ir) = APM_BEM_Polar
-         case default;     call Fatal('Input `BEMT_Mod` not supported'); return
+         case default;     call Fatal('Input `BEM_Mod` not supported: '//trim(num2lstr(InputFileData%BEM_Mod))); return
          end select
 
       endif

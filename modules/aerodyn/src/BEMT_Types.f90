@@ -42,7 +42,7 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Skew_Mod_PittPeters_Cont = 4      ! Pitt/Peters continuous formulation [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewRedistrMod_None = 0      ! No redistribution [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewRedistrMod_PittPeters = 1      ! Pitt/Peters/Glauert redistribution [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BEMMod_2D = 0      ! 2D BEM assuming Cx, Cy, phi, L, D are in the same plane [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BEMMod_2D = 1      ! 2D BEM assuming Cx, Cy, phi, L, D are in the same plane [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: BEMMod_3D = 2      ! 3D BEM assuming a momentum balance system, and an airfoil system [-]
 ! =========  BEMT_InitInputType  =======
   TYPE, PUBLIC :: BEMT_InitInputType

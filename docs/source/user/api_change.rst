@@ -45,7 +45,9 @@ Additional ressources:
 
 - The `discussion <https://github.com/OpenFAST/openfast/discussions/1895>`__ that led to these new inputs.
 
-- A directory with an example of AeroDyn input file: `here <https://github.com/OpenFAST/r-test/blob/dev/modules/aerodyn/ad_BAR_OLAF/OpenFAST_BAR_00_AeroDyn15.dat>`__
+- An example of AeroDyn input file at it's latest format: :download:`Example <aerodyn/examples/ad_primary_example.dat>`: 
+
+- A directory with a working example: `here <https://github.com/OpenFAST/r-test/blob/dev/modules/aerodyn/ad_BAR_OLAF/OpenFAST_BAR_00_AeroDyn15.dat>`__
 
 
 =========================== ========================================================= 
@@ -61,6 +63,7 @@ Old inputs                  Corresponding new inputs
 `FrozenWake=False`          `DBEMT_Mod=0` (quasi-steady) or `DBEMT_Mod>0` (dynamic)   
 `SkewMod=2` (Glauert)       `Skew_Mod=1` and `SkewRedistr_Mod=1`                      
 `SkewMod=0` (Orthogonal)    `Skew_Mod=-1`                                             
+`SkewModFactor`             `SkewRedistrFactor`
 `UAMod={2-7}`               `UA_Mod={2-7}` and `AoA34=True`                           
 =========================== ========================================================= 
 
