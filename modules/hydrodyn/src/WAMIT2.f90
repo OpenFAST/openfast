@@ -627,6 +627,7 @@ SUBROUTINE WAMIT2_Init( InitInp, p, y, m, ErrStat, ErrMsg )
 
          ! Deallocate the force arrays since we are done with them.  Note that the MnDrift force array is
          ! not deallocated since it is not time dependent.
+      IF (ALLOCATED(MnDriftForce))           DEALLOCATE(MnDriftForce)
       IF (ALLOCATED(NewmanAppForce))         DEALLOCATE(NewmanAppForce)
       IF (ALLOCATED(DiffQTFForce))           DEALLOCATE(DiffQTFForce)
       IF (ALLOCATED(SumQTFForce))            DEALLOCATE(SumQTFForce)
@@ -2419,6 +2420,7 @@ END SUBROUTINE WAMIT2_Init
       subroutine cleanup()
 
             ! Cleanup
+         IF (ALLOCATED(MnDriftForce))        DEALLOCATE(MnDriftForce,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpData4D))           DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDiffQTFForce))     DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpComplexArr))       DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
