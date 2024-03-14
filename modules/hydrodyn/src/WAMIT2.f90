@@ -1220,8 +1220,8 @@ END SUBROUTINE WAMIT2_Init
 
 
             ! Now rotate the force components with platform orientation
-         MnDriftForce(1:2) = MATMUL( RotateZMatrixT, MnDriftForce(1:2) )       ! Fx and Fy, rotation about z
-         MnDriftForce(4:5) = MATMUL( RotateZMatrixT, MnDriftForce(4:5) )       ! Mx and My, rotation about z
+         MnDriftForce((IBody-1)*6 + 1:2) = MATMUL( RotateZMatrixT, MnDriftForce((IBody-1)*6 + 1:2) )       ! Fx and Fy, rotation about z
+         MnDriftForce((IBody-1)*6 + 4:5) = MATMUL( RotateZMatrixT, MnDriftForce((IBody-1)*6 + 4:5) )       ! Mx and My, rotation about z
 
       ENDDO    ! IBody
 
