@@ -1105,8 +1105,8 @@ END SUBROUTINE WAMIT2_Init
          endif
 
             ! NOTE: RotateZMatrixT is the rotation from local to global.
-         RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(IBody)), -sin(InitInp%PtfmRefztRot(IBody)) /)
-         RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
+         RotateZMatrixT(1,:) = (/  cos(InitInp%PtfmRefztRot(IBody)), -sin(InitInp%PtfmRefztRot(IBody)) /)
+         RotateZMatrixT(2,:) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
 
 
          DO ThisDim=1,6
@@ -1805,8 +1805,8 @@ END SUBROUTINE WAMIT2_Init
 
             ! Set rotation
             ! NOTE: RotateZMatrixT is the rotation from local to global.
-         RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(IBody)), -sin(InitInp%PtfmRefztRot(IBody)) /)
-         RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
+         RotateZMatrixT(1,:) = (/  cos(InitInp%PtfmRefztRot(IBody)), -sin(InitInp%PtfmRefztRot(IBody)) /)
+         RotateZMatrixT(2,:) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
 
             ! Loop through all the frequencies
          DO J=1,InitInp%WaveField%NStepWave2
@@ -2332,8 +2332,8 @@ END SUBROUTINE WAMIT2_Init
 
             ! Set rotation
             ! NOTE: RotateZMatrixT is the rotation from local to global.
-         RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(IBody)), -sin(InitInp%PtfmRefztRot(IBody)) /)
-         RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
+         RotateZMatrixT(1,:) = (/  cos(InitInp%PtfmRefztRot(IBody)), -sin(InitInp%PtfmRefztRot(IBody)) /)
+         RotateZMatrixT(2,:) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
 
             ! Loop through all the frequencies
          DO J=1,InitInp%WaveField%NStepWave2
@@ -2932,8 +2932,8 @@ END SUBROUTINE WAMIT2_Init
 
             ! Set rotation
             ! NOTE: RotateZMatrixT is the rotation from local to global.
-         RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(IBody)), -sin(InitInp%PtfmRefztRot(IBody)) /)
-         RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
+         RotateZMatrixT(1,:) = (/  cos(InitInp%PtfmRefztRot(IBody)), -sin(InitInp%PtfmRefztRot(IBody)) /)
+         RotateZMatrixT(2,:) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
 
             ! Loop through all the frequencies
          DO J=1,InitInp%WaveField%NStepWave2
