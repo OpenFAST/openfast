@@ -3564,6 +3564,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    SUBROUTINE GetDisplacedNodePosition( forceDisplaced, pos )
       LOGICAL,         INTENT( IN    ) :: forceDisplaced ! Set to true to return the exact displaced position no matter WaveDisp or WaveStMod
       REAL(ReKi),      INTENT(   OUT ) :: pos(:,:) ! Displaced node positions
+      REAL(ReKi)                       :: Orient(3,3)
+
+      INTEGER(IntKi)                   :: ErrStat2
+      CHARACTER(ErrMsgLen)             :: ErrMsg2
 
       ! Undisplaced node position
       pos      = u%Mesh%Position
@@ -3576,6 +3580,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             ! Use displaced Z position only when wave stretching is enabled
             pos(3,:) = pos(3,:) + u%Mesh%TranslationDisp(3,:)
          END IF
+      ELSE ! p%WaveDisp=0 implies PtfmYMod=0
+         ! Rotate the structure based on PtfmRefY (constant)
+         call GetPtfmRefYOrient(u%PtfmRefY, Orient, ErrStat2, ErrMsg2)
+         pos = matmul(transpose(Orient),pos)
       END IF
 
    END SUBROUTINE GetDisplacedNodePosition
