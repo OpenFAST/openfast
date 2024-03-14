@@ -144,7 +144,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
    call ParseVar( FileInfo_In, CurLine, 'ExctnCutOff', InputFileData%WAMIT%ExctnCutOff, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
-      ! NExctnHdg  - Number of PRP headings/yaw offset evenly distributed in the range of [-180, 180) deg to precompute [used only when PtfmYMod = 2 in the HD driver or ElastoDyn]
+      ! NExctnHdg  - Number of PRP headings/yaw offset evenly distributed in the range of [-180, 180) deg to precompute [used only when PtfmYMod = 1 in the HD driver or ElastoDyn]
    call ParseVar( FileInfo_In, CurLine, 'NExctnHdg', InputFileData%WAMIT%NExctnHdg, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
@@ -1471,7 +1471,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       if ( InitInp%InvalidWithSSExctn ) then
          call SetErrStat( ErrID_Fatal, 'Given SeaState conditions cannot be used with state-space wave excitations. In SeaState, WaveMod cannot be 6; WaveDirMod must be 0; WvDiffQTF must be FALSE; and WvSumQTF must be FALSE. Or in HydroDyn set ExctnMod to 0 or 1.', ErrStat, ErrMsg, RoutineName )
       end if
-      
 
       if ( InputFileData%PotMod /= 1 ) then
          call SetErrStat( ErrID_Fatal, 'Potential-flow model via WAMIT must be used with state-space wave excitations. Set PotMod= 1.', ErrStat, ErrMsg, RoutineName )
@@ -1542,10 +1541,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       CALL SetErrStat( ErrID_Fatal,'AMMod must be 0 or 1',ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
-   IF ( InputFileData%Morison%WaveDisp .EQ. 0_IntKi .AND. InitInp%PtfmYMod .EQ. 1_IntKi) THEN
-      CALL SetErrStat( ErrID_Fatal,'When PtfmYMod=1, WaveDisp must also be 1.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
+  
 
    !-------------------------------------------------------------------------------------------------
    ! Member Joints Section
@@ -2203,6 +2199,24 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
    END IF
 
+
+   !-------------------------------------------------------------------------------------------------
+   ! Large yaw offset
+   !-------------------------------------------------------------------------------------------------
+   IF ( InitInp%PtfmYMod .EQ. 1_IntKi ) THEN
+      if ( InputFileData%Morison%WaveDisp == 0 .AND. InputFileData%Morison%NMembers > 0 ) then
+         call SetErrStat( ErrID_Fatal,'Dynamic reference yaw offset (PtfmYMod=1) in ElastoDyn or HydroDyn driver cannot be used with WaveDisp=0. Set WaveDisp=1.',ErrStat,ErrMsg,RoutineName)
+         return
+      end if
+      if ( InputFileData%PotMod > 0 .AND. InputFileData%WAMIT%ExctnMod == 2 ) then
+         call SetErrStat( ErrID_Fatal, 'Dynamic reference yaw offset (PtfmYMod=1) in ElastoDyn or HydroDyn driver cannot be used with State-space wave excitations. Set ExctnMod=0 or 1.', ErrStat, ErrMsg, RoutineName )
+         return
+      end if
+      if ( InputFileData%WAMIT2%SumQTFF .OR. InputFileData%WAMIT2%DiffQTFF ) then
+         call SetErrStat( ErrID_Fatal, 'Dynamic reference yaw offset (PtfmYMod=1) in ElastoDyn or HydroDyn driver cannot be used with full sum-frequency or difference-frequency QTFs. Set SumQTF and DiffQTF to 0.', ErrStat, ErrMsg, RoutineName )
+         return
+      end if
+   END IF
 
    !-------------------------------------------------------------------------------------------------
    ! Member Output List Section

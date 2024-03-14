@@ -978,14 +978,23 @@ end if
                ! NOTE: we may end up inadvertantly aborting if the wave direction crosses
                !   the -Pi / Pi boundary (-180/180 degrees).
 
-               IF ( ( p%WaveField%WaveDirMin < HdroWvDir(1) ) .OR. ( p%WaveField%WaveDirMax > HdroWvDir(NInpWvDir) ) )  THEN
-                  ErrMsg2  = 'All Wave directions must be within the wave heading angle range available in "' &
-                                 //TRIM(InitInp%WAMITFile)//'.3" (inclusive).'
-                  CALL SetErrStat( ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                  CALL Cleanup()
-                  RETURN
+               IF ( InitInp%PtfmYMod == 0 ) THEN
+                  IF ( ((p%WaveField%WaveDirMin-InitInp%PtfmRefY*R2D)<HdroWvDir(1)) .OR. ((p%WaveField%WaveDirMax-InitInp%PtfmRefY*R2D)>HdroWvDir(NInpWvDir)) )  THEN
+                     ErrMsg2  = 'All Wave directions must be within the wave heading angle range available in "' &
+                                    //TRIM(InitInp%WAMITFile)//'.3" (inclusive).'
+                     CALL SetErrStat( ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                     CALL Cleanup()
+                     RETURN
+                  END IF
+               ELSE IF ( InitInp%PtfmYMod == 1 ) THEN
+                  IF ( (.not. EqualRealNos( HdroWvDir(1),REAL(-180,SiKi))) .OR. (.not. EqualRealNos( HdroWvDir(NInpWvDir),REAL(180,SiKi))) )  THEN
+                     ErrMsg2  = 'With PtfmYMod=1 in ElastoDyn or HydroDyn driver, we need the lowest and highest wave headings to be exactly -180 deg and 180 deg, respectively, in "' &
+                                    //TRIM(InitInp%WAMITFile)//'.3" (inclusive).'
+                     CALL SetErrStat( ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                     CALL Cleanup()
+                     RETURN
+                  END IF
                END IF
-
                   ! Calculate the WaveExctn data from WAMIT data if ExctnMod = 1
                
                   ! ALLOCATE the arrays:
@@ -1030,7 +1039,7 @@ end if
 
                   do K = 1,6           ! Loop through all wave excitation forces and moments
                      do J = 1, NInpWvDir                       
-                        TmpCoord(2) = HdroWvDir(J) - InitInp%PtfmRefztRot(1)*R2D  ! apply locale Z rotation to heading angle (degrees)
+                        TmpCoord(2) = HdroWvDir(J) - InitInp%PtfmRefztRot(1)*R2D  ! apply locale Z rotation to heading angle (degrees) - How can we be sure this won't go out of range?
                         do I = 1, NInpFreq
                            TmpCoord(1) = HdroFreq(I)
                            ! Iterpolate to find new coef
@@ -1101,7 +1110,7 @@ end if
                      !   total excitation force on the support platfrom from incident waves:
                      DO J = 1,6*p%NBody           ! Loop through all wave excitation forces and moments
                         TmpCoord(1) = Omega
-                        TmpCoord(2) = WrapTo180(p%WaveField%WaveDirArr(I) - PRPHdg*R2D)
+                        TmpCoord(2) = p%WaveField%WaveDirArr(I) - PRPHdg*R2D
                         CALL WAMIT_Interp2D_Cplx( TmpCoord, HdroExctn(:,:,J), HdroFreq, HdroWvDir, LastInd2, WaveExctnC(I,iHdg,J), ErrStat2, ErrMsg2 )
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                         IF ( ErrStat >= AbortErrLev ) THEN
@@ -1173,7 +1182,7 @@ end if
                      !   total excitation force on the support platfrom from incident waves:
                      DO J = 1,6*p%NBody           ! Loop through all wave excitation forces and moments
                         TmpCoord(1) = Omega
-                        TmpCoord(2) = WrapTo180(p%WaveField%WaveDirArr(I) - PRPHdg*R2D)
+                        TmpCoord(2) = p%WaveField%WaveDirArr(I) - PRPHdg*R2D
                         CALL WAMIT_Interp2D_Cplx( TmpCoord, HdroExctn(:,:,J), HdroFreq, HdroWvDir, LastInd2, WaveExctnC(I,iHdg,J), ErrStat2, ErrMsg2 )
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                         IF ( ErrStat >= AbortErrLev ) THEN
