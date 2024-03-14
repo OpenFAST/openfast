@@ -131,7 +131,7 @@ module UA_Dvr_Subs
       real(ReKi) :: twist_full      !< Full twist (includes initial twist, potential pitch, and torsion)
       integer    :: iU0Last = 1     !< Index for faster interpolation of wind speed
       integer    :: iPALast = 1     !< Index for faster interpolation of prescribed aero
-      real(ReKi) :: uPA(4)          !< Prescribed Aero inputs
+      real(ReKi) :: uPA(3)          !< Prescribed Aero inputs
    end type Dvr_Misc
 
    type Dvr_Data
