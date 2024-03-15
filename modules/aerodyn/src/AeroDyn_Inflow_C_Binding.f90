@@ -150,6 +150,7 @@ MODULE AeroDyn_Inflow_C_BINDING
       real(ReKi), DIMENSION(:,:,:), ALLOCATABLE    :: Orient     !< Orientation of all blade points (sized by 3 x 3 x number of mesh points on the blade)
       real(ReKi), DIMENSION(:,:), ALLOCATABLE      :: Velocity   !< Velocity of all blade points (sized by 6 x number of mesh points on the blade)
       real(ReKi), DIMENSION(:,:), ALLOCATABLE      :: Accln      !< Acceleration of all blade points (sized by 6 x number of mesh points on the blade)
+      real(ReKi), DIMENSION(:,:), ALLOCATABLE      :: Force      !< Force of all blade points (sized by 6 x number of mesh points on the blade)
    end type BladePtMeshCoords
    ! =======================
    ! =========  StrucPtsToBladeMapType  =======
@@ -1516,6 +1517,7 @@ contains
          call AllocAry(StrucPts_2_Bld_Map(iWT)%BladePtMeshCoords(i)%Orient,   3, 3, StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i), "BladePtMeshCoords(i)%Orient",   ErrStat2, ErrMsg2 );    if (Failed())  return
          call AllocAry(StrucPts_2_Bld_Map(iWT)%BladePtMeshCoords(i)%Velocity,    6, StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i), "BladePtMeshCoords(i)%Velocity", ErrStat2, ErrMsg2 );    if (Failed())  return
          call AllocAry(StrucPts_2_Bld_Map(iWT)%BladePtMeshCoords(i)%Accln,       6, StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i), "BladePtMeshCoords(i)%Accln",    ErrStat2, ErrMsg2 );    if (Failed())  return
+         call AllocAry(StrucPts_2_Bld_Map(iWT)%BladePtMeshCoords(i)%Force,       6, StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i), "BladePtMeshCoords(i)%Force",    ErrStat2, ErrMsg2 );    if (Failed())  return
       enddo
 
       do i=1,Sim%WT(iWT)%NumBlades
@@ -1811,6 +1813,7 @@ subroutine ADI_C_GetRotorLoads(iWT_C, &
    integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
    character(ErrMsgLen)                      :: ErrMsg2                       !< temporary error message from a call
    character(*), parameter                   :: RoutineName = 'ADI_C_SetRotorMotion' !< for error handling
+   integer(IntKi)                            :: i,j                           !< generic index variables
 
    ! Initialize error handling
    ErrStat  =  ErrID_None
@@ -1837,8 +1840,11 @@ subroutine ADI_C_GetRotorLoads(iWT_C, &
 
    ! Set output force/moment array
    call Set_OutputLoadArray(iWT)
-   ! TODO *Question for Andy* How to handle this? Unit test passes without it
-   ! MeshFrc_C(1:6*NumMeshPts(iWT)) = reshape( real(tmpBldPtMeshFrc(1:6,1:NumMeshPts(iWT)), c_float), (/6*NumMeshPts(iWT)/) )
+   do i=1,Sim%WT(iWT)%NumBlades
+      do j=1,StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i)
+         MeshFrc_C(6 * StrucPts_2_Bld_Map(iWT)%BladeNode_2_MeshPt(i)%BladeNodeToMeshPoint(j) - 5 : 6 * StrucPts_2_Bld_Map(iWT)%BladeNode_2_MeshPt(i)%BladeNodeToMeshPoint(j)) = real(StrucPts_2_Bld_Map(iWT)%BladePtMeshCoords(i)%Force(1:6,j), c_float)
+      enddo
+   enddo
 
    ! Set error status
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
@@ -1875,7 +1881,7 @@ subroutine Set_MotionMesh(iWT, ErrStat3, ErrMsg3)
    integer(IntKi),            intent(in   )  :: iWT         !< current rotor/turbine
    integer(IntKi),            intent(  out)  :: ErrStat3
    character(ErrMsgLen),      intent(  out)  :: ErrMsg3
-   integer(IntKi)                            :: i, j        !< generic index variables
+   integer(IntKi)                            :: i,j         !< generic index variables
 
    ErrStat3 =  0_IntKi
    ErrMsg3  =  ''
@@ -1919,7 +1925,7 @@ subroutine AD_SetInputMotion( iWT, u_local,        &
    real(c_float),             intent(in   )  :: BldRootAcc_C( 6*Sim%WT(iWT)%NumBlades )   !< Blade root accelerations
    integer(IntKi),            intent(  out)  :: ErrStat
    character(ErrMsgLen),      intent(  out)  :: ErrMsg
-   integer(IntKi)                            :: i, j       !< generic index variables
+   integer(IntKi)                            :: i,j        !< generic index variables
    integer(IntKi)                            :: n_elems    !< number of elements in the mesh
    ErrStat =  0_IntKi
    ErrMsg  =  ''
@@ -1983,7 +1989,7 @@ subroutine AD_TransferLoads( iWT, u_local, y_local, ErrStat3, ErrMsg3 )
    type(ADI_OutputType),   intent(in   )  :: y_local     !< Only one input (probably at T)
    integer(IntKi),         intent(  out)  :: ErrStat3
    character(ErrMsgLen),   intent(  out)  :: ErrMsg3
-   integer(IntKi)                         :: i           !< generic counter
+   integer(IntKi)                         :: i           !< generic index variable
    integer(IntKi)                         :: n_elems     !< number of elements in the mesh
 
 
@@ -2015,11 +2021,13 @@ end subroutine AD_TransferLoads
 !! This routine is operating on module level data, hence few inputs
 subroutine Set_OutputLoadArray(iWT)
    integer(IntKi),            intent(in   )  :: iWT      !< current rotor/turbine
-   integer(IntKi)                            :: iNode
+   integer(IntKi)                            :: i,j      !< generic index variables
    ! Set mesh corresponding to input motions
-   do iNode=1,NumMeshPts(iWT)
-      ! tmpBldPtMeshFrc(1:3,iNode)   = BldPtLoadMesh(iWT)%Force (1:3,iNode)
-      ! tmpBldPtMeshFrc(4:6,iNode)   = BldPtLoadMesh(iWT)%Moment(1:3,iNode)
+   do i=1,Sim%WT(iWT)%NumBlades
+      do j=1,StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i)
+         StrucPts_2_Bld_Map(iWT)%BladePtMeshCoords(i)%Force(1:3,j) = BldPtLoadMesh(iWT)%Mesh(i)%Force( 1:3,j)
+         StrucPts_2_Bld_Map(iWT)%BladePtMeshCoords(i)%Force(4:6,j) = BldPtLoadMesh(iWT)%Mesh(i)%Moment(1:3,j)
+      enddo
    enddo
 end subroutine Set_OutputLoadArray
 
