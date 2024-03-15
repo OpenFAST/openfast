@@ -126,7 +126,7 @@ subroutine FAST_Sizes(iTurb, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, dt
       IF (PRESENT(TMax)) THEN
          ExternInitData%TMax = TMax
       END IF
-      ExternInitData%TurbineID  = -1        ! we're not going to use this to simulate a wind farm
+      ExternInitData%TurbIDforName  = -1        ! we're not going to use this to simulate a wind farm
       ExternInitData%TurbinePos = 0.0_ReKi  ! turbine position is at the origin
       ExternInitData%NumCtrl2SC = 0
       ExternInitData%NumSC2Ctrl = 0
@@ -506,7 +506,7 @@ subroutine FAST_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, NumOuts_c, d
       
 end subroutine FAST_Restart 
 !==================================================================================================================================
-subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, NumSC2Ctrl, NumCtrl2SC, InitSCOutputsGlob, InitSCOutputsTurbine, NumActForcePtsBlade, NumActForcePtsTower, TurbPosn, AbortErrLev_c, dt_c, NumBl_c, NumBlElem_c, NodeClusterType_c, &
+subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbIDforName, NumSC2CtrlGlob, NumSC2Ctrl, NumCtrl2SC, InitSCOutputsGlob, InitSCOutputsTurbine, NumActForcePtsBlade, NumActForcePtsTower, TurbPosn, AbortErrLev_c, dt_c, NumBl_c, NumBlElem_c, NodeClusterType_c, &
                           OpFM_Input_from_FAST, OpFM_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Init')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
@@ -516,7 +516,7 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
    REAL(C_DOUBLE),         INTENT(IN   ) :: TMax      
    CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: InputFileName_c(IntfStrLen)      
-   INTEGER(C_INT),         INTENT(IN   ) :: TurbID           ! Need not be same as iTurb
+   INTEGER(C_INT),         INTENT(IN   ) :: TurbIDforName    ! Need not be same as iTurb -- use numbering from c/cpp
    INTEGER(C_INT),         INTENT(IN   ) :: NumSC2CtrlGlob   ! Supercontroller global outputs = controller global inputs   
    INTEGER(C_INT),         INTENT(IN   ) :: NumSC2Ctrl       ! Supercontroller outputs = controller inputs
    INTEGER(C_INT),         INTENT(IN   ) :: NumCtrl2SC       ! controller outputs = Supercontroller inputs
@@ -554,9 +554,16 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
    
    NumBl_c       = 0    ! initialize here in case of error
    NumBlElem_c   = 0    ! initialize here in case of error
-   
+  
+      ! Check TurbIDforName -- must be 0 or larger
+   if (TurbIDforName < 0) then
+      ErrStat = ErrID_Fatal
+      ErrMsg  = "TurbIDforName cannot be negative"
+      if (Failed()) return
+   endif
+ 
    ExternInitData%TMax = TMax
-   ExternInitData%TurbineID = TurbID
+   ExternInitData%TurbIDforName = TurbIDforName
    ExternInitData%TurbinePos = TurbPosn
    ExternInitData%SensorType = SensorType_None
    ExternInitData%NumCtrl2SC = NumCtrl2SC
