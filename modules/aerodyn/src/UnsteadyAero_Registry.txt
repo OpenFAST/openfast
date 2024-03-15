@@ -17,6 +17,7 @@ usefrom   AirfoilInfo_Registry.txt
 #
 #
 
+param     UnsteadyAero/UA       -                INTEGER           UA_None          -        0   -   "UAMod = 0 [Quasi-steady ]" -
 param     UnsteadyAero/UA       -                INTEGER           UA_Baseline      -        1   -   "UAMod = 1 [Baseline model (Original)]" -
 param     UnsteadyAero/UA       -                INTEGER           UA_Gonzalez      -        2   -   "UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)]" -
 param     UnsteadyAero/UA       -                INTEGER           UA_MinnemaPierce -        3   -   "[Minnema/Pierce variant (changes in Cc and Cm)]" -

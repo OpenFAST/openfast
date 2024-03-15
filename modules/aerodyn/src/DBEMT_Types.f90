@@ -33,6 +33,7 @@ MODULE DBEMT_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_frozen = -1      ! use frozen-wake for linearization (not DBEMT) [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_none = 0      ! use BEMT instead (not DBEMT) [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_tauConst = 1      ! use constant tau1 [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_tauVaries = 2      ! use time-dependent tau1 [-]

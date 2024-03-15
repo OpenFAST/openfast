@@ -29,8 +29,8 @@ channels will be named with the convention of **B**\ :math:`\mathbf{\beta}`\
 the three digit node number.
 
 
-Sample Nodal Outputs section
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+**Sample Nodal Outputs section**
+
 
 This sample includes the ``END`` statement from the regular outputs section.
 
