@@ -5154,6 +5154,7 @@ SUBROUTINE CheckWvHdg(InitInp,NumWAMITWvDir,WAMITWvDir,WvDirName,ErrStat,ErrMsg)
    CHARACTER(*),               INTENT(  OUT) :: ErrMsg
 
    REAL(ReKi),                 PARAMETER     :: WvDirTol = 0.001  ! deg
+   REAL(ReKi)                                :: RotateZdegOffset
 
    ErrStat = ErrID_None
    ErrMsg  = ""   
@@ -5174,16 +5175,24 @@ SUBROUTINE CheckWvHdg(InitInp,NumWAMITWvDir,WAMITWvDir,WvDirName,ErrStat,ErrMsg)
                                        'direction of interest is near the +/- 180 direction.  This is a known issue with '// &
                                        'the WAMIT2 module that has not yet been addressed.',ErrStat,ErrMsg,'')
       ENDIF
+
+      if (InitInp%NBodyMod==2) then ! Need to account for PtfmRefztRot (the current WAMIT2 module can only contain one body in this case)
+         RotateZdegOffset = InitInp%PtfmRefztRot(1)*R2D
+      else
+         RotateZdegOffset = 0.0
+      end if
+         
       ! Now check the limits for the wave direction
       !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-      IF ( (InitInp%WaveField%WaveDirMin-InitInp%PtfmRefY*R2D) < (MINVAL(WAMITWvDir)-WvDirTol) ) THEN
+      IF ( (InitInp%WaveField%WaveDirMin-RotateZdegOffset-InitInp%PtfmRefY*R2D) < (MINVAL(WAMITWvDir)-WvDirTol) ) THEN
          CALL SetErrStat( ErrID_Fatal,' does not contain the minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' for the '//WvDirName//' wave direction.', &
                ErrStat, ErrMsg, '')
       ENDIF
-      IF ( (InitInp%WaveField%WaveDirMax-InitInp%PtfmRefY*R2D) > (MAXVAL(WAMITWvDir)+WvDirTol) ) THEN
+      IF ( (InitInp%WaveField%WaveDirMax-RotateZdegOffset-InitInp%PtfmRefY*R2D) > (MAXVAL(WAMITWvDir)+WvDirTol) ) THEN
          CALL SetErrStat( ErrID_Fatal,' does not contain the maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' for the '//WvDirName//' wave direction.', &
                ErrStat, ErrMsg, '')
       ENDIF
+
    ENDIF
 
 END SUBROUTINE CheckWvHdg
