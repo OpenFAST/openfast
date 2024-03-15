@@ -5056,7 +5056,7 @@ SUBROUTINE CheckWAMIT2WvHdgDiffData(InitInp,W2Data,ErrStat,ErrMsg)
          CALL SetErrStat(ErrStatTmp,' WAMIT output file '//TRIM(W2Data%Filename)//ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
    ELSE
       ! No data. This is a catastrophic issue.  We should not have called this routine without data that is usable for the MnDrift calculation
-      CALL SetErrStat( ErrID_Fatal, ' Mean drift calculation called without data.',ErrStat,ErrMsg,RoutineName)
+      CALL SetErrStat( ErrID_Fatal, ' Second-order wave-load calculation called without data.',ErrStat,ErrMsg,RoutineName)
    ENDIF
 
    RETURN
@@ -5083,7 +5083,7 @@ SUBROUTINE CheckWAMIT2WvHdgSumData(InitInp,W2Data,ErrStat,ErrMsg)
          CALL SetErrStat(ErrStatTmp,' WAMIT output file '//TRIM(W2Data%Filename)//ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
    ELSE
       ! No data. This is a catastrophic issue.  We should not have called this routine without data that is usable for the MnDrift calculation
-      CALL SetErrStat( ErrID_Fatal, ' Mean drift calculation called without data.',ErrStat,ErrMsg,RoutineName)
+      CALL SetErrStat( ErrID_Fatal, ' Second-order wave-load calculation called without data.',ErrStat,ErrMsg,RoutineName)
    ENDIF
 
    RETURN
@@ -5129,11 +5129,11 @@ SUBROUTINE CheckWvHdg(InitInp,NumWAMITWvDir,WAMITWvDir,WvDirName,ErrStat,ErrMsg)
          
       ! Now check the limits for the wave direction
       !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-      IF ( (InitInp%WaveField%WaveDirMin-RotateZdegOffset-InitInp%PtfmRefY*R2D) < (MINVAL(WAMITWvDir)-WvDirTol) ) THEN
+      IF ( (InitInp%WaveField%WaveDirMin-RotateZdegOffset) < (MINVAL(WAMITWvDir)-WvDirTol) ) THEN
          CALL SetErrStat( ErrID_Fatal,' does not contain the minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' for the '//WvDirName//' wave direction.', &
                ErrStat, ErrMsg, '')
       ENDIF
-      IF ( (InitInp%WaveField%WaveDirMax-RotateZdegOffset-InitInp%PtfmRefY*R2D) > (MAXVAL(WAMITWvDir)+WvDirTol) ) THEN
+      IF ( (InitInp%WaveField%WaveDirMax-RotateZdegOffset) > (MAXVAL(WAMITWvDir)+WvDirTol) ) THEN
          CALL SetErrStat( ErrID_Fatal,' does not contain the maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' for the '//WvDirName//' wave direction.', &
                ErrStat, ErrMsg, '')
       ENDIF
