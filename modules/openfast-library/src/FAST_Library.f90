@@ -53,7 +53,7 @@ subroutine FAST_AllocateTurbines(nTurbines, ErrStat_c, ErrMsg_c) BIND (C, NAME='
       call wrscr1('Proceeding anyway.')
    end if
 
-   allocate(Turbine(0:NumTurbines-1),Stat=ErrStat) !Allocate in C style because most of the other Turbine properties from the input file are in C style inside the C++ driver
+   allocate(Turbine(1:NumTurbines),Stat=ErrStat) !Allocate in F style -- all logic inside FAST_Subs is based on index 1 start, not C style index 0
 
    if (ErrStat /= 0) then
       ErrStat_c = ErrID_Fatal
