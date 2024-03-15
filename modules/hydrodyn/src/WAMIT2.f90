@@ -1113,9 +1113,6 @@ END SUBROUTINE WAMIT2_Init
 
             Idx = (IBody-1)*6 + ThisDim
 
-               ! Set the MnDrift force to 0.0 (Even ones we don't calculate)
-            MnDriftForce(iHdg,Idx)   = 0.0_SiKi
-
             IF (MnDriftData%DataIs3D) THEN
                TmpFlag = MnDriftData%Data3D%LoadComponents(Idx)
             ELSE
