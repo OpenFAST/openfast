@@ -5099,19 +5099,40 @@ SUBROUTINE CheckWAMIT2WvHdgDiffData(InitInp,W2Data,ErrStat,ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   IF ( W2Data%DataIs3D ) THEN
-      CALL CheckWvHdg(InitInp,W2Data%Data3D%NumWvDir1,W2Data%data3d%WvDir1,'first',ErrStatTmp,ErrMsgTmp)
-         CALL SetErrStat(ErrStatTmp,' WAMIT output file '//TRIM(W2Data%Filename)//ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-      CALL CheckWvHdg(InitInp,W2Data%Data3D%NumWvDir2,W2Data%data3d%WvDir2,'second',ErrStatTmp,ErrMsgTmp)
-         CALL SetErrStat(ErrStatTmp,' WAMIT output file '//TRIM(W2Data%Filename)//ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-   ELSEIF ( W2Data%DataIs4D ) THEN
-      CALL CheckWvHdg(InitInp,W2Data%Data4D%NumWvDir1,W2Data%data4D%WvDir1,'first',ErrStatTmp,ErrMsgTmp)
-         CALL SetErrStat(ErrStatTmp,' WAMIT output file '//TRIM(W2Data%Filename)//ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-      CALL CheckWvHdg(InitInp,W2Data%Data4D%NumWvDir2,W2Data%data4D%WvDir2,'second',ErrStatTmp,ErrMsgTmp)
-         CALL SetErrStat(ErrStatTmp,' WAMIT output file '//TRIM(W2Data%Filename)//ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-   ELSE
-      ! No data. This is a catastrophic issue.  We should not have called this routine without data that is usable for the MnDrift calculation
-      CALL SetErrStat( ErrID_Fatal, ' Mean drift calculation called without data.',ErrStat,ErrMsg,RoutineName)
+   IF ( InitInp%PtfmYMod == 1 ) THEN  ! Need to cover -180 deg to 180 deg
+      IF ( W2Data%DataIs3D ) THEN
+         IF ( (.not. EqualRealNos( minval(W2Data%data3d%WvDir1),REAL(-180,SiKi))) .OR. (.not. EqualRealNos( maxval(W2Data%data3d%WvDir1),REAL(180,SiKi))) )  THEN
+            CALL SetErrStat( ErrID_Fatal,'  Both wave directions in the WAMIT output file '//TRIM(W2Data%Filename)//' must go from exactly -180 deg to +180 deg.',ErrStat,ErrMsg,RoutineName)
+         END IF
+         IF ( (.not. EqualRealNos( minval(W2Data%data3d%WvDir2),REAL(-180,SiKi))) .OR. (.not. EqualRealNos( maxval(W2Data%data3d%WvDir2),REAL(180,SiKi))) )  THEN
+            CALL SetErrStat( ErrID_Fatal,'  Both wave directions in the WAMIT output file '//TRIM(W2Data%Filename)//' must go from exactly -180 deg to +180 deg.',ErrStat,ErrMsg,RoutineName)
+         END IF
+      ELSE IF ( W2Data%DataIs4D ) THEN
+         IF ( (.not. EqualRealNos( minval(W2Data%data4d%WvDir1),REAL(-180,SiKi))) .OR. (.not. EqualRealNos( maxval(W2Data%data4d%WvDir1),REAL(180,SiKi))) )  THEN
+            CALL SetErrStat( ErrID_Fatal,'  Both wave directions in the WAMIT output file '//TRIM(W2Data%Filename)//' must go from exactly -180 deg to +180 deg.',ErrStat,ErrMsg,RoutineName)
+         END IF
+         IF ( (.not. EqualRealNos( minval(W2Data%data4d%WvDir2),REAL(-180,SiKi))) .OR. (.not. EqualRealNos( maxval(W2Data%data4d%WvDir2),REAL(180,SiKi))) )  THEN
+            CALL SetErrStat( ErrID_Fatal,'  Both wave directions in the WAMIT output file '//TRIM(W2Data%Filename)//' must go from exactly -180 deg to +180 deg.',ErrStat,ErrMsg,RoutineName)
+         END IF
+      ELSE
+         ! No data. This is a catastrophic issue.  We should not have called this routine without data that is usable for the MnDrift calculation
+         CALL SetErrStat( ErrID_Fatal, ' Second-order wave-load calculation called without data.',ErrStat,ErrMsg,RoutineName)
+      END IF
+   ELSE IF ( InitInp%PtfmYMod == 0) THEN ! Only need to cover the range of incident wave headings
+      IF ( W2Data%DataIs3D ) THEN
+         CALL CheckWvHdg(InitInp,W2Data%Data3D%NumWvDir1,W2Data%data3d%WvDir1,'first',ErrStatTmp,ErrMsgTmp)
+            CALL SetErrStat(ErrStatTmp,' WAMIT output file '//TRIM(W2Data%Filename)//ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+         CALL CheckWvHdg(InitInp,W2Data%Data3D%NumWvDir2,W2Data%data3d%WvDir2,'second',ErrStatTmp,ErrMsgTmp)
+            CALL SetErrStat(ErrStatTmp,' WAMIT output file '//TRIM(W2Data%Filename)//ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      ELSE IF ( W2Data%DataIs4D ) THEN
+         CALL CheckWvHdg(InitInp,W2Data%Data4D%NumWvDir1,W2Data%data4D%WvDir1,'first',ErrStatTmp,ErrMsgTmp)
+            CALL SetErrStat(ErrStatTmp,' WAMIT output file '//TRIM(W2Data%Filename)//ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+         CALL CheckWvHdg(InitInp,W2Data%Data4D%NumWvDir2,W2Data%data4D%WvDir2,'second',ErrStatTmp,ErrMsgTmp)
+            CALL SetErrStat(ErrStatTmp,' WAMIT output file '//TRIM(W2Data%Filename)//ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      ELSE
+         ! No data. This is a catastrophic issue.  We should not have called this routine without data that is usable for the MnDrift calculation
+         CALL SetErrStat( ErrID_Fatal, ' Second-order wave-load calculation called without data.',ErrStat,ErrMsg,RoutineName)
+      END IF
    ENDIF
 
    RETURN
@@ -5131,15 +5152,29 @@ SUBROUTINE CheckWAMIT2WvHdgSumData(InitInp,W2Data,ErrStat,ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   IF ( W2Data%DataIs4D ) THEN
-      CALL CheckWvHdg(InitInp,W2Data%Data4D%NumWvDir1,W2Data%data4D%WvDir1,'first',ErrStatTmp,ErrMsgTmp)
-         CALL SetErrStat(ErrStatTmp,' WAMIT output file '//TRIM(W2Data%Filename)//ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-      CALL CheckWvHdg(InitInp,W2Data%Data4D%NumWvDir2,W2Data%data4D%WvDir2,'second',ErrStatTmp,ErrMsgTmp)
-         CALL SetErrStat(ErrStatTmp,' WAMIT output file '//TRIM(W2Data%Filename)//ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-   ELSE
-      ! No data. This is a catastrophic issue.  We should not have called this routine without data that is usable for the MnDrift calculation
-      CALL SetErrStat( ErrID_Fatal, ' Mean drift calculation called without data.',ErrStat,ErrMsg,RoutineName)
-   ENDIF
+   IF ( InitInp%PtfmYMod == 1 ) THEN  ! Need to cover -180 deg to 180 deg
+      IF ( W2Data%DataIs4D ) THEN
+         IF ( (.not. EqualRealNos( minval(W2Data%data4d%WvDir1),REAL(-180,SiKi))) .OR. (.not. EqualRealNos( maxval(W2Data%data4d%WvDir1),REAL(180,SiKi))) )  THEN
+            CALL SetErrStat( ErrID_Fatal,'  Both wave directions in the WAMIT output file '//TRIM(W2Data%Filename)//' must go from exactly -180 deg to +180 deg.',ErrStat,ErrMsg,RoutineName)
+         END IF
+         IF ( (.not. EqualRealNos( minval(W2Data%data4d%WvDir2),REAL(-180,SiKi))) .OR. (.not. EqualRealNos( maxval(W2Data%data4d%WvDir2),REAL(180,SiKi))) )  THEN
+            CALL SetErrStat( ErrID_Fatal,'  Both wave directions in the WAMIT output file '//TRIM(W2Data%Filename)//' must go from exactly -180 deg to +180 deg.',ErrStat,ErrMsg,RoutineName)
+         END IF
+      ELSE
+         ! No data. This is a catastrophic issue.  We should not have called this routine without data that is usable for the MnDrift calculation
+         CALL SetErrStat( ErrID_Fatal, ' Second-order wave-load calculation called without data.',ErrStat,ErrMsg,RoutineName)
+      END IF
+   ELSE IF ( InitInp%PtfmYMod == 0) THEN ! Only need to cover the range of incident wave headings
+      IF ( W2Data%DataIs4D ) THEN
+         CALL CheckWvHdg(InitInp,W2Data%Data4D%NumWvDir1,W2Data%data4D%WvDir1,'first',ErrStatTmp,ErrMsgTmp)
+            CALL SetErrStat(ErrStatTmp,' WAMIT output file '//TRIM(W2Data%Filename)//ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+         CALL CheckWvHdg(InitInp,W2Data%Data4D%NumWvDir2,W2Data%data4D%WvDir2,'second',ErrStatTmp,ErrMsgTmp)
+            CALL SetErrStat(ErrStatTmp,' WAMIT output file '//TRIM(W2Data%Filename)//ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      ELSE
+         ! No data. This is a catastrophic issue.  We should not have called this routine without data that is usable for the MnDrift calculation
+         CALL SetErrStat( ErrID_Fatal, ' Second-order wave-load calculation called without data.',ErrStat,ErrMsg,RoutineName)
+      END IF
+   END IF
 
    RETURN
 
