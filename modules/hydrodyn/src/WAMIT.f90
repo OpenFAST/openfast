@@ -53,7 +53,11 @@ MODULE WAMIT
    PUBLIC :: WAMIT_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
    PUBLIC :: WAMIT_UpdateDiscState                ! Tight coupling routine for updating discrete states
         
-   
+   INTERFACE GetAngleInRange
+      MODULE PROCEDURE GetAngleInRangeR4
+      MODULE PROCEDURE GetAngleInRangeR8
+   END INTERFACE GetAngleInRange
+
 CONTAINS
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -193,6 +197,11 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       real(ReKi)                             :: tmpAngle                             ! Frequency and heading and platform offset dependent phase shift angle for Euler's Equation e^(-j*tmpAngle)
       real(SiKi)                             :: tmpVec3(3)
       REAL(ReKi)                             :: RotateZdegOffset                     ! PtfmRefZtRot converted to degrees
+      REAL(SiKi)                             :: MinAllowedWvDir                      ! Minimum allowed wave heading in the global frame
+      REAL(SiKi)                             :: MaxAllowedWvDir                      ! Maximum allowed wave heading in the global frame
+      REAL(SiKi)                             :: unusedReal
+      REAL(SiKi)                             :: tmpDir2
+      LOGICAL                                :: dirInRange
          ! Error handling
       CHARACTER(ErrMsgLen)                   :: ErrMsg2                              ! Temporary error message for calls
       INTEGER(IntKi)                         :: ErrStat2                             ! Temporary error status for calls
@@ -985,13 +994,18 @@ end if
                   RotateZdegOffset = 0.0
                END IF
                IF ( InitInp%PtfmYMod == 0 ) THEN
-                  IF ( ((p%WaveField%WaveDirMin-RotateZdegOffset-InitInp%PtfmRefY*R2D)<HdroWvDir(1)) .OR. ((p%WaveField%WaveDirMax-RotateZdegOffset-InitInp%PtfmRefY*R2D)>HdroWvDir(NInpWvDir)) )  THEN
-                     ErrMsg2  = 'All Wave directions must be within the wave heading angle range available in "' &
-                                    //TRIM(InitInp%WAMITFile)//'.3" (inclusive).'
-                     CALL SetErrStat( ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                     CALL Cleanup()
-                     RETURN
-                  END IF
+                  ! Range of allowed wave headings in the global frame
+                  MinAllowedWvDir = HdroWvDir(1)        +RotateZdegOffset+InitInp%PtfmRefY*R2D
+                  MaxAllowedWvDir = HdroWvDir(NInpWvDir)+RotateZdegOffset+InitInp%PtfmRefY*R2D
+                  ! For robustness, check every single incident wave direction
+                  DO I = 0,InitInp%WaveField%NStepWave2
+                     IF (.NOT. GetAngleInRange(InitInp%WaveField%WaveDirArr(I),MinAllowedWvDir,MaxAllowedWvDir,unusedReal)) THEN
+                        CALL SetErrStat( ErrID_Fatal,TRIM(InitInp%WAMITFile)//'.3 does not cover the wave heading of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirArr(I)))//' deg (in the global frame).', &
+                           ErrStat, ErrMsg, RoutineName)
+                        CALL Cleanup()
+                        RETURN
+                     END IF
+                  END DO
                ELSE IF ( InitInp%PtfmYMod == 1 ) THEN
                   IF ( (.not. EqualRealNos( HdroWvDir(1),REAL(-180,SiKi))) .OR. (.not. EqualRealNos( HdroWvDir(NInpWvDir),REAL(180,SiKi))) )  THEN
                      ErrMsg2  = 'With PtfmYMod=1 in ElastoDyn or HydroDyn driver, we need the lowest and highest wave headings to be exactly -180 deg and 180 deg, respectively, in "' &
@@ -1106,6 +1120,10 @@ end if
                      DO J = 1,6*p%NBody           ! Loop through all wave excitation forces and moments
                         TmpCoord(1) = Omega
                         TmpCoord(2) = p%WaveField%WaveDirArr(I) - PRPHdg*R2D
+                        dirInRange = GetAngleInRange(TmpCoord(2),HdroWvDir(1),HdroWvDir(NInpWvDir),tmpDir2); TmpCoord(2) = tmpDir2
+                        IF (.NOT. dirInRange) THEN ! Somewhat redundant check. Can be removed in the future.
+                           CALL SetErrStat(ErrID_Fatal,' Wave heading out of range.', ErrStat, ErrMsg, RoutineName)
+                        END IF
                         CALL WAMIT_Interp2D_Cplx( TmpCoord, HdroExctn(:,:,J), HdroFreq, HdroWvDir, LastInd2, WaveExctnC(I,iHdg,J), ErrStat2, ErrMsg2 )
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                         IF ( ErrStat >= AbortErrLev ) THEN
@@ -1178,6 +1196,10 @@ end if
                      DO J = 1,6*p%NBody           ! Loop through all wave excitation forces and moments
                         TmpCoord(1) = Omega
                         TmpCoord(2) = p%WaveField%WaveDirArr(I) - PRPHdg*R2D
+                        dirInRange = GetAngleInRange(TmpCoord(2),HdroWvDir(1),HdroWvDir(NInpWvDir),tmpDir2); TmpCoord(2) = tmpDir2
+                        IF (.NOT. dirInRange) THEN ! Somewhat redundant check. Can be removed in the future.
+                           CALL SetErrStat(ErrID_Fatal,' Wave heading out of range.', ErrStat, ErrMsg, RoutineName)
+                        END IF
                         CALL WAMIT_Interp2D_Cplx( TmpCoord, HdroExctn(:,:,J), HdroFreq, HdroWvDir, LastInd2, WaveExctnC(I,iHdg,J), ErrStat2, ErrMsg2 )
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                         IF ( ErrStat >= AbortErrLev ) THEN
@@ -2147,6 +2169,60 @@ SUBROUTINE WAMIT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z
       call SS_Rad_CalcConstrStateResidual( Time, m%SS_Rdtn_u, p%SS_Rdtn, x%SS_Rdtn, xd%SS_Rdtn, z%SS_Rdtn, OtherState%SS_Rdtn, m%SS_Rdtn, z_residual%SS_Rdtn, ErrStat, ErrMsg ) 
 
 END SUBROUTINE WAMIT_CalcConstrStateResidual
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Other supporting subroutines
+!..................................................................................................................................
+FUNCTION GetAngleInRangeR8(inAngle,minAngle,maxAngle,outAngle)
+   REAL(R8Ki), INTENT(IN   ) :: inAngle
+   REAL(R8Ki), INTENT(IN   ) :: minAngle
+   REAL(R8Ki), INTENT(IN   ) :: maxAngle
+   REAL(R8Ki), INTENT(  OUT) :: outAngle
+   LOGICAL                   :: GetAngleInRangeR8
+   REAL(R8Ki), PARAMETER     :: Tol = 0.001  ! deg
+
+   GetAngleInRangeR8 = .FALSE.
+   if ( ( inAngle > (minAngle-Tol) ) .AND. ( inAngle < (maxAngle+Tol) ) ) then
+      GetAngleInRangeR8 = .TRUE.
+      outAngle = inAngle
+   else if (inAngle < minAngle ) then
+      outAngle = inAngle + ceiling((minAngle-inAngle)/360.0)*360.0
+      if ( outAngle < (maxAngle+Tol) ) then
+         GetAngleInRangeR8 = .TRUE.
+      end if
+   else ! inAngle > maxAngle
+      outAngle = inAngle - ceiling((inAngle-maxAngle)/360.0)*360.0
+      if ( outAngle > (minAngle-Tol) ) then
+         GetAngleInRangeR8 = .TRUE.
+      end if
+   end if
+
+END FUNCTION GetAngleInRangeR8
+
+FUNCTION GetAngleInRangeR4(inAngle,minAngle,maxAngle,outAngle)
+   REAL(SiKi), INTENT(IN   ) :: inAngle
+   REAL(SiKi), INTENT(IN   ) :: minAngle
+   REAL(SiKi), INTENT(IN   ) :: maxAngle
+   REAL(SiKi), INTENT(  OUT) :: outAngle
+   LOGICAL                   :: GetAngleInRangeR4
+   REAL(SiKi), PARAMETER     :: Tol = 0.001  ! deg
+
+   GetAngleInRangeR4 = .FALSE.
+   if ( ( inAngle > (minAngle-Tol) ) .AND. ( inAngle < (maxAngle+Tol) ) ) then
+      GetAngleInRangeR4 = .TRUE.
+      outAngle = inAngle
+   else if (inAngle < minAngle ) then
+      outAngle = inAngle + ceiling((minAngle-inAngle)/360.0)*360.0
+      if ( outAngle < (maxAngle+Tol) ) then
+         GetAngleInRangeR4 = .TRUE.
+      end if
+   else ! inAngle > maxAngle
+      outAngle = inAngle - ceiling((inAngle-maxAngle)/360.0)*360.0
+      if ( outAngle > (minAngle-Tol) ) then
+         GetAngleInRangeR4 = .TRUE.
+      end if
+   end if
+
+END FUNCTION GetAngleInRangeR4
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE WAMIT
 !**********************************************************************************************************************************
