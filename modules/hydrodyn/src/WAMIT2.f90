@@ -181,10 +181,20 @@ MODULE WAMIT2
       TYPE(W2_InitData4D_Type)         :: Data4D               !< The 4D type from above
    END TYPE W2_SumData_Type
 
+   INTERFACE GetWAMIT2WvHdgRange
+      MODULE PROCEDURE GetWAMIT2WvHdgRangeDiffData
+      MODULE PROCEDURE GetWAMIT2WvHdgRangeSumData
+   END INTERFACE GetWAMIT2WvHdgRange
+
    INTERFACE CheckWamit2WvHdg
       MODULE PROCEDURE CheckWAMIT2WvHdgDiffData
       MODULE PROCEDURE CheckWAMIT2WvHdgSumData
    END INTERFACE CheckWamit2WvHdg
+
+   INTERFACE GetAngleInRange
+      MODULE PROCEDURE GetAngleInRangeR4
+      MODULE PROCEDURE GetAngleInRangeR8
+   END INTERFACE GetAngleInRange
 
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -804,6 +814,10 @@ END SUBROUTINE WAMIT2_Init
       REAL(SiKi)                                         :: Coord4(4)            !< The (omega1,omega2,beta1,beta2) coordinate we want in the 4D dataset
       COMPLEX(SiKi),ALLOCATABLE                          :: TmpData3D(:,:,:)     !< Temporary 3D array we put the 3D data into (minus the load component indice)
       COMPLEX(SiKi),ALLOCATABLE                          :: TmpData4D(:,:,:,:)   !< Temporary 4D array we put the 4D data into (minus the load component indice)
+      REAL(SiKi)                                         :: W2WvDir1Range(2)     !< Range of the first  wave heading in the WAMIT second-order files
+      REAL(SiKi)                                         :: W2WvDir2Range(2)     !< Range of the second wave heading in the WAMIT second-order files
+      REAL(SiKi)                                         :: tmpDir
+      LOGICAL                                            :: dirInRange
 
          ! Initialize a few things
       ErrMsg      = ''
@@ -828,10 +842,14 @@ END SUBROUTINE WAMIT2_Init
          RETURN
       ENDIF
 
-      CALL CheckWAMIT2WvHdg(InitInp,MnDriftData,ErrStatTmp,ErrMsgTmp)
+      CALL GetWAMIT2WvHdgRange(MnDriftData,W2WvDir1Range,W2WvDir2Range,ErrStatTmp,ErrMsgTmp)
       CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev )    RETURN
 
+      CALL CheckWAMIT2WvHdg(InitInp,MnDriftData,ErrStatTmp,ErrMsgTmp)
+      CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev )    RETURN
+      
          !> 4. Check the data to see if we need to convert to 3D arrays before continuing (4D is sparse in any dimension we want and
          !!    frequency diagonal is complete).  Only check if we don't have 3D data.
 
@@ -993,6 +1011,13 @@ END SUBROUTINE WAMIT2_Init
                            Coord3(2) = Coord3(2) - RotateZdegOffset - PRPHdg*R2D
                            Coord3(3) = Coord3(3) - RotateZdegOffset - PRPHdg*R2D
 
+                           ! Make sure the wave headings are in the correct range
+                           dirInRange = GetAngleInRange(Coord3(2),W2WvDir1Range(1),W2WvDir1Range(2),tmpDir); Coord3(2) = tmpDir
+                           dirInRange = GetAngleInRange(Coord3(3),W2WvDir2Range(1),W2WvDir2Range(2),tmpDir); Coord3(3) = tmpDir
+                           IF (.NOT. dirInRange) THEN ! Somewhat redundant check. Can be removed in the future.
+                              CALL SetErrStat(ErrID_Fatal,' Wave heading out of range.', ErrStat, ErrMsg, RoutineName)
+                           END IF
+
                            ! get the interpolated value for F(omega1,beta1,beta2)
                            CALL WAMIT_Interp3D_Cplx( Coord3, TmpData3D, MnDriftData%Data3D%WvFreq1, &
                                              MnDriftData%Data3D%WvDir1, MnDriftData%Data3D%WvDir2, LastIndex3, QTF_Value, ErrStatTmp, ErrMsgTmp )
@@ -1006,6 +1031,13 @@ END SUBROUTINE WAMIT2_Init
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
                            Coord4(3) = Coord4(3) - RotateZdegOffset - PRPHdg*R2D
                            Coord4(4) = Coord4(4) - RotateZdegOffset - PRPHdg*R2D
+
+                           ! Make sure the wave headings are in the correct range
+                           dirInRange = GetAngleInRange(Coord4(3),W2WvDir1Range(1),W2WvDir1Range(2),tmpDir); Coord4(3) = tmpDir
+                           dirInRange = GetAngleInRange(Coord4(4),W2WvDir2Range(1),W2WvDir2Range(2),tmpDir); Coord4(4) = tmpDir
+                           IF (.NOT. dirInRange) THEN ! Somewhat redundant check. Can be removed in the future.
+                              CALL SetErrStat(ErrID_Fatal,' Wave heading out of range.', ErrStat, ErrMsg, RoutineName)
+                           END IF
 
                            ! get the interpolated value for F(omega1,omega2,beta1,beta2)
                            CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, MnDriftData%Data4D%WvFreq1, MnDriftData%Data4D%WvFreq2, &
@@ -1172,13 +1204,20 @@ END SUBROUTINE WAMIT2_Init
       REAL(SiKi)                                         :: WaveNmbr1            !< Wavenumber for this frequency
       COMPLEX(SiKi), ALLOCATABLE                         :: TmpData3D(:,:,:)     !< Temporary 3D array we put the 3D data into (minus the load component indice)
       COMPLEX(SiKi), ALLOCATABLE                         :: TmpData4D(:,:,:,:)   !< Temporary 4D array we put the 4D data into (minus the load component indice)
-
+      REAL(SiKi)                                         :: W2WvDir1Range(2)     !< Range of the first  wave heading in the WAMIT second-order files
+      REAL(SiKi)                                         :: W2WvDir2Range(2)     !< Range of the second wave heading in the WAMIT second-order files
+      REAL(SiKi)                                         :: tmpDir
+      LOGICAL                                            :: dirInRange
 
          ! Initialize a few things
       ErrMsg      = ''
       ErrMsgTmp   = ''
       ErrStat     = ErrID_None
       ErrStatTmp  = ErrID_None
+
+      CALL GetWAMIT2WvHdgRange(NewmanAppData,W2WvDir1Range,W2WvDir2Range,ErrStatTmp,ErrMsgTmp)
+      CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev )    RETURN
 
       CALL CheckWAMIT2WvHdg(InitInp,NewmanAppData,ErrStatTmp,ErrMsgTmp)
       CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
@@ -1387,6 +1426,13 @@ END SUBROUTINE WAMIT2_Init
                            Coord3(2) = Coord3(2) - RotateZdegOffset - PRPHdg*R2D
                            Coord3(3) = Coord3(3) - RotateZdegOffset - PRPHdg*R2D
 
+                           ! Make sure the wave headings are in the correct range
+                           dirInRange = GetAngleInRange(Coord3(2),W2WvDir1Range(1),W2WvDir1Range(2),tmpDir); Coord3(2) = tmpDir
+                           dirInRange = GetAngleInRange(Coord3(3),W2WvDir2Range(1),W2WvDir2Range(2),tmpDir); Coord3(3) = tmpDir
+                           IF (.NOT. dirInRange) THEN ! Somewhat redundant check. Can be removed in the future.
+                              CALL SetErrStat(ErrID_Fatal,' Wave heading out of range.', ErrStat, ErrMsg, RoutineName)
+                           END IF
+
                            ! get the interpolated value for F(omega1,beta1,beta2)
                            CALL WAMIT_Interp3D_Cplx( Coord3, TmpData3D, NewmanAppData%Data3D%WvFreq1, &
                                              NewmanAppData%Data3D%WvDir1, NewmanAppData%Data3D%WvDir2, LastIndex3, QTF_Value, ErrStatTmp, ErrMsgTmp )
@@ -1399,6 +1445,13 @@ END SUBROUTINE WAMIT2_Init
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
                            Coord4(3) = Coord4(3) - RotateZdegOffset - PRPHdg*R2D
                            Coord4(4) = Coord4(4) - RotateZdegOffset - PRPHdg*R2D
+
+                           ! Make sure the wave headings are in the correct range
+                           dirInRange = GetAngleInRange(Coord4(3),W2WvDir1Range(1),W2WvDir1Range(2),tmpDir); Coord4(3) = tmpDir
+                           dirInRange = GetAngleInRange(Coord4(4),W2WvDir2Range(1),W2WvDir2Range(2),tmpDir); Coord4(4) = tmpDir
+                           IF (.NOT. dirInRange) THEN ! Somewhat redundant check. Can be removed in the future.
+                              CALL SetErrStat(ErrID_Fatal,' Wave heading out of range.', ErrStat, ErrMsg, RoutineName)
+                           END IF
 
                            ! get the interpolated value for F(omega1,omega2,beta1,beta2)
                            CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, NewmanAppData%Data4D%WvFreq1, NewmanAppData%Data4D%WvFreq2, &
@@ -1678,13 +1731,20 @@ END SUBROUTINE WAMIT2_Init
       INTEGER(IntKi)                                     :: LastIndex4(4)        !< Last used index for searching in the interpolation algorithms.  First  wave freq
       REAL(SiKi)                                         :: Coord4(4)            !< The (omega1,omega2,beta1,beta2) coordinate we want in the 4D dataset. First  wave freq.
       COMPLEX(SiKi), ALLOCATABLE                         :: TmpData4D(:,:,:,:)   !< Temporary 4D array we put the 4D data into (minus the load component indice)
-
+      REAL(SiKi)                                         :: W2WvDir1Range(2)     !< Range of the first  wave heading in the WAMIT second-order files
+      REAL(SiKi)                                         :: W2WvDir2Range(2)     !< Range of the second wave heading in the WAMIT second-order files
+      REAL(SiKi)                                         :: tmpDir
+      LOGICAL                                            :: dirInRange
 
          ! Initialize a few things
       ErrMsg      = ''
       ErrMsgTmp   = ''
       ErrStat     = ErrID_None
       ErrStatTmp  = ErrID_None
+
+      CALL GetWAMIT2WvHdgRange(DiffQTFData,W2WvDir1Range,W2WvDir2Range,ErrStatTmp,ErrMsgTmp)
+      CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev )    RETURN
 
       CALL CheckWAMIT2WvHdg(InitInp,DiffQTFData,ErrStatTmp,ErrMsgTmp)
       CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
@@ -1839,6 +1899,13 @@ END SUBROUTINE WAMIT2_Init
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
                         Coord4(3) = Coord4(3) - RotateZdegOffset - InitInp%PtfmRefY*R2D
                         Coord4(4) = Coord4(4) - RotateZdegOffset - InitInp%PtfmRefY*R2D
+
+                           ! Make sure the wave headings are in the correct range
+                        dirInRange = GetAngleInRange(Coord4(3),W2WvDir1Range(1),W2WvDir1Range(2),tmpDir); Coord4(3) = tmpDir
+                        dirInRange = GetAngleInRange(Coord4(4),W2WvDir2Range(1),W2WvDir2Range(2),tmpDir); Coord4(4) = tmpDir
+                        IF (.NOT. dirInRange) THEN ! Somewhat redundant check. Can be removed in the future.
+                           CALL SetErrStat(ErrID_Fatal,' Wave heading out of range.', ErrStat, ErrMsg, RoutineName)
+                        END IF
 
                            ! get the interpolated value for F(omega1,omega2,beta1,beta2)  --> QTF_Value
                         CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, DiffQTFData%Data4D%WvFreq1, DiffQTFData%Data4D%WvFreq2, &
@@ -2085,13 +2152,20 @@ END SUBROUTINE WAMIT2_Init
       INTEGER(IntKi)                                     :: LastIndex4(4)        !< Last used index for searching in the interpolation algorithms.  First  wave freq
       REAL(SiKi)                                         :: Coord4(4)            !< The (omega1,omega2,beta1,beta2) coordinate we want in the 4D dataset. First  wave freq.
       COMPLEX(SiKi), ALLOCATABLE                         :: TmpData4D(:,:,:,:)   !< Temporary 4D array we put the 4D data into (minus the load component indice)
-
+      REAL(SiKi)                                         :: W2WvDir1Range(2)     !< Range of the first  wave heading in the WAMIT second-order files
+      REAL(SiKi)                                         :: W2WvDir2Range(2)     !< Range of the second wave heading in the WAMIT second-order files
+      REAL(SiKi)                                         :: tmpDir
+      LOGICAL                                            :: dirInRange
 
          ! Initialize a few things
       ErrMsg      = ''
       ErrMsgTmp   = ''
       ErrStat     = ErrID_None
       ErrStatTmp  = ErrID_None
+
+      CALL GetWAMIT2WvHdgRange(SumQTFData,W2WvDir1Range,W2WvDir2Range,ErrStatTmp,ErrMsgTmp)
+      CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev )    RETURN
 
       CALL CheckWAMIT2WvHdg(InitInp,SumQTFData,ErrStatTmp,ErrMsgTmp)
       CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
@@ -2234,6 +2308,13 @@ END SUBROUTINE WAMIT2_Init
                      Coord4(3) = Coord4(3) - RotateZdegOffset - InitInp%PtfmRefY*R2D
                      Coord4(4) = Coord4(4) - RotateZdegOffset - InitInp%PtfmRefY*R2D
 
+                        ! Make sure the wave headings are in the correct range
+                     dirInRange = GetAngleInRange(Coord4(3),W2WvDir1Range(1),W2WvDir1Range(2),tmpDir); Coord4(3) = tmpDir
+                     dirInRange = GetAngleInRange(Coord4(4),W2WvDir2Range(1),W2WvDir2Range(2),tmpDir); Coord4(4) = tmpDir
+                     IF (.NOT. dirInRange) THEN ! Somewhat redundant check. Can be removed in the future.
+                        CALL SetErrStat(ErrID_Fatal,' Wave heading out of range.', ErrStat, ErrMsg, RoutineName)
+                     END IF
+
                         ! get the interpolated value for F(omega1,omega2,beta1,beta2)  --> QTF_Value
                      CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, SumQTFData%Data4D%WvFreq1, SumQTFData%Data4D%WvFreq2, &
                                           SumQTFData%Data4D%WvDir1, SumQTFData%Data4D%WvDir2, LastIndex4, QTF_Value, ErrStatTmp, ErrMsgTmp )
@@ -2347,6 +2428,13 @@ END SUBROUTINE WAMIT2_Init
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
                         Coord4(3) = Coord4(3) - RotateZdegOffset - InitInp%PtfmRefY*R2D
                         Coord4(4) = Coord4(4) - RotateZdegOffset - InitInp%PtfmRefY*R2D
+
+                           ! Make sure the wave headings are in the correct range
+                        dirInRange = GetAngleInRange(Coord4(3),W2WvDir1Range(1),W2WvDir1Range(2),tmpDir); Coord4(3) = tmpDir
+                        dirInRange = GetAngleInRange(Coord4(4),W2WvDir2Range(1),W2WvDir2Range(2),tmpDir); Coord4(4) = tmpDir
+                        IF (.NOT. dirInRange) THEN ! Somewhat redundant check. Can be removed in the future.
+                           CALL SetErrStat(ErrID_Fatal,' Wave heading out of range.', ErrStat, ErrMsg, RoutineName)
+                        END IF
 
                            ! get the interpolated value for F(omega1,omega2,beta1,beta2)  --> QTF_Value
                         CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, SumQTFData%Data4D%WvFreq1, SumQTFData%Data4D%WvFreq2, &
@@ -5086,6 +5174,73 @@ SUBROUTINE Destroy_InitData4D(Data4D)
 END SUBROUTINE Destroy_InitData4D
 
 
+SUBROUTINE GetWAMIT2WvHdgRangeDiffData(W2Data,W2WvDir1Range,W2WvDir2Range,ErrStat,ErrMsg)
+   TYPE(W2_DiffData_Type),     INTENT(IN   ) :: W2Data
+   REAL(SiKi),                 INTENT(  OUT) :: W2WvDir1Range(2)
+   REAL(SiKi),                 INTENT(  OUT) :: W2WvDir2Range(2)
+   INTEGER(IntKi),             INTENT(  OUT) :: ErrStat
+   CHARACTER(*),               INTENT(  OUT) :: ErrMsg
+   REAL(SiKi),                 PARAMETER     :: Tol = 0.001  ! deg
+   CHARACTER(*),               PARAMETER     :: RoutineName = 'GetWAMIT2WvHdgRangeDiffData'
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   ! WvDir1 and WvDir2 should be the same, but treating them as potentially different for now
+   IF ( W2Data%DataIs3D) THEN
+      W2WvDir1Range(1) = MINVAL(W2Data%Data3D%WvDir1) 
+      W2WvDir1Range(2) = MAXVAL(W2Data%Data3D%WvDir1)
+      W2WvDir2Range(1) = MINVAL(W2Data%Data3D%WvDir2) 
+      W2WvDir2Range(2) = MAXVAL(W2Data%Data3D%WvDir2)
+   ELSE IF ( W2Data%DataIs4D) THEN
+      W2WvDir1Range(1) = MINVAL(W2Data%Data4D%WvDir1) 
+      W2WvDir1Range(2) = MAXVAL(W2Data%Data4D%WvDir1)
+      W2WvDir2Range(1) = MINVAL(W2Data%Data4D%WvDir2) 
+      W2WvDir2Range(2) = MAXVAL(W2Data%Data4D%WvDir2)
+   ELSE
+      ! No data. This is a catastrophic issue.  We should not have called this routine without data that is usable for the MnDrift calculation
+      CALL SetErrStat( ErrID_Fatal, ' Second-order wave-load calculation called without data.',ErrStat,ErrMsg,RoutineName)
+   END IF
+
+   IF ( (W2WvDir1Range(2)-W2WvDir1Range(1))>(360.0+Tol) ) THEN
+      CALL SetErrStat( ErrID_Fatal,' The difference between any pair of wave directions in '//TRIM(W2Data%Filename)//' should be less than 360 deg.',ErrStat,ErrMsg,RoutineName)
+   END IF
+   IF ( (W2WvDir2Range(2)-W2WvDir2Range(1))>(360.0+Tol) ) THEN
+      CALL SetErrStat( ErrID_Fatal,' The difference between any pair of wave directions in '//TRIM(W2Data%Filename)//' should be less than 360 deg.',ErrStat,ErrMsg,RoutineName)
+   END IF
+
+END SUBROUTINE GetWAMIT2WvHdgRangeDiffData
+
+SUBROUTINE GetWAMIT2WvHdgRangeSumData(W2Data,W2WvDir1Range,W2WvDir2Range,ErrStat,ErrMsg)
+   TYPE(W2_SumData_Type),      INTENT(IN   ) :: W2Data
+   REAL(SiKi),                 INTENT(  OUT) :: W2WvDir1Range(2)
+   REAL(SiKi),                 INTENT(  OUT) :: W2WvDir2Range(2)
+   INTEGER(IntKi),             INTENT(  OUT) :: ErrStat
+   CHARACTER(*),               INTENT(  OUT) :: ErrMsg
+   REAL(SiKi),                 PARAMETER     :: Tol = 0.001  ! deg
+   CHARACTER(*),               PARAMETER     :: RoutineName = 'GetWAMIT2WvHdgRangeSumData'
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   ! WvDir1 and WvDir2 should be the same, but treating them as potentially different for now
+   IF ( W2Data%DataIs4D) THEN
+      W2WvDir1Range(1) = MINVAL(W2Data%Data4D%WvDir1) 
+      W2WvDir1Range(2) = MAXVAL(W2Data%Data4D%WvDir1)
+      W2WvDir2Range(1) = MINVAL(W2Data%Data4D%WvDir2) 
+      W2WvDir2Range(2) = MAXVAL(W2Data%Data4D%WvDir2)
+   ELSE
+      ! No data. This is a catastrophic issue.  We should not have called this routine without data that is usable for the MnDrift calculation
+      CALL SetErrStat( ErrID_Fatal, ' Second-order wave-load calculation called without data.',ErrStat,ErrMsg,RoutineName)
+   END IF
+
+   IF ( (W2WvDir1Range(2)-W2WvDir1Range(1))>(360.0+Tol) ) THEN
+      CALL SetErrStat( ErrID_Fatal,' The difference between any pair of wave directions in '//TRIM(W2Data%Filename)//' should be less than 360 deg.',ErrStat,ErrMsg,RoutineName)
+   END IF
+   IF ( (W2WvDir2Range(2)-W2WvDir2Range(1))>(360.0+Tol) ) THEN
+      CALL SetErrStat( ErrID_Fatal,' The difference between any pair of wave directions in '//TRIM(W2Data%Filename)//' should be less than 360 deg.',ErrStat,ErrMsg,RoutineName)
+   END IF
+
+END SUBROUTINE GetWAMIT2WvHdgRangeSumData
+
 SUBROUTINE CheckWAMIT2WvHdgDiffData(InitInp,W2Data,ErrStat,ErrMsg)
    TYPE(WAMIT2_InitInputType), INTENT(IN   ) :: InitInp              !< Input data for initialization routine
    TYPE(W2_DiffData_Type),     INTENT(IN   ) :: W2Data
@@ -5181,15 +5336,14 @@ SUBROUTINE CheckWAMIT2WvHdgSumData(InitInp,W2Data,ErrStat,ErrMsg)
 END SUBROUTINE CheckWAMIT2WvHdgSumData
 
 SUBROUTINE CheckWvHdg(InitInp,NumWAMITWvDir,WAMITWvDir,WvDirName,ErrStat,ErrMsg)
-   TYPE(WAMIT2_InitInputType), INTENT(IN   ) :: InitInp              !< Input data for initialization routine
+   TYPE(WAMIT2_InitInputType), INTENT(IN   ) :: InitInp
    INTEGER(IntKi),             INTENT(IN   ) :: NumWAMITWvDir
    REAL(SiKi),                 INTENT(IN   ) :: WAMITWvDir(:)
    CHARACTER(*),               INTENT(IN   ) :: WvDirName
    INTEGER(IntKi),             INTENT(  OUT) :: ErrStat
    CHARACTER(*),               INTENT(  OUT) :: ErrMsg
-
-   REAL(ReKi),                 PARAMETER     :: WvDirTol = 0.001  ! deg
-   REAL(ReKi)                                :: RotateZdegOffset
+   REAL(SiKi)                                :: RotateZdegOffset,MinAllowedWvDir,MaxAllowedWvDir,unusedReal
+   INTEGER(IntKi)                            :: I
 
    ErrStat = ErrID_None
    ErrMsg  = ""   
@@ -5200,37 +5354,78 @@ SUBROUTINE CheckWvHdg(InitInp,NumWAMITWvDir,WAMITWvDir,WvDirName,ErrStat,ErrMsg)
                   'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                   ErrStat,ErrMsg,'')
    ELSE
-      ! See Known Issues #1 at the top of this file.  There may be problems if the data spans the +/- Pi boundary.  For
-      ! now (since time is limited) we will issue a warning if any of the wave directions for multidirectional waves
-      ! or data from the WAMIT file for the wavedirections is close to the +/-pi boundary (>150 degrees, <-150 degrees),
-      ! we will issue a warning.
-      IF ( (InitInp%WaveField%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveField%WaveDirMax < -150.0_SiKi) .OR. &
-              (minval(WAMITWvDir) > 150.0_SiKi) .OR.  (maxval(WAMITWvDir) < -150.0_SiKi)) THEN
-         CALL SetErrStat( ErrID_Warn,' There may be issues with how the wave direction data is handled when the wave '// &
-                                       'direction of interest is near the +/- 180 direction.  This is a known issue with '// &
-                                       'the WAMIT2 module that has not yet been addressed.',ErrStat,ErrMsg,'')
-      ENDIF
-
-      if (InitInp%NBodyMod==2) then ! Need to account for PtfmRefztRot (the current WAMIT2 module can only contain one body in this case)
+      ! Need to account for PtfmRefztRot (the current WAMIT2 module can only contain one body in this case)
+      IF (InitInp%NBodyMod==2) THEN
          RotateZdegOffset = InitInp%PtfmRefztRot(1)*R2D
-      else
+      ELSE
          RotateZdegOffset = 0.0
-      end if
-         
-      ! Now check the limits for the wave direction
-      !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-      IF ( (InitInp%WaveField%WaveDirMin-RotateZdegOffset-InitInp%PtfmRefY*R2D) < (MINVAL(WAMITWvDir)-WvDirTol) ) THEN
-         CALL SetErrStat( ErrID_Fatal,' does not contain the minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' for the '//WvDirName//' wave direction.', &
+      END IF
+      ! Allowed range of incident wave angles in the global frame
+      MinAllowedWvDir = MINVAL(WAMITWvDir)+RotateZdegOffset+InitInp%PtfmRefY*R2D
+      MaxAllowedWvDir = MAXVAL(WAMITWvDir)+RotateZdegOffset+InitInp%PtfmRefY*R2D
+      ! For robustness, check every single incident wave direction
+      DO I = 0,InitInp%WaveField%NStepWave2
+         IF (.NOT. GetAngleInRange(InitInp%WaveField%WaveDirArr(I),MinAllowedWvDir,MaxAllowedWvDir,unusedReal)) THEN
+            CALL SetErrStat( ErrID_Fatal,' does not contain the range of wave directions covering '//TRIM(Num2LStr(InitInp%WaveField%WaveDirArr(I)))//' deg for the '//WvDirName//' wave direction.', &
                ErrStat, ErrMsg, '')
-      ENDIF
-      IF ( (InitInp%WaveField%WaveDirMax-RotateZdegOffset-InitInp%PtfmRefY*R2D) > (MAXVAL(WAMITWvDir)+WvDirTol) ) THEN
-         CALL SetErrStat( ErrID_Fatal,' does not contain the maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' for the '//WvDirName//' wave direction.', &
-               ErrStat, ErrMsg, '')
-      ENDIF
-
+            RETURN
+         END IF
+      END DO
    ENDIF
 
 END SUBROUTINE CheckWvHdg
+
+FUNCTION GetAngleInRangeR8(inAngle,minAngle,maxAngle,outAngle)
+   REAL(R8Ki), INTENT(IN   ) :: inAngle
+   REAL(R8Ki), INTENT(IN   ) :: minAngle
+   REAL(R8Ki), INTENT(IN   ) :: maxAngle
+   REAL(R8Ki), INTENT(  OUT) :: outAngle
+   LOGICAL                   :: GetAngleInRangeR8
+   REAL(R8Ki), PARAMETER     :: Tol = 0.001  ! deg
+
+   GetAngleInRangeR8 = .FALSE.
+   if ( ( inAngle > (minAngle-Tol) ) .AND. ( inAngle < (maxAngle+Tol) ) ) then
+      GetAngleInRangeR8 = .TRUE.
+      outAngle = inAngle
+   else if (inAngle < minAngle ) then
+      outAngle = inAngle + ceiling((minAngle-inAngle)/360.0)*360.0
+      if ( outAngle < (maxAngle+Tol) ) then
+         GetAngleInRangeR8 = .TRUE.
+      end if
+   else ! inAngle > maxAngle
+      outAngle = inAngle - ceiling((inAngle-maxAngle)/360.0)*360.0
+      if ( outAngle > (minAngle-Tol) ) then
+         GetAngleInRangeR8 = .TRUE.
+      end if
+   end if
+
+END FUNCTION GetAngleInRangeR8
+
+FUNCTION GetAngleInRangeR4(inAngle,minAngle,maxAngle,outAngle)
+   REAL(SiKi), INTENT(IN   ) :: inAngle
+   REAL(SiKi), INTENT(IN   ) :: minAngle
+   REAL(SiKi), INTENT(IN   ) :: maxAngle
+   REAL(SiKi), INTENT(  OUT) :: outAngle
+   LOGICAL                   :: GetAngleInRangeR4
+   REAL(SiKi), PARAMETER     :: Tol = 0.001  ! deg
+
+   GetAngleInRangeR4 = .FALSE.
+   if ( ( inAngle > (minAngle-Tol) ) .AND. ( inAngle < (maxAngle+Tol) ) ) then
+      GetAngleInRangeR4 = .TRUE.
+      outAngle = inAngle
+   else if (inAngle < minAngle ) then
+      outAngle = inAngle + ceiling((minAngle-inAngle)/360.0)*360.0
+      if ( outAngle < (maxAngle+Tol) ) then
+         GetAngleInRangeR4 = .TRUE.
+      end if
+   else ! inAngle > maxAngle
+      outAngle = inAngle - ceiling((inAngle-maxAngle)/360.0)*360.0
+      if ( outAngle > (minAngle-Tol) ) then
+         GetAngleInRangeR4 = .TRUE.
+      end if
+   end if
+
+END FUNCTION GetAngleInRangeR4
 
 !----------------------------------------------------------------------------------------------------------------------------------
 
