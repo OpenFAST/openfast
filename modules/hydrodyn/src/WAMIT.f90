@@ -201,7 +201,9 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       REAL(SiKi)                             :: MaxAllowedWvDir                      ! Maximum allowed wave heading in the global frame
       REAL(SiKi)                             :: unusedReal
       REAL(SiKi)                             :: tmpDir2
+      REAL(SiKi)                             :: AvgInpWvDirSpcg                      ! Average spacing of input wave directions used to check for potential gaps (deg)
       LOGICAL                                :: dirInRange
+      REAL(SiKi),              PARAMETER     :: WvDirTol = 0.001                     ! Tolerance for wave heading in degrees             
          ! Error handling
       CHARACTER(ErrMsgLen)                   :: ErrMsg2                              ! Temporary error message for calls
       INTEGER(IntKi)                         :: ErrStat2                             ! Temporary error status for calls
@@ -986,6 +988,21 @@ end if
                !   heading direction:
                ! NOTE: we may end up inadvertantly aborting if the wave direction crosses
                !   the -Pi / Pi boundary (-180/180 degrees).
+
+               ! First do some check on the input wave heading angles
+               IF ( (HdroWvDir(NInpWvDir)-HdroWvDir(1)) > (360.0+WvDirTol) ) THEN
+                  CALL SetErrStat( ErrID_Fatal,' The difference between any pair of wave directions in '//TRIM(InitInp%WAMITFile)//'.3 should be less than or equal to 360 deg.',ErrStat,ErrMsg,RoutineName)
+               END IF
+               ! The input wave headings should cover a contiguous region of directions. Check for gaps and warn user.
+               IF (NInpWvDir>1) THEN
+                  AvgInpWvDirSpcg = (HdroWvDir(NInpWvDir)-HdroWvDir(1))/REAL(NInpWvDir-1,SiKi)
+                  DO I = 2,NInpWvDir
+                     IF ( (HdroWvDir(I)-HdroWvDir(I-1)) > (3.0*AvgInpWvDirSpcg) ) THEN
+                        CALL SetErrStat( ErrID_Warn,'The wave headings in '//TRIM(InitInp%WAMITFile)//'.3 is likely not contiguous with a gap between '//TRIM(Num2LStr(HdroWvDir(I-1)))//' and '//TRIM(Num2LStr(HdroWvDir(I)))//' degs.', &
+                           ErrStat, ErrMsg, RoutineName)
+                     END IF
+                  END DO
+               END IF
 
                ! Need to account for PtfmRefZtRot if NBodyMod=2 (NBody=1 in the case)
                IF ( p%NBodyMod == 2 ) THEN

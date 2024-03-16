@@ -5180,6 +5180,8 @@ SUBROUTINE GetWAMIT2WvHdgRangeDiffData(W2Data,W2WvDir1Range,W2WvDir2Range,ErrSta
    REAL(SiKi),                 INTENT(  OUT) :: W2WvDir2Range(2)
    INTEGER(IntKi),             INTENT(  OUT) :: ErrStat
    CHARACTER(*),               INTENT(  OUT) :: ErrMsg
+   INTEGER(IntKi)                            :: NumWvDir1, NumWvDir2, I
+   REAL(SiKi)                                :: AvgInpWvDirSpcg
    REAL(SiKi),                 PARAMETER     :: Tol = 0.001  ! deg
    CHARACTER(*),               PARAMETER     :: RoutineName = 'GetWAMIT2WvHdgRangeDiffData'
    ErrStat = ErrID_None
@@ -5191,21 +5193,66 @@ SUBROUTINE GetWAMIT2WvHdgRangeDiffData(W2Data,W2WvDir1Range,W2WvDir2Range,ErrSta
       W2WvDir1Range(2) = MAXVAL(W2Data%Data3D%WvDir1)
       W2WvDir2Range(1) = MINVAL(W2Data%Data3D%WvDir2) 
       W2WvDir2Range(2) = MAXVAL(W2Data%Data3D%WvDir2)
+      NumWvDir1 = W2Data%Data3D%NumWvDir1
+      NumWvDir2 = W2Data%Data3D%NumWvDir2
    ELSE IF ( W2Data%DataIs4D) THEN
       W2WvDir1Range(1) = MINVAL(W2Data%Data4D%WvDir1) 
       W2WvDir1Range(2) = MAXVAL(W2Data%Data4D%WvDir1)
       W2WvDir2Range(1) = MINVAL(W2Data%Data4D%WvDir2) 
       W2WvDir2Range(2) = MAXVAL(W2Data%Data4D%WvDir2)
+      NumWvDir1 = W2Data%Data4D%NumWvDir1
+      NumWvDir2 = W2Data%Data4D%NumWvDir2
    ELSE
       ! No data. This is a catastrophic issue.  We should not have called this routine without data that is usable for the MnDrift calculation
       CALL SetErrStat( ErrID_Fatal, ' Second-order wave-load calculation called without data.',ErrStat,ErrMsg,RoutineName)
    END IF
 
    IF ( (W2WvDir1Range(2)-W2WvDir1Range(1))>(360.0+Tol) ) THEN
-      CALL SetErrStat( ErrID_Fatal,' The difference between any pair of wave directions in '//TRIM(W2Data%Filename)//' should be less than 360 deg.',ErrStat,ErrMsg,RoutineName)
+      CALL SetErrStat( ErrID_Fatal,' The difference between any pair of wave directions in '//TRIM(W2Data%Filename)//' should be less than or equal to 360 deg.',ErrStat,ErrMsg,RoutineName)
    END IF
    IF ( (W2WvDir2Range(2)-W2WvDir2Range(1))>(360.0+Tol) ) THEN
-      CALL SetErrStat( ErrID_Fatal,' The difference between any pair of wave directions in '//TRIM(W2Data%Filename)//' should be less than 360 deg.',ErrStat,ErrMsg,RoutineName)
+      CALL SetErrStat( ErrID_Fatal,' The difference between any pair of wave directions in '//TRIM(W2Data%Filename)//' should be less than or equal to 360 deg.',ErrStat,ErrMsg,RoutineName)
+   END IF
+
+   ! The input wave headings should cover a contiguous region of directions. Check for gaps and warn user.
+   IF ( W2Data%DataIs3D) THEN
+      IF (NumWvDir1>1) THEN
+         AvgInpWvDirSpcg = (W2WvDir1Range(2)-W2WvDir1Range(1))/REAL(NumWvDir1-1,SiKi)
+         DO I = 2,NumWvDir1
+            IF ( (W2Data%Data3D%WvDir1(I)-W2Data%Data3D%WvDir1(I-1)) > (3.0*AvgInpWvDirSpcg) ) THEN
+               CALL SetErrStat( ErrID_Warn,'The wave headings in '//TRIM(W2Data%Filename)//' is likely not contiguous with a gap between '//TRIM(Num2LStr(W2Data%Data3D%WvDir1(I-1)))//' and '//TRIM(Num2LStr(W2Data%Data3D%WvDir1(I)))//' degs.', &
+                                ErrStat, ErrMsg, RoutineName)
+            END IF
+         END DO
+      END IF
+      IF (NumWvDir2>1) THEN
+         AvgInpWvDirSpcg = (W2WvDir2Range(2)-W2WvDir2Range(1))/REAL(NumWvDir2-1,SiKi)
+         DO I = 2,NumWvDir2
+            IF ( (W2Data%Data3D%WvDir2(I)-W2Data%Data3D%WvDir2(I-1)) > (3.0*AvgInpWvDirSpcg) ) THEN
+               CALL SetErrStat( ErrID_Warn,'The wave headings in '//TRIM(W2Data%Filename)//' is likely not contiguous with a gap between '//TRIM(Num2LStr(W2Data%Data3D%WvDir2(I-1)))//' and '//TRIM(Num2LStr(W2Data%Data3D%WvDir2(I)))//' degs.', &
+                                ErrStat, ErrMsg, RoutineName)
+            END IF
+         END DO
+      END IF
+   ELSE IF ( W2Data%DataIs4D) THEN
+      IF (NumWvDir1>1) THEN
+         AvgInpWvDirSpcg = (W2WvDir1Range(2)-W2WvDir1Range(1))/REAL(NumWvDir1-1,SiKi)
+         DO I = 2,NumWvDir1
+            IF ( (W2Data%Data4D%WvDir1(I)-W2Data%Data4D%WvDir1(I-1)) > (3.0*AvgInpWvDirSpcg) ) THEN
+               CALL SetErrStat( ErrID_Warn,'The wave headings in '//TRIM(W2Data%Filename)//' is likely not contiguous with a gap between '//TRIM(Num2LStr(W2Data%Data4D%WvDir1(I-1)))//' and '//TRIM(Num2LStr(W2Data%Data4D%WvDir1(I)))//' degs.', &
+                                ErrStat, ErrMsg, RoutineName)
+            END IF
+         END DO
+      END IF
+      IF (NumWvDir2>1) THEN
+         AvgInpWvDirSpcg = (W2WvDir2Range(2)-W2WvDir2Range(1))/REAL(NumWvDir2-1,SiKi)
+         DO I = 2,NumWvDir2
+            IF ( (W2Data%Data4D%WvDir2(I)-W2Data%Data4D%WvDir2(I-1)) > (3.0*AvgInpWvDirSpcg) ) THEN
+               CALL SetErrStat( ErrID_Warn,'The wave headings in '//TRIM(W2Data%Filename)//' is likely not contiguous with a gap between '//TRIM(Num2LStr(W2Data%Data4D%WvDir2(I-1)))//' and '//TRIM(Num2LStr(W2Data%Data4D%WvDir2(I)))//' degs.', &
+                                ErrStat, ErrMsg, RoutineName)
+            END IF
+         END DO
+      END IF
    END IF
 
 END SUBROUTINE GetWAMIT2WvHdgRangeDiffData
@@ -5216,6 +5263,8 @@ SUBROUTINE GetWAMIT2WvHdgRangeSumData(W2Data,W2WvDir1Range,W2WvDir2Range,ErrStat
    REAL(SiKi),                 INTENT(  OUT) :: W2WvDir2Range(2)
    INTEGER(IntKi),             INTENT(  OUT) :: ErrStat
    CHARACTER(*),               INTENT(  OUT) :: ErrMsg
+   INTEGER(IntKi)                            :: NumWvDir1, NumWvDir2, I
+   REAL(SiKi)                                :: AvgInpWvDirSpcg
    REAL(SiKi),                 PARAMETER     :: Tol = 0.001  ! deg
    CHARACTER(*),               PARAMETER     :: RoutineName = 'GetWAMIT2WvHdgRangeSumData'
    ErrStat = ErrID_None
@@ -5227,16 +5276,40 @@ SUBROUTINE GetWAMIT2WvHdgRangeSumData(W2Data,W2WvDir1Range,W2WvDir2Range,ErrStat
       W2WvDir1Range(2) = MAXVAL(W2Data%Data4D%WvDir1)
       W2WvDir2Range(1) = MINVAL(W2Data%Data4D%WvDir2) 
       W2WvDir2Range(2) = MAXVAL(W2Data%Data4D%WvDir2)
+      NumWvDir1 = W2Data%Data4D%NumWvDir1
+      NumWvDir2 = W2Data%Data4D%NumWvDir2
    ELSE
       ! No data. This is a catastrophic issue.  We should not have called this routine without data that is usable for the MnDrift calculation
       CALL SetErrStat( ErrID_Fatal, ' Second-order wave-load calculation called without data.',ErrStat,ErrMsg,RoutineName)
    END IF
 
    IF ( (W2WvDir1Range(2)-W2WvDir1Range(1))>(360.0+Tol) ) THEN
-      CALL SetErrStat( ErrID_Fatal,' The difference between any pair of wave directions in '//TRIM(W2Data%Filename)//' should be less than 360 deg.',ErrStat,ErrMsg,RoutineName)
+      CALL SetErrStat( ErrID_Fatal,' The difference between any pair of wave directions in '//TRIM(W2Data%Filename)//' should be less than or equal to 360 deg.',ErrStat,ErrMsg,RoutineName)
    END IF
    IF ( (W2WvDir2Range(2)-W2WvDir2Range(1))>(360.0+Tol) ) THEN
-      CALL SetErrStat( ErrID_Fatal,' The difference between any pair of wave directions in '//TRIM(W2Data%Filename)//' should be less than 360 deg.',ErrStat,ErrMsg,RoutineName)
+      CALL SetErrStat( ErrID_Fatal,' The difference between any pair of wave directions in '//TRIM(W2Data%Filename)//' should be less than or equal to 360 deg.',ErrStat,ErrMsg,RoutineName)
+   END IF
+
+   ! The input wave headings should cover a contiguous region of directions. Check for gaps and warn user.
+   IF ( W2Data%DataIs4D) THEN
+      IF (NumWvDir1>1) THEN
+         AvgInpWvDirSpcg = (W2WvDir1Range(2)-W2WvDir1Range(1))/REAL(NumWvDir1-1,SiKi)
+         DO I = 2,NumWvDir1
+            IF ( (W2Data%Data4D%WvDir1(I)-W2Data%Data4D%WvDir1(I-1)) > (3.0*AvgInpWvDirSpcg) ) THEN
+               CALL SetErrStat( ErrID_Warn,'The wave headings in '//TRIM(W2Data%Filename)//' is likely not contiguous with a gap between '//TRIM(Num2LStr(W2Data%Data4D%WvDir1(I-1)))//' and '//TRIM(Num2LStr(W2Data%Data4D%WvDir1(I)))//' degs.', &
+                                ErrStat, ErrMsg, RoutineName)
+            END IF
+         END DO
+      END IF
+      IF (NumWvDir2>1) THEN
+         AvgInpWvDirSpcg = (W2WvDir2Range(2)-W2WvDir2Range(1))/REAL(NumWvDir2-1,SiKi)
+         DO I = 2,NumWvDir2
+            IF ( (W2Data%Data4D%WvDir2(I)-W2Data%Data4D%WvDir2(I-1)) > (3.0*AvgInpWvDirSpcg) ) THEN
+               CALL SetErrStat( ErrID_Warn,'The wave headings in '//TRIM(W2Data%Filename)//' is likely not contiguous with a gap between '//TRIM(Num2LStr(W2Data%Data4D%WvDir2(I-1)))//' and '//TRIM(Num2LStr(W2Data%Data4D%WvDir2(I)))//' degs.', &
+                                ErrStat, ErrMsg, RoutineName)
+            END IF
+         END DO
+      END IF
    END IF
 
 END SUBROUTINE GetWAMIT2WvHdgRangeSumData
