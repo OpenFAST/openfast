@@ -836,7 +836,7 @@ subroutine FAST_OpFM_Step(iTurb_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM
       
       ! we can't continue because we might over-step some arrays that are allocated to the size of the simulation
       
-      if (iTurb .eq. (NumTurbines-1) ) then
+      if (iTurb == NumTurbines) then
          IF (n_t_global == Turbine(iTurb)%p_FAST%n_TMax_m1 + 1) THEN  ! we call update an extra time in Simulink, which we can ignore until the time shift with outputs is solved
             n_t_global = n_t_global + 1
             ErrStat_c = ErrID_None
@@ -852,7 +852,7 @@ subroutine FAST_OpFM_Step(iTurb_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM
    ELSE
 
       CALL FAST_Solution_T( t_initial, n_t_global, Turbine(iTurb), ErrStat, ErrMsg )                  
-      if (iTurb .eq. (NumTurbines-1) ) then
+      if (iTurb == NumTurbines) then
          n_t_global = n_t_global + 1
       end if
             
