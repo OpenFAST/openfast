@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-FROM ubuntu:mantic
+ARG BASE=ubuntu:mantic
+FROM ${BASE}
 
 # Install dependencies
 
