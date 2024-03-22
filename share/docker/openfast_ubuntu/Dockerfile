@@ -49,7 +49,12 @@ RUN apt-get update -qq && \
 ENV FC=/usr/bin/gfortran
 
 # Clone the project
-RUN git clone --depth 1 --branch=${VERSION} --recursive --shallow-submodules https://github.com/openfast/openfast.git
+ARG BUILD_TESTING=ON
+
+RUN if [ "${BUILD_TESTING}" = "ON" ]; then git clone --depth 1 --branch=${VERSION} --recursive --shallow-submodules https://github.com/openfast/openfast.git; \
+    else git clone --depth 1 --branch=${VERSION} https://github.com/openfast/openfast.git; \
+    fi
+
 WORKDIR /openfast
 
 # Build the project
@@ -60,7 +65,6 @@ WORKDIR /openfast/build
 # will require about 6GB of memory. Otherwise, the gfortran compiler will exit with an
 # "internal error"
 ARG BUILD_CORES=4
-ARG BUILD_TESTING=ON
 RUN cmake .. -DBUILD_TESTING=${BUILD_TESTING} -DDOUBLE_PRECISION=ON -DCMAKE_BUILD_TYPE=RELWITHDEBINFO
 RUN make -j${BUILD_CORES} install
 
