@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-FROM ubuntu:bionic
+FROM ubuntu:mantic
 
 # Install dependencies
 
@@ -34,7 +34,7 @@ RUN apt update -qq && \
     apt install -y git && \
     apt install -y nano
 
-RUN pip3 install numpy
+# RUN pip3 install numpy
 
 # Configure the environment
 ENV FC=/usr/bin/gfortran
