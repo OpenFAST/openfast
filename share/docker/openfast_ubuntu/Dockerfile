@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 ARG BASE=ubuntu:mantic
+ARG TIMEZONE=America/Denver
+
 FROM ${BASE}
 
 # Install dependencies
@@ -22,7 +24,7 @@ FROM ${BASE}
 # RUN add-apt-repository ppa:ubuntu-toolchain-r/test -y
 # apt-get install gfortran-8
 
-ENV DEBIAN_FRONTEND=noninteractive TZ=America/Denver
+ENV DEBIAN_FRONTEND=noninteractive TZ=TIMEZONE
 
 RUN apt update -qq && \
     apt install -y software-properties-common build-essential && \
