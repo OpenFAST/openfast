@@ -53,5 +53,6 @@ WORKDIR /openfast/build
 # NOTE: building with optimizations on (RELEASE or RELWITHDEBINFO), the virtual machine
 # will require about 6GB of memoery. Otherwise, the gfortran compiler will exit with an
 # "internal error"
+ARG BUILD_CORES=4
 RUN cmake .. -DBUILD_TESTING=ON -DDOUBLE_PRECISION=ON -DCMAKE_BUILD_TYPE=RELWITHDEBINFO
-RUN make -j4 install
+RUN make -j${BUILD_CORES} install
