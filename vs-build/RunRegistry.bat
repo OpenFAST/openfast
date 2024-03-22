@@ -36,6 +36,7 @@ SET IceF_Loc=%Modules_Loc%\icefloe\src\interfaces\FAST
 SET IceD_Loc=%Modules_Loc%\icedyn\src
 SET MD_Loc=%Modules_Loc%\moordyn\src
 SET ExtInfw_Loc=%Modules_Loc%\externalinflow\src
+SET ExtLoads_Loc=%Modules_Loc%\extloads\src
 SET Orca_Loc=%Modules_Loc%\orcaflex-interface\src
 SET NWTC_Lib_Loc=%Modules_Loc%\nwtc-library\src
 SET ExtPtfm_Loc=%Modules_Loc%\extptfm\src
@@ -51,7 +52,7 @@ SET Farm_Loc=%Root_Loc%\glue-codes\fast-farm\src
 SET ALL_FAST_Includes=-I "%FAST_Loc%" -I "%NWTC_Lib_Loc%" -I "%ED_Loc%" -I "%SrvD_Loc%" -I "%AD14_Loc%" -I^
  "%AD_Loc%" -I "%BD_Loc%" -I "%SC_Loc%" -I^
  "%IfW_Loc%" -I "%SD_Loc%" -I "%HD_Loc%" -I "%SEAST_Loc%" -I "%MAP_Loc%" -I "%FEAM_Loc%"  -I^
- "%IceF_Loc%" -I "%IceD_Loc%" -I "%MD_Loc%" -I "%ExtInfw_Loc%" -I "%Orca_Loc%" -I "%ExtPtfm_Loc%"
+ "%IceF_Loc%" -I "%IceD_Loc%" -I "%MD_Loc%" -I "%ExtInfw_Loc%" -I "%Orca_Loc%" -I "%ExtPtfm_Loc%" -I "%ExtLoads_Loc%" 
 
 
 SET ModuleName=%1
@@ -138,6 +139,18 @@ SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%IfW_Loc%" -ccode -O "%Output_Loc%"
 GOTO checkError
 
+:ExtLoads
+SET CURR_LOC=%ExtLoads_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%ExtLoads_Loc%" -O "%Output_Loc%"
+GOTO checkError
+
+:ExtLoadsDX
+SET CURR_LOC=%ExtLoads_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -ccode -O "%Output_Loc%"
+GOTO checkError
+
 :AeroDyn
 :BEMT
 :DBEMT
@@ -211,7 +224,6 @@ GOTO checkError
 :Current
 :Waves
 :Waves2
-:SeaState_Interp
 :SeaSt_WaveField
 
 SET CURR_LOC=%SEAST_Loc%

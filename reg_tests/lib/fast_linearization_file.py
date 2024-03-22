@@ -84,17 +84,17 @@ class FASTLinearizationFile(dict):
             OP=[]
             Var = {'RotatingFrame': [], 'DerivativeOrder': [], 'Description': []}
             colNames=fid.readline().strip()
-            dummy=   fid.readline().strip()
+            fid.readline().strip()
             bHasDeriv= colNames.find('Derivative Order')>=0
             for i, line in enumerate(fid):
-                sp=line.strip().split()
-                if sp[1].find(',')>=0:
+                sp = line.strip().split()
+                if sp[1].find(',') >= 0:
                     #  Most likely this OP has three values (e.g. orientation angles)
                     # For now we discard the two other values
-                    OP.append(float(sp[1][:-1]))
+                    OP.append(np.float32(sp[1][:-1]))
                     iRot=4
                 else:
-                    OP.append(float(sp[1]))
+                    OP.append(np.float32(sp[1]))
                     iRot=2
                 Var['RotatingFrame'].append(sp[iRot])
                 if bHasDeriv:
@@ -109,23 +109,23 @@ class FASTLinearizationFile(dict):
             return OP, Var
 
         def readMat(fid, n, m, name=''):
-            pattern = re.compile(r"[\*]+")
-            vals=[pattern.sub(' inf ', fid.readline().strip() ).split() for i in np.arange(n)]
-            vals = np.array(vals)
+
+            # Read rows from file, raise exception on failure
             try:
-                vals = np.array(vals).astype(float) # This could potentially fail
+                vals = np.genfromtxt(fid, dtype=np.float64, max_rows=n)
             except:
                 raise Exception('Failed to convert into an array of float the matrix `{}`\n\tin linfile: {}'.format(name, self.filename))
+            
+            # Raise exception if actual matrix shape does not match expected shape
             if vals.shape[0]!=n or vals.shape[1]!=m:
                 shape1 = vals.shape
                 shape2 = (n,m)
                 raise Exception('Shape of matrix `{}` has wrong dimension ({} instead of {})\n\tin linfile: {}'.format(name, shape1, shape2, name, self.filename))
 
-            nNaN = sum(np.isnan(vals.ravel()))
-            nInf = sum(np.isinf(vals.ravel()))
-            if nInf>0:
+            # Raise exceptions if any elements are NaN or infinity
+            if np.any(np.isnan(vals.ravel())):
                 raise Exception('Some ill-formated/infinite values (e.g. `*******`) were found in the matrix `{}`\n\tin linflile: {}'.format(name, self.filename))
-            if nNaN>0:
+            if np.any(np.isinf(vals.ravel())):
                 raise Exception('Some NaN values were found in the matrix `{}`\n\tin linfile: `{}`.'.format(name, self.filename))
             return vals
 
@@ -142,15 +142,15 @@ class FASTLinearizationFile(dict):
             ny  = int(extractVal(self['header'],'Number of outputs:'          ))
             bJac = extractVal(self['header'],'Jacobians included in this file?')
             try:
-                self['Azimuth'] = float(extractVal(self['header'],'Azimuth:'))
+                self['Azimuth'] = np.float32(extractVal(self['header'],'Azimuth:'))
             except:
                 self['Azimuth'] = None
             try:
-                self['RotSpeed'] = float(extractVal(self['header'],'Rotor Speed:')) # rad/s
+                self['RotSpeed'] = np.float32(extractVal(self['header'],'Rotor Speed:')) # rad/s
             except:
                 self['RotSpeed'] = None
             try:
-                self['WindSpeed'] = float(extractVal(self['header'],'Wind Speed:'))
+                self['WindSpeed'] = np.float32(extractVal(self['header'],'Wind Speed:'))
             except:
                 self['WindSpeed'] = None
 

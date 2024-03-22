@@ -105,7 +105,7 @@ IMPLICIT NONE
     TYPE(Conv_Rdtn_MiscVarType)  :: Conv_Rdtn      !<  [-]
     TYPE(Conv_Rdtn_InputType)  :: Conv_Rdtn_u      !<  [-]
     TYPE(Conv_Rdtn_OutputType)  :: Conv_Rdtn_y      !<  [-]
-    TYPE(SeaSt_Interp_MiscVarType)  :: SeaSt_Interp_m      !< misc var information from the SeaState Interpolation module [-]
+    TYPE(SeaSt_WaveField_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState Interpolation module [-]
   END TYPE WAMIT_MiscVarType
 ! =======================
 ! =========  WAMIT_ParameterType  =======
@@ -722,7 +722,7 @@ subroutine WAMIT_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call Conv_Rdtn_CopyOutput(SrcMiscData%Conv_Rdtn_y, DstMiscData%Conv_Rdtn_y, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call SeaSt_Interp_CopyMisc(SrcMiscData%SeaSt_Interp_m, DstMiscData%SeaSt_Interp_m, CtrlCode, ErrStat2, ErrMsg2)
+   call SeaSt_WaveField_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 end subroutine
@@ -766,7 +766,7 @@ subroutine WAMIT_DestroyMisc(MiscData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call Conv_Rdtn_DestroyOutput(MiscData%Conv_Rdtn_y, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call SeaSt_Interp_DestroyMisc(MiscData%SeaSt_Interp_m, ErrStat2, ErrMsg2)
+   call SeaSt_WaveField_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
@@ -789,7 +789,7 @@ subroutine WAMIT_PackMisc(RF, Indata)
    call Conv_Rdtn_PackMisc(RF, InData%Conv_Rdtn) 
    call Conv_Rdtn_PackInput(RF, InData%Conv_Rdtn_u) 
    call Conv_Rdtn_PackOutput(RF, InData%Conv_Rdtn_y) 
-   call SeaSt_Interp_PackMisc(RF, InData%SeaSt_Interp_m) 
+   call SeaSt_WaveField_PackMisc(RF, InData%WaveField_m) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -815,7 +815,7 @@ subroutine WAMIT_UnPackMisc(RF, OutData)
    call Conv_Rdtn_UnpackMisc(RF, OutData%Conv_Rdtn) ! Conv_Rdtn 
    call Conv_Rdtn_UnpackInput(RF, OutData%Conv_Rdtn_u) ! Conv_Rdtn_u 
    call Conv_Rdtn_UnpackOutput(RF, OutData%Conv_Rdtn_y) ! Conv_Rdtn_y 
-   call SeaSt_Interp_UnpackMisc(RF, OutData%SeaSt_Interp_m) ! SeaSt_Interp_m 
+   call SeaSt_WaveField_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
 end subroutine
 
 subroutine WAMIT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)

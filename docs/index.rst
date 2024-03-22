@@ -51,8 +51,9 @@ package:
 
    source/this_doc.rst
    source/install/index.rst
-   source/testing/index.rst
+   source/working.rst
    source/user/index.rst
+   source/testing/index.rst
    source/dev/index.rst
    source/license.rst
    source/help.rst

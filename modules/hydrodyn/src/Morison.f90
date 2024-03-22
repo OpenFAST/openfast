@@ -23,7 +23,6 @@ MODULE Morison
    USE Waves
    USE Morison_Types  
    USE Morison_Output
-   USE SeaState_Interp
    USE SeaSt_WaveField
   ! USE HydroDyn_Output_Types
    USE NWTC_Library
@@ -2603,7 +2602,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    
    !===============================================================================================
    ! Calculate the fluid kinematics at all mesh nodes and store for use in the equations below
-   CALL WaveField_GetWaveKin( p%WaveField, m%SeaSt_Interp_m, Time, m%DispNodePosHdn, .FALSE., m%nodeInWater, m%WaveElev1, m%WaveElev2, m%WaveElev, m%FDynP, m%FV, m%FA, m%FAMCF, ErrStat2, ErrMsg2 )
+   CALL WaveField_GetWaveKin( p%WaveField, m%WaveField_m, Time, m%DispNodePosHdn, .FALSE., m%nodeInWater, m%WaveElev1, m%WaveElev2, m%WaveElev, m%FDynP, m%FV, m%FA, m%FAMCF, ErrStat2, ErrMsg2 )
      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ! Compute fluid velocity relative to the structure
    DO j = 1, p%NNodes
@@ -2716,9 +2715,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             
             ! lower node
             Ioffset   = mem%h_cmg_l(i)*mem%h_cmg_l(i)*mem%m_mg_l(i)
+            Imat      = 0.0_ReKi
             Imat(1,1) = mem%I_rmg_l(i) - Ioffset
             Imat(2,2) = mem%I_rmg_l(i) - Ioffset
-            Imat(3,3) = mem%I_lmg_l(i) - Ioffset
+            Imat(3,3) = mem%I_lmg_l(i)
             Imat      =  matmul(matmul(CMatrix, Imat), CTrans)
             iArm = mem%h_cmg_l(i) * k_hat
             iTerm     = ( -a_s1 - cross_product(omega_s1, cross_product(omega_s1,iArm )) - cross_product(alpha_s1,iArm) ) * mem%m_mg_l(i)
@@ -2731,9 +2731,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             
             ! upper node
             Ioffset   = mem%h_cmg_u(i)*mem%h_cmg_u(i)*mem%m_mg_u(i)
+            Imat      = 0.0_ReKi
             Imat(1,1) = mem%I_rmg_u(i) - Ioffset
             Imat(2,2) = mem%I_rmg_u(i) - Ioffset
-            Imat(3,3) = mem%I_lmg_u(i) - Ioffset
+            Imat(3,3) = mem%I_lmg_u(i)
             Imat      =  matmul(matmul(CMatrix, Imat), CTrans)
             iArm = mem%h_cmg_u(i) * k_hat
             iTerm     = ( -a_s2 - cross_product(omega_s2, cross_product(omega_s2,iArm )) - cross_product(alpha_s2,iArm) ) * mem%m_mg_u(i)
@@ -2829,9 +2830,11 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          ! ------------------ flooded ballast inertia: sides: Section 6.1.1 : Always compute regardless of PropPot setting ---------------------
          ! lower node
          Ioffset   = mem%h_cfb_l(i)*mem%h_cfb_l(i)*mem%m_fb_l(i)
+         Imat      = 0.0_ReKi
          Imat(1,1) = mem%I_rfb_l(i) - Ioffset
          Imat(2,2) = mem%I_rfb_l(i) - Ioffset
-         Imat(3,3) = mem%I_lfb_l(i) - Ioffset
+         Imat(3,3) = mem%I_lfb_l(i)
+         Imat      =  matmul(matmul(CMatrix, Imat), CTrans)
          iArm = mem%h_cfb_l(i) * k_hat
          iTerm     = ( -a_s1  - cross_product(omega_s1, cross_product(omega_s1,iArm ))  -  cross_product(alpha_s1,iArm) ) * mem%m_fb_l(i)
          F_If(1:3) =  iTerm
@@ -2843,9 +2846,11 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          
          ! upper node
          Ioffset   = mem%h_cfb_u(i)*mem%h_cfb_u(i)*mem%m_fb_u(i)
+         Imat      = 0.0_ReKi
          Imat(1,1) = mem%I_rfb_u(i) - Ioffset
          Imat(2,2) = mem%I_rfb_u(i) - Ioffset
-         Imat(3,3) = mem%I_lfb_u(i) - Ioffset
+         Imat(3,3) = mem%I_lfb_u(i)
+         Imat      =  matmul(matmul(CMatrix, Imat), CTrans)
          iArm = mem%h_cfb_u(i) * k_hat
          iTerm     = ( -a_s2  - cross_product(omega_s2, cross_product(omega_s2,iArm ))  -  cross_product(alpha_s2,iArm) ) * mem%m_fb_u(i)
          F_If(1:3) = iTerm
@@ -3037,7 +3042,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         ! Compute the distributed loads at the point of intersection between the member and the free surface !
         !----------------------------------------------------------------------------------------------------!   
         ! Get wave kinematics at the free-surface intersection. Set forceNodeInWater=.TRUE. to guarantee the free-surface intersection is in water.
-        CALL WaveField_GetNodeWaveKin( p%WaveField, m%SeaSt_Interp_m, Time, FSInt, .TRUE., nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat2, ErrMsg2 )
+        CALL WaveField_GetNodeWaveKin( p%WaveField, m%WaveField_m, Time, FSInt, .TRUE., nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat2, ErrMsg2 )
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         FDynPFSInt = REAL(FDynP,ReKi)
         FVFSInt    = REAL(FV,   ReKi)
@@ -3579,7 +3584,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ErrStat   = ErrID_None
       ErrMsg    = ""
 
-      Zeta = WaveField_GetNodeTotalWaveElev( p%WaveField, m%SeaSt_Interp_m, Time, pos, ErrStat2, ErrMsg2 )
+      Zeta = WaveField_GetNodeTotalWaveElev( p%WaveField, m%WaveField_m, Time, pos, ErrStat2, ErrMsg2 )
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END SUBROUTINE GetTotalWaveElev
@@ -3597,7 +3602,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ErrStat   = ErrID_None
       ErrMsg    = ""
 
-      CALL WaveField_GetNodeWaveNormal( p%WaveField, m%SeaSt_Interp_m, Time, pos, r, n, ErrStat2, ErrMsg2 )
+      CALL WaveField_GetNodeWaveNormal( p%WaveField, m%WaveField_m, Time, pos, r, n, ErrStat2, ErrMsg2 )
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END SUBROUTINE GetFreeSurfaceNormal
@@ -4212,7 +4217,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
       END IF
 
       ! Get fluid velocity at the joint
-      CALL WaveField_GetNodeWaveVel( p%WaveField, m%SeaSt_Interp_m, Time, pos, .FALSE., nodeInWater, FVTmp, ErrStat2, ErrMsg2 )
+      CALL WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, pos, .FALSE., nodeInWater, FVTmp, ErrStat2, ErrMsg2 )
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       FV   = REAL(FVTmp, ReKi)
       vrel = ( FV - u%Mesh%TranslationVel(:,J) ) * nodeInWater

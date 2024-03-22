@@ -34,7 +34,6 @@ MODULE SeaState_Types
 USE Current_Types
 USE Waves_Types
 USE Waves2_Types
-USE SeaState_Interp_Types
 USE SeaSt_WaveField_Types
 USE NWTC_Library
 IMPLICIT NONE
@@ -94,13 +93,15 @@ IMPLICIT NONE
     REAL(ReKi)  :: defWtrDpth = 0.0_ReKi      !< Default water depth from the driver; may be overwritten                         [m]
     REAL(ReKi)  :: defMSL2SWL = 0.0_ReKi      !< Default mean sea level to still water level from the driver; may be overwritten [m]
     REAL(DbKi)  :: TMax = 0.0_R8Ki      !< Supplied by Driver:  The total simulation time [(sec)]
-    REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevXY      !< Supplied by Driver:  X-Y locations for WaveElevation output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number. [m,-]
     INTEGER(IntKi)  :: WaveFieldMod = 0_IntKi      !< Wave field handling (-) (switch) 0: use individual SeaState inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
     REAL(ReKi)  :: PtfmLocationX = 0.0_ReKi      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
     REAL(ReKi)  :: PtfmLocationY = 0.0_ReKi      !< Supplied by Driver:  Y coordinate of platform location in the wave field [m]
     INTEGER(IntKi)  :: WrWvKinMod = 0      !< 0,1, or 2 indicating whether we are going to write out kinematics files.  [ignored if WaveMod = 6, if 1 or 2 then files are written using the outrootname] [-]
     LOGICAL  :: HasIce = .false.      !< Supplied by Driver:  Whether this simulation has ice loading (flag) [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
+    LOGICAL  :: SurfaceVis = .FALSE.      !< Turn on grid surface visualization outputs [-]
+    INTEGER(IntKi)  :: SurfaceVisNx = 0      !< Number of points in X direction to output for visualization grid.  Use 0 or negative to set to SeaState resolution. [-]
+    INTEGER(IntKi)  :: SurfaceVisNy = 0      !< Number of points in Y direction to output for visualization grid.  Use 0 or negative to set to SeaState resolution. [-]
   END TYPE SeaSt_InitInputType
 ! =======================
 ! =========  SeaSt_InitOutputType  =======
@@ -109,7 +110,9 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< The is the list of all HD-related output channel unit strings (includes all sub-module channels) [-]
     TYPE(ProgDesc)  :: Ver      !< Version of SeaState [-]
     LOGICAL  :: InvalidWithSSExctn = .false.      !< Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2) [(-)]
-    REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevSeries      !< Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second dimension is XY point number corresponding to second dimension of WaveElevXY. [(m)]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevVisX      !< X locations of grid output [m,-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevVisY      !< Y locations of grid output [m,-]
+    REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElevVisGrid      !< Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second/third dimensions are the grid of points. [(m)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
   END TYPE SeaSt_InitOutputType
 ! =======================
@@ -138,7 +141,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Decimate = 0_IntKi      !< The output decimation counter [-]
     REAL(DbKi)  :: LastOutTime = 0.0_R8Ki      !< Last time step which was written to the output file (sec) [-]
     INTEGER(IntKi)  :: LastIndWave = 0_IntKi      !< The last index used in the wave kinematics arrays, used to optimize interpolation [-]
-    TYPE(SeaSt_Interp_MiscVarType)  :: SeaSt_Interp_m      !< misc var information from the SeaState Interpolation module [-]
+    TYPE(SeaSt_WaveField_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState Interpolation module [-]
   END TYPE SeaSt_MiscVarType
 ! =======================
 ! =========  SeaSt_ParameterType  =======
@@ -445,7 +448,6 @@ subroutine SeaSt_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SeaSt_CopyInitInput'
@@ -462,24 +464,15 @@ subroutine SeaSt_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%defWtrDpth = SrcInitInputData%defWtrDpth
    DstInitInputData%defMSL2SWL = SrcInitInputData%defMSL2SWL
    DstInitInputData%TMax = SrcInitInputData%TMax
-   if (allocated(SrcInitInputData%WaveElevXY)) then
-      LB(1:2) = lbound(SrcInitInputData%WaveElevXY, kind=B8Ki)
-      UB(1:2) = ubound(SrcInitInputData%WaveElevXY, kind=B8Ki)
-      if (.not. allocated(DstInitInputData%WaveElevXY)) then
-         allocate(DstInitInputData%WaveElevXY(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveElevXY.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitInputData%WaveElevXY = SrcInitInputData%WaveElevXY
-   end if
    DstInitInputData%WaveFieldMod = SrcInitInputData%WaveFieldMod
    DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
    DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
    DstInitInputData%WrWvKinMod = SrcInitInputData%WrWvKinMod
    DstInitInputData%HasIce = SrcInitInputData%HasIce
    DstInitInputData%Linearize = SrcInitInputData%Linearize
+   DstInitInputData%SurfaceVis = SrcInitInputData%SurfaceVis
+   DstInitInputData%SurfaceVisNx = SrcInitInputData%SurfaceVisNx
+   DstInitInputData%SurfaceVisNy = SrcInitInputData%SurfaceVisNy
 end subroutine
 
 subroutine SeaSt_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -493,9 +486,6 @@ subroutine SeaSt_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    ErrMsg  = ''
    call NWTC_Library_DestroyFileInfoType(InitInputData%PassedFileData, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(InitInputData%WaveElevXY)) then
-      deallocate(InitInputData%WaveElevXY)
-   end if
 end subroutine
 
 subroutine SeaSt_PackInitInput(RF, Indata)
@@ -512,13 +502,15 @@ subroutine SeaSt_PackInitInput(RF, Indata)
    call RegPack(RF, InData%defWtrDpth)
    call RegPack(RF, InData%defMSL2SWL)
    call RegPack(RF, InData%TMax)
-   call RegPackAlloc(RF, InData%WaveElevXY)
    call RegPack(RF, InData%WaveFieldMod)
    call RegPack(RF, InData%PtfmLocationX)
    call RegPack(RF, InData%PtfmLocationY)
    call RegPack(RF, InData%WrWvKinMod)
    call RegPack(RF, InData%HasIce)
    call RegPack(RF, InData%Linearize)
+   call RegPack(RF, InData%SurfaceVis)
+   call RegPack(RF, InData%SurfaceVisNx)
+   call RegPack(RF, InData%SurfaceVisNy)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -526,9 +518,6 @@ subroutine SeaSt_UnPackInitInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SeaSt_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_UnPackInitInput'
-   integer(B8Ki)   :: LB(2), UB(2)
-   integer(IntKi)  :: stat
-   logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%InputFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UseInputFile); if (RegCheckErr(RF, RoutineName)) return
@@ -539,13 +528,15 @@ subroutine SeaSt_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%defWtrDpth); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%defMSL2SWL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TMax); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%WaveElevXY); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveFieldMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmLocationX); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmLocationY); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WrWvKinMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HasIce); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Linearize); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SurfaceVis); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SurfaceVisNx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SurfaceVisNy); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine SeaSt_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -554,7 +545,7 @@ subroutine SeaSt_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SeaSt_CopyInitOutput'
@@ -588,17 +579,41 @@ subroutine SeaSt_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstInitOutputData%InvalidWithSSExctn = SrcInitOutputData%InvalidWithSSExctn
-   if (allocated(SrcInitOutputData%WaveElevSeries)) then
-      LB(1:2) = lbound(SrcInitOutputData%WaveElevSeries, kind=B8Ki)
-      UB(1:2) = ubound(SrcInitOutputData%WaveElevSeries, kind=B8Ki)
-      if (.not. allocated(DstInitOutputData%WaveElevSeries)) then
-         allocate(DstInitOutputData%WaveElevSeries(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcInitOutputData%WaveElevVisX)) then
+      LB(1:1) = lbound(SrcInitOutputData%WaveElevVisX, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WaveElevVisX, kind=B8Ki)
+      if (.not. allocated(DstInitOutputData%WaveElevVisX)) then
+         allocate(DstInitOutputData%WaveElevVisX(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveElevSeries.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveElevVisX.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstInitOutputData%WaveElevSeries = SrcInitOutputData%WaveElevSeries
+      DstInitOutputData%WaveElevVisX = SrcInitOutputData%WaveElevVisX
+   end if
+   if (allocated(SrcInitOutputData%WaveElevVisY)) then
+      LB(1:1) = lbound(SrcInitOutputData%WaveElevVisY, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%WaveElevVisY, kind=B8Ki)
+      if (.not. allocated(DstInitOutputData%WaveElevVisY)) then
+         allocate(DstInitOutputData%WaveElevVisY(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveElevVisY.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%WaveElevVisY = SrcInitOutputData%WaveElevVisY
+   end if
+   if (allocated(SrcInitOutputData%WaveElevVisGrid)) then
+      LB(1:3) = lbound(SrcInitOutputData%WaveElevVisGrid, kind=B8Ki)
+      UB(1:3) = ubound(SrcInitOutputData%WaveElevVisGrid, kind=B8Ki)
+      if (.not. allocated(DstInitOutputData%WaveElevVisGrid)) then
+         allocate(DstInitOutputData%WaveElevVisGrid(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveElevVisGrid.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%WaveElevVisGrid = SrcInitOutputData%WaveElevVisGrid
    end if
    DstInitOutputData%WaveField => SrcInitOutputData%WaveField
 end subroutine
@@ -620,8 +635,14 @@ subroutine SeaSt_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(InitOutputData%WaveElevSeries)) then
-      deallocate(InitOutputData%WaveElevSeries)
+   if (allocated(InitOutputData%WaveElevVisX)) then
+      deallocate(InitOutputData%WaveElevVisX)
+   end if
+   if (allocated(InitOutputData%WaveElevVisY)) then
+      deallocate(InitOutputData%WaveElevVisY)
+   end if
+   if (allocated(InitOutputData%WaveElevVisGrid)) then
+      deallocate(InitOutputData%WaveElevVisGrid)
    end if
    nullify(InitOutputData%WaveField)
 end subroutine
@@ -636,7 +657,9 @@ subroutine SeaSt_PackInitOutput(RF, Indata)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
    call RegPack(RF, InData%InvalidWithSSExctn)
-   call RegPackAlloc(RF, InData%WaveElevSeries)
+   call RegPackAlloc(RF, InData%WaveElevVisX)
+   call RegPackAlloc(RF, InData%WaveElevVisY)
+   call RegPackAlloc(RF, InData%WaveElevVisGrid)
    call RegPack(RF, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
       call RegPackPointer(RF, c_loc(InData%WaveField), PtrInIndex)
@@ -651,7 +674,7 @@ subroutine SeaSt_UnPackInitOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SeaSt_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_UnPackInitOutput'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -661,7 +684,9 @@ subroutine SeaSt_UnPackInitOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
    call RegUnpack(RF, OutData%InvalidWithSSExctn); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%WaveElevSeries); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveElevVisX); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveElevVisY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveElevVisGrid); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
@@ -848,7 +873,7 @@ subroutine SeaSt_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    DstMiscData%Decimate = SrcMiscData%Decimate
    DstMiscData%LastOutTime = SrcMiscData%LastOutTime
    DstMiscData%LastIndWave = SrcMiscData%LastIndWave
-   call SeaSt_Interp_CopyMisc(SrcMiscData%SeaSt_Interp_m, DstMiscData%SeaSt_Interp_m, CtrlCode, ErrStat2, ErrMsg2)
+   call SeaSt_WaveField_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 end subroutine
@@ -862,7 +887,7 @@ subroutine SeaSt_DestroyMisc(MiscData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SeaSt_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   call SeaSt_Interp_DestroyMisc(MiscData%SeaSt_Interp_m, ErrStat2, ErrMsg2)
+   call SeaSt_WaveField_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
@@ -874,7 +899,7 @@ subroutine SeaSt_PackMisc(RF, Indata)
    call RegPack(RF, InData%Decimate)
    call RegPack(RF, InData%LastOutTime)
    call RegPack(RF, InData%LastIndWave)
-   call SeaSt_Interp_PackMisc(RF, InData%SeaSt_Interp_m) 
+   call SeaSt_WaveField_PackMisc(RF, InData%WaveField_m) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -886,7 +911,7 @@ subroutine SeaSt_UnPackMisc(RF, OutData)
    call RegUnpack(RF, OutData%Decimate); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LastOutTime); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LastIndWave); if (RegCheckErr(RF, RoutineName)) return
-   call SeaSt_Interp_UnpackMisc(RF, OutData%SeaSt_Interp_m) ! SeaSt_Interp_m 
+   call SeaSt_WaveField_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
 end subroutine
 
 subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)

@@ -104,7 +104,7 @@ IMPLICIT NONE
 ! =========  MD_Body  =======
   TYPE, PUBLIC :: MD_Body
     INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this Point [-]
-    INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  0=free, 1=fixed, -1=vessel [-]
+    INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  0=free, 1=fixed, -1=coupled, 2=coupledpinned [-]
     INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedC = 0_IntKi      !< list of IdNums of points attached to this body [-]
     INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedR = 0_IntKi      !< list of IdNums of rods attached to this body [-]
     INTEGER(IntKi)  :: nAttachedC = 0      !< number of attached points [-]
@@ -135,7 +135,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: MD_Point
     INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this point [-]
     CHARACTER(10)  :: type      !< type of point: fix, vessel, point [-]
-    INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  1=fixed, -1=vessel, 0=free [-]
+    INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  1=fixed, -1=coupled, 0=free [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: Attached = 0_IntKi      !< list of IdNums of lines attached to this point node [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: Top = 0_IntKi      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
     INTEGER(IntKi)  :: nAttached = 0      !< number of attached lines [-]
@@ -163,7 +163,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this Line [-]
     CHARACTER(10)  :: type      !< type of Rod.  should match one of RodProp names [-]
     INTEGER(IntKi)  :: PropsIdNum = 0_IntKi      !< the IdNum of the associated rod properties [-]
-    INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  0=fixed, 1=vessel, 2=point [-]
+    INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  0=free, 1=pinned, 2=fixed, -1=coupledpinned, -2=coupled [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedA = 0_IntKi      !< list of IdNums of lines attached to end A [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedB = 0_IntKi      !< list of IdNums of lines attached to end B [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: TopA = 0_IntKi      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
@@ -425,6 +425,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: mu_kA = 0.0_R8Ki      !< axial kinetic friction coefficient [(-)]
     REAL(DbKi)  :: mc = 0.0_R8Ki      !< ratio of the static friction coefficient to the kinetic friction coefficient [(-)]
     REAL(DbKi)  :: cv = 0.0_R8Ki      !< saturated damping coefficient [(-)]
+    INTEGER(IntKi)  :: inertialF = 0      !< Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 1 if yes, 0 if no [-]
     INTEGER(IntKi)  :: nxWave = 0_IntKi      !< number of x wave grid points [-]
     INTEGER(IntKi)  :: nyWave = 0_IntKi      !< number of y wave grid points [-]
     INTEGER(IntKi)  :: nzWave = 0_IntKi      !< number of z wave grid points [-]
@@ -3569,6 +3570,7 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%mu_kA = SrcParamData%mu_kA
    DstParamData%mc = SrcParamData%mc
    DstParamData%cv = SrcParamData%cv
+   DstParamData%inertialF = SrcParamData%inertialF
    DstParamData%nxWave = SrcParamData%nxWave
    DstParamData%nyWave = SrcParamData%nyWave
    DstParamData%nzWave = SrcParamData%nzWave
@@ -3967,6 +3969,7 @@ subroutine MD_PackParam(RF, Indata)
    call RegPack(RF, InData%mu_kA)
    call RegPack(RF, InData%mc)
    call RegPack(RF, InData%cv)
+   call RegPack(RF, InData%inertialF)
    call RegPack(RF, InData%nxWave)
    call RegPack(RF, InData%nyWave)
    call RegPack(RF, InData%nzWave)
@@ -4070,6 +4073,7 @@ subroutine MD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%mu_kA); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%mc); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%cv); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%inertialF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nxWave); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nyWave); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nzWave); if (RegCheckErr(RF, RoutineName)) return

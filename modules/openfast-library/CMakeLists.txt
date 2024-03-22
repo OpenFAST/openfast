@@ -45,6 +45,7 @@ target_link_libraries(openfast_prelib
   versioninfolib
   aerodyn14lib
   aerodynlib
+  extloadslib
   beamdynlib
   elastodynlib
   extptfm_mckflib

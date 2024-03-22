@@ -364,9 +364,19 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
       END IF
           
       DO I = 1,InputFileData%Morison%NAxCoefs
-            ! read the table entries   AxCoefID   CdAx  CaAx    in the HydroDyn input file
+         ! read the table entries AxCoefID, AxCd, AxCa, AxCp, AxFdMod, AxVnCOff, AxFDLoFSc in the HydroDyn input file
+         ! Try reading in 7 entries first
          call ParseAry( FileInfo_In, CurLine, ' axial coefficients line '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
-            if (Failed())  return;
+         if ( ErrStat2 /= 0 ) then ! Try reading in 5 entries
+            tmpReArray(6) = -1.0  ! AxVnCoff
+            tmpReArray(7) =  1.0  ! AxFDLoFSc
+            call ParseAry( FileInfo_In, CurLine, ' axial coefficients line '//trim( Int2LStr(I)), tmpReArray(1:5), 5, ErrStat2, ErrMsg2, UnEc )
+            if ( ErrStat2 /= 0 ) then ! Try reading in 4 entries
+               tmpReArray(5) =  0.0  ! AxFdMod
+               call ParseAry( FileInfo_In, CurLine, ' axial coefficients line '//trim( Int2LStr(I)), tmpReArray(1:4), 4, ErrStat2, ErrMsg2, UnEc )
+               if (Failed())  return;
+            end if
+         end if
          InputFileData%Morison%AxialCoefs(I)%AxCoefID = NINT(tmpReArray(1))
          InputFileData%Morison%AxialCoefs(I)%AxCd     =      tmpReArray(2)
          InputFileData%Morison%AxialCoefs(I)%AxCa     =      tmpReArray(3)
@@ -2317,8 +2327,15 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
       DEALLOCATE(foundMask)
    ELSE
+
+      ! Set number of outputs to zero
       InputFileData%NumOuts = 0
       InputFileData%Morison%NumOuts = 0
+
+      ! Allocate outlist with zero length
+      call AllocAry(InputFileData%OutList, 0, "InputFileData%OutList", ErrStat2, ErrMsg2); 
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
    END IF
       ! Now that we have the sub-lists organized, lets do some additional validation.
    
