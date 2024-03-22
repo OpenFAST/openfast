@@ -34,11 +34,13 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  ExctnMod                        -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  ExctnDisp                       -          -        -          "0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0]" -
 typedef   ^                            ^                             ReKi                     ExctnCutOff                     -          -        -          "Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] " Hz
+typedef   ^                            ^                             IntKi                    NExctnHdg                       -          -        -         "Number of PRP headings/yaw offset evenly distributed over the region [-180, 180) deg to be used when precomputing the wave excitation [only used when PtfmYMod=1 in the HydroDyn driver or in ElastoDyn]"
 typedef   ^                            ^                             DbKi                     RdtnTMax                        -          -        -         ""    -
 typedef   ^                            ^                             CHARACTER(1024)          WAMITFile                       -          -        -         ""    -
 typedef   ^                            ^                             Conv_Rdtn_InitInputType  Conv_Rdtn                       -          -        -         ""    -
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                       -          -        -         "Pointer to wave field"
-
+typedef   ^                            ^                             INTEGER                  PtfmYMod                        -          -        -         "Large yaw model" -
+typedef   ^                            ^                             ReKi                     PtfmRefY                        -          -        -         "Initial reference yaw offset" (rad)
 #
 #
 # Define outputs from the initialization routine here:
@@ -104,23 +106,27 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             SiKi                     HdroAdMsI                {:}{:}     -         -         ""  (sec)
 typedef   ^                            ^                             SiKi                     HdroSttc                 {:}{:}     -         -         ""        -
 typedef   ^                            ^                             INTEGER                  RdtnMod                  -          -         -         ""        -
-typedef   ^                            ^                             INTEGER                  ExctnMod                 -          -        -          ""        -
-typedef   ^                            ^                             INTEGER                  ExctnDisp                -          -        -          "0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0]" -
-typedef   ^                            ^                             ReKi                     ExctnCutOff              -          -        -          "Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] " Hz
-typedef   ^                            ^                             ReKi                     ExctnFiltConst           -          -        -          "Low-pass time filter constant computed from ExctnCutOff"
-typedef   ^                            ^                             SiKi                     WaveExctn                {:}{:}     -         -         ""        -
-typedef   ^                            ^                             SiKi                     WaveExctnGrid            {:}{:}{:}{:}     -         -         "WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: Force component for eac WAMIT Body"        -
+typedef   ^                            ^                             INTEGER                  ExctnMod                 -          -         -         ""        -
+typedef   ^                            ^                             INTEGER                  ExctnDisp                -          -         -         "0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0]" -
+typedef   ^                            ^                             ReKi                     ExctnCutOff              -          -         -         "Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] " Hz
+typedef   ^                            ^                             IntKi                    NExctnHdg                -          -         -         "Number of PRP headings/yaw offset evenly distributed over the region [-180, 180) deg to be used when precomputing the wave excitation [only used when PtfmYMod=1 in the HydroDyn driver or in ElastoDyn]"
+typedef   ^                            ^                             ReKi                     ExctnFiltConst           -          -         -         "Low-pass time filter constant computed from ExctnCutOff"
+typedef   ^                            ^                             SiKi                     WaveExctn                {:}{:}{:}  -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveExctnGrid      {:}{:}{:}{:}{:}  -         -         "WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: PRP Yaw, 5th: Force component for eac WAMIT Body"        -
 typedef   ^                            ^                             Conv_Rdtn_ParameterType  Conv_Rdtn                -          -         -         ""        -
 typedef   ^                            ^                             SS_Rad_ParameterType     SS_Rdtn                  -          -         -         ""        -
 typedef   ^                            ^                             SS_Exc_ParameterType     SS_Exctn                 -          -         -         ""        -
 typedef   ^                            ^                             DbKi                     DT                       -          -         -         ""        -
-typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                -          -        -         "Pointer to wave field"
+typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                -          -         -         "Pointer to wave field"
+typedef   ^                            ^                             INTEGER                  PtfmYMod                 -          -         -         "Large yaw model" -
+typedef   ^                            ^                       SeaSt_WaveField_ParameterType  ExctnGridParams          -          -         -         "Parameters of WaveExctnGrid" -
 #
 #
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 #
 typedef   ^                            InputType                     MeshType                 Mesh                    -          -         -         "Displacements at the WAMIT reference point in the inertial frame" -
+typedef   ^                            ^                             ReKi                     PtfmRefY                -          -         -         "Reference yaw offset" (rad)
 #
 #
 # ..... Outputs ...................................................................................................................
