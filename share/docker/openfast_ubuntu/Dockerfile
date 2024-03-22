@@ -27,10 +27,10 @@ ARG VERSION='v3.5.2'
 
 ENV DEBIAN_FRONTEND=noninteractive TZ=${TIMEZONE}
 
-RUN apt update -qq && \
-    apt install -y software-properties-common build-essential && \
+RUN apt-get update -qq && \
+    apt-get install -y software-properties-common build-essential && \
     add-apt-repository ppa:git-core/ppa -y && \
-    apt install -y  \
+    apt-get install -y  \
         python3-pip \
         cmake  \
         cmake-curses-gui \
@@ -40,7 +40,8 @@ RUN apt update -qq && \
         libblas-dev \
         liblapack-dev \
         git \
-        nano
+        nano \
+    && rm -rf /var/lib/apt/lists/*
 
 # RUN pip3 install numpy
 
