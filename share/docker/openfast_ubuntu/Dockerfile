@@ -57,10 +57,11 @@ RUN mkdir build
 WORKDIR /openfast/build
 
 # NOTE: building with optimizations on (RELEASE or RELWITHDEBINFO), the virtual machine
-# will require about 6GB of memoery. Otherwise, the gfortran compiler will exit with an
+# will require about 6GB of memory. Otherwise, the gfortran compiler will exit with an
 # "internal error"
 ARG BUILD_CORES=4
-RUN cmake .. -DBUILD_TESTING=ON -DDOUBLE_PRECISION=ON -DCMAKE_BUILD_TYPE=RELWITHDEBINFO
+ARG BUILD_TESTING=ON
+RUN cmake .. -DBUILD_TESTING=${BUILD_TESTING} -DDOUBLE_PRECISION=ON -DCMAKE_BUILD_TYPE=RELWITHDEBINFO
 RUN make -j${BUILD_CORES} install
 
 # Make `openfast` command work.
