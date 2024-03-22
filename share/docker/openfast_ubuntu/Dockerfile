@@ -43,7 +43,7 @@ RUN apt update -qq && \
 ENV FC=/usr/bin/gfortran
 
 # Clone the project
-RUN git clone --depth 1 --branch=${VERSION} --recursive https://github.com/openfast/openfast.git
+RUN git clone --depth 1 --branch=${VERSION} --recursive --shallow-submodules https://github.com/openfast/openfast.git
 WORKDIR /openfast
 
 # Build the project
