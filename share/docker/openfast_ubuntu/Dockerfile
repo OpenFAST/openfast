@@ -17,6 +17,7 @@ ARG BASE=ubuntu:mantic
 FROM ${BASE}
 
 ARG TIMEZONE=America/Denver
+ARG VERSION='v3.5.2'
 
 # Install dependencies
 
@@ -42,7 +43,7 @@ RUN apt update -qq && \
 ENV FC=/usr/bin/gfortran
 
 # Clone the project
-RUN git clone --recursive https://github.com/openfast/openfast.git openfast
+RUN git clone --depth 1 --branch=${VERSION} --recursive https://github.com/openfast/openfast.git
 WORKDIR /openfast
 
 # Build the project
