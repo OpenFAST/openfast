@@ -31,16 +31,16 @@ RUN apt-get update -qq && \
     apt-get install -y software-properties-common build-essential && \
     add-apt-repository ppa:git-core/ppa -y && \
     apt-get install -y  \
-        python3-pip \
         cmake  \
         cmake-curses-gui \
         gcc \
         gfortran \
-        make \
+        git \
         libblas-dev \
         liblapack-dev \
-        git \
+        make \
         nano \
+        python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 # RUN pip3 install numpy
