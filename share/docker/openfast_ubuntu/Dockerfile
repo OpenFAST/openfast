@@ -30,12 +30,17 @@ ENV DEBIAN_FRONTEND=noninteractive TZ=${TIMEZONE}
 RUN apt update -qq && \
     apt install -y software-properties-common build-essential && \
     add-apt-repository ppa:git-core/ppa -y && \
-    apt install -y python3-pip && \
-    apt install -y cmake cmake-curses-gui && \
-    apt install -y gcc gfortran make && \
-    apt install -y libblas-dev liblapack-dev && \
-    apt install -y git && \
-    apt install -y nano
+    apt install -y  \
+        python3-pip \
+        cmake  \
+        cmake-curses-gui \
+        gcc \
+        gfortran \
+        make \
+        libblas-dev \
+        liblapack-dev \
+        git \
+        nano
 
 # RUN pip3 install numpy
 
