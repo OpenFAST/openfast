@@ -139,33 +139,34 @@ MODULE AeroDyn_Inflow_C_BINDING
    !     through a pair of meshes for the motion and loads corresponding to the node
    !     positions passed in.
 
-   ! =========  BladeNodeToMeshPointMap  =======
-   TYPE, PUBLIC :: BladeNodeToMeshPointMap
+   ! =========  BladeNodeToMeshPointMapType  =======
+   TYPE, PUBLIC :: BladeNodeToMeshPointMapType
       INTEGER(IntKi), ALLOCATABLE         :: BladeNodeToMeshPoint(:)  !< Blade node -> structural mesh point mapping (sized by the number of nodes on the blade)
-   END TYPE BladeNodeToMeshPointMap
+   END TYPE BladeNodeToMeshPointMapType
    ! =======================
-   ! =========  BladePtMeshCoords  =======
-   TYPE, PUBLIC :: BladePtMeshCoords
+   ! =========  BladePtMeshCoordsType  =======
+   TYPE, PUBLIC :: BladePtMeshCoordsType
       REAL(ReKi), DIMENSION(:,:), ALLOCATABLE      :: Position   !< Position of all blade points (sized by 3 x number of mesh points on the blade [x,y,z])
       REAL(ReKi), DIMENSION(:,:,:), ALLOCATABLE    :: Orient     !< Orientation of all blade points (sized by 3 x 3 x number of mesh points on the blade [r11,r12,r13,r21,r22,r23,r31,r32,r33])
       REAL(ReKi), DIMENSION(:,:), ALLOCATABLE      :: Velocity   !< Velocity of all blade points (sized by 6 x number of mesh points on the blade [u,v,w,p,q,r])
       REAL(ReKi), DIMENSION(:,:), ALLOCATABLE      :: Accln      !< Acceleration of all blade points (sized by 6 x number of mesh points on the blade [udot,vdot,wdot,pdot,qdot,rdot])
       REAL(ReKi), DIMENSION(:,:), ALLOCATABLE      :: Force      !< Force of all blade points (sized by 6 x number of mesh points on the blade [Fx,Fy,Fz,Mx,My,Mz])
-   END TYPE BladePtMeshCoords
+   END TYPE BladePtMeshCoordsType
    ! =======================
    ! =========  StrucPtsToBladeMapType  =======
    TYPE, PUBLIC :: StrucPtsToBladeMapType
       INTEGER(IntKi)                               :: NumBlades                ! Number of blades on this rotor
       INTEGER(IntKi), ALLOCATABLE                  :: NumMeshPtsPerBlade(:)    ! Number of structural mesh points on each blade (sized by the number of blades)
       INTEGER(IntKi), ALLOCATABLE                  :: MeshPt_2_BladeNum(:)     ! Structural mesh point -> which blade on the rotor it is on (sized by the number of mesh points on the rotor)
-      TYPE(BladeNodeToMeshPointMap), ALLOCATABLE   :: BladeNode_2_MeshPt(:)    ! Blade node on blade -> structural mesh point (sized by the number of mesh points on the blade)
-      TYPE(BladePtMeshCoords), ALLOCATABLE         :: BladePtMeshCoords(:)     ! Mesh point coordinates for each blade (sized by the number of blades)
+      TYPE(BladeNodeToMeshPointMapType),ALLOCATABLE:: BladeNode_2_MeshPt(:)    ! Blade node on blade -> structural mesh point (sized by the number of mesh points on the blade)
+      TYPE(BladePtMeshCoordsType), ALLOCATABLE     :: BladePtMeshCoords(:)     ! Mesh point coordinates for each blade (sized by the number of blades)
    END TYPE StrucPtsToBladeMapType
    ! =======================
-   ! =========  MeshByBlade  =======
-   TYPE, PUBLIC :: MeshByBlade
+   ! =========  MeshByBladeType  =======
+   TYPE, PUBLIC :: MeshByBladeType
+      ! TODO: Sometime we should rename Mesh to BldMesh
       TYPE(MeshType), ALLOCATABLE                  :: Mesh(:)          ! Mesh for motions/loads of external nodes at each blade (sized by number of blades on the rotor)
-   END TYPE MeshByBlade
+   END TYPE MeshByBladeType
    ! =======================
 
    !------------------------------
@@ -175,16 +176,18 @@ MODULE AeroDyn_Inflow_C_BINDING
    !     one or multiple points.
    !        - 1 point   -- rigid floating body assumption
    !        - N points  -- flexible structure (either floating or fixed bottom)
+   ! TODO: for clarity, sometime it might be worth renaming BldPt* here to RtrPt* instead
    logical                                :: TransposeDCM            !< Transpose DCMs as passed in -- test the vtk outputs to see if needed
    integer(IntKi), allocatable            :: NumMeshPts(:)           ! Number of mesh points we are interfacing motions/loads to/from AD for each rotor
-   type(MeshByBlade), allocatable         :: BldPtMotionMesh(:)      ! Mesh for motions of external nodes (sized by number of rotors)
-   type(MeshByBlade), allocatable         :: BldPtLoadMesh(:)        ! Mesh for loads  for external nodes (sized by number of rotors)
-   type(MeshByBlade), allocatable         :: BldPtLoadMesh_tmp(:)    ! Mesh for loads  for external nodes -- temporary storage for loads (sized by number of rotors)
+   type(MeshByBladeType), allocatable     :: BldPtMotionMesh(:)      ! Mesh for motions of external nodes (sized by number of rotors)
+   type(MeshByBladeType), allocatable     :: BldPtLoadMesh(:)        ! Mesh for loads  for external nodes (sized by number of rotors)
+   type(MeshByBladeType), allocatable     :: BldPtLoadMesh_tmp(:)    ! Mesh for loads  for external nodes -- temporary storage for loads (sized by number of rotors)
    ! type(MeshType), allocatable            :: NacMotionMesh(:)        ! mesh for motion  of nacelle -- TODO: add this mesh for nacelle load transfers
    ! type(MeshType), allocatable            :: NacLoadMesh(:)          ! mesh for loads  for nacelle loads -- TODO: add this mesh for nacelle load transfers
    !------------------------------
    !  Mesh mapping: motions
    !     The mapping of motions from the nodes passed in to the corresponding AD meshes
+   ! TODO: sometime restructure the Map_BldPtMotion_2_AD_Blade and Map_AD_BldLoad_P_2_BldPtLoad to 1D and place inside a rotor structure
    type(MeshMapType), allocatable         :: Map_BldPtMotion_2_AD_Blade(:,:)     ! Mesh mapping between input motion mesh for blade (sized by the number of blades and number of rotors)
    type(MeshMapType), allocatable         :: Map_AD_Nac_2_NacPtLoad(:)           ! Mesh mapping between input motion mesh for nacelle
    !------------------------------
@@ -878,6 +881,8 @@ CONTAINS
          maxBlades = max(maxBlades,Sim%WT(iWT)%NumBlades)
       enddo
 
+      ! NOTE: storing mappings in 2D this way may increase memory usage slightly if one turbine has many more blades than another.  However
+      ! the speed an memory penalties are negligible, so I don't see much reason to change that at this point.
       allocate(Map_BldPtMotion_2_AD_Blade(  maxBlades, Sim%NumTurbines), STAT=ErrStat2); if (Failed0('Map_BldPtMotion_2_AD_Blade'  )) return
       allocate(Map_AD_BldLoad_P_2_BldPtLoad(maxBlades, Sim%NumTurbines), STAT=ErrStat2); if (Failed0('Map_AD_BldLoad_P_2_BldPtLoad')) return
 
