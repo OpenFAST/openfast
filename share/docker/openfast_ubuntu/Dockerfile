@@ -16,7 +16,7 @@
 ARG BASE=ubuntu:mantic
 FROM ${BASE}
 
-ARG TIMEZONE=America/Denver
+ARG TIMEZONE=UTC
 ARG VERSION='v3.5.2'
 
 # Install dependencies
