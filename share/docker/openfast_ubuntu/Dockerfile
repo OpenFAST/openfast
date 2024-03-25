@@ -49,10 +49,11 @@ RUN apt-get update -qq && \
 ENV FC=/usr/bin/gfortran
 
 # Clone the project
+ENV REPOSITORY_URL=https://github.com/openfast/openfast.git
 ARG BUILD_TESTING=ON
 
-RUN if [ "${BUILD_TESTING}" = "ON" ]; then git clone --depth 1 --branch=${VERSION} --recursive --shallow-submodules https://github.com/openfast/openfast.git; \
-    else git clone --depth 1 --branch=${VERSION} https://github.com/openfast/openfast.git; \
+RUN if [ "${BUILD_TESTING}" = "ON" ]; then git clone --depth 1 --branch=${VERSION} --recursive --shallow-submodules $REPOSITORY_URL; \
+    else git clone --depth 1 --branch=${VERSION} $REPOSITORY_URL; \
     fi
 
 WORKDIR /openfast
