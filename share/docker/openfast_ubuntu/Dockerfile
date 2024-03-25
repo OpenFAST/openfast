@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 ARG BASE=ubuntu:mantic
+
+# Build stage 1: builds openfast.
 FROM ${BASE} AS build
 
 # Install dependencies
@@ -54,6 +56,7 @@ RUN cmake .. ${CMAKE_OPTIONS}
 ARG BUILD_CORES=4
 RUN make -j${BUILD_CORES} install
 
+# Build stage 2: provides built openfast in a small image.
 FROM ${BASE} as production
 COPY --from=build /openfast/install /openfast/install
 
