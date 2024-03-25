@@ -16,15 +16,12 @@
 ARG BASE=ubuntu:mantic
 FROM ${BASE}
 
-ARG TIMEZONE=UTC
-ARG OPENFAST_VERSION='3.5.2'
-
 # Install dependencies
-
 # For gfortran-8
 # RUN add-apt-repository ppa:ubuntu-toolchain-r/test -y
 # apt-get install gfortran-8
 
+ARG TIMEZONE=UTC
 ENV DEBIAN_FRONTEND=noninteractive TZ=${TIMEZONE}
 
 RUN apt-get update -qq && \
@@ -46,15 +43,10 @@ RUN apt-get update -qq && \
 # Configure the environment
 ENV FC=/usr/bin/gfortran
 
-# Clone the project
-ENV REPOSITORY_URL=https://github.com/openfast/openfast.git
-ARG BUILD_TESTING=OFF
-
-RUN if [ "${BUILD_TESTING}" = "ON" ]; then git clone --depth 1 --branch=v${OPENFAST_VERSION} --recursive --shallow-submodules $REPOSITORY_URL; \
-    else git clone --depth 1 --branch=v${OPENFAST_VERSION} $REPOSITORY_URL; \
-    fi
-
 WORKDIR /openfast
+
+# Copy in the checked-out code version.
+COPY . .
 
 # Build the project
 RUN mkdir build
@@ -63,6 +55,7 @@ WORKDIR /openfast/build
 # NOTE: building with optimizations on (RELEASE or RELWITHDEBINFO), the virtual machine
 # will require about 6GB of memory. Otherwise, the gfortran compiler will exit with an
 # "internal error"
+ARG BUILD_TESTING=OFF
 ARG BUILD_CORES=4
 RUN cmake .. -DBUILD_TESTING=${BUILD_TESTING} -DDOUBLE_PRECISION=ON -DCMAKE_BUILD_TYPE=RELWITHDEBINFO
 RUN make -j${BUILD_CORES} install
