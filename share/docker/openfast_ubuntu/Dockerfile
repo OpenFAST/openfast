@@ -33,6 +33,7 @@ RUN apt-get update -qq && \
         cmake-curses-gui \
         gcc \
         gfortran \
+        git \
         libblas-dev \
         liblapack-dev \
         make \
