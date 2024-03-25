@@ -25,6 +25,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -qq && \
     apt-get install -y  \
+        software-properties-common \
+        build-essential \
         cmake  \
         cmake-curses-gui \
         gcc \
