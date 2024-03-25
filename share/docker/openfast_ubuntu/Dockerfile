@@ -48,7 +48,7 @@ ENV FC=/usr/bin/gfortran
 
 # Clone the project
 ENV REPOSITORY_URL=https://github.com/openfast/openfast.git
-ARG BUILD_TESTING=ON
+ARG BUILD_TESTING=OFF
 
 RUN if [ "${BUILD_TESTING}" = "ON" ]; then git clone --depth 1 --branch=${VERSION} --recursive --shallow-submodules $REPOSITORY_URL; \
     else git clone --depth 1 --branch=${VERSION} $REPOSITORY_URL; \
