@@ -61,7 +61,10 @@ ARG TIMEZONE=UTC
 ENV DEBIAN_FRONTEND=noninteractive TZ=${TIMEZONE}
 
 RUN apt-get update -qq && \
-    apt-get install -y libblas-dev liblapack-dev \
+    apt-get install -y  \
+        libblas-dev \
+        liblapack-dev \
+        nano \
     && rm -rf /var/lib/apt/lists/*
 
 # Make `openfast` command work.
