@@ -43,8 +43,6 @@ RUN apt-get update -qq && \
         python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# RUN pip3 install numpy
-
 # Configure the environment
 ENV FC=/usr/bin/gfortran
 
