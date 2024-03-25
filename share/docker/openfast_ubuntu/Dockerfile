@@ -64,5 +64,23 @@ RUN make -j${BUILD_CORES} install
 FROM ${BASE} as production
 COPY --from=build /openfast/install /openfast/install
 
+ENV DEBIAN_FRONTEND=noninteractive TZ=${TIMEZONE}
+
+RUN apt-get update -qq && \
+    apt-get install -y software-properties-common build-essential && \
+    add-apt-repository ppa:git-core/ppa -y && \
+    apt-get install -y  \
+        cmake  \
+        cmake-curses-gui \
+        gcc \
+        gfortran \
+        git \
+        libblas-dev \
+        liblapack-dev \
+        make \
+        nano \
+        python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
 # Make `openfast` command work.
 ENV PATH=/openfast/install/bin:$PATH
