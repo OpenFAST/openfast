@@ -46,7 +46,7 @@ WORKDIR /openfast/build
 # will require about 6GB of memory. Otherwise, the gfortran compiler will exit with an
 # "internal error"
 ENV FC=/usr/bin/gfortran
-ARG CMAKE_OPTIONS="-DBUILD_TESTING=OFF -DDOUBLE_PRECISION=ON -DCMAKE_BUILD_TYPE=RELWITHDEBINFO"
+ARG CMAKE_OPTIONS="-DBUILD_TESTING=OFF -DDOUBLE_PRECISION=ON -DCMAKE_BUILD_TYPE=RELEASE"
 RUN cmake .. ${CMAKE_OPTIONS}
 
 ARG BUILD_CORES=4
