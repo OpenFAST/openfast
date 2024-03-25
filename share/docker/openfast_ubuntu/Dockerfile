@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 ARG BASE=ubuntu:mantic
-FROM ${BASE}
+FROM ${BASE} AS build
 
 # Install dependencies
 # For gfortran-8
@@ -56,9 +56,13 @@ WORKDIR /openfast/build
 # will require about 6GB of memory. Otherwise, the gfortran compiler will exit with an
 # "internal error"
 ARG BUILD_TESTING=OFF
-ARG BUILD_CORES=4
 RUN cmake .. -DBUILD_TESTING=${BUILD_TESTING} -DDOUBLE_PRECISION=ON -DCMAKE_BUILD_TYPE=RELWITHDEBINFO
+
+ARG BUILD_CORES=4
 RUN make -j${BUILD_CORES} install
+
+FROM ${BASE} as production
+COPY --from=build /openfast/install /openfast/install
 
 # Make `openfast` command work.
 ENV PATH=/openfast/install/bin:$PATH
