@@ -21,8 +21,7 @@ FROM ${BASE} AS build
 # RUN add-apt-repository ppa:ubuntu-toolchain-r/test -y
 # apt-get install gfortran-8
 
-ARG TIMEZONE=UTC
-ENV DEBIAN_FRONTEND=noninteractive TZ=${TIMEZONE}
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -qq && \
     apt-get install -y  \
@@ -35,21 +34,18 @@ RUN apt-get update -qq && \
         make \
     && rm -rf /var/lib/apt/lists/*
 
-# Configure the environment
-ENV FC=/usr/bin/gfortran
-
-WORKDIR /openfast
-
 # Copy in the checked-out code version.
+WORKDIR /openfast
 COPY . .
 
-# Build the project
+# Build the project.
 RUN mkdir build
 WORKDIR /openfast/build
 
 # NOTE: building with optimizations on (RELEASE or RELWITHDEBINFO), the virtual machine
 # will require about 6GB of memory. Otherwise, the gfortran compiler will exit with an
 # "internal error"
+ENV FC=/usr/bin/gfortran
 ARG CMAKE_OPTIONS="-DBUILD_TESTING=OFF -DDOUBLE_PRECISION=ON -DCMAKE_BUILD_TYPE=RELWITHDEBINFO"
 RUN cmake .. ${CMAKE_OPTIONS}
 
@@ -59,6 +55,7 @@ RUN make -j${BUILD_CORES} install
 FROM ${BASE} as production
 COPY --from=build /openfast/install /openfast/install
 
+ARG TIMEZONE=UTC
 ENV DEBIAN_FRONTEND=noninteractive TZ=${TIMEZONE}
 
 RUN apt-get update -qq && \
