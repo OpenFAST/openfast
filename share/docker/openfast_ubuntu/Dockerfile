@@ -17,7 +17,7 @@ ARG BASE=ubuntu:mantic
 FROM ${BASE}
 
 ARG TIMEZONE=UTC
-ARG OPENFAST_VERSION='v3.5.2'
+ARG OPENFAST_VERSION='3.5.2'
 
 # Install dependencies
 
@@ -50,8 +50,8 @@ ENV FC=/usr/bin/gfortran
 ENV REPOSITORY_URL=https://github.com/openfast/openfast.git
 ARG BUILD_TESTING=OFF
 
-RUN if [ "${BUILD_TESTING}" = "ON" ]; then git clone --depth 1 --branch=${OPENFAST_VERSION} --recursive --shallow-submodules $REPOSITORY_URL; \
-    else git clone --depth 1 --branch=${OPENFAST_VERSION} $REPOSITORY_URL; \
+RUN if [ "${BUILD_TESTING}" = "ON" ]; then git clone --depth 1 --branch=v${OPENFAST_VERSION} --recursive --shallow-submodules $REPOSITORY_URL; \
+    else git clone --depth 1 --branch=v${OPENFAST_VERSION} $REPOSITORY_URL; \
     fi
 
 WORKDIR /openfast
