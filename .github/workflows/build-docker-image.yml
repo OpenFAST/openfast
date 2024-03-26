@@ -34,13 +34,16 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Get Dockerfile for versions < 3.5.3
-        run: if [ ! -f $DOCKERFILE_PATH ]; then wget -O $DOCKERFILE_PATH $DOCKERFILE_PERMALINK; fi
+        run: |
+          if [ ! -f ${{ env.DOCKERFILE_PATH }} ]; \
+          then wget -O ${{ env.DOCKERFILE_PATH }} ${{ env.DOCKERFILE_PERMALINK }}; \
+          fi
 
       - name: Build and push to registry
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: $DOCKERFILE_PATH
+          file: ${{ env.DOCKERFILE_PATH }}
           platforms: linux/amd64
           tags: nrel/openfast:${{ github.event.inputs.tag }}
           push: true
