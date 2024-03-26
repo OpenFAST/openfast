@@ -25,7 +25,7 @@ FROM ${BASE} AS build
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -qq && \
-    apt-get install -y  \
+    apt-get install --no-install-recommends -y \
         software-properties-common \
         build-essential \
         cmake  \
@@ -64,7 +64,7 @@ ARG TIMEZONE=UTC
 ENV DEBIAN_FRONTEND=noninteractive TZ=${TIMEZONE}
 
 RUN apt-get update -qq && \
-    apt-get install -y  \
+    apt-get install --no-install-recommends -y  \
         libblas-dev \
         liblapack-dev \
         nano \
