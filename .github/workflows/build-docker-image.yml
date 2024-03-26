@@ -15,6 +15,9 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     timeout-minutes: 300
+    env:
+      DOCKERFILE_PATH: share/docker/openfast_ubuntu/Dockerfile
+      DOCKERFILE_PERMALINK: https://raw.githubusercontent.com/octue/openfast/update-dockerfiles/share/docker/openfast_ubuntu/Dockerfile
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,11 +33,14 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Get Dockerfile for versions < 3.5.3
+        run: if [ ! -f $DOCKERFILE_PATH ]; then wget -O $DOCKERFILE_PATH $DOCKERFILE_PERMALINK; fi
+
       - name: Build and push to registry
         uses: docker/build-push-action@v3.1.1
         with:
           context: .
-          file: share/docker/openfast_ubuntu/Dockerfile
+          file: $DOCKERFILE_PATH
           platforms: linux/amd64
           tags: nrel/openfast:${{ github.event.inputs.tag }}
           push: true
