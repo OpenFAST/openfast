@@ -110,7 +110,10 @@ include(${CMAKE_SOURCE_DIR}/cmake/set_rpath.cmake)
 # OpenMP
 #-------------------------------------------------------------------------------
 
-if (OPENMP OR BUILD_FASTFARM OR BUILD_OPENFAST_CPP_API)
+if (OPENMP)
+    FIND_PACKAGE(OpenMP REQUIRED)
+endif()
+if (BUILD_FASTFARM OR BUILD_OPENFAST_CPP_API)
   if (OPENMP)
      FIND_PACKAGE(OpenMP REQUIRED)
   else()
