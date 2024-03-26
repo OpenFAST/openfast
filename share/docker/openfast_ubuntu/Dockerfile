@@ -1,5 +1,4 @@
-#
-# Copyright 2016 National Renewable Energy Laboratory
+# Copyright 2024 National Renewable Energy Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,42 +12,63 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+ARG BASE=ubuntu:mantic
 
-FROM ubuntu:bionic
+# Build stage 1: builds openfast.
+FROM ${BASE} AS build
 
 # Install dependencies
-
 # For gfortran-8
 # RUN add-apt-repository ppa:ubuntu-toolchain-r/test -y
 # apt-get install gfortran-8
 
-ENV DEBIAN_FRONTEND=noninteractive TZ=America/Denver
+ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt update -qq && \
-    apt install -y software-properties-common build-essential && \
-    add-apt-repository ppa:git-core/ppa -y && \
-    apt install -y python3-pip && \
-    apt install -y cmake cmake-curses-gui && \
-    apt install -y gcc gfortran make && \
-    apt install -y libblas-dev liblapack-dev && \
-    apt install -y git && \
-    apt install -y nano
+RUN apt-get update -qq && \
+    apt-get install -y  \
+        software-properties-common \
+        build-essential \
+        cmake  \
+        cmake-curses-gui \
+        gcc \
+        gfortran \
+        git \
+        libblas-dev \
+        liblapack-dev \
+        make \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install numpy
-
-# Configure the environment
-ENV FC=/usr/bin/gfortran
-
-# Clone the project
-RUN git clone --recursive https://github.com/openfast/openfast.git openfast
+# Copy in the checked-out code version.
 WORKDIR /openfast
+COPY . .
 
-# Build the project
+# Build the project.
 RUN mkdir build
 WORKDIR /openfast/build
 
 # NOTE: building with optimizations on (RELEASE or RELWITHDEBINFO), the virtual machine
-# will require about 6GB of memoery. Otherwise, the gfortran compiler will exit with an
+# will require about 6GB of memory. Otherwise, the gfortran compiler will exit with an
 # "internal error"
-RUN cmake .. -DBUILD_TESTING=ON -DDOUBLE_PRECISION=ON -DCMAKE_BUILD_TYPE=RELWITHDEBINFO
-RUN make -j4 install
+ENV FC=/usr/bin/gfortran
+ARG CMAKE_OPTIONS="-DBUILD_TESTING=OFF -DDOUBLE_PRECISION=ON -DCMAKE_BUILD_TYPE=RELEASE"
+RUN cmake .. ${CMAKE_OPTIONS}
+
+ARG BUILD_CORES=4
+RUN make -j${BUILD_CORES} install
+
+# Build stage 2: provides built openfast in a small image.
+FROM ${BASE} as production
+COPY --from=build /openfast/install /openfast/install
+
+ARG TIMEZONE=UTC
+ENV DEBIAN_FRONTEND=noninteractive TZ=${TIMEZONE}
+
+RUN apt-get update -qq && \
+    apt-get install -y  \
+        libblas-dev \
+        liblapack-dev \
+        nano \
+    && rm -rf /var/lib/apt/lists/*
+
+# Make `openfast` command work.
+ENV PATH=/openfast/install/bin:$PATH
