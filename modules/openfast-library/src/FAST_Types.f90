@@ -748,7 +748,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: Tmax = -1      !< External code specified Tmax [s]
     INTEGER(IntKi)  :: SensorType = SensorType_None      !< lidar sensor type, which should not be pulsed at the moment; this input should be replaced with a section in the InflowWind input file [-]
     LOGICAL  :: LidRadialVel      !< TRUE => return radial component, FALSE => return 'x' direction estimate [-]
-    INTEGER(IntKi)  :: TurbineID = 0      !< ID number for turbine (used to create output file naming convention) [-]
+    INTEGER(IntKi)  :: TurbIDforName = -1      !< ID number for turbine (used to create output file naming convention) [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TurbinePos      !< Initial position of turbine base (origin used for graphics or in FAST.Farm) [m]
     INTEGER(IntKi)  :: WaveFieldMod      !< Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
     INTEGER(IntKi)  :: NumSC2CtrlGlob      !< number of global controller inputs [from supercontroller] [-]
@@ -48020,7 +48020,7 @@ ENDIF
     DstExternInitTypeData%Tmax = SrcExternInitTypeData%Tmax
     DstExternInitTypeData%SensorType = SrcExternInitTypeData%SensorType
     DstExternInitTypeData%LidRadialVel = SrcExternInitTypeData%LidRadialVel
-    DstExternInitTypeData%TurbineID = SrcExternInitTypeData%TurbineID
+    DstExternInitTypeData%TurbIDforName = SrcExternInitTypeData%TurbIDforName
     DstExternInitTypeData%TurbinePos = SrcExternInitTypeData%TurbinePos
     DstExternInitTypeData%WaveFieldMod = SrcExternInitTypeData%WaveFieldMod
     DstExternInitTypeData%NumSC2CtrlGlob = SrcExternInitTypeData%NumSC2CtrlGlob
@@ -48127,7 +48127,7 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! Tmax
       Int_BufSz  = Int_BufSz  + 1  ! SensorType
       Int_BufSz  = Int_BufSz  + 1  ! LidRadialVel
-      Int_BufSz  = Int_BufSz  + 1  ! TurbineID
+      Int_BufSz  = Int_BufSz  + 1  ! TurbIDforName
       Re_BufSz   = Re_BufSz   + SIZE(InData%TurbinePos)  ! TurbinePos
       Int_BufSz  = Int_BufSz  + 1  ! WaveFieldMod
       Int_BufSz  = Int_BufSz  + 1  ! NumSC2CtrlGlob
@@ -48184,7 +48184,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%LidRadialVel, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%TurbineID
+    IntKiBuf(Int_Xferred) = InData%TurbIDforName
     Int_Xferred = Int_Xferred + 1
     DO i1 = LBOUND(InData%TurbinePos,1), UBOUND(InData%TurbinePos,1)
       ReKiBuf(Re_Xferred) = InData%TurbinePos(i1)
@@ -48287,7 +48287,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%LidRadialVel = TRANSFER(IntKiBuf(Int_Xferred), OutData%LidRadialVel)
     Int_Xferred = Int_Xferred + 1
-    OutData%TurbineID = IntKiBuf(Int_Xferred)
+    OutData%TurbIDforName = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     i1_l = LBOUND(OutData%TurbinePos,1)
     i1_u = UBOUND(OutData%TurbinePos,1)

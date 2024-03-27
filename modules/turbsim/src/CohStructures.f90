@@ -766,7 +766,7 @@ SUBROUTINE CohStr_WriteEvents( RootName, p_CohStr, e_CohStr, y_CohStr, TScale, U
   CHARACTER(MaxMsgLen)     :: ErrMsg2                         ! Message describing error (local)
 
 
-   CHARACTER(200)          :: InpFile                ! Name of the input file
+   CHARACTER(1024)         :: InpFile                ! Name of the input file
    TYPE (Event), POINTER   :: PtrCurr  => NULL()     ! Pointer to the current event
    TYPE (Event), POINTER   :: PtrPrev  => NULL()     ! Pointer to the previous event (for deallocation purposes)
 

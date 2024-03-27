@@ -132,10 +132,10 @@ contains
         call AllocAry(p%QPtw_ShpDer, p%nqp, p%nodes_per_elem, 'QPtw_ShpDer', ErrStat, ErrMsg)
         call AllocAry(p%Jacobian, p%nqp, p%elem_total, 'Jacobian', ErrStat, ErrMsg)
         call AllocAry(p%uuN0, p%dof_node, p%nodes_per_elem, p%elem_total,'uuN0', ErrStat, ErrMsg)
-        call AllocAry(p%twN0, p%nodes_per_elem, p%elem_total,'twN0', ErrStat, ErrMsg)
 
         call AllocAry(p%uu0, p%dof_node, p%nqp,   p%elem_total,'uu0', ErrStat, ErrMsg)
         call AllocAry(p%E10, p%dof_node/2, p%nqp, p%elem_total,'E10', ErrStat, ErrMsg)
+        call AllocAry(p%rrN0, p%dof_node/2, p%nodes_per_elem, p%elem_total,'rrN0', ErrStat, ErrMsg)
 
         CALL AllocAry(p%node_elem_idx,p%elem_total,2,'start and end node numbers of elements in p%node_total sized arrays',ErrStat,ErrMsg)
 

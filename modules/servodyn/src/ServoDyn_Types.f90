@@ -450,6 +450,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     INTEGER(IntKi)  :: NumOuts_DLL      !< Number of logging channels output from the DLL (set at initialization) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
+    CHARACTER(1024)  :: PriPath      !< Path of the primary SrvD input file  [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
     CHARACTER(1)  :: Delim      !< Column delimiter for output text files [-]
     LOGICAL  :: UseBladedInterface      !< Flag that determines if BladedInterface was used [-]
@@ -12645,6 +12646,7 @@ ENDIF
     DstParamData%NumOuts = SrcParamData%NumOuts
     DstParamData%NumOuts_DLL = SrcParamData%NumOuts_DLL
     DstParamData%RootName = SrcParamData%RootName
+    DstParamData%PriPath = SrcParamData%PriPath
 IF (ALLOCATED(SrcParamData%OutParam)) THEN
   i1_l = LBOUND(SrcParamData%OutParam,1)
   i1_u = UBOUND(SrcParamData%OutParam,1)
@@ -13247,6 +13249,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts_DLL
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%PriPath)  ! PriPath
   Int_BufSz   = Int_BufSz   + 1     ! OutParam allocated yes/no
   IF ( ALLOCATED(InData%OutParam) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! OutParam upper/lower bounds for each dimension
@@ -13731,6 +13734,10 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(InData%RootName)
       IntKiBuf(Int_Xferred) = ICHAR(InData%RootName(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(InData%PriPath)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%PriPath(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
   IF ( .NOT. ALLOCATED(InData%OutParam) ) THEN
@@ -14619,6 +14626,10 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(OutData%RootName)
       OutData%RootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(OutData%PriPath)
+      OutData%PriPath(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! OutParam not allocated

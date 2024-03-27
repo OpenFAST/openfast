@@ -27,6 +27,7 @@ module test_BD_QuadraturePointData
 
     real(BDKi), allocatable    :: gll_nodes(:)
     real(BDKi), allocatable    :: baseline_uu0(:,:,:)
+    real(BDKi), allocatable    :: baseline_rrN0(:,:,:)
     real(BDKi), allocatable    :: baseline_E10(:,:,:)
 
     real(BDKi), allocatable    :: baseline_uuu(:,:,:)
@@ -90,6 +91,7 @@ contains
 
         call AllocAry(baseline_uu0  , p%dof_node,   p%nqp,            p%elem_total, 'baseline_uu0'     , ErrStat, ErrMsg)
         call AllocAry(baseline_E10  , p%dof_node/2, p%nqp,            p%elem_total, 'baseline_E10'     , ErrStat, ErrMsg)
+        call AllocAry(baseline_rrN0 , p%dof_node/2, p%nodes_per_elem, p%elem_total, 'baseline_rrN0'    , ErrStat, ErrMsg)
 
         call AllocAry(baseline_uuu  , p%dof_node,   p%nqp,            p%elem_total, 'baseline_uuu'     , ErrStat, ErrMsg)
         call AllocAry(baseline_uup  , p%dof_node/2, p%nqp,            p%elem_total, 'baseline_uup'     , ErrStat, ErrMsg)
@@ -101,10 +103,6 @@ contains
         call AllocAry(baseline_RR0 , 3, 3, p%nqp, p%elem_total, 'baseline_RR0'    , ErrStat, ErrMsg)
 
         call AllocAry(baseline_Stif , 6, 6, p%nqp, p%elem_total, 'baseline_Stif'    , ErrStat, ErrMsg)
-
-        ! Allocate memory for GLL node positions in 1D parametric space
-        call AllocAry(gll_nodes, nodes_per_elem, "GLL points array", ErrStat, ErrMsg)
-        gll_nodes = (/ -1., -0.6546536707079771, 0., 0.6546536707079771, 1. /)
 
         ! assign baseline results
     
@@ -125,25 +123,36 @@ contains
         p%uuN0(1:3,5,1) = (/  -1., 1., 5. /)
         p%uuN0(4:6,5,1) = (/  -1.0730193445455083,-0.42803085368057275,1.292451050059679 /)
 
+
+        ! the following is uuN0(4:6) with rotation of first node removed
+        baseline_rrN0(1:3,1,1) = (/ 0., 0., 0. /)
+        baseline_rrN0(1:3,2,1) = (/ -0.18695562365337798,-0.0032641497706398077,0.048935661676787534 /)
+        baseline_rrN0(1:3,3,1) = (/ -0.6080640291857297,-0.08595023366039768,0.4027112581652146 /)
+        baseline_rrN0(1:3,4,1) = (/ -1.1980591841054526,-0.3478409509012645,0.9658032687192992 /)
+        baseline_rrN0(1:3,5,1) = (/ -1.5856082606694464,-0.3853274394272689,1.3714709059387975 /)
+
         ! We are just looking at one randomly selected point in the domain to test interpolation; can be expanded
         p%QptN(1) = 0.3
-
-        ! Twist at nodes (nodes_per_elem, elem_total)
-        p%twN0(:,1) = 90.0*((gll_nodes+1)/2)**2
 
         ! Input baseline/reference quantities; uu0 and E10 are only for at quadrature points, so just 1 point here 
         ! uu0 is reference line evaluated at quadrature point
         ! E10 is tangent evaluated at qudrature point 
         baseline_uu0(1:3,1,1) = (/ 0.29298750000000007,-0.03250000000000007,3.2499999999999996  /)
-        baseline_uu0(4:6,1,1) = (/ -0.42032456079463276,-0.10798264336200536,0.61929246125947701 /)
-        baseline_E10(1:3,1,1) = (/ -0.21838554154630824,0.34664371674017153,0.91222030721097547 /)
-
+        baseline_uu0(4:6,1,1) = (/ -0.419497643454797,-0.1153574679103733,0.610107968645409 /)
+        baseline_E10(1:3,1,1) = (/ -0.22332806017852783,0.3449485111415417,0.9116661133321399 /)
+ 
+        ! Allocate memory for GLL node positions in 1D parametric space
+        call AllocAry(gll_nodes, nodes_per_elem, "GLL points array", ErrStat, ErrMsg)
+        gll_nodes = (/ -1., -0.6546536707079771, 0., 0.6546536707079771, 1. /)
         
         ! Build the shape functions and derivative of shape functions evaluated at QP points; this is tested elsewhere
         call BD_InitShpDerJaco(gll_nodes, p)
 
         ! **** primary function being tested *****
         call BD_QuadraturePointDataAt0( p )
+
+        testname = "5 node, 1 element, 1 qp, curved: BD_DisplacementQPAt0: rrN0"
+        @assertEqual(baseline_rrN0(:,:,1), p%rrN0(:,:,1), tolerance, testname)
 
         ! Test uu0; only one quadrature point for now
         testname = "5 node, 1 element, 1 qp, curved: BD_DisplacementQPAt0: uu0"
@@ -183,7 +192,7 @@ contains
         baseline_uuu(1:3,idx_qp,nelem) = (/ 0.42250000000000015,-0.14787500000000003,0.4774250000000001 /)
         baseline_uuu(4:6,idx_qp,nelem) = (/ 0.042250000000000024,0.1300000000000001,0.02746250000000002 /)
         baseline_uup(1:3,idx_qp,nelem) = (/ 0.23717727987485349,-0.005929431996871376,0.2834268494504499 /)
-        baseline_E1(1:3, idx_qp,nelem)  = (/ 0.018791738328546054, 0.34071428474330018, 1.1956471566614264 /)
+        baseline_E1(1:3, idx_qp,nelem)  = (/ 0.01384921969632566, 0.33901907914467033, 1.1950929627825897 /)
 
         call BD_DisplacementQP( nelem, p, x, m )
 
@@ -205,9 +214,9 @@ contains
 
         baseline_kappa(1:3,1,1)  = (/ 0.024664714695954715,0.036297077098213545,0.02229356260962948 /)
 
-        baseline_RR0(1,1:3,1,nelem)  = (/0.79124185715259476, -0.60219094249350502, -0.1063127098163618/)
-        baseline_RR0(2,1:3,1,nelem)  = (/0.60261503127580685, 0.7383322551011402, 0.30285409879630898/)
-        baseline_RR0(3,1:3,1,nelem)  = (/-0.10388189240754285, -0.30369647652886939, 0.94708869836662024/)
+        baseline_RR0(1,1:3,1,nelem)  = (/0.7967507798136657,-0.5939809735620473,-0.11124206898740374/)
+        baseline_RR0(2,1:3,1,nelem)  = (/0.5966254150993577,0.7439195402109748,0.3010346022466711 /)
+        baseline_RR0(3,1:3,1,nelem)  = (/-0.09605367730511442,-0.30621939967705303,0.9471026186942948 /)
 
         CALL BD_RotationalInterpQP( nelem, p, x, m )
 
@@ -233,12 +242,12 @@ contains
           enddo 
         enddo 
         ! the following should be the result from  MATMUL(tempR6,MATMUL(p%Stif0_QP(1:6,1:6,temp_id2+idx_qp),TRANSPOSE(tempR6)))
-        baseline_Stif(1,1:6,idx_qp,nelem) = (/4.7536759583339689, -33.907248359179356, -19.542837968671446, 2.9365509821876983, -70.008981029110458, -31.39174980281188/)
-        baseline_Stif(2,1:6,idx_qp,nelem) = (/-19.401250769011185, 138.38617399872942, 79.760485041818299, -11.984990668437774, 285.72873055166156, 128.11963106880802/)
-        baseline_Stif(3,1:6,idx_qp,nelem) = (/-13.830884167369799, 98.653595365050748, 56.86015004293688, -8.5439345976052863, 203.69207236173781, 91.33471846615123/)
-        baseline_Stif(4,1:6,idx_qp,nelem) = (/3.141919298405611, -22.410832986789217, -12.916744914371989, 1.9408992709130821, -46.272099841270119, -20.748226294907653/)
-        baseline_Stif(5,1:6,idx_qp,nelem) = (/-51.422828167125537, 366.79122036858701, 211.40439684348502, -31.766102251101898, 757.32124637229549, 339.57984728541373/)
-        baseline_Stif(6,1:6,idx_qp,nelem) = (/-24.340652516975311, 173.61817619702015, 100.06686033300799, -15.036272493606024, 358.4729576086462, 160.73785435679258/)
+        baseline_Stif(1,1:6,idx_qp,nelem) = (/4.5918231909187375, -33.558422946165074, -19.41124878362651, 2.60126686515566, -69.25969416961556, -31.26026770547517 /)
+        baseline_Stif(2,1:6,idx_qp,nelem) = (/-18.923545538732206, 138.2989541247406, 79.99647091096304, -10.720184539884109, 285.4288856786646, 128.8279349796045 /)
+        baseline_Stif(3,1:6,idx_qp,nelem) = (/ -13.509458152867301, 98.7311774904666, 57.109222684340786, -7.65310518243836, 203.76676129761876, 91.96984745617996 /)
+        baseline_Stif(4,1:6,idx_qp,nelem) = (/ 2.852586665816869, -20.847560074045475, -12.058885358769254, 1.6159897420374438, -43.026325677681456, -19.419872917332995 /)
+        baseline_Stif(5,1:6,idx_qp,nelem) = (/-50.11731488891121, 366.27238899233606, 211.8634858589486, -28.39144827024861, 755.9328304872744, 341.18924335009 /)
+        baseline_Stif(6,1:6,idx_qp,nelem) = (/-23.86246662028767, 174.39407269994138, 100.87502434184734, -13.518082286573822, 359.9239499295936, 162.45117977068867 /)
 
         CALL BD_StifAtDeformedQP( nelem, p, m )
    
@@ -250,6 +259,9 @@ contains
         ! dealocate baseline variables
         if (allocated(gll_nodes)) deallocate(gll_nodes)
         if (allocated(baseline_uu0)) deallocate(baseline_uu0)
+        if (allocated(baseline_E10)) deallocate(baseline_E10)
+        if (allocated(baseline_rrN0)) deallocate(baseline_rrN0)
+        if (allocated(baseline_rrN0)) deallocate(baseline_rrN0)
         if (allocated(baseline_E10)) deallocate(baseline_E10)
         if (allocated(baseline_uuu)) deallocate(baseline_uuu)
         if (allocated(baseline_uup)) deallocate(baseline_uup)

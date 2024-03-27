@@ -3567,39 +3567,35 @@ SUBROUTINE HD_Perturb_x( p, n, perturb_sign, x, dx )
    
 
    ! local variables
-   integer(intKi)                                      :: i, offset1, offset2, n2
+   integer(intKi)                                      :: i, j, k
   
    if ( p%totalStates == 0 ) return
    
    !Note: All excitation states for all bodies are stored 1st, then all radiation states
    dx = p%dx(n)
-   offset1 = 1
-   if ( n <= p%totalExctnStates ) then
+   k = 1
       
-      ! Find body index for exctn states
-      do i=1,p%nWAMITObj 
-         offset2 = offset1 + p%WAMIT(i)%SS_Exctn%numStates
-         if ( n >= offset1 .and. n < offset2) then
-            n2 = n - offset1 + 1
-            x%WAMIT(i)%SS_Exctn%x( n2 ) = x%WAMIT(i)%SS_Exctn%x( n2 ) + dx * perturb_sign 
-            exit
+   ! Find body index for exctn states
+   do i = 1, p%nWAMITObj 
+      do j = 1, p%WAMIT(i)%SS_Exctn%numStates
+         if (n == k) then
+            x%WAMIT(i)%SS_Exctn%x(j) = x%WAMIT(i)%SS_Exctn%x(j) + dx * perturb_sign 
+            return
          end if
-         offset1 = offset2
+         k = k + 1
       end do
+   end do
       
-   else
-      offset1 = p%totalExctnStates + 1
-      ! Find body index for rdtn states
-      do i=1,p%nWAMITObj
-         offset2 = offset1 + p%WAMIT(i)%SS_Exctn%numStates
-         if ( n >= offset1 .and. n < offset2) then
-            n2 = n - offset1 + 1
-            x%WAMIT(i)%SS_Rdtn%x( n2 ) = x%WAMIT(i)%SS_Rdtn%x( n2 ) + dx * perturb_sign 
-            exit
+   ! Find body index for rdtn states
+   do i = 1, p%nWAMITObj
+      do j = 1, p%WAMIT(i)%SS_Rdtn%numStates
+         if (n == k) then
+            x%WAMIT(i)%SS_Rdtn%x(j) = x%WAMIT(i)%SS_Rdtn%x(j) + dx * perturb_sign 
+            return
          end if
-         offset1 = offset2
+         k = k + 1
       end do
-   end if
+   end do
                                                 
 END SUBROUTINE HD_Perturb_x
 

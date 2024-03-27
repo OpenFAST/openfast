@@ -72,7 +72,7 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
    LOGICAL                       :: UseDefault                       ! Whether or not to use a default value
    LOGICAL                       :: IsUnusedParameter                ! Whether or not this variable will be ignored
                               
-   CHARACTER(200)                :: Line                             ! An input line
+   CHARACTER(1024)               :: Line                             ! An input line
    CHARACTER(1)                  :: Line1                            ! The first character of an input line
 
    INTEGER(IntKi)                :: ErrStat2                         ! Temporary Error status

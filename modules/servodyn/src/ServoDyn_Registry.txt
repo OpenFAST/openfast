@@ -439,6 +439,7 @@ typedef	^	ParameterType	IntKi	StCCmode	-	-	-	"Structural control control mode {0
 typedef	^	ParameterType	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	ParameterType	IntKi	NumOuts_DLL	-	-	-	"Number of logging channels output from the DLL (set at initialization)"	-
 typedef	^	ParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
+typedef	^	ParameterType	CHARACTER(1024)	PriPath  	-	-	-	"Path of the primary SrvD input file "	-
 typedef	^	ParameterType	OutParmType	OutParam	{:}	-	-	"Names and units (and other characteristics) of all requested output parameters"	-
 typedef	^	ParameterType	CHARACTER(1)	Delim	-	-	-	"Column delimiter for output text files"	-
 # parameters for Bladed Interface (dynamic-link library)
