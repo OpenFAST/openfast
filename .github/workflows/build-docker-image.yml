@@ -1,3 +1,6 @@
+# This manually-triggered workflow builds OpenFAST docker images for the linux/amd64 and linux/aarch64 architectures for
+# the specified git ref (this can be a branch, tag, or commit hash). The image is tagged with the given tag and pushed
+# to the `nrel/openfast` repository. The build cache is stored in GitHub actions.
 name: build-docker-image
 
 on:
@@ -34,9 +37,9 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # The updated Dockerfile is only available in the repository at the tag 3.5.3 and above. If we want to build
-      # versions of OpenFAST that are below this version, we have to get the updated Dockerfile from that tag of the
-      # repository before building. For versions >= 3.5.3, the Dockerfile is already there so this step does nothing.
+      # The updated Dockerfile is only available in the repository at the tag v3.5.3 and above. To build versions of
+      # OpenFAST that are below this version, the updated Dockerfile from that tag of the repository has to be acquired
+      # before building. For versions >= v3.5.3, the Dockerfile is already there so this step does nothing.
       - name: Get Dockerfile for versions < 3.5.3
         run: |
           if [ ! -f ${{ env.DOCKERFILE_PATH }} ]; \
