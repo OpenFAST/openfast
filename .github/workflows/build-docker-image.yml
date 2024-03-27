@@ -48,7 +48,7 @@ jobs:
         with:
           context: .
           file: ${{ env.DOCKERFILE_PATH }}
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/aarch64
           tags: ${{ env.DOCKERHUB_REPOSITORY }}:${{ github.event.inputs.tag }}
           push: true
           cache-from: type=gha
