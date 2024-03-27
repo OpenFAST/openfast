@@ -18,7 +18,7 @@ jobs:
     env:
       DOCKERFILE_PATH: share/docker/openfast_ubuntu/Dockerfile
       DOCKERFILE_PERMALINK: https://raw.githubusercontent.com/octue/openfast/update-dockerfiles/share/docker/openfast_ubuntu/Dockerfile
-      DOCKER_HUB_REPOSITORY: octue/openfast
+      DOCKERHUB_REPOSITORY: octue/openfast
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,7 +49,7 @@ jobs:
           context: .
           file: ${{ env.DOCKERFILE_PATH }}
           platforms: linux/amd64
-          tags: ${{ env.DOCKER_HUB_REPOSITORY }}:${{ github.event.inputs.tag }}
+          tags: ${{ env.DOCKERHUB_REPOSITORY }}:${{ github.event.inputs.tag }}
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
