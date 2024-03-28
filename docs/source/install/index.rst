@@ -176,7 +176,7 @@ local directory as the input files. You can also run commands inside the contain
 Build your own images
 ~~~~~~~~~~~~~~~~~~~~~
 You can also build your own custom images using our `Dockerfile` or base your images on ours. See
-`here <https://github.com/OpenFAST/openfast/blob/main/share/docker/README.md>` for more information on this.
+`here <https://github.com/OpenFAST/openfast/blob/main/share/docker/README.md>`_ for more information on this.
 
 .. _compile_from_source:
 
