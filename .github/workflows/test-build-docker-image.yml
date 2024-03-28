@@ -14,6 +14,7 @@ jobs:
     timeout-minutes: 300
     env:
       DOCKERFILE_PATH: share/docker/openfast_ubuntu/Dockerfile
+      DOCKERHUB_REPOSITORY: octue/openfast
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,6 +32,7 @@ jobs:
           context: .
           file: ${{ env.DOCKERFILE_PATH }}
           platforms: linux/amd64
+          tags: ${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.extract-tag.outputs.openfast-tag }}
           push: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
