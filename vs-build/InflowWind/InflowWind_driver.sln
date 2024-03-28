@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.33529.622
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.902
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "InflowWind_driver", "InflowWind_driver.vfproj", "{3BBE2741-5B28-47BC-9E7F-3E1D172838FB}"
 	ProjectSection(ProjectDependencies) = postProject
