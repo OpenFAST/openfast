@@ -11,8 +11,8 @@ maintained paths for obtaining an OpenFAST executable.
 
 Most users of OpenFAST will not require modifying or compiling the source
 code. **For the simplest installation of OpenFAST without changing the source
-code,** refer to the table in the :ref:`download_binaries` section and read
-the corresponding documentation for specific instructions.
+code,** refer to the table in the :ref:`download_binaries` or :ref:`use_docker`
+sections and read the corresponding documentation for specific instructions.
 For instructions on compiling, see :ref:`compile_from_source`.
 
 .. _download_binaries:
@@ -153,6 +153,30 @@ containing the executables, and running a simple test command:
 
     cd C:\your\path\Desktop\openfast_binaries\
     openfast_x64.exe /h
+
+
+.. _use_docker:
+
+Use a docker image
+~~~~~~~~~~~~~~~~~~
+Multiple versions of OpenFAST are available as docker images from our `docker registry <https://hub.docker.com/r/nrel/openfast>`_.
+To pull and run one with files from your local machine available, run:
+
+.. code-block::shell
+
+    docker run --rm -it --volume=/path/to/files:/files nrel/openfast:3.5.2 openfast /files/main.fst
+
+This command deletes the container (but not the image) when the analysis is finished and leaves the outputs in the same
+local directory as the input files. You can also run commands inside the container with:
+
+.. code-block::shell
+
+    docker run --rm -it --volume=/path/to/files:/files nrel/openfast:3.5.2 /bin/bash
+
+Build your own images
+~~~~~~~~~~~~~~~~~~~~~
+You can also build your own custom images using our `Dockerfile` or base your images on ours. See
+`here <https://github.com/OpenFAST/openfast/blob/main/share/docker/README.md>`_ for more information on this.
 
 .. _compile_from_source:
 
