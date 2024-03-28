@@ -1,0 +1,26 @@
+# System, cache and editor files
+**/__pycache__
+**/.DS_Store
+
+.editorconfig
+.idea
+.git
+.github
+.gitignore
+.pytest_cache
+.pre-commit-config.yaml
+.readthedocs.yml
+.coverage
+Procfile
+README.md
+
+# Never bake in environment variables
+.env
+.env*
+google_credentials.json
+# See: https://github.com/google-github-actions/auth/issues/123
+gha-creds-*.json
+gcp-creds-*.json
+
+.devcontainer/.zsh_history
+share/docker
