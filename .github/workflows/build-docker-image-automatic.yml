@@ -34,7 +34,7 @@ jobs:
 
       - name: Extract tag from release candidate branch name
         id: extract-tag
-        run: echo "openfast-tag=${"${{ github.head_ref }}":3}" >> $GITHUB_OUTPUT
+        run: echo "openfast-tag=$(expr substr "${{ github.head_ref }}" 4 100)" >> $GITHUB_OUTPUT
 
       - name: Build and push to registry
         uses: docker/build-push-action@v5
