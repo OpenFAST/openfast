@@ -1,15 +1,3 @@
-# This file was added to work around an issue with setup-python for non-Python projects, 
-# which fails with this error:
-#
-#   Run actions/setup-python@v5.0.0
-#     with:
-#       python-version: 3.12
-#       cache: pip
-#   Installed versions
-#     Successfully set up CPython (3.12.1)
-#   Error: No file in /home/runner/work/awesome-iam/awesome-iam matched to
-#   [**/requirements.txt or **/pyproject.toml], make sure you have checked out the target repository
-#
-# This has been reported at: https://github.com/actions/setup-python/issues/807
-# In the future this might be addressed by: https://github.com/actions/setup-python/pull/762
-# or https://github.com/actions/setup-python/issues/751
+# Python dependencies used for testing
+numpy 
+Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3
