@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-ARG BASE=ubuntu:mantic
+ARG BASE=ubuntu:jammy
 
 # Build stage 1: builds openfast.
 FROM ${BASE} AS build
