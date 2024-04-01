@@ -111,7 +111,7 @@ IMPLICIT NONE
     TYPE(ProgDesc)  :: Ver      !< Version of SeaState [-]
     LOGICAL  :: InvalidWithSSExctn = .false.      !< Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2) [(-)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevVisX      !< X locations of grid output [m,-]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevVisY      !< X locations of grid output [m,-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevVisY      !< Y locations of grid output [m,-]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElevVisGrid      !< Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second/third dimensions are the grid of points. [(m)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
   END TYPE SeaSt_InitOutputType

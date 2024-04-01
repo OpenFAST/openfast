@@ -26,7 +26,10 @@ module ExtLoads
 
    use NWTC_Library
    use ExtLoads_Types
-   
+   use IfW_FlowField
+   use InflowWind_IO_Types
+   use InflowWind_IO
+
    implicit none
 
    private
@@ -40,7 +43,7 @@ module ExtLoads
    public :: ExtLd_CalcOutput                     ! Routine for computing outputs
    public :: ExtLd_ConvertOpDataForOpenFAST        ! Routine to convert Output data for OpenFAST
    public :: ExtLd_ConvertInpDataForExtProg        ! Routine to convert Input data for external programs
-  
+
 contains    
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine sets the initialization output data structure, which contains data to be returned to the calling program (e.g.,
@@ -86,21 +89,21 @@ subroutine ExtLd_Init( InitInp, u, xd, p, y, m, interval, InitOut, ErrStat, ErrM
    type(ExtLd_OutputType),          intent(  out) :: y             !< Initial system outputs (outputs are not calculated;
    type(ExtLd_MiscVarType),         intent(  out) :: m             !< Miscellaneous variables
    type(ExtLd_ParameterType),       intent(  out) :: p             !< Parameter variables
-                                                                !!   only the output mesh is initialized)
-   real(DbKi),                   intent(inout) :: interval      !< Coupling interval in seconds: the rate that
-                                                                !!   (1) ExtLd_UpdateStates() is called in loose coupling &
-                                                                !!   (2) ExtLd_UpdateDiscState() is called in tight coupling.
-                                                                !!   Input is the suggested time from the glue code;
-                                                                !!   Output is the actual coupling interval that will be used
-                                                                !!   by the glue code.
+                                                                   !!   only the output mesh is initialized)
+   real(DbKi),                      intent(inout) :: interval      !< Coupling interval in seconds: the rate that
+                                                                   !!   (1) ExtLd_UpdateStates() is called in loose coupling &
+                                                                   !!   (2) ExtLd_UpdateDiscState() is called in tight coupling.
+                                                                   !!   Input is the suggested time from the glue code;
+                                                                   !!   Output is the actual coupling interval that will be used
+                                                                   !!   by the glue code.
    type(ExtLd_InitOutputType),      intent(  out) :: InitOut       !< Output for initialization routine
-   integer(IntKi),               intent(  out) :: errStat       !< Error status of the operation
-   character(*),                 intent(  out) :: errMsg        !< Error message if ErrStat /= ErrID_None
+   integer(IntKi),                  intent(  out) :: errStat       !< Error status of the operation
+   character(*),                    intent(  out) :: errMsg        !< Error message if ErrStat /= ErrID_None
    
 
       ! Local variables
    integer(IntKi)                              :: i             ! loop counter
-   
+   type(Points_InitInputType)                  :: Points_InitInput
    integer(IntKi)                              :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                        :: errMsg2       ! temporary error message 
       
@@ -118,10 +121,7 @@ subroutine ExtLd_Init( InitInp, u, xd, p, y, m, interval, InitOut, ErrStat, ErrM
    p%NumBlds = InitInp%NumBlades
    call AllocAry(p%NumBldNds, p%NumBlds, 'NumBldNds', ErrStat2,ErrMsg2)
    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-     if (ErrStat >= AbortErrLev) then
-        call Cleanup()
-        return
-     end if
+     if (ErrStat >= AbortErrLev) return
    p%NumBldNds(:) = InitInp%NumBldNodes(:)
    p%nTotBldNds = sum(p%NumBldNds(:))
    p%NumTwrNds = InitInp%NumTwrNds
@@ -142,10 +142,7 @@ subroutine ExtLd_Init( InitInp, u, xd, p, y, m, interval, InitOut, ErrStat, ErrM
    
    call Init_u( u, p, InitInp, errStat2, errMsg2 ) 
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      end if
+      if (ErrStat >= AbortErrLev) return
 
 
   ! Initialize discrete states
@@ -159,11 +156,27 @@ subroutine ExtLd_Init( InitInp, u, xd, p, y, m, interval, InitOut, ErrStat, ErrM
       !............................................................................................
    call Init_y(y, u, m, p, errStat2, errMsg2) ! do this after input meshes have been initialized
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      end if
+      if (ErrStat >= AbortErrLev) return
    
+      !............................................................................................
+      ! Initialize InflowWind FlowField
+      !............................................................................................
+   if (associated(m%FlowField)) deallocate(m%FlowField)
+   allocate(m%FlowField, stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating m%FlowField', ErrStat, ErrMsg, RoutineName )
+      return
+   end if
+
+   ! Initialize flowfield points type
+   m%FlowField%FieldType  = Point_FieldType
+   Points_InitInput%NumWindPoints = InitInp%nNodesVel
+   call IfW_Points_Init(Points_InitInput, m%FlowField%Points, ErrStat2, ErrMsg2); if (Failed()) return
+
+   ! Set pointer to flow field in InitOut
+   InitOut%FlowField => m%FlowField
+
+
       write(*,*) 'Initializing InitOut '
       
       !............................................................................................
@@ -172,13 +185,13 @@ subroutine ExtLd_Init( InitInp, u, xd, p, y, m, interval, InitOut, ErrStat, ErrM
    call ExtLd_SetInitOut(p, InitOut, errStat2, errMsg2)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
    
-   call Cleanup() 
 
 contains
-   subroutine Cleanup()
-     
-   end subroutine Cleanup
-   
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
+ 
 end subroutine ExtLd_Init
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This routine initializes ExtLoads meshes and output array variables for use during the simulation.

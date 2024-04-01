@@ -170,6 +170,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: AD_InitOutputType
     TYPE(RotInitOutputType) , DIMENSION(:), ALLOCATABLE  :: rotors      !< Rotor init output type [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
+    INTEGER(IntKi)  :: nNodesVel = 0_IntKi      !< number of nodes velocity values are needed at (for ExtLoads coupling) [-]
   END TYPE AD_InitOutputType
 ! =======================
 ! =========  RotInputFile  =======
@@ -1738,6 +1739,7 @@ subroutine AD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInitOutputData%nNodesVel = SrcInitOutputData%nNodesVel
 end subroutine
 
 subroutine AD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -1781,6 +1783,7 @@ subroutine AD_PackInitOutput(RF, Indata)
       end do
    end if
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
+   call RegPack(RF, InData%nNodesVel)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1807,6 +1810,7 @@ subroutine AD_UnPackInitOutput(RF, OutData)
       end do
    end if
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
+   call RegUnpack(RF, OutData%nNodesVel); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AD_CopyRotInputFile(SrcRotInputFileData, DstRotInputFileData, CtrlCode, ErrStat, ErrMsg)
