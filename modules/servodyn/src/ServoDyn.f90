@@ -1486,7 +1486,7 @@ subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,SrvD_
          ! A little bit of information about the StC location
          if (unsum >0) then
             write(UnSum, '(A24,i2)')                  '    Blade StC instance: ',j
-            write(UnSum, '(10x,A)')                   'Input file: '//trim(InputFileData%NStCfiles(j))
+            write(UnSum, '(10x,A)')                   'Input file: '//trim(InputFileData%BStCfiles(j))
             do k=1,StC_InitInp%NumMeshPts
                write(UnSum, '(10x,A6,I1,A29)')        'Blade ',k,' location (global/inertial): '
                write(UnSum, '(20x,3(2x,ES10.3e2))')   u(1,j)%Mesh(k)%Position(1:3,1)
