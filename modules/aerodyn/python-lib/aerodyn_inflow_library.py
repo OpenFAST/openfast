@@ -33,7 +33,7 @@ from ctypes import (
     c_byte,
     c_int,
     c_double,
-    c_float, 
+    c_float,
     c_char,
     c_char_p,
     c_wchar,
@@ -98,7 +98,7 @@ class AeroDynInflowLib(CDLL):
         self.WtrDpth     =       0.0  # Water depth (m)
         self.MSL2SWL     =       0.0  # Offset between still-water level and mean sea level (m) [positive upward]
 
-        # flags 
+        # flags
         self.storeHHVel  = 1          # 0=false, 1=true
         self.transposeDCM= 1          # 0=false, 1=true
         self.debuglevel  = 0          # 0-4 levels
@@ -149,6 +149,7 @@ class AeroDynInflowLib(CDLL):
         self.numMeshPts     = 1
         self.initMeshPos    = np.zeros(shape=(self.numMeshPts,3),dtype=c_float )    # Nx3 array [x,y,z]
         self.initMeshOrient = np.zeros(shape=(self.numMeshPts,9),dtype=c_double)    # Nx9 array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
+        self.meshPtToBladeNum = np.zeros(shape=(self.numMeshPts),dtype=c_int)       # Nx1 array [blade number]
 
         # OutRootName
         #   If HD writes a file (echo, summary, or other), use this for the
@@ -161,11 +162,11 @@ class AeroDynInflowLib(CDLL):
         self.ADI_C_PreInit.argtypes = [
             POINTER(c_int),                     # numTurbines
             POINTER(c_int),                     # transposeDCM
-            POINTER(c_int),                     # debuglevel 
+            POINTER(c_int),                     # debuglevel
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
         ]
-        self.ADI_C_PreInit.restype = c_int 
+        self.ADI_C_PreInit.restype = c_int
 
         # setup one rotor
         self.ADI_C_SetupRotor.argtypes = [
@@ -182,6 +183,7 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_int),                     # numMeshPts
             POINTER(c_float),                   # initMeshPos_flat
             POINTER(c_double),                  # initMeshOrient_flat
+            POINTER(c_int),                     # meshPtToBladeNum
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
         ]
@@ -194,7 +196,7 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_int),                     # IfW input file passed as string
             POINTER(c_char_p),                  # IfW input file as string
             POINTER(c_int),                     # IfW input file string length
-            POINTER(c_char),                    # OutRootName 
+            POINTER(c_char),                    # OutRootName
             POINTER(c_float),                   # gravity
             POINTER(c_float),                   # defFldDens
             POINTER(c_float),                   # defKinVisc
@@ -203,9 +205,9 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_float),                   # defPvap
             POINTER(c_float),                   # WtrDpth
             POINTER(c_float),                   # MSL2SWL
-            POINTER(c_int),                     # InterpOrder 
+            POINTER(c_int),                     # InterpOrder
             POINTER(c_double),                  # dt
-            POINTER(c_double),                  # tmax 
+            POINTER(c_double),                  # tmax
             POINTER(c_int),                     # storeHHVel
             POINTER(c_int),                     # WrVTK
             POINTER(c_int),                     # WrVTK_Type
@@ -219,16 +221,16 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
         ]
-        self.ADI_C_Init.restype = c_int 
+        self.ADI_C_Init.restype = c_int
 
         #self.ADI_C_ReInit.argtypes = [
-        #    POINTER(c_double),                  # t_initial 
+        #    POINTER(c_double),                  # t_initial
         #    POINTER(c_double),                  # dt
-        #    POINTER(c_double),                  # tmax 
+        #    POINTER(c_double),                  # tmax
         #    POINTER(c_int),                     # ErrStat_C
         #    POINTER(c_char)                     # ErrMsg_C
         #]
-        #self.ADI_C_ReInit.restype = c_int 
+        #self.ADI_C_ReInit.restype = c_int
 
         self.ADI_C_SetRotorMotion.argtypes = [
             POINTER(c_int),                     # iturb
@@ -322,6 +324,7 @@ class AeroDynInflowLib(CDLL):
         initRootOrient_flat_c   = self.flatOrientArr(self._initNumBlades, self.numBlades,self.initRootOrient, 'RootOrient')
         initMeshPos_flat_c      = self.flatPosArr(   self._initNumMeshPts,self.numMeshPts,self.initMeshPos,   'MeshPos')
         initMeshOrient_flat_c   = self.flatOrientArr(self._initNumMeshPts,self.numMeshPts,self.initMeshOrient,'MeshOrient')
+        initMeshPtToBladeNum_flat_c = (c_int * len(self.meshPtToBladeNum))(*self.meshPtToBladeNum)
 
         self.ADI_C_SetupRotor(
             c_int(iturb),                           # IN: iturb -- current turbine number
@@ -337,6 +340,7 @@ class AeroDynInflowLib(CDLL):
             byref(c_int(self.numMeshPts)),          # IN: number of mesh points expected
             initMeshPos_flat_c,                     # IN: initMeshPos -- initial node positions in flat array of 3*numMeshPts
             initMeshOrient_flat_c,                  # IN: initMeshOrient -- initial node orientation DCMs in flat array of 9*numMeshPts
+            initMeshPtToBladeNum_flat_c,            # IN: initMeshPtToBladeNum -- initial mesh point to blade number mapping
             byref(self.error_status_c),             # OUT: ErrStat_C
             self.error_message_c                    # OUT: ErrMsg_C
         )
@@ -402,7 +406,7 @@ class AeroDynInflowLib(CDLL):
         )
 
         self.check_error()
-        
+
         # Initialize output channels
         self.numChannels = self._numChannels_c.value
 
@@ -497,7 +501,7 @@ class AeroDynInflowLib(CDLL):
         )
 
         self.check_error()
-        
+
         ## Reshape Force/Moment into [N,6]
         count = 0
         for j in range(0,self.numMeshPts):
@@ -518,7 +522,7 @@ class AeroDynInflowLib(CDLL):
 
         # Run ADI_C_CalcOutput
         self.ADI_C_CalcOutput(
-            byref(c_double(time)),                  # IN: time at which to calculate output forces 
+            byref(c_double(time)),                  # IN: time at which to calculate output forces
             outputChannelValues_c,                  # OUT: output channel values as described in input file
             byref(self.error_status_c),             # OUT: ErrStat_C
             self.error_message_c                    # OUT: ErrMsg_C
@@ -535,7 +539,7 @@ class AeroDynInflowLib(CDLL):
 
         # Run AeroDyn_Inflow_UpdateStates_c
         self.ADI_C_UpdateStates(
-            byref(c_double(time)),                  # IN: time at which to calculate output forces 
+            byref(c_double(time)),                  # IN: time at which to calculate output forces
             byref(c_double(timeNext)),              # IN: time T+dt we are stepping to
             byref(self.error_status_c),             # OUT: ErrStat_C
             self.error_message_c                    # OUT: ErrMsg_C
@@ -662,7 +666,7 @@ class AeroDynInflowLib(CDLL):
             print("Expecting a 9 element array for initNacelleOrient DCM [r11,r12,r13,r21,r22,r23,r31,r32,r33]")
             self.adi_end()
             raise Exception("\nAeroDyn terminated prematurely.")
-            
+
 
     def check_init_mesh(self):
         #print("shape of initMeshPos       ",   self.initMeshPos.shape)
