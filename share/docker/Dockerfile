@@ -64,9 +64,9 @@ ARG TIMEZONE=UTC
 ENV DEBIAN_FRONTEND=noninteractive TZ=${TIMEZONE}
 
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y  \
-        libblas-dev \
-        liblapack-dev \
+    apt-get install --no-install-recommends -y \
+        libopenblas-dev \
+        libgomp1 \
         nano \
     && rm -rf /var/lib/apt/lists/*
 
