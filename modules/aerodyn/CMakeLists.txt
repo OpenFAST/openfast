@@ -67,19 +67,22 @@ add_library(aerodynlib STATIC
   src/FVW_BiotSavart.f90
   src/FVW_Tests.f90
   src/FVW_Types.f90
+)
+target_link_libraries(aerodynlib basicaerolib nwtclibs)
 
-  # ADI lib
+# ADI lib
+add_library(adilib STATIC
   src/AeroDyn_Inflow.f90
   src/AeroDyn_Inflow_Types.f90
 )
-target_link_libraries(aerodynlib basicaerolib ifwlib nwtclibs)
+target_link_libraries(adilib aerodynlib ifwlib)
 
 # AeroDyn Driver Subs Library
 add_library(aerodyn_driver_subs STATIC
   src/AeroDyn_Driver_Subs.f90
   src/AeroDyn_Driver_Types.f90
 )
-target_link_libraries(aerodyn_driver_subs aerodynlib versioninfolib)
+target_link_libraries(aerodyn_driver_subs adilib aerodynlib versioninfolib)
 
 # AeroDyn Driver
 add_executable(aerodyn_driver 
@@ -98,12 +101,12 @@ target_link_libraries(unsteadyaero_driver basicaerolib lindynlib versioninfolib)
 add_library(aerodyn_inflow_c_binding SHARED 
   src/AeroDyn_Inflow_C_Binding.f90
 )
-target_link_libraries(aerodyn_inflow_c_binding aerodyn_driver_subs versioninfolib)
+target_link_libraries(aerodyn_inflow_c_binding adilib aerodyn_driver_subs versioninfolib)
 if(APPLE OR UNIX)
    target_compile_definitions(aerodyn_inflow_c_binding PRIVATE IMPLICIT_DLLEXPORT)
 endif()
 
-install(TARGETS aerodynlib basicaerolib aerodyn_driver_subs aerodyn_driver unsteadyaero_driver aerodyn_inflow_c_binding 
+install(TARGETS aerodynlib basicaerolib aerodyn_driver_subs aerodyn_driver unsteadyaero_driver aerodyn_inflow_c_binding adilib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
