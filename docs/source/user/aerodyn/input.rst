@@ -90,7 +90,7 @@ When ``Wake_Mod`` is set to 3, the free vortex wake model is used, also referred
 :numref:`OLAF`). ``Wake_Mod`` cannot be set to 3 during linearization analyses.
 
 .. note::
-    Link to old inputs: The previous input `WakeMod` is removed, `WakeMod=2` used to mean DBEMT, but this now controled using `DBEMT_Mod`. 
+    Link to old inputs: The previous input `WakeMod` is removed, `WakeMod=2` used to mean DBEMT, but this now controlled using `DBEMT_Mod`. 
     `WakeMod=2` is a placeholder for future induction calculation method. 
 
 
@@ -320,7 +320,7 @@ Most ``UA_Mod`` will require `AoA34` to be set to true. But when using quasi-ste
     This feature is currently not implemented due to a lag between the `dev` and `dev-unstable`  branch.
 
 .. note::
-    Link to previous inputs: `AFAeroMod=1` implies `AoA34=False`. But to have a fair comparison between steady and unsteady aerodynamics model, it would be best to set `AoA34=True` when when doing quasi-steady aero.
+    Link to previous inputs: `AFAeroMod=1` implies `AoA34=False`. But to have a fair comparison between steady and unsteady aerodynamics model, it would be best to set `AoA34=True` when doing quasi-steady aero.
 
 
 
