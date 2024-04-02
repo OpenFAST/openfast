@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 300
     env:
       DOCKERFILE_PATH: share/docker/Dockerfile
-      DOCKERHUB_REPOSITORY: octue/openfast
+      DOCKERHUB_REPOSITORY: nrel/openfast
     steps:
       - name: Checkout
         uses: actions/checkout@v4
