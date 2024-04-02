@@ -182,9 +182,14 @@ try:
     for i, f in enumerate(localOutFiles):
         local_file = os.path.join(testBuildDirectory, f)
         baseline_file = os.path.join(targetOutputDirectory, f)
+        # Set a prefix for all errors to identify where it comes from
+        basename = os.path.splitext(os.path.basename(local_file))[0]
+        ext2 = os.path.splitext(basename)[1][1:]  #+'.lin' # '.1' or '.AD' '.BD'
+        errPrefix = CasePrefix[:-1]+ext2+': '
+
         if verbose:
-            print(CasePrefix+'ref:', baseline_file)
-            print(CasePrefix+'new:', local_file)
+            print(errPrefix+'ref:', baseline_file)
+            print(errPrefix+'new:', local_file)
 
         # verify both files have the same number of lines
         local_file_line_count = file_line_count(local_file)
@@ -228,8 +233,8 @@ try:
                 v_loc = np.diag(Lambda)
 
                 if verbose:
-                    print(CasePrefix+'val_ref:', v_bas[:7])
-                    print(CasePrefix+'val_new:', v_loc[:7])
+                    print(errPrefix+'val_ref:', v_bas[:7])
+                    print(errPrefix+'val_new:', v_loc[:7])
                 try:
                     np.testing.assert_allclose(v_bas[:10], v_loc[:10], rtol=rtol_f, atol=atol_f)
                 except Exception as e:
@@ -237,22 +242,20 @@ try:
             else:
 
                 #if verbose:
-                print(CasePrefix+'freq_ref:', np.around(freq_bas[:8]    ,5), '[Hz]')
-                print(CasePrefix+'freq_new:', np.around(freq_loc[:8]    ,5),'[Hz]')
-                print(CasePrefix+'damp_ref:', np.around(zeta_bas[:8]*100,5), '[%]')
-                print(CasePrefix+'damp_new:', np.around(zeta_loc[:8]*100,5), '[%]')
+                print(errPrefix+'freq_ref:', np.around(freq_bas[:10]    ,5), '[Hz]')
+                print(errPrefix+'freq_new:', np.around(freq_loc[:10]    ,5), '[Hz]')
+                print(errPrefix+'damp_ref:', np.around(zeta_bas[:10]*100,5), '[%]')
+                print(errPrefix+'damp_new:', np.around(zeta_loc[:10]*100,5), '[%]')
 
                 try:
                     np.testing.assert_allclose(freq_loc[:10], freq_bas[:10], rtol=rtol_f, atol=atol_f)
                 except Exception as e:
                     raise Exception('Failed to compare A-matrix frequencies\n\tLinfile: {}.\n\tException: {}'.format(local_file, indent(e.args[0])))
 
-
                 if caseName=='Ideal_Beam_Free_Free_Linear':
-                    # The free-free case is a bit weird, smae frequencies but dampings are +/- a value
-                    zeta_loc=np.abs(zeta_loc)
-                    zeta_bas=np.abs(zeta_bas)
-
+                    # The free-free case is a bit weird, same frequencies but damping values are +/- a value
+                    zeta_loc = np.abs(zeta_loc)
+                    zeta_bas = np.abs(zeta_bas)
 
                 try:
                     # Note: damping ratios in [%]
@@ -263,40 +266,50 @@ try:
 
 
         # --- Compare individual matrices/vectors
-        KEYS= ['A','B','C','D','dUdu','dUdy']
-        KEYS+=['x','y','u','xdot']
+        KEYS = ['A','B','C','D','dUdu','dUdy', 'x','y','u','xdot']
         for k,v in fbas.items():
-            if k in KEYS and v is not None:
-                if verbose:
-                    print(CasePrefix+'key:', k)
-                # Arrays
-                Mloc=np.atleast_2d(floc[k])
-                Mbas=np.atleast_2d(fbas[k])
+            if k not in KEYS or v is None:
+                continue
+            if verbose:
+                print(errPrefix+'key:', k)
+            # Arrays
+            Mloc=np.atleast_2d(floc[k])
+            Mbas=np.atleast_2d(fbas[k])
 
-                # --- Compare dimensions
+            # --- Compare dimensions
+            try:
+                np.testing.assert_equal(Mloc.shape, Mbas.shape)
+            except Exception as e:
+                Err = 'Different dimensions for variable `{k}`.\n'
+                Err += f'\tNew:{Mloc.shape}\n'
+                Err += f'\tRef:{Mbas.shape}\n'
+                Err += f'\tLinfile: {local_file}.\n'
+                raise Exception(Err)
+
+            # Get boolean matrix where Mloc is within tolerance of Mbas
+            M_in_tol = np.isclose(Mloc, Mbas, rtol=rtol, atol=atol)
+
+            # Loop through elements where Mloc is not within tolerance of Mbas
+            # Retest to get error message
+            for n, (i,j) in enumerate(zip(*np.where(M_in_tol == False)), 1):
                 try:
-                    np.testing.assert_equal(Mloc.shape, Mbas.shape)
+                    np.testing.assert_allclose(Mloc[i,j], Mbas[i,j], rtol=rtol, atol=atol)
                 except Exception as e:
-                    Err = 'Different dimensions for variable `{}`.\n'.format(k)
-                    Err+= '\tNew:{}\n'.format(Mloc.shape)
-                    Err+= '\tRef:{}\n'.format(Mbas.shape)
-                    Err+= '\tLinfile: {}.\n'.format(local_file)
-                    raise Exception(Err)
+                    sElem = f'Element [{i+1},{j+1}], new: {Mloc[i,j]}, baseline: {Mbas[i,j]}'
+                    if k in ['dXdx', 'A', 'dXdu', 'B']:
+                        sElem += '\n\t\t  row: ' + fbas['x_info']['Description'][i]
+                    if k in ['dYdx', 'C', 'dYdu', 'D']:
+                        sElem += '\n\t\t  row: ' + fbas['y_info']['Description'][i]
+                    if k in ['dUdu', 'dUdy']:
+                        sElem += '\n\t\t  row: ' + fbas['u_info']['Description'][i]
+                    if k in ['dXdx', 'A', 'dYdx', 'C']:
+                        sElem += '\n\t\t  col: ' + fbas['x_info']['Description'][j]
+                    if k in ['dXdu', 'B', 'dYdu', 'D', 'dUdu']:
+                        sElem += '\n\t\t  col: ' + fbas['u_info']['Description'][j]
+                    if k in ['dUdy']:
+                        sElem += '\n\t\t  col: ' + fbas['y_info']['Description'][j]
+                    raise Exception('Failed to compare matrix `{}`, {} \n\tLinfile: {}.\n\tException: {}'.format(k, sElem, local_file, indent(e.args[0])))
 
-
-                # We for loop below to get the first element that mismatch
-                # Otherwise, do: np.testing.assert_allclose(floc[k], fbas[k], rtol=rtol, atol=atol)
-                for i in range(Mbas.shape[0]):
-                    for j in range(Mbas.shape[1]):
-                        # Old method:
-                        #if not isclose(Mloc[i,j], Mbas[i,j], rtol=rtol, atol=atol):
-                        #    sElem = 'Element [{},{}], new : {}, baseline: {}'.format(i+1,j+1,Mloc[i,j], Mbas[i,j])
-                        #    raise Exception('Failed to compare variable `{}`, {} \n\tLinfile: {}.'.format(k, sElem, local_file)) #, e.args[0]))
-                        try:
-                            np.testing.assert_allclose(Mloc[i,j], Mbas[i,j], rtol=rtol, atol=atol)
-                        except Exception as e:
-                            sElem = 'Element [{},{}], new : {}, baseline: {}'.format(i+1,j+1,Mloc[i,j], Mbas[i,j])
-                            raise Exception('Failed to compare variable `{}`, {} \n\tLinfile: {}.\n\tException: {}'.format(k, sElem, local_file, indent(e.args[0])))
 
 except Exception as e:
     exitWithError(e.args[0])

@@ -9,6 +9,12 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
+OpenFAST v3.5.2 to OpenFAST v3.5.3 
+----------------------------------
+
+No input file changes were made.
+
+
 OpenFAST v3.5.1 to OpenFAST v3.5.2 
 ----------------------------------
 

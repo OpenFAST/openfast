@@ -162,14 +162,14 @@ Use a docker image
 Multiple versions of OpenFAST are available as docker images from our `docker registry <https://hub.docker.com/r/nrel/openfast>`_.
 To pull and run one with files from your local machine available, run:
 
-.. code-block::shell
+.. code-block:: shell
 
     docker run --rm -it --volume=/path/to/files:/files nrel/openfast:3.5.2 openfast /files/main.fst
 
 This command deletes the container (but not the image) when the analysis is finished and leaves the outputs in the same
 local directory as the input files. You can also run commands inside the container with:
 
-.. code-block::shell
+.. code-block:: shell
 
     docker run --rm -it --volume=/path/to/files:/files nrel/openfast:3.5.2 /bin/bash
 
