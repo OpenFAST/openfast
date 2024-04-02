@@ -53,8 +53,7 @@ ARG CMAKE_OPTIONS="-DBUILD_TESTING=OFF -DBUILD_FASTFARM=ON -DDOUBLE_PRECISION=ON
 RUN cmake .. ${CMAKE_OPTIONS}
 
 ARG BUILD_CORES=4
-RUN make -j${BUILD_CORES} FAST.Farm
-RUN make -j${BUILD_CORES} install
+RUN make -j${BUILD_CORES}
 
 # Build stage 2: provides built openfast in a small image.
 FROM ${BASE} as production
