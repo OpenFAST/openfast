@@ -33,8 +33,7 @@ RUN apt-get update -qq && \
         gcc \
         gfortran \
         git \
-        libblas-dev \
-        liblapack-dev \
+        libopenblas-dev \
         make \
     && rm -rf /var/lib/apt/lists/*
 
