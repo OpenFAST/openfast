@@ -877,7 +877,29 @@ CONTAINS
                      m%FreeBodyIs(p%nFreeBodies) = l
                    
                      
-                  ! TODO: add option for body coupling to different turbines in FAST.Farm  <<<
+                  else if ((let1 == "TURBINE") .or. (let1 == "T")) then  ! turbine-coupled in FAST.Farm case
+                  
+                     if (len_trim(num1) > 0) then                     
+                        READ(num1, *) J   ! convert to int, representing turbine index
+                        
+                        if ((J <= p%nTurbines) .and. (J > 0)) then
+                           
+                           m%BodyList(l)%typeNum = -1          ! set as coupled type 
+                           p%nCpldBodies(J)=p%nCpldBodies(J)+1  ! increment counter for the appropriate turbine                           
+                           m%CpldBodyIs(p%nCpldBodies(J),J) = l      
+                           CALL WrScr(' added Body '//TRIM(int2lstr(l))//' for turbine '//trim(int2lstr(J)))
+                           if (p%writeLog > 0) then
+                              write(p%UnLog,'(A)') ' Added Body '//TRIM(int2lstr(l))//' for turbine '//trim(int2lstr(J))
+                           end if
+                           
+                        else
+                           CALL SetErrStat( ErrID_Fatal,  "Turbine ID out of bounds for Body "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
+                           return
+                        end if   
+                     else
+                        CALL SetErrStat( ErrID_Fatal,  "No number provided for Body "//trim(Num2LStr(l))//" Turbine attachment.", ErrStat, ErrMsg, RoutineName )   
+                            return
+                     end if
                      
                   else if (let1 == "FREE") then    ! if a free body
                      m%BodyList(l)%typeNum = 0
@@ -1058,7 +1080,28 @@ CONTAINS
                      m%CpldRodIs(p%nCpldRods(1),1) = l
                      m%FreeRodIs(p%nFreeRods) = l
                    
-                  ! TODO: add option for body coupling to different turbines in FAST.Farm <<<
+                  else if ((let1 == "TURBINE") .or. (let1 == "T")) then  ! turbine-coupled in FAST.Farm case
+                  
+                     if (len_trim(num1) > 0) then                     
+                        READ(num1, *) J   ! convert to int, representing turbine index
+                        
+                        if ((J <= p%nTurbines) .and. (J > 0)) then
+                           m%RodList(l)%typeNum = -2          ! set as coupled type 
+                           p%nCpldRods(J)=p%nCpldRods(J)+1     ! increment counter for the appropriate turbine
+                           m%CpldRodIs(p%nCpldRods(J),J) = l   
+                           CALL WrScr(' added Rod '//TRIM(int2lstr(l))//' for turbine '//trim(int2lstr(J)))
+                           if (p%writeLog > 0) then
+                              write(p%UnLog,'(A)') ' Added Rod '//TRIM(int2lstr(l))//' for turbine '//trim(int2lstr(J))
+                           end if
+                           
+                        else
+                           CALL SetErrStat( ErrID_Fatal,  "Turbine ID out of bounds for Rod "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
+                           return
+                        end if   
+                     else
+                        CALL SetErrStat( ErrID_Fatal,  "No number provided for Rod "//trim(Num2LStr(l))//" Turbine attachment.", ErrStat, ErrMsg, RoutineName )   
+                            return
+                     end if
                    
                   else if ((let1 == "ROD") .or. (let1 == "R") .or. (let1 == "FREE")) then
                      m%RodList(l)%typeNum = 0

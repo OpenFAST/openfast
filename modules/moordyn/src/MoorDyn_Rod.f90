@@ -259,7 +259,7 @@ CONTAINS
          ! handled, along with passing kinematics to dependent lines, by separate call to setState
       
       else
-         print *, "Error: Rod_SetKinematics called for a free Rod in MoorDyn."  ! <<<
+         print *, "Error: Rod_SetKinematics called for a free Rod in MoorDyn. Rod number", Rod%IdNum  ! <<<
       end if
 
    
