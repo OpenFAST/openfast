@@ -25,7 +25,7 @@ For example, to build OpenFAST v3.5.3 for the `linux/amd64` platform and set `CM
 ```shell
 # Run from the root of this repository.
 git checkout v3.5.3
-docker build -f share/docker/openfast_ubuntu/Dockerfile -t openfast:3.5.3 --platform=linux/amd64 --build-arg=CMAKE_OPTIONS='-DBUILD_TESTING=ON' .
+docker build -f share/docker/Dockerfile -t openfast:3.5.3 --platform=linux/amd64 --build-arg=CMAKE_OPTIONS='-DBUILD_TESTING=ON' .
 ```
 
 **NOTE:** This version of the `Dockerfile` is only available in v3.5.3 and up of this repository. To build earlier 
