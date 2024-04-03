@@ -2409,7 +2409,7 @@ subroutine calcCantAngle(f, xi,stencilSize,n,cantAngle)
         call differ_stencil ( xi(i), 1, 2, xiIn, cx, info )
         !call differ_stencil ( xi(i), 1, 2, fIn, cf, info )
         if (info /= 0) then 
-           print*,'Cant Calc failed at i=',i
+           call WrScr('Cant Calc failed at i='//trim(Num2LStr(i)))
         else
            cPrime(i) = 0.0
            fPrime(i) = 0.0

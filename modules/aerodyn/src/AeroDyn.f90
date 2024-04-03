@@ -360,7 +360,6 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       endif
    enddo
 
-   print*,'AD_Init: AeroProjMod B:',AeroProjMod
 
       ! -----------------------------------------------------------------
       ! Read the AeroDyn blade files, or copy from passed input
@@ -4495,6 +4494,9 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
    elseif (p%AeroProjMod==APM_LiftingLine) then
       Label='Projection: Lifting Line'
    else
+      ! Normally we wouldn't want to do a print or STOP, but we 
+      ! should never get here unless a programmer made a mistake.
+      ! I'll leave this as is for now.  - ADP
       print*,'Invalid projection method'
       STOP
    endif
@@ -4745,7 +4747,7 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
       V_ind = 0.0_ReKi
    elseif(p%TFin%TFinIndMod==TFinIndMod_rotavg) then
       ! TODO TODO
-      print*,'TODO TailFin: compute rotor average induced velocity'
+      call WrScr('TODO TailFin: compute rotor average induced velocity')
       V_ind = 0.0_ReKi 
    else
       STOP ! Will never happen
