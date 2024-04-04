@@ -19,7 +19,7 @@ jobs:
     env:
       DOCKERFILE_PATH: share/docker/Dockerfile
       DOCKERHUB_REPOSITORY: nrel/openfast
-      GH_REGISTRY: ghcr.io/nrel/openfast
+      GH_REGISTRY: ghcr.io/OpenFAST/openfast
     permissions:
       contents: read
       packages: write
