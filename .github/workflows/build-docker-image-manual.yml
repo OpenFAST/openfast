@@ -19,9 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 300
     env:
-      DOCKERFILE_PATH: share/docker/openfast_ubuntu/Dockerfile
-      DOCKERFILE_PERMALINK: https://raw.githubusercontent.com/octue/openfast/update-dockerfiles/share/docker/openfast_ubuntu/Dockerfile
-      DOCKERHUB_REPOSITORY: octue/openfast
+      DOCKERFILE_PATH: share/docker/Dockerfile
+      DOCKERFILE_PERMALINK: https://raw.githubusercontent.com/OpenFAST/openfast/main/share/docker/Dockerfile
+      DOCKERHUB_REPOSITORY: nrel/openfast
     steps:
       - name: Checkout
         uses: actions/checkout@v4

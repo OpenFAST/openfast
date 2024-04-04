@@ -33,8 +33,7 @@ RUN apt-get update -qq && \
         gcc \
         gfortran \
         git \
-        libblas-dev \
-        liblapack-dev \
+        libopenblas-dev \
         make \
     && rm -rf /var/lib/apt/lists/*
 
@@ -50,7 +49,7 @@ WORKDIR /openfast/build
 # will require about 6GB of memory. Otherwise, the gfortran compiler will exit with an
 # "internal error"
 ENV FC=/usr/bin/gfortran
-ARG CMAKE_OPTIONS="-DBUILD_TESTING=OFF -DDOUBLE_PRECISION=ON -DCMAKE_BUILD_TYPE=RELEASE"
+ARG CMAKE_OPTIONS="-DBUILD_TESTING=OFF -DBUILD_FASTFARM=ON -DDOUBLE_PRECISION=OFF -DCMAKE_BUILD_TYPE=RELEASE"
 RUN cmake .. ${CMAKE_OPTIONS}
 
 ARG BUILD_CORES=4
@@ -64,9 +63,9 @@ ARG TIMEZONE=UTC
 ENV DEBIAN_FRONTEND=noninteractive TZ=${TIMEZONE}
 
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y  \
-        libblas-dev \
-        liblapack-dev \
+    apt-get install --no-install-recommends -y \
+        libopenblas-dev \
+        libgomp1 \
         nano \
     && rm -rf /var/lib/apt/lists/*
 
