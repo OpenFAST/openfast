@@ -67,7 +67,7 @@ REM ----------------------------------------------------------------------------
 :NWTC_Lib
 SET CURR_LOC=%NWTC_Lib_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\Registry_NWTC_Library_typedef_nomesh.txt"  -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%" -noextrap
+%REGISTRY% "%CURR_LOC%\Registry_NWTC_Library_base.txt"  -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%" -noextrap
 GOTO checkError
 
 :MAP
