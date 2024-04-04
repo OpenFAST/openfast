@@ -22,6 +22,7 @@ jobs:
       DOCKERFILE_PATH: share/docker/Dockerfile
       DOCKERFILE_PERMALINK: https://raw.githubusercontent.com/OpenFAST/openfast/main/share/docker/Dockerfile
       DOCKERHUB_REPOSITORY: nrel/openfast
+      GH_REGISTRY: ghcr.io/nrel/openfast
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,6 +37,13 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GH_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GH_TOKEN }}
 
       # The updated Dockerfile is only available in the repository at the tag v3.5.3 and above. To build versions of
       # OpenFAST that are below this version, the updated Dockerfile from that tag of the repository has to be acquired
@@ -52,7 +60,9 @@ jobs:
           context: .
           file: ${{ env.DOCKERFILE_PATH }}
           platforms: linux/amd64,linux/aarch64
-          tags: ${{ env.DOCKERHUB_REPOSITORY }}:${{ github.event.inputs.tag }}
+          tags: |
+            ${{ env.DOCKERHUB_REPOSITORY }}:${{ github.event.inputs.tag }}
+            ${{ env.GH_REGISTRY }}:${{ github.event.inputs.tag }}
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
