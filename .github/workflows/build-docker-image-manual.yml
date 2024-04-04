@@ -43,7 +43,7 @@ jobs:
         with:
           registry: ${{ env.GH_REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GH_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       # The updated Dockerfile is only available in the repository at the tag v3.5.3 and above. To build versions of
       # OpenFAST that are below this version, the updated Dockerfile from that tag of the repository has to be acquired
