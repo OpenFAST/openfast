@@ -168,7 +168,7 @@ To pull and run one with files from your local machine available, run:
 
 .. code-block:: shell
 
-    docker run --rm -it --volume=/path/to/files:/files nrel/openfast:3.5.3 openfast /files/main.fst
+    docker run --rm -it --volume=/path/to/files:/files nrel/openfast:latest openfast /files/main.fst
 
 This command deletes the container (but not the image) when the analysis is finished and leaves the outputs in the same
 local directory as the input files. 
@@ -177,10 +177,9 @@ You can also run commands interactively inside the container with:
 
 .. code-block:: shell
 
-    docker run --rm -it --volume=/path/to/files:/files nrel/openfast:3.5.3 /bin/bash
+    docker run --rm -it --volume=/path/to/files:/files nrel/openfast:latest /bin/bash
 
-To pull the latest container, substitute `latest` for `3.5.3` in the above
-commands.
+To pull a specific release, substitute the version number in place of `latest` in the above commands (i.e. `nrel/openfast:3.5.3`).
 
 
 Using a docker image from GitHub container registry
