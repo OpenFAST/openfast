@@ -1805,7 +1805,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! ........................
 
    CALL FAST_InitOutput( p_FAST, y_FAST, Init, p_FAST%ZmqOutChnlsIdx, p_FAST%ZmqOutChannelsNames, p_FAST%ZmqOutChannelsAry, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! zmq integration ok 
 
 
    ! -------------------------------------------------------------------------
@@ -2487,64 +2487,64 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
       END IF
    END IF
 
-   if (p%CompAeroMaps) then
+   ! if (p%CompAeroMaps) then
 
-      if (p%NumSSCases < 0) then
-         CALL SetErrStat( ErrID_Fatal, 'NumSSCases must be at least 1 to compute steady-state solve.', ErrStat, ErrMsg, RoutineName )
-      else
-         do i=1,p%NumSSCases
-            if (p%RotSpeed(i) < 0.0_ReKi) then
-               CALL SetErrStat( ErrID_Fatal, 'RotSpeed must be positive for the steady-state solver.', ErrStat, ErrMsg, RoutineName )
-            end if
-         end do
+   !    if (p%NumSSCases < 0) then
+   !       CALL SetErrStat( ErrID_Fatal, 'NumSSCases must be at least 1 to compute steady-state solve.', ErrStat, ErrMsg, RoutineName )
+   !    else
+   !       do i=1,p%NumSSCases
+   !          if (p%RotSpeed(i) < 0.0_ReKi) then
+   !             CALL SetErrStat( ErrID_Fatal, 'RotSpeed must be positive for the steady-state solver.', ErrStat, ErrMsg, RoutineName )
+   !          end if
+   !       end do
 
-         do i=1,p%NumSSCases
-            if (p%WS_TSR(i) < EPSILON(p%WS_TSR(1))) then
-               CALL SetErrStat( ErrID_Fatal, 'WindSpeed and TSR must be positive numbers for the steady-state solver.', ErrStat, ErrMsg, RoutineName ) ! at least, they can't be zero!
-            end if
-         end do
+   !       do i=1,p%NumSSCases
+   !          if (p%WS_TSR(i) < EPSILON(p%WS_TSR(1))) then
+   !             CALL SetErrStat( ErrID_Fatal, 'WindSpeed and TSR must be positive numbers for the steady-state solver.', ErrStat, ErrMsg, RoutineName ) ! at least, they can't be zero!
+   !          end if
+   !       end do
 
-      end if
+   !    end if
 
-   end if
+   ! end if
    
-   ! Query of ZMQ broadcast channels idx
+   ! ! Query of ZMQ broadcast channels idx
 
-   if (p_FAST%ZmqOn) then
-      CALL AllocAry( ZmqOutChnlsIdx, p_FAST%ZmqOutNbr, 'ZmqOutChnlsIdx', ErrStat, ErrMsg )
-      CALL AllocAry( ZmqOutChannelsNames, p_FAST%ZmqOutNbr + 2, 'ZmqOutChannelNames', ErrStat, ErrMsg )
+   ! if (p_FAST%ZmqOn) then
+   !    CALL AllocAry( ZmqOutChnlsIdx, p_FAST%ZmqOutNbr, 'ZmqOutChnlsIdx', ErrStat, ErrMsg )
+   !    CALL AllocAry( ZmqOutChannelsNames, p_FAST%ZmqOutNbr + 2, 'ZmqOutChannelNames', ErrStat, ErrMsg )
 
-      ZmqOutChnlsIdx    = 0_IntKi
+   !    ZmqOutChnlsIdx    = 0_IntKi
 
-      do i = 1, SIZE(ZmqOutChnlsIdx) 
-         tmp_string = p_FAST%ZmqOutChannels(i)
-         call Conv2UC(tmp_string)
+   !    do i = 1, SIZE(ZmqOutChnlsIdx) 
+   !       tmp_string = p_FAST%ZmqOutChannels(i)
+   !       call Conv2UC(tmp_string)
 
-         do j = 1, SIZE(y_FAST%ChannelNames)
-            tmp_string2 = y_FAST%ChannelNames(j)
-            call Conv2UC(tmp_string2)
+   !       do j = 1, SIZE(y_FAST%ChannelNames)
+   !          tmp_string2 = y_FAST%ChannelNames(j)
+   !          call Conv2UC(tmp_string2)
 
-            if (trim(tmp_string) == trim(tmp_string2)) then 
-               ZmqOutChnlsIdx(i) = j 
-               exit 
-            end if 
+   !          if (trim(tmp_string) == trim(tmp_string2)) then 
+   !             ZmqOutChnlsIdx(i) = j 
+   !             exit 
+   !          end if 
 
-         end do 
-      end do 
+   !       end do 
+   !    end do 
 
-      if (minval(ZmqOutChnlsIdx) == 0) then 
-         call WrScr('Warning: one channel requested from ZMQ was not identified') ! CU = unit number for the output 
-      end if 
+   !    if (minval(ZmqOutChnlsIdx) == 0) then 
+   !       call WrScr('Warning: one channel requested from ZMQ was not identified') ! CU = unit number for the output 
+   !    end if 
 
-      ! Augmenting ZMQ output to handle wind turbine id and current time stamp
-      ZmqOutChannelsNames(1) = 'TurbId'
-      ZmqOutChannelsNames(2) = 'Time'
+   !    ! Augmenting ZMQ output to handle wind turbine id and current time stamp
+   !    ZmqOutChannelsNames(1) = 'TurbId'
+   !    ZmqOutChannelsNames(2) = 'Time'
 
-      do i = 1,p_FAST%ZmqOutNbr
-         ZmqOutChannelsNames(2 + i) = trim(y_FAST%ChannelNames(ZmqOutChnlsIdx(i))) ! Up to here everything OK! 
-      end do
+   !    do i = 1,p_FAST%ZmqOutNbr
+   !       ZmqOutChannelsNames(2 + i) = trim(y_FAST%ChannelNames(ZmqOutChnlsIdx(i))) ! Up to here everything OK! 
+   !    end do
 
-   end if 
+   ! end if 
 
 END SUBROUTINE ValidateInputData
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -7791,7 +7791,9 @@ END SUBROUTINE FAST_Solution_T
 SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, ExtLd, IfW, ExtInfw, SC_DX, SeaSt, HD, SD, ExtPtfm, &
                          MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ZmqOutChannelsAry, TurbID, ErrStat, ErrMsg )
 
-   REAL(DbKi),               INTENT(IN   ) :: t_initial           !< initial time
+   
+   use iso_c_binding
+                         REAL(DbKi),               INTENT(IN   ) :: t_initial           !< initial time
    INTEGER(IntKi),           INTENT(IN   ) :: n_t_global          !< loop counter
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
@@ -7831,7 +7833,8 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    INTEGER(IntKi), parameter               :: MaxCorrections = 20 ! maximum number of corrections allowed
    LOGICAL                                 :: WriteThisStep       ! Whether WriteOutput values will be printed
 
-   INTEGER(IntKi)                          :: I, k                ! generic loop counters
+   INTEGER(IntKi)                          :: I, k, idx                ! generic loop counters
+
 
    !REAL(ReKi)                              :: ControlInputGuess   ! value of controller inputs
 
@@ -7842,9 +7845,9 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    INTEGER(IntKi)                          :: TurbID                    !< Grab Turbine ID for messages-tagging purposes (ZMQ)
 
    ! ! -----------------------------------------------------------------------------
-   ! REAL(DbKi), allocatable, intent(inout)           :: ZmqOutChannelsAry(:)
-   ! REAL(DbKi)                                       :: ZmqInChannelsAry(p_FAST%ZmqInNbr)
-   ! character(len=1024)                              :: tmp_str 
+   REAL(DbKi), allocatable, intent(inout)           :: ZmqOutChannelsAry(:)
+   REAL(DbKi)                                       :: ZmqInChannelsAry(p_FAST%ZmqInNbr)
+   character(len=1024)                              :: tmp_str 
    ! ! -----------------------------------------------------------------------------
 
 
