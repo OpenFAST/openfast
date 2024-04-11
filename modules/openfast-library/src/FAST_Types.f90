@@ -232,6 +232,16 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WS_TSR      !< List of WindSpeed or TSRs (depending on WindSpeedOrTSR setting) for aeromap generation [(m/s or -)]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Pitch      !< List of pitch angles for aeromap generation [(rad)]
     INTEGER(IntKi)  :: GearBox_index      !< Index to gearbox rotation in state array (for steady-state calculations) [-]
+    LOGICAL  :: ZmqOn = .false.      !< zmq activation flag [-]
+    CHARACTER(1024)  :: ZmqInAddress      !< address for ZMQ REQ-REP protocol [-]
+    INTEGER(IntKi)  :: ZmqInNbr      !< number of ZMQ REQ-REP channels [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ZmqInChannels      !< address for ZMQ REQ-REP protocol [-]
+    CHARACTER(1024)  :: ZmqOutAddress      !< address for ZMQ PUB-SUB protocol [-]
+    INTEGER(IntKi)  :: ZmqOutNbr      !< number of ZMQ PUB-SUB channels [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ZmqOutChannels      !< variables to pass ZMQ PUB-SUB protocol [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ZmqOutChnlsIdx      !< indexes of channels to be broadcasted [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ZmqOutChannelsNames      !< names for ZMQ PUB-SUB protocol [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ZmqOutChannelsAry      !< array to pass ZMQ PUB-SUB protocol [-]
   END TYPE FAST_ParameterType
 ! =======================
 ! =========  FAST_LinStateSave  =======
@@ -2541,6 +2551,71 @@ IF (ALLOCATED(SrcParamData%Pitch)) THEN
     DstParamData%Pitch = SrcParamData%Pitch
 ENDIF
     DstParamData%GearBox_index = SrcParamData%GearBox_index
+    DstParamData%ZmqOn = SrcParamData%ZmqOn
+    DstParamData%ZmqInAddress = SrcParamData%ZmqInAddress
+    DstParamData%ZmqInNbr = SrcParamData%ZmqInNbr
+IF (ALLOCATED(SrcParamData%ZmqInChannels)) THEN
+  i1_l = LBOUND(SrcParamData%ZmqInChannels,1)
+  i1_u = UBOUND(SrcParamData%ZmqInChannels,1)
+  IF (.NOT. ALLOCATED(DstParamData%ZmqInChannels)) THEN 
+    ALLOCATE(DstParamData%ZmqInChannels(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%ZmqInChannels.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%ZmqInChannels = SrcParamData%ZmqInChannels
+ENDIF
+    DstParamData%ZmqOutAddress = SrcParamData%ZmqOutAddress
+    DstParamData%ZmqOutNbr = SrcParamData%ZmqOutNbr
+IF (ALLOCATED(SrcParamData%ZmqOutChannels)) THEN
+  i1_l = LBOUND(SrcParamData%ZmqOutChannels,1)
+  i1_u = UBOUND(SrcParamData%ZmqOutChannels,1)
+  IF (.NOT. ALLOCATED(DstParamData%ZmqOutChannels)) THEN 
+    ALLOCATE(DstParamData%ZmqOutChannels(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%ZmqOutChannels.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%ZmqOutChannels = SrcParamData%ZmqOutChannels
+ENDIF
+IF (ALLOCATED(SrcParamData%ZmqOutChnlsIdx)) THEN
+  i1_l = LBOUND(SrcParamData%ZmqOutChnlsIdx,1)
+  i1_u = UBOUND(SrcParamData%ZmqOutChnlsIdx,1)
+  IF (.NOT. ALLOCATED(DstParamData%ZmqOutChnlsIdx)) THEN 
+    ALLOCATE(DstParamData%ZmqOutChnlsIdx(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%ZmqOutChnlsIdx.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%ZmqOutChnlsIdx = SrcParamData%ZmqOutChnlsIdx
+ENDIF
+IF (ALLOCATED(SrcParamData%ZmqOutChannelsNames)) THEN
+  i1_l = LBOUND(SrcParamData%ZmqOutChannelsNames,1)
+  i1_u = UBOUND(SrcParamData%ZmqOutChannelsNames,1)
+  IF (.NOT. ALLOCATED(DstParamData%ZmqOutChannelsNames)) THEN 
+    ALLOCATE(DstParamData%ZmqOutChannelsNames(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%ZmqOutChannelsNames.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%ZmqOutChannelsNames = SrcParamData%ZmqOutChannelsNames
+ENDIF
+IF (ALLOCATED(SrcParamData%ZmqOutChannelsAry)) THEN
+  i1_l = LBOUND(SrcParamData%ZmqOutChannelsAry,1)
+  i1_u = UBOUND(SrcParamData%ZmqOutChannelsAry,1)
+  IF (.NOT. ALLOCATED(DstParamData%ZmqOutChannelsAry)) THEN 
+    ALLOCATE(DstParamData%ZmqOutChannelsAry(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%ZmqOutChannelsAry.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%ZmqOutChannelsAry = SrcParamData%ZmqOutChannelsAry
+ENDIF
  END SUBROUTINE FAST_CopyParam
 
  SUBROUTINE FAST_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -2576,6 +2651,21 @@ IF (ALLOCATED(ParamData%WS_TSR)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%Pitch)) THEN
   DEALLOCATE(ParamData%Pitch)
+ENDIF
+IF (ALLOCATED(ParamData%ZmqInChannels)) THEN
+  DEALLOCATE(ParamData%ZmqInChannels)
+ENDIF
+IF (ALLOCATED(ParamData%ZmqOutChannels)) THEN
+  DEALLOCATE(ParamData%ZmqOutChannels)
+ENDIF
+IF (ALLOCATED(ParamData%ZmqOutChnlsIdx)) THEN
+  DEALLOCATE(ParamData%ZmqOutChnlsIdx)
+ENDIF
+IF (ALLOCATED(ParamData%ZmqOutChannelsNames)) THEN
+  DEALLOCATE(ParamData%ZmqOutChannelsNames)
+ENDIF
+IF (ALLOCATED(ParamData%ZmqOutChannelsAry)) THEN
+  DEALLOCATE(ParamData%ZmqOutChannelsAry)
 ENDIF
  END SUBROUTINE FAST_DestroyParam
 
@@ -2763,6 +2853,36 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%Pitch)  ! Pitch
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! GearBox_index
+      Int_BufSz  = Int_BufSz  + 1  ! ZmqOn
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%ZmqInAddress)  ! ZmqInAddress
+      Int_BufSz  = Int_BufSz  + 1  ! ZmqInNbr
+  Int_BufSz   = Int_BufSz   + 1     ! ZmqInChannels allocated yes/no
+  IF ( ALLOCATED(InData%ZmqInChannels) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! ZmqInChannels upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%ZmqInChannels)*LEN(InData%ZmqInChannels)  ! ZmqInChannels
+  END IF
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%ZmqOutAddress)  ! ZmqOutAddress
+      Int_BufSz  = Int_BufSz  + 1  ! ZmqOutNbr
+  Int_BufSz   = Int_BufSz   + 1     ! ZmqOutChannels allocated yes/no
+  IF ( ALLOCATED(InData%ZmqOutChannels) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! ZmqOutChannels upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%ZmqOutChannels)*LEN(InData%ZmqOutChannels)  ! ZmqOutChannels
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! ZmqOutChnlsIdx allocated yes/no
+  IF ( ALLOCATED(InData%ZmqOutChnlsIdx) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! ZmqOutChnlsIdx upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%ZmqOutChnlsIdx)  ! ZmqOutChnlsIdx
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! ZmqOutChannelsNames allocated yes/no
+  IF ( ALLOCATED(InData%ZmqOutChannelsNames) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! ZmqOutChannelsNames upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%ZmqOutChannelsNames)*LEN(InData%ZmqOutChannelsNames)  ! ZmqOutChannelsNames
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! ZmqOutChannelsAry allocated yes/no
+  IF ( ALLOCATED(InData%ZmqOutChannelsAry) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! ZmqOutChannelsAry upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%ZmqOutChannelsAry)  ! ZmqOutChannelsAry
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3137,6 +3257,101 @@ ENDIF
   END IF
     IntKiBuf(Int_Xferred) = InData%GearBox_index
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%ZmqOn, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    DO I = 1, LEN(InData%ZmqInAddress)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%ZmqInAddress(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    IntKiBuf(Int_Xferred) = InData%ZmqInNbr
+    Int_Xferred = Int_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%ZmqInChannels) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ZmqInChannels,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ZmqInChannels,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%ZmqInChannels,1), UBOUND(InData%ZmqInChannels,1)
+        DO I = 1, LEN(InData%ZmqInChannels)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%ZmqInChannels(i1)(I:I), IntKi)
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
+      END DO
+  END IF
+    DO I = 1, LEN(InData%ZmqOutAddress)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%ZmqOutAddress(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    IntKiBuf(Int_Xferred) = InData%ZmqOutNbr
+    Int_Xferred = Int_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%ZmqOutChannels) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ZmqOutChannels,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ZmqOutChannels,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%ZmqOutChannels,1), UBOUND(InData%ZmqOutChannels,1)
+        DO I = 1, LEN(InData%ZmqOutChannels)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%ZmqOutChannels(i1)(I:I), IntKi)
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%ZmqOutChnlsIdx) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ZmqOutChnlsIdx,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ZmqOutChnlsIdx,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%ZmqOutChnlsIdx,1), UBOUND(InData%ZmqOutChnlsIdx,1)
+        IntKiBuf(Int_Xferred) = InData%ZmqOutChnlsIdx(i1)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%ZmqOutChannelsNames) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ZmqOutChannelsNames,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ZmqOutChannelsNames,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%ZmqOutChannelsNames,1), UBOUND(InData%ZmqOutChannelsNames,1)
+        DO I = 1, LEN(InData%ZmqOutChannelsNames)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%ZmqOutChannelsNames(i1)(I:I), IntKi)
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%ZmqOutChannelsAry) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ZmqOutChannelsAry,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ZmqOutChannelsAry,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%ZmqOutChannelsAry,1), UBOUND(InData%ZmqOutChannelsAry,1)
+        ReKiBuf(Re_Xferred) = InData%ZmqOutChannelsAry(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE FAST_PackParam
 
  SUBROUTINE FAST_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -3560,6 +3775,116 @@ ENDIF
   END IF
     OutData%GearBox_index = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%ZmqOn = TRANSFER(IntKiBuf(Int_Xferred), OutData%ZmqOn)
+    Int_Xferred = Int_Xferred + 1
+    DO I = 1, LEN(OutData%ZmqInAddress)
+      OutData%ZmqInAddress(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    OutData%ZmqInNbr = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ZmqInChannels not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ZmqInChannels)) DEALLOCATE(OutData%ZmqInChannels)
+    ALLOCATE(OutData%ZmqInChannels(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ZmqInChannels.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%ZmqInChannels,1), UBOUND(OutData%ZmqInChannels,1)
+        DO I = 1, LEN(OutData%ZmqInChannels)
+          OutData%ZmqInChannels(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
+      END DO
+  END IF
+    DO I = 1, LEN(OutData%ZmqOutAddress)
+      OutData%ZmqOutAddress(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    OutData%ZmqOutNbr = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ZmqOutChannels not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ZmqOutChannels)) DEALLOCATE(OutData%ZmqOutChannels)
+    ALLOCATE(OutData%ZmqOutChannels(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ZmqOutChannels.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%ZmqOutChannels,1), UBOUND(OutData%ZmqOutChannels,1)
+        DO I = 1, LEN(OutData%ZmqOutChannels)
+          OutData%ZmqOutChannels(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ZmqOutChnlsIdx not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ZmqOutChnlsIdx)) DEALLOCATE(OutData%ZmqOutChnlsIdx)
+    ALLOCATE(OutData%ZmqOutChnlsIdx(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ZmqOutChnlsIdx.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%ZmqOutChnlsIdx,1), UBOUND(OutData%ZmqOutChnlsIdx,1)
+        OutData%ZmqOutChnlsIdx(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ZmqOutChannelsNames not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ZmqOutChannelsNames)) DEALLOCATE(OutData%ZmqOutChannelsNames)
+    ALLOCATE(OutData%ZmqOutChannelsNames(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ZmqOutChannelsNames.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%ZmqOutChannelsNames,1), UBOUND(OutData%ZmqOutChannelsNames,1)
+        DO I = 1, LEN(OutData%ZmqOutChannelsNames)
+          OutData%ZmqOutChannelsNames(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ZmqOutChannelsAry not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ZmqOutChannelsAry)) DEALLOCATE(OutData%ZmqOutChannelsAry)
+    ALLOCATE(OutData%ZmqOutChannelsAry(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ZmqOutChannelsAry.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%ZmqOutChannelsAry,1), UBOUND(OutData%ZmqOutChannelsAry,1)
+        OutData%ZmqOutChannelsAry(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE FAST_UnPackParam
 
  SUBROUTINE FAST_CopyLinStateSave( SrcLinStateSaveData, DstLinStateSaveData, CtrlCode, ErrStat, ErrMsg )

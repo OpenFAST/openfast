@@ -5435,13 +5435,13 @@ SUBROUTINE FAST_Solution0_T(Turbine, ErrStat, ErrMsg)
    CALL FAST_Solution0(Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                      Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%ExtLd, Turbine%IfW, Turbine%ExtInfw, Turbine%SC_DX,&
                      Turbine%SeaSt, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
-                     Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )
+                     Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, Turbine%TurbID, ErrStat, ErrMsg )
 
 END SUBROUTINE FAST_Solution0_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that calls CalcOutput for the first time of the simulation (at t=0). After the initial solve, data arrays are initialized.
 SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, ExtLd, IfW, ExtInfw, SC_DX, SeaSt, HD, SD, ExtPtfm, &
-                          MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
+                          MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, TurbID, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              !< Output variables for the glue code
@@ -5480,6 +5480,7 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, ExtLd,
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_Solution0'
+   INTEGER(IntKi)                          :: TurbID              !< grab turbine ID for ZMQ communication
 
    !NOTE: m_FAST%t_global is t_initial in this routine
 
@@ -5520,7 +5521,9 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, ExtLd,
    ! Check to see if we should output data this time step:
    !----------------------------------------------------------------------------------------
 
-   CALL WriteOutputToFile(n_t_global_next, t_initial, p_FAST, y_FAST, ED, BD, AD14, AD, IfW, ExtInfw, SeaSt, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2)
+   CALL WriteOutputToFile(n_t_global_next, t_initial, p_FAST, y_FAST, ED, BD, AD14, AD, IfW, &
+                           ExtInfw, SeaSt, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, &
+                           TurbID, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       ! turn off VTK output when
@@ -7834,7 +7837,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    LOGICAL                                 :: WriteThisStep       ! Whether WriteOutput values will be printed
 
    INTEGER(IntKi)                          :: I, k, idx                ! generic loop counters
-
+   INTEGER(IntKi)                          :: TurbID                    !< Grab Turbine ID for messages-tagging purposes (ZMQ)
 
    !REAL(ReKi)                              :: ControlInputGuess   ! value of controller inputs
 
@@ -7842,13 +7845,11 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_Solution'
-   INTEGER(IntKi)                          :: TurbID                    !< Grab Turbine ID for messages-tagging purposes (ZMQ)
-
-   ! ! -----------------------------------------------------------------------------
+   ! -----------------------------------------------------------------------------
    REAL(DbKi), allocatable, intent(inout)           :: ZmqOutChannelsAry(:)
    REAL(DbKi)                                       :: ZmqInChannelsAry(p_FAST%ZmqInNbr)
    character(len=1024)                              :: tmp_str 
-   ! ! -----------------------------------------------------------------------------
+   ! -----------------------------------------------------------------------------
 
 
    ErrStat = ErrID_None
@@ -7881,7 +7882,8 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
    call FAST_AdvanceToNextTimeStep(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, ExtLd, IfW, ExtInfw, SC_DX, &
-                        SeaSt, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )
+                        SeaSt, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData,& 
+                        ZmqOutChannelsAry, TurbID, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
@@ -7889,7 +7891,8 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    !! Write outputs
    !----------------------------------------------------------------------------------------
    call FAST_WriteOutput(t_initial, n_t_global_next, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, ExtLd, IfW, ExtInfw, SC_DX, &
-                        SeaSt, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )
+                        SeaSt, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, &
+                        TurbID, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 END SUBROUTINE FAST_Solution
@@ -8166,13 +8169,14 @@ SUBROUTINE FAST_AdvanceToNextTimeStep_T(t_initial, n_t_global, Turbine, ErrStat,
       CALL FAST_AdvanceToNextTimeStep(t_initial, n_t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                   Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%ExtLd, Turbine%IfW, Turbine%ExtInfw, Turbine%SC_DX, &
                   Turbine%SeaSt, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
-                  Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )
+                  Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, Turbine%p_FAST%ZmqOutChannelsAry, & 
+                  Turbine%TurbID, ErrStat, ErrMsg )
 
 END SUBROUTINE FAST_AdvanceToNextTimeStep_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine advances the time step from n_t_global to n_t_global + 1 and does all the relvant copying of data
 SUBROUTINE FAST_AdvanceToNextTimeStep(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, ExtLd, IfW, ExtInfw, SC_DX, &
-                  SeaSt, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
+                  SeaSt, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ZmqOutChannelsAry, TurbID, ErrStat, ErrMsg )
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           !< initial time
    INTEGER(IntKi),           INTENT(IN   ) :: n_t_global          !< loop counter
@@ -8212,7 +8216,7 @@ SUBROUTINE FAST_AdvanceToNextTimeStep(t_initial, n_t_global, p_FAST, y_FAST, m_F
    INTEGER(IntKi)                          :: NumCorrections      ! number of corrections for this time step
 
    INTEGER(IntKi)                          :: I, k                ! generic loop counters
-
+   INTEGER(IntKi)                          :: TurbID              !< Grab Turbine ID for messages-tagging purposes (ZMQ)
 
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
@@ -8417,7 +8421,6 @@ SUBROUTINE FAST_AdvanceToNextTimeStep(t_initial, n_t_global, p_FAST, y_FAST, m_F
    !! update the global time
 
    m_FAST%t_global = t_global_next
-
    if (p_FAST%ZmqOn) then 
 
       ZmqInChannelsAry = 0.0_DbKi
@@ -8475,13 +8478,13 @@ SUBROUTINE FAST_WriteOutput_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg )
       CALL FAST_WriteOutput(t_initial, n_t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                   Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%ExtLd, Turbine%IfW, Turbine%ExtInfw, Turbine%SC_DX, &
                   Turbine%SeaSt, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
-                  Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )
+                  Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, Turbine%TurbID, ErrStat, ErrMsg )
 
 END SUBROUTINE FAST_WriteOutput_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes the outputs at this timestep
 SUBROUTINE FAST_WriteOutput(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, ExtLd, IfW, ExtInfw, SC_DX, &
-                  SeaSt, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
+                  SeaSt, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, TurbID, ErrStat, ErrMsg )
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial            !< initial time
    INTEGER(IntKi),           INTENT(IN   ) :: n_t_global          !< loop counter
@@ -8518,6 +8521,7 @@ SUBROUTINE FAST_WriteOutput(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, B
    ! local variables
    INTEGER(IntKi)                          :: I, k                ! generic loop counters
    REAL(DbKi)                              :: t_global            ! this simulation time (m_FAST%t_global + p_FAST%dt)
+   INTEGER(IntKi)                          :: TurbID              !< Grab Turbine ID for messages-tagging purposes (ZMQ)
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_WriteOutput'
@@ -8532,7 +8536,7 @@ SUBROUTINE FAST_WriteOutput(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, B
    !! Check to see if we should output data this time step:
    !----------------------------------------------------------------------------------------
    CALL WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14, AD, IfW, ExtInfw, SeaSt, HD, SD, ExtPtfm, &
-                          SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2)
+                          SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, TurbID, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    !----------------------------------------------------------------------------------------
@@ -8569,7 +8573,7 @@ END FUNCTION NeedWriteOutput
 !! calls the routine to write to the files with the output data. It should be called after all the output solves for a given time
 !! have been completed, and assumes y_FAST\%WriteThisStep has been set.
 SUBROUTINE WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14, AD, IfW, ExtInfw, SeaSt, HD, SD, ExtPtfm, &
-                             SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg)
+                             SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, TurbID, ErrStat, ErrMsg)
 !...............................................................................................................................
    INTEGER(IntKi),           INTENT(IN   ) :: n_t_global          !< Current global time step
    REAL(DbKi),               INTENT(IN   ) :: t_global            !< Current global time
@@ -8600,6 +8604,7 @@ SUBROUTINE WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14,
 
 
    CHARACTER(*), PARAMETER                 :: RoutineName = 'WriteOutputToFile'
+   INTEGER(IntKi),         INTENT(INOUT)    :: TurbID             !< Added TurbID for ZMQ communication
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -8612,7 +8617,8 @@ SUBROUTINE WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14,
          ! Generate glue-code output file
          CALL WrOutputLine( t_global, p_FAST, y_FAST, IfW%y%WriteOutput, ExtInfw%y%WriteOutput, ED%y%WriteOutput, &
                AD%y, SrvD%y%WriteOutput, SeaSt%y%WriteOutput, HD%y%WriteOutput, SD%y%WriteOutput, ExtPtfm%y%WriteOutput, MAPp%y%WriteOutput, &
-               FEAM%y%WriteOutput, MD%y%WriteOutput, Orca%y%WriteOutput, IceF%y%WriteOutput, IceD%y, BD%y, ErrStat, ErrMsg )
+               FEAM%y%WriteOutput, MD%y%WriteOutput, Orca%y%WriteOutput, IceF%y%WriteOutput, IceD%y, BD%y,& 
+               p_FAST%ZmqOutChannelsAry, TurbID, ErrStat, ErrMsg )
 
    ENDIF
 
@@ -8664,12 +8670,15 @@ SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, ExtInfwOutput, EDOutput, 
    CHARACTER(p_FAST%TChanLen)       :: TmpStr                                    ! temporary string to print the time output as text
 
    REAL(ReKi)                       :: OutputAry(SIZE(y_FAST%ChannelNames)-1)
-
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-
+   INTEGER(IntKi)                   :: i
+   INTEGER(IntKi)                   :: TurbID
+   
    ! ---- ZMQ Definitions ----- 
    REAL(ReKi), ALLOCATABLE           :: ZmqOutChannelsAry(:)
+
+   ! Initialize the error status
+   ErrStat = ErrID_None
+   ErrMsg  = ''
 
 
    CALL FillOutputAry(p_FAST, y_FAST, IfWOutput, ExtInfwOutput, EDOutput, y_AD, SrvDOutput, SeaStOutput, HDOutput, SDOutput, ExtPtfmOutput, &
@@ -8695,8 +8704,6 @@ SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, ExtInfwOutput, EDOutput, 
       call zmq_pub(ZmqOutChannelsAry, p_FAST%ZmqOutChannelsNames, p_FAST%ZmqOutNbr)
 
    end if 
-
-
 
    IF (p_FAST%WrTxtOutFile) THEN
 
