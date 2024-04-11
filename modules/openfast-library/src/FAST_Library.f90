@@ -53,7 +53,7 @@ subroutine FAST_AllocateTurbines(nTurbines, ErrStat_c, ErrMsg_c) BIND (C, NAME='
       call wrscr1('Proceeding anyway.')
    end if
 
-   allocate(Turbine(0:NumTurbines-1),Stat=ErrStat) !Allocate in C style because most of the other Turbine properties from the input file are in C style inside the C++ driver
+   allocate(Turbine(1:NumTurbines),Stat=ErrStat) !Allocate in F style -- all logic inside FAST_Subs is based on index 1 start, not C style index 0
 
    if (ErrStat /= 0) then
       ErrStat_c = ErrID_Fatal
@@ -83,13 +83,13 @@ subroutine FAST_DeallocateTurbines(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Deal
    ErrMsg_c = C_NULL_CHAR
 end subroutine
 !==================================================================================================================================
-subroutine FAST_Sizes(iTurb, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, dt_out_c, tmax_c, ErrStat_c, ErrMsg_c, ChannelNames_c, TMax, InitInpAry) BIND (C, NAME='FAST_Sizes')
+subroutine FAST_Sizes(iTurb_c, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, dt_out_c, tmax_c, ErrStat_c, ErrMsg_c, ChannelNames_c, TMax, InitInpAry) BIND (C, NAME='FAST_Sizes')
    IMPLICIT NONE 
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: FAST_Sizes
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Sizes
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
+   INTEGER(C_INT),         INTENT(IN   ) :: iTurb_c      ! Turbine number, c indexing (starts at 0 for first turbine)
    CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: InputFileName_c(IntfStrLen)      
    INTEGER(C_INT),         INTENT(  OUT) :: AbortErrLev_c      
    INTEGER(C_INT),         INTENT(  OUT) :: NumOuts_c      
@@ -106,6 +106,10 @@ subroutine FAST_Sizes(iTurb, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, dt
    CHARACTER(IntfStrLen)               :: InputFileName   
    INTEGER                             :: i, j, k
    TYPE(FAST_ExternInitType)           :: ExternInitData
+   integer(IntKi)                      :: iTurb       ! turbine number: Fortran indexing (starts at 1 for first turbine)
+
+      ! transfer turbine index number from C to Fortran indexing (0 to 1 start)
+   iTurb = int(iTurb_c,IntKi) + 1
    
       ! transfer the character array from C to a Fortran string:   
    InputFileName = TRANSFER( InputFileName_c, InputFileName )
@@ -126,7 +130,7 @@ subroutine FAST_Sizes(iTurb, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, dt
       IF (PRESENT(TMax)) THEN
          ExternInitData%TMax = TMax
       END IF
-      ExternInitData%TurbineID  = -1        ! we're not going to use this to simulate a wind farm
+      ExternInitData%TurbIDforName  = -1        ! we're not going to use this to simulate a wind farm
       ExternInitData%TurbinePos = 0.0_ReKi  ! turbine position is at the origin
       ExternInitData%NumCtrl2SC = 0
       ExternInitData%NumSC2Ctrl = 0
@@ -179,32 +183,33 @@ subroutine FAST_Sizes(iTurb, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, dt
       
 end subroutine FAST_Sizes
 !==================================================================================================================================
-subroutine FAST_Start(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Start')
+subroutine FAST_Start(iTurb_c, NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Start')
    IMPLICIT NONE 
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: FAST_Start
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Start
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
+   INTEGER(C_INT),         INTENT(IN   ) :: iTurb_c      ! Turbine number, c indexing (starts at 0 for first turbine)
    INTEGER(C_INT),         INTENT(IN   ) :: NumInputs_c      
    INTEGER(C_INT),         INTENT(IN   ) :: NumOutputs_c      
    REAL(C_DOUBLE),         INTENT(IN   ) :: InputAry(NumInputs_c)
    REAL(C_DOUBLE),         INTENT(  OUT) :: OutputAry(NumOutputs_c)
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)      
-
    
    ! local
    CHARACTER(IntfStrLen)                 :: InputFileName   
    INTEGER                               :: i
    REAL(ReKi)                            :: Outputs(NumOutputs_c-1)
-     
+   integer(IntKi)                        :: iTurb       ! turbine number: Fortran indexing (starts at 1 for first turbine)
    INTEGER(IntKi)                        :: ErrStat2                                ! Error status
    CHARACTER(IntfStrLen-1)               :: ErrMsg2                                 ! Error message  (this needs to be static so that it will print in Matlab's mex library)
    
+      ! transfer turbine index number from C to Fortran indexing (0 to 1 start)
+   iTurb = int(iTurb_c,IntKi) + 1
+
       ! initialize variables:   
    n_t_global = 0
-
 
    !...............................................................................................................................
    ! Initialization of solver: (calculate outputs based on states at t=t_initial as well as guesses of inputs and constraint states)
@@ -243,13 +248,13 @@ subroutine FAST_Start(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Err
       
 end subroutine FAST_Start
 !==================================================================================================================================
-subroutine FAST_Update(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, EndSimulationEarly, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Update')
+subroutine FAST_Update(iTurb_c, NumInputs_c, NumOutputs_c, InputAry, OutputAry, EndSimulationEarly, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Update')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: FAST_Update
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Update
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
+   INTEGER(C_INT),         INTENT(IN   ) :: iTurb_c      ! Turbine number, c indexing (starts at 0 for first turbine)
    INTEGER(C_INT),         INTENT(IN   ) :: NumInputs_c      
    INTEGER(C_INT),         INTENT(IN   ) :: NumOutputs_c      
    REAL(C_DOUBLE),         INTENT(IN   ) :: InputAry(NumInputs_c)
@@ -261,9 +266,13 @@ subroutine FAST_Update(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, En
       ! local variables
    REAL(ReKi)                            :: Outputs(NumOutputs_c-1)
    INTEGER(IntKi)                        :: i
+   integer(IntKi)                        :: iTurb       ! turbine number: Fortran indexing (starts at 1 for first turbine)
    INTEGER(IntKi)                        :: ErrStat2                                ! Error status
    CHARACTER(IntfStrLen-1)               :: ErrMsg2                                 ! Error message  (this needs to be static so that it will print in Matlab's mex library)
-                 
+
+      ! transfer turbine index number from C to Fortran indexing (0 to 1 start)
+   iTurb = int(iTurb_c,IntKi) + 1
+
    EndSimulationEarly = .FALSE.
 
    IF ( n_t_global > Turbine(iTurb)%p_FAST%n_TMax_m1 ) THEN !finish 
@@ -325,20 +334,24 @@ subroutine FAST_Update(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, En
 end subroutine FAST_Update 
 !==================================================================================================================================
 ! Get the hub's absolute position, rotation velocity, and orientation DCM for the current time step
-subroutine FAST_HubPosition(iTurb, AbsPosition_c, RotationalVel_c, Orientation_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_HubPosition')
+subroutine FAST_HubPosition(iTurb_c, AbsPosition_c, RotationalVel_c, Orientation_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_HubPosition')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: FAST_HubPosition
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_HubPosition
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb
+   INTEGER(C_INT),         INTENT(IN   ) :: iTurb_c      ! Turbine number, c indexing (starts at 0 for first turbine)
    REAL(C_FLOAT),          INTENT(  OUT) :: AbsPosition_c(3), RotationalVel_c(3)
    REAL(C_DOUBLE),         INTENT(  OUT) :: Orientation_c(9)
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)
+   integer(IntKi)                        :: iTurb       ! turbine number: Fortran indexing (starts at 1 for first turbine)
 
    ErrStat_c = ErrID_None
    ErrMsg = C_NULL_CHAR
+
+      ! transfer turbine index number from C to Fortran indexing (0 to 1 start)
+   iTurb = int(iTurb_c,IntKi) + 1
 
    if (iTurb > size(Turbine) ) then
       ErrStat_c = ErrID_Fatal
@@ -364,18 +377,15 @@ end subroutine FAST_HubPosition
 !!    Ideally we would write this summary info from here, but that isn't currently done.  So as a workaround so the user has some
 !!    vague idea what went wrong with their simulation, we have ServoDyn include the arrangement set here in the SrvD.sum file.
 subroutine FAST_SetExternalInputs(iTurb, NumInputs_c, InputAry, m_FAST)
-
    USE, INTRINSIC :: ISO_C_Binding
    USE FAST_Types
-!   USE FAST_Data, only: NumFixedInputs
-   
-   IMPLICIT  NONE
 
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
+   IMPLICIT  NONE
+   INTEGER(IntKi),         INTENT(IN   ) :: iTurb      ! Turbine number, Fortran indexing (starts at 1 for first turbine)
    INTEGER(C_INT),         INTENT(IN   ) :: NumInputs_c      
    REAL(C_DOUBLE),         INTENT(IN   ) :: InputAry(NumInputs_c)                   ! Inputs from Simulink
    TYPE(FAST_MiscVarType), INTENT(INOUT) :: m_FAST                                  ! Miscellaneous variables
-   
+
          ! set the inputs from external code here...
          ! transfer inputs from Simulink to FAST
       IF ( NumInputs_c < NumFixedInputs ) RETURN ! This is an error
@@ -398,26 +408,30 @@ subroutine FAST_SetExternalInputs(iTurb, NumInputs_c, InputAry, m_FAST)
       
 end subroutine FAST_SetExternalInputs
 !==================================================================================================================================
-subroutine FAST_End(iTurb, StopTheProgram) BIND (C, NAME='FAST_End')
+subroutine FAST_End(iTurb_c, StopTheProgram) BIND (C, NAME='FAST_End')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: FAST_End
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_End
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
+   INTEGER(C_INT),         INTENT(IN   ) :: iTurb_c      ! Turbine number, c indexing (starts at 0 for first turbine)
    LOGICAL(C_BOOL),        INTENT(IN)    :: StopTheProgram   ! flag indicating if the program should end (false if there are more turbines to end)
+   integer(IntKi)                        :: iTurb       ! turbine number: Fortran indexing (starts at 1 for first turbine)
+
+      ! transfer turbine index number from C to Fortran indexing (0 to 1 start)
+   iTurb = int(iTurb_c,IntKi) + 1
 
    CALL ExitThisProgram_T( Turbine(iTurb), ErrID_None, LOGICAL(StopTheProgram))
    
 end subroutine FAST_End
 !==================================================================================================================================
-subroutine FAST_CreateCheckpoint(iTurb, CheckpointRootName_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CreateCheckpoint')
+subroutine FAST_CreateCheckpoint(iTurb_c, CheckpointRootName_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CreateCheckpoint')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: FAST_CreateCheckpoint
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_CreateCheckpoint
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
+   INTEGER(C_INT),         INTENT(IN   ) :: iTurb_c      ! Turbine number, c indexing (starts at 0 for first turbine)
    CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: CheckpointRootName_c(IntfStrLen)      
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)      
@@ -426,8 +440,11 @@ subroutine FAST_CreateCheckpoint(iTurb, CheckpointRootName_c, ErrStat_c, ErrMsg_
    CHARACTER(IntfStrLen)                 :: CheckpointRootName   
    INTEGER(IntKi)                        :: I
    INTEGER(IntKi)                        :: Unit
-             
-   
+   integer(IntKi)                        :: iTurb       ! turbine number: Fortran indexing (starts at 1 for first turbine)
+
+      ! transfer turbine index number from C to Fortran indexing (0 to 1 start)
+   iTurb = int(iTurb_c,IntKi) + 1
+
       ! transfer the character array from C to a Fortran string:   
    CheckpointRootName = TRANSFER( CheckpointRootName_c, CheckpointRootName )
    I = INDEX(CheckpointRootName,C_NULL_CHAR) - 1                 ! if this has a c null character at the end...
@@ -453,13 +470,13 @@ subroutine FAST_CreateCheckpoint(iTurb, CheckpointRootName_c, ErrStat_c, ErrMsg_
       
 end subroutine FAST_CreateCheckpoint 
 !==================================================================================================================================
-subroutine FAST_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, NumOuts_c, dt_c, n_t_global_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Restart')
+subroutine FAST_Restart(iTurb_c, CheckpointRootName_c, AbortErrLev_c, NumOuts_c, dt_c, n_t_global_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Restart')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: FAST_Restart
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Restart
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
+   INTEGER(C_INT),         INTENT(IN   ) :: iTurb_c      ! Turbine number, c indexing (starts at 0 for first turbine)
    CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: CheckpointRootName_c(IntfStrLen)      
    INTEGER(C_INT),         INTENT(  OUT) :: AbortErrLev_c      
    INTEGER(C_INT),         INTENT(  OUT) :: NumOuts_c      
@@ -474,9 +491,12 @@ subroutine FAST_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, NumOuts_c, d
    INTEGER(IntKi)                        :: Unit
    REAL(DbKi)                            :: t_initial_out
    INTEGER(IntKi)                        :: NumTurbines_out
+   integer(IntKi)                        :: iTurb       ! turbine number: Fortran indexing (starts at 1 for first turbine)
    CHARACTER(*),           PARAMETER     :: RoutineName = 'FAST_Restart' 
-             
-   
+
+      ! transfer turbine index number from C to Fortran indexing (0 to 1 start)
+   iTurb = int(iTurb_c,IntKi) + 1
+
       ! transfer the character array from C to a Fortran string:   
    CheckpointRootName = TRANSFER( CheckpointRootName_c, CheckpointRootName )
    I = INDEX(CheckpointRootName,C_NULL_CHAR) - 1                 ! if this has a c null character at the end...
@@ -506,17 +526,17 @@ subroutine FAST_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, NumOuts_c, d
       
 end subroutine FAST_Restart 
 !==================================================================================================================================
-subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, NumSC2Ctrl, NumCtrl2SC, InitSCOutputsGlob, InitSCOutputsTurbine, NumActForcePtsBlade, NumActForcePtsTower, TurbPosn, AbortErrLev_c, dt_c, NumBl_c, NumBlElem_c, NodeClusterType_c, &
+subroutine FAST_OpFM_Init(iTurb_c, TMax, InputFileName_c, TurbIDforName, NumSC2CtrlGlob, NumSC2Ctrl, NumCtrl2SC, InitSCOutputsGlob, InitSCOutputsTurbine, NumActForcePtsBlade, NumActForcePtsTower, TurbPosn, AbortErrLev_c, dt_c, NumBl_c, NumBlElem_c, NodeClusterType_c, &
                           OpFM_Input_from_FAST, OpFM_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Init')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Init
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Init
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
+   INTEGER(C_INT),         INTENT(IN   ) :: iTurb_c      ! Turbine number, c indexing (starts at 0 for first turbine)
    REAL(C_DOUBLE),         INTENT(IN   ) :: TMax      
    CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: InputFileName_c(IntfStrLen)      
-   INTEGER(C_INT),         INTENT(IN   ) :: TurbID           ! Need not be same as iTurb
+   INTEGER(C_INT),         INTENT(IN   ) :: TurbIDforName    ! Need not be same as iTurb -- use numbering from c/cpp
    INTEGER(C_INT),         INTENT(IN   ) :: NumSC2CtrlGlob   ! Supercontroller global outputs = controller global inputs   
    INTEGER(C_INT),         INTENT(IN   ) :: NumSC2Ctrl       ! Supercontroller outputs = controller inputs
    INTEGER(C_INT),         INTENT(IN   ) :: NumCtrl2SC       ! controller outputs = Supercontroller inputs
@@ -541,7 +561,11 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
    CHARACTER(IntfStrLen)                 :: InputFileName   
    INTEGER(C_INT)                        :: i    
    TYPE(FAST_ExternInitType)             :: ExternInitData
-   
+   integer(IntKi)                        :: iTurb       ! turbine number: Fortran indexing (starts at 1 for first turbine)
+
+      ! transfer turbine index number from C to Fortran indexing (0 to 1 start)
+   iTurb = int(iTurb_c,IntKi) + 1
+
       ! transfer the character array from C to a Fortran string:   
    InputFileName = TRANSFER( InputFileName_c, InputFileName )
    I = INDEX(InputFileName,C_NULL_CHAR) - 1            ! if this has a c null character at the end...
@@ -554,9 +578,16 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
    
    NumBl_c       = 0    ! initialize here in case of error
    NumBlElem_c   = 0    ! initialize here in case of error
-   
+  
+      ! Check TurbIDforName -- must be 0 or larger
+   if (TurbIDforName < 0) then
+      ErrStat = ErrID_Fatal
+      ErrMsg  = "TurbIDforName cannot be negative"
+      if (Failed()) return
+   endif
+ 
    ExternInitData%TMax = TMax
-   ExternInitData%TurbineID = TurbID
+   ExternInitData%TurbIDforName = TurbIDforName
    ExternInitData%TurbinePos = TurbPosn
    ExternInitData%SensorType = SensorType_None
    ExternInitData%NumCtrl2SC = NumCtrl2SC
@@ -642,15 +673,19 @@ contains
    END FUNCTION FAILED
 end subroutine   
 !==================================================================================================================================
-subroutine FAST_OpFM_Solution0(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Solution0')
+subroutine FAST_OpFM_Solution0(iTurb_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Solution0')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Solution0
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Solution0
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
+   INTEGER(C_INT),         INTENT(IN   ) :: iTurb_c      ! Turbine number, c indexing (starts at 0 for first turbine)
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen) 
+   integer(IntKi)                        :: iTurb       ! turbine number: Fortran indexing (starts at 1 for first turbine)
+
+      ! transfer turbine index number from C to Fortran indexing (0 to 1 start)
+   iTurb = int(iTurb_c,IntKi) + 1
 
    call FAST_Solution0_T(Turbine(iTurb), ErrStat, ErrMsg ) 
 
@@ -666,14 +701,14 @@ subroutine FAST_OpFM_Solution0(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_O
                         
 end subroutine FAST_OpFM_Solution0
 !==================================================================================================================================
-subroutine FAST_OpFM_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, numblades_c, numElementsPerBlade_c, n_t_global_c, &
+subroutine FAST_OpFM_Restart(iTurb_c, CheckpointRootName_c, AbortErrLev_c, dt_c, numblades_c, numElementsPerBlade_c, n_t_global_c, &
                       OpFM_Input_from_FAST, OpFM_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Restart')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Restart
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Restart
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
+   INTEGER(C_INT),         INTENT(IN   ) :: iTurb_c      ! Turbine number, c indexing (starts at 0 for first turbine)
    CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: CheckpointRootName_c(IntfStrLen)      
    INTEGER(C_INT),         INTENT(  OUT) :: AbortErrLev_c      
    INTEGER(C_INT),         INTENT(  OUT) :: numblades_c
@@ -694,8 +729,12 @@ subroutine FAST_OpFM_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, n
    INTEGER(IntKi)                        :: Unit
    REAL(DbKi)                            :: t_initial_out
    INTEGER(IntKi)                        :: NumTurbines_out
+   integer(IntKi)                        :: iTurb       ! turbine number: Fortran indexing (starts at 1 for first turbine)
    CHARACTER(*),           PARAMETER     :: RoutineName = 'FAST_Restart' 
-             
+
+      ! transfer turbine index number from C to Fortran indexing (0 to 1 start)
+   iTurb = int(iTurb_c,IntKi) + 1
+
    CALL NWTC_Init()
       ! transfer the character array from C to a Fortran string:   
    CheckpointRootName = TRANSFER( CheckpointRootName_c, CheckpointRootName )
@@ -738,9 +777,8 @@ subroutine FAST_OpFM_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, n
 end subroutine FAST_OpFM_Restart
 !==================================================================================================================================
 subroutine SetOpenFOAM_pointers(iTurb, OpFM_Input_from_FAST, OpFM_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST)
-
    IMPLICIT NONE
-   INTEGER(C_INT),            INTENT(IN   ) :: iTurb            ! Turbine number 
+   INTEGER(C_INT),            INTENT(IN   ) :: iTurb      ! Turbine number, F indexing (starts at 1 for first turbine)
    TYPE(OpFM_InputType_C),    INTENT(INOUT) :: OpFM_Input_from_FAST
    TYPE(OpFM_OutputType_C),   INTENT(INOUT) :: OpFM_Output_to_FAST
    TYPE(SC_DX_InputType_C),   INTENT(INOUT) :: SC_DX_Input_from_FAST
@@ -780,22 +818,25 @@ subroutine SetOpenFOAM_pointers(iTurb, OpFM_Input_from_FAST, OpFM_Output_to_FAST
 
 end subroutine SetOpenFOAM_pointers
 !==================================================================================================================================
-subroutine FAST_OpFM_Step(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Step')
+subroutine FAST_OpFM_Step(iTurb_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Step')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Step
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Step
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
+   INTEGER(C_INT),         INTENT(IN   ) :: iTurb_c      ! Turbine number, c indexing (starts at 0 for first turbine)
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)      
-                    
-   
+   integer(IntKi)                        :: iTurb       ! turbine number: Fortran indexing (starts at 1 for first turbine)
+
+      ! transfer turbine index number from C to Fortran indexing (0 to 1 start)
+   iTurb = int(iTurb_c,IntKi) + 1
+
    IF ( n_t_global > Turbine(iTurb)%p_FAST%n_TMax_m1 ) THEN !finish 
       
       ! we can't continue because we might over-step some arrays that are allocated to the size of the simulation
       
-      if (iTurb .eq. (NumTurbines-1) ) then
+      if (iTurb == NumTurbines) then
          IF (n_t_global == Turbine(iTurb)%p_FAST%n_TMax_m1 + 1) THEN  ! we call update an extra time in Simulink, which we can ignore until the time shift with outputs is solved
             n_t_global = n_t_global + 1
             ErrStat_c = ErrID_None
@@ -811,7 +852,7 @@ subroutine FAST_OpFM_Step(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_S
    ELSE
 
       CALL FAST_Solution_T( t_initial, n_t_global, Turbine(iTurb), ErrStat, ErrMsg )                  
-      if (iTurb .eq. (NumTurbines-1) ) then
+      if (iTurb == NumTurbines) then
          n_t_global = n_t_global + 1
       end if
             

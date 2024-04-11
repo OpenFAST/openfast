@@ -3331,8 +3331,8 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
 
          ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}) from BD root-to-ED hub load transfer:
       ED_Start = Indx_u_ED_Hub_Start(u_ED, y_FAST) + u_ED%HubPtLoad%NNodes*3 ! start of u_ED%HubPtLoad%Moment field (skip forces)
+      ED_Out_Start  = Indx_y_ED_Hub_Start(y_ED, y_FAST) ! start of y_ED%HubMotion%TranslationDisp field
       DO k=1,p_FAST%nBeams
-         ED_Out_Start = Indx_y_ED_BladeRoot_Start(y_ED, y_FAST, k) ! start of y_ED%BladeRootMotion(k)%TranslationDisp field
          call SumBlockMatrix( dUdy, MeshMapData%BD_P_2_ED_P(k)%dM%m_ud, ED_Start, ED_Out_Start)
       END DO
 
@@ -3733,8 +3733,9 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, y_ED, BD, MeshMa
       
       DO k=1,p_FAST%nBeams
          AD_Start     = Indx_u_AD_Blade_Start(u_AD, y_FAST, k)     ! start of u_AD%BladeMotion(k)%TranslationDisp field
-         BD_Out_Start = y_FAST%Lin%Modules(Module_BD)%Instance(k)%LinStartIndx(LIN_OUTPUT_COL)
-         
+         BD_Out_Start  = y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%LinStartIndx(LIN_OUTPUT_COL) & ! start of BD%y(k)%BldMotion%TranslationDisp field
+                       + BD%y(k)%ReactionForce%NNodes * 6 ! 2 fields with 3 components
+
          CALL Assemble_dUdy_Motions(BD%y(k)%BldMotion, u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), AD_Start, BD_Out_Start, dUdy, skipRotAcc=.true.)
       END DO
    

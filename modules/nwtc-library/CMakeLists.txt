@@ -140,7 +140,6 @@ add_library(nwtclibs ${NWTC_SYS_FILE} ${NWTCLIBS_SOURCES})
 target_link_libraries(nwtclibs PUBLIC
   ${LAPACK_LIBRARIES} 
   ${CMAKE_DL_LIBS} 
-  ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}
 )
 if (USE_DLL_INTERFACE)
   target_compile_definitions(nwtclibs PRIVATE USE_DLL_INTERFACE)

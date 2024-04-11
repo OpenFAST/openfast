@@ -883,7 +883,7 @@ CONTAINS
       else
          dc_dx = 0.0_DbKi   ! maybe this should raise an error
       end if
-      if ( dx > 0.0 ) then
+      if ( dy > 0.0 ) then
          dc_dy = (cx1-cx0)/dy
       else
          dc_dy = 0.0_DbKi   ! maybe this should raise an error
@@ -1297,8 +1297,7 @@ CONTAINS
       REAL(SiKi)                       :: t, Frac
       CHARACTER(1024)                  :: FileName             ! Name of MoorDyn input file  
       CHARACTER(120)                   :: Line
-      CHARACTER(120)                   :: Line2  
-      CHARACTER(120)                   :: entries2  
+      CHARACTER(4096)                  :: entries2  
       INTEGER(IntKi)                   :: coordtype
    
       INTEGER(IntKi)                   :: NStepWave    ! 

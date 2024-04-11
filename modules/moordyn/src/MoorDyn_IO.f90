@@ -139,7 +139,7 @@ CONTAINS
       
       INTEGER(IntKi)                   :: ErrStat4
       CHARACTER(120)                   :: ErrMsg4         
-      CHARACTER(120)                   :: Line2
+      CHARACTER(4096)                   :: Line2
 
       CHARACTER(20)                    :: nGridX_string  ! string to temporarily hold the nGridX string from Line2
       CHARACTER(20)                    :: nGridY_string  ! string to temporarily hold the nGridY string from Line3
@@ -182,7 +182,7 @@ CONTAINS
          READ(UnCoef,*,IOSTAT=ErrStat4) nGridY_string, nGridY  ! read in the third line as the number of y values in the BathGrid
 
          ! Allocate the bathymetry matrix and associated grid x and y values
-         ALLOCATE(BathGrid(nGridX, nGridY), STAT=ErrStat4)
+         ALLOCATE(BathGrid(nGridY, nGridX), STAT=ErrStat4)
          ALLOCATE(BathGrid_Xs(nGridX), STAT=ErrStat4)
          ALLOCATE(BathGrid_Ys(nGridY), STAT=ErrStat4)
 
@@ -563,7 +563,7 @@ CONTAINS
           END IF
         
         ! Point case                            
-        ELSE IF (let1(1:1) == 'P') THEN    ! Look for P?xxx or Point?xxx
+        ELSE IF (let1(1:1) == 'P' .OR. let1(1:1) == 'C') THEN    ! Look for P?xxx or Point?xxx (C?xxx and Con?xxx for backwards compatability)
           p%OutParam(I)%OType = 2                ! Point object type
           qVal = let2                            ! quantity type string
           
@@ -601,7 +601,7 @@ CONTAINS
         ! error
         ELSE
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
-          CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Must start with L, C, R, or B')
+          CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Must start with L, R, or B')
           CYCLE
         END IF
 

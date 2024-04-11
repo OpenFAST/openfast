@@ -21,6 +21,7 @@ env:
   C_COMPILER: gcc-12
   GCOV_EXE: gcov-12
   CMAKE_BUILD_PARALLEL_LEVEL: 8
+  CTEST_PARALLEL_LEVEL: 2
 
 
 jobs:
@@ -35,18 +36,17 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
       - name: Setup workspace
@@ -74,7 +74,7 @@ jobs:
         run: |
           cmake --build . --target all
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-all-debug-${{ github.sha }}
@@ -86,7 +86,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Install dependencies
@@ -121,18 +121,17 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
       - name: Setup workspace
@@ -157,7 +156,7 @@ jobs:
         run: |
           cmake --build . --target regression_test_module_drivers
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-drivers-release-${{ github.sha }}
@@ -167,18 +166,17 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev  # gcovr
@@ -209,7 +207,7 @@ jobs:
         working-directory: ${{runner.workspace}}/openfast/build
         run: cmake --build . --target openfast_postlib
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-postlib-release-${{ github.sha }}
@@ -220,19 +218,18 @@ jobs:
     needs: build-postlib-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-postlib-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
@@ -247,7 +244,7 @@ jobs:
         run: |
           cmake --build . --target openfastlib openfast_cpp_driver openfastcpp aerodyn_inflow_c_binding moordyn_c_binding ifw_c_binding hydrodyn_c_binding regression_test_controllers
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-interfaces-release-${{ github.sha }}
@@ -258,19 +255,18 @@ jobs:
     needs: build-postlib-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-postlib-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
@@ -285,7 +281,7 @@ jobs:
         run: |
           cmake --build . --target openfast
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
@@ -296,19 +292,18 @@ jobs:
     needs: build-postlib-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-postlib-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
@@ -323,7 +318,7 @@ jobs:
         run: |
           cmake --build . --target FAST.Farm
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-fastfarm-release-${{ github.sha }}
@@ -337,18 +332,17 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev
       - name: Setup workspace
@@ -382,7 +376,7 @@ jobs:
           ctest -VV -R "^ua_" 
 
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-uadriver
@@ -398,19 +392,18 @@ jobs:
     needs: build-drivers-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-drivers-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
@@ -441,7 +434,7 @@ jobs:
       - name: Run SubDyn tests
         uses: ./.github/actions/tests-module-subdyn
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-module-drivers
@@ -454,19 +447,18 @@ jobs:
     needs: build-all-debug
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-all-debug-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
@@ -499,7 +491,7 @@ jobs:
       - name: Run VersionInfo tests
         uses: ./.github/actions/tests-module-version
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-modules-debug
@@ -513,19 +505,18 @@ jobs:
     needs: build-interfaces-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-interfaces-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3" vtk
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
@@ -542,7 +533,7 @@ jobs:
         run: |
           ctest -VV -L "cpp|python|fastlib"
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-interfaces
@@ -561,19 +552,18 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
@@ -589,12 +579,12 @@ jobs:
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j4 \
+          ctest -VV \
           -L openfast \
           -LE "cpp|linear|python|fastlib" \
           -E "5MW_OC4Semi_WSt_WavesWN|5MW_OC3Mnpl_DLL_WTurb_WavesIrr|5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth|5MW_OC3Trpd_DLL_WSt_WavesReg|5MW_Land_BD_DLL_WTurb"
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-OF
@@ -614,19 +604,18 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
@@ -644,7 +633,7 @@ jobs:
         run: |
           ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC4Semi_WSt_WavesWN
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-OF-5MW_OC4Semi_WSt_WavesWN
@@ -664,19 +653,18 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
@@ -694,7 +682,7 @@ jobs:
         run: |
           ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC3Mnpl_DLL_WTurb_WavesIrr
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-OF-5MW_OC3Mnpl_DLL_WTurb_WavesIrr
@@ -714,19 +702,18 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
@@ -744,7 +731,7 @@ jobs:
         run: |
           ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-OF-5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth
@@ -764,19 +751,18 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
@@ -794,7 +780,7 @@ jobs:
         run: |
           ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC3Trpd_DLL_WSt_WavesReg
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-OF-5MW_OC3Trpd_DLL_WSt_WavesReg
@@ -814,19 +800,18 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
@@ -844,7 +829,7 @@ jobs:
         run: |
           ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_Land_BD_DLL_WTurb
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-OF-5MW_Land_BD_DLL_WTurb
@@ -864,19 +849,18 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
@@ -892,9 +876,9 @@ jobs:
       - name: Run OpenFAST linearization tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j4 -L linear
+          ctest -VV -L linear
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-OF-linearization
@@ -914,19 +898,18 @@ jobs:
     needs: build-fastfarm-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-fastfarm-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
@@ -946,7 +929,7 @@ jobs:
           set OMP_NUM_THREADS=2
           ctest -VV -L fastfarm --verbose
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-FF
