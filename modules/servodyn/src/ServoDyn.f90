@@ -62,7 +62,8 @@ MODULE ServoDyn
    INTEGER(IntKi), PARAMETER :: ControlMode_USER      = 3          !< The (ServoDyn-universal) control code for obtaining the control values from a user-defined routine
    INTEGER(IntKi), PARAMETER :: ControlMode_EXTERN    = 4          !< The (ServoDyn-universal) control code for obtaining the control values from Simulink or Labivew
    INTEGER(IntKi), PARAMETER :: ControlMode_DLL       = 5          !< The (ServoDyn-universal) control code for obtaining the control values from a Bladed-Style dynamic-link library
-
+   INTEGER(IntKi), PARAMETER :: ZmqIn                 = 9          !< The (ServoDyn-universal) control code for obtaining the control values from a Zmq socket
+   
    INTEGER(IntKi), PARAMETER, PUBLIC :: TrimCase_none   = 0
    INTEGER(IntKi), PARAMETER, PUBLIC :: TrimCase_yaw    = 1
    INTEGER(IntKi), PARAMETER, PUBLIC :: TrimCase_torque = 2
@@ -4586,12 +4587,11 @@ CONTAINS
 
       END IF
 
-
-      IF ( InputFileData%PCMode /= ControlMode_NONE .and. InputFileData%PCMode /= ControlMode_USER )  THEN
+ 
+      IF ( InputFileData%PCMode /= ControlMode_NONE .and. InputFileData%PCMode /= ControlMode_USER .and. InputFileData%PCMode /= ZmqIn )  THEN
          IF ( InputFileData%PCMode /= ControlMode_EXTERN .and. InputFileData%PCMode /= ControlMode_DLL )  &
          CALL SetErrStat( ErrID_Fatal, 'PCMode must be 0, 3, 4, or 5.', ErrStat, ErrMsg, RoutineName )
       ENDIF
-
 
          ! Time that pitch control is enabled:
 
@@ -4627,7 +4627,7 @@ CONTAINS
    !...............................................................................................................................
 
             ! checks for yaw control mode:
-      IF ( InputFileData%YCMode /= ControlMode_NONE .and. InputFileData%YCMode /= ControlMode_USER   )  THEN
+      IF ( InputFileData%YCMode /= ControlMode_NONE .and. InputFileData%YCMode /= ControlMode_USER  .and. InputFileData%YCMode /= ZmqIn)  THEN
          IF ( InputFileData%YCMode /= ControlMode_DLL .and. InputFileData%YCMode /= ControlMode_EXTERN )  &
          CALL SetErrStat( ErrID_Fatal, 'YCMode must be 0, 3, 4 or 5.', ErrStat, ErrMsg, RoutineName )
       ENDIF
@@ -4695,16 +4695,15 @@ CONTAINS
 
          IF ( InputFileData%VSContrl == ControlMode_EXTERN )  THEN
             CALL SetErrStat( ErrID_Fatal, 'VSContrl can equal '//TRIM(Num2LStr(ControlMode_EXTERN))//' only when ServoDyn is interfaced with Simulink or LabVIEW.'// &
-                '  Set VSContrl to 0, 1, 3, or 5 or interface ServoDyn with Simulink or LabVIEW.', ErrStat, ErrMsg, RoutineName )
+                '  Set VSContrl to 0, 1, 3, 5 for interface ServoDyn with Simulink or LabVIEW or 9 for ZMQ.', ErrStat, ErrMsg, RoutineName )
          END IF
       END IF
 
-
          ! checks for generator and torque control:
       IF ( InputFileData%VSContrl /= ControlMode_NONE .and. &
-              InputFileData%VSContrl /= ControlMode_SIMPLE .AND. InputFileData%VSContrl /= ControlMode_USER )  THEN
+              InputFileData%VSContrl /= ControlMode_SIMPLE .AND. InputFileData%VSContrl /= ControlMode_USER .AND. InputFileData%VSContrl /= ZmqIn )  THEN
          IF ( InputFileData%VSContrl /= ControlMode_DLL .AND. InputFileData%VSContrl /=ControlMode_EXTERN )  &
-         CALL SetErrStat( ErrID_Fatal, 'VSContrl must be either 0, 1, 3, 4, or 5.', ErrStat, ErrMsg, RoutineName )
+         CALL SetErrStat( ErrID_Fatal, 'VSContrl must be either 0, 1, 3, 4, 5 or 9.', ErrStat, ErrMsg, RoutineName )
       ENDIF
 
       IF ( InputFileData%SpdGenOn < 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'SpdGenOn must not be negative.', ErrStat, ErrMsg, RoutineName )
@@ -4854,7 +4853,7 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, UnSum, ErrStat, ErrMsg )
    if (UnSum >0) then
       write(UnSum, '(A)')  ' Unless specified, units are consistent with Input units, [SI] system is advised.'
       write(UnSum, '(A)') SectionDivide
-      write(UnSum, '(A)')                 ' Pitch control mode {0: none, 3: user-defined from routine PitchCntrl, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)'
+      write(UnSum, '(A)')                 ' Pitch control mode {0: none, 3: user-defined from routine PitchCntrl, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL, 9: ZmqIn} (switch)'
       write(UnSum, '(A43,I2)')            '   PCMode -- Pitch control mode:           ',p%PCMode
       write(UnSum, '(A43,ES20.12e3)')     '   TPCOn  -- pitch control start time:     ',p%TPCOn
       write(UnSum, '(A)')                 '   -------------------'
@@ -5028,7 +5027,7 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, UnSum, ErrStat, ErrMsg )
    if (UnSum >0) then
       write(UnSum, '(A)') ''
       write(UnSum, '(A)') SectionDivide
-      write(UnSum, '(A)')              ' Yaw control mode {0: none, 3: user-defined from routine UserYawCont, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)'
+      write(UnSum, '(A)')              ' Yaw control mode {0: none, 3: user-defined from routine UserYawCont, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL, 9: ZmqIn} (switch)'
       write(UnSum, '(A32,I2)')         '    YCMode  -- yaw control mode ',p%YCMode
       if (p%YCMode > 0) &
       write(UnSum, '(A55,ES12.5e2)')   '    TYCOn   --  Time to enable active yaw control (s)  ',p%TYCOn
@@ -5180,6 +5179,8 @@ SUBROUTINE Yaw_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
             y%YawMom = m%dll_data%YawTorqueDemand
 
             return
+
+            
          end if
       end if
 
@@ -5258,6 +5259,10 @@ SUBROUTINE CalculateStandardYaw(t, u, p, m, YawPosCom, YawRateCom, YawPosComInt,
                call SetErrStat(ErrID_Fatal, "Unable to calculate yaw rate control because yaw torque control (or override) was requested from DLL.", ErrStat, ErrMsg, "CalculateStandardYaw")
                return
             end if
+
+         CASE ( ZmqIn )
+
+            continue ! pass through, it is going to be overwritten in FAST_Subs
 
       END SELECT
 
@@ -5405,13 +5410,17 @@ SUBROUTINE Pitch_CalcOutput( t, u, p, x, xd, z, OtherState, BlPitchCom, ElecPwr,
 
             BlPitchCom = p%BlAlpha * m%xd_BlPitchFilter + (1.0_ReKi - p%BlAlpha) * BlPitchCom
 
+         CASE ( ZmqIn )
+
+            continue ! pass through, it is going to be overwritten in FAST_Subs
+
       END SELECT
 
    ELSE                          ! Do not control pitch yet, maintain initial pitch angles.
 
       ! Use the initial blade pitch angles:
 
-      BlPitchCom = p%BlPitchInit
+      BlPitchCom = p%BlPitchInit ! todo: add check that blpitch is one of the channels inputs of ZMQ
 
    ENDIF
 
@@ -5749,6 +5758,10 @@ SUBROUTINE Torque_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
             HSSBrFrac = u%ExternalHSSBrFrac
 
+         CASE ( ZmqIn )
+            
+            continue ! pass through, it is going to be overwritten in FAST_Subs
+
          ENDSELECT
 
          HSSBrFrac = MAX( MIN( HSSBrFrac, 1.0_ReKi ), 0.0_ReKi )  ! make sure we didn't get outside the acceptable range: 0 (off) <= HSSBrFrac <= 1 (full)
@@ -5997,6 +6010,10 @@ SUBROUTINE CalculateTorque( t, u, p, m, GenTrq, ElecPwr, ErrStat, ErrMsg )
                GenTrq  = u%ExternalGenTrq
                ElecPwr = u%ExternalElecPwr
 
+            CASE ( ZmqIn )
+
+               continue ! pass through, it is going to be overwritten in FAST_Subs
+
          END SELECT
 
 
@@ -6208,6 +6225,13 @@ SUBROUTINE CalculateTorqueJacobian( t, u, p, m, GenTrq_du, ElecPwr_du, ErrStat, 
 
                   GenTrq_du   = 0.0_R8Ki
                   ElecPwr_du  = 0.0_R8Ki
+
+               CASE ( ZmqIn )                          ! User-defined generator model.
+
+                  ! we should not get here (initialization should have caught this issue)
+
+               GenTrq_du   = 0.0_R8Ki
+               ElecPwr_du  = 0.0_R8Ki
 
             END SELECT
 
