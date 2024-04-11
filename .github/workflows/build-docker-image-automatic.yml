@@ -5,15 +5,12 @@
 name: build-docker-image-automatic
 
 on:
-  pull_request:
+  release:
     types:
-      - closed
-    branches:
-      - main
+      - released
 
 jobs:
   build-and-push:
-    if: ${{ (github.event.pull_request.merged == true) && startsWith(github.head_ref, 'rc-') }}
     runs-on: ubuntu-latest
     timeout-minutes: 300
     env:
