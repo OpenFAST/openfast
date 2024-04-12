@@ -167,8 +167,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    y_FAST%Lin%WindSpeed = 0.0_ReKi
 
    if (present(ExternInitData)) then
-      CallStart = .not. ExternInitData%FarmIntegration ! .and. ExternInitData%TurbineID == 1
-      if (ExternInitData%TurbineID > 0) p_FAST%TDesc = 'T'//trim(num2lstr(ExternInitData%TurbineID))
+      CallStart = .not. ExternInitData%FarmIntegration
+      if (ExternInitData%TurbIDforName >= 0) p_FAST%TDesc = 'T'//trim(num2lstr(ExternInitData%TurbIDforName))
    else
       CallStart = .true.
    end if
@@ -211,7 +211,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       if (ExternInitData%FarmIntegration) then ! we're integrating with FAST.Farm
          CALL FAST_Init( p_FAST, m_FAST, y_FAST, t_initial, InputFile, ErrStat2, ErrMsg2, ExternInitData%TMax, OverrideAbortLev=.false., RootName=ExternInitData%RootName )
       else
-         CALL FAST_Init( p_FAST, m_FAST, y_FAST, t_initial, InputFile, ErrStat2, ErrMsg2, ExternInitData%TMax, ExternInitData%TurbineID, DTdriver=ExternInitData%DTdriver )  ! We have the name of the input file and the simulation length from somewhere else (e.g. Simulink)
+         CALL FAST_Init( p_FAST, m_FAST, y_FAST, t_initial, InputFile, ErrStat2, ErrMsg2, ExternInitData%TMax, ExternInitData%TurbIDforName, DTdriver=ExternInitData%DTdriver )  ! We have the name of the input file and the simulation length from somewhere else (e.g. Simulink)
       end if
 
    else
