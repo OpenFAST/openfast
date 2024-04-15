@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "openfast-toolbox"
+version = "3.5.4"
+description = "Readers and writers for OpenFAST files."
+authors = ["Marcus Lugg <marcus@octue.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
