@@ -855,15 +855,19 @@ subroutine FAST_CFD_Solution0(iTurb_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_
 
 end subroutine FAST_CFD_Solution0
 !==================================================================================================================================
-subroutine FAST_CFD_InitIOarrays_SubStep(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CFD_InitIOarrays_SubStep')
+subroutine FAST_CFD_InitIOarrays_SubStep(iTurb_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CFD_InitIOarrays_SubStep')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_CFD_InitIOarrays_SubStep
   IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_CFD_InitIOarrays_SubStep
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number
+   INTEGER(C_INT),         INTENT(IN   ) :: iTurb_c            ! Turbine number
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)
+   integer(IntKi)                        :: iTurb       ! turbine number: Fortran indexing (starts at 1 for first turbine)
+
+      ! transfer turbine index number from C to Fortran indexing (0 to 1 start)
+   iTurb = int(iTurb_c,IntKi) + 1
 
    call FAST_InitIOarrays_SubStep_T(t_initial, Turbine(iTurb), ErrStat, ErrMsg )
 
@@ -1159,22 +1163,25 @@ subroutine FAST_CFD_Prework(iTurb_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CF
 
 end subroutine FAST_CFD_Prework
 !==================================================================================================================================
-subroutine FAST_CFD_UpdateStates(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CFD_UpdateStates')
+subroutine FAST_CFD_UpdateStates(iTurb_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CFD_UpdateStates')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_CFD_UpdateStates
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_CFD_UpdateStates
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number
+   INTEGER(C_INT),         INTENT(IN   ) :: iTurb_c          ! Turbine number
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)
+   integer(IntKi)                        :: iTurb       ! turbine number: Fortran indexing (starts at 1 for first turbine)
 
+      ! transfer turbine index number from C to Fortran indexing (0 to 1 start)
+   iTurb = int(iTurb_c,IntKi) + 1
 
    IF ( n_t_global > Turbine(iTurb)%p_FAST%n_TMax_m1 ) THEN !finish
 
       ! we can't continue because we might over-step some arrays that are allocated to the size of the simulation
 
-      if (iTurb .eq. (NumTurbines-1) ) then
+      if (iTurb == NumTurbines ) then
          IF (n_t_global == Turbine(iTurb)%p_FAST%n_TMax_m1 + 1) THEN  ! we call update an extra time in Simulink, which we can ignore until the time shift with outputs is solved
             n_t_global = n_t_global + 1
             ErrStat_c = ErrID_None
@@ -1198,22 +1205,25 @@ subroutine FAST_CFD_UpdateStates(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST
 
 end subroutine FAST_CFD_UpdateStates
 !==================================================================================================================================
-subroutine FAST_CFD_AdvanceToNextTimeStep(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CFD_AdvanceToNextTimeStep')
+subroutine FAST_CFD_AdvanceToNextTimeStep(iTurb_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CFD_AdvanceToNextTimeStep')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_CFD_AdvanceToNextTimeStep
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_CFD_AdvanceToNextTimeStep
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number
+   INTEGER(C_INT),         INTENT(IN   ) :: iTurb_c            ! Turbine number
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)
+   integer(IntKi)                        :: iTurb       ! turbine number: Fortran indexing (starts at 1 for first turbine)
 
+      ! transfer turbine index number from C to Fortran indexing (0 to 1 start)
+   iTurb = int(iTurb_c,IntKi) + 1
 
    IF ( n_t_global > Turbine(iTurb)%p_FAST%n_TMax_m1 ) THEN !finish
 
       ! we can't continue because we might over-step some arrays that are allocated to the size of the simulation
 
-      if (iTurb .eq. (NumTurbines-1) ) then
+      if (iTurb == NumTurbines ) then
          IF (n_t_global == Turbine(iTurb)%p_FAST%n_TMax_m1 + 1) THEN  ! we call update an extra time in Simulink, which we can ignore until the time shift with outputs is solved
             n_t_global = n_t_global + 1
             ErrStat_c = ErrID_None
@@ -1234,7 +1244,7 @@ subroutine FAST_CFD_AdvanceToNextTimeStep(iTurb, ErrStat_c, ErrMsg_c) BIND (C, N
       !    CALL SC_SetInputs(Turbine(iTurb)%p_FAST, Turbine(iTurb)%SrvD%y, Turbine(iTurb)%SC, ErrStat, ErrMsg)
       ! end if
 
-      if (iTurb .eq. (NumTurbines-1) ) then
+      if (iTurb == NumTurbines ) then
          n_t_global = n_t_global + 1
       end if
 
@@ -1246,36 +1256,43 @@ subroutine FAST_CFD_AdvanceToNextTimeStep(iTurb, ErrStat_c, ErrMsg_c) BIND (C, N
 
 end subroutine FAST_CFD_AdvanceToNextTimeStep
 !==================================================================================================================================
-subroutine FAST_CFD_WriteOutput(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CFD_WriteOutput')
+subroutine FAST_CFD_WriteOutput(iTurb_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CFD_WriteOutput')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_CFD_WriteOutput
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_CFD_WriteOutput
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number
+   INTEGER(C_INT),         INTENT(IN   ) :: iTurb_c            ! Turbine number
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)
+   integer(IntKi)                        :: iTurb       ! turbine number: Fortran indexing (starts at 1 for first turbine)
+
+      ! transfer turbine index number from C to Fortran indexing (0 to 1 start)
+   iTurb = int(iTurb_c,IntKi) + 1
 
    CALL FAST_WriteOutput_T( t_initial, n_t_global, Turbine(iTurb), ErrStat, ErrMsg )
 
 end subroutine FAST_CFD_WriteOutput
 !==================================================================================================================================
-subroutine FAST_CFD_Step(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CFD_Step')
+subroutine FAST_CFD_Step(iTurb_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CFD_Step')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: FAST_CFD_Step
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_CFD_Step
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number
+   INTEGER(C_INT),         INTENT(IN   ) :: iTurb_c          ! Turbine number
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)
+   integer(IntKi)                        :: iTurb       ! turbine number: Fortran indexing (starts at 1 for first turbine)
 
+      ! transfer turbine index number from C to Fortran indexing (0 to 1 start)
+   iTurb = int(iTurb_c,IntKi) + 1
 
    IF ( n_t_global > Turbine(iTurb)%p_FAST%n_TMax_m1 ) THEN !finish
 
       ! we can't continue because we might over-step some arrays that are allocated to the size of the simulation
 
-      if (iTurb .eq. (NumTurbines-1) ) then
+      if (iTurb == NumTurbines ) then
          IF (n_t_global == Turbine(iTurb)%p_FAST%n_TMax_m1 + 1) THEN  ! we call update an extra time in Simulink, which we can ignore until the time shift with outputs is solved
             n_t_global = n_t_global + 1
             ErrStat_c = ErrID_None
@@ -1292,7 +1309,7 @@ subroutine FAST_CFD_Step(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CFD_Ste
 
       CALL FAST_Solution_T( t_initial, n_t_global, Turbine(iTurb), ErrStat, ErrMsg )
 
-      if (iTurb .eq. (NumTurbines-1) ) then
+      if (iTurb == NumTurbines ) then
          n_t_global = n_t_global + 1
       end if
 
@@ -1304,20 +1321,24 @@ subroutine FAST_CFD_Step(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CFD_Ste
 
 end subroutine FAST_CFD_Step
 !==================================================================================================================================
-subroutine FAST_CFD_Reset_SubStep(iTurb, n_timesteps, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CFD_Reset_SubStep')
+subroutine FAST_CFD_Reset_SubStep(iTurb_c, n_timesteps, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CFD_Reset_SubStep')
   IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
   !DEC$ ATTRIBUTES DLLEXPORT :: FAST_CFD_Reset_SubStep
   !GCC$ ATTRIBUTES DLLEXPORT :: FAST_CFD_Reset_SubStep
 #endif
-  INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number
+  INTEGER(C_INT),         INTENT(IN   ) :: iTurb_c          ! Turbine number
   INTEGER(C_INT),         INTENT(IN   ) :: n_timesteps      ! Number of time steps to go back
   INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
   CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)
+  integer(IntKi)                        :: iTurb       ! turbine number: Fortran indexing (starts at 1 for first turbine)
+
+     ! transfer turbine index number from C to Fortran indexing (0 to 1 start)
+  iTurb = int(iTurb_c,IntKi) + 1
 
   CALL FAST_Reset_SubStep_T(t_initial, n_t_global-n_timesteps, n_timesteps, Turbine(iTurb), ErrStat, ErrMsg )
 
-  if (iTurb .eq. (NumTurbines-1) ) then
+  if (iTurb == NumTurbines ) then
      n_t_global = n_t_global - n_timesteps
   end if
 
@@ -1328,16 +1349,20 @@ subroutine FAST_CFD_Reset_SubStep(iTurb, n_timesteps, ErrStat_c, ErrMsg_c) BIND 
 
 end subroutine FAST_CFD_Reset_SubStep
 !==================================================================================================================================
-subroutine FAST_CFD_Store_SubStep(iTurb, n_t_global, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CFD_Store_SubStep')
+subroutine FAST_CFD_Store_SubStep(iTurb_c, n_t_global, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CFD_Store_SubStep')
   IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
   !DEC$ ATTRIBUTES DLLEXPORT :: FAST_CFD_Store_SubStep
   !GCC$ ATTRIBUTES DLLEXPORT :: FAST_CFD_Store_SubStep
 #endif
-  INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number
+  INTEGER(C_INT),         INTENT(IN   ) :: iTurb_c          ! Turbine number
   INTEGER(C_INT),         INTENT(IN   ) :: n_t_global       !< loop counter
   INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
   CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)
+  integer(IntKi)                        :: iTurb       ! turbine number: Fortran indexing (starts at 1 for first turbine)
+
+    ! transfer turbine index number from C to Fortran indexing (0 to 1 start)
+  iTurb = int(iTurb_c,IntKi) + 1
 
   CALL FAST_Store_SubStep_T(t_initial, n_t_global, Turbine(iTurb), ErrStat, ErrMsg )
 
