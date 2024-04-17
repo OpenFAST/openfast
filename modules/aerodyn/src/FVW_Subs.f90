@@ -130,10 +130,11 @@ subroutine ReadAndInterpGamma(CirculationFileName, s_CP_LL, L, Gamma_CP_LL, ErrS
    real(ReKi), parameter :: ReNaN = huge(1.0_ReKi)
    ErrStat = ErrID_None
    ErrMsg  = ''
+   ! TODO Poentially use ReadDelimFile Instead
    ! ---
    call GetNewUnit(iUnit)
    call OpenFInpFile(iUnit, CirculationFileName, errStat2, errMsg2); if(Failed()) return
-   nLines=line_count(iUnit)-1
+   nLines=line_count(iUnit, errStat2, errMsg2)-1
    ! Read Header
    read(iUnit,*, iostat=errStat2) line ; if(Failed()) return
    ! Read table:  s/L [-], GammaPresc [m^2/s]
@@ -171,28 +172,6 @@ contains
       Failed =  ErrStat >= AbortErrLev
       if (Failed) call CleanUp()
    end function Failed
-
-   !> Counts number of lines in a file
-   integer function line_count(iunit)
-      integer(IntKi), intent(in) :: iunit
-      character(len=1054) :: line
-      ! safety for infinite loop..
-      integer(IntKi), parameter :: nline_max=100000000 ! 100 M
-      integer(IntKi) :: i
-      line_count=0
-      do i=1,nline_max
-         line=''
-         read(iunit,'(A)',END=100)line
-         line_count=line_count+1
-      enddo
-      if (line_count==nline_max) then
-         print*,'Error: maximum number of line exceeded'
-      endif
-      100 if(len(trim(line))>0) then
-         line_count=line_count+1
-      endif
-      rewind(iunit)
-   end function
 
 endsubroutine ReadAndInterpGamma
 ! =====================================================================================

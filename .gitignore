@@ -42,6 +42,8 @@ vs-build/
 .atom
 .fortls
 .devcontainer
+.idea
+
 # backup files
 *.asv
 ~$*.xlsx
@@ -54,4 +56,3 @@ vs-build/
 #Simulink cache files
 varcache
 *.slxc
-
