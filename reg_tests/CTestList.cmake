@@ -312,7 +312,7 @@ of_regression("Tailfin_FreeYaw1DOF_Unsteady"           "openfast;elastodyn;aerod
 of_aeromap_regression("5MW_Land_AeroMap"               "aeromap;elastodyn;aerodyn15")
 
 # OpenFAST C++ API test
-if(BUILD_OPENFAST_CPP_DRIVER)
+if(BUILD_OPENFAST_CPP_API)
   of_cpp_interface_regression("5MW_Land_DLL_WTurb_cpp" "openfast;fastlib;cpp")
 endif()
 
@@ -341,10 +341,15 @@ of_regression_linear("Fake5MW_AeroLin_B3_UA6"        "openfast;linear;elastodyn"
 of_regression_linear("WP_Stationary_Linear"         "openfast;linear;elastodyn")
 of_regression_linear("Ideal_Beam_Fixed_Free_Linear" "openfast;linear;beamdyn")
 of_regression_linear("Ideal_Beam_Free_Free_Linear"  "openfast;linear;beamdyn")
+of_regression_linear("5MW_Land_Linear_Aero"         "openfast;linear;elastodyn;servodyn;aerodyn")
 of_regression_linear("5MW_Land_BD_Linear"           "openfast;linear;beamdyn;servodyn")
-of_regression_linear("5MW_OC4Semi_Linear"           "openfast;linear;hydrodyn;servodyn")
+of_regression_linear("5MW_Land_BD_Linear_Aero"      "openfast;linear;beamdyn;servodyn;aerodyn")
+of_regression_linear("5MW_OC4Semi_Linear"           "openfast;linear;hydrodyn;servodyn;map")
+of_regression_linear("5MW_OC4Semi_MD_Linear"        "openfast;linear;hydrodyn;servodyn;moordyn")
+of_regression_linear("5MW_OC3Mnpl_Linear"        "openfast;linear;hydrodyn;servodyn;moordyn")
 of_regression_linear("StC_test_OC4Semi_Linear_Nac"  "openfast;linear;servodyn;stc")
 of_regression_linear("StC_test_OC4Semi_Linear_Tow"  "openfast;linear;servodyn;stc")
+of_regression_linear("5MW_OC3Spar_Linear"           "openfast;linear;map;hydrodyn")
 
 # FAST Farm regression tests
 if(BUILD_FASTFARM)

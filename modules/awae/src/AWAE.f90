@@ -958,6 +958,9 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       IfW_InitInp%lidar%HubPosition = 0.0_ReKi
       IfW_InitInp%lidar%SensorType  = SensorType_None
       IfW_InitInp%Use4Dext          = .false.
+      IfW_InitInp%MHK               = 0   !FIXME: after merge to dev, change this test to use MHK_None
+      IfW_InitInp%WtrDpth           = 0.0_ReKi
+      IfW_InitInp%MSL2SWL           = 0.0_ReKi
 
       if (      p%Mod_AmbWind == 2 ) then ! one InflowWind module
 
