@@ -314,11 +314,12 @@ of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrod
 of_regression("MHK_RM1_Fixed"                          "openfast;elastodyn;aerodyn15;mhk")
 of_regression("MHK_RM1_Floating"                       "openfast;elastodyn;aerodyn15;hydrodyn;moordyn;mhk")
 of_regression("Tailfin_FreeYaw1DOF_PolarBased"         "openfast;elastodyn;aerodyn15")
+of_regression("Tailfin_FreeYaw1DOF_Unsteady"           "openfast;elastodyn;aerodyn15")
 
 of_aeromap_regression("5MW_Land_AeroMap"               "aeromap;elastodyn;aerodyn15")
 
 # OpenFAST C++ API test
-if(BUILD_OPENFAST_CPP_DRIVER)
+if(BUILD_OPENFAST_CPP_API)
   of_cpp_interface_regression("5MW_Land_DLL_WTurb_cpp" "openfast;fastlib;cpp")
 endif()
 
@@ -342,8 +343,8 @@ of_regression_py("EllipticalWing_OLAF_py"                    "openfast;fastlib;p
 of_regression_aeroacoustic("IEA_LB_RWT-AeroAcoustics"  "openfast;aerodyn15;aeroacoustics")
 
 # Linearized OpenFAST regression tests
-#of_regression_linear("Fake5MW_AeroLin_B1_UA4_DBEMT3"  "-highpass=0.05"  "openfast;linear;elastodyn;aerodyn")
-#of_regression_linear("Fake5MW_AeroLin_B3_UA6"         "-highpass=0.05"  "openfast;linear;elastodyn;aerodyn")
+of_regression_linear("Fake5MW_AeroLin_B1_UA4_DBEMT3"  "-highpass=0.05"  "openfast;linear;elastodyn;aerodyn")
+of_regression_linear("Fake5MW_AeroLin_B3_UA6"         "-highpass=0.05"  "openfast;linear;elastodyn;aerodyn")
 of_regression_linear("WP_Stationary_Linear"           ""                "openfast;linear;elastodyn")
 of_regression_linear("Ideal_Beam_Fixed_Free_Linear"   "-highpass=0.10"  "openfast;linear;beamdyn")
 of_regression_linear("Ideal_Beam_Free_Free_Linear"    "-highpass=0.10"  "openfast;linear;beamdyn")
@@ -356,6 +357,7 @@ of_regression_linear("StC_test_OC4Semi_Linear_Nac"    ""                "openfas
 of_regression_linear("StC_test_OC4Semi_Linear_Tow"    ""                "openfast;linear;servodyn;stc")
 of_regression_linear("WP_Stationary_Linear"           ""                "openfast;linear;elastodyn")
 of_regression_linear("5MW_OC3Spar_Linear"             ""                "openfast;linear;map;hydrodyn")
+of_regression_linear("5MW_OC3Mnpl_Linear"             ""                "openfast;linear;hydrodyn;servodyn;moordyn")
 
 # FAST Farm regression tests
 if(BUILD_FASTFARM)

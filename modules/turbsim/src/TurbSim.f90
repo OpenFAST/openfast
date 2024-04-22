@@ -82,7 +82,7 @@ REAL(ReKi)                       ::  WSig                   ! Standard deviation
 
 INTEGER(IntKi)                   :: ErrStat                 ! allocation status
 CHARACTER(MaxMsgLen)             :: ErrMsg                  ! error message
-CHARACTER(200)                   :: InFile                  ! Name of the TurbSim input file.
+CHARACTER(1024)                  :: InFile                  ! Name of the TurbSim input file.
 CHARACTER(20)                    :: FlagArg                 ! flag argument from command line
 
 

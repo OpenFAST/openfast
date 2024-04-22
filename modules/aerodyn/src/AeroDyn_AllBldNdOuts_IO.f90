@@ -301,7 +301,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
    nNd = p%NumBlNds
    R_li => m%R_li                     ! inertial to local-polar
    R_wi => m%orientationAnnulus       ! inertial to without-sweep-pitch-twist or orientation annulus (TODO: deprecate me)
-   W2B => p_AD%FVW%Bld2Wings(iRot, :) ! From Wing index to blade index
+   if (p_AD%WakeMod == WakeMod_FVW) W2B => p_AD%FVW%Bld2Wings(iRot, :) ! From Wing index to blade index
 
          ! Initialize some things
       ErrMsg = ''

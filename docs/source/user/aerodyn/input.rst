@@ -883,22 +883,26 @@ An example of tail fin input file is given below:
     0         TFinIndMod  - Model for induced velocity calculation {0: none, 1:rotor-average} (switch)
     ====== Polar-based model ================================ [used only when TFinMod=1] 
     1        TFinAFID - Index of Tail fin airfoil number [1 to NumAFfiles]
-    ====== Unsteady slender body model  ===================== [used only when TFinMod=2] 
-    [TODO inputs for model 2]
+    ====== Unsteady slender body model  ===================== [used only when TFinMod=2]
+    0.9           TFinKp        - Tail fin moment of area about reference point
+    0.3,0.1,0.1   TFinSigma     - Tail fin empirical constant for vortex separation functions
+    40,60,60      TFinAStar     - Tail fin initial angles for vortex separation functions (deg)
+    3.1416        TFinKv        - Tail fin vortex lift coefficient
+    1.3           TFinCDc       - Tail fin drag coefficient
 
 General inputs
 ~~~~~~~~~~~~~~
 
-**TFinMod** Switch to select a model for the tail fin aerodynamics:
+``TFinMod`` is a switch to select a model for the tail fin aerodynamics:
 0) none (the aerodynamic forces are zero), 1) polar-based, 2) USB-based (see :numref:`TF-aerotheory`).
 (switch)
 
-**TFinArea** Area of the tail fin. (m^2)
+``TFinArea`` is the area of the tail fin. (m^2)
 This is the plan form area of the tail fin plate used to relate the local dynamic pressure and airfoil
 coefficients to aerodynamic loads. This value must not be negative and is only used when
 TFinMod is set to 1. (m^2)
 
-**TFinRefP_n** Undeflected position (:math:`x_{\text{ref},x_n},x_{\text{ref},y_n}, x_{\text{ref},z_n}`) of the tail fin from the tower top in nacelle coordinates.
+``TFinRefP_n`` is the undeflected position (:math:`x_{\text{ref},x_n},x_{\text{ref},y_n}, x_{\text{ref},z_n}`) of the tail fin from the tower top in nacelle coordinates.
 (formerly defined using ``TFinCPxn``,  ``TFinCPyn``, ``TFinCPzn``). 
 The distances defines the configuration for a furl angle of zero.
 For a typical upwind wind turbine, 
@@ -908,7 +912,7 @@ For a typical upwind wind turbine,
 See :numref:`figTFGeom` and :numref:`figTFcoord1`.
 (m)
 
-**TFinAngles** Angles (:math:`\theta_\text{skew},\theta_\text{tilt}, \theta_\text{bank}`) of the tail fin 
+``TFinAngles`` are the angles (:math:`\theta_\text{skew},\theta_\text{tilt}, \theta_\text{bank}`) of the tail fin 
 (formerly defined as ``TFinSkew``, ``TFinTilt``, ``TFinBank``).
 See :numref:`figTFGeom` and :numref:`figTFcoord1`. 
 These angles define the chordline at a furl angle of zero, where the chordline is assumed to be passing through the reference point.
@@ -925,7 +929,7 @@ This value must be greater than -180 and less than or equal to 180 degrees.
 
 
 
-**TFinIndMod**
+``TFinIndMod``
 Switch to select a model for the calculation of the velocity induced by the rotor and its wake on the tailfin (not the induced velocity from the tailfin wing).
 The options available are: 
 0) none (the induced velocity is zero)
@@ -936,7 +940,7 @@ The options available are:
 Polar-based model inputs
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-**TFinAFID**
+``TFinAFID``
 This integer tells AeroDyn which of the input airfoil files (``AFNames``) is assigned to the tail fin. For
 instance, a value of 2 means that the tail fin will use ``AFNames(2)`` for the local tail fin airfoil. 
 This value must be
@@ -945,7 +949,21 @@ between 1 and ``NumAFfiles`` and is only used when TFinMod is set to 1. (-)
 
 Unsteady slender body (USB) model inputs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Refer to :numref:`TF-aerotheory` and :cite:`ad-hammam_NREL:2023` for guidance on how to select parameters for the unsteady slender body theory based model.
 
-This option is currently not available and will be documented in a future release.
+``TFinKp``
+Potential lift coefficient for unsteady aerodynamics. ``TFinKp`` is used to calculate the potential flow contribution to the unsteady aerodynamic force on the tail fin.
+
+``TFinSigma``
+Tail fin empirical constants characterizing the decay of separation functions used in the unsteady aerodynamic model. The separation functions and their dependence on ``TFinSigma`` are described in :numref:`TF-aerotheory`.
 
 
+``TFinAStar``
+Tail fin characteristics angles for separation functions used in the unsteady aerodynamic model. The separation functions and their dependence on ``TFinAStar`` are described in :numref:`TF-aerotheory`.
+
+
+``TFinKv``
+Vortex lift coefficient for unsteady aerodynamics. ``TFinKv`` is used to calculate the vortex flow contribution to the unsteady aerodynamic force on the tail fin.
+
+``TFinCDc``
+Tail fin drag coefficient used for unsteady aerodynamic model. The drag on the tail fin significantly contributes to the normal force at high yaw angles.

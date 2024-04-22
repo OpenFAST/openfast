@@ -20,7 +20,7 @@ EXTERNAL_ROUTINE void FAST_ExtInfw_Restart(int * iTurb, const char *CheckpointRo
                                            int * NumBl, int * NumBlElem, int * NumTwrElem, int * n_t_global,
                                            ExtInfw_InputType_t* ExtInfw_Input, ExtInfw_OutputType_t* ExtInfw_Output, SC_DX_InputType_t* SC_DX_Input, SC_DX_OutputType_t* SC_DX_Output,
                                            int *ErrStat, char *ErrMsg);
-EXTERNAL_ROUTINE void FAST_ExtInfw_Init(int * iTurb, double *TMax, const char *InputFileName, int * TurbineID, char *OutFileRoot,
+EXTERNAL_ROUTINE void FAST_ExtInfw_Init(int * iTurb, double *TMax, const char *InputFileName, int * TurbIDforName, char *OutFileRoot,
                                         int * NumSC2CtrlGlob, int * NumSC2Ctrl, int * NumCtrl2SC, float * initSCInputsGlob, float * initSCInputsTurbine,
                                         int * NumActForcePtsBlade, int * NumActForcePtsTower, float * TurbinePosition, int *AbortErrLev,
                                         double * dtDriver, double * dt, int * InflowType, int * NumBl, int * NumBlElem, int * NumTwrElem, int * NodeClusterType,

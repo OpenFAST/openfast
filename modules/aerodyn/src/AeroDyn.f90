@@ -389,6 +389,11 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       p%rotors(iR)%TFin%TFinArea    = InputFileData%rotors(iR)%TFin%TFinArea
       p%rotors(iR)%TFin%TFinIndMod  = InputFileData%rotors(iR)%TFin%TFinIndMod
       p%rotors(iR)%TFin%TFinAFID    = InputFileData%rotors(iR)%TFin%TFinAFID
+      p%rotors(iR)%TFin%TFinKp      = InputFileData%rotors(iR)%TFin%TFinKp
+      p%rotors(iR)%TFin%TFinSigma   = InputFileData%rotors(iR)%TFin%TFinSigma
+      p%rotors(iR)%TFin%TFinAStar   = InputFileData%rotors(iR)%TFin%TFinAStar
+      p%rotors(iR)%TFin%TFinKv      = InputFileData%rotors(iR)%TFin%TFinKv
+      p%rotors(iR)%TFin%TFinCDc     = InputFileData%rotors(iR)%TFin%TFinCDc
    enddo
 
  
@@ -2961,7 +2966,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    !..........................
    do k=1,p%NumBlades
       do j=1,p%NumBlNds         
-         ! Velocity in "p" or "w" system (depending) on AeroProjMod
+         ! Velocity in "l" or "w" system (depending) on AeroProjMod
          tmp   = m%DisturbedInflow(:,j,k) - u%BladeMotion(k)%TranslationVel(:,j) ! rel_V(j)_Blade(k)
          m%BEMT_u(indx)%Vx(j,k) = dot_product( tmp, m%orientationAnnulus(1,:,j,k) ) ! normal component (normal to the plane, not chord) of the inflow velocity of the jth node in the kth blade
          m%BEMT_u(indx)%Vy(j,k) = dot_product( tmp, m%orientationAnnulus(2,:,j,k) ) !+ TwoNorm(m%DisturbedInflow(:,j,k))*(sin()*sin(tilt)*)! tangential component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
@@ -2980,6 +2985,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    do k=1,p%NumBlades
       do j=1,p%NumBlNds
          ! inputs for CUA (and CDBEMT):
+         ! TODO Here we should take the rotation in the airfoil coordinate system instead of the "l" or "w" system
          m%BEMT_u(indx)%omega_z(j,k)       = dot_product( u%BladeMotion(k)%RotationVel(   :,j), m%orientationAnnulus(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
          
       end do !j=nodes
@@ -4505,9 +4511,12 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
    real(ReKi)              :: V_wnd(3)          ! wind velocity
    real(ReKi)              :: V_ind(3)          ! induced velocity
    real(ReKi)              :: V_str(3)          ! structural velocity
+   real(ReKi)              :: V_wnd_tf(3)          ! wind velocity
    real(ReKi)              :: force_tf(3)       ! force in tf system
    real(ReKi)              :: moment_tf(3)      ! moment in tf system
    real(ReKi)              :: alpha, Re, Cx, Cy, q ! Cl, Cd, Cm, 
+   real(ReKi)              :: x1, x2, x3,gamma_tf! scaling functions, gamma for unsteady modeling
+
    type(AFI_OutputType)    :: AFI_interp  ! Resulting values from lookup table
    integer(intKi)          :: ErrStat2
    character(ErrMsgLen)    :: ErrMsg2
@@ -4523,24 +4532,33 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
 
    if (p%TFin%TFinIndMod==TFinIndMod_none) then
       V_ind = 0.0_ReKi
+
    elseif(p%TFin%TFinIndMod==TFinIndMod_rotavg) then
       ! TODO TODO
       print*,'TODO TailFin: compute rotor average induced velocity'
       V_ind = 0.0_ReKi 
+
    else
-      STOP ! Will never happen
+      call setErrStat(ErrID_Fatal, 'TailFin model unsupported', ErrStat, ErrMsg, 'TFin_CalcOutput')
+
    endif
-   V_rel       = V_wnd - V_str + V_ind
+   
+   V_rel       = V_wnd - V_str + V_ind                          ! relative wind on tail fin
    V_rel_tf    = matmul(u%TFinMotion%Orientation(:,:,1), V_rel) ! from inertial to tf system
-   alpha       = atan2( V_rel_tf(2), V_rel_tf(1))               ! angle of attack
+   alpha       = atan2(V_rel_tf(2), V_rel_tf(1))                ! angle of attack
+   v_wnd_tf    = matmul(u%TFinMotion%Orientation(:,:,1), V_wnd) ! only used for calculation of x1,x2,x3
+   gamma_tf = atan2(v_wnd_tf(2), v_wnd_tf(1))                   ! only used for calculation of x1,x2,x3
    V_rel_orth2 = V_rel_tf(1)**2 + V_rel_tf(2)**2                ! square norm of Vrel in tf system
 
+   ! Initialize the tail fin forces to zero
+   force_tf(:)    = 0.0_ReKi
+   moment_tf(:)   = 0.0_ReKi
+
    if (p%TFin%TFinMod==TFinAero_none) then
-      y%TFinLoad%Force(1:3,1)  = 0.0_ReKi
-      y%TFinLoad%Moment(1:3,1) = 0.0_ReKi
+      ! Do nothing
 
    elseif (p%TFin%TFinMod==TFinAero_polar) then
-      ! Airfoil coefficients
+      ! Airfoil coefficients based model
       Re  = sqrt(V_rel_orth2) * p%TFin%TFinChord/p%KinVisc
       call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p_AD%AFI(p%TFin%TFinAFID), AFI_interp, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4548,21 +4566,28 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
       Cy =  AFI_interp%Cl * cos(alpha) + AFI_interp%Cd * sin(alpha)
       ! Forces in tailfin system
       q = 0.5 * p%airDens * V_rel_orth2 * p%TFin%TFinArea
-      force_tf(:)    = 0.0_ReKi
-      moment_tf(:)    = 0.0_ReKi
+      
       force_tf(1)    = Cx * q
       force_tf(2)    = Cy * q
-      force_tf(3)    = 0.0_ReKi
-      moment_tf(1:2) = 0.0_ReKi
       moment_tf(3)   = AFI_interp%Cm * q * p%TFin%TFinChord
-      ! Transfer to global
-      y%TFinLoad%Force(1:3,1)  = matmul(transpose(u%TFinMotion%Orientation(:,:,1)), force_tf)
-      y%TFinLoad%Moment(1:3,1) = matmul(transpose(u%TFinMotion%Orientation(:,:,1)), moment_tf)
 
    elseif (p%TFin%TFinMod==TFinAero_USB) then
-      call SetErrStat(ErrID_Fatal, 'Tail fin USB model not yet available', ErrStat, ErrMsg, RoutineName )
-      return
+      ! Unsteady aerodynamic model
+
+      ! Calculate separation function (quasi-steady)
+      x1 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(1)*((ABS(gamma_tf)*180.0_ReKi/pi)-p%TFin%TFinAStar(1)))) 
+      x2 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(2)*((ABS(gamma_tf)*180.0_ReKi/pi)-p%TFin%TFinAStar(2)))) 
+      x3 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(3)*((ABS(gamma_tf)*180.0_ReKi/pi)-p%TFin%TFinAStar(3))))
+   
+      ! Calculate unsteady force on tail fin
+      force_tf(2) = 0.5_ReKi * p%AirDens * p%TFin%TFinArea * &
+         (p%TFin%TFinKp * x1 * V_rel_tf(1) * V_rel_tf(2) + &
+         (x2 * p%TFin%TFinKv + (1-x3)*p%TFin%TFinCDc) * V_rel_tf(2) * ABS(V_rel_tf(2)))
    endif
+   
+   ! Transfer to global
+   y%TFinLoad%Force(1:3,1)  = matmul(transpose(u%TFinMotion%Orientation(:,:,1)), force_tf)
+   y%TFinLoad%Moment(1:3,1) = matmul(transpose(u%TFinMotion%Orientation(:,:,1)), moment_tf)
 
    ! --- Store
    m%TFinAlpha  = alpha
@@ -4576,6 +4601,7 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
    m%TFinM_i    = y%TFinLoad%Moment(1:3,1)
 
 END SUBROUTINE TFin_CalcOutput
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine calculates the tower loads for the AeroDyn TowerLoad output mesh.
 SUBROUTINE ADTwr_CalcOutput(p, u, m, y, ErrStat, ErrMsg )
