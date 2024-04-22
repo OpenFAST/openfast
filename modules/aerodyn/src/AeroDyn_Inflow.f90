@@ -488,16 +488,17 @@ subroutine ADI_CalcOutput_IW(t, u_IfW, IW, errStat, errMsg)
       call InflowWind_CalcOutput(t, u_IfW, IW%p, IW%x, IW%xd, IW%z, IW%OtherSt, IW%y, IW%m, errStat2, errMsg2)
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ADI_CalcOutput_IW') 
    else
-      !$OMP PARALLEL DEFAULT(SHARED)
-      !$OMP DO PRIVATE(j,z) schedule(runtime)
+      ! Disabling OMP for now -- it is causing a compiler fault with OneAPI 2023.2 with LLVM (see issue #2135)
+      ! !$OMP PARALLEL DEFAULT(SHARED)
+      ! !$OMP DO PRIVATE(j,z) schedule(runtime)
       do j=1,size(u_IfW%PositionXYZ,2)
          z = u_IfW%PositionXYZ(3,j)
          IW%y%VelocityUVW(1,j) = IW%HWindSpeed*(z/IW%RefHt)**IW%PLExp
          IW%y%VelocityUVW(2,j) = 0.0_ReKi !V
          IW%y%VelocityUVW(3,j) = 0.0_ReKi !W      
       end do 
-      !$OMP END DO 
-      !$OMP END PARALLEL
+      ! !$OMP END DO 
+      ! !$OMP END PARALLEL
    endif
 end subroutine ADI_CalcOutput_IW
 !----------------------------------------------------------------------------------------------------------------------------------

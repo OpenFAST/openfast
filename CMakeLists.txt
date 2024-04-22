@@ -111,7 +111,12 @@ include(${CMAKE_SOURCE_DIR}/cmake/set_rpath.cmake)
 #-------------------------------------------------------------------------------
 
 if (OPENMP OR BUILD_FASTFARM OR BUILD_OPENFAST_CPP_API)
-  FIND_PACKAGE(OpenMP REQUIRED)
+  if (OPENMP)
+    FIND_PACKAGE(OpenMP REQUIRED)
+  else()
+    # Optional for FF or the CPP interface
+    FIND_PACKAGE(OpenMP)
+  endif()
   if (OpenMP_Fortran_FOUND)
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
     link_libraries("${OpenMP_Fortran_LIBRARIES}")
