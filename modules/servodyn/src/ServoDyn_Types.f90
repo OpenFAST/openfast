@@ -450,6 +450,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of parameters in the output list (number of outputs requested) [-]
     INTEGER(IntKi)  :: NumOuts_DLL = 0_IntKi      !< Number of logging channels output from the DLL (set at initialization) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
+    CHARACTER(1024)  :: PriPath      !< Path of the primary SrvD input file  [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
     CHARACTER(1)  :: Delim      !< Column delimiter for output text files [-]
     LOGICAL  :: UseBladedInterface = .false.      !< Flag that determines if BladedInterface was used [-]
@@ -4621,6 +4622,7 @@ subroutine SrvD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%NumOuts = SrcParamData%NumOuts
    DstParamData%NumOuts_DLL = SrcParamData%NumOuts_DLL
    DstParamData%RootName = SrcParamData%RootName
+   DstParamData%PriPath = SrcParamData%PriPath
    if (allocated(SrcParamData%OutParam)) then
       LB(1:1) = lbound(SrcParamData%OutParam, kind=B8Ki)
       UB(1:1) = ubound(SrcParamData%OutParam, kind=B8Ki)
@@ -5141,6 +5143,7 @@ subroutine SrvD_PackParam(RF, Indata)
    call RegPack(RF, InData%NumOuts)
    call RegPack(RF, InData%NumOuts_DLL)
    call RegPack(RF, InData%RootName)
+   call RegPack(RF, InData%PriPath)
    call RegPack(RF, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
       call RegPackBounds(RF, 1, lbound(InData%OutParam, kind=B8Ki), ubound(InData%OutParam, kind=B8Ki))
@@ -5316,6 +5319,7 @@ subroutine SrvD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NumOuts); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumOuts_DLL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PriPath); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%OutParam)) deallocate(OutData%OutParam)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
