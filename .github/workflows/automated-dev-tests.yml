@@ -774,7 +774,7 @@ jobs:
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC3Mnpl_DLL_WTurb_WavesIrr
+          ctest -VV -L openfast -LE "cpp|linear|python" -j1 -R 5MW_OC3Mnpl_DLL_WTurb_WavesIrr
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
         if: failure()
