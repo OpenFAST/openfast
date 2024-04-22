@@ -407,7 +407,7 @@ CONTAINS
       ! check for NaNs (should check all state derivatives, not just first 6)
       DO J = 1, 6
          IF (Is_NaN(Xd(J))) THEN
-            CALL WrScr("NaN detected at time "//trim(Num2LStr(Body%time))//" in Body "//trim(Int2LStr(Body%IdNum))//"in MoorDyn,")
+            CALL WrScr("NaN detected at time "//trim(Num2LStr(Body%time))//" in Body "//trim(Int2LStr(Body%IdNum))//" in MoorDyn,")
             IF (wordy > 0) print *, "state derivatives:"
             IF (wordy > 0) print *, Xd
             EXIT
@@ -436,6 +436,9 @@ CONTAINS
       Real(DbKi)                 :: vi(6)              ! relative water velocity (last 3 terms are rotatonal and will be set to zero
       Real(DbKi)                 :: F6_i(6)            ! net force and moments from an attached object
       Real(DbKi)                 :: M6_i(6,6)          ! mass and inertia from an attached object
+      Real(DbKi)                 :: cda(6)             ! body drag coefficients
+      Real(DbKi)                 :: cda_t(3,3) = 0.0         ! matrix with translational drag coefficients as diagonals
+      Real(DbKi)                 :: cda_r(3,3) = 0.0         ! matrix with rotational drag coefficients as diagonals
 
       ! Initialize variables
       U = 0.0_DbKi      ! Set to zero for now
@@ -465,8 +468,18 @@ CONTAINS
       vi(1:3) = U - Body%v6(1:3)  ! relative flow velocity over body ref point
       vi(4:6) =   - Body%v6(4:6)  ! for rotation, this is just the negative of the body's rotation for now (not allowing flow rotation)
 
-      Body%F6net = Body%F6net + 0.5*p%rhoW * vi * abs(vi) * Body%bodyCdA
-      ! <<< NOTE, for body this should be fixed to account for orientation!! <<< what about drag in rotational DOFs??? <<<<<<<<<<<<<<
+      cda_t(1,1) = Body%bodyCdA(1)
+      cda_t(2,2) = Body%bodyCdA(2)
+      cda_t(3,3) = Body%bodyCdA(3)
+      cda_r(1,1) = Body%bodyCdA(4)
+      cda_r(2,2) = Body%bodyCdA(5)
+      cda_r(3,3) = Body%bodyCdA(6)
+
+      cda(1:3) = MATMUL( MATMUL( MATMUL(Body%OrMat,cda_t) , transpose(Body%OrMat) ) , vi(1:3) * norm2(vi(1:3)) );
+      cda(4:6) = MATMUL( MATMUL( MATMUL(Body%OrMat,cda_r) , transpose(Body%OrMat) ) , vi(4:6) * norm2(vi(4:6)) );
+      Body%F6net = Body%F6net + 0.5*p%rhoW*cda
+
+      
 
    
    
