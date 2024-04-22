@@ -122,7 +122,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    INTEGER(IntKi)                          :: IceDim              ! dimension we're pre-allocating for number of IceDyn legs/instances
    INTEGER(IntKi)                          :: I                   ! generic loop counter
    INTEGER(IntKi)                          :: k                   ! blade loop counter
-   INTEGER(IntKi)                          :: nNodes              ! temp var for ExtInfw coupling
    logical                                 :: CallStart
 
    REAL(R8Ki)                              :: theta(3)            ! angles for hub orientation matrix for aeromaps
@@ -167,8 +166,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    y_FAST%Lin%WindSpeed = 0.0_ReKi
 
    if (present(ExternInitData)) then
-      CallStart = .not. ExternInitData%FarmIntegration ! .and. ExternInitData%TurbineID == 1
-      if (ExternInitData%TurbineID > 0) p_FAST%TDesc = 'T'//trim(num2lstr(ExternInitData%TurbineID))
+      CallStart = .not. ExternInitData%FarmIntegration
+      if (ExternInitData%TurbIDforName >= 0) p_FAST%TDesc = 'T'//trim(num2lstr(ExternInitData%TurbIDforName))
    else
       CallStart = .true.
    end if
@@ -211,7 +210,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       if (ExternInitData%FarmIntegration) then ! we're integrating with FAST.Farm
          CALL FAST_Init( p_FAST, m_FAST, y_FAST, t_initial, InputFile, ErrStat2, ErrMsg2, ExternInitData%TMax, OverrideAbortLev=.false., RootName=ExternInitData%RootName )
       else
-         CALL FAST_Init( p_FAST, m_FAST, y_FAST, t_initial, InputFile, ErrStat2, ErrMsg2, ExternInitData%TMax, ExternInitData%TurbineID, DTdriver=ExternInitData%DTdriver )  ! We have the name of the input file and the simulation length from somewhere else (e.g. Simulink)
+         CALL FAST_Init( p_FAST, m_FAST, y_FAST, t_initial, InputFile, ErrStat2, ErrMsg2, ExternInitData%TMax, ExternInitData%TurbIDforName, DTdriver=ExternInitData%DTdriver )  ! We have the name of the input file and the simulation length from somewhere else (e.g. Simulink)
       end if
 
    else
@@ -613,6 +612,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
          AirDens = Init%OutData_ExtLd%AirDens
 
+         ! Set pointer to flowfield
+         IF (p_FAST%CompAero == Module_AD) AD%p%FlowField => Init%OutData_ExtLd%FlowField
+
       END IF
 
    END IF
@@ -654,13 +656,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
       IF ( p_FAST%CompAero  == Module_AD14 ) THEN
          Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + NumBl * AD14%Input(1)%InputMarkers(1)%NNodes + AD14%Input(1)%Twr_InputMarkers%NNodes
-      ELSEIF ( p_FAST%CompAero  == Module_AD ) THEN
-         ! Number of Wind points from AeroDyn, see AeroDyn.f90
-         Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints
-         ! Wake -- we allow the wake positions to exceed the wind box
-         if (allocated(AD%OtherSt(STATE_CURR)%WakeLocationPoints)) then
-            Init%InData_IfW%BoxExceedAllow = .true.
-         endif
       END IF
 
       ! lidar
@@ -883,7 +878,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
       if (allocated(Init%OutData_SeaSt%WaveElevVisGrid)) then
          p_FAST%VTK_surface%NWaveElevPts(1) = size(Init%OutData_SeaSt%WaveElevVisX)
-         p_FAST%VTK_surface%NWaveElevPts(2) = size(Init%OutData_SeaSt%WaveElevVisX)
+         p_FAST%VTK_surface%NWaveElevPts(2) = size(Init%OutData_SeaSt%WaveElevVisY)
       else
          p_FAST%VTK_surface%NWaveElevPts(1) = 0
          p_FAST%VTK_surface%NWaveElevPts(2) = 0
@@ -1630,7 +1625,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! Initialize data for VTK output
    ! -------------------------------------------------------------------------
    if ( p_FAST%WrVTK > VTK_None ) then
-      call SetVTKParameters(p_FAST, Init%OutData_ED, Init%OutData_AD, Init%InData_SeaSt, Init%OutData_SeaSt, Init%OutData_HD, ED, BD, AD, HD, ErrStat2, ErrMsg2)
+      call SetVTKParameters(p_FAST, Init%OutData_ED, Init%OutData_AD, Init%OutData_SeaSt, Init%OutData_HD, ED, BD, AD, HD, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end if
 
@@ -3942,12 +3937,11 @@ CONTAINS
 END SUBROUTINE FAST_ReadSteadyStateFile
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets up the information needed for plotting VTK surfaces.
-SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_SeaSt, InitOutData_SeaSt, InitOutData_HD, ED, BD, AD, HD, ErrStat, ErrMsg)
+SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitOutData_SeaSt, InitOutData_HD, ED, BD, AD, HD, ErrStat, ErrMsg)
 
    TYPE(FAST_ParameterType),     INTENT(INOUT) :: p_FAST           !< The parameters of the glue code
    TYPE(ED_InitOutputType),      INTENT(IN   ) :: InitOutData_ED   !< The initialization output from structural dynamics module
    TYPE(AD_InitOutputType),      INTENT(INOUT) :: InitOutData_AD   !< The initialization output from AeroDyn
-   TYPE(SeaSt_InitInputType),    INTENT(INOUT) :: InitInData_SeaSt    !< The initialization input to SeaState
    TYPE(SeaSt_InitOutputType),   INTENT(INOUT) :: InitOutData_SeaSt   !< The initialization output from SeaState
    TYPE(HydroDyn_InitOutputType),INTENT(INOUT) :: InitOutData_HD   !< The initialization output from HydroDyn
    TYPE(ElastoDyn_Data), TARGET, INTENT(IN   ) :: ED               !< ElastoDyn data
@@ -4157,7 +4151,6 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_S
 
    !bjj: interpolate here instead of each time step?
    if ( allocated(InitOutData_SeaSt%WaveElevVisGrid) ) then
-print*,'Storing Wave surface visualization'
       call move_alloc( InitOutData_SeaSt%WaveElevVisX,   p_FAST%VTK_Surface%WaveElevVisX )
       call move_alloc( InitOutData_SeaSt%WaveElevVisY,   p_FAST%VTK_Surface%WaveElevVisY )
       call move_alloc( InitOutData_SeaSt%WaveElevVisGrid,p_FAST%VTK_Surface%WaveElevVisGrid )
@@ -4525,7 +4518,7 @@ SUBROUTINE ExtLd_SetInitInput(InitInData_ExtLd, InitOutData_ED, y_ED, InitOutDat
    do k=1,InitInData_ExtLd%NumBlades
       InitInData_ExtLd%BldRloc(1,k) = 0.0
       do j = 2, InitInData_ExtLd%NumBldNodes(k)
-         InitInData_ExtLd%BldRloc(j,k) = InitInData_ExtLd%BldRloc(j-1,k) + norm2(InitInData_ExtLd%BldPos(:,j,k) - InitInData_ExtLd%BldPos(:,j-1,k))
+         InitInData_ExtLd%BldRloc(j,k) = InitInData_ExtLd%BldRloc(j-1,k) + TwoNorm(InitInData_ExtLd%BldPos(:,j,k) - InitInData_ExtLd%BldPos(:,j-1,k))
       end do
    end do
 
@@ -4587,7 +4580,7 @@ SUBROUTINE ExtLd_SetInitInput(InitInData_ExtLd, InitOutData_ED, y_ED, InitOutDat
 
          InitInData_ExtLd%TwrHloc(1) = 0.0
          do j = 2, InitInData_ExtLd%NumTwrNds
-            InitInData_ExtLd%TwrHloc(j) = InitInData_ExtLd%TwrHloc(j-1) + norm2(InitInData_ExtLd%TwrPos(:,j) - InitInData_ExtLd%TwrPos(:,j-1))
+            InitInData_ExtLd%TwrHloc(j) = InitInData_ExtLd%TwrHloc(j-1) + TwoNorm(InitInData_ExtLd%TwrPos(:,j) - InitInData_ExtLd%TwrPos(:,j-1))
          end do
       END IF
 
@@ -4664,6 +4657,10 @@ SUBROUTINE ExtLd_SetInitInput(InitInData_ExtLd, InitOutData_ED, y_ED, InitOutDat
      end do
      deallocate(AD_etaNodes)
   end if
+
+   ! Total number of nodes velocity is needed at
+   InitInData_ExtLd%nNodesVel = InitOutData_AD%nNodesVel
+
 
   RETURN
 
@@ -6205,9 +6202,6 @@ SUBROUTINE FAST_Reset_SubStep(t_initial, n_t_global, n_timesteps, p_FAST, y_FAST
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
    ! local variables
-   INTEGER(IntKi)                          :: j_pc                ! predictor-corrector loop counter
-   INTEGER(IntKi)                          :: NumCorrections      ! number of corrections for this time step
-
    INTEGER(IntKi)                          :: i, j, k             ! generic loop counters
    REAL(DbKi)                              :: t_global            ! the time to which states, inputs and outputs are reset
    INTEGER(IntKi)                          :: old_avrSwap1        ! previous value of avrSwap(1) !hack for Bladed DLL checkpoint/restore
@@ -6793,9 +6787,6 @@ SUBROUTINE FAST_Store_SubStep(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED,
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
    ! local variables
-   INTEGER(IntKi)                          :: j_pc                ! predictor-corrector loop counter
-   INTEGER(IntKi)                          :: NumCorrections      ! number of corrections for this time step
-
    INTEGER(IntKi)                          :: i, j, k             ! generic loop counters
    REAL(DbKi)                              :: t_global            ! the time to which states, inputs and outputs are reset
    INTEGER(IntKi)                          :: old_avrSwap1        ! previous value of avrSwap(1) !hack for Bladed DLL checkpoint/restore
@@ -7372,30 +7363,16 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
    ! local variables
-   REAL(DbKi)                              :: t_global_next       ! next simulation time (m_FAST%t_global + p_FAST%dt)
    INTEGER(IntKi)                          :: n_t_global_next     ! n_t_global + 1
-   INTEGER(IntKi)                          :: j_pc                ! predictor-corrector loop counter
-   INTEGER(IntKi)                          :: NumCorrections      ! number of corrections for this time step
-   INTEGER(IntKi), parameter               :: MaxCorrections = 20 ! maximum number of corrections allowed
-   LOGICAL                                 :: WriteThisStep       ! Whether WriteOutput values will be printed
-
-   INTEGER(IntKi)                          :: I, k                ! generic loop counters
-
-   !REAL(ReKi)                              :: ControlInputGuess   ! value of controller inputs
-
 
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_Solution'
 
-
    ErrStat = ErrID_None
    ErrMsg  = ""
 
    n_t_global_next = n_t_global+1
-   t_global_next = t_initial + n_t_global_next*p_FAST%DT  ! = m_FAST%t_global + p_FAST%dt
-
-   y_FAST%WriteThisStep = NeedWriteOutput(n_t_global_next, t_global_next, p_FAST)
 
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    !! ## Step 1.a: set some variables and Extrapolate Inputs
@@ -7487,12 +7464,8 @@ SUBROUTINE FAST_Prework(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, S
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
    ! local variables
+   INTEGER(IntKi)                          :: n_t_global_next     ! n_t_global + 1
    REAL(DbKi)                              :: t_global_next       ! next simulation time (m_FAST%t_global + p_FAST%dt)
-   INTEGER(IntKi)                          :: j_pc                ! predictor-corrector loop counter
-   INTEGER(IntKi)                          :: NumCorrections      ! number of corrections for this time step
-
-   INTEGER(IntKi)                          :: I, k                ! generic loop counters
-
 
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
@@ -7502,7 +7475,11 @@ SUBROUTINE FAST_Prework(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, S
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   t_global_next = t_initial + (n_t_global+1)*p_FAST%DT  ! = m_FAST%t_global + p_FAST%dt
+   n_t_global_next = n_t_global+1
+   t_global_next = t_initial + n_t_global_next*p_FAST%DT  ! = m_FAST%t_global + p_FAST%dt
+
+   ! set flag for writing output at time t_global_next
+   y_FAST%WriteThisStep = NeedWriteOutput(n_t_global_next, t_global_next, p_FAST)
 
       !! determine if the Jacobian should be calculated this time
    IF ( m_FAST%calcJacobian ) THEN ! this was true (possibly at initialization), so we'll advance the time for the next calculation of the Jacobian
@@ -7598,8 +7575,7 @@ SUBROUTINE FAST_UpdateStates(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, 
    INTEGER(IntKi), parameter               :: MaxCorrections = 20 ! maximum number of corrections allowed
    LOGICAL                                 :: WriteThisStep       ! Whether WriteOutput values will be printed
 
-   INTEGER(IntKi)                          :: I, k                ! generic loop counters
-
+  !REAL(ReKi)                              :: ControlInputGuess   ! value of controller inputs
 
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
@@ -7746,11 +7722,7 @@ SUBROUTINE FAST_AdvanceToNextTimeStep(t_initial, n_t_global, p_FAST, y_FAST, m_F
 
    ! local variables
    REAL(DbKi)                              :: t_global_next       ! next simulation time (m_FAST%t_global + p_FAST%dt)
-   INTEGER(IntKi)                          :: j_pc                ! predictor-corrector loop counter
-   INTEGER(IntKi)                          :: NumCorrections      ! number of corrections for this time step
-
    INTEGER(IntKi)                          :: I, k                ! generic loop counters
-
 
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
@@ -8007,7 +7979,6 @@ SUBROUTINE FAST_WriteOutput(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, B
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
    ! local variables
-   INTEGER(IntKi)                          :: I, k                ! generic loop counters
    REAL(DbKi)                              :: t_global            ! this simulation time (m_FAST%t_global + p_FAST%dt)
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2

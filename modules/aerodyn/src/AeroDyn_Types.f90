@@ -67,6 +67,11 @@ IMPLICIT NONE
     REAL(ReKi)  :: TFinArea = 0.0_ReKi      !< Tail fin planform area [used only when TFinMod=1] [m^2]
     INTEGER(IntKi)  :: TFinIndMod = 0_IntKi      !< Model for induced velocity calculation {0=none, 1=rotor-average} [(switch)]
     INTEGER(IntKi)  :: TFinAFID = 0_IntKi      !< Index of Tail fin airfoil number [1 to NumAFfiles] [-]
+    REAL(ReKi)  :: TFinKp = 0.0_ReKi      !< Tail fin potential lift coefficient for unsteady aerodynamics [used only when TFMod=2] [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: TFinSigma = 0.0_ReKi      !< Tail fin empirical constants characterizing the decay of separation functions [used only when TFMod=2] [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: TFinAStar = 0.0_ReKi      !< Tail fin characteristics angles for separation functions [used only when TFMod=2] [deg]
+    REAL(ReKi)  :: TFinKv = 0.0_ReKi      !< Tail fin vortex lift coefficient for unsteady aerodynamics [used only when TFMod=2] [-]
+    REAL(ReKi)  :: TFinCDc = 0.0_ReKi      !< Tail fin drag coefficient for unsteady aerodynamics [used only when TFMod=2] [-]
   END TYPE TFinParameterType
 ! =======================
 ! =========  TFinInputFileType  =======
@@ -78,6 +83,11 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: TFinAngles = 0.0_ReKi      !< Tail fin chordline skew, tilt, and bank angles about the reference point [(deg)]
     INTEGER(IntKi)  :: TFinIndMod = 0_IntKi      !< Model for induced velocity calculation {0=none, 1=rotor-average} [(switch)]
     INTEGER(IntKi)  :: TFinAFID = 0_IntKi      !< Index of Tail fin airfoil number [1 to NumAFfiles] [-]
+    REAL(ReKi)  :: TFinKp = 0.0_ReKi      !< Tail fin potential lift coefficient for unsteady aerodynamics [used only when TFMod=2] [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: TFinSigma = 0.0_ReKi      !< Tail fin empirical constants characterizing the decay of separation functions [used only when TFMod=2] [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: TFinAStar = 0.0_ReKi      !< Tail fin characteristics angles for separation functions [used only when TFMod=2] [deg]
+    REAL(ReKi)  :: TFinKv = 0.0_ReKi      !< Tail fin vortex lift coefficient for unsteady aerodynamics [used only when TFMod=2] [-]
+    REAL(ReKi)  :: TFinCDc = 0.0_ReKi      !< Tail fin drag coefficient for unsteady aerodynamics [used only when TFMod=2] [-]
   END TYPE TFinInputFileType
 ! =======================
 ! =========  AD_VTK_BLSurfaceType  =======
@@ -169,6 +179,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: AD_InitOutputType
     TYPE(RotInitOutputType) , DIMENSION(:), ALLOCATABLE  :: rotors      !< Rotor init output type [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
+    INTEGER(IntKi)  :: nNodesVel = 0_IntKi      !< number of nodes velocity values are needed at (for ExtLoads coupling) [-]
   END TYPE AD_InitOutputType
 ! =======================
 ! =========  RotInputFile  =======
@@ -523,6 +534,11 @@ subroutine AD_CopyTFinParameterType(SrcTFinParameterTypeData, DstTFinParameterTy
    DstTFinParameterTypeData%TFinArea = SrcTFinParameterTypeData%TFinArea
    DstTFinParameterTypeData%TFinIndMod = SrcTFinParameterTypeData%TFinIndMod
    DstTFinParameterTypeData%TFinAFID = SrcTFinParameterTypeData%TFinAFID
+   DstTFinParameterTypeData%TFinKp = SrcTFinParameterTypeData%TFinKp
+   DstTFinParameterTypeData%TFinSigma = SrcTFinParameterTypeData%TFinSigma
+   DstTFinParameterTypeData%TFinAStar = SrcTFinParameterTypeData%TFinAStar
+   DstTFinParameterTypeData%TFinKv = SrcTFinParameterTypeData%TFinKv
+   DstTFinParameterTypeData%TFinCDc = SrcTFinParameterTypeData%TFinCDc
 end subroutine
 
 subroutine AD_DestroyTFinParameterType(TFinParameterTypeData, ErrStat, ErrMsg)
@@ -544,6 +560,11 @@ subroutine AD_PackTFinParameterType(RF, Indata)
    call RegPack(RF, InData%TFinArea)
    call RegPack(RF, InData%TFinIndMod)
    call RegPack(RF, InData%TFinAFID)
+   call RegPack(RF, InData%TFinKp)
+   call RegPack(RF, InData%TFinSigma)
+   call RegPack(RF, InData%TFinAStar)
+   call RegPack(RF, InData%TFinKv)
+   call RegPack(RF, InData%TFinCDc)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -557,6 +578,11 @@ subroutine AD_UnPackTFinParameterType(RF, OutData)
    call RegUnpack(RF, OutData%TFinArea); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TFinIndMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TFinAFID); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinKp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinSigma); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinAStar); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinKv); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinCDc); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AD_CopyTFinInputFileType(SrcTFinInputFileTypeData, DstTFinInputFileTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -575,6 +601,11 @@ subroutine AD_CopyTFinInputFileType(SrcTFinInputFileTypeData, DstTFinInputFileTy
    DstTFinInputFileTypeData%TFinAngles = SrcTFinInputFileTypeData%TFinAngles
    DstTFinInputFileTypeData%TFinIndMod = SrcTFinInputFileTypeData%TFinIndMod
    DstTFinInputFileTypeData%TFinAFID = SrcTFinInputFileTypeData%TFinAFID
+   DstTFinInputFileTypeData%TFinKp = SrcTFinInputFileTypeData%TFinKp
+   DstTFinInputFileTypeData%TFinSigma = SrcTFinInputFileTypeData%TFinSigma
+   DstTFinInputFileTypeData%TFinAStar = SrcTFinInputFileTypeData%TFinAStar
+   DstTFinInputFileTypeData%TFinKv = SrcTFinInputFileTypeData%TFinKv
+   DstTFinInputFileTypeData%TFinCDc = SrcTFinInputFileTypeData%TFinCDc
 end subroutine
 
 subroutine AD_DestroyTFinInputFileType(TFinInputFileTypeData, ErrStat, ErrMsg)
@@ -598,6 +629,11 @@ subroutine AD_PackTFinInputFileType(RF, Indata)
    call RegPack(RF, InData%TFinAngles)
    call RegPack(RF, InData%TFinIndMod)
    call RegPack(RF, InData%TFinAFID)
+   call RegPack(RF, InData%TFinKp)
+   call RegPack(RF, InData%TFinSigma)
+   call RegPack(RF, InData%TFinAStar)
+   call RegPack(RF, InData%TFinKv)
+   call RegPack(RF, InData%TFinCDc)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -613,6 +649,11 @@ subroutine AD_UnPackTFinInputFileType(RF, OutData)
    call RegUnpack(RF, OutData%TFinAngles); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TFinIndMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TFinAFID); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinKp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinSigma); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinAStar); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinKv); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinCDc); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AD_CopyVTK_BLSurfaceType(SrcVTK_BLSurfaceTypeData, DstVTK_BLSurfaceTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -1683,6 +1724,7 @@ subroutine AD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInitOutputData%nNodesVel = SrcInitOutputData%nNodesVel
 end subroutine
 
 subroutine AD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -1726,6 +1768,7 @@ subroutine AD_PackInitOutput(RF, Indata)
       end do
    end if
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
+   call RegPack(RF, InData%nNodesVel)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1752,6 +1795,7 @@ subroutine AD_UnPackInitOutput(RF, OutData)
       end do
    end if
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
+   call RegUnpack(RF, OutData%nNodesVel); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AD_CopyRotInputFile(SrcRotInputFileData, DstRotInputFileData, CtrlCode, ErrStat, ErrMsg)

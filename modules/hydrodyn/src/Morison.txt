@@ -13,7 +13,6 @@
 # ...... Include files (definitions from NWTC Library) ............................................................................
 # make sure that the file name does not have any trailing white spaces!
 include   Registry_NWTC_Library.txt
-usefrom   SeaState_Interp.txt
 usefrom   SeaSt_WaveField.txt
 #
 #
@@ -323,7 +322,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     V_rel_n                       {:}            -         -         "Normal relative flow velocity at joints"        m/s
 typedef   ^                            ^                             ReKi                     V_rel_n_HiPass                {:}            -         -         "High-pass filtered normal relative flow velocity at joints"   m/s
 typedef   ^                            ^                             MeshMapType              VisMeshMap                      -            -         -         "Mesh mapping for visualization mesh" -
-typedef   ^                            ^                         SeaSt_Interp_MiscVarType     SeaSt_Interp_m                -              -         -         "misc var information from the SeaState Interpolation module"   -
+typedef   ^                            ^                          SeaSt_WaveField_MiscVarType WaveField_m                     -            -         -         "misc var information from the SeaState Interpolation module"   -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
