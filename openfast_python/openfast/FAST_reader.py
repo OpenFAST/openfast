@@ -2,7 +2,7 @@ import os, re, copy
 import numpy as np
 from functools import reduce
 import operator
-from weis.aeroelasticse.FAST_vars_out import FstOutput
+from openfast.FAST_vars_out import FstOutput
 
 from rosco.toolbox.utilities import read_DISCON, load_from_txt
 from rosco.toolbox import turbine as ROSCO_turbine
@@ -2552,4 +2552,3 @@ if __name__=="__main__":
                                                      'OpenFAST_models', 'IEA-15-240-RWT',
                                                      'IEA-15-240-RWT-UMaineSemi')   # Path to fst directory files
     fast.execute()
-

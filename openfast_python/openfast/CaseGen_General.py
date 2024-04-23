@@ -1,6 +1,6 @@
 import os, itertools
 import numpy as np
-from weis.aeroelasticse.FileTools import save_yaml
+from openfast.FileTools import save_yaml
 
 def save_case_matrix(matrix_out, change_vars, dir_matrix):
     # save matrix file

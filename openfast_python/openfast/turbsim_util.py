@@ -1,7 +1,7 @@
 import os
 import shutil
 import subprocess
-from weis.aeroelasticse.IEC_CoeherentGusts import IEC_CoherentGusts
+from openfast.IEC_CoeherentGusts import IEC_CoherentGusts
 
 class TurbsimReader(object):
 

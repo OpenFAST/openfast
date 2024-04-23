@@ -6,7 +6,7 @@ import operator
 import numpy as np
 from functools import reduce
 
-from weis.aeroelasticse.FAST_reader import InputReader_OpenFAST
+from openfast.FAST_reader import InputReader_OpenFAST
 
 try:
     from rosco.toolbox import utilities as ROSCO_utilities
@@ -2249,5 +2249,3 @@ if __name__=="__main__":
     # for i_TStC, TStC in enumerate(fst_vt['TStC']):
     #     fastout.write_StC(TStC,fst_vt['ServoDyn']['TStCfiles'][i_TStC])
     # print('here')
-
-

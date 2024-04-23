@@ -9,12 +9,12 @@ import shutil
 import platform
 import multiprocessing as mp
 
-from weis.aeroelasticse.FAST_reader import InputReader_OpenFAST
-from weis.aeroelasticse.FAST_writer import InputWriter_OpenFAST
-from weis.aeroelasticse.FAST_wrapper import FAST_wrapper
+from openfast.FAST_reader import InputReader_OpenFAST
+from openfast.FAST_writer import InputWriter_OpenFAST
+from openfast.FAST_wrapper import FAST_wrapper
 from pCrunch.io import OpenFASTOutput, OpenFASTBinary, OpenFASTAscii
 from pCrunch import LoadsAnalysis, FatigueParams
-from weis.aeroelasticse.openfast_library import FastLibAPI
+from openfast.openfast_library import FastLibAPI
 
 import numpy as np
 

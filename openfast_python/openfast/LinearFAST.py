@@ -12,8 +12,8 @@ import numpy as np
 import os
 import shutil
 
-from weis.aeroelasticse.runFAST_pywrapper import runFAST_pywrapper_batch
-from weis.aeroelasticse.CaseGen_General import CaseGen_General
+from openfast.runFAST_pywrapper import runFAST_pywrapper_batch
+from openfast.CaseGen_General import CaseGen_General
 from rosco.toolbox import utilities as ROSCO_utilities
 
 
