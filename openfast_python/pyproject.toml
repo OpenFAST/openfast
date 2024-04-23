@@ -4,9 +4,16 @@ version = "3.5.4"
 description = "Readers and writers for OpenFAST files."
 authors = ["Marcus Lugg <marcus@octue.com>"]
 readme = "README.md"
+packages = [{include = "openfast"}]
+
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
+rosco = "^2.9"
+numpy = "^1"
+pandas = "^2"
+xlrd = "^2"
+ruamel_yaml = "^0.18"
 
 
 [build-system]
