@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "openfast-toolbox"
+name = "openfast"
 version = "3.5.4"
 description = "Readers and writers for OpenFAST files."
 authors = ["Marcus Lugg <marcus@octue.com>"]
