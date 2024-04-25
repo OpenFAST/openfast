@@ -400,8 +400,8 @@ typedef ^   RotParameterType	ReKi	TwrAxCent {:}	    -	-	"Array of tower element 
 typedef	^	RotParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
 typedef	^	RotParameterType	AA_ParameterType	AA	-	-	-	"Parameters for AA module"
 typedef	^	RotParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
-typedef	^	RotParameterType	Jac_u_idxStarts Jac_u_idxStartList	-	-	-	"Starting indices for all Jac_u compenents" -
-typedef	^	RotParameterType	Jac_y_idxStarts Jac_y_idxStartList	-	-	-	"Starting indices for all Jac_u compenents" -
+typedef	^	RotParameterType	Jac_u_idxStarts Jac_u_idxStartList	-	-	-	"Starting indices for all Jac_u components" -
+typedef	^	RotParameterType	Jac_y_idxStarts Jac_y_idxStartList	-	-	-	"Starting indices for all Jac_y components" -
 typedef	^	RotParameterType	Integer	NumExtendedInputs	-	-	-	"number of extended inputs" -
 typedef	^	RotParameterType	ReKi	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
 typedef	^	RotParameterType	ReKi	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states)"
