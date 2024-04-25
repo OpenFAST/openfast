@@ -448,7 +448,7 @@ SUBROUTINE AddArrays_4D(Array1, Array2, ArrayName, ErrStat, ErrMsg)
    CHARACTER(*),                    INTENT(IN   )  :: ArrayName
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat           !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
-   
+
    ErrStat = ErrID_None
    ErrMsg = ""
 
@@ -456,7 +456,7 @@ SUBROUTINE AddArrays_4D(Array1, Array2, ArrayName, ErrStat, ErrMsg)
         SIZE(Array1,DIM=2) /= SIZE(Array2,DIM=2) .OR. &
         SIZE(Array1,DIM=3) /= SIZE(Array2,DIM=3) .OR. &
         SIZE(Array1,DIM=4) /= SIZE(Array2,DIM=4)) THEN
-                    
+
       ErrStat = ErrID_Fatal
       ErrMsg = TRIM(ArrayName)//' arrays for first and second order wave elevations are of different sizes:  '//NewLine// &
                'Waves:  '// TRIM(Num2LStr(SIZE(Array1,DIM=1)))//'x'//          &
@@ -470,7 +470,7 @@ SUBROUTINE AddArrays_4D(Array1, Array2, ArrayName, ErrStat, ErrMsg)
    ELSE
       Array1 = Array1 + Array2
    ENDIF
-   
+
 END SUBROUTINE AddArrays_4D
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE AddArrays_5D(Array1, Array2, ArrayName, ErrStat, ErrMsg)
@@ -479,14 +479,14 @@ SUBROUTINE AddArrays_5D(Array1, Array2, ArrayName, ErrStat, ErrMsg)
    CHARACTER(*),                    INTENT(IN   )  :: ArrayName
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat           !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
-   
+
 
    IF ( SIZE(Array1,DIM=1) /= SIZE(Array2,DIM=1) .OR. &
         SIZE(Array1,DIM=2) /= SIZE(Array2,DIM=2) .OR. &
         SIZE(Array1,DIM=3) /= SIZE(Array2,DIM=3) .OR. &
         SIZE(Array1,DIM=4) /= SIZE(Array2,DIM=4) .OR. &
         SIZE(Array1,DIM=5) /= SIZE(Array2,DIM=5)) THEN
-                    
+
       ErrStat = ErrID_Fatal
       ErrMsg = TRIM(ArrayName)//' arrays for first and second order wave elevations are of different sizes: '//NewLine// &
                'Waves:  '// TRIM(Num2LStr(SIZE(Array1,DIM=1)))//'x'//          &
@@ -504,71 +504,56 @@ SUBROUTINE AddArrays_5D(Array1, Array2, ArrayName, ErrStat, ErrMsg)
       ErrMsg = ""
       Array1 = Array1 + Array2
    ENDIF
-   
+
 END SUBROUTINE AddArrays_5D
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 SUBROUTINE SeaSt_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-
       TYPE(SeaSt_InputType),           INTENT(INOUT)  :: u           !< System inputs
-      TYPE(SeaSt_ParameterType),       INTENT(INOUT)  :: p           !< Parameters     
+      TYPE(SeaSt_ParameterType),       INTENT(INOUT)  :: p           !< Parameters
       TYPE(SeaSt_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
       TYPE(SeaSt_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Discrete states
       TYPE(SeaSt_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
-      TYPE(SeaSt_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other/optimization states            
+      TYPE(SeaSt_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other/optimization states
       TYPE(SeaSt_OutputType),          INTENT(INOUT)  :: y           !< System outputs
-      TYPE(SeaSt_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
+      TYPE(SeaSt_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables
       INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-
-
          ! Initialize ErrStat
-         
-      ErrStat = ErrID_None         
-      ErrMsg  = ""               
-      
-      
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
          ! Place any last minute operations or calculations here:
       ! CALL WaveField_End(p%WaveField)
 
-            
          ! Write the SeaState-level output file data FROM THE LAST COMPLETED TIME STEP if the user requested module-level output
          ! and the current time has advanced since the last stored time step.
-         
+
       IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3) THEN  !Note: this will always output a line, even if we're ending early (e.g. if HD doesn't initialize properly, this will write a line of zeros to the output file.)
-         CALL SeaStOut_WriteOutputs( m%LastOutTime, y, p, m%Decimate, ErrStat, ErrMsg )         
-      END IF          
-      
-         ! Close files here:  
-      CALL SeaStOut_CloseOutput( p, ErrStat, ErrMsg )           
-          
+         CALL SeaStOut_WriteOutputs( m%LastOutTime, y, p, m%Decimate, ErrStat, ErrMsg )
+      END IF
+
+         ! Close files here:
+      CALL SeaStOut_CloseOutput( p, ErrStat, ErrMsg )
 
          ! Destroy the input data:
-         
       CALL SeaSt_DestroyInput( u, ErrStat, ErrMsg )
 
-
          ! Destroy the parameter data:
-      
       CALL SeaSt_DestroyParam( p, ErrStat, ErrMsg )
 
-
          ! Destroy the state data:
-         
       CALL SeaSt_DestroyContState(   x,           ErrStat, ErrMsg )
       CALL SeaSt_DestroyDiscState(   xd,          ErrStat, ErrMsg )
       CALL SeaSt_DestroyConstrState( z,           ErrStat, ErrMsg )
       CALL SeaSt_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
-         
+
          ! Destroy misc variables:
-      
       CALL SeaSt_DestroyMisc( m, ErrStat, ErrMsg )
 
          ! Destroy the output data:
-         
       CALL SeaSt_DestroyOutput( y, ErrStat, ErrMsg )
-      
 
 END SUBROUTINE SeaSt_End
 
@@ -577,7 +562,6 @@ END SUBROUTINE SeaSt_End
 !> Loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
 !! Continuous, constraint, and discrete states are updated to values at t + Interval.
 SUBROUTINE SeaSt_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-
       REAL(DbKi),                         INTENT(IN   )  :: t               !< Current simulation time in seconds
       INTEGER(IntKi),                     INTENT(IN   )  :: n               !< Current step of the simulation: t = n*Interval
       TYPE(SeaSt_InputType),              INTENT(INOUT ) :: Inputs(:)       !< Inputs at InputTimes
@@ -591,26 +575,20 @@ SUBROUTINE SeaSt_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
                                                                             !!   Output: Constraint states at t + Interval
       TYPE(SeaSt_OtherStateType),         INTENT(INOUT)  :: OtherState      !< Other states: Other states at t;
                                                                             !!   Output: Other states at t + Interval
-      TYPE(SeaSt_MiscVarType),            INTENT(INOUT)  :: m               !< Initial misc/optimization variables           
+      TYPE(SeaSt_MiscVarType),            INTENT(INOUT)  :: m               !< Initial misc/optimization variables
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat         !< Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
-
-         ! Initialize variables
-
+      ! Initialize variables
       ErrStat   = ErrID_None           ! no error has occurred
       ErrMsg    = ""
-      
 
-   
-      
 END SUBROUTINE SeaSt_UpdateStates
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
-SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )   
-   
+SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       REAL(DbKi),                         INTENT(IN   )  :: Time        !< Current simulation time in seconds
       TYPE(SeaSt_InputType),              INTENT(INOUT)  :: u           !< Inputs at Time (note that this is intent out because we're copying the u%WAMITMesh into m%u_wamit%mesh)
       TYPE(SeaSt_ParameterType),          INTENT(IN   )  :: p           !< Parameters
@@ -620,17 +598,17 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       TYPE(SeaSt_OtherStateType),         INTENT(IN   )  :: OtherState  !< Other states at Time
       TYPE(SeaSt_OutputType),             INTENT(INOUT)  :: y           !< Outputs computed at Time (Input only so that mesh con-
                                                                         !!   nectivity information does not have to be recalculated)
-      TYPE(SeaSt_MiscVarType),            INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
+      TYPE(SeaSt_MiscVarType),            INTENT(INOUT)  :: m           !< Initial misc/optimization variables
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !! Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !! Error message if ErrStat /= ErrID_None
 
       INTEGER                                            :: I           ! Generic counters
-      
+
       INTEGER(IntKi)                                     :: ErrStat2        ! Error status of the operation (secondary error)
       CHARACTER(ErrMsgLen)                               :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
       character(*), parameter                            :: RoutineName = 'SeaSt_CalcOutput'
 
-    
+
       REAL(SiKi)                           :: WaveElev (p%NWaveElev) ! Instantaneous total elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)
       REAL(SiKi)                           :: WaveElev1(p%NWaveElev)    ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)
       REAL(SiKi)                           :: WaveElev2(p%NWaveElev)    ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)
@@ -640,16 +618,16 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       REAL(SiKi)                           :: WaveDynP(p%NWaveKin)
       REAL(ReKi)                           :: AllOuts(MaxOutPts)
       real(ReKi)                           :: positionXYZ(3), positionXY(2)
-  
+
       REAL(SiKi)                           :: zeta
       REAL(SiKi)                           :: zeta1
       REAL(SiKi)                           :: zeta2
-      
+
      INTEGER(IntKi)                        :: nodeInWater
-      
+
          ! Initialize ErrStat
-         
-      ErrStat = ErrID_None         
+
+      ErrStat = ErrID_None
       ErrMsg  = ""
       WaveElev  = 0.0_ReKi
       WaveElev1 = 0.0_ReKi
@@ -657,18 +635,18 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       WaveAccMCF = 0.0_ReKi   ! In case we don't use MCF approximation
       ErrStat2 = ErrID_None
       ErrMsg = ""
- 
+
          ! Compute outputs here:
-         
+
       ! These Outputs are only used for generated user-requested output channel results.
       ! If the user did not request any outputs, then we can simply return
    IF ( p%NumOuts > 0 ) THEN
-         
+
          ! Write the SeaState-level output file data FROM THE LAST COMPLETED TIME STEP if the user requested module-level output
          ! and the current time has advanced since the last stored time step. Note that this must be done before filling y%WriteOutput
          ! so that we don't get recent results. Also note that this may give strange results in the .SeaSt.out files of linearization simulations
          ! because it assumes that the last call to SeaSt_CalcOutput was for a "normal" time step.
-           
+
       IF ( (p%OutSwtch == 1 .OR. p%OutSwtch == 3) .AND. ( Time > m%LastOutTime ) ) THEN
          CALL SeaStOut_WriteOutputs( m%LastOutTime, y, p, m%Decimate, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -680,94 +658,75 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          CALL WaveField_GetNodeWaveKin( p%WaveField, m%WaveField_m, Time, positionXYZ, .FALSE., nodeInWater, zeta1, zeta2, zeta, WaveDynP(i), WaveVel(:,i), WaveAcc(:,i), WaveAccMCF(:,i), ErrStat2, ErrMsg2 )
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
-     
+
       ! Compute the wave elevations at the requested output locations for this time.  Note that p%WaveElev has the second order added to it already.
-   
+
       DO i = 1, p%NWaveElev
          positionXY = (/p%WaveElevxi(i),p%WaveElevyi(i)/)
          WaveElev1(i) = WaveField_GetNodeWaveElev1( p%WaveField, m%WaveField_m, Time, positionXY, ErrStat2, ErrMsg2 )
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          WaveElev2(i) = WaveField_GetNodeWaveElev2( p%WaveField, m%WaveField_m, Time, positionXY, ErrStat2, ErrMsg2 )
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         WaveElev(i)  = WaveElev1(i) + WaveElev2(i)            
+         WaveElev(i)  = WaveElev1(i) + WaveElev2(i)
       END DO
-      
+
       ! Map calculated results into the AllOuts Array
       CALL SeaStOut_MapOutputs( p, WaveElev, WaveElev1, WaveElev2, WaveVel, WaveAcc, WaveAccMCF, WaveDynP, AllOuts, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                  
-      
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
       DO I = 1,p%NumOuts
             y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
-      END DO   
-      
+      END DO
+
    END IF
-      
+
 END SUBROUTINE SeaSt_CalcOutput
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> Tight coupling routine for computing derivatives of continuous states
-SUBROUTINE SeaSt_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )  
-   
-      REAL(DbKi),                         INTENT(IN   )  :: Time        !< Current simulation time in seconds
-      TYPE(SeaSt_InputType),              INTENT(INOUT)  :: u           !< Inputs at Time (intent OUT only because we're copying the input mesh)
-      TYPE(SeaSt_ParameterType),          INTENT(IN   )  :: p           !< Parameters                             
-      TYPE(SeaSt_ContinuousStateType),    INTENT(IN   )  :: x           !< Continuous states at Time
-      TYPE(SeaSt_DiscreteStateType),      INTENT(IN   )  :: xd          !< Discrete states at Time
-      TYPE(SeaSt_ConstraintStateType),    INTENT(IN   )  :: z           !< Constraint states at Time
-      TYPE(SeaSt_OtherStateType),         INTENT(IN   )  :: OtherState  !< Other states                    
-      TYPE(SeaSt_MiscVarType),            INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
-      TYPE(SeaSt_ContinuousStateType),    INTENT(INOUT)  :: dxdt        !< Continuous state derivatives at Time
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation     
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-      CHARACTER(*), PARAMETER                            :: RoutineName = 'SeaSt_CalcContStateDeriv'
-               
-         ! Initialize ErrStat
-         
-      ErrStat = ErrID_None         
-      ErrMsg  = ""               
-      
- 
-   
+!> Tight coupling routine for computing derivatives of continuous states. Not used in SeaState
+SUBROUTINE SeaSt_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
+      real(DbKi),                         intent(in   )  :: Time        !< Current simulation time in seconds
+      type(SeaSt_InputType),              intent(inout)  :: u           !< Inputs at Time (intent OUT only because we're copying the input mesh)
+      type(SeaSt_ParameterType),          intent(in   )  :: p           !< Parameters
+      type(SeaSt_ContinuousStateType),    intent(in   )  :: x           !< Continuous states at Time
+      type(SeaSt_DiscreteStateType),      intent(in   )  :: xd          !< Discrete states at Time
+      type(SeaSt_ConstraintStateType),    intent(in   )  :: z           !< Constraint states at Time
+      type(SeaSt_OtherStateType),         intent(in   )  :: OtherState  !< Other states
+      type(SeaSt_MiscVarType),            intent(inout)  :: m           !< Initial misc/optimization variables
+      type(SeaSt_ContinuousStateType),    intent(inout)  :: dxdt        !< Continuous state derivatives at Time
+      integer(IntKi),                     intent(  out)  :: ErrStat     !< Error status of the operation
+      character(*),                       intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+      character(*), parameter                            :: RoutineName = 'SeaSt_CalcContStateDeriv'
+
+      ! Initialize ErrStat
+      ErrStat = ErrID_None
+      ErrMsg  = ""
 END SUBROUTINE SeaSt_CalcContStateDeriv
-
-
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for solving for the residual of the constraint state equations
-SUBROUTINE SeaSt_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )   
-   
-   REAL(DbKi),                         INTENT(IN   )  :: Time        !< Current simulation time in seconds   
-   TYPE(SeaSt_InputType),           INTENT(INOUT)  :: u           !< Inputs at Time (intent OUT only because we're copying the input mesh)              
-   TYPE(SeaSt_ParameterType),       INTENT(IN   )  :: p           !< Parameters                           
-   TYPE(SeaSt_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
-   TYPE(SeaSt_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
-   TYPE(SeaSt_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time (possibly a guess)
-   TYPE(SeaSt_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other/optimization states                    
-   TYPE(SeaSt_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
-   TYPE(SeaSt_ConstraintStateType), INTENT(  OUT)  :: z_residual  !< Residual of the constraint state equations using  
-                                                                     !!     the input values described above      
-   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation
-   CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+SUBROUTINE SeaSt_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )
+   real(DbKi),                         intent(in   )  :: Time        !< Current simulation time in seconds
+   type(SeaSt_InputType),              intent(inout)  :: u           !< Inputs at Time (intent OUT only because we're copying the input mesh)
+   type(SeaSt_ParameterType),          intent(in   )  :: p           !< Parameters
+   type(SeaSt_ContinuousStateType),    intent(in   )  :: x           !< Continuous states at Time
+   type(SeaSt_DiscreteStateType),      intent(in   )  :: xd          !< Discrete states at Time
+   type(SeaSt_ConstraintStateType),    intent(in   )  :: z           !< Constraint states at Time (possibly a guess)
+   type(SeaSt_OtherStateType),         intent(in   )  :: OtherState  !< Other/optimization states
+   type(SeaSt_MiscVarType),            intent(inout)  :: m           !< Initial misc/optimization variables
+   type(SeaSt_ConstraintStateType),    intent(  out)  :: z_residual  !< Residual of the constraint state equations using
+   integer(IntKi),                     intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                       intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-               
-      ! Initialize ErrStat
-         
-   ErrStat = ErrID_None         
-   ErrMsg  = ""               
-      
-   ! Nothing to do here since none of the sub-modules have contraint states
-   z_residual = z  
-    
-         ! Solve for the constraint states here:
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
-
+   ! Nothing to do here since no contraint states
+   call SeaSt_CopyConstrState(z, z_residual, MESH_NEWCOPY, ErrStat, ErrMsg)
 END SUBROUTINE SeaSt_CalcConstrStateResidual
-
-
-
- 
 
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE SeaState
