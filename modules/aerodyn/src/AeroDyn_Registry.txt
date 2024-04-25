@@ -209,7 +209,7 @@ typedef	^	AD_InputFile	ReKi	InCol_Cl	-	-	-	"The column in the airfoil tables tha
 typedef	^	AD_InputFile	ReKi	InCol_Cd	-	-	-	"The column in the airfoil tables that contains the drag coefficient"	-
 typedef	^	AD_InputFile	ReKi	InCol_Cm	-	-	-	"The column in the airfoil tables that contains the pitching-moment coefficient; use zero if there is no Cm column"	-
 typedef	^	AD_InputFile	ReKi	InCol_Cpmin	-	-	-	"The column in the airfoil tables that contains the drag coefficient; use zero if there is no Cpmin column"	-
-typedef	^	AD_InputFile	INTEGER	AFTabMod	-	-	-	"Interpolation method for multiple airfoil tables {1 = 1D on AoA (only first table is used); 2 = 2D on AoA and Re; 3 = 2D on AoA and UserProp}" -
+typedef	^	AD_InputFile	IntKi AFTabMod	-	-	-	"Interpolation method for multiple airfoil tables {1 = 1D on AoA (only first table is used); 2 = 2D on AoA and Re; 3 = 2D on AoA and UserProp}" -
 typedef	^	AD_InputFile	IntKi	NumAFfiles	-	-	-	"Number of airfoil files used"	-
 typedef	^	AD_InputFile	CHARACTER(1024)	FVWFileName	-	-	-	"FVW input filename"	"quoted string"
 typedef	^	AD_InputFile	CHARACTER(1024)	AFNames	{:}	-	-	"Airfoil file names (NumAF lines)"	"quoted strings"
@@ -399,14 +399,14 @@ typedef ^   RotParameterType	ReKi	TwrTaper  {:}   	-	-	"Array of tower element t
 typedef ^   RotParameterType	ReKi	TwrAxCent {:}	    -	-	"Array of tower element axial centroid, used in buoyancy calculation" -
 typedef	^	RotParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
 typedef	^	RotParameterType	AA_ParameterType	AA	-	-	-	"Parameters for AA module"
-typedef	^	RotParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
+typedef	^	RotParameterType	IntKi	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
 typedef	^	RotParameterType	Jac_u_idxStarts Jac_u_idxStartList	-	-	-	"Starting indices for all Jac_u components" -
 typedef	^	RotParameterType	Jac_y_idxStarts Jac_y_idxStartList	-	-	-	"Starting indices for all Jac_y components" -
-typedef	^	RotParameterType	Integer	NumExtendedInputs	-	-	-	"number of extended inputs" -
+typedef	^	RotParameterType	IntKi	NumExtendedInputs	-	-	-	"number of extended inputs" -
 typedef	^	RotParameterType	ReKi	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
 typedef	^	RotParameterType	ReKi	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states)"
-typedef	^	RotParameterType	Integer	Jac_ny	-	-	-	"number of outputs in jacobian matrix"	-
-typedef   ^     RotParameterType Integer         NumBl_Lin      -    -     -   "number of blades in the jacobian"	-
+typedef	^	RotParameterType	IntKi	Jac_ny	-	-	-	"number of outputs in jacobian matrix"	-
+typedef   ^     RotParameterType IntKi NumBl_Lin      -    -     -   "number of blades in the jacobian"	-
 
 typedef	^	RotParameterType	IntKi	TwrPotent	-	-	-	"Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"	-
 typedef	^	RotParameterType	IntKi	TwrShadow	-	-	-	"Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}"	-
