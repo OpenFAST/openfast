@@ -1541,7 +1541,8 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    TYPE(HydroDyn_ContinuousStateType)                      :: x_m
    TYPE(HydroDyn_InputType)                                :: u_perturb
    REAL(R8Ki)                                        :: delta        ! delta change in input or state
-   INTEGER(IntKi)                                    :: i, j, k, startingI, startingJ, bOffset, offsetI, n_du_plus1
+   INTEGER(IntKi)                                    :: i, j, k, startingI, startingJ, bOffset, offsetI, n_du_extend, n_du_norm
+   integer(IntKi), parameter                         :: nu_extended = 4    ! 4 total extended inputs: WaveElev0 from SeaSt, HWindSpeed / PLexp / PropagationDir from IfW (turbulent sea current)
    
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
@@ -1553,7 +1554,8 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    ErrStat = ErrID_None
    ErrMsg  = ''
    
-   n_du_plus1 = size(p%Jac_u_indx,1)+1
+   n_du_norm = size(p%Jac_u_indx,1)
+   n_du_extend = n_du_norm + nu_extended
    
       ! make a copy of the inputs to perturb
    call HydroDyn_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2)
@@ -1571,7 +1573,7 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
       ! allocate dYdu if necessary
       if (.not. allocated(dYdu)) then
-         call AllocAry(dYdu, p%Jac_ny, n_du_plus1, 'dYdu', ErrStat2, ErrMsg2)
+         call AllocAry(dYdu, p%Jac_ny, n_du_extend, 'dYdu', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -1589,7 +1591,7 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             return
          end if
          
-      do i=1,size(p%Jac_u_indx,1)
+      do i=1,size(p%Jac_u_indx,1)   ! NOTE: extended inputs are not included in p%Jac_u_indx
          
             ! get u_op + delta u
          call HydroDyn_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
@@ -1616,8 +1618,14 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          
       end do
       
-         ! p%WaveElev0 column
-      dYdu(:,n_du_plus1) = 0
+
+      !-------------------
+      ! extended inputs
+      ! WaveElev0 column -- from SeaState
+      dYdu(:,n_du_norm+1) = 0.0_ReKi
+
+      ! HWindSpeed / PLexp / PropagationDir -- from Ifw/FlowField for turbulent sea current
+      dYdu(:,n_du_norm+2:n_du_norm+4) = 0.0_ReKi
       
 
       if (ErrStat>=AbortErrLev) then
@@ -1640,7 +1648,7 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
       ! allocate dXdu if necessary
       if (.not. allocated(dXdu)) then
-         call AllocAry(dXdu, p%totalStates, n_du_plus1, 'dXdu', ErrStat2, ErrMsg2)
+         call AllocAry(dXdu, p%totalStates, n_du_extend, 'dXdu', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -1653,13 +1661,13 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       
       do j = 1,p%nWAMITObj
          do i = 1,p%WAMIT(j)%SS_Exctn%numStates
-            dXdu(offsetI+i,n_du_plus1) = p%WAMIT(j)%SS_Exctn%B(i) ! B is numStates by 1
+            dXdu(offsetI+i,n_du_extend) = p%WAMIT(j)%SS_Exctn%B(i) ! B is numStates by 1
          end do
          offsetI = offsetI + p%WAMIT(j)%SS_Exctn%numStates
       end do
 
       startingI = p%totalStates - p%totalRdtnStates
-      startingJ = n_du_plus1 - 1 - 18 - 4*3*p%NBody !  subtract 1 for WaveElev0, then 6*3 for PRPMesh and then 4*3*NBody to place us at the beginning of the velocity inputs
+      startingJ = n_du_norm - 18 - 4*3*p%NBody !  subtract 6*3 for PRPMesh and then 4*3*NBody to place us at the beginning of the velocity inputs
       ! B is numStates by 6*NBody where NBody =1 if NBodyMod=2 or 3, but could be >1 for NBodyMod=1
       if ( p%NBodyMod == 1 ) then
          ! Example for NBodyMod=1 and NBody = 2,
@@ -2274,6 +2282,7 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    
       ! local variables:
    INTEGER(IntKi)                :: i, j, index, nu, i_meshField, m, meshFieldCount
+   integer(IntKi), parameter     :: nu_extended = 4    ! 4 total extended inputs: WaveElev0 from SeaSt, HWindSpeed / PLexp / PropagationDir from IfW (turbulent sea current)
    REAL(R8Ki)                    :: perturb_t, perturb
    LOGICAL                       :: FieldMask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
 
@@ -2302,7 +2311,8 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    
    nu = nu + u%PRPMesh%NNodes * 18   ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
    
-   ! DO NOT Add the extended input WaveElev0 when computing the size of p%Jac_u_indx
+   ! DO NOT Add the extended inputs WaveElev0, HWindSpeed / PLexp / PropagationDir when computing the size of p%Jac_u_indx
+!FIXME: extended inputs will need to be added later to get HWindSpeed / PLexp / PropagationDir from sea currents from IfW/FlowField in
       
          
    ! note: all other inputs are ignored
@@ -2429,11 +2439,11 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    !................
    ! names of the columns, InitOut%LinNames_u:
    !................
-   call AllocAry(InitOut%LinNames_u, nu+1, 'LinNames_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(InitOut%LinNames_u, nu+nu_extended, 'LinNames_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    ! We do not need RotFrame_u for this module and the glue code with handle the fact that we did not allocate the array and hence set all values to false at the glue-code level
-   !call AllocAry(InitOut%RotFrame_u, nu+1, 'RotFrame_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   !call AllocAry(InitOut%RotFrame_u, nu+nu_extended, 'RotFrame_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    
-   call AllocAry(InitOut%IsLoad_u,   nu+1, 'IsLoad_u',   ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(InitOut%IsLoad_u,   nu+nu_extended, 'IsLoad_u',   ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
       
    InitOut%IsLoad_u   = .false.  ! HD's inputs are NOT loads
@@ -2470,9 +2480,13 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    FieldMask(MASKID_TRANSLATIONACC) = .true.
    FieldMask(MASKID_ROTATIONACC) = .true.
    call PackMotionMesh_Names(u%PRPMesh, 'Platform-RefPt', InitOut%LinNames_u, index, FieldMask=FieldMask)
-   
-   InitOut%LinNames_u(index) = 'Extended input: wave elevation at platform ref point, m'
-   
+
+   ! Extended inputs
+   InitOut%LinNames_u(index) = 'Extended input: wave elevation at platform ref point, m';             index=index+1
+   InitOut%LinNames_u(index) = 'Extended input: horizontal current speed (steady/uniform wind), m/s'; index=index+1
+   InitOut%LinNames_u(index) = 'Extended input: vertical power-law shear exponent, -';                index=index+1
+   InitOut%LinNames_u(index) = 'Extended input: propagation direction, rad';                          index=index+1
+
 END SUBROUTINE HD_Init_Jacobian
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine perturbs the nth element of the u array (and mesh/field it corresponds to)
@@ -2604,7 +2618,27 @@ SUBROUTINE HD_Perturb_u( p, n, perturb_sign, u, du )
             u%PRPMesh%RotationAcc(fieldIndx,node) = u%PRPMesh%RotationAcc(fieldIndx,node) + du * perturb_sign               
       END SELECT   
    end if
-                                             
+
+!FIXME: when SeaState superposition with IfW/FlowField for current is enabled, we must also add in the perturbations of those extended inputs (HWindSpeed/PLexp/PropagationDir)
+!  Some revisions needed at that time:
+!     - expand p%Jac_u_indx to include the extended inputs (currently ignores them)
+!     - copy what was done in AD15 for perturbing these extended inputs (may require extensive modifications to data management)
+!  Until then, we should add a warning that linearization with IfW/FlowField currents in HD is not allowed for MHK turbines (no warning at present).
+!
+! Example code chunk from AD15.  May be superceded by new linearization system later
+!      ! Extended inputs
+!      !     Module/Mesh/Field:  HWindSpeed      = 37
+!      !     Module/Mesh/Field:  PLexp           = 38
+!      !     Module/Mesh/Field:  PropagationDir  = 39
+!      case(37,38,39)
+!         FlowField_du = 0.0_R8Ki
+!         select case( p%Jac_u_indx(n,1) )
+!            case (37);  FlowField_du(1) = du *perturb_sign
+!            case (38);  FlowField_du(2) = du *perturb_sign
+!            case (39);  FlowField_du(3) = du *perturb_sign
+!         end select
+!         call IfW_UniformWind_Perturb(FlowField_perturb, FlowField_du)
+!   call AD_CalcWind_Rotor(t, u_perturb, FlowField_perturb, p, RotInflow_perturb, StartNode, ErrStat, ErrMsg)
 END SUBROUTINE HD_Perturb_u
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine perturbs the nth element of the continuous state array.
@@ -2713,6 +2747,7 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
 
    INTEGER(IntKi)                                    :: i, j, index, nu
+   integer(IntKi), parameter                         :: nu_extended = 4    ! 4 total extended inputs: WaveElev0 from SeaSt, HWindSpeed / PLexp / PropagationDir from IfW (turbulent sea current)
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_GetOP'
@@ -2741,7 +2776,7 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          end if
          
          nu = nu + u%PRPMesh%NNodes          * 6   ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
-         nu = nu + 1   ! Extended input
+         nu = nu + nu_extended   ! Extended input
          
          call AllocAry(u_op, nu,'u_op',ErrStat2,ErrMsg2) ! 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -2768,10 +2803,27 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       
       call PackMotionMesh(u%PRPMesh, u_op, index, FieldMask=Mask) 
       
-         ! extended input:
-      u_op(index) = 0.0_R8Ki
-          
-      
+      ! extended inputs:
+      u_op(index) = 0.0_R8Ki; index=index+1   ! WaveElev0 -- linearization not allowed for non-zero
+      u_op(index) = 0.0_R8Ki; index=index+1   ! HWindSpeed
+      u_op(index) = 0.0_R8Ki; index=index+1   ! PLexp
+      u_op(index) = 0.0_R8Ki; index=index+1   ! PropagationDir
+
+!FIXME: when sea current from IfW/FlowField is enabled, this code must be updated and enabled
+!      !------------------------------
+!      ! Extended inputs -- Linearization is only possible with Steady or Uniform Wind, so take advantage of that here
+!      !     Module/Mesh/Field:  HWindSpeed      = 37
+!      !     Module/Mesh/Field:  PLexp           = 38
+!      !     Module/Mesh/Field:  PropagationDir  = 39
+!      call IfW_UniformWind_GetOP(p_AD%FlowField%Uniform, t, .false. , OP_out)
+!      ! HWindSpeed
+!      u_op(index) = OP_out(1);   index = index + 1
+!      ! PLexp
+!      u_op(index) = OP_out(2);   index = index + 1
+!      ! PropagationDir (include AngleH in calculation if any)
+!      u_op(index) = OP_out(3) + p_AD%FlowField%PropagationDir;   index = index + 1
+
+
    END IF
 
    !..................................
