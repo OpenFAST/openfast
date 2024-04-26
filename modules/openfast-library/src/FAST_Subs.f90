@@ -715,6 +715,19 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          p_FAST%VTK_surface%NWaveElevPts(2) = 0
       endif
 
+      allocate( y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1), stat=ErrStat2)
+      if (ErrStat2 /= 0 ) then
+         call SetErrStat(ErrID_Fatal, "Error allocating Lin%Modules(SeaSt).", ErrStat, ErrMsg, RoutineName )
+      else
+         if (allocated(Init%OutData_SeaSt%LinNames_y)) call move_alloc(Init%OutData_SeaSt%LinNames_y,y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1)%Names_y )
+         if (allocated(Init%OutData_SeaSt%LinNames_u)) call move_alloc(Init%OutData_SeaSt%LinNames_u,y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1)%Names_u )
+         if (allocated(Init%OutData_SeaSt%RotFrame_y)) call move_alloc(Init%OutData_SeaSt%RotFrame_y,y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1)%RotFrame_y )
+         if (allocated(Init%OutData_SeaSt%RotFrame_u)) call move_alloc(Init%OutData_SeaSt%RotFrame_u,y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1)%RotFrame_u )
+         if (allocated(Init%OutData_SeaSt%IsLoad_u  )) call move_alloc(Init%OutData_SeaSt%IsLoad_u  ,y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1)%IsLoad_u   )
+
+         if (allocated(Init%OutData_SeaSt%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1)%NumOutputs = size(Init%OutData_SeaSt%WriteOutputHdr)
+      end if
+
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -9287,7 +9300,7 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
 
             CALL FAST_Linearize_OP(t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                      Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD, Turbine%IfW, Turbine%ExtInfw, &
-                     Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+                     Turbine%HD, Turbine%SeaSt, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                IF (ErrStat >= AbortErrLev) RETURN
@@ -9305,7 +9318,7 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
       t_global      = t_initial + n_t_global*Turbine%p_FAST%dt
 
       call FAST_CalcSteady( n_t_global, t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, Turbine%ED, Turbine%BD, Turbine%SrvD, &
-                      Turbine%AD, Turbine%IfW, Turbine%ExtInfw, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, &
+                      Turbine%AD, Turbine%IfW, Turbine%ExtInfw, Turbine%HD, Turbine%SeaSt, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, &
                       Turbine%Orca, Turbine%IceF, Turbine%IceD, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -9318,8 +9331,8 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
             t_global = Turbine%m_FAST%Lin%LinTimes(iLinTime)
 
             call SetOperatingPoint(iLinTime, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, Turbine%ED, Turbine%BD, Turbine%SrvD, &
-                                      Turbine%AD, Turbine%IfW, Turbine%ExtInfw, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, &
-                                    Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, Turbine%IceF, Turbine%IceD, ErrStat2, ErrMsg2 )
+                                   Turbine%AD, Turbine%IfW, Turbine%ExtInfw, Turbine%HD, Turbine%SeaSt, Turbine%SD, Turbine%ExtPtfm, &
+                                   Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, Turbine%IceF, Turbine%IceD, ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
             if (Turbine%p_FAST%DT_UJac < Turbine%p_FAST%TMax) then
@@ -9335,7 +9348,7 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
 
             CALL FAST_Linearize_OP(t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                      Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD, Turbine%IfW, Turbine%ExtInfw, &
-                     Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+                     Turbine%HD, Turbine%SeaSt, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                IF (ErrStat >= AbortErrLev) RETURN
@@ -10387,12 +10400,12 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, p_FAST, y_FAST, m_FAST, ED, 
                m_FAST%NextJacCalcTime = m_FAST%Lin%LinTimes(iLinTime)
             end if
 
-            call SetOperatingPoint(iLinTime, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, &
+            call SetOperatingPoint(iLinTime, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SeaSt, SD, ExtPtfm, &
                                     MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
                ! set perturbation of states based on x_eig magnitude and phase
-            call PerturbOP(tprime, iLinTime, ModeNo, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
+            call PerturbOP(tprime, iLinTime, ModeNo, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SeaSt, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                         IceF, IceD, ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                IF (ErrStat >= AbortErrLev) RETURN
@@ -10419,12 +10432,12 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, p_FAST, y_FAST, m_FAST, ED, 
             do it = 1,nt
                tprime = (it-1)*dt
 
-               call SetOperatingPoint(iLinTime, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, &
+               call SetOperatingPoint(iLinTime, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SeaSt, SD, ExtPtfm, &
                                      MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat2, ErrMsg2 )
                   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
                   ! set perturbation of states based on x_eig magnitude and phase
-               call PerturbOP(tprime, iLinTime, ModeNo, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
+               call PerturbOP(tprime, iLinTime, ModeNo, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SeaSt, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                          IceF, IceD, ErrStat2, ErrMsg2 )
                   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   IF (ErrStat >= AbortErrLev) RETURN

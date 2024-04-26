@@ -282,6 +282,11 @@ IMPLICIT NONE
     TYPE(HydroDyn_ConstraintStateType) , DIMENSION(:), ALLOCATABLE  :: z_HD      !< Constraint states [-]
     TYPE(HydroDyn_OtherStateType) , DIMENSION(:), ALLOCATABLE  :: OtherSt_HD      !< Other states [-]
     TYPE(HydroDyn_InputType) , DIMENSION(:), ALLOCATABLE  :: u_HD      !< System inputs [-]
+    TYPE(SeaSt_ContinuousStateType) , DIMENSION(:), ALLOCATABLE  :: x_SeaSt      !< Continuous states [-]
+    TYPE(SeaSt_DiscreteStateType) , DIMENSION(:), ALLOCATABLE  :: xd_SeaSt      !< Discrete states [-]
+    TYPE(SeaSt_ConstraintStateType) , DIMENSION(:), ALLOCATABLE  :: z_SeaSt      !< Constraint states [-]
+    TYPE(SeaSt_OtherStateType) , DIMENSION(:), ALLOCATABLE  :: OtherSt_SeaSt      !< Other states [-]
+    TYPE(SeaSt_InputType) , DIMENSION(:), ALLOCATABLE  :: u_SeaSt      !< System inputs [-]
     TYPE(IceFloe_ContinuousStateType) , DIMENSION(:), ALLOCATABLE  :: x_IceF      !< Continuous states [-]
     TYPE(IceFloe_DiscreteStateType) , DIMENSION(:), ALLOCATABLE  :: xd_IceF      !< Discrete states [-]
     TYPE(IceFloe_ConstraintStateType) , DIMENSION(:), ALLOCATABLE  :: z_IceF      !< Constraint states [-]
@@ -2524,6 +2529,86 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          if (ErrStat >= AbortErrLev) return
       end do
    end if
+   if (allocated(SrcLinStateSaveData%x_SeaSt)) then
+      LB(1:1) = lbound(SrcLinStateSaveData%x_SeaSt, kind=B8Ki)
+      UB(1:1) = ubound(SrcLinStateSaveData%x_SeaSt, kind=B8Ki)
+      if (.not. allocated(DstLinStateSaveData%x_SeaSt)) then
+         allocate(DstLinStateSaveData%x_SeaSt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinStateSaveData%x_SeaSt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call SeaSt_CopyContState(SrcLinStateSaveData%x_SeaSt(i1), DstLinStateSaveData%x_SeaSt(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcLinStateSaveData%xd_SeaSt)) then
+      LB(1:1) = lbound(SrcLinStateSaveData%xd_SeaSt, kind=B8Ki)
+      UB(1:1) = ubound(SrcLinStateSaveData%xd_SeaSt, kind=B8Ki)
+      if (.not. allocated(DstLinStateSaveData%xd_SeaSt)) then
+         allocate(DstLinStateSaveData%xd_SeaSt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinStateSaveData%xd_SeaSt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call SeaSt_CopyDiscState(SrcLinStateSaveData%xd_SeaSt(i1), DstLinStateSaveData%xd_SeaSt(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcLinStateSaveData%z_SeaSt)) then
+      LB(1:1) = lbound(SrcLinStateSaveData%z_SeaSt, kind=B8Ki)
+      UB(1:1) = ubound(SrcLinStateSaveData%z_SeaSt, kind=B8Ki)
+      if (.not. allocated(DstLinStateSaveData%z_SeaSt)) then
+         allocate(DstLinStateSaveData%z_SeaSt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinStateSaveData%z_SeaSt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call SeaSt_CopyConstrState(SrcLinStateSaveData%z_SeaSt(i1), DstLinStateSaveData%z_SeaSt(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcLinStateSaveData%OtherSt_SeaSt)) then
+      LB(1:1) = lbound(SrcLinStateSaveData%OtherSt_SeaSt, kind=B8Ki)
+      UB(1:1) = ubound(SrcLinStateSaveData%OtherSt_SeaSt, kind=B8Ki)
+      if (.not. allocated(DstLinStateSaveData%OtherSt_SeaSt)) then
+         allocate(DstLinStateSaveData%OtherSt_SeaSt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinStateSaveData%OtherSt_SeaSt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call SeaSt_CopyOtherState(SrcLinStateSaveData%OtherSt_SeaSt(i1), DstLinStateSaveData%OtherSt_SeaSt(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcLinStateSaveData%u_SeaSt)) then
+      LB(1:1) = lbound(SrcLinStateSaveData%u_SeaSt, kind=B8Ki)
+      UB(1:1) = ubound(SrcLinStateSaveData%u_SeaSt, kind=B8Ki)
+      if (.not. allocated(DstLinStateSaveData%u_SeaSt)) then
+         allocate(DstLinStateSaveData%u_SeaSt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinStateSaveData%u_SeaSt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call SeaSt_CopyInput(SrcLinStateSaveData%u_SeaSt(i1), DstLinStateSaveData%u_SeaSt(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
    if (allocated(SrcLinStateSaveData%x_IceF)) then
       LB(1:1) = lbound(SrcLinStateSaveData%x_IceF, kind=B8Ki)
       UB(1:1) = ubound(SrcLinStateSaveData%x_IceF, kind=B8Ki)
@@ -3266,6 +3351,51 @@ subroutine FAST_DestroyLinStateSave(LinStateSaveData, ErrStat, ErrMsg)
       end do
       deallocate(LinStateSaveData%u_HD)
    end if
+   if (allocated(LinStateSaveData%x_SeaSt)) then
+      LB(1:1) = lbound(LinStateSaveData%x_SeaSt, kind=B8Ki)
+      UB(1:1) = ubound(LinStateSaveData%x_SeaSt, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call SeaSt_DestroyContState(LinStateSaveData%x_SeaSt(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(LinStateSaveData%x_SeaSt)
+   end if
+   if (allocated(LinStateSaveData%xd_SeaSt)) then
+      LB(1:1) = lbound(LinStateSaveData%xd_SeaSt, kind=B8Ki)
+      UB(1:1) = ubound(LinStateSaveData%xd_SeaSt, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call SeaSt_DestroyDiscState(LinStateSaveData%xd_SeaSt(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(LinStateSaveData%xd_SeaSt)
+   end if
+   if (allocated(LinStateSaveData%z_SeaSt)) then
+      LB(1:1) = lbound(LinStateSaveData%z_SeaSt, kind=B8Ki)
+      UB(1:1) = ubound(LinStateSaveData%z_SeaSt, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call SeaSt_DestroyConstrState(LinStateSaveData%z_SeaSt(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(LinStateSaveData%z_SeaSt)
+   end if
+   if (allocated(LinStateSaveData%OtherSt_SeaSt)) then
+      LB(1:1) = lbound(LinStateSaveData%OtherSt_SeaSt, kind=B8Ki)
+      UB(1:1) = ubound(LinStateSaveData%OtherSt_SeaSt, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call SeaSt_DestroyOtherState(LinStateSaveData%OtherSt_SeaSt(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(LinStateSaveData%OtherSt_SeaSt)
+   end if
+   if (allocated(LinStateSaveData%u_SeaSt)) then
+      LB(1:1) = lbound(LinStateSaveData%u_SeaSt, kind=B8Ki)
+      UB(1:1) = ubound(LinStateSaveData%u_SeaSt, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call SeaSt_DestroyInput(LinStateSaveData%u_SeaSt(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(LinStateSaveData%u_SeaSt)
+   end if
    if (allocated(LinStateSaveData%x_IceF)) then
       LB(1:1) = lbound(LinStateSaveData%x_IceF, kind=B8Ki)
       UB(1:1) = ubound(LinStateSaveData%x_IceF, kind=B8Ki)
@@ -3869,6 +3999,51 @@ subroutine FAST_PackLinStateSave(RF, Indata)
       UB(1:1) = ubound(InData%u_HD, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call HydroDyn_PackInput(RF, InData%u_HD(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%x_SeaSt))
+   if (allocated(InData%x_SeaSt)) then
+      call RegPackBounds(RF, 1, lbound(InData%x_SeaSt, kind=B8Ki), ubound(InData%x_SeaSt, kind=B8Ki))
+      LB(1:1) = lbound(InData%x_SeaSt, kind=B8Ki)
+      UB(1:1) = ubound(InData%x_SeaSt, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call SeaSt_PackContState(RF, InData%x_SeaSt(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%xd_SeaSt))
+   if (allocated(InData%xd_SeaSt)) then
+      call RegPackBounds(RF, 1, lbound(InData%xd_SeaSt, kind=B8Ki), ubound(InData%xd_SeaSt, kind=B8Ki))
+      LB(1:1) = lbound(InData%xd_SeaSt, kind=B8Ki)
+      UB(1:1) = ubound(InData%xd_SeaSt, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call SeaSt_PackDiscState(RF, InData%xd_SeaSt(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%z_SeaSt))
+   if (allocated(InData%z_SeaSt)) then
+      call RegPackBounds(RF, 1, lbound(InData%z_SeaSt, kind=B8Ki), ubound(InData%z_SeaSt, kind=B8Ki))
+      LB(1:1) = lbound(InData%z_SeaSt, kind=B8Ki)
+      UB(1:1) = ubound(InData%z_SeaSt, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call SeaSt_PackConstrState(RF, InData%z_SeaSt(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%OtherSt_SeaSt))
+   if (allocated(InData%OtherSt_SeaSt)) then
+      call RegPackBounds(RF, 1, lbound(InData%OtherSt_SeaSt, kind=B8Ki), ubound(InData%OtherSt_SeaSt, kind=B8Ki))
+      LB(1:1) = lbound(InData%OtherSt_SeaSt, kind=B8Ki)
+      UB(1:1) = ubound(InData%OtherSt_SeaSt, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call SeaSt_PackOtherState(RF, InData%OtherSt_SeaSt(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%u_SeaSt))
+   if (allocated(InData%u_SeaSt)) then
+      call RegPackBounds(RF, 1, lbound(InData%u_SeaSt, kind=B8Ki), ubound(InData%u_SeaSt, kind=B8Ki))
+      LB(1:1) = lbound(InData%u_SeaSt, kind=B8Ki)
+      UB(1:1) = ubound(InData%u_SeaSt, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call SeaSt_PackInput(RF, InData%u_SeaSt(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%x_IceF))
@@ -4657,6 +4832,71 @@ subroutine FAST_UnPackLinStateSave(RF, OutData)
       end if
       do i1 = LB(1), UB(1)
          call HydroDyn_UnpackInput(RF, OutData%u_HD(i1)) ! u_HD 
+      end do
+   end if
+   if (allocated(OutData%x_SeaSt)) deallocate(OutData%x_SeaSt)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%x_SeaSt(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%x_SeaSt.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SeaSt_UnpackContState(RF, OutData%x_SeaSt(i1)) ! x_SeaSt 
+      end do
+   end if
+   if (allocated(OutData%xd_SeaSt)) deallocate(OutData%xd_SeaSt)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%xd_SeaSt(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%xd_SeaSt.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SeaSt_UnpackDiscState(RF, OutData%xd_SeaSt(i1)) ! xd_SeaSt 
+      end do
+   end if
+   if (allocated(OutData%z_SeaSt)) deallocate(OutData%z_SeaSt)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%z_SeaSt(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%z_SeaSt.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SeaSt_UnpackConstrState(RF, OutData%z_SeaSt(i1)) ! z_SeaSt 
+      end do
+   end if
+   if (allocated(OutData%OtherSt_SeaSt)) deallocate(OutData%OtherSt_SeaSt)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%OtherSt_SeaSt(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%OtherSt_SeaSt.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SeaSt_UnpackOtherState(RF, OutData%OtherSt_SeaSt(i1)) ! OtherSt_SeaSt 
+      end do
+   end if
+   if (allocated(OutData%u_SeaSt)) deallocate(OutData%u_SeaSt)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%u_SeaSt(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%u_SeaSt.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SeaSt_UnpackInput(RF, OutData%u_SeaSt(i1)) ! u_SeaSt 
       end do
    end if
    if (allocated(OutData%x_IceF)) deallocate(OutData%x_IceF)
