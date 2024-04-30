@@ -585,7 +585,7 @@ SUBROUTINE ExtLd_UpdateFlowField( p_FAST, u_AD, m_AD, ExtLd, ErrStat, ErrMsg )
 
    !FIXME this should probably be checked against a parameter instead of digging into miscvars of AD
    ! Tower
-   if ( allocated(m_AD%Inflow(1)%RotInflow(1)%InflowOnTower) ) then
+   if ( allocated(m_AD%Inflow(1)%RotInflow(1)%Tower%InflowVel) ) then
       do j=1,u_AD%rotors(1)%TowerMotion%nNodes
          ! height
          z = u_AD%rotors(1)%TowerMotion%Position(3,j) + u_AD%rotors(1)%TowerMotion%TranslationDisp(3,j)
