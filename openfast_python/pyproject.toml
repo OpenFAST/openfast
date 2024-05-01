@@ -3,13 +3,12 @@ name = "openfast"
 version = "3.5.4"
 description = "Readers and writers for OpenFAST files."
 authors = [
-    {name = "NREL WISDEM Team", email = "systems.engineering@nrel.gov"},
-    {name = "dzalkind"},
-    {name = "Garrett Barter", email = "garrett.barter@nrel.gov"},
-    {name = "Pietro Bortolotti", email = "<ptrbortolotti@gmail.com>"},
-    {name = "Mayank Chetan"},
-    {name = "John Jasa"},
-    {name = "Marcus Lugg", email = "marcus@octue.com"},
+    "NREL WISDEM Team <systems.engineering@nrel.gov>",
+    "dzalkind",
+    "Garrett Barter <garrett.barter@nrel.gov>",
+    "Pietro Bortolotti <ptrbortolotti@gmail.com>",
+    "Mayank Chetan",
+    "John Jasa",
 ]
 readme = "README.md"
 packages = [{include = "openfast"}]
