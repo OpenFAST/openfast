@@ -852,8 +852,10 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       call WrScr('         Setting SectAvg to False as the input is Missing (legacy behavior).')
       InputFileData%SectAvg = .false.
    else
-      call ParseVar( FileInfo_In, CurLine, "SectAvgWeighting", InputFileData%SA_Weighting, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
-      call ParseVar( FileInfo_In, CurLine, "SectAvgNPoints"  , InputFileData%SA_nPerSec, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+      call ParseVarWDefault( FileInfo_In, CurLine, "SectAvgWeighting", InputFileData%SA_Weighting, 1      , ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+      call ParseVarWDefault( FileInfo_In, CurLine, "SectAvgNPoints"  , InputFileData%SA_nPerSec,   5      , ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+      call ParseVarWDefault( FileInfo_In, CurLine, "SectAvgPsiBwd"   , InputFileData%SA_PsiBwd,  -60._ReKi, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+      call ParseVarWDefault( FileInfo_In, CurLine, "SectAvgPsiFwd"   , InputFileData%SA_PsiFwd,   60._ReKi, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
       call ParseCom (FileInfo_in, CurLine, sDummy, errStat2, errMsg2, UnEc, isLegalComment); if (Failed()) return
    endif
 

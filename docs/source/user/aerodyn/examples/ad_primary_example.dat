@@ -34,8 +34,10 @@ True          TIDrag             - Include the drag term in the tangential-induc
         100   MaxIter            - Maximum number of iteration steps (-) [unused when WakeMod=0]
 --- Shear correction 
 False         SectAvg           - Use sector averaging (flag)
-1             SectAvgWeighting  - Weighting function for sector average  {1=Uniform}  within a sector centered on the blade (switch) [used only when SectAvg=True] 
-5             SectAvgNPoints    - Number of points per sectors (-) [used only when SectAvg=True] 
+1             SectAvgWeighting  - Weighting function for sector average  {1=Uniform, default=1}  within a sector centered on the blade (switch) [used only when SectAvg=True] 
+5             SectAvgNPoints    - Number of points per sectors (-) {default=5} [used only when SectAvg=True] 
+-60           SectAvgPsiBwd     - Backward azimuth relative to blade where the sector starts (<=0) {default=-60} (deg) [used only when SectAvg=True]
+ 60           SectAvgPsiFwd     - Forward azimuth relative to blade where the sector ends (>=0) {default=60} (deg) [used only when SectAvg=True]
 --- Dynamic wake/inflow
           2   DBEMT_Mod          - Type of dynamic BEMT (DBEMT) model {0=No Dynamic Wake, -1=Frozen Wake for linearization, 1:constant tau1, 2=time-dependent tau1, 3=constant tau1 with continuous formulation} (-)
          20   tau1_const         - Time constant for DBEMT (s) [used only when DBEMT_Mod=1 or 3]

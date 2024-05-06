@@ -199,7 +199,7 @@ typedef	^	AD_InputFile	Logical	SectAvg	-	-	False	"Use Sector average for BEM inf
 typedef	^	     ^      	IntKi  	SA_Weighting	-	-	1	    "Sector Average - Weighting function for sector average  {1=Uniform, 2=Impulse, }  within a 360/nB sector centered on the blade (switch) [used only when SectAvg=True]" -
 typedef	^	     ^      	ReKi   	SA_PsiBwd	-	-60	-	"Sector Average - Backard Azimuth (<0)"	deg
 typedef	^	     ^      	ReKi   	SA_PsiFwd	-	 60	-	"Sector Average - Forward Azimuth (>0)"	deg
-typedef	^	     ^      	IntKi  	SA_nPerSec	-	 11	-	"Sector average - Number of points per sectors (-) [used only when SectAvg=True]" -
+typedef	^	     ^      	IntKi  	SA_nPerSec	-	  5	-	"Sector average - Number of points per sectors (-) [used only when SectAvg=True]" -
 typedef	^	     ^      	LOGICAL	AoA34	-	-	-	"Sample the angle of attack (AoA) at the 3/4 chord or the AC point {default=True} [always used]"	-
 typedef	^	     ^      	IntKi	UAMod	-	-	-	"Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA),  2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)}" -
 typedef	^	AD_InputFile	LOGICAL	FLookup	-	-	-	"Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAeroMod=2]"	flag

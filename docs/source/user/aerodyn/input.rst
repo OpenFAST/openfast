@@ -197,6 +197,8 @@ The following inputs in this section are only used when ``WakeMod = 1``.
 - ``Skew_Mod=0`` means no skew model at all (not recommended) 
 - ``Skew_Mod=-1`` throws away non-normal component (for linearization). This setting makes sure the wind speed is always normal to the rotor to limit periodic variation of the wind speed if the rotor is not perpendicular to the wind (e.g. tower top tilting or tilt). This is mostly needed for linearization. 
 
+Currently (``Skew_Mod=0``) or (``Skew_Mod=1`` and ``SkewModCorr=False`` and ``SkewRedistr_Mod = 0``)  are the same, both set of inputs turn off the skew correction entirely.
+
 .. note::
     Link to old inputs: Previous implementations always had the skew model on. `Skew_Mod=-1` replaces the old `SkewMod=0` (an option that few users were using). 
 
@@ -253,16 +255,22 @@ Shear corrections
 ~~~~~~~~~~~~~~~~~
 
 The BEM algorithm may need to be corrected to account for shear.
-Currently, a sector average correction is implemented, as a beta feature, to limit fluctuations associtated with variations of wind speed as the blade rotates.
+Currently, a sector average correction is implemented, as a beta feature, to limit fluctuations associated with variations of wind speed as the blade rotates.
 
-The feature will be documented at a later time.
+The feature will be documented at a later time and is still at an experimental stage.
 
-**SectAvg**  Use Sector Averaging (flag)
+**SectAvg**  Use Sector Averaging (flag).
+The method uses sectors expanding forward and backward relative to the current azimuth of the blade (see ``SectAvgPsiBwd`` and ``SectAvgPsiFwd``). 
+The velocity is averaged within this sector by attributing different weighting at different points in the sector (see ``SectAvgWeighting``).
 
 **SectAvgWeighting** Weighting function for sector average. 
-1=Uniform  within a sector centered on the blade (switch) [used only when ``SectAvg=True``] 
+1=Uniform  (switch) [used only when ``SectAvg=True``]. Default is 1.
 
-**SectAvgNPoints** Number of points per sectors (-) [used only when ``SectAvg=True``] 
+**SectAvgNPoints** Number of points per sectors (-) [used only when ``SectAvg=True``]. Default is 5.
+
+**SectAvgPsiBwd** Backward azimuth (in degrees) relative to the blade azimuth where the sector starts. Must be negative. [used only when SectAvg=True]. Default is -60 deg.
+
+**SectAvgPsiFwd** Forward azimuth (in degrees) relative to the blade azimuth where the sector ends. Must be positive. [used only when SectAvg=True]. Default is 60 deg.
 
 
 
