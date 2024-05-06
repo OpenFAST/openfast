@@ -189,7 +189,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       real(ReKi)                             :: WaveNmbr                             ! Frequency-dependent wave number
       COMPLEX(SiKi)                          :: Fxy                                  ! Phase correction term for Wave excitation forces
       real(ReKi)                             :: tmpAngle                             ! Frequency and heading and platform offset dependent phase shift angle for Euler's Equation e^(-j*tmpAngle)
-      COMPLEX(SiKi), ALLOCATABLE             :: HdroExctn_Local (:,:,:)              ! Temporary Frequency- and direction-dependent complex hydrodynamic wave excitation force per unit wave amplitude vector (kg/s^2, kg-m/s^2)
+      REAL(ReKi)                             :: RotateZdegOffset                     ! PtfmRefZtRot converted to degrees
          ! Error handling
       CHARACTER(ErrMsgLen)                   :: ErrMsg2                              ! Temporary error message for calls
       INTEGER(IntKi)                         :: ErrStat2                             ! Temporary error status for calls
@@ -954,7 +954,13 @@ end if
                ! NOTE: we may end up inadvertantly aborting if the wave direction crosses
                !   the -Pi / Pi boundary (-180/180 degrees).
 
-               IF ( ( p%WaveField%WaveDirMin < HdroWvDir(1) ) .OR. ( p%WaveField%WaveDirMax > HdroWvDir(NInpWvDir) ) )  THEN
+               ! Need to account for PtfmRefZtRot if NBodyMod=2 (NBody=1 in the case)
+               IF ( p%NBodyMod == 2 ) THEN
+                  RotateZdegOffset = InitInp%PtfmRefztRot(1)*R2D
+               ELSE
+                  RotateZdegOffset = 0.0
+               END IF
+               IF ( ( (p%WaveField%WaveDirMin-RotateZdegOffset)<HdroWvDir(1) ) .OR. ( (p%WaveField%WaveDirMax-RotateZdegOffset) > HdroWvDir(NInpWvDir) ) )  THEN
                   ErrMsg2  = 'All Wave directions must be within the wave heading angle range available in "' &
                                  //TRIM(InitInp%WAMITFile)//'.3" (inclusive).'
                   CALL SetErrStat( ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1003,46 +1009,35 @@ end if
                if ( p%NBodyMod == 2 ) then
                   
                   ! Since NBodyMod = 2, then NBody = 1 for this WAMIT object (this requirement is encoded at the HydroDyn module level)
-                  
-                  allocate (  HdroExctn_Local(NInpFreq, NInpWvDir, 6),   STAT=ErrStat2 )
-                  IF ( ErrStat2 /= 0 )  THEN
-                     CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the HdroExctn_Local array.', ErrStat, ErrMsg, RoutineName)
-                     CALL Cleanup()
-                     RETURN            
-                  END IF
+                  ! HdroWvDir from WAMIT is effectively in the body-local coordinate system. Need to offset HdroWvDir to be back in the global frame
+                  HdroWvDir = HdroWvDir + InitInp%PtfmRefztRot(1)*R2D
 
-                  do K = 1,6           ! Loop through all wave excitation forces and moments
-                     do J = 1, NInpWvDir                       
-                        TmpCoord(2) = HdroWvDir(J) - InitInp%PtfmRefztRot(1)*R2D  ! apply locale Z rotation to heading angle (degrees)
-                        do I = 1, NInpFreq
-                           TmpCoord(1) = HdroFreq(I)
-                           ! Iterpolate to find new coef
-                           call WAMIT_Interp2D_Cplx( TmpCoord, HdroExctn(:,:,K), HdroFreq, HdroWvDir, LastInd2, HdroExctn_Local(I,J,K), ErrStat2, ErrMsg2 )
-                        end do
-                     end do
-                  end do
-
-                  ! Now apply rotation and phase shift 
-
+                  ! Now apply rotation and phase shift
                   do J = 1, NInpWvDir  
                      do I = 1, NInpFreq
-                           ! Fxy = exp(-j * k(w) * ( X*cos(Beta(w)) + Y*sin(Beta(w)) )
+                        ! Fxy = exp(-j * k(w) * ( X*cos(Beta(w)) + Y*sin(Beta(w)) )
                         WaveNmbr   = WaveNumber ( HdroFreq(I), InitInp%Gravity, p%WaveField%EffWtrDpth )
                         tmpAngle   = WaveNmbr * ( InitInp%PtfmRefxt(1)*cos(HdroWvDir(J)*D2R) + InitInp%PtfmRefyt(1)*sin(HdroWvDir(J)*D2R) )
                         TmpRe =  cos(tmpAngle)
                         TmpIm = -sin(tmpAngle)
                         Fxy   = CMPLX( TmpRe, TmpIm )
 
-                        HdroExctn(I,J,1) = Fxy*( HdroExctn_Local(I,J,1)*cos(InitInp%PtfmRefztRot(1)) -  HdroExctn_Local(I,J,2)*sin(InitInp%PtfmRefztRot(1)) )
-                        HdroExctn(I,J,2) = Fxy*( HdroExctn_Local(I,J,1)*sin(InitInp%PtfmRefztRot(1)) +  HdroExctn_Local(I,J,2)*cos(InitInp%PtfmRefztRot(1)) )
-                        HdroExctn(I,J,3) = Fxy*( HdroExctn_Local(I,J,3) )
-                        HdroExctn(I,J,4) = Fxy*( HdroExctn_Local(I,J,4)*cos(InitInp%PtfmRefztRot(1)) -  HdroExctn_Local(I,J,5)*sin(InitInp%PtfmRefztRot(1)) )
-                        HdroExctn(I,J,5) = Fxy*( HdroExctn_Local(I,J,4)*sin(InitInp%PtfmRefztRot(1)) +  HdroExctn_Local(I,J,5)*cos(InitInp%PtfmRefztRot(1)) )
-                        HdroExctn(I,J,6) = Fxy*( HdroExctn_Local(I,J,6) )
+                        Ctmp1 = Fxy*( HdroExctn(I,J,1)*cos(InitInp%PtfmRefztRot(1)) -  HdroExctn(I,J,2)*sin(InitInp%PtfmRefztRot(1)) )
+                        Ctmp2 = Fxy*( HdroExctn(I,J,1)*sin(InitInp%PtfmRefztRot(1)) +  HdroExctn(I,J,2)*cos(InitInp%PtfmRefztRot(1)) )
+                        Ctmp4 = Fxy*( HdroExctn(I,J,4)*cos(InitInp%PtfmRefztRot(1)) -  HdroExctn(I,J,5)*sin(InitInp%PtfmRefztRot(1)) )
+                        Ctmp5 = Fxy*( HdroExctn(I,J,4)*sin(InitInp%PtfmRefztRot(1)) +  HdroExctn(I,J,5)*cos(InitInp%PtfmRefztRot(1)) )
+
+                        HdroExctn(I,J,1) = Ctmp1
+                        HdroExctn(I,J,2) = Ctmp2
+                        HdroExctn(I,J,4) = Ctmp4
+                        HdroExctn(I,J,5) = Ctmp5
+
+                        HdroExctn(I,J,3) = Fxy*( HdroExctn(I,J,3) )
+                        HdroExctn(I,J,6) = Fxy*( HdroExctn(I,J,6) )
 
                      end do
                   end do  
-                  deallocate(HdroExctn_Local)
+
                else
                   
                      ! Apply rotation only for NBodyMod = 1,3
@@ -1204,23 +1199,18 @@ end if
                
                         ! Now apply the phase shift in the frequency space
 
-                        do J = 1, NInpWvDir  
-                           do I = 0,p%WaveField%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transform
+                        do I = 0,p%WaveField%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transform
 
-                        ! Compute the frequency of this component:
+                           ! Compute the phase shift of this component, Fxy = exp(-j * k(w) * ( X*cos(Beta(w)) + Y*sin(Beta(w)) ):
+                           Omega = I*p%WaveField%WaveDOmega 
+                           WaveNmbr   = WaveNumber ( Omega, InitInp%Gravity, p%WaveField%EffWtrDpth )
+                           tmpAngle   = WaveNmbr * ( InitInp%PtfmRefxt(1)*cos(p%WaveField%WaveDirArr(I)*D2R) + InitInp%PtfmRefyt(1)*sin(p%WaveField%WaveDirArr(I)*D2R) )
+                           TmpRe =  cos(tmpAngle)
+                           TmpIm = -sin(tmpAngle)
+                           Fxy   = CMPLX( TmpRe, TmpIm )
 
-                              Omega = I*p%WaveField%WaveDOmega
-                                 ! Fxy = exp(-j * k(w) * ( X*cos(Beta(w)) + Y*sin(Beta(w)) )
-                              WaveNmbr   = WaveNumber ( Omega, InitInp%Gravity, p%WaveField%EffWtrDpth )
-                              tmpAngle   = WaveNmbr * ( InitInp%PtfmRefxt(1)*cos(HdroWvDir(J)*D2R) + InitInp%PtfmRefyt(1)*sin(HdroWvDir(J)*D2R) )
-                              TmpRe =  cos(tmpAngle)
-                              TmpIm = -sin(tmpAngle)
-                              Fxy   = CMPLX( TmpRe, TmpIm )
-
-                              tmpComplexArr(I) = Fxy*CMPLX(p%WaveField%WaveElevC0(1,I), p%WaveField%WaveElevC0(2,I))
-                          
-
-                           end do
+                           ! Apply phase shift
+                           tmpComplexArr(I) = Fxy*CMPLX(p%WaveField%WaveElevC0(1,I), p%WaveField%WaveElevC0(2,I))
                         end do  
                      
                         ! Compute the inverse discrete Fourier transforms to find the time-domain

@@ -659,6 +659,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    integer(IntKi)                                  :: CurLine           !< current entry in FileInfo_In%Lines array
    real(ReKi)                                      :: TmpRe5(5)         !< temporary 8 number array for reading values in
    character(1024)                                 :: sDummy            !< temporary string
+   character(1024)                                 :: tmpOutStr         !< temporary string for writing to screen
    logical :: wakeModProvided, frozenWakeProvided, skewModProvided, AFAeroModProvided, UAModProvided, isLegalComment, firstWarn !< Temporary for legacy purposes
    logical :: AoA34_Missing
    integer :: UAMod_Old
@@ -1177,19 +1178,20 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
          ! pass comment lines
          elseif (index(sDummy, 'SECTAVG')>1) then
             read(sDummy, '(L1)') InputFileData%SectAvg
-            print*,'   >>> SectAvg        ',InputFileData%SectAvg
+            write(tmpOutStr,*) '   >>> SectAvg        ',InputFileData%SectAvg
          elseif (index(sDummy, 'SA_PSIBWD')>1) then
             read(sDummy, *) InputFileData%SA_PsiBwd
-            print*,'   >>> SA_PsiBwd      ',InputFileData%SA_PsiBwd
+            write(tmpOutStr,*) '   >>> SA_PsiBwd      ',InputFileData%SA_PsiBwd
          elseif (index(sDummy, 'SA_PSIFWD')>1) then
             read(sDummy, *) InputFileData%SA_PsiFwd
-            print*,'   >>> SA_PsiFwd      ',InputFileData%SA_PsiFwd
+            write(tmpOutStr,*) '   >>> SA_PsiFwd      ',InputFileData%SA_PsiFwd
          elseif (index(sDummy, 'SA_NPERSEC')>1) then
             read(sDummy, *) InputFileData%SA_nPerSec
-            print*,'   >>> SA_nPerSec     ',InputFileData%SA_nPerSec
+            write(tmpOutStr,*) '   >>> SA_nPerSec     ',InputFileData%SA_nPerSec
          else
-            print*,'[WARN] AeroDyn Line ignored: '//trim(sDummy)
+            write(tmpOutStr,*) '[WARN] AeroDyn Line ignored: '//trim(sDummy)
       endif
+      call WrScr(trim(tmpOutStr))
    enddo
 
 
@@ -1271,6 +1273,7 @@ CONTAINS
 
    !-------------------------------------------------------------------------------------------------
    subroutine printNewOldInputs()
+      character(1024)   :: tmpStr
       ! Temporary HACK, for WakeMod=10, 11 or 12 use AeroProjMod 2 (will trigger PolarBEM)
       if (InputFileData%Wake_Mod==10) then
          call WrScr('[WARN] Wake_Mod=10 is a temporary hack. Setting BEM_Mod to 0')
@@ -1285,23 +1288,23 @@ CONTAINS
       !====== Summary of new AeroDyn options ===============================================================
       ! NOTE: remove me in future release
       call WrScr('-------------- New AeroDyn inputs (with new meaning):')
-      write (*,'(A20,I0)') 'Wake_Mod: '         , InputFileData%Wake_Mod
-      write (*,'(A20,I0)') 'BEM_Mod:  '         , InputFileData%BEM_Mod
-      write (*,'(A20,L0)') 'SectAvg:  '         , InputFileData%SectAvg
-      write (*,'(A20,I0)') 'SectAvgWeighting:  ', InputFileData%SA_Weighting
-      write (*,'(A20,I0)') 'SectAvgNPoints:    ', InputFileData%SA_nPerSec
-      write (*,'(A20,I0)') 'DBEMT_Mod:'         , InputFileData%DBEMT_Mod
-      write (*,'(A20,I0)') 'Skew_Mod:  '        , InputFileData%Skew_Mod
-      write (*,'(A20,L0)') 'SkewMomCorr:'       , InputFileData%SkewMomCorr
-      write (*,'(A20,I0)') 'SkewRedistr_Mod:'   , InputFileData%SkewRedistr_Mod
-      write (*,'(A20,L0)') 'AoA34:    '         , InputFileData%AoA34
-      write (*,'(A20,I0)') 'UA_Mod:   '         , InputFileData%UAMod
+      write (tmpStr,'(A20,I0)') 'Wake_Mod: '         , InputFileData%Wake_Mod;         call WrScr(trim(tmpStr))
+      write (tmpStr,'(A20,I0)') 'BEM_Mod:  '         , InputFileData%BEM_Mod;          call WrScr(trim(tmpStr))
+      write (tmpStr,'(A20,L1)') 'SectAvg:  '         , InputFileData%SectAvg;          call WrScr(trim(tmpStr))
+      write (tmpStr,'(A20,I0)') 'SectAvgWeighting:  ', InputFileData%SA_Weighting;     call WrScr(trim(tmpStr))
+      write (tmpStr,'(A20,I0)') 'SectAvgNPoints:    ', InputFileData%SA_nPerSec;       call WrScr(trim(tmpStr))
+      write (tmpStr,'(A20,I0)') 'DBEMT_Mod:'         , InputFileData%DBEMT_Mod;        call WrScr(trim(tmpStr))
+      write (tmpStr,'(A20,I0)') 'Skew_Mod:  '        , InputFileData%Skew_Mod;         call WrScr(trim(tmpStr))
+      write (tmpStr,'(A20,L1)') 'SkewMomCorr:'       , InputFileData%SkewMomCorr;      call WrScr(trim(tmpStr))
+      write (tmpStr,'(A20,I0)') 'SkewRedistr_Mod:'   , InputFileData%SkewRedistr_Mod;  call WrScr(trim(tmpStr))
+      write (tmpStr,'(A20,L1)') 'AoA34:    '         , InputFileData%AoA34;            call WrScr(trim(tmpStr))
+      write (tmpStr,'(A20,I0)') 'UA_Mod:   '         , InputFileData%UAMod;            call WrScr(trim(tmpStr))
       call WrScr('-------------- Old AeroDyn inputs:')
-      write (*,'(A20,I0)') 'WakeMod:  ', InputFileData%WakeMod
-      write (*,'(A20,I0)') 'SkewMod:  ', InputFileData%SkewMod
-      write (*,'(A20,I0)') 'AFAeroMod:', InputFileData%AFAeroMod
-      write (*,'(A20,L0)') 'FrozenWake:', InputFileData%FrozenWake
-      write (*,'(A20,I0)') 'UAMod:     ', UAMod_Old
+      write (tmpStr,'(A20,I0)') 'WakeMod:  ', InputFileData%WakeMod;          call WrScr(trim(tmpStr))
+      write (tmpStr,'(A20,I0)') 'SkewMod:  ', InputFileData%SkewMod;          call WrScr(trim(tmpStr))
+      write (tmpStr,'(A20,I0)') 'AFAeroMod:', InputFileData%AFAeroMod;        call WrScr(trim(tmpStr))
+      write (tmpStr,'(A20,L1)') 'FrozenWake:', InputFileData%FrozenWake;      call WrScr(trim(tmpStr))
+      write (tmpStr,'(A20,I0)') 'UAMod:     ', UAMod_Old;                     call WrScr(trim(tmpStr))
       call WrScr('------------------------------------------------------')
    end subroutine printNewOldInputs
 
@@ -2408,7 +2411,7 @@ subroutine calcCantAngle(f, xi,stencilSize,n,cantAngle)
         call differ_stencil ( xi(i), 1, 2, xiIn, cx, info )
         !call differ_stencil ( xi(i), 1, 2, fIn, cf, info )
         if (info /= 0) then 
-           print*,'Cant Calc failed at i=',i
+           call WrScr('Cant Calc failed at i='//trim(Num2LStr(i)))
         else
            cPrime(i) = 0.0
            fPrime(i) = 0.0
