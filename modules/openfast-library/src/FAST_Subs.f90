@@ -9962,16 +9962,14 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
 
    IF ( unOut < 0 ) THEN
 
-      CALL GetNewUnit( unOut, ErrStat2, ErrMsg2 )
-      CALL OpenBOutFile ( unOut, FileName, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         if (ErrStat >= AbortErrLev ) then
-
+      CALL GetNewUnit(unOut, ErrStat2, ErrMsg2)
+      CALL OpenBOutFile (unOut, FileName, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev)  then
             IF (.NOT. PRESENT(Unit)) THEN
                CLOSE(unOut)
                unOut = -1
             end if
-            call cleanup()
             return
          end if
 
@@ -9985,20 +9983,15 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
 
    ! Initialize the registry file
    call InitRegFile(RF, unOut, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
 
    ! Pack data into the registry file
    call FAST_PackTurbineType(RF, Turbine)
-      call SetErrStat(RF%ErrStat, RF%ErrMsg, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev ) then
-         call cleanup()
-         return
-      end if
 
-   ! Close registry file
+   ! Close registry file and get any errors that occurred while writing
    call CloseRegFile(RF, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
 
    ! If last turbine or no unit, close output unit
@@ -10030,13 +10023,6 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
          Turbine%SrvD%m%dll_data%SimStatus = Turbine%SrvD%m%dll_data%avrSWAP( 1)
       end if
    END IF
-   
-   call cleanup()
-
-contains
-   subroutine cleanup()
-      call CloseRegFile(RF, ErrStat2, ErrMsg2)
-   end subroutine cleanup
 
 END SUBROUTINE FAST_CreateCheckpoint_T
 !----------------------------------------------------------------------------------------------------------------------------------

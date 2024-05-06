@@ -190,6 +190,9 @@ contains
       ErrStat = ErrID_None
       ErrMsg = ""
 
+      ! If registry has already been closed, return
+      if (RF%Unit < 0) return
+
       ! Check if there have been any errors while writing to the file
       if (RF%ErrStat /= ErrID_None) then
          call SetErrStat(RF%ErrStat, RF%ErrMsg, ErrStat, ErrMsg, RoutineName)
@@ -204,8 +207,9 @@ contains
          return
       end if
 
-      ! Close the file
+      ! Close the file and set unit to -1 so file won't be closed again
       close (RF%Unit)
+      RF%Unit = -1
 
       ! Deallocate pointer array
       if (allocated(RF%Pointers)) deallocate (RF%Pointers)
