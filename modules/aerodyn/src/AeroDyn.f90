@@ -4369,9 +4369,17 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
    
    InitInp%airDens          = InputFileData%AirDens 
    InitInp%kinVisc          = InputFileData%KinVisc
+   ! --- Skew
    InitInp%skewWakeMod      = InputFileData%Skew_Mod
    InitInp%skewRedistrMod   = InputFileData%SkewRedistr_Mod
    InitInp%yawCorrFactor    = InputFileData%SkewModFactor
+   InitInp%MomentumCorr     = InputFileData%SkewMomCorr
+   ! Safety
+   if (InputFileData%Skew_Mod /= Skew_Mod_Active) then
+      InitInp%skewRedistrMod = SkewRedistrMod_None
+      InitInp%MomentumCorr   = .False.
+   endif
+   ! --- Algo
    InitInp%aTol             = InputFileData%IndToler
    InitInp%useTipLoss       = InputFileData%TipLoss
    InitInp%useHubLoss       = InputFileData%HubLoss
@@ -4482,7 +4490,6 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
    InitInp%SumPrint      = InputFileData%SumPrint
    InitInp%RootName      = p%RootName
    InitInp%BEM_Mod       = InputFileData%BEM_Mod
-   InitInp%MomentumCorr  = InputFileData%SkewMomCorr
    p%BEM_Mod             = InputFileData%BEM_Mod ! TODO try to get rid of me
 
    ! --- Print BEM formulation to screen

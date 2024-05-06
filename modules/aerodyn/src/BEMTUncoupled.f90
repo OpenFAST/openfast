@@ -466,6 +466,10 @@ subroutine ApplySkewedWakeCorrection(BEM_Mod, SkewRedistrMod, yawCorrFactor, F, 
       ! Local variables      
    real(ReKi)                               :: yawCorr
    real(ReKi)                               :: yawCorr_tan ! magnitude of the tan(chi/2) correction term (with possible limits)
+
+   if (SkewRedistrMod==SkewRedistrMod_None) then
+      return
+   endif
    
    ! Skewed wake correction
    if(BEM_Mod==BEMMod_2D) then
@@ -480,7 +484,7 @@ subroutine ApplySkewedWakeCorrection(BEM_Mod, SkewRedistrMod, yawCorrFactor, F, 
          
       if (FirstWarn) then
          call WrScr( 'Warning: SkewedWakeCorrection encountered a large value of chi ('//trim(num2lstr(chi*R2D))// &
-            ' deg), so the yaw correction will be limited. This warning will not be repeated though the condition may persist. See the AD15 chi output channels, and'// &
+            ' deg), so the yaw correction will be limited. This warning will not be repeated though the condition may persist. See the AD chi output channels, and'// &
             ' consider turning off the Pitt/Peters skew model (set SkewMod=1) if this condition persists.'//NewLine)
          FirstWarn = .false.
       end if

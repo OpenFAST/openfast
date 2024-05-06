@@ -250,10 +250,10 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    p%kinVisc          = InitInp%kinVisc
    p%skewWakeMod      = InitInp%skewWakeMod
    if (p%skewWakeMod==Skew_Mod_Active) then
-      p%skewRedistrMod   = InitInp%skewRedistrMod
+      p%SkewRedistrMod   = InitInp%SkewRedistrMod
       p%MomentumCorr     = InitInp%MomentumCorr
    else
-      p%skewRedistrMod   = SkewRedistrMod_None
+      p%SkewRedistrMod   = SkewRedistrMod_None
       p%MomentumCorr     = .false.
    endif
    p%yawCorrFactor    = InitInp%yawCorrFactor
@@ -1608,7 +1608,7 @@ subroutine ApplySkewedWakeCorrection_AllNodes(p, u, m, x, phi, OtherState, axInd
          do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
             if ( .not. p%FixedInductions(i,j) ) then
                F = getHubTipLossCorrection(p%BEM_Mod, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), phi(i,j), u%cantAngle(i,j) )
-               call ApplySkewedWakeCorrection( p%BEM_Mod, p%skewRedistrMod, p%yawCorrFactor, F, u%psi_s(j), u%psiSkewOffset, u%chi0, u%rlocal(i,j)/m%Rtip(j), axInduction(i,j), chi(i,j), m%FirstWarn_Skew )
+               call ApplySkewedWakeCorrection( p%BEM_Mod, p%SkewRedistrMod, p%yawCorrFactor, F, u%psi_s(j), u%psiSkewOffset, u%chi0, u%rlocal(i,j)/m%Rtip(j), axInduction(i,j), chi(i,j), m%FirstWarn_Skew )
             end if ! .not. p%FixedInductions (special case for tip and/or hub loss)
          enddo    ! I - Blade nodes / elements
       enddo       ! J - All blades
