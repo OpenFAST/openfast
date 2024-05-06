@@ -141,7 +141,7 @@ subroutine BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMs
    call move_alloc(InitInp%UAOff_outerNode, Init_UA_Data%UAOff_outerNode)
    
    Init_UA_Data%dt              = interval          
-   Init_UA_Data%OutRootName     = InitInp%RootName ! was 'Debug.UA'
+   Init_UA_Data%OutRootName     = trim(InitInp%RootName)//'.UA'
                
    Init_UA_Data%numBlades       = InitInp%numBlades 
    Init_UA_Data%nNodesPerBlade  = InitInp%numBladeNodes
@@ -151,6 +151,9 @@ subroutine BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMs
    Init_UA_Data%a_s             = InitInp%a_s ! m/s  
    Init_UA_Data%ShedEffect      = .true. ! This should be true when coupled to BEM
    Init_UA_Data%WrSum           = InitInp%SumPrint
+   
+   Init_UA_Data%UA_OUTS         = 0
+   Init_UA_Data%d_34_to_ac      = 0.5_ReKi
    
 end subroutine BEMT_Set_UA_InitData
 
@@ -2344,6 +2347,11 @@ subroutine SetInputs_for_UA(BEM_Mod, phi, theta, cantAngle, toeAngle, axInductio
       call GetRelativeVelocity( axInduction, tanInduction, Vx, Vy, cantAngle, xVelCorr, u_UA%U, u_UA%v_ac )
       call GetReynoldsNumber(BEM_Mod,   axInduction, tanInduction, Vx, Vy, Vz, chord, kinVisc, theta, phi, cantAngle, toeAngle, u_UA%Re)
    endif
+
+   ! NOTE: 
+   ! U: is here is the norm of the velocity made of Vx(1-a) and Vy(1+a'). 
+   !    Ideally we would go back to the airfoil coordinate system
+   ! Below, v_ac is in the airfoil coordinate system. In baseline configurations, v_ac(1)>0 and v_ac(2)>0 
 
    u_UA%v_ac(1) = sin(u_UA%alpha)*u_UA%U
    u_UA%v_ac(2) = cos(u_UA%alpha)*u_UA%U

@@ -47,6 +47,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: dt = 0.0_R8Ki      !< time step [s]
     CHARACTER(1024)  :: OutRootName      !< Supplied by Driver:  The name of the root file (without extension) including the full path [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: c      !< Chord length at node [m]
+    REAL(ReKi)  :: d_34_to_ac = 0.5      !< Distance from 3/4 chord to aerodynamic center (typically 0.5) in chord length (no dimension) [-]
     INTEGER(IntKi)  :: numBlades = 0_IntKi      !< Number nodes of all blades [-]
     INTEGER(IntKi)  :: nNodesPerBlade = 0_IntKi      !< Number nodes per blades [-]
     INTEGER(IntKi)  :: UAMod = 0_IntKi      !< Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema] [-]
@@ -56,13 +57,14 @@ IMPLICIT NONE
     LOGICAL  :: WrSum = .false.      !< Write UA AFI parameters to summary file? [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: UAOff_innerNode      !< Last node on each blade where UA should be turned off based on span location from blade root (0 if always on) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: UAOff_outerNode      !< First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on) [-]
+    INTEGER(IntKi)  :: UA_OUTS = 0      !< Store write outputs 0=None, 1=WriteOutpus, 2=WriteToFile [-]
   END TYPE UA_InitInputType
 ! =======================
 ! =========  UA_InitOutputType  =======
   TYPE, PUBLIC :: UA_InitOutputType
     TYPE(ProgDesc)  :: Version      !< Version structure [-]
-    CHARACTER(19) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< The is the list of all UA-related output channel header strings (includes all sub-module channels) [-]
-    CHARACTER(19) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< The is the list of all UA-related output channel unit strings (includes all sub-module channels) [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< The is the list of all UA-related output channel header strings (includes all sub-module channels) [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< The is the list of all UA-related output channel unit strings (includes all sub-module channels) [-]
   END TYPE UA_InitOutputType
 ! =======================
 ! =========  UA_KelvinChainType  =======
@@ -209,6 +211,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: UA_ParameterType
     REAL(DbKi)  :: dt = 0.0_R8Ki      !< time step [s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: c      !< Chord length at node [m]
+    REAL(ReKi)  :: d_34_to_ac = 0.5      !< Distance from 3/4 chord to aerodynamic center (typically 0.5) in chord length (no dimension) [-]
     INTEGER(IntKi)  :: numBlades = 0_IntKi      !< Number nodes of all blades [-]
     INTEGER(IntKi)  :: nNodesPerBlade = 0_IntKi      !< Number nodes per blades [-]
     INTEGER(IntKi)  :: UAMod = 0_IntKi      !< Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema] [-]
@@ -225,6 +228,7 @@ IMPLICIT NONE
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: UA_off_forGood      !< logical flag indicating if UA is off for good [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: lin_xIndx      !< array to indicate which state to perturb for UA [-]
     REAL(R8Ki) , DIMENSION(1:5)  :: dx = 0.0_R8Ki      !< array to indicate size of state perturbations [-]
+    INTEGER(IntKi)  :: UA_OUTS = 0      !< Store write outputs 0=None, 1=WriteOutpus, 2=WriteToFile [-]
   END TYPE UA_ParameterType
 ! =======================
 ! =========  UA_InputType  =======
@@ -274,6 +278,7 @@ subroutine UA_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
       end if
       DstInitInputData%c = SrcInitInputData%c
    end if
+   DstInitInputData%d_34_to_ac = SrcInitInputData%d_34_to_ac
    DstInitInputData%numBlades = SrcInitInputData%numBlades
    DstInitInputData%nNodesPerBlade = SrcInitInputData%nNodesPerBlade
    DstInitInputData%UAMod = SrcInitInputData%UAMod
@@ -305,6 +310,7 @@ subroutine UA_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
       end if
       DstInitInputData%UAOff_outerNode = SrcInitInputData%UAOff_outerNode
    end if
+   DstInitInputData%UA_OUTS = SrcInitInputData%UA_OUTS
 end subroutine
 
 subroutine UA_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -333,6 +339,7 @@ subroutine UA_PackInitInput(RF, Indata)
    call RegPack(RF, InData%dt)
    call RegPack(RF, InData%OutRootName)
    call RegPackAlloc(RF, InData%c)
+   call RegPack(RF, InData%d_34_to_ac)
    call RegPack(RF, InData%numBlades)
    call RegPack(RF, InData%nNodesPerBlade)
    call RegPack(RF, InData%UAMod)
@@ -342,6 +349,7 @@ subroutine UA_PackInitInput(RF, Indata)
    call RegPack(RF, InData%WrSum)
    call RegPackAlloc(RF, InData%UAOff_innerNode)
    call RegPackAlloc(RF, InData%UAOff_outerNode)
+   call RegPack(RF, InData%UA_OUTS)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -356,6 +364,7 @@ subroutine UA_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%dt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutRootName); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%c); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%d_34_to_ac); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%numBlades); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nNodesPerBlade); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UAMod); if (RegCheckErr(RF, RoutineName)) return
@@ -365,6 +374,7 @@ subroutine UA_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%WrSum); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%UAOff_innerNode); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%UAOff_outerNode); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%UA_OUTS); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine UA_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -1928,6 +1938,7 @@ subroutine UA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstParamData%c = SrcParamData%c
    end if
+   DstParamData%d_34_to_ac = SrcParamData%d_34_to_ac
    DstParamData%numBlades = SrcParamData%numBlades
    DstParamData%nNodesPerBlade = SrcParamData%nNodesPerBlade
    DstParamData%UAMod = SrcParamData%UAMod
@@ -1966,6 +1977,7 @@ subroutine UA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%lin_xIndx = SrcParamData%lin_xIndx
    end if
    DstParamData%dx = SrcParamData%dx
+   DstParamData%UA_OUTS = SrcParamData%UA_OUTS
 end subroutine
 
 subroutine UA_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -1993,6 +2005,7 @@ subroutine UA_PackParam(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%dt)
    call RegPackAlloc(RF, InData%c)
+   call RegPack(RF, InData%d_34_to_ac)
    call RegPack(RF, InData%numBlades)
    call RegPack(RF, InData%nNodesPerBlade)
    call RegPack(RF, InData%UAMod)
@@ -2009,6 +2022,7 @@ subroutine UA_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%UA_off_forGood)
    call RegPackAlloc(RF, InData%lin_xIndx)
    call RegPack(RF, InData%dx)
+   call RegPack(RF, InData%UA_OUTS)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2022,6 +2036,7 @@ subroutine UA_UnPackParam(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%dt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%c); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%d_34_to_ac); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%numBlades); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nNodesPerBlade); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UAMod); if (RegCheckErr(RF, RoutineName)) return
@@ -2038,6 +2053,7 @@ subroutine UA_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%UA_off_forGood); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%lin_xIndx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%dx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%UA_OUTS); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine UA_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
