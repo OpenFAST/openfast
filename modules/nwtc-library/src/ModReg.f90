@@ -196,15 +196,13 @@ contains
       ! Check if there have been any errors while writing to the file
       if (RF%ErrStat /= ErrID_None) then
          call SetErrStat(RF%ErrStat, RF%ErrMsg, ErrStat, ErrMsg, RoutineName)
-         return
       end if
 
       ! Write the actual number of pointers
       write (RF%Unit, POS=RF%Offset, iostat=stat) RF%NumPointers
       if (stat /= 0) then
-         ErrStat = ErrID_Fatal
-         write (ErrMsg, *) 'CloseRegFile: Unable to write offset at beginning of file'
-         return
+         call SetErrStat(ErrID_Fatal, 'CloseRegFile: Unable to write offset at beginning of file', &
+                         ErrStat, ErrMsg, RoutineName)
       end if
 
       ! Close the file and set unit to -1 so file won't be closed again
