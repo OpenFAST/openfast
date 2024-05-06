@@ -211,7 +211,7 @@ The feature will be documented at a later time.
     Link to old inputs: the previous behavior would be `SkewMomCorr=False`
 
 **SkewRedistr_Mod**
-``SkewRedistr_Mod`` allows to turn on and off the induced velocity redistribution model, and give room for other models to be selected/implemented.
+``SkewRedistr_Mod`` allows to turn on and off the induced velocity redistribution model, and give room for other models to be selected/implemented. Default=1.
 
  - 0: no redistribution
  - 1: Glauert (Pitt-Peters) redistribution model

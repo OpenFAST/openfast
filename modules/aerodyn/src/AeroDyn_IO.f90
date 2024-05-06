@@ -806,7 +806,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    endif
 
    ! SkewRedistr_Mod - Type of skewed-wake correction model (switch) {0: no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1]
-   call ParseVar( FileInfo_In, CurLine, "SkewRedistr_Mod", InputFileData%SkewRedistr_Mod, ErrStat2, ErrMsg2, UnEc )
+   call ParseVarWDefault( FileInfo_In, CurLine, "SkewRedistr_Mod", InputFileData%SkewRedistr_Mod, 1, ErrStat2, ErrMsg2, UnEc )
    if (newInputMissing('SkewRedistr_Mod', CurLine, errStat2, errMsg2)) then
       call WrScr('         Setting SkewRedistr_Mod to 1 as the input is Missing (legacy behavior).')
       InputFileData%SkewRedistr_Mod = 1
@@ -815,7 +815,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       ! SkewModFactor - Constant used in Pitt/Peters skewed wake model {or "default" is 15/32*pi} (-) [used only when SkewMod=2; unused when WakeMod=0 or 3]
    call ParseVarWDefault( FileInfo_In, CurLine, "SkewModFactor", InputFileData%SkewModFactor, (15.0_ReKi * pi / 32.0_ReKi), ErrStat2, ErrMsg2, UnEc )
    if( legacyInputPresent('SkewModFactor', CurLine, ErrStat2, ErrMsg2, 'Rename this parameter to SkewRedistrFactor')) then
-
+      ! pass
    else
       call ParseVarWDefault( FileInfo_In, CurLine, "SkewRedistrFactor", InputFileData%SkewModFactor, (15.0_ReKi * pi / 32.0_ReKi), ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
       call ParseCom (FileInfo_in, CurLine, sDummy, errStat2, errMsg2, UnEc, isLegalComment); if (Failed()) return
