@@ -144,7 +144,7 @@ GOTO checkError
 :ExtLoads
 SET CURR_LOC=%ExtLoads_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%ExtLoads_Loc%" -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -I "%IfW_Loc%" -O "%Output_Loc%"
 GOTO checkError
 
 :ExtLoadsDX
