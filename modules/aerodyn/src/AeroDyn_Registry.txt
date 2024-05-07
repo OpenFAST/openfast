@@ -175,14 +175,11 @@ typedef  ^  RotInputFile   TFinInputFileType TFin     -    -    -   "Input file 
 
 typedef	^	AD_InputFile	Logical	Echo	-	-	-	"Echo input file to echo file"	-
 typedef	^	AD_InputFile	DbKi	DTAero	-	-	-	"Time interval for aerodynamic calculations {or \"default\"}"	s
-typedef	^	AD_InputFile	IntKi	WakeMod	-	-	-	"LEGACY - Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
 typedef	^	AD_InputFile	IntKi	Wake_Mod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
 typedef	^	AD_InputFile	IntKi	BEM_Mod	-	-	-	"Type of BEM model {1=legacy NoSweepPitchTwist, 2=polar grid}"	-
-typedef	^	AD_InputFile	IntKi	AFAeroMod	-	-	-	"Type of blade airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model}"	-
 typedef	^	AD_InputFile	IntKi	TwrPotent	-	-	-	"Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"	-
 typedef	^	AD_InputFile	IntKi	TwrShadow	-	-	-	"Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}"	-
 typedef	^	AD_InputFile	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
-typedef	^	AD_InputFile	Logical	FrozenWake	-	-	-	"LEGACY - Flag that tells this module it should assume a frozen wake during linearization."	-
 typedef	^	AD_InputFile	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
 typedef ^   AD_InputFile    Logical Buoyancy    -   -   -   "Include buoyancy effects?" flag
 typedef	^	AD_InputFile	Logical	CompAA   -  -  -  "Compute AeroAcoustic noise" flag
@@ -193,7 +190,6 @@ typedef	^	AD_InputFile	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s
 typedef	^	AD_InputFile	ReKi	Patm 	-	-	-	"Atmospheric pressure" Pa
 typedef	^	AD_InputFile	ReKi	Pvap 	-	-	-	"Vapour pressure" Pa
 typedef	^	AD_InputFile	ReKi	SpdSound	-	-	-	"Speed of sound"	m/s
-typedef	^	AD_InputFile	IntKi	SkewMod	-	-	-	"LEGACY - Skew Mod"	-
 typedef	^	AD_InputFile	IntKi	Skew_Mod -	-	-	"Select skew model {0=No skew model at all, -1=Throw away non-normal component for linearization, 1=Glauert skew model}"	-
 typedef	^	AD_InputFile	Logical SkewMomCorr	-	-	-	"Turn the skew momentum correction on or off [used only when SkewMod=1]" - 
 typedef	^	AD_InputFile	IntKi   SkewRedistr_Mod	-	-	-	"Type of skewed-wake redistribution model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1]" - 
@@ -205,8 +201,8 @@ typedef	^	AD_InputFile	LOGICAL	AIDrag	-	-	-	"Include the drag term in the axial-
 typedef	^	AD_InputFile	LOGICAL	TIDrag	-	-	-	"Include the drag term in the tangential-induction calculation? [unused when Wake_Mod=0 or TanInd=FALSE]"	flag
 typedef	^	AD_InputFile	ReKi	IndToler	-	-	-	"Convergence tolerance for BEM induction factors [unused when Wake_Mod=0]"	-
 typedef	^	AD_InputFile	ReKi	MaxIter	-	-	-	"Maximum number of iteration steps [unused when Wake_Mod=0]"	-
-typedef	^	AD_InputFile	Logical	SectAvg	-	-	False	"Use Sector average for BEM inflow velocity calculation (flag)"	-
-typedef	^	     ^      	IntKi  	SA_Weighting	-	-	1	    "Sector Average - Weighting function for sector average  {1=Uniform, 2=Impulse, }  within a 360/nB sector centered on the blade (switch) [used only when SectAvg=True]" -
+typedef	^	AD_InputFile	Logical	SectAvg	-	.False. - 	"Use Sector average for BEM inflow velocity calculation (flag)"	-
+typedef	^	     ^      	IntKi  	SA_Weighting	-	1	-	    "Sector Average - Weighting function for sector average  {1=Uniform, 2=Impulse, }  within a 360/nB sector centered on the blade (switch) [used only when SectAvg=True]" -
 typedef	^	     ^      	ReKi   	SA_PsiBwd	-	-60	-	"Sector Average - Backard Azimuth (<0)"	deg
 typedef	^	     ^      	ReKi   	SA_PsiFwd	-	 60	-	"Sector Average - Forward Azimuth (>0)"	deg
 typedef	^	     ^      	IntKi  	SA_nPerSec	-	  5	-	"Sector average - Number of points per sectors (-) [used only when SectAvg=True]" -

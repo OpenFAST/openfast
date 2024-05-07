@@ -201,14 +201,11 @@ IMPLICIT NONE
   TYPE, PUBLIC :: AD_InputFile
     LOGICAL  :: Echo = .false.      !< Echo input file to echo file [-]
     REAL(DbKi)  :: DTAero = 0.0_R8Ki      !< Time interval for aerodynamic calculations {or "default"} [s]
-    INTEGER(IntKi)  :: WakeMod = 0_IntKi      !< LEGACY - Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
     INTEGER(IntKi)  :: Wake_Mod = 0_IntKi      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
     INTEGER(IntKi)  :: BEM_Mod = 0_IntKi      !< Type of BEM model {1=legacy NoSweepPitchTwist, 2=polar grid} [-]
-    INTEGER(IntKi)  :: AFAeroMod = 0_IntKi      !< Type of blade airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model} [-]
     INTEGER(IntKi)  :: TwrPotent = 0_IntKi      !< Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
     INTEGER(IntKi)  :: TwrShadow = 0_IntKi      !< Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model} [-]
     LOGICAL  :: TwrAero = .false.      !< Calculate tower aerodynamic loads? [flag]
-    LOGICAL  :: FrozenWake = .false.      !< LEGACY - Flag that tells this module it should assume a frozen wake during linearization. [-]
     LOGICAL  :: CavitCheck = .false.      !< Flag that tells us if we want to check for cavitation [-]
     LOGICAL  :: Buoyancy = .false.      !< Include buoyancy effects? [flag]
     LOGICAL  :: CompAA = .false.      !< Compute AeroAcoustic noise [flag]
@@ -219,7 +216,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: Patm = 0.0_ReKi      !< Atmospheric pressure [Pa]
     REAL(ReKi)  :: Pvap = 0.0_ReKi      !< Vapour pressure [Pa]
     REAL(ReKi)  :: SpdSound = 0.0_ReKi      !< Speed of sound [m/s]
-    INTEGER(IntKi)  :: SkewMod = 0_IntKi      !< LEGACY - Skew Mod [-]
     INTEGER(IntKi)  :: Skew_Mod = 0_IntKi      !< Select skew model {0=No skew model at all, -1=Throw away non-normal component for linearization, 1=Glauert skew model} [-]
     LOGICAL  :: SkewMomCorr = .false.      !< Turn the skew momentum correction on or off [used only when SkewMod=1] [-]
     INTEGER(IntKi)  :: SkewRedistr_Mod = 0_IntKi      !< Type of skewed-wake redistribution model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1] [-]
@@ -231,8 +227,8 @@ IMPLICIT NONE
     LOGICAL  :: TIDrag = .false.      !< Include the drag term in the tangential-induction calculation? [unused when Wake_Mod=0 or TanInd=FALSE] [flag]
     REAL(ReKi)  :: IndToler = 0.0_ReKi      !< Convergence tolerance for BEM induction factors [unused when Wake_Mod=0] [-]
     REAL(ReKi)  :: MaxIter = 0.0_ReKi      !< Maximum number of iteration steps [unused when Wake_Mod=0] [-]
-    LOGICAL  :: SectAvg = .false.      !< Use Sector average for BEM inflow velocity calculation (flag) [-]
-    INTEGER(IntKi)  :: SA_Weighting = 0_IntKi      !< Sector Average - Weighting function for sector average  {1=Uniform, 2=Impulse, }  within a 360/nB sector centered on the blade (switch) [used only when SectAvg=True] [-]
+    LOGICAL  :: SectAvg = .False.      !< Use Sector average for BEM inflow velocity calculation (flag) [-]
+    INTEGER(IntKi)  :: SA_Weighting = 1      !< Sector Average - Weighting function for sector average  {1=Uniform, 2=Impulse, }  within a 360/nB sector centered on the blade (switch) [used only when SectAvg=True] [-]
     REAL(ReKi)  :: SA_PsiBwd = -60      !< Sector Average - Backard Azimuth (<0) [deg]
     REAL(ReKi)  :: SA_PsiFwd = 60      !< Sector Average - Forward Azimuth (>0) [deg]
     INTEGER(IntKi)  :: SA_nPerSec = 5      !< Sector average - Number of points per sectors (-) [used only when SectAvg=True] [-]
@@ -2023,14 +2019,11 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    ErrMsg  = ''
    DstInputFileData%Echo = SrcInputFileData%Echo
    DstInputFileData%DTAero = SrcInputFileData%DTAero
-   DstInputFileData%WakeMod = SrcInputFileData%WakeMod
    DstInputFileData%Wake_Mod = SrcInputFileData%Wake_Mod
    DstInputFileData%BEM_Mod = SrcInputFileData%BEM_Mod
-   DstInputFileData%AFAeroMod = SrcInputFileData%AFAeroMod
    DstInputFileData%TwrPotent = SrcInputFileData%TwrPotent
    DstInputFileData%TwrShadow = SrcInputFileData%TwrShadow
    DstInputFileData%TwrAero = SrcInputFileData%TwrAero
-   DstInputFileData%FrozenWake = SrcInputFileData%FrozenWake
    DstInputFileData%CavitCheck = SrcInputFileData%CavitCheck
    DstInputFileData%Buoyancy = SrcInputFileData%Buoyancy
    DstInputFileData%CompAA = SrcInputFileData%CompAA
@@ -2052,7 +2045,6 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%Patm = SrcInputFileData%Patm
    DstInputFileData%Pvap = SrcInputFileData%Pvap
    DstInputFileData%SpdSound = SrcInputFileData%SpdSound
-   DstInputFileData%SkewMod = SrcInputFileData%SkewMod
    DstInputFileData%Skew_Mod = SrcInputFileData%Skew_Mod
    DstInputFileData%SkewMomCorr = SrcInputFileData%SkewMomCorr
    DstInputFileData%SkewRedistr_Mod = SrcInputFileData%SkewRedistr_Mod
@@ -2191,14 +2183,11 @@ subroutine AD_PackInputFile(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%Echo)
    call RegPack(RF, InData%DTAero)
-   call RegPack(RF, InData%WakeMod)
    call RegPack(RF, InData%Wake_Mod)
    call RegPack(RF, InData%BEM_Mod)
-   call RegPack(RF, InData%AFAeroMod)
    call RegPack(RF, InData%TwrPotent)
    call RegPack(RF, InData%TwrShadow)
    call RegPack(RF, InData%TwrAero)
-   call RegPack(RF, InData%FrozenWake)
    call RegPack(RF, InData%CavitCheck)
    call RegPack(RF, InData%Buoyancy)
    call RegPack(RF, InData%CompAA)
@@ -2209,7 +2198,6 @@ subroutine AD_PackInputFile(RF, Indata)
    call RegPack(RF, InData%Patm)
    call RegPack(RF, InData%Pvap)
    call RegPack(RF, InData%SpdSound)
-   call RegPack(RF, InData%SkewMod)
    call RegPack(RF, InData%Skew_Mod)
    call RegPack(RF, InData%SkewMomCorr)
    call RegPack(RF, InData%SkewRedistr_Mod)
@@ -2277,14 +2265,11 @@ subroutine AD_UnPackInputFile(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%Echo); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DTAero); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%WakeMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Wake_Mod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BEM_Mod); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%AFAeroMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TwrPotent); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TwrShadow); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TwrAero); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%FrozenWake); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CavitCheck); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Buoyancy); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompAA); if (RegCheckErr(RF, RoutineName)) return
@@ -2295,7 +2280,6 @@ subroutine AD_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%Patm); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Pvap); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SpdSound); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%SkewMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Skew_Mod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SkewMomCorr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SkewRedistr_Mod); if (RegCheckErr(RF, RoutineName)) return
