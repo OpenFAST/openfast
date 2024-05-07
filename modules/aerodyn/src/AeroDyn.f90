@@ -4134,7 +4134,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    !..................
    if (InitInp%Linearize) then
 
-      if (InputFileData%Wake_Mod /= WakeMod_None .and. InputFileData%Wake_Mod /= WakeMod_None) then 
+      if (InputFileData%Wake_Mod /= WakeMod_None .and. InputFileData%Wake_Mod /= WakeMod_BEMT) then 
          call SetErrStat( ErrID_Fatal, 'WakeMod must be 0 or 1 for linearization.', ErrStat, ErrMsg, RoutineName )
       endif
 
@@ -4142,7 +4142,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
          call SetErrStat( ErrID_Fatal, 'UAMod must be 0, 4, 5, or 6 for linearization.', ErrStat, ErrMsg, RoutineName )
       end if
 
-      if (InputFileData%DBEMT_Mod /= DBEMT_None .or. InputFileData%DBEMT_Mod /= DBEMT_cont_tauConst) then
+      if (InputFileData%DBEMT_Mod /= DBEMT_None .and. InputFileData%DBEMT_Mod /= DBEMT_cont_tauConst) then
          call SetErrStat( ErrID_Fatal, 'DBEMT Mod must be 0 or 3 (continuous formulation with constant tau1) for linearization. Set DBEMT_Mod=0,3.', ErrStat, ErrMsg, RoutineName )
       end if
    end if
