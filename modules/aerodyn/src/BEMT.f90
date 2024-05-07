@@ -155,6 +155,8 @@ subroutine BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMs
    Init_UA_Data%UA_OUTS         = 0
    Init_UA_Data%d_34_to_ac      = 0.5_ReKi
    
+   Init_UA_Data%integrationMethod = InitInp%UA_IntegrationMethod
+   
 end subroutine BEMT_Set_UA_InitData
 
    
@@ -173,7 +175,10 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    integer(IntKi)                                :: errStat2                ! temporary Error status of the operation
    character(*), parameter                       :: RoutineName = 'BEMT_SetParameters'
    integer(IntKi)                                :: i, j
-
+   
+   ! variables for computing weights:
+   real(ReKi)                                    :: u(InitInp%numBladeNodes)
+   real(ReKi)                                    :: k_sum
    real(ReKi), parameter                         :: FractionMax    = 0.7   ! fraction of rotor disk where weighted average should be maximum
    real(ReKi), parameter                         :: FractionRadius = 0.1   ! radius of smoothing (fraction of rotor disk around FractionMax)
    ! constants for kernelType_TRIWEIGHT:
@@ -234,6 +239,13 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
       return
    end if
    
+   allocate ( p%IntegrateWeight(p%numBladeNodes, p%numBlades), STAT = errStat2 )
+   if ( errStat2 /= 0 ) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating memory for p%IntegrateWeight.', errStat, errMsg, RoutineName )
+      return
+   end if
+   
+   
    p%AFindx = InitInp%AFindx 
    
       ! Compute the tip and hub loss constants using the distances along the blade (provided as input for now) 
@@ -279,6 +291,36 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    end do
    
    p%rTipFixMax = maxval(InitInp%rTipFix)
+   
+   
+   !......................................................
+   ! compute the weights for averaging the axial induction
+   ! compare with kernelSmoothing()
+   ! note: we should probably add some additional factors to 
+   ! account for non-uniform spacing of nodes.
+   !......................................................
+   
+   do j=1,p%numBlades
+
+      u = (InitInp%rlocal(:,j)/ maxval(InitInp%rlocal) - FractionMax) / FractionRadius ! whole array operation
+      do i=1,p%numBladeNodes
+         u(i) = min( 1.0_ReKi, max( -1.0_ReKi, u(i) ) )
+      end do
+
+      k_sum   = 0.0_ReKi
+      do i=1,p%numBladeNodes
+         p%IntegrateWeight(i,j) = w*(1.0_ReKi-abs(u(i))**Exp1)**Exp2;
+         k_sum = k_sum + p%IntegrateWeight(i,j)
+      end do
+      if (k_sum > 0.0_ReKi) then
+         p%IntegrateWeight(:,j) = p%IntegrateWeight(:,j) / k_sum
+      end if
+      
+   end do ! j (each blade)
+   p%IntegrateWeight = p%IntegrateWeight/p%numBlades
+      
+      
+   
 end subroutine BEMT_SetParameters
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -983,13 +1025,13 @@ subroutine SetInputs_For_DBEMT(u_DBEMT, u, p, axInduction, tanInduction, Rtip)
       !.............................
    u_DBEMT%R_disk     = maxval( Rtip )               ! Locate the maximum rlocal value for all blades.
    u_DBEMT%Un_disk    = u%Un_disk
+   !u_DBEMT%AxInd_disk = sum(axInduction) / size(axInduction) ! needed only if p%DBEMT_Mod == DBEMT_tauVaries
    u_DBEMT%AxInd_disk = 0.0_ReKi
    do j = 1,p%numBlades
       do i = 1,p%numBladeNodes
-         u_DBEMT%AxInd_disk = u_DBEMT%AxInd_disk + axInduction(i,j)
+         u_DBEMT%AxInd_disk = u_DBEMT%AxInd_disk + axInduction(i,j) * p%IntegrateWeight(i,j)
       end do
    end do
-   u_DBEMT%AxInd_disk = u_DBEMT%AxInd_disk / (p%numBladeNodes*p%numBlades)
    
       !.............................
       ! calculate element-level inputs
@@ -2477,7 +2519,7 @@ subroutine WriteDEBUGValuesToFile(t, u, p, x, xd, z, OtherState, m, AFInfo)
       do ii = 1, numPhi
 
          ! nonlinear mapping of ii --> phi
-         phi = smoothStep( real(ii,ReKi), 1.0, -pi+BEMT_epsilon2, real(numPhi,ReKi)/2.0, 0.0_ReKi ) + smoothStep( real(ii,ReKi), real(numPhi,ReKi)/2.0, 0.0_ReKi, real(numPhi,ReKi), pi-BEMT_epsilon2 )
+         phi = smoothStep( real(ii,ReKi), 3, 1.0_ReKi, -pi+BEMT_epsilon2, real(numPhi,ReKi)/2.0, 0.0_ReKi ) + smoothStep( real(ii,ReKi), 3, real(numPhi,ReKi)/2.0, 0.0_ReKi, real(numPhi,ReKi), pi-BEMT_epsilon2 )
       
          fzero = BEMTU_InductionWithResidual(p, u, DEBUG_BLADENODE, DEBUG_BLADE, phi, AFInfo(p%AFIndx(DEBUG_BLADENODE,DEBUG_BLADE)), ValidPhi, errStat, errMsg, a=axInd, ap=tnInd )
          if (ValidPhi) then

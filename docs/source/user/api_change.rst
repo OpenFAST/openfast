@@ -22,6 +22,8 @@ Modified in OpenFAST `dev`
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line    Flag Name            Example Value
 ============================================= ======= ==================== ========================================================================================================================================================================================================
+AeroDyn                                          40   IntegrationMethod    3   IntegrationMethod  - Switch to indicate which integration method UA uses (1=RK4, 2=AB4, 3=ABM4, 4=BDF2)
+AeroDyn                                       140\*   BldNd_BlOutNd        "All"  BldNd_BlOutNd   - Specify a portion of the nodes to output. {"ALL", "Tip", "Root", or a list of node numbers} (-)
 HydroDyn                                       all                         Complete restructuring of input file
 SeaState                                       all                         New module (split from HydroDyn, so contains some inputs previously found in HydroDyn)
 SubDyn                                        56\*                                             ----------------------- SPRING ELEMENT PROPERTIES -------------------------------------

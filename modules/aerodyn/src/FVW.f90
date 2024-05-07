@@ -1606,6 +1606,7 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
          Init_UA_Data%WrSum           = InitInp%SumPrint
          Init_UA_Data%UA_OUTS         = 0
          Init_UA_Data%d_34_to_ac      = 0.5_ReKi
+         Init_UA_Data%integrationMethod = InitInp%UA_integrationMethod
 
          allocate(Init_UA_Data%UAOff_innerNode(1), stat=errStat2)
          allocate(Init_UA_Data%UAOff_outerNode(1), stat=errStat2)

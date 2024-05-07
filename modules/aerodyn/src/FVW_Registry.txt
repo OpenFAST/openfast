@@ -267,6 +267,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^              IntKi                             UAMod             - - -   "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
 typedef     ^                   ^              LOGICAL                           UA_Flag           - - -   "logical flag indicating whether to use UnsteadyAero"        -
 typedef     ^                   ^              LOGICAL                           Flookup           - - -   "Use table lookup for f' and f'' "    -
+typedef     ^                   ^              INTEGER                   UA_integrationMethod      - - -   "method to integrate states"    - 
 typedef     ^                   ^              ReKi                              a_s               - - -   "speed of sound"        m/s
 typedef     ^                   ^              LOGICAL                           SumPrint          - - -   "Whether to print summary file (primarially in in UA)"    -
 

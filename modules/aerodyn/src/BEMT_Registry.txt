@@ -69,6 +69,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             CHARACTER(1024)          RootName                         -         -         -        "RootName for writing output files" -
 typedef   ^                            ^                             LOGICAL                  SumPrint                         -         -         -        "logical flag indicating whether to use UnsteadyAero"        -
 typedef   ^                            ^                             IntKi                    BEM_Mod                          -         -         -        "BEM Model 0=OpenFAST 2=Envision " -
+typedef   ^                            ^                             INTEGER                  UA_integrationMethod             -         -         -        "method to integrate states"    -
 #
 #
 # Define outputs from the initialization routine here:

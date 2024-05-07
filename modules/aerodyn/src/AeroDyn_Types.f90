@@ -48,6 +48,8 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrShadow_none = 0      ! no tower shadow [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrShadow_Powles = 1      ! Powles tower shadow model [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrShadow_Eames = 2      ! Eames tower shadow model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrAero_none = 0      ! no tower aero [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrAero_noVIV = 1      ! Tower aero model without VIV [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SA_Wgt_Uniform = 1      ! Sector average weighting - Uniform [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinAero_none = 0      ! no tail fin aero [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinAero_polar = 1      ! polar-based tail fin aerodynamics [-]
@@ -206,7 +208,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: BEM_Mod = 0_IntKi      !< Type of BEM model {1=legacy NoSweepPitchTwist, 2=polar grid} [-]
     INTEGER(IntKi)  :: TwrPotent = 0_IntKi      !< Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
     INTEGER(IntKi)  :: TwrShadow = 0_IntKi      !< Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model} [-]
-    LOGICAL  :: TwrAero = .false.      !< Calculate tower aerodynamic loads? [flag]
+    INTEGER(IntKi)  :: TwrAero = 0_IntKi      !< Calculate tower aerodynamic loads? {0=none, 1=aero without VIV, 2=aero with VIV} [-]
     LOGICAL  :: CavitCheck = .false.      !< Flag that tells us if we want to check for cavitation [-]
     LOGICAL  :: Buoyancy = .false.      !< Include buoyancy effects? [flag]
     LOGICAL  :: CompAA = .false.      !< Compute AeroAcoustic noise [flag]
@@ -236,6 +238,7 @@ IMPLICIT NONE
     LOGICAL  :: AoA34 = .false.      !< Sample the angle of attack (AoA) at the 3/4 chord or the AC point {default=True} [always used] [-]
     INTEGER(IntKi)  :: UA_Mod = 0_IntKi      !< Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA),  2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [-]
     LOGICAL  :: FLookup = .false.      !< Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAeroMod=2] [flag]
+    INTEGER(IntKi)  :: IntegrationMethod = 3      !< Unsteady Aero model integration method switch (switch) {1=RK4, 2=AB4, 3=ABM4, 4=BDF2} [used only when AFAeroMod=2 and UAMod=4,5,6] [-]
     REAL(ReKi)  :: InCol_Alfa = 0.0_ReKi      !< The column in the airfoil tables that contains the angle of attack [-]
     REAL(ReKi)  :: InCol_Cl = 0.0_ReKi      !< The column in the airfoil tables that contains the lift coefficient [-]
     REAL(ReKi)  :: InCol_Cd = 0.0_ReKi      !< The column in the airfoil tables that contains the drag coefficient [-]
@@ -470,7 +473,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumBl_Lin = 0_IntKi      !< number of blades in the jacobian [-]
     INTEGER(IntKi)  :: TwrPotent = 0_IntKi      !< Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
     INTEGER(IntKi)  :: TwrShadow = 0_IntKi      !< Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model} [-]
-    LOGICAL  :: TwrAero = .false.      !< Calculate tower aerodynamic loads? [flag]
+    INTEGER(IntKi)  :: TwrAero = 0_IntKi      !< Calculate tower aerodynamic loads? {0=none, 1=aero without VIV, 2=aero with VIV} [switch]
     INTEGER(IntKi)  :: DBEMT_Mod = 0_IntKi      !< DBEMT_Mod [-]
     LOGICAL  :: CavitCheck = .false.      !< Flag that tells us if we want to check for cavitation [-]
     LOGICAL  :: Buoyancy = .false.      !< Include buoyancy effects? [flag]
@@ -498,6 +501,7 @@ IMPLICIT NONE
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: BldNd_OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BldNd_BlOutNd      !< The blade nodes to actually output (AD_AllBldNdOuts) [-]
     INTEGER(IntKi)  :: BldNd_BladesOut = 0_IntKi      !< The blades to output (AD_AllBldNdOuts) [-]
+    INTEGER(IntKi)  :: BldNd_NumNodesOut = 0_IntKi      !< The blades to output (AD_AllBldNdOuts) [-]
     LOGICAL  :: TFinAero = .FALSE.      !< Calculate tail fin aerodynamics model (flag) [flag]
     TYPE(TFinParameterType)  :: TFin      !< Parameters for tail fin of current rotor [-]
   END TYPE RotParameterType
@@ -2128,6 +2132,7 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%AoA34 = SrcInputFileData%AoA34
    DstInputFileData%UA_Mod = SrcInputFileData%UA_Mod
    DstInputFileData%FLookup = SrcInputFileData%FLookup
+   DstInputFileData%IntegrationMethod = SrcInputFileData%IntegrationMethod
    DstInputFileData%InCol_Alfa = SrcInputFileData%InCol_Alfa
    DstInputFileData%InCol_Cl = SrcInputFileData%InCol_Cl
    DstInputFileData%InCol_Cd = SrcInputFileData%InCol_Cd
@@ -2281,6 +2286,7 @@ subroutine AD_PackInputFile(RF, Indata)
    call RegPack(RF, InData%AoA34)
    call RegPack(RF, InData%UA_Mod)
    call RegPack(RF, InData%FLookup)
+   call RegPack(RF, InData%IntegrationMethod)
    call RegPack(RF, InData%InCol_Alfa)
    call RegPack(RF, InData%InCol_Cl)
    call RegPack(RF, InData%InCol_Cd)
@@ -2363,6 +2369,7 @@ subroutine AD_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%AoA34); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UA_Mod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FLookup); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%IntegrationMethod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%InCol_Alfa); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%InCol_Cl); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%InCol_Cd); if (RegCheckErr(RF, RoutineName)) return
@@ -4975,6 +4982,7 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
       DstRotParameterTypeData%BldNd_BlOutNd = SrcRotParameterTypeData%BldNd_BlOutNd
    end if
    DstRotParameterTypeData%BldNd_BladesOut = SrcRotParameterTypeData%BldNd_BladesOut
+   DstRotParameterTypeData%BldNd_NumNodesOut = SrcRotParameterTypeData%BldNd_NumNodesOut
    DstRotParameterTypeData%TFinAero = SrcRotParameterTypeData%TFinAero
    call AD_CopyTFinParameterType(SrcRotParameterTypeData%TFin, DstRotParameterTypeData%TFin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -5166,6 +5174,7 @@ subroutine AD_PackRotParameterType(RF, Indata)
    end if
    call RegPackAlloc(RF, InData%BldNd_BlOutNd)
    call RegPack(RF, InData%BldNd_BladesOut)
+   call RegPack(RF, InData%BldNd_NumNodesOut)
    call RegPack(RF, InData%TFinAero)
    call AD_PackTFinParameterType(RF, InData%TFin) 
    if (RegCheckErr(RF, RoutineName)) return
@@ -5268,6 +5277,7 @@ subroutine AD_UnPackRotParameterType(RF, OutData)
    end if
    call RegUnpackAlloc(RF, OutData%BldNd_BlOutNd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BldNd_BladesOut); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BldNd_NumNodesOut); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TFinAero); if (RegCheckErr(RF, RoutineName)) return
    call AD_UnpackTFinParameterType(RF, OutData%TFin) ! TFin 
 end subroutine

@@ -81,6 +81,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     LOGICAL  :: SumPrint = .false.      !< logical flag indicating whether to use UnsteadyAero [-]
     INTEGER(IntKi)  :: BEM_Mod = 0_IntKi      !< BEM Model 0=OpenFAST 2=Envision  [-]
+    INTEGER(IntKi)  :: UA_integrationMethod = 0_IntKi      !< method to integrate states [-]
   END TYPE BEMT_InitInputType
 ! =======================
 ! =========  BEMT_InitOutputType  =======
@@ -377,6 +378,7 @@ subroutine BEMT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
    DstInitInputData%RootName = SrcInitInputData%RootName
    DstInitInputData%SumPrint = SrcInitInputData%SumPrint
    DstInitInputData%BEM_Mod = SrcInitInputData%BEM_Mod
+   DstInitInputData%UA_integrationMethod = SrcInitInputData%UA_integrationMethod
 end subroutine
 
 subroutine BEMT_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -455,6 +457,7 @@ subroutine BEMT_PackInitInput(RF, Indata)
    call RegPack(RF, InData%RootName)
    call RegPack(RF, InData%SumPrint)
    call RegPack(RF, InData%BEM_Mod)
+   call RegPack(RF, InData%UA_integrationMethod)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -501,6 +504,7 @@ subroutine BEMT_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SumPrint); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BEM_Mod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%UA_integrationMethod); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine BEMT_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)

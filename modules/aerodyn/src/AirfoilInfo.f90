@@ -26,6 +26,7 @@ MODULE AirfoilInfo
 
    USE                                             AirfoilInfo_Types
    USE                                          :: ISO_FORTRAN_ENV , ONLY : IOSTAT_EOR
+   USE                                          :: NWTC_LAPACK
 
    IMPLICIT NONE
 
@@ -34,6 +35,9 @@ MODULE AirfoilInfo
    PUBLIC                                       :: AFI_Init ! routine to initialize AirfoilInfo parameters
    PUBLIC                                       :: AFI_ComputeUACoefs        ! routine to calculate Airfoil BL parameters for UA
    PUBLIC                                       :: AFI_ComputeAirfoilCoefs   ! routine to perform 1D (AOA) or 2D (AOA, Re) or (AOA, UserProp) lookup of the airfoil coefs
+   PUBLIC                                       :: AFI_WrHeader
+   PUBLIC                                       :: AFI_WrData
+   PUBLIC                                       :: AFI_WrTables
 
    TYPE(ProgDesc), PARAMETER                    :: AFI_Ver = ProgDesc( 'AirfoilInfo', '', '')    ! The name, version, and date of AirfoilInfo.
 
@@ -477,15 +481,15 @@ CONTAINS
          ENDDO ! Row
 
       ENDIF
-
-      ! Reading Boundary layer file  for aeroacoustics
+      
+      ! Reading Boundary layer file for aeroacoustics
       CALL ParseVar ( FileInfo, CurLine, 'BL_file' , p%BL_file , ErrStat2, ErrMsg2, UnEc )
          IF (ErrStat2 >= AbortErrLev) p%BL_file = "NOT_SET_IN_AIRFOIL_FILE"
          !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( PathIsRelative( p%BL_file ) )  p%BL_file=trim(PriPath)//trim(p%BL_file)
 
-         ! How many columns do we need to read in the input and how many total coefficients will be used?
 
+         ! How many columns do we need to read in the input and how many total coefficients will be used?
       Cols2Parse = MAX( InitInp%InCol_Alfa, InitInp%InCol_Cl, InitInp%InCol_Cd, InitInp%InCol_Cm, InitInp%InCol_Cpmin )
       ALLOCATE ( SiAry( Cols2Parse ) , STAT=ErrStat2 )
       IF ( ErrStat2 /= 0 )  THEN
@@ -713,6 +717,7 @@ CONTAINS
             CALL Cleanup()
             RETURN
          ENDIF
+         p%Table(iTable)%Coefs = 0.0_ReKi
 
          DO Row=1,p%Table(iTable)%NumAlf
 
@@ -752,7 +757,7 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
          if ( p%Table(iTable)%ConstData ) then
             p%Table(iTable)%InclUAdata = .false.
          else
-            call CalculateUACoeffs(CalcDefaults(iTable), p%Table(iTable), p%ColCl, p%ColCd, p%ColCm, p%ColUAf, InitInp%UA_f_cn)
+            call CalculateUACoeffs(CalcDefaults(iTable), p%Table(iTable), p%ColCl, p%ColCd, p%ColCm, p%ColUAf, InitInp%UAMod)
          end if
 
             ! Let's make sure that the data go from -Pi to Pi and that the values are the same for both
@@ -819,48 +824,63 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
 
    END SUBROUTINE ReadAFfile
 !----------------------------------------------------------------------------------------------------------------------------------  
-   SUBROUTINE CalculateUACoeffs(CalcDefaults,p,ColCl,ColCd,ColCm,ColUAf,UA_f_cn)
+   SUBROUTINE CalculateUACoeffs(CalcDefaults,p,ColCl,ColCd,ColCm,ColUAf,UAMod)
       TYPE (AFI_UA_BL_Default_Type),intent(in):: CalcDefaults
       TYPE (AFI_Table_Type),    intent(inout) :: p                             ! This structure stores all the module parameters that are set by AirfoilInfo during the initialization phase.
       integer(IntKi),           intent(in   ) :: ColCl                         ! column for cl
       integer(IntKi),           intent(in   ) :: ColCd                         ! column for cd
       integer(IntKi),           intent(in   ) :: ColCm                         ! column for cm
       integer(IntKi),           intent(in   ) :: ColUAf                        ! column for UA f_st (based on Cl or cn)
-      logical,                  intent(in   ) :: UA_f_cn                       ! is f_st based on cn (true) or cl (false)?
+      integer(IntKi),           intent(in   ) :: UAMod                         ! UA model; determines how to compute f_st?
    
       INTEGER(IntKi)                          :: Row                           ! The row of a table to be parsed in the FileInfo structure.
       INTEGER(IntKi)                          :: col_fs                        ! column for UA cn/cl_fs (fully separated cn or cl)
       INTEGER(IntKi)                          :: col_fa                        ! column for UA cn/cl_fa (fully attached cn or cl)
       
-      REAL(ReKi)                              :: cl_ratio, cl_inv
-      REAL(ReKi)                              :: f_st, fullySeparate
-      REAL(ReKi)                              :: f_iHigh, f_iLow
       INTEGER(IntKi)                          :: iCdMin
-      INTEGER(IntKi)                          :: iHigh, iLow
+      INTEGER(IntKi)                          :: iHighLimit, iLowLimit
+      INTEGER(IntKi)                          :: iHigh,  iLow
       INTEGER(IntKi)                          :: iHigh2, iLow2
+      INTEGER(IntKi)                          :: iGuess, iUpper, iLower, i(1)
+      INTEGER(IntKi)                          :: nRoots
+      
+      LOGICAL                                 :: UA_f_cn
 
       ! note that we don't get here with constant data, so NumAlf>2
+      REAL(ReKi)                              :: roots(p%NumAlf)
       REAL(ReKi)                              :: cn(p%NumAlf)
+      REAL(ReKi)                              :: ClSlope_raw(p%NumAlf-1)
       REAL(ReKi)                              :: CnSlope_raw(p%NumAlf-1)
+      
       REAL(ReKi)                              :: ClSlope_(p%NumAlf-1)
       REAL(ReKi)                              :: CnSlope_(p%NumAlf-1)
       REAL(ReKi)                              :: alpha_(p%NumAlf-1)
       REAL(ReKi)                              :: alphaAtCdMin
       REAL(ReKi)                              :: CnSlopeAtCdMin
-      REAL(ReKi)                              :: ClTmp, alphaTmp
       REAL(ReKi)                              :: maxCnSlope
       
-      REAL(ReKi)                              :: slope
       REAL(ReKi) , PARAMETER                  :: CnSlopeThreshold = 0.90;
       REAL(ReKi) , PARAMETER                  :: fAtCriticalCn    = 0.7;
       REAL(ReKi)                              :: LimitAlphaRange
+      REAL(ReKi)                              :: Default_Cn_alpha
+      REAL(ReKi)                              :: Default_Cl_alpha
+      REAL(ReKi)                              :: Default_alpha0
+      REAL(ReKi)                              :: alphaMargin
+      
 
-      
-      LimitAlphaRange = 20.0_ReKi * D2R ! range we're limiting our equations to (in radians)
-      
+      INTEGER(IntKi)                          :: ErrStat2                      ! Error status local to this routine.
+      CHARACTER(ErrMsgLen)                    :: ErrMsg2
+      CHARACTER(*), PARAMETER                 :: RoutineName = 'CalculateUACoeffs'
+
+      if ( UAMod == UA_HGMV360 ) then
+         LimitAlphaRange = TwoPi ! range we're limiting our equations to (in radians)
+      else
+         LimitAlphaRange =  20.0_ReKi * D2R ! range we're limiting our equations to (in radians)
+      end if
 
       col_fs = ColUAf + 1
       col_fa = col_fs  + 1
+      UA_f_cn = UAMod /= UA_HGM .and. UAMod /= UA_Oye ! these models use cl instead of cn
       
       if ( p%InclUAdata )  then
 
@@ -888,142 +908,339 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
          if (CalcDefaults%A1             ) p%UA_BL%A1             =  0.30_ReKi
          if (CalcDefaults%A2             ) p%UA_BL%A2             =  0.70_ReKi
          if (CalcDefaults%A5             ) p%UA_BL%A5             =  1.00_ReKi
-         if (CalcDefaults%St_sh          ) p%UA_BL%St_sh          =  0.19_ReKi
          if (CalcDefaults%x_cp_bar       ) p%UA_BL%x_cp_bar       =  0.20_ReKi
-         if (CalcDefaults%UACutout       ) p%UA_BL%UACutout       = 45.00_ReKi*D2R       ! turn off UA at 45 degrees
-         if (CalcDefaults%UACutout_delta ) p%UA_BL%UACutout_delta =  5.00_ReKi*D2R       ! begin turning off 5 degrees before UAcutout
-         
          if (CalcDefaults%filtCutOff     ) p%UA_BL%filtCutOff     =  0.50_ReKi
+         
+         if (UAMod == UA_HGMV360) then ! set defaults for this model (note: we don't turn off UA)
+            if (CalcDefaults%St_sh          ) p%UA_BL%St_sh          =  0.14_ReKi
+            if (CalcDefaults%UACutout       ) p%UA_BL%UACutout       =  TwoPi*2              ! don't turn off UA for this model
+            if (CalcDefaults%UACutout_delta ) p%UA_BL%UACutout_delta =  D2R                  ! begin turning off 1 degrees before UAcutout (if UACutout is large enough, we don't turn off UAcutout)
+         else
+            if (CalcDefaults%St_sh          ) p%UA_BL%St_sh          =  0.19_ReKi
+            if (CalcDefaults%UACutout       ) p%UA_BL%UACutout       = 45.00_ReKi*D2R        ! turn off UA at 45 degrees
+            if (CalcDefaults%UACutout_delta ) p%UA_BL%UACutout_delta =  5.00_ReKi*D2R        ! begin turning off 5 degrees before UAcutout
+         end if
          
          p%UA_BL%UACutout_blend  = max(0.0_ReKi, abs(p%UA_BL%UACutout) - abs(p%UA_BL%UACutout_delta))
          
          !-------------------------------------
          ! Calculate based on airfoil polar:
          !-------------------------------------
-            ! if Cd is constant, does this cause issues???
          iCdMin = minloc(p%Coefs(:,ColCd),DIM=1, MASK=abs(p%alpha)<=LimitAlphaRange)
-         if (CalcDefaults%Cd0) p%UA_BL%Cd0 = p%Coefs(iCdMin,ColCd)
          
-         alphaAtCdMin = p%alpha(iCdMin)
-         
-            ! compute cn:
-         do Row=1,p%NumAlf
-            cn(Row) = p%Coefs(Row,ColCl)*cos(p%alpha(Row)) + (p%Coefs(Row,ColCd) - p%UA_BL%Cd0)*sin(p%alpha(Row))
-         end do
-
-            ! compute cn and cl slopes (raw):
-         do Row=1,p%NumAlf-1
-            CnSlope_raw(Row) = (      cn(Row+1)       - cn(Row)            ) / (p%alpha(Row+1) - p%alpha(Row))
-            ClSlope_(   Row) = ( p%Coefs(Row+1,ColCl) - p%Coefs(Row,ColCl) ) / (p%alpha(Row+1) - p%alpha(Row))
-            alpha_(     Row) = 0.5_ReKi * (p%alpha(Row+1) + p%alpha(Row))
-         end do
-         
-            ! smooth cn slope for better calculations later:
-         call kernelSmoothing(alpha_, CnSlope_raw, kernelType_TRIWEIGHT, 2.0_ReKi*D2R, CnSlope_)
-         
-         
-         CnSlopeAtCdMin = InterpStp( alphaAtCdMin, alpha_, CnSlope_, iLow, p%NumAlf-1 )
-         
-            !find alphaUpper (using smoothed Cn values):
-         iHigh = minloc( alpha_ ,DIM=1, MASK=alpha_ >= LimitAlphaRange ) ! we can limit this to ~20 degrees
-         iHigh2 = iHigh
-         if (CalcDefaults%alphaUpper) then
-            
-            if (iHigh<iCdMin) iHigh = p%NumAlf-1 !this should be an error?
-            
-            maxCnSlope = CnSlopeAtCdMin
-            iHigh2 = iCdMin
-            do Row=iCdMin, iHigh
-               iHigh2 = Row
-               if (CnSlope_(Row) > maxCnSlope) then
-                  maxCnSlope = CnSlope_(Row)
-               end if
-               if (CnSlope_(Row) < CnSlopeThreshold*maxCnSlope) exit
-            end do
-
-            if (iHigh2 == iCdMin) then
-               p%UA_BL%alphaUpper = alphaAtCdMin;
+         if ( (maxval(p%Coefs(:,ColCd),DIM=1, MASK=abs(p%alpha)<=LimitAlphaRange) ==        &
+               minval(p%Coefs(:,ColCd),DIM=1, MASK=abs(p%alpha)<=LimitAlphaRange)    ) .or. &
+               maxval(p%Coefs(:,ColCl),DIM=1, MASK=abs(p%alpha)<=LimitAlphaRange) < 0.01 ) then
+                 
+               ! Cylinder polar perhaps?
+                 
+               if (CalcDefaults%Cd0)        p%UA_BL%Cd0 = p%Coefs(iCdMin,ColCd)
+               if (CalcDefaults%alpha0)     p%UA_BL%alpha0 = 0;
+               if (CalcDefaults%C_nalpha)   p%UA_BL%C_nalpha = 0;
+               if (CalcDefaults%C_nalpha)   p%UA_BL%C_nalpha = 0;
+               if (CalcDefaults%Cm0)        p%UA_BL%Cm0 = 0;
+               if (CalcDefaults%alpha1)     p%UA_BL%alpha1 = 10*D2R;
+               if (CalcDefaults%alpha2)     p%UA_BL%alpha2 = -10*D2R;
+               if (CalcDefaults%Cn1)        p%UA_BL%Cn1 = 0;
+               if (CalcDefaults%Cn2)        p%UA_BL%Cn2 = 0;
+               if (CalcDefaults%alphaLower) p%UA_BL%alphaLower = -5*D2R;
+               if (CalcDefaults%alphaUpper) p%UA_BL%alphaUpper = 5*D2R;
+               
+            if (.not. UA_f_cn) then
+               call ComputeUASeparationFunction_onCl(p, ColCl, ColUAf, col_fs, col_fa)
             else
-               iHigh2 = min(max(1, iHigh2-1), p%NumAlf-1 )
-               p%UA_BL%alphaUpper = alpha_(iHigh2);
-            end if
-
-         end if
-         
-            !find alphaLower
-         iLow = maxloc( alpha_ , DIM=1, MASK=alpha_ <= -LimitAlphaRange) ! we can limit this to ~-20 degrees
-         if (CalcDefaults%alphaLower) then
-            if (iLow>iCdMin) iLow = 1
-
-            maxCnSlope = CnSlopeAtCdMin
-            iLow2 = min(iHigh2-1, iCdMin-1, p%NumAlf-1)
-
-            do Row = min(iHigh2-1, iCdMin-1, p%NumAlf-1) ,iLow,-1
-               iLow2 = Row
-               if (CnSlope_(Row) > maxCnSlope) then
-                  maxCnSlope = CnSlope_(Row);
+            
+               if ( UAMod == UA_HGMV360 ) then
+                  cn = Calculate_Cn(alpha=p%alpha, cl=p%Coefs(:,ColCl), cd=p%Coefs(:,ColCd), cd0=0.0_ReKi)
+               
+                  iUpper = maxloc( p%alpha , DIM=1, MASK=p%alpha <= p%UA_BL%alphaUpper)
+                  iLower = minloc( p%alpha , DIM=1, MASK=p%alpha >= p%UA_BL%alphaLower)
+            
+                  call ComputeUA360_AttachedFlow(p, ColUAf, Cn, iLower, iUpper)
+                  call ComputeUA360_updateSeparationF( p, ColUAf, Cn, iLower, iUpper )
+                  call ComputeUA360_updateCnSeparated( p, ColUAf, Cn, iLower )
+               else
+                  cn = Calculate_Cn(alpha=p%alpha, cl=p%Coefs(:,ColCl), cd=p%Coefs(:,ColCd), cd0=p%UA_BL%Cd0)
+                  call ComputeUASeparationFunction(p, ColUAf, cn)
                end if
 
+            end if
+         else
+               ! if Cd is constant, does this cause issues???
+            alphaAtCdMin = p%alpha(iCdMin)
+         
+               ! compute cn:
+            if (UAMod == UA_HGMV360) then
+               cn = Calculate_Cn(alpha=p%alpha, cl=p%Coefs(:,ColCl), cd=p%Coefs(:,ColCd), cd0=0.0_ReKi)
+            else
+               if (CalcDefaults%Cd0) p%UA_BL%Cd0 = p%Coefs(iCdMin,ColCd)
+               cn = Calculate_Cn(alpha=p%alpha, cl=p%Coefs(:,ColCl), cd=p%Coefs(:,ColCd), cd0=p%UA_BL%Cd0)
+            end if
 
-               if ( CnSlope_(Row) < CnSlopeThreshold*maxCnSlope ) exit
+               ! compute cn and cl slopes (raw):
+            do Row=1,p%NumAlf-1
+               CnSlope_raw(Row) = (      cn(Row+1)       - cn(Row)            ) / (p%alpha(Row+1) - p%alpha(Row))
+               ClSlope_raw(Row) = ( p%Coefs(Row+1,ColCl) - p%Coefs(Row,ColCl) ) / (p%alpha(Row+1) - p%alpha(Row))
+               alpha_(     Row) = 0.5_ReKi * (p%alpha(Row+1) + p%alpha(Row))
             end do
+         
+               ! smooth cn slope for better calculations later:
+            call kernelSmoothing(alpha_, CnSlope_raw, kernelType_TRIWEIGHT, 2.0_ReKi*D2R, CnSlope_)
+            call kernelSmoothing(alpha_, ClSlope_raw, kernelType_TRIWEIGHT, 2.0_ReKi*D2R, ClSlope_)
+         
+            iGuess = iCdMin
+            CnSlopeAtCdMin = InterpStp( alphaAtCdMin, alpha_, CnSlope_, iGuess, p%NumAlf-1 )
+         
+               ! find bounding indices for limitAlphaRange
+            iHighLimit = min( maxloc( alpha_ , DIM=1, MASK=alpha_ <  LimitAlphaRange) + 1, size(alpha_) ) ! we can limit this to some range
+            iLowLimit  = max( minloc( alpha_ , DIM=1, MASK=alpha_ > -LimitAlphaRange) - 1, 1            ) ! we can limit this to some range
             
-            if (iLow2 == iCdMin) then
-               p%UA_BL%alphaLower = alphaAtCdMin;
-            else
-               iLow2 = min(max(1, iLow2+1), p%NumAlf-1 )
-               p%UA_BL%alphaLower = alpha_(iLow2);
-            end if
-         end if
-         
-            ! make sure iLow and iHigh are defined before doing this calculation:
-         ! note: perhaps we want to recalculate CnSlope_ with un-smoothed values????
-         if (CalcDefaults%C_nalpha) p%UA_BL%C_nalpha = maxval(CnSlope_(iLow:iHigh))
-         
-         ! this is calculated with un-smoothed data:
-         if (CalcDefaults%C_lalpha) p%UA_BL%C_lalpha = maxval(ClSlope_(iLow:iHigh))
+               ! find alphaUpper (using smoothed Cn values):
+            if (CalcDefaults%alphaUpper) then
+               iHigh = iHighLimit
+               if (iHigh<iCdMin) iHigh = p%NumAlf-1 !this should be an error?
+            
+               maxCnSlope = CnSlopeAtCdMin
+               do Row=iCdMin, iHigh
+                  iHigh2 = Row
+                  if (CnSlope_(Row) > maxCnSlope) then
+                     maxCnSlope = CnSlope_(Row)
+                  else if (CnSlope_(Row) < CnSlopeThreshold*maxCnSlope) then
+                     exit
+                  end if
+               end do
 
-         
-         ! find alpha0
-         ! least squares fit between alphaLower and alphaUpper??? (see LAPACK_GELSD)
-         ! For now we will just go a poor-man's linear fit with existing data:
-         if (CalcDefaults%alpha0) then
-            slope = p%UA_BL%C_lalpha
-            if (EqualRealNos(slope, 0.0_ReKi)) then
-               p%UA_BL%alpha0 = 0.0_ReKi ! doesn't really matter
-            else
-               alphaTmp = 0.5_ReKi * (p%UA_BL%alphaLower+p%UA_BL%alphaUpper)
-               ClTmp = InterpStp(alphaTmp, p%alpha, p%Coefs(:,ColCl), iLow,  p%NumAlf)
-               p%UA_BL%alpha0 = alphaTmp - ClTmp / slope
-            end if
-         end if
+               if (iHigh2 == iCdMin) then
+                  p%UA_BL%alphaUpper = alphaAtCdMin;
+               else
+                  iHigh2 = min(max(1, iHigh2-1), p%NumAlf-1 )
+                  p%UA_BL%alphaUpper = alpha_(iHigh2);
+               end if
 
-         if (CalcDefaults%Cm0) then
-            if (ColCm > 0) then
-               iLow = p%NumAlf/2 ! guess: start in the center
-               p%UA_BL%Cm0 = InterpStp( p%UA_BL%alpha0, p%alpha, p%Coefs(:,ColCm), iLow, p%NumAlf )
             else
-               p%UA_BL%Cm0 = 0.0_ReKi
+               iHigh2 = iHighLimit ! initialize for use in alphaLower if no alphaUpper default is requested
             end if
+         
+            
+               !find alphaLower
+            if (CalcDefaults%alphaLower) then
+               maxCnSlope = CnSlopeAtCdMin
+               
+               iLow = iLowLimit
+               iHigh = max( 1, min(iHigh2, iCdMin, p%NumAlf-1) )
+               if (iHigh < iLow) iLow = 1
+
+               do Row = iHigh,iLow,-1
+                  iLow2 = Row
+                  if (CnSlope_(Row) > maxCnSlope) then
+                     maxCnSlope = CnSlope_(Row);
+                  else if ( CnSlope_(Row) < CnSlopeThreshold*maxCnSlope ) then
+                     exit
+                  end if
+               end do
+            
+               if (iLow2 == iCdMin) then
+                  p%UA_BL%alphaLower = alphaAtCdMin;
+               else
+                  iLow2 = min(max(1, iLow2+1), p%NumAlf-1 )
+                  p%UA_BL%alphaLower = alpha_(iLow2);
+               end if
+            end if
+         
+            
+            iUpper = maxloc( p%alpha , DIM=1, MASK=p%alpha <= p%UA_BL%alphaUpper)
+            iLower = minloc( p%alpha , DIM=1, MASK=p%alpha >= p%UA_BL%alphaLower)
+            
+               ! modifications for HGM360: default cd0, alphaUpper, alphaLower
+            if (UAMod == UA_HGMV360) then
+               if (CalcDefaults%alphaUpper) p%UA_BL%alphaUpper = p%alpha(iUpper)
+               if (CalcDefaults%alphaLower) p%UA_BL%alphaLower = p%alpha(iLower)
+            
+               if (CalcDefaults%Cd0) p%UA_BL%Cd0 = minval( p%Coefs(iLower:iUpper, ColCd) )
+               p%UA_BL%Cd0 = 0.0_ReKi  ! setting this to 0 so that Cn gets calculated properly elsewhere in this code
+               
+               call ComputeUA360_AttachedFlow(p, ColUAf, Cn, iLower, iUpper)
+               call ComputeUA360_updateSeparationF( p, ColUAf, Cn, iLower, iUpper )
+               call ComputeUA360_updateCnSeparated( p, ColUAf, Cn, iLower )
+            end if
+            
+            !------------------------------------
+            ! Note: These are not used in HGMV360
+            !------------------------------------
+            
+            if (CalcDefaults%C_nalpha .or. CalcDefaults%C_lalpha .or. CalcDefaults%alpha0) then
+               
+               alphaMargin = 0.2*( p%UA_BL%alphaUpper - p%UA_BL%alphaLower );
+               !mask = p%alpha >= p%UA_BL%alphaLower+alphaMargin & p%alpha <= p%UA_BL%alphaUpper-alphaMargin;
+            
+               iLow2 = iLowLimit
+               do while (iLow2 < iHighLimit .and. p%alpha(iLow2) <  p%UA_BL%alphaLower + alphaMargin) 
+                  iLow2 = iLow2 + 1
+               end do
+
+               iHigh2 = iHighLimit
+               do while (iHigh2 > iLowLimit .and. p%alpha(iHigh2) >  p%UA_BL%alphaUpper - alphaMargin) 
+                  iHigh2 = iHigh2 - 1
+               end do
+
+               call Calculate_C_alpha(p%alpha(iLow2:iHigh2), Cn(iLow2:iHigh2), p%Coefs(iLow2:iHigh2,ColCl), Default_Cn_alpha, Default_Cl_alpha, Default_alpha0, ErrStat2, ErrMsg2)
+         
+               if (CalcDefaults%C_nalpha) p%UA_BL%C_nalpha = Default_Cn_alpha
+               if (CalcDefaults%C_lalpha) p%UA_BL%C_lalpha = Default_Cl_alpha
+               if (CalcDefaults%alpha0)   p%UA_BL%alpha0   = Default_alpha0
+            end if
+
+            if (CalcDefaults%Cm0) then
+               if (ColCm > 0) then
+                  iGuess = p%NumAlf/2 ! guess: start in the center
+                  p%UA_BL%Cm0 = InterpStp( p%UA_BL%alpha0, p%alpha, p%Coefs(:,ColCm), iGuess, p%NumAlf )
+               else
+                  p%UA_BL%Cm0 = 0.0_ReKi
+               end if
+            end if
+         
+            if (.not. UA_f_cn) then !
+               call ComputeUASeparationFunction_onCl(p, ColCl, ColUAf, col_fs, col_fa)
+            elseif (UAMod /= UA_HGMV360) then
+               call ComputeUASeparationFunction(p, ColUAf, cn)
+            end if
+            
+
+               ! alpha1
+            if (CalcDefaults%alpha1) then
+               iUpper = minloc( p%alpha , DIM=1, MASK=p%alpha >= p%UA_BL%alphaUpper) ! recalculating iUpper here (for backward compatibility)
+               iGuess = max(1, minloc( p%alpha , DIM=1, MASK=p%alpha >= p%UA_BL%alphaUpper .and. p%Coefs(:,ColUAf) <= fAtCriticalCn))
+               call fZeros(p%alpha(iUpper:), fAtCriticalCn - p%Coefs(iUpper:,ColUAf), roots, nRoots)
+
+               if (nRoots==1) then
+                  p%UA_BL%alpha1 = roots(1)
+               elseif (nRoots>1) then
+                  i = minloc( abs(roots(1:nRoots) - p%alpha(iGuess) ), DIM=1 ) ! find root closest to guess
+                  p%UA_BL%alpha1 = roots(i(1))
+               else
+                  p%UA_BL%alpha1 = p%alpha(iGuess)
+               end if
+            end if
+         
+               ! alpha2
+            if (CalcDefaults%alpha2) then
+               iLower = maxloc( p%alpha , DIM=1, MASK=p%alpha <= p%UA_BL%alphaLower) ! recalculating iLower here (for backward compatibility)
+               iGuess = maxloc( p%alpha , DIM=1, MASK=p%alpha <= p%UA_BL%alphaLower .and. p%Coefs(:,ColUAf) <= fAtCriticalCn)
+               call fZeros(p%alpha(:iLower), fAtCriticalCn - p%Coefs(:iLower,ColUAf), roots, nRoots)
+
+               if (nRoots==1) then
+                  p%UA_BL%alpha2 = roots(1)
+               elseif (nRoots>1) then
+                  i = minloc( abs(roots(1:nRoots) - p%alpha(iGuess) ), DIM=1 ) ! find root closest to guess
+                  p%UA_BL%alpha2 = roots(i(1))
+               else
+                  p%UA_BL%alpha2 = p%alpha(iGuess)
+               end if
+            
+            end if
+         
+               ! Cn1
+            if (CalcDefaults%Cn1) then
+               iGuess = iHighLimit
+               p%UA_BL%Cn1 = InterpStp( p%UA_BL%alpha1, p%alpha, cn, iGuess, p%NumAlf )
+            end if
+         
+               ! Cn2
+            if (CalcDefaults%Cn2) then
+               iGuess = iLowLimit
+               p%UA_BL%Cn2 = InterpStp( p%UA_BL%alpha2, p%alpha, cn, iGuess, p%NumAlf )
+            end if
+         
+         end if ! not a circular polar
+         
+         if (UAMod /= UA_HGMV360) then
+            p%UA_BL%alpha0ReverseFlow = 0
          end if
          
+      end if ! UA is included
+
+   END SUBROUTINE CalculateUACoeffs
+!----------------------------------------------------------------------------------------------------------------------------------
+   FUNCTION Calculate_Cn (alpha, Cl, Cd, Cd0) RESULT(Cn)
+      REAL(ReKi),               intent(in   ) :: alpha(:)                   ! alpha
+      REAL(ReKi),               intent(in   ) :: Cl(:)                      ! cl
+      REAL(ReKi),               intent(in   ) :: Cd(:)                      ! cd
+      REAL(ReKi),               intent(in   ) :: Cd0
+      REAL(ReKi)                              :: Cn(size(alpha))            ! cn (result of this function)
+      
+      integer(IntKi)                          :: NumAlf
+      integer(IntKi)                          :: Row
+   
+      NumAlf = size(alpha)
+      
+      do Row=1,NumAlf
+         cn(Row) = Cl(Row)*cos(alpha(Row)) + (Cd(Row) - Cd0)*sin(alpha(Row))
+      end do
+      
+   END FUNCTION Calculate_Cn
+!----------------------------------------------------------------------------------------------------------------------------------
+   SUBROUTINE Calculate_C_alpha(alpha, Cn, Cl, Default_Cn_alpha, Default_Cl_alpha, Default_alpha0, ErrStat, ErrMsg)
+      REAL(ReKi),               intent(in   ) :: alpha(:)                   ! alpha
+      REAL(ReKi),               intent(in   ) :: Cn(:)                      ! cn
+      REAL(ReKi),               intent(in   ) :: Cl(:)                      ! cl
+   
+      REAL(ReKi),               intent(  out) :: Default_Cn_alpha
+      REAL(ReKi),               intent(  out) :: Default_Cl_alpha
+      REAL(ReKi),               intent(  out) :: Default_alpha0
+      integer(IntKi),           intent(  out) :: errStat                    ! Error status of the operation
+      character(*),             intent(  out) :: errMsg                     ! Error message if ErrStat /= ErrID_None 
+      
+      REAL(ReKi)                              :: A(      size(alpha), 2)
+      REAL(ReKi)                              :: B(max(2,size(alpha)),2)
+
+      A(:,1) = alpha
+      A(:,2) = 1.0_ReKi
+      
+      B(:,1) = Cn
+      B(:,2) = Cl
+      
+      CALL LAPACK_gels('N', A, B, ErrStat, ErrMsg)
+   
+      Default_Cn_alpha = B(1,1)
+      Default_Cl_alpha = B(1,2)
+      
+      if (.not. EqualRealNos(B(1,1),0.0_ReKi)) then
+         Default_alpha0  = -B(2,1)/B(1,1) ! using the values from Cn_alpha
+      else
+         Default_alpha0 = 0.0_ReKi
+      end if
          
-         if (.not. UA_f_cn) then !
-            !------------------------------------------------
-            ! calculate f_st, cl_fs, and cl_fa for HGM model
-            !------------------------------------------------
-            if (EqualRealNos(p%UA_BL%c_lalpha,0.0_ReKi)) then
-               p%Coefs(:,ColUAf) = 0.0_ReKi                           ! Eq. 59
-               p%Coefs(:,col_fs) = p%Coefs(:,ColCl)                   ! Eq. 61
-               p%Coefs(:,col_fa) = 0.0_ReKi
-               call ComputeUASeparationFunction_zero(p, ColUAf, p%Coefs(:,ColCl)) ! just to initialize these values... UA will turn off without using them
-            else
+   END SUBROUTINE Calculate_C_alpha
+!----------------------------------------------------------------------------------------------------------------------------------
+   SUBROUTINE ComputeUASeparationFunction_onCl(p, ColCl, ColUAf, col_fs, col_fa)
+      TYPE (AFI_Table_Type),    intent(inout) :: p                             ! This structure stores all the module parameters that are set by AirfoilInfo during the initialization phase.
+      integer(IntKi),           intent(in   ) :: ColUAf                        ! column for UA f_st (based on Cl or cn)
+      integer(IntKi),           intent(in   ) :: ColCl                         ! column for cl
+      INTEGER(IntKi),           intent(in   ) :: col_fs                        ! column for UA cn/cl_fs (fully separated cn or cl)
+      INTEGER(IntKi),           intent(in   ) :: col_fa                        ! column for UA cn/cl_fa (fully attached cn or cl); NOT USED IN THE MODELS ! note that col_fa is not used in this model, but we set the values to ensure files get written properly
+
+      
+      integer                                 :: Row
+      REAL(ReKi)                              :: cl_ratio
+      REAL(ReKi)                              :: cl_inv
+      REAL(ReKi)                              :: f_st
+      REAL(ReKi)                              :: fullySeparate
+      
+         !------------------------------------------------
+         ! calculate f_st, cl_fs, and cl_fa for HGM model
+         !------------------------------------------------
+         if (EqualRealNos(p%UA_BL%c_lalpha,0.0_ReKi)) then
+            p%Coefs(:,ColUAf) = 0.0_ReKi                           ! Eq. 59
+            p%Coefs(:,col_fs) = p%Coefs(:,ColCl)                   ! Eq. 61
+            p%Coefs(:,col_fa) = 0.0_ReKi
+            call ComputeUASeparationFunction_zero(p, ColUAf, p%Coefs(:,ColCl)) ! just to initialize these values... UA will turn off without using them
+         else
             
                do Row=1,p%NumAlf
             
                   if (EqualRealNos( p%alpha(Row), p%UA_BL%alpha0)) then
                      f_st  = 1.0_ReKi                                         ! Eq. 59
-                     p%Coefs(Row,col_fs) = p%Coefs(Row,ColCl) / 2.0_ReKi    ! Eq. 61 (which should be very close to 0 because definition of alpha0 says cl(alpha0) = 0 )
+                     fullySeparate = p%Coefs(Row,ColCl) / 2.0_ReKi            ! Eq. 61 (which should be very close to 0 because definition of alpha0 says cl(alpha0) = 0 )
                   else
             
                      cl_ratio = p%Coefs(Row,ColCl) / ( p%UA_BL%c_lalpha*(p%alpha(Row) - p%UA_BL%alpha0))
@@ -1040,19 +1257,19 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
                         f_st = 1.0_ReKi
                         fullySeparate = p%Coefs(Row,ColCl) / 2.0_ReKi                      ! Eq. 61
                      end if
-                  
-                     p%Coefs(Row,col_fs) = fullySeparate
-
+                     
                   end if
                
                   p%Coefs(Row,ColUAf) = f_st
+                  p%Coefs(Row,col_fs) = fullySeparate
+                  p%Coefs(Row,col_fa) = p%UA_BL%c_lalpha * (p%alpha(Row) - p%UA_BL%alpha0) ! not used in the UA model (it's specified directly), but computed here for completeness
 
                end do
-               
-               ! Compute variables to help x3 state with +/-180-degree wrap-around issues
-               ! and make sure that the separation function is monotonic before iLow and after iHigh:
+
+               ! These variables aren't used with the models that use Cl instead of Cn, but it's a way to initialize the values.
+               ! They make sure that the separation function is monotonic before p%UA_BL%alphaLower and after p%UA_BL%alphaUpper:
                call ComputeUASeparationFunction_zero(p, ColUAf, p%Coefs(:,ColCl)) ! this was comparing with alpha0, but now we compare with alphaUpper and alphaLower
-            
+
             
                ! Ensuring everything is in harmony 
                do Row=1,p%NumAlf
@@ -1072,101 +1289,24 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
                
                
             end if ! c_lalpha == 0
-            
-         else
-         
-            call ComputeUASeparationFunction(p, ColUAf, cn)
-            
-         end if
-         
-            ! alpha1, alpha2, Cn1 and Cn2
-         iLow     = 1
-         f_iLow   = huge(f_iHigh)
-         iHigh    = p%NumAlf
-         f_iHigh  = f_iLow
-         do Row=1,p%NumAlf
-            if (p%alpha(Row) < p%UA_BL%AlphaLower) then
-               f_st = abs(p%Coefs(Row,ColUAf) - fAtCriticalCn)
-               if ( f_st < f_iLow ) then
-                  iLow = Row
-                  f_iLow = f_st
-               end if
-            else if (p%alpha(Row) > p%UA_BL%AlphaUpper) then
-               f_st = abs(p%Coefs(Row,ColUAf) - fAtCriticalCn)
-               if ( f_st < f_iHigh ) then
-                  iHigh = Row
-                  f_iHigh = f_st
-               end if
-            end if
-         end do
 
-            ! alpha2
-         if (CalcDefaults%alpha2) then
-            if ( (p%Coefs(iLow,ColUAf) < fAtCriticalCn .and. iLow < p%NumAlf) .or. iLow == 1) then
-               iLow2 = iLow + 1
-            else 
-               iLow2 = iLow - 1
-            end if
-         
-            slope = (p%Coefs(iLow,ColUAf) - p%Coefs(iLow2,ColUAf)) / (p%alpha(iLow) - p%alpha(iLow2))
-            if (EqualRealNos(slope, 0.0_ReKi) ) then
-               p%UA_BL%alpha2 = p%alpha(iLow)
-            else
-               p%UA_BL%alpha2 = (fAtCriticalCn - p%Coefs(iLow,ColUAf)) / slope + p%alpha(iLow)
-            end if
-         end if
-         
-            ! alpha1
-         if (CalcDefaults%alpha1) then
-            if ((p%Coefs(iHigh,ColUAf) < fAtCriticalCn .and. iHigh > 1) .or. iHigh == p%NumAlf) then
-               iHigh2 = iHigh - 1
-            else 
-               iHigh2 = iHigh + 1
-            end if
-            slope =(p%Coefs(iHigh,ColUAf) - p%Coefs(iHigh2,ColUAf)) / (p%alpha(iHigh) - p%alpha(iHigh2))
-            if (EqualRealNos(slope, 0.0_ReKi) ) then
-               p%UA_BL%alpha1 = p%alpha(iHigh)
-            else
-               p%UA_BL%alpha1 = (fAtCriticalCn - p%Coefs(iHigh,ColUAf)) / slope + p%alpha(iHigh)
-            end if
-         end if
-         
-         
-            ! Cn1
-         if (CalcDefaults%Cn1) then
-            p%UA_BL%Cn1 = InterpStp( p%UA_BL%alpha1, p%alpha, cn, iHigh, p%NumAlf )
-         end if
-         
-            ! Cn2
-         if (CalcDefaults%Cn2) then
-            p%UA_BL%Cn2 = InterpStp( p%UA_BL%alpha2, p%alpha, cn, iLow, p%NumAlf )
-         end if
-
-         
-         ! after we know the fully attached Cn
-         
-      end if ! UA is included
-
-   END SUBROUTINE CalculateUACoeffs
-!----------------------------------------------------------------------------------------------------------------------------------  
+   END SUBROUTINE ComputeUASeparationFunction_onCl
+!----------------------------------------------------------------------------------------------------------------------------------
    SUBROUTINE ComputeUASeparationFunction(p, ColUAf, cn_cl)
       TYPE (AFI_Table_Type),    intent(inout) :: p                             ! This structure stores all the module parameters that are set by AirfoilInfo during the initialization phase.
       integer(IntKi),           intent(in   ) :: ColUAf                        ! column for UA f_st (based on Cl or cn)
       REAL(ReKi),               intent(in   ) :: cn_cl(:)                      ! cn or cl, whichever variable we are computing this on
    
-      REAL(ReKi)                              :: temp
       INTEGER(IntKi)                          :: Row                           ! The row of a table to be parsed in the FileInfo structure.
       INTEGER(IntKi)                          :: col_fs                        ! column for UA cn/cl_fs (fully separated cn or cl)
       INTEGER(IntKi)                          :: col_fa                        ! column for UA cn/cl_fa (fully attached cn or cl)
       
       REAL(ReKi)                              :: c_ratio
       REAL(ReKi)                              :: f_st
-      REAL(ReKi)                              :: denom
+      REAL(ReKi)                              :: c_RateLower, c_RateUpper
       REAL(ReKi)                              :: fullySeparate
       
-      INTEGER(IntKi)                          :: iHigh, iLow
-      INTEGER(IntKi)                          :: iHigh_2, iLow_2
-      INTEGER(IntKi)                          :: iHigh_1, iLow_1
+      INTEGER(IntKi)                          :: iLower, iUpper, iGuess
       
       REAL(ReKi)                              :: c_num, c_den
       REAL(ReKi)                              :: c_offset
@@ -1181,86 +1321,62 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
       !------------------------------------------------
       ! calculate f_st, {cn | cl}_fs, and {cn | cl}_fa for UA model
       !------------------------------------------------
-      if (p%UA_BL%alphaLower > p%UA_BL%alphaUpper) then ! switch them around
-         temp               = p%UA_BL%alphaUpper
-         p%UA_BL%alphaUpper = p%UA_BL%alphaLower
-         p%UA_BL%alphaLower = temp
-      end if
+
          
       !------------------------------------------------
-      ! find iLow where p%alpha(iLow) = p%UA_BL%alphaLower
-      ! Note that we may have specified an alphaLower that is not in the input alpha table, so we get the closest value
+      ! calculate offset prior to recalculating alphaLower and alphaUpper:
+      ! Note these c_alphaLower and c_alphaUpper will be overwritten later, too.
       !------------------------------------------------
-      iLow = 1 ! start at first index
-      CALL LocateBin( p%UA_BL%alphaLower, p%alpha, iLow, p%NumAlf )
-      if (iLow < p%NumAlf) then
-         if ( p%alpha(iLow+1) - p%UA_BL%alphaLower < p%UA_BL%alphaLower - p%alpha(iLow) ) then ! see if p%alpha(iLow) or p%alpha(iLow+1) is the closest index
-            if (p%UA_BL%alphaUpper > p%alpha(iLow+1)) iLow = iLow + 1                !if we don't go past, alphaUpper, use the closest alpha: p%alpha(iLow+1)
-         end if
-      else
-         iLow = p%NumAlf - 1 ! we can't have IndLower > IndUpper, so fix it here.
-      end if
-         ! figure out which side of iLow to compute the slope later:
-      iLow_2 = iLow + 1
-      iLow_1 = iLow
+      iGuess = p%NumAlf / 2.0_ReKi
+      p%UA_BL%c_alphaLower = InterpStp(p%UA_BL%alphaLower, p%alpha, cn_cl, iGuess, p%NumAlf)
+      p%UA_BL%c_alphaUpper = InterpStp(p%UA_BL%alphaUpper, p%alpha, cn_cl, iGuess, p%NumAlf)
       
-         ! get value
-      p%UA_BL%c_alphaLower = InterpStp( p%UA_BL%alphaLower, p%alpha, cn_cl, iLow, p%NumAlf )
-
+      c_offset = (p%UA_BL%c_alphaLower + p%UA_BL%c_alphaUpper) / 2.0_ReKi
+      
+      
       !------------------------------------------------
-      ! find iHigh where p%alpha(iHigh) is approximately p%UA_BL%alphaUpper
-      ! Note that we may have specified an alphaUpper that is not in the input alpha table, so we get the closest value
-      ! also making sure that iLow < iHigh
+      ! find iLower where p%alpha(iLower) = p%UA_BL%alphaLower
+      ! Note that we may have specified an alphaLower that is not in the input alpha table, so we get the closest value (and overwrite later if necessary)
       !------------------------------------------------
-      iHigh = iLow_1 ! start at first index
-      CALL LocateStp( p%UA_BL%alphaUpper, p%alpha, iHigh, p%NumAlf )
-      if (iHigh < p%NumAlf) then
-         if (iHigh >= iLow) then
-            if ( p%alpha(iHigh+1) - p%UA_BL%alphaUpper < p%UA_BL%alphaUpper - p%alpha(iHigh) ) iHigh = iHigh + 1
-         else 
-            iHigh = iLow + 1
-         end if
-      end if
-         ! figure out which side of iHigh to compute the slope later:
-      iHigh_2= iHigh - 1
-      iHigh_1 = iHigh
+      iLower = minloc( p%alpha , DIM=1, MASK=p%alpha >= p%UA_BL%alphaLower)
+      iUpper = maxloc( p%alpha , DIM=1, MASK=p%alpha <= p%UA_BL%alphaUpper)
       
-      p%UA_BL%c_alphaUpper = InterpStp( p%UA_BL%alphaUpper, p%alpha, cn_cl, iHigh, p%NumAlf )
-      
+      iLower = min(p%NumAlf-1,iLower)
+      iUpper = max(2,iUpper)
       !------------------------------------------------
       ! Compute derivatives for fully attached values of cn or cl:
+      ! (find linear rate and offset values)
       !------------------------------------------------
-      denom = (p%UA_BL%alphaLower - p%UA_BL%alphaUpper)
-      if (EqualRealNos(denom,0.0_ReKi)) then
-         p%UA_BL%c_Rate = 0.0_ReKi
-      else
-         p%UA_BL%c_Rate       = (p%UA_BL%c_alphaLower - p%UA_BL%c_alphaUpper)/(p%UA_BL%alphaLower - p%UA_BL%alphaUpper)
-      end if
-      p%UA_BL%c_Rate = max(p%UA_BL%c_Rate, sqrt(epsilon(p%UA_BL%c_Rate))) ! make sure this isn't zero
+      p%UA_BL%alphaLower = p%alpha(iLower) ! note we are overwritting values here to make them consistent in the linear equation
+      p%UA_BL%alphaUpper = p%alpha(iUpper) ! note we are overwritting values here to make them consistent in the linear equation
+      
+      p%UA_BL%c_alphaLower = cn_cl(iLower)
+      p%UA_BL%c_alphaUpper = cn_cl(iUpper)
+      
       
          ! these can't have zero in the denom because alphas are unique and the indices are not the same:
-      p%UA_BL%c_RateLower  = (cn_cl( iLow_1) - cn_cl( iLow_2))/(p%alpha( iLow_1) - p%alpha( iLow_2))
-      p%UA_BL%c_RateUpper  = (cn_cl(iHigh_1) - cn_cl(iHigh_2))/(p%alpha(iHigh_1) - p%alpha(iHigh_2))
+      c_RateLower  = (cn_cl(iLower) - cn_cl(iLower+1))/(p%alpha(iLower) - p%alpha(iLower+1))
+      c_RateUpper  = (cn_cl(iUpper) - cn_cl(iUpper-1))/(p%alpha(iUpper) - p%alpha(iUpper-1))
 
-      p%UA_BL%c_RateLower = max(p%UA_BL%c_RateLower, sqrt(epsilon(p%UA_BL%c_RateLower))) ! make sure this isn't zero
-      p%UA_BL%c_RateUpper = max(p%UA_BL%c_RateUpper, sqrt(epsilon(p%UA_BL%c_RateUpper))) ! make sure this isn't zero
+      c_RateLower = max(c_RateLower, sqrt(epsilon(c_RateLower))) ! make sure this isn't zero
+      c_RateUpper = max(c_RateUpper, sqrt(epsilon(c_RateUpper))) ! make sure this isn't zero
       
          ! Linear extrapolation using values computed with alphaLower and alphaUpper;
          ! between alphaLower and alphaUpper, set equal to {cn | cl} so that we don't get asymptotic behavior in the separation function.
-      do Row=1,iLow-1
-         p%Coefs(Row,col_fa) = (p%alpha(Row) - p%UA_BL%alphaLower) * p%UA_BL%c_RateLower + p%UA_BL%c_alphaLower
+         ! NOTE: THIS GETS OVERWRITTEN LATER!!!
+      do Row=1,iLower-1
+         p%Coefs(Row,col_fa) = (p%alpha(Row) - p%UA_BL%alphaLower) * c_RateLower + p%UA_BL%c_alphaLower
       end do
-      do Row=iLow,iHigh
+      do Row=iLower,iUpper
          p%Coefs(Row,col_fa) = cn_cl(Row)
       end do
-      do Row=iHigh+1,p%NumAlf
-         p%Coefs(Row,col_fa) = (p%alpha(Row) - p%UA_BL%alphaUpper) * p%UA_BL%c_RateUpper + p%UA_BL%c_alphaUpper
+      do Row=iUpper+1,p%NumAlf
+         p%Coefs(Row,col_fa) = (p%alpha(Row) - p%UA_BL%alphaUpper) * c_RateUpper + p%UA_BL%c_alphaUpper
       end do
       
       !----------------------------------------------------------------------
       ! Compute separation function, f_st, as well as fully separated values:
       !----------------------------------------------------------------------
-      c_offset = (p%UA_BL%c_alphaLower + p%UA_BL%c_alphaUpper) / 2.0_ReKi
 
       do Row=1,p%NumAlf
 
@@ -1291,7 +1407,7 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
 
       
       ! Compute variables to help x3 state with +/-180-degree wrap-around issues
-      ! and make sure that the separation function is monotonic before iLow and after iHigh:
+      ! and make sure that the separation function is monotonic before p%UA_BL%alphaLower and after p%UA_BL%alphaUpper:
       call ComputeUASeparationFunction_zero(p, ColUAf, cn_cl)
    
    END SUBROUTINE ComputeUASeparationFunction
@@ -1301,12 +1417,12 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
       integer(IntKi),           intent(in   ) :: ColUAf                        ! column for UA f_st (based on Cl or cn)
       REAL(ReKi),               intent(in   ) :: cn_cl(:)                      ! cn or cl, whichever variable we are computing this on
    
+      REAL(ReKi)                              :: c_RateBreak                   ! the slope of the wrap-around region
       INTEGER(IntKi)                          :: Row                           ! The row of a table to be parsed in the FileInfo structure.
       INTEGER(IntKi)                          :: col_fs                        ! column for UA cn/cl_fs (fully separated cn or cl)
       INTEGER(IntKi)                          :: col_fa                        ! column for UA cn/cl_fa (fully attached cn or cl)
       INTEGER(IntKi)                          :: iHigh, iLow
-      REAL(ReKi)                              :: f_st                          ! separation function
-      REAL(ReKi)                              :: f_iHigh, f_iLow
+      INTEGER(IntKi)                          :: iTemp
       
       !------------------------------------------------
       ! set column numbers
@@ -1314,53 +1430,98 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
       col_fs = ColUAf + 1
       col_fa = col_fs + 1
       
-      
          ! initialize so that we can find the minimum f on each side of the attached region
-      f_iHigh = huge(f_iHigh)
-      f_iLow  = f_iHigh
-      iHigh = p%NumAlf
-      iLow  = 1
-         
-      
-      do Row=1,p%NumAlf
+     !iLow  = minloc(p%Coefs(:,ColUAf), DIM=1, MASK=p%alpha < p%UA_BL%alphaLower, BACK=.TRUE.) ! because not all compilers allow keyword "BACK" from the F2008 standard, we implement this way:
+      iTemp  = minloc(p%Coefs(:,ColUAf), DIM=1, MASK=p%alpha < p%UA_BL%alphaLower) ! because not all compilers (gcc) allow keyword "BACK" from the F2008 standard, we implement this way
+      iLow  = maxloc( p%alpha, DIM=1, MASK=p%alpha < p%UA_BL%alphaLower .and. p%Coefs(:,ColUAf) == p%Coefs(iTemp,ColUAf) )
 
-         f_st = p%Coefs(Row,ColUAf)
-         
-         if (p%alpha(Row) < p%UA_BL%alphaLower) then ! find minimum f below alphaLower
-            if (f_st <= f_iLow) then
-               f_iLow = f_st
-               iLow = Row
-            end if
-         else if (p%alpha(Row) > p%UA_BL%alphaUpper) then
-            if (f_st < f_iHigh) then  ! find minimum f above alphaUpper
-               f_iHigh = f_st
-               iHigh = Row
-            end if
-         end if
+      iHigh = minloc(p%Coefs(:,ColUAf), DIM=1, MASK=p%alpha > p%UA_BL%alphaUpper)
 
-      end do
-
-      
       ! Compute variables to help x3 state with +/-180-degree wrap-around issues
-      p%UA_BL%alphaUpperWrap   = p%alpha(iHigh)
-      p%UA_BL%alphaLowerWrap   = p%alpha(iLow)
-      p%UA_BL%c_RateWrap       = (p%Coefs(iHigh,col_fa) - p%Coefs(iLow,col_fa)) / ( (p%alpha(iHigh)-TwoPi) - p%alpha(iLow))
-      p%UA_BL%c_alphaUpperWrap = p%Coefs(iHigh,col_fa)
-      p%UA_BL%c_alphaLowerWrap = p%Coefs(iLow,col_fa)
+      p%UA_BL%alphaBreakUpper  = p%alpha(iHigh)
+      p%UA_BL%alphaBreakLower  = p%alpha(iLow)
+      p%UA_BL%CnBreakUpper     = p%Coefs(iHigh,col_fa)
+      p%UA_BL%CnBreakLower     = p%Coefs(iLow,col_fa)
+      
+      c_RateBreak       = (p%UA_BL%CnBreakUpper - p%UA_BL%CnBreakLower) / ( (p%UA_BL%alphaBreakUpper-TwoPi) - p%UA_BL%alphaBreakLower)
       
          ! make sure that the separation function is monotonic before iLow and after iHigh:
       do Row=1,iLow
-         p%Coefs(Row,col_fa) = (p%alpha(Row) - p%UA_BL%alphaLowerWrap) * p%UA_BL%c_RateWrap + p%UA_BL%c_alphaLowerWrap
+         p%Coefs(Row,col_fa) = (p%alpha(Row) - p%UA_BL%alphaBreakLower) * c_RateBreak + p%UA_BL%CnBreakLower
          p%Coefs(Row,col_fs) = cn_cl(Row)
          p%Coefs(Row,ColUAf) = 0.0_ReKi
       end do
       do Row=iHigh,p%NumAlf
-         p%Coefs(Row,col_fa) = (p%alpha(Row) - p%UA_BL%alphaUpperWrap) * p%UA_BL%c_RateWrap + p%UA_BL%c_alphaUpperWrap
+         p%Coefs(Row,col_fa) = (p%alpha(Row) - p%UA_BL%alphaBreakUpper) * c_RateBreak + p%UA_BL%CnBreakUpper
          p%Coefs(Row,col_fs) = cn_cl(Row)
          p%Coefs(Row,ColUAf) = 0.0_ReKi
       end do
       
-END SUBROUTINE ComputeUASeparationFunction_zero
+   END SUBROUTINE ComputeUASeparationFunction_zero
+!----------------------------------------------------------------------------------------------------------------------------------  
+   SUBROUTINE ComputeUA360_AttachedFlow(p, ColUAf, cn_cl, iLower, iUpper)
+      TYPE (AFI_Table_Type),    intent(inout) :: p                             ! This structure stores all the module parameters that are set by AirfoilInfo during the initialization phase.
+      integer(IntKi),           intent(in   ) :: ColUAf                        ! column for UA f_st (based on Cl or cn)
+      REAL(ReKi),               intent(in   ) :: cn_cl(:)                      ! cn or cl, whichever variable we are computing this on
+      INTEGER(IntKi)          , intent(in   ) :: iLower                        ! The lower index separating the region around 0
+      INTEGER(IntKi)          , intent(in   ) :: iUpper                        ! The upper index separating the region around 0
+   
+      REAL(ReKi)                              :: roots(p%NumAlf)
+      REAL(ReKi)                              :: x_(3), f_(3)
+      
+      REAL(ReKi)                              :: CnSlopeUpper, alpha0Upper
+      REAL(ReKi)                              :: CnSlopeLower, alpha0Lower
+      REAL(ReKi)                              :: CnSlopeReverseFlow           ! Cn slope versus angle of attack for reverse flow, 1/rad
+
+      
+      INTEGER(IntKi)                          :: Row                           ! The row of a table to be parsed in the FileInfo structure.
+      INTEGER(IntKi)                          :: iRoot
+      INTEGER(IntKi)                          :: col_fa                        ! column for UA cn/cl_fa (fully attached cn or cl)
+      INTEGER(IntKi)                          :: Indx
+      INTEGER(IntKi)                          :: nZeros
+
+      
+   END SUBROUTINE ComputeUA360_AttachedFlow
+!----------------------------------------------------------------------------------------------------------------------------------  
+   SUBROUTINE ComputeUA360_updateSeparationF( p, ColUAf, cn_cl, iLower, iUpper )
+      TYPE (AFI_Table_Type),    intent(inout) :: p                             ! This structure stores all the module parameters that are set by AirfoilInfo during the initialization phase.
+      integer(IntKi),           intent(in   ) :: ColUAf                        ! column for UA f_st (based on Cl or cn)
+      REAL(ReKi),               intent(in   ) :: cn_cl(:)                      ! cn or cl, whichever variable we are computing this on
+      INTEGER(IntKi)          , intent(in   ) :: iLower                        ! The lower index separating the region around 0
+      INTEGER(IntKi)          , intent(in   ) :: iUpper                        ! The upper index separating the region around 0
+   
+      REAL(ReKi)                              :: Offset
+      REAL(ReKi)                              :: CnRatio
+
+      INTEGER(IntKi)                          :: Row                           ! The row of a table to be parsed in the FileInfo structure.
+      INTEGER(IntKi)                          :: col_fa                        ! column for UA cn/cl_fa (fully attached cn or cl)
+      
+
+   END SUBROUTINE ComputeUA360_updateSeparationF
+!----------------------------------------------------------------------------------------------------------------------------------  
+   SUBROUTINE ComputeUA360_updateCnSeparated( p, ColUAf, cn_cl, iLower )
+      TYPE (AFI_Table_Type),    intent(inout) :: p                             ! This structure stores all the module parameters that are set by AirfoilInfo during the initialization phase.
+      integer(IntKi),           intent(in   ) :: ColUAf                        ! column for UA f_st (based on Cl or cn)
+      REAL(ReKi),               intent(in   ) :: cn_cl(:)                      ! cn or cl, whichever variable we are computing this on
+      INTEGER(IntKi)          , intent(in   ) :: iLower                        ! The lower index separating the region around 0
+   
+      REAL(ReKi)                              :: Offset                       
+      INTEGER(IntKi)                          :: Row                           ! The row of a table to be parsed in the FileInfo structure.
+      INTEGER(IntKi)                          :: col_fa                        ! column for UA cn/cl_fa (fully attached cn or cl)
+      INTEGER(IntKi)                          :: col_fs                        ! column for UA cn/cl_fa (fully separated cn or cl)
+
+   END SUBROUTINE ComputeUA360_updateCnSeparated
+!----------------------------------------------------------------------------------------------------------------------------------  
+   REAL(ReKi) FUNCTION ComputeUA360_CnOffset(p, cn_cl, Row, iLower) RESULT(offset)
+      TYPE (AFI_Table_Type),    intent(in   ) :: p                             ! This structure stores all the module parameters that are set by AirfoilInfo during the initialization phase.
+      REAL(ReKi),               intent(in   ) :: cn_cl(:)                      ! cn or cl, whichever variable we are computing this on
+      INTEGER(IntKi)          , intent(in   ) :: Row                           ! The row of a table to be parsed in the FileInfo structure.
+      INTEGER(IntKi)          , intent(in   ) :: iLower                        ! The lower index separating the region around 0
+   
+      REAL(ReKi)                              :: CnOffset                     ! Mathematical trick: offset to Cn making formulation of f-separation behave for strange polars with negative stall at positive Cn values (usually soiled polars for thick airfoils)
+      REAL(ReKi)                              :: SlopeScale
+
+   END FUNCTION ComputeUA360_CnOffset
 !----------------------------------------------------------------------------------------------------------------------------------  
 subroutine FindBoundingTables(p, secondaryDepVal, lowerTable, upperTable, xVals)
 
@@ -1570,6 +1731,7 @@ subroutine AFI_ComputeAirfoilCoefs1D( AOA, p, AFI_interp, errStat, errMsg, Table
       AFI_interp%Cm0 = 0.0_ReKi
    end if
    
+   
 end subroutine AFI_ComputeAirfoilCoefs1D
 
 !----------------------------------------------------------------------------------------------------------------------------------  
@@ -1647,4 +1809,311 @@ subroutine AFI_ComputeUACoefs( p, Re, UserProp, UA_BL, errMsg, errStat )
 end subroutine AFI_ComputeUACoefs
 
 !=============================================================================
+subroutine AFI_WrHeader(delim, FileName, unOutFile, ErrStat, ErrMsg)
+
+   character(*),                 intent(in   )  :: delim
+   character(*),                 intent(in   )  :: FileName
+   integer(IntKi),               intent(  out)  :: unOutFile
+   integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+   integer(IntKi)                               :: i
+   integer(IntKi)                               :: ErrStat2
+   character(ErrMsgLen)                         :: ErrMsg2
+   character(*), parameter                      :: RoutineName = 'AFI_WrHeader'
+   
+   integer, parameter                           :: MaxLen = 17
+   integer, parameter                           :: NumChans = 46
+   character(MaxLen)                            :: ChanName( NumChans)
+   character(MaxLen)                            :: ChanUnit( NumChans)
+   
+   
+   i=1
+   ChanName(i) = 'AirfoilNumber';     ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'TableNumber';       ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'alpha0';            ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'alpha1';            ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'alpha2';            ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'eta_e';             ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'C_nalpha';          ChanUnit(i) = '(-/rad)';    i = i+1;
+   ChanName(i) = 'C_lalpha';          ChanUnit(i) = '(-/rad)';    i = i+1;
+   ChanName(i) = 'T_f0';              ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'T_V0';              ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'T_p';               ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'T_VL';              ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'b1';                ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'b2';                ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'b5';                ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'A1';                ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'A2';                ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'A5';                ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'S1';                ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'S2';                ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'S3';                ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'S4';                ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'Cn1';               ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'Cn2';               ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'St_sh';             ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'Cd0';               ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'Cm0';               ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'k0';                ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'k1';                ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'k2';                ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'k3';                ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'k1_hat';            ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'x_cp_bar';          ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'UACutout';          ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'UACutout_delta';    ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'UACutout_blend';    ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'filtCutOff';        ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'alphaLower';        ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'alphaUpper';        ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'c_alphaLower';      ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'c_alphaUpper';      ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'alpha0ReverseFlow'; ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'alphaBreakUpper';   ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'CnBreakUpper';      ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'alphaBreakLower';   ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'CnBreakLower';      ChanUnit(i) = '(-)';        i = i+1;
+
+   CALL GetNewUnit( unOutFile, ErrStat, ErrMsg )
+   IF ( ErrStat /= ErrID_None ) RETURN
+
+   CALL OpenFOutFile ( unOutFile, trim(FileName), ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+      
+         
+   ! Generate file outputs
+
+   write (unOutFile,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime() !//' using '//trim(GetNVD(version))
+   write (unOutFile,'(1X,A)') trim(ProgName)
+   write (unOutFile,'()' )    !print a blank line
+   write (unOutFile,'()' )    !print a blank line
+   write (unOutFile,'()' )    !print a blank line
+              
+
+      !......................................................
+      ! Write the names of the output parameters on one line:
+      !......................................................
+   call WrFileNR ( unOutFile, ChanName(1) )
+   do i=2,size(ChanName)
+      call WrFileNR ( unOutFile, delim//ChanName(i) )
+   end do
+   write (unOutFile,'()')
+
+      !......................................................
+      ! Write the units of the output parameters on one line:
+      !......................................................
+   call WrFileNR ( unOutFile, ChanUnit(1) )
+   do i=2,size(ChanName)
+      call WrFileNR ( unOutFile, delim//ChanUnit(i) )
+   end do
+   write (unOutFile,'()')
+   
+end subroutine AFI_WrHeader
+!=============================================================================
+subroutine AFI_WrData(k, unOutFile, delim, AFInfo)
+   type(AFI_ParameterType),      intent(in   )  :: AFInfo      ! The airfoil parameter data (for all airfoils)
+   integer,                      intent(in   )  :: k
+   integer(IntKi),               intent(in   )  :: unOutFile
+   character(*),                 intent(in   )  :: delim
+   
+   integer(IntKi)                               :: i
+   
+   integer, parameter                           :: MaxLen = 17
+   integer, parameter                           :: NumChans = 46
+   real(ReKi)                                   :: TmpValues(NumChans)
+   character(3)                                 :: MaxLenStr
+   character(80)                                :: Fmt
+   
+   MaxLenStr = trim(num2lstr(MaxLen))
+   TmpValues = 0.0_ReKi ! initialize in case UAdata is not included in the airfoil table
+
+   Fmt = '(I'//MaxLenStr//',"'//delim//'",I'//MaxLenStr//','//trim(num2lstr(NumChans))//'("'//delim//'",F'//MaxLenStr//'.5))'
+   
+   do i=1,size(AFInfo%Table)
+      IF (AFInfo%Table(i)%InclUAdata) then
+         WRITE(unOutFile, Fmt) k, i, &
+                                    AFInfo%Table(i)%UA_BL%alpha0*R2D        , &
+                                    AFInfo%Table(i)%UA_BL%alpha1*R2D        , &
+                                    AFInfo%Table(i)%UA_BL%alpha2*R2D        , &
+                                    AFInfo%Table(i)%UA_BL%eta_e             , &
+                                    AFInfo%Table(i)%UA_BL%C_nalpha          , &
+                                    AFInfo%Table(i)%UA_BL%C_lalpha          , &
+                                    AFInfo%Table(i)%UA_BL%T_f0              , &
+                                    AFInfo%Table(i)%UA_BL%T_V0              , &
+                                    AFInfo%Table(i)%UA_BL%T_p               , &
+                                    AFInfo%Table(i)%UA_BL%T_VL              , &
+                                    AFInfo%Table(i)%UA_BL%b1                , &
+                                    AFInfo%Table(i)%UA_BL%b2                , &
+                                    AFInfo%Table(i)%UA_BL%b5                , &
+                                    AFInfo%Table(i)%UA_BL%A1                , &
+                                    AFInfo%Table(i)%UA_BL%A2                , &
+                                    AFInfo%Table(i)%UA_BL%A5                , &
+                                    AFInfo%Table(i)%UA_BL%S1                , &
+                                    AFInfo%Table(i)%UA_BL%S2                , &
+                                    AFInfo%Table(i)%UA_BL%S3                , &
+                                    AFInfo%Table(i)%UA_BL%S4                , &
+                                    AFInfo%Table(i)%UA_BL%Cn1               , &
+                                    AFInfo%Table(i)%UA_BL%Cn2               , &
+                                    AFInfo%Table(i)%UA_BL%St_sh             , &
+                                    AFInfo%Table(i)%UA_BL%Cd0               , &
+                                    AFInfo%Table(i)%UA_BL%Cm0               , &
+                                    AFInfo%Table(i)%UA_BL%k0                , &
+                                    AFInfo%Table(i)%UA_BL%k1                , &
+                                    AFInfo%Table(i)%UA_BL%k2                , &
+                                    AFInfo%Table(i)%UA_BL%k3                , &
+                                    AFInfo%Table(i)%UA_BL%k1_hat            , &
+                                    AFInfo%Table(i)%UA_BL%x_cp_bar          , &
+                                    AFInfo%Table(i)%UA_BL%UACutout*R2D      , &
+                                    AFInfo%Table(i)%UA_BL%UACutout_delta*R2D, &
+                                    AFInfo%Table(i)%UA_BL%UACutout_blend*R2D, &
+                                    AFInfo%Table(i)%UA_BL%filtCutOff        , &
+                                    AFInfo%Table(i)%UA_BL%alphaLower*R2D    , &
+                                    AFInfo%Table(i)%UA_BL%alphaUpper*R2D    , &
+                                    AFInfo%Table(i)%UA_BL%c_alphaLower      , &
+                                    AFInfo%Table(i)%UA_BL%c_alphaUpper      , &
+                                    AFInfo%Table(i)%UA_BL%alpha0ReverseFlow , &
+                                    AFInfo%Table(i)%UA_BL%alphaBreakUpper*R2D, &
+                                    AFInfo%Table(i)%UA_BL%CnBreakUpper       , &
+                                    AFInfo%Table(i)%UA_BL%alphaBreakLower*R2D, &
+                                    AFInfo%Table(i)%UA_BL%CnBreakLower
+
+      ELSE
+         WRITE(unOutFile, Fmt) k, i, TmpValues(3:)
+      END IF
+   end do
+      
+end subroutine AFI_WrData
+!=============================================================================
+subroutine AFI_WrTables(AFI_Params,UAMod,OutRootName)
+   
+   type(AFI_ParameterType), intent(in), target  :: AFI_Params
+   integer(IntKi),          intent(in)          :: UAMod
+   character(*),            intent(in)          :: OutRootName
+      
+   integer(IntKi)                               :: unOutFile
+   integer(IntKi)                               :: ErrStat
+   character(ErrMsgLen)                         :: ErrMsg
+   
+   Real(ReKi),      allocatable                 :: cl_smooth(:)
+   Real(ReKi),      allocatable                 :: cn_smooth(:)
+   Real(ReKi),      allocatable                 :: cn(:)
+   Real(ReKi),      allocatable                 :: cc(:)
+   Real(ReKi),      allocatable                 :: cl_lin(:)
+   Real(ReKi),      allocatable                 :: cn_lin(:)
+   
+   character(len=3)                             :: Prefix
+   character(len=11)                            :: sFullyAtt
+   character(len=8)                             :: sCm
+   integer                                      :: iTab, iRow
+   type(AFI_Table_Type), pointer                :: table !< Alias
+   
+   if (UAMod /= UA_HGM .and. UAMod /= UA_Oye) then
+      Prefix='Cn_'
+      sFullyAtt='Cn_FullyAtt'
+   else
+      Prefix='Cl_'
+      sFullyAtt='Dummy'
+   endif
+   if (AFI_Params%ColCm > 0) then
+      sCm='Cm'
+   else
+      sCm='Cm_Dummy'
+   endif
+   
+      
+   ! Loop on tables, write a different file for each table.
+   do iTab = 1, size(AFI_Params%Table)
+      table => AFI_Params%Table(iTab)
+      
+      ! Compute derived parameters from cl and cd, and UA_BL
+      allocate(cl_smooth(table%NumAlf))
+      allocate(cn_smooth(table%NumAlf))
+      allocate(cn       (table%NumAlf))
+      allocate(cc       (table%NumAlf))
+      allocate(cl_lin   (table%NumAlf))
+      allocate(cn_lin   (table%NumAlf))
+      
+
+      cn     = table%Coefs(:,AFI_Params%ColCl) * cos(table%alpha) + (table%Coefs(:,AFI_Params%ColCd) - table%UA_BL%Cd0) * sin(table%alpha);
+      cc     = table%Coefs(:,AFI_Params%ColCl) * sin(table%alpha) - (table%Coefs(:,AFI_Params%ColCd) - table%UA_BL%Cd0) * cos(table%alpha);
+      cn_lin = table%UA_BL%C_nalpha * (table%alpha - table%UA_BL%alpha0)
+      cl_lin = table%UA_BL%C_lalpha * (table%alpha - table%UA_BL%alpha0)
+
+      do iRow = 1, table%NumAlf
+         if ((table%alpha(iRow)<table%UA_BL%alphaBreakLower).or. table%alpha(iRow)>table%UA_BL%alphaBreakUpper) then
+            cl_lin(iRow) =0.0_ReKi
+            cn_lin(iRow) =0.0_ReKi
+         endif
+      enddo
+
+      ! Smoothing (used priot to compute slope in CalculateUACoeffs)
+      call kernelSmoothing(table%alpha, cn                             , kernelType_TRIWEIGHT, 2.0_ReKi*D2R, cn_smooth)
+      call kernelSmoothing(table%alpha, table%Coefs(:,AFI_Params%ColCl), kernelType_TRIWEIGHT, 2.0_ReKi*D2R, cl_smooth)
+
+      
+      ! Write to file
+
+      CALL GetNewUnit( unOutFile, ErrStat, ErrMsg )
+      IF ( ErrStat /= ErrID_None ) RETURN
+
+      CALL OpenFOutFile ( unOutFile, trim(OutRootName)//'.Coefs.'//trim(num2lstr(iTab))//'.out', ErrStat, ErrMsg )
+         if (ErrStat >= AbortErrLev) then
+            call WrScr(Trim(ErrMsg))
+            return
+         end if
+   
+      WRITE (unOutFile,'(/,A/)') 'These predictions were generated by AirfoilInfo on '//CurDate()//' at '//CurTime()//'.'
+      WRITE (unOutFile,'(/,A/)')  ' '
+
+      if (AFI_Params%ColUAf > 0) then
+         WRITE(unOutFile, '(20(A20,1x))') 'Alpha', 'Cl',  'Cd',  sCm,   'Cn',  'Cc', 'f_st', Prefix//'FullySep', sFullyAtt , 'Cl_lin','Cn_lin','Cl_smooth', 'Cn_smooth'
+         WRITE(unOutFile, '(20(A20,1x))') '(deg)', '(-)', '(-)', '(-)', '(-)', '(-)','(-)', '(-)'             , '(-)'     ,  '(-)'  , '(-)'  , '(-)'    ,'(-)'
+
+         ! TODO, we could do something with ColCpmim and ColUAf
+         if (AFI_Params%ColCm > 0) then
+            do iRow=1,size(table%Alpha)
+               WRITE(unOutFile, '(20(F20.6,1x))') table%Alpha(iRow)*R2D, table%Coefs(iRow,AFI_Params%ColCl), table%Coefs(iRow,AFI_Params%ColCd), table%Coefs(iRow,AFI_Params%ColCm), &
+                                              cn(iRow), cc(iRow),  table%Coefs(iRow,AFI_Params%ColUAf:), cl_lin(iRow), cn_lin(iRow), cl_smooth(iRow), cn_smooth(iRow)
+            end do
+         else
+            do iRow=1,size(table%Alpha)
+               WRITE(unOutFile, '(20(F20.6,1x))') table%Alpha(iRow)*R2D, table%Coefs(iRow,AFI_Params%ColCl), table%Coefs(iRow,AFI_Params%ColCd), 0.0_ReKi, &
+                                              cn(iRow), cn(iRow), table%Coefs(iRow,AFI_Params%ColUAf:), cl_lin(iRow), cn_lin(iRow), cl_smooth(iRow), cn_smooth(iRow)
+            end do
+         endif
+      else
+         WRITE(unOutFile, '(20(A20,1x))') 'Alpha', 'Cl',  'Cd',  sCm,   'Cn',  'Cc',  'Cl_lin','Cn_lin','Cl_smooth', 'Cn_smooth'
+         WRITE(unOutFile, '(20(A20,1x))') '(deg)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)'   ,'(-)'   ,'(-)'      ,'(-)'
+
+         ! TODO, we could do something with ColCpmim and ColUAf
+         if (AFI_Params%ColCm > 0) then
+            do iRow=1,size(table%Alpha)
+               WRITE(unOutFile, '(20(F20.6,1x))') table%Alpha(iRow)*R2D, table%Coefs(iRow,AFI_Params%ColCl), table%Coefs(iRow,AFI_Params%ColCd), table%Coefs(iRow,AFI_Params%ColCm), &
+                                              cn(iRow), cn(iRow), cl_lin(iRow), cn_lin(iRow), cl_smooth(iRow), cn_smooth(iRow)
+            end do
+         else
+            do iRow=1,size(table%Alpha)
+               WRITE(unOutFile, '(20(F20.6,1x))') table%Alpha(iRow)*R2D, table%Coefs(iRow,AFI_Params%ColCl), table%Coefs(iRow,AFI_Params%ColCd), 0.0_ReKi, &
+                                              cn(iRow), cn(iRow), cl_lin(iRow), cn_lin(iRow), cl_smooth(iRow), cn_smooth(iRow)
+            end do
+         endif
+      
+      end if
+      
+      CLOSE(unOutFile)
+      
+      if(allocated(cl_smooth)) deallocate(cl_smooth)
+      if(allocated(cn_smooth)) deallocate(cn_smooth)
+      if(allocated(cn       )) deallocate(cn       )
+      if(allocated(cc       )) deallocate(cc       )
+      if(allocated(cl_lin   )) deallocate(cl_lin   )
+      if(allocated(cn_lin   )) deallocate(cn_lin   )
+   enddo
+
+end subroutine AFI_WrTables
+!=============================================================================
+   
 END MODULE AirfoilInfo

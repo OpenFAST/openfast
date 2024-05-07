@@ -310,6 +310,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: UAMod = 0_IntKi      !< Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema] [-]
     LOGICAL  :: UA_Flag = .false.      !< logical flag indicating whether to use UnsteadyAero [-]
     LOGICAL  :: Flookup = .false.      !< Use table lookup for f' and f''  [-]
+    INTEGER(IntKi)  :: UA_integrationMethod = 0_IntKi      !< method to integrate states [-]
     REAL(ReKi)  :: a_s = 0.0_ReKi      !< speed of sound [m/s]
     LOGICAL  :: SumPrint = .false.      !< Whether to print summary file (primarially in in UA) [-]
   END TYPE FVW_InitInputType
@@ -3403,6 +3404,7 @@ subroutine FVW_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSt
    DstInitInputData%UAMod = SrcInitInputData%UAMod
    DstInitInputData%UA_Flag = SrcInitInputData%UA_Flag
    DstInitInputData%Flookup = SrcInitInputData%Flookup
+   DstInitInputData%UA_integrationMethod = SrcInitInputData%UA_integrationMethod
    DstInitInputData%a_s = SrcInitInputData%a_s
    DstInitInputData%SumPrint = SrcInitInputData%SumPrint
 end subroutine
@@ -3473,6 +3475,7 @@ subroutine FVW_PackInitInput(RF, Indata)
    call RegPack(RF, InData%UAMod)
    call RegPack(RF, InData%UA_Flag)
    call RegPack(RF, InData%Flookup)
+   call RegPack(RF, InData%UA_integrationMethod)
    call RegPack(RF, InData%a_s)
    call RegPack(RF, InData%SumPrint)
    if (RegCheckErr(RF, RoutineName)) return
@@ -3523,6 +3526,7 @@ subroutine FVW_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%UAMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UA_Flag); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Flookup); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%UA_integrationMethod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%a_s); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SumPrint); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
