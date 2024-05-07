@@ -10,8 +10,8 @@ authors = [
     "Mayank Chetan",
     "John Jasa",
 ]
-readme = "README.md"
-packages = [{include = "openfast"}]
+readme = "openfast_python/README.md"
+packages = [{include = "openfast_python/openfast"}]
 
 
 [tool.poetry.dependencies]
