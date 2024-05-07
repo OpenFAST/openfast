@@ -9,8 +9,10 @@ import os.path as osp
 import shutil
 import platform
 
-examples_dir    = osp.join( osp.dirname( osp.dirname( osp.dirname( osp.dirname( osp.realpath(__file__) ) ) ) ), 'examples')
-weis_dir        = osp.dirname( osp.dirname( osp.dirname( osp.dirname(osp.realpath(__file__) ) ) ) ) # get path to this file
+
+REPOSITORY_ROOT = osp.dirname(osp.dirname(osp.dirname(osp.dirname(__file__))))
+TEST_DATA_DIR = osp.join(REPOSITORY_ROOT, "openfast_python", "openfast", "test", "test_data")
+
 of_path = shutil.which('openfast')
 bin_dir  = osp.dirname(of_path)
 lib_dir  = osp.abspath( osp.join(osp.dirname(bin_dir), 'lib') )
@@ -48,9 +50,7 @@ class TestOFutils(unittest.TestCase):
         fast_wrap   = FAST_wrapper() 
         fast_obj    = runFAST_pywrapper()
         fast_reader.FAST_InputFile = fast_obj.FAST_InputFile = 'IEA-15-240-RWT-UMaineSemi.fst'   # FAST input file (ext=.fst)
-        fast_reader.FAST_directory = fast_obj.FAST_directory = osp.join(examples_dir, '01_aeroelasticse',
-                                                                        'OpenFAST_models', 'IEA-15-240-RWT',
-                                                                        'IEA-15-240-RWT-UMaineSemi')   # Path to fst directory files
+        fast_reader.FAST_directory = fast_obj.FAST_directory = osp.join(TEST_DATA_DIR, 'OpenFAST_models', 'IEA-15-240-RWT', 'IEA-15-240-RWT-UMaineSemi')   # Path to fst directory files
         fast_writer.FAST_runDirectory = fast_wrap.FAST_directory = osp.join('temp','OpenFAST')
         fast_obj.FAST_runDirectory    = osp.join('temp2','OpenFAST')
         fast_obj.FAST_namingOut       = fast_writer.FAST_namingOut    = 'iea15'
@@ -103,8 +103,8 @@ class TestOFutils(unittest.TestCase):
         lin_fast = LinearFAST(debug_level=2)
         lin_fast.FAST_exe = of_path
         lin_fast.FAST_InputFile           = 'IEA-15-240-RWT-Monopile.fst'   # FAST input file (ext=.fst)
-        lin_fast.FAST_directory           = osp.join(weis_dir, 'examples/01_aeroelasticse/OpenFAST_models/IEA-15-240-RWT/IEA-15-240-RWT-Monopile')   # Path to fst directory files
-        lin_fast.FAST_runDirectory        = osp.join(weis_dir,'outputs','iea_mono_lin')
+        lin_fast.FAST_directory           = osp.join(TEST_DATA_DIR, "OpenFAST_models", "IEA-15-240-RWT", "IEA-15-240-RWT-Monopile")   # Path to fst directory files
+        lin_fast.FAST_runDirectory        = osp.join(REPOSITORY_ROOT,'outputs','iea_mono_lin')
         
         # Read monopile input for fst_vt
         fast_read = InputReader_OpenFAST()

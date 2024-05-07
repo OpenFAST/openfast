@@ -1,0 +1,94 @@
+--------- BEAMDYN with OpenFAST INPUT FILE -------------------------------------------
+IEA 15MW Offshore Reference Turbine, with taped chord tip design blade
+---------------------- SIMULATION CONTROL --------------------------------------
+True          Echo            - Echo input data to "<RootName>.ech" (flag)
+True          QuasiStaticInit - Use quasistatic pre-conditioning with centripetal accelerations in initialization (flag) [dynamic solve only]
+ 0            rhoinf          - Numerical damping parameter for generalized-alpha integrator
+ 2            quadrature      - Quadrature method: 1=Gaussian; 2=Trapezoidal (switch)
+ 2            refine          - Refinement factor for trapezoidal quadrature (-). DEFAULT = 1 [used only when quadrature=2]
+DEFAULT       n_fact          - Factorization frequency (-). DEFAULT = 5
+DEFAULT       DTBeam          - Time step size (s).
+DEFAULT       load_retries    - Number of factored load retries before quitting the aimulation
+DEFAULT       NRMax           - Max number of iterations in Newton-Ralphson algorithm (-). DEFAULT = 10
+DEFAULT       stop_tol        - Tolerance for stopping criterion (-)
+DEFAULT       tngt_stf_fd     - Flag to use finite differenced tangent stiffness matrix (-)
+DEFAULT       tngt_stf_comp   - Flag to compare analytical finite differenced tangent stiffness matrix  (-)
+DEFAULT       tngt_stf_pert   - perturbation size for finite differencing (-)
+DEFAULT       tngt_stf_difftol- Maximum allowable relative difference between analytical and fd tangent stiffness (-)
+True          RotStates       - Orient states in the rotating frame during linearization? (flag) [used only when linearizing]
+---------------------- GEOMETRY PARAMETER --------------------------------------
+          1   member_total    - Total number of members (-)
+         50   kp_total        - Total number of key points (-) [must be at least 3]
+     1     50                 - Member number; Number of key points in this member
+         kp_xr           kp_yr          kp_zr        initial_twist
+          (m)             (m)            (m)            (deg)
+     0.00000e+00     0.00000e+00     0.00000e+00     1.55946e+01 
+     1.84435e-02     0.00000e+00     2.38776e+00     1.55848e+01 
+     4.42547e-02     0.00000e+00     4.77551e+00     1.52722e+01 
+     7.04469e-02     0.00000e+00     7.16327e+00     1.49320e+01 
+     1.02607e-01     0.00000e+00     9.55102e+00     1.41587e+01 
+     1.34578e-01     0.00000e+00     1.19388e+01     1.33615e+01 
+     1.64841e-01     0.00000e+00     1.43265e+01     1.23499e+01 
+     1.95104e-01     0.00000e+00     1.67143e+01     1.13382e+01 
+     2.19251e-01     0.00000e+00     1.91020e+01     1.03407e+01 
+     2.38876e-01     0.00000e+00     2.14898e+01     9.36880e+00 
+     2.46864e-01     0.00000e+00     2.38776e+01     8.56794e+00 
+     2.50137e-01     0.00000e+00     2.62653e+01     7.84623e+00 
+     2.49410e-01     0.00000e+00     2.86531e+01     7.19164e+00 
+     2.47109e-01     0.00000e+00     3.10408e+01     6.56300e+00 
+     2.44787e-01     0.00000e+00     3.34286e+01     5.93471e+00 
+     2.40916e-01     0.00000e+00     3.58163e+01     5.36469e+00 
+     2.36941e-01     0.00000e+00     3.82041e+01     4.79861e+00 
+     2.31729e-01     0.00000e+00     4.05918e+01     4.31242e+00 
+     2.25412e-01     0.00000e+00     4.29796e+01     3.84376e+00 
+     2.08839e-01     0.00000e+00     4.53673e+01     3.45434e+00 
+     1.85567e-01     0.00000e+00     4.77551e+01     3.07869e+00 
+     1.45267e-01     0.00000e+00     5.01429e+01     2.73806e+00 
+     9.72760e-02     0.00000e+00     5.25306e+01     2.41518e+00 
+     4.09587e-02     0.00000e+00     5.49184e+01     2.11152e+00 
+    -2.32178e-02     0.00000e+00     5.73061e+01     1.83141e+00 
+    -8.97487e-02     0.00000e+00     5.96939e+01     1.56018e+00 
+    -1.59634e-01     0.00000e+00     6.20816e+01     1.30414e+00 
+    -2.43603e-01     0.00000e+00     6.44694e+01     1.06774e+00 
+    -3.35292e-01     0.00000e+00     6.68571e+01     8.41981e-01 
+    -4.49346e-01     0.00000e+00     6.92449e+01     6.38167e-01 
+    -5.69003e-01     0.00000e+00     7.16327e+01     4.36820e-01 
+    -6.98204e-01     0.00000e+00     7.40204e+01     2.39673e-01 
+    -8.32976e-01     0.00000e+00     7.64082e+01     3.60946e-02 
+    -9.70169e-01     0.00000e+00     7.87959e+01    -1.73247e-01 
+    -1.11069e+00     0.00000e+00     8.11837e+01    -4.15724e-01 
+    -1.25730e+00     0.00000e+00     8.35714e+01    -6.89429e-01 
+    -1.41116e+00     0.00000e+00     8.59592e+01    -1.00036e+00 
+    -1.57532e+00     0.00000e+00     8.83469e+01    -1.31641e+00 
+    -1.74350e+00     0.00000e+00     9.07347e+01    -1.62321e+00 
+    -1.91945e+00     0.00000e+00     9.31224e+01    -1.88420e+00 
+    -2.10112e+00     0.00000e+00     9.55102e+01    -2.05754e+00 
+    -2.28641e+00     0.00000e+00     9.78980e+01    -2.16303e+00 
+    -2.47616e+00     0.00000e+00     1.00286e+02    -2.17528e+00 
+    -2.67493e+00     0.00000e+00     1.02673e+02    -2.14833e+00 
+    -2.87923e+00     0.00000e+00     1.05061e+02    -2.09773e+00 
+    -3.08988e+00     0.00000e+00     1.07449e+02    -2.02012e+00 
+    -3.30951e+00     0.00000e+00     1.09837e+02    -1.88951e+00 
+    -3.53530e+00     0.00000e+00     1.12224e+02    -1.70994e+00 
+    -3.76765e+00     0.00000e+00     1.14612e+02    -1.47616e+00 
+    -4.00000e+00     0.00000e+00     1.17000e+02    -1.24239e+00 
+---------------------- MESH PARAMETER ------------------------------------------
+          5   order_elem     - Order of interpolation (basis) function (-)
+---------------------- MATERIAL PARAMETER --------------------------------------
+"../IEA-15-240-RWT/IEA-15-240-RWT_BeamDyn_blade.dat"    BldFile - Name of file containing properties for blade (quoted string)
+---------------------- PITCH ACTUATOR PARAMETERS -------------------------------
+False         UsePitchAct - Whether a pitch actuator should be used (flag)
+        200   PitchJ      - Pitch actuator inertia (kg-m^2) [used only when UsePitchAct is true]
+      2E+07   PitchK      - Pitch actuator stiffness (kg-m^2/s^2) [used only when UsePitchAct is true]
+     500000   PitchC      - Pitch actuator damping (kg-m^2/s) [used only when UsePitchAct is true]
+---------------------- OUTPUTS -------------------------------------------------
+True          SumPrint       - Print summary data to "<RootName>.sum" (flag)
+"ES10.3E2"    OutFmt         - Format used for text tabular output, excluding the time channel.
+          1   NNodeOuts      - Number of nodes to output to file [0 - 9] (-)
+          1,          2,          3,          4,          5,          6    OutNd          - Nodes whose values will be output  (-)
+          OutList            - The next line(s) contains a list of output parameters. See OutListParameters.xlsx for a listing of available output channels, (-)
+"RootFxr, RootFyr, RootFzr"
+"RootMxr, RootMyr, RootMzr"
+"TipTDxr, TipTDyr, TipTDzr"
+END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
+---------------------------------------------------------------------------------------
