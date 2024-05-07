@@ -1104,7 +1104,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
          call WrScr('> AFAeroMod=1      -> Setting UA_Mod=0')
          InputFileData%UAMod = UA_None
          if (AoA34_Missing) then
-            call WrScr('> Setting AoA34 to False as the input is Missing (legacy behavior).')
+            call WrScr('> Setting AoA34 to False as the input is Missing and UA is turned off (legacy behavior).')
             InputFileData%AoA34=.false.
          endif
       else if (InputFileData%AFAeroMod==2) then
@@ -1112,7 +1112,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
          if (InputFileData%UAMod==0) then
             call LegacyAbort('Cannot set UA_Mod=0 with legacy option AFAeroMod=2 (inconsistent behavior).'); return
          else if (AoA34_Missing) then
-            call WrScr('> Setting AoA34 to True as the input is Missing (legacy behavior).')
+            call WrScr('> Setting AoA34 to True as the input is Missing and UA is turned on (legacy behavior).')
             InputFileData%AoA34=.true.
          endif
       else
