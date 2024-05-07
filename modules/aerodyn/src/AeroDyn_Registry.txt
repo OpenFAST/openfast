@@ -207,7 +207,7 @@ typedef	^	     ^      	ReKi   	SA_PsiBwd	-	-60	-	"Sector Average - Backard Azimu
 typedef	^	     ^      	ReKi   	SA_PsiFwd	-	 60	-	"Sector Average - Forward Azimuth (>0)"	deg
 typedef	^	     ^      	IntKi  	SA_nPerSec	-	  5	-	"Sector average - Number of points per sectors (-) [used only when SectAvg=True]" -
 typedef	^	     ^      	LOGICAL	AoA34	-	-	-	"Sample the angle of attack (AoA) at the 3/4 chord or the AC point {default=True} [always used]"	-
-typedef	^	     ^      	IntKi	UAMod	-	-	-	"Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA),  2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)}" -
+typedef	^	     ^      	IntKi	UA_Mod	-	-	-	"Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA),  2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)}" -
 typedef	^	AD_InputFile	LOGICAL	FLookup	-	-	-	"Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAeroMod=2]"	flag
 typedef	^	AD_InputFile	ReKi	InCol_Alfa	-	-	-	"The column in the airfoil tables that contains the angle of attack"	-
 typedef	^	AD_InputFile	ReKi	InCol_Cl	-	-	-	"The column in the airfoil tables that contains the lift coefficient"	-

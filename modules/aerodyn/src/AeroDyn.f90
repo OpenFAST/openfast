@@ -318,32 +318,6 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    CALL ParsePrimaryFileInfo( PriPath, InitInp, InitInp%InputFile, p%RootName, NumBlades, interval, FileInfo_In, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
       if (Failed()) return;
 
-   ! Temporary HACK, for WakeMod=10, 11 or 12 use AeroProjMod 2 (will trigger PolarBEM)
-   if (InputFileData%Wake_Mod==10) then
-      call WrScr('[WARN] Wake_Mod=10 is a temporary hack. Using new projection method with Wake_Mod=0 and DBEMT_Mod=0')
-      if (InputFileData%DBEMT_Mod/=0) then
-         call Fatal('DBEMT_Mod should be =0 when using the temporary hack Wake_Mod=10.'); return
-      endif
-      InputFileData%Wake_Mod = 0
-      AeroProjMod(:) = APM_BEM_Polar
-
-   elseif (InputFileData%Wake_Mod==11) then
-      call WrScr('[WARN] Wake_Mod=11 is a temporary hack. Using new projection method with Wake_Mod=1 (BEM) and DBEMT_Mod=0.')
-      if (InputFileData%DBEMT_Mod/=0) then
-         call Fatal('DBEMT_Mod should be 0 when using the temporary hack Wake_Mod=11.'); return
-      endif
-      InputFileData%Wake_Mod = 1
-      AeroProjMod(:) = APM_BEM_Polar
-
-   elseif (InputFileData%Wake_Mod==12) then
-      call WrScr('[WARN] Wake_Mod=12 is a temporary hack. Using new projection method with Wake_Mod=1 (BEM) and DBEMT_Mod>=1.')
-      if (InputFileData%DBEMT_Mod<1) then
-         call Fatal('DBEMT_Mod should be >=1 when using the temporary hack Wake_Mod=12.'); return
-      endif
-      InputFileData%Wake_Mod = 1
-      AeroProjMod(:) = APM_BEM_Polar
-   endif
-
    ! --- "Automatic handling of AeroProjMod
    do iR = 1, nRotors
       if (AeroProjMod(iR) == -1) then
@@ -371,7 +345,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! bjj: do we put a warning here if any of these values aren't currently set this way?
    if (InitInp%CompAeroMaps) then
       InputFileData%DTAero     = interval ! we're not using this, so set it to something "safe"
-      InputFileData%UAMod      = UA_None
+      InputFileData%UA_Mod     = UA_None
       InputFileData%TwrPotent  = TwrPotent_none
       InputFileData%TwrShadow  = TwrShadow_none
       InputFileData%TwrAero    = .false.
@@ -1362,7 +1336,7 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
 
    ! NOTE: p_AD%FlowField is set in the glue code (or ADI module); seems like FlowField should be an initialization input so that would be clearer for new developers...
    
-   p_AD%UA_Flag       = InputFileData%UAMod > UA_None
+   p_AD%UA_Flag       = InputFileData%UA_Mod > UA_None
    p_AD%CompAeroMaps  = InitInp%CompAeroMaps
 
    p_AD%SectAvg        = InputFileData%SectAvg
@@ -3932,7 +3906,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    end if !BEMT/DBEMT checks
    
    
-   if ( InputFileData%CavitCheck .and. InputFileData%UAMod >0) then
+   if ( InputFileData%CavitCheck .and. InputFileData%UA_Mod >0) then
       call SetErrStat( ErrID_Fatal, 'Cannot use unsteady aerodynamics module with a cavitation check', ErrStat, ErrMsg, RoutineName )
    end if
         
@@ -4138,8 +4112,8 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
          call SetErrStat( ErrID_Fatal, 'WakeMod must be 0 or 1 for linearization.', ErrStat, ErrMsg, RoutineName )
       endif
 
-      if (InputFileData%UAMod /= UA_None .and. InputFileData%UAMod /= UA_HGM .and. InputFileData%UAMod /= UA_HGMV .and. InputFileData%UAMod /= UA_OYE) then
-         call SetErrStat( ErrID_Fatal, 'UAMod must be 0, 4, 5, or 6 for linearization.', ErrStat, ErrMsg, RoutineName )
+      if (InputFileData%UA_Mod /= UA_None .and. InputFileData%UA_Mod /= UA_HGM .and. InputFileData%UA_Mod /= UA_HGMV .and. InputFileData%UA_Mod /= UA_OYE) then
+         call SetErrStat( ErrID_Fatal, 'UA_Mod must be 0, 4, 5, or 6 for linearization.', ErrStat, ErrMsg, RoutineName )
       end if
 
       if (InputFileData%DBEMT_Mod /= DBEMT_None .and. InputFileData%DBEMT_Mod /= DBEMT_cont_tauConst) then
@@ -4200,7 +4174,7 @@ SUBROUTINE Init_AFIparams( InputFileData, p_AFI, UnEc,  ErrStat, ErrMsg )
    IF (.not. InputFileData%UseBlCm) AFI_InitInputs%InCol_Cm = 0      ! Don't try to use Cm if flag set to false
    AFI_InitInputs%InCol_Cpmin = InputFileData%InCol_Cpmin
    AFI_InitInputs%AFTabMod    = InputFileData%AFTabMod !AFITable_1
-   AFI_InitInputs%UA_f_cn     = (InputFileData%UAMod /= UA_HGM).and.(InputFileData%UAMod /= UA_OYE)  ! HGM and OYE use the separation function based on cl instead of cn
+   AFI_InitInputs%UA_f_cn     = (InputFileData%UA_Mod /= UA_HGM).and.(InputFileData%UA_Mod /= UA_OYE)  ! HGM and OYE use the separation function based on cl instead of cn
    
       ! Call AFI_Init to read in and process the airfoil files.
       ! This includes creating the spline coefficients to be used for interpolation.
@@ -4490,7 +4464,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
   end do
    
    InitInp%UA_Flag       = p_AD%UA_Flag
-   InitInp%UAMod         = InputFileData%UAMod
+   InitInp%UAMod         = InputFileData%UA_Mod
    InitInp%Flookup       = InputFileData%Flookup
    InitInp%a_s           = InputFileData%SpdSound
    InitInp%SumPrint      = InputFileData%SumPrint
@@ -4687,7 +4661,7 @@ SUBROUTINE Init_OLAF( InputFileData, u_AD, u, p, x, xd, z, OtherState, m, ErrSta
 
       ! Unsteady Aero Data
       InitInp%UA_Flag    = p%UA_Flag
-      InitInp%UAMod      = InputFileData%UAMod
+      InitInp%UAMod      = InputFileData%UA_Mod
       InitInp%Flookup    = InputFileData%Flookup
       InitInp%a_s        = InputFileData%SpdSound
       InitInp%SumPrint   = InputFileData%SumPrint

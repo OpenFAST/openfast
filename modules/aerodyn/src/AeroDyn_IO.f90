@@ -894,10 +894,10 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    call ParseVar( FileInfo_In, CurLine, "UAMod", UAMod_Old, ErrStat2, ErrMsg2, UnEc )
    UAModProvided = legacyInputPresent('UAMod', CurLine, ErrStat2, ErrMsg2, 'UA_Mod=0 (AFAeroMod=1), UA_Mod>1 (AFAeroMod=2 and UA_Mod=UAMod')
    ! UA_Mod - Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA),  2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} 
-   call ParseVar( FileInfo_In, CurLine, "UA_Mod", InputFileData%UAMod, ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, "UA_Mod", InputFileData%UA_Mod, ErrStat2, ErrMsg2, UnEc )
    if (newInputMissing('UA_Mod', CurLine, errStat2, errMsg2)) then
       ! We'll deal with it when we deal with AFAeroMod
-      InputFileData%UAMod = UAMod_Old
+      InputFileData%UA_Mod = UAMod_Old
       if (.not. UAModProvided) then
          call LegacyAbort('Need to provide either UA_Mod or UAMod in the input file'); return
       endif
@@ -1110,14 +1110,14 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    if (AFAeroModProvided) then
       if (AFAeroMod_Old==1) then
          call WrScr('> AFAeroMod=1      -> Setting UA_Mod=0')
-         InputFileData%UAMod = UA_None
+         InputFileData%UA_Mod = UA_None
          if (AoA34_Missing) then
             call WrScr('> Setting AoA34 to False as the input is Missing and UA is turned off (legacy behavior).')
             InputFileData%AoA34=.false.
          endif
       else if (AFAeroMod_Old==2) then
          call WrScr('> AFAeroMod=2      -> Not changing DBEMT_Mod')
-         if (InputFileData%UAMod==0) then
+         if (InputFileData%UA_Mod==0) then
             call LegacyAbort('Cannot set UA_Mod=0 with legacy option AFAeroMod=2 (inconsistent behavior).'); return
          else if (AoA34_Missing) then
             call WrScr('> Setting AoA34 to True as the input is Missing and UA is turned on (legacy behavior).')
@@ -1308,7 +1308,7 @@ CONTAINS
       write (tmpStr,'(A20,L1)') 'SkewMomCorr:'       , InputFileData%SkewMomCorr;      call WrScr(trim(tmpStr))
       write (tmpStr,'(A20,I0)') 'SkewRedistr_Mod:'   , InputFileData%SkewRedistr_Mod;  call WrScr(trim(tmpStr))
       write (tmpStr,'(A20,L1)') 'AoA34:    '         , InputFileData%AoA34;            call WrScr(trim(tmpStr))
-      write (tmpStr,'(A20,I0)') 'UA_Mod:   '         , InputFileData%UAMod;            call WrScr(trim(tmpStr))
+      write (tmpStr,'(A20,I0)') 'UA_Mod:   '         , InputFileData%UA_Mod;           call WrScr(trim(tmpStr))
       call WrScr('-------------- Old AeroDyn inputs:')
       write (tmpStr,'(A20,I0)') 'WakeMod:  ',  WakeMod_Old;      call WrScr(trim(tmpStr))
       write (tmpStr,'(A20,I0)') 'SkewMod:  ',  SkewMod_Old;      call WrScr(trim(tmpStr))
@@ -1768,7 +1768,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
    WRITE (UnSu,'(A)') '======================== Unsteady Airfoil Aerodynamics Options  ====================================='
    
    ! UAMod
-   select case (InputFileData%UAMod)
+   select case (InputFileData%UA_Mod)
       case (UA_None)
          Msg = 'none (quasi-steady airfoil aerodynamics)'
       case (UA_Baseline)
@@ -1790,7 +1790,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       case default
          Msg = 'unknown'      
    end select
-   WRITE (UnSu,Ec_IntFrmt) InputFileData%UAMod, 'UAMod', 'Unsteady Aero Model: '//TRIM(Msg)
+   WRITE (UnSu,Ec_IntFrmt) InputFileData%UA_Mod, 'UA_Mod', 'Unsteady Aero Model: '//TRIM(Msg)
 
 
    ! FLookup

@@ -233,7 +233,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: SA_PsiFwd = 60      !< Sector Average - Forward Azimuth (>0) [deg]
     INTEGER(IntKi)  :: SA_nPerSec = 5      !< Sector average - Number of points per sectors (-) [used only when SectAvg=True] [-]
     LOGICAL  :: AoA34 = .false.      !< Sample the angle of attack (AoA) at the 3/4 chord or the AC point {default=True} [always used] [-]
-    INTEGER(IntKi)  :: UAMod = 0_IntKi      !< Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA),  2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [-]
+    INTEGER(IntKi)  :: UA_Mod = 0_IntKi      !< Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA),  2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [-]
     LOGICAL  :: FLookup = .false.      !< Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAeroMod=2] [flag]
     REAL(ReKi)  :: InCol_Alfa = 0.0_ReKi      !< The column in the airfoil tables that contains the angle of attack [-]
     REAL(ReKi)  :: InCol_Cl = 0.0_ReKi      !< The column in the airfoil tables that contains the lift coefficient [-]
@@ -2062,7 +2062,7 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%SA_PsiFwd = SrcInputFileData%SA_PsiFwd
    DstInputFileData%SA_nPerSec = SrcInputFileData%SA_nPerSec
    DstInputFileData%AoA34 = SrcInputFileData%AoA34
-   DstInputFileData%UAMod = SrcInputFileData%UAMod
+   DstInputFileData%UA_Mod = SrcInputFileData%UA_Mod
    DstInputFileData%FLookup = SrcInputFileData%FLookup
    DstInputFileData%InCol_Alfa = SrcInputFileData%InCol_Alfa
    DstInputFileData%InCol_Cl = SrcInputFileData%InCol_Cl
@@ -2215,7 +2215,7 @@ subroutine AD_PackInputFile(RF, Indata)
    call RegPack(RF, InData%SA_PsiFwd)
    call RegPack(RF, InData%SA_nPerSec)
    call RegPack(RF, InData%AoA34)
-   call RegPack(RF, InData%UAMod)
+   call RegPack(RF, InData%UA_Mod)
    call RegPack(RF, InData%FLookup)
    call RegPack(RF, InData%InCol_Alfa)
    call RegPack(RF, InData%InCol_Cl)
@@ -2297,7 +2297,7 @@ subroutine AD_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%SA_PsiFwd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SA_nPerSec); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AoA34); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%UAMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%UA_Mod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FLookup); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%InCol_Alfa); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%InCol_Cl); if (RegCheckErr(RF, RoutineName)) return
