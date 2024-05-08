@@ -41,16 +41,14 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: ModelUnknown = -1      !  [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeMod_none = 0      ! Wake model - none [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeMod_BEMT = 1      ! Wake model - BEMT (blade elememnt momentum theory) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeMod_DBEMT = 2      ! Wake model - DBEMT (dynamic elememnt momentum theory) [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeMod_FVW = 3      ! Wake model - FVW (free vortex wake, OLAF) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFAeroMod_steady = 1      ! steady model [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFAeroMod_BL_unsteady = 2      ! Beddoes-Leishman unsteady model [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrPotent_none = 0      ! no tower potential flow [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrPotent_baseline = 1      ! baseline tower potential flow [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrPotent_Bak = 2      ! tower potential flow with Bak correction [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrShadow_none = 0      ! no tower shadow [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrShadow_Powles = 1      ! Powles tower shadow model [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrShadow_Eames = 2      ! Eames tower shadow model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SA_Wgt_Uniform = 1      ! Sector average weighting - Uniform [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinAero_none = 0      ! no tail fin aero [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinAero_polar = 1      ! polar-based tail fin aerodynamics [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinAero_USB = 2      ! unsteady slender body tail fin aerodynamics model [-]
@@ -112,7 +110,6 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3)  :: NacellePosition = 0.0_R8Ki      !< X-Y-Z reference position of nacelle [m]
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: NacelleOrientation = 0.0_R8Ki      !< DCM reference orientation of nacelle [-]
     INTEGER(IntKi)  :: AeroProjMod = 1      !< Flag to switch between different projection models [-]
-    INTEGER(IntKi)  :: AeroBEM_Mod = -1      !< Flag to switch between different BEM Model [-]
     REAL(ReKi)  :: RotSpeed = 0.0_ReKi      !< Rotor speed used when AeroDyn is computing aero maps [rad/s]
   END TYPE RotInitInputType
 ! =======================
@@ -204,12 +201,11 @@ IMPLICIT NONE
   TYPE, PUBLIC :: AD_InputFile
     LOGICAL  :: Echo = .false.      !< Echo input file to echo file [-]
     REAL(DbKi)  :: DTAero = 0.0_R8Ki      !< Time interval for aerodynamic calculations {or "default"} [s]
-    INTEGER(IntKi)  :: WakeMod = 0_IntKi      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
-    INTEGER(IntKi)  :: AFAeroMod = 0_IntKi      !< Type of blade airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model} [-]
+    INTEGER(IntKi)  :: Wake_Mod = 0_IntKi      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
+    INTEGER(IntKi)  :: BEM_Mod = 0_IntKi      !< Type of BEM model {1=legacy NoSweepPitchTwist, 2=polar grid} [-]
     INTEGER(IntKi)  :: TwrPotent = 0_IntKi      !< Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
     INTEGER(IntKi)  :: TwrShadow = 0_IntKi      !< Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model} [-]
     LOGICAL  :: TwrAero = .false.      !< Calculate tower aerodynamic loads? [flag]
-    LOGICAL  :: FrozenWake = .false.      !< Flag that tells this module it should assume a frozen wake during linearization. [-]
     LOGICAL  :: CavitCheck = .false.      !< Flag that tells us if we want to check for cavitation [-]
     LOGICAL  :: Buoyancy = .false.      !< Include buoyancy effects? [flag]
     LOGICAL  :: CompAA = .false.      !< Compute AeroAcoustic noise [flag]
@@ -220,16 +216,24 @@ IMPLICIT NONE
     REAL(ReKi)  :: Patm = 0.0_ReKi      !< Atmospheric pressure [Pa]
     REAL(ReKi)  :: Pvap = 0.0_ReKi      !< Vapour pressure [Pa]
     REAL(ReKi)  :: SpdSound = 0.0_ReKi      !< Speed of sound [m/s]
-    INTEGER(IntKi)  :: SkewMod = 0_IntKi      !< Type of skewed-wake correction model {0=orthogonal, 1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0] [-]
+    INTEGER(IntKi)  :: Skew_Mod = 0_IntKi      !< Select skew model {0=No skew model at all, -1=Throw away non-normal component for linearization, 1=Glauert skew model} [-]
+    LOGICAL  :: SkewMomCorr = .false.      !< Turn the skew momentum correction on or off [used only when SkewMod=1] [-]
+    INTEGER(IntKi)  :: SkewRedistr_Mod = 0_IntKi      !< Type of skewed-wake redistribution model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1] [-]
     REAL(ReKi)  :: SkewModFactor = 0.0_ReKi      !< Constant used in Pitt/Peters skewed wake model (default is 15*pi/32) [-]
-    LOGICAL  :: TipLoss = .false.      !< Use the Prandtl tip-loss model? [unused when WakeMod=0] [flag]
-    LOGICAL  :: HubLoss = .false.      !< Use the Prandtl hub-loss model? [unused when WakeMod=0] [flag]
-    LOGICAL  :: TanInd = .false.      !< Include tangential induction in BEMT calculations? [unused when WakeMod=0] [flag]
-    LOGICAL  :: AIDrag = .false.      !< Include the drag term in the axial-induction calculation? [unused when WakeMod=0] [flag]
-    LOGICAL  :: TIDrag = .false.      !< Include the drag term in the tangential-induction calculation? [unused when WakeMod=0 or TanInd=FALSE] [flag]
-    REAL(ReKi)  :: IndToler = 0.0_ReKi      !< Convergence tolerance for BEM induction factors [unused when WakeMod=0] [-]
-    REAL(ReKi)  :: MaxIter = 0.0_ReKi      !< Maximum number of iteration steps [unused when WakeMod=0] [-]
-    INTEGER(IntKi)  :: UAMod = 0_IntKi      !< Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [used only when AFAeroMod=2] [-]
+    LOGICAL  :: TipLoss = .false.      !< Use the Prandtl tip-loss model? [unused when Wake_Mod=0] [flag]
+    LOGICAL  :: HubLoss = .false.      !< Use the Prandtl hub-loss model? [unused when Wake_Mod=0] [flag]
+    LOGICAL  :: TanInd = .false.      !< Include tangential induction in BEMT calculations? [unused when Wake_Mod=0] [flag]
+    LOGICAL  :: AIDrag = .false.      !< Include the drag term in the axial-induction calculation? [unused when Wake_Mod=0] [flag]
+    LOGICAL  :: TIDrag = .false.      !< Include the drag term in the tangential-induction calculation? [unused when Wake_Mod=0 or TanInd=FALSE] [flag]
+    REAL(ReKi)  :: IndToler = 0.0_ReKi      !< Convergence tolerance for BEM induction factors [unused when Wake_Mod=0] [-]
+    REAL(ReKi)  :: MaxIter = 0.0_ReKi      !< Maximum number of iteration steps [unused when Wake_Mod=0] [-]
+    LOGICAL  :: SectAvg = .False.      !< Use Sector average for BEM inflow velocity calculation (flag) [-]
+    INTEGER(IntKi)  :: SA_Weighting = 1      !< Sector Average - Weighting function for sector average  {1=Uniform, 2=Impulse, }  within a 360/nB sector centered on the blade (switch) [used only when SectAvg=True] [-]
+    REAL(ReKi)  :: SA_PsiBwd = -60      !< Sector Average - Backard Azimuth (<0) [deg]
+    REAL(ReKi)  :: SA_PsiFwd = 60      !< Sector Average - Forward Azimuth (>0) [deg]
+    INTEGER(IntKi)  :: SA_nPerSec = 5      !< Sector average - Number of points per sectors (-) [used only when SectAvg=True] [-]
+    LOGICAL  :: AoA34 = .false.      !< Sample the angle of attack (AoA) at the 3/4 chord or the AC point {default=True} [always used] [-]
+    INTEGER(IntKi)  :: UA_Mod = 0_IntKi      !< Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA),  2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [-]
     LOGICAL  :: FLookup = .false.      !< Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAeroMod=2] [flag]
     REAL(ReKi)  :: InCol_Alfa = 0.0_ReKi      !< The column in the airfoil tables that contains the angle of attack [-]
     REAL(ReKi)  :: InCol_Cl = 0.0_ReKi      !< The column in the airfoil tables that contains the lift coefficient [-]
@@ -248,8 +252,8 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:9)  :: TwOutNd = 0_IntKi      !< Tower nodes whose values will be output [-]
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
-    REAL(ReKi)  :: tau1_const = 0.0_ReKi      !< time constant for DBEMT [used only when WakeMod=2 and DBEMT_Mod/=2] [s]
-    INTEGER(IntKi)  :: DBEMT_Mod = 0_IntKi      !< Type of dynamic BEMT (DBEMT) model {1=constant tau1, 2=time-dependent tau1} [-]
+    REAL(ReKi)  :: tau1_const = 0.0_ReKi      !< time constant for DBEMT [s]
+    INTEGER(IntKi)  :: DBEMT_Mod = 0_IntKi      !< Type of dynamic BEMT (DBEMT) model {0=No Dynamic Wake, -1=Frozen Wake for linearization, 1=constant tau1, 2=time-dependent tau1, 3=constant tau1 with continuous formulation} (-) [used only when WakeMod=1] [-]
     INTEGER(IntKi)  :: BldNd_NumOuts = 0_IntKi      !< Number of requested output channels per blade node (AD_AllBldNdOuts) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: BldNd_OutList      !< List of user-requested output channels (AD_AllBldNdOuts) [-]
     CHARACTER(1024)  :: BldNd_BlOutNd_Str      !< String to parse for the blade nodes to actually output (AD_AllBldNdOuts) [-]
@@ -317,6 +321,7 @@ IMPLICIT NONE
     TYPE(AA_OutputType)  :: AA_y      !< Outputs from the AA module [-]
     TYPE(AA_InputType)  :: AA_u      !< Inputs to the AA module [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: DisturbedInflow      !< InflowOnBlade values modified by tower influence [m/s]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: SectAvgInflow      !< Sector averaged - disturbed inflow to improve BEM shear calculations [m/s]
     REAL(R8Ki) , DIMENSION(:,:,:,:), ALLOCATABLE  :: orientationAnnulus      !< Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles [-]
     REAL(R8Ki) , DIMENSION(:,:,:,:), ALLOCATABLE  :: R_li      !< Transformation matrix from inertial system to the staggered polar coordinate system of a given section [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< An array holding the value of all of the calculated (not only selected) output channels [-]
@@ -442,7 +447,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: TwrPotent = 0_IntKi      !< Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
     INTEGER(IntKi)  :: TwrShadow = 0_IntKi      !< Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model} [-]
     LOGICAL  :: TwrAero = .false.      !< Calculate tower aerodynamic loads? [flag]
-    LOGICAL  :: FrozenWake = .false.      !< Flag that tells this module it should assume a frozen wake during linearization. [-]
+    INTEGER(IntKi)  :: DBEMT_Mod = 0_IntKi      !< DBEMT_Mod [-]
     LOGICAL  :: CavitCheck = .false.      !< Flag that tells us if we want to check for cavitation [-]
     LOGICAL  :: Buoyancy = .false.      !< Include buoyancy effects? [flag]
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK [flag]
@@ -456,7 +461,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [m]
     REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Offset between still-water level and mean sea level [m]
     INTEGER(IntKi)  :: AeroProjMod = 1      !< Flag to switch between different projection models [-]
-    INTEGER(IntKi)  :: AeroBEM_Mod = -1      !< Flag to switch between different BEM Model [-]
+    INTEGER(IntKi)  :: BEM_Mod = -1      !< Flag to switch between different BEM Model [-]
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
@@ -479,12 +484,17 @@ IMPLICIT NONE
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [seconds]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     TYPE(AFI_ParameterType) , DIMENSION(:), ALLOCATABLE  :: AFI      !< AirfoilInfo parameters [-]
-    INTEGER(IntKi)  :: SkewMod = 0_IntKi      !< Type of skewed-wake correction model {0=orthogonal, 1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0] [-]
-    INTEGER(IntKi)  :: WakeMod = 0_IntKi      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
+    INTEGER(IntKi)  :: Skew_Mod = 0_IntKi      !< Type of skewed-wake correction model {-1=orthogonal, 0=None, 1=Glauert} [unused when Wake_Mod=0] [-]
+    INTEGER(IntKi)  :: Wake_Mod = 0_IntKi      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
     TYPE(FVW_ParameterType)  :: FVW      !< Parameters for FVW module [-]
     LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false) [-]
     LOGICAL  :: UA_Flag = .false.      !< logical flag indicating whether to use UnsteadyAero [-]
     TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Pointer of InflowWinds flow field data type [-]
+    LOGICAL  :: SectAvg = .false.      !< Use Sector average for BEM inflow velocity calculation [-]
+    INTEGER(IntKi)  :: SA_Weighting = 0_IntKi      !< Sector Average - Weighting function for sector average  {1=Uniform, 2=Impulse}  within a 360/nB sector centered on the blade (switch) [used only when SectAvg=True] [-]
+    REAL(ReKi)  :: SA_PsiBwd = 0.0_ReKi      !< Sector Average - Backard Azimuth (<0) [deg]
+    REAL(ReKi)  :: SA_PsiFwd = 0.0_ReKi      !< Sector Average - Forward Azimuth (>0) [deg]
+    INTEGER(IntKi)  :: SA_nPerSec = 0_IntKi      !< Sector Average - Number of points per sector (>1) [-]
   END TYPE AD_ParameterType
 ! =======================
 ! =========  RotInputType  =======
@@ -868,7 +878,6 @@ subroutine AD_CopyRotInitInputType(SrcRotInitInputTypeData, DstRotInitInputTypeD
    DstRotInitInputTypeData%NacellePosition = SrcRotInitInputTypeData%NacellePosition
    DstRotInitInputTypeData%NacelleOrientation = SrcRotInitInputTypeData%NacelleOrientation
    DstRotInitInputTypeData%AeroProjMod = SrcRotInitInputTypeData%AeroProjMod
-   DstRotInitInputTypeData%AeroBEM_Mod = SrcRotInitInputTypeData%AeroBEM_Mod
    DstRotInitInputTypeData%RotSpeed = SrcRotInitInputTypeData%RotSpeed
 end subroutine
 
@@ -901,7 +910,6 @@ subroutine AD_PackRotInitInputType(RF, Indata)
    call RegPack(RF, InData%NacellePosition)
    call RegPack(RF, InData%NacelleOrientation)
    call RegPack(RF, InData%AeroProjMod)
-   call RegPack(RF, InData%AeroBEM_Mod)
    call RegPack(RF, InData%RotSpeed)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -923,7 +931,6 @@ subroutine AD_UnPackRotInitInputType(RF, OutData)
    call RegUnpack(RF, OutData%NacellePosition); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NacelleOrientation); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AeroProjMod); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%AeroBEM_Mod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RotSpeed); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2022,12 +2029,11 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    ErrMsg  = ''
    DstInputFileData%Echo = SrcInputFileData%Echo
    DstInputFileData%DTAero = SrcInputFileData%DTAero
-   DstInputFileData%WakeMod = SrcInputFileData%WakeMod
-   DstInputFileData%AFAeroMod = SrcInputFileData%AFAeroMod
+   DstInputFileData%Wake_Mod = SrcInputFileData%Wake_Mod
+   DstInputFileData%BEM_Mod = SrcInputFileData%BEM_Mod
    DstInputFileData%TwrPotent = SrcInputFileData%TwrPotent
    DstInputFileData%TwrShadow = SrcInputFileData%TwrShadow
    DstInputFileData%TwrAero = SrcInputFileData%TwrAero
-   DstInputFileData%FrozenWake = SrcInputFileData%FrozenWake
    DstInputFileData%CavitCheck = SrcInputFileData%CavitCheck
    DstInputFileData%Buoyancy = SrcInputFileData%Buoyancy
    DstInputFileData%CompAA = SrcInputFileData%CompAA
@@ -2049,7 +2055,9 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%Patm = SrcInputFileData%Patm
    DstInputFileData%Pvap = SrcInputFileData%Pvap
    DstInputFileData%SpdSound = SrcInputFileData%SpdSound
-   DstInputFileData%SkewMod = SrcInputFileData%SkewMod
+   DstInputFileData%Skew_Mod = SrcInputFileData%Skew_Mod
+   DstInputFileData%SkewMomCorr = SrcInputFileData%SkewMomCorr
+   DstInputFileData%SkewRedistr_Mod = SrcInputFileData%SkewRedistr_Mod
    DstInputFileData%SkewModFactor = SrcInputFileData%SkewModFactor
    DstInputFileData%TipLoss = SrcInputFileData%TipLoss
    DstInputFileData%HubLoss = SrcInputFileData%HubLoss
@@ -2058,7 +2066,13 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%TIDrag = SrcInputFileData%TIDrag
    DstInputFileData%IndToler = SrcInputFileData%IndToler
    DstInputFileData%MaxIter = SrcInputFileData%MaxIter
-   DstInputFileData%UAMod = SrcInputFileData%UAMod
+   DstInputFileData%SectAvg = SrcInputFileData%SectAvg
+   DstInputFileData%SA_Weighting = SrcInputFileData%SA_Weighting
+   DstInputFileData%SA_PsiBwd = SrcInputFileData%SA_PsiBwd
+   DstInputFileData%SA_PsiFwd = SrcInputFileData%SA_PsiFwd
+   DstInputFileData%SA_nPerSec = SrcInputFileData%SA_nPerSec
+   DstInputFileData%AoA34 = SrcInputFileData%AoA34
+   DstInputFileData%UA_Mod = SrcInputFileData%UA_Mod
    DstInputFileData%FLookup = SrcInputFileData%FLookup
    DstInputFileData%InCol_Alfa = SrcInputFileData%InCol_Alfa
    DstInputFileData%InCol_Cl = SrcInputFileData%InCol_Cl
@@ -2179,12 +2193,11 @@ subroutine AD_PackInputFile(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%Echo)
    call RegPack(RF, InData%DTAero)
-   call RegPack(RF, InData%WakeMod)
-   call RegPack(RF, InData%AFAeroMod)
+   call RegPack(RF, InData%Wake_Mod)
+   call RegPack(RF, InData%BEM_Mod)
    call RegPack(RF, InData%TwrPotent)
    call RegPack(RF, InData%TwrShadow)
    call RegPack(RF, InData%TwrAero)
-   call RegPack(RF, InData%FrozenWake)
    call RegPack(RF, InData%CavitCheck)
    call RegPack(RF, InData%Buoyancy)
    call RegPack(RF, InData%CompAA)
@@ -2195,7 +2208,9 @@ subroutine AD_PackInputFile(RF, Indata)
    call RegPack(RF, InData%Patm)
    call RegPack(RF, InData%Pvap)
    call RegPack(RF, InData%SpdSound)
-   call RegPack(RF, InData%SkewMod)
+   call RegPack(RF, InData%Skew_Mod)
+   call RegPack(RF, InData%SkewMomCorr)
+   call RegPack(RF, InData%SkewRedistr_Mod)
    call RegPack(RF, InData%SkewModFactor)
    call RegPack(RF, InData%TipLoss)
    call RegPack(RF, InData%HubLoss)
@@ -2204,7 +2219,13 @@ subroutine AD_PackInputFile(RF, Indata)
    call RegPack(RF, InData%TIDrag)
    call RegPack(RF, InData%IndToler)
    call RegPack(RF, InData%MaxIter)
-   call RegPack(RF, InData%UAMod)
+   call RegPack(RF, InData%SectAvg)
+   call RegPack(RF, InData%SA_Weighting)
+   call RegPack(RF, InData%SA_PsiBwd)
+   call RegPack(RF, InData%SA_PsiFwd)
+   call RegPack(RF, InData%SA_nPerSec)
+   call RegPack(RF, InData%AoA34)
+   call RegPack(RF, InData%UA_Mod)
    call RegPack(RF, InData%FLookup)
    call RegPack(RF, InData%InCol_Alfa)
    call RegPack(RF, InData%InCol_Cl)
@@ -2254,12 +2275,11 @@ subroutine AD_UnPackInputFile(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%Echo); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DTAero); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%WakeMod); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%AFAeroMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Wake_Mod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BEM_Mod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TwrPotent); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TwrShadow); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TwrAero); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%FrozenWake); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CavitCheck); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Buoyancy); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompAA); if (RegCheckErr(RF, RoutineName)) return
@@ -2270,7 +2290,9 @@ subroutine AD_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%Patm); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Pvap); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SpdSound); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%SkewMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Skew_Mod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SkewMomCorr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SkewRedistr_Mod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SkewModFactor); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TipLoss); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HubLoss); if (RegCheckErr(RF, RoutineName)) return
@@ -2279,7 +2301,13 @@ subroutine AD_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%TIDrag); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%IndToler); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MaxIter); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%UAMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SectAvg); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SA_Weighting); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SA_PsiBwd); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SA_PsiFwd); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SA_nPerSec); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%AoA34); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%UA_Mod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FLookup); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%InCol_Alfa); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%InCol_Cl); if (RegCheckErr(RF, RoutineName)) return
@@ -3009,6 +3037,18 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
       end if
       DstRotMiscVarTypeData%DisturbedInflow = SrcRotMiscVarTypeData%DisturbedInflow
    end if
+   if (allocated(SrcRotMiscVarTypeData%SectAvgInflow)) then
+      LB(1:3) = lbound(SrcRotMiscVarTypeData%SectAvgInflow, kind=B8Ki)
+      UB(1:3) = ubound(SrcRotMiscVarTypeData%SectAvgInflow, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%SectAvgInflow)) then
+         allocate(DstRotMiscVarTypeData%SectAvgInflow(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%SectAvgInflow.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%SectAvgInflow = SrcRotMiscVarTypeData%SectAvgInflow
+   end if
    if (allocated(SrcRotMiscVarTypeData%orientationAnnulus)) then
       LB(1:4) = lbound(SrcRotMiscVarTypeData%orientationAnnulus, kind=B8Ki)
       UB(1:4) = ubound(SrcRotMiscVarTypeData%orientationAnnulus, kind=B8Ki)
@@ -3477,6 +3517,9 @@ subroutine AD_DestroyRotMiscVarType(RotMiscVarTypeData, ErrStat, ErrMsg)
    if (allocated(RotMiscVarTypeData%DisturbedInflow)) then
       deallocate(RotMiscVarTypeData%DisturbedInflow)
    end if
+   if (allocated(RotMiscVarTypeData%SectAvgInflow)) then
+      deallocate(RotMiscVarTypeData%SectAvgInflow)
+   end if
    if (allocated(RotMiscVarTypeData%orientationAnnulus)) then
       deallocate(RotMiscVarTypeData%orientationAnnulus)
    end if
@@ -3637,6 +3680,7 @@ subroutine AD_PackRotMiscVarType(RF, Indata)
    call AA_PackOutput(RF, InData%AA_y) 
    call AA_PackInput(RF, InData%AA_u) 
    call RegPackAlloc(RF, InData%DisturbedInflow)
+   call RegPackAlloc(RF, InData%SectAvgInflow)
    call RegPackAlloc(RF, InData%orientationAnnulus)
    call RegPackAlloc(RF, InData%R_li)
    call RegPackAlloc(RF, InData%AllOuts)
@@ -3760,6 +3804,7 @@ subroutine AD_UnPackRotMiscVarType(RF, OutData)
    call AA_UnpackOutput(RF, OutData%AA_y) ! AA_y 
    call AA_UnpackInput(RF, OutData%AA_u) ! AA_u 
    call RegUnpackAlloc(RF, OutData%DisturbedInflow); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%SectAvgInflow); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%orientationAnnulus); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%R_li); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AllOuts); if (RegCheckErr(RF, RoutineName)) return
@@ -4719,7 +4764,7 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
    DstRotParameterTypeData%TwrPotent = SrcRotParameterTypeData%TwrPotent
    DstRotParameterTypeData%TwrShadow = SrcRotParameterTypeData%TwrShadow
    DstRotParameterTypeData%TwrAero = SrcRotParameterTypeData%TwrAero
-   DstRotParameterTypeData%FrozenWake = SrcRotParameterTypeData%FrozenWake
+   DstRotParameterTypeData%DBEMT_Mod = SrcRotParameterTypeData%DBEMT_Mod
    DstRotParameterTypeData%CavitCheck = SrcRotParameterTypeData%CavitCheck
    DstRotParameterTypeData%Buoyancy = SrcRotParameterTypeData%Buoyancy
    DstRotParameterTypeData%MHK = SrcRotParameterTypeData%MHK
@@ -4733,7 +4778,7 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
    DstRotParameterTypeData%WtrDpth = SrcRotParameterTypeData%WtrDpth
    DstRotParameterTypeData%MSL2SWL = SrcRotParameterTypeData%MSL2SWL
    DstRotParameterTypeData%AeroProjMod = SrcRotParameterTypeData%AeroProjMod
-   DstRotParameterTypeData%AeroBEM_Mod = SrcRotParameterTypeData%AeroBEM_Mod
+   DstRotParameterTypeData%BEM_Mod = SrcRotParameterTypeData%BEM_Mod
    DstRotParameterTypeData%NumOuts = SrcRotParameterTypeData%NumOuts
    DstRotParameterTypeData%RootName = SrcRotParameterTypeData%RootName
    if (allocated(SrcRotParameterTypeData%OutParam)) then
@@ -4928,7 +4973,7 @@ subroutine AD_PackRotParameterType(RF, Indata)
    call RegPack(RF, InData%TwrPotent)
    call RegPack(RF, InData%TwrShadow)
    call RegPack(RF, InData%TwrAero)
-   call RegPack(RF, InData%FrozenWake)
+   call RegPack(RF, InData%DBEMT_Mod)
    call RegPack(RF, InData%CavitCheck)
    call RegPack(RF, InData%Buoyancy)
    call RegPack(RF, InData%MHK)
@@ -4942,7 +4987,7 @@ subroutine AD_PackRotParameterType(RF, Indata)
    call RegPack(RF, InData%WtrDpth)
    call RegPack(RF, InData%MSL2SWL)
    call RegPack(RF, InData%AeroProjMod)
-   call RegPack(RF, InData%AeroBEM_Mod)
+   call RegPack(RF, InData%BEM_Mod)
    call RegPack(RF, InData%NumOuts)
    call RegPack(RF, InData%RootName)
    call RegPack(RF, allocated(InData%OutParam))
@@ -5019,7 +5064,7 @@ subroutine AD_UnPackRotParameterType(RF, OutData)
    call RegUnpack(RF, OutData%TwrPotent); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TwrShadow); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TwrAero); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%FrozenWake); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DBEMT_Mod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CavitCheck); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Buoyancy); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MHK); if (RegCheckErr(RF, RoutineName)) return
@@ -5033,7 +5078,7 @@ subroutine AD_UnPackRotParameterType(RF, OutData)
    call RegUnpack(RF, OutData%WtrDpth); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MSL2SWL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AeroProjMod); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%AeroBEM_Mod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BEM_Mod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumOuts); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%OutParam)) deallocate(OutData%OutParam)
@@ -5121,14 +5166,19 @@ subroutine AD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          if (ErrStat >= AbortErrLev) return
       end do
    end if
-   DstParamData%SkewMod = SrcParamData%SkewMod
-   DstParamData%WakeMod = SrcParamData%WakeMod
+   DstParamData%Skew_Mod = SrcParamData%Skew_Mod
+   DstParamData%Wake_Mod = SrcParamData%Wake_Mod
    call FVW_CopyParam(SrcParamData%FVW, DstParamData%FVW, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstParamData%CompAeroMaps = SrcParamData%CompAeroMaps
    DstParamData%UA_Flag = SrcParamData%UA_Flag
    DstParamData%FlowField => SrcParamData%FlowField
+   DstParamData%SectAvg = SrcParamData%SectAvg
+   DstParamData%SA_Weighting = SrcParamData%SA_Weighting
+   DstParamData%SA_PsiBwd = SrcParamData%SA_PsiBwd
+   DstParamData%SA_PsiFwd = SrcParamData%SA_PsiFwd
+   DstParamData%SA_nPerSec = SrcParamData%SA_nPerSec
 end subroutine
 
 subroutine AD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -5193,8 +5243,8 @@ subroutine AD_PackParam(RF, Indata)
          call AFI_PackParam(RF, InData%AFI(i1)) 
       end do
    end if
-   call RegPack(RF, InData%SkewMod)
-   call RegPack(RF, InData%WakeMod)
+   call RegPack(RF, InData%Skew_Mod)
+   call RegPack(RF, InData%Wake_Mod)
    call FVW_PackParam(RF, InData%FVW) 
    call RegPack(RF, InData%CompAeroMaps)
    call RegPack(RF, InData%UA_Flag)
@@ -5205,6 +5255,11 @@ subroutine AD_PackParam(RF, Indata)
          call IfW_FlowField_PackFlowFieldType(RF, InData%FlowField) 
       end if
    end if
+   call RegPack(RF, InData%SectAvg)
+   call RegPack(RF, InData%SA_Weighting)
+   call RegPack(RF, InData%SA_PsiBwd)
+   call RegPack(RF, InData%SA_PsiFwd)
+   call RegPack(RF, InData%SA_nPerSec)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -5247,8 +5302,8 @@ subroutine AD_UnPackParam(RF, OutData)
          call AFI_UnpackParam(RF, OutData%AFI(i1)) ! AFI 
       end do
    end if
-   call RegUnpack(RF, OutData%SkewMod); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%WakeMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Skew_Mod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Wake_Mod); if (RegCheckErr(RF, RoutineName)) return
    call FVW_UnpackParam(RF, OutData%FVW) ! FVW 
    call RegUnpack(RF, OutData%CompAeroMaps); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UA_Flag); if (RegCheckErr(RF, RoutineName)) return
@@ -5270,6 +5325,11 @@ subroutine AD_UnPackParam(RF, OutData)
    else
       OutData%FlowField => null()
    end if
+   call RegUnpack(RF, OutData%SectAvg); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SA_Weighting); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SA_PsiBwd); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SA_PsiFwd); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SA_nPerSec); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AD_CopyRotInputType(SrcRotInputTypeData, DstRotInputTypeData, CtrlCode, ErrStat, ErrMsg)

@@ -481,7 +481,7 @@ subroutine FVW_FinalWrite(u, p, x, z, m, ErrStat, ErrMsg)
    ErrMsg  = ""
    ! Place any last minute operations or calculations here:
    if (p%WrVTK>0 .and. m%VTKstep<FINAL_STEP) then
-      print*,'>>> FINAL WRITE'
+      call WrScr('OLAF: writting final VTK outputs')
       t=-1.0_ReKi
       if (p%WrVTK==1) then
          if (m%VTKstep<m%iStep+1) then
