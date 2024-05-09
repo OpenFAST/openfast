@@ -285,6 +285,12 @@ typedef   ^      ^                   HydroDyn_DiscreteStateType            xd_HD
 typedef   ^      ^                   HydroDyn_ConstraintStateType           z_HD      {:}    -   -   "Constraint states"
 typedef   ^      ^                   HydroDyn_OtherStateType          OtherSt_HD      {:}    -   -   "Other states"
 typedef   ^      ^                   HydroDyn_InputType                     u_HD      {:}    -   -   "System inputs"
+# ..... SeaSt OP data .......................................................................................................
+typedef   FAST   FAST_LinStateSave   SeaSt_ContinuousStateType             x_SeaSt    {:}    -   -   "Continuous states"
+typedef   ^      ^                   SeaSt_DiscreteStateType              xd_SeaSt    {:}    -   -   "Discrete states"
+typedef   ^      ^                   SeaSt_ConstraintStateType             z_SeaSt    {:}    -   -   "Constraint states"
+typedef   ^      ^                   SeaSt_OtherStateType            OtherSt_SeaSt    {:}    -   -   "Other states"
+typedef   ^      ^                   SeaSt_InputType                       u_SeaSt    {:}    -   -   "System inputs"
 # ..... IceFloe OP data .......................................................................................................
 typedef   FAST   FAST_LinStateSave   IceFloe_ContinuousStateType            x_IceF    {:}    -   -   "Continuous states"
 typedef   ^      ^                   IceFloe_DiscreteStateType             xd_IceF    {:}    -   -   "Discrete states"

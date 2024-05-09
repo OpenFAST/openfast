@@ -540,6 +540,21 @@ typedef ^       MiscVarType     ReKi    YawFriMz      -       -       -       "E
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+typedef	^	Jac_u_idxStarts	IntKi	BladeLoad	-	1	-	"Index to first point in y jacobian for BladeLoad" -
+typedef	^	Jac_u_idxStarts	IntKi	PlatformLoad	-	1	-	"Index to first point in y jacobian for PlatformLoad" -
+typedef	^	Jac_u_idxStarts	IntKi	TowerLoad	-	1	-	"Index to first point in y jacobian for TowerLoad" -
+typedef	^	Jac_u_idxStarts	IntKi	HubLoad	-	1	-	"Index to first point in y jacobian for HubLoad" -
+typedef	^	Jac_u_idxStarts	IntKi	NacelleLoad	-	1	-	"Index to first point in y jacobian for NacelleLoad" -
+typedef	^	Jac_u_idxStarts	IntKi	TFinLoad	-	1	-	"Index to first point in y jacobian for TFinLoad" -
+typedef	^	Jac_u_idxStarts	IntKi	BlPitchCom	-	1	-	"Index to first point in y jacobian for BlPitchCom" -
+typedef	^	Jac_y_idxStarts	IntKi	Blade	-	1	-	"Index to first point in u jacobian for Blade" -
+typedef	^	Jac_y_idxStarts	IntKi	Platform	-	1	-	"Index to first point in u jacobian for Platform" -
+typedef	^	Jac_y_idxStarts	IntKi	Tower	-	1	-	"Index to first point in u jacobian for Tower" -
+typedef	^	Jac_y_idxStarts	IntKi	Hub	-	1	-	"Index to first point in u jacobian for Hub" -
+typedef	^	Jac_y_idxStarts	IntKi	BladeRoot	-	1	-	"Index to first point in u jacobian for BladeRoot" -
+typedef	^	Jac_y_idxStarts	IntKi	Nacelle	-	1	-	"Index to first point in u jacobian for Nacelle" -
+typedef	^	Jac_y_idxStarts	IntKi	TFin	-	1	-	"Index to first point in u jacobian for TFin" -
+
 typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
 typedef	^	ParameterType	DbKi	DT24	-	-	-	"=DT/24 (used in loose coupling)"	seconds
 typedef	^	ParameterType	IntKi	BldNodes	-	-	-	"Number of blade nodes used in the analysis"	-
@@ -766,6 +781,8 @@ typedef  ^  ParameterType  OutParmType BldNd_OutParam  {:} -  -  "Names and unit
 #typedef  ^  ParameterType  IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (ED_AllBldNdOuts)" -
 typedef  ^  ParameterType  IntKi BldNd_BladesOut - - - "The blades to output (ED_AllBldNdOuts)" -
 
+typedef	^	ParameterType	Jac_u_idxStarts Jac_u_idxStartList	-	-	-	"Starting indices for all Jac_u compenents" -
+typedef	^	ParameterType	Jac_y_idxStarts Jac_y_idxStartList	-	-	-	"Starting indices for all Jac_u compenents" -
 typedef	^	ParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
 typedef	^	ParameterType	R8Ki	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
 typedef	^	ParameterType	R8Ki	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states)"

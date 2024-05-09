@@ -531,15 +531,11 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_A
          Node = Node + 1      
          u_IfW%PositionXYZ(:,Node) = u_AD14%Twr_InputMarkers%TranslationDisp(:,J) + u_AD14%Twr_InputMarkers%Position(:,J)
       END DO      
-      
    END IF
-   
-   
+  
+   !FIXME: This is used for the disk average returned from IfW_CalcOutput.  May not be needed after removing AD14 
    u_IfW%HubPosition    = y_ED%HubPtMotion%Position(:,1) + y_ED%HubPtMotion%TranslationDisp(:,1)
    u_IfW%HubOrientation = y_ED%HubPtMotion%Orientation(:,:,1)
-   
-               
-
 
    IF ( p_FAST%MHK /= MHK_None ) THEN
       u_IfW%PositionXYZ(3,:) = u_IfW%PositionXYZ(3,:) + p_FAST%WtrDpth
@@ -773,8 +769,7 @@ SUBROUTINE AD14_InputSolve_IfW( p_FAST, u_AD14, y_IfW, ErrStat, ErrMsg )
    END IF
       
    u_AD14%AvgInfVel = y_IfW%DiskVel
-  
-   
+
 END SUBROUTINE AD14_InputSolve_IfW
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets all the AeroDyn14 inputs, except for the wind inflow values.
@@ -5569,9 +5564,9 @@ SUBROUTINE SolveOption2c_Inp2AD_SrvD(this_time, this_state, p_FAST, m_FAST, ED, 
          
    IF (p_FAST%CompInflow == Module_IfW) THEN
       ! get Lidar position directly from hub mesh (may map meshes later)
-      IfW%Input%lidar%HubDisplacementX = ED%y%HubPtMotion%TranslationDisp(1,1)
-      IfW%Input%lidar%HubDisplacementY = ED%y%HubPtMotion%TranslationDisp(2,1)
-      IfW%Input%lidar%HubDisplacementZ = ED%y%HubPtMotion%TranslationDisp(3,1)
+      IfW%Input(1)%lidar%HubDisplacementX = ED%y%HubPtMotion%TranslationDisp(1,1)
+      IfW%Input(1)%lidar%HubDisplacementY = ED%y%HubPtMotion%TranslationDisp(2,1)
+      IfW%Input(1)%lidar%HubDisplacementZ = ED%y%HubPtMotion%TranslationDisp(3,1)
 
       CALL InflowWind_CalcOutput( this_time, IfW%Input(1), IfW%p, IfW%x(this_state), IfW%xd(this_state), IfW%z(this_state), &
                                   IfW%OtherSt(this_state), IfW%y, IfW%m, ErrStat2, ErrMsg2 )

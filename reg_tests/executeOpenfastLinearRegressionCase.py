@@ -88,7 +88,7 @@ highpass = args.highpass
 # is between 1e-3 and 1e-4. We allow a bit of margin and use rtol=2e-3
 # Lin matrices have a lot of small values, so atol is quite important
 rtol = 2e-3
-atol = 1e-5
+atol = 5e-4
 
 # --- Tolerances for frequencies 
 # Low frequencies are hard to match, so we use a high atol

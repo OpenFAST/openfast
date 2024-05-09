@@ -909,8 +909,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
    !--------------------------------------------------------------------------------
    !=== Constrained New Waves ===
    ! Modify the wave components to implement the constrained wave
-   ! Only do this if WaveMod = 2 (JONSWAP/Pierson-Moskowitz Spectrum) and ConstWaveMod > 0
-   IF ( WaveField%WaveMod == WaveMod_JONSWAP .AND. InitInp%ConstWaveMod > 0) THEN
+   ! Only do this if WaveMod = 2 (JONSWAP/Pierson-Moskowitz Spectrum) and ConstWaveMod /= ConstWaveMod_None
+   IF ( WaveField%WaveMod == WaveMod_JONSWAP .AND. InitInp%ConstWaveMod /= ConstWaveMod_None ) THEN
       ! adjust InitOut%WaveElevC0 for constrained wave:
       call ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddArr, CosWaveDir, SinWaveDir, FFT_Data, ErrStatTmp, ErrMsgTmp)
          call SetErrStat(ErrStatTmp,ErrMsgTmp, ErrStat,ErrMsg,RoutineName)
@@ -2188,7 +2188,7 @@ SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddA
    REAL(SiKi)                                      :: Trough                                        !< The trough preceding or following the crest, whichever is lower (m)
    REAL(SiKi)                                      :: m0                                            !< Zeroth spectral moment of the wave spectrum (m^2)
    REAL(SiKi)                                      :: m2                                            !< First spectral moment of the wave spectrum (m^2(rad/s)^2)
-   REAL(SiKi)                                      :: CrestHeightTol = 1.0E-3                       !< Relative tolerance for the crest height when ConstWaveMod = 2
+   REAL(SiKi)                                      :: CrestHeightTol = 1.0E-3                       !< Relative tolerance for the crest height when ConstWaveMod = ConstWaveMod_Peak2Trough (2)
    INTEGER(IntKi)                                  :: NStepTp                                       !< Number of time steps per peak period when waveMod = 2 (-)
    INTEGER(IntKi)                                  :: Iter                                          !< Number of iterations when trying to meet the prescribed crest height (-)
    INTEGER(IntKi)                                  :: MaxCrestIter = 20                             !< Maximum number of iterations when trying to meet the prescribed crest height (-)
@@ -2221,12 +2221,12 @@ SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddA
       Crest = 0.5_SiKi * InitInp%CrestHmax ! Set crest elevation to half of crest height
       tmpArr = WaveField%NStepWave2/m0 * WaveField%WaveDOmega * WaveS1SddArr
         
-      IF (InitInp%ConstWaveMod == 1) THEN  ! Crest elevation prescribed
+      IF (InitInp%ConstWaveMod == ConstWaveMod_CrestElev) THEN  ! Crest elevation prescribed
       
          ! Apply the remaining part of the modification proportional to crest elevation
          WaveField%WaveElevC0(1,:) = WaveField%WaveElevC0(1,:) + Crest * tmpArr
          
-      ELSE IF (InitInp%ConstWaveMod == 2) THEN ! Crest height prescribed - Need to interate
+      ELSE IF (InitInp%ConstWaveMod == ConstWaveMod_Peak2Trough) THEN ! Crest height prescribed - Need to interate
       
          NStepTp = CEILING(InitInp%WaveTp/InitInp%WaveDT)
 

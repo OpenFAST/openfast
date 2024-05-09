@@ -438,7 +438,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
 
    ! ........................
-   ! initialize AeroDyn
+   ! initialize AeroDyn14
    ! ........................
    ALLOCATE( AD14%Input( p_FAST%InterpOrder+1 ), AD14%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
@@ -450,20 +450,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ALLOCATE( AD14%Input_Saved( p_FAST%InterpOrder+1 ), AD14%InputTimes_Saved( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
          CALL SetErrStat(ErrID_Fatal,"Error allocating AD14%Input_Saved and AD14%InputTimes_Saved.",ErrStat,ErrMsg,RoutineName)
-         CALL Cleanup()
-         RETURN
-      END IF
-
-   ALLOCATE( AD%Input( p_FAST%InterpOrder+1 ), AD%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
-      IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating AD%Input and AD%InputTimes.",ErrStat,ErrMsg,RoutineName)
-         CALL Cleanup()
-         RETURN
-      END IF
-
-   ALLOCATE( AD%Input_Saved( p_FAST%InterpOrder+1 ), AD%InputTimes_Saved( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
-      IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating AD%Input and AD%InputTimes.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF
@@ -487,137 +473,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          CALL Cleanup()
          RETURN
       END IF
+   ENDIF
 
-   ELSEIF ( (p_FAST%CompAero == Module_AD) .OR. (p_FAST%CompAero == Module_ExtLd) ) THEN
-
-      allocate(Init%InData_AD%rotors(1), stat=ErrStat2)
-      if (ErrStat2 /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'Allocating rotors', errStat, errMsg, RoutineName )
-         call Cleanup()
-         return
-      end if
-
-      Init%InData_AD%rotors(1)%NumBlades  = NumBl
-
-      if (p_FAST%CompAeroMaps) then
-         CALL AllocAry( MeshMapData%HubOrient, 3, 3, Init%InData_AD%rotors(1)%NumBlades, 'Hub orientation matrix', ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            IF (ErrStat >= AbortErrLev) THEN
-               CALL Cleanup()
-               RETURN
-            END IF
-
-         theta = 0.0_R8Ki
-         do k=1,Init%InData_AD%rotors(1)%NumBlades
-            theta(1) = TwoPi_R8 * (k-1) / Init%InData_AD%rotors(1)%NumBlades
-            MeshMapData%HubOrient(:,:,k) = EulerConstruct( theta )
-         end do
-      end if
-
-
-         ! set initialization data for AD
-      CALL AllocAry( Init%InData_AD%rotors(1)%BladeRootPosition,      3, Init%InData_AD%rotors(1)%NumBlades, 'Init%InData_AD%rotors(1)%BladeRootPosition', errStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      CALL AllocAry( Init%InData_AD%rotors(1)%BladeRootOrientation,3, 3, Init%InData_AD%rotors(1)%NumBlades, 'Init%InData_AD%rotors(1)%BladeRootOrientation', errStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-
-      Init%InData_AD%Gravity            = p_FAST%Gravity
-      Init%InData_AD%Linearize          = p_FAST%Linearize
-      Init%InData_AD%CompAeroMaps       = p_FAST%CompAeroMaps
-      Init%InData_AD%rotors(1)%RotSpeed = p_FAST%RotSpeedInit ! used only for aeromaps
-      Init%InData_AD%InputFile          = p_FAST%AeroFile
-      Init%InData_AD%RootName           = p_FAST%OutFileRoot
-      Init%InData_AD%MHK                = p_FAST%MHK
-      if ( p_FAST%MHK == MHK_None ) then
-         Init%InData_AD%defFldDens      = p_FAST%AirDens
-      else
-         Init%InData_AD%defFldDens      = p_FAST%WtrDens
-      end if
-      Init%InData_AD%defKinVisc         = p_FAST%KinVisc
-      Init%InData_AD%defSpdSound        = p_FAST%SpdSound
-      Init%InData_AD%defPatm            = p_FAST%Patm
-      Init%InData_AD%defPvap            = p_FAST%Pvap
-      Init%InData_AD%WtrDpth            = p_FAST%WtrDpth
-      Init%InData_AD%MSL2SWL            = p_FAST%MSL2SWL
-
-
-      Init%InData_AD%rotors(1)%HubPosition        = ED%y%HubPtMotion%Position(:,1)
-      Init%InData_AD%rotors(1)%HubOrientation     = ED%y%HubPtMotion%RefOrientation(:,:,1)
-      Init%InData_AD%rotors(1)%NacellePosition    = ED%y%NacelleMotion%Position(:,1)
-      Init%InData_AD%rotors(1)%NacelleOrientation = ED%y%NacelleMotion%RefOrientation(:,:,1)
-      ! Note: not passing tailfin position and orientation at init
-      Init%InData_AD%rotors(1)%AeroProjMod        = APM_BEM_NoSweepPitchTwist
-
-      do k=1,NumBl
-         Init%InData_AD%rotors(1)%BladeRootPosition(:,k)      = ED%y%BladeRootMotion(k)%Position(:,1)
-         Init%InData_AD%rotors(1)%BladeRootOrientation(:,:,k) = ED%y%BladeRootMotion(k)%RefOrientation(:,:,1)
-      end do
-
-      CALL AD_Init( Init%InData_AD, AD%Input(1), AD%p, AD%x(STATE_CURR), AD%xd(STATE_CURR), AD%z(STATE_CURR), &
-                    AD%OtherSt(STATE_CURR), AD%y, AD%m, p_FAST%dt_module( MODULE_AD ), Init%OutData_AD, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-      p_FAST%ModuleInitialized(Module_AD) = .TRUE.
-      CALL SetModuleSubstepTime(Module_AD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-      allocate( y_FAST%Lin%Modules(MODULE_AD)%Instance(1), stat=ErrStat2)
-      if (ErrStat2 /= 0 ) then
-         call SetErrStat(ErrID_Fatal, "Error allocating Lin%Modules(AD).", ErrStat, ErrMsg, RoutineName )
-      else
-         if (allocated(Init%OutData_AD%rotors(1)%LinNames_u  )) call move_alloc(Init%OutData_AD%rotors(1)%LinNames_u  ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%Names_u )
-         if (allocated(Init%OutData_AD%rotors(1)%LinNames_y  )) call move_alloc(Init%OutData_AD%rotors(1)%LinNames_y  ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%Names_y )
-         if (allocated(Init%OutData_AD%rotors(1)%LinNames_x  )) call move_alloc(Init%OutData_AD%rotors(1)%LinNames_x  ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%Names_x )
-         if (allocated(Init%OutData_AD%rotors(1)%RotFrame_u  )) call move_alloc(Init%OutData_AD%rotors(1)%RotFrame_u  ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%RotFrame_u )
-         if (allocated(Init%OutData_AD%rotors(1)%RotFrame_y  )) call move_alloc(Init%OutData_AD%rotors(1)%RotFrame_y  ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%RotFrame_y )
-         if (allocated(Init%OutData_AD%rotors(1)%RotFrame_x  )) call move_alloc(Init%OutData_AD%rotors(1)%RotFrame_x  ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%RotFrame_x )
-         if (allocated(Init%OutData_AD%rotors(1)%IsLoad_u    )) call move_alloc(Init%OutData_AD%rotors(1)%IsLoad_u    ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%IsLoad_u   )
-         if (allocated(Init%OutData_AD%rotors(1)%DerivOrder_x)) call move_alloc(Init%OutData_AD%rotors(1)%DerivOrder_x,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%DerivOrder_x )
-
-         if (allocated(Init%OutData_AD%rotors(1)%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%NumOutputs = size(Init%OutData_AD%rotors(1)%WriteOutputHdr)
-      end if
-
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      AirDens = Init%OutData_AD%rotors(1)%AirDens
-
-   ELSE
-      AirDens = 0.0_ReKi
-   END IF ! CompAero
-
-   IF ( p_FAST%CompAero == Module_ExtLd ) THEN
-
-      IF ( PRESENT(ExternInitData) ) THEN
-
-         ! set initialization data for ExtLoads
-         CALL ExtLd_SetInitInput(Init%InData_ExtLd, Init%OutData_ED, ED%y, Init%OutData_BD, BD%y(:), Init%OutData_AD, p_FAST, ExternInitData, ErrStat2, ErrMsg2)
-         CALL ExtLd_Init( Init%InData_ExtLd, ExtLd%u, ExtLd%xd(1), ExtLd%p, ExtLd%y, ExtLd%m, p_FAST%dt_module( MODULE_ExtLd ), Init%OutData_ExtLd, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-         p_FAST%ModuleInitialized(Module_ExtLd) = .TRUE.
-         CALL SetModuleSubstepTime(Module_ExtLd, p_FAST, y_FAST, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-
-         AirDens = Init%OutData_ExtLd%AirDens
-
-         ! Set pointer to flowfield
-         IF (p_FAST%CompAero == Module_AD) AD%p%FlowField => Init%OutData_ExtLd%FlowField
-
-      END IF
-
-   END IF
 
    ! ........................
    ! initialize InflowWind
@@ -689,9 +546,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       p_FAST%ModuleInitialized(Module_IfW) = .TRUE.
       CALL SetModuleSubstepTime(Module_IfW, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-      ! Set pointers to flowfield
-      IF (p_FAST%CompAero == Module_AD) AD%p%FlowField => Init%OutData_IfW%FlowField
 
       allocate( y_FAST%Lin%Modules(MODULE_IfW)%Instance(1), stat=ErrStat2)
       if (ErrStat2 /= 0 ) then
@@ -791,29 +645,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    END IF   ! CompInflow
 
    ! ........................
-   ! initialize SuperController
-   ! ........................
-      IF ( PRESENT(ExternInitData) ) THEN
-            ! set up the data structures for integration with supercontroller
-         IF ( p_FAST%UseSC ) THEN
-            CALL SC_DX_Init( ExternInitData%NumSC2CtrlGlob, ExternInitData%NumSC2Ctrl, ExternInitData%NumCtrl2SC, SC_DX, ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         ELSE
-            SC_DX%u%c_obj%toSC_Len       = 0
-            SC_DX%u%c_obj%toSC           = C_NULL_PTR
-            SC_DX%y%c_obj%fromSC_Len     = 0
-            SC_DX%y%c_obj%fromSC         = C_NULL_PTR
-            SC_DX%y%c_obj%fromSCglob_Len = 0
-            SC_DX%y%c_obj%fromSCglob     = C_NULL_PTR
-         END IF
-      END IF
-
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-   ! ........................
    ! some checks for AeroDyn14's Dynamic Inflow with Mean Wind Speed from InflowWind:
    ! (DO NOT COPY THIS CODE!)
    ! bjj: AeroDyn14 should not need this rule of thumb; it should check the instantaneous values when the code runs
@@ -884,12 +715,206 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          p_FAST%VTK_surface%NWaveElevPts(2) = 0
       endif
 
+      allocate( y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1), stat=ErrStat2)
+      if (ErrStat2 /= 0 ) then
+         call SetErrStat(ErrID_Fatal, "Error allocating Lin%Modules(SeaSt).", ErrStat, ErrMsg, RoutineName )
+      else
+         if (allocated(Init%OutData_SeaSt%LinNames_y)) call move_alloc(Init%OutData_SeaSt%LinNames_y,y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1)%Names_y )
+         if (allocated(Init%OutData_SeaSt%LinNames_u)) call move_alloc(Init%OutData_SeaSt%LinNames_u,y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1)%Names_u )
+         if (allocated(Init%OutData_SeaSt%RotFrame_y)) call move_alloc(Init%OutData_SeaSt%RotFrame_y,y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1)%RotFrame_y )
+         if (allocated(Init%OutData_SeaSt%RotFrame_u)) call move_alloc(Init%OutData_SeaSt%RotFrame_u,y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1)%RotFrame_u )
+         if (allocated(Init%OutData_SeaSt%IsLoad_u  )) call move_alloc(Init%OutData_SeaSt%IsLoad_u  ,y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1)%IsLoad_u   )
+
+         if (allocated(Init%OutData_SeaSt%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1)%NumOutputs = size(Init%OutData_SeaSt%WriteOutputHdr)
+      end if
+
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
       END IF  
       
    end if
+
+
+   ! ........................
+   ! initialize AeroDyn15
+   ! ........................
+   ALLOCATE( AD%Input( p_FAST%InterpOrder+1 ), AD%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,"Error allocating AD%Input and AD%InputTimes.",ErrStat,ErrMsg,RoutineName)
+         CALL Cleanup()
+         RETURN
+      END IF
+
+   ALLOCATE( AD%Input_Saved( p_FAST%InterpOrder+1 ), AD%InputTimes_Saved( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,"Error allocating AD%Input and AD%InputTimes.",ErrStat,ErrMsg,RoutineName)
+         CALL Cleanup()
+         RETURN
+      END IF
+
+   IF ( (p_FAST%CompAero == Module_AD) .OR. (p_FAST%CompAero == Module_ExtLd) ) THEN
+
+      allocate(Init%InData_AD%rotors(1), stat=ErrStat2)
+      if (ErrStat2 /= 0 ) then
+         call SetErrStat( ErrID_Fatal, 'Allocating rotors', errStat, errMsg, RoutineName )
+         call Cleanup()
+         return
+      end if
+
+      Init%InData_AD%rotors(1)%NumBlades  = NumBl
+
+      if (p_FAST%CompAeroMaps) then
+         CALL AllocAry( MeshMapData%HubOrient, 3, 3, Init%InData_AD%rotors(1)%NumBlades, 'Hub orientation matrix', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            IF (ErrStat >= AbortErrLev) THEN
+               CALL Cleanup()
+               RETURN
+            END IF
+
+         theta = 0.0_R8Ki
+         do k=1,Init%InData_AD%rotors(1)%NumBlades
+            theta(1) = TwoPi_R8 * (k-1) / Init%InData_AD%rotors(1)%NumBlades
+            MeshMapData%HubOrient(:,:,k) = EulerConstruct( theta )
+         end do
+      end if
+
+
+         ! set initialization data for AD
+      CALL AllocAry( Init%InData_AD%rotors(1)%BladeRootPosition,      3, Init%InData_AD%rotors(1)%NumBlades, 'Init%InData_AD%rotors(1)%BladeRootPosition', errStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      CALL AllocAry( Init%InData_AD%rotors(1)%BladeRootOrientation,3, 3, Init%InData_AD%rotors(1)%NumBlades, 'Init%InData_AD%rotors(1)%BladeRootOrientation', errStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+
+      Init%InData_AD%Gravity            = p_FAST%Gravity
+      Init%InData_AD%Linearize          = p_FAST%Linearize
+      Init%InData_AD%CompAeroMaps       = p_FAST%CompAeroMaps
+      Init%InData_AD%rotors(1)%RotSpeed = p_FAST%RotSpeedInit ! used only for aeromaps
+      Init%InData_AD%InputFile          = p_FAST%AeroFile
+      Init%InData_AD%RootName           = p_FAST%OutFileRoot
+      Init%InData_AD%MHK                = p_FAST%MHK
+      if ( p_FAST%MHK == MHK_None ) then
+         Init%InData_AD%defFldDens      = p_FAST%AirDens
+      else
+         Init%InData_AD%defFldDens      = p_FAST%WtrDens
+      end if
+      Init%InData_AD%defKinVisc         = p_FAST%KinVisc
+      Init%InData_AD%defSpdSound        = p_FAST%SpdSound
+      Init%InData_AD%defPatm            = p_FAST%Patm
+      Init%InData_AD%defPvap            = p_FAST%Pvap
+      Init%InData_AD%WtrDpth            = p_FAST%WtrDpth
+      Init%InData_AD%MSL2SWL            = p_FAST%MSL2SWL
+
+
+      Init%InData_AD%rotors(1)%HubPosition        = ED%y%HubPtMotion%Position(:,1)
+      Init%InData_AD%rotors(1)%HubOrientation     = ED%y%HubPtMotion%RefOrientation(:,:,1)
+      Init%InData_AD%rotors(1)%NacellePosition    = ED%y%NacelleMotion%Position(:,1)
+      Init%InData_AD%rotors(1)%NacelleOrientation = ED%y%NacelleMotion%RefOrientation(:,:,1)
+      ! Note: not passing tailfin position and orientation at init
+      Init%InData_AD%rotors(1)%AeroProjMod        = APM_BEM_NoSweepPitchTwist
+
+      do k=1,NumBl
+         Init%InData_AD%rotors(1)%BladeRootPosition(:,k)      = ED%y%BladeRootMotion(k)%Position(:,1)
+         Init%InData_AD%rotors(1)%BladeRootOrientation(:,:,k) = ED%y%BladeRootMotion(k)%RefOrientation(:,:,1)
+      end do
+
+      ! Set pointers to flowfield
+      IF (p_FAST%CompInflow == Module_IfW) Init%InData_AD%FlowField => Init%OutData_IfW%FlowField
+
+      CALL AD_Init( Init%InData_AD, AD%Input(1), AD%p, AD%x(STATE_CURR), AD%xd(STATE_CURR), AD%z(STATE_CURR), &
+                    AD%OtherSt(STATE_CURR), AD%y, AD%m, p_FAST%dt_module( MODULE_AD ), Init%OutData_AD, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      p_FAST%ModuleInitialized(Module_AD) = .TRUE.
+      CALL SetModuleSubstepTime(Module_AD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      allocate( y_FAST%Lin%Modules(MODULE_AD)%Instance(1), stat=ErrStat2)
+      if (ErrStat2 /= 0 ) then
+         call SetErrStat(ErrID_Fatal, "Error allocating Lin%Modules(AD).", ErrStat, ErrMsg, RoutineName )
+      else
+         if (allocated(Init%OutData_AD%rotors(1)%LinNames_u  )) call move_alloc(Init%OutData_AD%rotors(1)%LinNames_u  ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%Names_u )
+         if (allocated(Init%OutData_AD%rotors(1)%LinNames_y  )) call move_alloc(Init%OutData_AD%rotors(1)%LinNames_y  ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%Names_y )
+         if (allocated(Init%OutData_AD%rotors(1)%LinNames_x  )) call move_alloc(Init%OutData_AD%rotors(1)%LinNames_x  ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%Names_x )
+         if (allocated(Init%OutData_AD%rotors(1)%RotFrame_u  )) call move_alloc(Init%OutData_AD%rotors(1)%RotFrame_u  ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%RotFrame_u )
+         if (allocated(Init%OutData_AD%rotors(1)%RotFrame_y  )) call move_alloc(Init%OutData_AD%rotors(1)%RotFrame_y  ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%RotFrame_y )
+         if (allocated(Init%OutData_AD%rotors(1)%RotFrame_x  )) call move_alloc(Init%OutData_AD%rotors(1)%RotFrame_x  ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%RotFrame_x )
+         if (allocated(Init%OutData_AD%rotors(1)%IsLoad_u    )) call move_alloc(Init%OutData_AD%rotors(1)%IsLoad_u    ,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%IsLoad_u   )
+         if (allocated(Init%OutData_AD%rotors(1)%DerivOrder_x)) call move_alloc(Init%OutData_AD%rotors(1)%DerivOrder_x,y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%DerivOrder_x )
+
+         if (allocated(Init%OutData_AD%rotors(1)%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%NumOutputs = size(Init%OutData_AD%rotors(1)%WriteOutputHdr)
+      end if
+
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+
+      AirDens = Init%OutData_AD%rotors(1)%AirDens
+
+   END IF ! CompAero
+
+   IF ( p_FAST%CompAero == Module_ExtLd ) THEN
+
+      IF ( PRESENT(ExternInitData) ) THEN
+
+         ! set initialization data for ExtLoads
+         CALL ExtLd_SetInitInput(Init%InData_ExtLd, Init%OutData_ED, ED%y, Init%OutData_BD, BD%y(:), Init%OutData_AD, p_FAST, ExternInitData, ErrStat2, ErrMsg2)
+         CALL ExtLd_Init( Init%InData_ExtLd, ExtLd%u, ExtLd%xd(1), ExtLd%p, ExtLd%y, ExtLd%m, p_FAST%dt_module( MODULE_ExtLd ), Init%OutData_ExtLd, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+         p_FAST%ModuleInitialized(Module_ExtLd) = .TRUE.
+         CALL SetModuleSubstepTime(Module_ExtLd, p_FAST, y_FAST, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+
+         AirDens = Init%OutData_ExtLd%AirDens
+
+      END IF
+
+   END IF
+
+   ! ........................
+   ! No aero of any sort
+   ! ........................
+   IF ( (p_FAST%CompAero /= Module_AD14) .and. (p_FAST%CompAero /= Module_AD) .and. (p_FAST%CompAero /= Module_ExtLd) ) THEN
+   ELSE
+      AirDens = 0.0_ReKi
+   ENDIF
+
+
+
+   ! ........................
+   ! initialize SuperController
+   ! ........................
+   IF ( PRESENT(ExternInitData) ) THEN
+         ! set up the data structures for integration with supercontroller
+      IF ( p_FAST%UseSC ) THEN
+         CALL SC_DX_Init( ExternInitData%NumSC2CtrlGlob, ExternInitData%NumSC2Ctrl, ExternInitData%NumCtrl2SC, SC_DX, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      ELSE
+         SC_DX%u%c_obj%toSC_Len       = 0
+         SC_DX%u%c_obj%toSC           = C_NULL_PTR
+         SC_DX%y%c_obj%fromSC_Len     = 0
+         SC_DX%y%c_obj%fromSC         = C_NULL_PTR
+         SC_DX%y%c_obj%fromSCglob_Len = 0
+         SC_DX%y%c_obj%fromSCglob     = C_NULL_PTR
+      END IF
+   END IF
+
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
 
    ! ........................
    ! initialize HydroDyn
@@ -9275,7 +9300,7 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
 
             CALL FAST_Linearize_OP(t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                      Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD, Turbine%IfW, Turbine%ExtInfw, &
-                     Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+                     Turbine%HD, Turbine%SeaSt, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                IF (ErrStat >= AbortErrLev) RETURN
@@ -9293,7 +9318,7 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
       t_global      = t_initial + n_t_global*Turbine%p_FAST%dt
 
       call FAST_CalcSteady( n_t_global, t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, Turbine%ED, Turbine%BD, Turbine%SrvD, &
-                      Turbine%AD, Turbine%IfW, Turbine%ExtInfw, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, &
+                      Turbine%AD, Turbine%IfW, Turbine%ExtInfw, Turbine%HD, Turbine%SeaSt, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, &
                       Turbine%Orca, Turbine%IceF, Turbine%IceD, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -9306,8 +9331,8 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
             t_global = Turbine%m_FAST%Lin%LinTimes(iLinTime)
 
             call SetOperatingPoint(iLinTime, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, Turbine%ED, Turbine%BD, Turbine%SrvD, &
-                                      Turbine%AD, Turbine%IfW, Turbine%ExtInfw, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, &
-                                    Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, Turbine%IceF, Turbine%IceD, ErrStat2, ErrMsg2 )
+                                   Turbine%AD, Turbine%IfW, Turbine%ExtInfw, Turbine%HD, Turbine%SeaSt, Turbine%SD, Turbine%ExtPtfm, &
+                                   Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, Turbine%IceF, Turbine%IceD, ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
             if (Turbine%p_FAST%DT_UJac < Turbine%p_FAST%TMax) then
@@ -9323,7 +9348,7 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
 
             CALL FAST_Linearize_OP(t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                      Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD, Turbine%IfW, Turbine%ExtInfw, &
-                     Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+                     Turbine%HD, Turbine%SeaSt, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                IF (ErrStat >= AbortErrLev) RETURN
@@ -9458,6 +9483,11 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
       CALL WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)
    end if
 
+
+      ! If we are doing AeroMaps, there is leftover data in AD15 parameters
+   if (p_FAST%CompAeroMaps) then
+      if (associated(AD%p%FlowField))  deallocate(AD%p%FlowField)
+   endif
 
 
       ! End all modules
@@ -10356,12 +10386,12 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, p_FAST, y_FAST, m_FAST, ED, 
                m_FAST%NextJacCalcTime = m_FAST%Lin%LinTimes(iLinTime)
             end if
 
-            call SetOperatingPoint(iLinTime, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, &
+            call SetOperatingPoint(iLinTime, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SeaSt, SD, ExtPtfm, &
                                     MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
                ! set perturbation of states based on x_eig magnitude and phase
-            call PerturbOP(tprime, iLinTime, ModeNo, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
+            call PerturbOP(tprime, iLinTime, ModeNo, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SeaSt, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                         IceF, IceD, ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                IF (ErrStat >= AbortErrLev) RETURN
@@ -10388,12 +10418,12 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, p_FAST, y_FAST, m_FAST, ED, 
             do it = 1,nt
                tprime = (it-1)*dt
 
-               call SetOperatingPoint(iLinTime, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, &
+               call SetOperatingPoint(iLinTime, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SeaSt, SD, ExtPtfm, &
                                      MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat2, ErrMsg2 )
                   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
                   ! set perturbation of states based on x_eig magnitude and phase
-               call PerturbOP(tprime, iLinTime, ModeNo, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
+               call PerturbOP(tprime, iLinTime, ModeNo, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SeaSt, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                          IceF, IceD, ErrStat2, ErrMsg2 )
                   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   IF (ErrStat >= AbortErrLev) RETURN

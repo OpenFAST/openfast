@@ -547,6 +547,28 @@ IMPLICIT NONE
     REAL(ReKi)  :: YawFriMz = 0.0_ReKi      !< External loading on yaw bearing not including inertial contributions [N-m]
   END TYPE ED_MiscVarType
 ! =======================
+! =========  Jac_u_idxStarts  =======
+  TYPE, PUBLIC :: Jac_u_idxStarts
+    INTEGER(IntKi)  :: BladeLoad = 1      !< Index to first point in y jacobian for BladeLoad [-]
+    INTEGER(IntKi)  :: PlatformLoad = 1      !< Index to first point in y jacobian for PlatformLoad [-]
+    INTEGER(IntKi)  :: TowerLoad = 1      !< Index to first point in y jacobian for TowerLoad [-]
+    INTEGER(IntKi)  :: HubLoad = 1      !< Index to first point in y jacobian for HubLoad [-]
+    INTEGER(IntKi)  :: NacelleLoad = 1      !< Index to first point in y jacobian for NacelleLoad [-]
+    INTEGER(IntKi)  :: TFinLoad = 1      !< Index to first point in y jacobian for TFinLoad [-]
+    INTEGER(IntKi)  :: BlPitchCom = 1      !< Index to first point in y jacobian for BlPitchCom [-]
+  END TYPE Jac_u_idxStarts
+! =======================
+! =========  Jac_y_idxStarts  =======
+  TYPE, PUBLIC :: Jac_y_idxStarts
+    INTEGER(IntKi)  :: Blade = 1      !< Index to first point in u jacobian for Blade [-]
+    INTEGER(IntKi)  :: Platform = 1      !< Index to first point in u jacobian for Platform [-]
+    INTEGER(IntKi)  :: Tower = 1      !< Index to first point in u jacobian for Tower [-]
+    INTEGER(IntKi)  :: Hub = 1      !< Index to first point in u jacobian for Hub [-]
+    INTEGER(IntKi)  :: BladeRoot = 1      !< Index to first point in u jacobian for BladeRoot [-]
+    INTEGER(IntKi)  :: Nacelle = 1      !< Index to first point in u jacobian for Nacelle [-]
+    INTEGER(IntKi)  :: TFin = 1      !< Index to first point in u jacobian for TFin [-]
+  END TYPE Jac_y_idxStarts
+! =======================
 ! =========  ED_ParameterType  =======
   TYPE, PUBLIC :: ED_ParameterType
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [seconds]
@@ -767,6 +789,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: BldNd_TotNumOuts = 0_IntKi      !< Total number of requested output channels of blade node information (BldNd_NumOuts * BldNd_BlOutNd * BldNd_BladesOut -- ED_AllBldNdOuts) [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: BldNd_OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
     INTEGER(IntKi)  :: BldNd_BladesOut = 0_IntKi      !< The blades to output (ED_AllBldNdOuts) [-]
+    TYPE(Jac_u_idxStarts)  :: Jac_u_idxStartList      !< Starting indices for all Jac_u compenents [-]
+    TYPE(Jac_y_idxStarts)  :: Jac_y_idxStartList      !< Starting indices for all Jac_u compenents [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
@@ -4986,6 +5010,118 @@ subroutine ED_UnPackMisc(RF, OutData)
    call RegUnpack(RF, OutData%YawFriMz); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
+subroutine ED_CopyJac_u_idxStarts(SrcJac_u_idxStartsData, DstJac_u_idxStartsData, CtrlCode, ErrStat, ErrMsg)
+   type(Jac_u_idxStarts), intent(in) :: SrcJac_u_idxStartsData
+   type(Jac_u_idxStarts), intent(inout) :: DstJac_u_idxStartsData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'ED_CopyJac_u_idxStarts'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstJac_u_idxStartsData%BladeLoad = SrcJac_u_idxStartsData%BladeLoad
+   DstJac_u_idxStartsData%PlatformLoad = SrcJac_u_idxStartsData%PlatformLoad
+   DstJac_u_idxStartsData%TowerLoad = SrcJac_u_idxStartsData%TowerLoad
+   DstJac_u_idxStartsData%HubLoad = SrcJac_u_idxStartsData%HubLoad
+   DstJac_u_idxStartsData%NacelleLoad = SrcJac_u_idxStartsData%NacelleLoad
+   DstJac_u_idxStartsData%TFinLoad = SrcJac_u_idxStartsData%TFinLoad
+   DstJac_u_idxStartsData%BlPitchCom = SrcJac_u_idxStartsData%BlPitchCom
+end subroutine
+
+subroutine ED_DestroyJac_u_idxStarts(Jac_u_idxStartsData, ErrStat, ErrMsg)
+   type(Jac_u_idxStarts), intent(inout) :: Jac_u_idxStartsData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'ED_DestroyJac_u_idxStarts'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
+
+subroutine ED_PackJac_u_idxStarts(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(Jac_u_idxStarts), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'ED_PackJac_u_idxStarts'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%BladeLoad)
+   call RegPack(RF, InData%PlatformLoad)
+   call RegPack(RF, InData%TowerLoad)
+   call RegPack(RF, InData%HubLoad)
+   call RegPack(RF, InData%NacelleLoad)
+   call RegPack(RF, InData%TFinLoad)
+   call RegPack(RF, InData%BlPitchCom)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine ED_UnPackJac_u_idxStarts(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(Jac_u_idxStarts), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'ED_UnPackJac_u_idxStarts'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%BladeLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PlatformLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TowerLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HubLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NacelleLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BlPitchCom); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine ED_CopyJac_y_idxStarts(SrcJac_y_idxStartsData, DstJac_y_idxStartsData, CtrlCode, ErrStat, ErrMsg)
+   type(Jac_y_idxStarts), intent(in) :: SrcJac_y_idxStartsData
+   type(Jac_y_idxStarts), intent(inout) :: DstJac_y_idxStartsData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'ED_CopyJac_y_idxStarts'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstJac_y_idxStartsData%Blade = SrcJac_y_idxStartsData%Blade
+   DstJac_y_idxStartsData%Platform = SrcJac_y_idxStartsData%Platform
+   DstJac_y_idxStartsData%Tower = SrcJac_y_idxStartsData%Tower
+   DstJac_y_idxStartsData%Hub = SrcJac_y_idxStartsData%Hub
+   DstJac_y_idxStartsData%BladeRoot = SrcJac_y_idxStartsData%BladeRoot
+   DstJac_y_idxStartsData%Nacelle = SrcJac_y_idxStartsData%Nacelle
+   DstJac_y_idxStartsData%TFin = SrcJac_y_idxStartsData%TFin
+end subroutine
+
+subroutine ED_DestroyJac_y_idxStarts(Jac_y_idxStartsData, ErrStat, ErrMsg)
+   type(Jac_y_idxStarts), intent(inout) :: Jac_y_idxStartsData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'ED_DestroyJac_y_idxStarts'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
+
+subroutine ED_PackJac_y_idxStarts(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(Jac_y_idxStarts), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'ED_PackJac_y_idxStarts'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%Blade)
+   call RegPack(RF, InData%Platform)
+   call RegPack(RF, InData%Tower)
+   call RegPack(RF, InData%Hub)
+   call RegPack(RF, InData%BladeRoot)
+   call RegPack(RF, InData%Nacelle)
+   call RegPack(RF, InData%TFin)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine ED_UnPackJac_y_idxStarts(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(Jac_y_idxStarts), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'ED_UnPackJac_y_idxStarts'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%Blade); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Platform); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Tower); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Hub); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BladeRoot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Nacelle); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFin); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
 subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    type(ED_ParameterType), intent(in) :: SrcParamData
    type(ED_ParameterType), intent(inout) :: DstParamData
@@ -5832,6 +5968,12 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    DstParamData%BldNd_BladesOut = SrcParamData%BldNd_BladesOut
+   call ED_CopyJac_u_idxStarts(SrcParamData%Jac_u_idxStartList, DstParamData%Jac_u_idxStartList, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call ED_CopyJac_y_idxStarts(SrcParamData%Jac_y_idxStartList, DstParamData%Jac_y_idxStartList, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcParamData%Jac_u_indx)) then
       LB(1:2) = lbound(SrcParamData%Jac_u_indx, kind=B8Ki)
       UB(1:2) = ubound(SrcParamData%Jac_u_indx, kind=B8Ki)
@@ -6067,6 +6209,10 @@ subroutine ED_DestroyParam(ParamData, ErrStat, ErrMsg)
       end do
       deallocate(ParamData%BldNd_OutParam)
    end if
+   call ED_DestroyJac_u_idxStarts(ParamData%Jac_u_idxStartList, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ED_DestroyJac_y_idxStarts(ParamData%Jac_y_idxStartList, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%Jac_u_indx)) then
       deallocate(ParamData%Jac_u_indx)
    end if
@@ -6319,6 +6465,8 @@ subroutine ED_PackParam(RF, Indata)
       end do
    end if
    call RegPack(RF, InData%BldNd_BladesOut)
+   call ED_PackJac_u_idxStarts(RF, InData%Jac_u_idxStartList) 
+   call ED_PackJac_y_idxStarts(RF, InData%Jac_y_idxStartList) 
    call RegPackAlloc(RF, InData%Jac_u_indx)
    call RegPackAlloc(RF, InData%du)
    call RegPackAlloc(RF, InData%dx)
@@ -6583,6 +6731,8 @@ subroutine ED_UnPackParam(RF, OutData)
       end do
    end if
    call RegUnpack(RF, OutData%BldNd_BladesOut); if (RegCheckErr(RF, RoutineName)) return
+   call ED_UnpackJac_u_idxStarts(RF, OutData%Jac_u_idxStartList) ! Jac_u_idxStartList 
+   call ED_UnpackJac_y_idxStarts(RF, OutData%Jac_y_idxStartList) ! Jac_y_idxStartList 
    call RegUnpackAlloc(RF, OutData%Jac_u_indx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%du); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%dx); if (RegCheckErr(RF, RoutineName)) return

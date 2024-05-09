@@ -131,6 +131,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: defPvap = 0.0_ReKi      !< Default vapor pressure from the driver; may be overwritten [Pa]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [m]
     REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Offset between still-water level and mean sea level [m]
+    TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Pointer of InflowWinds flow field data type [-]
   END TYPE AD_InitInputType
 ! =======================
 ! =========  AD_BladePropsType  =======
@@ -411,6 +412,27 @@ IMPLICIT NONE
     TYPE(RotInflowType) , DIMENSION(:), ALLOCATABLE  :: RotInflow      !< Inflow on rotor [-]
   END TYPE AD_InflowType
 ! =======================
+! =========  Jac_u_idxStarts  =======
+  TYPE, PUBLIC :: Jac_u_idxStarts
+    INTEGER(IntKi)  :: Nacelle = 1      !< Index to first point in u jacobian for Nacelle [-]
+    INTEGER(IntKi)  :: Hub = 1      !< Index to first point in u jacobian for Hub [-]
+    INTEGER(IntKi)  :: TFin = 1      !< Index to first point in u jacobian for TFin [-]
+    INTEGER(IntKi)  :: Tower = 1      !< Index to first point in u jacobian for Tower [-]
+    INTEGER(IntKi)  :: BladeRoot = 1      !< Index to first point in u jacobian for BladeRoot [-]
+    INTEGER(IntKi)  :: Blade = 1      !< Index to first point in u jacobian for Blade [-]
+    INTEGER(IntKi)  :: UserProp = 1      !< Index to first point in u jacobian for UserProp [-]
+    INTEGER(IntKi)  :: Extended = 1      !< Index to first point in u jacobian for Extended [-]
+  END TYPE Jac_u_idxStarts
+! =======================
+! =========  Jac_y_idxStarts  =======
+  TYPE, PUBLIC :: Jac_y_idxStarts
+    INTEGER(IntKi)  :: NacelleLoad = 1      !< Index to first point in y jacobian for NacelleLoad [-]
+    INTEGER(IntKi)  :: HubLoad = 1      !< Index to first point in y jacobian for HubLoad [-]
+    INTEGER(IntKi)  :: TFinLoad = 1      !< Index to first point in y jacobian for TFinLoad [-]
+    INTEGER(IntKi)  :: TowerLoad = 1      !< Index to first point in y jacobian for TowerLoad [-]
+    INTEGER(IntKi)  :: BladeLoad = 1      !< Index to first point in y jacobian for BladeLoad [-]
+  END TYPE Jac_y_idxStarts
+! =======================
 ! =========  RotParameterType  =======
   TYPE, PUBLIC :: RotParameterType
     INTEGER(IntKi)  :: NumBlades = 0_IntKi      !< Number of blades on the turbine [-]
@@ -440,6 +462,9 @@ IMPLICIT NONE
     TYPE(BEMT_ParameterType)  :: BEMT      !< Parameters for BEMT module [-]
     TYPE(AA_ParameterType)  :: AA      !< Parameters for AA module [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian [-]
+    TYPE(Jac_u_idxStarts)  :: Jac_u_idxStartList      !< Starting indices for all Jac_u components [-]
+    TYPE(Jac_y_idxStarts)  :: Jac_y_idxStartList      !< Starting indices for all Jac_y components [-]
+    INTEGER(IntKi)  :: NumExtendedInputs = 0_IntKi      !< number of extended inputs [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
     INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix [-]
@@ -980,6 +1005,7 @@ subroutine AD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    DstInitInputData%defPvap = SrcInitInputData%defPvap
    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
    DstInitInputData%MSL2SWL = SrcInitInputData%MSL2SWL
+   DstInitInputData%FlowField => SrcInitInputData%FlowField
 end subroutine
 
 subroutine AD_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -1004,6 +1030,7 @@ subroutine AD_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyFileInfoType(InitInputData%PassedPrimaryInputData, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   nullify(InitInputData%FlowField)
 end subroutine
 
 subroutine AD_PackInitInput(RF, Indata)
@@ -1012,6 +1039,7 @@ subroutine AD_PackInitInput(RF, Indata)
    character(*), parameter         :: RoutineName = 'AD_PackInitInput'
    integer(B8Ki)   :: i1
    integer(B8Ki)   :: LB(1), UB(1)
+   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, allocated(InData%rotors))
    if (allocated(InData%rotors)) then
@@ -1037,6 +1065,13 @@ subroutine AD_PackInitInput(RF, Indata)
    call RegPack(RF, InData%defPvap)
    call RegPack(RF, InData%WtrDpth)
    call RegPack(RF, InData%MSL2SWL)
+   call RegPack(RF, associated(InData%FlowField))
+   if (associated(InData%FlowField)) then
+      call RegPackPointer(RF, c_loc(InData%FlowField), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call IfW_FlowField_PackFlowFieldType(RF, InData%FlowField) 
+      end if
+   end if
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1048,6 +1083,8 @@ subroutine AD_UnPackInitInput(RF, OutData)
    integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(B8Ki)   :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    if (allocated(OutData%rotors)) deallocate(OutData%rotors)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
@@ -1077,6 +1114,24 @@ subroutine AD_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%defPvap); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WtrDpth); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MSL2SWL); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%FlowField)) deallocate(OutData%FlowField)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%FlowField)
+      else
+         allocate(OutData%FlowField,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%FlowField.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%FlowField)
+         call IfW_FlowField_UnpackFlowFieldType(RF, OutData%FlowField) ! FlowField 
+      end if
+   else
+      OutData%FlowField => null()
+   end if
 end subroutine
 
 subroutine AD_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -4515,6 +4570,115 @@ subroutine AD_UnPackInflowType(RF, OutData)
    end if
 end subroutine
 
+subroutine AD_CopyJac_u_idxStarts(SrcJac_u_idxStartsData, DstJac_u_idxStartsData, CtrlCode, ErrStat, ErrMsg)
+   type(Jac_u_idxStarts), intent(in) :: SrcJac_u_idxStartsData
+   type(Jac_u_idxStarts), intent(inout) :: DstJac_u_idxStartsData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AD_CopyJac_u_idxStarts'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstJac_u_idxStartsData%Nacelle = SrcJac_u_idxStartsData%Nacelle
+   DstJac_u_idxStartsData%Hub = SrcJac_u_idxStartsData%Hub
+   DstJac_u_idxStartsData%TFin = SrcJac_u_idxStartsData%TFin
+   DstJac_u_idxStartsData%Tower = SrcJac_u_idxStartsData%Tower
+   DstJac_u_idxStartsData%BladeRoot = SrcJac_u_idxStartsData%BladeRoot
+   DstJac_u_idxStartsData%Blade = SrcJac_u_idxStartsData%Blade
+   DstJac_u_idxStartsData%UserProp = SrcJac_u_idxStartsData%UserProp
+   DstJac_u_idxStartsData%Extended = SrcJac_u_idxStartsData%Extended
+end subroutine
+
+subroutine AD_DestroyJac_u_idxStarts(Jac_u_idxStartsData, ErrStat, ErrMsg)
+   type(Jac_u_idxStarts), intent(inout) :: Jac_u_idxStartsData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AD_DestroyJac_u_idxStarts'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
+
+subroutine AD_PackJac_u_idxStarts(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(Jac_u_idxStarts), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'AD_PackJac_u_idxStarts'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%Nacelle)
+   call RegPack(RF, InData%Hub)
+   call RegPack(RF, InData%TFin)
+   call RegPack(RF, InData%Tower)
+   call RegPack(RF, InData%BladeRoot)
+   call RegPack(RF, InData%Blade)
+   call RegPack(RF, InData%UserProp)
+   call RegPack(RF, InData%Extended)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine AD_UnPackJac_u_idxStarts(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(Jac_u_idxStarts), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'AD_UnPackJac_u_idxStarts'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%Nacelle); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Hub); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Tower); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BladeRoot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Blade); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%UserProp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Extended); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine AD_CopyJac_y_idxStarts(SrcJac_y_idxStartsData, DstJac_y_idxStartsData, CtrlCode, ErrStat, ErrMsg)
+   type(Jac_y_idxStarts), intent(in) :: SrcJac_y_idxStartsData
+   type(Jac_y_idxStarts), intent(inout) :: DstJac_y_idxStartsData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AD_CopyJac_y_idxStarts'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstJac_y_idxStartsData%NacelleLoad = SrcJac_y_idxStartsData%NacelleLoad
+   DstJac_y_idxStartsData%HubLoad = SrcJac_y_idxStartsData%HubLoad
+   DstJac_y_idxStartsData%TFinLoad = SrcJac_y_idxStartsData%TFinLoad
+   DstJac_y_idxStartsData%TowerLoad = SrcJac_y_idxStartsData%TowerLoad
+   DstJac_y_idxStartsData%BladeLoad = SrcJac_y_idxStartsData%BladeLoad
+end subroutine
+
+subroutine AD_DestroyJac_y_idxStarts(Jac_y_idxStartsData, ErrStat, ErrMsg)
+   type(Jac_y_idxStarts), intent(inout) :: Jac_y_idxStartsData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AD_DestroyJac_y_idxStarts'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
+
+subroutine AD_PackJac_y_idxStarts(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(Jac_y_idxStarts), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'AD_PackJac_y_idxStarts'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%NacelleLoad)
+   call RegPack(RF, InData%HubLoad)
+   call RegPack(RF, InData%TFinLoad)
+   call RegPack(RF, InData%TowerLoad)
+   call RegPack(RF, InData%BladeLoad)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine AD_UnPackJac_y_idxStarts(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(Jac_y_idxStarts), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'AD_UnPackJac_y_idxStarts'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%NacelleLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HubLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TFinLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TowerLoad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BladeLoad); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
 subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeData, CtrlCode, ErrStat, ErrMsg)
    type(RotParameterType), intent(in) :: SrcRotParameterTypeData
    type(RotParameterType), intent(inout) :: DstRotParameterTypeData
@@ -4735,6 +4899,13 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
       end if
       DstRotParameterTypeData%Jac_u_indx = SrcRotParameterTypeData%Jac_u_indx
    end if
+   call AD_CopyJac_u_idxStarts(SrcRotParameterTypeData%Jac_u_idxStartList, DstRotParameterTypeData%Jac_u_idxStartList, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call AD_CopyJac_y_idxStarts(SrcRotParameterTypeData%Jac_y_idxStartList, DstRotParameterTypeData%Jac_y_idxStartList, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstRotParameterTypeData%NumExtendedInputs = SrcRotParameterTypeData%NumExtendedInputs
    if (allocated(SrcRotParameterTypeData%du)) then
       LB(1:1) = lbound(SrcRotParameterTypeData%du, kind=B8Ki)
       UB(1:1) = ubound(SrcRotParameterTypeData%du, kind=B8Ki)
@@ -4901,6 +5072,10 @@ subroutine AD_DestroyRotParameterType(RotParameterTypeData, ErrStat, ErrMsg)
    if (allocated(RotParameterTypeData%Jac_u_indx)) then
       deallocate(RotParameterTypeData%Jac_u_indx)
    end if
+   call AD_DestroyJac_u_idxStarts(RotParameterTypeData%Jac_u_idxStartList, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD_DestroyJac_y_idxStarts(RotParameterTypeData%Jac_y_idxStartList, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(RotParameterTypeData%du)) then
       deallocate(RotParameterTypeData%du)
    end if
@@ -4966,6 +5141,9 @@ subroutine AD_PackRotParameterType(RF, Indata)
    call BEMT_PackParam(RF, InData%BEMT) 
    call AA_PackParam(RF, InData%AA) 
    call RegPackAlloc(RF, InData%Jac_u_indx)
+   call AD_PackJac_u_idxStarts(RF, InData%Jac_u_idxStartList) 
+   call AD_PackJac_y_idxStarts(RF, InData%Jac_y_idxStartList) 
+   call RegPack(RF, InData%NumExtendedInputs)
    call RegPackAlloc(RF, InData%du)
    call RegPackAlloc(RF, InData%dx)
    call RegPack(RF, InData%Jac_ny)
@@ -5057,6 +5235,9 @@ subroutine AD_UnPackRotParameterType(RF, OutData)
    call BEMT_UnpackParam(RF, OutData%BEMT) ! BEMT 
    call AA_UnpackParam(RF, OutData%AA) ! AA 
    call RegUnpackAlloc(RF, OutData%Jac_u_indx); if (RegCheckErr(RF, RoutineName)) return
+   call AD_UnpackJac_u_idxStarts(RF, OutData%Jac_u_idxStartList) ! Jac_u_idxStartList 
+   call AD_UnpackJac_y_idxStarts(RF, OutData%Jac_y_idxStartList) ! Jac_y_idxStartList 
+   call RegUnpack(RF, OutData%NumExtendedInputs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%du); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%dx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Jac_ny); if (RegCheckErr(RF, RoutineName)) return
