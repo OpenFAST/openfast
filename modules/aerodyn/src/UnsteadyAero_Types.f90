@@ -34,7 +34,7 @@ MODULE UnsteadyAero_Types
 USE AirfoilInfo_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_None = 0      ! Steady aerodynamics, using same angle of attack convention as UA [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_None = 0      ! UAMod = 0 [Quasi-steady ] [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Baseline = 1      ! UAMod = 1 [Baseline model (Original)] [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Gonzalez = 2      ! UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)] [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_MinnemaPierce = 3      ! [Minnema/Pierce variant (changes in Cc and Cm)] [-]

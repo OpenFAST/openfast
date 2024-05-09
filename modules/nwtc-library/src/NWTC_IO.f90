@@ -2959,7 +2959,7 @@ END SUBROUTINE CheckR8Var
    END SUBROUTINE ParseChAry
 !=======================================================================
 !> This subroutine parses a comment line
-   SUBROUTINE ParseCom ( FileInfo, LineNum, Var, ErrStat, ErrMsg, UnEc )
+   SUBROUTINE ParseCom ( FileInfo, LineNum, Var, ErrStat, ErrMsg, UnEc, IsLegalComment )
 
          ! Arguments declarations.
       INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       !< The error status.
@@ -2968,6 +2968,7 @@ END SUBROUTINE CheckR8Var
       CHARACTER(*),   INTENT(OUT)            :: Var                           !< The variable to receive the comment
       CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        !< The error message, if ErrStat /= 0.
       TYPE (FileInfoType), INTENT(IN)        :: FileInfo                      !< The derived type for holding the file information.
+      LOGICAL, OPTIONAL,   INTENT(INOUT)     :: IsLegalComment                !< True if the comment is a "legal" comment line starting with '---' or '==='. NOTE: We have too many options, we need to be more strict!!!!
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseCom'
       
       ErrStat=ErrID_None
@@ -2994,6 +2995,21 @@ END SUBROUTINE CheckR8Var
          IF ( UnEc > 0 )  WRITE (UnEc,'(A)')  trim(Var)
       END IF
       LineNum = LineNum + 1
+
+      IF (PRESENT(IsLegalComment) ) then
+         if (len(Var)<=3) then
+            IsLegalComment=.False.
+         else
+            ! Here, we are talking about comments in the input file that are "expected to be there"
+            IsLegalComment =  (Var(1:3)=='---') .or.  (Var(1:3)=='===')
+         endif
+         if (.not.IsLegalComment) then
+            call SetErrStat(ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
+                   ' >> The comment line did not start with `---` or `===`. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
+                   , ErrStat, ErrMsg, RoutineName )
+         endif
+      END IF
 
    END SUBROUTINE ParseCom
 
@@ -4095,7 +4111,9 @@ END SUBROUTINE CheckR8Var
          NullLoc = index(FileString(idx:len(FileString)),C_NULL_CHAR)
          ! started indexing at idx, so add that back in for location in FileString
          NullLoc = NullLoc + idx - 1
-         if (NullLoc > idx) then
+         if (NullLoc == idx) then   ! blank line
+            FileStringArray(Line) = ''
+         elseif (NullLoc > idx) then
             FileStringArray(Line) = trim(FileString(idx:NullLoc-1))
          else
             ! If not NULL terminated
