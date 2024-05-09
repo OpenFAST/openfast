@@ -348,11 +348,10 @@ typedef	^	MiscVarType	ReKi            WindVel	{:}{:} - -	"XYZ components of wind
 typedef	^	MiscVarType	ReKi            WindAcc	{:}{:} - -	"XYZ components of wind acceleration"	-
 
 # Inflow data storage
-typedef	^	BldInflowType	ReKi	InflowOnBlade	{:}{:}	-	-	"U,V,W at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
-typedef	^	BldInflowType	ReKi	AccelOnBlade	{:}{:}	-	-	"Wind acceleration at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
-typedef	^	RotInflowType	BldInflowType    Bld		{:}	-	-	"Blade Inputs"	-
-typedef	^	RotInflowType	ReKi	InflowOnTower	{:}{:}	-	-	"U,V,W at nodes on the tower"	m/s
-typedef	^	RotInflowType	ReKi	AccelOnTower	{:}{:}	-	-	"Wind acceleration at nodes on the tower"	m/s
+typedef	^	ElemInflowType	ReKi	InflowVel	{:}{:}	-	-	"U,V,W at nodes on element (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
+typedef	^	ElemInflowType	ReKi	InflowAcc	{:}{:}	-	-	"Wind acceleration at nodes on element (blade or tower) (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
+typedef	^	RotInflowType	ElemInflowType    Blade		{:}	-	-	"Blade wind inputs"	-
+typedef	^	RotInflowType	ElemInflowType    Tower		-	-	-	"Blade wind inputs"	-
 typedef	^	RotInflowType	ReKi	InflowOnHub 	{3}{1}	-	-	"U,V,W at hub"	m/s
 typedef	^	RotInflowType	ReKi	InflowOnNacelle	{3}{1}	-	-	"U,V,W at nacelle"	m/s
 typedef	^	RotInflowType	ReKi	InflowOnTailFin	{3}{1}	-	-	"U,V,W at tailfin"	m/s

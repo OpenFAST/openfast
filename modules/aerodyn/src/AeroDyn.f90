@@ -658,7 +658,7 @@ subroutine Init_MiscVars(m, p, p_AD, u, y, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ""
    
-   call AllocAry( m%DisturbedInflow, 3_IntKi, p%NumBlNds, p%numBlades, 'm%DisturbedInflow', ErrStat2, ErrMsg2 ) ! must be same size as u%InflowOnBlade
+   call AllocAry( m%DisturbedInflow, 3_IntKi, p%NumBlNds, p%numBlades, 'm%DisturbedInflow', ErrStat2, ErrMsg2 ) ! must be same size as RotInflow%Blade(k)%InflowVel
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 if ((p_AD%SectAvg) .and. ((p_AD%Wake_Mod == WakeMod_BEMT))  ) then
    call AllocAry( m%SectAvgInflow,   3_IntKi, p%NumBlNds, p%numBlades, 'm%SectAvgInflow'  , ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -1318,29 +1318,29 @@ subroutine Init_RotInflow( p, RotInflow, errStat, ErrMsg )
    ErrMsg   = ""
 
    ! Arrays for InflowWind inputs:
-   allocate(RotInflow%Bld(p%numBlades), stat=ErrStat2)
+   allocate(RotInflow%Blade(p%numBlades), stat=ErrStat2)
    if (ErrStat2 /= 0) then
-      call SetErrStat( ErrID_Fatal, 'Error allocating RotInflow%Bld', errStat, errMsg, RoutineName )
+      call SetErrStat( ErrID_Fatal, 'Error allocating RotInflow%Blade', errStat, errMsg, RoutineName )
       if (Failed()) return
    end if
 
    do k = 1, p%NumBlades
-      call AllocAry( RotInflow%Bld(k)%InflowOnBlade, 3_IntKi, p%NumBlNds, 'RotInflow%Bld(k)%InflowOnBlade', ErrStat2, ErrMsg2 )
+      call AllocAry( RotInflow%Blade(k)%InflowVel, 3_IntKi, p%NumBlNds, 'RotInflow%Blade(k)%InflowVel', ErrStat2, ErrMsg2 )
       if (Failed()) return
-      RotInflow%Bld(k)%InflowOnBlade = 0.0_ReKi
+      RotInflow%Blade(k)%InflowVel = 0.0_ReKi
 
       if (p%MHK > 0) then
-         call AllocAry( RotInflow%Bld(k)%AccelOnBlade, 3_IntKi, p%NumBlNds, 'RotInflow%Bld(k)%AccelOnBlade', ErrStat2, ErrMsg2 )
+         call AllocAry( RotInflow%Blade(k)%InflowAcc, 3_IntKi, p%NumBlNds, 'RotInflow%Blade(k)%InflowAcc', ErrStat2, ErrMsg2 )
          if (Failed()) return
-         RotInflow%Bld(k)%AccelOnBlade = 0.0_ReKi
+         RotInflow%Blade(k)%InflowAcc = 0.0_ReKi
       end if
    end do
 
-   call AllocAry( RotInflow%InflowOnTower, 3_IntKi, p%NumTwrNds, 'RotInflow%InflowOnTower', ErrStat2, ErrMsg2 ) ! could be size zero
+   call AllocAry( RotInflow%Tower%InflowVel, 3_IntKi, p%NumTwrNds, 'RotInflow%Tower%InflowVel', ErrStat2, ErrMsg2 ) ! could be size zero
    if (Failed()) return
 
    if (p%MHK > 0) then
-      call AllocAry( RotInflow%AccelOnTower, 3_IntKi, p%NumTwrNds, 'RotInflow%AccelOnTower', ErrStat2, ErrMsg2 ) ! could be size zero
+      call AllocAry( RotInflow%Tower%InflowAcc, 3_IntKi, p%NumTwrNds, 'RotInflow%Tower%InflowAcc', ErrStat2, ErrMsg2 ) ! could be size zero
       if (Failed()) return
    end if
 
@@ -1349,7 +1349,7 @@ subroutine Init_RotInflow( p, RotInflow, errStat, ErrMsg )
    RotInflow%InflowOnNacelle = 0.0_ReKi
    RotInflow%InflowOnTailFin = 0.0_ReKi
    RotInflow%AvgDiskVel      = 0.0_ReKi
-   RotInflow%InflowOnTower   = 0.0_ReKi 
+   RotInflow%Tower%InflowVel   = 0.0_ReKi 
 
 contains 
    logical function Failed()
@@ -1721,13 +1721,9 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
       call AD_Input_ExtrapInterp(u,utimes,uInterp,BEMT_utimes(i), errStat2, errMsg2)
       if (Failed()) return
 
-!Extrapolate Inflow (should match previous extrapolations)
-      call AD_InflowType_ExtrapInterp(m%Inflow(1:size(utimes)),utimes,InflowInterp,BEMT_utimes(i), errStat2, errMsg2)
+      ! Calculate wind using uInterp
+      call AD_CalcWind(utimes(i),uInterp, p%FLowField, p, OtherState, m%Inflow(1), ErrStat2, ErrMsg2)
       if (Failed()) return
-
-!Calculate using uInterp
-!      call AD_CalcWind(utimes(i),uInterp, p%FLowField, p, OtherState, m%Inflow(1), ErrStat2, ErrMsg2)
-!      if (Failed()) return
 
       do iR = 1,size(p%rotors)
          call SetInputs(t, p%rotors(iR), p, uInterp%rotors(iR), InflowInterp%RotInflow(iR), m%rotors(iR), i, errStat2, errMsg2)
@@ -1884,7 +1880,7 @@ subroutine AD_CalcWind_Rotor(t, u, FlowField, p, RotInflow, StartNode, ErrStat, 
    do k = 1, p%NumBlades
       call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
          real(u%BladeMotion(k)%TranslationDisp + u%BladeMotion(k)%Position, ReKi), &
-         RotInflow%Bld(k)%InflowOnBlade, RotInflow%Bld(k)%AccelOnBlade, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+         RotInflow%Blade(k)%InflowVel, RotInflow%Blade(k)%InflowAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
       if(Failed()) return
       StartNode = StartNode + p%NumBlNds
    end do
@@ -1893,7 +1889,7 @@ subroutine AD_CalcWind_Rotor(t, u, FlowField, p, RotInflow, StartNode, ErrStat, 
    if (u%TowerMotion%Nnodes > 0) then
       call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
          real(u%TowerMotion%TranslationDisp + u%TowerMotion%Position, ReKi), &
-         RotInflow%InflowOnTower, RotInflow%AccelOnTower, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+         RotInflow%Tower%InflowVel, RotInflow%Tower%InflowAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
       if(Failed()) return
       StartNode = StartNode + p%NumTwrNds
    end if
@@ -2801,7 +2797,7 @@ subroutine SetDisturbedInflow(p, p_AD, u, RotInflow, m, errStat, errMsg)
          call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
    else
       do k = 1, p%NumBlades
-         m%DisturbedInflow(:,:,k) = RotInflow%Bld(k)%InflowOnBlade
+         m%DisturbedInflow(:,:,k) = RotInflow%Blade(k)%InflowVel
       end do
    end if
 
@@ -3296,7 +3292,7 @@ subroutine DiskAvgValues(p, u, RotInflow, m, x_hat_disk, y_hat_disk, z_hat_disk,
    do k=1,p%NumBlades
       do j=1,p%NumBlNds
          m%AvgDiskVelDist = m%AvgDiskVelDist + m%DisturbedInflow(:,j,k)
-         m%AvgDiskVel = m%AvgDiskVel + RotInflow%Bld(k)%InflowOnBlade(:,j)
+         m%AvgDiskVel = m%AvgDiskVel + RotInflow%Blade(k)%InflowVel(:,j)
       end do
    end do
    m%AvgDiskVelDist = m%AvgDiskVelDist / real( p%NumBlades * p%NumBlNds, ReKi )
@@ -3666,7 +3662,7 @@ subroutine SetInputsForAA(p, u, RotInflow, m, errStat, errMsg)
          m%AA_u%AoANoise(i,j) = m%BEMT_y%AOA(i,j)
 
          ! Set the blade element undisturbed flow
-         m%AA_u%Inflow(:,i,j) = RotInflow%Bld(j)%InflowonBlade(:,i)
+         m%AA_u%Inflow(:,i,j) = RotInflow%Blade(j)%InflowVel(:,i)
       end do
    end do
 end subroutine SetInputsForAA
@@ -4946,7 +4942,7 @@ SUBROUTINE ADTwr_CalcOutput(p, u, RotInflow, m, y, ErrStat, ErrMsg )
    
    do j=1,p%NumTwrNds
       
-      V_rel = RotInflow%InflowOnTower(:,j) - u%TowerMotion%TranslationVel(:,j) ! relative wind speed at tower node
+      V_rel = RotInflow%Tower%InflowVel(:,j) - u%TowerMotion%TranslationVel(:,j) ! relative wind speed at tower node
    
       tmp   = u%TowerMotion%Orientation(1,:,j)
       VL(1) = dot_product( V_Rel, tmp )            ! relative local x-component of wind speed of the jth node in the tower
@@ -5066,9 +5062,9 @@ SUBROUTINE TwrInfl( p, u, RotInflow, m, ErrStat, ErrMsg )
 
          if ( DisturbInflow ) then
             v = CalculateTowerInfluence(p, xbar, ybar, zbar, W_tower, TwrCd, TwrTI)
-            m%DisturbedInflow(:,j,k) = RotInflow%Bld(k)%InflowOnBlade(:,j) + matmul( theta_tower_trans, v ) 
+            m%DisturbedInflow(:,j,k) = RotInflow%Blade(k)%InflowVel(:,j) + matmul( theta_tower_trans, v ) 
          else
-            m%DisturbedInflow(:,j,k) = RotInflow%Bld(k)%InflowOnBlade(:,j)
+            m%DisturbedInflow(:,j,k) = RotInflow%Blade(k)%InflowVel(:,j)
          end if
       
       end do !j=NumBlNds
@@ -5377,8 +5373,8 @@ SUBROUTINE TwrInfl_NearestLine2Element(p, u, RotInflow, BladeNodePosition, r_Tow
             found = .true.
             min_dist = dist
 
-            V_rel_tower =   ( RotInflow%InflowOnTower(:,n1) - u%TowerMotion%TranslationVel(:,n1) ) * elem_position2  &
-                          + ( RotInflow%InflowOnTower(:,n2) - u%TowerMotion%TranslationVel(:,n2) ) * elem_position
+            V_rel_tower =   ( RotInflow%Tower%InflowVel(:,n1) - u%TowerMotion%TranslationVel(:,n1) ) * elem_position2  &
+                          + ( RotInflow%Tower%InflowVel(:,n2) - u%TowerMotion%TranslationVel(:,n2) ) * elem_position
             
             TwrDiam     = elem_position2*p%TwrDiam(n1) + elem_position*p%TwrDiam(n2)
             TwrCd       = elem_position2*p%TwrCd(  n1) + elem_position*p%TwrCd(  n2)
@@ -5493,7 +5489,7 @@ SUBROUTINE TwrInfl_NearestPoint(p, u, RotInflow, BladeNodePosition, r_TowerBlade
    n1 = node_with_min_distance
    
    r_TowerBlade = BladeNodePosition - u%TowerMotion%Position(:,n1) - u%TowerMotion%TranslationDisp(:,n1)
-   V_rel_tower  = RotInflow%InflowOnTower(:,n1) - u%TowerMotion%TranslationVel(:,n1)
+   V_rel_tower  = RotInflow%Tower%InflowVel(:,n1) - u%TowerMotion%TranslationVel(:,n1)
    TwrDiam      = p%TwrDiam(n1) 
    TwrCd        = p%TwrCd(  n1) 
    TwrTI        = p%TwrTI(  n1) 

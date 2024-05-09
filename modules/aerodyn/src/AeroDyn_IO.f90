@@ -163,7 +163,7 @@ CONTAINS
       do beta=1,p%NTwOuts
          j = p%TwOutNd(beta)
       
-         tmp = matmul( u%TowerMotion%Orientation(:,:,j) , RotInflow%InflowOnTower(:,j) )
+         tmp = matmul( u%TowerMotion%Orientation(:,:,j) , RotInflow%Tower%InflowVel(:,j) )
          m%AllOuts( TwNVUnd(:,beta) ) = tmp
       
          tmp = matmul( u%TowerMotion%Orientation(:,:,j) , u%TowerMotion%TranslationVel(:,j) )
@@ -221,7 +221,7 @@ CONTAINS
          do beta=1,p%NBlOuts
             j=p%BlOutNd(beta)
 
-            tmp = matmul( m%orientationAnnulus(:,:,j,k), RotInflow%Bld(k)%InflowOnBlade(:,j) )
+            tmp = matmul( m%orientationAnnulus(:,:,j,k), RotInflow%Blade(k)%InflowVel(:,j) )
             m%AllOuts( BNVUndx(beta,k) ) = tmp(1)
             m%AllOuts( BNVUndy(beta,k) ) = tmp(2)
             m%AllOuts( BNVUndz(beta,k) ) = tmp(3)
