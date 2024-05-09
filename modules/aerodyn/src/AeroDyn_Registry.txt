@@ -346,6 +346,21 @@ typedef	^	MiscVarType	ReKi            WindPos	{:}{:} - -	"XYZ coordinates to que
 typedef	^	MiscVarType	ReKi            WindVel	{:}{:} - -	"XYZ components of wind velocity"	-
 typedef	^	MiscVarType	ReKi            WindAcc	{:}{:} - -	"XYZ components of wind acceleration"	-
 
+# Inflow data storage
+typedef	^	BldInflowType	ReKi	InflowOnBlade	{:}{:}	-	-	"U,V,W at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
+typedef	^	BldInflowType	ReKi	AccelOnBlade	{:}{:}	-	-	"Wind acceleration at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
+typedef	^	RotInflowType	BldInflowType    Bld		{:}	-	-	"Blade Inputs"	-
+typedef	^	RotInflowType	ReKi	InflowOnTower	{:}{:}	-	-	"U,V,W at nodes on the tower"	m/s
+typedef	^	RotInflowType	ReKi	AccelOnTower	{:}{:}	-	-	"Wind acceleration at nodes on the tower"	m/s
+typedef	^	RotInflowType	ReKi	InflowOnHub 	{3}{1}	-	-	"U,V,W at hub"	m/s
+typedef	^	RotInflowType	ReKi	InflowOnNacelle	{3}{1}	-	-	"U,V,W at nacelle"	m/s
+typedef	^	RotInflowType	ReKi	InflowOnTailFin	{3}{1}	-	-	"U,V,W at tailfin"	m/s
+typedef	^	RotInflowType	ReKi	AvgDiskVel	{3}	-	0.0	"disk-averaged U,V,W"	m/s
+typedef	^	AD_InflowType	ReKi	InflowWakeVel	{:}{:}	-	-	"U,V,W at wake points"	m/s
+typedef	^	AD_InflowType	RotInflowType	RotInflow	{:}	-	-	"Inflow on rotor"	-
+typedef	^	MiscVarType	AD_InflowType	Inflow	{:}	-	-	"Inflow storage (size of u for history of inputs)"	-
+
+
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 
@@ -439,8 +454,6 @@ typedef ^      ^            IntKi          SA_nPerSec -  -   -    "Sector Averag
 
 
 # ..... Inputs ....................................................................................................................
-typedef	^	BldInputType	ReKi	InflowOnBlade	{:}{:}	-	-	"U,V,W at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
-typedef	^	BldInputType	ReKi	AccelOnBlade	{:}{:}	-	-	"Wind acceleration at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
 # Define inputs that are contained on a mesh here:
 typedef	^	RotInputType	MeshType	NacelleMotion	-	-	-	"motion on the nacelle"	-
 typedef	^	RotInputType	MeshType	TowerMotion	-	-	-	"motion on the tower"	-
@@ -449,18 +462,10 @@ typedef	^	RotInputType	MeshType	BladeRootMotion	{:}	-	-	"motion on each blade ro
 typedef	^	RotInputType	MeshType	BladeMotion	{:}	-	-	"motion on each blade"	-
 typedef	^	RotInputType	MeshType	TFinMotion	- 	-	-	"motion of tail fin (at tail fin ref point)"	-
 # Define inputs that are not on a mesh here:
-typedef	^	RotInputType	BldInputType    Bld		{:}	-	-	"Blade Inputs"	-
-typedef	^	RotInputType	ReKi	InflowOnTower	{:}{:}	-	-	"U,V,W at nodes on the tower"	m/s
-typedef	^	RotInputType	ReKi	AccelOnTower	{:}{:}	-	-	"Wind acceleration at nodes on the tower"	m/s
-typedef	^	RotInputType	ReKi	InflowOnHub 	{3}{1}	-	-	"U,V,W at hub"	m/s
-typedef	^	RotInputType	ReKi	InflowOnNacelle	{3}{1}	-	-	"U,V,W at nacelle"	m/s
-typedef	^	RotInputType	ReKi	InflowOnTailFin	{3}{1}	-	-	"U,V,W at tailfin"	m/s
-typedef	^	RotInputType	ReKi	AvgDiskVel	{3}	-	0.0	"disk-averaged U,V,W"	m/s
 typedef	^	RotInputType	ReKi	UserProp	{:}{:}	-	-	"Optional user property for interpolating airfoils (per element per blade)" -
 
 
 typedef	^	InputType	RotInputType	rotors	{:}	-	-	"Inputs for each rotor"	-
-typedef	^	InputType	ReKi	InflowWakeVel	{:}{:}	-	-	"U,V,W at wake points"	m/s
 
 
 # ..... Outputs ...................................................................................................................

@@ -308,7 +308,7 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg)
 
    if (p%storeHHVel) then
       do iWT = 1, size(u%AD%rotors)
-         y%HHVel(:,iWT) = u%AD%rotors(iWT)%InflowOnHub(:,1)
+         y%HHVel(:,iWT) = m%AD%Inflow(1)%RotInflow(iWT)%InflowOnHub(:,1)
       end do
    endif
 

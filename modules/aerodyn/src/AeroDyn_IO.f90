@@ -83,11 +83,12 @@ END FUNCTION Calc_Chi0
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Calc_WriteOutput( p, p_AD, u, x, m, m_AD, y, OtherState, xd, indx, iRot, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteOutput( p, p_AD, u, RotInflow, x, m, m_AD, y, OtherState, xd, indx, iRot, ErrStat, ErrMsg )
    
    TYPE(RotParameterType),       INTENT(IN   )  :: p                                 ! The rotor parameters
    TYPE(AD_ParameterType),       INTENT(IN   )  :: p_AD                              ! The module parameters
    TYPE(RotInputType),           INTENT(IN   )  :: u                                 ! inputs
+   TYPE(RotInflowType),          INTENT(IN   )  :: RotInflow                         ! other states%RotInflow at t (for DBEMT and UA)
    TYPE(RotContinuousStateType), INTENT(IN   )  :: x                                 !< Continuous states at t
    TYPE(RotMiscVarType),         INTENT(INOUT)  :: m                                 ! misc variables
    TYPE(AD_MiscVarType),         INTENT(INOUT)  :: m_AD                              ! misc variables
@@ -162,7 +163,7 @@ CONTAINS
       do beta=1,p%NTwOuts
          j = p%TwOutNd(beta)
       
-         tmp = matmul( u%TowerMotion%Orientation(:,:,j) , u%InflowOnTower(:,j) )
+         tmp = matmul( u%TowerMotion%Orientation(:,:,j) , RotInflow%InflowOnTower(:,j) )
          m%AllOuts( TwNVUnd(:,beta) ) = tmp
       
          tmp = matmul( u%TowerMotion%Orientation(:,:,j) , u%TowerMotion%TranslationVel(:,j) )
@@ -220,7 +221,7 @@ CONTAINS
          do beta=1,p%NBlOuts
             j=p%BlOutNd(beta)
 
-            tmp = matmul( m%orientationAnnulus(:,:,j,k), u%Bld(k)%InflowOnBlade(:,j) )
+            tmp = matmul( m%orientationAnnulus(:,:,j,k), RotInflow%Bld(k)%InflowOnBlade(:,j) )
             m%AllOuts( BNVUndx(beta,k) ) = tmp(1)
             m%AllOuts( BNVUndy(beta,k) ) = tmp(2)
             m%AllOuts( BNVUndz(beta,k) ) = tmp(3)

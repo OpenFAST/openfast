@@ -548,9 +548,10 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_A
 END SUBROUTINE IfW_InputSolve
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ExtLd_UpdateFlowField( p_FAST, u_AD, ExtLd, ErrStat, ErrMsg )
+SUBROUTINE ExtLd_UpdateFlowField( p_FAST, u_AD, m_AD, ExtLd, ErrStat, ErrMsg )
    type(FAST_ParameterType),  intent(in)     :: p_FAST     !< FAST parameter data
    type(AD_InputType),        intent(in   )  :: u_AD       !< The inputs to AeroDyn
+   type(AD_MiscvarType),      intent(in   )  :: m_AD       !< AeroDyn MiscVars
    type(ExtLoads_Data),       intent(in   )  :: ExtLd      !< ExtLoads data
    integer(IntKi)                            :: ErrStat    !< Error status of the operation
    character(*)                              :: ErrMsg     !< Error message if ErrStat /= ErrID_None
@@ -586,8 +587,9 @@ SUBROUTINE ExtLd_UpdateFlowField( p_FAST, u_AD, ExtLd, ErrStat, ErrMsg )
       end do
    end do
 
+   !FIXME this should probably be checked against a parameter instead of digging into miscvars of AD
    ! Tower
-   if ( allocated(u_AD%rotors(1)%InflowOnTower) ) then
+   if ( allocated(m_AD%Inflow(1)%RotInflow(1)%InflowOnTower) ) then
       do j=1,u_AD%rotors(1)%TowerMotion%nNodes
          ! height
          z = u_AD%rotors(1)%TowerMotion%Position(3,j) + u_AD%rotors(1)%TowerMotion%TranslationDisp(3,j)
@@ -716,7 +718,7 @@ SUBROUTINE AD_InputSolve_NoIfW( p_FAST, u_AD, y_SrvD, y_ED, BD, MeshMapData, Err
 
    
    
-      ! Set Conrol parameter (i.e. flaps) if using ServoDyn
+      ! Set Control parameter (i.e. flaps) if using ServoDyn
       ! bem:   This takes in flap deflection for each blade (only one flap deflection angle per blade),
       !        from ServoDyn (which comes from Bladed style DLL controller)
       !  Commanded Airfoil UserProp for blade (must be same units as given in AD15 airfoil tables)
@@ -5166,7 +5168,7 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
       CALL AD_InputSolve_NoIfW( p_FAST, AD%Input(1), SrvD%y, ED%y, BD, MeshMapData, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL ExtLd_UpdateFlowField( p_FAST, AD%Input(1), ExtLd, ErrStat2, ErrMsg2 )
+      CALL ExtLd_UpdateFlowField( p_FAST, AD%Input(1), AD%m, ExtLd, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       CALL ExtLd_InputSolve_NoIfW( p_FAST, ExtLd%u, ExtLd%p, ED%y, BD, MeshMapData, ErrStat2, ErrMsg2 )
@@ -5595,7 +5597,7 @@ SUBROUTINE SolveOption2c_Inp2AD_SrvD(this_time, this_state, p_FAST, m_FAST, ED, 
    ELSE IF (p_FAST%CompAero == Module_ExtLd ) THEN
 
       ! The outputs from ExternalInflow need to be transfered to the FlowField for use by AeroDyn, this seems like the right place
-      call ExtLd_UpdateFlowField( p_FAST, AD%Input(1), ExtLd, ErrStat2, ErrMsg2 )
+      call ExtLd_UpdateFlowField( p_FAST, AD%Input(1), AD%m, ExtLd, ErrStat2, ErrMsg2 )
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
          
    END IF
@@ -5684,7 +5686,7 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
          CALL SetErrStat(ErrID_Fatal,'p_FAST%CompInflow option not setup to work with ExtLoads module.',ErrStat,ErrMsg,RoutineName)
       ENDIF
 
-      CALL ExtLd_UpdateFlowField( p_FAST, AD%Input(1), ExtLd, ErrStat2, ErrMsg2 )
+      CALL ExtLd_UpdateFlowField( p_FAST, AD%Input(1), AD%m, ExtLd, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       CALL AD_CalcOutput( this_time, AD%Input(1), AD%p, AD%x(this_state), AD%xd(this_state), AD%z(this_state), &
@@ -5843,26 +5845,26 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
                         
-   ! InflowWind: get predicted states
-   IF ( p_FAST%CompInflow == Module_IfW ) THEN
-      CALL InflowWind_CopyContState   (IfW%x( STATE_CURR), IfW%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
-         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyDiscState   (IfW%xd(STATE_CURR), IfW%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)  
-         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL InflowWind_CopyConstrState (IfW%z( STATE_CURR), IfW%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
-         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )            
-      CALL InflowWind_CopyOtherState( IfW%OtherSt(STATE_CURR), IfW%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
-         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            
-      DO j_ss = 1, p_FAST%n_substeps( MODULE_IfW )
-         n_t_module = n_t_global*p_FAST%n_substeps( MODULE_IfW ) + j_ss - 1
-         t_module   = n_t_module*p_FAST%dt_module( MODULE_IfW ) + t_initial
-            
-         CALL InflowWind_UpdateStates( t_module, n_t_module, IfW%Input, IfW%InputTimes, IfW%p, IfW%x(STATE_PRED), IfW%xd(STATE_PRED), &
-                                       IfW%z(STATE_PRED), IfW%OtherSt(STATE_PRED), IfW%m, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      END DO !j_ss
-   END IF
+   ! InflowWind: get predicted states -- NO STATES
+!   IF ( p_FAST%CompInflow == Module_IfW ) THEN
+!      CALL InflowWind_CopyContState   (IfW%x( STATE_CURR), IfW%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+!         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+!      CALL InflowWind_CopyDiscState   (IfW%xd(STATE_CURR), IfW%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)  
+!         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+!      CALL InflowWind_CopyConstrState (IfW%z( STATE_CURR), IfW%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+!         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )            
+!      CALL InflowWind_CopyOtherState( IfW%OtherSt(STATE_CURR), IfW%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+!         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+!            
+!      DO j_ss = 1, p_FAST%n_substeps( MODULE_IfW )
+!         n_t_module = n_t_global*p_FAST%n_substeps( MODULE_IfW ) + j_ss - 1
+!         t_module   = n_t_module*p_FAST%dt_module( MODULE_IfW ) + t_initial
+!            
+!         CALL InflowWind_UpdateStates( t_module, n_t_module, IfW%Input, IfW%InputTimes, IfW%p, IfW%x(STATE_PRED), IfW%xd(STATE_PRED), &
+!                                       IfW%z(STATE_PRED), IfW%OtherSt(STATE_PRED), IfW%m, ErrStat2, ErrMsg2 )
+!            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+!      END DO !j_ss
+!   END IF
    
    
       ! because AeroDyn DBEMT states depend heavily on getting inputs correct, we are overwriting its inputs with updated inflow outputs here
