@@ -122,7 +122,7 @@ SUBROUTINE GetChebCoefs(p, UJetMax_IsKnown, ErrStat, ErrMsg)
 
    ! valid only for jet WindProfileType
    
-IMPLICIT                   NONE
+   IMPLICIT                   NONE
 
    TYPE(TurbSim_ParameterType),INTENT(INOUT) :: p                 ! TurbSim parameters
    LOGICAL,                    INTENT(IN)    :: UJetMax_IsKnown   

@@ -50,8 +50,7 @@ jobs:
           products: Simulink
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
       - name: Setup workspace
@@ -137,8 +136,7 @@ jobs:
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
       - name: Setup workspace
@@ -187,8 +185,7 @@ jobs:
           products: Simulink
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev  # gcovr
@@ -242,8 +239,7 @@ jobs:
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -280,8 +276,7 @@ jobs:
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -318,8 +313,7 @@ jobs:
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -344,7 +338,7 @@ jobs:
   ### BUILD AND TEST JOBS
 
   build-test-uadriver-debug:
-    # UA driver requires -DUA_OUTS, cannot be compiled with other
+    # UA driver used to require -DUA_OUTS
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -358,8 +352,7 @@ jobs:
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev
       - name: Setup workspace
@@ -379,7 +372,6 @@ jobs:
             -DVARIABLE_TRACKING=OFF \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
-            -DCMAKE_Fortran_FLAGS="-DUA_OUTS=ON" \
             ${GITHUB_WORKSPACE}
       - name: Build all
         working-directory: ${{runner.workspace}}/openfast/build
@@ -420,8 +412,7 @@ jobs:
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -478,8 +469,7 @@ jobs:
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -539,8 +529,7 @@ jobs:
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3" vtk
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -587,8 +576,7 @@ jobs:
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -721,8 +709,7 @@ jobs:
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -771,8 +758,7 @@ jobs:
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -788,7 +774,7 @@ jobs:
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC3Mnpl_DLL_WTurb_WavesIrr
+          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC3Mnpl_DLL_WTurb_WavesIrr -j1
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
         if: failure()
@@ -821,8 +807,7 @@ jobs:
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -871,8 +856,7 @@ jobs:
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -921,8 +905,7 @@ jobs:
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -971,8 +954,7 @@ jobs:
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -1020,8 +1002,7 @@ jobs:
           cache: 'pip'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          pip install -r requirements.txt
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev

@@ -1850,7 +1850,7 @@ END SUBROUTINE CheckR8Var
          END IF
       END IF
       
-      CALL WrScr ( 'Running '//TRIM( GetNVD( ProgInfo ) )//'.' )
+      CALL WrScr ( ' Running '//TRIM( GetNVD( ProgInfo ) )//'.' )
 
    RETURN
    END SUBROUTINE DispNVD1
@@ -2959,7 +2959,7 @@ END SUBROUTINE CheckR8Var
    END SUBROUTINE ParseChAry
 !=======================================================================
 !> This subroutine parses a comment line
-   SUBROUTINE ParseCom ( FileInfo, LineNum, Var, ErrStat, ErrMsg, UnEc )
+   SUBROUTINE ParseCom ( FileInfo, LineNum, Var, ErrStat, ErrMsg, UnEc, IsLegalComment )
 
          ! Arguments declarations.
       INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       !< The error status.
@@ -2968,6 +2968,7 @@ END SUBROUTINE CheckR8Var
       CHARACTER(*),   INTENT(OUT)            :: Var                           !< The variable to receive the comment
       CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        !< The error message, if ErrStat /= 0.
       TYPE (FileInfoType), INTENT(IN)        :: FileInfo                      !< The derived type for holding the file information.
+      LOGICAL, OPTIONAL,   INTENT(INOUT)     :: IsLegalComment                !< True if the comment is a "legal" comment line starting with '---' or '==='. NOTE: We have too many options, we need to be more strict!!!!
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseCom'
       
       ErrStat=ErrID_None
@@ -2994,6 +2995,21 @@ END SUBROUTINE CheckR8Var
          IF ( UnEc > 0 )  WRITE (UnEc,'(A)')  trim(Var)
       END IF
       LineNum = LineNum + 1
+
+      IF (PRESENT(IsLegalComment) ) then
+         if (len(Var)<=3) then
+            IsLegalComment=.False.
+         else
+            ! Here, we are talking about comments in the input file that are "expected to be there"
+            IsLegalComment =  (Var(1:3)=='---') .or.  (Var(1:3)=='===')
+         endif
+         if (.not.IsLegalComment) then
+            call SetErrStat(ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
+                   ' >> The comment line did not start with `---` or `===`. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
+                   , ErrStat, ErrMsg, RoutineName )
+         endif
+      END IF
 
    END SUBROUTINE ParseCom
 
@@ -4095,7 +4111,9 @@ END SUBROUTINE CheckR8Var
          NullLoc = index(FileString(idx:len(FileString)),C_NULL_CHAR)
          ! started indexing at idx, so add that back in for location in FileString
          NullLoc = NullLoc + idx - 1
-         if (NullLoc > idx) then
+         if (NullLoc == idx) then   ! blank line
+            FileStringArray(Line) = ''
+         elseif (NullLoc > idx) then
             FileStringArray(Line) = trim(FileString(idx:NullLoc-1))
          else
             ! If not NULL terminated
@@ -7789,5 +7807,92 @@ END SUBROUTINE CheckR8Var
 
    RETURN
    END SUBROUTINE WrScr1
+
+   !----------------------------------------------------------------------------------------------------------------------------------
+   !> Read a delimited file of float with one or multiple lines of header
+   !! TODO: put me in a CSV.f90 file of the NWTC library
+   !! TODO: automatic detection of number of columns for instance using ReadCAryFromStr
+   !!       See also the quick and dirty check introduced to read blade files that don't have Buoyancy columns
+   subroutine ReadDelimFile(Filename, nCol, array, errStat, errMsg, nHeaderLines, priPath)
+      character(len=*),                        intent(in)  :: Filename
+      integer(IntKi),                          intent(in)  :: nCol
+      real(ReKi), dimension(:,:), allocatable, intent(out) :: array
+      integer(IntKi)         ,                 intent(out) :: errStat ! Status of error message
+      character(*)           ,                 intent(out) :: errMsg  ! Error message if errStat /= ErrID_None
+      integer(IntKi), optional,                intent(in ) :: nHeaderLines
+      character(*)  , optional,                intent(in ) :: priPath  ! Primary path, to use if filename is not absolute
+      integer(IntKi)       :: UnIn, i, j, nLine, nHead
+      character(len= 2048) :: line
+      integer(IntKi)       :: errStat2      ! local status of error message
+      character(ErrMsgLen) :: errMsg2       ! temporary Error message
+      character(len=2048) :: Filename_Loc   ! filename local to this function
+      errStat = ErrID_None
+      errMsg  = ""
+
+      Filename_Loc = Filename
+      if (present(priPath)) then
+         if (PathIsRelative(Filename_Loc)) Filename_Loc = trim(PriPath)//trim(Filename)
+      endif
+
+      ! Open file
+      call GetNewUnit(UnIn) 
+      call OpenFInpFile(UnIn, Filename_Loc, errStat2, errMsg2); if(Failed()) return 
+      ! Count number of lines
+      nLine = line_count(UnIn, errStat2, errMsg2); if(Failed()) return
+      if (allocated(array)) deallocate(array)
+      allocate(array(nLine-1, nCol), stat=errStat2); errMsg2='allocation failed'; if(Failed())return
+      ! Read header
+      nHead=1
+      if (present(nHeaderLines)) nHead = nHeaderLines
+      do i=1,nHead
+         read(UnIn, *, IOSTAT=errStat2) line
+         errMsg2 = ' Error reading line '//trim(Num2LStr(1))//' of file: '//trim(Filename_Loc)
+         if(Failed()) return
+      enddo
+      ! Read data
+      do i = 1,nLine-1
+         read (UnIn,*,IOSTAT=errStat2) (array(i,j), j=1,nCol)
+         errMsg2 = ' Error reading line '//trim(Num2LStr(i+1))//' of file: '//trim(Filename_Loc)
+         if(Failed()) return
+      end do  
+      close(UnIn) 
+   contains
+      logical function Failed()
+         CALL SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ReadDelimFile' )
+         Failed = errStat >= AbortErrLev
+         if (Failed) then
+            if ((UnIn)>0) close(UnIn)
+         endif
+      end function Failed
+   end subroutine ReadDelimFile
+
+   !----------------------------------------------------------------------------------------------------------------------------------
+   !> Counts number of lines in a file, do not count last line if empty
+   integer function line_count(iUnit, errStat, errMsg)
+      integer(IntKi), intent(in) :: iUnit
+      integer(IntKi), intent(out) :: errStat ! Error status
+      character(*),   intent(out) :: errMsg  ! Error message associated with ErrStat
+      character(len=2048) :: line
+      integer, parameter :: nline_max=100000000 ! 100 M safety for infinite loop..
+      integer :: i
+      errStat = ErrID_None
+      errMsg  = ''
+      line_count=0
+      do i=1,nline_max 
+         line=''
+         read(iUnit,'(A)',END=100)line
+         line_count=line_count+1
+      enddo
+      if (line_count==nline_max) then
+         errStat = ErrID_Fatal
+         errMsg = 'Error: maximum number of line exceeded for line_count'
+         return
+      endif
+   100 if(len(trim(line))>0) then
+         line_count=line_count+1
+      endif
+      rewind(iUnit)
+      return
+   end function line_count
       
 END MODULE NWTC_IO

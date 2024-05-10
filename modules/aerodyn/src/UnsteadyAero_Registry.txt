@@ -17,6 +17,7 @@ usefrom   AirfoilInfo_Registry.txt
 #
 #
 
+param     UnsteadyAero/UA       -                INTEGER           UA_None          -        0   -   "UAMod = 0 [Quasi-steady ]" -
 param     UnsteadyAero/UA       -                INTEGER           UA_Baseline      -        1   -   "UAMod = 1 [Baseline model (Original)]" -
 param     UnsteadyAero/UA       -                INTEGER           UA_Gonzalez      -        2   -   "UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)]" -
 param     UnsteadyAero/UA       -                INTEGER           UA_MinnemaPierce -        3   -   "[Minnema/Pierce variant (changes in Cc and Cm)]" -
@@ -32,6 +33,7 @@ param     UnsteadyAero/UA       -                INTEGER           UA_BV        
 typedef   UnsteadyAero/UA              InitInputType                 DbKi                     dt                              -             -         -        "time step" s
 typedef   ^                            ^                             CHARACTER(1024)          OutRootName                     -             -         -        "Supplied by Driver:  The name of the root file (without extension) including the full path"    -
 typedef   ^                            ^                             ReKi                     c                               {:}{:}        -         -        "Chord length at node" m
+typedef   ^                            ^                             ReKi                     d_34_to_ac                      -            0.5        -        "Distance from 3/4 chord to aerodynamic center (typically 0.5) in chord length (no dimension)"       - 
 typedef   ^                            ^                             INTEGER                  numBlades                       -             -         -        "Number nodes of all blades"    -
 typedef   ^                            ^                             INTEGER                  nNodesPerBlade                  -             -         -        "Number nodes per blades"    -
 typedef   ^                            ^                             INTEGER                  UAMod                           -             -         -        "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
@@ -41,13 +43,14 @@ typedef   ^                            ^                             Logical    
 typedef   ^                            ^                             LOGICAL                  WrSum                           -             .false.   -        "Write UA AFI parameters to summary file?"    -
 typedef   ^                            ^                             INTEGER                  UAOff_innerNode                 {:}           -         -        "Last node on each blade where UA should be turned off based on span location from blade root (0 if always on)"    -
 typedef   ^                            ^                             INTEGER                  UAOff_outerNode                 {:}           -         -        "First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on)"    -
+typedef   ^                            ^                             IntKi                    UA_OUTS                         -             0         -        "Store write outputs 0=None, 1=WriteOutpus, 2=WriteToFile"    -
 
 #
 # Define outputs from the initialization routine here:                                                                                    
 #                                                                                                                                         
 typedef   ^                            InitOutputType                ProgDesc                 Version                         -             -         -        "Version structure" -
-typedef   ^                            InitOutputType                CHARACTER(19)            WriteOutputHdr                  {:}           -         -        "The is the list of all UA-related output channel header strings (includes all sub-module channels)"    -
-typedef   ^                            ^                             CHARACTER(19)            WriteOutputUnt                  {:}           -         -        "The is the list of all UA-related output channel unit strings (includes all sub-module channels)"    -
+typedef   ^                            InitOutputType                CHARACTER(ChanLen)       WriteOutputHdr                  {:}           -         -        "The is the list of all UA-related output channel header strings (includes all sub-module channels)"    -
+typedef   ^                            ^                             CHARACTER(ChanLen)       WriteOutputUnt                  {:}           -         -        "The is the list of all UA-related output channel unit strings (includes all sub-module channels)"    -
 
 
 # Variables local to the Kelvin Chain:                                                                                                                                                                                                                            
@@ -189,6 +192,7 @@ typedef   ^                            MiscVarType                   ReKi       
 # Define parameters here:
 typedef   ^                            ParameterType                 DbKi                     dt                              -             -         -        "time step" s
 typedef   ^                            ^                             ReKi                     c                               {:}{:}        -         -        "Chord length at node" m
+typedef   ^                            ^                             ReKi                     d_34_to_ac                      -            0.5        -        "Distance from 3/4 chord to aerodynamic center (typically 0.5) in chord length (no dimension)"       - 
 typedef   ^                            ^                             INTEGER                  numBlades                       -             -         -        "Number nodes of all blades"    -
 typedef   ^                            ^                             INTEGER                  nNodesPerBlade                  -             -         -        "Number nodes per blades"    -
 typedef   ^                            ^                             INTEGER                  UAMod                           -             -         -        "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
@@ -205,6 +209,7 @@ typedef   ^                            ParameterType                 IntKi      
 typedef   ^                            ^                             LOGICAL                  UA_off_forGood                  {:}{:}        -         -        "logical flag indicating if UA is off for good"   -
 typedef   ^                            ^                             INTEGER                  lin_xIndx                       {:}{:}        -         -        "array to indicate which state to perturb for UA"   -
 typedef   ^                            ^                             R8Ki                     dx                              {5}           -         -        "array to indicate size of state perturbations"   -
+typedef   ^                            ^                             IntKi                    UA_OUTS                         -             0         -        "Store write outputs 0=None, 1=WriteOutpus, 2=WriteToFile"    -
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:

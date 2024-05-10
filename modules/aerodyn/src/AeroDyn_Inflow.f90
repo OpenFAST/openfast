@@ -62,6 +62,10 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    ! Display the module information
    call DispNVD( ADI_Ver )
 
+   ! Clear writeoutputs
+   if (allocated(InitOut%WriteOutputHdr)) deallocate(InitOut%WriteOutputHdr)
+   if (allocated(InitOut%WriteOutputUnt)) deallocate(InitOut%WriteOutputUnt)
+
    ! Set parameters
    p%dt         = interval
    p%storeHHVel = InitInp%storeHHVel
@@ -69,22 +73,20 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%MHK        = InitInp%AD%MHK
    p%WtrDpth    = InitInp%AD%WtrDpth
 
+   ! --- Initialize Inflow Wind 
+   call ADI_InitInflowWind(InitInp%RootName, InitInp%IW_InitInp, u%AD, OtherState%AD, m%IW, Interval, InitOut_IW, errStat2, errMsg2); if (Failed()) return
+   ! Concatenate AD outputs to IW outputs
+   call concatOutputHeaders(InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, InitOut_IW%WriteOutputHdr, InitOut_IW%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
+
    ! --- Initialize AeroDyn
-   if (allocated(InitOut%WriteOutputHdr)) deallocate(InitOut%WriteOutputHdr)
-   if (allocated(InitOut%WriteOutputUnt)) deallocate(InitOut%WriteOutputUnt)
+   ! Link InflowWind's FlowField to AeroDyn's FlowField
+   InitInp%AD%FlowField => InitOut_IW%FlowField
 
    call AD_Init(InitInp%AD, u%AD, p%AD, x%AD, xd%AD, z%AD, OtherState%AD, y%AD, m%AD, Interval, InitOut_AD, errStat2, errMsg2); if (Failed()) return
    InitOut%Ver = InitOut_AD%ver
    ! Add writeoutput units and headers to driver, same for all cases and rotors!
    !TODO: this header is too short if we add more rotors.  Should also add a rotor identifier
    call concatOutputHeaders(InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, InitOut_AD%rotors(1)%WriteOutputHdr, InitOut_AD%rotors(1)%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
-
-   ! --- Initialize Inflow Wind 
-   call ADI_InitInflowWind(InitInp%RootName, InitInp%IW_InitInp, u%AD, OtherState%AD, m%IW, Interval, InitOut_IW, errStat2, errMsg2); if (Failed()) return
-   ! Concatenate AD outputs to IW outputs
-   call concatOutputHeaders(InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, InitOut_IW%WriteOutputHdr, InitOut_IW%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
-   ! Link InflowWind's FlowField to AeroDyn's FlowField
-   p%AD%FlowField => InitOut_IW%FlowField
 
    ! --- Initialize grouped outputs
    !TODO: assumes one rotor
@@ -235,7 +237,7 @@ contains
    subroutine CleanUp()
       !call ADI_DestroyConstrState(z_guess, errStat2, errMsg2); if(Failed()) return
       do it=1,size(utimes)
-         call AD_DestroyInput(u_AD(it), errStat2, errMsg2); if(Failed()) return
+         call AD_DestroyInput(u_AD(it), errStat2, errMsg2)  ! ignore errors here
       enddo
    end subroutine
 
@@ -308,7 +310,7 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg)
 
    if (p%storeHHVel) then
       do iWT = 1, size(u%AD%rotors)
-         y%HHVel(:,iWT) = u%AD%rotors(iWT)%InflowOnHub(:,1)
+         y%HHVel(:,iWT) = m%AD%Inflow(1)%RotInflow(iWT)%InflowOnHub(:,1)
       end do
    endif
 
@@ -367,7 +369,7 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
       call IfW_SteadyWind_Init(Steady_InitInput, 0, IW%p%FlowField%Uniform, &
                                FileDat, errStat2, errMsg2)
       if(Failed()) return
-      if (i_IW%MHK == 1 .or. i_IW%MHK == 2) then
+      if (i_IW%MHK == MHK_FixedBottom .or. i_IW%MHK == MHK_FLoating) then
          call IfW_UniformField_CalcAccel(IW%p%FlowField%Uniform, errStat2, errMsg2)
          if(Failed()) return
          IW%p%FlowField%AccFieldValid = .true.

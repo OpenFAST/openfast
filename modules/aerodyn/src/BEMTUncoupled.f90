@@ -59,6 +59,8 @@ module BEMTUnCoupled
    public :: GetEulerAnglesFromOrientation
    
    public :: VelocityIsZero
+
+   public :: BEMTU_Test_ACT_Relationship
 contains
    
 !..................................................................................................................................   
@@ -227,6 +229,20 @@ contains
       
       
 end subroutine computeAirfoilOperatingAOA
+! ---
+!> Angle of attack in the airfoil reference frame
+real(ReKi) function computeAirfoilAOA(Vrel_a) result(AoA)
+   real(ReKi), intent(in   ) :: Vrel_a(3)
+   real(ReKi)                :: numer, denom, ratio
+   ! Determine angle of attack as angle between airfoil chordline (afAxialVec) and inflow
+   numer = Vrel_a(2)
+   denom = sqrt(Vrel_a(1)**2 + Vrel_a(2)**2)
+   ratio = numer / denom
+   AoA = acos( max( min( ratio, 1.0_ReKi ), -1.0_ReKi ) )
+   AoA = sign( AoA, Vrel_a(1) )
+end function computeAirfoilAOA
+
+
 !..................................................................................................................................
 !> Transform the aerodynamic coefficients (Cl,Cd,Cm) (directed based on Vrel_xy_a )
 !! from the airfoil coordinate system (a) to the without sweep pitch coordinate system (w)
@@ -433,10 +449,10 @@ real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValid
    
 end function BEMTU_InductionWithResidual
 !-----------------------------------------------------------------------------------------
-subroutine ApplySkewedWakeCorrection(BEM_Mod, SkewMod, yawCorrFactor, F, azimuth, azimuthOffset, chi0, tipRatio, a, chi, FirstWarn )
+subroutine ApplySkewedWakeCorrection(BEM_Mod, SkewRedistrMod, yawCorrFactor, F, azimuth, azimuthOffset, chi0, tipRatio, a, chi, FirstWarn )
    
    integer(IntKi),            intent(in   ) :: BEM_Mod
-   integer(IntKi),            intent(in   ) :: SkewMod
+   integer(IntKi),            intent(in   ) :: SkewRedistrMod
    real(ReKi),                intent(in   ) :: yawCorrFactor ! set to 15*pi/32 previously; now allowed to be input (to better match data) 
    real(ReKi),                intent(in   ) :: F             ! tip/hub loss factor
    real(ReKi),                intent(in   ) :: azimuth
@@ -450,7 +466,10 @@ subroutine ApplySkewedWakeCorrection(BEM_Mod, SkewMod, yawCorrFactor, F, azimuth
       ! Local variables      
    real(ReKi)                               :: yawCorr
    real(ReKi)                               :: yawCorr_tan ! magnitude of the tan(chi/2) correction term (with possible limits)
-   
+
+   if (SkewRedistrMod==SkewRedistrMod_None) then
+      return
+   endif
    
    ! Skewed wake correction
    if(BEM_Mod==BEMMod_2D) then
@@ -465,7 +484,7 @@ subroutine ApplySkewedWakeCorrection(BEM_Mod, SkewMod, yawCorrFactor, F, azimuth
          
       if (FirstWarn) then
          call WrScr( 'Warning: SkewedWakeCorrection encountered a large value of chi ('//trim(num2lstr(chi*R2D))// &
-            ' deg), so the yaw correction will be limited. This warning will not be repeated though the condition may persist. See the AD15 chi output channels, and'// &
+            ' deg), so the yaw correction will be limited. This warning will not be repeated though the condition may persist. See the AD chi output channels, and'// &
             ' consider turning off the Pitt/Peters skew model (set SkewMod=1) if this condition persists.'//NewLine)
          FirstWarn = .false.
       end if
@@ -476,7 +495,14 @@ subroutine ApplySkewedWakeCorrection(BEM_Mod, SkewMod, yawCorrFactor, F, azimuth
    end if
       
       !bjj: modified 22-Sep-2015: RRD recommends 32 instead of 64 in the denominator (like AD14)
-   yawCorr = ( yawCorrFactor * yawCorr_tan * (tipRatio) * sin(azimuth) ) ! bjj: note that when chi gets close to +/-pi this blows up
+   ! TODO TODO TODO
+   if(BEM_Mod==BEMMod_2D) then
+      ! ADLEG:
+      yawCorr = ( yawCorrFactor * yawCorr_tan * (tipRatio) * sin(azimuth) ) ! bjj: note that when chi gets close to +/-pi this blows up
+   else
+      ! ADENV:
+      yawCorr = ( yawCorrFactor * F * yawCorr_tan * (tipRatio) * cos(azimuth-azimuthOffset) ) ! bjj: note that when chi gets close to +/-pi this blows up
+   endif
       
    a = a * (1.0 +  yawCorr)
    
@@ -1215,5 +1241,53 @@ FUNCTION GetEulerAnglesFromOrientation(EulerDCM,orientation) RESULT(theta)
    end if
 end function
 !-----------------------------------------------------------------------------------------
+
+
+
+!> Simple test for a-Ct relationship. 
+subroutine BEMTU_Test_ACT_Relationship()
+   real(R8Ki) :: chi0
+   real(R8Ki) :: delta_chi
+   real(ReKi) :: F
+   logical :: skewConvention
+   integer :: i
+   integer :: iUnit
+   real(R8Ki)              :: c2, c1, c0 ! Empirical CT = c2*a^2 + c1*a + c0 for a > a0
+   ! Get Coefficients for Empirical CT
+   iUnit = 123
+
+   ! --- No Momentum Corr, F=1
+   F=1; skewConvention=.False.
+   call parametricStudy('ACTCoeffs_F10_NoCo.csv')
+   ! --- No Momentum Corr, F=0.5
+   F=0.5; skewConvention=.False.
+   call parametricStudy('ACTCoeffs_F05_NoCo.csv')
+   ! --- Momentum Corr, F=1
+   F=1; skewConvention=.True.
+   call parametricStudy('ACTCoeffs_F10_Corr.csv')
+   ! --- Momentum Corr, F=0.5
+   F=0.5; skewConvention=.True.
+   call parametricStudy('ACTCoeffs_F05_Corr.csv')
+
+   STOP
+  
+contains
+   subroutine parametricStudy(filename)
+      character(len=*) :: filename
+      chi0=-50 * D2R
+      open(unit=iUnit, file=filename)
+      write(iUnit, '(5(A15))') 'chi0', 'c0', 'c1', 'c2', 'F'
+      do i=1,21
+         call getEmpiricalCoefficients(chi0 ,F , c0, c1, c2, skewConvention)
+         write(iUnit,'(5(F15.5))') chi0*R2D, c0, c1, c2, F
+         chi0 = chi0 + 5*D2R
+      enddo
+      close(iUnit)
+   end subroutine
+  
+  
+
+end subroutine BEMTU_Test_ACT_Relationship
+
 
 end module BEMTUncoupled
