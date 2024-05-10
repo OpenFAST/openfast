@@ -25,6 +25,7 @@
 !   [2] R. Damiani, J.Jonkman
 !       DBEMT Theory Rev. 3
 !       Unpublished
+!
 module DBEMT
    
    use NWTC_Library   
@@ -328,13 +329,14 @@ end subroutine DBEMT_InitStates
 !!----------------------------------------------------------------------------------------------------------------------------------
 !> Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete and other states.
 !! Continuous, constraint, discrete, and other states are updated for t + Interval
-subroutine DBEMT_UpdateStates( i, j, t, n, u, p, x, OtherState, m, errStat, errMsg )
+subroutine DBEMT_UpdateStates( i, j, t, n, u, uTimes, p, x, OtherState, m, errStat, errMsg )
 !..................................................................................................................................
    integer(IntKi),                  intent(in   ) :: i          !< blade node counter
    integer(IntKi),                  intent(in   ) :: j          !< blade counter
    real(DbKi),                      intent(in   ) :: t          !< Current simulation time in seconds
    integer(IntKi),                  intent(in   ) :: n          !< Current simulation time step n = 0,1,...
    type(DBEMT_InputType),           intent(in   ) :: u(2)       !< Inputs at t and t+dt
+   real(DbKi),                      intent(in   ) :: uTimes(2)  ! Times associated with u(:), in seconds
    type(DBEMT_ParameterType),       intent(in   ) :: p          !< Parameters
    type(DBEMT_ContinuousStateType), intent(inout) :: x          !< Input: Continuous states at t;
                                                                 !!   Output: Continuous states at t + Interval
@@ -346,7 +348,6 @@ subroutine DBEMT_UpdateStates( i, j, t, n, u, p, x, OtherState, m, errStat, errM
    ! local variables
    real(ReKi)                                     :: A, B, C0, k_tau, C0_2 ! tau1_plus1, C_tau1, C, K1
    integer(IntKi)                                 :: indx
-   real(DbKi)                                     :: utimes(2)
    
    TYPE(DBEMT_ElementInputType)                   :: u_elem(2)        !< Inputs at utimes
    
@@ -364,9 +365,6 @@ subroutine DBEMT_UpdateStates( i, j, t, n, u, p, x, OtherState, m, errStat, errM
    call DBEMT_InitStates( i, j, u(1), p, x, OtherState )
 
    if (p%DBEMT_Mod == DBEMT_cont_tauConst) then ! continuous formulation:
-      utimes(1) = t
-      utimes(2) = t + p%dt
-      
       u_elem(1) = u(1)%element(i,j)
       u_elem(2) = u(2)%element(i,j)
       call DBEMT_ABM4( i, j, t, n, u_elem, utimes, p, x, OtherState, m, ErrStat, ErrMsg )

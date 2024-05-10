@@ -75,22 +75,21 @@ subroutine MAP_Fortran_DestroyLin_InitInputType(Lin_InitInputTypeData, ErrStat, 
    ErrMsg  = ''
 end subroutine
 
-subroutine MAP_Fortran_PackLin_InitInputType(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine MAP_Fortran_PackLin_InitInputType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Lin_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MAP_Fortran_PackLin_InitInputType'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%linearize)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%linearize)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine MAP_Fortran_UnPackLin_InitInputType(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine MAP_Fortran_UnPackLin_InitInputType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Lin_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MAP_Fortran_UnPackLin_InitInputType'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%linearize)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%linearize); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MAP_Fortran_CopyLin_InitOutputType(SrcLin_InitOutputTypeData, DstLin_InitOutputTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -99,14 +98,14 @@ subroutine MAP_Fortran_CopyLin_InitOutputType(SrcLin_InitOutputTypeData, DstLin_
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(1), UB(1)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'MAP_Fortran_CopyLin_InitOutputType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcLin_InitOutputTypeData%LinNames_y)) then
-      LB(1:1) = lbound(SrcLin_InitOutputTypeData%LinNames_y)
-      UB(1:1) = ubound(SrcLin_InitOutputTypeData%LinNames_y)
+      LB(1:1) = lbound(SrcLin_InitOutputTypeData%LinNames_y, kind=B8Ki)
+      UB(1:1) = ubound(SrcLin_InitOutputTypeData%LinNames_y, kind=B8Ki)
       if (.not. allocated(DstLin_InitOutputTypeData%LinNames_y)) then
          allocate(DstLin_InitOutputTypeData%LinNames_y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -117,8 +116,8 @@ subroutine MAP_Fortran_CopyLin_InitOutputType(SrcLin_InitOutputTypeData, DstLin_
       DstLin_InitOutputTypeData%LinNames_y = SrcLin_InitOutputTypeData%LinNames_y
    end if
    if (allocated(SrcLin_InitOutputTypeData%LinNames_u)) then
-      LB(1:1) = lbound(SrcLin_InitOutputTypeData%LinNames_u)
-      UB(1:1) = ubound(SrcLin_InitOutputTypeData%LinNames_u)
+      LB(1:1) = lbound(SrcLin_InitOutputTypeData%LinNames_u, kind=B8Ki)
+      UB(1:1) = ubound(SrcLin_InitOutputTypeData%LinNames_u, kind=B8Ki)
       if (.not. allocated(DstLin_InitOutputTypeData%LinNames_u)) then
          allocate(DstLin_InitOutputTypeData%LinNames_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -129,8 +128,8 @@ subroutine MAP_Fortran_CopyLin_InitOutputType(SrcLin_InitOutputTypeData, DstLin_
       DstLin_InitOutputTypeData%LinNames_u = SrcLin_InitOutputTypeData%LinNames_u
    end if
    if (allocated(SrcLin_InitOutputTypeData%IsLoad_u)) then
-      LB(1:1) = lbound(SrcLin_InitOutputTypeData%IsLoad_u)
-      UB(1:1) = ubound(SrcLin_InitOutputTypeData%IsLoad_u)
+      LB(1:1) = lbound(SrcLin_InitOutputTypeData%IsLoad_u, kind=B8Ki)
+      UB(1:1) = ubound(SrcLin_InitOutputTypeData%IsLoad_u, kind=B8Ki)
       if (.not. allocated(DstLin_InitOutputTypeData%IsLoad_u)) then
          allocate(DstLin_InitOutputTypeData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -160,79 +159,28 @@ subroutine MAP_Fortran_DestroyLin_InitOutputType(Lin_InitOutputTypeData, ErrStat
    end if
 end subroutine
 
-subroutine MAP_Fortran_PackLin_InitOutputType(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine MAP_Fortran_PackLin_InitOutputType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Lin_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MAP_Fortran_PackLin_InitOutputType'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%LinNames_y))
-   if (allocated(InData%LinNames_y)) then
-      call RegPackBounds(Buf, 1, lbound(InData%LinNames_y), ubound(InData%LinNames_y))
-      call RegPack(Buf, InData%LinNames_y)
-   end if
-   call RegPack(Buf, allocated(InData%LinNames_u))
-   if (allocated(InData%LinNames_u)) then
-      call RegPackBounds(Buf, 1, lbound(InData%LinNames_u), ubound(InData%LinNames_u))
-      call RegPack(Buf, InData%LinNames_u)
-   end if
-   call RegPack(Buf, allocated(InData%IsLoad_u))
-   if (allocated(InData%IsLoad_u)) then
-      call RegPackBounds(Buf, 1, lbound(InData%IsLoad_u), ubound(InData%IsLoad_u))
-      call RegPack(Buf, InData%IsLoad_u)
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%LinNames_y)
+   call RegPackAlloc(RF, InData%LinNames_u)
+   call RegPackAlloc(RF, InData%IsLoad_u)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine MAP_Fortran_UnPackLin_InitOutputType(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine MAP_Fortran_UnPackLin_InitOutputType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Lin_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MAP_Fortran_UnPackLin_InitOutputType'
-   integer(IntKi)  :: LB(1), UB(1)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   if (allocated(OutData%LinNames_y)) deallocate(OutData%LinNames_y)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%LinNames_y(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%LinNames_y.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%LinNames_y)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%LinNames_u)) deallocate(OutData%LinNames_u)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%LinNames_u(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%LinNames_u.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%LinNames_u)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%IsLoad_u)) deallocate(OutData%IsLoad_u)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%IsLoad_u(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%IsLoad_u.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%IsLoad_u)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%LinNames_y); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%LinNames_u); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%IsLoad_u); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MAP_Fortran_CopyLin_ParamType(SrcLin_ParamTypeData, DstLin_ParamTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -241,14 +189,14 @@ subroutine MAP_Fortran_CopyLin_ParamType(SrcLin_ParamTypeData, DstLin_ParamTypeD
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'MAP_Fortran_CopyLin_ParamType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcLin_ParamTypeData%Jac_u_indx)) then
-      LB(1:2) = lbound(SrcLin_ParamTypeData%Jac_u_indx)
-      UB(1:2) = ubound(SrcLin_ParamTypeData%Jac_u_indx)
+      LB(1:2) = lbound(SrcLin_ParamTypeData%Jac_u_indx, kind=B8Ki)
+      UB(1:2) = ubound(SrcLin_ParamTypeData%Jac_u_indx, kind=B8Ki)
       if (.not. allocated(DstLin_ParamTypeData%Jac_u_indx)) then
          allocate(DstLin_ParamTypeData%Jac_u_indx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -274,47 +222,28 @@ subroutine MAP_Fortran_DestroyLin_ParamType(Lin_ParamTypeData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine MAP_Fortran_PackLin_ParamType(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine MAP_Fortran_PackLin_ParamType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Lin_ParamType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MAP_Fortran_PackLin_ParamType'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%Jac_u_indx))
-   if (allocated(InData%Jac_u_indx)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Jac_u_indx), ubound(InData%Jac_u_indx))
-      call RegPack(Buf, InData%Jac_u_indx)
-   end if
-   call RegPack(Buf, InData%du)
-   call RegPack(Buf, InData%Jac_ny)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%Jac_u_indx)
+   call RegPack(RF, InData%du)
+   call RegPack(RF, InData%Jac_ny)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine MAP_Fortran_UnPackLin_ParamType(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine MAP_Fortran_UnPackLin_ParamType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Lin_ParamType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MAP_Fortran_UnPackLin_ParamType'
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   if (allocated(OutData%Jac_u_indx)) deallocate(OutData%Jac_u_indx)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%Jac_u_indx(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Jac_u_indx.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%Jac_u_indx)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%du)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Jac_ny)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%Jac_u_indx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%du); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Jac_ny); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 END MODULE MAP_Fortran_Types
 !ENDOFREGISTRYGENERATEDFILE

@@ -42,9 +42,11 @@ MODULE MoorDyn_Rod
    PUBLIC :: Rod_GetNetForceAndMass
    PUBLIC :: Rod_AddLine
    PUBLIC :: Rod_RemoveLine
-   
-   
+   public :: VisRodsMesh_Init
+   public :: VisRodsMesh_Update
 
+   
+   
 CONTAINS
 
 
@@ -149,24 +151,6 @@ CONTAINS
             
       IF (wordy > 0) print *, "Set up Rod ",Rod%IdNum, ", type ", Rod%typeNum
 
-
-      if (p%writeLog > 1) then
-         write(p%UnLog, '(A)') "  - Rod "//trim(num2lstr(Rod%IdNum))
-         write(p%UnLog, '(A)') "    ID: "//trim(num2lstr(Rod%IdNum))
-         write(p%UnLog, '(A)') "    UnstrLen: "//trim(num2lstr(Rod%UnstrLen))
-         write(p%UnLog, '(A)') "    N   : "//trim(num2lstr(Rod%N   ))
-         write(p%UnLog, '(A)') "    d   : "//trim(num2lstr(Rod%d   ))
-         write(p%UnLog, '(A)') "    rho : "//trim(num2lstr(Rod%rho ))
-         write(p%UnLog, '(A)') "    Can  : "//trim(num2lstr(Rod%Can ))
-         write(p%UnLog, '(A)') "    Cat  : "//trim(num2lstr(Rod%Cat ))         
-         write(p%UnLog, '(A)') "    CaEnd: "//trim(num2lstr(Rod%CaEnd ))
-         write(p%UnLog, '(A)') "    Cdn  : "//trim(num2lstr(Rod%Cdn ))
-         write(p%UnLog, '(A)') "    Cdt  : "//trim(num2lstr(Rod%Cdt ))
-         write(p%UnLog, '(A)') "    CdEnd: "//trim(num2lstr(Rod%CdEnd ))
-         !write(p%UnLog, '(A)') "    ww_l: " << ( (rho - env->rho_w)*(pi/4.*d*d) )*9.81 << endl;	
-      end if
-
-
       ! need to add cleanup sub <<<
 
 
@@ -207,7 +191,7 @@ CONTAINS
       ! r and rd of ends have already been set by setup function or by parent object   <<<<< right? <<<<<
 
 
-      ! Pass kinematics to any attached lines (this is just like what a Connection does, except for both ends)
+      ! Pass kinematics to any attached lines (this is just like what a Point does, except for both ends)
       ! so that they have the correct initial positions at this initialization stage.
       
       if (Rod%typeNum >- 2)  CALL Rod_SetDependentKin(Rod, 0.0_DbKi, m, .TRUE.)  ! don't call this for type -2 coupled Rods as it's already been called
@@ -357,7 +341,7 @@ CONTAINS
 
       Type(MD_Rod),          INTENT(INOUT)  :: Rod            ! the Rod object
       Real(DbKi),            INTENT(IN   )  :: t              ! instantaneous time
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m              ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Connections)
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m              ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Points)
       LOGICAL,               INTENT(IN   )  :: initial        ! true if this is the call during initialization (in which case avoid calling any Lines yet)
 
       INTEGER(IntKi)                        :: l              ! index of segments or nodes along line
@@ -390,7 +374,7 @@ CONTAINS
          CALL transformKinematicsAtoB(Rod%r6(1:3), Rod%r6(4:6), Rod%UnstrLen, Rod%v6, Rod%r(:,N), Rod%rd(:,N))   ! end B    
       end if
 
-      ! pass end node kinematics to any attached lines (this is just like what a Connection does, except for both ends)
+      ! pass end node kinematics to any attached lines (this is just like what a Point does, except for both ends)
       DO l=1,Rod%nAttachedA
          CALL Line_SetEndKinematics(m%LineList(Rod%attachedA(l)), Rod%r(:,0), Rod%rd(:,0), t, Rod%TopA(l))
       END DO
@@ -424,7 +408,7 @@ CONTAINS
          Rod%r6(4:6) = Rod%q  ! set orientation angles
       END IF
 
-      ! pass Rod orientation to any attached lines (this is just like what a Connection does, except for both ends)
+      ! pass Rod orientation to any attached lines (this is just like what a Point does, except for both ends)
       DO l=1,Rod%nAttachedA
          CALL Line_SetEndOrientation(m%LineList(Rod%attachedA(l)), Rod%q, Rod%TopA(l), 0)
       END DO
@@ -440,7 +424,7 @@ CONTAINS
 
       Type(MD_Rod),          INTENT(INOUT)  :: Rod              ! the Rod object
       Real(DbKi),            INTENT(INOUT)  :: Xd(:)            ! state derivative vector section for this line
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m         ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Connections)
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m         ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Points)
       TYPE(MD_ParameterType),INTENT(IN   )  :: p                ! Parameters
       
       !TYPE(MD_MiscVarType), INTENT(INOUT)  :: m       ! misc/optimization variables
@@ -481,7 +465,7 @@ CONTAINS
          ! rate of change of unit vector components!!  CHECK!   <<<<<
          Xd(10) =                - Rod%v6(6)*Rod%r6(5) + Rod%v6(5)*Rod%r6(6) ! i.e.  u_dot_x = -omega_z*u_y + omega_y*u_z
          Xd(11) =  Rod%v6(6)*Rod%r6(4)                 - Rod%v6(4)*Rod%r6(6) ! i.e.  u_dot_y =  omega_z*u_x - omega_x*u_z
-         Xd(12) = -Rod%v6(5)*Rod%r6(4) + Rod%v6(4)*Rod%r6(5)                 ! i.e.  u_dot_z = -omega_y*u_x - omega_x*u_y
+         Xd(12) = -Rod%v6(5)*Rod%r6(4) + Rod%v6(4)*Rod%r6(5)                 ! i.e.  u_dot_z = -omega_y*u_x + omega_x*u_y
 
          ! store accelerations in case they're useful as output
          Rod%a6 = acc
@@ -489,8 +473,7 @@ CONTAINS
       ELSE                            ! pinned rod, 6 states (rotational only)
       
          ! account for moment in response to end A acceleration due to inertial coupling (off-diagonal sub-matrix terms)
-         !Fnet(4:6) = Fnet(4:6) - MATMUL(M_out(4:6,1:3), Rod%a6(1:3))  ! <<<check that it's the right submatrix <<<
-         Fnet(4:6) = Fnet(4:6) - MATMUL(M_out(1:3,4:6), Rod%a6(1:3))  ! <<< THIS order is stable. Weird. <<<
+         Fnet(4:6) = Fnet(4:6) - MATMUL(M_out(4:6,1:3), Rod%a6(1:3))  
          ! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the above line seems to be causing the stability problems for USFLOWT! <<<<
          
          ! solve for accelerations in [M]{a}={f} using LU decomposition
@@ -502,7 +485,7 @@ CONTAINS
          ! rate of change of unit vector components!!  CHECK!   <<<<<
          Xd(4) =                - Rod%v6(6)*Rod%r6(5) + Rod%v6(5)*Rod%r6(6) ! i.e.  u_dot_x = -omega_z*u_y + omega_y*u_z
          Xd(5) =  Rod%v6(6)*Rod%r6(4)                 - Rod%v6(4)*Rod%r6(6) ! i.e.  u_dot_y =  omega_z*u_x - omega_x*u_z
-         Xd(6) = -Rod%v6(5)*Rod%r6(4) + Rod%v6(4)*Rod%r6(5)                 ! i.e.  u_dot_z = -omega_y*u_x - omega_x*u_y
+         Xd(6) = -Rod%v6(5)*Rod%r6(4) + Rod%v6(4)*Rod%r6(5)                 ! i.e.  u_dot_z = -omega_y*u_x + omega_x*u_y
       
          ! store angular accelerations in case they're useful as output
          Rod%a6(4:6) = acc(4:6)
@@ -776,7 +759,7 @@ CONTAINS
             ! fluid acceleration components for current node
             aq = DOT_PRODUCT(Rod%Ud(:,I), Rod%q) * Rod%q  ! tangential component of fluid acceleration
             ap = Rod%Ud(:,I) - aq                         ! normal component of fluid acceleration
-            ! transverse and axial Froude-Krylov force
+            ! transverse and axial fluid inertia force
             Rod%Ap(:,I) = VOF * p%rhoW*(1.0+Rod%Can)* v_i * ap  ! 
             Rod%Aq(:,I) = 0.0_DbKi  ! p%rhoW*(1.0+Rod%Cat)* v_i * aq  ! <<< just put a taper-based term here eventually?
 
@@ -827,14 +810,14 @@ CONTAINS
             Rod%Mext = Rod%Mext + (/ Mtemp*sinBeta, -Mtemp*cosBeta, 0.0_DbKi /) 
          
             ! axial drag
-            Rod%Dq(:,I) = Rod%Dq(:,I) + VOF * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
+            Rod%Dq(:,I) = Rod%Dq(:,I) + 0.5 * VOF * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
          
             ! >>> what about rotational drag?? <<<   eqn will be  Pi* Rod%d**4/16.0 omega_rel?^2...  *0.5 * Cd...
 
-            ! Froud-Krylov force
-            Rod%Aq(:,I) = Rod%Aq(:,I) + VOF * p%rhoW*(1.0+Rod%CaEnd)* (2.0/3.0*Pi*Rod%d**3 /8.0) * aq
+            ! long-wave diffraction force
+            Rod%Aq(:,I) = Rod%Aq(:,I) + VOF * p%rhoW* Rod%CaEnd * (2.0/3.0*Pi*Rod%d**3 /8.0) * aq
             
-            ! dynamic pressure force
+            ! Froude-Krylov force
             Rod%Pd(:,I) = Rod%Pd(:,I) + VOF * 0.25* Pi*Rod%d*Rod%d * Rod%PDyn(I) * Rod%q
             
             ! added mass
@@ -857,12 +840,12 @@ CONTAINS
             Rod%Mext = Rod%Mext + (/ Mtemp*sinBeta, -Mtemp*cosBeta, 0.0_DbKi /) 
            
             ! axial drag
-            Rod%Dq(:,I) = Rod%Dq(:,I) + VOF * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
+            Rod%Dq(:,I) = Rod%Dq(:,I) + 0.5 * VOF * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
+            
+            ! long-wave diffraction force
+            Rod%Aq(:,I) = Rod%Aq(:,I) + VOF * p%rhoW* Rod%CaEnd * (2.0/3.0*Pi*Rod%d**3 /8.0) * aq
             
             ! Froud-Krylov force
-            Rod%Aq(:,I) = Rod%Aq(:,I) + VOF * p%rhoW*(1.0+Rod%CaEnd)* (2.0/3.0*Pi*Rod%d**3 /8.0) * aq
-            
-            ! dynamic pressure force
             Rod%Pd(:,I) = Rod%Pd(:,I) - VOF * 0.25* Pi*Rod%d*Rod%d * Rod%PDyn(I) * Rod%q
             
             ! added mass
@@ -958,7 +941,7 @@ CONTAINS
       Imat_l = 0.0_DbKi
       if (Rod%N > 0) then
          I_l = 0.125*Rod%mass * Rod%d*Rod%d     ! axial moment of inertia
-         I_r = Rod%mass/12 * (0.75*Rod%d*Rod%d + (Rod%UnstrLen/Rod%N)**2 ) * Rod%N     ! summed radial moment of inertia for each segment individually
+         I_r = Rod%mass * ((Rod%d**2) / 16 - (Rod%UnstrLen**2) / (6 * Rod%N**2)); ! moment of inertia correction term for lumped mass approach
          
          Imat_l(1,1) = I_r   ! inertia about CG in local orientations (as if Rod is vertical)
          Imat_l(2,2) = I_r
@@ -1013,16 +996,27 @@ CONTAINS
       ! add inertial loads as appropriate (written out in a redundant way just for clarity, and to support load separation in future)
       ! fixed coupled rod
       if (Rod%typeNum == -2) then                          
-      
-         F6_iner  = -MATMUL(Rod%M6net, Rod%a6)    ! inertial loads      
-         Fnet_out = Rod%F6net + F6_iner           ! add inertial loads
-      
+
+         if (p%inertialF == 1) then      ! include inertial components  
+            F6_iner  = -MATMUL(Rod%M6net, Rod%a6)    ! inertial loads 
+         else 
+            F6_iner = 0.0
+         endif     
+         Rod%F6net = Rod%F6net + F6_iner           ! add inertial loads  
+         Fnet_out = Rod%F6net
       ! pinned coupled rod      
-      else if (Rod%typeNum == -1) then                     
-         ! inertial loads ... from input translational ... and solved rotational ... acceleration
-         F6_iner(4:6)  = -MATMUL(Rod%M6net(1:3,1:3), Rod%a6(1:3)) - MATMUL(Rod%M6net(1:3,4:6), Rod%a6(4:6))
-         Fnet_out(1:3) = Rod%F6net(1:3) + F6_iner(4:6)     ! add translational inertial loads
-         Fnet_out(4:6) = 0.0_DbKi
+      else if (Rod%typeNum == -1) then   
+                     
+         if (p%inertialF == 1) then      ! include inertial components 
+            ! inertial loads ... from input translational ... and solved rotational ... acceleration
+            F6_iner(1:3)  = -MATMUL(Rod%M6net(1:3,1:3), Rod%a6(1:3)) - MATMUL(Rod%M6net(1:3,4:6), Rod%a6(4:6))
+         else
+            F6_iner(1:3) = 0.0
+         endif
+         
+         Rod%F6net(1:3) = Rod%F6net(1:3) + F6_iner(1:3)     ! add translational inertial loads
+         Rod%F6net(4:6) = 0.0_DbKi
+         Fnet_out = Rod%F6net
       else
          print *, "ERROR, Rod_GetCoupledForce called for wrong (non-coupled) rod type!"
       end if
@@ -1069,10 +1063,10 @@ CONTAINS
    !--------------------------------------------------------------
    
 
-   ! this function handles assigning a line to a connection node
+   ! this function handles assigning a line to a point node
    SUBROUTINE Rod_AddLine(Rod, lineID, TopOfLine, endB)
 
-      Type(MD_Rod), INTENT (INOUT)   :: Rod        ! the Connection object
+      Type(MD_Rod), INTENT (INOUT)   :: Rod        ! the Point object
 
       Integer(IntKi),   INTENT( IN )     :: lineID
       Integer(IntKi),   INTENT( IN )     :: TopOfLine
@@ -1087,7 +1081,7 @@ CONTAINS
             Rod%AttachedB(Rod%nAttachedB) = lineID
             Rod%TopB(Rod%nAttachedB) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
          ELSE
-            Print*, "too many lines connected to Rod ", Rod%IdNum, " in MoorDyn!"
+            call WrScr("too many lines connected to Rod "//trim(num2lstr(Rod%IdNum))//" in MoorDyn!")
          END IF
 
       else              ! attaching to end A
@@ -1099,7 +1093,7 @@ CONTAINS
             Rod%AttachedA(Rod%nAttachedA) = lineID
             Rod%TopA(Rod%nAttachedA) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
          ELSE
-            Print*, "too many lines connected to Rod ", Rod%IdNum, " in MoorDyn!"
+            call WrScr("too many lines connected to Rod "//trim(num2lstr(Rod%IdNum))//" in MoorDyn!")
          END IF
          
       end if
@@ -1107,10 +1101,10 @@ CONTAINS
    END SUBROUTINE Rod_AddLine
 
 
-   ! this function handles removing a line from a connection node
+   ! this function handles removing a line from a point node
    SUBROUTINE Rod_RemoveLine(Rod, lineID, TopOfLine, endB,  rEnd, rdEnd)
 
-      Type(MD_Rod), INTENT (INOUT)  :: Rod        ! the Connection object
+      Type(MD_Rod), INTENT (INOUT)  :: Rod        ! the Point object
 
       Integer(IntKi),   INTENT( IN )     :: lineID
       Integer(IntKi),   INTENT(  OUT)    :: TopOfLine
@@ -1141,7 +1135,7 @@ CONTAINS
                      rdEnd(J) = Rod%rd(J,Rod%N)
                   END DO
                   
-                  print*, "Detached line ", lineID, " from Rod ", Rod%IdNum, " end B"
+                  call WrScr( "Detached line "//trim(num2lstr(lineID))//" from Rod "//trim(num2lstr(Rod%IdNum))//" end B")
                   
                   EXIT
                END DO
@@ -1173,7 +1167,7 @@ CONTAINS
                      rdEnd(J) = Rod%rd(J,0)
                   END DO
                   
-                  print*, "Detached line ", lineID, " from Rod ", Rod%IdNum, " end A"
+                  call WrScr( "Detached line "//trim(num2lstr(lineID))//" from Rod "//trim(num2lstr(Rod%IdNum))//" end A")
                   
                   EXIT
                END DO
@@ -1187,6 +1181,103 @@ CONTAINS
       end if
       
    END SUBROUTINE Rod_RemoveLine
+
+
+
+   subroutine VisRodsMesh_Init(p,m,y,ErrStat,ErrMsg)
+      type(MD_ParameterType), intent(inout)  :: p
+      type(MD_MiscVarType),   intent(in   )  :: m
+      type(MD_OutputType),    intent(inout)  :: y
+      integer(IntKi),         intent(  out)  :: ErrStat
+      character(*),           intent(  out)  :: ErrMsg
+      integer(IntKi)                         :: ErrStat2
+      character(ErrMsgLen)                   :: ErrMsg2
+      integer(IntKi)                         :: i,l
+      character(*), parameter                :: RoutineName = 'VisRodsMesh_Init'
+
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+
+      ! allocate line2 mesh for all lines
+      allocate (y%VisRodsMesh(p%NRods), STAT=ErrStat2);   if (Failed0('visualization mesh for lines')) return
+      allocate (p%VisRodsDiam(p%NRods), STAT=ErrStat2);   if (Failed0('visualization mesh for lines')) return
+
+      ! Initialize mesh for each line (line nodes start at 0 index, so N+1 total nodes)
+      do l=1,p%NRods
+         CALL MeshCreate( BlankMesh = y%VisRodsMesh(l), &
+                NNodes          = m%RodList(l)%N+1,     &
+                IOS             = COMPONENT_OUTPUT,      &
+                TranslationDisp = .true.,                &
+                Orientation     = .true.,                &
+                ErrStat=ErrStat2, ErrMess=ErrMsg2)
+         if (Failed())  return
+
+         ! Internal nodes (line nodes start at 0 index)
+         do i = 0,m%RodList(l)%N
+            call MeshPositionNode ( y%VisRodsMesh(l), i+1, real(m%RodList(l)%r(:,I),ReKi), ErrStat2, ErrMsg2, Orient=real(m%RodList(l)%OrMat,R8Ki))
+            if (Failed())  return
+         enddo
+
+         ! make elements (line nodes start at 0 index, so N+1 total nodes)
+         do i = 2,m%RodList(l)%N+1
+            call MeshConstructElement ( Mesh      = y%VisRodsMesh(l)  &
+                                       , Xelement = ELEMENT_LINE2      &
+                                       , P1       = i-1                &   ! node1 number
+                                       , P2       = i                  &   ! node2 number
+                                       , ErrStat  = ErrStat2           &
+                                       , ErrMess  = ErrMsg2            )
+            if (Failed())  return
+         enddo
+
+         ! Commit mesh
+         call MeshCommit ( y%VisRodsMesh(l), ErrStat2, ErrMsg2 )
+         if (Failed())  return
+
+         ! Set rod diameter for visualization
+         call AllocAry(p%VisRodsDiam(l)%Diam,m%RodList(l)%N+1,'',ErrStat2,ErrMsg2)
+         if (Failed())  return
+         p%VisRodsDiam(l)%Diam=real(m%RodTypeList(m%RodList(l)%PropsIdNum)%d,SiKi)
+      enddo
+   contains
+      logical function Failed()
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         Failed = ErrStat >= AbortErrLev
+      end function Failed
+
+      ! check for failed where /= 0 is fatal
+      logical function Failed0(txt)
+         character(*), intent(in) :: txt
+         if (errStat /= 0) then
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = "Could not allocate "//trim(txt)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         endif
+         Failed0 = ErrStat >= AbortErrLev
+      end function Failed0
+   end subroutine VisRodsMesh_Init
+
+
+
+   subroutine VisRodsMesh_Update(p,m,y,ErrStat,ErrMsg)
+      type(MD_ParameterType), intent(in   )  :: p
+      type(MD_MiscVarType),   intent(in   )  :: m
+      type(MD_OutputType),    intent(inout)  :: y
+      integer(IntKi),         intent(  out)  :: ErrStat
+      character(*),           intent(  out)  :: ErrMsg
+      integer(IntKi)                         :: i,l
+      character(*), parameter                :: RoutineName = 'VisRodsMesh_Update'
+
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+
+      do l=1,p%NRods
+         ! Update rod positions/orientations
+         do i = 0,m%RodList(l)%N
+            y%VisRodsMesh(l)%TranslationDisp(:,i+1) = real(m%RodList(l)%r(:,I),ReKi) - y%VisRodsMesh(l)%Position(:,i+1)
+            y%VisRodsMesh(l)%Orientation(:,:,i+1) = real(m%RodList(l)%OrMat,R8Ki)
+         enddo
+      enddo
+   end subroutine VisRodsMesh_Update
 
 
 

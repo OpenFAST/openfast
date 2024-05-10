@@ -444,7 +444,7 @@ CONTAINS
       ErrStat=ErrID_Fatal
       ErrMsg='Error reading force inputs.'//char(10)//'Prolematic line: '//trim(Line)
       ! NodeID
-      if (.not. is_integer(StrArray(1), AL%NodeID) ) then
+      if (.not. is_int(StrArray(1), AL%NodeID) ) then
          ErrMsg=trim(ErrMsg)//achar(13)//achar(10)//'NodeID needs to be an integer.'
          return
       endif
@@ -487,110 +487,35 @@ CONTAINS
       call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
    end subroutine LegacyWarning
 
-   !> Read a delimited file with one line of header
-   subroutine ReadDelimFile(Filename, nCol, Array, errStat, errMsg, nHeaderLines, priPath)
-      character(len=*),                        intent(in)  :: Filename
-      integer,                                 intent(in)  :: nCol
-      real(ReKi), dimension(:,:), allocatable, intent(out) :: Array
-      integer(IntKi)         ,                 intent(out) :: errStat ! Status of error message
-      character(*)           ,                 intent(out) :: errMsg  ! Error message if ErrStat /= ErrID_None
-      integer(IntKi), optional,                intent(in ) :: nHeaderLines
-      character(*)  , optional,                intent(in ) :: priPath  ! Primary path, to use if filename is not absolute
-      integer              :: UnIn, i, j, nLine, nHead
-      character(len= 2048) :: line
-      integer(IntKi)       :: errStat2      ! local status of error message
-      character(ErrMsgLen) :: errMsg2       ! temporary Error message
-      character(len=2048) :: Filename_Loc   ! filename local to this function
-      ErrStat = ErrID_None
-      ErrMsg  = ""
+   ! --------------------------------------------------------------------------------
+   ! --- Generic routines (also present in other modules, e.g. OLAF, AD Driver) 
+   ! --------------------------------------------------------------------------------
+   function is_numeric(string, x)
+      implicit none
+      character(len=*), intent(in) :: string
+      real(reki), intent(out) :: x
+      logical :: is_numeric
+      integer :: e,n
+      character(len=12) :: fmt
+      x = 0.0_reki
+      n=len_trim(string)
+      write(fmt,'("(F",I0,".0)")') n
+      read(string,fmt,iostat=e) x
+      is_numeric = e == 0
+   end function is_numeric
 
-      Filename_Loc = Filename
-      if (present(priPath)) then
-         if (PathIsRelative(Filename_Loc)) Filename_Loc = trim(PriPath)//trim(Filename)
-      endif
-
-
-      ! Open file
-      call GetNewUnit(UnIn) 
-      call OpenFInpFile(UnIn, Filename_Loc, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ReadDelimFile')
-      if (errStat >= AbortErrLev) return
-      ! Count number of lines
-      nLine = line_count(UnIn)
-      allocate(Array(nLine-1, nCol), stat=errStat2); errMsg2='allocation failed'; call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ReadDelimFile')
-      if (errStat >= AbortErrLev) return
-      ! Read header
-      nHead=1
-      if (present(nHeaderLines)) nHead = nHeaderLines
-      do i=1,nHead
-         read(UnIn, *, IOSTAT=errStat2) line
-         errMsg2 = ' Error reading line '//trim(Num2LStr(1))//' of file: '//trim(Filename_Loc)
-         call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ReadDelimFile')
-         if (errStat >= AbortErrLev) return
-      enddo
-      ! Read data
-      do I = 1,nLine-1
-         read (UnIn,*,IOSTAT=errStat2) (Array(I,J), J=1,nCol)
-         errMsg2 = ' Error reading line '//trim(Num2LStr(I+1))//' of file: '//trim(Filename_Loc)
-         call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ReadDelimFile')
-         if (errStat >= AbortErrLev) return
-      end do  
-      close(UnIn) 
-   end subroutine ReadDelimFile
-
-   !> Counts number of lines in a file
-   integer function line_count(iunit)
-      integer, intent(in) :: iunit
-      character(len=2048) :: line
-      ! safety for infinite loop..
-      integer :: i
-      integer, parameter :: nline_max=100000000 ! 100 M
-      line_count=0
-      do i=1,nline_max 
-         line=''
-         read(iunit,'(A)',END=100)line
-         line_count=line_count+1
-      enddo
-      if (line_count==nline_max) then
-         print*,'Error: maximum number of line exceeded for line_count'
-         STOP
-      endif
-   100 if(len(trim(line))>0) then
-         line_count=line_count+1
-      endif
-      rewind(iunit)
-      return
-    end function
-   !> Perform linear interpolation of an array, where first column is assumed to be ascending time values
-   !! First value is used for times before, and last value is used for time beyond
-   subroutine interpTimeValue(array, time, iLast, values)
-      real(ReKi), dimension(:,:), intent(in)    :: array !< vector of time steps
-      real(DbKi),                 intent(in)    :: time  !< time
-      integer,                    intent(inout) :: iLast
-      real(ReKi), dimension(:),   intent(out)   :: values !< vector of values at given time
-      integer :: i
-      real(ReKi) :: alpha
-      if (array(iLast,1)> time) then 
-         values = array(iLast,2:)
-      elseif (iLast == size(array,1)) then 
-         values = array(iLast,2:)
-      else
-         ! Look for index
-         do i=iLast,size(array,1)
-            if (array(i,1)<=time) then
-               iLast=i
-            else
-               exit
-            endif
-         enddo
-         if (iLast==size(array,1)) then
-            values = array(iLast,2:)
-         else
-            ! Linear interpolation
-            alpha = (array(iLast+1,1)-time)/(array(iLast+1,1)-array(iLast,1))
-            values = array(iLast,2:)*alpha + array(iLast+1,2:)*(1-alpha)
-            !print*,'time', array(iLast,1), '<=', time,'<',  array(iLast+1,1), 'fact', alpha
-         endif
-      endif
-   end subroutine interpTimeValue
+   function is_int(string, x)
+      implicit none
+      character(len=*), intent(in) :: string
+      integer(IntKi), intent(out) :: x
+      logical :: is_int
+      integer :: e,n
+      character(len=12) :: fmt
+      x = 0
+      n=len_trim(string)
+      write(fmt,'("(I",I0,")")') n
+      read(string,fmt,iostat=e) x
+      is_int = e == 0
+   end function is_int
 !----------------------------------------------------------------------------------------------------------------------------------
 END PROGRAM 

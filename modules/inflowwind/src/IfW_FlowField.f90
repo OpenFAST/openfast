@@ -26,7 +26,7 @@ implicit none
 
 public IfW_FlowField_GetVelAcc
 public IfW_UniformField_CalcAccel, IfW_Grid3DField_CalcAccel
-public IfW_UniformWind_GetOP
+public IfW_UniformWind_GetOP, IfW_UniformWind_Perturb       ! for linearization
 public Grid3D_to_Uniform, Uniform_to_Grid3D
 
 integer(IntKi), parameter  :: WindProfileType_None = -1     !< don't add wind profile; already included in input
@@ -716,7 +716,7 @@ subroutine IfW_UniformWind_GetOP(UF, t, InterpCubic, OP_out)
    type(UniformFieldType), intent(IN)  :: UF             !< Parameters
    real(DbKi), intent(IN)              :: t              !< Current simulation time in seconds
    logical, intent(in)                 :: InterpCubic    !< flag for using cubic interpolation
-   real(ReKi), intent(OUT)             :: OP_out(2)      !< operating point (HWindSpeed and PLexp
+   real(ReKi), intent(OUT)             :: OP_out(3)      !< operating point (HWindSpeed, PLexp, and AngleH)
 
    type(UniformField_Interp)           :: op         ! interpolated values of InterpParams
 
@@ -729,8 +729,21 @@ subroutine IfW_UniformWind_GetOP(UF, t, InterpCubic, OP_out)
 
    OP_out(1) = op%VelH
    OP_out(2) = op%ShrV
-
+   OP_out(3) = op%AngleH
 end subroutine
+
+
+!> Routine to perturb the wind extended outputs (needed by AeroDyn)
+!! NOTE: we are not passing the pointer here, but doing pass by reference to the FlowField since
+!!    this can only be used with linearization, and linearization requires using Uniform winds.
+subroutine IfW_UniformWind_Perturb(FF_perturb, du)
+   type(FlowFieldType),    intent(INOUT)  :: FF_perturb     !< Parameters to be modified
+   real(R8Ki),             intent(IN   )  :: du(3)          !< perturbations to apply
+   FF_perturb%Uniform%VelH(:) = FF_perturb%Uniform%VelH(:) + du(1)
+   FF_perturb%Uniform%ShrV(:) = FF_perturb%Uniform%ShrV(:) + du(2)
+   FF_perturb%PropagationDir  = FF_perturb%PropagationDir  + du(3)
+end subroutine
+
 
 subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, AllowExtrap, &
                                VelCell, AccCell, Xi, Is3D, ErrStat, ErrMsg)
@@ -1256,34 +1269,32 @@ contains
       ! In distance, X: InputInfo%PosX - p%InitXPosition - TIME*p%MeanWS
       TimeShifted = real(Time, ReKi) + (G3D%InitXPosition - PosX)*G3D%InvMWS
 
+      ! Get position on T grid
+      T_GRID = TimeShifted*G3D%Rate
+
       ! If field is periodic
       if (G3D%Periodic) then
-         TimeShifted = MODULO(TimeShifted, G3D%TotalTime)
-         ! If TimeShifted is a very small negative number,
-         ! modulo returns the incorrect value due to internal rounding errors.
-         ! See bug report #471
-         if (TimeShifted == G3D%TotalTime) TimeShifted = 0.0_ReKi
+         ! Take modulus of negative grid to get positive value between 0 and NSteps
+         T_GRID = MODULO(T_GRID, real(G3D%NSteps, ReKi))
+         ! For very small negative numbers, the above modulus will return exactly NSteps
+         ! so take modulus again to ensure that T_GRID is less than NSteps
+         T_GRID = MODULO(T_GRID, real(G3D%NSteps, ReKi))
       end if
-
-      ! Get position on T grid
-      T_GRID = TimeShifted*G3D%Rate + 1
-
+      
       ! Calculate bounding grid indices
-      IT_LO = floor(T_GRID, IntKi)
-      IT_HI = ceiling(T_GRID, IntKi)
+      IT_LO = floor(T_GRID, IntKi) + 1
+      IT_HI = IT_LO + 1
 
       ! Position location within interval [0,1]
-      DT = T_GRID - aint(T_GRID)
+      DT = 2.0_ReKi*(T_GRID - aint(T_GRID)) - 1.0_ReKi
 
       ! Adjust indices and interpolant
       if (IT_LO >= 1 .and. IT_HI <= G3D%NSteps) then
          ! Point is within grid
-         DT = 2.0_ReKi*DT - 1.0_ReKi
       else if (IT_LO == G3D%NSteps) then
          if (G3D%Periodic) then
             ! Time wraps back to beginning
             IT_HI = 1
-            DT = 2.0_ReKi*DT - 1.0_ReKi
          else if (DT <= GridTol) then
             ! Within tolerance of last time
             IT_HI = IT_LO
@@ -1292,13 +1303,13 @@ contains
             ! Extrapolate
             IT_LO = G3D%NSteps - 1
             IT_HI = G3D%NSteps
-            DT = DT + 1.0_ReKi
          end if
       else
          ! Time exceeds array bounds
          call SetErrStat(ErrID_Fatal, ' Error: GF wind array was exhausted at '// &
                          TRIM(Num2LStr(TIME))//' seconds (trying to access data at '// &
-                         TRIM(Num2LStr(TimeShifted))//' seconds).', &
+                         TRIM(Num2LStr(TimeShifted))//' seconds). IT_Lo='//TRIM(Num2LStr(IT_Lo))// &
+                         ', IT_HI='//TRIM(Num2LStr(IT_Hi)), &
                          ErrStat, ErrMsg, RoutineName)
       end if
 
@@ -1553,6 +1564,7 @@ subroutine IfW_Grid3DField_CalcVelAvgProfile(G3D, CalcAccel, ErrStat, ErrMsg)
    character(*), parameter    :: RoutineName = 'IfW_Grid3DField_CalcVelAvgProfile'
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
+   integer(IntKi)             :: it, iz, ic
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -1567,7 +1579,13 @@ subroutine IfW_Grid3DField_CalcVelAvgProfile(G3D, CalcAccel, ErrStat, ErrMsg)
    end if
 
    ! Calculate average velocity for each component across grid (Y)
-   G3D%VelAvg = sum(G3D%Vel, dim=2)/G3D%NYGrids
+   do it = 1, G3D%NSteps
+      do iz = 1, G3D%NZGrids
+         do ic = 1, G3D%NComp
+            G3D%VelAvg(ic,iz,it) = sum(G3D%Vel(ic,:,iz,it))/real(G3D%NYGrids, SiKi)
+         end do
+      end do
+   end do
 
    ! If acceleration calculation not requested, return
    if (.not. CalcAccel) return
@@ -1580,9 +1598,15 @@ subroutine IfW_Grid3DField_CalcVelAvgProfile(G3D, CalcAccel, ErrStat, ErrMsg)
       if (ErrStat >= AbortErrLev) return
       G3D%AccAvg = 0.0_SiKi
    end if
-
+   
    ! Calculate average acceleration for each component across grid (Y)
-   G3D%AccAvg = sum(G3D%Acc, dim=2)/G3D%NYGrids
+   do it = 1, G3D%NSteps
+      do iz = 1, G3D%NZGrids
+         do ic = 1, G3D%NComp
+            G3D%AccAvg(ic,iz,it) = sum(G3D%Acc(ic,:,iz,it))/real(G3D%NYGrids, SiKi)
+         end do
+      end do
+   end do
 
 end subroutine
 
@@ -1613,7 +1637,7 @@ subroutine Grid4DField_GetVel(G4D, Time, Position, Velocity, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    do i = 1, 3
-      tmp = (Position(i) - G4D%pZero(i))/G4D%delta(i)
+      tmp = (Position(i) - G4D%pZero(i))/real(G4D%delta(i),Reki)
       Indx_Lo(i) = INT(tmp) + 1                          ! convert REAL to INTEGER, then add one since our grid indices start at 1, not 0
       xi(i) = 2.0_ReKi*(tmp - aint(tmp)) - 1.0_ReKi   ! convert to value between -1 and 1
    end do

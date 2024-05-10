@@ -107,6 +107,7 @@ MODULE ModMesh_Types
       INTEGER :: ios                                         !< Mesh type: input (1), output(2), or state(3)
       INTEGER :: refNode = 0                                 !< optional reference node (informational only)
       INTEGER :: Nnodes = 0                                  !< Number of nodes (vertices) in mesh
+      INTEGER :: ID = 0                                      !< Mesh identifier (used during init)
 
      ! Mesh elements
       TYPE(ElemTabType), POINTER :: ElemTable(:) => NULL()   !< A table of all elements in the mesh, by type

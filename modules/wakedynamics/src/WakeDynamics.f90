@@ -1478,6 +1478,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'WD_CalcOutput'
    real(ReKi)                                   :: correction(3)
+   real(ReKi)                                   :: C, S, dvdr, dvdtheta_r, R, r_tmp
    errStat = ErrID_None
    errMsg  = ""
    
@@ -1681,7 +1682,7 @@ subroutine WD_WritePlaneOutputs( t, u, p, x, xd, z, OtherState, y, m, errStat, e
             x0(1) = xd%p_plane(1,i)
             x0(2) = xd%p_plane(2,i) - p%dr*p%NumRadii
             x0(3) = xd%p_plane(3,i) - p%dr*p%NumRadii
-             call vtk_dataset_structured_points(x0, dx, (/1,p%NumRadii*2-1,p%NumRadii*2-1/),mvtk)
+            call vtk_dataset_structured_points(x0, dx, (/1,p%NumRadii*2-1,p%NumRadii*2-1/),mvtk)
             call vtk_point_data_init(mvtk)
             call vtk_point_data_scalar(y%Vx_wake2(:,:,i),'Vx',mvtk) 
             call vtk_point_data_scalar(y%Vy_wake2(:,:,i),'Vy',mvtk) 

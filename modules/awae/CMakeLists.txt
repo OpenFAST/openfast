@@ -17,7 +17,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/AWAE_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AWAE_Types.f90 -noextrap)
 endif()
 
-add_library(awaelib 
+add_library(awaelib STATIC
   src/AWAE.f90
   src/AWAE_IO.f90
   src/AWAE_Types.f90

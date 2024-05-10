@@ -3311,6 +3311,44 @@ END FUNCTION FindValidChannelIndx
 
    RETURN
    END SUBROUTINE InterpStpMat8
+!=======================================================================
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Perform linear interpolation of an array, where first column is assumed to be ascending time values
+!! Similar to InterpStpMat, I think (to check), interpTimeValues=InterpStpMat( array(:,1), time, array(:,1:), iLast, AryLen, values )
+!! First value is used for times before, and last value is used for time beyond
+   subroutine interpTimeValue(array, time, iLast, values)
+      real(ReKi), dimension(:,:), intent(in)    :: array  !< Values, shape nt x nc, where array(:,1) is the time vector
+      real(DbKi),                 intent(in)    :: time   !< Time where values are to be interpolated
+      integer(IntKi),             intent(inout) :: iLast  !< previous index used (to speed up interpolation) 
+      real(ReKi), dimension(:),   intent(out)   :: values !< vector of values, shape nc, at given `time`
+      integer :: i, nMax
+      real(ReKi) :: alpha
+      nMax = size(array, 1)
+      iLast = max( min(iLast, nMax), 1) ! Clip iLast between 1 and nMax
+      !call InterpStpMat( array(:,1), time, array(:,1:), iLast, AryLen, values )
+      if (array(iLast,1) > time) then 
+         values = array(iLast,2:)
+      elseif (iLast == nMax) then 
+         values = array(iLast,2:)
+      else
+         ! Look for index
+         do i = iLast, nMax
+            if (array(i,1)<=time) then
+               iLast=i
+            else
+               exit
+            endif
+         enddo
+         if (iLast==nMax) then
+            values = array(iLast,2:)
+         else
+            ! Linear interpolation
+            alpha = (array(iLast+1,1)-time)/(array(iLast+1,1)-array(iLast,1))
+            values = array(iLast,2:)*alpha + array(iLast+1,2:)*(1-alpha)
+         endif
+      endif
+   end subroutine interpTimeValue
+
 !=======================================================================   
 !< This routine linearly interpolates Dataset. It is
 !! set for a 2-d interpolation on x and y of the input point.
@@ -4946,7 +4984,7 @@ end function Rad2M180to180Deg
    RETURN
    END FUNCTION RegCubicSplineInterpM ! ( X, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
 !=======================================================================
-!> This routine is used to integrate funciton f over the interval [a, b]. This routine
+!> This routine is used to integrate function f over the interval [a, b]. This routine
 !! is useful for sufficiently smooth (e.g., analytic) integrands, integrated over
 !! intervals which contain no singularities, and where the endpoints are also nonsingular.
 !!
@@ -6383,7 +6421,13 @@ end function Rad2M180to180Deg
        REAL(R8Ki)                          :: t_out                     ! Time to which to be extrap/interpd
                                                                      
        REAL(SiKi)                          :: Angle2_mod
-    
+
+         ! If both inputs are the same, then the output must equal the input
+      if (Angle1 == Angle2) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6427,7 +6471,13 @@ end function Rad2M180to180Deg
        REAL(R8Ki)                          :: t_out                     ! Time to which to be extrap/interpd
                                                                      
        REAL(R8Ki)                          :: Angle2_mod
-    
+
+         ! If both inputs are the same, then the output must equal the input
+      if (Angle1 == Angle2) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6470,7 +6520,13 @@ end function Rad2M180to180Deg
        REAL(SiKi)                          :: t_out                     ! Time to which to be extrap/interpd
                                                                      
        REAL(SiKi)                          :: Angle2_mod
-    
+
+         ! If both inputs are the same, then the output must equal the input
+      if (Angle1 == Angle2) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6514,7 +6570,13 @@ end function Rad2M180to180Deg
        REAL(SiKi)                          :: t_out                     ! Time to which to be extrap/interpd
                                                                      
        REAL(R8Ki)                          :: Angle2_mod
-    
+
+         ! If both inputs are the same, then the output must equal the input
+      if (Angle1 == Angle2) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6560,7 +6622,13 @@ end function Rad2M180to180Deg
        REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
        REAL(SiKi)                          :: Angle2_mod
        REAL(SiKi)                          :: Angle3_mod
-    
+
+         ! If all inputs are the same, then the output must equal the input
+      if ((Angle1 == Angle2) .and. (Angle2 == Angle3)) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6623,7 +6691,13 @@ end function Rad2M180to180Deg
        REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
        REAL(R8Ki)                          :: Angle2_mod
        REAL(R8Ki)                          :: Angle3_mod
-    
+
+         ! If all inputs are the same, then the output must equal the input
+      if ((Angle1 == Angle2) .and. (Angle2 == Angle3)) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6686,7 +6760,13 @@ end function Rad2M180to180Deg
        REAL(R8Ki)                          :: scaleFactor               ! temporary for extrapolation/interpolation
        REAL(SiKi)                          :: Angle2_mod
        REAL(SiKi)                          :: Angle3_mod
-    
+
+         ! If all inputs are the same, then the output must equal the input
+      if ((Angle1 == Angle2) .and. (Angle2 == Angle3)) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6749,7 +6829,13 @@ end function Rad2M180to180Deg
        REAL(R8Ki)                          :: scaleFactor               ! temporary for extrapolation/interpolation
        REAL(R8Ki)                          :: Angle2_mod
        REAL(R8Ki)                          :: Angle3_mod
-    
+
+         ! If all inputs are the same, then the output must equal the input
+      if ((Angle1 == Angle2) .and. (Angle2 == Angle3)) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)

@@ -59,11 +59,10 @@ CONTAINS
 !> @brief
 !!    This routine is called at the start of the simulation to perform initialization steps.
 !!    The parameters that are set here are not changed during the simulation.
-SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
+SUBROUTINE Waves2_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       TYPE(Waves2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
-      TYPE(Waves2_ParameterType),         INTENT(  OUT)  :: p                    !< Parameters
       TYPE(Waves2_InitOutputType),        INTENT(  OUT)  :: InitOut              !< Output for initialization routine
       TYPE(SeaSt_WaveFieldType),          INTENT(INOUT)  :: WaveField            !< WaveFieldType
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Error status of the operation
@@ -197,48 +196,6 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
       ErrMsgTmp   = ""
 
 
-      !-----------------------------------------------------------------------------
-      !> Before attempting to do any real calculations, we first check what was
-      !! passed in through _InitInp_ to make sure it makes sense.  That routine will
-      !! then copy over the relevant information that should be kept in parameters
-      !! (_p_).
-      !!
-      !! _InitInp_ will also check the flags, existence of files, and set flags
-      !! accordingly.
-      !-----------------------------------------------------------------------------
-
-
-      !--------------------------------------------------------------------------------
-      ! Check the Min and Max frequencies for the full QTF cases
-      !  -- these checks are performed based on the DiffQTFF and SumQTFF flags
-      !--------------------------------------------------------------------------------
-
-         ! 1. Check that the min / max diff frequencies make sense if using DiffQTF
-
-      IF ( InitInp%WvDiffQTFF .eqv. .TRUE. ) THEN
-         IF ( ( InitInp%WvHiCOffD < InitInp%WvLowCOffD ) .OR. ( InitInp%WvLowCOffD < 0.0 ) ) THEN
-            CALL SetErrStat( ErrID_Fatal, ' Programming Error in call to Waves2_Init: '//NewLine// &
-                  '           WvHiCOffD must be larger than WvLowCOffD. Both must be positive.'// &
-                  '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, RoutineName)
-            CALL CleanUp()
-            RETURN
-         END IF
-      END IF
-
-
-         ! 2. Check that the min / max diff frequencies make sense if using SumQTF
-
-      IF ( InitInp%WvSumQTFF .eqv. .TRUE. ) THEN
-         IF ( ( InitInp%WvHiCOffS < InitInp%WvLowCOffS ) .OR. ( InitInp%WvLowCOffS < 0.0 ) ) THEN
-            CALL SetErrStat( ErrID_Fatal, ' Programming Error in call to Waves2_Init: '//NewLine// &
-                  '           WvHiCOffS must be larger than WvLowCOffS. Both must be positive.'// &
-                  '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, RoutineName)
-            CALL CleanUp
-            RETURN
-         END IF
-      END IF
-
-
 
       !--------------------------------------------------------------------------------
       ! Check the size of arrays that were passed in containing the wave info
@@ -247,9 +204,9 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
          ! Check that WaveElevC0 is a 2x(NStepWave2+1) sized array (0 index start)
 
-      IF ( SIZE( WaveField%WaveElevC0, DIM=2 ) /= (InitInp%NStepWave2 + 1) ) THEN    ! Expect a 2x(0:NStepWave2) array
+      IF ( SIZE( WaveField%WaveElevC0, DIM=2 ) /= (WaveField%NStepWave2 + 1) ) THEN    ! Expect a 2x(0:NStepWave2) array
          CALL SetErrStat( ErrID_Fatal, ' Programming error in call to Waves2_Init:'//NewLine// &
-               '        --> Expected array for WaveElevC0 to be of size 2x'//TRIM(Num2LStr(InitInp%NStepWave2 + 1))// &
+               '        --> Expected array for WaveElevC0 to be of size 2x'//TRIM(Num2LStr(WaveField%NStepWave2 + 1))// &
                ' (2x(NStepWave2+1)), but instead received array of size '// &
                TRIM(Num2LStr(SIZE(WaveField%WaveElevC0,1)))//'x'//TRIM(Num2LStr(SIZE(WaveField%WaveElevC0,2)))//'.', &
                ErrStat, ErrMsg, RoutineName)
@@ -260,9 +217,9 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
          ! Check that WaveTime is of size (NStepWave+1)
 
-      IF ( SIZE( WaveField%WaveTime ) /= (InitInp%NStepWave + 1) ) THEN    ! Expect a 2x(0:NStepWave2) array
+      IF ( SIZE( WaveField%WaveTime ) /= (WaveField%NStepWave + 1) ) THEN    ! Expect a 2x(0:NStepWave2) array
          CALL SetErrStat( ErrID_Fatal, ' Programming error in call to Waves2_Init:'//NewLine// &
-               '        --> Expected array for WaveTime to be of size '//TRIM(Num2LStr(InitInp%NStepWave + 1))// &
+               '        --> Expected array for WaveTime to be of size '//TRIM(Num2LStr(WaveField%NStepWave + 1))// &
                ' (NStepWave+1), but instead received array of size '// &
                TRIM(Num2LStr(SIZE(WaveField%WaveTime)))//'.', &
                ErrStat, ErrMsg, RoutineName)
@@ -272,26 +229,19 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
 
       !--------------------------------------------------------------------------------
-      ! Now copy over things to parameters...
+      ! 
       !--------------------------------------------------------------------------------
 
-         ! Difference QTF
-      p%WvDiffQTFF            =  InitInp%WvDiffQTFF           ! Flag for calculation
-
-         ! Summation QTF
-      p%WvSumQTFF             =  InitInp%WvSumQTFF            ! Flag for calculation
-
-
          ! The wave elevation information in frequency space -- we need to normalize this by NStepWave2
-      ALLOCATE ( WaveElevC0Norm(0:InitInp%NStepWave2) , STAT=ErrStatTmp )
+      ALLOCATE ( WaveElevC0Norm(0:WaveField%NStepWave2) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) then
          CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElevC0Norm.',ErrStat,ErrMsg,RoutineName)
          CALL CleanUp()
          RETURN
       END IF
 
-      DO I=0,InitInp%NStepWave2
-         WaveElevC0Norm(I) = CMPLX( WaveField%WaveElevC0(1,I), WaveField%WaveElevC0(2,I), SiKi ) / REAL(InitInp%NStepWave2,SiKi)
+      DO I=0,WaveField%NStepWave2
+         WaveElevC0Norm(I) = CMPLX( WaveField%WaveElevC0(1,I), WaveField%WaveElevC0(2,I), SiKi ) / REAL(WaveField%NStepWave2,SiKi)
       ENDDO
 
       !--------------------------------------------------------------------------------
@@ -315,14 +265,14 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
          ! Since we have no stretching, NWaveKin0Prime and WaveKinzi0Prime(:) are
          !   equal to the number of, and the zi-coordinates for, the points in the
-         !   WaveKinGridzi(:) array between, and including, -WtrDpth and 0.0.
+         !   WaveKinGridzi(:) array between, and including, -EffWtrDpth and 0.0.
 
          ! Determine NWaveKin0Prime here:
 
          NWaveKin0Prime = 0
          DO J = 1,InitInp%NWaveKinGrid   ! Loop through all mesh points  where the incident wave kinematics will be computed
-               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and WtrDpth have already been adjusted using MSL2SWL
-            IF (    InitInp%WaveKinGridzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
+               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and EffWtrDpth have already been adjusted using MSL2SWL
+            IF (    InitInp%WaveKinGridzi(J) >= -WaveField%EffWtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
                NWaveKin0Prime = NWaveKin0Prime + 1
             END IF
          END DO                ! J - All Morison nodes where the incident wave kinematics will be computed
@@ -346,8 +296,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
          I = 1
 
          DO J = 1,InitInp%NWaveKinGrid ! Loop through all points where the incident wave kinematics will be computed without stretching
-               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and WtrDpth have already been adjusted using MSL2SWL
-            IF (    InitInp%WaveKinGridzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
+               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and EffWtrDpth have already been adjusted using MSL2SWL
+            IF (    InitInp%WaveKinGridzi(J) >= -WaveField%EffWtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
 
                WaveKinzi0Prime(I) =  InitInp%WaveKinGridzi(J)
                WaveKinPrimeMap(I) =  J
@@ -384,25 +334,25 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
       !--------------------------------------------------------------------------------
       ! Setup the output arrays
       !--------------------------------------------------------------------------------
-      ALLOCATE ( WaveField%WaveElev2 (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)  ) , STAT=ErrStatTmp )
+      ALLOCATE ( WaveField%WaveElev2 (0:WaveField%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)  ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveField%WaveElev2.', ErrStat,ErrMsg,RoutineName)
 
-      ALLOCATE ( InitOut%WaveVel2D  (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%WaveVel2D  (0:WaveField%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel2D.',  ErrStat,ErrMsg,RoutineName)
       
-      ALLOCATE ( InitOut%WaveAcc2D  (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%WaveAcc2D  (0:WaveField%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc2D.',  ErrStat,ErrMsg,RoutineName)
       
-      ALLOCATE ( InitOut%WaveDynP2D (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)  ), STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%WaveDynP2D (0:WaveField%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)  ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP2D.', ErrStat,ErrMsg,RoutineName)
       
-      ALLOCATE ( InitOut%WaveVel2S  (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%WaveVel2S  (0:WaveField%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel2S.',  ErrStat,ErrMsg,RoutineName)
       
-      ALLOCATE ( InitOut%WaveAcc2S  (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%WaveAcc2S  (0:WaveField%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc2S.',  ErrStat,ErrMsg,RoutineName)
       
-      ALLOCATE ( InitOut%WaveDynP2S (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)  ), STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%WaveDynP2S (0:WaveField%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)  ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP2S.', ErrStat,ErrMsg,RoutineName)
 
          ! Now check if all the allocations worked properly
@@ -411,10 +361,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
          RETURN
       END IF
 
-      !InitOut%WaveElev2 => WaveField%WaveElev2
-
          !Initialize the output arrays to zero.  We will only fill it in for the points we calculate.
-      WaveField%WaveElev2    =  0.0_SiKi
+      WaveField%WaveElev2  =  0.0_SiKi
       InitOut%WaveVel2D    =  0.0_SiKi
       InitOut%WaveAcc2D    =  0.0_SiKi
       InitOut%WaveDynP2D   =  0.0_SiKi
@@ -426,14 +374,14 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
 
          ! For calculating the 2nd-order wave elevation corrections, we need a temporary array to hold the information.
-      ALLOCATE ( TmpTimeSeries(0:InitInp%NStepWave), STAT=ErrStatTmp )
+      ALLOCATE ( TmpTimeSeries(0:WaveField%NStepWave), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array TmpTimeSeries.', ErrStat,ErrMsg,RoutineName)
-      ALLOCATE ( TmpTimeSeries2(0:InitInp%NStepWave), STAT=ErrStatTmp )
+      ALLOCATE ( TmpTimeSeries2(0:WaveField%NStepWave), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array TmpTimeSeries2.', ErrStat,ErrMsg,RoutineName)
 
-      ALLOCATE ( TmpFreqSeries(0:InitInp%NStepWave2), STAT=ErrStatTmp )
+      ALLOCATE ( TmpFreqSeries(0:WaveField%NStepWave2), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array TmpFreqSeries.', ErrStat,ErrMsg,RoutineName)
-      ALLOCATE ( TmpFreqSeries2(0:InitInp%NStepWave2), STAT=ErrStatTmp )
+      ALLOCATE ( TmpFreqSeries2(0:WaveField%NStepWave2), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array TmpFreqSeries2.', ErrStat,ErrMsg,RoutineName)
 
          ! Now check if all the allocations worked properly
@@ -446,7 +394,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
       ! Setup the FFT working arrays
       !--------------------------------------------------------------------------------
 
-      CALL InitFFT ( InitInp%NStepWave, FFT_Data, .FALSE., ErrStatTmp )
+      CALL InitFFT ( WaveField%NStepWave, FFT_Data, .FALSE., ErrStatTmp )
       CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp()
@@ -470,7 +418,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
       !--------------------------------------------------------------------------------
 
 
-      IF(p%WvDiffQTFF) THEN
+      IF(InitInp%WvDiffQTFF) THEN
 
             ! Tell our nice users what is about to happen that may take a while:
          CALL WrScr ( ' Calculating second order difference frequency wave kinematics.' )
@@ -482,21 +430,21 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
             ! Frequency space arrays:
 
-         ALLOCATE ( WaveVel2xCDiff   (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveVel2xCDiff   (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2xCDiff.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveVel2yCDiff   (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveVel2yCDiff   (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2yCDiff.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveVel2zCDiff   (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveVel2zCDiff   (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2zCDiff.',  ErrStat,ErrMsg,RoutineName)
 
-         ALLOCATE ( WaveAcc2xCDiff   (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc2xCDiff   (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2xCDiff.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveAcc2yCDiff   (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc2yCDiff   (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2yCDiff.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveAcc2zCDiff   (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc2zCDiff   (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2zCDiff.',  ErrStat,ErrMsg,RoutineName)
 
-         ALLOCATE ( WaveDynP2CDiff   (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveDynP2CDiff   (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2CDiff.',  ErrStat,ErrMsg,RoutineName)
 
             ! Now check if all the allocations worked properly
@@ -507,21 +455,21 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
 
             ! Time domain arrays:
-         ALLOCATE ( WaveVel2xDiff   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveVel2xDiff   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2xDiff.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveVel2yDiff   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveVel2yDiff   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2yDiff.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveVel2zDiff   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveVel2zDiff   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2zDiff.',  ErrStat,ErrMsg,RoutineName)
 
-         ALLOCATE ( WaveAcc2xDiff   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc2xDiff   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2xDiff.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveAcc2yDiff   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc2yDiff   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2yDiff.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveAcc2zDiff   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc2zDiff   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2zDiff.',  ErrStat,ErrMsg,RoutineName)
 
-         ALLOCATE ( WaveDynP2Diff   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveDynP2Diff   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2Diff.',  ErrStat,ErrMsg,RoutineName)
 
             ! Now check if all the allocations worked properly
@@ -578,22 +526,22 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
                ! \f$ \mu^- \f$ loop.  This loop is used to construct the full set of \f$ H_{\mu^-} \f$ terms used in the IFFT to find the timeseries.
                !> * \f$ \mu^- = n -m \f$
-            DO mu_minus=1,InitInp%NStepWave2-1
+            DO mu_minus=1,WaveField%NStepWave2-1
 
                   ! The frequency we are dealing with
                   !> * \f$ \omega^- = \mu^- \Delta \omega \f$
-               Omega_minus =  mu_minus * InitInp%WaveDOmega
+               Omega_minus =  mu_minus * WaveField%WaveDOmega
 
-               IF ( Omega_minus >= InitInp%WvLowCOffD .AND. Omega_minus <= InitInp%WvHiCOffD ) THEN
+               IF ( Omega_minus >= WaveField%WvLowCOffD .AND. Omega_minus <= WaveField%WvHiCOffD ) THEN
 
                      ! The inner \f$ m \f$ loop for calculating the \f$ H_{\mu^-} \f$ terms at each frequency.
-                  DO m=1,InitInp%NStepWave2-mu_minus
+                  DO m=1,WaveField%NStepWave2-mu_minus
                         ! Calculate the value of the n index from \f$ \mu^- = n - m \f$.  Calculate corresponding wavenumbers and frequencies.
                      n           =  mu_minus + m
-                     Omega_n     =  n * InitInp%WaveDOmega
-                     Omega_m     =  m * InitInp%WaveDOmega
-                     k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
-                     k_m         =  WaveNumber( Omega_m, InitInp%Gravity, InitInp%WtrDpth )
+                     Omega_n     =  n * WaveField%WaveDOmega
+                     Omega_m     =  m * WaveField%WaveDOmega
+                     k_n         =  WaveNumber( Omega_n, InitInp%Gravity, WaveField%EffWtrDpth )
+                     k_m         =  WaveNumber( Omega_m, InitInp%Gravity, WaveField%EffWtrDpth )
                      k_nm        =  k_nm_minus( n, m, k_n, k_m )
 
 
@@ -617,7 +565,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
 
                         !> Calculate \f$ U^- \f$ terms for the velocity calculations (\f$B^-\f$ provided by waves2::transfuncb_minus)
-                        ! NOTE: InitInp%WtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
+                        ! NOTE: WaveField%EffWtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
                         !> * \f$ _x{U}_{nm}^- = B_{nm}^- \left(k_n \cos \theta_n - k_m \cos \theta_m \right) \f$
                      Ux_nm_minus = B_minus * ( k_n * COS( D2R_S*WaveField%WaveDirArr(n) ) - k_m * COS( D2R_S*WaveField%WaveDirArr(m) ) )
 
@@ -625,7 +573,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                      Uy_nm_minus = B_minus * ( k_n * SIN( D2R_S*WaveField%WaveDirArr(n) ) - k_m * SIN( D2R_S*WaveField%WaveDirArr(m) ) )
 
                         !> * \f$ _z{U}_{nm}^- = \imath B_{nm}^- k_{nm} \tanh \left( k_{nm} ( h + z ) \right) \f$
-                     Uz_nm_minus = ImagNmbr * B_minus * k_nm * tanh( k_nm * ( InitInp%WtrDpth + WaveKinzi0Prime(I) ) )
+                     Uz_nm_minus = ImagNmbr * B_minus * k_nm * tanh( k_nm * ( WaveField%EffWtrDpth + WaveKinzi0Prime(I) ) )
 
 
                         !> Acceleration calculations
@@ -636,7 +584,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
                         !> Dynamic pressure
                         !> * \f$ P_{nm}^- = \rho_\mathrm{w} B_{nm}^- \omega_{\mu^-} \f$
-                     DynP_nm_minus  = REAL(InitInp%WtrDens,SiKi) * B_minus * Omega_minus
+                     DynP_nm_minus  = REAL(WaveField%WtrDens,SiKi) * B_minus * Omega_minus
 
 
 
@@ -733,15 +681,15 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
                ! Copy the first point to the last to make it easier.
             ! TODO: Why don't these have the 2.0 multipler?? GJH 9/8/21
-            InitOut%WaveVel2D(InitInp%NStepWave,ii,jj,kk,1)   =  WaveVel2xDiff(0)
-            InitOut%WaveVel2D(InitInp%NStepWave,ii,jj,kk,2)   =  WaveVel2yDiff(0)
-            InitOut%WaveVel2D(InitInp%NStepWave,ii,jj,kk,3)   =  WaveVel2zDiff(0)
+            InitOut%WaveVel2D(WaveField%NStepWave,ii,jj,kk,1)   =  WaveVel2xDiff(0)
+            InitOut%WaveVel2D(WaveField%NStepWave,ii,jj,kk,2)   =  WaveVel2yDiff(0)
+            InitOut%WaveVel2D(WaveField%NStepWave,ii,jj,kk,3)   =  WaveVel2zDiff(0)
 
-            InitOut%WaveAcc2D(InitInp%NStepWave,ii,jj,kk,1)   =  WaveAcc2xDiff(0)
-            InitOut%WaveAcc2D(InitInp%NStepWave,ii,jj,kk,2)   =  WaveAcc2yDiff(0)
-            InitOut%WaveAcc2D(InitInp%NStepWave,ii,jj,kk,3)   =  WaveAcc2zDiff(0)
+            InitOut%WaveAcc2D(WaveField%NStepWave,ii,jj,kk,1)   =  WaveAcc2xDiff(0)
+            InitOut%WaveAcc2D(WaveField%NStepWave,ii,jj,kk,2)   =  WaveAcc2yDiff(0)
+            InitOut%WaveAcc2D(WaveField%NStepWave,ii,jj,kk,3)   =  WaveAcc2zDiff(0)
 
-            InitOut%WaveDynP2D(InitInp%NStepWave,ii,jj,kk)    =  WaveDynP2Diff(0)
+            InitOut%WaveDynP2D(WaveField%NStepWave,ii,jj,kk)    =  WaveDynP2Diff(0)
 
 
          ENDDO    ! I=1,NWaveKin0Prime loop end
@@ -770,7 +718,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
          END IF
 
 
-      ENDIF    ! p%WvDiffQTFF
+      ENDIF    ! WvDiffQTFF
 
 
 
@@ -795,7 +743,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
       !--------------------------------------------------------------------------------
 
 
-      IF(p%WvSumQTFF) THEN
+      IF(InitInp%WvSumQTFF) THEN
 
             ! Tell our nice users what is about to happen that may take a while:
          CALL WrScr ( ' Calculating second order sum frequency wave kinematics.' )
@@ -807,39 +755,39 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
             ! Frequency space arrays:  Term 1 (n=m term)
 
-         ALLOCATE ( WaveVel2xCSumT1    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveVel2xCSumT1    (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2xCSumT1.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveVel2yCSumT1    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveVel2yCSumT1    (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2yCSumT1.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveVel2zCSumT1    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveVel2zCSumT1    (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2zCSumT1.',  ErrStat,ErrMsg,RoutineName)
 
-         ALLOCATE ( WaveAcc2xCSumT1    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc2xCSumT1    (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2xCSumT1.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveAcc2yCSumT1    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc2yCSumT1    (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2yCSumT1.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveAcc2zCSumT1    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc2zCSumT1    (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2zCSumT1.',  ErrStat,ErrMsg,RoutineName)
 
-         ALLOCATE ( WaveDynP2CSumT1    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveDynP2CSumT1    (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2CSumT1.',  ErrStat,ErrMsg,RoutineName)
 
             ! Term 2 (n/=m term)
-         ALLOCATE ( WaveVel2xCSumT2    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveVel2xCSumT2    (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2xCSumT2.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveVel2yCSumT2    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveVel2yCSumT2    (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2yCSumT2.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveVel2zCSumT2    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveVel2zCSumT2    (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2zCSumT2.',  ErrStat,ErrMsg,RoutineName)
 
-         ALLOCATE ( WaveAcc2xCSumT2    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc2xCSumT2    (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2xCSumT2.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveAcc2yCSumT2    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc2yCSumT2    (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2yCSumT2.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveAcc2zCSumT2    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc2zCSumT2    (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2zCSumT2.',  ErrStat,ErrMsg,RoutineName)
 
-         ALLOCATE ( WaveDynP2CSumT2    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
+         ALLOCATE ( WaveDynP2CSumT2    (0:WaveField%NStepWave2), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2CSumT2.',  ErrStat,ErrMsg,RoutineName)
 
             ! Now check if all the allocations worked properly
@@ -851,39 +799,39 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
             ! Time domain arrays: Term 1 (n=m term)
 
-         ALLOCATE ( WaveVel2xSumT1   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveVel2xSumT1   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2xSumT1.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveVel2ySumT1   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveVel2ySumT1   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2ySumT1.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveVel2zSumT1   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveVel2zSumT1   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2zSumT1.',  ErrStat,ErrMsg,RoutineName)
 
-         ALLOCATE ( WaveAcc2xSumT1   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc2xSumT1   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2xSumT1.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveAcc2ySumT1   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc2ySumT1   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2ySumT1.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveAcc2zSumT1   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc2zSumT1   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2zSumT1.',  ErrStat,ErrMsg,RoutineName)
 
-         ALLOCATE ( WaveDynP2SumT1   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveDynP2SumT1   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2SumT1.',  ErrStat,ErrMsg,RoutineName)
 
             ! Term 2 (n/=m term)
-         ALLOCATE ( WaveVel2xSumT2   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveVel2xSumT2   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2xSumT2.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveVel2ySumT2   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveVel2ySumT2   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2ySumT2.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveVel2zSumT2   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveVel2zSumT2   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2zSumT2.',  ErrStat,ErrMsg,RoutineName)
 
-         ALLOCATE ( WaveAcc2xSumT2   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc2xSumT2   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2xSumT2.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveAcc2ySumT2   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc2ySumT2   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2ySumT2.',  ErrStat,ErrMsg,RoutineName)
-         ALLOCATE ( WaveAcc2zSumT2   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc2zSumT2   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2zSumT2.',  ErrStat,ErrMsg,RoutineName)
 
-         ALLOCATE ( WaveDynP2SumT2   (0:InitInp%NStepWave), STAT=ErrStatTmp )
+         ALLOCATE ( WaveDynP2SumT2   (0:WaveField%NStepWave), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2SumT2.',  ErrStat,ErrMsg,RoutineName)
 
             ! Now check if all the allocations worked properly
@@ -958,17 +906,17 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                ! The limits look a little funny.  But remember we are placing the value in the 2*J location,
                ! so we cannot overun the end of the array.  The floor function is just in case NStepWave2 is
                ! an odd number
-            DO n=1,FLOOR( REAL(InitInp%NStepWave2-1) / 2.0_SiKi )   ! Only
+            DO n=1,FLOOR( REAL(WaveField%NStepWave2-1) / 2.0_SiKi )   ! Only
 
-               Omega_n  =  n * InitInp%WaveDOmega
+               Omega_n  =  n * WaveField%WaveDOmega
 
                ! The frequency we are dealing with
                !> * \f$ \omega^+ = \mu^+ \Delta \omega = 2 \omega_n \f$
                mu_plus     =  2 * n
                Omega_plus  =  2.0_SiKi * Omega_n
 
-               IF ( Omega_plus >= InitInp%WvLowCOffS .AND. Omega_plus <= InitInp%WvHiCOffS ) THEN
-                  k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
+               IF ( Omega_plus >= WaveField%WvLowCOffS .AND. Omega_plus <= WaveField%WvHiCOffS ) THEN
+                  k_n         =  WaveNumber( Omega_n, InitInp%Gravity, WaveField%EffWtrDpth )
                   k_nm        =  k_nm_plus( n, n, k_n, k_n )
 
 
@@ -992,7 +940,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
 
                      !> Calculate \f$ U^+ \f$ terms for the velocity calculations (\f$B^+\f$ provided by waves2::transfuncb_plus)
-                     ! NOTE: InitInp%WtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
+                     ! NOTE: WaveField%EffWtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
                      !> * \f$ _x{U}_{nn}^+ = B_{nn}^+ 2 k_n \cos \theta_n \f$
                   Ux_nm_plus = B_plus * 2.0_SiKi * k_n * COS( D2R_S*WaveField%WaveDirArr(n) )
 
@@ -1000,7 +948,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                   Uy_nm_plus = B_plus * 2.0_SiKi * k_n * SIN( D2R_S*WaveField%WaveDirArr(n) )
 
                      !> * \f$ _z{U}_{nn}^+ = \imath B_{nn}^+ k_{nn} \tanh \left( k_{nn} ( h + z ) \right) \f$
-                  Uz_nm_plus = ImagNmbr * B_plus * k_nm * tanh( k_nm * ( InitInp%WtrDpth + WaveKinzi0Prime(I) ) )
+                  Uz_nm_plus = ImagNmbr * B_plus * k_nm * tanh( k_nm * ( WaveField%EffWtrDpth + WaveKinzi0Prime(I) ) )
 
 
                      !> Acceleration calculations
@@ -1011,7 +959,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
                      !> Dynamic pressure
                      !> * \f$ P_{nn}^+ = \rho_\mathrm{w} B_{nn}^+ \omega_{\mu^+} \f$
-                  DynP_nm_plus  = REAL(InitInp%WtrDens, SiKi) * B_plus * Omega_plus
+                  DynP_nm_plus  = REAL(WaveField%WtrDens, SiKi) * B_plus * Omega_plus
 
 
 
@@ -1056,21 +1004,21 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
                ! \f$ \mu^+ \f$ loop.  This loop is used to construct the full set of \f$ H_{\mu^+} \f$ terms used in the IFFT to find the timeseries.
                !> * \f$ \mu^+ = n + m \f$
-            DO mu_plus=2,InitInp%NStepWave2-1
+            DO mu_plus=2,WaveField%NStepWave2-1
 
                   ! The frequency we are dealing with
                   !> * \f$ \omega^+ = \mu^+ \Delta \omega \f$
-               Omega_plus =  mu_plus * InitInp%WaveDOmega
+               Omega_plus =  mu_plus * WaveField%WaveDOmega
 
-               IF ( Omega_plus >= InitInp%WvLowCOffS .AND. Omega_plus <= InitInp%WvHiCOffS ) THEN
+               IF ( Omega_plus >= WaveField%WvLowCOffS .AND. Omega_plus <= WaveField%WvHiCOffS ) THEN
                      ! The inner \f$ m \f$ loop for calculating the \f$ H_{\mu^+} \f$ terms at each frequency.
                   DO m=1,FLOOR( REAL(mu_plus - 1) / 2.0_SiKi )
                         ! Calculate the value of the n index from \f$ \mu^+ = n + m \f$.  Calculate corresponding wavenumbers and frequencies.
                      n           =  mu_plus - m
-                     Omega_n     =  n * InitInp%WaveDOmega
-                     Omega_m     =  m * InitInp%WaveDOmega
-                     k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
-                     k_m         =  WaveNumber( Omega_m, InitInp%Gravity, InitInp%WtrDpth )
+                     Omega_n     =  n * WaveField%WaveDOmega
+                     Omega_m     =  m * WaveField%WaveDOmega
+                     k_n         =  WaveNumber( Omega_n, InitInp%Gravity, WaveField%EffWtrDpth )
+                     k_m         =  WaveNumber( Omega_m, InitInp%Gravity, WaveField%EffWtrDpth )
                      k_nm        =  k_nm_plus( n, m, k_n, k_m )
 
 
@@ -1094,7 +1042,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
 
                         !> Calculate \f$ U^+ \f$ terms for the velocity calculations (\f$B^+\f$ provided by waves2::transfuncb_plus)
-                        ! NOTE: InitInp%WtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
+                        ! NOTE: WaveField%EffWtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
                         !> * \f$ _x{U}_{nm}^+ = B_{nm}^+ \left(k_n \cos \theta_n + k_m \cos \theta_m \right) \f$
                      Ux_nm_plus = B_plus * ( k_n * COS( D2R_S*WaveField%WaveDirArr(n) ) + k_m * COS( D2R_S*WaveField%WaveDirArr(m) ) )
 
@@ -1102,7 +1050,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                      Uy_nm_plus = B_plus * ( k_n * SIN( D2R_S*WaveField%WaveDirArr(n) ) + k_m * SIN( D2R_S*WaveField%WaveDirArr(m) ) )
 
                         !> * \f$ _z{U}_{nm}^+ = \imath B_{nm}^+ k_{nm} \tanh \left( k_{nm} ( h + z ) \right) \f$
-                     Uz_nm_plus = ImagNmbr * B_plus * k_nm * tanh( k_nm * ( InitInp%WtrDpth + WaveKinzi0Prime(I) ) )
+                     Uz_nm_plus = ImagNmbr * B_plus * k_nm * tanh( k_nm * ( WaveField%EffWtrDpth + WaveKinzi0Prime(I) ) )
 
 
                         !> Acceleration calculations
@@ -1113,7 +1061,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
                         !> Dynamic pressure
                         !> * \f$ P_{nm}^+ = \rho_\mathrm{w} B_{nm}^+ \omega_{\mu^+} \f$
-                     DynP_nm_plus  = REAL(InitInp%WtrDens,SiKi) * B_plus * Omega_plus
+                     DynP_nm_plus  = REAL(WaveField%WtrDens,SiKi) * B_plus * Omega_plus
 
 
 
@@ -1232,9 +1180,9 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
 
                ! Copy the first point to the last to make it easier.
-            InitOut%WaveVel2S(InitInp%NStepWave,ii,jj,kk,:)     =  InitOut%WaveVel2S(0,ii,jj,kk,:)
-            InitOut%WaveAcc2S(InitInp%NStepWave,ii,jj,kk,:)     =  InitOut%WaveAcc2S(0,ii,jj,kk,:)
-            InitOut%WaveDynP2S(InitInp%NStepWave,ii,jj,kk)    =  InitOut%WaveDynP2S(0,ii,jj,kk)
+            InitOut%WaveVel2S(WaveField%NStepWave,ii,jj,kk,:)     =  InitOut%WaveVel2S(0,ii,jj,kk,:)
+            InitOut%WaveAcc2S(WaveField%NStepWave,ii,jj,kk,:)     =  InitOut%WaveAcc2S(0,ii,jj,kk,:)
+            InitOut%WaveDynP2S(WaveField%NStepWave,ii,jj,kk)    =  InitOut%WaveDynP2S(0,ii,jj,kk)
 
 
          ENDDO    ! I=1,NWaveKin0Prime loop end
@@ -1280,7 +1228,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
 
 
-      ENDIF    ! p%WvSumQTFF
+      ENDIF    ! WvSumQTFF
 
 
 
@@ -1326,7 +1274,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
    
          REAL(SiKi),       INTENT(IN   )              :: Xcoord
          REAL(SiKi),       INTENT(IN   )              :: Ycoord
-         REAL(SiKi),       INTENT(  OUT)              :: WaveElevSeriesAtXY(0:InitInp%NStepWave)
+         REAL(SiKi),       INTENT(  OUT)              :: WaveElevSeriesAtXY(0:WaveField%NStepWave)
          INTEGER(IntKi),   INTENT(  OUT)              :: ErrStatLcl
          INTEGER(IntKi)                               :: ErrStatLcl2
          CHARACTER(*),     INTENT(  OUT)              :: ErrMsgLcl
@@ -1354,24 +1302,24 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
             ! \f$ \mu^- \f$ loop.  This loop is used to construct the full set of \f$ H_{\mu^-} \f$ terms used in the IFFT to find the timeseries.
             !> * \f$ \mu^- = n -m \f$
-         DO mu_minus=1,InitInp%NStepWave2-1
+         DO mu_minus=1,WaveField%NStepWave2-1
 
                ! The frequency we are dealing with
                !> * \f$ \omega^- = \mu^- \Delta \omega \f$
-            Omega_minus =  mu_minus * InitInp%WaveDOmega
+            Omega_minus =  mu_minus * WaveField%WaveDOmega
 
-            IF ( Omega_minus >= InitInp%WvLowCOffD .AND. Omega_minus <= InitInp%WvHiCOffD ) THEN
+            IF ( Omega_minus >= WaveField%WvLowCOffD .AND. Omega_minus <= WaveField%WvHiCOffD ) THEN
 
                   ! The inner \f$ m \f$ loop for calculating the \f$ H_{\mu^-} \f$ terms at each frequency.
-               DO m=1,InitInp%NStepWave2-mu_minus
+               DO m=1,WaveField%NStepWave2-mu_minus
                      ! Calculate the value of the n index from \f$ \mu^- = n - m \f$.  Calculate corresponding wavenumbers and frequencies.
                   n           =  mu_minus + m
-                  Omega_n     =  n * InitInp%WaveDOmega
-                  Omega_m     =  m * InitInp%WaveDOmega
-                  k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
-                  k_m         =  WaveNumber( Omega_m, InitInp%Gravity, InitInp%WtrDpth )
-                  R_n         =  k_n * tanh( k_n * InitInp%WtrDpth )
-                  R_m         =  k_m * tanh( k_m * InitInp%WtrDpth )
+                  Omega_n     =  n * WaveField%WaveDOmega
+                  Omega_m     =  m * WaveField%WaveDOmega
+                  k_n         =  WaveNumber( Omega_n, InitInp%Gravity, WaveField%EffWtrDpth )
+                  k_m         =  WaveNumber( Omega_m, InitInp%Gravity, WaveField%EffWtrDpth )
+                  R_n         =  k_n * tanh( k_n * WaveField%EffWtrDpth )
+                  R_m         =  k_m * tanh( k_m * WaveField%EffWtrDpth )
                   D_minus     =  TransFuncD_minus(n,m,k_n,k_m,R_n,R_m)
 
                      !> Calculate the value of 
@@ -1431,7 +1379,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
          CALL SetErrStat(ErrStatLcl2,'Error occured while applying the FFT on WaveElevSeriesAtXY.',ErrStatLcl,ErrMsgLcl,'WaveElevSeriesAtXY_Diff')
  
             ! Append first datapoint as the last as aid for repeated wave data
-         WaveElevSeriesAtXY(InitInp%NStepWave) = WaveElevSeriesAtXY(0)
+         WaveElevSeriesAtXY(WaveField%NStepWave) = WaveElevSeriesAtXY(0)
    
 
       END SUBROUTINE WaveElevTimeSeriesAtXY_Diff
@@ -1453,7 +1401,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
    
          REAL(SiKi),       INTENT(IN   )              :: Xcoord
          REAL(SiKi),       INTENT(IN   )              :: Ycoord
-         REAL(SiKi),       INTENT(  OUT)              :: WaveElevSeriesAtXY(0:InitInp%NStepWave)
+         REAL(SiKi),       INTENT(  OUT)              :: WaveElevSeriesAtXY(0:WaveField%NStepWave)
          INTEGER(IntKi),   INTENT(  OUT)              :: ErrStatLcl
          INTEGER(IntKi)                               :: ErrStatLcl2
          CHARACTER(*),     INTENT(  OUT)              :: ErrMsgLcl
@@ -1485,18 +1433,18 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
             !> ## First term ##
             ! First term results are stored in TmpFreqSeries.
 
-         DO n=1,FLOOR( REAL(InitInp%NStepWave2-1) / 2.0_SiKi )   ! Only
+         DO n=1,FLOOR( REAL(WaveField%NStepWave2-1) / 2.0_SiKi )   ! Only
 
-            Omega_n  =  n * InitInp%WaveDOmega
+            Omega_n  =  n * WaveField%WaveDOmega
 
             ! The frequency we are dealing with
             !> * \f$ \omega^+ = \mu^+ \Delta \omega = 2 \omega_n \f$
             mu_plus     =  2 * n
             Omega_plus  =  2.0_SiKi * Omega_n
 
-            IF ( Omega_plus >= InitInp%WvLowCOffS .AND. Omega_plus <= InitInp%WvHiCOffS ) THEN
-               k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
-               R_n         =  k_n * tanh( k_n * InitInp%WtrDpth )
+            IF ( Omega_plus >= WaveField%WvLowCOffS .AND. Omega_plus <= WaveField%WvHiCOffS ) THEN
+               k_n         =  WaveNumber( Omega_n, InitInp%Gravity, WaveField%EffWtrDpth )
+               R_n         =  k_n * tanh( k_n * WaveField%EffWtrDpth )
                D_plus      =  TransFuncD_plus(n,n,k_n,k_n,R_n,R_n)
 
                   !> Calculate the value of 
@@ -1547,24 +1495,24 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
             ! \f$ \mu^+ \f$ loop.  This loop is used to construct the full set of \f$ H_{\mu^+} \f$ terms used in the IFFT to find the timeseries.
             !> * \f$ \mu^+ = n + m \f$
-         DO mu_plus=2,InitInp%NStepWave2-1
+         DO mu_plus=2,WaveField%NStepWave2-1
 
                ! The frequency we are dealing with
                !> * \f$ \omega^+ = \mu^+ \Delta \omega \f$
-            Omega_plus =  mu_plus * InitInp%WaveDOmega
+            Omega_plus =  mu_plus * WaveField%WaveDOmega
 
-            IF ( Omega_plus >= InitInp%WvLowCOffS .AND. Omega_plus <= InitInp%WvHiCOffS ) THEN
+            IF ( Omega_plus >= WaveField%WvLowCOffS .AND. Omega_plus <= WaveField%WvHiCOffS ) THEN
 
                   ! The inner \f$ m \f$ loop for calculating the \f$ H_{\mu^+} \f$ terms at each frequency.
                DO m=1,FLOOR( REAL(mu_plus - 1) / 2.0_SiKi )
                      ! Calculate the value of the n index from \f$ \mu^+ = n + m \f$.  Calculate corresponding wavenumbers and frequencies.
                   n           =  mu_plus - m
-                  Omega_n     =  n * InitInp%WaveDOmega
-                  Omega_m     =  m * InitInp%WaveDOmega
-                  k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
-                  k_m         =  WaveNumber( Omega_m, InitInp%Gravity, InitInp%WtrDpth )
-                  R_n         =  k_n * tanh( k_n * InitInp%WtrDpth )
-                  R_m         =  k_m * tanh( k_m * InitInp%WtrDpth )
+                  Omega_n     =  n * WaveField%WaveDOmega
+                  Omega_m     =  m * WaveField%WaveDOmega
+                  k_n         =  WaveNumber( Omega_n, InitInp%Gravity, WaveField%EffWtrDpth )
+                  k_m         =  WaveNumber( Omega_m, InitInp%Gravity, WaveField%EffWtrDpth )
+                  R_n         =  k_n * tanh( k_n * WaveField%EffWtrDpth )
+                  R_m         =  k_m * tanh( k_m * WaveField%EffWtrDpth )
                   D_plus      =  TransFuncD_plus(n,m,k_n,k_m,R_n,R_m)
 
                      !> Calculate the value of 
@@ -1620,12 +1568,12 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
          CALL SetErrStat(ErrStatLcl2,'Error occured while applying the FFT on WaveElevSeriesAtXY.',ErrStatLcl,ErrMsgLcl,'WaveElevSeriesAtXY_Sum')
 
             ! Add the two terms together
-         DO Ctr=0,InitInp%NStepWave
+         DO Ctr=0,WaveField%NStepWave
             WaveElevSeriesAtXY(Ctr) =  WaveElevSeriesAtXY(Ctr)  +  2.0_SiKi * TmpTimeSeries2(Ctr)
          ENDDO
  
             ! Append first datapoint as the last as aid for repeated wave data
-         WaveElevSeriesAtXY(InitInp%NStepWave) = WaveElevSeriesAtXY(0)
+         WaveElevSeriesAtXY(WaveField%NStepWave) = WaveElevSeriesAtXY(0)
    
 
       END SUBROUTINE WaveElevTimeSeriesAtXY_Sum
@@ -1673,15 +1621,15 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
          ELSE
 
                ! Frequencies
-            Omega_n     =  n * InitInp%WaveDOmega
-            Omega_m     =  m * InitInp%WaveDOmega
+            Omega_n     =  n * WaveField%WaveDOmega
+            Omega_m     =  m * WaveField%WaveDOmega
 
                ! Wavenumbers
             k_nm        =  k_nm_minus( n,m,k_n,k_m )
 
                ! Effect of depth scaling
-            R_n         =  k_n * tanh( k_n * InitInp%WtrDpth )
-            R_m         =  k_m * tanh( k_m * InitInp%WtrDpth )
+            R_n         =  k_n * tanh( k_n * WaveField%EffWtrDpth )
+            R_m         =  k_m * tanh( k_m * WaveField%EffWtrDpth )
 
                ! Transfer function D_minus
             D_minus     =  TransFuncD_minus(n,m,k_n,k_m,R_n,R_m)
@@ -1689,7 +1637,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
                ! Calculation of B_minus
             TransFuncB_minus  =  REAL(InitInp%Gravity*InitInp%Gravity,SiKi) / ( 4.0_SiKi * Omega_n * Omega_m ) &          
-                                 * COSHNumOvrCOSHDen(k_nm, REAL(InitInp%WtrDpth,SiKi), z)  * D_minus / ( Omega_n - Omega_m )
+                                 * COSHNumOvrCOSHDen(k_nm, REAL(WaveField%EffWtrDpth,SiKi), z)  * D_minus / ( Omega_n - Omega_m )
 
 
          ENDIF
@@ -1735,22 +1683,22 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
          ELSE
 
                ! Frequencies
-            Omega_n     =  n * InitInp%WaveDOmega
-            Omega_m     =  m * InitInp%WaveDOmega
+            Omega_n     =  n * WaveField%WaveDOmega
+            Omega_m     =  m * WaveField%WaveDOmega
 
                ! Wavenumbers
             k_nm        =  k_nm_plus( n,m,k_n,k_m )
 
                ! Effect of depth scaling
-            R_n         =  k_n * tanh( k_n * InitInp%WtrDpth )
-            R_m         =  k_m * tanh( k_m * InitInp%WtrDpth )
+            R_n         =  k_n * tanh( k_n * WaveField%EffWtrDpth )
+            R_m         =  k_m * tanh( k_m * WaveField%EffWtrDpth )
 
                ! Transfer function D_plus
             D_plus     =  TransFuncD_plus(n,m,k_n,k_m,R_n,R_m)
 
                ! Calculation of B_plus
             TransFuncB_plus  =  REAL(InitInp%Gravity*InitInp%Gravity,SiKi) / ( 4.0_SiKi * Omega_n * Omega_m ) &
-                                 * COSHNumOvrCOSHDen(k_nm, REAL(InitInp%WtrDpth,SiKi), z)  * D_plus / ( Omega_n + Omega_m )
+                                 * COSHNumOvrCOSHDen(k_nm, REAL(WaveField%EffWtrDpth,SiKi), z)  * D_plus / ( Omega_n + Omega_m )
 
 
          ENDIF
@@ -1868,7 +1816,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
             Num2  = 2*SqrtRnMinusRm*SqrtRnMinusRm*( k_n * k_m * COS( D2R_S*WaveField%WaveDirArr(n) - D2R_S*WaveField%WaveDirArr(m) ) + R_n*R_m )
 
                ! Calculate the denominator
-            Den   = SqrtRnMinusRm*SqrtRnMinusRm - k_nm * tanh( k_nm * InitInp%WtrDpth )
+            Den   = SqrtRnMinusRm*SqrtRnMinusRm - k_nm * tanh( k_nm * WaveField%EffWtrDpth )
 
             TransFuncD_minus  = (Num1+Num2) / Den
 
@@ -1932,7 +1880,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
          Num2  = 2*SqrtRnPlusRm*SqrtRnPlusRm*( k_n * k_m * COS( D2R_S*WaveField%WaveDirArr(n) - D2R_S*WaveField%WaveDirArr(m) ) - R_n*R_m )
 
             ! Calculate the denominator
-         Den   = SqrtRnPlusRm*SqrtRnPlusRm - k_nm * tanh( k_nm * InitInp%WtrDpth )
+         Den   = SqrtRnPlusRm*SqrtRnPlusRm - k_nm * tanh( k_nm * WaveField%EffWtrDpth )
 
          TransFuncD_plus  = (Num1+Num2) / Den
 

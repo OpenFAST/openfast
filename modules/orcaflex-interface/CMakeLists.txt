@@ -18,7 +18,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/OrcaFlexInterface.txt ${CMAKE_CURRENT_LIST_DIR}/src/OrcaFlexInterface_Types.f90)
 endif()
 
-add_library(orcaflexlib 
+add_library(orcaflexlib STATIC
   src/OrcaFlexInterface.f90
   src/OrcaFlexInterface_Types.f90
 )

@@ -44,6 +44,7 @@ option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
 option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" on)
 option(BUILD_FASTFARM "Enable building FAST.Farm" off)
 option(BUILD_OPENFAST_CPP_API "Enable building OpenFAST - C++ API" off)
+option(BUILD_OPENFAST_CPP_DRIVER "Enable building OpenFAST C++ driver using C++ API" off)
 option(BUILD_OPENFAST_SIMULINK_API "Enable building OpenFAST for use with Simulink" off)
 option(OPENMP "Enable OpenMP support" off)
 option(USE_LOCAL_STATIC_LAPACK "Enable downloading and building static LAPACK and BLAS libs" off)
@@ -66,7 +67,10 @@ endif()
 option(BUILD_TESTING "Build the testing tree." OFF)
 if(BUILD_TESTING)
   option(CODECOVERAGE "Enable infrastructure for measuring code coverage." OFF)
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DUNIT_TEST")
+  option(BUILD_UNIT_TESTING "Enable unit testing" ON)
+  if(BUILD_UNIT_TESTING)
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DUNIT_TEST")
+  endif()
 endif()
 
 # Setup Fortran Compiler options based on architecture/compiler
@@ -107,11 +111,24 @@ include(${CMAKE_SOURCE_DIR}/cmake/set_rpath.cmake)
 #-------------------------------------------------------------------------------
 
 if (OPENMP OR BUILD_FASTFARM OR BUILD_OPENFAST_CPP_API)
-  FIND_PACKAGE(OpenMP REQUIRED)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-  set(CMAKE_FORTRAN_FLAGS "${CMAKE_FORTRAN_FLAGS} ${OpenMP_FORTRAN_FLAGS}")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+  if (OPENMP)
+    FIND_PACKAGE(OpenMP REQUIRED)
+  else()
+    # Optional for FF or the CPP interface
+    FIND_PACKAGE(OpenMP)
+  endif()
+  if (OpenMP_Fortran_FOUND)
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
+    link_libraries("${OpenMP_Fortran_LIBRARIES}")
+  endif()
+  if (OpenMP_C_FOUND)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    link_libraries("${OpenMP_C_LIBRARIES}")
+  endif()
+  if (OpenMP_CXX_FOUND)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    link_libraries("${OpenMP_CXX_LIBRARIES}")
+  endif()
 endif()
 
 #-------------------------------------------------------------------------------
@@ -130,11 +147,13 @@ if (USE_LOCAL_STATIC_LAPACK)
   include(ExternalProject)
   ExternalProject_Add(lapack
     URL http://www.netlib.org/lapack/lapack.tgz
-    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_SOURCE_DIR}/install
+    CMAKE_ARGS 
+      -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_SOURCE_DIR}/install 
+      -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON
     PREFIX ${CMAKE_BINARY_DIR}/dependencies
     BUILD_BYPRODUCTS ${BLAS_LIB_PATH} ${LAPACK_LIB_PATH}
   )
-  set(LAPACK_LIBRARIES ${BLAS_LIB_PATH} ${LAPACK_LIB_PATH} CACHE STRING "LAPACK library" FORCE)
+  set(LAPACK_LIBRARIES ${LAPACK_LIB_PATH} ${BLAS_LIB_PATH} CACHE STRING "LAPACK library" FORCE)
   install(FILES ${LAPACK_LIBRARIES} DESTINATION ${CMAKE_SOURCE_DIR}/install/lib)
   message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
 else()
@@ -173,6 +192,7 @@ set(OPENFAST_MODULES
   nwtc-library
   version
   inflowwind
+  extloads
   aerodyn
   aerodyn14
   servodyn
@@ -189,10 +209,11 @@ set(OPENFAST_MODULES
   icefloe
   wakedynamics
   awae
+  lindyn
   map
   turbsim
   supercontroller
-  openfoam
+  externalinflow
   openfast-library
 )
 
@@ -266,8 +287,10 @@ if(BUILD_TESTING)
   add_subdirectory(reg_tests)
 
   # unit tests
-  if(NOT (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Flang"))
-    add_subdirectory(unit_tests)
+  if(BUILD_UNIT_TESTING)
+    if(NOT (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Flang"))
+      add_subdirectory(unit_tests)
+    endif()
   endif()
 endif()
 

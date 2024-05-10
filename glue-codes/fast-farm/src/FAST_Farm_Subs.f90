@@ -990,7 +990,7 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
    ! ----- map MD load outputs to each turbine's substructure -----   (taken from U FullOpt1...)
    do nt = 1,farm%p%NumTurbines
    
-      if (farm%MD%p%nCpldCons(nt) > 0 ) then   ! only map loads if MoorDyn has connections to this turbine (currently considering only Point connections <<< )
+      if (farm%MD%p%nCpldPoints(nt) > 0 ) then   ! only map loads if MoorDyn has connections to this turbine (currently considering only Point connections <<< )
          
          IF (farm%FWrap(nt)%m%Turbine%p_FAST%CompSub == Module_SD) then
             SubstructureMotion => farm%FWrap(nt)%m%Turbine%SD%y%y3Mesh

@@ -13,7 +13,6 @@
 # ...... Include files (definitions from NWTC Library) ............................................................................
 # make sure that the file name does not have any trailing white spaces!
 include   Registry_NWTC_Library.txt
-usefrom   SeaState_Interp.txt
 usefrom   SeaSt_WaveField.txt
 #
 #
@@ -225,9 +224,6 @@ typedef   ^                            ^                             INTEGER    
 #   e.g.,  the name of the input file,  the file root name,etc.
 #
 typedef   ^                            InitInputType                 ReKi                     Gravity                          -          -        -         "Gravity (scalar, positive-valued)"    m/s^2
-typedef   ^                            ^                             ReKi                     WtrDens                          -          -        -         "Water density"    kg/m^3
-typedef   ^                            ^                             ReKi                     WtrDpth                          -          -        -         "Water depth (positive-valued)"    m
-typedef   ^                            ^                             ReKi                     MSL2SWL                          -          -        -         "Mean Sea Level to Still Water Level offset"    m
 typedef   ^                            ^                             INTEGER                  WaveDisp                         -          -        -         "Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) " -
 typedef   ^                            ^                             INTEGER                  AMMod                            -          -        -         "Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState]" -
 typedef   ^                            ^                             INTEGER                  NJoints                          -          -        -         "Number of user-specified joints"    -
@@ -272,14 +268,13 @@ typedef   ^                            ^                             Morison_JOu
 typedef   ^                            ^                             CHARACTER(ChanLen)       OutList                          {:}        -        -         "This list size needs to be the maximum # of possible outputs because of the use of ReadAry(). Use MaxMrsnOutputs"    -
 typedef   ^                            ^                             INTEGER                  NumOuts                          -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  UnSum                            -          -        -         ""    -
-typedef   ^                            ^                             INTEGER                  NStepWave                        -          -        -         ""    -
-typedef   ^                            ^                             INTEGER                  WaveStMod                        -          -        -         ""    -  
-typedef   ^                            ^                             SiKi                     MCFD                             -          -        -         "Diameter of the MacCamy-Fuchs member."    -
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                        -          -        -         "Pointer to SeaState wave field" -
+typedef   ^                            ^                             logical                  VisMeshes                         -      .false.     -         "Output visualization meshes" -
 #
 #
 # Define outputs from the initialization routine here:
 #
+typedef   ^                            InitOutputType                SiKi                      MorisonVisRad                    {:}        -        -         "radius of node (for FAST visualization)" (m)
 typedef   ^                            InitOutputType                CHARACTER(ChanLen)        WriteOutputHdr                   {:}        -        -         "User-requested Output channel names"    -
 typedef   ^                            ^                             CHARACTER(ChanLen)        WriteOutputUnt                   {:}        -        -         ""    -
 #
@@ -326,7 +321,8 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     F_BF_End                      {:}{:}         -         -         ""        -
 typedef   ^                            ^                             ReKi                     V_rel_n                       {:}            -         -         "Normal relative flow velocity at joints"        m/s
 typedef   ^                            ^                             ReKi                     V_rel_n_HiPass                {:}            -         -         "High-pass filtered normal relative flow velocity at joints"   m/s
-typedef   ^                            ^                             INTEGER                  LastIndWave                   -              -         -         "Last time index used in the wave kinematics arrays"   -
+typedef   ^                            ^                             MeshMapType              VisMeshMap                      -            -         -         "Mesh mapping for visualization mesh" -
+typedef   ^                            ^                          SeaSt_WaveField_MiscVarType WaveField_m                     -            -         -         "misc var information from the SeaState Interpolation module"   -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -334,9 +330,6 @@ typedef   ^                            ^                             INTEGER    
 #
 typedef   ^                            ParameterType                 DbKi                     DT                            -          -        -         "Time step for continuous state integration & discrete state update"  (sec)
 typedef   ^                            ^                             ReKi                     Gravity                       -          -        -         "Gravity (scalar, positive-valued)"    m/s^2
-typedef   ^                            ^                             ReKi                     WtrDens                       -          -        -         "Water density"    kg/m^3
-typedef   ^                            ^                             ReKi                     WtrDpth                       -          -        -         "Water depth (positive-valued)"    m
-typedef   ^                            ^                             ReKi                     MSL2SWL                       -          -        -         "Mean Sea Level to Still Water Level offset"    m
 typedef   ^                            ^                             INTEGER                  WaveDisp                      -          -        -         "Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) " -
 typedef   ^                            ^                             INTEGER                  AMMod                         -          -        -         "Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState]" -
 typedef   ^                            ^                             INTEGER                  NMembers                      -          -        -         "number of members"        -
@@ -353,15 +346,14 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     DP_Const_End                  {:}{:}     -        -         "Constant part of Joint dynamic pressure term"   N
 typedef   ^                            ^                             ReKi                     Mass_MG_End                   {:}        -        -         "Joint marine growth mass"   kg
 typedef   ^                            ^                             ReKi                     AM_End                        {:}{:}{:}  -        -         "3x3 Joint added mass matrix, constant for all t"   N
-typedef   ^                            ^                             INTEGER                  NStepWave                     -          -        -         ""        -
 typedef   ^                            ^                             INTEGER                  NMOutputs                     -          -        -         ""        -
 typedef   ^                            ^                             Morison_MOutput          MOutLst                       {:}        -        -         ""        -
 typedef   ^                            ^                             INTEGER                  NJOutputs                     -          -        -         ""        -
 typedef   ^                            ^                             Morison_JOutput          JOutLst                       {:}        -        -         ""        -
 typedef   ^                            ^                             OutParmType              OutParam                      {:}        -        -         ""        -
 typedef   ^                            ^                             INTEGER                  NumOuts                       -          -        -         ""        -
-typedef   ^                            ^                             INTEGER                  WaveStMod                     -          -        -         ""    -  
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                     -          -        -         "SeaState wave field" -
+typedef   ^                            ^                             logical                  VisMeshes                       -        .false.     -         "Output visualization meshes" -
 #
 #
 # ..... Inputs ....................................................................................................................
@@ -373,4 +365,5 @@ typedef   ^                            InputType                     MeshType   
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef   ^                            OutputType                   MeshType                 Mesh                           -          -        -         "Loads on each node output mesh" -
+typedef   ^                            ^                            MeshType                 VisMesh                        -          -        -         "Line mesh for visualization" -
 typedef   ^                            ^                            ReKi                     WriteOutput                    {:}        -        -         ""  -

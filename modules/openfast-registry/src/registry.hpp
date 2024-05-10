@@ -188,6 +188,14 @@ struct Field
         else if (init_value.compare("-") != 0)
         {
             this->init_value = init_value;
+            if (tolower(init_value).compare("f") == 0)
+            {
+                this->init_value = ".false.";
+            }
+            else if (tolower(init_value).compare("t") == 0)
+            {
+                this->init_value = ".true.";
+            }
         }
     }
 
@@ -277,7 +285,7 @@ struct DataType
                 switch (field.data_type->tag)
                 {
 
-                // Field is a derived type, so check it's fields and
+                // Field is a derived type, so check its fields and
                 // return false if it doesn't only contain reals
                 case Tag::Derived:
                     if (!field.data_type->derived.only_contains_reals())
@@ -432,6 +440,7 @@ struct Registry
     std::map<std::string, std::shared_ptr<DataType>, ci_less> data_types;
     bool gen_c_code = false;
     bool no_extrap_interp = false;
+    bool gen_inc_subs = false;
 
     Registry()
     {
@@ -536,6 +545,7 @@ struct Registry
     void gen_module_files(std::string const &out_dir);
     void gen_fortran_module(const Module &mod, const std::string &out_dir);
     void gen_c_module(const Module &mod, const std::string &out_dir);
+    void gen_fortran_subs(std::ostream &w, const Module &mod);
 };
 
 #endif
