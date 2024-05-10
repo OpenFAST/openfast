@@ -118,6 +118,7 @@ MODULE MoorDyn_IO
    PUBLIC :: MDIO_CloseOutput
    PUBLIC :: MDIO_ProcessOutList
    PUBLIC :: MDIO_WriteOutputs
+   PUBLIC :: Line_GetNodeTen
 
 
 CONTAINS
@@ -1365,11 +1366,11 @@ CONTAINS
                   CASE (FZ)
                      y%WriteOutput(I) = m%LineList(p%OutParam(I)%ObjID)%Fnet(3,p%OutParam(I)%NodeID)  ! node force in z
                   CASE (Ten)
-                    y%WriteOutput(I) = Line_GetNodeTen(m%LineList(p%OutParam(I)%ObjID), p%OutParam(I)%NodeID, p)  ! this is actually the segment tension ( 1 < NodeID < N )  Should deal with properly!
+                    y%WriteOutput(I) = Line_GetNodeTen(m%LineList(p%OutParam(I)%ObjID), p%OutParam(I)%NodeID)  ! this is actually the segment tension ( 1 < NodeID < N )  Should deal with properly!
                   CASE (TenA)
-                     y%WriteOutput(I) = Line_GetNodeTen(m%LineList(p%OutParam(I)%ObjID), 0, p) 
+                     y%WriteOutput(I) = Line_GetNodeTen(m%LineList(p%OutParam(I)%ObjID), 0) 
                   CASE (TenB)
-                     y%WriteOutput(I) = Line_GetNodeTen(m%LineList(p%OutParam(I)%ObjID), m%LineList(p%OutParam(I)%ObjID)%N, p)  
+                     y%WriteOutput(I) = Line_GetNodeTen(m%LineList(p%OutParam(I)%ObjID), m%LineList(p%OutParam(I)%ObjID)%N)  
                   CASE DEFAULT
                     y%WriteOutput(I) = 0.0_ReKi
                     ErrStat = ErrID_Warn
@@ -1886,11 +1887,10 @@ CONTAINS
 
    ! get tension at any node including fairlead or anchor (accounting for weight in these latter cases)
    !--------------------------------------------------------------
-   FUNCTION Line_GetNodeTen(Line, i, p) result(NodeTen)
+   FUNCTION Line_GetNodeTen(Line, i) result(NodeTen)
 
       TYPE(MD_Line),          INTENT(IN   )  :: Line           ! label for the current line, for convenience
       INTEGER(IntKi),         INTENT(IN   )  :: i              ! node index to get tension at
-      TYPE(MD_ParameterType), INTENT(IN   )  :: p              ! Parameters
       REAL(DbKi)                             :: NodeTen        ! returned calculation of tension at node   
       
       INTEGER(IntKi)                   :: J      

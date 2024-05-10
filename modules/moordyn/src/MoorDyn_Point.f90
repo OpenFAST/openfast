@@ -379,6 +379,7 @@ CONTAINS
       REAL(DbKi),       INTENT(INOUT)    :: rdEnd(3)
       
       Integer(IntKi)    :: l,m,J
+      Integer(IntKi)    :: found = 0
       
       DO l = 1,Point%nAttached    ! look through attached lines
       
@@ -386,7 +387,7 @@ CONTAINS
          
             TopOfLine = Point%Top(l);                ! record which end of the line was attached
             
-            DO m = l,Point%nAttached-1 
+            DO m = l,Point%nAttached 
             
                Point%Attached(m) = Point%Attached(m+1)  ! move subsequent line links forward one spot in the list to eliminate this line link
                Point%Top(     m) =      Point%Top(m+1) 
@@ -404,13 +405,15 @@ CONTAINS
                EXIT
             END DO
             
-            IF (l == Point%nAttached) THEN   ! detect if line not found
-               print *, "Error: failed to find line to remove during removeLineFromPoint call to point ", Point%IdNum, ". Line ", lineID
-            END IF
+            found = 1
          
          END IF
          
       END DO
+
+      IF (found == 0) THEN   ! detect if line not found TODO: fix this, its wrong. If pointNnattached is oprginally 2, then it will be 1 after one run of the loop and l will also be 1
+         CALL WrScr("Error: failed to find line to remove during RemoveLine call to Point "//trim(num2lstr(Point%IdNum))//". Line "//trim(num2lstr(lineID)))
+      END IF
       
    END SUBROUTINE Point_RemoveLine
 

@@ -105,8 +105,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: MD_Body
     INTEGER(IntKi)  :: IdNum      !< integer identifier of this Point [-]
     INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  0=free, 1=fixed, -1=coupled, 2=coupledpinned [-]
-    INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedC      !< list of IdNums of points attached to this body [-]
-    INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedR      !< list of IdNums of rods attached to this body [-]
+    INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedC = 0  !< list of IdNums of points attached to this body [-]
+    INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedR = 0  !< list of IdNums of rods attached to this body [-]
     INTEGER(IntKi)  :: nAttachedC = 0      !< number of attached points [-]
     INTEGER(IntKi)  :: nAttachedR = 0      !< number of attached rods [-]
     REAL(DbKi) , DIMENSION(1:3,1:30)  :: rPointRel      !< relative position of point on body [-]
@@ -136,8 +136,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: IdNum      !< integer identifier of this point [-]
     CHARACTER(10)  :: type      !< type of point: fix, vessel, point [-]
     INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  1=fixed, -1=coupled, 0=free [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: Attached      !< list of IdNums of lines attached to this point node [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: Top      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
+    INTEGER(IntKi) , DIMENSION(1:10)  :: Attached = 0  !< list of IdNums of lines attached to this point node [-]
+    INTEGER(IntKi) , DIMENSION(1:10)  :: Top = 0  !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
     INTEGER(IntKi)  :: nAttached = 0      !< number of attached lines [-]
     REAL(DbKi)  :: pointM      !< point mass [[kg]]
     REAL(DbKi)  :: pointV      !< point volume [[m^3]]
@@ -164,10 +164,10 @@ IMPLICIT NONE
     CHARACTER(10)  :: type      !< type of Rod.  should match one of RodProp names [-]
     INTEGER(IntKi)  :: PropsIdNum      !< the IdNum of the associated rod properties [-]
     INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  0=free, 1=pinned, 2=fixed, -1=coupledpinned, -2=coupled [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedA      !< list of IdNums of lines attached to end A [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedB      !< list of IdNums of lines attached to end B [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: TopA      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: TopB      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
+    INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedA = 0   !< list of IdNums of lines attached to end A [-]
+    INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedB = 0   !< list of IdNums of lines attached to end B [-]
+    INTEGER(IntKi) , DIMENSION(1:10)  :: TopA = 0  !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
+    INTEGER(IntKi) , DIMENSION(1:10)  :: TopB = 0  !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
     INTEGER(IntKi)  :: nAttachedA = 0      !< number of attached lines to Rod end A [-]
     INTEGER(IntKi)  :: nAttachedB = 0      !< number of attached lines to Rod end B [-]
     INTEGER(IntKi) , DIMENSION(1:20)  :: OutFlagList      !< array specifying what line quantities should be output (1 vs 0) [-]
@@ -227,8 +227,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: ElasticMod      !< Which elasticity model to use: {0 basic, 1 viscoelastic, 2 future SYCOM}  [-]
     INTEGER(IntKi) , DIMENSION(1:20)  :: OutFlagList      !< array specifying what line quantities should be output (1 vs 0) [-]
     INTEGER(IntKi)  :: CtrlChan = 0      !< index of control channel that will drive line active tensioning (0 for none) [-]
-    INTEGER(IntKi)  :: FairPoint      !< IdNum of Point at fairlead [-]
-    INTEGER(IntKi)  :: AnchPoint      !< IdNum of Point at anchor [-]
+    INTEGER(IntKi)  :: FairPoint      !< IdNum of Point at fairlead. Not initialized [-]
+    INTEGER(IntKi)  :: AnchPoint      !< IdNum of Point at anchor. Not initialized [-]
     INTEGER(IntKi)  :: N      !< The number of elements in the line [-]
     INTEGER(IntKi)  :: endTypeA      !< type of connection at end A: 0=pinned to Point, 1=cantilevered to Rod. [-]
     INTEGER(IntKi)  :: endTypeB      !< type of connection at end B: 0=pinned to Point, 1=cantilevered to Rod. [-]
@@ -289,7 +289,15 @@ IMPLICIT NONE
 ! =======================
 ! =========  MD_Fail  =======
   TYPE, PUBLIC :: MD_Fail
-    INTEGER(IntKi)  :: IdNum      !< integer identifier of this failure [-]
+    INTEGER(IntKi)  ::  IdNum      !< integer identifier of this failure [-]
+    INTEGER(IntKi)  ::  attachID      !< ID of connection or Rod the lines are attached to [-]
+    INTEGER(IntKi)  ::  isRod      !< 1 Rod end A, 2 Rod end B, 0 if point [-]
+    INTEGER(IntKi) , DIMENSION(1:30)  ::  lineIDs      !< array of one or more lines to detach (starting from 1...) [-]
+    INTEGER(IntKi) , DIMENSION(1:30)  ::  lineTops      !< an array that will be FILLED IN to return which end of each line was disconnected ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
+    INTEGER(IntKi)  ::  nLinesToDetach      !< how many lines to dettach [-]
+    REAL(DbKi)  ::  failTime      !< time of failure [[s]]      
+    REAL(DbKi)  ::  failTen      !< tension threshold of failure [[N]]
+    INTEGER(IntKi)  ::  failStatus      !< 0 not failed yet, 1 failed, 2 invalid [-]
   END TYPE MD_Fail
 ! =======================
 ! =========  MD_OutParmType  =======
@@ -368,6 +376,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BodyStateIs1      !< starting index of each body's states in state vector []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BodyStateIsN      !< ending index of each body's states in state vector []
     INTEGER(IntKi)  :: Nx      !< number of states and size of state vector []
+    INTEGER(IntKi)  :: Nxtra      !< number of states and size of state vector including points for potential line failures []
     INTEGER(IntKi)  :: WaveTi      !< current interpolation index for wave time series data []
     TYPE(MD_ContinuousStateType)  :: xTemp      !< contains temporary state vector used in integration (put here so it's only allocated once) [-]
     TYPE(MD_ContinuousStateType)  :: xdTemp      !< contains temporary state derivative vector used in integration (put here so it's only allocated once) [-]
@@ -8467,6 +8476,7 @@ IF (ALLOCATED(SrcMiscData%BodyStateIsN)) THEN
     DstMiscData%BodyStateIsN = SrcMiscData%BodyStateIsN
 ENDIF
     DstMiscData%Nx = SrcMiscData%Nx
+    DstMiscData%Nxtra = SrcMiscData%Nxtra
     DstMiscData%WaveTi = SrcMiscData%WaveTi
       CALL MD_CopyContState( SrcMiscData%xTemp, DstMiscData%xTemp, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
@@ -9593,6 +9603,8 @@ ENDIF
   END IF
     IntKiBuf(Int_Xferred) = InData%Nx
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%Nxtra
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%WaveTi
     Int_Xferred = Int_Xferred + 1
       CALL MD_PackContState( Re_Buf, Db_Buf, Int_Buf, InData%xTemp, ErrStat2, ErrMsg2, OnlySize ) ! xTemp 
@@ -10471,6 +10483,8 @@ ENDIF
       END DO
   END IF
     OutData%Nx = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%Nxtra = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%WaveTi = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1

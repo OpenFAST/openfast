@@ -1113,6 +1113,7 @@ CONTAINS
       REAL(DbKi),       INTENT(INOUT)    :: rdEnd(3)
       
       Integer(IntKi)    :: l,m,J
+      Integer(IntKi)    :: foundA, foundB = 0
       
       if (endB==1) then   ! attaching to end B
          
@@ -1122,7 +1123,7 @@ CONTAINS
             
                TopOfLine = Rod%TopB(l);                ! record which end of the line was attached
                
-               DO m = l,Rod%nAttachedB-1 
+               DO m = l,Rod%nAttachedB 
                
                   Rod%AttachedB(m) = Rod%AttachedB(m+1)  ! move subsequent line links forward one spot in the list to eliminate this line link
                   Rod%TopB(     m) =      Rod%TopB(m+1) 
@@ -1135,17 +1136,19 @@ CONTAINS
                      rdEnd(J) = Rod%rd(J,Rod%N)
                   END DO
                   
-                  call WrScr( "Detached line "//trim(num2lstr(lineID))//" from Rod "//trim(num2lstr(Rod%IdNum))//" end B")
+                  CALL WrScr( "Detached line "//trim(num2lstr(lineID))//" from Rod "//trim(num2lstr(Rod%IdNum))//" end B")
                   
                   EXIT
                END DO
-               
-               IF (l == Rod%nAttachedB) THEN   ! detect if line not found
-                  print *, "Error: failed to find line to remove during RemoveLine call to Rod ", Rod%IdNum, ". Line ", lineID
-               END IF
+
+               foundB = 1
+
             END IF
          END DO
-         
+         IF (foundB == 0) THEN   ! detect if line not found
+            CALL WrScr("Error: failed to find line to remove during RemoveLine call to Rod "//trim(num2lstr(Rod%IdNum))//" end B. Line "//trim(num2lstr(lineID)))
+         END IF
+
       else              ! attaching to end A
               
         DO l = 1,Rod%nAttachedA    ! look through attached lines
@@ -1154,7 +1157,7 @@ CONTAINS
             
                TopOfLine = Rod%TopA(l);                ! record which end of the line was attached
                
-               DO m = l,Rod%nAttachedA-1 
+               DO m = l,Rod%nAttachedA 
                
                   Rod%AttachedA(m) = Rod%AttachedA(m+1)  ! move subsequent line links forward one spot in the list to eliminate this line link
                   Rod%TopA(     m) =      Rod%TopA(m+1) 
@@ -1167,16 +1170,19 @@ CONTAINS
                      rdEnd(J) = Rod%rd(J,0)
                   END DO
                   
-                  call WrScr( "Detached line "//trim(num2lstr(lineID))//" from Rod "//trim(num2lstr(Rod%IdNum))//" end A")
+                  CALL WrScr( "Detached line "//trim(num2lstr(lineID))//" from Rod "//trim(num2lstr(Rod%IdNum))//" end A")
                   
                   EXIT
                END DO
-               
-               IF (l == Rod%nAttachedA) THEN   ! detect if line not found
-                  print *, "Error: failed to find line to remove during RemoveLine call to Rod ", Rod%IdNum, ". Line ", lineID
-               END IF
+
+               foundA = 1
+
             END IF
          END DO
+         
+         IF (foundA == 0) THEN   ! detect if line not found
+            CALL WrScr("Error: failed to find line to remove during RemoveLine call to Rod "//trim(num2lstr(Rod%IdNum))//" end A. Line "//trim(num2lstr(lineID)))
+         END IF
       
       end if
       
