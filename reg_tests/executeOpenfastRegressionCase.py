@@ -29,6 +29,7 @@ sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
 import argparse
 import numpy as np
 import shutil
+import glob
 import subprocess
 import rtestlib as rtl
 import openfastDrivers
@@ -73,7 +74,7 @@ steadyState = args.steadyState
 rtl.validateExeOrExit(executable)
 rtl.validateDirOrExit(sourceDirectory)
 if not os.path.isdir(buildDirectory):
-    os.makedirs(buildDirectory)
+    os.makedirs(buildDirectory, exist_ok=True)
 
 
 ### Build the filesystem navigation variables for running openfast on the test case
@@ -131,7 +132,16 @@ if not noExec:
         returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable)
     if returnCode != 0:
         sys.exit(returnCode*10)
-    
+
+### If this is a restart test case
+if caseName.endswith('_Restart'):
+    for caseInputFile in reversed(glob.glob(os.path.join(testBuildDirectory, '*chkp'))):
+        if not caseInputFile.endswith('dll.chkp'): 
+            break
+    returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable, restart=True)
+    if returnCode != 0:
+        sys.exit(returnCode*10)
+
 ### Build the filesystem navigation variables for running the regression test
 localOutFile = os.path.join(testBuildDirectory, caseName + ".outb")
 baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".outb")

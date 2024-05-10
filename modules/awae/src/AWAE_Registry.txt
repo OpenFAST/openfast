@@ -23,7 +23,8 @@ param	^                    -               INTEGER         MeanderMod_TruncJinc 
 param	^                    -               INTEGER         MeanderMod_WndwdJinc   - 3 -  "Spatial filter model for wake meandering: windowed jinc" -
 
 # ..... Wind 3D Data .......................................................................................................
-typedef   AWAE/AWAE   AWAE_HighWindGrid       SiKi            data         {:}{:}{:}{:}{:} - - "UVW components of wind data across the high-res regularly-spaced grid" m/s
+typedef   AWAE/AWAE   AWAE_HighWindGrid       SiKi          &data         {:}{:}{:}{:}{:} - - "UVW components of wind data across the high-res regularly-spaced grid" m/s
+typedef   AWAE/AWAE   AWAE_HighWindGridPtr    SiKi          *data         {:}{:}{:}{:}{:} - - "Pointer to UVW components of wind data across the high-res regularly-spaced grid" m/s
 # ..... InputFile Data .......................................................................................................
 typedef   AWAE/AWAE   AWAE_InputFileType  ReKi            dr             - - -  "Radial increment of radial finite-difference grid [>0.0]" m
 typedef   ^           ^                   DbKi            dt_low             - - -  "Low-resolution (FAST.Farm driver/glue code) time step" s
@@ -99,6 +100,7 @@ typedef   ^ InitOutputType IntKi              nZ_low           -  - -   "Number 
 typedef   ^ InitOutputType ReKi               X0_low           -  - -   "X-component of the origin of the low-resolution spatial domain" m
 typedef   ^ InitOutputType ReKi               Y0_low           -  - -   "Y-component of the origin of the low-resolution spatial domain" m
 typedef   ^ InitOutputType ReKi               Z0_low           -  - -   "Z-component of the origin of the low-resolution spatial domain" m
+typedef   ^ InitOutputType AWAE_HighWindGridPtr Vdist_High    {:} - -   "Pointers to Wind velocity of disturbed wind (ambient + wakes) across each high-resolution domain around a turbine for each high-resolution step within a low-resolution step"      m/s
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:

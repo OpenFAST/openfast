@@ -20,6 +20,8 @@
 !> This is a pseudo module used to couple OpenFAST with ExternalInflow; it is used to interface to CFD codes including SOWFA, ExternalInflow, and AMR-Wind
 MODULE ExternalInflow
    USE FAST_Types
+   USE IfW_FlowField
+   USE InflowWind_IO
 
    IMPLICIT NONE
    PRIVATE
@@ -29,6 +31,7 @@ MODULE ExternalInflow
    PUBLIC :: Init_ExtInfw                           ! Initialization routine
    PUBLIC :: ExtInfw_SetInputs                      ! Glue-code routine to update inputs for ExternalInflow
    PUBLIC :: ExtInfw_SetWriteOutput
+   PUBLIC :: ExtInfw_UpdateFlowField
 
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -46,7 +49,7 @@ SUBROUTINE Init_ExtInfw( InitInp, p_FAST, AirDens, u_AD, initOut_AD, y_AD, ExtIn
 
       ! local variables
    INTEGER(IntKi)                                   :: k          ! blade loop counter
-
+   Type(Points_InitInputType)                       :: Points_InitInput
    INTEGER(IntKi)                                   :: ErrStat2    ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                             :: ErrMsg2     ! temporary Error message if ErrStat /= ErrID_None
 
@@ -242,6 +245,23 @@ SUBROUTINE Init_ExtInfw( InitInp, p_FAST, AirDens, u_AD, initOut_AD, y_AD, ExtIn
    ExtInfw%y%c_obj%v_Len = ExtInfw%p%nNodesVel; ExtInfw%y%c_obj%v = C_LOC( ExtInfw%y%v(1) )
    ExtInfw%y%c_obj%w_Len = ExtInfw%p%nNodesVel; ExtInfw%y%c_obj%w = C_LOC( ExtInfw%y%w(1) )
 
+      !............................................................................................
+      ! Initialize InflowWind FlowField
+      !............................................................................................
+   if (associated(ExtInfw%m%FlowField)) deallocate(ExtInfw%m%FlowField)
+   allocate(ExtInfw%m%FlowField, stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating m%FlowField', ErrStat, ErrMsg, RoutineName )
+      return
+   end if
+
+   ! Initialize flowfield points type
+   ExtInfw%m%FlowField%FieldType = Point_FieldType
+   Points_InitInput%NumWindPoints = ExtInfw%p%nNodesVel
+   call IfW_Points_Init(Points_InitInput, ExtInfw%m%FlowField%Points, ErrStat2, ErrMsg2); if (Failed()) return
+
+   ! Set pointer to flow field in InitOut
+   InitOut%FlowField => ExtInfw%m%FlowField
 
       !............................................................................................
       ! Define initialization-routine output (including writeOutput array) here:
@@ -272,6 +292,20 @@ contains
       endif
    end function Failed2
 END SUBROUTINE Init_ExtInfw
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE ExtInfw_UpdateFlowField(p_FAST, ExtInfw, ErrStat, ErrMsg)
+   TYPE(FAST_ParameterType),       INTENT(IN   )   :: p_FAST      ! Parameters for the glue code
+   TYPE(ExternalInflow_Data),      INTENT(INOUT)   :: ExtInfw        ! data for the ExternalInflow integration module
+   INTEGER(IntKi),                 INTENT(  OUT)   :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ExtInfw%m%FlowField%Points%Vel(1:size(ExtInfw%y%u),1) = ExtInfw%y%u
+   ExtInfw%m%FlowField%Points%Vel(1:size(ExtInfw%y%v),2) = ExtInfw%y%v
+   ExtInfw%m%FlowField%Points%Vel(1:size(ExtInfw%y%w),3) = ExtInfw%y%w
+END SUBROUTINE ExtInfw_UpdateFlowField
 
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ExtInfw_SetInputs( p_FAST, u_AD, y_AD, y_SrvD, ExtInfw, ErrStat, ErrMsg )
@@ -323,10 +357,18 @@ SUBROUTINE SetExtInfwPositions(p_FAST, u_AD, ExtInfw, ErrStat, ErrMsg)
 
    ! Do the Velocity (AeroDyn) nodes first
    !-------------------------------------------------------------------------------------------------
-   Node = 1   ! displaced hub position
-   ExtInfw%u%pxVel(Node) = u_AD%rotors(1)%HubMotion%Position(1,1) + u_AD%rotors(1)%HubMotion%TranslationDisp(1,1)
-   ExtInfw%u%pyVel(Node) = u_AD%rotors(1)%HubMotion%Position(2,1) + u_AD%rotors(1)%HubMotion%TranslationDisp(2,1)
-   ExtInfw%u%pzVel(Node) = u_AD%rotors(1)%HubMotion%Position(3,1) + u_AD%rotors(1)%HubMotion%TranslationDisp(3,1)
+   
+   ! Hub
+   Node = 1 
+   if (u_AD%rotors(1)%HubMotion%Committed) then
+      ExtInfw%u%pxVel(Node) = real(u_AD%rotors(1)%HubMotion%Position(1,1) + u_AD%rotors(1)%HubMotion%TranslationDisp(1,1), c_float)
+      ExtInfw%u%pyVel(Node) = real(u_AD%rotors(1)%HubMotion%Position(2,1) + u_AD%rotors(1)%HubMotion%TranslationDisp(2,1), c_float)
+      ExtInfw%u%pzVel(Node) = real(u_AD%rotors(1)%HubMotion%Position(3,1) + u_AD%rotors(1)%HubMotion%TranslationDisp(3,1), c_float)
+   else
+      ExtInfw%u%pxVel(Node) = 0.0_c_float
+      ExtInfw%u%pyVel(Node) = 0.0_c_float
+      ExtInfw%u%pzVel(Node) = 0.0_c_float
+   end if
 
 
    ! blade nodes
@@ -334,10 +376,9 @@ SUBROUTINE SetExtInfwPositions(p_FAST, u_AD, ExtInfw, ErrStat, ErrMsg)
       DO J = 1,u_AD%rotors(1)%BladeMotion(k)%nNodes
 
          Node = Node + 1
-         ExtInfw%u%pxVel(Node) = u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(1,j) + u_AD%rotors(1)%BladeMotion(k)%Position(1,j)
-         ExtInfw%u%pyVel(Node) = u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(2,j) + u_AD%rotors(1)%BladeMotion(k)%Position(2,j)
-         ExtInfw%u%pzVel(Node) = u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(3,j) + u_AD%rotors(1)%BladeMotion(k)%Position(3,j)
-
+         ExtInfw%u%pxVel(Node) = real(u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(1,j) + u_AD%rotors(1)%BladeMotion(k)%Position(1,j), c_float)
+         ExtInfw%u%pyVel(Node) = real(u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(2,j) + u_AD%rotors(1)%BladeMotion(k)%Position(2,j), c_float)
+         ExtInfw%u%pzVel(Node) = real(u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(3,j) + u_AD%rotors(1)%BladeMotion(k)%Position(3,j), c_float)
       END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
    END DO !K = 1,p%NumBl
 
@@ -345,27 +386,28 @@ SUBROUTINE SetExtInfwPositions(p_FAST, u_AD, ExtInfw, ErrStat, ErrMsg)
       ! tower nodes
       DO J=1,u_AD%rotors(1)%TowerMotion%nnodes
          Node = Node + 1
-         ExtInfw%u%pxVel(Node) = u_AD%rotors(1)%TowerMotion%TranslationDisp(1,J) + u_AD%rotors(1)%TowerMotion%Position(1,J)
-         ExtInfw%u%pyVel(Node) = u_AD%rotors(1)%TowerMotion%TranslationDisp(2,J) + u_AD%rotors(1)%TowerMotion%Position(2,J)
-         ExtInfw%u%pzVel(Node) = u_AD%rotors(1)%TowerMotion%TranslationDisp(3,J) + u_AD%rotors(1)%TowerMotion%Position(3,J)
+         ExtInfw%u%pxVel(Node) = real(u_AD%rotors(1)%TowerMotion%TranslationDisp(1,J) + u_AD%rotors(1)%TowerMotion%Position(1,J), c_float)
+         ExtInfw%u%pyVel(Node) = real(u_AD%rotors(1)%TowerMotion%TranslationDisp(2,J) + u_AD%rotors(1)%TowerMotion%Position(2,J), c_float)
+         ExtInfw%u%pzVel(Node) = real(u_AD%rotors(1)%TowerMotion%TranslationDisp(3,J) + u_AD%rotors(1)%TowerMotion%Position(3,J), c_float)
       END DO
    end if
 
    ! Do the Actuator Force nodes now
    !-------------------------------------------------------------------------------------------------
-   Node = 1   ! displaced hub position
-   ExtInfw%u%pxForce(Node) = ExtInfw%u%pxVel(Node)
-   ExtInfw%u%pyForce(Node) = ExtInfw%u%pyVel(Node)
-   ExtInfw%u%pzForce(Node) = ExtInfw%u%pzVel(Node)
-   ExtInfw%u%pOrientation((Node-1)*9 + 1) = u_AD%rotors(1)%HubMotion%Orientation(1,1,1)
-   ExtInfw%u%pOrientation((Node-1)*9 + 2) = u_AD%rotors(1)%HubMotion%Orientation(2,1,1)
-   ExtInfw%u%pOrientation((Node-1)*9 + 3) = u_AD%rotors(1)%HubMotion%Orientation(3,1,1)
-   ExtInfw%u%pOrientation((Node-1)*9 + 4) = u_AD%rotors(1)%HubMotion%Orientation(1,2,1)
-   ExtInfw%u%pOrientation((Node-1)*9 + 5) = u_AD%rotors(1)%HubMotion%Orientation(2,2,1)
-   ExtInfw%u%pOrientation((Node-1)*9 + 6) = u_AD%rotors(1)%HubMotion%Orientation(3,2,1)
-   ExtInfw%u%pOrientation((Node-1)*9 + 7) = u_AD%rotors(1)%HubMotion%Orientation(1,3,1)
-   ExtInfw%u%pOrientation((Node-1)*9 + 8) = u_AD%rotors(1)%HubMotion%Orientation(2,3,1)
-   ExtInfw%u%pOrientation((Node-1)*9 + 9) = u_AD%rotors(1)%HubMotion%Orientation(3,3,1)
+   
+   ! Hub
+   Node = 1 
+   if (u_AD%rotors(1)%HubMotion%Committed) then
+      ExtInfw%u%pxForce(Node) = ExtInfw%u%pxVel(Node)
+      ExtInfw%u%pyForce(Node) = ExtInfw%u%pyVel(Node)
+      ExtInfw%u%pzForce(Node) = ExtInfw%u%pzVel(Node)
+      ExtInfw%u%pOrientation((Node-1)*9+1:Node*9) = real(pack(u_AD%rotors(1)%HubMotion%Orientation(:,:,1),.true.),c_float)
+   else
+      ExtInfw%u%pxForce(Node) = 0.0_c_float
+      ExtInfw%u%pyForce(Node) = 0.0_c_float
+      ExtInfw%u%pzForce(Node) = 0.0_c_float
+      ExtInfw%u%pOrientation((Node-1)*9+1:Node*9) = real([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0], c_float)
+   end if
 
 
    DO K = 1,ExtInfw%p%NumBl
@@ -375,21 +417,13 @@ SUBROUTINE SetExtInfwPositions(p_FAST, u_AD, ExtInfw, ErrStat, ErrMsg)
 
       DO J = 1, ExtInfw%p%nNodesForceBlade
          Node = Node + 1
-         ExtInfw%u%pxForce(Node) = ExtInfw%m%ActForceMotionsPoints(k)%Position(1,J) +  ExtInfw%m%ActForceMotionsPoints(k)%TranslationDisp(1,J)
-         ExtInfw%u%pyForce(Node) = ExtInfw%m%ActForceMotionsPoints(k)%Position(2,J) +  ExtInfw%m%ActForceMotionsPoints(k)%TranslationDisp(2,J)
-         ExtInfw%u%pzForce(Node) = ExtInfw%m%ActForceMotionsPoints(k)%Position(3,J) +  ExtInfw%m%ActForceMotionsPoints(k)%TranslationDisp(3,J)
-         ExtInfw%u%xdotForce(Node) = ExtInfw%m%ActForceMotionsPoints(k)%TranslationVel(1,J)
-         ExtInfw%u%ydotForce(Node) = ExtInfw%m%ActForceMotionsPoints(k)%TranslationVel(2,J)
-         ExtInfw%u%zdotForce(Node) = ExtInfw%m%ActForceMotionsPoints(k)%TranslationVel(3,J)
-         ExtInfw%u%pOrientation((Node-1)*9 + 1) = ExtInfw%m%ActForceMotionsPoints(k)%Orientation(1,1,J)
-         ExtInfw%u%pOrientation((Node-1)*9 + 2) = ExtInfw%m%ActForceMotionsPoints(k)%Orientation(2,1,J)
-         ExtInfw%u%pOrientation((Node-1)*9 + 3) = ExtInfw%m%ActForceMotionsPoints(k)%Orientation(3,1,J)
-         ExtInfw%u%pOrientation((Node-1)*9 + 4) = ExtInfw%m%ActForceMotionsPoints(k)%Orientation(1,2,J)
-         ExtInfw%u%pOrientation((Node-1)*9 + 5) = ExtInfw%m%ActForceMotionsPoints(k)%Orientation(2,2,J)
-         ExtInfw%u%pOrientation((Node-1)*9 + 6) = ExtInfw%m%ActForceMotionsPoints(k)%Orientation(3,2,J)
-         ExtInfw%u%pOrientation((Node-1)*9 + 7) = ExtInfw%m%ActForceMotionsPoints(k)%Orientation(1,3,J)
-         ExtInfw%u%pOrientation((Node-1)*9 + 8) = ExtInfw%m%ActForceMotionsPoints(k)%Orientation(2,3,J)
-         ExtInfw%u%pOrientation((Node-1)*9 + 9) = ExtInfw%m%ActForceMotionsPoints(k)%Orientation(3,3,J)
+         ExtInfw%u%pxForce(Node) = real(ExtInfw%m%ActForceMotionsPoints(k)%Position(1,J) +  ExtInfw%m%ActForceMotionsPoints(k)%TranslationDisp(1,J),c_float)
+         ExtInfw%u%pyForce(Node) = real(ExtInfw%m%ActForceMotionsPoints(k)%Position(2,J) +  ExtInfw%m%ActForceMotionsPoints(k)%TranslationDisp(2,J),c_float)
+         ExtInfw%u%pzForce(Node) = real(ExtInfw%m%ActForceMotionsPoints(k)%Position(3,J) +  ExtInfw%m%ActForceMotionsPoints(k)%TranslationDisp(3,J),c_float)
+         ExtInfw%u%xdotForce(Node) = real(ExtInfw%m%ActForceMotionsPoints(k)%TranslationVel(1,J),c_float)
+         ExtInfw%u%ydotForce(Node) = real(ExtInfw%m%ActForceMotionsPoints(k)%TranslationVel(2,J),c_float)
+         ExtInfw%u%zdotForce(Node) = real(ExtInfw%m%ActForceMotionsPoints(k)%TranslationVel(3,J),c_float)
+         ExtInfw%u%pOrientation((Node-1)*9_1:Node*9) = real(pack(ExtInfw%m%ActForceMotionsPoints(k)%Orientation(:,:,J),.true.),c_float)
       END DO
 
    END DO
@@ -400,18 +434,10 @@ SUBROUTINE SetExtInfwPositions(p_FAST, u_AD, ExtInfw, ErrStat, ErrMsg)
 
          DO J=1,ExtInfw%p%nNodesForceTower
             Node = Node + 1
-            ExtInfw%u%pxForce(Node) = ExtInfw%m%ActForceMotionsPoints(k)%Position(1,J) +  ExtInfw%m%ActForceMotionsPoints(k)%TranslationDisp(1,J)
-            ExtInfw%u%pyForce(Node) = ExtInfw%m%ActForceMotionsPoints(k)%Position(2,J) +  ExtInfw%m%ActForceMotionsPoints(k)%TranslationDisp(2,J)
-            ExtInfw%u%pzForce(Node) = ExtInfw%m%ActForceMotionsPoints(k)%Position(3,J) +  ExtInfw%m%ActForceMotionsPoints(k)%TranslationDisp(3,J)
-            ExtInfw%u%pOrientation((Node-1)*9 + 1) = ExtInfw%m%ActForceMotionsPoints(k)%Orientation(1,1,J)
-            ExtInfw%u%pOrientation((Node-1)*9 + 2) = ExtInfw%m%ActForceMotionsPoints(k)%Orientation(2,1,J)
-            ExtInfw%u%pOrientation((Node-1)*9 + 3) = ExtInfw%m%ActForceMotionsPoints(k)%Orientation(3,1,J)
-            ExtInfw%u%pOrientation((Node-1)*9 + 4) = ExtInfw%m%ActForceMotionsPoints(k)%Orientation(1,2,J)
-            ExtInfw%u%pOrientation((Node-1)*9 + 5) = ExtInfw%m%ActForceMotionsPoints(k)%Orientation(2,2,J)
-            ExtInfw%u%pOrientation((Node-1)*9 + 6) = ExtInfw%m%ActForceMotionsPoints(k)%Orientation(3,2,J)
-            ExtInfw%u%pOrientation((Node-1)*9 + 7) = ExtInfw%m%ActForceMotionsPoints(k)%Orientation(1,3,J)
-            ExtInfw%u%pOrientation((Node-1)*9 + 8) = ExtInfw%m%ActForceMotionsPoints(k)%Orientation(2,3,J)
-            ExtInfw%u%pOrientation((Node-1)*9 + 9) = ExtInfw%m%ActForceMotionsPoints(k)%Orientation(3,3,J)
+            ExtInfw%u%pxForce(Node) = real(ExtInfw%m%ActForceMotionsPoints(k)%Position(1,J) +  ExtInfw%m%ActForceMotionsPoints(k)%TranslationDisp(1,J),c_float)
+            ExtInfw%u%pyForce(Node) = real(ExtInfw%m%ActForceMotionsPoints(k)%Position(2,J) +  ExtInfw%m%ActForceMotionsPoints(k)%TranslationDisp(2,J),c_float)
+            ExtInfw%u%pzForce(Node) = real(ExtInfw%m%ActForceMotionsPoints(k)%Position(3,J) +  ExtInfw%m%ActForceMotionsPoints(k)%TranslationDisp(3,J),c_float)
+            ExtInfw%u%pOrientation((Node-1)*9+1:Node*9) = real(pack(ExtInfw%m%ActForceMotionsPoints(k)%Orientation(:,:,J),.true.),c_float)
          END DO
       END DO
    endif

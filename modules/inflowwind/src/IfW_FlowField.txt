@@ -88,17 +88,15 @@ typedef  ^              ^                      ReKi                PLExp        
 typedef  ^              ^                      ReKi                Z0                  -     0         -     "Surface roughness length (used for LOG wind profile type only)"  -
 typedef  ^              ^                      ReKi                VLinShr             -     0         -     "Vertical linear wind shear coefficient (used for vertical linear wind profile type only)"   -
 typedef  ^              ^                      ReKi                HLinShr             -     0         -     "Horizontal linear wind shear coefficient (used for horizontal wind profile type only)"   -
-typedef  ^              ^                      LOGICAL             BoxExceedAllowF     -  .FALSE.      -     "Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim)" -
-typedef  ^              ^                      IntKi               BoxExceedAllowIdx   -    -1         -     "Extrapolate winds outside box starting at this index (for OLAF wakes and LidarSim)" -
-typedef  ^              ^                      LOGICAL             BoxExceedWarned     -  .FALSE.      -     "Has a warning been issued for points extrapolated beyond FFWind grid" -
-
+typedef  ^              ^                      LOGICAL             BoxExceedAllow      -  .FALSE.      -     "Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim)" -
+typedef  ^              ^                      LOGICAL             BoxExceedAllowDrv   -  .FALSE.      -     "Flag to allow Extrapolation winds outside box set by driver" -
 
 #----------------------------------------------------------------------------------------------------------------------------------
 typedef  ^              Grid4DFieldType        IntKi               n                   4     -         -     "number of evenly-spaced grid points in the x, y, z, and t directions"      -
 typedef  ^              ^                      DbKi                delta               4     -         -     "size between 2 consecutive grid points in each grid direction"            "m,m,m,s"
 typedef  ^              ^                      ReKi                pZero               3     -         -     "fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))" "m"
-typedef  ^              ^                      SiKi                Vel                 ::::: -         -     "this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]" -
-typedef  ^              ^                      DbKi                TimeStart           -     -         -     "this is the time where the first time grid in m%V starts (i.e, the time associated with m%V(:,:,:,:,1))" s
+typedef  ^              ^                      SiKi               *Vel                 ::::: -         -     "this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]" -
+typedef  ^              ^                      ReKi                TimeStart           -     -         -     "this is the time where the first time grid in m%V starts (i.e, the time associated with m%V(:,:,:,:,1))" s
 typedef  ^              ^                      ReKi                RefHeight           -     -         -     "reference height; used to center the wind"                   meters
 
 #----------------------------------------------------------------------------------------------------------------------------------
@@ -110,13 +108,13 @@ typedef  ^              UserFieldType          ReKi                RefHeight    
 #----------------------------------------------------------------------------------------------------------------------------------
 typedef  ^              FlowFieldType          IntKi               FieldType           -     0         -     "Switch for flow field type {1=Uniform, 2=Grid, 3=User, 4=External}" -
 typedef  ^              ^                      ReKi                RefPosition         3     0.0_ReKi  -     "Reference position (point where box is rotated)"                 meters
-typedef  ^              ^                      ReKi                PropagationDir      -     -         -     "Direction of wind propagation"                                   radians
-typedef  ^              ^                      ReKi                VFlowAngle          -     -         -     "Vertical (upflow) angle"                                         radians
+typedef  ^              ^                      ReKi                PropagationDir      -     0.0_ReKi  -     "Direction of wind propagation"                                   radians
+typedef  ^              ^                      ReKi                VFlowAngle          -     0.0_ReKi  -     "Vertical (upflow) angle"                                         radians
 typedef  ^              ^                      logical             VelInterpCubic      -  .false.      -     "Velocity interpolation order in time (1=linear; 3=cubic) [Used with WindType=2,3,4,5,7]" -
 typedef  ^              ^                      logical             RotateWindBox       -  .false.      -     "flag indicating if the wind will be rotated"                     -
 typedef  ^              ^                      logical             AccFieldValid       -  .false.      -     "flag indicating that acceleration field has been calculated" -
-typedef  ^              ^                      ReKi                RotToWind         {3}{3}  -         -     "Rotation matrix for rotating from the global XYZ coordinate system to the wind coordinate system (wind along X')"   -
-typedef  ^              ^                      ReKi                RotFromWind       {3}{3}  -         -     "Rotation matrix for rotating from the wind coordinate system (wind along X') back to the global XYZ coordinate system.  Equal to TRANSPOSE(RotToWind)"   -
+typedef  ^              ^                      ReKi                RotToWind         {3}{3}  0.0_ReKi  -     "Rotation matrix for rotating from the global XYZ coordinate system to the wind coordinate system (wind along X')"   -
+typedef  ^              ^                      ReKi                RotFromWind       {3}{3}  0.0_ReKi  -     "Rotation matrix for rotating from the wind coordinate system (wind along X') back to the global XYZ coordinate system.  Equal to TRANSPOSE(RotToWind)"   -
 typedef  ^              ^                      UniformFieldType    Uniform             -     -         -     "Uniform Flow Data"
 typedef  ^              ^                      Grid3DFieldType     Grid3D              -     -         -     "Grid Field Wind Data"
 typedef  ^              ^                      Grid4DFieldType     Grid4D              -     -         -     "External Grid Flow Data"

@@ -42,11 +42,9 @@ program SeaStateDriver
       integer                 :: WrWvKinMod
       integer                 :: NSteps
       real(DbKi)              :: TimeInterval    
-      logical                 :: WaveElevSeriesFlag      !< Should we put together a wave elevation series and save it to file?
-      real(ReKi)              :: WaveElevdX              !< Spacing in the X direction for wave elevation series              (m)
-      real(ReKi)              :: WaveElevdY              !< Spacing in the Y direction for the wave elevation series          (m)
-      integer(IntKi)          :: WaveElevNX              !< Number of points in the X direction for the wave elevation series (-)
-      integer(IntKi)          :: WaveElevNY              !< Number of points in the X direction for the wave elevation series (-)
+      logical                 :: WaveElevVis          !< Should we put together a wave elevation series and save it to file?
+      integer(IntKi)          :: WaveElevVisNx        !< Number of points in the X direction for the wave elevation series (-)
+      integer(IntKi)          :: WaveElevVisNy        !< Number of points in the X direction for the wave elevation series (-)
    end type SeaSt_Drvr_InitInput
    
 ! -----------------------------------------------------------------------------------   
@@ -178,28 +176,14 @@ program SeaStateDriver
 !-------------------------------------------------------------------------------------
 
       ! Setup the arrays for the wave elevation timeseries if requested by the driver input file
-   !if ( drvrInitInp%WaveElevSeriesFlag ) then
-   !   ALLOCATE ( InitInData%WaveElevXY(2,drvrInitInp%WaveElevNX*drvrInitInp%WaveElevNY), STAT=ErrStat )
-   !   if ( ErrStat >= ErrID_Fatal ) then
-   !      call SeaSt_End( u(1), p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-   !      if ( ErrStat /= ErrID_None ) then
-   !         call WrScr( ErrMsg )     
-   !      end if
-   !      stop
-   !   end if
-   !
-   !      ! Set the values
-   !   n  = 0         ! Dummy counter we are using to get the current point number
-   !   do I  = 0,drvrInitInp%WaveElevNX-1
-   !      do J  = 0, drvrInitInp%WaveElevNY-1
-   !         n  =  n+1
-   !            ! X dimension
-   !         InitInData%WaveElevXY(1,n) = drvrInitInp%WaveElevDX*(I - 0.5*(drvrInitInp%WaveElevNX-1))
-   !            ! Y dimension
-   !         InitInData%WaveElevXY(2,n) = drvrInitInp%WaveElevDY*(J - 0.5*(drvrInitInp%WaveElevNY-1))
-   !      ENDDO
-   !   ENDDO
-   !endif
+   if ( drvrInitInp%WaveElevVis ) then
+      InitInData%SurfaceVis     = .true.
+!FIXME: enable this when we can use an arbitrary number of points from the FFT of the data.
+      !InitInData%SurfaceVisNx   = drvrInitInp%WaveElevVisNx    ! Number of points in X
+      !InitInData%SurfaceVisNy   = drvrInitInp%WaveElevVisNy    ! Number of points in Y
+      InitInData%SurfaceVisNx   = 0    ! use the WaveField grid resolution
+      InitInData%SurfaceVisNy   = 0    ! use the WaveField grid resolution
+   endif
 
          ! Initialize the module
    Interval = drvrInitInp%TimeInterval
@@ -217,7 +201,7 @@ program SeaStateDriver
 
       ! Write the gridded wave elevation data to a file
 
-   if ( drvrInitInp%WaveElevSeriesFlag )     call WaveElevGrid_Output  (drvrInitInp, InitInData, InitOutData, p, ErrStat, ErrMsg)
+   if ( drvrInitInp%WaveElevVis )      call WaveElevGrid_Output  (drvrInitInp, InitInData, InitOutData, p, ErrStat, ErrMsg)
    if (errStat >= AbortErrLev) then
          ! Clean up and exit
       call SeaSt_DvrCleanup()
@@ -226,8 +210,8 @@ program SeaStateDriver
    
       ! Destroy initialization data
 
-   call SeaSt_DestroyInitInput(  InitInData,  ErrStat, ErrMsg, DEALLOCATEpointers = .false. )
-   call SeaSt_DestroyInitOutput( InitOutData, ErrStat, ErrMsg, DEALLOCATEpointers = .false. )
+   call SeaSt_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
+   call SeaSt_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
    
 
    if (errStat >= AbortErrLev) then
@@ -291,7 +275,7 @@ subroutine SeaSt_DvrCleanup()
       errStat2 = ErrID_None
       errMsg2  = ""
      
-      call SeaSt_DestroyInitInput( InitInData, errStat2, errMsg2, DEALLOCATEpointers = .false. )
+      call SeaSt_DestroyInitInput( InitInData, errStat2, errMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'SeaSt_DvrCleanup' )
 
       call SeaSt_End( u(1), p, x, xd, z, OtherState, y, m, errStat2, errMsg2 )
@@ -434,13 +418,13 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
          if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
          close( UnIn )
          return
-      end if
+   end if
       
    end if
    !-------------------------------------------------------------------------------------------------
    ! Environmental conditions section
    !-------------------------------------------------------------------------------------------------
-
+   
       ! Header
       
    call ReadCom( UnIn, FileName, 'Environmental conditions header', ErrStat, ErrMsg, UnEchoLocal )
@@ -499,7 +483,7 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       ! Header
       
    call ReadCom( UnIn, FileName, 'SeaState header', ErrStat, ErrMsg, UnEchoLocal )
-   
+      
       if ( ErrStat >= AbortErrLev ) then
          if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
          close( UnIn )
@@ -580,20 +564,38 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       !> Header
 
    call ReadCom( UnIn, FileName, 'Waves multipoint elevation output header', ErrStat, ErrMsg, UnEchoLocal )
-
+   
       if ( ErrStat >= AbortErrLev ) then
-         if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
-         close( UnIn )
+      if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
+      close( UnIn )
          return
       end if
 
       !> WaveElevSeriesFlag   -- are we doing multipoint wave elevation output?
-   call ReadVar ( UnIn, FileName, InitInp%WaveElevSeriesFlag, 'WaveElevSeriesFlag', 'WaveElevSeriesFlag', ErrStat, ErrMsg )
+   call ReadVar ( UnIn, FileName, InitInp%WaveElevVis, 'WaveElevVis', 'WaveElevVis', ErrStat, ErrMsg )
       if ( ErrStat >= AbortErrLev ) then
          if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
          close( UnIn )
          return
       end if
+
+!FIXME: enable this when we can use an arbitrary number of points from the FFT of the data.
+!      !> WaveElevVisNx -- number of points in X if visualizing 
+!   call ReadVar ( UnIn, FileName, InitInp%WaveElevVisNx, 'WaveElevVisNX', 'WaveElevVisNx', ErrStat, ErrMsg )
+!      if ( ErrStat >= AbortErrLev ) then
+!         if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
+!         close( UnIn )
+!         return
+!      end if
+!
+!      !> WaveElevVisNy -- number of points in Y if visualizing 
+!   call ReadVar ( UnIn, FileName, InitInp%WaveElevVisNy, 'WaveElevVisNy', 'WaveElevVisNy', ErrStat, ErrMsg )
+!      if ( ErrStat >= AbortErrLev ) then
+!         if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
+!         close( UnIn )
+!         return
+!      end if
+
 
    if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
    close( UnIn )
@@ -624,8 +626,6 @@ SUBROUTINE WaveElevGrid_Output (drvrInitInp, SeaStateInitInp, SeaStateInitOut, S
 
    ErrMsg      = ""
    ErrStat     = ErrID_None
-   ErrMsgTmp   = ""
-   ErrStatTmp  = ErrID_None
 
 
       ! If we calculated the wave elevation at a set of coordinates for use with making movies, put it into an output file
@@ -637,12 +637,12 @@ SUBROUTINE WaveElevGrid_Output (drvrInitInp, SeaStateInitInp, SeaStateInitOut, S
       if ( ErrStat >= AbortErrLev ) return
    end if
 
-   if (associated(SeaState_p%WaveElev2)) then
-      maxWaveVal = MAXVAL(SeaState_p%WaveElev1+SeaState_p%WaveElev2)
-      minWaveVal = MINVAL(SeaState_p%WaveElev1+SeaState_p%WaveElev2)
+   if (allocated(SeaState_p%WaveField%WaveElev2)) then
+      maxWaveVal = MAXVAL(SeaState_p%WaveField%WaveElev1 + SeaState_p%WaveField%WaveElev2)
+      minWaveVal = MINVAL(SeaState_p%WaveField%WaveElev1 + SeaState_p%WaveField%WaveElev2)
    else
-      maxWaveVal = MAXVAL(SeaState_p%WaveElev1)
-      minWaveVal = MINVAL(SeaState_p%WaveElev1)
+      maxWaveVal = MAXVAL(SeaState_p%WaveField%WaveElev1)
+      minWaveVal = MINVAL(SeaState_p%WaveField%WaveElev1)
    end if
    
       ! Write some useful header information
@@ -654,8 +654,8 @@ SUBROUTINE WaveElevGrid_Output (drvrInitInp, SeaStateInitInp, SeaStateInitOut, S
    write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '## It is arranged as blocks of X,Y,Elevation at each timestep'
    write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '## Each block is separated by two blank lines for use in gnuplot'
    write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# '
-   write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# WaveTMax    =  '//TRIM(Num2LStr(SeaState_p%WaveTime(SeaState_P%NStepWave)))
-   write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# NStepWave   =  '//TRIM(Num2LStr(SeaState_p%NStepWave))
+   write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# WaveTMax    =  '//TRIM(Num2LStr(SeaState_p%WaveField%WaveTime(SeaState_p%WaveField%NStepWave)))
+   write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# NStepWave   =  '//TRIM(Num2LStr(SeaState_p%WaveField%NStepWave))
    write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# GridXPoints =  '//TRIM(Num2LStr(SeaState_p%NGrid(1)))
    write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# GridYPoints =  '//TRIM(Num2LStr(SeaState_p%NGrid(2)))
    write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# GridDX      =  '//TRIM(Num2LStr(SeaState_p%deltaGrid(1)))
@@ -665,19 +665,15 @@ SUBROUTINE WaveElevGrid_Output (drvrInitInp, SeaStateInitInp, SeaStateInitOut, S
    write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# '
 
       ! Timestep looping
-   do i = 0,SeaState_p%NStepWave
+   do i = 0,SeaState_p%WaveField%NStepWave
       write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp ) NewLine
-      write (WaveElevFileUn,'(A8,F10.3)', IOSTAT=ErrStatTmp ) '# Time: ',SeaState_p%WaveTime(I)
+      write (WaveElevFileUn,'(A8,F10.3)', IOSTAT=ErrStatTmp ) '# Time: ',SeaState_p%WaveField%WaveTime(I)
          ! Now output the X,Y, Elev info for this timestep
-      do j=1,SeaState_p%NGrid(1)
-         xpos = -SeaState_p%deltaGrid(1)*(SeaState_p%NGrid(1)-1)/2.0 + (J-1)*SeaState_p%deltaGrid(1)
+      do j=1,size(SeaStateInitOut%WaveElevVisX)
+         xpos = SeaStateInitOut%WaveElevVisX(j)
          do k=1, SeaState_p%NGrid(2)
-            ypos = -SeaState_p%deltaGrid(2)*(SeaState_p%NGrid(2)-1)/2.0 + (K-1)*SeaState_p%deltaGrid(2) 
-            if (associated(SeaState_p%WaveElev2)) then
-               WaveElev =  SeaState_p%WaveElev1(I,J,K) + SeaState_p%WaveElev2(I,J,K)
-            else
-               WaveElev =  SeaState_p%WaveElev1(I,J,K)
-            end if
+            ypos = SeaStateInitOut%WaveElevVisY(k)
+            WaveElev = SeaStateInitOut%WaveElevVisGrid(i,j,k)
             write (WaveElevFileUn,WaveElevFmt, IOSTAT=ErrStatTmp ) xpos, ypos, WaveElev
          end do       
       end do

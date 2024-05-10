@@ -394,17 +394,20 @@ end subroutine PropagateWake
 
 
 !> Print the states, useful for debugging
-subroutine print_x_NW_FW(p, m, x, label)
+subroutine print_x_NW_FW(p, m, x, label, nSteps_in)
    type(FVW_ParameterType),         intent(in)  :: p              !< Parameters
    type(FVW_MiscVarType),           intent(in)  :: m              !< Initial misc/optimization variables
    type(FVW_ContinuousStateType),   intent(in)  :: x              !< Continuous states
+   integer(IntKi),   optional,      intent(in)  :: nSteps_in      !< number of steps to limit to
    character(len=*),intent(in) :: label
-   integer(IntKi) :: iAge, iW
+   integer(IntKi) :: iAge, iW, nSteps
    character(len=1):: flag
+   nSteps=99999999   ! big number
+   if (present(nSteps_in)) nSteps = nSteps_in
    print*,'------------------------------------------------------------------'
    print'(A,I0,A,I0)',' NW .....................iNWStart:',p%iNWStart,' nNW:',m%nNW
    iW=1
-   do iAge=1,p%nNWMax+1
+   do iAge=1,min(p%nNWMax+1,nSteps)
       flag='X'
       if ((iAge)<= m%nNW+1) flag='.'
       print'(A,A,I0,A)',flag,'iAge ',iAge,'      Root              Tip'
@@ -417,7 +420,7 @@ subroutine print_x_NW_FW(p, m, x, label)
       endif
    enddo
    print'(A,I0)','FW <<<<<<<<<<<<<<<<<<<< nFW:',m%nFW
-   do iAge=1,p%nFWMax+1
+   do iAge=1,min(p%nFWMax+1,nSteps)
       flag='X'
       if ((iAge)<= m%nFW+1) flag='.'
       print'(A,A,I0,A)',flag,'iAge ',iAge,'      Root              Tip'

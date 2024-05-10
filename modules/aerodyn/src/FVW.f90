@@ -481,7 +481,7 @@ subroutine FVW_FinalWrite(u, p, x, z, m, ErrStat, ErrMsg)
    ErrMsg  = ""
    ! Place any last minute operations or calculations here:
    if (p%WrVTK>0 .and. m%VTKstep<FINAL_STEP) then
-      print*,'>>> FINAL WRITE'
+      call WrScr('OLAF: writting final VTK outputs')
       t=-1.0_ReKi
       if (p%WrVTK==1) then
          if (m%VTKstep<m%iStep+1) then
@@ -584,7 +584,10 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       m%ComputeWakeInduced = .FALSE.
    endif
    if (bReevaluation) then
-      call WrScr('[INFO] FVW: Update States: reevaluation at the same starting time')
+      if (m%InfoReEval) then
+         call WrScr('[INFO] FVW: Update States: reevaluation at the same starting time.  This will not print on subsequent occurences.')
+         m%InfoReEval = .false.
+      endif
       call RollBackPreviousTimeStep() ! Cancel wake emission done in previous call
       m%ComputeWakeInduced = .TRUE.
    endif
@@ -756,8 +759,9 @@ contains
    end subroutine RollBackPreviousTimeStep
 
    subroutine CleanUp()
-      call FVW_DestroyConstrState(z_guess, ErrStat2, ErrMsg2); if(Failed()) return
-      call FVW_DestroyInput(uInterp, ErrStat2, ErrMsg2); if(Failed()) return
+      ! note: errors not trapped here as leads to recursive use of Failed()
+      call FVW_DestroyConstrState(z_guess, ErrStat2, ErrMsg2)  !; if(Failed()) return
+      call FVW_DestroyInput(uInterp, ErrStat2, ErrMsg2)        !; if(Failed()) return
    end subroutine
 
    logical function Failed()

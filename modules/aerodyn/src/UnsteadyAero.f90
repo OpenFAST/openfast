@@ -28,7 +28,7 @@
 !        Development plan for the aerodynamic linearization in OpenFAST
 !        Unpublished
 !
-!   [70] User Documentation / AeroDyn / Unsteady Aerodynamics / Boing-Vertol model
+!   [70] User Documentation / AeroDyn / Unsteady Aerodynamics / Boeing-Vertol model
 !        https://openfast.readthedocs.io/
 !
 !   [other] R. Damiani and G. Hayman (2017)
@@ -1702,7 +1702,7 @@ subroutine UA_TurnOff_param(p, AFInfo, ErrStat, ErrMsg)
 
 end subroutine UA_TurnOff_param
 !============================================================================== 
-!> Update discrete states for Boieng Vertol model
+!> Update discrete states for Boeing Vertol model
 subroutine UA_UpdateDiscOtherState_BV( i, j, u, p, xd, OtherState, AFInfo, m, ErrStat, ErrMsg )   
    integer   ,                   intent(in   )  :: i           !< node index within a blade
    integer   ,                   intent(in   )  :: j           !< blade index    

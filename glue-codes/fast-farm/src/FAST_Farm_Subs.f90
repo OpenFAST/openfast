@@ -1736,6 +1736,9 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
          FWrap_InitInp%dX_high       = AWAE_InitOutput%dX_high(nt)
          FWrap_InitInp%dY_high       = AWAE_InitOutput%dY_high(nt)
          FWrap_InitInp%dZ_high       = AWAE_InitOutput%dZ_high(nt)
+
+         FWrap_InitInp%Vdist_High   => AWAE_InitOutput%Vdist_High(nt)%data
+
          if (SC_InitOutput%NumSC2Ctrl>0) then
             FWrap_InitInp%fromSC = SC_y%fromSC((nt-1)*SC_InitOutput%NumSC2Ctrl+1:nt*SC_InitOutput%NumSC2Ctrl)
          end if
@@ -2063,7 +2066,6 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
       !--------------------
       ! 1c. transfer y_AWAE to u_F and u_WD         
    
-   call Transfer_AWAE_to_FAST(farm)      
    call Transfer_AWAE_to_WD(farm)   
 
    if (farm%p%UseSC) then
@@ -2155,8 +2157,7 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    !.......................................................................................
    ! Transfer y_AWAE to u_F and u_WD
    !.......................................................................................
-   
-   call Transfer_AWAE_to_FAST(farm)              
+
    call Transfer_AWAE_to_WD(farm)   
    
    !.......................................................................................
@@ -2743,7 +2744,6 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
 
       !--------------------
       ! 2. Transfer y_AWAE to u_F  and u_WD   
-   call Transfer_AWAE_to_FAST(farm)      
    call Transfer_AWAE_to_WD(farm)   
    
    
@@ -2889,18 +2889,6 @@ SUBROUTINE Transfer_AWAE_to_WD(farm)
    END DO
    
 END SUBROUTINE Transfer_AWAE_to_WD
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Transfer_AWAE_to_FAST(farm)
-   type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
-
-   integer(intKi)  :: nt
-   
-   DO nt = 1,farm%p%NumTurbines
-         ! allocated in FAST's IfW initialization as 3,x,y,z,t
-      farm%FWrap(nt)%u%Vdist_High = farm%AWAE%y%Vdist_High(nt)%data
-   END DO
-   
-END SUBROUTINE Transfer_AWAE_to_FAST
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Transfer_WD_to_AWAE(farm)
    type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  

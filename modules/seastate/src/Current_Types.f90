@@ -35,18 +35,18 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  Current_InitInputType  =======
   TYPE, PUBLIC :: Current_InitInputType
-    REAL(SiKi)  :: CurrSSV0      !<  [-]
+    REAL(SiKi)  :: CurrSSV0 = 0.0_R4Ki      !<  [-]
     CHARACTER(80)  :: CurrSSDirChr      !<  [-]
-    REAL(SiKi)  :: CurrSSDir      !<  [-]
-    REAL(SiKi)  :: CurrNSRef      !<  [-]
-    REAL(SiKi)  :: CurrNSV0      !<  [-]
-    REAL(SiKi)  :: CurrNSDir      !<  [-]
-    REAL(SiKi)  :: CurrDIV      !<  [-]
-    REAL(SiKi)  :: CurrDIDir      !<  [-]
-    INTEGER(IntKi)  :: CurrMod      !<  [-]
-    REAL(SiKi)  :: WtrDpth      !<  [-]
+    REAL(SiKi)  :: CurrSSDir = 0.0_R4Ki      !<  [-]
+    REAL(SiKi)  :: CurrNSRef = 0.0_R4Ki      !<  [-]
+    REAL(SiKi)  :: CurrNSV0 = 0.0_R4Ki      !<  [-]
+    REAL(SiKi)  :: CurrNSDir = 0.0_R4Ki      !<  [-]
+    REAL(SiKi)  :: CurrDIV = 0.0_R4Ki      !<  [-]
+    REAL(SiKi)  :: CurrDIDir = 0.0_R4Ki      !<  [-]
+    INTEGER(IntKi)  :: CurrMod = 0_IntKi      !<  [-]
+    REAL(SiKi)  :: EffWtrDpth = 0.0_R4Ki      !<  [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinGridzi      !<  [-]
-    INTEGER(IntKi)  :: NGridPts      !<  [-]
+    INTEGER(IntKi)  :: NGridPts = 0_IntKi      !<  [-]
     CHARACTER(1024)  :: DirRoot      !<  [-]
   END TYPE Current_InitInputType
 ! =======================
@@ -54,527 +54,183 @@ IMPLICIT NONE
   TYPE, PUBLIC :: Current_InitOutputType
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: CurrVxi      !<  [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: CurrVyi      !<  [-]
-    REAL(SiKi)  :: PCurrVxiPz0      !<  [-]
-    REAL(SiKi)  :: PCurrVyiPz0      !<  [-]
+    REAL(SiKi)  :: PCurrVxiPz0 = 0.0_R4Ki      !<  [-]
+    REAL(SiKi)  :: PCurrVyiPz0 = 0.0_R4Ki      !<  [-]
   END TYPE Current_InitOutputType
 ! =======================
 CONTAINS
- SUBROUTINE Current_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Current_InitInputType), INTENT(IN) :: SrcInitInputData
-   TYPE(Current_InitInputType), INTENT(INOUT) :: DstInitInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Current_CopyInitInput'
-! 
+
+subroutine Current_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
+   type(Current_InitInputType), intent(in) :: SrcInitInputData
+   type(Current_InitInputType), intent(inout) :: DstInitInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'Current_CopyInitInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInitInputData%CurrSSV0 = SrcInitInputData%CurrSSV0
-    DstInitInputData%CurrSSDirChr = SrcInitInputData%CurrSSDirChr
-    DstInitInputData%CurrSSDir = SrcInitInputData%CurrSSDir
-    DstInitInputData%CurrNSRef = SrcInitInputData%CurrNSRef
-    DstInitInputData%CurrNSV0 = SrcInitInputData%CurrNSV0
-    DstInitInputData%CurrNSDir = SrcInitInputData%CurrNSDir
-    DstInitInputData%CurrDIV = SrcInitInputData%CurrDIV
-    DstInitInputData%CurrDIDir = SrcInitInputData%CurrDIDir
-    DstInitInputData%CurrMod = SrcInitInputData%CurrMod
-    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
-IF (ALLOCATED(SrcInitInputData%WaveKinGridzi)) THEN
-  i1_l = LBOUND(SrcInitInputData%WaveKinGridzi,1)
-  i1_u = UBOUND(SrcInitInputData%WaveKinGridzi,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%WaveKinGridzi)) THEN 
-    ALLOCATE(DstInitInputData%WaveKinGridzi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveKinGridzi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%WaveKinGridzi = SrcInitInputData%WaveKinGridzi
-ENDIF
-    DstInitInputData%NGridPts = SrcInitInputData%NGridPts
-    DstInitInputData%DirRoot = SrcInitInputData%DirRoot
- END SUBROUTINE Current_CopyInitInput
+   ErrMsg  = ''
+   DstInitInputData%CurrSSV0 = SrcInitInputData%CurrSSV0
+   DstInitInputData%CurrSSDirChr = SrcInitInputData%CurrSSDirChr
+   DstInitInputData%CurrSSDir = SrcInitInputData%CurrSSDir
+   DstInitInputData%CurrNSRef = SrcInitInputData%CurrNSRef
+   DstInitInputData%CurrNSV0 = SrcInitInputData%CurrNSV0
+   DstInitInputData%CurrNSDir = SrcInitInputData%CurrNSDir
+   DstInitInputData%CurrDIV = SrcInitInputData%CurrDIV
+   DstInitInputData%CurrDIDir = SrcInitInputData%CurrDIDir
+   DstInitInputData%CurrMod = SrcInitInputData%CurrMod
+   DstInitInputData%EffWtrDpth = SrcInitInputData%EffWtrDpth
+   if (allocated(SrcInitInputData%WaveKinGridzi)) then
+      LB(1:1) = lbound(SrcInitInputData%WaveKinGridzi, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%WaveKinGridzi, kind=B8Ki)
+      if (.not. allocated(DstInitInputData%WaveKinGridzi)) then
+         allocate(DstInitInputData%WaveKinGridzi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveKinGridzi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%WaveKinGridzi = SrcInitInputData%WaveKinGridzi
+   end if
+   DstInitInputData%NGridPts = SrcInitInputData%NGridPts
+   DstInitInputData%DirRoot = SrcInitInputData%DirRoot
+end subroutine
 
- SUBROUTINE Current_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
-  TYPE(Current_InitInputType), INTENT(INOUT) :: InitInputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Current_DestroyInitInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-IF (ALLOCATED(InitInputData%WaveKinGridzi)) THEN
-  DEALLOCATE(InitInputData%WaveKinGridzi)
-ENDIF
- END SUBROUTINE Current_DestroyInitInput
-
- SUBROUTINE Current_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Current_InitInputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Current_PackInitInput'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! CurrSSV0
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%CurrSSDirChr)  ! CurrSSDirChr
-      Re_BufSz   = Re_BufSz   + 1  ! CurrSSDir
-      Re_BufSz   = Re_BufSz   + 1  ! CurrNSRef
-      Re_BufSz   = Re_BufSz   + 1  ! CurrNSV0
-      Re_BufSz   = Re_BufSz   + 1  ! CurrNSDir
-      Re_BufSz   = Re_BufSz   + 1  ! CurrDIV
-      Re_BufSz   = Re_BufSz   + 1  ! CurrDIDir
-      Int_BufSz  = Int_BufSz  + 1  ! CurrMod
-      Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
-  Int_BufSz   = Int_BufSz   + 1     ! WaveKinGridzi allocated yes/no
-  IF ( ALLOCATED(InData%WaveKinGridzi) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! WaveKinGridzi upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveKinGridzi)  ! WaveKinGridzi
-  END IF
-      Int_BufSz  = Int_BufSz  + 1  ! NGridPts
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%DirRoot)  ! DirRoot
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
-
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    ReKiBuf(Re_Xferred) = InData%CurrSSV0
-    Re_Xferred = Re_Xferred + 1
-    DO I = 1, LEN(InData%CurrSSDirChr)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%CurrSSDirChr(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    ReKiBuf(Re_Xferred) = InData%CurrSSDir
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%CurrNSRef
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%CurrNSV0
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%CurrNSDir
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%CurrDIV
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%CurrDIDir
-    Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%CurrMod
-    Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%WtrDpth
-    Re_Xferred = Re_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%WaveKinGridzi) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveKinGridzi,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveKinGridzi,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%WaveKinGridzi,1), UBOUND(InData%WaveKinGridzi,1)
-        ReKiBuf(Re_Xferred) = InData%WaveKinGridzi(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-    IntKiBuf(Int_Xferred) = InData%NGridPts
-    Int_Xferred = Int_Xferred + 1
-    DO I = 1, LEN(InData%DirRoot)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%DirRoot(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
- END SUBROUTINE Current_PackInitInput
-
- SUBROUTINE Current_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Current_InitInputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Current_UnPackInitInput'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%CurrSSV0 = REAL(ReKiBuf(Re_Xferred), SiKi)
-    Re_Xferred = Re_Xferred + 1
-    DO I = 1, LEN(OutData%CurrSSDirChr)
-      OutData%CurrSSDirChr(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    OutData%CurrSSDir = REAL(ReKiBuf(Re_Xferred), SiKi)
-    Re_Xferred = Re_Xferred + 1
-    OutData%CurrNSRef = REAL(ReKiBuf(Re_Xferred), SiKi)
-    Re_Xferred = Re_Xferred + 1
-    OutData%CurrNSV0 = REAL(ReKiBuf(Re_Xferred), SiKi)
-    Re_Xferred = Re_Xferred + 1
-    OutData%CurrNSDir = REAL(ReKiBuf(Re_Xferred), SiKi)
-    Re_Xferred = Re_Xferred + 1
-    OutData%CurrDIV = REAL(ReKiBuf(Re_Xferred), SiKi)
-    Re_Xferred = Re_Xferred + 1
-    OutData%CurrDIDir = REAL(ReKiBuf(Re_Xferred), SiKi)
-    Re_Xferred = Re_Xferred + 1
-    OutData%CurrMod = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%WtrDpth = REAL(ReKiBuf(Re_Xferred), SiKi)
-    Re_Xferred = Re_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveKinGridzi not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WaveKinGridzi)) DEALLOCATE(OutData%WaveKinGridzi)
-    ALLOCATE(OutData%WaveKinGridzi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveKinGridzi.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%WaveKinGridzi,1), UBOUND(OutData%WaveKinGridzi,1)
-        OutData%WaveKinGridzi(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-    OutData%NGridPts = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    DO I = 1, LEN(OutData%DirRoot)
-      OutData%DirRoot(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
- END SUBROUTINE Current_UnPackInitInput
-
- SUBROUTINE Current_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Current_InitOutputType), INTENT(IN) :: SrcInitOutputData
-   TYPE(Current_InitOutputType), INTENT(INOUT) :: DstInitOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Current_CopyInitOutput'
-! 
+subroutine Current_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
+   type(Current_InitInputType), intent(inout) :: InitInputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Current_DestroyInitInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcInitOutputData%CurrVxi)) THEN
-  i1_l = LBOUND(SrcInitOutputData%CurrVxi,1)
-  i1_u = UBOUND(SrcInitOutputData%CurrVxi,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%CurrVxi)) THEN 
-    ALLOCATE(DstInitOutputData%CurrVxi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%CurrVxi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%CurrVxi = SrcInitOutputData%CurrVxi
-ENDIF
-IF (ALLOCATED(SrcInitOutputData%CurrVyi)) THEN
-  i1_l = LBOUND(SrcInitOutputData%CurrVyi,1)
-  i1_u = UBOUND(SrcInitOutputData%CurrVyi,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%CurrVyi)) THEN 
-    ALLOCATE(DstInitOutputData%CurrVyi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%CurrVyi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%CurrVyi = SrcInitOutputData%CurrVyi
-ENDIF
-    DstInitOutputData%PCurrVxiPz0 = SrcInitOutputData%PCurrVxiPz0
-    DstInitOutputData%PCurrVyiPz0 = SrcInitOutputData%PCurrVyiPz0
- END SUBROUTINE Current_CopyInitOutput
+   ErrMsg  = ''
+   if (allocated(InitInputData%WaveKinGridzi)) then
+      deallocate(InitInputData%WaveKinGridzi)
+   end if
+end subroutine
 
- SUBROUTINE Current_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
-  TYPE(Current_InitOutputType), INTENT(INOUT) :: InitOutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Current_DestroyInitOutput'
+subroutine Current_PackInitInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(Current_InitInputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Current_PackInitInput'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%CurrSSV0)
+   call RegPack(RF, InData%CurrSSDirChr)
+   call RegPack(RF, InData%CurrSSDir)
+   call RegPack(RF, InData%CurrNSRef)
+   call RegPack(RF, InData%CurrNSV0)
+   call RegPack(RF, InData%CurrNSDir)
+   call RegPack(RF, InData%CurrDIV)
+   call RegPack(RF, InData%CurrDIDir)
+   call RegPack(RF, InData%CurrMod)
+   call RegPack(RF, InData%EffWtrDpth)
+   call RegPackAlloc(RF, InData%WaveKinGridzi)
+   call RegPack(RF, InData%NGridPts)
+   call RegPack(RF, InData%DirRoot)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
 
-  ErrStat = ErrID_None
-  ErrMsg  = ""
+subroutine Current_UnPackInitInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(Current_InitInputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Current_UnPackInitInput'
+   integer(B8Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%CurrSSV0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CurrSSDirChr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CurrSSDir); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CurrNSRef); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CurrNSV0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CurrNSDir); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CurrDIV); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CurrDIDir); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CurrMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%EffWtrDpth); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveKinGridzi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NGridPts); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DirRoot); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-IF (ALLOCATED(InitOutputData%CurrVxi)) THEN
-  DEALLOCATE(InitOutputData%CurrVxi)
-ENDIF
-IF (ALLOCATED(InitOutputData%CurrVyi)) THEN
-  DEALLOCATE(InitOutputData%CurrVyi)
-ENDIF
- END SUBROUTINE Current_DestroyInitOutput
+subroutine Current_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(Current_InitOutputType), intent(in) :: SrcInitOutputData
+   type(Current_InitOutputType), intent(inout) :: DstInitOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'Current_CopyInitOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(SrcInitOutputData%CurrVxi)) then
+      LB(1:1) = lbound(SrcInitOutputData%CurrVxi, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%CurrVxi, kind=B8Ki)
+      if (.not. allocated(DstInitOutputData%CurrVxi)) then
+         allocate(DstInitOutputData%CurrVxi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%CurrVxi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%CurrVxi = SrcInitOutputData%CurrVxi
+   end if
+   if (allocated(SrcInitOutputData%CurrVyi)) then
+      LB(1:1) = lbound(SrcInitOutputData%CurrVyi, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitOutputData%CurrVyi, kind=B8Ki)
+      if (.not. allocated(DstInitOutputData%CurrVyi)) then
+         allocate(DstInitOutputData%CurrVyi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%CurrVyi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%CurrVyi = SrcInitOutputData%CurrVyi
+   end if
+   DstInitOutputData%PCurrVxiPz0 = SrcInitOutputData%PCurrVxiPz0
+   DstInitOutputData%PCurrVyiPz0 = SrcInitOutputData%PCurrVyiPz0
+end subroutine
 
- SUBROUTINE Current_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Current_InitOutputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Current_PackInitOutput'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+subroutine Current_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
+   type(Current_InitOutputType), intent(inout) :: InitOutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Current_DestroyInitOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(InitOutputData%CurrVxi)) then
+      deallocate(InitOutputData%CurrVxi)
+   end if
+   if (allocated(InitOutputData%CurrVyi)) then
+      deallocate(InitOutputData%CurrVyi)
+   end if
+end subroutine
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-  Int_BufSz   = Int_BufSz   + 1     ! CurrVxi allocated yes/no
-  IF ( ALLOCATED(InData%CurrVxi) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! CurrVxi upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%CurrVxi)  ! CurrVxi
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! CurrVyi allocated yes/no
-  IF ( ALLOCATED(InData%CurrVyi) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! CurrVyi upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%CurrVyi)  ! CurrVyi
-  END IF
-      Re_BufSz   = Re_BufSz   + 1  ! PCurrVxiPz0
-      Re_BufSz   = Re_BufSz   + 1  ! PCurrVyiPz0
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine Current_PackInitOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(Current_InitOutputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Current_PackInitOutput'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%CurrVxi)
+   call RegPackAlloc(RF, InData%CurrVyi)
+   call RegPack(RF, InData%PCurrVxiPz0)
+   call RegPack(RF, InData%PCurrVyiPz0)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-  IF ( .NOT. ALLOCATED(InData%CurrVxi) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CurrVxi,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CurrVxi,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%CurrVxi,1), UBOUND(InData%CurrVxi,1)
-        ReKiBuf(Re_Xferred) = InData%CurrVxi(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%CurrVyi) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CurrVyi,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CurrVyi,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%CurrVyi,1), UBOUND(InData%CurrVyi,1)
-        ReKiBuf(Re_Xferred) = InData%CurrVyi(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-    ReKiBuf(Re_Xferred) = InData%PCurrVxiPz0
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%PCurrVyiPz0
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Current_PackInitOutput
-
- SUBROUTINE Current_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Current_InitOutputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Current_UnPackInitOutput'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CurrVxi not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%CurrVxi)) DEALLOCATE(OutData%CurrVxi)
-    ALLOCATE(OutData%CurrVxi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CurrVxi.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%CurrVxi,1), UBOUND(OutData%CurrVxi,1)
-        OutData%CurrVxi(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CurrVyi not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%CurrVyi)) DEALLOCATE(OutData%CurrVyi)
-    ALLOCATE(OutData%CurrVyi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CurrVyi.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%CurrVyi,1), UBOUND(OutData%CurrVyi,1)
-        OutData%CurrVyi(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-    OutData%PCurrVxiPz0 = REAL(ReKiBuf(Re_Xferred), SiKi)
-    Re_Xferred = Re_Xferred + 1
-    OutData%PCurrVyiPz0 = REAL(ReKiBuf(Re_Xferred), SiKi)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Current_UnPackInitOutput
-
+subroutine Current_UnPackInitOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(Current_InitOutputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Current_UnPackInitOutput'
+   integer(B8Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%CurrVxi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%CurrVyi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PCurrVxiPz0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PCurrVyiPz0); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
 END MODULE Current_Types
 !ENDOFREGISTRYGENERATEDFILE
