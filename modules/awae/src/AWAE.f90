@@ -958,7 +958,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       IfW_InitInp%lidar%HubPosition = 0.0_ReKi
       IfW_InitInp%lidar%SensorType  = SensorType_None
       IfW_InitInp%Use4Dext          = .false.
-      IfW_InitInp%MHK               = 0   !FIXME: after merge to dev, change this test to use MHK_None
+      IfW_InitInp%MHK               = MHK_None
       IfW_InitInp%WtrDpth           = 0.0_ReKi
       IfW_InitInp%MSL2SWL           = 0.0_ReKi
 
@@ -1186,6 +1186,13 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    allocate ( y%TI_amb   (1:p%NumTurbines), STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%TI_amb.', errStat, errMsg, RoutineName )
    if (errStat >= AbortErrLev) return
+
+   ! Set pointers to high resolution wind in InitOutput
+   allocate(InitOut%Vdist_High(1:p%NumTurbines), STAT=ErrStat2 )
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%Vdist_High.', errStat, errMsg, RoutineName )
+   do i = 1, p%NumTurbines
+      InitOut%Vdist_High(i)%data => y%Vdist_High(i)%data      
+   end do
 
       ! This next step is not strictly necessary
    y%V_plane       = 0.0_Reki

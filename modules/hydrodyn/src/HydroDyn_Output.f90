@@ -1006,9 +1006,10 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, OutRootName, InputFileData, y,  p, m, 
    ! Check that the variables in OutList are valid      
    !-------------------------------------------------------------------------------------------------      
       
-   
-   CALL SetOutParam(InputFileData%OutList, p, ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) RETURN
+   if (allocated(InputFileData%OutList)) then
+      CALL SetOutParam(InputFileData%OutList, p, ErrStat, ErrMsg )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   end if
 
          ! Aggregate the sub-module initialization outputs for the glue code
 

@@ -21,7 +21,7 @@ endif()
 add_library(extinflowtypeslib STATIC
   src/ExternalInflow_Types.f90
 )
-target_link_libraries(extinflowtypeslib nwtclibs)
+target_link_libraries(extinflowtypeslib nwtclibs ifwlib)
 
 add_library(extinflowlib STATIC
   src/ExternalInflow.f90

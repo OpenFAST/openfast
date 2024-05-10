@@ -45,7 +45,9 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Set up MATLAB
-        uses: matlab-actions/setup-matlab@v1
+        uses: matlab-actions/setup-matlab@v2
+        with:
+          products: Simulink
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
@@ -178,7 +180,9 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Set up MATLAB
-        uses: matlab-actions/setup-matlab@v1
+        uses: matlab-actions/setup-matlab@v2
+        with:
+          products: Simulink
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
@@ -588,7 +592,7 @@ jobs:
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV \
+          ctest -VV -j4 \
           -L openfast \
           -LE "cpp|linear|python|fastlib|aeromap" \
           -E "5MW_OC4Semi_WSt_WavesWN|5MW_OC3Mnpl_DLL_WTurb_WavesIrr|5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth|5MW_OC3Trpd_DLL_WSt_WavesReg|5MW_Land_BD_DLL_WTurb"
@@ -613,7 +617,7 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
@@ -622,7 +626,9 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev libopenblas-dev libopenblas-openmp-dev
       - name: Set up MATLAB
-        uses: matlab-actions/setup-matlab@v1
+        uses: matlab-actions/setup-matlab@v2
+        with:
+          products: Simulink
       - name: Build FAST_SFunc
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -631,7 +637,7 @@ jobs:
             ${GITHUB_WORKSPACE}
           cmake --build . --target FAST_SFunc
       - name: Run MATLAB tests and generate artifacts
-        uses: matlab-actions/run-tests@v1
+        uses: matlab-actions/run-tests@v2
         with:
           source-folder: ${{runner.workspace}}/openfast/build/glue-codes/simulink; ${{runner.workspace}}/openfast/glue-codes/simulink/examples
           test-results-junit: test-results/results.xml
@@ -643,12 +649,12 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -672,7 +678,7 @@ jobs:
         run: |
           ctest -VV -L aeromap -LE "cpp|linear|python" -R 5MW_Land_AeroMap
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-OF-5MW_Land_AeroMap
@@ -699,7 +705,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.10'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -768,7 +774,7 @@ jobs:
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC3Mnpl_DLL_WTurb_WavesIrr
+          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC3Mnpl_DLL_WTurb_WavesIrr -j1
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
         if: failure()
