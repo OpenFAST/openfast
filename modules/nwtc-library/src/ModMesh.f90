@@ -1508,7 +1508,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 !! separately for each sibling, because the fields allocated with the siblings are separate 
 !! and unique to each sibling.
    subroutine MeshPack (Buf, Mesh)
-      type(PackBuffer), intent(inout)  :: Buf
+      type(RegFile), intent(inout)  :: Buf
       type(MeshType), intent(in)       :: Mesh        ! Mesh being packed
       
       integer                          :: i,j, nelemnodes
@@ -1536,6 +1536,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       call RegPack(Buf, Mesh%ios)
       call RegPack(Buf, Mesh%nnodes)
       call RegPack(Buf, Mesh%refnode)
+      call RegPack(Buf, Mesh%ID)
       call RegPack(Buf, Mesh%nextelem)
       call RegPack(Buf, Mesh%nscalars)
       
@@ -1587,7 +1588,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 !! in the exact state as when the data in the buffers was packed using MeshPack. 
    SUBROUTINE MeshUnpack(Buf, Mesh)
       
-      type(PackBuffer), intent(inout)   :: Buf
+      type(RegFile), intent(inout)   :: Buf
       type(MeshType), intent(inout)     :: Mesh        ! Mesh being packed
 
       ! bjj: not implemented yet:  
@@ -1595,7 +1596,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       ! the existing sibling as an optional argument so that the sibling relationship is also recreated.
    
       LOGICAL committed, RemapFlag, fieldmask(FIELDMASK_SIZE)
-      INTEGER nScalars, ios, nnodes, nextelem, nelemnodes, nelem, refnode
+      INTEGER nScalars, ios, nnodes, nextelem, nelemnodes, nelem, refnode, id
       INTEGER i,j
       integer(IntKi) :: EN(20) ! Element nodes
 
@@ -1622,6 +1623,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       call RegUnpack(Buf, ios)
       call RegUnpack(Buf, nnodes)
       call RegUnpack(Buf, refnode)
+      call RegUnpack(Buf, id)
       call RegUnpack(Buf, nextelem)
       call RegUnpack(Buf, nscalars)
 
@@ -1644,6 +1646,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       if (Buf%ErrStat >= AbortErrLev) return
 
       Mesh%RefNode = refnode
+      Mesh%ID = id
       Mesh%RemapFlag = RemapFlag
       Mesh%nextelem  = nextelem
      
@@ -1973,7 +1976,8 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
       DestMesh%Initialized = SrcMesh%Initialized
       DestMesh%Committed   = SrcMesh%Committed
-      DestMesh%refNode = SrcMesh%refNode
+      DestMesh%refNode     = SrcMesh%refNode
+      DestMesh%ID          = SrcMesh%ID
       IF ( ALLOCATED(SrcMesh%Force          ) .AND. ALLOCATED(DestMesh%Force          ) ) DestMesh%Force = SrcMesh%Force
       IF ( ALLOCATED(SrcMesh%Moment         ) .AND. ALLOCATED(DestMesh%Moment         ) ) DestMesh%Moment = SrcMesh%Moment
       IF ( ALLOCATED(SrcMesh%Orientation    ) .AND. ALLOCATED(DestMesh%Orientation    ) ) DestMesh%Orientation = SrcMesh%Orientation

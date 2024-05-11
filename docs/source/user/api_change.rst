@@ -9,7 +9,8 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
-OpenFAST v3.5.0 to OpenFAST dev
+
+OpenFAST v3.5.3 to OpenFAST dev
 ----------------------------------
 
 The HydroDyn module was split into HydroDyn and SeaState.  This results in a
@@ -23,7 +24,72 @@ Module                                        Line  Flag Name           Example 
 ============================================= ==== ==================== ========================================================================================================================================================================================================
 HydroDyn                                       all                      Complete restructuring of input file
 SeaState                                       all                      New module (split from HydroDyn, so contains some inputs previously found in HydroDyn)
+SubDyn                                        56\*                                            ----------------------- SPRING ELEMENT PROPERTIES -------------------------------------
+SubDyn                                        57\* NSpringPropSets  0                         - Number of spring properties
+SubDyn                                        58\*                                            PropSetID   k11     k12     k13     k14     k15     k16     k22     k23     k24     k25     k26     k33     k34     k35     k36     k44      k45      k46      k55      k56      k66
+SubDyn                                        59\*                                            (-)      (N/m)   (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)  (N/rad) (N/rad) (N/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad)   
 ============================================= ==== ==================== ========================================================================================================================================================================================================
+
+\*Exact line number depends on number of entries in various preceeding tables.
+
+
+.. _api_change_ad4x:
+
+AeroDyn changes starting from v4.x
+----------------------------------
+
+The table below shows how to convert from the Old AeroDyn inputs to the new AeroDyn inputs.
+Additional ressources:
+
+- The AeroDyn input file description (:numref:`ad_input`) for more details on the new inputs.
+
+- The `discussion <https://github.com/OpenFAST/openfast/discussions/1895>`__ that led to these new inputs.
+
+- An example of AeroDyn input file at it's latest format: :download:`Example <aerodyn/examples/ad_primary_example.dat>`: 
+
+- A directory with a working example: `here <https://github.com/OpenFAST/r-test/blob/dev/modules/aerodyn/ad_BAR_OLAF/OpenFAST_BAR_00_AeroDyn15.dat>`__
+
+
+=========================== ========================================================= 
+Old inputs                  Corresponding new inputs                                  
+=========================== ========================================================= 
+`WakeMod=0`                 `Wake_Mod=0`                                              
+`WakeMod=1` ("BEM")         `Wake_Mod=1` and `DBEMT_Mod=0` and `BEM_Mod=1`            
+`WakeMod=2` ("DBEMT")       `Wake_Mod=1` and `DBEMT_Mod={1,2,3}`                      
+`WakeMod=3` ("OLAF")        `Wake_Mod=3`                                              
+`AFAeroMod=1`               `UA_Mod=0` and `AoA34=False`                              
+`AFAeroMod=2`               `UA_Mod>0` and `AoA34=False`  and `UA_Mod=UAMod`          
+`FrozenWake=True`           `DBEMT_Mod=-1`                                            
+`FrozenWake=False`          `DBEMT_Mod=0` (quasi-steady) or `DBEMT_Mod>0` (dynamic)   
+`SkewMod=2` (Glauert)       `Skew_Mod=1` and `SkewRedistr_Mod=1`                      
+`SkewMod=0` (Orthogonal)    `Skew_Mod=-1`                                             
+`SkewModFactor`             `SkewRedistrFactor`
+`UAMod={2-7}`               `UA_Mod={2-7}` and `AoA34=True`                           
+=========================== ========================================================= 
+
+
+
+
+
+OpenFAST v3.5.2 to OpenFAST v3.5.3 
+----------------------------------
+
+No input file changes were made.
+
+
+OpenFAST v3.5.1 to OpenFAST v3.5.2 
+----------------------------------
+
+No input file changes were made.
+
+
+OpenFAST v3.5.0 to OpenFAST v3.5.1 
+----------------------------------
+
+No input file changes were made.  Some input files now include additional
+output channels:  AeroDyn nodal outputs for another coordinate system, new
+MoorDyn output names (Connect changed to Point).
+
 
 
 OpenFAST v3.4.0 to OpenFAST v3.5.0 
@@ -71,7 +137,7 @@ Added in OpenFAST `3.4.0`
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== ================= ========================================================================================================================================================================================================
-FAST.Farm                                     17   ModWake           1          Mod_Wake          - Switch between wake formulations {1:Polar, 2:Curl, 3:Cartesian} (-) (switch)
+FAST.Farm                                     42\* ModWake           1          Mod_Wake          - Switch between wake formulations {1:Polar, 2:Curl, 3:Cartesian} (-) (switch)
 FAST.Farm                                     67   CurlSection       --- CURLED-WAKE PARAMETERS [only used if Mod_Wake=2 or 3] ---
 FAST.Farm                                     68   Swirl             DEFAULT    Swirl             - Switch to include swirl velocities in wake (-) (switch) [DEFAULT=True]
 FAST.Farm                                     69   k_VortexDecay     DEFAULT    k_VortexDecay     - Vortex decay constant for curl (-) [DEFAULT=0.01] [only used if Mod_Wake=2]

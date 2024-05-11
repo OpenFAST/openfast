@@ -404,8 +404,7 @@ PROGRAM InflowWind_Driver
    END IF
    InflowWind_InitInp%RootName = trim(InflowWind_InitInp%RootName)//'.IfW'
    InflowWind_InitInp%RadAvg = -1.0_ReKi ! let the IfW code guess what to use
-   InflowWind_InitInp%BoxExceedAllowF  = SettingsFlags%BoxExceedAllowF  ! Set flag for allowing points outside the wind box (alternate interpolation method for FF)
-   if (InflowWind_InitInp%BoxExceedAllowF) InflowWind_InitInp%BoxExceedAllowIdx = 1_IntKi
+   InflowWind_InitInp%BoxExceedAllow  = SettingsFlags%BoxExceedAllowF  ! Set flag for allowing points outside the wind box (alternate interpolation method for FF)
    
    IF ( IfWDriver_Verbose >= 5_IntKi ) CALL WrScr('Calling InflowWind_Init...')
 
@@ -417,6 +416,9 @@ PROGRAM InflowWind_Driver
                   InflowWind_y1, InflowWind_MiscVars, Settings%DT,  InflowWind_InitOut, ErrStat, ErrMsg )
    call CheckCallErr('InflowWind_Init')
 
+   if (InflowWind_InitInp%BoxExceedAllow) then
+      InflowWind_p%FlowField%Grid3D%BoxExceedAllowDrv = .true.
+   end if
 
 
       ! Let user know we returned from the InflowWind code if verbose
@@ -704,8 +706,7 @@ if (SettingsFlags%WindGrid .or. SettingsFlags%PointsFile .or. SettingsFlags%FFTc
    IF ( IfWDriver_Verbose >= 5_IntKi )    CALL WrScr(NewLine//'Calling InflowWind_CalcOutput...'//NewLine)
 
 
-   DO ITime =  0, MAX( Settings%NumTimeSteps, 1_IntKi )
-
+   DO ITime =  0, MAX( Settings%NumTimeSteps, 0_IntKi )
       TimeNow  =  Settings%TStart + Settings%DT*(ITime)
 
       IF ( SettingsFlags%WindGrid ) THEN

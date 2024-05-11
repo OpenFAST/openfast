@@ -4,6 +4,6 @@ author: 'Rafael Mudafort https://github.com/rafmudaf'
 runs:
   using: "composite"
   steps:  
-    - run: ctest -VV -j7 -R seastate_ -LE python
+    - run: ctest -VV -j4 -R seastate_ -LE python
       working-directory: ${{runner.workspace}}/openfast/build
       shell: bash

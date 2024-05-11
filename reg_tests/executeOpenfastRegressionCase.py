@@ -55,6 +55,7 @@ parser.add_argument("atol", metavar="Absolute-Tolerance", type=float, nargs=1, h
 parser.add_argument("-p", "-plot", dest="plot", action='store_true', help="bool to include plots in failed cases")
 parser.add_argument("-n", "-no-exec", dest="noExec", action='store_true', help="bool to prevent execution of the test cases")
 parser.add_argument("-v", "-verbose", dest="verbose", action='store_true', help="bool to include verbose system output")
+parser.add_argument("-steadystate", dest="steadyState", action='store_true', help="perform steadystate/aeromap analysis"  )
 
 args = parser.parse_args()
 
@@ -67,12 +68,13 @@ atol = args.atol[0]
 plotError = args.plot
 noExec = args.noExec
 verbose = args.verbose
+steadyState = args.steadyState
 
 # validate inputs
 rtl.validateExeOrExit(executable)
 rtl.validateDirOrExit(sourceDirectory)
 if not os.path.isdir(buildDirectory):
-    os.makedirs(buildDirectory)
+    os.makedirs(buildDirectory, exist_ok=True)
 
 
 ### Build the filesystem navigation variables for running openfast on the test case
@@ -94,7 +96,7 @@ if not os.path.isdir(inputsDirectory):
 
 # create the local output directory if it does not already exist
 # and initialize it with input files for all test cases
-for data in ["AOC", "AWT27", "SWRT", "UAE_VI", "WP_Baseline"]:
+for data in ["AOC", "AWT27", "_DummyTurbineData", "SWRT", "UAE_VI", "WP_Baseline"]:
     dataDir = os.path.join(buildDirectory, data)
     if not os.path.isdir(dataDir):
         rtl.copyTree(os.path.join(moduleDirectory, data), dataDir, excludeExt=excludeExt)
@@ -122,8 +124,12 @@ if not os.path.isdir(testBuildDirectory):
 
 ### Run openfast on the test case
 if not noExec:
-    caseInputFile = os.path.join(testBuildDirectory, caseName + ".fst")
-    returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable)
+    if steadyState:
+        caseInputFile = os.path.join(testBuildDirectory, caseName + ".drv")
+        returnCode = openfastDrivers.runAeromapCase(caseInputFile, executable)
+    else:
+        caseInputFile = os.path.join(testBuildDirectory, caseName + ".fst")
+        returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable)
     if returnCode != 0:
         sys.exit(returnCode*10)
 

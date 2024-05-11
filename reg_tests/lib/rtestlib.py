@@ -25,7 +25,9 @@ from stat import ST_MODE
 import shutil 
 
 def exitWithError(error, code=1):
-    print(error)
+    # Making errors a bit more visible. 
+    # The best would be colors. I tried with termcolor.cprint but failed.
+    print('\n\n'+'Error: '+error+'\n\n')
     sys.exit(code)
 
 def validInput(argv, nArgsExpected):

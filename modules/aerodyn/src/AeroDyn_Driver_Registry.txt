@@ -138,7 +138,7 @@ typedef   ^                         ^            ReKi                    Patm   
 typedef   ^                         ^            ReKi                    Pvap             -      -     -   "Vapour pressure of working fluid" "Pa"
 typedef   ^                         ^            ReKi                    WtrDpth          -      -     -   "Water depth" "m"
 typedef   ^                         ^            ReKi                    MSL2SWL          -      -     -   "Offset between still-water level and mean sea level" "m"
-typedef   ^                         ^            IntKi                   numTurbines      -      -     -   "number of blades on turbine" "-"
+typedef   ^                         ^            IntKi                   numTurbines      -   -9999    -   "number of turbine rotors" "-"
 typedef   ^                         ^            WTData                  WT               :      -     -   "Wind turbine data for driver" "-"
 typedef   ^                         ^            DbKi                    dT               -      -     -   "time increment" "s"
 typedef   ^                         ^            DbKi                    tMax             -      -     -   "time increment" "s"

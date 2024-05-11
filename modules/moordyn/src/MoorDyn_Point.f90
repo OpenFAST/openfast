@@ -32,61 +32,61 @@ MODULE MoorDyn_Point
 
    INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
-   PUBLIC :: Connect_Initialize
-   PUBLIC :: Connect_SetKinematics
-   PUBLIC :: Connect_SetState
-   PUBLIC :: Connect_GetStateDeriv
-   PUBLIC :: Connect_DoRHS
-   PUBLIC :: Connect_GetCoupledForce
-   PUBLIC :: Connect_GetNetForceAndMass
-   PUBLIC :: Connect_AddLine
-   PUBLIC :: Connect_RemoveLine
+   PUBLIC :: Point_Initialize
+   PUBLIC :: Point_SetKinematics
+   PUBLIC :: Point_SetState
+   PUBLIC :: Point_GetStateDeriv
+   PUBLIC :: Point_DoRHS
+   PUBLIC :: Point_GetCoupledForce
+   PUBLIC :: Point_GetNetForceAndMass
+   PUBLIC :: Point_AddLine
+   PUBLIC :: Point_RemoveLine
    
 
 CONTAINS
 
 
    !--------------------------------------------------------------
-   SUBROUTINE Connect_Initialize(Connect, states, m)
+   SUBROUTINE Point_Initialize(Point, states, m)
 
-      Type(MD_Connect), INTENT(INOUT)  :: Connect        ! the Connection object
-      Real(DbKi),       INTENT(INOUT)  :: states(6)      ! state vector section for this Connection
+      Type(MD_Point), INTENT(INOUT)  :: Point        ! the Point object
+      Real(DbKi),       INTENT(INOUT)  :: states(6)      ! state vector section for this Point
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m          ! passing along all mooring objects
 
       INTEGER(IntKi)                   :: l
 
 
-      if (Connect%typeNum == 0) then  ! error check
+      if (Point%typeNum == 0) then  ! error check
       
          ! pass kinematics to any attached lines so they have initial positions at this initialization stage
-         DO l=1,Connect%nAttached
-            IF (wordy > 1) print *, "Connect ",  Connect%IdNum, " setting end kinematics of line ", Connect%attached(l), " to ", Connect%r
-            CALL Line_SetEndKinematics(m%LineList(Connect%attached(l)), Connect%r, Connect%rd, 0.0_DbKi, Connect%Top(l))
+         DO l=1,Point%nAttached
+            IF (wordy > 1) print *, "Point ",  Point%IdNum, " setting end kinematics of line ", Point%attached(l), " to ", Point%r
+            CALL Line_SetEndKinematics(m%LineList(Point%attached(l)), Point%r, Point%rd, 0.0_DbKi, Point%Top(l))
          END DO
 
 
          ! assign initial node kinematics to state vector
-         states(4:6) = Connect%r
-         states(1:3) = Connect%rd
+         states(4:6) = Point%r
+         states(1:3) = Point%rd
          
          
-         IF (wordy > 0) print *, "Initialized Connection ", Connect%IdNum
+         IF (wordy > 0) print *, "Initialized Point ", Point%IdNum
       
       else 
-         CALL WrScr("   Error: wrong Point type given to Connect_Initialize for number "//trim(Int2Lstr(Connect%idNum)))
+         CALL WrScr("   Error: wrong Point type given to Point_Initialize for number "//trim(Int2Lstr(Point%idNum)))
       end if
       
-   END SUBROUTINE Connect_Initialize
+   END SUBROUTINE Point_Initialize
    !--------------------------------------------------------------
 
 
    !--------------------------------------------------------------
-   SUBROUTINE Connect_SetKinematics(Connect, r_in, rd_in, a_in, t, m)
+   SUBROUTINE Point_SetKinematics(Point, r_in, rd_in, a_in, t, m)
 
-      Type(MD_Connect), INTENT(INOUT)  :: Connect        ! the Connection object
+      Type(MD_Point), INTENT(INOUT)  :: Point        ! the Point object
       Real(DbKi),       INTENT(IN   )  :: r_in( 3)       ! position
       Real(DbKi),       INTENT(IN   )  :: rd_in(3)       ! velocity
-      Real(DbKi),       INTENT(IN   )  :: a_in(3)        ! acceleration (only used for coupled connects)
+      Real(DbKi),       INTENT(IN   )  :: a_in(3)        ! acceleration (only used for coupled points)
       Real(DbKi),       INTENT(IN   )  :: t              ! instantaneous time
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m          ! passing along all mooring objects
       
@@ -94,35 +94,35 @@ CONTAINS
       INTEGER(IntKi)                   :: l
 
       ! store current time
-      Connect%time = t
+      Point%time = t
 
       
-    !  if (Connect%typeNum==0) THEN ! anchor ( <<< to be changed/expanded) ... in MoorDyn F also used for coupled connections
+    !  if (Point%typeNum==0) THEN ! anchor ( <<< to be changed/expanded) ... in MoorDyn F also used for coupled points
                         
          ! set position and velocity
-         Connect%r  = r_in
-         Connect%rd = rd_in
-         Connect%a = a_in
+         Point%r  = r_in
+         Point%rd = rd_in
+         Point%a = a_in
                  
          ! pass latest kinematics to any attached lines
-         DO l=1,Connect%nAttached
-            CALL Line_SetEndKinematics(m%LineList(Connect%attached(l)), Connect%r, Connect%rd, t, Connect%Top(l))
+         DO l=1,Point%nAttached
+            CALL Line_SetEndKinematics(m%LineList(Point%attached(l)), Point%r, Point%rd, t, Point%Top(l))
          END DO
       
      ! else
      !    
-     !    PRINT*,"Error: setKinematics called for wrong Connection type. Connection ", Connect%IdNum, " type ", Connect%typeNum
+     !    PRINT*,"Error: setKinematics called for wrong Point type. Point ", Point%IdNum, " type ", Point%typeNum
          
    !  END IF
       
          
-   END SUBROUTINE Connect_SetKinematics
+   END SUBROUTINE Point_SetKinematics
    !--------------------------------------------------------------
 
    !--------------------------------------------------------------
-   SUBROUTINE Connect_SetState(Connect, X, t, m)
+   SUBROUTINE Point_SetState(Point, X, t, m)
 
-      Type(MD_Connect),      INTENT(INOUT)  :: Connect        ! the Connection object
+      Type(MD_Point),      INTENT(INOUT)  :: Point        ! the Point object
       Real(DbKi),            INTENT(IN   )  :: X(:)           ! state vector section for this line
       Real(DbKi),            INTENT(IN   )  :: t              ! instantaneous time
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m              ! passing along all mooring objects
@@ -132,26 +132,26 @@ CONTAINS
    
 
       ! store current time
-      Connect%time = t
+      Point%time = t
       
       ! from state values, get r and rdot values
       DO J=1,3
-         Connect%r( J) = X(3 + J)  ! get positions
-         Connect%rd(J) = X(    J)  ! get velocities
+         Point%r( J) = X(3 + J)  ! get positions
+         Point%rd(J) = X(    J)  ! get velocities
       END DO
            
      ! pass latest kinematics to any attached lines
-      DO l=1,Connect%nAttached
-         CALL Line_SetEndKinematics(m%LineList(Connect%attached(l)), Connect%r, Connect%rd, t, Connect%Top(l))
+      DO l=1,Point%nAttached
+         CALL Line_SetEndKinematics(m%LineList(Point%attached(l)), Point%r, Point%rd, t, Point%Top(l))
       END DO
       
-   END SUBROUTINE Connect_SetState
+   END SUBROUTINE Point_SetState
    !--------------------------------------------------------------
 
    !--------------------------------------------------------------
-   SUBROUTINE Connect_GetStateDeriv(Connect, Xd, m, p)
+   SUBROUTINE Point_GetStateDeriv(Point, Xd, m, p)
 
-      Type(MD_Connect),      INTENT(INOUT)  :: Connect          ! the Connection object
+      Type(MD_Point),      INTENT(INOUT)  :: Point          ! the Point object
       Real(DbKi),            INTENT(INOUT)  :: Xd(:)            ! state derivative vector section for this line
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m              ! passing along all mooring objects
       
@@ -167,7 +167,7 @@ CONTAINS
       Real(DbKi)                            :: S(3,3)           ! inverse mass matrix
 
 
-      CALL Connect_DoRHS(Connect, m, p)
+      CALL Point_DoRHS(Point, m, p)
                   
 !      // solve for accelerations in [M]{a}={f} using LU decomposition
 !      double M_tot[9];                     // serialize total mass matrix for easy processing
@@ -182,33 +182,33 @@ CONTAINS
    
                   
       ! invert node mass matrix
-      CALL Inverse3by3(S, Connect%M)
+      CALL Inverse3by3(S, Point%M)
 
       ! accelerations 
-      Connect%a = MATMUL(S, Connect%Fnet)
+      Point%a = MATMUL(S, Point%Fnet)
 
       ! fill in state derivatives
-      Xd(4:6) = Connect%rd           ! dxdt = V    (velocities)
-      Xd(1:3) = Connect%a            ! dVdt = RHS * A  (accelerations)
+      Xd(4:6) = Point%rd           ! dxdt = V    (velocities)
+      Xd(1:3) = Point%a            ! dVdt = RHS * A  (accelerations)
       
 
       ! check for NaNs
       DO J = 1, 6
          IF (Is_NaN(Xd(J))) THEN
-            CALL WrScr("NaN detected at time "//trim(Num2LStr(Connect%time))//" in Point "//trim(Int2LStr(Connect%IdNum))//" in MoorDyn.")
+            CALL WrScr("NaN detected at time "//trim(Num2LStr(Point%time))//" in Point "//trim(Int2LStr(Point%IdNum))//" in MoorDyn.")
             IF (wordy > 1) print *, "state derivatives:"
             IF (wordy > 1) print *, Xd
             EXIT
          END IF
       END DO
 
-   END SUBROUTINE Connect_GetStateDeriv
+   END SUBROUTINE Point_GetStateDeriv
    !--------------------------------------------------------------
 
    !--------------------------------------------------------------
-   SUBROUTINE Connect_DoRHS(Connect, m, p)
+   SUBROUTINE Point_DoRHS(Point, m, p)
 
-      Type(MD_Connect),      INTENT(INOUT)  :: Connect ! the Connection object      
+      Type(MD_Point),      INTENT(INOUT)  :: Point ! the Point object      
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m       ! passing along all mooring objects
       TYPE(MD_ParameterType),INTENT(IN   )  :: p       ! Parameters
       
@@ -224,47 +224,47 @@ CONTAINS
       Real(DbKi)                 :: M_i(3,3)  ! mass from an attached line
 
 
-      ! start with the Connection's own forces including buoyancy and weight, and its own mass
-      Connect%Fnet(1) = Connect%conFX
-      Connect%Fnet(2) = Connect%conFY
-      Connect%Fnet(3) = Connect%conFZ + Connect%conV*p%rhoW*p%g - Connect%conM*p%g
+      ! start with the Point's own forces including buoyancy and weight, and its own mass
+      Point%Fnet(1) = Point%pointFX
+      Point%Fnet(2) = Point%pointFY
+      Point%Fnet(3) = Point%pointFZ + Point%pointV*p%rhoW*p%g - Point%pointM*p%g
 
-      Connect%M    = 0.0_DbKi  ! clear (zero) the connect mass matrix
+      Point%M    = 0.0_DbKi  ! clear (zero) the point mass matrix
       
       DO J = 1,3
-        Connect%M   (J,J) = Connect%conM  ! set the diagonals to the self-mass (to start with)
+        Point%M   (J,J) = Point%pointM  ! set the diagonals to the self-mass (to start with)
       END DO
 
 
-   !   print *, "connection number", Connect%IdNum
-   !   print *, "attached lines: ", Connect%attached
+   !   print *, "point number", Point%IdNum
+   !   print *, "attached lines: ", Point%attached
    !   print *, "size of line list" , size(m%LineList)
 
       ! loop through attached lines, adding force and mass contributions
-      DO l=1,Connect%nAttached
+      DO l=1,Point%nAttached
          
       !   print *, "  l", l
-      !   print *, Connect%attached(l)
-      !   print *, m%LineList(Connect%attached(l))%Fnet
+      !   print *, Point%attached(l)
+      !   print *, m%LineList(Point%attached(l))%Fnet
       !   
       !   
-      !   print *, "  attached line ID", m%LineList(Connect%attached(l))%IdNum
+      !   print *, "  attached line ID", m%LineList(Point%attached(l))%IdNum
          
-         CALL Line_GetEndStuff(m%LineList(Connect%attached(l)), Fnet_i, Moment_dummy, M_i, Connect%Top(l))
+         CALL Line_GetEndStuff(m%LineList(Point%attached(l)), Fnet_i, Moment_dummy, M_i, Point%Top(l))
          
          ! sum quantitites
-         Connect%Fnet = Connect%Fnet + Fnet_i
-         Connect%M    = Connect%M    + M_i
+         Point%Fnet = Point%Fnet + Fnet_i
+         Point%M    = Point%M    + M_i
          
       END DO
 
 
       ! XXXWhen this sub is called, any self weight, buoyancy, or external forcing should have already been
-      ! added by the calling subroutine.  The only thing left is any added mass or drag forces from the connection (e.g. float)
+      ! added by the calling subroutine.  The only thing left is any added mass or drag forces from the point (e.g. float)
       ! itself, which will be added below.XXX
 
 
-   !   IF (EqualRealNos(t, 0.0_DbKi)) THEN  ! this is old: with current IC gen approach, we skip the first call to the line objects, because they're set AFTER the call to the connects
+   !   IF (EqualRealNos(t, 0.0_DbKi)) THEN  ! this is old: with current IC gen approach, we skip the first call to the line objects, because they're set AFTER the call to the points
    !
    !      DO J = 1,3
    !         Xd(3+J) = X(J)        ! velocities - these are unused in integration
@@ -273,106 +273,106 @@ CONTAINS
    !   ELSE
    !      ! from state values, get r and rdot values
    !      DO J = 1,3
-   !         Connect%r(J)  = X(3 + J)   ! get positions
-   !         Connect%rd(J) = X(J)       ! get velocities
+   !         Point%r(J)  = X(3 + J)   ! get positions
+   !         Point%rd(J) = X(J)       ! get velocities
    !      END DO
    !   END IF
       
 
-      ! add any added mass and drag forces from the Connect body itself
+      ! add any added mass and drag forces from the Point body itself
       DO J = 1,3
-         Connect%Fnet(J)   = Connect%Fnet(J) - 0.5 * p%rhoW * Connect%rd(J) * abs(Connect%rd(J)) * Connect%conCdA;  ! add drag forces - corrected Nov 24
-         Connect%M   (J,J) = Connect%M   (J,J) + Connect%conV*p%rhoW*Connect%conCa;                               ! add added mass
+         Point%Fnet(J)   = Point%Fnet(J) - 0.5 * p%rhoW * Point%rd(J) * abs(Point%rd(J)) * Point%pointCdA;  ! add drag forces - corrected Nov 24
+         Point%M   (J,J) = Point%M   (J,J) + Point%pointV*p%rhoW*Point%pointCa;                               ! add added mass
 
       END DO
       
-      ! would this sub ever need to include the m*a inertial term?  Is it ever called for coupled connects? <<<
+      ! would this sub ever need to include the m*a inertial term?  Is it ever called for coupled points? <<<
 
-   END SUBROUTINE Connect_DoRHS
+   END SUBROUTINE Point_DoRHS
    !=====================================================================
 
 
-   ! calculate the force including inertial loads on connect that is coupled
+   ! calculate the force including inertial loads on point that is coupled
    !--------------------------------------------------------------
-   SUBROUTINE Connect_GetCoupledForce(Connect,  Fnet_out, m, p)
+   SUBROUTINE Point_GetCoupledForce(Point,  Fnet_out, m, p)
    
-      Type(MD_Connect),      INTENT(INOUT)  :: Connect     ! the Connect object
+      Type(MD_Point),      INTENT(INOUT)  :: Point     ! the Point object
       Real(DbKi),            INTENT(  OUT)  :: Fnet_out(3) ! force and moment vector about rRef
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m              ! passing along all mooring objects
       TYPE(MD_ParameterType),INTENT(IN   )  :: p           ! Parameters
 
       Real(DbKi)                            :: F_iner(3)   ! inertial force
 
-      IF (Connect%typeNum == -1) then
-         ! calculate forces and masses of connect
-         CALL Connect_DoRHS(Connect, m, p)
+      IF (Point%typeNum == -1) then
+         ! calculate forces and masses of point
+         CALL Point_DoRHS(Point, m, p)
 
          ! add inertial loads as appropriate
-         F_iner = -MATMUL(Connect%M, Connect%a)    ! inertial loads
-         Fnet_out = Connect%Fnet + F_iner          ! add inertial loads
+         F_iner = -MATMUL(Point%M, Point%a)    ! inertial loads
+         Fnet_out = Point%Fnet + F_iner          ! add inertial loads
 
       ELSE
-         CALL WrScr("Connect_GetCoupledForce called for wrong (uncoupled) Point type in MoorDyn!")
+         CALL WrScr("Point_GetCoupledForce called for wrong (uncoupled) Point type in MoorDyn!")
       END IF
       
-   END SUBROUTINE Connect_GetCoupledForce
+   END SUBROUTINE Point_GetCoupledForce
 
 
-   ! calculate the force and mass contributions of the connect on the parent body (only for type 3 connects?)
+   ! calculate the force and mass contributions of the point on the parent body (only for type 3 points?)
    !--------------------------------------------------------------
-   SUBROUTINE Connect_GetNetForceAndMass(Connect, rRef, Fnet_out, M_out, m, p)
+   SUBROUTINE Point_GetNetForceAndMass(Point, rRef, Fnet_out, M_out, m, p)
    
-      Type(MD_Connect),      INTENT(INOUT)  :: Connect     ! the Connect object
+      Type(MD_Point),      INTENT(INOUT)  :: Point     ! the Point object
       Real(DbKi),            INTENT(IN   )  :: rRef(3)     ! global coordinates of reference point (i.e. the parent body)
       Real(DbKi),            INTENT(  OUT)  :: Fnet_out(6) ! force and moment vector about rRef
       Real(DbKi),            INTENT(  OUT)  :: M_out(6,6)  ! mass and inertia matrix about rRef
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
       TYPE(MD_ParameterType),INTENT(IN   )  :: p           ! Parameters
 
-      Real(DbKi)                            :: rRel(  3)   ! position of connection relative to the body reference point (global orientation frame)
+      Real(DbKi)                            :: rRel(  3)   ! position of point relative to the body reference point (global orientation frame)
 
 
-      CALL Connect_DoRHS(Connect, m, p)
+      CALL Point_DoRHS(Point, m, p)
 
-      rRel = Connect%r - rRef    ! vector from body reference point to node
+      rRel = Point%r - rRef    ! vector from body reference point to node
 
       ! convert net force into 6dof force about body ref point
-      CALL translateForce3to6DOF(rRel, Connect%Fnet, Fnet_out)
+      CALL translateForce3to6DOF(rRel, Point%Fnet, Fnet_out)
       
       ! convert mass matrix to 6by6 mass matrix about body ref point
-      CALL translateMass3to6DOF(rRel, Connect%M, M_out)
+      CALL translateMass3to6DOF(rRel, Point%M, M_out)
 
-   END SUBROUTINE Connect_GetNetForceAndMass
+   END SUBROUTINE Point_GetNetForceAndMass
    
    
  
  
    ! this function handles assigning a line to a connection node
    !--------------------------------------------------------------
-   SUBROUTINE Connect_AddLine(Connect, lineID, TopOfLine)
+   SUBROUTINE Point_AddLine(Point, lineID, TopOfLine)
 
-      Type(MD_Connect), INTENT (INOUT)   :: Connect        ! the Connection object
+      Type(MD_Point), INTENT (INOUT)   :: Point        ! the Point object
       Integer(IntKi),   INTENT( IN )     :: lineID
       Integer(IntKi),   INTENT( IN )     :: TopOfLine
 
-      IF (wordy > 0) Print*, "L", lineID, "->C", Connect%IdNum
+      IF (wordy > 0) Print*, "L", lineID, "->C", Point%IdNum
       
-      IF (Connect%nAttached <10) THEN ! this is currently just a maximum imposed by a fixed array size.  could be improved.
-         Connect%nAttached = Connect%nAttached + 1  ! add the line to the number connected
-         Connect%Attached(Connect%nAttached) = lineID
-         Connect%Top(Connect%nAttached) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
+      IF (Point%nAttached <10) THEN ! this is currently just a maximum imposed by a fixed array size.  could be improved.
+         Point%nAttached = Point%nAttached + 1  ! add the line to the number connected
+         Point%Attached(Point%nAttached) = lineID
+         Point%Top(Point%nAttached) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
       ELSE
-         Print*, "Too many lines connected to Point ", Connect%IdNum, " in MoorDyn!"
+         call WrScr("Too many lines connected to Point "//trim(num2lstr(Point%IdNum))//" in MoorDyn!")
       END IF
 
-   END SUBROUTINE Connect_AddLine
+   END SUBROUTINE Point_AddLine
 
 
    ! this function handles removing a line from a connection node
    !--------------------------------------------------------------
-   SUBROUTINE Connect_RemoveLine(Connect, lineID, TopOfLine, rEnd, rdEnd)
+   SUBROUTINE Point_RemoveLine(Point, lineID, TopOfLine, rEnd, rdEnd)
 
-      Type(MD_Connect), INTENT (INOUT)   :: Connect        ! the Connection object
+      Type(MD_Point), INTENT (INOUT)   :: Point        ! the Point object
       Integer(IntKi),   INTENT( IN )     :: lineID
       Integer(IntKi),   INTENT(  OUT)    :: TopOfLine
       REAL(DbKi),       INTENT(INOUT)    :: rEnd(3)
@@ -380,39 +380,39 @@ CONTAINS
       
       Integer(IntKi)    :: l,m,J
       
-      DO l = 1,Connect%nAttached    ! look through attached lines
+      DO l = 1,Point%nAttached    ! look through attached lines
       
-         IF (Connect%Attached(l) == lineID) THEN   ! if this is the line's entry in the attachment list
+         IF (Point%Attached(l) == lineID) THEN   ! if this is the line's entry in the attachment list
          
-            TopOfLine = Connect%Top(l);                ! record which end of the line was attached
+            TopOfLine = Point%Top(l);                ! record which end of the line was attached
             
-            DO m = l,Connect%nAttached-1 
+            DO m = l,Point%nAttached-1 
             
-               Connect%Attached(m) = Connect%Attached(m+1)  ! move subsequent line links forward one spot in the list to eliminate this line link
-               Connect%Top(     m) =      Connect%Top(m+1) 
+               Point%Attached(m) = Point%Attached(m+1)  ! move subsequent line links forward one spot in the list to eliminate this line link
+               Point%Top(     m) =      Point%Top(m+1) 
             
-               Connect%nAttached = Connect%nAttached - 1                      ! reduce attached line counter by 1
+               Point%nAttached = Point%nAttached - 1                      ! reduce attached line counter by 1
             
                ! also pass back the kinematics at the end
                DO J = 1,3
-                  rEnd( J) = Connect%r( J)
-                  rdEnd(J) = Connect%rd(J)
+                  rEnd( J) = Point%r( J)
+                  rdEnd(J) = Point%rd(J)
                END DO
                
-               print*, "Detached line ", lineID, " from Connection ", Connect%IdNum
+               call WrScr( "Detached line "//trim(num2lstr(lineID))//" from Point "//trim(num2lstr(Point%IdNum)))
                
                EXIT
             END DO
             
-            IF (l == Connect%nAttached) THEN   ! detect if line not found
-               print *, "Error: failed to find line to remove during removeLineFromConnect call to connection ", Connect%IdNum, ". Line ", lineID
+            IF (l == Point%nAttached) THEN   ! detect if line not found
+               print *, "Error: failed to find line to remove during removeLineFromPoint call to point ", Point%IdNum, ". Line ", lineID
             END IF
          
          END IF
          
       END DO
       
-   END SUBROUTINE Connect_RemoveLine
+   END SUBROUTINE Point_RemoveLine
 
 
 

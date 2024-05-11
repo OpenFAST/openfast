@@ -424,7 +424,7 @@ CONTAINS
             RETURN
          END IF
          
-         ! RelThickness, default is 0.2 if user doesn't know it, only used for Boing-Vertol UA model = 7
+         ! RelThickness, default is 0.2 if user doesn't know it, only used for Boeing-Vertol UA model = 7
       CALL ParseVarWDefault ( FileInfo, CurLine, 'RelThickness', p%RelThickness, 0.2_ReKi, ErrStat2, ErrMsg2, UnEc )
          if (ErrStat2 >= AbortErrLev) then ! if the line is missing, set RelThickness = -1 and move on...
             p%RelThickness=-1 ! To trigger an error

@@ -36,9 +36,6 @@
 !                       1   1.5     2     3     5 on fast mainframe
 !
 ! NotYet is .TRUE. if no initialization has been performed yet.
-!Start bjj:  We want to write to the screen instead of "print *"
-!   use     NWTC_IO
-!End bjj:
   use precision
   implicit none
 
@@ -78,22 +75,12 @@ contains
       NotYet = .FALSE.
       JSeed = JSDFlt
       InSeed = JSeed
-!begin bjj
-!      print *, " RanLux default initialization: ", JSeed
-!      write( RanLux_str, '(I12)' ) JSeed
-!      CALL WrScr( " RanLux default initialization: "//TRIM( ADJUSTL( RanLux_str ) ) )
-!end bjj
       LuxLev = LxDflt
       NSkip = NDSkip(LuxLev)
       LP = NSkip + NSeeds - 1
       In24 = 0
       Kount = 0
       MKount = 0
-!begin bjj
-!      print *, " RanLux default luxury level = ", LuxLev, " p = ", LP
-!      write( RanLux_str, '(A,I5,A,I12)' ) " RanLux default luxury level = ", LuxLev, " p = ", LP
-!      CALL WrScr( TRIM( RanLux_str ) )
-!end bjj
 
       TwoM24 = 1.0
       do I = 1, NSeeds - 1
@@ -129,14 +116,8 @@ contains
       ! "Pad" small numbers (with less than 12 "significant" bits) and eliminate zero values (in case someone takes a logarithm)
       if ( RVec(IVec) < TwoM12 ) RVec(IVec) = RVec(IVec) + tmpTwoM24Seed
       if ( Rvec(IVec) == 0.0 )  RVec(IVec) = tmpTwoM24
-         !bjj end of modifications
 
    end do
-      !bjj removed to eliminate crashing in SNwind
-   ! "Pad" small numbers (with less than 12 "significant" bits) and eliminate zero values (in case someone takes a logarithm)
-    !where (RVec < TwoM12) RVec = RVec + TwoM24 * Seeds(J24)
-    !where (Rvec == 0.0) RVec = TwoM24 * TwoM24
-      !bjj end of modifications
 
     Kount = Kount + LEnv
     if (Kount >= IGiga) then
@@ -152,21 +133,12 @@ contains
     integer :: I, ISD
 ! start subroutine RLuxIn
     if (Size(ISDext) /= NSeeds) then
-!begin bjj
-!      print *, " Array size for RLuxIn must be ", NSeeds
-!      write( RanLux_str, '(I5)' ) NSeeds
-!      CALL WrScr( " Array size for RLuxIn must be "//TRIM( ADJUSTL(RanLux_str) ) )
-!end bjj
 
       return
     end if
     ! The following IF block added by Phillip Helbig, based on conversation with Fred James;
     ! an equivalent correction has been published by James.
     if (NotYet) then
-!begin bjj
-!      print *, " Proper results only with initialisation from 25 integers obtained with RLuxUt"
-!      CALL WrScr( " Proper results only with initialisation from 25 integers obtained with RLuxUt" )
-!end bjj
       NotYet = .FALSE.
     end if
     TwoM24 = 1.0
@@ -174,13 +146,6 @@ contains
       TwoM24 = TwoM24 * 0.5
     end do
     TwoM12 = TwoM24 * 4096.0
-!Start bjj
-!    print *, " Full initialization of RanLux with 25 integers:"
-!    print *, ISDext
-!    CALL WrScr ( " Full initialization of RanLux with 25 integers:" )
-!    write( RanLux_str, '(25(I11,1x))' ) ISDext
-!    CALL WrScr ( TRIM( RanLux_str ) )
-!End bjj
     Seeds = Real (ISDext(: NSeeds - 1)) * TwoM24
     Carry = 0.0
     if (ISDext(NSeeds) < 0) Carry = TwoM24
@@ -199,22 +164,10 @@ contains
 
     if (LuxLev <= MaxLev) then
       NSkip = NDSkip(LuxLev)
-!start bjj
-!      print *, " RanLux luxury level set by RLuxIn to: ", LuxLev\
-!       CALL WrScr( " RanLux luxury level set by RLuxIn to: "//TRIM(ADJUSTL(RanLux_str) ))
-!end bjj
     else if (LuxLev >= NSeeds - 1) then
       NSkip = LuxLev - NSeeds + 1
-!start bjj
-!      print *, " RanLux p-value set by RLuxIn to:", LuxLev
-!      CALL WrScr( " RanLux p-value set by RLuxIn to: "//TRIM(ADJUSTL(RanLux_str) ))
-!end bjj
     else
       NSkip = NDSkip(MaxLev)
-!start bjj
-!      print *, " RanLux illegal luxury RLuxIn: ", LuxLev
-!      CALL WrScr( " RanLux illegal luxury RLuxIn: "//TRIM(ADJUSTL(RanLux_str) ))
-!end bjj
       LuxLev = MaxLev
     end if
     InSeed = - 1
@@ -227,11 +180,6 @@ contains
 ! start subroutine RLuxUt
     if (Size(ISDext) /= NSeeds) then
       ISDext = 0
-!start bjj
-!      print *, " Array size for RLuxUt must be ", NSeeds
-!      write( RanLux_str, '(I20)' ) NSeeds
-!      CALL WrScr( " Array size for RLuxUt must be "//TRIM( ADJUSTL(RanLux_str )))
-!end bjj
       return
     end if
     ISDext(: NSeeds - 1) = Int (Seeds * TwoP12 * TwoP12)
@@ -261,11 +209,6 @@ contains
       LuxLev = Lux
     else if (Lux < NSeeds - 1 .or. Lux > 2000) then
       LuxLev = MaxLev
-!start bjj
-!      print *, " RanLux illegal luxury level in RLuxGo: ", Lux
-!       write( RanLux_str, '(I20)' ) Lux
-!       Call WrScr( " RanLux illegal luxury level in RLuxGo: "//TRIM( ADJUSTL(RanLux_str ) ))
-!end bjj
     else
       LuxLev = Lux
       do ILx = 0, MaxLev
@@ -276,39 +219,15 @@ contains
     end if
     if (LuxLev <= MaxLev) then
       NSkip = NDSkip(LuxLev)
-!start bjj
-!      print *, " RanLux luxury level set by RLuxGo :", LuxLev, " p = ", NSkip + NSeeds - 1
-!      write (RanLux_str, '(A,I5)') " RanLux luxury level set by RLuxGo :", LuxLev
-!      write (RanLux_str, '(A,I12)') TRIM(RanLux_str)//" p = ", NSkip + NSeeds - 1
-!      CALL WrScr( TRIM(RanLux_str) )
-!end bjj
     else
       NSkip = LuxLev - 24
-!start bjj
-!      print *, " RanLux p-value set by RLuxGo to:", LuxLev
-!      write( RanLux_str, '(I20)' ) LuxLev
-!      CALL WrScr( " RanLux p-value set by RLuxGo to: "//TRIM( ADJUSTL(RanLux_str ) ))
-!end bjj
     end if
     In24 = 0
     if (Int < 0) then
-!start bjj
-!      print *, " Illegal initialization by RLuxGo, negative input seed"
-!       CALL WrScr( " Illegal initialization by RLuxGo, negative input seed" )
-!end bjj
    else if (Int > 0) then
       JSeed = Int
-!start bjj
-!      print *, " RanLux initialized by RLuxGo from Seeds", JSeed, K1, K2
-!      write( RanLux_str, '(3(I12))' ) JSeed, K1, K2
-!      CALL WrScr( " RanLux initialized by RLuxGo from Seeds"//TRIM( RanLux_str ) )
-!end bjj
     else
       JSeed = JSDFlt
-!start bjj
-!      print *, " RanLux initialized by RLuxGo from default seed"
-!      CALL WrScr( " RanLux initialized by RLuxGo from default seed" )
-!end bjj
     end if
     InSeed = JSeed
     NotYet = .FALSE.
@@ -343,12 +262,6 @@ contains
       end if
       ! Now IN24 had better be between zero and 23 inclusive
       if ((In24 < 1) .or. (In24 >= NSeeds - 1)) then
-!start bjj
-!        print *, " Error in restarting with RLuxGo: the values", Int, K1, K2, " cannot occur at luxury level", LuxLev
-!        write( RanLux_str, '(A,3(I12),A,I5)' ) " Error in restarting with RLuxGo: the values ", Int, K1, K2, &
-!                                            " cannot occur at luxury level ", LuxLev
-!        CALL WrScr( TRIM(RanLux_str ) )
-!end bjj
         In24 = 0
       end if
     end if

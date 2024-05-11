@@ -21,9 +21,35 @@ import sys
 import subprocess
 import re
 
-
 from sphinx.highlighting import PygmentsBridge
 from pygments.formatters.latex import LatexFormatter
+
+#sys.path.append(os.path.abspath('_extensions/'))
+
+readTheDocs = os.environ.get('READTHEDOCS', None) == 'True'
+builddir = sys.argv[-1]
+sourcedir = sys.argv[-2]
+
+# Use this to turn Doxygen on or off
+useDoxygen = False
+
+# This function was adapted from https://gitlab.kitware.com/cmb/smtk
+# Only run when on readthedocs
+def runDoxygen(sourcfile, doxyfileIn, doxyfileOut):
+    dx = open(os.path.join(sourcedir, doxyfileIn), 'r')
+    cfg = dx.read()
+    srcdir = os.path.abspath(os.path.join(os.getcwd(), '..'))
+    bindir = srcdir
+    c2 = re.sub('@CMAKE_SOURCE_DIR@', srcdir, re.sub('@CMAKE_BINARY_DIR@', bindir, cfg))
+    doxname = os.path.join(sourcedir, doxyfileOut)
+    dox = open(doxname, 'w')
+    print(c2, file=dox)
+    dox.close()
+    print("Running Doxygen on {}".format(doxyfileOut))
+    doxproc = subprocess.call(('doxygen', doxname))
+
+if readTheDocs and useDoxygen:
+    runDoxygen(sourcedir, 'Doxyfile.in', 'Doxyfile')
 
 class CustomLatexFormatter(LatexFormatter):
     def __init__(self, **options):
@@ -31,12 +57,6 @@ class CustomLatexFormatter(LatexFormatter):
         self.verboptions = r"formatcom=\footnotesize"
 
 PygmentsBridge.latex_formatter = CustomLatexFormatter
-
-#sys.path.append(os.path.abspath('_extensions/'))
-
-readTheDocs = os.environ.get('READTHEDOCS', None) == 'True'
-sourcedir = sys.argv[-2]
-builddir = sys.argv[-1]
 
 # -- General configuration ------------------------------------------------
 
@@ -56,13 +76,32 @@ extensions = [
               'sphinxcontrib.bibtex',
              ]
 
-autodoc_default_flags = ['members','show-inheritance','undoc-members']
+autodoc_default_flags = [
+    'members',
+    'show-inheritance',
+    'undoc-members'
+]
 
 autoclass_content = 'both'
 
 mathjax_path = 'https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML'
 
 # FIXME: Naively assuming build directory one level up locally, and two up on readthedocs
+if useDoxygen:
+    if readTheDocs:
+        doxylink = {
+            'openfast': (
+                os.path.join(builddir, '..', '..', 'openfast.tag'),
+                os.path.join('html')
+            )
+        }
+    else:
+        doxylink = {
+            'openfast': (
+                os.path.join(builddir, '..', 'openfast.tag'),
+                os.path.join('html')
+            )
+        }
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -79,7 +118,7 @@ master_doc = 'index'
 # General information about the project.
 project = u'AeroDyn'
 filename = project.replace(' ','_')
-copyright = u'2017, National Renewable Energy Laboratory'
+copyright = u'2023, National Renewable Energy Laboratory'
 author = u'OpenFAST Team'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -96,7 +135,7 @@ release = u'1.0'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+# language = None  # Default is English and None is not a valid option
 
 #If true, figures, tables and code-blocks are automatically numbered if they 
 #have a caption. At same time, the numref role is enabled. For now, it works 
@@ -107,6 +146,13 @@ numfig = True
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+
+# FIXME: Naively assuming build directory one level up locally, and two up on readthedocs
+if useDoxygen:
+    if readTheDocs:
+        html_extra_path = [os.path.join(builddir, '..', '..', 'doxygen')]
+    else:
+        html_extra_path = [os.path.join(builddir, '..', 'doxygen')]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -147,12 +193,15 @@ latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #
     # 'papersize': 'letterpaper',
+
     # The font size ('10pt', '11pt' or '12pt').
     #
     # 'pointsize': '10pt',
+
     # Additional stuff for the LaTeX preamble.
     #
     # 'preamble': '',
+
     # Latex figure (float) alignment
     #
     # 'figure_align': 'htbp',
@@ -162,8 +211,13 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, '{}.tex'.format(filename), u'{} Documentation'.format(project),
-     u'National Renewable Energy Laboratory', 'manual'),
+    (
+        master_doc,
+        '{}.tex'.format(filename), 
+        u'{} Documentation'.format(project),
+        u'National Renewable Energy Laboratory',
+        'manual'
+    ),
 ]
 
 
@@ -172,8 +226,13 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, project, u'{} Documentation'.format(project),
-     [author], 1)
+    (
+        master_doc,
+        project, 
+        u'{} Documentation'.format(project),
+        [author],
+        1
+    )
 ]
 
 
@@ -183,19 +242,34 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, filename, u'{} Documentation'.format(project),
-     author, project, 'One line description of project.',
-     'Miscellaneous'),
+    (
+        master_doc,
+    	filename,
+    	u'{} Documentation'.format(project),
+        author,
+        project,
+        'One line description of project.',
+        'Miscellaneous'
+    ),
 ]
 
 def setup(app):
-    app.add_object_type("confval", "confval",
-                        objname="input file parameter",
-                        indextemplate="pair: %s; input file parameter")
-    app.add_object_type("cmakeval", "cmakeval",
-                        objname="CMake configuration value",
-                        indextemplate="pair: %s; CMake configuration")
-    
+    try:
+        app.add_css_file('css/math_eq.css')
+    except:
+        pass
+    app.add_object_type(
+        "confval",
+        "confval",
+        objname="input file parameter",
+        indextemplate="pair: %s; input file parameter"
+    )
+    app.add_object_type(
+        "cmakeval",
+        "cmakeval",
+        objname="CMake configuration value",
+        indextemplate="pair: %s; CMake configuration"
+    )
 # --- Prolog that will be included at the top of every rst file
 # Here: defining the role :red: for html and latex
 rst_prolog = r"""
@@ -216,3 +290,4 @@ rst_prolog = r"""
 .. role:: red
 
 """
+

@@ -7,6 +7,7 @@ type_map = {
     'C1': 'character(*)',
     'L1': 'logical',
     'I4': 'integer(B4Ki)',
+    'I8': 'integer(B8Ki)',
     'R4': 'real(R4Ki)',
     'R8': 'real(R8Ki)',
 }
@@ -14,169 +15,178 @@ type_map = {
 num_ranks = 5
 
 module_header = '''
+!STARTOFGENERATEDFILE 'ModReg.f90'
+!
+! WARNING This file is generated automatically by ModRegGen.py.
+! Do not edit.  Your changes to this file will be lost.
+!
+! FAST Registry
+!**********************************************************************************************************************************
+! LICENSING
+! Copyright (C) 2024  National Renewable Energy Laboratory
+!
+!    This file is part of the NWTC Subroutine Library.
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
+!
+!     http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License.
+!**********************************************************************************************************************************
+
+!> This module contains routines for packing and unpacking data from a registry data file.
 module ModReg
    use NWTC_Base
    implicit none
 
    private
-   public :: PackBuffer
-   public :: WritePackBuffer, ReadPackBuffer, InitPackBuffer, RegCheckErr
-   public :: RegPack, RegPackBounds, RegPackPointer
-   public :: RegUnpack, RegUnpackBounds, RegUnpackPointer
+   public :: RegFile
+   public :: OpenRegFile, InitRegFile, CloseRegFile, RegCheckErr
+   public :: RegPackBounds, RegUnpackBounds
+   public :: RegPackPointer, RegUnpackPointer
+   public :: RegPack, RegUnpack
+   public :: RegPackAlloc, RegUnpackAlloc
+   public :: RegPackPtr, RegUnpackPtr
 
-   type :: PackBuffer
-      integer(B1Ki), allocatable  :: Bytes(:)
-      integer(IntKi)              :: NB
-      type(c_ptr), allocatable    :: Pointers(:)
-      integer(IntKi)              :: NP
-      integer(IntKi)              :: ErrStat = ErrID_Fatal
-      character(ErrMsgLen)        :: ErrMsg = 'PackBuffer not initialized'
+   type :: RegFile
+      integer(IntKi)             :: Unit
+      integer(IntKi)             :: Offset
+      type(c_ptr), allocatable   :: Pointers(:)
+      integer(B8Ki)              :: NumData
+      integer(B8Ki)              :: NumPointers
+      integer(IntKi)             :: ErrStat = ErrID_Fatal
+      character(ErrMsgLen)       :: ErrMsg = 'RegFile not initialized'
    end type
    {ifc_lines}
 
 contains
 
-   subroutine InitPackBuffer(Buf, ErrStat, ErrMsg)
-      type(PackBuffer), intent(inout)   :: Buf
-      integer(IntKi), intent(out)       :: ErrStat
-      character(ErrMsgLen), intent(out) :: ErrMsg
+   subroutine InitRegFile(RF, Unit, ErrStat, ErrMsg)
+      type(RegFile), intent(inout)        :: RF
+      integer(IntKi), intent(in)          :: Unit
+      integer(IntKi), intent(out)         :: ErrStat
+      character(ErrMsgLen), intent(out)   :: ErrMsg
 
-      character(*), parameter           :: RoutineName = "InitPackBuffer"
-      integer(IntKi), parameter         :: NumPointersInit = 128
-      integer(IntKi), parameter         :: NumBytesInit = 1024
-      integer(IntKi)                    :: stat
+      character(*), parameter             :: RoutineName = "InitRegFile"
+      integer(B8Ki), parameter            :: NumPointersInit = 128
+      integer(IntKi)                      :: stat
 
       ErrStat = ErrID_None
       ErrMsg = ""
 
-      Buf%ErrStat = ErrID_None
-      Buf%ErrMsg = ""
-      Buf%NP = 0
-      Buf%NB = 0
-      
+      RF%ErrStat = ErrID_None
+      RF%ErrMsg = ""
+      RF%NumData = 0
+      RF%NumPointers = 0
+      RF%Unit = Unit
+
+      ! Get current position in the file in case anything has been written to it
+      inquire(Unit, POS=RF%Offset)
+
+      ! Write invalid number of pointers at the beginning of file so we can
+      ! check if the file if the file has been finalized and closed
+      write (Unit, iostat=stat) -1_B8Ki
+      if (stat /= 0) then
+         ErrStat = ErrID_Fatal
+         write (ErrMsg, *) 'InitRegFile: Unable to write offset at beginning of file'
+         return
+      end if
+
       ! If pointers have not been allocated, allocate with initial size
-      if (.not. allocated(Buf%Pointers)) then
-         allocate (Buf%Pointers(NumPointersInit), stat=stat)
+      if (.not. allocated(RF%Pointers)) then
+         allocate (RF%Pointers(NumPointersInit), stat=stat)
          if (stat /= 0) then
             ErrStat = ErrID_Fatal
-            write(ErrMsg,*) 'InitPackBuffer: Unable to init pointer index to with size of', NumPointersInit
+            write (ErrMsg, *) 'InitRegFile: Unable to init pointer index to with size of', NumPointersInit
             return
          end if
       end if
-      
+
       ! Reset all pointers to null
-      Buf%Pointers = c_null_ptr
-
-      ! If byte array has not been allocated, allocate with initial size
-      if (.not. allocated(Buf%Bytes)) then
-         allocate (Buf%Bytes(NumBytesInit), stat=stat)
-         if (stat /= 0) then
-            ErrStat = ErrID_Fatal
-            write(ErrMsg,*) 'Grow: Unable to init buffer to', NumBytesInit, 'bytes'
-            return
-         end if
-      end if
-
+      RF%Pointers = c_null_ptr
    end subroutine
 
-   subroutine WritePackBuffer(Buf, Unit, ErrStat, ErrMsg)
-      type(PackBuffer), intent(inout)   :: Buf
-      integer(IntKi), intent(in)        :: Unit
-      integer(IntKi), intent(out)       :: ErrStat
-      character(ErrMsgLen), intent(out) :: ErrMsg
+   subroutine CloseRegFile(RF, ErrStat, ErrMsg)
+      type(RegFile), intent(inout)        :: RF
+      integer(IntKi), intent(out)         :: ErrStat
+      character(ErrMsgLen), intent(out)   :: ErrMsg
 
-      character(*), parameter           :: RoutineName = "WritePackBuffer"
-      integer(IntKi)                    :: iostat
+      character(*), parameter             :: RoutineName = "CloseRegFile"
+      integer(IntKi)                      :: stat
+
+      ErrStat = ErrID_None
+      ErrMsg = ""
+
+      ! Check if there have been any errors while writing to the file
+      if (RF%ErrStat /= ErrID_None) then
+         call SetErrStat(RF%ErrStat, RF%ErrMsg, ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+
+      ! Write the actual number of pointers
+      write (RF%Unit, POS=RF%Offset, iostat=stat) RF%NumPointers
+      if (stat /= 0) then
+         ErrStat = ErrID_Fatal
+         write (ErrMsg, *) 'CloseRegFile: Unable to write offset at beginning of file'
+         return
+      end if
+
+      ! Close the file
+      close (RF%Unit)
+
+      ! Deallocate pointer array
+      if (allocated(RF%Pointers)) deallocate (RF%Pointers)
+   end subroutine
+
+   subroutine OpenRegFile(RF, Unit, ErrStat, ErrMsg)
+      type(RegFile), intent(inout)        :: RF
+      integer(IntKi), intent(in)          :: Unit
+      integer(IntKi), intent(out)         :: ErrStat
+      character(ErrMsgLen), intent(out)   :: ErrMsg
+
+      character(*), parameter             :: RoutineName = "ReadRegFile"
+      integer(IntKi)                      :: iostat
 
       ErrStat = ErrID_None
       ErrMsg = ''
 
-      if (Buf%ErrStat /= ErrID_None) then
-         call SetErrStat(Buf%ErrStat, Buf%ErrMsg, ErrStat, ErrMsg, 'Buf%WriteFile')
-         return
-      end if
-
-      write(Unit, iostat=iostat) Buf%NP
-      if (iostat /= 0) then
-         call SetErrStat(ErrID_Fatal, "Error writing number of pointers", ErrStat, ErrMsg, RoutineName)
-         return
-      end if
-
-      write(Unit, iostat=iostat) Buf%NB
-      if (iostat /= 0) then
-         call SetErrStat(ErrID_Fatal, "Error writing number of bytes", ErrStat, ErrMsg, RoutineName)
-         return
-      end if
-
-      write(Unit, iostat=iostat) Buf%Bytes(1:Buf%NB)
-      if (iostat /= 0) then
-         call SetErrStat(ErrID_Fatal, "Error writing bytes", ErrStat, ErrMsg, RoutineName)
-         return
-      end if
-
-   end subroutine
-
-   subroutine ReadPackBuffer(Buf, Unit, ErrStat, ErrMsg)
-      type(PackBuffer), intent(inout)   :: Buf
-      integer(IntKi), intent(in)        :: Unit
-      integer(IntKi), intent(out)       :: ErrStat
-      character(ErrMsgLen), intent(out) :: ErrMsg
-
-      character(*), parameter           :: RoutineName = "ReadPackBuffer"
-      integer(IntKi)                    :: iostat
-
-      ErrStat = ErrID_None
-      ErrMsg = ''
+      ! Save unit
+      RF%Unit = Unit
 
       ! Read number of pointers
-      read(Unit, iostat=iostat) Buf%NP
+      read (Unit, iostat=iostat) RF%NumPointers
       if (iostat /= 0) then
          call SetErrStat(ErrID_Fatal, "Error reading number of pointers", ErrStat, ErrMsg, RoutineName)
          return
       end if
 
       ! If pointers are allocated, deallocate
-      if (allocated(Buf%Pointers)) deallocate(Buf%Pointers)
+      if (allocated(RF%Pointers)) deallocate (RF%Pointers)
 
       ! Allocate pointer index and initialize pointers to null
-      allocate(Buf%Pointers(1:Buf%NP), stat=ErrStat)
-      Buf%Pointers = c_null_ptr
+      allocate (RF%Pointers(1:RF%NumPointers), stat=ErrStat)
+      RF%Pointers = c_null_ptr
 
-      ! Read number of bytes in buffer
-      read(Unit, iostat=iostat) Buf%NB
-      if (iostat /= 0) then
-         call SetErrStat(ErrID_Fatal, "Error reading number of bytes", ErrStat, ErrMsg, RoutineName)
-         return
-      end if
+      ! initialize the number of data
+      RF%NumData = 0
 
-      ! If bytes are allocated, deallocate
-      if (allocated(Buf%Bytes)) deallocate(Buf%Bytes)
-
-      ! Allocate bytes
-      allocate(Buf%Bytes(1:Buf%NB), stat=ErrStat)
-
-      ! Read bytes
-      read(Unit, iostat=iostat) Buf%Bytes
-      if (iostat /= 0) then
-         call SetErrStat(ErrID_Fatal, "Error reading bytes", ErrStat, ErrMsg, RoutineName)
-         return
-      end if
-
-      ! Clear buffer error
-      Buf%ErrStat = ErrID_None
-      Buf%ErrMsg = ''
-
-      ! Reset Number of bytes to be used by unpack routines
-      Buf%NB = 0
-
+      ! Clear error
+      RF%ErrStat = ErrID_None
+      RF%ErrMsg = ''
    end subroutine
 
-   function RegCheckErr(Buf, RoutineName) result(Err)
-      type(PackBuffer), intent(inout)  :: Buf
-      character(*), intent(in)         :: RoutineName
-      logical                          :: Err
-      Err = Buf%ErrStat /= ErrID_None
-      if (Err) Buf%ErrMsg = trim(RoutineName)//": "//trim(Buf%ErrMsg)
+   function RegCheckErr(RF, RoutineName) result(Err)
+      type(RegFile), intent(inout)  :: RF
+      character(*), intent(in)      :: RoutineName
+      logical                       :: Err
+      Err = RF%ErrStat /= ErrID_None
+      if (Err) RF%ErrMsg = trim(RoutineName)//": "//trim(RF%ErrMsg)
    end function
 
    elemental function LogicalToByte(b) result(i)
@@ -199,22 +209,22 @@ contains
       end if
    end function
 
-   subroutine RegPackPointer(Buf, Ptr, Found)
-      type(PackBuffer), intent(inout)   :: Buf
-      type(c_ptr), intent(in)           :: Ptr
-      logical, intent(out)              :: Found
+   subroutine RegPackPointer(RF, Ptr, Found)
+      type(RegFile), intent(inout)  :: RF
+      type(c_ptr), intent(in)       :: Ptr
+      logical, intent(out)          :: Found
 
-      type(c_ptr), allocatable          :: PointersTmp(:)
-      integer(IntKi)                    :: NewSize
-      integer(B4Ki)                     :: i
+      type(c_ptr), allocatable      :: PointersTmp(:)
+      integer(B8Ki)                 :: NewSize
+      integer(B8Ki)                 :: i
 
-      ! If buffer error, return
-      if (Buf%ErrStat /= ErrID_None) return
+      ! If error, return
+      if (RF%ErrStat /= ErrID_None) return
 
       ! Look for pointer in index, if found, pack pointer index and return
-      do i = 1, Buf%NP
-         if (c_associated(Ptr, Buf%Pointers(i))) then
-            call RegPack(Buf, i)
+      do i = 1, RF%NumPointers
+         if (c_associated(Ptr, RF%Pointers(i))) then
+            call RegPack(RF, i)
             Found = .true.
             return
          end if
@@ -224,258 +234,198 @@ contains
       Found = .false.
 
       ! If pointer index is full, grow pointer index
-      if (Buf%NP == size(Buf%Pointers)) then
-         NewSize = int(1.5_R4Ki * real(Buf%NP, R4Ki), IntKi)
-         call move_alloc(Buf%Pointers, PointersTmp)
-         allocate (Buf%Pointers(NewSize), stat=Buf%ErrStat)
-         if (Buf%ErrStat /= ErrID_None) then
-            Buf%ErrStat = ErrID_Fatal
-            write(Buf%ErrMsg,*) 'RegPackPointer: Unable to allocate pointer index to', NewSize, 'bytes'
+      if (RF%NumPointers == size(RF%Pointers)) then
+         NewSize = int(1.5_R8Ki*real(RF%NumPointers, R8Ki), B8Ki)
+         call move_alloc(RF%Pointers, PointersTmp)
+         allocate (RF%Pointers(NewSize), stat=RF%ErrStat)
+         if (RF%ErrStat /= ErrID_None) then
+            RF%ErrStat = ErrID_Fatal
+            write (RF%ErrMsg, *) 'RegPackPointer: Unable to allocate pointer index to', NewSize, 'bytes'
             return
          end if
-         Buf%Pointers(1:size(PointersTmp)) = PointersTmp
-         Buf%Pointers(size(PointersTmp)+1:) = c_null_ptr
+         RF%Pointers(1:size(PointersTmp)) = PointersTmp
+         RF%Pointers(size(PointersTmp) + 1:) = c_null_ptr
       end if
 
       ! Increment number of pointers, add new pointer to index
-      Buf%NP = Buf%NP + 1
-      Buf%Pointers(Buf%NP) = Ptr
+      RF%NumPointers = RF%NumPointers + 1
+      RF%Pointers(RF%NumPointers) = Ptr
 
       ! Pack pointer index
-      call RegPack(Buf, Buf%NP)
-
+      call RegPack(RF, RF%NumPointers)
    end subroutine
 
-   subroutine RegUnpackPointer(Buf, Ptr, Idx)
-      type(PackBuffer), intent(inout)   :: Buf
-      type(c_ptr), intent(out)          :: Ptr
-      integer(B4Ki), intent(out)        :: Idx
+   subroutine RegUnpackPointer(RF, Ptr, Idx)
+      type(RegFile), intent(inout)  :: RF
+      type(c_ptr), intent(out)      :: Ptr
+      integer(B8Ki), intent(out)    :: Idx
 
-      ! If buffer error, return
-      if (Buf%ErrStat /= ErrID_None) return
+      ! If error, return
+      if (RF%ErrStat /= ErrID_None) return
 
       ! Unpack pointer index
-      call RegUnpack(Buf, Idx)
+      call RegUnpack(RF, Idx)
 
       ! Get pointer from index
-      Ptr = Buf%Pointers(Idx)
-
+      Ptr = RF%Pointers(Idx)
    end subroutine
 
-   subroutine RegPackBounds(Buf, R, LB, UB)
-      type(PackBuffer), intent(inout)  :: Buf
-      integer(B4Ki), intent(in)        :: R, LB(:), UB(:)
-      
-      ! If buffer has an error, return
-      if (Buf%ErrStat /= ErrID_None) return
+   subroutine RegPackBounds(RF, R, LB, UB)
+      type(RegFile), intent(inout)  :: RF
+      integer(B4Ki), intent(in)     :: R
+      integer(B8Ki), intent(in)     :: LB(:), UB(:)
+
+      ! If has an error, return
+      if (RF%ErrStat /= ErrID_None) return
 
       ! Pack lower and upper bounds
-      call RegPack(Buf, LB(1:R))
-      call RegPack(Buf, UB(1:R))
-      if (RegCheckErr(Buf, "RegPackBounds")) return
+      call RegPack(RF, LB(1:R))
+      call RegPack(RF, UB(1:R))
+      if (RegCheckErr(RF, "RegPackBounds")) return
    end subroutine
 
-   subroutine RegUnpackBounds(Buf, R, LB, UB)
-      type(PackBuffer), intent(inout)   :: Buf
-      integer(B4Ki), intent(in)         :: R
-      integer(B4Ki), intent(out)        :: LB(:), UB(:)
+   subroutine RegUnpackBounds(RF, R, LB, UB)
+      type(RegFile), intent(inout)  :: RF
+      integer(B4Ki), intent(in)     :: R
+      integer(B8Ki), intent(out)    :: LB(:), UB(:)
 
-      ! If buffer has an error, return
-      if (Buf%ErrStat /= ErrID_None) return
+      ! If has an error, return
+      if (RF%ErrStat /= ErrID_None) return
 
       ! Unpack lower and upper bounds
-      call RegUnpack(Buf, LB(1:R))
-      call RegUnpack(Buf, UB(1:R))
-      if (RegCheckErr(Buf, "RegUnpackBounds")) return
+      call RegUnpack(RF, LB(1:R))
+      call RegUnpack(RF, UB(1:R))
+      if (RegCheckErr(RF, "RegUnpackBounds")) return
    end subroutine
 
-   subroutine GrowBuffer(Buf, N)
-      type(PackBuffer), intent(inout)   :: Buf
-      integer(B4Ki), intent(in)         :: N
+   function DataNumValid(RF) result(match)
+      type(RegFile), intent(inout)  :: RF
+      logical                       :: match
+      integer(B8Ki)                 :: DataNum
 
-      integer(B1Ki), allocatable        :: BytesTmp(:)
-      integer(B4Ki)                     :: NewSize
-      integer(IntKi)                    :: stat
-      
-      ! Return if there is a buffer error
-      if (Buf%ErrStat /= ErrID_None) return
+      ! Increment the data number to be read
+      RF%NumData = RF%NumData + 1
 
-      ! If buffer can hold requested bytes, return
-      if (size(Buf%Bytes) > Buf%NB + N) return
+      ! Read the data number from the file
+      read(RF%Unit) DataNum
 
-      ! Calculate new size
-      NewSize = int(real(Buf%NB + N, R4Ki) * 1.8_R4Ki, IntKi)
-
-      ! Move allocation to temporary array and allocate buffer with new size
-      call move_alloc(Buf%Bytes, BytesTmp)
-      allocate (Buf%Bytes(NewSize), stat=stat)
-      if (stat /= 0) then
-         Buf%ErrStat = ErrID_Fatal
-         write(Buf%ErrMsg,*) 'Grow: Unable to grow buffer to', NewSize, 'bytes'
-         return
+      ! If data number from file does not match expected number, set match false
+      ! and create error message; otherwise, set match to true
+      if (DataNum /= RF%NumData) then
+         match = .false.
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Read data number", DataNum, "expected", RF%NumData
+      else
+         match = .true.
       end if
-
-      ! Copy contents of temporary bytes to buffer
-      Buf%Bytes(1:size(BytesTmp)) = BytesTmp
-
-   end subroutine
+   end function
 '''
 
 
 def gen_pack(w, dt, decl, rank):
    dims = '' if rank == 0 else '('+','.join([':']*rank)+')'
-   dt_size = int(dt[-1])
    name = f'Pack_{dt}' if rank == 0 else f'Pack_{dt}_Rank{rank}'
-   w.write(f'\n\n   subroutine {name}(Buf, Data)')
-   w.write(f'\n      type(PackBuffer), intent(inout)         :: Buf')
-   w.write(f'\n      {decl+", intent(in)":<38s}  :: Data{dims}')
-   w.write(f'\n      integer(IntKi)                          :: DataSize')
+   w.write(f'\n\n   subroutine {name}(RF, Data)')
+   w.write(f'\n      type(RegFile), intent(inout)         :: RF')
+   w.write(f'\n      {decl+", intent(in)":<35s}  :: Data{dims}')
    w.write(f'\n')
-   w.write(f'\n      ! If buffer error, return')
-   w.write(f'\n      if (Buf%ErrStat /= ErrID_None) return')
+   w.write(f'\n      ! If error, return')
+   w.write(f'\n      if (RF%ErrStat /= ErrID_None) return')
    w.write(f'\n')
-   w.write(f'\n      ! Get size of data in bytes')
-   if dt == 'C1' and rank == 0:
-      w.write(f'\n      DataSize = len(Data)')
-   elif dt == 'C1' and rank > 0:
-      w.write(f'\n      DataSize = len(Data({",".join(["1"]*rank)}))*size(Data)')
-   elif rank == 0:
-      w.write(f'\n      DataSize = {dt_size}')
-   elif dt_size == 1:
-      w.write(f'\n      DataSize = size(Data)')
-   else:
-      w.write(f'\n      DataSize = {dt_size}*size(Data)')
+   w.write(f'\n      ! Increment data number and write to file')
+   w.write(f'\n      RF%NumData = RF%NumData + 1')
+   w.write(f'\n      write(RF%Unit) RF%NumData')
    w.write(f'\n')
-   w.write(f'\n      ! Grow buffer to accommodate Data')
-   w.write(f'\n      call GrowBuffer(Buf, DataSize)')
-   w.write(f'\n      if (RegCheckErr(Buf, "{name}")) return')
-   w.write(f'\n')
-   w.write(f'\n      ! Transfer data to buffer')
-   if dt == 'L1':
-      w.write(f'\n      Buf%Bytes(Buf%NB+1:Buf%NB+DataSize) = transfer(LogicalToByte(Data), Buf%Bytes)')
-   else:
-      w.write(f'\n      Buf%Bytes(Buf%NB+1:Buf%NB+DataSize) = transfer(Data, Buf%Bytes)')
-   w.write(f'\n      Buf%NB = Buf%NB + DataSize')
-   w.write(f'\n')
+   w.write(f'\n      ! Write data to file')
+   w.write(f'\n      write(RF%Unit) Data')
    w.write(f'\n   end subroutine')
 
 
 def gen_unpack(w, dt, decl, rank):
    dims = '' if rank == 0 else '('+','.join([':']*rank)+')'
-   dt_size = int(dt[-1])
    name = f'Unpack_{dt}' if rank == 0 else f'Unpack_{dt}_Rank{rank}'
    w.write(f'\n')
-   w.write(f'\n   subroutine {name}(Buf, Data)')
-   w.write(f'\n      type(PackBuffer), intent(inout)         :: Buf')
-   w.write(f'\n      {decl+", intent(out)":<38s}  :: Data{dims}')
-   w.write(f'\n      integer(IntKi)                          :: DataSize')
+   w.write(f'\n   subroutine {name}(RF, Data)')
+   w.write(f'\n      type(RegFile), intent(inout)         :: RF')
+   w.write(f'\n      {decl+", intent(out)":<35s}  :: Data{dims}')
    w.write(f'\n')
-   w.write(f'\n      ! If buffer error, return')
-   w.write(f'\n      if (Buf%ErrStat /= ErrID_None) return')
+   w.write(f'\n      ! If error, return')
+   w.write(f'\n      if (RF%ErrStat /= ErrID_None) return')
    w.write(f'\n')
-   w.write(f'\n      ! Get size of data in bytes')
-   if dt == 'C1' and rank == 0:
-      w.write(f'\n      DataSize = len(Data)')
-   elif dt == 'C1' and rank > 0:
-      w.write(f'\n      DataSize = len(Data({",".join(["1"]*rank)}))*size(Data)')
-   elif rank == 0:
-      w.write(f'\n      DataSize = {dt_size}')
-   elif dt_size == 1:
-      w.write(f'\n      DataSize = size(Data)')
-   else:
-      w.write(f'\n      DataSize = {dt_size}*size(Data)')
+   w.write(f'\n      ! Read data number, return if invalid')
+   w.write(f'\n      if (.not. DataNumValid(RF)) return')
    w.write(f'\n')
-   w.write(f'\n      ! Check that buffer has sufficient bytes remaining')
-   w.write(f'\n      if (size(Buf%Bytes) < Buf%NB + DataSize) then')
-   w.write(f'\n         Buf%ErrStat = ErrID_Fatal')
-   w.write(f'\n         write(Buf%ErrMsg,*) "{name}: buffer too small, requested", DataSize, "bytes"')
-   w.write(f'\n         return')
-   w.write(f'\n      end if')
-   w.write(f'\n')
-   w.write(f'\n      ! Transfer data from buffer')
-   if dt == 'L1' and rank == 0:
-      w.write(f'\n      Data = ByteToLogical(Buf%Bytes(Buf%NB+1))')
-   elif dt == 'L1' and rank > 0:
-      w.write(f'\n      Data = reshape(ByteToLogical(Buf%Bytes(Buf%NB+1:Buf%NB+DataSize)), shape(Data))')
-   elif rank == 0:
-      w.write(f'\n      Data = transfer(Buf%Bytes(Buf%NB+1:Buf%NB+DataSize), Data)')
-   else:
-      w.write(f'\n      Data = reshape(transfer(Buf%Bytes(Buf%NB+1:Buf%NB+DataSize), Data), shape(Data))')
-   w.write(f'\n      Buf%NB = Buf%NB + DataSize')
-   w.write(f'\n')
+   w.write(f'\n      ! Read data from file')
+   w.write(f'\n      read(RF%Unit) Data')
    w.write(f'\n   end subroutine')
 
 def gen_pack_alloc(w, dt, decl, rank):
    dims = '' if rank == 0 else '('+','.join([':']*rank)+')'
-   name = f'PackAlloc_{dt}'
-   if rank > 0: name += f'_Rank{rank}'
+   name = f'PackAlloc_{dt}' + ("" if rank == 0 else f'_Rank{rank}')
    w.write(f'\n')
-   w.write(f'\n   subroutine {name}(Buf, Data)')
-   w.write(f'\n      type(PackBuffer), intent(inout)         :: Buf')
-   w.write(f'\n      {decl+", allocatable, intent(in)":<38s}  :: Data{dims}')
+   w.write(f'\n   subroutine {name}(RF, Data)')
+   w.write(f'\n      type(RegFile), intent(inout)         :: RF')
+   w.write(f'\n      {decl+", allocatable, intent(in)":<35s}  :: Data{dims}')
    w.write(f'\n')
-   w.write(f'\n      ! If buffer error, return')
-   w.write(f'\n      if (Buf%ErrStat /= ErrID_None) return')
+   w.write(f'\n      ! If error, return')
+   w.write(f'\n      if (RF%ErrStat /= ErrID_None) return')
    w.write(f'\n')
    w.write(f'\n      ! Write if allocated')
-   w.write(f'\n      call RegPack(Buf, allocated(Data))')
-   w.write(f'\n      if (RegCheckErr(Buf, "{name}")) return')
+   w.write(f'\n      call RegPack(RF, allocated(Data))')
+   w.write(f'\n      if (RegCheckErr(RF, "{name}")) return')
    w.write(f'\n      if (.not. allocated(Data)) return')
    w.write(f'\n')
    if rank > 0:
       w.write(f'\n      ! Write array bounds')
-      w.write(f'\n      call RegPackBounds(Buf, {rank}, lbound(Data), ubound(Data))')
+      w.write(f'\n      call RegPackBounds(RF, {rank}, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))')
    w.write(f'\n')
-   w.write(f'\n      ! Write data to buffer')
-   w.write(f'\n      call RegPack(Buf, Data)')
-   w.write(f'\n      if (RegCheckErr(Buf, "{name}")) return')
-   w.write(f'\n')
+   w.write(f'\n      ! Write data to file')
+   w.write(f'\n      call RegPack(RF, Data)')
+   w.write(f'\n      if (RegCheckErr(RF, "{name}")) return')
    w.write(f'\n   end subroutine')
 
 
 def gen_unpack_alloc(w, dt, decl, rank):
    dims = '' if rank == 0 else '('+','.join([':']*rank)+')'
-   dt_size = int(dt[-1])
-   name = f'UnpackAlloc_{dt}' if rank == 0 else f'UnpackAlloc_{dt}_Rank{rank}'
+   name = f'UnpackAlloc_{dt}' + ("" if rank == 0 else f'_Rank{rank}')
    w.write(f'\n')
-   w.write(f'\n   subroutine {name}(Buf, Data)')
-   w.write(f'\n      type(PackBuffer), intent(inout)         :: Buf')
-   w.write(f'\n      {decl+", allocatable, intent(out)":<38s}  :: Data{dims}')
-   w.write(f'\n      integer(IntKi)                          :: stat')
-   w.write(f'\n      logical                               :: IsAllocated')
+   w.write(f'\n   subroutine {name}(RF, Data)')
+   w.write(f'\n      type(RegFile), intent(inout)         :: RF')
+   w.write(f'\n      {decl+", allocatable, intent(out)":<35s}  :: Data{dims}')
+   w.write(f'\n      integer(IntKi)                       :: stat')
+   w.write(f'\n      logical                              :: IsAllocated')
    if rank > 0:
-      w.write(f'\n      integer(IntKi)                        :: LB({rank}), UB({rank})')
+      w.write(f'\n      integer(B8Ki)                        :: LB({rank}), UB({rank})')
    w.write(f'\n')
-   w.write(f'\n      ! If buffer error, return')
-   w.write(f'\n      if (Buf%ErrStat /= ErrID_None) return')
+   w.write(f'\n      ! If error, return')
+   w.write(f'\n      if (RF%ErrStat /= ErrID_None) return')
    w.write(f'\n')
    w.write(f'\n      ! Deallocate if allocated')
    w.write(f'\n      if (allocated(Data)) deallocate(Data)')
    w.write(f'\n')
    w.write(f'\n      ! Read value to see if it was allocated, return if not')
-   w.write(f'\n      call RegUnpack(Buf, IsAllocated)')
-   w.write(f'\n      if (RegCheckErr(Buf, "{name}")) return')
+   w.write(f'\n      call RegUnpack(RF, IsAllocated)')
+   w.write(f'\n      if (RegCheckErr(RF, "{name}")) return')
    w.write(f'\n      if (.not. IsAllocated) return')
    w.write(f'\n')
    alloc_dims = ''
    if rank > 0:
       w.write(f'\n      ! Read array bounds')
-      w.write(f'\n      call RegUnpackBounds(Buf, {rank}, LB, UB)')
-      w.write(f'\n      if (RegCheckErr(Buf, "{name}")) return')
+      w.write(f'\n      call RegUnpackBounds(RF, {rank}, LB, UB)')
+      w.write(f'\n      if (RegCheckErr(RF, "{name}")) return')
       alloc_dims = '(' + ','.join([f'LB({d+1}):UB({d+1})' for d in range(rank)]) + ')'
    w.write(f'\n')
    w.write(f'\n      ! Allocate data')
    w.write(f'\n      allocate(Data{alloc_dims}, stat=stat)')
    w.write(f'\n      if (stat /= 0) then')
-   w.write(f'\n         Buf%ErrStat = ErrID_Fatal')
-   w.write(f'\n         Buf%ErrMsg = "{name}: error allocating data"')
+   w.write(f'\n         RF%ErrStat = ErrID_Fatal')
+   w.write(f'\n         RF%ErrMsg = "{name}: error allocating data"')
    w.write(f'\n         return')
    w.write(f'\n      end if')
    w.write(f'\n')
    w.write(f'\n      ! Read data')
-   w.write(f'\n      call RegUnpack(Buf, Data)')
-   w.write(f'\n      if (RegCheckErr(Buf, "{name}")) return')
-   w.write(f'\n')
+   w.write(f'\n      call RegUnpack(RF, Data)')
+   w.write(f'\n      if (RegCheckErr(RF, "{name}")) return')
    w.write(f'\n   end subroutine')
 
 
@@ -484,32 +434,31 @@ def gen_pack_ptr(w, dt, decl, rank):
    name = f'PackPtr_{dt}'
    if rank > 0: name += f'_Rank{rank}'
    w.write(f'\n')
-   w.write(f'\n   subroutine {name}(Buf, Data)')
-   w.write(f'\n      type(PackBuffer), intent(inout)         :: Buf')
-   w.write(f'\n      {decl+", pointer, intent(in)":<38s}  :: Data{dims}')
-   w.write(f'\n      logical                               :: PtrInIndex')
+   w.write(f'\n   subroutine {name}(RF, Data)')
+   w.write(f'\n      type(RegFile), intent(inout)         :: RF')
+   w.write(f'\n      {decl+", pointer, intent(in)":<35s}  :: Data{dims}')
+   w.write(f'\n      logical                              :: PtrInIndex')
    w.write(f'\n')
-   w.write(f'\n      ! If buffer error, return')
-   w.write(f'\n      if (Buf%ErrStat /= ErrID_None) return')
+   w.write(f'\n      ! If error, return')
+   w.write(f'\n      if (RF%ErrStat /= ErrID_None) return')
    w.write(f'\n')
    w.write(f'\n      ! Write if associated')
-   w.write(f'\n      call RegPack(Buf, associated(Data))')
-   w.write(f'\n      if (RegCheckErr(Buf, "{name}")) return')
+   w.write(f'\n      call RegPack(RF, associated(Data))')
+   w.write(f'\n      if (RegCheckErr(RF, "{name}")) return')
    w.write(f'\n      if (.not. associated(Data)) return')
    if rank > 0:
       w.write(f'\n')
       w.write(f'\n      ! Write array bounds')
-      w.write(f'\n      call RegPackBounds(Buf, {rank}, lbound(Data), ubound(Data))')
+      w.write(f'\n      call RegPackBounds(RF, {rank}, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))')
    w.write(f'\n')
    w.write(f'\n      ! Write pointer info')
-   w.write(f'\n      call RegPackPointer(Buf, c_loc(Data), PtrInIndex)')
-   w.write(f'\n      if (RegCheckErr(Buf, "{name}")) return')
+   w.write(f'\n      call RegPackPointer(RF, c_loc(Data), PtrInIndex)')
+   w.write(f'\n      if (RegCheckErr(RF, "{name}")) return')
    w.write(f'\n      if (PtrInIndex) return')
    w.write(f'\n')
-   w.write(f'\n      ! Write data to buffer')
-   w.write(f'\n      call RegPack(Buf, Data)')
-   w.write(f'\n      if (RegCheckErr(Buf, "{name}")) return')
-   w.write(f'\n')
+   w.write(f'\n      ! Write data to file')
+   w.write(f'\n      call RegPack(RF, Data)')
+   w.write(f'\n      if (RegCheckErr(RF, "{name}")) return')
    w.write(f'\n   end subroutine')
 
 def gen_unpack_ptr(w, dt, decl, rank):
@@ -517,17 +466,18 @@ def gen_unpack_ptr(w, dt, decl, rank):
    dt_size = int(dt[-1])
    name = f'UnpackPtr_{dt}' if rank == 0 else f'UnpackPtr_{dt}_Rank{rank}'
    w.write(f'\n')
-   w.write(f'\n   subroutine {name}(Buf, Data)')
-   w.write(f'\n      type(PackBuffer), intent(inout)         :: Buf')
-   w.write(f'\n      {decl+", pointer, intent(out)":<38s}  :: Data{dims}')
-   w.write(f'\n      integer(IntKi)                          :: PtrIdx, stat')
+   w.write(f'\n   subroutine {name}(RF, Data)')
+   w.write(f'\n      type(RegFile), intent(inout)          :: RF')
+   w.write(f'\n      {decl+", pointer, intent(out)":<36s}  :: Data{dims}')
+   w.write(f'\n      integer(IntKi)                        :: stat')
+   w.write(f'\n      integer(B8Ki)                         :: PtrIdx')
    w.write(f'\n      logical                               :: IsAssociated')
    w.write(f'\n      type(c_ptr)                           :: Ptr')
    if rank > 0:
-      w.write(f'\n      integer(IntKi)                        :: LB({rank}), UB({rank})')
+      w.write(f'\n      integer(B8Ki)                        :: LB({rank}), UB({rank})')
    w.write(f'\n')
-   w.write(f'\n      ! If buffer error, return')
-   w.write(f'\n      if (Buf%ErrStat /= ErrID_None) return')
+   w.write(f'\n      ! If error, return')
+   w.write(f'\n      if (RF%ErrStat /= ErrID_None) return')
    w.write(f'\n')
    w.write(f'\n      ! If associated, deallocate and nullify')
    w.write(f'\n      if (associated(Data)) then')
@@ -536,17 +486,18 @@ def gen_unpack_ptr(w, dt, decl, rank):
    w.write(f'\n      end if')
    w.write(f'\n')
    w.write(f'\n      ! Read value to see if it was associated, return if not')
-   w.write(f'\n      call RegUnpack(Buf, IsAssociated)')
-   w.write(f'\n      if (RegCheckErr(Buf, "{name}")) return')
+   w.write(f'\n      call RegUnpack(RF, IsAssociated)')
+   w.write(f'\n      if (RegCheckErr(RF, "{name}")) return')
    w.write(f'\n      if (.not. IsAssociated) return')
    if rank > 0:
       w.write(f'\n')
       w.write(f'\n      ! Read array bounds')
-      w.write(f'\n      call RegUnpackBounds(Buf, {rank}, LB, UB)')
+      w.write(f'\n      call RegUnpackBounds(RF, {rank}, LB, UB)')
+      w.write(f'\n      if (RegCheckErr(RF, "{name}")) return')
    w.write(f'\n')
    w.write(f'\n      ! Unpack pointer inf')
-   w.write(f'\n      call RegUnpackPointer(Buf, Ptr, PtrIdx)')
-   w.write(f'\n      if (RegCheckErr(Buf, "{name}")) return')
+   w.write(f'\n      call RegUnpackPointer(RF, Ptr, PtrIdx)')
+   w.write(f'\n      if (RegCheckErr(RF, "{name}")) return')
    w.write(f'\n')
    w.write(f'\n      ! If pointer was in index, associate data with pointer, return')
    w.write(f'\n      if (c_associated(Ptr)) then')
@@ -564,21 +515,21 @@ def gen_unpack_ptr(w, dt, decl, rank):
    w.write(f'\n      ! Allocate data')
    w.write(f'\n      allocate(Data{alloc_dims}, stat=stat)')
    w.write(f'\n      if (stat /= 0) then')
-   w.write(f'\n         Buf%ErrStat = ErrID_Fatal')
-   w.write(f'\n         Buf%ErrMsg = "{name}: error allocating data"')
+   w.write(f'\n         RF%ErrStat = ErrID_Fatal')
+   w.write(f'\n         RF%ErrMsg = "{name}: error allocating data"')
    w.write(f'\n         return')
    w.write(f'\n      end if')
    w.write(f'\n')
    w.write(f'\n      ! Read data')
-   w.write(f'\n      call RegUnpack(Buf, Data)')
-   w.write(f'\n      if (RegCheckErr(Buf, "{name}")) return')
-   w.write(f'\n')
+   w.write(f'\n      call RegUnpack(RF, Data)')
+   w.write(f'\n      if (RegCheckErr(RF, "{name}")) return')
    w.write(f'\n   end subroutine')
 
 # Registry interface
+groups = ['Pack', 'Unpack', 'PackAlloc', 'UnpackAlloc', 'PackPtr', 'UnpackPtr']
 ifc_lines = ''
 ranks = [''] + [f'_Rank{r}' for r in range(1,num_ranks+1)]
-for attr, punp in product([''], ['Pack', 'Unpack']):
+for attr, punp in product([''], groups):
    ifc_lines += f'\n\n   interface Reg{punp}{attr}'
    funcs = [f'{punp}{attr}_{dt}{rank}'for dt, rank in product(type_map.keys(), ranks)]
    lines = textwrap.wrap('module procedure ' + ', '.join(funcs), 80,
@@ -593,11 +544,9 @@ with open('src/ModReg.f90', 'w') as w:
     for (dt,decl), rank in product(type_map.items(), range(num_ranks+1)):
         gen_pack(w, dt, decl, rank)
         gen_unpack(w, dt, decl, rank)
-
-      #   gen_pack_alloc(w, dt, decl, rank)
-      #   gen_unpack_alloc(w, dt, decl, rank)
-
-      #   gen_pack_ptr(w, dt, decl, rank)
-      #   gen_unpack_ptr(w, dt, decl, rank)
+        gen_pack_alloc(w, dt, decl, rank)
+        gen_unpack_alloc(w, dt, decl, rank)
+        gen_pack_ptr(w, dt, decl, rank)
+        gen_unpack_ptr(w, dt, decl, rank)
 
     w.write('\nend module')

@@ -58,7 +58,7 @@ MODULE NWTC_IO
 
    LOGICAL                       :: Beep     = .TRUE.                            !< Flag that specifies whether or not to beep for error messages and program terminations.
 
-   CHARACTER(20)                 :: ProgName = ' '                               !< The name of the calling program. DO NOT USE THIS IN NEW PROGRAMS (Modules)
+   CHARACTER(25)                 :: ProgName = ' '                               !< The name of the calling program. DO NOT USE THIS IN NEW PROGRAMS (Modules)
    CHARACTER(99)                 :: ProgVer  = ' '                               !< The version (including date) of the calling program. DO NOT USE THIS IN NEW PROGRAMS
    CHARACTER(1), PARAMETER       :: Tab      = CHAR( 9 )                         !< The tab character.
    CHARACTER(*), PARAMETER       :: CommChars = '!#%'                            !< Comment characters that mark the end of useful input
@@ -120,6 +120,7 @@ MODULE NWTC_IO
       MODULE PROCEDURE AllIPAry1
       MODULE PROCEDURE AllIPAry2
       MODULE PROCEDURE AllFPAry1
+      MODULE PROCEDURE AllDPAry1  
       MODULE PROCEDURE AllRPAry2
       MODULE PROCEDURE AllR4PAry3
       MODULE PROCEDURE AllR8PAry3
@@ -667,6 +668,39 @@ CONTAINS
    END SUBROUTINE AllFPAry1
 !=======================================================================
 !> \copydoc nwtc_io::allipary1
+   SUBROUTINE AllDPAry1 (  Ary, AryDim1, Descr, ErrStat, ErrMsg )
+
+      ! This routine allocates a 1-D REAL array.
+      ! Argument declarations.
+
+   REAL(C_DOUBLE), POINTER           :: Ary    (:)                                 !  Array to be allocated
+   INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    !< Error status
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
+   CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
+
+
+   IF ( ASSOCIATED(Ary) ) THEN
+      DEALLOCATE(Ary)
+      !ErrStat = ErrID_Warn
+      !ErrMsg = " AllRPAry2: Ary already allocated."
+   END IF
+
+   ALLOCATE ( Ary(AryDim1) , STAT=ErrStat )
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*BYTES_IN_REAL))//&
+                  ' bytes of memory for the '//TRIM( Descr )//' array.'
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+   END IF
+   
+   Ary = 0
+   RETURN
+   END SUBROUTINE AllDPAry1
+!=======================================================================
+!> \copydoc nwtc_io::allipary1
    SUBROUTINE AllRPAry2 (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
 
       ! This routine allocates a 2-D REAL array.
@@ -726,7 +760,7 @@ CONTAINS
    ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=ErrStat )
    IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_REAL))//&
+      ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_R4Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
    ELSE
       ErrStat = ErrID_None
@@ -763,7 +797,7 @@ CONTAINS
    ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=ErrStat )
    IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_REAL))//&
+      ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_R8Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
    ELSE
       ErrStat = ErrID_None
@@ -901,7 +935,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*BYTES_IN_SiKi))//' bytes of memory for the '//TRIM( Descr )//' array.'
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*BYTES_IN_R4Ki))//' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
       ErrStat = ErrID_None
@@ -971,7 +1005,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_SiKi))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_R4Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1047,7 +1081,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_REAL))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_R4Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1084,7 +1118,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_REAL))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_R8Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1122,7 +1156,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*BYTES_IN_REAL))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*BYTES_IN_R4Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1160,7 +1194,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*BYTES_IN_REAL))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*BYTES_IN_R8Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1199,7 +1233,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*AryDim5*BYTES_IN_REAL))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*AryDim5*BYTES_IN_R4Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1240,7 +1274,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*AryDim5*BYTES_IN_REAL))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*AryDim5*BYTES_IN_R8Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1725,56 +1759,56 @@ END SUBROUTINE CheckR8Var
 !=======================================================================
 !> This routine packs the DLL_Type (nwtc_base::dll_type) data into an integer buffer.
 !! It is required for the FAST Registry. It is the inverse of DLLTypeUnPack (nwtc_io::dlltypeunpack).
-   SUBROUTINE DLLTypePack(Buf, InData)
-      type(PackBuffer), intent(inout)  :: Buf
+   SUBROUTINE DLLTypePack(RF, InData)
+      type(RegFile), intent(inout)  :: RF
       TYPE(DLL_Type), intent(in)       :: InData  !< DLL data to pack
       
       INTEGER(IntKi)                   :: i
 
       ! If buffer error, return
-      if (Buf%ErrStat /= ErrID_None) return
+      if (RF%ErrStat /= ErrID_None) return
       
       ! has the DLL procedure been loaded?
-      call RegPack(Buf, c_associated(InData%ProcAddr(1)))
+      call RegPack(RF, c_associated(InData%ProcAddr(1)))
       
       ! Pack strings
-      call RegPack(Buf, InData%FileName)
+      call RegPack(RF, InData%FileName)
       do i = 1, NWTC_MAX_DLL_PROC
-         call RegPack(Buf, InData%ProcName(i))
+         call RegPack(RF, InData%ProcName(i))
       end do
 
       ! If buffer error, return
-      if (RegCheckErr(Buf, 'DLLTypeUnPack')) return
+      if (RegCheckErr(RF, 'DLLTypeUnPack')) return
       
    END SUBROUTINE DLLTypePack
 !=======================================================================
 !> This routine unpacks the DLL_Type data from an integer buffer.
 !! It is required for the FAST Registry. It is the inverse of DLLTypePack (nwtc_io::dlltypepack).
-   subroutine DLLTypeUnPack(Buf, OutData)
-      type(PackBuffer), intent(inout)  :: Buf
-      type(DLL_Type), intent(out)      :: OutData !< Reconstituted OutData structure
+   subroutine DLLTypeUnPack(RF, OutData)
+      type(RegFile), intent(inout)  :: RF
+      type(DLL_Type), intent(out)   :: OutData !< Reconstituted OutData structure
          
       logical        :: WasAssociated
       integer(IntKi) :: i
 
       ! If buffer error, return
-      if (Buf%ErrStat /= ErrID_None) return
+      if (RF%ErrStat /= ErrID_None) return
       
       ! Get flag indicating if dll was associated
-      call RegUnpack(Buf, WasAssociated)
+      call RegUnpack(RF, WasAssociated)
 
       ! Unpack strings
-      call RegUnpack(Buf, OutData%FileName)
+      call RegUnpack(RF, OutData%FileName)
       do i = 1, NWTC_MAX_DLL_PROC
-         call RegUnpack(Buf, OutData%ProcName(i))
+         call RegUnpack(RF, OutData%ProcName(i))
       end do
 
       ! If buffer error, return
-      if (RegCheckErr(Buf, 'DLLTypeUnPack')) return
+      if (RegCheckErr(RF, 'DLLTypeUnPack')) return
       
       ! If dll was loaded, and data in filename and procname, load dll
       IF (WasAssociated .AND. LEN_TRIM(OutData%FileName) > 0 .AND. LEN_TRIM(OutData%ProcName(1)) > 0) THEN
-         CALL LoadDynamicLib(OutData, Buf%ErrStat, Buf%ErrMsg)
+         CALL LoadDynamicLib(OutData, RF%ErrStat, RF%ErrMsg)
       else
          ! Nullifying
          OutData%FileAddr  = INT(0,C_INTPTR_T)
@@ -1783,7 +1817,7 @@ END SUBROUTINE CheckR8Var
       END IF
 
       ! If buffer error, return
-      if (RegCheckErr(Buf, 'DLLTypeUnPack')) return
+      if (RegCheckErr(RF, 'DLLTypeUnPack')) return
       
    END SUBROUTINE DLLTypeUnPack   
 !=======================================================================
@@ -1816,7 +1850,7 @@ END SUBROUTINE CheckR8Var
          END IF
       END IF
       
-      CALL WrScr ( 'Running '//TRIM( GetNVD( ProgInfo ) )//'.' )
+      CALL WrScr ( ' Running '//TRIM( GetNVD( ProgInfo ) )//'.' )
 
    RETURN
    END SUBROUTINE DispNVD1
@@ -2925,7 +2959,7 @@ END SUBROUTINE CheckR8Var
    END SUBROUTINE ParseChAry
 !=======================================================================
 !> This subroutine parses a comment line
-   SUBROUTINE ParseCom ( FileInfo, LineNum, Var, ErrStat, ErrMsg, UnEc )
+   SUBROUTINE ParseCom ( FileInfo, LineNum, Var, ErrStat, ErrMsg, UnEc, IsLegalComment )
 
          ! Arguments declarations.
       INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       !< The error status.
@@ -2934,6 +2968,7 @@ END SUBROUTINE CheckR8Var
       CHARACTER(*),   INTENT(OUT)            :: Var                           !< The variable to receive the comment
       CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        !< The error message, if ErrStat /= 0.
       TYPE (FileInfoType), INTENT(IN)        :: FileInfo                      !< The derived type for holding the file information.
+      LOGICAL, OPTIONAL,   INTENT(INOUT)     :: IsLegalComment                !< True if the comment is a "legal" comment line starting with '---' or '==='. NOTE: We have too many options, we need to be more strict!!!!
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseCom'
       
       ErrStat=ErrID_None
@@ -2960,6 +2995,21 @@ END SUBROUTINE CheckR8Var
          IF ( UnEc > 0 )  WRITE (UnEc,'(A)')  trim(Var)
       END IF
       LineNum = LineNum + 1
+
+      IF (PRESENT(IsLegalComment) ) then
+         if (len(Var)<=3) then
+            IsLegalComment=.False.
+         else
+            ! Here, we are talking about comments in the input file that are "expected to be there"
+            IsLegalComment =  (Var(1:3)=='---') .or.  (Var(1:3)=='===')
+         endif
+         if (.not.IsLegalComment) then
+            call SetErrStat(ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
+                   ' >> The comment line did not start with `---` or `===`. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
+                   , ErrStat, ErrMsg, RoutineName )
+         endif
+      END IF
 
    END SUBROUTINE ParseCom
 
@@ -4061,7 +4111,9 @@ END SUBROUTINE CheckR8Var
          NullLoc = index(FileString(idx:len(FileString)),C_NULL_CHAR)
          ! started indexing at idx, so add that back in for location in FileString
          NullLoc = NullLoc + idx - 1
-         if (NullLoc > idx) then
+         if (NullLoc == idx) then   ! blank line
+            FileStringArray(Line) = ''
+         elseif (NullLoc > idx) then
             FileStringArray(Line) = trim(FileString(idx:NullLoc-1))
          else
             ! If not NULL terminated
@@ -6379,7 +6431,6 @@ END SUBROUTINE CheckR8Var
    CHARACTER( *), INTENT(IN)          :: VarDescr                                        !< Text string describing the variable.
    CHARACTER( *), INTENT(IN)          :: VarName                                         !< Text string containing the variable name.
       ! Local declarations:
-   INTEGER                            :: IOS                                             ! I/O status returned from the read statement.
    CHARACTER(1024)                    :: sVar                                            ! String to hold the value of the variable
    ! Read full content of variable as one string, should it be "default", or an array
    CALL ReadVar (UnIn, Fil, sVar, VarName, VarDescr, ErrStat, ErrMsg, UnEc)
@@ -7756,5 +7807,92 @@ END SUBROUTINE CheckR8Var
 
    RETURN
    END SUBROUTINE WrScr1
+
+   !----------------------------------------------------------------------------------------------------------------------------------
+   !> Read a delimited file of float with one or multiple lines of header
+   !! TODO: put me in a CSV.f90 file of the NWTC library
+   !! TODO: automatic detection of number of columns for instance using ReadCAryFromStr
+   !!       See also the quick and dirty check introduced to read blade files that don't have Buoyancy columns
+   subroutine ReadDelimFile(Filename, nCol, array, errStat, errMsg, nHeaderLines, priPath)
+      character(len=*),                        intent(in)  :: Filename
+      integer(IntKi),                          intent(in)  :: nCol
+      real(ReKi), dimension(:,:), allocatable, intent(out) :: array
+      integer(IntKi)         ,                 intent(out) :: errStat ! Status of error message
+      character(*)           ,                 intent(out) :: errMsg  ! Error message if errStat /= ErrID_None
+      integer(IntKi), optional,                intent(in ) :: nHeaderLines
+      character(*)  , optional,                intent(in ) :: priPath  ! Primary path, to use if filename is not absolute
+      integer(IntKi)       :: UnIn, i, j, nLine, nHead
+      character(len= 2048) :: line
+      integer(IntKi)       :: errStat2      ! local status of error message
+      character(ErrMsgLen) :: errMsg2       ! temporary Error message
+      character(len=2048) :: Filename_Loc   ! filename local to this function
+      errStat = ErrID_None
+      errMsg  = ""
+
+      Filename_Loc = Filename
+      if (present(priPath)) then
+         if (PathIsRelative(Filename_Loc)) Filename_Loc = trim(PriPath)//trim(Filename)
+      endif
+
+      ! Open file
+      call GetNewUnit(UnIn) 
+      call OpenFInpFile(UnIn, Filename_Loc, errStat2, errMsg2); if(Failed()) return 
+      ! Count number of lines
+      nLine = line_count(UnIn, errStat2, errMsg2); if(Failed()) return
+      if (allocated(array)) deallocate(array)
+      allocate(array(nLine-1, nCol), stat=errStat2); errMsg2='allocation failed'; if(Failed())return
+      ! Read header
+      nHead=1
+      if (present(nHeaderLines)) nHead = nHeaderLines
+      do i=1,nHead
+         read(UnIn, *, IOSTAT=errStat2) line
+         errMsg2 = ' Error reading line '//trim(Num2LStr(1))//' of file: '//trim(Filename_Loc)
+         if(Failed()) return
+      enddo
+      ! Read data
+      do i = 1,nLine-1
+         read (UnIn,*,IOSTAT=errStat2) (array(i,j), j=1,nCol)
+         errMsg2 = ' Error reading line '//trim(Num2LStr(i+1))//' of file: '//trim(Filename_Loc)
+         if(Failed()) return
+      end do  
+      close(UnIn) 
+   contains
+      logical function Failed()
+         CALL SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ReadDelimFile' )
+         Failed = errStat >= AbortErrLev
+         if (Failed) then
+            if ((UnIn)>0) close(UnIn)
+         endif
+      end function Failed
+   end subroutine ReadDelimFile
+
+   !----------------------------------------------------------------------------------------------------------------------------------
+   !> Counts number of lines in a file, do not count last line if empty
+   integer function line_count(iUnit, errStat, errMsg)
+      integer(IntKi), intent(in) :: iUnit
+      integer(IntKi), intent(out) :: errStat ! Error status
+      character(*),   intent(out) :: errMsg  ! Error message associated with ErrStat
+      character(len=2048) :: line
+      integer, parameter :: nline_max=100000000 ! 100 M safety for infinite loop..
+      integer :: i
+      errStat = ErrID_None
+      errMsg  = ''
+      line_count=0
+      do i=1,nline_max 
+         line=''
+         read(iUnit,'(A)',END=100)line
+         line_count=line_count+1
+      enddo
+      if (line_count==nline_max) then
+         errStat = ErrID_Fatal
+         errMsg = 'Error: maximum number of line exceeded for line_count'
+         return
+      endif
+   100 if(len(trim(line))>0) then
+         line_count=line_count+1
+      endif
+      rewind(iUnit)
+      return
+   end function line_count
       
 END MODULE NWTC_IO

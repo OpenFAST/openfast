@@ -1,0 +1,40 @@
+------- OpenFAST AeroMap INPUT FILE ----------------------------------------------
+AeroMap generation for FAST Certification Test #18: NREL 5.0 MW Baseline Wind Turbine (Onshore)
+---------------------- OpenFAST MODEL FILE ---------------------------------------
+"openfast.fst"  FstFile         - Name of the primary OpenFAST input file (-)
+---------------------- STEADY-STATE SIMULATION CONTROL --------------------------------------
+false         Echo            - Echo input data to <RootName>.ech (flag)
+       1e-4   Toler           - Convergence tolerance for nonlinear solve residual equation [>0] (-)
+         50   MaxIter         - Maximum number of iteration steps for nonlinear solve [>0] (-)
+          1   N_SSJac         - Number of iteration steps to recalculate steady-state Jacobian (-) [1=every iteration step, 2=every other step] (Note: for large flexible blades, this almost always needs to be 1)
+      1E+05   SSJacSclFact   - Scaling factor used in steady-state Jacobians (-) [on order of blade mass in kg]
+---------------------- STEADY-STATE CASES --------------------------------------
+           1  WindSpeedOrTSR  - Choice of swept parameter (switch) { 1:wind speed; 2: TSR }
+          25  NumCases        - Number of cases to run
+RotSpeed      WndSpeedOrTSR     Pitch
+(rpm)         (m/s or -)        (deg)
+ 8.0000        3.0000           0.0000
+ 8.0000        6.0000           0.0000
+ 8.0000        9.0000           0.0000
+ 8.0000       12.0000           0.0000
+ 8.0000       15.0000           0.0000
+ 8.0000       15.0000           3.0000 
+ 8.0000       12.0000           3.0000
+ 8.0000        9.0000           3.0000
+ 8.0000        6.0000           3.0000
+ 8.0000        3.0000           3.0000
+ 8.0000        3.0000           6.0000
+ 8.0000        6.0000           6.0000
+ 8.0000        9.0000           6.0000
+ 8.0000       12.0000           6.0000
+ 8.0000       15.0000           6.0000
+ 8.0000       15.0000           9.0000 
+ 8.0000       12.0000           9.0000
+ 8.0000        9.0000           9.0000
+ 8.0000        6.0000           9.0000
+ 8.0000        3.0000           9.0000
+ 8.0000        3.0000          12.0000
+ 8.0000        6.0000          12.0000
+ 8.0000        9.0000          12.0000
+ 8.0000       12.0000          12.0000
+ 8.0000       15.0000          12.0000

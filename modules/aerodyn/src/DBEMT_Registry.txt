@@ -12,6 +12,7 @@
 # ...... Include files (definitions from NWTC Library) ............................................................................
 include   Registry_NWTC_Library.txt
 
+param     DBEMT/DBEMT                   -                              INTEGER                 DBEMT_frozen         -     -1     -   "use frozen-wake for linearization (not DBEMT)" -
 param     DBEMT/DBEMT                   -                              INTEGER                 DBEMT_none           -      0     -   "use BEMT instead (not DBEMT)" -
 param     DBEMT/DBEMT                   -                              INTEGER                 DBEMT_tauConst       -      1     -   "use constant tau1" -
 param     DBEMT/DBEMT                   -                              INTEGER                 DBEMT_tauVaries      -      2     -   "use time-dependent tau1" -

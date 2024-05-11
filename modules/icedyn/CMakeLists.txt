@@ -18,7 +18,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/Registry_IceDyn.txt ${CMAKE_CURRENT_LIST_DIR}/src/IceDyn_Types.f90)
 endif()
 
-add_library(icedynlib 
+add_library(icedynlib STATIC
   src/IceDyn.f90
   src/IceDyn_Types.f90
 )

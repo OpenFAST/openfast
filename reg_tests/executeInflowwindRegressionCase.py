@@ -69,7 +69,7 @@ verbose = args.verbose if args.verbose is False else True
 rtl.validateExeOrExit(executable)
 rtl.validateDirOrExit(sourceDirectory)
 if not os.path.isdir(buildDirectory):
-    os.makedirs(buildDirectory)
+    os.makedirs(buildDirectory, exist_ok=True)
 
 ### Build the filesystem navigation variables for running the test case
 regtests = os.path.join(sourceDirectory, "reg_tests")
@@ -94,6 +94,7 @@ if not os.path.isdir(testBuildDirectory):
     os.makedirs(testBuildDirectory)
     for file in (glob.glob(os.path.join(inputsDirectory,"*.inp")) +
                  glob.glob(os.path.join(inputsDirectory,"*.bts"))+
+                 glob.glob(os.path.join(inputsDirectory,"*.bin"))+
                  glob.glob(os.path.join(inputsDirectory,"*.wnd"))+
                  glob.glob(os.path.join(inputsDirectory,"*.hh"))+
                  glob.glob(os.path.join(inputsDirectory,"*.sum"))):

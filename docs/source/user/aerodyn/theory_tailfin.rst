@@ -150,8 +150,6 @@ Where :math:`\boldsymbol{V}_{\text{ind},\text{blade}}[i_b, i_r]` is the induced 
 More advanced models could set the induced velocity to zero when outside of the wake boundary, or include a tower-shadow-like wake model. Such option is not yet available.
    
 
-
-
 Polar-based model
 -----------------
 
@@ -163,9 +161,25 @@ The user only needs to indicate the index `TFinAFIndex` within the list `AFNames
 Unsteady slender body model
 ---------------------------
 
-The unsteady slender body (USB) model is documented in :cite:`ad-hammam2022`.
+The unsteady aerodynamics of the tail fin is modeled based on Unsteady Slender Body Theory.
+The theory is extended to include the effect of high yaw angle :cite:`ad-hammam_NREL:2023`.
 
-The theory will be implemented and documented in a future release.
+The normal force on the tail fin can be described as the sum of three contributions (potential lift, vortex lift, and drag), weighted by separation functions :math:`x_i` as:
+
+.. math::  :label: TFUSBForce
+
+    N = \frac{\rho}{2} A_{tf} \bigg(  K_p x_1 V_{\text{rel},x} V_{\text{rel},y} +  \Big[x_2 K_v+(1- x_3)C_{Dc} \Big] V_{\text{rel},y}\big|V_{\text{rel},y}\big|\bigg)
 
 
+where :math:`\rho` is the density of air, :math:`A_{tf}` is the tail fin area, :math:`K_p` is the potential lift coefficient and :math:`K_v` is the vortex lift coefficient, and :math:`C_{Dc}` is the drag coefficient.
+:math:`x_i` are the separation functions calculated using a quasi-steady approximation as:
 
+.. math::  :label: TFUSBxiEquation
+
+    x_i = (1+exp{[\sigma_i (|\gamma_{tf}|-\alpha^*_i)]})^{-1}
+
+
+where :math:`\sigma_i` are empirical constants characterizing the decay of separation functions, :math:`\gamma_{tf}` is the yaw angle of the tail fin with respect to the free-stream wind (:math:`V_{\text{wind}}`), :math:`\alpha^*_i` are the characteristics angles for separation functions.
+:math:`x_i` takes on a value between 0 and 1, and are used to activate or deactivate a the contribution of potential lift, vortex lift and draft to the normal force on the tail fin.
+
+The normal force is assumed to act at the user defined reference point on the tail fin and the moment of the normal force is calculated accordingly.

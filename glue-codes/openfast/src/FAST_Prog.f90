@@ -32,7 +32,8 @@ PROGRAM FAST
 
 
 USE FAST_Subs   ! all of the ModuleName and ModuleName_types modules are inherited from FAST_Subs
-                       
+USE FAST_SS_Subs, ONLY : FAST_RunSteadyStateDriver
+
 IMPLICIT  NONE
    
    ! Local parameters:
@@ -58,7 +59,7 @@ INTEGER(IntKi)                        :: Restart_step                           
       ! determine if this is a restart from checkpoint
       !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    CALL NWTC_Init() ! initialize NWTC library (set some global constants and if necessary, open console for writing)
-   ProgName = 'OpenFAST'
+   ProgName = FAST_Ver%Name
    InputFile = ""
    CheckpointRoot = ""
 
@@ -76,6 +77,11 @@ INTEGER(IntKi)                        :: Restart_step                           
       Restart_step = Turbine(1)%p_FAST%n_TMax_m1 + 1
       CALL ExitThisProgram_T( Turbine(1), ErrID_None, .true., SkipRunTimeMsg = .TRUE. )
       
+   ELSE IF ( TRIM(FlagArg) == 'STEADYSTATE' ) THEN ! Do steady-state analysis, not time-marching -- this works for only 1 turbine (i.e., NumTurbines==1)!
+
+      ! this runs the steady-state solver driver and ENDS the program:
+      CALL FAST_RunSteadyStateDriver( Turbine(1) )
+   
    ELSEIF ( LEN( TRIM(FlagArg) ) > 0 ) THEN ! Any other flag, end normally
       CALL NormStop()
 

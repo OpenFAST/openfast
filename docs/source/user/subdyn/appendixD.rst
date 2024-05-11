@@ -7,7 +7,7 @@ This is a list of all possible output parameters for the SubDyn module.
 The names are grouped by meaning, but can be ordered in the OUTPUT
 CHANNELS section of the SubDyn input file as the user sees fit. :math:`M \alpha N \beta`,
 refers to node :math:`\beta` of member :math:`\alpha`, where :math:`\alpha` is a number in the range [1,9] and
-corresponds to row :math:`\alpha` in the MEMBER OUTPUT LIST table (see Section ) and
+corresponds to row :math:`\alpha` in the MEMBER OUTPUT LIST table (see :numref:`SD_Member_Output`) and
 :math:`\beta` is a number in the range [1,9] and corresponds to node :math:`\beta` in the
 **NodeCnt** list of that table entry.
 

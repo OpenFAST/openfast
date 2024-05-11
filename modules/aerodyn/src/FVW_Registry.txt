@@ -209,6 +209,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             Uind          ::    -  -  "Induced velocities obtained at control points" -
 # Outputs
 typedef     ^                   ^               GridOutType                      GridOutputs   {:}  - -    "Number of VTK grid to output" -
+typedef     ^                   ^               Logical                          InfoReeval     - .true. - "Give info about Reevaluation: gets set to false after first info statement" -
 
 # ........ Input ............
 # Rotors

@@ -253,6 +253,17 @@ be found in the following pages:
 - `Index of Types <../../html/classes.html>`_
 - `Source Files <../../html/files.html>`_
 
+C++ API Reference
+~~~~~~~~~~~~~~~~~~~
+C++ API documentation is available.
+
+.. toctree::
+   :maxdepth: 1
+
+   cppapi/index.rst
+
+
+
 Other Documentation
 ~~~~~~~~~~~~~~~~~~~
 Additional documentation exists that may be useful for developers seeking deeper

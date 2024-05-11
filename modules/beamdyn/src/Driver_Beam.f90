@@ -102,7 +102,8 @@ PROGRAM BeamDyn_Driver_Program
    BD_InitInput%RootName = TRIM(RootName)//'.BD'
    BD_InitInput%RootDisp = MATMUL(BD_InitInput%GlbPos(:),DvrData%RootRelInit) - BD_InitInput%GlbPos(:)
    BD_InitInput%DynamicSolve = DvrData%DynamicSolve      ! QuasiStatic options handled within the BD code.
-
+   BD_InitInput%CompAeroMaps = .false.
+   
    t_global = DvrData%t_initial
    n_t_final = ((DvrData%t_final - DvrData%t_initial) / dt_global )
 
@@ -136,7 +137,7 @@ PROGRAM BeamDyn_Driver_Program
    call Init_RotationCenterMesh(DvrData, BD_InitInput, BD_Input(1)%RootMotion, ErrStat, ErrMsg)
       CALL CheckError()
 
-   call CreateMultiPointMeshes(DvrData,BD_InitInput,BD_InitOutput,BD_Parameter, BD_Output, BD_Input(1), ErrStat, ErrMsg)   
+   call CreateMultiPointMeshes(DvrData,BD_InitInput,BD_InitOutput,BD_Parameter,BD_OtherState, BD_Output, BD_Input(1), ErrStat, ErrMsg)   
    call Transfer_MultipointLoads(DvrData, BD_Output, BD_Input(1), ErrStat, ErrMsg)   
    
    CALL Dvr_InitializeOutputFile(DvrOut,BD_InitOutput,RootName,ErrStat,ErrMsg)

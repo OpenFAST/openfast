@@ -20,9 +20,6 @@ add_executable(openfast src/FAST_Prog.f90)
 target_link_libraries(openfast openfastlib_static)
 set_target_properties(openfast PROPERTIES LINKER_LANGUAGE Fortran)
 
-add_executable(openfast_cpp src/FAST_Prog.cpp src/FastLibAPI.cpp)
-target_link_libraries(openfast_cpp openfastlib)
-
 string(TOUPPER ${CMAKE_Fortran_COMPILER_ID} _compiler_id)
 if (${_compiler_id} STREQUAL "GNU" AND NOT ${VARIABLE_TRACKING})
   # With variable tracking enabled, the compile step frequently aborts on large modules and
@@ -33,5 +30,15 @@ if (${_compiler_id} STREQUAL "GNU" AND NOT ${VARIABLE_TRACKING})
   set_source_files_properties(src/FAST_Prog.f90 PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
 endif()
 
-install(TARGETS openfast openfast_cpp
+install(TARGETS openfast
   RUNTIME DESTINATION bin)
+
+if(BUILD_OPENFAST_CPP_DRIVER)
+  add_executable(openfast_cpp_driver src/FAST_Prog.cpp src/FastLibAPI.cpp)
+  target_link_libraries(openfast_cpp_driver openfastlib)
+  
+  install(TARGETS openfast_cpp_driver
+    RUNTIME DESTINATION bin)
+endif()
+
+

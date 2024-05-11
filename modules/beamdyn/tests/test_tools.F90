@@ -91,6 +91,11 @@ contains
         getGravityInZ = (/ 0.0, 0.0, -9.806 /)
     end function
     
+    type(BD_OtherStateType) function simpleOtherState() result(otherstate)
+        ! fixed size arrays
+        otherstate%Glb_crv = (/ 0.0, 0.0, 0.0 /)
+        otherstate%GlbRot = identity()
+    end function
     type(BD_ParameterType) function simpleParameterType(elem_total, nodes_per_elem, nqp, qp_indx_offset, refine) RESULT(p)
   
         integer, intent(in   ) :: elem_total
@@ -110,10 +115,6 @@ contains
         p%refine = refine
 
         p%dof_node = 6
-
-        ! fixed size arrays
-        p%Glb_crv = (/ 0.0, 0.0, 0.0 /)
-        p%GlbRot = identity()
 
         ! allocate arrays
         call AllocAry(p%qp%mmm, p%nqp, p%elem_total, 'qp_mmm', ErrStat, ErrMsg)

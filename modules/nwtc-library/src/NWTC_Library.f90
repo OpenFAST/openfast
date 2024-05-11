@@ -75,6 +75,7 @@ MODULE NWTC_Library
     USE NWTC_Num  ! technically we don't need to specify this if we have ModMesh (because ModMesh USEs NWTC_Num)
     USE ModMesh
     USE ModReg
+    USE ModVar
     
 #ifndef NO_MESHMAPPING
     ! Note that ModMesh_Mapping also includes LAPACK routines
@@ -82,6 +83,11 @@ MODULE NWTC_Library
 #endif
 
     IMPLICIT  NONE
+    
+    INTEGER, PARAMETER ::MHK_None = 0
+    INTEGER, PARAMETER ::MHK_FixedBottom = 1
+    INTEGER, PARAMETER ::MHK_Floating = 2
+
 
     CONTAINS
 

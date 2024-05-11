@@ -27,7 +27,9 @@ else()
 endif()
 add_definitions(-DGIT_VERSION_INFO="${GIT_DESCRIBE}")
 
-add_library(versioninfolib src/VersionInfo.f90)
+add_library(versioninfolib STATIC
+  src/VersionInfo.f90
+)
 target_link_libraries(versioninfolib nwtclibs)
 
 install(TARGETS versioninfolib

@@ -11,8 +11,8 @@ maintained paths for obtaining an OpenFAST executable.
 
 Most users of OpenFAST will not require modifying or compiling the source
 code. **For the simplest installation of OpenFAST without changing the source
-code,** refer to the table in the :ref:`download_binaries` section and read
-the corresponding documentation for specific instructions.
+code,** refer to the table in the :ref:`download_binaries` or :ref:`use_docker`
+sections and read the corresponding documentation for specific instructions.
 For instructions on compiling, see :ref:`compile_from_source`.
 
 .. _download_binaries:
@@ -153,6 +153,60 @@ containing the executables, and running a simple test command:
 
     cd C:\your\path\Desktop\openfast_binaries\
     openfast_x64.exe /h
+
+
+.. _use_docker:
+
+Running OpenFAST with docker
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+OpenFAST is avilable to be run on docker starting with version 3.5.3. Three approaches are shared below.
+
+Using a docker image from Docker hub
+------------------------------------
+Multiple versions of OpenFAST are also available as docker images from our `docker registry <https://hub.docker.com/r/nrel/openfast>`_.
+To pull and run one with files from your local machine available, run:
+
+.. code-block:: shell
+
+    docker run --rm -it --volume=/path/to/files:/files nrel/openfast:latest openfast /files/main.fst
+
+This command deletes the container (but not the image) when the analysis is finished and leaves the outputs in the same
+local directory as the input files. 
+
+You can also run commands interactively inside the container with:
+
+.. code-block:: shell
+
+    docker run --rm -it --volume=/path/to/files:/files nrel/openfast:latest /bin/bash
+
+To pull a specific release, substitute the version number in place of `latest` in the above commands (i.e. `nrel/openfast:3.5.3`).
+
+
+Using a docker image from GitHub container registry
+---------------------------------------------------
+In addition to images hosted on Docker hub, we also host docker images on our
+`GitHub container registry <https://github.com/orgs/OpenFAST/packages?repo_name=openfast>`_.
+The commands for pulling an image from the GitHub container repository are
+similar to those for pulling and running from Docker hub.  
+
+To pull and run with local files:
+
+.. code-block:: shell
+
+    docker run --rm -it --volume=/path/to/files:/files ghcr.io/OpenFAST/openfast:latest openfast /files/main.fst
+
+For running the container interactively:
+
+.. code-block:: shell
+
+    docker run --rm -it --volume=/path/to/files:/files ghcr.io/OpenFAST/openfast:latest /bin/bash
+
+
+Build your own images
+---------------------
+You can also build your own custom images using our `Dockerfile` or base your images on ours. See
+`here <https://github.com/OpenFAST/openfast/blob/main/share/docker/README.md>`_ for more information on this.
+
 
 .. _compile_from_source:
 

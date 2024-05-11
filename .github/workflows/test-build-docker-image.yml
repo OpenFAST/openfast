@@ -1,0 +1,38 @@
+# This workflow tests building an OpenFAST docker image for the linux/amd64 architecture on push to a release candidate
+# branch. The build cache is stored in GitHub actions.
+name: test-build-docker-image
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-build:
+    if: startsWith(github.head_ref, 'rc-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      DOCKERFILE_PATH: share/docker/Dockerfile
+      DOCKERHUB_REPOSITORY: nrel/openfast
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract tag from release candidate branch name
+        id: extract-tag
+        run: echo "openfast-tag=$(expr substr "${{ github.head_ref }}" 4 100)" >> $GITHUB_OUTPUT
+
+      - name: Test building docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ env.DOCKERFILE_PATH }}
+          platforms: linux/amd64
+          tags: ${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.extract-tag.outputs.openfast-tag }}
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1006,11 +1006,13 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
 
       ! OutList - List of user-requested output channels at each node(-):
    CALL ReadOutputList ( UnIn, InputFile, InputFileData%BldNd_OutList, InputFileData%BldNd_NumOuts, 'BldNd_OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  )     ! Routine in NWTC Subroutine Library
-   IF ( ErrStat2 >= AbortErrLev ) THEN
+   IF ( ErrStat2 >= AbortErrLev .and. InputFileData%BldNd_NumOuts < 1) THEN
       InputFileData%BldNd_NumOuts = 0
       call wrscr( trim(ErrMsg_NoBldNdOuts) )
       CALL Cleanup()
       RETURN
+   ELSE
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ENDIF
 
    !---------------------- END OF FILE -----------------------------------------
@@ -1684,7 +1686,7 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg, CalcWriteOutput 
    
       ! compute the root relative orientation, RootRelOrient, which is used in several calculations below 
       ! RootRelOrient = matmul( transpose(m%u2%RootMotion%Orientation(:,:,1)), m%u2%RootMotion%RefOrientation(:,:,1))
-   call LAPACK_DGEMM('T', 'N', 1.0_BDKi, m%u2%RootMotion%Orientation(:,:,1), m%u2%RootMotion%RefOrientation(:,:,1), 0.0_BDKi, RootRelOrient,   ErrStat2, ErrMsg2 )
+   call LAPACK_GEMM('T', 'N', 1.0_BDKi, m%u2%RootMotion%Orientation(:,:,1), m%u2%RootMotion%RefOrientation(:,:,1), 0.0_BDKi, RootRelOrient,   ErrStat2, ErrMsg2 )
    
       !------------------------------------
       ! Tip translational deflection (relative to the undeflected position) expressed in r   
@@ -1699,8 +1701,8 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg, CalcWriteOutput 
 
       !-------------------------
       ! Tip angular/rotational deflection Wiener-Milenkovic parameter (relative to the undeflected orientation) expressed in r
-   call LAPACK_DGEMM('N', 'T', 1.0_BDKi, y%BldMotion%RefOrientation(:,:,y%BldMotion%NNodes), RootRelOrient,   0.0_BDKi, temp33_2, ErrStat2, ErrMsg2 )
-   call LAPACK_DGEMM('T', 'N', 1.0_BDKi, y%BldMotion%Orientation(   :,:,y%BldMotion%NNodes), temp33_2,        0.0_BDKi, temp33,   ErrStat2, ErrMsg2 )
+   call LAPACK_GEMM('N', 'T', 1.0_BDKi, y%BldMotion%RefOrientation(:,:,y%BldMotion%NNodes), RootRelOrient,   0.0_BDKi, temp33_2, ErrStat2, ErrMsg2 )
+   call LAPACK_GEMM('T', 'N', 1.0_BDKi, y%BldMotion%Orientation(   :,:,y%BldMotion%NNodes), temp33_2,        0.0_BDKi, temp33,   ErrStat2, ErrMsg2 )
    call BD_CrvExtractCrv(temp33,temp_vec2, ErrStat2, ErrMsg2) ! temp_vec2 = the Wiener-Milenkovic parameters of the tip angular/rotational defelctions
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
@@ -1785,8 +1787,8 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg, CalcWriteOutput 
 
          !-------------------------
          ! Sectional angular/rotational deflection Wiener-Milenkovic parameter (relative to the undeflected orientation) expressed in r
-      call LAPACK_DGEMM('N', 'T', 1.0_BDKi, y%BldMotion%RefOrientation(:,:,j_BldMotion), RootRelOrient,  0.0_BDKi, temp33_2, ErrStat2, ErrMsg2 )
-      call LAPACK_DGEMM('T', 'N', 1.0_BDKi, y%BldMotion%Orientation(   :,:,j_BldMotion), temp33_2,       0.0_BDKi, temp33,   ErrStat2, ErrMsg2 )
+      call LAPACK_GEMM('N', 'T', 1.0_BDKi, y%BldMotion%RefOrientation(:,:,j_BldMotion), RootRelOrient,  0.0_BDKi, temp33_2, ErrStat2, ErrMsg2 )
+      call LAPACK_GEMM('T', 'N', 1.0_BDKi, y%BldMotion%Orientation(   :,:,j_BldMotion), temp33_2,       0.0_BDKi, temp33,   ErrStat2, ErrMsg2 )
       call BD_CrvExtractCrv(temp33,temp_vec2, ErrStat2, ErrMsg2) ! temp_vec2 = the Wiener-Milenkovic parameters of the node's angular/rotational defelctions
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
@@ -1915,11 +1917,12 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg, CalcWriteOutput 
 END SUBROUTINE Calc_WriteOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine generates the summary file, which contains a regurgitation of  the input data and interpolated flexible body data.
-SUBROUTINE BD_PrintSum( p, x, m, InitInp, ErrStat, ErrMsg )
+SUBROUTINE BD_PrintSum( p, x, OtherState, m, InitInp, ErrStat, ErrMsg )
    use YAML, only: yaml_write_var, yaml_write_array, yaml_write_list
       ! passed variables
    TYPE(BD_ParameterType),       INTENT(IN)     :: p                 !< Parameters of the structural dynamics module
    type(BD_ContinuousStateType), intent(in)     :: x                 !< Continuous states
+   TYPE(BD_OtherStateType),      intent(in   ) :: OtherState         !< Other states at t
    TYPE(BD_MiscVarType),         INTENT(INout)  :: m                 !< misc/optimization variables
    TYPE(BD_InitInputType),       INTENT(IN   )  :: InitInp           !< Input data for initialization routine
    INTEGER(IntKi),               INTENT(OUT)    :: ErrStat           !< error status
@@ -1947,15 +1950,15 @@ SUBROUTINE BD_PrintSum( p, x, m, InitInp, ErrStat, ErrMsg )
    WRITE (UnSu,'(A)')  '#This summary information was generated by '//TRIM( GetNVD(BeamDyn_Ver) )
                          
    WRITE (UnSu,'(/,A)')  '# --- Main parameters'
-   call yaml_write_var  (UnSu, 'Mass'    , p%blade_mass    , 'F13.3', ErrStat, ErrMsg, comment='(kg)')
-   call yaml_write_var  (UnSu, 'Length'  , p%blade_length  , 'F13.3', ErrStat, ErrMsg, comment='(m)')
-   call yaml_write_list (UnSu, 'CG'      , p%blade_CG      , 'ES18.5', ErrStat, ErrMsg, comment='Blade center of mass (IEC coords) (m) from blade root')
-   call yaml_write_array(UnSu, 'JRoot'   , p%blade_IN      , 'ES18.5', ErrStat, ErrMsg, comment='Blade mass moment of inertia at blade root. NOTE: from mass distribution only, missing some important inertial contributions (see PR#1337)')
-   call yaml_write_list (UnSu, 'GlbPos'  , p%GlbPos        , 'ES18.5', ErrStat, ErrMsg, comment='Global position vector (IEC coords) of blade root')
-   call yaml_write_array(UnSu, 'GlbRot'  , p%GlbRot        , 'ES18.5', ErrStat, ErrMsg, comment='Global rotation tensor (IEC coords)')
-   call yaml_write_array(UnSu, 'RootOri' , InitInp%RootOri , 'ES18.5', ErrStat, ErrMsg, comment='Initial blade orientation tensor (relative to global rotation tensor)')
-   call yaml_write_list (UnSu, 'GlbCrv'  , p%Glb_crv       , 'ES18.5', ErrStat, ErrMsg, comment='Global rotation WM parameters (IEC coords)')
-   call yaml_write_list (UnSu, 'Gravity' , p%gravity       , 'ES18.5', ErrStat, ErrMsg, comment='Gravity vector (m/s^2) (IEC coords)')
+   call yaml_write_var  (UnSu, 'Mass'    , p%blade_mass      , 'F13.3', ErrStat, ErrMsg, comment='(kg)')
+   call yaml_write_var  (UnSu, 'Length'  , p%blade_length    , 'F13.3', ErrStat, ErrMsg, comment='(m)')
+   call yaml_write_list (UnSu, 'CG'      , p%blade_CG        , 'ES18.5', ErrStat, ErrMsg, comment='Blade center of mass (IEC coords) (m) from blade root')
+   call yaml_write_array(UnSu, 'JRoot'   , p%blade_IN        , 'ES18.5', ErrStat, ErrMsg, comment='Blade mass moment of inertia at blade root. NOTE: from mass distribution only, missing some important inertial contributions (see PR#1337)')
+   call yaml_write_list (UnSu, 'GlbPos'  , OtherState%GlbPos , 'ES18.5', ErrStat, ErrMsg, comment='Global position vector (IEC coords) of blade root at Initialization')
+   call yaml_write_array(UnSu, 'GlbRot'  , OtherState%GlbRot , 'ES18.5', ErrStat, ErrMsg, comment='Global rotation tensor (IEC coords) at Initialization')
+   call yaml_write_array(UnSu, 'RootOri' , InitInp%RootOri   , 'ES18.5', ErrStat, ErrMsg, comment='Initial blade orientation tensor (relative to global rotation tensor)')
+   call yaml_write_list (UnSu, 'GlbCrv'  , OtherState%Glb_crv, 'ES18.5', ErrStat, ErrMsg, comment='Global rotation WM parameters (IEC coords) at Initialization')
+   call yaml_write_list (UnSu, 'Gravity' , p%gravity         , 'ES18.5', ErrStat, ErrMsg, comment='Gravity vector (m/s^2) (IEC coords)')
 
 !FIXME:analysis_type
    IF(p%analysis_type .EQ. BD_STATIC_ANALYSIS) THEN
@@ -2088,10 +2091,14 @@ SUBROUTINE Init_Jacobian( p, u, y, m, InitOut, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
 
       ! determine how many inputs there are in the Jacobians
-   nu = u%RootMotion%NNodes * 18            & ! 3 Translation Displacements + 3 orientations + 6 velocities (rotation+translation) + 6 accelerations at each node
-      + u%PointLoad%NNodes  * 6             & ! 3 forces + 3 moments at each node
-      + u%DistrLoad%NNodes  * 6               ! 3 forces + 3 moments at each node
-      
+   if (p%CompAeroMaps) then
+      nu = u%DistrLoad%NNodes  * 6               ! 3 forces + 3 moments at each node
+   else
+      nu = u%RootMotion%NNodes * 18            & ! 3 Translation Displacements + 3 orientations + 6 velocities (rotation+translation) + 6 accelerations at each node
+         + u%PointLoad%NNodes  * 6             & ! 3 forces + 3 moments at each node
+         + u%DistrLoad%NNodes  * 6               ! 3 forces + 3 moments at each node
+   end if
+   
    ! all other inputs (e.g., hub motion) ignored
 
    !............................
@@ -2116,29 +2123,31 @@ SUBROUTINE Init_Jacobian( p, u, y, m, InitOut, ErrStat, ErrMsg)
    !Module/Mesh/Field: u%RootMotion%RotationVel      = 4;
    !Module/Mesh/Field: u%RootMotion%TranslationAcc   = 5;
    !Module/Mesh/Field: u%RootMotion%RotationAcc      = 6;
-   do i_meshField = 1,6
-      do i=1,u%RootMotion%NNodes
-         do j=1,3
-            p%Jac_u_indx(index,1) =  i_meshField
-            p%Jac_u_indx(index,2) =  j !component index:  j
-            p%Jac_u_indx(index,3) =  i !Node:   i
-            index = index + 1
-         end do !j
-      end do !i
-   end do
+   if (.not. p%CompAeroMaps) then
+      do i_meshField = 1,6
+         do i=1,u%RootMotion%NNodes
+            do j=1,3
+               p%Jac_u_indx(index,1) =  i_meshField
+               p%Jac_u_indx(index,2) =  j !component index:  j
+               p%Jac_u_indx(index,3) =  i !Node:   i
+               index = index + 1
+            end do !j
+         end do !i
+      end do
    
-   !Module/Mesh/Field: u%PointLoad%Force   = 7;
-   !Module/Mesh/Field: u%PointLoad%Moment  = 8;
-   do i_meshField = 7,8
-      do i=1,u%PointLoad%NNodes
-         do j=1,3
-            p%Jac_u_indx(index,1) =  i_meshField
-            p%Jac_u_indx(index,2) =  j !component index:  j
-            p%Jac_u_indx(index,3) =  i !Node:   i
-            index = index + 1
-         end do !j
-      end do !i
-   end do
+      !Module/Mesh/Field: u%PointLoad%Force   = 7;
+      !Module/Mesh/Field: u%PointLoad%Moment  = 8;
+      do i_meshField = 7,8
+         do i=1,u%PointLoad%NNodes
+            do j=1,3
+               p%Jac_u_indx(index,1) =  i_meshField
+               p%Jac_u_indx(index,2) =  j !component index:  j
+               p%Jac_u_indx(index,3) =  i !Node:   i
+               index = index + 1
+            end do !j
+         end do !i
+      end do
+   end if
    
    !Module/Mesh/Field: u%DistrLoad%Force   =  9;
    !Module/Mesh/Field: u%DistrLoad%Moment  = 10;
@@ -2194,10 +2203,12 @@ SUBROUTINE Init_Jacobian( p, u, y, m, InitOut, ErrStat, ErrMsg)
    InitOut%RotFrame_u = .false. ! every input is on a mesh, which stores values in the global (not rotating) frame
    
    index = 1
-   call PackMotionMesh_Names(u%RootMotion, 'RootMotion', InitOut%LinNames_u, index) ! all 6 motion fields
-   InitOut%IsLoad_u(1:index-1) = .false. ! the RootMotion inputs are not loads
-   InitOut%IsLoad_u(index:)    = .true.  ! the remaining inputs are loads
-   call PackLoadMesh_Names(  u%PointLoad,   'PointLoad', InitOut%LinNames_u, index)
+   InitOut%IsLoad_u = .true.  ! initialize all inputs as loads, and overwrite for the RootMotion mesh, below:
+   if (.not. p%CompAeroMaps) then
+      call PackMotionMesh_Names(u%RootMotion, 'RootMotion', InitOut%LinNames_u, index) ! all 6 motion fields
+      InitOut%IsLoad_u(1:index-1) = .false. ! the RootMotion inputs are not loads
+      call PackLoadMesh_Names(  u%PointLoad,   'PointLoad', InitOut%LinNames_u, index)
+   end if
    call PackLoadMesh_Names(  u%DistrLoad,   'DistrLoad', InitOut%LinNames_u, index)
 
 
@@ -2224,16 +2235,20 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
 
    CHARACTER(ChanLen)                                :: ChannelName
    LOGICAL                                           :: isRotating
+   LOGICAL                                           :: BladeMask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
    
    ErrStat = ErrID_None
    ErrMsg  = ""
    
+   if (p%CompAeroMaps) then
+      p%Jac_ny = y%BldMotion%NNodes     * 12     ! 6 displacements (translation, rotation) + 6 velocities 
+   else
    
-      ! determine how many outputs there are in the Jacobians     
-   p%Jac_ny = y%ReactionForce%NNodes * 6     & ! 3 forces + 3 moments at each node
-            + y%BldMotion%NNodes     * 18    & ! 6 displacements (translation, rotation) + 6 velocities + 6 accelerations at each node
-            + p%NumOuts + p%BldNd_TotNumOuts   ! WriteOutput values 
-   
+         ! determine how many outputs there are in the Jacobians     
+      p%Jac_ny = y%ReactionForce%NNodes * 6     & ! 3 forces + 3 moments at each node
+               + y%BldMotion%NNodes     * 18    & ! 6 displacements (translation, rotation) + 6 velocities + 6 accelerations at each node
+               + p%NumOuts + p%BldNd_TotNumOuts   ! WriteOutput values 
+   end if
    
       ! get the names of the linearized outputs:
    call AllocAry(InitOut%LinNames_y, p%Jac_ny,'LinNames_y',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -2244,50 +2259,58 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    InitOut%RotFrame_y = .false.   ! need to set all the values in the global system to .false
    
    index_next = 1
-   call PackLoadMesh_Names(  y%ReactionForce, 'Reaction force', InitOut%LinNames_y, index_next)
-   call PackMotionMesh_Names(y%BldMotion,     'Blade motion',   InitOut%LinNames_y, index_next)
-
-   do i=1,p%NumOuts + p%BldNd_TotNumOuts
-      InitOut%LinNames_y(i+index_next-1) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))
-   end do
+   if (p%CompAeroMaps) then
+      BladeMask = .true. ! default is all the fields
+      BladeMask(MASKID_TRANSLATIONACC) = .false.
+      BladeMask(MASKID_ROTATIONACC)    = .false.
    
-   AllOut = .true. ! all output values except those specifically in the global system are in the rotating system
-   AllOut(TipTVXg) = .false.
-   AllOut(TipTVYg) = .false.
-   AllOut(TipTVZg) = .false.
-   AllOut(TipRVXg) = .false.
-   AllOut(TipRVYg) = .false.
-   AllOut(TipRVZg) = .false.
-      
-   do j=1,9
-      do i=1,3 !x,y,z
-         AllOut(NTVg(j,i)) = .false.
-         AllOut(NRVg(j,i)) = .false.
+      call PackMotionMesh_Names(y%BldMotion,     'Blade motion',   InitOut%LinNames_y, index_next, FieldMask=BladeMask)
+   else
+      call PackLoadMesh_Names(  y%ReactionForce, 'Reaction force', InitOut%LinNames_y, index_next)
+      call PackMotionMesh_Names(y%BldMotion,     'Blade motion',   InitOut%LinNames_y, index_next)
+
+      do i=1,p%NumOuts + p%BldNd_TotNumOuts
+         InitOut%LinNames_y(i+index_next-1) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))
       end do
-   end do
    
-   do i=1,p%NumOuts
-      if (p%OutParam(i)%Indx == 0 ) then
-         InitOut%RotFrame_y(i+index_next-1) = .false.
-      else
-         InitOut%RotFrame_y(i+index_next-1) = AllOut( p%OutParam(i)%Indx )
-      end if
-   end do
+      AllOut = .true. ! all output values except those specifically in the global system are in the rotating system
+      AllOut(TipTVXg) = .false.
+      AllOut(TipTVYg) = .false.
+      AllOut(TipTVZg) = .false.
+      AllOut(TipRVXg) = .false.
+      AllOut(TipRVYg) = .false.
+      AllOut(TipRVZg) = .false.
+      
+      do j=1,9
+         do i=1,3 !x,y,z
+            AllOut(NTVg(j,i)) = .false.
+            AllOut(NRVg(j,i)) = .false.
+         end do
+      end do
+   
+      do i=1,p%NumOuts
+         if (p%OutParam(i)%Indx == 0 ) then
+            InitOut%RotFrame_y(i+index_next-1) = .false.
+         else
+            InitOut%RotFrame_y(i+index_next-1) = AllOut( p%OutParam(i)%Indx )
+         end if
+      end do
    
 
-      ! set outputs for all nodes out:
-   index_next = index_next + p%NumOuts
-   DO i=1,p%BldNd_NumOuts
-      ChannelName = p%BldNd_OutParam(i)%Name
-      call Conv2UC(ChannelName)
-      if ( ChannelName( LEN_TRIM(ChannelName):LEN_TRIM(ChannelName) ) == 'G') then ! channel is in global coordinate system
-         isRotating = .false.
-      else
-         isRotating = .true.
-      end if
-      InitOut%RotFrame_y(index_next : index_next+size(p%BldNd_BlOutNd)-1 ) = isRotating
-      index_next = index_next + size(p%BldNd_BlOutNd)
-   ENDDO
+         ! set outputs for all nodes out:
+      index_next = index_next + p%NumOuts
+      DO i=1,p%BldNd_NumOuts
+         ChannelName = p%BldNd_OutParam(i)%Name
+         call Conv2UC(ChannelName)
+         if ( ChannelName( LEN_TRIM(ChannelName):LEN_TRIM(ChannelName) ) == 'G') then ! channel is in global coordinate system
+            isRotating = .false.
+         else
+            isRotating = .true.
+         end if
+         InitOut%RotFrame_y(index_next : index_next+size(p%BldNd_BlOutNd)-1 ) = isRotating
+         index_next = index_next + size(p%BldNd_BlOutNd)
+      ENDDO
+   end if
 
 
 END SUBROUTINE Init_Jacobian_y
@@ -2438,14 +2461,22 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
       ! local variables:
    INTEGER(IntKi)                                    :: i              ! loop over outputs
    INTEGER(IntKi)                                    :: indx_first     ! index indicating next value of dY to be filled 
-   
+   LOGICAL                                           :: Mask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
+
    indx_first = 1
-   call PackLoadMesh_dY(  y_p%ReactionForce, y_m%ReactionForce, dY, indx_first)
-   call PackMotionMesh_dY(y_p%BldMotion,     y_m%BldMotion,     dY, indx_first) ! all 6 motion fields
+   if (p%CompAeroMaps) then
+      Mask  = .true.
+      Mask(MASKID_TRANSLATIONACC) = .false.
+      Mask(MASKID_ROTATIONACC) = .false.
+      call PackMotionMesh_dY(y_p%BldMotion,     y_m%BldMotion,     dY, indx_first, FieldMask=Mask) ! 4 motion fields
+   else
+      call PackLoadMesh_dY(  y_p%ReactionForce, y_m%ReactionForce, dY, indx_first)
+      call PackMotionMesh_dY(y_p%BldMotion,     y_m%BldMotion,     dY, indx_first) ! all 6 motion fields
    
-   do i=1,p%NumOuts + p%BldNd_TotNumOuts
-      dY(i+indx_first-1) = y_p%WriteOutput(i) - y_m%WriteOutput(i)
-   end do
+      do i=1,p%NumOuts + p%BldNd_TotNumOuts
+         dY(i+indx_first-1) = y_p%WriteOutput(i) - y_m%WriteOutput(i)
+      end do
+   end if
    
    
    dY = dY / (2.0_R8Ki*delta)
@@ -2529,11 +2560,12 @@ END SUBROUTINE Compute_dX
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine uses values of two output types to compute an array of differences.
 !! Do not change this packing without making sure subroutine beamdyn::init_jacobian is consistant with this routine!
-SUBROUTINE Compute_RelState_Matrix(p, u, x, RelState_x, RelState_xdot)
+SUBROUTINE Compute_RelState_Matrix(p, u, x, OtherState, RelState_x, RelState_xdot)
    
    TYPE(BD_ParameterType)            , INTENT(IN   ) :: p                  !< parameters
    TYPE(BD_InputType)                , INTENT(IN   ) :: u                  !< BD inputs
    TYPE(BD_ContinuousStateType)      , INTENT(IN   ) :: x                  !< BD continuous states
+   TYPE(BD_OtherStateType)           , INTENT(IN   ) :: OtherState         !< Other states at t
    REAL(R8Ki)                        , INTENT(INOUT) :: RelState_x(:,:)    !< 
    REAL(R8Ki)                        , INTENT(INOUT) :: RelState_xdot(:,:) !< 
    
@@ -2564,7 +2596,7 @@ SUBROUTINE Compute_RelState_Matrix(p, u, x, RelState_x, RelState_xdot)
          dqdt_index = p%Jac_nx + q_index
          
          DisplacedPosition = u%RootMotion%Position(:,1) + u%RootMotion%TranslationDisp(:,1) &
-                           - p%GlbPos - MATMUL(p%GlbRot, p%uuN0(1:3,j,i) + x%q(1:3,node) )
+                           - OtherState%GlbPos - MATMUL(OtherState%GlbRot, p%uuN0(1:3,j,i) + x%q(1:3,node) )
 
          RotVel = real(u%RootMotion%RotationVel(:,1),R8Ki)
          RotAcc = real(u%RootMotion%RotationAcc(:,1),R8Ki)

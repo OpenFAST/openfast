@@ -1,0 +1,82 @@
+###################################################################################################################################
+# Registry for Linear Dynamics Module
+###################################################################################################################################
+include   Registry_NWTC_Library.txt
+
+#param     ElasticSection/ES      -                INTEGER           ES_Baseline      -        1   -   "UAMod = 1 [Baseline model (Original)]" -
+
+# ..... Initialization data .......................................................................................................
+# Initialization inputs
+typedef   LinDyn/LD                    InitInputType                 DbKi                     dt                              -             -         -        "time step" s
+typedef   ^                            ^                             IntKi                    IntMethod                       -             -         -        "Identifier for integration method (1 [RK4], 2 [AB4], or 3 [ABM4])" -
+typedef   ^                            ^                             ReKi                     MM                              {:}{:}        -         -        "Mass      matrix"    -
+typedef   ^                            ^                             ReKi                     CC                              {:}{:}        -         -        "Damping   matrix"    -
+typedef   ^                            ^                             ReKi                     KK                              {:}{:}        -         -        "Stiffness matrix"    -
+typedef   ^                            ^                             ReKi                     x0                              {:}           0         -        "Degrees of freedom initial conditions - shape nx" -
+typedef   ^                            ^                             ReKi                     xd0                             {:}           0         -        "Velocities initial conditions - shape nx" -
+typedef   ^                            ^                             logical                  activeDOFs                      {:}          .true.     -        "Degrees of freedom that are active - shape nx"   -
+typedef   ^                            ^                             character(8)             prefix                          -             ""        -        "Prefix for degrees of freedom write outputs"   -
+typedef   ^                            ^                             character(8)             DOFsNames                       {:}           ""        -        "Names of degrees of freedom for write outputs"     -
+typedef   ^                            ^                             character(8)             DOFsUnits                       {:}           ""        -        "Units of degrees of freedom for write outputs"     -
+typedef   ^                            ^                             logical                  Linearize                        -           .false.    -        "Flag that tells this module if the glue code wants to linearize." -
+typedef   ^                            ^                             character(2048)          PrescribedMotionFile             -             ""       -        "Input file for prescribed motion"   -
+
+# Initialization outputs
+typedef LinDyn/LD                      InitOutputType                ProgDesc                 Ver                              -            -         -        "This module's name, version, and date"	-
+typedef   ^                            InitOutputType                character(ChanLen)       WriteOutputHdr                  {:}           -         -        "The is the list of all output channel header strings (includes all sub-module channels)"    -
+typedef   ^                            ^                             character(ChanLen)       WriteOutputUnt                  {:}           -         -        "The is the list of all output channel unit strings (includes all sub-module channels)"    -
+typedef   ^                            ^                             character(LinChanLen)    LinNames_y                      {:}           -         -        "Names of the outputs used in linearization" -
+typedef   ^                            ^                             character(LinChanLen)    LinNames_x                      {:}           -         -        "Names of the continuous states used in linearization" -
+typedef   ^                            ^                             character(LinChanLen)    LinNames_u                      {:}           -         -        "Names of the inputs used in linearization" -
+typedef   ^                            ^                             logical                  RotFrame_y                      {:}           -         -        "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame"	-
+typedef   ^                            ^                             logical                  RotFrame_x                      {:}           -         -        "Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame"	-
+typedef   ^                            ^                             logical                  RotFrame_u                      {:}           -         -        "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
+typedef   ^                            ^                             logical                  IsLoad_u                        {:}           -         -        "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
+typedef   ^                            ^                             IntKi                    DerivOrder_x                    {:}           -         -        "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization" -
+
+# ..... States ....................................................................................................................
+# Continuous states
+typedef   ^                            ContinuousStateType           ReKi                     q                               {:}           -         -        "Continuous states q =(x,xdot)"        "-"
+
+# Discrete (non-differentiable) states:
+typedef   ^                            DiscreteStateType             SiKi                     Dummy                           -             -        -         "" -
+
+# Constraint states:
+typedef   ^                            ConstraintStateType           SiKi                     Dummy                           -             -         -        "" -
+
+# Other states:
+typedef   ^                            OtherStateType                LD_ContinuousStateType   xdot                           {:}            -         -        "Previous state derivs for m-step time integrator"
+typedef   ^                            ^                             IntKi                    n                               -             -         -        "Tracks time step for which OtherState was updated last"
+typedef   ^                            ^                             IntKi                    iMotionInterpLast               -             1         -        "Last index used to interpolate the presribed motion time series"   -
+
+# ..... Misc/Optimization variables.................................................................................................
+typedef   ^                            MiscVarType                   Logical                  Dummy                           -             -         -        "" -
+typedef   ^                            ^                             ReKi                     qPrescribed                      {:}          -         -        "Prescribed motion/velocity/accelerations for all degrees of freedom at a given time"   -
+
+
+# ..... Parameters ................................................................................................................
+typedef   ^                            ParameterType                 DbKi                     dt                              -             -         -        "time step" s
+typedef   ^                            ^                             IntKi                    IntMethod                       -             -         -        "Identifier for integration method (1 [RK4], 2 [AB4], or 3 [ABM4])" -
+typedef   ^                            ^                             IntKi                    nx                              -             -         -        "Number of degrees of freedom (size of M)" -
+typedef   ^                            ^                             IntKi                    nq                              -             -         -        "nq=2*nx" -
+typedef   ^                            ^                             ReKi                     MM                              {:}{:}        -         -        "Mass      Matrix - shape (nx x nx)" -
+typedef   ^                            ^                             ReKi                     CC                              {:}{:}        -         -        "Damping   Matrix - shape (nx x nx)" -
+typedef   ^                            ^                             ReKi                     KK                              {:}{:}        -         -        "Stiffness Matrix - shape (nx x nx)" -
+typedef   ^                            ^                             ReKi                     Minv                            {:}{:}        -         -        "Inverse of Mass matrix" -
+typedef   ^                            ^                             Logical                  activeDOFs                      {:}           -         -        "Degrees of freedom that are active" -
+typedef   ^                            ^                             ReKi                     AA                              {:}{:}        -         -        "State matrix A - shape (nq x nq) " -
+typedef   ^                            ^                             ReKi                     BB                              {:}{:}        -         -        "State matrix B - shape (nq x nx) " -
+typedef   ^                            ^                             IntKi                    NumOuts                         -             -         -        "Number of values in WriteOutput" -
+typedef   ^                            ^                             OutParmType              OutParam                        {:}           -         -        "Names and units (and other characteristics) of all requested output parameters" -
+typedef   ^                            ^                             IntKi                    OutParamLinIndx                 {:}{:}        -         -        "Index into WriteOutput for linearization analysis" -
+typedef   ^                            ^                             ReKi                     PrescribedValues                {:}{:}        -         -        "Prescribed motion for all degrees of freedom"   -
+
+
+
+# ..... Inputs ....................................................................................................................
+typedef   ^                            InputType                     ReKi                     Fext                            :             -         -        "External loads - shape nx" 
+
+# ..... Outputs ...................................................................................................................                            
+typedef   ^                            OutputType                    ReKi                     xdd                             {:}           -                  "Time derivative of continuous states" - 
+typedef   ^                            ^                             ReKi                     WriteOutput                     {:}           -         -        "outputs to be written to a file"  -
+

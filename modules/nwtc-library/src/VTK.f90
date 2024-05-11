@@ -12,8 +12,8 @@ module VTK
 
    implicit none
 
-   character(8), parameter :: RFMT='E17.8E3'
-   character(8), parameter :: IFMT='I7'
+   character(*), parameter :: RFMT='E17.8E3'
+   character(*), parameter :: IFMT='I7'
 
    ! Internal type to ensure the same options are used in between calls for the functions vtk_*
    TYPE, PUBLIC :: VTK_Misc

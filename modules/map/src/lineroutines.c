@@ -667,7 +667,7 @@ MAP_ERROR_CODE solve_linear_spring_cable(Line* line, char* map_msg, MAP_ERROR_CO
   };
 
   *(line->H.value) = sqrt(force.x*force.x + force.y*force.y);
-  *(line->V.value) = fabs(force.z);
+  *(line->V.value) = -force.z; /* vertical force can be positive or negative. Important for systems with the anchor point above the fairlead connection */
   return MAP_SAFE;
 };
 
