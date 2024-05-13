@@ -2909,7 +2909,7 @@ CONTAINS
 
                                  m%FailList(li)%nLinesToDetach = m%FailList(li)%nLinesToDetach - 1 ! reduce the size of nLinesToDetach of the other failure 
                                  m%FailList(li)%lineIDs(lii) = m%FailList(li)%lineIDs(lii+1) ! move subsequent line ID's forward one spot in the list to eliminate this line ID
-                                 CALL CheckError(ErrID_Warn, "Line "//trim(num2lstr(m%FailList(l)%lineIDs(il)))//" removed from Failure "//trim(num2lstr(li))//" becasue it already failed by Failure "//trim(num2lstr(l)))
+                                 CALL CheckError(ErrID_Warn, " Line "//trim(num2lstr(m%FailList(l)%lineIDs(il)))//" removed from Failure "//trim(num2lstr(li))//" becasue it already failed by Failure "//trim(num2lstr(l)))
                               
                               endif
 
@@ -2919,7 +2919,7 @@ CONTAINS
                         if (m%FailList(li)%nLinesToDetach == 0) then
                            ! invalid failure
                            m%FailList(li)%failStatus = 2
-                           CALL CheckError (ErrID_Warn, "Failure "//trim(num2lstr(li))//" is a duplicate of failure "//trim(num2lstr(l))//" and will be ignored.")
+                           CALL CheckError (ErrID_Warn, " Failure "//trim(num2lstr(li))//" is a duplicate of Failure "//trim(num2lstr(l))//" and will be ignored.")
                         endif
 
                      endif

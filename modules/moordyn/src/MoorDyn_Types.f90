@@ -105,8 +105,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: MD_Body
     INTEGER(IntKi)  :: IdNum      !< integer identifier of this Point [-]
     INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  0=free, 1=fixed, -1=coupled, 2=coupledpinned [-]
-    INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedC = 0  !< list of IdNums of points attached to this body [-]
-    INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedR = 0  !< list of IdNums of rods attached to this body [-]
+    INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedC      !< list of IdNums of points attached to this body [-]
+    INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedR      !< list of IdNums of rods attached to this body [-]
     INTEGER(IntKi)  :: nAttachedC = 0      !< number of attached points [-]
     INTEGER(IntKi)  :: nAttachedR = 0      !< number of attached rods [-]
     REAL(DbKi) , DIMENSION(1:3,1:30)  :: rPointRel      !< relative position of point on body [-]
@@ -136,8 +136,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: IdNum      !< integer identifier of this point [-]
     CHARACTER(10)  :: type      !< type of point: fix, vessel, point [-]
     INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  1=fixed, -1=coupled, 0=free [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: Attached = 0  !< list of IdNums of lines attached to this point node [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: Top = 0  !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
+    INTEGER(IntKi) , DIMENSION(1:10)  :: Attached      !< list of IdNums of lines attached to this point node [-]
+    INTEGER(IntKi) , DIMENSION(1:10)  :: Top      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
     INTEGER(IntKi)  :: nAttached = 0      !< number of attached lines [-]
     REAL(DbKi)  :: pointM      !< point mass [[kg]]
     REAL(DbKi)  :: pointV      !< point volume [[m^3]]
@@ -164,10 +164,10 @@ IMPLICIT NONE
     CHARACTER(10)  :: type      !< type of Rod.  should match one of RodProp names [-]
     INTEGER(IntKi)  :: PropsIdNum      !< the IdNum of the associated rod properties [-]
     INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  0=free, 1=pinned, 2=fixed, -1=coupledpinned, -2=coupled [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedA = 0   !< list of IdNums of lines attached to end A [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedB = 0   !< list of IdNums of lines attached to end B [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: TopA = 0  !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: TopB = 0  !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
+    INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedA      !< list of IdNums of lines attached to end A [-]
+    INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedB      !< list of IdNums of lines attached to end B [-]
+    INTEGER(IntKi) , DIMENSION(1:10)  :: TopA      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
+    INTEGER(IntKi) , DIMENSION(1:10)  :: TopB      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
     INTEGER(IntKi)  :: nAttachedA = 0      !< number of attached lines to Rod end A [-]
     INTEGER(IntKi)  :: nAttachedB = 0      !< number of attached lines to Rod end B [-]
     INTEGER(IntKi) , DIMENSION(1:20)  :: OutFlagList      !< array specifying what line quantities should be output (1 vs 0) [-]
@@ -227,8 +227,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: ElasticMod      !< Which elasticity model to use: {0 basic, 1 viscoelastic, 2 future SYCOM}  [-]
     INTEGER(IntKi) , DIMENSION(1:20)  :: OutFlagList      !< array specifying what line quantities should be output (1 vs 0) [-]
     INTEGER(IntKi)  :: CtrlChan = 0      !< index of control channel that will drive line active tensioning (0 for none) [-]
-    INTEGER(IntKi)  :: FairPoint      !< IdNum of Point at fairlead. Not initialized [-]
-    INTEGER(IntKi)  :: AnchPoint      !< IdNum of Point at anchor. Not initialized [-]
+    INTEGER(IntKi)  :: FairPoint      !< IdNum of Point at fairlead [-]
+    INTEGER(IntKi)  :: AnchPoint      !< IdNum of Point at anchor [-]
     INTEGER(IntKi)  :: N      !< The number of elements in the line [-]
     INTEGER(IntKi)  :: endTypeA      !< type of connection at end A: 0=pinned to Point, 1=cantilevered to Rod. [-]
     INTEGER(IntKi)  :: endTypeB      !< type of connection at end B: 0=pinned to Point, 1=cantilevered to Rod. [-]
@@ -289,15 +289,15 @@ IMPLICIT NONE
 ! =======================
 ! =========  MD_Fail  =======
   TYPE, PUBLIC :: MD_Fail
-    INTEGER(IntKi)  ::  IdNum      !< integer identifier of this failure [-]
-    INTEGER(IntKi)  ::  attachID      !< ID of connection or Rod the lines are attached to [-]
-    INTEGER(IntKi)  ::  isRod      !< 1 Rod end A, 2 Rod end B, 0 if point [-]
-    INTEGER(IntKi) , DIMENSION(1:30)  ::  lineIDs      !< array of one or more lines to detach (starting from 1...) [-]
-    INTEGER(IntKi) , DIMENSION(1:30)  ::  lineTops      !< an array that will be FILLED IN to return which end of each line was disconnected ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
-    INTEGER(IntKi)  ::  nLinesToDetach      !< how many lines to dettach [-]
-    REAL(DbKi)  ::  failTime      !< time of failure [[s]]      
-    REAL(DbKi)  ::  failTen      !< tension threshold of failure [[N]]
-    INTEGER(IntKi)  ::  failStatus      !< 0 not failed yet, 1 failed, 2 invalid [-]
+    INTEGER(IntKi)  :: IdNum      !< integer identifier of this failure [-]
+    INTEGER(IntKi)  :: attachID      !< ID of connection or Rod the lines are attached to [-]
+    INTEGER(IntKi)  :: isRod      !< 1 Rod end A, 2 Rod end B, 0 if point [-]
+    INTEGER(IntKi) , DIMENSION(1:30)  :: lineIDs      !< array of one or more lines to detach (starting from 1...) [-]
+    INTEGER(IntKi) , DIMENSION(1:30)  :: lineTops      !< an array that will be FILLED IN to return which end of each line was disconnected ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
+    INTEGER(IntKi)  :: nLinesToDetach      !< how many lines to dettach [-]
+    REAL(DbKi)  :: failTime      !< time of failure [s]
+    REAL(DbKi)  :: failTen      !< tension threshold of failure [N]
+    INTEGER(IntKi)  :: failStatus      !< 0 not failed yet, 1 failed, 2 invalid [-]
   END TYPE MD_Fail
 ! =======================
 ! =========  MD_OutParmType  =======
@@ -6256,6 +6256,7 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyFail'
@@ -6263,6 +6264,14 @@ ENDIF
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstFailData%IdNum = SrcFailData%IdNum
+    DstFailData%attachID = SrcFailData%attachID
+    DstFailData%isRod = SrcFailData%isRod
+    DstFailData%lineIDs = SrcFailData%lineIDs
+    DstFailData%lineTops = SrcFailData%lineTops
+    DstFailData%nLinesToDetach = SrcFailData%nLinesToDetach
+    DstFailData%failTime = SrcFailData%failTime
+    DstFailData%failTen = SrcFailData%failTen
+    DstFailData%failStatus = SrcFailData%failStatus
  END SUBROUTINE MD_CopyFail
 
  SUBROUTINE MD_DestroyFail( FailData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -6324,6 +6333,14 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1  ! IdNum
+      Int_BufSz  = Int_BufSz  + 1  ! attachID
+      Int_BufSz  = Int_BufSz  + 1  ! isRod
+      Int_BufSz  = Int_BufSz  + SIZE(InData%lineIDs)  ! lineIDs
+      Int_BufSz  = Int_BufSz  + SIZE(InData%lineTops)  ! lineTops
+      Int_BufSz  = Int_BufSz  + 1  ! nLinesToDetach
+      Db_BufSz   = Db_BufSz   + 1  ! failTime
+      Db_BufSz   = Db_BufSz   + 1  ! failTen
+      Int_BufSz  = Int_BufSz  + 1  ! failStatus
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -6353,6 +6370,26 @@ ENDIF
 
     IntKiBuf(Int_Xferred) = InData%IdNum
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%attachID
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%isRod
+    Int_Xferred = Int_Xferred + 1
+    DO i1 = LBOUND(InData%lineIDs,1), UBOUND(InData%lineIDs,1)
+      IntKiBuf(Int_Xferred) = InData%lineIDs(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%lineTops,1), UBOUND(InData%lineTops,1)
+      IntKiBuf(Int_Xferred) = InData%lineTops(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    IntKiBuf(Int_Xferred) = InData%nLinesToDetach
+    Int_Xferred = Int_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%failTime
+    Db_Xferred = Db_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%failTen
+    Db_Xferred = Db_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%failStatus
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE MD_PackFail
 
  SUBROUTINE MD_UnPackFail( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -6368,6 +6405,7 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_UnPackFail'
@@ -6382,6 +6420,30 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred  = 1
     OutData%IdNum = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%attachID = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%isRod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    i1_l = LBOUND(OutData%lineIDs,1)
+    i1_u = UBOUND(OutData%lineIDs,1)
+    DO i1 = LBOUND(OutData%lineIDs,1), UBOUND(OutData%lineIDs,1)
+      OutData%lineIDs(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%lineTops,1)
+    i1_u = UBOUND(OutData%lineTops,1)
+    DO i1 = LBOUND(OutData%lineTops,1), UBOUND(OutData%lineTops,1)
+      OutData%lineTops(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    OutData%nLinesToDetach = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%failTime = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
+    OutData%failTen = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
+    OutData%failStatus = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE MD_UnPackFail
 
@@ -8971,6 +9033,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%BodyStateIsN)  ! BodyStateIsN
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! Nx
+      Int_BufSz  = Int_BufSz  + 1  ! Nxtra
       Int_BufSz  = Int_BufSz  + 1  ! WaveTi
       Int_BufSz   = Int_BufSz + 3  ! xTemp: size of buffers for each call to pack subtype
       CALL MD_PackContState( Re_Buf, Db_Buf, Int_Buf, InData%xTemp, ErrStat2, ErrMsg2, .TRUE. ) ! xTemp 

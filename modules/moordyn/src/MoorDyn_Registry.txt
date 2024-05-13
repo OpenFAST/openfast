@@ -272,8 +272,8 @@ typedef  ^            ^                IntKi              isRod           -     
 typedef  ^            ^                IntKi              lineIDs         {30}     -  -   "array of one or more lines to detach (starting from 1...)" "-"
 typedef  ^            ^                IntKi              lineTops        {30}     -  -   "an array that will be FILLED IN to return which end of each line was disconnected ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)" "-"
 typedef  ^            ^                IntKi              nLinesToDetach  -        -  -   "how many lines to dettach" "-"
-typedef  ^            ^                IntKi              nLinesToDetach  -        -  -   "time of failure" "s"
-typedef  ^            ^                IntKi              nLinesToDetach  -        -  -   "tension threshold of failure" "N"
+typedef  ^            ^                DbKi               failTime        -        -  -   "time of failure" "s"
+typedef  ^            ^                DbKi               failTen         -        -  -   "tension threshold of failure" "N"
 typedef  ^            ^                IntKi              failStatus      -        -  -   "0 not failed yet, 1 failed, 2 invalid" "-"
 
 # this is the MDOutParmType - a less literal alternative of the NWTC OutParmType for MoorDyn (to avoid huge lists of possible output channel permutations)
