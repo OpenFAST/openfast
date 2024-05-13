@@ -23,7 +23,7 @@ Coordinate Systems
 
 .. _bd-frame:
 
-.. figure:: figs/bd_frame.pdf
+.. figure:: figs/bd_frame.png
    :width: 100%
    :align: center
 
@@ -312,7 +312,7 @@ References :cite:`Patera:1984,Ronquist:1987,Sprague:2003,Sprague:2004`.
 
 .. _N4_lsfe:
 
-.. figure:: figs/n4.pdf
+.. figure:: figs/n4.png
    :width: 47%
    :align: center
 
@@ -320,7 +320,7 @@ References :cite:`Patera:1984,Ronquist:1987,Sprague:2003,Sprague:2004`.
 
 .. _N8_lsfe:
 
-.. figure:: figs/n8.pdf
+.. figure:: figs/n8.png
    :width: 47%
    :align: center
 

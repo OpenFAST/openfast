@@ -49,6 +49,8 @@ Additional ressources:
 
 - A directory with a working example: `here <https://github.com/OpenFAST/r-test/blob/dev/modules/aerodyn/ad_BAR_OLAF/OpenFAST_BAR_00_AeroDyn15.dat>`__
 
+- An example python converter (v3.5.x to 4.x): `here <https://github.com/OpenFAST/openfast_toolbox/blob/dev/openfast_toolbox/converters/examples/Main_AD30_AD40.py>`__
+
 
 =========================== ========================================================= 
 Old inputs                  Corresponding new inputs                                  
@@ -58,7 +60,7 @@ Old inputs                  Corresponding new inputs
 `WakeMod=2` ("DBEMT")       `Wake_Mod=1` and `DBEMT_Mod={1,2,3}`                      
 `WakeMod=3` ("OLAF")        `Wake_Mod=3`                                              
 `AFAeroMod=1`               `UA_Mod=0` and `AoA34=False`                              
-`AFAeroMod=2`               `UA_Mod>0` and `AoA34=False`  and `UA_Mod=UAMod`          
+`AFAeroMod=2`               `UA_Mod>0` and `AoA34=True` and `UA_Mod=UAMod`
 `FrozenWake=True`           `DBEMT_Mod=-1`                                            
 `FrozenWake=False`          `DBEMT_Mod=0` (quasi-steady) or `DBEMT_Mod>0` (dynamic)   
 `SkewMod=2` (Glauert)       `Skew_Mod=1` and `SkewRedistr_Mod=1`                      
