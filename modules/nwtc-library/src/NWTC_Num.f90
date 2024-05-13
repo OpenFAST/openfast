@@ -112,6 +112,10 @@ MODULE NWTC_Num
       MODULE PROCEDURE EulerExtractR8
    END INTERFACE
 
+   INTERFACE EulerExtractZYX
+      MODULE PROCEDURE EulerExtractZYXR8
+   END INTERFACE
+
       !> \copydoc nwtc_num::taitbryanyxzextractr4()
       !! See nwtc_num::taitbryanyxzextractr4() for details on the algorithm
    INTERFACE TaitBryanYXZExtract
@@ -2044,6 +2048,104 @@ CONTAINS
       M(3,3) =  cx*cy
    
    END FUNCTION EulerConstructZYXR8
+
+!=======================================================================
+!> 
+   FUNCTION EulerExtractZYXR8(M) result(theta)
+   
+      ! if M is a rotation matrix from a 3-2-1 rotation sequence, this function returns 
+      ! the 3 Euler angles, theta_x, theta_y, and theta_z (in radians), that formed 
+      ! the matrix. M represents a change of basis (from global to local coordinates; 
+      ! not a physical rotation of the body). M is the inverse of EulerConstruct().
+      !
+      ! M = R(theta_x) * R(theta_y) * R(theta_z)
+      !   = [ 1   0   0 |   [ cy  0 -sy |   [ cz sz 0 |
+      !     | 0  cx  sx | * |  0  1   0 | * |-sz cz 0 |
+      !     | 0 -sx  cx ]   | sy  0  cy ]   |  0  0 1 ]
+      !   = [cy*cz            sz*cy                -sy|
+      !     |sx*sy*cz-sz*cx   sx*sy*sz+cx*cz     sx*cy|
+      !     |sx*sz+sy*cx*cz  -sx*cz+sy*sz*cx     cx*cy]
+      ! where cz = cos(theta_z), sz = sin(theta_z), cy = cos(theta_y), etc.
+      ! 
+      ! returned angles are in the range [-pi, pi]
+   
+      REAL(R8Ki), INTENT(IN) :: M(3,3)    ! rotation matrix M 
+      REAL(R8Ki)             :: theta(3)  ! the 3 rotation angles: theta_x, theta_y, theta_z
+      
+      REAL(R8Ki)             :: cx        ! cos(theta_x)
+      REAL(R8Ki)             :: sx        ! sin(theta_x)
+      REAL(R8Ki)             :: cy        ! cos(theta_y)
+!     REAL(R8Ki)             :: sy        ! sin(theta_y)
+      REAL(R8Ki)             :: cz        ! cos(theta_z)
+      REAL(R8Ki)             :: sz        ! sin(theta_z)
+   
+         ! use trig identity sz**2 + cz**2 = 1 to get abs(cy):
+      cy = sqrt( m(1,1)**2 + m(1,2)**2 ) 
+!      cy = sqrt( m(3,3)**2 + m(2,3)**2 ) 
+            
+      if ( EqualRealNos(cy,0.0_R8Ki) ) then
+      !if ( cy < 16*epsilon(0.0_ReKi) ) then
+         
+         theta(2) = atan2( -m(1,3), cy )               ! theta_y
+         
+         ! cy = 0 -> sy = +/-1
+         ! M  = [0                0              +/-1|
+         !      |+/-sx*cz-sz*cx  +/-sx*sz+cx*cz     0|
+         !      |sx*sz+/-cx*cz   -sx*cz+/-sz*cx     0]
+         
+         ! gimbal lock allows us to choose theta_z = 0
+         theta(3) = 0.0_R8Ki                          ! theta_z
+         
+         ! which reduces the matrix to 
+         ! M  = [0       0  +/-1|
+         !      |+/-sx  cx     0|
+         !      |+/-cx -sx     0]
+         
+         theta(1) = atan2( -m(3,2), m(2,2) )          ! theta_x
+         
+      else
+         ! atan2( cy*sz, cy*cz )
+         theta(3) = atan2( m(1,2), m(1,1) )          ! theta_z         
+         cz       = cos( theta(3) )
+         sz       = sin( theta(3) )
+
+            ! get the appropriate sign for cy:
+         if ( EqualRealNos(cz, 0.0_R8Ki) ) then
+            cy = sign( cy, m(1,2)/sz )
+            !cy = m(1,2)/sz
+         else
+            cy = sign( cy, m(1,1)/cz )
+            !cy = m(1,1)/cz
+         end if
+         theta(2) = atan2( -m(1,3), cy )               ! theta_y
+         
+        !theta(1) = atan2( m(2,3), m(3,3) )          ! theta_x
+         
+         ! for numerical reasons, we're going to get theta_x using
+         ! M' = M * (R(theta_y)*R(theta_z))^T = R(theta_x)
+         !    =     [ cz -sz 0 |   [ cy  0  sy |   [ 1   0   0 |
+         !      M * | sz  cz 0 | * |  0  1   0 | = | 0  cx  sx |
+         !          |  0   0 1 ]   |-sy  0  cy ]   | 0 -sx  cx ]
+         !    =     [ cy*cz  -sz  sy*cz |   [ 1   0   0 |
+         !      M * | cy*sz   cz  sy*sz | = | 0  cx  sx |
+         !          |  -sy     0     cy ]   | 0 -sx  cx ]
+         ! taking M'(2,2) and M'(2,3) , we get cx and sx:
+         ! -sz*m(2,1) + cz*m(2,2) =  cx
+         ! -sz*m(3,1) + cz*m(3,2) = -sx
+
+         cz = cos( theta(3) )
+         sz = sin( theta(3) )
+         
+         cx = -sz*m(2,1) + cz*m(2,2)
+         sx =  sz*m(3,1) - cz*m(3,2)
+         
+         theta(1) = atan2( sx, cx )
+         
+      end if
+            
+      
+   END FUNCTION EulerExtractZYXR8
+
 !=======================================================================
 !> This routine sets the matrices in the first two dimensions of A equal 
 !! to the identity matrix (all zeros, with ones on the diagonal).

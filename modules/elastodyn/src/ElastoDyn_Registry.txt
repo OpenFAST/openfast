@@ -259,6 +259,12 @@ typedef  ^  ED_InputFile   IntKi BldNd_BladesOut - - - "The blades to output (ED
 # ..... Internal data types: Coordinate Systems ...................................................................................
 #  This type defines coordinate sytems used internally by FAST.  The 3 components of each vector correspond to the z1, z2, and z3 components of the individual vectors.
 #  NOTE: the orientations of most of these coordinate systems will change every time step.
+typedef ^       ED_CoordSys     R8Ki    alpha1  3       -       -       "Vector / direction alpha1 after ptfm yaw rotation"	-
+typedef ^       ED_CoordSys     R8Ki    alpha2  3       -       -       "Vector / direction alpha2 after ptfm yaw rotation"	-
+typedef ^       ED_CoordSys     R8Ki    alpha3  3       -       -       "Vector / direction alpha3 after ptfm yaw rotation"	-
+typedef ^       ED_CoordSys     R8Ki    beta1   3       -       -       "Vector / direction beta1 after ptfm yaw and pitch rotation"	-
+typedef ^       ED_CoordSys     R8Ki    beta2   3       -       -       "Vector / direction beta2 after ptfm yaw and pitch rotation"	-
+typedef ^       ED_CoordSys     R8Ki    beta3   3       -       -       "Vector / direction beta3 after ptfm yaw and pitch rotation"	-
 typedef	^	ED_CoordSys	R8Ki	a1	3	-	-	"Vector / direction a1 (=  xt from the IEC coord. system)"	-
 typedef	^	ED_CoordSys	R8Ki	a2	3	-	-	"Vector / direction a2 (=  zt from the IEC coord. system)"	-
 typedef	^	ED_CoordSys	R8Ki	a3	3	-	-	"Vector / direction a3 (= -yt from the IEC coord. system)"	-

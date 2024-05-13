@@ -292,7 +292,9 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
    ! Platform reference point wrt to global origin (0,0,0)
    InitOut%PlatformPos = x%QT(1:6)
-   CALL SmllRotTrans('initial platform rotation', x%QT(4), x%QT(5), x%QT(6), TransMat, '', ErrStat2, ErrMsg2)
+   ! CALL SmllRotTrans('initial platform rotation', x%QT(4), x%QT(5), x%QT(6), TransMat, '', ErrStat2, ErrMsg2)
+   TransMat = EulerConstructZYX((/x%QT(4),x%QT(5),x%QT(6)/))
+
    InitOut%PlatformPos(1) = InitOut%PlatformPos(1) - TransMat(3,1)*p%PtfmRefzt
    InitOut%PlatformPos(2) = InitOut%PlatformPos(2) - TransMat(3,2)*p%PtfmRefzt
    InitOut%PlatformPos(3) = InitOut%PlatformPos(3) - TransMat(3,3)*p%PtfmRefzt + p%PtfmRefzt
@@ -1045,15 +1047,21 @@ END IF
    m%AllOuts( PtfmRVxt) =  DOT_PRODUCT( m%RtHS%AngVelEX, m%CoordSys%a1 )*R2D
    m%AllOuts( PtfmRVyt) = -DOT_PRODUCT( m%RtHS%AngVelEX, m%CoordSys%a3 )*R2D
    m%AllOuts( PtfmRVzt) =  DOT_PRODUCT( m%RtHS%AngVelEX, m%CoordSys%a2 )*R2D
-   m%AllOuts( PtfmRVxi) = x%QDT (DOF_R )*R2D
-   m%AllOuts( PtfmRVyi) = x%QDT (DOF_P )*R2D
-   m%AllOuts( PtfmRVzi) = x%QDT (DOF_Y )*R2D
+   ! m%AllOuts( PtfmRVxi) = x%QDT (DOF_R )*R2D
+   ! m%AllOuts( PtfmRVyi) = x%QDT (DOF_P )*R2D
+   ! m%AllOuts( PtfmRVzi) = x%QDT (DOF_Y )*R2D
+   m%AllOuts( PtfmRVxi) =  m%RtHS%AngVelEX(1)*R2D
+   m%AllOuts( PtfmRVyi) = -m%RtHS%AngVelEX(3)*R2D
+   m%AllOuts( PtfmRVzi) =  m%RtHS%AngVelEX(2)*R2D
    m%AllOuts( PtfmRAxt) =  DOT_PRODUCT(                 AngAccEX, m%CoordSys%a1 )*R2D
    m%AllOuts( PtfmRAyt) = -DOT_PRODUCT(                 AngAccEX, m%CoordSys%a3 )*R2D
    m%AllOuts( PtfmRAzt) =  DOT_PRODUCT(                 AngAccEX, m%CoordSys%a2 )*R2D
-   m%AllOuts( PtfmRAxi) = m%QD2T(DOF_R )*R2D
-   m%AllOuts( PtfmRAyi) = m%QD2T(DOF_P )*R2D
-   m%AllOuts( PtfmRAzi) = m%QD2T(DOF_Y )*R2D
+   ! m%AllOuts( PtfmRAxi) = m%QD2T(DOF_R )*R2D
+   ! m%AllOuts( PtfmRAyi) = m%QD2T(DOF_P )*R2D
+   ! m%AllOuts( PtfmRAzi) = m%QD2T(DOF_Y )*R2D
+   m%AllOuts( PtfmRAxi) =  AngAccEX(1)*R2D
+   m%AllOuts( PtfmRAyi) = -AngAccEX(3)*R2D
+   m%AllOuts( PtfmRAzi) =  AngAccEX(2)*R2D
 
 
 
@@ -1755,23 +1763,32 @@ END IF
    y%PlatformPtMesh%TranslationDisp(2,1) = x%QT(DOF_Sw)
    y%PlatformPtMesh%TranslationDisp(3,1) = x%QT(DOF_Hv)
    
-   y%PlatformPtMesh%RotationVel(1,1)    = x%QDT(DOF_R )
-   y%PlatformPtMesh%RotationVel(2,1)    = x%QDT(DOF_P )
-   y%PlatformPtMesh%RotationVel(3,1)    = x%QDT(DOF_Y )
+   ! y%PlatformPtMesh%RotationVel(1,1)    = x%QDT(DOF_R )
+   ! y%PlatformPtMesh%RotationVel(2,1)    = x%QDT(DOF_P )
+   ! y%PlatformPtMesh%RotationVel(3,1)    = x%QDT(DOF_Y )
+
+   y%PlatformPtMesh%RotationVel(1,1)    =     m%RtHS%AngVelEX(1)
+   y%PlatformPtMesh%RotationVel(2,1)    = -1.*m%RtHS%AngVelEX(3)
+   y%PlatformPtMesh%RotationVel(3,1)    =     m%RtHS%AngVelEX(2)
    
    y%PlatformPtMesh%TranslationVel(1,1) = x%QDT(DOF_Sg)
    y%PlatformPtMesh%TranslationVel(2,1) = x%QDT(DOF_Sw)
    y%PlatformPtMesh%TranslationVel(3,1) = x%QDT(DOF_Hv) 
    
+   ! CALL SmllRotTrans( 'platform displacement (ED_CalcOutput)', x%QT(DOF_R ),x%QT(DOF_P ),x%QT(DOF_Y ), &
+   !        y%PlatformPtMesh%Orientation(:,:,1), errstat=ErrStat, errmsg=ErrMsg )
+   !    IF (ErrStat /= ErrID_None)    ErrMsg = TRIM(ErrMsg)//' (occurred at '//TRIM(Num2LStr(t))//' s)'
+   !   !IF (ErrStat >= AbortErrLev) RETURN
 
-   CALL SmllRotTrans( 'platform displacement (ED_CalcOutput)', x%QT(DOF_R ),x%QT(DOF_P ),x%QT(DOF_Y ), &
-          y%PlatformPtMesh%Orientation(:,:,1), errstat=ErrStat, errmsg=ErrMsg )
-      IF (ErrStat /= ErrID_None)    ErrMsg = TRIM(ErrMsg)//' (occurred at '//TRIM(Num2LStr(t))//' s)'
-     !IF (ErrStat >= AbortErrLev) RETURN
+   y%PlatformPtMesh%Orientation(:,:,1) = EulerConstructZYX((/x%QT(DOF_R ),x%QT(DOF_P ),x%QT(DOF_Y )/))
 
-   y%PlatformPtMesh%RotationAcc(1,1) = m%QD2T(DOF_R )     
-   y%PlatformPtMesh%RotationAcc(2,1) = m%QD2T(DOF_P )     
-   y%PlatformPtMesh%RotationAcc(3,1) = m%QD2T(DOF_Y )     
+   ! y%PlatformPtMesh%RotationAcc(1,1) = m%QD2T(DOF_R )     
+   ! y%PlatformPtMesh%RotationAcc(2,1) = m%QD2T(DOF_P )     
+   ! y%PlatformPtMesh%RotationAcc(3,1) = m%QD2T(DOF_Y )     
+
+   y%PlatformPtMesh%RotationAcc(1,1) =     AngAccEX(1)     
+   y%PlatformPtMesh%RotationAcc(2,1) = -1.*AngAccEX(3)     
+   y%PlatformPtMesh%RotationAcc(3,1) =     AngAccEX(2)   
 
    y%PlatformPtMesh%TranslationAcc(1,1) = m%QD2T(DOF_Sg)     
    y%PlatformPtMesh%TranslationAcc(2,1) = m%QD2T(DOF_Sw)    
@@ -1985,10 +2002,12 @@ SUBROUTINE ED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
          IF (ErrStat >= AbortErrLev) RETURN
    
       CALL CalculatePositions(        p, x, m%CoordSys,    m%RtHS ) ! calculate positions
-      CALL CalculateAngularPosVelPAcc(p, x, m%CoordSys,    m%RtHS ) ! calculate angular positions, velocities, and partial accelerations, including partial angular quantities
+      CALL CalculateAngularPosVelPAcc(p, x, m%CoordSys,    m%RtHS, ErrStat2, ErrMsg2 ) ! calculate angular positions, velocities, and partial accelerations, including partial angular quantities
       CALL CalculateLinearVelPAcc(    p, x, m%CoordSys,    m%RtHS ) ! calculate linear velocities and partial accelerations
       CALL CalculateForcesMoments(    p, x, m%CoordSys, u, m%RtHS ) ! calculate the forces and moments (requires AeroBladeForces and AeroBladeMoments)            
-      
+         call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+
    END IF
       
    !.....................................
@@ -6201,14 +6220,28 @@ SUBROUTINE SetCoordSy( t, CoordSys, RtHSdat, BlPitch, p, x, ErrStat, ErrMsg )
 
       ! Tower base / platform coordinate system:
 
-   CALL SmllRotTrans( 'platform displacement (ElastoDyn SetCoordSy)', x%QT(DOF_R), x%QT(DOF_Y), -x%QT(DOF_P), TransMat, TRIM(Num2LStr(t))//' s', ErrStat2, ErrMsg2 )  ! Get the transformation matrix, TransMat, from inertial frame to tower base / platform coordinate systems.
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+   ! CALL SmllRotTrans( 'platform displacement (ElastoDyn SetCoordSy)', x%QT(DOF_R), x%QT(DOF_Y), -x%QT(DOF_P), TransMat, TRIM(Num2LStr(t))//' s', ErrStat2, ErrMsg2 )  ! Get the transformation matrix, TransMat, from inertial frame to tower base / platform coordinate systems.
+   !    CALL CheckError( ErrStat2, ErrMsg2 )
+   !    IF (ErrStat >= AbortErrLev) RETURN
 
-   CoordSys%a1 = TransMat(1,1)*CoordSys%z1 + TransMat(1,2)*CoordSys%z2 + TransMat(1,3)*CoordSys%z3 ! Vector / direction a1 (=  xt from the IEC coord. system).
-   CoordSys%a2 = TransMat(2,1)*CoordSys%z1 + TransMat(2,2)*CoordSys%z2 + TransMat(2,3)*CoordSys%z3 ! Vector / direction a2 (=  zt from the IEC coord. system).
-   CoordSys%a3 = TransMat(3,1)*CoordSys%z1 + TransMat(3,2)*CoordSys%z2 + TransMat(3,3)*CoordSys%z3 ! Vector / direction a3 (= -yt from the IEC coord. system).
+   ! CoordSys%a1 = TransMat(1,1)*CoordSys%z1 + TransMat(1,2)*CoordSys%z2 + TransMat(1,3)*CoordSys%z3 ! Vector / direction a1 (=  xt from the IEC coord. system).
+   ! CoordSys%a2 = TransMat(2,1)*CoordSys%z1 + TransMat(2,2)*CoordSys%z2 + TransMat(2,3)*CoordSys%z3 ! Vector / direction a2 (=  zt from the IEC coord. system).
+   ! CoordSys%a3 = TransMat(3,1)*CoordSys%z1 + TransMat(3,2)*CoordSys%z2 + TransMat(3,3)*CoordSys%z3 ! Vector / direction a3 (= -yt from the IEC coord. system).
 
+      ! Platform orientation after yaw
+   CoordSys%alpha1 =  cos(x%QT(DOF_Y))*CoordSys%z1 - sin(x%QT(DOF_Y))*CoordSys%z3
+   CoordSys%alpha2 =  CoordSys%z2
+   CoordSys%alpha3 =  sin(x%QT(DOF_Y))*CoordSys%z1 + cos(x%QT(DOF_Y))*CoordSys%z3
+
+      ! Platform orientation after pitch
+   CoordSys%beta1  =  cos(x%QT(DOF_P))*CoordSys%alpha1 - sin(x%QT(DOF_P))*CoordSys%alpha2
+   CoordSys%beta2  =  sin(x%QT(DOF_P))*CoordSys%alpha1 + cos(x%QT(DOF_P))*CoordSys%alpha2
+   CoordSys%beta3  =  CoordSys%alpha3
+
+      ! Platform orientation after roll
+   CoordSys%a1     =  CoordSys%beta1 
+   CoordSys%a2     =  cos(x%QT(DOF_R))*CoordSys%beta2 + sin(x%QT(DOF_R))*CoordSys%beta3
+   CoordSys%a3     = -sin(x%QT(DOF_R))*CoordSys%beta2 + cos(x%QT(DOF_R))*CoordSys%beta3
 
    DO J = 1,p%TwrNodes ! Loop through the tower nodes / elements
 
@@ -6898,7 +6931,7 @@ END SUBROUTINE CalculatePositions
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is used to calculate the angular positions, velocities, and partial accelerations stored in other states that are used in
 !! both the CalcOutput and CalcContStateDeriv routines.
-SUBROUTINE CalculateAngularPosVelPAcc( p, x, CoordSys, RtHSdat )
+SUBROUTINE CalculateAngularPosVelPAcc( p, x, CoordSys, RtHSdat, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       ! Passed variables
@@ -6907,6 +6940,9 @@ SUBROUTINE CalculateAngularPosVelPAcc( p, x, CoordSys, RtHSdat )
    TYPE(ED_CoordSys),            INTENT(IN   )  :: CoordSys    !< The coordinate systems that have been set for these states/time
    TYPE(ED_RtHndSide),           INTENT(INOUT)  :: RtHSdat     !< data from the RtHndSid module (contains positions to be set)
 
+   INTEGER(IntKi),               INTENT(OUT)    :: ErrStat                      !< Error status
+   CHARACTER(*),                 INTENT(OUT)    :: ErrMsg                       !< Error message
+
       !Local variables
    
    REAL(ReKi)                   :: AngVelHM  (3)                                   ! Angular velocity of eleMent J of blade K (body M) in the hub (body H).
@@ -6914,6 +6950,15 @@ SUBROUTINE CalculateAngularPosVelPAcc( p, x, CoordSys, RtHSdat )
    REAL(ReKi)                   :: AngAccELt (3)                                   ! Portion of the angular acceleration of the low-speed shaft (body L) in the inertia frame (body E for earth) associated with everything but the QD2T()'s.
    INTEGER(IntKi)               :: J                                               ! Counter for elements
    INTEGER(IntKi)               :: K                                               ! Counter for blades
+   REAL(R8Ki)                   :: PtfmOrientation (3,3)                           ! Orientation matrix for the platform (-).
+   REAL(R8Ki)                   :: TransMat (3,3)                                  ! Orientation matrix for the platform (-).
+   REAL(R8Ki)                   :: ThetaFA                                         ! Tower fore-aft tilt deflection angle.
+   REAL(R8Ki)                   :: ThetaSS                                         ! Tower side-to-side tilt deflection angle.
+
+   INTEGER(IntKi)               :: ErrStat2                      ! Temporary error status
+   CHARACTER(ErrMsgLen)         :: ErrMsg2                       ! Temporary error message
+
+   CHARACTER(*), PARAMETER      :: RoutineName = "CalculateAngularPosVelPAcc"
 
    !-------------------------------------------------------------------------------------------------
    ! Angular and partial angular velocities
@@ -6923,15 +6968,19 @@ SUBROUTINE CalculateAngularPosVelPAcc( p, x, CoordSys, RtHSdat )
    ! NOTE: PAngVelEN(I,D,:) = the Dth-derivative of the partial angular velocity of DOF I for body N in body E.
 
    RtHSdat%PAngVelEX(       :,0,:) = 0.0
-   RtHSdat%PAngVelEX(DOF_R   ,0,:) =  CoordSys%z1
-   RtHSdat%PAngVelEX(DOF_P   ,0,:) = -CoordSys%z3
+   ! RtHSdat%PAngVelEX(DOF_R   ,0,:) =  CoordSys%z1
+   ! RtHSdat%PAngVelEX(DOF_P   ,0,:) = -CoordSys%z3
+   ! RtHSdat%PAngVelEX(DOF_Y   ,0,:) =  CoordSys%z2
+   RtHSdat%PAngVelEX(DOF_R   ,0,:) =  CoordSys%beta1
+   RtHSdat%PAngVelEX(DOF_P   ,0,:) = -CoordSys%alpha3
    RtHSdat%PAngVelEX(DOF_Y   ,0,:) =  CoordSys%z2
    RtHSdat%AngVelEX                =                     x%QDT(DOF_R   )*RtHSdat%PAngVelEX(DOF_R   ,0,:) &
                                                        + x%QDT(DOF_P   )*RtHSdat%PAngVelEX(DOF_P   ,0,:) &
                                                        + x%QDT(DOF_Y   )*RtHSdat%PAngVelEX(DOF_Y   ,0,:)
-   RtHSdat%AngPosEX                =                     x%QT (DOF_R   )*RtHSdat%PAngVelEX(DOF_R   ,0,:) &
-                                                       + x%QT (DOF_P   )*RtHSdat%PAngVelEX(DOF_P   ,0,:) &
-                                                       + x%QT (DOF_Y   )*RtHSdat%PAngVelEX(DOF_Y   ,0,:)
+   ! RtHSdat%AngPosEX                =                     x%QT (DOF_R   )*RtHSdat%PAngVelEX(DOF_R   ,0,:) & ! <- LW: Doesn't work for large rotation. Impacts AngPosEF (TwHtRP*i output)
+   !                                                     + x%QT (DOF_P   )*RtHSdat%PAngVelEX(DOF_P   ,0,:) &
+   !                                                     + x%QT (DOF_Y   )*RtHSdat%PAngVelEX(DOF_Y   ,0,:)
+   PtfmOrientation = EulerConstructZYX((/x%QT(DOF_R),x%QT(DOF_P),x%QT(DOF_Y)/))
 
    RtHSdat%PAngVelEB(       :,0,:) =  RtHSdat%PAngVelEX(:,0,:)
    RtHSdat%PAngVelEB(DOF_TFA1,0,:) = -p%TwrFASF(1,p%TTopNode,1)*CoordSys%a3
@@ -6984,7 +7033,10 @@ ENDIF
    !   everything but the QD2T()'s:
 
    RtHSdat%PAngVelEX(       :,1,:) = 0.0
-   RtHSdat%AngAccEXt               = 0.0
+   RtHSdat%PAngVelEX(DOF_R   ,1,:) = CROSS_PRODUCT(   RtHSdat%AngVelEX,                   RtHSdat%PAngVelEX(DOF_R   ,0,:) )
+   RtHSdat%PAngVelEX(DOF_P   ,1,:) = CROSS_PRODUCT(   x%QDT(DOF_Y)*CoordSys%z2,           RtHSdat%PAngVelEX(DOF_P   ,0,:) )
+   RtHSdat%AngAccEXt               =   x%QDT(DOF_R)*RtHSdat%PAngVelEX(DOF_R   ,1,:) &
+                                     + x%QDT(DOF_P)*RtHSdat%PAngVelEX(DOF_P   ,1,:)
 
    RtHSdat%PAngVelEB(       :,1,:) =                  RtHSdat%PAngVelEX(:,1,:)
    RtHSdat%PAngVelEB(DOF_TFA1,1,:) = CROSS_PRODUCT(   RtHSdat%AngVelEX,                   RtHSdat%PAngVelEB(DOF_TFA1,0,:) )
@@ -7106,7 +7158,17 @@ ENDIF
                                                              + x%QT (DOF_TSS1)*RtHSdat%PAngVelEF(J,DOF_TSS1,0,:) &
                                                              + x%QT (DOF_TFA2)*RtHSdat%PAngVelEF(J,DOF_TFA2,0,:) &
                                                              + x%QT (DOF_TSS2)*RtHSdat%PAngVelEF(J,DOF_TSS2,0,:)
-      RtHSdat%AngPosEF (:,J)            =  RtHSdat%AngPosEX  + RtHSdat%AngPosXF(:,J)
+
+      !RtHSdat%AngPosEF (:,J)            =  RtHSdat%AngPosEX  + RtHSdat%AngPosXF(:,J) ! LW: This is no longer right with large Ptfm Rotation
+      ThetaSS =  p%TwrSSSF(1,J,1)*x%QT(DOF_TSS1) + p%TwrSSSF(2,J,1)*x%QT(DOF_TSS2)
+      ThetaFA = -p%TwrFASF(1,J,1)*x%QT(DOF_TFA1) - p%TwrFASF(2,J,1)*x%QT(DOF_TFA2)
+      CALL SmllRotTrans('tower element rotation',ThetaSS,-ThetaFA,0.,TransMat,'',ErrStat2,ErrMsg2)
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat>=AbortErrLev) then
+         return
+      end if
+      RtHSdat%AngPosEF (:,J) = EulerExtractZYX(MatMul(TransMat,PtfmOrientation)) ! Extract tower element yaw, pitch, and roll angles from the combined platform and tower element rotation
+
       RtHSdat%AngAccEFt(:,J)            =  RtHSdat%AngAccEXt + x%QDT(DOF_TFA1)*RtHSdat%PAngVelEF(J,DOF_TFA1,1,:) &
                                                              + x%QDT(DOF_TSS1)*RtHSdat%PAngVelEF(J,DOF_TSS1,1,:) &
                                                              + x%QDT(DOF_TFA2)*RtHSdat%PAngVelEF(J,DOF_TFA2,1,:) &
@@ -7223,9 +7285,10 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
 
       TmpVec0 = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I)   ,0,:), RtHSdat%rZY  )
       TmpVec1 = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I)   ,0,:),     EwXXrZY  )
+      TmpVec2 = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I)   ,1,:), RtHSdat%rZY  )
 
       RtHSdat%PLinVelEY(PX(I),0,:) = TmpVec0   +                       RtHSdat%PLinVelEY(PX(I)   ,0,:)
-      RtHSdat%PLinVelEY(PX(I),1,:) = TmpVec1   +                       RtHSdat%PLinVelEY(PX(I)   ,1,:)
+      RtHSdat%PLinVelEY(PX(I),1,:) = TmpVec1   +   TmpVec2   +         RtHSdat%PLinVelEY(PX(I)   ,1,:)
 
        RtHSdat%LinAccEYt           = RtHSdat%LinAccEYt + x%QDT(PX(I) )*RtHSdat%PLinVelEY(PX(I)   ,1,:)
 
@@ -7269,10 +7332,11 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
    DO I = 1,NPX   ! Loop through all DOFs associated with the angular motion of the platform (body X)
 
       TmpVec0 = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I)   ,0,:), RtHSdat%rZO                 )
-      TmpVec1 = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I)   ,0,:),     EwXXrZO + LinVelXO      )
+      TmpVec1 = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I)   ,0,:),     EwXXrZO + LinVelXO      ) 
+      TmpVec2 = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I)   ,1,:), RtHSdat%rZO                 )
 
       RtHSdat%PLinVelEO(PX(I),0,:) = TmpVec0    +                       RtHSdat%PLinVelEO(PX(I)   ,0,:)
-      RtHSdat%PLinVelEO(PX(I),1,:) = TmpVec1    +                       RtHSdat%PLinVelEO(PX(I)   ,1,:)
+      RtHSdat%PLinVelEO(PX(I),1,:) = TmpVec1    +    TmpVec2    +       RtHSdat%PLinVelEO(PX(I)   ,1,:)
 
       RtHSdat%LinVelEO             =  RtHSdat%LinVelEO  + x%QDT(PX(I) )*RtHSdat%PLinVelEO(PX(I)   ,0,:)
       RtHSdat%LinAccEOt            =  RtHSdat%LinAccEOt + x%QDT(PX(I) )*RtHSdat%PLinVelEO(PX(I)   ,1,:)
@@ -7565,11 +7629,12 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
       RtHSdat%LinVelET(:,J)  = LinVelXT + RtHSdat%LinVelEZ
       DO I = 1,NPX   ! Loop through all DOFs associated with the angular motion of the platform (body X)
 
-         TmpVec0   = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I),0,:), RtHSdat%rZT(:,J)            )
+         TmpVec0   = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I),0,:), RtHSdat%rZT(:,J)        )
          TmpVec1   = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I),0,:), EwXXrZT      + LinVelXT )
+         TmpVec2   = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I),1,:), RtHSdat%rZT(:,J)        )
 
          RtHSdat%PLinVelET(J,PX(I),0,:) = RtHSdat%PLinVelET(J,PX(I),0,:) + TmpVec0
-         RtHSdat%PLinVelET(J,PX(I),1,:) = RtHSdat%PLinVelET(J,PX(I),1,:) + TmpVec1
+         RtHSdat%PLinVelET(J,PX(I),1,:) = RtHSdat%PLinVelET(J,PX(I),1,:) + TmpVec1 + TmpVec2
 
          RtHSdat%LinVelET( :,        J) = RtHSdat%LinVelET( :,        J) + x%QDT(PX(I))*RtHSdat%PLinVelET(J,PX(I),0,:)
          RtHSdat%LinAccETt(:,        J) = RtHSdat%LinAccETt(:,        J) + x%QDT(PX(I))*RtHSdat%PLinVelET(J,PX(I),1,:)
@@ -8209,7 +8274,10 @@ DO K = 1,p%NumBl ! Loop through all blades
    TmpVec4 = CROSS_PRODUCT( -RtHSdat%AngVelEX,   TmpVec  )                                                      ! = ( -angular velocity of platform in the inertia frame ) cross ( TmpVec )
 
    RtHSdat%FrcZAllt = RtHSdat%FrcT0Trbt + RtHSdat%FZHydrot + TmpVec1
-   RtHSdat%MomXAllt = RtHSdat%MomX0Trbt + RtHSdat%MXHydrot + TmpVec2 + TmpVec3 + TmpVec4   
+   RtHSdat%MomXAllt = RtHSdat%MomX0Trbt + RtHSdat%MXHydrot + TmpVec2 + TmpVec3 + TmpVec4 &
+                    - p%PtfmRIner*CoordSys%a1*DOT_PRODUCT( CoordSys%a1, RtHSdat%AngAccEXt ) &
+                    - p%PtfmYIner*CoordSys%a2*DOT_PRODUCT( CoordSys%a2, RtHSdat%AngAccEXt ) &
+                    - p%PtfmPIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a3, RtHSdat%AngAccEXt )      
    
    
 END SUBROUTINE CalculateForcesMoments
