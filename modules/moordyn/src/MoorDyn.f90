@@ -3992,12 +3992,12 @@ SUBROUTINE MD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       do i=1,p%Jac_nx      ! index into dx dimension
          ! get x_op + delta x
          call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call MD_perturb_x(p, p%dxIdx_map2_xStateIdx(i), 1, x_perturb, delta )
+         call MD_perturb_x(p, i, 1, x_perturb, delta )
          ! compute y at x_op + delta x
          call MD_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          ! get x_op - delta x
          call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call MD_perturb_x(p, p%dxIdx_map2_xStateIdx(i), -1, x_perturb, delta )
+         call MD_perturb_x(p, i, -1, x_perturb, delta )
          ! compute y at x_op - delta x
          call MD_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          ! get central difference:
@@ -4017,12 +4017,12 @@ SUBROUTINE MD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       do i=1,p%Jac_nx      ! index into dx dimension
          ! get x_op + delta x
          call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call MD_perturb_x(p, p%dxIdx_map2_xStateIdx(i), 1, x_perturb, delta )
+         call MD_perturb_x(p, i, 1, x_perturb, delta )
          ! compute x at x_op + delta x
          call MD_CalcContStateDeriv( t, u, p, x_perturb, xd, z, OtherState, m, x_p, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          ! get x_op - delta x
          call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call MD_perturb_x(p, p%dxIdx_map2_xStateIdx(i), -1, x_perturb, delta )
+         call MD_perturb_x(p, i, -1, x_perturb, delta )
          ! compute x at x_op - delta x
          call MD_CalcContStateDeriv( t, u, p, x_perturb, xd, z, OtherState, m, x_m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
          if(Failed()) return
@@ -4703,9 +4703,10 @@ SUBROUTINE MD_Perturb_x( p, i, perturb_sign, x, dx )
    INTEGER( IntKi )            , INTENT(IN   ) :: perturb_sign !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
    TYPE(MD_ContinuousStateType), INTENT(INOUT) :: x            !< perturbed MD states
    REAL( R8Ki )                , INTENT(  OUT) :: dx           !< amount that specific state was perturbed
-
-   dx=p%dx(i)
-   x%states(i)    = x%states(i)    + dx * perturb_sign
+   integer(IntKi) :: j
+   dx = p%dx(i)
+   j = p%dxIdx_map2_xStateIdx(i)
+   x%states(j)    = x%states(j)    + dx * perturb_sign
 END SUBROUTINE MD_Perturb_x
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine uses values of two output types to compute an array of differences.

@@ -80,8 +80,9 @@ typedef	^	FAST_VTK_SurfaceType	SiKi	GroundRad	-	-	-	"radius for plotting circle 
 typedef	^	FAST_VTK_SurfaceType	SiKi	NacelleBox	{3}{8}	-	-	"X-Y-Z locations of 8 points that define the nacelle box, relative to the nacelle position"	m
 typedef	^	FAST_VTK_SurfaceType	SiKi	TowerRad	{:}	-	-	"radius of each ED tower node"	m
 typedef	^	FAST_VTK_SurfaceType	IntKi	NWaveElevPts	{2}	-	-	"number of points for wave elevation visualization"	-
-typedef	^	FAST_VTK_SurfaceType	SiKi	WaveElevXY	{:}{:}	-	-	"X-Y locations for WaveElev output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number."	"m,-"
-typedef	^	FAST_VTK_SurfaceType	SiKi	WaveElev	{:}{:}	-	-	"wave elevation at WaveElevXY; first dimension is time step; second dimension is point number"	"m,-"
+typedef	^	FAST_VTK_SurfaceType	SiKi	WaveElevVisX	{:}	-	-	"X locations for WaveElev output (for visualization)."	"m,-"
+typedef	^	FAST_VTK_SurfaceType	SiKi	WaveElevVisY	{:}	-	-	"Y locations for WaveElev output (for visualization)."	"m,-"
+typedef	^	FAST_VTK_SurfaceType	SiKi	WaveElevVisGrid	{:}{:}{:}	-	-	"wave elevation at WaveElevVis{XY}; first dimension is time step; second/third dimensions are grid of elevations"	"m,-"
 typedef	^	FAST_VTK_SurfaceType	FAST_VTK_BLSurfaceType	BladeShape	{:}	-	-	"AirfoilCoords for each blade"	m
 typedef	^	FAST_VTK_SurfaceType	SiKi	MorisonVisRad	{:}	-	-	"radius of each Morison node"	m
 
@@ -284,6 +285,12 @@ typedef   ^      ^                   HydroDyn_DiscreteStateType            xd_HD
 typedef   ^      ^                   HydroDyn_ConstraintStateType           z_HD      {:}    -   -   "Constraint states"
 typedef   ^      ^                   HydroDyn_OtherStateType          OtherSt_HD      {:}    -   -   "Other states"
 typedef   ^      ^                   HydroDyn_InputType                     u_HD      {:}    -   -   "System inputs"
+# ..... SeaSt OP data .......................................................................................................
+typedef   FAST   FAST_LinStateSave   SeaSt_ContinuousStateType             x_SeaSt    {:}    -   -   "Continuous states"
+typedef   ^      ^                   SeaSt_DiscreteStateType              xd_SeaSt    {:}    -   -   "Discrete states"
+typedef   ^      ^                   SeaSt_ConstraintStateType             z_SeaSt    {:}    -   -   "Constraint states"
+typedef   ^      ^                   SeaSt_OtherStateType            OtherSt_SeaSt    {:}    -   -   "Other states"
+typedef   ^      ^                   SeaSt_InputType                       u_SeaSt    {:}    -   -   "System inputs"
 # ..... IceFloe OP data .......................................................................................................
 typedef   FAST   FAST_LinStateSave   IceFloe_ContinuousStateType            x_IceF    {:}    -   -   "Continuous states"
 typedef   ^      ^                   IceFloe_DiscreteStateType             xd_IceF    {:}    -   -   "Discrete states"
@@ -842,6 +849,7 @@ typedef	^	FAST_ExternInitType	logical	FarmIntegration	-	.false.	-	"whether this 
 typedef	^	FAST_ExternInitType	IntKi	windGrid_n	4	-	-	"number of grid points in the x, y, z, and t directions for IfW"	-
 typedef	^	FAST_ExternInitType	ReKi	windGrid_delta	4	-	-	"size between 2 consecutive grid points in each grid direction for IfW"	"m,m,m,s"
 typedef	^	FAST_ExternInitType	ReKi	windGrid_pZero	3	-	-	"fixed position of the XYZ grid (i.e., XYZ coordinates of IfW m%V(:,1,1,1,:))"	m
+typedef	^	FAST_ExternInitType	SiKi	*windGrid_data	:::::	-	-	"Pointers to Wind velocity of disturbed wind (ambient + wakes) across each high-resolution domain around a turbine for each high-resolution step within a low-resolution step"      m/s
 typedef	^	FAST_ExternInitType	CHARACTER(1024)	RootName	-	-	-	"Root name of FAST output files (overrides normal operation)"	-
 typedef	^	FAST_ExternInitType	IntKi	NumActForcePtsBlade	-	-	-	"number of actuator line force points in blade"	-
 typedef	^	FAST_ExternInitType	IntKi	NumActForcePtsTower	-	-	-	"number of actuator line force points in tower"	-

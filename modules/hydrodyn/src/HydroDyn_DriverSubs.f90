@@ -1010,7 +1010,7 @@ SUBROUTINE PRP_Perturb_u( n, perturb_sign, p, u, EDRPMotion, du, Motion_HDRP, ma
    fieldIndx6= mod(n-1,6)+1    ! 1=x, 2=y 3=z 4=theta_x, 5=theta_y 6=theta_z (variable)
 
    ! Perturbation amplitude
-   perturb_t = 0.02_ReKi*D2R * max(p%WtrDpth,1.0_ReKi) ! translation input scaling  
+   perturb_t = 0.02_ReKi*D2R * max(p%WaveField%EffWtrDpth,1.0_ReKi) ! translation input scaling  
    perturb   = 2*D2R                 ! rotational input scaling
    !perturb_t = 1.0
    !perturb   = 0.1

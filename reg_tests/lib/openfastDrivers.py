@@ -27,15 +27,17 @@ import shutil
 import subprocess
 import rtestlib as rtl
 
-def _runCase(executable, inputFile, logFile, stdout, ExtraFlags=""):
+def _runCase(executable, inputFile, logFile, stdout, restart=False, ExtraFlags=""):
     if logFile is None:
-        command = "{} {} {}".format(executable, inputFile, ExtraFlags, logFile)
+        command = f"{executable} {inputFile} {ExtraFlags}"
+    elif restart:
+        command = f"{executable} -restart {os.path.splitext(inputFile)[0]} > {logFile}"
     else:
-        command = "{} {} {} > {}".format(executable, inputFile, ExtraFlags, logFile)
+        command = f"{executable} {inputFile} {ExtraFlags} > {logFile}"
     print(command)
     return subprocess.call(command, stdout=stdout, shell=True)
     
-def _runGenericCase(inputFile, executable, verbose=False, ExtraFlags=""):
+def _runGenericCase(inputFile, executable, verbose=False, restart=False, ExtraFlags=""):
     stdout = sys.stdout if verbose else open(os.devnull, 'w')
     
     rtl.validateFileOrExit(inputFile)
@@ -46,9 +48,12 @@ def _runGenericCase(inputFile, executable, verbose=False, ExtraFlags=""):
     else:
         caseparent = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
         casebase = caseparent.split(os.path.sep)[-1]  # assumes that the directory structure name is the name of the .log file. (for consistent driver + glue-code names)
-        logFile = caseparent + os.path.sep + casebase + '.log'
+        if restart:
+            logFile = caseparent + os.path.sep + casebase + '_2.log'
+        else:
+            logFile = caseparent + os.path.sep + casebase + '.log'
     
-    returnCode = _runCase(executable, inputFile, logFile, stdout, ExtraFlags)
+    returnCode = _runCase(executable, inputFile, logFile, stdout, restart, ExtraFlags)
     print("COMPLETE with code {}".format(returnCode), flush=True)    
     
     return returnCode
@@ -70,11 +75,11 @@ def _runUACase(inputFile, executable, verbose=False):
     return returnCode
 
 
-def runOpenfastCase(inputFile, executable, verbose=False):
-    return _runGenericCase(inputFile, executable, verbose)
+def runOpenfastCase(inputFile, executable, verbose=False, restart=False):
+    return _runGenericCase(inputFile, executable, verbose, restart)
 
 def runAeromapCase(inputFile, executable, verbose=False):
-    return _runGenericCase(inputFile, executable, verbose, "-steadystate")
+    return _runGenericCase(inputFile, executable, verbose, restart=False, ExtraFlags="-steadystate")
 
 def runAerodynDriverCase(inputFile, executable, verbose=False):
     caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])

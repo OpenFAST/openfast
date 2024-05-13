@@ -52,24 +52,24 @@ program AeroDyn_Driver
       ! Init of time estimator
       t_global=0.0_DbKi
       t_final=dat%dvr%numSteps*dat%dvr%dt
-      if (dat%dvr%analysisType/=idAnalysisCombi) then
+      !if (dat%dvr%analysisType/=idAnalysisCombi) then
          call SimStatus_FirstTime( TiLstPrn, PrevClockTime, SimStrtTime, UsrTime2, t_global, t_final )
-      endif
+      !endif
 
       ! One time loop
       do nt = 1, dat%dvr%numSteps
          call Dvr_TimeStep(nt, dat%dvr, dat%ADI, dat%FED, dat%errStat, dat%errMsg); call CheckError()
          ! Time update to screen
          t_global=nt*dat%dvr%dt
-         if (dat%dvr%analysisType/=idAnalysisCombi) then
+         !if (dat%dvr%analysisType/=idAnalysisCombi) then
             if (mod( nt + 1, 10 )==0) call SimStatus(TiLstPrn, PrevClockTime, t_global, t_final)
-         endif
+         !endif
       end do !nt=1,numSteps
 
-      if (dat%dvr%analysisType/=idAnalysisCombi) then
+      !if (dat%dvr%analysisType/=idAnalysisCombi) then
          ! display runtime to screen
          call RunTimes(StrtTime, UsrTime1, SimStrtTime, UsrTime2, t_global)
-      endif
+      !endif
 
       call Dvr_EndCase(dat%dvr, dat%ADI, dat%initialized, dat%errStat, dat%errMsg); call CheckError()
 

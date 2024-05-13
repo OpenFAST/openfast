@@ -184,7 +184,6 @@ PROGRAM HydroDynDriver
       ErrStat = ErrID_Fatal
       call HD_DvrEnd()
    end if
-
   
       ! Set HD Init Inputs based on SeaStates Init Outputs
    call SetHD_InitInputs()
@@ -207,10 +206,10 @@ PROGRAM HydroDynDriver
 
    
    ! Destroy InitInput and InitOutput data (and nullify pointers to SeaState data)
-   CALL SeaSt_DestroyInitInput(  InitInData_SeaSt,  ErrStat, ErrMsg, DEALLOCATEpointers=.false. );      CALL CheckError()
-   CALL SeaSt_DestroyInitOutput( InitOutData_SeaSt, ErrStat, ErrMsg, DEALLOCATEpointers=.false. );      CALL CheckError()
-   CALL HydroDyn_DestroyInitInput(  InitInData_HD,  ErrStat, ErrMsg, DEALLOCATEpointers=.false. );      CALL CheckError()
-   CALL HydroDyn_DestroyInitOutput( InitOutData_HD, ErrStat, ErrMsg, DEALLOCATEpointers=.false. );      CALL CheckError()
+   CALL SeaSt_DestroyInitInput(  InitInData_SeaSt,  ErrStat, ErrMsg );      CALL CheckError()
+   CALL SeaSt_DestroyInitOutput( InitOutData_SeaSt, ErrStat, ErrMsg );      CALL CheckError()
+   CALL HydroDyn_DestroyInitInput(  InitInData_HD,  ErrStat, ErrMsg );      CALL CheckError()
+   CALL HydroDyn_DestroyInitOutput( InitOutData_HD, ErrStat, ErrMsg );      CALL CheckError()
    
    
    ! Create Mesh mappings
@@ -323,52 +322,9 @@ subroutine SetHD_InitInputs()
    InitInData_HD%Linearize    = drvrData%Linearize
    
    ! Data from InitOutData_SeaSt:
-   InitInData_HD%WtrDens      = InitOutData_SeaSt%WtrDens
-   InitInData_HD%WtrDpth      = InitOutData_SeaSt%WtrDpth
-   InitInData_HD%MSL2SWL      = InitOutData_SeaSt%MSL2SWL
-   InitInData_HD%NStepWave    = InitOutData_SeaSt%NStepWave
-   InitInData_HD%NStepWave2   = InitOutData_SeaSt%NStepWave2
-   InitInData_HD%RhoXg        = InitOutData_SeaSt%RhoXg
-   InitInData_HD%WaveMod      = InitOutData_SeaSt%WaveMod
-   InitInData_HD%WaveStMod    = InitOutData_SeaSt%WaveStMod
-   InitInData_HD%WaveDirMod   = InitOutData_SeaSt%WaveDirMod
-   InitInData_HD%WvLowCOff    = InitOutData_SeaSt%WvLowCOff 
-   InitInData_HD%WvHiCOff     = InitOutData_SeaSt%WvHiCOff  
-   InitInData_HD%WvLowCOffD   = InitOutData_SeaSt%WvLowCOffD
-   InitInData_HD%WvHiCOffD    = InitOutData_SeaSt%WvHiCOffD 
-   InitInData_HD%WvLowCOffS   = InitOutData_SeaSt%WvLowCOffS
-   InitInData_HD%WvHiCOffS    = InitOutData_SeaSt%WvHiCOffS
-   
    InitInData_HD%InvalidWithSSExctn     =  InitOutData_SeaSt%InvalidWithSSExctn
-   
-   InitInData_HD%WaveDirMin     =  InitOutData_SeaSt%WaveDirMin  
-   InitInData_HD%WaveDirMax     =  InitOutData_SeaSt%WaveDirMax  
-   InitInData_HD%WaveDir        =  InitOutData_SeaSt%WaveDir     
-   InitInData_HD%WaveMultiDir   =  InitOutData_SeaSt%WaveMultiDir
-   InitInData_HD%WaveDOmega     =  InitOutData_SeaSt%WaveDOmega  
-   InitInData_HD%MCFD           =  InitOutData_SeaSt%MCFD
-   !InitInData_HD%WaveElev0      => InitOutData_SeaSt%WaveElev0 
-   CALL MOVE_ALLOC(  InitOutData_SeaSt%WaveElev0, InitInData_HD%WaveElev0 )  
-   InitInData_HD%WaveTime       => InitOutData_SeaSt%WaveTime  
-   InitInData_HD%WaveDynP       => InitOutData_SeaSt%WaveDynP  
-   InitInData_HD%WaveAcc        => InitOutData_SeaSt%WaveAcc   
-   InitInData_HD%WaveVel        => InitOutData_SeaSt%WaveVel   
-   
-   InitInData_HD%PWaveDynP0     => InitOutData_SeaSt%PWaveDynP0  
-   InitInData_HD%PWaveAcc0      => InitOutData_SeaSt%PWaveAcc0   
-   InitInData_HD%PWaveVel0      => InitOutData_SeaSt%PWaveVel0   
-   
-   InitInData_HD%WaveAccMCF     => InitOutData_SeaSt%WaveAccMCF
-   InitInData_HD%PWaveAccMCF0   => InitOutData_SeaSt%PWaveAccMCF0
-   
-   InitInData_HD%WaveElevC0     => InitOutData_SeaSt%WaveElevC0
-   CALL MOVE_ALLOC( InitOutData_SeaSt%WaveElevC, InitInData_HD%WaveElevC )
-   InitInData_HD%WaveDirArr     => InitOutData_SeaSt%WaveDirArr
-   InitInData_HD%WaveElev1      => InitOutData_SeaSt%WaveElev1
-   InitInData_HD%WaveElev2      => InitOutData_SeaSt%WaveElev2
-   
-   call SeaSt_Interp_CopyParam(InitOutData_SeaSt%SeaSt_Interp_p, InitInData_HD%SeaSt_Interp_p, MESH_NEWCOPY, ErrStat, ErrMsg ); CALL CheckError()
 
+   InitInData_HD%WaveField => InitOutData_SeaSt%WaveField
 
 end subroutine SetHD_InitInputs
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -409,13 +365,13 @@ subroutine HD_DvrEnd()
       end if
          
          ! Destroy Initialization data
-      CALL SeaSt_DestroyInitOutput( InitOutData_SeaSt, ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
+      CALL SeaSt_DestroyInitOutput( InitOutData_SeaSt, ErrStat2, ErrMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-      CALL SeaSt_DestroyInitInput( InitInData_SeaSt, ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
+      CALL SeaSt_DestroyInitInput( InitInData_SeaSt, ErrStat2, ErrMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-      CALL HydroDyn_DestroyInitInput(  InitInData_HD,  ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
+      CALL HydroDyn_DestroyInitInput(  InitInData_HD,  ErrStat2, ErrMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-      CALL HydroDyn_DestroyInitOutput( InitOutData_HD, ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
+      CALL HydroDyn_DestroyInitOutput( InitOutData_HD, ErrStat2, ErrMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
             ! Destroy copies of HD data

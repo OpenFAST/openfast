@@ -68,9 +68,6 @@ if(APPLE OR UNIX)
 endif()
 
 
-#add_executable(ss_radiation
-#  src/SS_Radiation_DriverCode.f90)
-#target_link_libraries(ss_radiation hydrodynlib nwtclibs)
 
 install(TARGETS hydrodynlib hydrodyn_driver hydrodyn_driver_subs hydrodyn_c_binding
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

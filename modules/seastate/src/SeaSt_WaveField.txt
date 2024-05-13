@@ -1,0 +1,74 @@
+#---------------------------------------------------------------------------------------------------------------------------------------------------------
+# Data structures for representing wave fields.
+#
+param     SeaSt_WaveField      -                INTEGER             WaveDirMod_None          -        0   -   "WaveDirMod = 0 [Directional spreading function is NONE]" -
+param     SeaSt_WaveField      -                INTEGER             WaveDirMod_COS2S         -        1   -   "WaveDirMod = 1 [Directional spreading function is COS2S]" -
+
+param     SeaSt_WaveField      -                INTEGER             WaveMod_None             -        0   -   "WaveMod = 0   [Incident wave kinematics model: NONE (still water)]" -
+param     SeaSt_WaveField      -                INTEGER             WaveMod_Regular          -        1   -   "WaveMod = 1   [Incident wave kinematics model: Regular (periodic)]" -
+param     SeaSt_WaveField      -                INTEGER             WaveMod_RegularUsrPh     -        10  -   "WaveMod = 1P# [Incident wave kinematics model: Regular (user specified phase)]" -
+param     SeaSt_WaveField      -                INTEGER             WaveMod_JONSWAP          -        2   -   "WaveMod = 2   [Incident wave kinematics model: JONSWAP/Pierson-Moskowitz spectrum (irregular)]" -
+param     SeaSt_WaveField      -                INTEGER             WaveMod_WhiteNoise       -        3   -   "WaveMod = 3   [Incident wave kinematics model: White noise spectrum (irregular)]" -
+param     SeaSt_WaveField      -                INTEGER             WaveMod_UserSpctrm       -        4   -   "WaveMod = 4   [Incident wave kinematics model: user-defined spectrum from routine UserWaveSpctrm (irregular)]" -
+param     SeaSt_WaveField      -                INTEGER             WaveMod_ExtElev          -        5   -   "WaveMod = 5   [Incident wave kinematics model: Externally generated wave-elevation time series]" -
+param     SeaSt_WaveField      -                INTEGER             WaveMod_ExtFull          -        6   -   "WaveMod = 6   [Incident wave kinematics model: Externally generated full wave-kinematics time series (invalid for PotMod/=0)]" -
+param     SeaSt_WaveField      -                INTEGER             WaveMod_UserFreq         -        7   -   "WaveMod = 7   [Incident wave kinematics model: user-defined wave frequency components]" -
+
+param     SeaSt_WaveField      -                INTEGER             ConstWaveMod_None        -        0   -   "ConstWaveMod = 0 [Constrained wave model: No constrained waves]" -
+param     SeaSt_WaveField      -                INTEGER             ConstWaveMod_CrestElev   -        1   -   "ConstWaveMod = 1 [Constrained wave model: Constrained wave with specified crest elevation, alpha]" -
+param     SeaSt_WaveField      -                INTEGER             ConstWaveMod_Peak2Trough -        2   -   "ConstWaveMod = 2 [Constrained wave model: Constrained wave with guaranteed peak-to-trough crest height, HCrest]" -
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------
+#<Key Word> <Module>         <TypeName>            <FieldType>                   <FieldName>     <Dims>           <Ctrl>   <DNA ME> <Description> <Units>
+#---------------------------------------------------------------------------------------------------------------------------------------------------------
+typedef     ^             ParameterType         IntKi                n                4               -        -        "number of evenly-spaced grid points in the t, x, y, and z directions"      -
+typedef     ^             ParameterType         ReKi                 delta            4               -        -        "size between 2 consecutive grid points in each grid direction"            "s,m,m,m"
+typedef     ^             ParameterType         ReKi                 pZero            4               -        -        "fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))" "m"
+typedef     ^             ParameterType         ReKi                 Z_Depth          -               -        -        "grid depth" m
+
+typedef     ^             MiscVarType           SiKi                 N3D             {8}              -        -        "this is the weighting function for 3-d velocity field" -
+typedef     ^             MiscVarType           SiKi                 N4D             {16}             -        -        "this is the weighting function for 4-d velocity field" -
+typedef     ^             MiscVarType           integer              Indx_Lo          4               -        -        "this is the index into the 4-d velocity field for each wave component" -
+typedef     ^             MiscVarType           integer              Indx_Hi          4               -        -        "this is the index into the 4-d velocity field for each wave component" -
+typedef     ^             MiscVarType           logical              FirstWarn_Clamp  -            .true.      -        "used to avoid too many 'Position has been clamped to the grid boundary' warning messages " -
+
+
+typedef  SeaSt_WaveField  SeaSt_WaveFieldType   SiKi                 WaveTime        {:}              -        -        "Time array"   (s)
+typedef     ^                 ^                 SiKi                 WaveDynP        {:}{:}{:}{:}     -        -        "Incident wave dynamic pressure" (N/m^2)
+typedef     ^                 ^                 SiKi                 WaveAcc         {:}{:}{:}{:}{:}  -        -        "Incident wave acceleration"     (m/s^2)
+typedef     ^                 ^                 SiKi                 WaveAccMCF      {:}{:}{:}{:}{:}  -        -        "Scaled acceleration for MacCamy-Fuchs members" (m/s^2)
+typedef     ^                 ^                 SiKi                 WaveVel         {:}{:}{:}{:}{:}  -        -        "Incident wave velocity"         (m/s)
+typedef     ^                 ^                 SiKi                 PWaveDynP0      {:}{:}{:}        -        -        "Partial derivative of dynamic pressure in the vertical direction at the still water level" (Pa/m)
+typedef     ^                 ^                 SiKi                 PWaveAcc0       {:}{:}{:}{:}     -        -        "Partial derivative of incident wave acceleration in the vertical direction at the still water level" (m/s^2/m)
+typedef     ^                 ^                 SiKi                 PWaveAccMCF0    {:}{:}{:}{:}     -        -        "Partial derivative of scaled wave acceleration in the vertical direction at the still water level for MacCamy-Fuchs members" (m/s^2/m)
+typedef     ^                 ^                 SiKi                 PWaveVel0       {:}{:}{:}{:}     -        -        "Partial derivative of incident wave velocity in the vertical direction at the still water level" (m/s/m)
+typedef     ^                 ^                 SiKi                 WaveElev0       {:}              -        -        "Instantaneous elevation time-series of incident waves at the platform reference point (NOTE THAT THIS CAN GET MODIFIED IN WAMIT)" (m) 
+typedef     ^                 ^                 SiKi                 WaveElev1       {:}{:}{:}        -        -        "First order wave elevation"  (m)
+typedef     ^                 ^                 SiKi                 WaveElev2       {:}{:}{:}        -        -        "Second order wave elevation" (m)
+typedef     ^                 ^      SeaSt_WaveField_ParameterType   GridParams      -                -        -        "Parameters for grid spacing" (-)
+typedef     ^                 ^                 IntKi                WaveStMod       -                -        -        "Wave stretching model"
+typedef     ^                 ^                 ReKi                 EffWtrDpth      -                -        -        "Water depth" (-)
+typedef     ^                 ^                 ReKi                 MSL2SWL         -                -        -        "Vertical distance from mean sea level to still water level" (m)
+typedef     ^                 ^                 SiKi                 WaveElevC       {:}{:}{:}        -        -        "Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part" (m)
+typedef     ^                 ^                 SiKi                 WaveElevC0      {:}{:}           -        -        "Fourier components of the incident wave elevation at the platform reference point. First column is the real part; second column is the imaginary part" (m)
+typedef     ^                 ^                 SiKi                 WaveDirArr      {:}              -        -        "Wave direction array. Each frequency has a unique direction of WaveNDir > 1" (degrees)
+
+typedef     ^                 ^                 ReKi                 WtrDpth          -               -        -        "Water depth, this is necessary to inform glue-code what the module is using for WtrDpth (may not be the glue-code's default)"    (m)
+typedef     ^                 ^                 ReKi                 WtrDens          -               -        -        "Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default)"    (kg/m^3)
+typedef     ^                 ^                 SiKi                 RhoXg            -               -        -        "= WtrDens*Gravity" -
+typedef     ^                 ^                 SiKi                 WaveDirMin       -               -        -        "Minimum wave direction."  (degrees)
+typedef     ^                 ^                 SiKi                 WaveDirMax       -               -        -        "Maximum wave direction."  (degrees)
+typedef     ^                 ^                 SiKi                 WaveDir          -               -        -        "Incident wave propagation heading direction" (degrees)
+typedef     ^                 ^                 LOGICAL              WaveMultiDir     -               -        -        "Indicates the waves are multidirectional -- set by HydroDyn_Input"  -
+typedef     ^                 ^                 SiKi                 MCFD             -               -        -        "Diameter of members that will use the MacCamy-Fuchs diffraction model"
+typedef     ^                 ^                 SiKi                 WvLowCOff         -              -        -        "Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4]"   (rad/s)
+typedef     ^                 ^                 SiKi                 WvHiCOff          -              -        -        "High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4]"   (rad/s)
+typedef     ^                 ^                 SiKi                 WvLowCOffD        -              -        -        "Minimum frequency used in the difference methods [Ignored if all difference methods = 0]"   (rad/s)
+typedef     ^                 ^                 SiKi                 WvHiCOffD         -              -        -        "Maximum frequency used in the difference methods [Ignored if all difference methods = 0]"   (rad/s)
+typedef     ^                 ^                 SiKi                 WvLowCOffS        -              -        -        "Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
+typedef     ^                 ^                 SiKi                 WvHiCOffS         -              -        -        "Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
+typedef     ^                 ^                 SiKi                 WaveDOmega        -              -        -        "Frequency step for incident wave calculations" (rad/s)
+typedef     ^                 ^                 INTEGER              WaveMod           -              -        -        "Incident wave kinematics model: See valid values in SeaSt_WaveField module parameters." -
+
+typedef     ^                 ^                 INTEGER              NStepWave         -              -        -        "Total number of frequency components = total number of time steps in the incident wave" -
+typedef     ^                 ^                 INTEGER              NStepWave2        -              -        -        "NStepWave / 2" -
