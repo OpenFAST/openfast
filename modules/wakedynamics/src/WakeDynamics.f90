@@ -469,7 +469,6 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       !p%WAT_k_BrkDwn= asin(0.99_ReKi)/InitInp%InputFileData%WAT_D_BrkDwn ! sin(x/D *k) =0.
       p%WAT_k_BrkDwn= 1.00**(1./nExpBrkDwn) /InitInp%InputFileData%WAT_D_BrkDwn ! (k x/D)**n 
    endif
-   print*,'>>> WAT: k_BrkDwn',p%WAT_k_BrkDwn
    
    ! Finite difference grid coordinates r, y, z
    allocate(p%r(0:p%NumRadii-1),             stat=errStat2);  if (Failed0('p%r.')) return;
@@ -1577,6 +1576,7 @@ contains
       integer(intKi) :: i, iy, iz
       real(ReKi)     :: C, S, dvdr, dvdtheta_r, R, r_tmp
       real(ReKi)     :: x_over_D, k_Scale, U0
+      character(1024):: tmpStr
       logical, parameter :: verbose =.False.
 
       ! We use the same method for all Mod_Wake (everything on the Cartesian grid)
@@ -1585,7 +1585,8 @@ contains
          U0 = xd%Vx_wind_disk_filt(i)
          if ( EqualRealNos( U0, 0.0_ReKi ) ) then
             y%WAT_k(:,:,i) = 0.0_ReKi
-            if(verbose) print'(A,I3,A)','Plane:',i,' Velocity zero'
+            if(verbose) write(tmpStr,'(A,I3,A)') 'Plane:',i,' Velocity zero'
+            if(verbose) call WrScr(trim(tmpStr))
          else
             ! Scaling factor, onset of vortex breakdown
             x_over_D = xd%x_plane(i)/u%D_rotor 
@@ -1614,7 +1615,8 @@ contains
                                    &  + p%WAT_k_Off
                end do ! iy
             end do ! iz
-            if(verbose) print'(A,I3,A,F6.2,A,F6.3,A,F6.3,A,F8.3)','Plane:',i,'  x/D:',xd%x_plane(i)/u%D_rotor,'  scale:', k_Scale, '  kmax:',maxval(y%WAT_k(:,:,i)), '  velmax:',maxval(abs(y%Vx_wake2(:,:,i))) 
+            if(verbose) write(tmpStr,'(A,I3,A,F6.2,A,F6.3,A,F6.3,A,F8.3)') 'Plane:',i,'  x/D:',xd%x_plane(i)/u%D_rotor,'  scale:', k_Scale, '  kmax:',maxval(y%WAT_k(:,:,i)), '  velmax:',maxval(abs(y%Vx_wake2(:,:,i))) 
+            if(verbose) call WrScr(trim(tmpStr))
          endif
       end do !i, planes
 !       print*,'kmax ', maxval(y%WAT_k(:,:,0)), maxval(y%WAT_k(:,:,1)) , maxval(y%WAT_k(:,:,maxPln-1)), maxval(y%WAT_k(:,:,maxPln))
