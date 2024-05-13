@@ -51,7 +51,7 @@ outputs are expressed in one of the following three coordinate systems:
 
 .. _bd-output-channel:
 
-.. figure:: figs/bd_output_channel.pdf
+.. figure:: figs/bd_output_channel.png
    :width: 500px
    :align: center
 
