@@ -7162,7 +7162,7 @@ ENDIF
       !RtHSdat%AngPosEF (:,J)            =  RtHSdat%AngPosEX  + RtHSdat%AngPosXF(:,J) ! LW: This is no longer right with large Ptfm Rotation
       ThetaSS =  p%TwrSSSF(1,J,1)*x%QT(DOF_TSS1) + p%TwrSSSF(2,J,1)*x%QT(DOF_TSS2)
       ThetaFA = -p%TwrFASF(1,J,1)*x%QT(DOF_TFA1) - p%TwrFASF(2,J,1)*x%QT(DOF_TFA2)
-      CALL SmllRotTrans('tower element rotation',ThetaSS,-ThetaFA,0.,TransMat,'',ErrStat2,ErrMsg2)
+      CALL SmllRotTrans('tower element rotation',ThetaSS,-ThetaFA,0.0_R8Ki,TransMat,'',ErrStat2,ErrMsg2)
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat>=AbortErrLev) then
          return
