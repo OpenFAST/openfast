@@ -1009,9 +1009,13 @@ END IF
       m%AllOuts( TwHtTPyi(I) ) = -1.0*m%RtHS%rT(3,p%TwrGagNd(I))
       m%AllOuts( TwHtTPzi(I) ) =      m%RtHS%rT(2,p%TwrGagNd(I)) + p%PtfmRefzt
 
-      m%AllOuts( TwHtRPxi(I) ) =  m%RtHS%AngPosEF(1,p%TwrGagNd(I))*R2D
-      m%AllOuts( TwHtRPyi(I) ) = -m%RtHS%AngPosEF(3,p%TwrGagNd(I))*R2D
-      m%AllOuts( TwHtRPzi(I) ) =  m%RtHS%AngPosEF(2,p%TwrGagNd(I))*R2D
+      ! m%AllOuts( TwHtRPxi(I) ) =  m%RtHS%AngPosEF(1,p%TwrGagNd(I))*R2D
+      ! m%AllOuts( TwHtRPyi(I) ) = -m%RtHS%AngPosEF(3,p%TwrGagNd(I))*R2D
+      ! m%AllOuts( TwHtRPzi(I) ) =  m%RtHS%AngPosEF(2,p%TwrGagNd(I))*R2D
+
+      m%AllOuts( TwHtRPxi(I) ) =  m%RtHS%AngPosEF(1,p%TwrGagNd(I))*R2D ! <- AngPosEF is now simply the roll, pitch, and yaw angles (possibly large) of each tower section
+      m%AllOuts( TwHtRPyi(I) ) =  m%RtHS%AngPosEF(2,p%TwrGagNd(I))*R2D
+      m%AllOuts( TwHtRPzi(I) ) =  m%RtHS%AngPosEF(3,p%TwrGagNd(I))*R2D
 
    END DO !I
 
