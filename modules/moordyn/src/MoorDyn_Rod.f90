@@ -259,7 +259,7 @@ CONTAINS
          ! handled, along with passing kinematics to dependent lines, by separate call to setState
       
       else
-         print *, "Error: Rod_SetKinematics called for a free Rod in MoorDyn. Rod number", Rod%IdNum  ! <<<
+         Call WrScr("Error: Rod_SetKinematics called for a free Rod in MoorDyn. Rod number"//trim(num2lstr(Rod%IdNum)))  ! <<<
       end if
 
    
@@ -324,7 +324,7 @@ CONTAINS
          CALL Rod_SetDependentKin(Rod, t, m, .FALSE.)
       
       else
-         print *, "Error: Rod::setState called for a non-free rod type in MoorDyn"   ! <<<
+         Call WrScr("Error: Rod::setState called for a non-free rod type in MoorDyn")   ! <<<
       end if
 
       ! update Rod direction unit vector (simply equal to last three entries of r6)
@@ -1018,7 +1018,7 @@ CONTAINS
          Rod%F6net(4:6) = 0.0_DbKi
          Fnet_out = Rod%F6net
       else
-         print *, "ERROR, Rod_GetCoupledForce called for wrong (non-coupled) rod type!"
+         Call WrScr("ERROR, Rod_GetCoupledForce called for wrong (non-coupled) rod type!")
       end if
    
    END SUBROUTINE Rod_GetCoupledForce

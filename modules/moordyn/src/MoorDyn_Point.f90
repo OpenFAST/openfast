@@ -97,24 +97,18 @@ CONTAINS
       Point%time = t
 
       
-    !  if (Point%typeNum==0) THEN ! anchor ( <<< to be changed/expanded) ... in MoorDyn F also used for coupled points
-                        
-         ! set position and velocity
-         Point%r  = r_in
-         Point%rd = rd_in
-         Point%a = a_in
-                 
-         ! pass latest kinematics to any attached lines
-         DO l=1,Point%nAttached
-            CALL Line_SetEndKinematics(m%LineList(Point%attached(l)), Point%r, Point%rd, t, Point%Top(l))
-         END DO
-      
-     ! else
-     !    
-     !    PRINT*,"Error: setKinematics called for wrong Point type. Point ", Point%IdNum, " type ", Point%typeNum
-         
-   !  END IF
-      
+                     
+      ! set position and velocity
+      Point%r  = r_in
+      Point%rd = rd_in
+      Point%a = a_in
+               
+      ! pass latest kinematics to any attached lines
+      DO l=1,Point%nAttached
+         CALL Line_SetEndKinematics(m%LineList(Point%attached(l)), Point%r, Point%rd, t, Point%Top(l))
+      END DO
+   
+   
          
    END SUBROUTINE Point_SetKinematics
    !--------------------------------------------------------------

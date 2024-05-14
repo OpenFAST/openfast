@@ -286,7 +286,7 @@ CONTAINS
          CALL Body_SetDependentKin(Body, t, m) 
 
       else 
-         print *, "Error: Body::setState called for a non-free Body type in MoorDyn"   ! <<<
+         Call WrScr("Error: Body::setState called for a non-free Body type in MoorDyn")   ! <<<
       end if
       
    END SUBROUTINE Body_SetState
@@ -490,7 +490,7 @@ CONTAINS
          CALL Point_GetNetForceAndMass( m%PointList(Body%attachedC(l)), Body%r6(1:3), F6_i, M6_i, m, p)
          
          if (ABS(F6_i(5)) > 1.0E12) then
-            print *, "Warning: extreme pitch moment from body-attached Point ", l
+            Call WrScr( "Warning: extreme pitch moment from body-attached Point "//trim(num2lstr(l)))
          end if
          
          ! sum quantitites
@@ -505,7 +505,7 @@ CONTAINS
          CALL Rod_GetNetForceAndMass(m%RodList(Body%attachedR(l)), Body%r6(1:3), F6_i, M6_i, m, p)
          
          if (ABS(F6_i(5)) > 1.0E12) then
-            print *, "Warning: extreme pitch moment from body-attached Rod ", l
+            Call WrScr("Warning: extreme pitch moment from body-attached Rod "//trim(num2lstr(l)))
          end if
          
          ! sum quantitites
@@ -559,7 +559,7 @@ CONTAINS
          Fnet_out = Body%F6net
 
       else
-         print *, "ERROR, Body_GetCoupledForce called for wrong (non-coupled) body type in MoorDyn!"
+         Call WrScr( "ERROR, Body_GetCoupledForce called for wrong (non-coupled) body type in MoorDyn!")
       end if
    
    END SUBROUTINE Body_GetCoupledForce
