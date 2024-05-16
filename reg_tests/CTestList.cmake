@@ -468,6 +468,7 @@ seast_regression("seastate_wavemod5"                         "seastate")   # pla
 
 # MoorDyn regression tests
 md_regression("md_5MW_OC4Semi"                                "moordyn")
+md_regression("md_lineFail"                                   "moordyn")
 py_md_regression("py_md_5MW_OC4Semi"                             "moordyn;python")
 # the following tests are excessively slow in double precision, so skip these in normal testing
 #md_regression("md_Node_Check_N20"                             "moordyn")
