@@ -10221,7 +10221,7 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat2 >= AbortErrLev ) RETURN
       if (present(silent)) then
-         if (silent) then
+         if (.not. silent) then
             CALL WrFileNR ( Turbine%y_FAST%UnOu, '#Restarting here')
             WRITE(Turbine%y_FAST%UnOu, '()')
          endif
