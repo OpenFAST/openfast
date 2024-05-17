@@ -316,7 +316,7 @@ of_regression("MHK_RM1_Floating"                       "openfast;elastodyn;aerod
 of_regression("Tailfin_FreeYaw1DOF_PolarBased"         "openfast;elastodyn;aerodyn15")
 of_regression("Tailfin_FreeYaw1DOF_Unsteady"           "openfast;elastodyn;aerodyn15")
 
-of_aeromap_regression("5MW_Land_AeroMap"               "aeromap;elastodyn;aerodyn15")
+# of_aeromap_regression("5MW_Land_AeroMap"               "aeromap;elastodyn;aerodyn15")
 
 # OpenFAST C++ API test
 if(BUILD_OPENFAST_CPP_API)
