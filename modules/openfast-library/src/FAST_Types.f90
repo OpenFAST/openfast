@@ -160,25 +160,25 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: TmpMatrix      !< Temporary matrix for performing transfer for destination load meshes without sibling motion meshes [-]
     TYPE(MeshMapType)  :: MeshMap      !< Mesh mapping from Source variable to Destination variable [-]
     TYPE(MeshMapType)  :: MeshMapAux      !< Auxiliary mesh mapping for destination load meshes without sibling motion mesh [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocSrcTransDisp = 0_IntKi      !< Data indices of linearized mesh mapping [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocSrcTransVel = 0_IntKi      !< Data indices of linearized mesh mapping [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocSrcTransAcc = 0_IntKi      !< Data indices of linearized mesh mapping [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocSrcOrientation = 0_IntKi      !< Data indices of linearized mesh mapping [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocSrcAngularVel = 0_IntKi      !< Data indices of linearized mesh mapping [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocSrcAngularAcc = 0_IntKi      !< Data indices of linearized mesh mapping [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocSrcForce = 0_IntKi      !< Data indices of linearized mesh mapping [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocSrcMoment = 0_IntKi      !< Data indices of linearized mesh mapping [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocSrcDispTransDisp = 0_IntKi      !< Data indices of linearized mesh mapping [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocDstTransDisp = 0_IntKi      !< Data indices of linearized mesh mapping [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocDstTransVel = 0_IntKi      !< Data indices of linearized mesh mapping [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocDstTransAcc = 0_IntKi      !< Data indices of linearized mesh mapping [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocDstOrientation = 0_IntKi      !< Data indices of linearized mesh mapping [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocDstAngularVel = 0_IntKi      !< Data indices of linearized mesh mapping [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocDstAngularAcc = 0_IntKi      !< Data indices of linearized mesh mapping [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocDstForce = 0_IntKi      !< Data indices of linearized mesh mapping [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocDstMoment = 0_IntKi      !< Data indices of linearized mesh mapping [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocDstDispTransDisp = 0_IntKi      !< Data indices of linearized mesh mapping [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLocDstDispOrientation = 0_IntKi      !< Data indices of linearized mesh mapping [-]
+    INTEGER(IntKi)  :: iVarSrcTransDisp = 0_IntKi      !< Var index for linearized mesh mapping [-]
+    INTEGER(IntKi)  :: iVarSrcTransVel = 0_IntKi      !< Var index for linearized mesh mapping [-]
+    INTEGER(IntKi)  :: iVarSrcTransAcc = 0_IntKi      !< Var index for linearized mesh mapping [-]
+    INTEGER(IntKi)  :: iVarSrcOrientation = 0_IntKi      !< Var index for linearized mesh mapping [-]
+    INTEGER(IntKi)  :: iVarSrcAngularVel = 0_IntKi      !< Var index for linearized mesh mapping [-]
+    INTEGER(IntKi)  :: iVarSrcAngularAcc = 0_IntKi      !< Var index for linearized mesh mapping [-]
+    INTEGER(IntKi)  :: iVarSrcForce = 0_IntKi      !< Var index for linearized mesh mapping [-]
+    INTEGER(IntKi)  :: iVarSrcMoment = 0_IntKi      !< Var index for linearized mesh mapping [-]
+    INTEGER(IntKi)  :: iVarSrcDispTransDisp = 0_IntKi      !< Var index for linearized mesh mapping [-]
+    INTEGER(IntKi)  :: iVarDstTransDisp = 0_IntKi      !< Var index for linearized mesh mapping [-]
+    INTEGER(IntKi)  :: iVarDstTransVel = 0_IntKi      !< Var index for linearized mesh mapping [-]
+    INTEGER(IntKi)  :: iVarDstTransAcc = 0_IntKi      !< Var index for linearized mesh mapping [-]
+    INTEGER(IntKi)  :: iVarDstOrientation = 0_IntKi      !< Var index for linearized mesh mapping [-]
+    INTEGER(IntKi)  :: iVarDstAngularVel = 0_IntKi      !< Var index for linearized mesh mapping [-]
+    INTEGER(IntKi)  :: iVarDstAngularAcc = 0_IntKi      !< Var index for linearized mesh mapping [-]
+    INTEGER(IntKi)  :: iVarDstForce = 0_IntKi      !< Var index for linearized mesh mapping [-]
+    INTEGER(IntKi)  :: iVarDstMoment = 0_IntKi      !< Var index for linearized mesh mapping [-]
+    INTEGER(IntKi)  :: iVarDstDispTransDisp = 0_IntKi      !< Var index for linearized mesh mapping [-]
+    INTEGER(IntKi)  :: iVarDstDispOrientation = 0_IntKi      !< Var index for linearized mesh mapping [-]
   END TYPE TC_MappingType
 ! =======================
 ! =========  TC_ParameterType  =======
@@ -217,29 +217,6 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModPost      !< ModData index order for post option 1 modules [-]
   END TYPE TC_ParameterType
 ! =======================
-! =========  VarIdxType  =======
-  TYPE, PUBLIC :: VarIdxType
-    INTEGER(IntKi)  :: ModIdx = 0_IntKi      !<  [-]
-    INTEGER(IntKi)  :: iVar = 0_IntKi      !<  [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLoc = 0_IntKi      !<  [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iGbl = 0_IntKi      !<  [-]
-  END TYPE VarIdxType
-! =======================
-! =========  VarsIdxType  =======
-  TYPE, PUBLIC :: VarsIdxType
-    INTEGER(IntKi)  :: FlagFilter = 0_IntKi      !<  [-]
-    INTEGER(IntKi)  :: Nx = 0_IntKi      !<  [-]
-    INTEGER(IntKi)  :: Nxd = 0_IntKi      !<  [-]
-    INTEGER(IntKi)  :: Nz = 0_IntKi      !<  [-]
-    INTEGER(IntKi)  :: Nu = 0_IntKi      !<  [-]
-    INTEGER(IntKi)  :: Ny = 0_IntKi      !<  [-]
-    TYPE(VarIdxType) , DIMENSION(:), ALLOCATABLE  :: ix      !<  [-]
-    TYPE(VarIdxType) , DIMENSION(:), ALLOCATABLE  :: ixd      !<  [-]
-    TYPE(VarIdxType) , DIMENSION(:), ALLOCATABLE  :: iz      !<  [-]
-    TYPE(VarIdxType) , DIMENSION(:), ALLOCATABLE  :: iu      !<  [-]
-    TYPE(VarIdxType) , DIMENSION(:), ALLOCATABLE  :: iy      !<  [-]
-  END TYPE VarsIdxType
-! =======================
 ! =========  ModLinTCType  =======
   TYPE, PUBLIC :: ModLinTCType
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: x      !<  [-]
@@ -271,20 +248,38 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Ins = 0      !< Module instance number [-]
     REAL(R8Ki)  :: DT = 0      !< Module time step [-]
     INTEGER(IntKi)  :: SubSteps = 0      !< Module number of substeps per solver time step [-]
-    INTEGER(IntKi)  :: ixg = 0_IntKi      !< starting index for continuous state values in global arrays [-]
-    INTEGER(IntKi)  :: ixdg = 0_IntKi      !< starting index for discrete state values in global arrays [-]
-    INTEGER(IntKi)  :: izg = 0_IntKi      !< starting index for constraint state values in global arrays [-]
-    INTEGER(IntKi)  :: iug = 0_IntKi      !< starting index for input values in global arrays [-]
-    INTEGER(IntKi)  :: iyg = 0_IntKi      !< starting index for output values in global arrays [-]
     TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Pointer to module variables type [-]
     TYPE(ModLinTCType)  :: Lin      !< Module linearization data [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: SrcMaps      !< Indices of mappings where module is the source [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DstMaps      !< Indices of mappings where module is the destination [-]
   END TYPE ModDataType
 ! =======================
+! =========  VarIdxType  =======
+  TYPE, PUBLIC :: VarIdxType
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ModVarStart      !< Variable start index from module index [-]
+    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: ValLocGbl      !< Variable local and global value indices [-]
+  END TYPE VarIdxType
+! =======================
+! =========  VarsIdxType  =======
+  TYPE, PUBLIC :: VarsIdxType
+    INTEGER(IntKi)  :: FlagFilter = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: Nx = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: Nxd = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: Nz = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: Nu = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: Ny = 0_IntKi      !<  [-]
+    TYPE(VarIdxType)  :: x      !<  [-]
+    TYPE(VarIdxType)  :: xd      !<  [-]
+    TYPE(VarIdxType)  :: z      !<  [-]
+    TYPE(VarIdxType)  :: u      !<  [-]
+    TYPE(VarIdxType)  :: y      !<  [-]
+    TYPE(ModLinTCType)  :: Lin      !< Linearization matrices [-]
+  END TYPE VarsIdxType
+! =======================
 ! =========  ML_ParameterType  =======
   TYPE, PUBLIC :: ML_ParameterType
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iMod      !< ModData index order for linearization [-]
+    TYPE(VarsIdxType)  :: IdxLin      !< Variable index for linearization data [-]
   END TYPE ML_ParameterType
 ! =======================
 ! =========  ML_MiscVarType  =======
@@ -1643,25 +1638,25 @@ subroutine FAST_CopyTC_MappingType(SrcTC_MappingTypeData, DstTC_MappingTypeData,
    call NWTC_Library_CopyMeshMapType(SrcTC_MappingTypeData%MeshMapAux, DstTC_MappingTypeData%MeshMapAux, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   DstTC_MappingTypeData%iLocSrcTransDisp = SrcTC_MappingTypeData%iLocSrcTransDisp
-   DstTC_MappingTypeData%iLocSrcTransVel = SrcTC_MappingTypeData%iLocSrcTransVel
-   DstTC_MappingTypeData%iLocSrcTransAcc = SrcTC_MappingTypeData%iLocSrcTransAcc
-   DstTC_MappingTypeData%iLocSrcOrientation = SrcTC_MappingTypeData%iLocSrcOrientation
-   DstTC_MappingTypeData%iLocSrcAngularVel = SrcTC_MappingTypeData%iLocSrcAngularVel
-   DstTC_MappingTypeData%iLocSrcAngularAcc = SrcTC_MappingTypeData%iLocSrcAngularAcc
-   DstTC_MappingTypeData%iLocSrcForce = SrcTC_MappingTypeData%iLocSrcForce
-   DstTC_MappingTypeData%iLocSrcMoment = SrcTC_MappingTypeData%iLocSrcMoment
-   DstTC_MappingTypeData%iLocSrcDispTransDisp = SrcTC_MappingTypeData%iLocSrcDispTransDisp
-   DstTC_MappingTypeData%iLocDstTransDisp = SrcTC_MappingTypeData%iLocDstTransDisp
-   DstTC_MappingTypeData%iLocDstTransVel = SrcTC_MappingTypeData%iLocDstTransVel
-   DstTC_MappingTypeData%iLocDstTransAcc = SrcTC_MappingTypeData%iLocDstTransAcc
-   DstTC_MappingTypeData%iLocDstOrientation = SrcTC_MappingTypeData%iLocDstOrientation
-   DstTC_MappingTypeData%iLocDstAngularVel = SrcTC_MappingTypeData%iLocDstAngularVel
-   DstTC_MappingTypeData%iLocDstAngularAcc = SrcTC_MappingTypeData%iLocDstAngularAcc
-   DstTC_MappingTypeData%iLocDstForce = SrcTC_MappingTypeData%iLocDstForce
-   DstTC_MappingTypeData%iLocDstMoment = SrcTC_MappingTypeData%iLocDstMoment
-   DstTC_MappingTypeData%iLocDstDispTransDisp = SrcTC_MappingTypeData%iLocDstDispTransDisp
-   DstTC_MappingTypeData%iLocDstDispOrientation = SrcTC_MappingTypeData%iLocDstDispOrientation
+   DstTC_MappingTypeData%iVarSrcTransDisp = SrcTC_MappingTypeData%iVarSrcTransDisp
+   DstTC_MappingTypeData%iVarSrcTransVel = SrcTC_MappingTypeData%iVarSrcTransVel
+   DstTC_MappingTypeData%iVarSrcTransAcc = SrcTC_MappingTypeData%iVarSrcTransAcc
+   DstTC_MappingTypeData%iVarSrcOrientation = SrcTC_MappingTypeData%iVarSrcOrientation
+   DstTC_MappingTypeData%iVarSrcAngularVel = SrcTC_MappingTypeData%iVarSrcAngularVel
+   DstTC_MappingTypeData%iVarSrcAngularAcc = SrcTC_MappingTypeData%iVarSrcAngularAcc
+   DstTC_MappingTypeData%iVarSrcForce = SrcTC_MappingTypeData%iVarSrcForce
+   DstTC_MappingTypeData%iVarSrcMoment = SrcTC_MappingTypeData%iVarSrcMoment
+   DstTC_MappingTypeData%iVarSrcDispTransDisp = SrcTC_MappingTypeData%iVarSrcDispTransDisp
+   DstTC_MappingTypeData%iVarDstTransDisp = SrcTC_MappingTypeData%iVarDstTransDisp
+   DstTC_MappingTypeData%iVarDstTransVel = SrcTC_MappingTypeData%iVarDstTransVel
+   DstTC_MappingTypeData%iVarDstTransAcc = SrcTC_MappingTypeData%iVarDstTransAcc
+   DstTC_MappingTypeData%iVarDstOrientation = SrcTC_MappingTypeData%iVarDstOrientation
+   DstTC_MappingTypeData%iVarDstAngularVel = SrcTC_MappingTypeData%iVarDstAngularVel
+   DstTC_MappingTypeData%iVarDstAngularAcc = SrcTC_MappingTypeData%iVarDstAngularAcc
+   DstTC_MappingTypeData%iVarDstForce = SrcTC_MappingTypeData%iVarDstForce
+   DstTC_MappingTypeData%iVarDstMoment = SrcTC_MappingTypeData%iVarDstMoment
+   DstTC_MappingTypeData%iVarDstDispTransDisp = SrcTC_MappingTypeData%iVarDstDispTransDisp
+   DstTC_MappingTypeData%iVarDstDispOrientation = SrcTC_MappingTypeData%iVarDstDispOrientation
 end subroutine
 
 subroutine FAST_DestroyTC_MappingType(TC_MappingTypeData, ErrStat, ErrMsg)
@@ -1726,25 +1721,25 @@ subroutine FAST_PackTC_MappingType(RF, Indata)
    call RegPackAlloc(RF, InData%TmpMatrix)
    call NWTC_Library_PackMeshMapType(RF, InData%MeshMap) 
    call NWTC_Library_PackMeshMapType(RF, InData%MeshMapAux) 
-   call RegPack(RF, InData%iLocSrcTransDisp)
-   call RegPack(RF, InData%iLocSrcTransVel)
-   call RegPack(RF, InData%iLocSrcTransAcc)
-   call RegPack(RF, InData%iLocSrcOrientation)
-   call RegPack(RF, InData%iLocSrcAngularVel)
-   call RegPack(RF, InData%iLocSrcAngularAcc)
-   call RegPack(RF, InData%iLocSrcForce)
-   call RegPack(RF, InData%iLocSrcMoment)
-   call RegPack(RF, InData%iLocSrcDispTransDisp)
-   call RegPack(RF, InData%iLocDstTransDisp)
-   call RegPack(RF, InData%iLocDstTransVel)
-   call RegPack(RF, InData%iLocDstTransAcc)
-   call RegPack(RF, InData%iLocDstOrientation)
-   call RegPack(RF, InData%iLocDstAngularVel)
-   call RegPack(RF, InData%iLocDstAngularAcc)
-   call RegPack(RF, InData%iLocDstForce)
-   call RegPack(RF, InData%iLocDstMoment)
-   call RegPack(RF, InData%iLocDstDispTransDisp)
-   call RegPack(RF, InData%iLocDstDispOrientation)
+   call RegPack(RF, InData%iVarSrcTransDisp)
+   call RegPack(RF, InData%iVarSrcTransVel)
+   call RegPack(RF, InData%iVarSrcTransAcc)
+   call RegPack(RF, InData%iVarSrcOrientation)
+   call RegPack(RF, InData%iVarSrcAngularVel)
+   call RegPack(RF, InData%iVarSrcAngularAcc)
+   call RegPack(RF, InData%iVarSrcForce)
+   call RegPack(RF, InData%iVarSrcMoment)
+   call RegPack(RF, InData%iVarSrcDispTransDisp)
+   call RegPack(RF, InData%iVarDstTransDisp)
+   call RegPack(RF, InData%iVarDstTransVel)
+   call RegPack(RF, InData%iVarDstTransAcc)
+   call RegPack(RF, InData%iVarDstOrientation)
+   call RegPack(RF, InData%iVarDstAngularVel)
+   call RegPack(RF, InData%iVarDstAngularAcc)
+   call RegPack(RF, InData%iVarDstForce)
+   call RegPack(RF, InData%iVarDstMoment)
+   call RegPack(RF, InData%iVarDstDispTransDisp)
+   call RegPack(RF, InData%iVarDstDispOrientation)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1783,25 +1778,25 @@ subroutine FAST_UnPackTC_MappingType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%TmpMatrix); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackMeshMapType(RF, OutData%MeshMap) ! MeshMap 
    call NWTC_Library_UnpackMeshMapType(RF, OutData%MeshMapAux) ! MeshMapAux 
-   call RegUnpack(RF, OutData%iLocSrcTransDisp); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iLocSrcTransVel); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iLocSrcTransAcc); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iLocSrcOrientation); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iLocSrcAngularVel); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iLocSrcAngularAcc); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iLocSrcForce); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iLocSrcMoment); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iLocSrcDispTransDisp); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iLocDstTransDisp); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iLocDstTransVel); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iLocDstTransAcc); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iLocDstOrientation); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iLocDstAngularVel); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iLocDstAngularAcc); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iLocDstForce); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iLocDstMoment); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iLocDstDispTransDisp); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iLocDstDispOrientation); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarSrcTransDisp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarSrcTransVel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarSrcTransAcc); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarSrcOrientation); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarSrcAngularVel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarSrcAngularAcc); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarSrcForce); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarSrcMoment); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarSrcDispTransDisp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarDstTransDisp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarDstTransVel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarDstTransAcc); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarDstOrientation); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarDstAngularVel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarDstAngularAcc); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarDstForce); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarDstMoment); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarDstDispTransDisp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarDstDispOrientation); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine FAST_CopyTC_ParameterType(SrcTC_ParameterTypeData, DstTC_ParameterTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -2064,355 +2059,6 @@ subroutine FAST_UnPackTC_ParameterType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%iModOpt1US); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%iModOpt2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%iModPost); if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine FAST_CopyVarIdxType(SrcVarIdxTypeData, DstVarIdxTypeData, CtrlCode, ErrStat, ErrMsg)
-   type(VarIdxType), intent(in) :: SrcVarIdxTypeData
-   type(VarIdxType), intent(inout) :: DstVarIdxTypeData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'FAST_CopyVarIdxType'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   DstVarIdxTypeData%ModIdx = SrcVarIdxTypeData%ModIdx
-   DstVarIdxTypeData%iVar = SrcVarIdxTypeData%iVar
-   DstVarIdxTypeData%iLoc = SrcVarIdxTypeData%iLoc
-   DstVarIdxTypeData%iGbl = SrcVarIdxTypeData%iGbl
-end subroutine
-
-subroutine FAST_DestroyVarIdxType(VarIdxTypeData, ErrStat, ErrMsg)
-   type(VarIdxType), intent(inout) :: VarIdxTypeData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'FAST_DestroyVarIdxType'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-end subroutine
-
-subroutine FAST_PackVarIdxType(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(VarIdxType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'FAST_PackVarIdxType'
-   if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, InData%ModIdx)
-   call RegPack(RF, InData%iVar)
-   call RegPack(RF, InData%iLoc)
-   call RegPack(RF, InData%iGbl)
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine FAST_UnPackVarIdxType(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(VarIdxType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'FAST_UnPackVarIdxType'
-   if (RF%ErrStat /= ErrID_None) return
-   call RegUnpack(RF, OutData%ModIdx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVar); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iLoc); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iGbl); if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine FAST_CopyVarsIdxType(SrcVarsIdxTypeData, DstVarsIdxTypeData, CtrlCode, ErrStat, ErrMsg)
-   type(VarsIdxType), intent(in) :: SrcVarsIdxTypeData
-   type(VarsIdxType), intent(inout) :: DstVarsIdxTypeData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'FAST_CopyVarsIdxType'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   DstVarsIdxTypeData%FlagFilter = SrcVarsIdxTypeData%FlagFilter
-   DstVarsIdxTypeData%Nx = SrcVarsIdxTypeData%Nx
-   DstVarsIdxTypeData%Nxd = SrcVarsIdxTypeData%Nxd
-   DstVarsIdxTypeData%Nz = SrcVarsIdxTypeData%Nz
-   DstVarsIdxTypeData%Nu = SrcVarsIdxTypeData%Nu
-   DstVarsIdxTypeData%Ny = SrcVarsIdxTypeData%Ny
-   if (allocated(SrcVarsIdxTypeData%ix)) then
-      LB(1:1) = lbound(SrcVarsIdxTypeData%ix, kind=B8Ki)
-      UB(1:1) = ubound(SrcVarsIdxTypeData%ix, kind=B8Ki)
-      if (.not. allocated(DstVarsIdxTypeData%ix)) then
-         allocate(DstVarsIdxTypeData%ix(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstVarsIdxTypeData%ix.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call FAST_CopyVarIdxType(SrcVarsIdxTypeData%ix(i1), DstVarsIdxTypeData%ix(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcVarsIdxTypeData%ixd)) then
-      LB(1:1) = lbound(SrcVarsIdxTypeData%ixd, kind=B8Ki)
-      UB(1:1) = ubound(SrcVarsIdxTypeData%ixd, kind=B8Ki)
-      if (.not. allocated(DstVarsIdxTypeData%ixd)) then
-         allocate(DstVarsIdxTypeData%ixd(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstVarsIdxTypeData%ixd.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call FAST_CopyVarIdxType(SrcVarsIdxTypeData%ixd(i1), DstVarsIdxTypeData%ixd(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcVarsIdxTypeData%iz)) then
-      LB(1:1) = lbound(SrcVarsIdxTypeData%iz, kind=B8Ki)
-      UB(1:1) = ubound(SrcVarsIdxTypeData%iz, kind=B8Ki)
-      if (.not. allocated(DstVarsIdxTypeData%iz)) then
-         allocate(DstVarsIdxTypeData%iz(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstVarsIdxTypeData%iz.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call FAST_CopyVarIdxType(SrcVarsIdxTypeData%iz(i1), DstVarsIdxTypeData%iz(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcVarsIdxTypeData%iu)) then
-      LB(1:1) = lbound(SrcVarsIdxTypeData%iu, kind=B8Ki)
-      UB(1:1) = ubound(SrcVarsIdxTypeData%iu, kind=B8Ki)
-      if (.not. allocated(DstVarsIdxTypeData%iu)) then
-         allocate(DstVarsIdxTypeData%iu(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstVarsIdxTypeData%iu.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call FAST_CopyVarIdxType(SrcVarsIdxTypeData%iu(i1), DstVarsIdxTypeData%iu(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcVarsIdxTypeData%iy)) then
-      LB(1:1) = lbound(SrcVarsIdxTypeData%iy, kind=B8Ki)
-      UB(1:1) = ubound(SrcVarsIdxTypeData%iy, kind=B8Ki)
-      if (.not. allocated(DstVarsIdxTypeData%iy)) then
-         allocate(DstVarsIdxTypeData%iy(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstVarsIdxTypeData%iy.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call FAST_CopyVarIdxType(SrcVarsIdxTypeData%iy(i1), DstVarsIdxTypeData%iy(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-end subroutine
-
-subroutine FAST_DestroyVarsIdxType(VarsIdxTypeData, ErrStat, ErrMsg)
-   type(VarsIdxType), intent(inout) :: VarsIdxTypeData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'FAST_DestroyVarsIdxType'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   if (allocated(VarsIdxTypeData%ix)) then
-      LB(1:1) = lbound(VarsIdxTypeData%ix, kind=B8Ki)
-      UB(1:1) = ubound(VarsIdxTypeData%ix, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call FAST_DestroyVarIdxType(VarsIdxTypeData%ix(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(VarsIdxTypeData%ix)
-   end if
-   if (allocated(VarsIdxTypeData%ixd)) then
-      LB(1:1) = lbound(VarsIdxTypeData%ixd, kind=B8Ki)
-      UB(1:1) = ubound(VarsIdxTypeData%ixd, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call FAST_DestroyVarIdxType(VarsIdxTypeData%ixd(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(VarsIdxTypeData%ixd)
-   end if
-   if (allocated(VarsIdxTypeData%iz)) then
-      LB(1:1) = lbound(VarsIdxTypeData%iz, kind=B8Ki)
-      UB(1:1) = ubound(VarsIdxTypeData%iz, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call FAST_DestroyVarIdxType(VarsIdxTypeData%iz(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(VarsIdxTypeData%iz)
-   end if
-   if (allocated(VarsIdxTypeData%iu)) then
-      LB(1:1) = lbound(VarsIdxTypeData%iu, kind=B8Ki)
-      UB(1:1) = ubound(VarsIdxTypeData%iu, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call FAST_DestroyVarIdxType(VarsIdxTypeData%iu(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(VarsIdxTypeData%iu)
-   end if
-   if (allocated(VarsIdxTypeData%iy)) then
-      LB(1:1) = lbound(VarsIdxTypeData%iy, kind=B8Ki)
-      UB(1:1) = ubound(VarsIdxTypeData%iy, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call FAST_DestroyVarIdxType(VarsIdxTypeData%iy(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(VarsIdxTypeData%iy)
-   end if
-end subroutine
-
-subroutine FAST_PackVarsIdxType(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(VarsIdxType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'FAST_PackVarsIdxType'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
-   if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, InData%FlagFilter)
-   call RegPack(RF, InData%Nx)
-   call RegPack(RF, InData%Nxd)
-   call RegPack(RF, InData%Nz)
-   call RegPack(RF, InData%Nu)
-   call RegPack(RF, InData%Ny)
-   call RegPack(RF, allocated(InData%ix))
-   if (allocated(InData%ix)) then
-      call RegPackBounds(RF, 1, lbound(InData%ix, kind=B8Ki), ubound(InData%ix, kind=B8Ki))
-      LB(1:1) = lbound(InData%ix, kind=B8Ki)
-      UB(1:1) = ubound(InData%ix, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call FAST_PackVarIdxType(RF, InData%ix(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%ixd))
-   if (allocated(InData%ixd)) then
-      call RegPackBounds(RF, 1, lbound(InData%ixd, kind=B8Ki), ubound(InData%ixd, kind=B8Ki))
-      LB(1:1) = lbound(InData%ixd, kind=B8Ki)
-      UB(1:1) = ubound(InData%ixd, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call FAST_PackVarIdxType(RF, InData%ixd(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%iz))
-   if (allocated(InData%iz)) then
-      call RegPackBounds(RF, 1, lbound(InData%iz, kind=B8Ki), ubound(InData%iz, kind=B8Ki))
-      LB(1:1) = lbound(InData%iz, kind=B8Ki)
-      UB(1:1) = ubound(InData%iz, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call FAST_PackVarIdxType(RF, InData%iz(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%iu))
-   if (allocated(InData%iu)) then
-      call RegPackBounds(RF, 1, lbound(InData%iu, kind=B8Ki), ubound(InData%iu, kind=B8Ki))
-      LB(1:1) = lbound(InData%iu, kind=B8Ki)
-      UB(1:1) = ubound(InData%iu, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call FAST_PackVarIdxType(RF, InData%iu(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%iy))
-   if (allocated(InData%iy)) then
-      call RegPackBounds(RF, 1, lbound(InData%iy, kind=B8Ki), ubound(InData%iy, kind=B8Ki))
-      LB(1:1) = lbound(InData%iy, kind=B8Ki)
-      UB(1:1) = ubound(InData%iy, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call FAST_PackVarIdxType(RF, InData%iy(i1)) 
-      end do
-   end if
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine FAST_UnPackVarsIdxType(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(VarsIdxType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'FAST_UnPackVarsIdxType'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
-   integer(IntKi)  :: stat
-   logical         :: IsAllocAssoc
-   if (RF%ErrStat /= ErrID_None) return
-   call RegUnpack(RF, OutData%FlagFilter); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Nx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Nxd); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Nz); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Nu); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Ny); if (RegCheckErr(RF, RoutineName)) return
-   if (allocated(OutData%ix)) deallocate(OutData%ix)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%ix(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ix.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call FAST_UnpackVarIdxType(RF, OutData%ix(i1)) ! ix 
-      end do
-   end if
-   if (allocated(OutData%ixd)) deallocate(OutData%ixd)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%ixd(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ixd.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call FAST_UnpackVarIdxType(RF, OutData%ixd(i1)) ! ixd 
-      end do
-   end if
-   if (allocated(OutData%iz)) deallocate(OutData%iz)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%iz(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%iz.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call FAST_UnpackVarIdxType(RF, OutData%iz(i1)) ! iz 
-      end do
-   end if
-   if (allocated(OutData%iu)) deallocate(OutData%iu)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%iu(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%iu.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call FAST_UnpackVarIdxType(RF, OutData%iu(i1)) ! iu 
-      end do
-   end if
-   if (allocated(OutData%iy)) deallocate(OutData%iy)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%iy(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%iy.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call FAST_UnpackVarIdxType(RF, OutData%iy(i1)) ! iy 
-      end do
-   end if
 end subroutine
 
 subroutine FAST_CopyModLinTCType(SrcModLinTCTypeData, DstModLinTCTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -2796,11 +2442,6 @@ subroutine FAST_CopyModDataType(SrcModDataTypeData, DstModDataTypeData, CtrlCode
    DstModDataTypeData%Ins = SrcModDataTypeData%Ins
    DstModDataTypeData%DT = SrcModDataTypeData%DT
    DstModDataTypeData%SubSteps = SrcModDataTypeData%SubSteps
-   DstModDataTypeData%ixg = SrcModDataTypeData%ixg
-   DstModDataTypeData%ixdg = SrcModDataTypeData%ixdg
-   DstModDataTypeData%izg = SrcModDataTypeData%izg
-   DstModDataTypeData%iug = SrcModDataTypeData%iug
-   DstModDataTypeData%iyg = SrcModDataTypeData%iyg
    DstModDataTypeData%Vars => SrcModDataTypeData%Vars
    call FAST_CopyModLinTCType(SrcModDataTypeData%Lin, DstModDataTypeData%Lin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2863,11 +2504,6 @@ subroutine FAST_PackModDataType(RF, Indata)
    call RegPack(RF, InData%Ins)
    call RegPack(RF, InData%DT)
    call RegPack(RF, InData%SubSteps)
-   call RegPack(RF, InData%ixg)
-   call RegPack(RF, InData%ixdg)
-   call RegPack(RF, InData%izg)
-   call RegPack(RF, InData%iug)
-   call RegPack(RF, InData%iyg)
    call RegPack(RF, associated(InData%Vars))
    if (associated(InData%Vars)) then
       call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
@@ -2897,11 +2533,6 @@ subroutine FAST_UnPackModDataType(RF, OutData)
    call RegUnpack(RF, OutData%Ins); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SubSteps); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%ixg); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%ixdg); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%izg); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iug); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iyg); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%Vars)) deallocate(OutData%Vars)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
@@ -2925,6 +2556,179 @@ subroutine FAST_UnPackModDataType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%DstMaps); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
+subroutine FAST_CopyVarIdxType(SrcVarIdxTypeData, DstVarIdxTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(VarIdxType), intent(in) :: SrcVarIdxTypeData
+   type(VarIdxType), intent(inout) :: DstVarIdxTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'FAST_CopyVarIdxType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(SrcVarIdxTypeData%ModVarStart)) then
+      LB(1:1) = lbound(SrcVarIdxTypeData%ModVarStart, kind=B8Ki)
+      UB(1:1) = ubound(SrcVarIdxTypeData%ModVarStart, kind=B8Ki)
+      if (.not. allocated(DstVarIdxTypeData%ModVarStart)) then
+         allocate(DstVarIdxTypeData%ModVarStart(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstVarIdxTypeData%ModVarStart.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstVarIdxTypeData%ModVarStart = SrcVarIdxTypeData%ModVarStart
+   end if
+   if (allocated(SrcVarIdxTypeData%ValLocGbl)) then
+      LB(1:2) = lbound(SrcVarIdxTypeData%ValLocGbl, kind=B8Ki)
+      UB(1:2) = ubound(SrcVarIdxTypeData%ValLocGbl, kind=B8Ki)
+      if (.not. allocated(DstVarIdxTypeData%ValLocGbl)) then
+         allocate(DstVarIdxTypeData%ValLocGbl(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstVarIdxTypeData%ValLocGbl.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstVarIdxTypeData%ValLocGbl = SrcVarIdxTypeData%ValLocGbl
+   end if
+end subroutine
+
+subroutine FAST_DestroyVarIdxType(VarIdxTypeData, ErrStat, ErrMsg)
+   type(VarIdxType), intent(inout) :: VarIdxTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'FAST_DestroyVarIdxType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(VarIdxTypeData%ModVarStart)) then
+      deallocate(VarIdxTypeData%ModVarStart)
+   end if
+   if (allocated(VarIdxTypeData%ValLocGbl)) then
+      deallocate(VarIdxTypeData%ValLocGbl)
+   end if
+end subroutine
+
+subroutine FAST_PackVarIdxType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(VarIdxType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'FAST_PackVarIdxType'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%ModVarStart)
+   call RegPackAlloc(RF, InData%ValLocGbl)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine FAST_UnPackVarIdxType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(VarIdxType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'FAST_UnPackVarIdxType'
+   integer(B8Ki)   :: LB(2), UB(2)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%ModVarStart); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ValLocGbl); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine FAST_CopyVarsIdxType(SrcVarsIdxTypeData, DstVarsIdxTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(VarsIdxType), intent(in) :: SrcVarsIdxTypeData
+   type(VarsIdxType), intent(inout) :: DstVarsIdxTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'FAST_CopyVarsIdxType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstVarsIdxTypeData%FlagFilter = SrcVarsIdxTypeData%FlagFilter
+   DstVarsIdxTypeData%Nx = SrcVarsIdxTypeData%Nx
+   DstVarsIdxTypeData%Nxd = SrcVarsIdxTypeData%Nxd
+   DstVarsIdxTypeData%Nz = SrcVarsIdxTypeData%Nz
+   DstVarsIdxTypeData%Nu = SrcVarsIdxTypeData%Nu
+   DstVarsIdxTypeData%Ny = SrcVarsIdxTypeData%Ny
+   call FAST_CopyVarIdxType(SrcVarsIdxTypeData%x, DstVarsIdxTypeData%x, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call FAST_CopyVarIdxType(SrcVarsIdxTypeData%xd, DstVarsIdxTypeData%xd, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call FAST_CopyVarIdxType(SrcVarsIdxTypeData%z, DstVarsIdxTypeData%z, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call FAST_CopyVarIdxType(SrcVarsIdxTypeData%u, DstVarsIdxTypeData%u, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call FAST_CopyVarIdxType(SrcVarsIdxTypeData%y, DstVarsIdxTypeData%y, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call FAST_CopyModLinTCType(SrcVarsIdxTypeData%Lin, DstVarsIdxTypeData%Lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
+
+subroutine FAST_DestroyVarsIdxType(VarsIdxTypeData, ErrStat, ErrMsg)
+   type(VarsIdxType), intent(inout) :: VarsIdxTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'FAST_DestroyVarsIdxType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call FAST_DestroyVarIdxType(VarsIdxTypeData%x, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyVarIdxType(VarsIdxTypeData%xd, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyVarIdxType(VarsIdxTypeData%z, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyVarIdxType(VarsIdxTypeData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyVarIdxType(VarsIdxTypeData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyModLinTCType(VarsIdxTypeData%Lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+end subroutine
+
+subroutine FAST_PackVarsIdxType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(VarsIdxType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'FAST_PackVarsIdxType'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%FlagFilter)
+   call RegPack(RF, InData%Nx)
+   call RegPack(RF, InData%Nxd)
+   call RegPack(RF, InData%Nz)
+   call RegPack(RF, InData%Nu)
+   call RegPack(RF, InData%Ny)
+   call FAST_PackVarIdxType(RF, InData%x) 
+   call FAST_PackVarIdxType(RF, InData%xd) 
+   call FAST_PackVarIdxType(RF, InData%z) 
+   call FAST_PackVarIdxType(RF, InData%u) 
+   call FAST_PackVarIdxType(RF, InData%y) 
+   call FAST_PackModLinTCType(RF, InData%Lin) 
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine FAST_UnPackVarsIdxType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(VarsIdxType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'FAST_UnPackVarsIdxType'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%FlagFilter); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Nx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Nxd); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Nz); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Nu); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Ny); if (RegCheckErr(RF, RoutineName)) return
+   call FAST_UnpackVarIdxType(RF, OutData%x) ! x 
+   call FAST_UnpackVarIdxType(RF, OutData%xd) ! xd 
+   call FAST_UnpackVarIdxType(RF, OutData%z) ! z 
+   call FAST_UnpackVarIdxType(RF, OutData%u) ! u 
+   call FAST_UnpackVarIdxType(RF, OutData%y) ! y 
+   call FAST_UnpackModLinTCType(RF, OutData%Lin) ! Lin 
+end subroutine
+
 subroutine FAST_CopyML_ParameterType(SrcML_ParameterTypeData, DstML_ParameterTypeData, CtrlCode, ErrStat, ErrMsg)
    type(ML_ParameterType), intent(in) :: SrcML_ParameterTypeData
    type(ML_ParameterType), intent(inout) :: DstML_ParameterTypeData
@@ -2933,6 +2737,7 @@ subroutine FAST_CopyML_ParameterType(SrcML_ParameterTypeData, DstML_ParameterTyp
    character(*),    intent(  out) :: ErrMsg
    integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FAST_CopyML_ParameterType'
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -2948,18 +2753,25 @@ subroutine FAST_CopyML_ParameterType(SrcML_ParameterTypeData, DstML_ParameterTyp
       end if
       DstML_ParameterTypeData%iMod = SrcML_ParameterTypeData%iMod
    end if
+   call FAST_CopyVarsIdxType(SrcML_ParameterTypeData%IdxLin, DstML_ParameterTypeData%IdxLin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine FAST_DestroyML_ParameterType(ML_ParameterTypeData, ErrStat, ErrMsg)
    type(ML_ParameterType), intent(inout) :: ML_ParameterTypeData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FAST_DestroyML_ParameterType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(ML_ParameterTypeData%iMod)) then
       deallocate(ML_ParameterTypeData%iMod)
    end if
+   call FAST_DestroyVarsIdxType(ML_ParameterTypeData%IdxLin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine FAST_PackML_ParameterType(RF, Indata)
@@ -2968,6 +2780,7 @@ subroutine FAST_PackML_ParameterType(RF, Indata)
    character(*), parameter         :: RoutineName = 'FAST_PackML_ParameterType'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%iMod)
+   call FAST_PackVarsIdxType(RF, InData%IdxLin) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2980,6 +2793,7 @@ subroutine FAST_UnPackML_ParameterType(RF, OutData)
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%iMod); if (RegCheckErr(RF, RoutineName)) return
+   call FAST_UnpackVarsIdxType(RF, OutData%IdxLin) ! IdxLin 
 end subroutine
 
 subroutine FAST_CopyML_MiscVarType(SrcML_MiscVarTypeData, DstML_MiscVarTypeData, CtrlCode, ErrStat, ErrMsg)

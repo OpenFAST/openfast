@@ -75,6 +75,8 @@ add_library(openfast_postlib STATIC
   src/FAST_Funcs.f90
   src/FAST_ModGlue.f90
   src/FAST_Mapping.f90
+  src/FAST_Idx.f90
+  # src/FAST_AeroMap.f90
 )
 target_link_libraries(openfast_postlib openfast_prelib extinflowlib scfastlib)
 target_include_directories(openfast_postlib PUBLIC 

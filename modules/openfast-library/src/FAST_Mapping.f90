@@ -22,6 +22,7 @@ module FAST_Mapping
 
 use FAST_Types
 use FAST_ModTypes
+use FAST_Idx
 
 implicit none
 
@@ -417,27 +418,6 @@ subroutine FAST_InitMappings(Mods, Mappings, Turbine, ErrStat, ErrMsg)
          DstMod%DstMaps = [DstMod%DstMaps, iMap]
 
          write (*, *) "Mapping: ", Mappings(iMap)%Desc
-         ! write (*, *) " Src: ", trim(SrcMod%Abbr), SrcMod%Ins
-         ! if (Mappings(iMap)%iLocSrcTransDisp(1) > 0) write (*, *) "   iLocTransDisp       ", Mappings(iMap)%iLocSrcTransDisp + SrcMod%iyg - 1
-         ! if (Mappings(iMap)%iLocSrcTransVel(1) > 0) write (*, *) "   iLocTransVel        ", Mappings(iMap)%iLocSrcTransVel + SrcMod%iyg - 1
-         ! if (Mappings(iMap)%iLocSrcTransAcc(1) > 0) write (*, *) "   iLocTransAcc        ", Mappings(iMap)%iLocSrcTransAcc + SrcMod%iyg - 1
-         ! if (Mappings(iMap)%iLocSrcOrientation(1) > 0) write (*, *) "   iLocOrientation     ", Mappings(iMap)%iLocSrcOrientation + SrcMod%iyg - 1
-         ! if (Mappings(iMap)%iLocSrcAngularVel(1) > 0) write (*, *) "   iLocAngularVel      ", Mappings(iMap)%iLocSrcAngularVel + SrcMod%iyg - 1
-         ! if (Mappings(iMap)%iLocSrcAngularAcc(1) > 0) write (*, *) "   iLocAngularAcc      ", Mappings(iMap)%iLocSrcAngularAcc + SrcMod%iyg - 1
-         ! if (Mappings(iMap)%iLocSrcForce(1) > 0) write (*, *) "   iLocForce           ", Mappings(iMap)%iLocSrcForce + SrcMod%iyg - 1
-         ! if (Mappings(iMap)%iLocSrcMoment(1) > 0) write (*, *) "   iLocMoment          ", Mappings(iMap)%iLocSrcMoment + SrcMod%iyg - 1
-         ! if (Mappings(iMap)%iLocSrcDispTransDisp(1) > 0) write (*, *) "   iLocDispTransDisp   ", Mappings(iMap)%iLocSrcDispTransDisp + SrcMod%iyg - 1
-         ! write (*, *) " Dst: ", trim(DstMod%Abbr), DstMod%Ins
-         ! if (Mappings(iMap)%iLocDstTransDisp(1) > 0) write (*, *) "   iLocTransDisp       ", Mappings(iMap)%iLocDstTransDisp
-         ! if (Mappings(iMap)%iLocDstTransVel(1) > 0) write (*, *) "   iLocTransVel        ", Mappings(iMap)%iLocDstTransVel
-         ! if (Mappings(iMap)%iLocDstTransAcc(1) > 0) write (*, *) "   iLocTransAcc        ", Mappings(iMap)%iLocDstTransAcc
-         ! if (Mappings(iMap)%iLocDstOrientation(1) > 0) write (*, *) "   iLocOrientation     ", Mappings(iMap)%iLocDstOrientation
-         ! if (Mappings(iMap)%iLocDstAngularVel(1) > 0) write (*, *) "   iLocAngularVel      ", Mappings(iMap)%iLocDstAngularVel
-         ! if (Mappings(iMap)%iLocDstAngularAcc(1) > 0) write (*, *) "   iLocAngularAcc      ", Mappings(iMap)%iLocDstAngularAcc
-         ! if (Mappings(iMap)%iLocDstForce(1) > 0) write (*, *) "   iLocForce           ", Mappings(iMap)%iLocDstForce
-         ! if (Mappings(iMap)%iLocDstMoment(1) > 0) write (*, *) "   iLocMoment          ", Mappings(iMap)%iLocDstMoment
-         ! if (Mappings(iMap)%iLocDstDispTransDisp(1) > 0) write (*, *) "   iLocDispTransDisp   ", Mappings(iMap)%iLocDstDispTransDisp
-         ! if (Mappings(iMap)%iLocDstDispOrientation(1) > 0) write (*, *) "   iLocDispOrientation ", Mappings(iMap)%iLocDstDispOrientation
 
       end associate
    end do
@@ -1836,50 +1816,50 @@ subroutine InitMeshVarLocs(Mapping, SrcMod, DstMod, SrcMesh, DstMesh, SrcDispMes
    Mapping%XfrType = MeshTransferType(SrcMesh, DstMesh)
 
    ! Get data locations for variables of source mesh fields
-   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_TransDisp, SrcMod%iyg, Mapping%iLocSrcTransDisp)
-   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_TransVel, SrcMod%iyg, Mapping%iLocSrcTransVel)
-   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_TransAcc, SrcMod%iyg, Mapping%iLocSrcTransAcc)
-   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_Orientation, SrcMod%iyg, Mapping%iLocSrcOrientation)
-   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_AngularVel, SrcMod%iyg, Mapping%iLocSrcAngularVel)
-   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_AngularAcc, SrcMod%iyg, Mapping%iLocSrcAngularAcc)
-   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_Force, SrcMod%iyg, Mapping%iLocSrcForce)
-   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_Moment, SrcMod%iyg, Mapping%iLocSrcMoment)
+   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_TransDisp, Mapping%iVarSrcTransDisp)
+   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_TransVel, Mapping%iVarSrcTransVel)
+   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_TransAcc, Mapping%iVarSrcTransAcc)
+   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_Orientation, Mapping%iVarSrcOrientation)
+   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_AngularVel, Mapping%iVarSrcAngularVel)
+   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_AngularAcc, Mapping%iVarSrcAngularAcc)
+   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_Force, Mapping%iVarSrcForce)
+   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_Moment, Mapping%iVarSrcMoment)
 
    ! Get data locations for variables of destination mesh fields
-   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_TransDisp, DstMod%iug, Mapping%iLocDstTransDisp)
-   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_TransVel, DstMod%iug, Mapping%iLocDstTransVel)
-   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_TransAcc, DstMod%iug, Mapping%iLocDstTransAcc)
-   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_Orientation, DstMod%iug, Mapping%iLocDstOrientation)
-   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_AngularVel, DstMod%iug, Mapping%iLocDstAngularVel)
-   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_AngularAcc, DstMod%iug, Mapping%iLocDstAngularAcc)
-   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_Force, DstMod%iug, Mapping%iLocDstForce)
-   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_Moment, DstMod%iug, Mapping%iLocDstMoment)
+   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_TransDisp, Mapping%iVarDstTransDisp)
+   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_TransVel, Mapping%iVarDstTransVel)
+   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_TransAcc, Mapping%iVarDstTransAcc)
+   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_Orientation, Mapping%iVarDstOrientation)
+   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_AngularVel, Mapping%iVarDstAngularVel)
+   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_AngularAcc, Mapping%iVarDstAngularAcc)
+   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_Force, Mapping%iVarDstForce)
+   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_Moment, Mapping%iVarDstMoment)
 
    if (present(SrcDispMesh)) then
       Mapping%SrcDispMeshID = SrcDispMesh%ID
-      call FindVarByMeshAndField(SrcMod%Vars%u, SrcDispMesh%ID, VF_TransDisp, SrcMod%iug, Mapping%iLocSrcDispTransDisp)
+      call FindVarByMeshAndField(SrcMod%Vars%u, SrcDispMesh%ID, VF_TransDisp, Mapping%iVarSrcDispTransDisp)
    end if
 
    if (present(DstDispMesh)) then
       Mapping%DstDispMeshID = DstDispMesh%ID
-      call FindVarByMeshAndField(DstMod%Vars%y, DstDispMesh%ID, VF_TransDisp, DstMod%iyg, Mapping%iLocDstDispTransDisp)
-      call FindVarByMeshAndField(DstMod%Vars%y, DstDispMesh%ID, VF_Orientation, DstMod%iyg, Mapping%iLocDstDispOrientation)
+      call FindVarByMeshAndField(DstMod%Vars%y, DstDispMesh%ID, VF_TransDisp, Mapping%iVarDstDispTransDisp)
+      call FindVarByMeshAndField(DstMod%Vars%y, DstDispMesh%ID, VF_Orientation, Mapping%iVarDstDispOrientation)
    end if
 
 contains
-   subroutine FindVarByMeshAndField(VarAry, MeshID, Field, iGbl, iLoc)
+   subroutine FindVarByMeshAndField(VarAry, MeshID, Field, iVar)
       type(ModVarType), intent(in)  :: VarAry(:)
-      integer(IntKi), intent(in)    :: MeshID, Field, iGbl
-      integer(IntKi), intent(out)   :: iLoc(2)
+      integer(IntKi), intent(in)    :: MeshID, Field
+      integer(IntKi), intent(out)   :: iVar
       integer(IntKi)                :: i
 
-      ! Initialize locations
-      iLoc = 0
+      ! Initialize variable index to invalid value (not used)
+      iVar = 0
 
       ! Loop through variables, if variable's mesh ID and field matches given values, return
       do i = 1, size(VarAry)
          if ((VarAry(i)%MeshID == MeshID) .and. (VarAry(i)%Field == Field)) then
-            iLoc = VarAry(i)%iLoc + iGbl - 1
+            iVar = i
             return
          end if
       end do
@@ -1902,11 +1882,12 @@ function MeshTransferType(SrcMesh, DstMesh) result(XfrType)
    end if
 end function
 
-subroutine FAST_LinearizeMappings(Turbine, Mods, Mappings, ModOrder, ErrStat, ErrMsg, dUdu, dUdy)
+subroutine FAST_LinearizeMappings(Turbine, Mods, Mappings, ModOrder, Idx, ErrStat, ErrMsg, dUdu, dUdy)
    type(FAST_TurbineType), target, intent(inout)   :: Turbine     !< Turbine type
    type(ModDataType), intent(in)                   :: Mods(:)     !< Module data
    type(TC_MappingType), intent(inout)             :: Mappings(:)
    integer(IntKi), intent(in)                      :: ModOrder(:)
+   type(VarsIdxType), intent(in)                   :: Idx
    integer(IntKi), intent(out)                     :: ErrStat
    character(*), intent(out)                       :: ErrMsg
    real(R8Ki), intent(inout)                       :: dUdu(:, :), dUdy(:, :)
@@ -1914,6 +1895,7 @@ subroutine FAST_LinearizeMappings(Turbine, Mods, Mappings, ModOrder, ErrStat, Er
    character(*), parameter       :: RoutineName = 'FAST_LinearizeMappings'
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
+   integer(IntKi)                :: iLocSrc(2), iLocDst(2)
    integer(IntKi)                :: i, j, k
    type(MeshType), pointer       :: SrcMesh, DstMesh
    type(MeshType), pointer       :: SrcDispMesh, DstDispMesh
@@ -1933,22 +1915,13 @@ subroutine FAST_LinearizeMappings(Turbine, Mods, Mappings, ModOrder, ErrStat, Er
 
             case (Map_Variable)
 
-               associate (SrcMod => Mods(Mapping%SrcModIdx), &
-                          DstMod => Mods(Mapping%DstModIdx), &
-                          SrcVar => Mods(Mapping%SrcModIdx)%Vars%y(Mapping%iVarSrc), &
-                          DstVar => Mods(Mapping%DstModIdx)%Vars%u(Mapping%iVarDst))
-                  if (SrcVar%Num == 1) then
-                     ! Map rank 0 source var to rank 1 destination var
-                     do k = 0, DstVar%Num - 1
-                        dUdy(DstMod%iug + DstVar%iLoc(1) + k - 1, SrcMod%iyg + SrcVar%iLoc(1) - 1) = -1.0_R8Ki
-                     end do
-                  else
-                     ! Map rank 1 source var to rank 1 destination var
-                     do k = 0, SrcVar%Num - 1
-                        dUdy(DstMod%iug + DstVar%iLoc(1) + k - 1, SrcMod%iyg + SrcVar%iLoc(1) + k - 1) = -1.0_R8Ki
-                     end do
-                  end if
-               end associate
+               ! Get source and destination global value indices, skip if no global index for either
+               call Idx_GetValLoc(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrc, iGbl=iLocSrc)
+               call Idx_GetValLoc(Idx%u, Mapping%DstModIdx, Mapping%iVarDst, iGbl=iLocDst)
+               if (iLocSrc(1) == 0 .or. iLocDst(1) == 0) cycle
+
+               ! Set coupling terms in dUdy to -1
+               dUdy(iLocDst(1):iLocDst(2), iLocSrc(1):iLocSrc(2)) = -1.0_R8Ki
 
             case (Map_MotionMesh)
 
@@ -1960,10 +1933,10 @@ subroutine FAST_LinearizeMappings(Turbine, Mods, Mappings, ModOrder, ErrStat, Er
                call LinearizeMeshTransfer(Mapping%XfrType, SrcMesh, DstMesh, Mapping%MeshMap); if (Failed()) return
 
                ! Copy linearization matrices to global dUdy matrix
-               call Assemble_dUdy_Motions(Mapping, dUdy)
+               call Assemble_dUdy_Motions(Mapping)
 
                ! Copy linearization matrices to global dUdu matrix
-               call Assemble_dUdu(Mapping, dUdu)
+               call Assemble_dUdu(Mapping)
 
             case (Map_LoadMesh)
 
@@ -1983,7 +1956,7 @@ subroutine FAST_LinearizeMappings(Turbine, Mods, Mappings, ModOrder, ErrStat, Er
 
                else
 
-                  ! Transfer destination displacement mesh to temporary motion mesh (cousin of destionation load mesh)
+                  ! Transfer destination displacement mesh to temporary motion mesh (cousin of destination load mesh)
                   call TransferMesh(Mapping%XfrTypeAux, DstDispMesh, Mapping%TmpMotionMesh, Mapping%MeshMapAux); if (Failed()) return
 
                   ! Linearize the motion mesh transfer
@@ -1991,13 +1964,14 @@ subroutine FAST_LinearizeMappings(Turbine, Mods, Mappings, ModOrder, ErrStat, Er
 
                   ! Linearize the load mesh transfer
                   call LinearizeMeshTransfer(Mapping%XfrType, SrcMesh, DstMesh, Mapping%MeshMap, SrcDispMesh, Mapping%TmpMotionMesh); if (Failed()) return
+
                end if
 
                ! Copy linearization matrices to global dUdy matrix
-               call Assemble_dUdy_Loads(Mapping, dUdy)
+               call Assemble_dUdy_Loads(Mapping)
 
                ! Copy linearization matrices to global dUdu matrix
-               call Assemble_dUdu(Mapping, dUdu)
+               call Assemble_dUdu(Mapping)
 
             end select
 
@@ -2009,20 +1983,20 @@ contains
 
    ! LinearizeMeshTransfer calls the specific linearization function based on
    ! transfer type (Point_to_Point, Point_to_Line2, etc.)
-   subroutine LinearizeMeshTransfer(Typ, Src, Dst, MMap, SrcDisp, DstDisp)
+   subroutine LinearizeMeshTransfer(Typ, Src, Dst, MeshMap, SrcDisp, DstDisp)
       integer(IntKi), intent(in)             :: Typ
       type(MeshType), intent(in)             :: Src, Dst
-      type(MeshMapType), intent(inout)       :: MMap
+      type(MeshMapType), intent(inout)       :: MeshMap
       type(MeshType), optional, intent(in)   :: SrcDisp, DstDisp
       select case (Typ)
       case (Xfr_Point_to_Point)
-         call Linearize_Point_to_Point(Src, Dst, MMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
+         call Linearize_Point_to_Point(Src, Dst, MeshMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
       case (Xfr_Point_to_Line2)
-         call Linearize_Point_to_Line2(Src, Dst, MMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
+         call Linearize_Point_to_Line2(Src, Dst, MeshMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
       case (Xfr_Line2_to_Point)
-         call Linearize_Line2_to_Point(Src, Dst, MMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
+         call Linearize_Line2_to_Point(Src, Dst, MeshMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
       case (Xfr_Line2_to_Line2)
-         call Linearize_Line2_to_Line2(Src, Dst, MMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
+         call Linearize_Line2_to_Line2(Src, Dst, MeshMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
       case default
          ErrStat2 = ErrID_Fatal
          ErrMsg2 = "LinearizeMeshTransfer: unknown transfer type: "//Num2LStr(Typ)
@@ -2031,25 +2005,151 @@ contains
 
    ! MeshTransfer calls the specific transfer function based on
    ! transfer type (Point_to_Point, Point_to_Line2, etc.)
-   subroutine TransferMesh(Typ, Src, Dst, MMap, SrcDisp, DstDisp)
+   subroutine TransferMesh(Typ, Src, Dst, MeshMap, SrcDisp, DstDisp)
       integer(IntKi), intent(in)             :: Typ
       type(MeshType), intent(in)             :: Src
       type(MeshType), intent(inout)          :: Dst
-      type(MeshMapType), intent(inout)       :: MMap
+      type(MeshMapType), intent(inout)       :: MeshMap
       type(MeshType), optional, intent(in)   :: SrcDisp, DstDisp
       select case (Typ)
       case (Xfr_Point_to_Point)
-         call Transfer_Point_to_Point(Src, Dst, MMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
+         call Transfer_Point_to_Point(Src, Dst, MeshMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
       case (Xfr_Point_to_Line2)
-         call Transfer_Point_to_Line2(Src, Dst, MMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
+         call Transfer_Point_to_Line2(Src, Dst, MeshMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
       case (Xfr_Line2_to_Point)
-         call Transfer_Line2_to_Point(Src, Dst, MMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
+         call Transfer_Line2_to_Point(Src, Dst, MeshMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
       case (Xfr_Line2_to_Line2)
-         call Transfer_Line2_to_Line2(Src, Dst, MMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
+         call Transfer_Line2_to_Line2(Src, Dst, MeshMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
       case default
          ErrStat2 = ErrID_Fatal
          ErrMsg2 = "TransferMeshTransfer: unknown transfer type: "//Num2LStr(Typ)
       end select
+   end subroutine
+
+   subroutine Assemble_dUdu(Mapping)
+      type(TC_MappingType), intent(in) :: Mapping
+   
+      ! Effect of input Translation Displacement on input Translation Velocity
+      if (allocated(Mapping%MeshMap%dM%tv_uD)) then
+         call SumBlock(Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransDisp, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransVel, Mapping%MeshMap%dM%tv_uD, dUdu)
+      end if
+   
+      ! Effect of input Translation Displacement on input Translation Acceleration
+      if (allocated(Mapping%MeshMap%dM%ta_uD)) then
+         call SumBlock(Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransDisp, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransAcc, Mapping%MeshMap%dM%ta_uD, dUdu)
+      end if
+   
+      ! Effect of input Translation Displacement on input Moments
+      if (allocated(Mapping%MeshMap%dM%M_uS)) then
+         call SumBlock(Idx%u, Mapping%SrcModIdx, Mapping%iVarSrcDispTransDisp, Idx%u, Mapping%DstModIdx, Mapping%iVarDstMoment, Mapping%MeshMap%dM%M_uS, dUdu)
+      end if
+   end subroutine
+   
+   !> Assemble_dUdy_Loads assembles the linearization matrices for transfer of
+   !! load fields between two meshes. It sets the following block matrix, which
+   !! is the dUdy block for transfering output (source) mesh  to the input
+   !! (destination) mesh :
+   !! M = -| M_li   0    | * M_mi | F^S |
+   !!      | M_fm   M_li |        | M^S |
+   subroutine Assemble_dUdy_Loads(Mapping)
+      type(TC_MappingType), intent(inout) :: Mapping
+   
+      ! Load identity
+      if (allocated(Mapping%MeshMap%dM%li)) then
+         call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcForce, Idx%u, Mapping%DstModIdx, Mapping%iVarDstForce, Mapping%MeshMap%dM%li, dUdy)
+         call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcMoment, Idx%u, Mapping%DstModIdx, Mapping%iVarDstMoment, Mapping%MeshMap%dM%li, dUdy)
+      end if
+   
+      ! Force to Moment
+      if (allocated(Mapping%MeshMap%dM%m_f)) then
+         call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcForce, Idx%u, Mapping%DstModIdx, Mapping%iVarDstMoment, Mapping%MeshMap%dM%m_f, dUdy)
+      end if
+   
+      ! Destination Translation Displacement to Moment
+      if (allocated(Mapping%MeshMap%dM%m_uD)) then
+         if (Mapping%DstUsesSibling) then
+            ! Direct transfer
+            call SumBlock(Idx%y, Mapping%DstModIdx, Mapping%iVarDstDispTransDisp, Idx%u, Mapping%DstModIdx, Mapping%iVarDstMoment, Mapping%MeshMap%dM%m_uD, dUdy)
+         else
+            ! Compose linearization of motion and loads
+            Mapping%TmpMatrix = matmul(Mapping%MeshMap%dM%m_uD, Mapping%MeshMapAux%dM%mi)
+            call SumBlock(Idx%y, Mapping%DstModIdx, Mapping%iVarDstDispTransDisp, Idx%u, Mapping%DstModIdx, Mapping%iVarDstMoment, Mapping%TmpMatrix, dUdy)
+            Mapping%TmpMatrix = matmul(Mapping%MeshMap%dM%m_uD, Mapping%MeshMapAux%dM%fx_p)
+            call SumBlock(Idx%y, Mapping%DstModIdx, Mapping%iVarDstDispOrientation, Idx%u, Mapping%DstModIdx, Mapping%iVarDstMoment, Mapping%TmpMatrix, dUdy)
+         end if
+      end if
+   end subroutine
+   
+   !> Assemble_dUdy_Motions assembles the linearization matrices for transfer of
+   !! motion fields between two meshes. It set the following block matrix, which
+   !! is the dUdy block for transfering output (source) mesh  to the input
+   !! (destination) mesh :
+   !! M = -| M_mi      M_f_p   0      0         0      0     |
+   !!      | 0         M_mi    0      0         0      0     |
+   !!      | M_tv_uS   0       M_mi   M_f_p     0      0     |
+   !!      | 0         0       0      M_mi      0      0     |
+   !!      | M_ta_uS   0       0      M_ta_rv   M_mi   M_f_p |
+   !!      | 0         0       0      0         0      M_mi  |
+   !! where the matrices correspond to
+   !! u^S, theta^S, v^S, omega^S, a^S, alpha^S
+   subroutine Assemble_dUdy_Motions(Mapping)
+      type(TC_MappingType), intent(inout) :: Mapping
+   
+      ! Motion identity
+      if (allocated(Mapping%MeshMap%dM%mi)) then
+         call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcTransDisp, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransDisp, Mapping%MeshMap%dM%mi, dUdy)
+         call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcOrientation, Idx%u, Mapping%DstModIdx, Mapping%iVarDstOrientation, Mapping%MeshMap%dM%mi, dUdy)
+         call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcTransVel, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransVel, Mapping%MeshMap%dM%mi, dUdy)
+         call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcAngularVel, Idx%u, Mapping%DstModIdx, Mapping%iVarDstAngularVel, Mapping%MeshMap%dM%mi, dUdy)
+         call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcTransAcc, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransAcc, Mapping%MeshMap%dM%mi, dUdy)
+         call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcAngularAcc, Idx%u, Mapping%DstModIdx, Mapping%iVarDstAngularAcc, Mapping%MeshMap%dM%mi, dUdy)
+      end if
+   
+      ! Rotation to Translation
+      if (allocated(Mapping%MeshMap%dM%fx_p)) then
+         call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcOrientation, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransDisp, Mapping%MeshMap%dM%fx_p, dUdy)
+         call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcAngularVel, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransVel, Mapping%MeshMap%dM%fx_p, dUdy)
+         call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcAngularAcc, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransAcc, Mapping%MeshMap%dM%fx_p, dUdy)
+      end if
+   
+      ! Translation displacement to Translation velocity
+      if (allocated(Mapping%MeshMap%dM%tv_us)) then
+         call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcTransDisp, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransVel, Mapping%MeshMap%dM%tv_us, dUdy)
+      end if
+   
+      ! Translation displacement to Translation acceleration
+      if (allocated(Mapping%MeshMap%dM%ta_us)) then
+         call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcTransDisp, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransAcc, Mapping%MeshMap%dM%ta_us, dUdy)
+      end if
+   
+      ! Angular velocity to Translation acceleration
+      if (allocated(Mapping%MeshMap%dM%ta_rv)) then
+         call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcAngularVel, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransAcc, Mapping%MeshMap%dM%ta_rv, dUdy)
+      end if
+   end subroutine
+   
+   subroutine SumBlock(IdxSrc, iModSrc, iVarSrc, IdxDst, iModDst, iVarDst, SrcM, DstM)
+      type(VarIdxType), intent(in)     :: IdxDst, IdxSrc
+      integer(IntKi), intent(in)       :: iModDst, iModSrc
+      integer(IntKi), intent(in)       :: iVarDst, iVarSrc
+      real(R8Ki), intent(in)           :: SrcM(:, :)
+      real(R8Ki), intent(inout)        :: DstM(:, :)
+      integer(IntKi)                   :: iLocSrc(2), iLocDst(2)
+
+      ! If no variable index for source or destination, return
+      if (iVarDst == 0 .or. iVarSrc == 0) return
+
+      ! Get global indices for source/destination modules/variables
+      call Idx_GetValLoc(IdxSrc, iModSrc, iVarSrc, iGbl=iLocSrc)
+      call Idx_GetValLoc(IdxDst, iModDst, iVarDst, iGbl=iLocDst)
+      
+      ! If no global indices for source or destination, return
+      if (iLocDst(1) == 0 .or. iLocSrc(1) == 0) return
+      
+      ! Subtracts the source matrix from the destination sub-matrix
+      associate (DstSubM => DstM(iLocDst(1):iLocDst(2), iLocSrc(1):iLocSrc(2)))
+         DstSubM = DstSubM - SrcM
+      end associate
    end subroutine
 
    logical function Failed()
@@ -2058,129 +2158,12 @@ contains
    end function
 end subroutine
 
-subroutine Assemble_dUdu(Mapping, dUdu)
-   type(TC_MappingType), intent(in) :: Mapping
-   real(R8Ki), intent(inout)        :: dUdu(:, :)
 
-   ! Effect of input Translation Displacement on input Translation Velocity
-   if (allocated(Mapping%MeshMap%dM%tv_uD)) then
-      call SumBlock(Mapping%iLocDstTransVel, Mapping%iLocDstTransDisp, Mapping%MeshMap%dM%tv_uD, dUdu)
-   end if
-
-   ! Effect of input Translation Displacement on input Translation Acceleration
-   if (allocated(Mapping%MeshMap%dM%ta_uD)) then
-      call SumBlock(Mapping%iLocDstTransAcc, Mapping%iLocDstTransDisp, Mapping%MeshMap%dM%ta_uD, dUdu)
-   end if
-
-   ! Effect of input Translation Displacement on input Moments
-   if (allocated(Mapping%MeshMap%dM%M_uS)) then
-      call SumBlock(Mapping%iLocDstMoment, Mapping%iLocSrcDispTransDisp, Mapping%MeshMap%dM%M_uS, dUdu)
-   end if
-end subroutine
-
-!> Assemble_dUdy_Loads assembles the linearization matrices for transfer of
-!! load fields between two meshes. It sets the following block matrix, which
-!! is the dUdy block for transfering output (source) mesh  to the input
-!! (destination) mesh :
-!! M = -| M_li   0    | * M_mi | F^S |
-!!      | M_fm   M_li |        | M^S |
-subroutine Assemble_dUdy_Loads(Mapping, dUdy)
-   type(TC_MappingType), intent(inout) :: Mapping
-   real(R8Ki), intent(inout)           :: dUdy(:, :)
-
-   ! Load identity
-   if (allocated(Mapping%MeshMap%dM%li)) then
-      call SumBlock(Mapping%iLocDstForce, Mapping%iLocSrcForce, Mapping%MeshMap%dM%li, dUdy)
-      call SumBlock(Mapping%iLocDstMoment, Mapping%iLocSrcMoment, Mapping%MeshMap%dM%li, dUdy)
-   end if
-
-   ! Force to Moment
-   if (allocated(Mapping%MeshMap%dM%m_f)) then
-      call SumBlock(Mapping%iLocDstMoment, Mapping%iLocSrcForce, Mapping%MeshMap%dM%m_f, dUdy)
-   end if
-
-   ! Destination Translation Displacement to Moment
-   if (allocated(Mapping%MeshMap%dM%m_uD)) then
-      if (Mapping%DstUsesSibling) then
-         ! Direct transfer
-         call SumBlock(Mapping%iLocDstMoment, Mapping%iLocDstDispTransDisp, Mapping%MeshMap%dM%m_uD, dUdy)
-      else
-         ! call SumBlock(Mapping%iLocDstMoment, [Mapping%iLocDstDispTransDisp(1), Mapping%iLocDstDispTransDisp(1)  + size(Mapping%MeshMap%dM%m_uD,2) - 1], Mapping%MeshMap%dM%m_uD, dUdy)
-         ! Compose linearization of motion and loads
-         Mapping%TmpMatrix = matmul(Mapping%MeshMap%dM%m_uD, Mapping%MeshMapAux%dM%mi)
-         call SumBlock(Mapping%iLocDstMoment, Mapping%iLocDstDispTransDisp, Mapping%TmpMatrix, dUdy)
-         Mapping%TmpMatrix = matmul(Mapping%MeshMap%dM%m_uD, Mapping%MeshMapAux%dM%fx_p)
-         call SumBlock(Mapping%iLocDstMoment, Mapping%iLocDstDispOrientation, Mapping%TmpMatrix, dUdy)
-      end if
-   end if
-end subroutine
-
-!> Assemble_dUdy_Motions assembles the linearization matrices for transfer of
-!! motion fields between two meshes. It set the following block matrix, which
-!! is the dUdy block for transfering output (source) mesh  to the input
-!! (destination) mesh :
-!! M = -| M_mi       M_f_p    0      0           0      0     |
-!!      | 0          M_mi     0      0           0      0     |
-!!      | M_tv_uS    0        M_mi   M_f_p       0      0     |
-!!      | 0          0        0      M_mi        0      0     |
-!!      | M_ta_uS    0        0      M_ta_rv     M_mi   M_f_p |
-!!      | 0          0        0      0           0      M_mi  |
-!! where the matrices correspond to
-!! u^S, theta^S, v^S, omega^S, a^S, alpha^S
-subroutine Assemble_dUdy_Motions(Mapping, dUdy)
-   type(TC_MappingType), intent(inout) :: Mapping
-   real(R8Ki), intent(inout)           :: dUdy(:, :)
-
-   ! Motion identity
-   if (allocated(Mapping%MeshMap%dM%mi)) then
-      call SumBlock(Mapping%iLocDstTransDisp, Mapping%iLocSrcTransDisp, Mapping%MeshMap%dM%mi, dUdy)
-      call SumBlock(Mapping%iLocDstOrientation, Mapping%iLocSrcOrientation, Mapping%MeshMap%dM%mi, dUdy)
-      call SumBlock(Mapping%iLocDstTransVel, Mapping%iLocSrcTransVel, Mapping%MeshMap%dM%mi, dUdy)
-      call SumBlock(Mapping%iLocDstAngularVel, Mapping%iLocSrcAngularVel, Mapping%MeshMap%dM%mi, dUdy)
-      call SumBlock(Mapping%iLocDstTransAcc, Mapping%iLocSrcTransAcc, Mapping%MeshMap%dM%mi, dUdy)
-      call SumBlock(Mapping%iLocDstAngularAcc, Mapping%iLocSrcAngularAcc, Mapping%MeshMap%dM%mi, dUdy)
-   end if
-
-   ! Rotation to Translation
-   if (allocated(Mapping%MeshMap%dM%fx_p)) then
-      call SumBlock(Mapping%iLocDstTransDisp, Mapping%iLocSrcOrientation, Mapping%MeshMap%dM%fx_p, dUdy)
-      call SumBlock(Mapping%iLocDstTransVel, Mapping%iLocSrcAngularVel, Mapping%MeshMap%dM%fx_p, dUdy)
-      call SumBlock(Mapping%iLocDstTransAcc, Mapping%iLocSrcAngularAcc, Mapping%MeshMap%dM%fx_p, dUdy)
-   end if
-
-   ! Translation displacement to Translation velocity
-   if (allocated(Mapping%MeshMap%dM%tv_us)) then
-      call SumBlock(Mapping%iLocDstTransVel, Mapping%iLocSrcTransDisp, Mapping%MeshMap%dM%tv_us, dUdy)
-   end if
-
-   ! Translation displacement to Translation acceleration
-   if (allocated(Mapping%MeshMap%dM%ta_us)) then
-      call SumBlock(Mapping%iLocDstTransAcc, Mapping%iLocSrcTransDisp, Mapping%MeshMap%dM%ta_us, dUdy)
-   end if
-
-   ! Angular velocity to Translation acceleration
-   if (allocated(Mapping%MeshMap%dM%ta_rv)) then
-      call SumBlock(Mapping%iLocDstTransAcc, Mapping%iLocSrcAngularVel, Mapping%MeshMap%dM%ta_rv, dUdy)
-   end if
-end subroutine
-
-subroutine SumBlock(iLocRow, iLocCol, SrcM, DstM)
-   integer(IntKi), intent(in)    :: iLocRow(2), iLocCol(2)
-   real(R8Ki), intent(in)        :: SrcM(:, :)
-   real(R8Ki), intent(inout)     :: DstM(:, :)
-   if (iLocRow(1) > 0 .and. iLocCol(1) > 0) then
-      ! Subtracts the source matrix from the destination sub-matrix
-      associate (DstSubM => DstM(iLocRow(1):iLocRow(2), iLocCol(1):iLocCol(2)))
-         DstSubM = DstSubM - SrcM
-      end associate
-   end if
-end subroutine
-
-subroutine FAST_InputSolve(Turbine, Mods, Mappings, iMod, ErrStat, ErrMsg, UseU)
-   type(FAST_TurbineType), intent(inout)  :: Turbine     !< Turbine type
+subroutine FAST_InputSolve(ModData, Mods, Mappings, Turbine, ErrStat, ErrMsg, UseU)
+   type(ModDataType), intent(in)          :: ModData     !< Module data
    type(ModDataType), intent(in)          :: Mods(:)     !< Module data
-   type(TC_MappingType), intent(inout)    :: Mappings(:)
-   integer(IntKi), intent(in)             :: iMod        !< Index of module in Mods to do input solve
+   type(TC_MappingType), intent(inout)    :: Mappings(:) !< Mesh and variable mappings
+   type(FAST_TurbineType), intent(inout)  :: Turbine     !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
    logical, intent(in)                    :: UseU        ! Flag to transfer to u instead of Input
@@ -2195,9 +2178,9 @@ subroutine FAST_InputSolve(Turbine, Mods, Mappings, iMod, ErrStat, ErrMsg, UseU)
    ErrStat = ErrID_None
    ErrMsg = ''
 
-   ! Loop through mappings where this module is the destination
-   do i = 1, size(Mods(iMod)%DstMaps)
-      associate (Mapping => Mappings(Mods(iMod)%DstMaps(i)))
+   ! Loop through mappings where the ModData module is the destination
+   do i = 1, size(ModData%DstMaps)
+      associate (Mapping => Mappings(ModData%DstMaps(i)))
 
          ! Select based on type of mapping
          select case (Mapping%MapType)
@@ -2260,7 +2243,7 @@ contains
    logical function Failed()
       Failed = ErrStat2 /= ErrID_None
       if (Failed) call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, &
-                                  RoutineName//':Module='//trim(Mods(iMod)%Abbr)//', Instance='//Num2LStr(Mods(iMod)%Ins))
+                                  RoutineName//':Module='//trim(ModData%Abbr)//', Instance='//Num2LStr(ModData%Ins))
    end function
 end subroutine
 

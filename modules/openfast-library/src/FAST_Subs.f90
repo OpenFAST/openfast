@@ -9364,7 +9364,7 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
 
          if ( EqualRealNos( t_global, next_lin_time ) .or. t_global > next_lin_time ) then
 
-            call ModLin_Linearize_OP(Turbine, Turbine%y_FAST%ModGlue, Turbine%y_FAST%Modules, &
+            call ModGlue_Linearize_OP(Turbine, Turbine%y_FAST%Modules, Turbine%y_FAST%ModGlue,  &
                                      Turbine%p_FAST%ModLin, Turbine%m_FAST%ModLin, Turbine%p_FAST, Turbine%m_FAST, &
                                      Turbine%y_FAST, t_global, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -9420,7 +9420,7 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                IF (ErrStat >= AbortErrLev) RETURN
 
-            call ModLin_Linearize_OP(Turbine, Turbine%y_FAST%ModGlue, Turbine%y_FAST%Modules, &
+            call ModGlue_Linearize_OP(Turbine, Turbine%y_FAST%Modules, Turbine%y_FAST%ModGlue, &
                Turbine%p_FAST%ModLin, Turbine%m_FAST%ModLin, Turbine%p_FAST, Turbine%m_FAST, &
                Turbine%y_FAST, t_global, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)

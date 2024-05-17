@@ -142,25 +142,25 @@ typedef ^ ^                 MeshType                TmpMotionMesh   -  -  -     
 typedef ^ ^                 R8Ki                    TmpMatrix       :: -  -     "Temporary matrix for performing transfer for destination load meshes without sibling motion meshes" -
 typedef ^ ^                 MeshMapType             MeshMap         -  -  -     "Mesh mapping from Source variable to Destination variable" -
 typedef ^ ^                 MeshMapType             MeshMapAux      -  -  -     "Auxiliary mesh mapping for destination load meshes without sibling motion mesh" -
-typedef ^ ^                 IntKi                   iLocSrcTransDisp      2 - - "Data indices of linearized mesh mapping"
-typedef ^ ^                 IntKi                   iLocSrcTransVel       2 - - "Data indices of linearized mesh mapping"
-typedef ^ ^                 IntKi                   iLocSrcTransAcc       2 - - "Data indices of linearized mesh mapping"
-typedef ^ ^                 IntKi                   iLocSrcOrientation    2 - - "Data indices of linearized mesh mapping"
-typedef ^ ^                 IntKi                   iLocSrcAngularVel     2 - - "Data indices of linearized mesh mapping"
-typedef ^ ^                 IntKi                   iLocSrcAngularAcc     2 - - "Data indices of linearized mesh mapping"
-typedef ^ ^                 IntKi                   iLocSrcForce          2 - - "Data indices of linearized mesh mapping"
-typedef ^ ^                 IntKi                   iLocSrcMoment         2 - - "Data indices of linearized mesh mapping"
-typedef ^ ^                 IntKi                   iLocSrcDispTransDisp  2 - - "Data indices of linearized mesh mapping"
-typedef ^ ^                 IntKi                   iLocDstTransDisp      2 - - "Data indices of linearized mesh mapping"
-typedef ^ ^                 IntKi                   iLocDstTransVel       2 - - "Data indices of linearized mesh mapping"
-typedef ^ ^                 IntKi                   iLocDstTransAcc       2 - - "Data indices of linearized mesh mapping"
-typedef ^ ^                 IntKi                   iLocDstOrientation    2 - - "Data indices of linearized mesh mapping"
-typedef ^ ^                 IntKi                   iLocDstAngularVel     2 - - "Data indices of linearized mesh mapping"
-typedef ^ ^                 IntKi                   iLocDstAngularAcc     2 - - "Data indices of linearized mesh mapping"
-typedef ^ ^                 IntKi                   iLocDstForce          2 - - "Data indices of linearized mesh mapping"
-typedef ^ ^                 IntKi                   iLocDstMoment         2 - - "Data indices of linearized mesh mapping"
-typedef ^ ^                 IntKi                   iLocDstDispTransDisp  2 - - "Data indices of linearized mesh mapping"
-typedef ^ ^                 IntKi                   iLocDstDispOrientation 2 - - "Data indices of linearized mesh mapping"
+typedef ^ ^                 IntKi                   iVarSrcTransDisp       - - - "Var index for linearized mesh mapping"
+typedef ^ ^                 IntKi                   iVarSrcTransVel        - - - "Var index for linearized mesh mapping"
+typedef ^ ^                 IntKi                   iVarSrcTransAcc        - - - "Var index for linearized mesh mapping"
+typedef ^ ^                 IntKi                   iVarSrcOrientation     - - - "Var index for linearized mesh mapping"
+typedef ^ ^                 IntKi                   iVarSrcAngularVel      - - - "Var index for linearized mesh mapping"
+typedef ^ ^                 IntKi                   iVarSrcAngularAcc      - - - "Var index for linearized mesh mapping"
+typedef ^ ^                 IntKi                   iVarSrcForce           - - - "Var index for linearized mesh mapping"
+typedef ^ ^                 IntKi                   iVarSrcMoment          - - - "Var index for linearized mesh mapping"
+typedef ^ ^                 IntKi                   iVarSrcDispTransDisp   - - - "Var index for linearized mesh mapping"
+typedef ^ ^                 IntKi                   iVarDstTransDisp       - - - "Var index for linearized mesh mapping"
+typedef ^ ^                 IntKi                   iVarDstTransVel        - - - "Var index for linearized mesh mapping"
+typedef ^ ^                 IntKi                   iVarDstTransAcc        - - - "Var index for linearized mesh mapping"
+typedef ^ ^                 IntKi                   iVarDstOrientation     - - - "Var index for linearized mesh mapping"
+typedef ^ ^                 IntKi                   iVarDstAngularVel      - - - "Var index for linearized mesh mapping"
+typedef ^ ^                 IntKi                   iVarDstAngularAcc      - - - "Var index for linearized mesh mapping"
+typedef ^ ^                 IntKi                   iVarDstForce           - - - "Var index for linearized mesh mapping"
+typedef ^ ^                 IntKi                   iVarDstMoment          - - - "Var index for linearized mesh mapping"
+typedef ^ ^                 IntKi                   iVarDstDispTransDisp   - - - "Var index for linearized mesh mapping"
+typedef ^ ^                 IntKi                   iVarDstDispOrientation - - - "Var index for linearized mesh mapping"
 
 # Parameters 
 typedef ^ TC_ParameterType  R8Ki            DT                     -  -  -      "solution time step" -
@@ -196,24 +196,6 @@ typedef ^ ^                 IntKi           iModOpt1US             :  -  -      
 typedef ^ ^                 IntKi           iModOpt2               :  -  -      "ModData index order for option 2 modules" -
 typedef ^ ^                 IntKi           iModPost               :  -  -      "ModData index order for post option 1 modules" -
 
-# Variable indexing
-typedef ^ VarIdxType        IntKi           ModIdx                 -  -  -      ""  -
-typedef ^ ^                 IntKi           iVar                   -  -  -      ""  -
-typedef ^ ^                 IntKi           iLoc                   2  -  -      ""  -
-typedef ^ ^                 IntKi           iGbl                   2  -  -      ""  -
-
-typedef ^ VarsIdxType       IntKi           FlagFilter             -  -  -      ""  -
-typedef ^ ^                 IntKi           Nx                     -  -  -      ""  -
-typedef ^ ^                 IntKi           Nxd                    -  -  -      ""  -
-typedef ^ ^                 IntKi           Nz                     -  -  -      ""  -
-typedef ^ ^                 IntKi           Nu                     -  -  -      ""  -
-typedef ^ ^                 IntKi           Ny                     -  -  -      ""  -
-typedef ^ ^                 VarIdxType      ix                     :  -  -      ""  -
-typedef ^ ^                 VarIdxType      ixd                    :  -  -      ""  -
-typedef ^ ^                 VarIdxType      iz                     :  -  -      ""  -
-typedef ^ ^                 VarIdxType      iu                     :  -  -      ""  -
-typedef ^ ^                 VarIdxType      iy                     :  -  -      ""  -
-
 typedef ^ ModLinTCType      R8Ki            x                      :  -  -      ""  -
 typedef ^ ^                 R8Ki            dx                     :  -  -      ""  -
 typedef ^ ^                 R8Ki            xd                     :  -  -      ""  -
@@ -240,17 +222,29 @@ typedef ^ ^                 IntKi           Idx                    -  0  -      
 typedef ^ ^                 IntKi           Ins                    -  0  -      "Module instance number"  -
 typedef ^ ^                 R8Ki            DT                     -  0  -      "Module time step"  -
 typedef ^ ^                 IntKi           SubSteps               -  0  -      "Module number of substeps per solver time step"  -
-typedef ^ ^                 IntKi           ixg                    -  -  -      "starting index for continuous state values in global arrays" -
-typedef ^ ^                 IntKi           ixdg                   -  -  -      "starting index for discrete state values in global arrays" -
-typedef ^ ^                 IntKi           izg                    -  -  -      "starting index for constraint state values in global arrays" -
-typedef ^ ^                 IntKi           iug                    -  -  -      "starting index for input values in global arrays" -
-typedef ^ ^                 IntKi           iyg                    -  -  -      "starting index for output values in global arrays" -
 typedef ^ ^                 ModVarsType    *Vars                   -  -  -      "Pointer to module variables type"  -
 typedef ^ ^                 ModLinTCType    Lin                    -  -  -      "Module linearization data"  -
 typedef ^ ^                 IntKi           SrcMaps                :  -  -      "Indices of mappings where module is the source"
 typedef ^ ^                 IntKi           DstMaps                :  -  -      "Indices of mappings where module is the destination"
 
+# Variable indexing
+typedef ^ VarIdxType        IntKi           ModVarStart            :  -  -      "Variable start index from module index"  -
+typedef ^ ^                 IntKi           ValLocGbl              :: -  -      "Variable local and global value indices"  -
+typedef ^ VarsIdxType       IntKi           FlagFilter             -  -  -      ""  -
+typedef ^ ^                 IntKi           Nx                     -  -  -      ""  -
+typedef ^ ^                 IntKi           Nxd                    -  -  -      ""  -
+typedef ^ ^                 IntKi           Nz                     -  -  -      ""  -
+typedef ^ ^                 IntKi           Nu                     -  -  -      ""  -
+typedef ^ ^                 IntKi           Ny                     -  -  -      ""  -
+typedef ^ ^                 VarIdxType      x                      -  -  -      ""  -
+typedef ^ ^                 VarIdxType      xd                     -  -  -      ""  -
+typedef ^ ^                 VarIdxType      z                      -  -  -      ""  -
+typedef ^ ^                 VarIdxType      u                      -  -  -      ""  -
+typedef ^ ^                 VarIdxType      y                      -  -  -      ""  -
+typedef ^ ^                 ModLinTCType    Lin                    -  -  -      "Linearization matrices"  -
+
 typedef ^ ML_ParameterType  IntKi           iMod                   :  -  -      "ModData index order for linearization" -
+typedef ^ ^                 VarsIdxType     IdxLin                 -  -  -      "Variable index for linearization data" -
 typedef ^ ML_MiscVarType    TC_MappingType  Mappings               :  -  -      "Module mesh mapping" -
 typedef ^ ML_OutputType     ModLinTCType    Lin                    :  -  -      "Module linearization type" -
 

@@ -31,7 +31,7 @@ use FAST_Mapping
 implicit none
 
 private
-public :: ModGlue_Init, ModLin_Linearize_OP, MV_AddModule
+public :: ModGlue_Init, ModGlue_Linearize_OP, MV_AddModule
 
 contains
 
@@ -142,7 +142,6 @@ subroutine ModGlue_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, E
          end do
 
          ! Set module data start index in global arrays, increment data size
-         ModData%ixg = ModGlue%Vars%Nx + 1
          ModGlue%Vars%Nx = ModGlue%Vars%Nx + ModData%Vars%Nx
 
          ! Save start index of module variables and append to glue code variables
@@ -157,7 +156,6 @@ subroutine ModGlue_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, E
          !----------------------------------------------------------------------
 
          ! Set module data start index in global arrays, increment data size
-         ModData%ixdg = ModGlue%Vars%Nxd + 1
          ModGlue%Vars%Nxd = ModGlue%Vars%Nxd + ModData%Vars%Nxd
 
          ! Save start index of module variables and append to glue code variables
@@ -172,7 +170,6 @@ subroutine ModGlue_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, E
          !----------------------------------------------------------------------
 
          ! Set module data start index in global arrays, increment data size
-         ModData%izg = ModGlue%Vars%Nz + 1
          ModGlue%Vars%Nz = ModGlue%Vars%Nz + ModData%Vars%Nz
 
          ! Save start index of module variables and append to glue code variables
@@ -201,7 +198,6 @@ subroutine ModGlue_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, E
          end select
 
          ! Set module data start index in global arrays, increment data size
-         ModData%iug = ModGlue%Vars%Nu + 1
          ModGlue%Vars%Nu = ModGlue%Vars%Nu + ModData%Vars%Nu
 
          ! Save start index of module variables and append to glue code variables
@@ -236,7 +232,6 @@ subroutine ModGlue_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, E
          end select
 
          ! Set module data start index in global arrays, increment data size
-         ModData%iyg = ModGlue%Vars%Ny + 1
          ModGlue%Vars%Ny = ModGlue%Vars%Ny + ModData%Vars%Ny
 
          ! Save start index of module variables and append to glue code variables
@@ -266,7 +261,11 @@ subroutine ModGlue_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, E
    ! Allocate linearization arrays and matrices
    !----------------------------------------------------------------------------
 
-   if (p_FAST%Linearize .or. p_FAST%CompAeroMaps) then
+   ! If linearization is enabled
+   if (p_FAST%Linearize) then
+
+      ! Initialize linearization index
+      call Idx_Init(Mods, p%iMod, p%IdxLin, VF_None, ErrStat2, ErrMsg2); if (Failed()) return
 
       ! Allocate linearization arrays
       call AllocAry(ModGlue%Lin%x, ModGlue%Vars%Nx, "x", ErrStat2, ErrMsg2); if (Failed()) return
@@ -286,10 +285,7 @@ subroutine ModGlue_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, E
    end if
 
 contains
-   logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      Failed = ErrStat >= AbortErrLev
-   end function Failed
+
    subroutine CalcVarDataLoc(VarAry, DataSize)
       type(ModVarType), intent(inout)  :: VarAry(:)
       integer(IntKi), intent(out)      :: DataSize
@@ -299,6 +295,12 @@ contains
          DataSize = DataSize + VarAry(i)%Num
       end do
    end subroutine
+
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
+
 end subroutine
 
 subroutine AddLinNamePrefix(VarAry, Prefix)
@@ -314,10 +316,10 @@ subroutine AddLinNamePrefix(VarAry, Prefix)
    end do
 end subroutine
 
-subroutine ModLin_Linearize_OP(Turbine, ModGlue, Mods, p, m, p_FAST, m_FAST, y_FAST, t_global, ErrStat, ErrMsg)
+subroutine ModGlue_Linearize_OP(Turbine, Mods, ModGlue, p, m, p_FAST, m_FAST, y_FAST, t_global, ErrStat, ErrMsg)
 
-   type(ModDataType), intent(inout)          :: ModGlue  !< Module data for glue code
    type(ModDataType), intent(inout)          :: Mods(:)  !< Data for all modules
+   type(ModDataType), intent(inout)          :: ModGlue  !< Module data for glue code
    type(ML_ParameterType), intent(inout)     :: p        !< ModLin parameters
    type(ML_MiscVarType), intent(inout)       :: m        !< ModLin MiscVars
    type(FAST_ParameterType), intent(in)      :: p_FAST
@@ -470,7 +472,7 @@ subroutine ModLin_Linearize_OP(Turbine, ModGlue, Mods, p, m, p_FAST, m_FAST, y_F
    ! Linearize mesh mappings to popoulate dUdy and dUdu
    ModGlue%Lin%dUdy = 0.0_R8Ki
    call Eye2D(ModGlue%Lin%dUdu, ErrStat2, ErrMsg2); if (Failed()) return
-   call FAST_LinearizeMappings(Turbine, Mods, m%Mappings, p%iMod, ErrStat2, ErrMsg2, ModGlue%Lin%dUdu, ModGlue%Lin%dUdy)
+   call FAST_LinearizeMappings(Turbine, Mods, m%Mappings, p%iMod, p%IdxLin, ErrStat2, ErrMsg2, ModGlue%Lin%dUdu, ModGlue%Lin%dUdy)
    if (Failed()) return
 
    ! Calculate the glue code state matrices (A, B, C, D)
@@ -513,25 +515,21 @@ subroutine ModLin_StateMatrices(ModGlue, JacScaleFactor, ErrStat, ErrMsg)
    ! D = dYdu
 
    ! Create copies of dUdu and dUdy for calculating matrices
-   call AllocAry(dUdu, size(ModGlue%Lin%dUdu, 1), size(ModGlue%Lin%dUdu, 2), 'dUdu', ErrStat2, ErrMsg2)
-   call AllocAry(dUdy, size(ModGlue%Lin%dUdy, 1), size(ModGlue%Lin%dUdy, 2), 'dUdy', ErrStat2, ErrMsg2)
+   call AllocAry(dUdu, size(ModGlue%Lin%dUdu, 1), size(ModGlue%Lin%dUdu, 2), 'dUdu', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(dUdy, size(ModGlue%Lin%dUdy, 1), size(ModGlue%Lin%dUdy, 2), 'dUdy', ErrStat2, ErrMsg2); if (Failed()) return
    dUdu = ModGlue%Lin%dUdu
    dUdy = ModGlue%Lin%dUdy
 
    ! *** get G matrix ****
    !----------------------
    if (.not. allocated(G)) then
-      call AllocAry(G, size(dUdu, 1), size(dUdu, 2), 'G', ErrStat2, ErrMsg2)
-      if (Failed()) return
-
-      call AllocAry(ipiv, ModGlue%Vars%Nu, 'ipiv', ErrStat2, ErrMsg2)
-      if (Failed()) return
+      call AllocAry(G, size(dUdu, 1), size(dUdu, 2), 'G', ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(ipiv, ModGlue%Vars%Nu, 'ipiv', ErrStat2, ErrMsg2); if (Failed()) return
    end if
 
-   !G = dUdu + matmul( dUdy, y_FAST%Lin%Glue%D )
+   !G = dUdu + matmul(dUdy, y_FAST%Lin%Glue%D)
    G = dUdu
-   call LAPACK_GEMM('N', 'N', 1.0_R8Ki, dUdy, ModGlue%Lin%dYdu, 1.0_R8Ki, G, ErrStat2, ErrMsg2)
-   if (Failed()) return
+   call LAPACK_GEMM('N', 'N', 1.0_R8Ki, dUdy, ModGlue%Lin%dYdu, 1.0_R8Ki, G, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! G can be ill-conditioned, so we are going to precondition with G_hat = S^(-1) * G * S
    ! we will also multiply the right-hand-side of the equations that need G inverse so that
@@ -540,16 +538,13 @@ subroutine ModLin_StateMatrices(ModGlue, JacScaleFactor, ErrStat, ErrMsg)
 
    ! Form G_hat^(-1) * (S^-1*dUdy) and G^(-1) * (S^-1*dUdu)
    ! factor G for the two solves:
-   call LAPACK_getrf(M=size(G, 1), N=size(G, 2), A=G, IPIV=ipiv, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
-   if (Failed()) return
+   call LAPACK_getrf(M=size(G, 1), N=size(G, 2), A=G, IPIV=ipiv, ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
    ! after the this solve, dUdy holds G_hat^(-1) * dUdy_hat:
-   call LAPACK_getrs(trans='N', N=size(G, 2), A=G, IPIV=ipiv, B=dUdy, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call LAPACK_getrs(trans='N', N=size(G, 2), A=G, IPIV=ipiv, B=dUdy, ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
    ! after the this solve, dUdu holds G_hat^(-1) * dUdu_hat:
-   call LAPACK_getrs(trans='N', N=size(G, 2), A=G, IPIV=ipiv, B=dUdu, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call LAPACK_getrs(trans='N', N=size(G, 2), A=G, IPIV=ipiv, B=dUdu, ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
    ! Deallocate G and ipiv because the solves are complete
    deallocate (G)
@@ -559,36 +554,28 @@ subroutine ModLin_StateMatrices(ModGlue, JacScaleFactor, ErrStat, ErrMsg)
    call Postcondition(ModGlue%Vars%u, dUdu, dUdy, JacScaleFactor)
 
    ! Allocate tmp matrix for A and C calculations
-   call AllocAry(tmp, ModGlue%Vars%Nu, ModGlue%Vars%Nx, 'G^-1*dUdy*C', ErrStat2, ErrMsg2)
-   if (Failed()) return
+   call AllocAry(tmp, ModGlue%Vars%Nu, ModGlue%Vars%Nx, 'G^-1*dUdy*C', ErrStat2, ErrMsg2); if (Failed()) return
 
    ! tmp = G^(-1) * dUdy * diag(C)
-   call LAPACK_GEMM('N', 'N', 1.0_R8Ki, dUdy, ModGlue%Lin%dYdx, 0.0_R8Ki, tmp, ErrStat2, ErrMsg2)
-   if (Failed()) return
+   call LAPACK_GEMM('N', 'N', 1.0_R8Ki, dUdy, ModGlue%Lin%dYdx, 0.0_R8Ki, tmp, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! A
-   ! dXdx = dXdx - matmul( dXdu, tmp )
-   call LAPACK_GEMM('N', 'N', -1.0_R8Ki, ModGlue%Lin%dXdu, tmp, 1.0_R8Ki, ModGlue%Lin%dXdx, ErrStat2, ErrMsg2)
-   if (Failed()) return
+   ! dXdx = dXdx - matmul(dXdu, tmp)
+   call LAPACK_GEMM('N', 'N', -1.0_R8Ki, ModGlue%Lin%dXdu, tmp, 1.0_R8Ki, ModGlue%Lin%dXdx, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! C
-   ! dYdx = dYdx - matmul( dYdu, tmp )
-   call LAPACK_GEMM('N', 'N', -1.0_R8Ki, ModGlue%Lin%dYdu, tmp, 1.0_R8Ki, ModGlue%Lin%dYdx, ErrStat2, ErrMsg2)
-   if (Failed()) return
+   ! dYdx = dYdx - matmul(dYdu, tmp)
+   call LAPACK_GEMM('N', 'N', -1.0_R8Ki, ModGlue%Lin%dYdu, tmp, 1.0_R8Ki, ModGlue%Lin%dYdx, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! B
-   if (Failed()) return
    tmp = ModGlue%Lin%dXdu
-   ! dXdu = matmul( dXdu, dUdu )
-   call LAPACK_GEMM('N', 'N', 1.0_R8Ki, tmp, dUdu, 0.0_R8Ki, ModGlue%Lin%dXdu, ErrStat2, ErrMsg2)
-   if (Failed()) return
+   ! dXdu = matmul(dXdu, dUdu)
+   call LAPACK_GEMM('N', 'N', 1.0_R8Ki, tmp, dUdu, 0.0_R8Ki, ModGlue%Lin%dXdu, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! D
-   if (Failed()) return
    tmp = ModGlue%Lin%dYdu
-   ! D = matmul( dYdu, dUdu )
-   call LAPACK_GEMM('N', 'N', 1.0_R8Ki, tmp, dUdu, 0.0_R8Ki, ModGlue%Lin%dYdu, ErrStat2, ErrMsg2)
-   if (Failed()) return
+   ! D = matmul(dYdu, dUdu)
+   call LAPACK_GEMM('N', 'N', 1.0_R8Ki, tmp, dUdu, 0.0_R8Ki, ModGlue%Lin%dYdu, ErrStat2, ErrMsg2); if (Failed()) return
 
 contains
    logical function Failed()
@@ -793,7 +780,7 @@ subroutine WriteModuleLinearMatrices(ModData, p_FAST, y_FAST, t_global, Un, OutF
    yUse = .false.
    do i = 1, size(ModData%Vars%y)
       associate (Var => ModData%Vars%y(i))
-         if (MV_HasFlags(Var, VF_Linearize))  yUse(Var%iLoc(1):Var%iLoc(2)) = .true.
+         if (MV_HasFlags(Var, VF_Linearize)) yUse(Var%iLoc(1):Var%iLoc(2)) = .true.
       end associate
    end do
 
@@ -939,35 +926,240 @@ subroutine WrLinFile_txt_Table(VarAry, FlagFilter, p_FAST, Un, RowCol, op, IsDer
 
 end subroutine WrLinFile_txt_Table
 
-subroutine MV_InitModuleVarIdx(ModData, VarIdx, FlagFilter, ErrStat, ErrMsg)
-   type(ModDataType), intent(in)       :: ModData
-   type(VarsIdxType), intent(out)      :: VarIdx
+subroutine Idx_Init(Mods, ModOrder, Idx, FlagFilter, ErrStat, ErrMsg)
+   type(ModDataType), intent(in)       :: Mods(:)
+   integer(IntKi), intent(in)          :: ModOrder(:)
+   type(VarsIdxType), intent(out)      :: Idx
    integer(IntKi), intent(in)          :: FlagFilter
    integer(IntKi), intent(out)         :: ErrStat
    character(ErrMsgLen), intent(out)   :: ErrMsg
 
-   character(*), parameter             :: RoutineName = 'MV_InitModuleVarIdx'
+   character(*), parameter             :: RoutineName = 'Idx_Init'
    integer(IntKi)                      :: ErrStat2
    character(ErrMsgLen)                :: ErrMsg2
-   integer(IntKi)                      :: xNumVar, xdNumVar, zNumVar, uNumVar, yNumVar
-   integer(IntKi)                      :: IndCol
+   integer(IntKi)                      :: NumVars
+   integer(IntKi)                      :: iGbl(2)
+   integer(IntKi)                      :: i, j
 
    ! Initialize error return
    ErrStat = ErrID_None
    ErrMsg = ""
 
    ! Destroy VarIdx in case it has been previously used
-   call FAST_DestroyVarsIdxType(VarIdx, ErrStat2, ErrMsg2); if (Failed()) return
+   call FAST_DestroyVarsIdxType(Idx, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Save filter in index
-   VarIdx%FlagFilter = FlagFilter
+   Idx%FlagFilter = FlagFilter
 
-   ! Populate variable index arrays
-   call GetModVarLocs(ModData%Idx, ModData%Vars%x, VarIdx%ix, VarIdx%Nx, FlagFilter, ErrStat2, ErrMsg2); if (Failed()) return
-   call GetModVarLocs(ModData%Idx, ModData%Vars%xd, VarIdx%ixd, VarIdx%Nxd, FlagFilter, ErrStat2, ErrMsg2); if (Failed()) return
-   call GetModVarLocs(ModData%Idx, ModData%Vars%z, VarIdx%iz, VarIdx%Nz, FlagFilter, ErrStat2, ErrMsg2); if (Failed()) return
-   call GetModVarLocs(ModData%Idx, ModData%Vars%u, VarIdx%iu, VarIdx%Nu, FlagFilter, ErrStat2, ErrMsg2); if (Failed()) return
-   call GetModVarLocs(ModData%Idx, ModData%Vars%y, VarIdx%iy, VarIdx%Ny, FlagFilter, ErrStat2, ErrMsg2); if (Failed()) return
+   !----------------------------------------------------------------------------
+   ! Indexing Data Description
+   !----------------------------------------------------------------------------
+
+   ! For each variable (x, u, y, etc.) there are two arrays:
+   !     1) Variable local and global value indices (ValLocGbl)
+   !     2) Module variable start index (ModVarStart)
+   ! ValLocGbl has 4 rows and N columns where N is the total number of variables
+   ! for all modules in Mods. The columns are as follows:
+   !     1) Values start index inside module arrays/matrices (iLoc(1))
+   !     2) Values end index inside module arrays/matrices (iLoc(2))
+   !     3) Values start index in global arrays/matrices (iGbl(1))
+   !     4) Values end index in global arrays/matrices (iLoc(2))
+   ! ModVarStart contains N rows where N is the total number of modules in Mods.
+   ! The values in this array contain the variable start index offset for each
+   ! module into ValLocGbl so value indices can be looked up given module index
+   ! and variable index. Keeping all value indices in one matrix makes data
+   ! storage much simpler at the cost of of having to maintain the array of
+   ! module offsets.
+
+   !----------------------------------------------------------------------------
+   ! Build index for continuous state variables
+   !----------------------------------------------------------------------------
+
+   ! Allocate array of module variable start indices for each module, init to 0
+   call AllocAry(Idx%x%ModVarStart, size(Mods) + 1, "VarIdx%x%ModVarStart", ErrStat2, ErrMsg2); if (Failed()) return
+   Idx%x%ModVarStart(1) = 0
+
+   ! Populate ModVarStart with variable offsets and calculate total number of variables
+   NumVars = 0
+   do i = 1, size(Mods)
+      NumVars = NumVars + size(Mods(i)%Vars%x)
+      Idx%x%ModVarStart(i + 1) = NumVars
+   end do
+
+   ! Allocate variable value index matrix and initialize to zero
+   call AllocAry(Idx%x%ValLocGbl, 4, NumVars, "VarIdx%x%ValLocGbl", ErrStat2, ErrMsg2); if (Failed()) return
+   Idx%x%ValLocGbl = 0
+
+   ! Initialize global index to zero
+   iGbl = 0
+
+   ! Loop through modules and variables, add value indices to index if variable has filter flags, increment global indices
+   do i = 1, size(ModOrder)
+      associate (ModData => Mods(ModOrder(i)))
+         do j = 1, size(ModData%Vars%x)
+            if (MV_HasFlags(ModData%Vars%x(j), FlagFilter)) then
+               iGbl(1) = iGbl(2) + 1
+               iGbl(2) = iGbl(1) + ModData%Vars%x(j)%Num - 1
+               Idx%x%ValLocGbl(:, Idx%x%ModVarStart(ModData%Idx) + j) = [ModData%Vars%x(j)%iLoc, iGbl]
+            end if
+         end do
+      end associate
+   end do
+
+   ! Save total number of values
+   Idx%Nx = iGbl(2)
+
+   !----------------------------------------------------------------------------
+   ! Build index for discrete state variables
+   !----------------------------------------------------------------------------
+
+   ! Allocate array of module variable start indices for each module, init to 0
+   call AllocAry(Idx%xd%ModVarStart, size(Mods) + 1, "VarIdx%xd%ModVarStart", ErrStat2, ErrMsg2); if (Failed()) return
+   Idx%xd%ModVarStart(1) = 0
+
+   ! Populate ModVarStart with variable offsets and calculate total number of variables and values
+   NumVars = 0
+   do i = 1, size(Mods)
+      NumVars = NumVars + size(Mods(i)%Vars%xd)
+      Idx%xd%ModVarStart(i + 1) = NumVars
+   end do
+
+   ! Allocate variable value index matrix and initialize to zero
+   call AllocAry(Idx%xd%ValLocGbl, 4, NumVars, "VarIdx%xd%ValLocGbl", ErrStat2, ErrMsg2); if (Failed()) return
+   Idx%xd%ValLocGbl = 0
+
+   ! Initialize global index and number of values to zero
+   iGbl = 0
+
+   ! Loop through modules and variables, add value indices to index if variable has filter flags, increment global indices
+   do i = 1, size(ModOrder)
+      associate (ModData => Mods(ModOrder(i)))
+         do j = 1, size(ModData%Vars%xd)
+            if (MV_HasFlags(ModData%Vars%xd(j), FlagFilter)) then
+               iGbl(1) = iGbl(2) + 1
+               iGbl(2) = iGbl(1) + ModData%Vars%xd(j)%Num - 1
+               Idx%xd%ValLocGbl(:, Idx%xd%ModVarStart(ModData%Idx) + j) = [ModData%Vars%xd(j)%iLoc, iGbl]
+            end if
+         end do
+      end associate
+   end do
+
+   ! Save total number of values
+   Idx%Nxd = iGbl(2)
+
+   !----------------------------------------------------------------------------
+   ! Build index for constraint state variables
+   !----------------------------------------------------------------------------
+
+   ! Allocate array of module variable start indices for each module, init to 0
+   call AllocAry(Idx%z%ModVarStart, size(Mods) + 1, "VarIdx%z%ModVarStart", ErrStat2, ErrMsg2); if (Failed()) return
+   Idx%z%ModVarStart(1) = 0
+
+   ! Populate ModVarStart with variable offsets and calculate total number of variables
+   NumVars = 0
+   do i = 1, size(Mods)
+      NumVars = NumVars + size(Mods(i)%Vars%z)
+      Idx%z%ModVarStart(i + 1) = NumVars
+   end do
+
+   ! Allocate variable value index matrix and initialize to zero
+   call AllocAry(Idx%z%ValLocGbl, 4, NumVars, "VarIdx%z%ValLocGbl", ErrStat2, ErrMsg2); if (Failed()) return
+   Idx%z%ValLocGbl = 0
+
+   ! Initialize global index to zero
+   iGbl = 0
+
+   ! Loop through modules and variables, add value indices to index if variable has filter flags, increment global indices
+   do i = 1, size(ModOrder)
+      associate (ModData => Mods(ModOrder(i)))
+         do j = 1, size(ModData%Vars%z)
+            if (MV_HasFlags(ModData%Vars%z(j), FlagFilter)) then
+               iGbl(1) = iGbl(2) + 1
+               iGbl(2) = iGbl(1) + ModData%Vars%z(j)%Num - 1
+               Idx%z%ValLocGbl(:, Idx%z%ModVarStart(ModData%Idx) + j) = [ModData%Vars%z(j)%iLoc, iGbl]
+            end if
+         end do
+      end associate
+   end do
+
+   ! Save total number of values
+   Idx%Nz = iGbl(2)
+
+   !----------------------------------------------------------------------------
+   ! Build index for input variables
+   !----------------------------------------------------------------------------
+
+   ! Allocate array of module variable start indices for each module, init to 0
+   call AllocAry(Idx%u%ModVarStart, size(Mods) + 1, "VarIdx%u%ModVarStart", ErrStat2, ErrMsg2); if (Failed()) return
+   Idx%u%ModVarStart(1) = 0
+
+   ! Populate ModVarStart with variable offsets and calculate total number of variables
+   NumVars = 0
+   do i = 1, size(Mods)
+      NumVars = NumVars + size(Mods(i)%Vars%u)
+      Idx%u%ModVarStart(i + 1) = NumVars
+   end do
+
+   ! Allocate variable value index matrix and initialize to zero
+   call AllocAry(Idx%u%ValLocGbl, 4, NumVars, "VarIdx%u%ValLocGbl", ErrStat2, ErrMsg2); if (Failed()) return
+   Idx%u%ValLocGbl = 0
+
+   ! Initialize global index to zero
+   iGbl = 0
+
+   ! Loop through modules and variables, add value indices to index if variable has filter flags, increment global indices
+   do i = 1, size(ModOrder)
+      associate (ModData => Mods(ModOrder(i)))
+         do j = 1, size(ModData%Vars%u)
+            if (MV_HasFlags(ModData%Vars%u(j), FlagFilter)) then
+               iGbl(1) = iGbl(2) + 1
+               iGbl(2) = iGbl(1) + ModData%Vars%u(j)%Num - 1
+               Idx%u%ValLocGbl(:, Idx%u%ModVarStart(ModData%Idx) + j) = [ModData%Vars%u(j)%iLoc, iGbl]
+            end if
+         end do
+      end associate
+   end do
+
+   ! Save total number of values
+   Idx%Nu = iGbl(2)
+
+   !----------------------------------------------------------------------------
+   ! Build index for output variables
+   !----------------------------------------------------------------------------
+
+   ! Allocate array of module variable start indices for each module, init to 0
+   call AllocAry(Idx%y%ModVarStart, size(Mods) + 1, "VarIdx%y%ModVarStart", ErrStat2, ErrMsg2); if (Failed()) return
+   Idx%y%ModVarStart(1) = 0
+
+   ! Populate ModVarStart with variable offsets and calculate total number of variables
+   NumVars = 0
+   do i = 1, size(Mods)
+      NumVars = NumVars + size(Mods(i)%Vars%y)
+      Idx%y%ModVarStart(i + 1) = NumVars
+   end do
+
+   ! Allocate variable value index matrix and initialize to zero
+   call AllocAry(Idx%y%ValLocGbl, 4, NumVars, "VarIdx%y%ValLocGbl", ErrStat2, ErrMsg2); if (Failed()) return
+   Idx%y%ValLocGbl = 0
+
+   ! Initialize global index to zero
+   iGbl = 0
+
+   ! Loop through modules and variables, add value indices to index if variable has filter flags, increment global indices
+   do i = 1, size(ModOrder)
+      associate (ModData => Mods(ModOrder(i)))
+         do j = 1, size(ModData%Vars%y)
+            if (MV_HasFlags(ModData%Vars%y(j), FlagFilter)) then
+               iGbl(1) = iGbl(2) + 1
+               iGbl(2) = iGbl(1) + ModData%Vars%y(j)%Num - 1
+               Idx%y%ValLocGbl(:, Idx%y%ModVarStart(ModData%Idx) + j) = [ModData%Vars%y(j)%iLoc, iGbl]
+            end if
+         end do
+      end associate
+   end do
+
+   ! Save total number of values
+   Idx%Ny = iGbl(2)
 
 contains
    logical function Failed()
@@ -976,113 +1168,19 @@ contains
    end function
 end subroutine
 
-subroutine MV_InitGlueVarIdx(Mods, ModOrder, VarIdx, FlagFilter, ErrStat, ErrMsg)
-   type(ModDataType), intent(in)       :: Mods(:)
-   integer(IntKi), intent(in)          :: ModOrder(:)
-   type(VarsIdxType), intent(out)      :: VarIdx
-   integer(IntKi), intent(in)          :: FlagFilter
-   integer(IntKi), intent(out)         :: ErrStat
-   character(ErrMsgLen), intent(out)   :: ErrMsg
+logical function Idx_GetLocGbl(Idx, ModIdx, VarIdx, iLoc, iGbl)
+   type(VarIdxType), intent(in)  :: Idx
+   integer(IntKi), intent(in)    :: ModIdx, VarIdx
+   integer(IntKi), intent(out)   :: iLoc(2), iGbl(2)
+   integer(IntKi)                :: iLocGbl(4)
+   iLocGbl = Idx%ValLocGbl(:, Idx%ModVarStart(ModIdx) + VarIdx)
+   iLoc = iLocGbl(1:2)
+   iGbl = iLocGbl(3:4)
+   Idx_GetLocGbl = iLocGbl(3) /= 0  ! Variable has global index
+end function
 
-   character(*), parameter             :: RoutineName = 'MV_InitVarIdx'
-   integer(IntKi)                      :: ErrStat2
-   character(ErrMsgLen)                :: ErrMsg2
-   type(ModDataType)                   :: ModData
-   integer(IntKi)                      :: ivar, inum
-
-contains
-   logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      Failed = ErrStat >= AbortErrLev
-   end function
-end subroutine
-
-subroutine GetModVarLocs(ModIdx, VarAry, Idx, NumVals, FlagFilter, ErrStat, ErrMsg)
-   integer(IntKi), intent(in)                   :: ModIdx
-   type(ModVarType), intent(in)                 :: VarAry(:)
-   type(VarIdxType), allocatable, intent(inout) :: Idx(:)
-   integer(IntKi), intent(inout)                :: NumVals
-   integer(IntKi), intent(in)                   :: FlagFilter
-   integer(IntKi), intent(out)                  :: ErrStat
-   character(ErrMsgLen), intent(out)            :: ErrMsg
-
-   character(*), parameter       :: RoutineName = 'GetModIdx'
-   integer(IntKi)                :: ErrStat2
-   character(ErrMsgLen)          :: ErrMsg2
-   integer(IntKi)                :: i, j, iGbl(2), NumVarsOld, NumVarsNew
-   type(VarIdxType), allocatable :: IdxTmp(:)
-
-   ErrStat = ErrID_None
-   ErrMsg = ''
-
-   ! Calculate number of vars to keep in VarAry
-   NumVarsNew = 0
-   do i = 1, size(VarAry)
-      if (MV_HasFlags(VarAry(i), FlagFilter)) NumVarsNew = NumVarsNew + 1
-   end do
-
-   ! If variable locations array currently has data
-   if (allocated(Idx)) then
-
-      ! Get number of variables currently in index
-      NumVarsOld = size(Idx)
-
-      ! Move Idx allocation to temporary so new array can be allocated with correct size
-      call move_alloc(Idx, IdxTmp)
-
-      ! Allocate new array to store previous and new variable data
-      allocate(Idx(NumVarsOld + NumVarsNew), stat=ErrStat2)
-      if (ErrStat2 /= 0) then
-         call SetErrStat(ErrID_Fatal, "Unable to allocate index", ErrStat, ErrMsg, RoutineName)
-         return
-      end if
-
-      ! Move old variables to new array
-      Idx(1:NumVarsOld) = IdxTmp
-
-      ! Deallocate temporary array
-      deallocate(IdxTmp)
-
-   else
-
-      ! No old variables
-      NumVarsOld = 0
-
-      ! Initialize number of values
-      NumVals = 0
-
-      ! Allocate new array to store previous and new variable data
-      allocate(Idx(NumVarsNew), stat=ErrStat2)
-      if (ErrStat2 /= 0) then
-         call SetErrStat(ErrID_Fatal, "Unable to allocate index", ErrStat, ErrMsg, RoutineName)
-         return
-      end if
-
-   end if
-
-   ! Determine starting index of variable in index array
-   if (NumVarsOld == 0) then
-      iGbl = 0
-   else
-      iGbl = Idx(NumVarsOld)%iGbl
-   end if
-
-   ! Store variable index data in array
-   j = NumVarsOld
-   do i = 1, size(VarAry)
-      if (MV_HasFlags(VarAry(i), FlagFilter)) then
-         j = j + 1
-         iGbl(1) = iGbl(2) + 1
-         iGbl(2) = iGbl(1) + VarAry(i)%Num - 1
-         Idx(j) = VarIdxType(ModIdx=ModIdx, iVar=i, iLoc=VarAry(i)%iLoc, iGbl=iGbl)
-         NumVals = NumVals + VarAry(i)%Num
-      end if
-   end do
-
-end subroutine
-
-subroutine MV_AddModule(ModAry, ModID, ModAbbr, Instance, ModDT, SolverDT, Vars, ErrStat, ErrMsg)
-   type(ModDataType), allocatable, intent(inout)   :: ModAry(:)
+subroutine MV_AddModule(Mods, ModID, ModAbbr, Instance, ModDT, SolverDT, Vars, ErrStat, ErrMsg)
+   type(ModDataType), allocatable, intent(inout)   :: Mods(:)
    integer(IntKi), intent(in)                      :: ModID
    character(*), intent(in)                        :: ModAbbr
    integer(IntKi), intent(in)                      :: Instance
@@ -1101,10 +1199,10 @@ subroutine MV_AddModule(ModAry, ModID, ModAbbr, Instance, ModDT, SolverDT, Vars,
    ErrMsg = ''
 
    ! If module array hasn't been allocated, allocate with zero size
-   if (.not. allocated(ModAry)) allocate (ModAry(0))
+   if (.not. allocated(Mods)) allocate (Mods(0))
 
    ! Populate ModuleDataType derived type
-   ModData = ModDataType(Idx=size(ModAry) + 1, ID=ModID, Abbr=ModAbbr, &
+   ModData = ModDataType(Idx=size(Mods) + 1, ID=ModID, Abbr=ModAbbr, &
                          Ins=Instance, DT=ModDT, Vars=Vars)
 
    ! Allocate source and destination mapping arrays
@@ -1149,7 +1247,7 @@ subroutine MV_AddModule(ModAry, ModID, ModAbbr, Instance, ModDT, SolverDT, Vars,
    ! Add module data to array
    !----------------------------------------------------------------------------
 
-   ModAry = [ModAry, ModData]
+   Mods = [Mods, ModData]
 
 end subroutine
 
