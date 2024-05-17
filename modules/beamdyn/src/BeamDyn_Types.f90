@@ -175,8 +175,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: dt = 0.0_R8Ki      !< module dt [s]
     REAL(DbKi) , DIMENSION(1:9)  :: coef = 0.0_R8Ki      !< GA2 Coefficient [-]
     REAL(DbKi)  :: rhoinf = 0.0_R8Ki      !< Numerical Damping Coefficient for GA2 [-]
-    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: uuN0      !< Initial Position Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element) [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: twN0      !< Initial Twist of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element) [-]
+    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: uuN0      !< Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: Stif0_QP      !< Sectional Stiffness Properties at quadrature points (6x6xqp) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: Mass0_QP      !< Sectional Mass Properties at quadrature points (6x6xqp) [-]
     REAL(R8Ki) , DIMENSION(1:3)  :: gravity = 0.0_R8Ki      !< Gravitational acceleration -- intertial frame!!! [m/s^2]
@@ -194,6 +193,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: ShpDer      !< Derivative of shape function matrix (index 1 = FE nodes; index 2=quadrature points) [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Jacobian      !< Jacobian value at each quadrature point [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: uu0      !< Initial Disp/Rot value at quadrature point (at T=0) [-]
+    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: rrN0      !< Initial relative rotation array, relative to root (at T=0) (index 1=rot DOF; index 2=FE nodes; index 3=element) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: E10      !< Initial E10 at quadrature point [-]
     INTEGER(IntKi)  :: nodes_per_elem = 0_IntKi      !< Finite element (GLL) nodes per element [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: node_elem_idx      !< Index to first and last nodes of element in p%node_total sized arrays [-]
@@ -1366,18 +1366,6 @@ subroutine BD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstParamData%uuN0 = SrcParamData%uuN0
    end if
-   if (allocated(SrcParamData%twN0)) then
-      LB(1:2) = lbound(SrcParamData%twN0, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%twN0, kind=B8Ki)
-      if (.not. allocated(DstParamData%twN0)) then
-         allocate(DstParamData%twN0(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%twN0.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%twN0 = SrcParamData%twN0
-   end if
    if (allocated(SrcParamData%Stif0_QP)) then
       LB(1:3) = lbound(SrcParamData%Stif0_QP, kind=B8Ki)
       UB(1:3) = ubound(SrcParamData%Stif0_QP, kind=B8Ki)
@@ -1504,6 +1492,18 @@ subroutine BD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%uu0 = SrcParamData%uu0
+   end if
+   if (allocated(SrcParamData%rrN0)) then
+      LB(1:3) = lbound(SrcParamData%rrN0, kind=B8Ki)
+      UB(1:3) = ubound(SrcParamData%rrN0, kind=B8Ki)
+      if (.not. allocated(DstParamData%rrN0)) then
+         allocate(DstParamData%rrN0(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%rrN0.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%rrN0 = SrcParamData%rrN0
    end if
    if (allocated(SrcParamData%E10)) then
       LB(1:3) = lbound(SrcParamData%E10, kind=B8Ki)
@@ -1768,9 +1768,6 @@ subroutine BD_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%uuN0)) then
       deallocate(ParamData%uuN0)
    end if
-   if (allocated(ParamData%twN0)) then
-      deallocate(ParamData%twN0)
-   end if
    if (allocated(ParamData%Stif0_QP)) then
       deallocate(ParamData%Stif0_QP)
    end if
@@ -1800,6 +1797,9 @@ subroutine BD_DestroyParam(ParamData, ErrStat, ErrMsg)
    end if
    if (allocated(ParamData%uu0)) then
       deallocate(ParamData%uu0)
+   end if
+   if (allocated(ParamData%rrN0)) then
+      deallocate(ParamData%rrN0)
    end if
    if (allocated(ParamData%E10)) then
       deallocate(ParamData%E10)
@@ -1890,7 +1890,6 @@ subroutine BD_PackParam(RF, Indata)
    call RegPack(RF, InData%coef)
    call RegPack(RF, InData%rhoinf)
    call RegPackAlloc(RF, InData%uuN0)
-   call RegPackAlloc(RF, InData%twN0)
    call RegPackAlloc(RF, InData%Stif0_QP)
    call RegPackAlloc(RF, InData%Mass0_QP)
    call RegPack(RF, InData%gravity)
@@ -1908,6 +1907,7 @@ subroutine BD_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%ShpDer)
    call RegPackAlloc(RF, InData%Jacobian)
    call RegPackAlloc(RF, InData%uu0)
+   call RegPackAlloc(RF, InData%rrN0)
    call RegPackAlloc(RF, InData%E10)
    call RegPack(RF, InData%nodes_per_elem)
    call RegPackAlloc(RF, InData%node_elem_idx)
@@ -2021,7 +2021,6 @@ subroutine BD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%coef); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%rhoinf); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%uuN0); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%twN0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Stif0_QP); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Mass0_QP); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%gravity); if (RegCheckErr(RF, RoutineName)) return
@@ -2039,6 +2038,7 @@ subroutine BD_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%ShpDer); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Jacobian); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%uu0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%rrN0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%E10); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nodes_per_elem); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%node_elem_idx); if (RegCheckErr(RF, RoutineName)) return

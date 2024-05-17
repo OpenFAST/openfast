@@ -44,6 +44,9 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtElev                  = 5      ! WaveMod = 5   [Incident wave kinematics model: Externally generated wave-elevation time series] [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtFull                  = 6      ! WaveMod = 6   [Incident wave kinematics model: Externally generated full wave-kinematics time series (invalid for PotMod/=0)] [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_UserFreq                 = 7      ! WaveMod = 7   [Incident wave kinematics model: user-defined wave frequency components] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ConstWaveMod_None                = 0      ! ConstWaveMod = 0 [Constrained wave model: No constrained waves] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ConstWaveMod_CrestElev           = 1      ! ConstWaveMod = 1 [Constrained wave model: Constrained wave with specified crest elevation, alpha] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ConstWaveMod_Peak2Trough         = 2      ! ConstWaveMod = 2 [Constrained wave model: Constrained wave with guaranteed peak-to-trough crest height, HCrest] [-]
 ! =========  SeaSt_WaveField_ParameterType  =======
   TYPE, PUBLIC :: SeaSt_WaveField_ParameterType
     INTEGER(IntKi) , DIMENSION(1:4)  :: n = 0_IntKi      !< number of evenly-spaced grid points in the t, x, y, and z directions [-]

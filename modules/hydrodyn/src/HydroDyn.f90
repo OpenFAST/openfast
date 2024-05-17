@@ -1028,8 +1028,22 @@ subroutine HydroDyn_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, E
    call MV_AddVar(p%Vars%u, "WaveElev0", VF_Scalar, &
                   VarIdx=p%iVarWaveElev0, &
                   Flags=VF_ExtLin + VF_Linearize, &
-                  Perturb=1.0_R8Ki, &
                   LinNames=['Extended input: wave elevation at platform ref point, m'])
+
+   call MV_AddVar(p%Vars%u, "HWindSpeed", VF_Scalar, &
+                  VarIdx=p%iVarHWindSpeed, &
+                  Flags=VF_ExtLin + VF_Linearize, &
+                  LinNames=['Extended input: horizontal current speed (steady/uniform wind), m/s'])
+
+   call MV_AddVar(p%Vars%u, "PLexp", VF_Scalar, &
+                  VarIdx=p%iVarPLexp, &
+                  Flags=VF_ExtLin + VF_Linearize, &
+                  LinNames=['Extended input: vertical power-law shear exponent, -'])
+
+   call MV_AddVar(p%Vars%u, "PropagationDir", VF_Scalar, &
+                  VarIdx=p%iVarPropagationDir, &
+                  Flags=VF_ExtLin + VF_Linearize, &
+                  LinNames=['Extended input: propagation direction, rad'])
 
    !----------------------------------------------------------------------------
    ! Output variables
@@ -1727,8 +1741,9 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          ! If variable flag not in flag filter, skip
          if (.not. MV_HasFlags(p%Vars%u(i), FlagFilterLoc)) cycle
 
-         ! If this is the Wave elevation extended input
-         if (i == p%iVarWaveElev0) then
+         ! If this index is extended input
+         if (i == p%iVarWaveElev0 .or. i == p%iVarHWindSpeed .or. &
+             i == p%iVarPLexp .or. i == p%iVarPropagationDir) then
             dYdu(:, p%Vars%u(i)%iLoc(1)) = 0
             cycle
          end if
@@ -1754,7 +1769,15 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             ! Get partial derivative via central difference and store in full linearization array
             call MV_ComputeCentralDiff(p%Vars%y, p%Vars%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,col))
          end do
-      end do     
+      end do
+
+      !-------------------
+      ! extended inputs
+      ! WaveElev0 column -- from SeaState
+      ! dYdu(:,n_du_norm+1) = 0.0_ReKi
+
+      ! HWindSpeed / PLexp / PropagationDir -- from Ifw/FlowField for turbulent sea current
+      ! dYdu(:,n_du_norm+2:n_du_norm+4) = 0.0_ReKi
       
    END IF
    
@@ -2266,7 +2289,24 @@ subroutine HD_PackInputValues(p, u, Ary)
    call MV_Pack(p%Vars%u, p%iVarMorisonMotionMesh, u%Morison%Mesh, Ary)
    call MV_Pack(p%Vars%u, p%iVarWAMITMotionMesh, u%WAMITMesh, Ary)
    call MV_Pack(p%Vars%u, p%iVarPRPMotionMesh, u%PRPMesh, Ary)
-   call MV_Pack(p%Vars%u, p%iVarWaveElev0, 0.0_R8Ki, Ary)   ! Extended input
+   call MV_Pack(p%Vars%u, p%iVarWaveElev0, 0.0_R8Ki, Ary)      ! Extended input
+   call MV_Pack(p%Vars%u, p%iVarHWindSpeed, 0.0_R8Ki, Ary)     ! Extended input
+   call MV_Pack(p%Vars%u, p%iVarPLexp, 0.0_R8Ki, Ary)          ! Extended input
+   call MV_Pack(p%Vars%u, p%iVarPropagationDir, 0.0_R8Ki, Ary) ! Extended input
+
+!FIXME: when sea current from IfW/FlowField is enabled, this code must be updated and enabled
+!      !------------------------------
+!      ! Extended inputs -- Linearization is only possible with Steady or Uniform Wind, so take advantage of that here
+!      !     Module/Mesh/Field:  HWindSpeed      = 37
+!      !     Module/Mesh/Field:  PLexp           = 38
+!      !     Module/Mesh/Field:  PropagationDir  = 39
+!      call IfW_UniformWind_GetOP(p_AD%FlowField%Uniform, t, .false. , OP_out)
+!      ! HWindSpeed
+!      u_op(index) = OP_out(1);   index = index + 1
+!      ! PLexp
+!      u_op(index) = OP_out(2);   index = index + 1
+!      ! PropagationDir (include AngleH in calculation if any)
+!      u_op(index) = OP_out(3) + p_AD%FlowField%PropagationDir;   index = index + 1
 end subroutine
 
 subroutine HD_UnpackInputValues(p, Ary, u)
@@ -2278,6 +2318,24 @@ subroutine HD_UnpackInputValues(p, Ary, u)
    call MV_Unpack(p%Vars%u, p%iVarWAMITMotionMesh, Ary, u%WAMITMesh)
    call MV_Unpack(p%Vars%u, p%iVarPRPMotionMesh, Ary, u%PRPMesh)
    ! call MV_Unpack(p%Vars%u, p%iVarWaveElev0, Ary, )   ! Extended input
+   ! u_op(index) = 0.0_R8Ki; index=index+1   ! WaveElev0 -- linearization not allowed for non-zero
+   ! u_op(index) = 0.0_R8Ki; index=index+1   ! HWindSpeed
+   ! u_op(index) = 0.0_R8Ki; index=index+1   ! PLexp
+   ! u_op(index) = 0.0_R8Ki; index=index+1   ! PropagationDir
+
+!FIXME: when sea current from IfW/FlowField is enabled, this code must be updated and enabled
+!      !------------------------------
+!      ! Extended inputs -- Linearization is only possible with Steady or Uniform Wind, so take advantage of that here
+!      !     Module/Mesh/Field:  HWindSpeed      = 37
+!      !     Module/Mesh/Field:  PLexp           = 38
+!      !     Module/Mesh/Field:  PropagationDir  = 39
+!      call IfW_UniformWind_GetOP(p_AD%FlowField%Uniform, t, .false. , OP_out)
+!      ! HWindSpeed
+!      u_op(index) = OP_out(1);   index = index + 1
+!      ! PLexp
+!      u_op(index) = OP_out(2);   index = index + 1
+!      ! PropagationDir (include AngleH in calculation if any)
+!      u_op(index) = OP_out(3) + p_AD%FlowField%PropagationDir;   index = index + 1
 end subroutine
 
 subroutine HD_PackOutputValues(p, y, Ary, PackWriteOutput)

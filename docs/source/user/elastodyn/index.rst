@@ -58,3 +58,4 @@ equations of FAST v7 and the ElastoDyn module of FAST v8 and OpenFAST.
    coordsys.rst
    input.rst
    theory.rst
+   zrefs.rst

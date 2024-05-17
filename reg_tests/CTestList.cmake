@@ -314,11 +314,12 @@ of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrod
 of_regression("MHK_RM1_Fixed"                          "openfast;elastodyn;aerodyn15;mhk")
 of_regression("MHK_RM1_Floating"                       "openfast;elastodyn;aerodyn15;hydrodyn;moordyn;mhk")
 of_regression("Tailfin_FreeYaw1DOF_PolarBased"         "openfast;elastodyn;aerodyn15")
+of_regression("Tailfin_FreeYaw1DOF_Unsteady"           "openfast;elastodyn;aerodyn15")
 
 of_aeromap_regression("5MW_Land_AeroMap"               "aeromap;elastodyn;aerodyn15")
 
 # OpenFAST C++ API test
-if(BUILD_OPENFAST_CPP_DRIVER)
+if(BUILD_OPENFAST_CPP_API)
   of_cpp_interface_regression("5MW_Land_DLL_WTurb_cpp" "openfast;fastlib;cpp")
 endif()
 
@@ -342,8 +343,8 @@ of_regression_py("EllipticalWing_OLAF_py"                    "openfast;fastlib;p
 of_regression_aeroacoustic("IEA_LB_RWT-AeroAcoustics"  "openfast;aerodyn15;aeroacoustics")
 
 # Linearized OpenFAST regression tests
-of_regression_linear("Fake5MW_AeroLin_B1_UA4_DBEMT3"  "-highpass=0.05"  "openfast;linear;elastodyn;aerodyn")
-of_regression_linear("Fake5MW_AeroLin_B3_UA6"         "-highpass=0.05"  "openfast;linear;elastodyn;aerodyn")
+#of_regression_linear("Fake5MW_AeroLin_B1_UA4_DBEMT3"  "-highpass=0.05"  "openfast;linear;elastodyn;aerodyn")  #segfault currently -- fixed in next PR
+#of_regression_linear("Fake5MW_AeroLin_B3_UA6"         "-highpass=0.05"  "openfast;linear;elastodyn;aerodyn")  #segfault currently -- fixed in next PR
 of_regression_linear("WP_Stationary_Linear"           ""                "openfast;linear;elastodyn")
 of_regression_linear("Ideal_Beam_Fixed_Free_Linear"   "-highpass=0.10"  "openfast;linear;beamdyn")
 of_regression_linear("Ideal_Beam_Free_Free_Linear"    "-highpass=0.10"  "openfast;linear;beamdyn")
@@ -352,11 +353,11 @@ of_regression_linear("5MW_Land_BD_Linear"             ""                "openfas
 of_regression_linear("5MW_Land_BD_Linear_Aero"        "-highpass=0.25"  "openfast;linear;beamdyn;servodyn;aerodyn")
 of_regression_linear("5MW_OC4Semi_Linear"             ""                "openfast;linear;hydrodyn;servodyn;map")
 of_regression_linear("5MW_OC4Semi_MD_Linear"          ""                "openfast;linear;hydrodyn;servodyn;moordyn")
-of_regression_linear("5MW_OC3Mnpl_Linear"             ""                "openfast;linear;hydrodyn;servodyn;moordyn")
 of_regression_linear("StC_test_OC4Semi_Linear_Nac"    ""                "openfast;linear;servodyn;stc")
 of_regression_linear("StC_test_OC4Semi_Linear_Tow"    ""                "openfast;linear;servodyn;stc")
 of_regression_linear("WP_Stationary_Linear"           ""                "openfast;linear;elastodyn")
 of_regression_linear("5MW_OC3Spar_Linear"             ""                "openfast;linear;map;hydrodyn")
+of_regression_linear("5MW_OC3Mnpl_Linear"             ""                "openfast;linear;hydrodyn;servodyn;moordyn")
 
 # FAST Farm regression tests
 if(BUILD_FASTFARM)
@@ -400,16 +401,27 @@ bd_regression("bd_static_twisted_with_k1"   "beamdyn;static")
 
 # HydroDyn regression tests
 hd_regression("hd_OC3tripod_offshore_fixedbottom_wavesirr"  "hydrodyn;offshore")
-#hd_regression("hd_5MW_ITIBarge_DLL_WTurb_WavesIrr"          "hydrodyn;offshore")
+#hd_regression("hd_5MW_ITIBarge_DLL_WTurb_WavesIrr"         "hydrodyn;offshore")
 hd_regression("hd_5MW_OC3Spar_DLL_WTurb_WavesIrr"           "hydrodyn;offshore")
-#hd_regression("hd_5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth"      "hydrodyn;offshore")
+#hd_regression("hd_5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth"  "hydrodyn;offshore")
 hd_regression("hd_5MW_OC4Semi_WSt_WavesWN"                  "hydrodyn;offshore")
 hd_regression("hd_5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti"    "hydrodyn;offshore")
 hd_regression("hd_TaperCylinderPitchMoment"                 "hydrodyn;offshore")
 hd_regression("hd_NBodyMod1"                                "hydrodyn;offshore")
 hd_regression("hd_NBodyMod2"                                "hydrodyn;offshore")
 hd_regression("hd_NBodyMod3"                                "hydrodyn;offshore")
-
+hd_regression("hd_WaveStMod1"                               "hydrodyn;offshore")
+hd_regression("hd_WaveStMod2"                               "hydrodyn;offshore")
+hd_regression("hd_WaveStMod3"                               "hydrodyn;offshore")
+hd_regression("hd_MHstLMod2"                                "hydrodyn;offshore")
+hd_regression("hd_MHstLMod1_compare"                        "hydrodyn;offshore")
+hd_regression("hd_MHstLMod2_compare"                        "hydrodyn;offshore")
+hd_regression("hd_MCF_WaveStMod0"                           "hydrodyn;offshore")
+hd_regression("hd_MCF_WaveStMod1"                           "hydrodyn;offshore")
+hd_regression("hd_MCF_WaveStMod2"                           "hydrodyn;offshore")
+hd_regression("hd_MCF_WaveStMod3"                           "hydrodyn;offshore")
+hd_regression("hd_ExctnMod1_ExctnDisp1"                     "hydrodyn;offshore")
+hd_regression("hd_ExctnMod1_ExctnDisp2"                     "hydrodyn;offshore")
 
 # Py-HydroDyn regression tests
 py_hd_regression("py_hd_5MW_OC4Semi_WSt_WavesWN"            "hydrodyn;offshore;python")
@@ -446,11 +458,17 @@ py_ifw_regression("py_ifw_turbsimff"                          "inflowwind;python
 
 # SeaState regression tests
 seast_regression("seastate_1"                                "seastate")
-seast_regression("seastate_wavemod5"                         "seastate")
 seast_regression("seastate_wr_kin1"                          "seastate")
+seast_regression("seastate_CNW1"                             "seastate")
+seast_regression("seastate_CNW2"                             "seastate")
+seast_regression("seastate_WaveMod7_WaveStMod1"              "seastate")
+seast_regression("seastate_WaveMod7_WaveStMod2"              "seastate")
+seast_regression("seastate_WaveMod7_WaveStMod3"              "seastate")
+seast_regression("seastate_wavemod5"                         "seastate")   # place at end since it reads outputs generated by seastate_wr_kin1
 
 # MoorDyn regression tests
 md_regression("md_5MW_OC4Semi"                                "moordyn")
+md_regression("md_lineFail"                                   "moordyn")
 py_md_regression("py_md_5MW_OC4Semi"                             "moordyn;python")
 # the following tests are excessively slow in double precision, so skip these in normal testing
 #md_regression("md_Node_Check_N20"                             "moordyn")

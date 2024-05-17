@@ -153,6 +153,9 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: iVarWAMITMotionMesh = 0      !< WAMIT Motion Mesh variable index [-]
     INTEGER(IntKi)  :: iVarPRPMotionMesh = 0      !< PRP Motion Mesh variable index [-]
     INTEGER(IntKi)  :: iVarWaveElev0 = 0      !< Wave Elevation variable index [-]
+    INTEGER(IntKi)  :: iVarHWindSpeed = 0      !< Horizontal wind speed variable index [-]
+    INTEGER(IntKi)  :: iVarPLexp = 0      !< Wind shear exponent variable index [-]
+    INTEGER(IntKi)  :: iVarPropagationDir = 0      !< Wind propagation direction variable index [-]
     INTEGER(IntKi)  :: iVarMorisonLoadMesh = 0      !< Morison Load Mesh variable index [-]
     INTEGER(IntKi)  :: iVarWAMITLoadMesh = 0      !< WAMIT Load Mesh variable index [-]
     INTEGER(IntKi)  :: iVarWriteOut = 0      !< Write Output variable index [-]
@@ -1356,6 +1359,9 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
    DstParamData%iVarWAMITMotionMesh = SrcParamData%iVarWAMITMotionMesh
    DstParamData%iVarPRPMotionMesh = SrcParamData%iVarPRPMotionMesh
    DstParamData%iVarWaveElev0 = SrcParamData%iVarWaveElev0
+   DstParamData%iVarHWindSpeed = SrcParamData%iVarHWindSpeed
+   DstParamData%iVarPLexp = SrcParamData%iVarPLexp
+   DstParamData%iVarPropagationDir = SrcParamData%iVarPropagationDir
    DstParamData%iVarMorisonLoadMesh = SrcParamData%iVarMorisonLoadMesh
    DstParamData%iVarWAMITLoadMesh = SrcParamData%iVarWAMITLoadMesh
    DstParamData%iVarWriteOut = SrcParamData%iVarWriteOut
@@ -1606,6 +1612,9 @@ subroutine HydroDyn_PackParam(RF, Indata)
    call RegPack(RF, InData%iVarWAMITMotionMesh)
    call RegPack(RF, InData%iVarPRPMotionMesh)
    call RegPack(RF, InData%iVarWaveElev0)
+   call RegPack(RF, InData%iVarHWindSpeed)
+   call RegPack(RF, InData%iVarPLexp)
+   call RegPack(RF, InData%iVarPropagationDir)
    call RegPack(RF, InData%iVarMorisonLoadMesh)
    call RegPack(RF, InData%iVarWAMITLoadMesh)
    call RegPack(RF, InData%iVarWriteOut)
@@ -1707,6 +1716,9 @@ subroutine HydroDyn_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%iVarWAMITMotionMesh); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarPRPMotionMesh); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarWaveElev0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarHWindSpeed); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarPLexp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarPropagationDir); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarMorisonLoadMesh); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarWAMITLoadMesh); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarWriteOut); if (RegCheckErr(RF, RoutineName)) return

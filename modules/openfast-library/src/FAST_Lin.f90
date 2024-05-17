@@ -70,11 +70,15 @@ SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, NumBl, NumBlNodes, ErrStat, 
    if ( p_FAST%CompInflow  == Module_IfW ) then 
       p_FAST%Lin_NumMods = p_FAST%Lin_NumMods + 1
       p_FAST%Lin_ModOrder( p_FAST%Lin_NumMods ) = Module_IfW
-      
       call Init_Lin_IfW( p_FAST, y_FAST, AD%Input(1) ) ! overwrite some variables based on knowledge from glue code
-                  
    end if
-   
+
+      ! SeaState next, if activated:
+   if ( p_FAST%CompSeaSt  == Module_SeaSt ) then
+      p_FAST%Lin_NumMods = p_FAST%Lin_NumMods + 1
+      p_FAST%Lin_ModOrder( p_FAST%Lin_NumMods ) = Module_SeaSt
+   end if
+
       ! ServoDyn is next, if activated:
    if ( p_FAST%CompServo  == Module_SrvD ) then 
       p_FAST%Lin_NumMods = p_FAST%Lin_NumMods + 1
@@ -458,16 +462,18 @@ SUBROUTINE Init_Lin_InputOutput(p_FAST, y_FAST, NumBl, NumBlNodes, ErrStat, ErrM
          y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%SizeLin(LIN_INPUT_COL)+1-j) = .true.
       end do
       
-      ! IfW standard inputs: HWindSpeed, PLexp, PropagationDir
+      ! IfW standard inputs (extended): HWindSpeed, PLexp, PropagationDir
       if (p_FAST%CompInflow == MODULE_IfW) then
          do j = 1,3
             y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%SizeLin(LIN_INPUT_COL)+1-j) = .true.
          end do
       end if
 
-      ! HD standard inputs: WaveElev0
+      ! HD standard inputs (extended): WaveElev0, HWindSpeed, PLexp, PropagationDir
       if (p_FAST%CompHydro == MODULE_HD) then
-            y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%SizeLin(LIN_INPUT_COL)) = .true.
+         do j = 1,4
+            y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%use_u(y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%SizeLin(LIN_INPUT_COL)+1-j) = .true.
+         end do
       end if
       
      ! SD has no standard inputs
@@ -523,7 +529,7 @@ SUBROUTINE Init_Lin_InputOutput(p_FAST, y_FAST, NumBl, NumBlNodes, ErrStat, ErrM
 END SUBROUTINE Init_Lin_InputOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that performs lineaization at current operating point for a turbine.
-SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
+SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SeaSt, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                          IceF, IceD, MeshMapData, ErrStat, ErrMsg )
    REAL(DbKi),               INTENT(IN   ) :: t_global            !< current (global) simulation time
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
@@ -536,6 +542,7 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(ExternalInflow_Data),INTENT(INOUT) :: ExtInfw             !< ExternalInflow data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
+   TYPE(SeaState_Data),      INTENT(INOUT) :: SeaSt               !< SeaState data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
    TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm_MCKF data
    TYPE(MAP_Data),           INTENT(INOUT) :: MAPp                !< MAP data
@@ -582,7 +589,7 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
    LinRootName = TRIM(p_FAST%OutFileRoot)//'.'//trim(num2lstr(m_FAST%Lin%NextLinTimeIndx))
 
    if (p_FAST%WrVTK == VTK_ModeShapes .and. .not. p_FAST%CalcSteady) then ! we already saved these for the CalcSteady case
-      call SaveOP(m_FAST%Lin%NextLinTimeIndx, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
+      call SaveOP(m_FAST%Lin%NextLinTimeIndx, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SeaSt, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                             IceF, IceD, ErrStat, ErrMsg, m_FAST%Lin%CopyOP_CtrlCode )
       !m_FAST%Lin%CopyOP_CtrlCode = MESH_UPDATECOPY ! we need a new copy for each LinTime
    end if
@@ -663,27 +670,40 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
    ! InflowWind
    !.....................
    if ( p_FAST%CompInflow  == Module_IfW ) then
-
-         ! get the jacobians
+      ! get the jacobians
       call InflowWind_JacobianPInput( t_global, IfW%Input(1), IfW%p, IfW%x(STATE_CURR), IfW%xd(STATE_CURR), IfW%z(STATE_CURR), &
                                    IfW%OtherSt(STATE_CURR), IfW%y, IfW%m, ErrStat2, ErrMsg2, dYdu=y_FAST%Lin%Modules(Module_IfW)%Instance(1)%D )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if(Failed()) return;
 
       ! get the operating point
       call InflowWind_GetOP( t_global, IfW%Input(1), IfW%p, IfW%x(STATE_CURR), IfW%xd(STATE_CURR), IfW%z(STATE_CURR), &
                              IfW%OtherSt(STATE_CURR), IfW%y, IfW%m, ErrStat2, ErrMsg2, u_op=y_FAST%Lin%Modules(Module_IfW)%Instance(1)%op_u, &
                        y_op=y_FAST%Lin%Modules(Module_IfW)%Instance(1)%op_y )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat >=AbortErrLev) then
-            call cleanup()
-            return
-         end if
-
-
-         ! write the module matrices:
-      call WriteModuleLinearMatrices(Module_IfW, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
       if(Failed()) return;
 
+      ! write the module matrices:
+      call WriteModuleLinearMatrices(Module_IfW, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
+      if(Failed()) return;
+   end if
+
+   !.....................
+   ! SeaState
+   !.....................
+   if ( p_FAST%CompSeaSt == Module_SeaSt ) then
+      ! get the jacobians
+      call SeaSt_JacobianPInput( t_global, SeaSt%Input(1), SeaSt%p, SeaSt%x(STATE_CURR), SeaSt%xd(STATE_CURR), SeaSt%z(STATE_CURR), &
+                                   SeaSt%OtherSt(STATE_CURR), SeaSt%y, SeaSt%m, ErrStat2, ErrMsg2, dYdu=y_FAST%Lin%Modules(Module_SeaSt)%Instance(1)%D )
+      if(Failed()) return;
+
+      ! get the operating point
+      call SeaSt_GetOP( t_global, SeaSt%Input(1), SeaSt%p, SeaSt%x(STATE_CURR), SeaSt%xd(STATE_CURR), SeaSt%z(STATE_CURR), &
+                             SeaSt%OtherSt(STATE_CURR), SeaSt%y, SeaSt%m, ErrStat2, ErrMsg2, u_op=y_FAST%Lin%Modules(Module_SeaSt)%Instance(1)%op_u, &
+                       y_op=y_FAST%Lin%Modules(Module_SeaSt)%Instance(1)%op_y )
+      if(Failed()) return;
+
+      ! write the module matrices:
+      call WriteModuleLinearMatrices(Module_SeaSt, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
+      if(Failed()) return;
    end if
 
    !.....................
@@ -729,13 +749,13 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
                                    AD%OtherSt(STATE_CURR), AD%y, AD%m, ErrStat2, ErrMsg2, &
                                    dXdu=y_FAST%Lin%Modules(Module_AD)%Instance(1)%B, &
                                    dYdu=y_FAST%Lin%Modules(Module_AD)%Instance(1)%D )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if(Failed()) return;
 
       call AD_JacobianPContState( t_global, AD%Input(1), AD%p, AD%x(STATE_CURR), AD%xd(STATE_CURR), AD%z(STATE_CURR), &
                                    AD%OtherSt(STATE_CURR), AD%y, AD%m, ErrStat2, ErrMsg2, &
                                    dXdx=y_FAST%Lin%Modules(Module_AD)%Instance(1)%A, &
                                    dYdx=y_FAST%Lin%Modules(Module_AD)%Instance(1)%C )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if(Failed()) return;
 
       ! get the operating point
       call AD_GetOP( t_global, AD%Input(1), AD%p, AD%x(STATE_CURR), AD%xd(STATE_CURR), AD%z(STATE_CURR), &
@@ -744,44 +764,33 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
                        y_op=y_FAST%Lin%Modules(Module_AD)%Instance(1)%op_y, &
                        x_op=y_FAST%Lin%Modules(Module_AD)%Instance(1)%op_x, &
                       dx_op=y_FAST%Lin%Modules(Module_AD)%Instance(1)%op_dx )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat >=AbortErrLev) then
-            call cleanup()
-            return
-         end if
+      if(Failed()) return;
 
          ! write the module matrices:
       call WriteModuleLinearMatrices(Module_AD, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
       if(Failed()) return;
-
    end if
 
    !.....................
    ! HydroDyn
    !.....................
    if ( p_FAST%CompHydro  == Module_HD ) then
-         ! get the jacobians
+      ! get the jacobians
       call HD_JacobianPInput( t_global, HD%Input(1), HD%p, HD%x(STATE_CURR), HD%xd(STATE_CURR), HD%z(STATE_CURR), HD%OtherSt(STATE_CURR), &
                                  HD%y, HD%m, ErrStat2, ErrMsg2, dYdu=y_FAST%Lin%Modules(Module_HD)%Instance(1)%D, dXdu=y_FAST%Lin%Modules(Module_HD)%Instance(1)%B )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if(Failed()) return;
 
       call HD_JacobianPContState( t_global, HD%Input(1), HD%p, HD%x(STATE_CURR), HD%xd(STATE_CURR), HD%z(STATE_CURR), HD%OtherSt(STATE_CURR), &
                                      HD%y, HD%m, ErrStat2, ErrMsg2, dYdx=y_FAST%Lin%Modules(Module_HD)%Instance(1)%C, dXdx=y_FAST%Lin%Modules(Module_HD)%Instance(1)%A )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if(Failed()) return;
 
-         ! get the operating point
+      ! get the operating point
       call HD_GetOP( t_global, HD%Input(1), HD%p, HD%x(STATE_CURR), HD%xd(STATE_CURR), HD%z(STATE_CURR), HD%OtherSt(STATE_CURR), &
                         HD%y, HD%m, ErrStat2, ErrMsg2, u_op=y_FAST%Lin%Modules(Module_HD)%Instance(1)%op_u, y_op=y_FAST%Lin%Modules(Module_HD)%Instance(1)%op_y, &
                        x_op=y_FAST%Lin%Modules(Module_HD)%Instance(1)%op_x, dx_op=y_FAST%Lin%Modules(Module_HD)%Instance(1)%op_dx )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat >=AbortErrLev) then
-            call cleanup()
-            return
-         end if
+      if(Failed()) return;
 
-
-
-         ! write the module matrices:
+      ! write the module matrices:
       call WriteModuleLinearMatrices(Module_HD, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
       if(Failed()) return;
    end if
@@ -915,7 +924,7 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
       end if
 
       ! get the dUdu and dUdy matrices, which linearize SolveOption2 for the modules we've included in linearization
-   call Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, MAPp, FEAM, MD, Orca, &
+   call Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SeaSt, SD, MAPp, FEAM, MD, Orca, &
                          IceF, IceD, MeshMapData, dUdu, dUdy, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >=AbortErrLev) then
@@ -1436,7 +1445,7 @@ END SUBROUTINE Glue_GetOP
 !----------------------------------------------------------------------------------------------------------------------------------
 
 !> This routine forms the Jacobian for the glue-code input-output solves.
-SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, MAPp, FEAM, MD, Orca, &
+SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SeaSt, SD, MAPp, FEAM, MD, Orca, &
                          IceF, IceD, MeshMapData, dUdu, dUdy, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
@@ -1450,6 +1459,7 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInf
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(ExternalInflow_Data),INTENT(INOUT) :: ExtInfw             !< ExternalInflow data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
+   TYPE(SeaState_Data),      INTENT(INOUT) :: SeaSt               !< SeaState data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
    TYPE(MAP_Data),           INTENT(INOUT) :: MAPp                !< MAP data
    TYPE(FEAMooring_Data),    INTENT(INOUT) :: FEAM                !< FEAMooring data
@@ -1693,6 +1703,14 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInf
    if (p_FAST%CompHydro == MODULE_HD) then
       call Linear_HD_InputSolve_dy( p_FAST, y_FAST, HD%Input(1), ED%p, ED%y, SD%y, MeshMapData, dUdy, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      if (p_FAST%CompSeaSt == MODULE_SeaSt) then
+         call Linear_HD_InputSolve_SeaSt_dy( p_FAST, y_FAST, SeaSt%p, HD%p, HD%Input(1), dUdy )
+      end if
+
+      if (p_FAST%CompInflow == MODULE_IfW .and. p_FAST%MHK /= MHK_None) then
+         call Linear_HD_InputSolve_IfW_dy( p_FAST, y_FAST, HD%p, HD%Input(1), dUdy )
+      end if
    end if
    
    !LIN-TODO: Add doc strings and look at above doc string
@@ -3447,13 +3465,15 @@ SUBROUTINE Linear_AD_InputSolve_IfW_dy( p_FAST, y_FAST, p_AD, u_AD, dUdy )
    INTEGER(IntKi)                               :: I              ! Loops through components
    INTEGER(IntKi)                               :: node
    INTEGER(IntKi)                               :: AD_Start       ! starting index of dUdy (row) where AD input equations (for specific fields) are located   
+   INTEGER(IntKi)                               :: Ifw_Start      ! starting index of dUdy (col) where IfW output equations (for specific fields) are located
    !-------------------------------------------------------------------------------------------------
    ! Set the inputs from inflow wind (IfW only has 3 extended outputs):
    !-------------------------------------------------------------------------------------------------
-   AD_Start = y_FAST%Lin%Modules(Module_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + p_AD%rotors(1)%Jac_u_idxStartList%Extended - 1   ! index starts at 1
+   AD_Start  = y_FAST%Lin%Modules(Module_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + p_AD%rotors(1)%Jac_u_idxStartList%Extended - 1   ! index starts at 1
+   IfW_Start = y_FAST%Lin%Modules(Module_IfW)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL)
 
    do i=1,p_AD%rotors(1)%NumExtendedInputs ! extended inputs -- direct mapping.  Extended outputs of IfW are exactly the same number as AD15 extended inputs
-      dUdy( AD_Start + i - 1, y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + i - 1 ) = -1.0_R8Ki
+      dUdy( AD_Start + i - 1, IfW_Start + i - 1 ) = -1.0_R8Ki
    end do
 END SUBROUTINE Linear_AD_InputSolve_IfW_dy
 
@@ -3761,9 +3781,9 @@ SUBROUTINE Linear_HD_InputSolve_du( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
       end if
       
    end if
-   
-   
 END SUBROUTINE Linear_HD_InputSolve_du
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine forms the dU^{HD}/dy^{ED} block of dUdy. (i.e., how do changes in the ED outputs affect 
 !! the HD inputs?)
@@ -3836,9 +3856,54 @@ SUBROUTINE Linear_HD_InputSolve_dy( p_FAST, y_FAST, u_HD, p_ED, y_ED, y_SD, Mesh
       HD_Start     = Indx_u_HD_WAMIT_Start(u_HD, y_FAST)  ! start of u_HD%Mesh%TranslationDisp field
       call Assemble_dUdy_Motions(SubstructureMotion2HD, u_HD%WAMITMesh, MeshMapData%SubStructure_2_HD_W_P, HD_Start, SubStructure_Out_Start, dUdy)
    END IF
-
-   
 END SUBROUTINE Linear_HD_InputSolve_dy
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine forms the dU^{HD}/dy^{SeaSt} block of dUdy. (i.e., how do changes in the SeaSt outputs affect the HD inputs?)
+subroutine Linear_HD_InputSolve_SeaSt_dy( p_FAST, y_FAST, p_SeaSt, p_HD, u_HD, dUdy )
+   type(FAST_ParameterType),     intent(in   )  :: p_FAST         !< FAST parameter data
+   type(FAST_OutputFileType),    intent(in   )  :: y_FAST         !< FAST output file data (for linearization)
+   type(SeaSt_ParameterType),    intent(in   )  :: p_SeaSt        !< The parameters of SeaState
+   type(HydroDyn_ParameterType), intent(in   )  :: p_HD           !< The parameters of HydroDyn
+   type(HydroDyn_InputType),     intent(inout)  :: u_HD           !< The inputs to HydroDyn
+   real(R8Ki),                   intent(inout)  :: dUdy(:,:)      !< Jacobian matrix of which we are computing the dU^{HD}/dy^{IfW} block
+   integer(IntKi)                               :: I              ! Loops through components
+   integer(IntKi)                               :: node
+   integer(IntKi)                               :: HD_Start       ! starting index of dUdy (row) where HD input equations (for specific fields) are located
+   integer(IntKi)                               :: SeaSt_Start    ! starting index of dUdy (column) where SeaSt output equations (for specific fields) are located
+   !-------------------------------------------------------------------------------------------------
+   ! Set the inputs from SeaState (SeaSt only has 1 extended output):
+   !-------------------------------------------------------------------------------------------------
+   HD_Start    = Indx_u_HD_Ext_Start(u_HD, y_FAST)
+   SeaSt_Start = y_FAST%Lin%Modules(Module_SeaSt)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + p_SeaSt%LinParams%Jac_y_idxStartList%Extended - 1   ! index starts at 1
+
+   ! SeaState has one extended output, but HD has multiple extended inputs.  WaveElev0 is transferred.
+   dUdy( HD_Start, SeaSt_Start ) = -1.0_R8Ki
+end subroutine Linear_HD_InputSolve_SeaSt_dy
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine forms the dU^{HD}/dy^{IfW} block of dUdy. (i.e., how do changes in the IfW outputs affect the HD inputs?)
+subroutine Linear_HD_InputSolve_IfW_dy( p_FAST, y_FAST, p_HD, u_HD, dUdy )
+   type(FAST_ParameterType),     intent(in   )  :: p_FAST         !< FAST parameter data
+   type(FAST_OutputFileType),    intent(in   )  :: y_FAST         !< FAST output file data (for linearization)
+   type(HydroDyn_ParameterType), intent(in   )  :: p_HD           !< The parameters of AeroDyn
+   type(HydroDyn_InputType),     intent(inout)  :: u_HD           !< The inputs to AeroDyn
+   real(R8Ki),                   intent(inout)  :: dUdy(:,:)      !< Jacobian matrix of which we are computing the dU^{HD}/dy^{IfW} block
+   integer(IntKi)                               :: I              ! Loops through components
+   integer(IntKi)                               :: node
+   integer(IntKi)                               :: HD_Start       ! starting index of dUdy (row) where HD input equations (for specific fields) are located
+   integer(IntKi)                               :: IfW_Start      ! starting index of dUdy (column) where IfW output equations (for specific fields) are located
+   !-------------------------------------------------------------------------------------------------
+   ! Set the inputs from IfW (IfW only has 3 extended output):
+   !-------------------------------------------------------------------------------------------------
+   HD_Start  = Indx_u_HD_Ext_Start(u_HD, y_FAST)    ! skip first Ext input (WaveElev0 from SeaSt)
+   IfW_Start = y_FAST%Lin%Modules(Module_IfW)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) ! use all IfW extended outputs
+
+   ! IfW has 3 extended outputs, but HD has multiple extended inputs.  Transfer HWindSpeed, PLexp, PropagationDir
+   do i = 0,2
+      dUdy( HD_Start + i, IfW_Start + i ) = -1.0_R8Ki
+   enddo
+end subroutine Linear_HD_InputSolve_IfW_dy
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine forms the dU^{MAP}/dy^{ED} block of dUdy. (i.e., how do changes in the ED outputs affect 
@@ -5036,7 +5101,19 @@ FUNCTION Indx_u_HD_PRP_Start(u_HD, y_FAST) RESULT(HD_Start)
    HD_Start = Indx_u_HD_WAMIT_Start(u_HD, y_FAST) 
    if (u_HD%WAMITMesh%committed)  HD_Start =  HD_Start + u_HD%WAMITMesh%NNodes * 18  ! 6 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_TRANSLATIONVel,MASKID_ROTATIONVel,MASKID_TRANSLATIONAcc,MASKID_ROTATIONAcc) with 3 components
 
-   END FUNCTION Indx_u_HD_PRP_Start
+END FUNCTION Indx_u_HD_PRP_Start
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine returns the starting index for the u_HD%PRPMesh mesh in the FAST linearization inputs.
+function Indx_u_HD_Ext_Start(u_HD, y_FAST) RESULT(HD_Start)
+   type(FAST_OutputFileType),      intent(in )  :: y_FAST           !< FAST output file data (for linearization)
+   type(HydroDyn_InputType),       intent(in )  :: u_HD             !< HD Inputs at t
+
+   integer                                      :: HD_Start         !< starting index of this mesh in HydroDyn inputs
+
+   HD_Start = Indx_u_HD_PRP_Start(u_HD, y_FAST)
+   if (u_HD%WAMITMesh%committed)  HD_Start =  HD_Start + u_HD%PRPMesh%NNodes * 18  ! 6 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_TRANSLATIONVel,MASKID_ROTATIONVel,MASKID_TRANSLATIONAcc,MASKID_ROTATIONAcc) with 3 components
+
+end function Indx_u_HD_Ext_Start
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine returns the starting index for the y_HD%Morison%DistribMesh mesh in the FAST linearization outputs.
 FUNCTION Indx_y_HD_Morison_Start(y_HD, y_FAST) RESULT(HD_Start)
@@ -5122,8 +5199,15 @@ SUBROUTINE AllocateOP(p_FAST, y_FAST, ErrStat, ErrMsg )
       ALLOCATE( y_FAST%op%OtherSt_IfW(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("InflowWind operating point data")) return;
       ALLOCATE(       y_FAST%op%u_IfW(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("InflowWind operating point data")) return;
    END IF
-            
-      
+
+   if ( p_FAST%CompSeaSt == Module_SeaSt ) then
+      allocate(       y_FAST%op%x_SeaSt(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("SeaState operating point data")) return;
+      allocate(      y_FAST%op%xd_SeaSt(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("SeaState operating point data")) return;
+      allocate(       y_FAST%op%z_SeaSt(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("SeaState operating point data")) return;
+      allocate( y_FAST%op%OtherSt_SeaSt(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("SeaState operating point data")) return;
+      allocate(       y_FAST%op%u_SeaSt(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("SeaState operating point data")) return;
+   endif
+
    IF ( p_FAST%CompServo == Module_SrvD ) THEN
       ALLOCATE(       y_FAST%op%x_SrvD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("ServoDyn operating point data")) return;
       ALLOCATE(      y_FAST%op%xd_SrvD(p_FAST%NLinTimes), STAT=ErrStat2 ); if (Failed0("ServoDyn operating point data")) return;
@@ -5210,9 +5294,8 @@ END SUBROUTINE AllocateOP
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine is the inverse of SetOperatingPoint(). It saves the current operating points so they can be retrieved 
 !> when visualizing mode shapes.
-SUBROUTINE SaveOP(i, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
+SUBROUTINE SaveOP(i, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SeaSt, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                          IceF, IceD, ErrStat, ErrMsg, CtrlCode )
-
    INTEGER(IntKi)          , INTENT(IN   ) :: i                   !< current index into LinTimes
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              !< Output variables for the glue code
@@ -5224,6 +5307,7 @@ SUBROUTINE SaveOP(i, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, Ext
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(ExternalInflow_Data),INTENT(INOUT) :: ExtInfw             !< ExternalInflow data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
+   TYPE(SeaState_Data),      INTENT(INOUT) :: SeaSt               !< SeaState data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
    TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm_MCKF data
    TYPE(MAP_Data),           INTENT(INOUT) :: MAPp                !< MAP data
@@ -5302,7 +5386,7 @@ SUBROUTINE SaveOP(i, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, Ext
       CALL AD_CopyInput (AD%Input(1), y_FAST%op%u_AD(i), CtrlCode, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    END IF
-         
+
    ! InflowWind: copy states and inputs to OP array
    IF ( p_FAST%CompInflow == Module_IfW ) THEN
       CALL InflowWind_CopyContState   (IfW%x( STATE_CURR), y_FAST%op%x_IfW( i), CtrlCode, Errstat2, ErrMsg2)
@@ -5316,10 +5400,23 @@ SUBROUTINE SaveOP(i, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, Ext
                
       CALL InflowWind_CopyInput (IfW%Input(1), y_FAST%op%u_IfW(i), CtrlCode, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               
    END IF
-            
-      
+
+   ! SeaState: copy states and inputs to OP array
+   if ( p_FAST%CompSeaSt == Module_SeaSt ) then
+      call SeaSt_CopyContState   (SeaSt%x( STATE_CURR), y_FAST%op%x_SeaSt( i), CtrlCode, Errstat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call SeaSt_CopyDiscState   (SeaSt%xd(STATE_CURR), y_FAST%op%xd_SeaSt( i), CtrlCode, Errstat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call SeaSt_CopyConstrState (SeaSt%z( STATE_CURR), y_FAST%op%z_SeaSt( i), CtrlCode, Errstat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call SeaSt_CopyOtherState( SeaSt%OtherSt( STATE_CURR), y_FAST%op%OtherSt_SeaSt( i), CtrlCode, Errstat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               
+      call SeaSt_CopyInput (SeaSt%Input(1), y_FAST%op%u_SeaSt(i), CtrlCode, Errstat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   endif
+
    ! ServoDyn: copy states and inputs to OP array
    IF ( p_FAST%CompServo == Module_SrvD ) THEN
       CALL SrvD_CopyContState   (SrvD%x( STATE_CURR), y_FAST%op%x_SrvD( i), CtrlCode, Errstat2, ErrMsg2)
@@ -5457,7 +5554,7 @@ END SUBROUTINE SaveOP
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine takes arrays representing the eigenvector of the states and uses it to modify the operating points for 
 !! continuous states. It is highly tied to the module organizaton.
-SUBROUTINE PerturbOP(t, iLinTime, iMode, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
+SUBROUTINE PerturbOP(t, iLinTime, iMode, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SeaSt,SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                          IceF, IceD, ErrStat, ErrMsg )
 
    REAL(DbKi),               INTENT(IN   ) :: t
@@ -5474,6 +5571,7 @@ SUBROUTINE PerturbOP(t, iLinTime, iMode, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, 
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(ExternalInflow_Data),INTENT(INOUT) :: ExtInfw             !< ExternalInflow data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
+   TYPE(SeaState_Data),      INTENT(INOUT) :: SeaSt               !< SeaState data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
    TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm_MCKF data
    TYPE(MAP_Data),           INTENT(INOUT) :: MAPp                !< MAP data
@@ -5622,8 +5720,13 @@ SUBROUTINE PerturbOP(t, iLinTime, iMode, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, 
    !!!! InflowWind: copy op to actual states and inputs
    !!!IF ( p_FAST%CompInflow == Module_IfW ) THEN
    !!!END IF
-   !!!         
-   !!!   
+   !!!
+   !!!
+   !!!! SeaState: copy op to actual states and inputs
+   !!!IF ( p_FAST%CompSeaSt == Module_SeaSt ) THEN
+   !!!END IF
+   !!!
+   !!!
    !!!! ServoDyn: copy op to actual states and inputs
    !!!IF ( p_FAST%CompServo == Module_SrvD ) THEN
    !!!END IF
@@ -5667,7 +5770,7 @@ SUBROUTINE PerturbOP(t, iLinTime, iMode, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, 
 
 END SUBROUTINE PerturbOP
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SetOperatingPoint(i, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, &
+SUBROUTINE SetOperatingPoint(i, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SeaSt, SD, ExtPtfm, &
                          MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat, ErrMsg )
 
    INTEGER(IntKi),           INTENT(IN   ) :: i                   !< Index into LinTimes (to determine which operating point to copy)
@@ -5682,6 +5785,7 @@ SUBROUTINE SetOperatingPoint(i, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, E
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(ExternalInflow_Data),INTENT(INOUT) :: ExtInfw             !< ExternalInflow data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
+   TYPE(SeaState_Data),      INTENT(INOUT) :: SeaSt               !< SeaState data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
    TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm_MCKF data
    TYPE(MAP_Data),           INTENT(INOUT) :: MAPp                !< MAP data
@@ -5757,7 +5861,7 @@ SUBROUTINE SetOperatingPoint(i, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, E
       CALL AD_CopyInput (y_FAST%op%u_AD(i), AD%Input(1), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    END IF
-         
+
    ! InflowWind: copy op to actual states and inputs
    IF ( p_FAST%CompInflow == Module_IfW ) THEN
       CALL InflowWind_CopyContState   (y_FAST%op%x_IfW( i), IfW%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
@@ -5771,10 +5875,23 @@ SUBROUTINE SetOperatingPoint(i, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, E
                
       CALL InflowWind_CopyInput (y_FAST%op%u_IfW(i), IfW%Input(1), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               
    END IF
             
-      
+   ! SeaSt: copy op to actual states and inputs
+   if ( p_FAST%CompSeaSt == Module_SeaSt ) then
+      call SeaSt_CopyContState   (y_FAST%op%x_SeaSt( i), SeaSt%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call SeaSt_CopyDiscState   (y_FAST%op%xd_SeaSt( i), SeaSt%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call SeaSt_CopyConstrState (y_FAST%op%z_SeaSt( i), SeaSt%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call SeaSt_CopyOtherState (y_FAST%op%OtherSt_SeaSt( i), SeaSt%OtherSt( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      call SeaSt_CopyInput (y_FAST%op%u_SeaSt(i), SeaSt%Input(1), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   endif
+
    ! ServoDyn: copy op to actual states and inputs
    IF ( p_FAST%CompServo == Module_SrvD ) THEN
       CALL SrvD_CopyContState   (y_FAST%op%x_SrvD( i), SrvD%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
@@ -5924,7 +6041,7 @@ end subroutine GetStateAry
 !----------------------------------------------------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine performs the algorithm for computing a periodic steady-state solution.
-SUBROUTINE FAST_CalcSteady( n_t_global, t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
+SUBROUTINE FAST_CalcSteady( n_t_global, t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SeaSt, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                    IceF, IceD, ErrStat, ErrMsg )
 
    INTEGER(IntKi),           INTENT(IN   ) :: n_t_global          !< integer time step
@@ -5940,6 +6057,7 @@ SUBROUTINE FAST_CalcSteady( n_t_global, t_global, p_FAST, y_FAST, m_FAST, ED, BD
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(ExternalInflow_Data),INTENT(INOUT) :: ExtInfw             !< ExternalInflow data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
+   TYPE(SeaState_Data),      INTENT(INOUT) :: SeaSt               !< SeaState data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
    TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm data
    TYPE(MAP_Data),           INTENT(INOUT) :: MAPp                !< MAP data
@@ -5973,7 +6091,7 @@ SUBROUTINE FAST_CalcSteady( n_t_global, t_global, p_FAST, y_FAST, m_FAST, ED, BD
 
       if (n_t_global == 0) then
             ! initialize a few things on the first call:
-         call FAST_InitSteadyOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
+         call FAST_InitSteadyOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SeaSt, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                    IceF, IceD, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       else
@@ -5986,7 +6104,7 @@ SUBROUTINE FAST_CalcSteady( n_t_global, t_global, p_FAST, y_FAST, m_FAST, ED, BD
          end if
          
             ! save the outputs and azimuth angle for possible interpolation later
-         call FAST_SaveOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
+         call FAST_SaveOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SeaSt, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                       IceF, IceD, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       end if
@@ -6013,7 +6131,7 @@ SUBROUTINE FAST_CalcSteady( n_t_global, t_global, p_FAST, y_FAST, m_FAST, ED, BD
       if (NextAzimuth) then
       
             ! interpolate to find y at the target azimuth
-         call FAST_DiffInterpOutputs( m_FAST%Lin%AzimTarget(m_FAST%Lin%AzimIndx), p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
+         call FAST_DiffInterpOutputs( m_FAST%Lin%AzimTarget(m_FAST%Lin%AzimIndx), p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SeaSt, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                    IceF, IceD, ErrStat, ErrMsg )
          ! If linearization is forced
          if (m_FAST%Lin%ForceLin) then
@@ -6022,7 +6140,7 @@ SUBROUTINE FAST_CalcSteady( n_t_global, t_global, p_FAST, y_FAST, m_FAST, ED, BD
                    
          if (m_FAST%Lin%IsConverged .or. m_FAST%Lin%n_rot == 0) then ! save this operating point for linearization later
             m_FAST%Lin%LinTimes(m_FAST%Lin%AzimIndx) = t_global  
-            call SaveOP(m_FAST%Lin%AzimIndx, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
+            call SaveOP(m_FAST%Lin%AzimIndx, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, ExtInfw, HD, SeaSt, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                                   IceF, IceD, ErrStat, ErrMsg, m_FAST%Lin%CopyOP_CtrlCode )
          end if
          
@@ -6073,7 +6191,7 @@ SUBROUTINE FAST_CalcSteady( n_t_global, t_global, p_FAST, y_FAST, m_FAST, ED, BD
 END SUBROUTINE FAST_CalcSteady
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes variables for calculating periodic steady-state solution.
-SUBROUTINE FAST_InitSteadyOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
+SUBROUTINE FAST_InitSteadyOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SeaSt, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                    IceF, IceD, ErrStat, ErrMsg )
 
    REAL(DbKi),               INTENT(IN   ) :: psi                 !< psi (rotor azimuth) at which the outputs are defined
@@ -6086,6 +6204,7 @@ SUBROUTINE FAST_InitSteadyOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, H
    TYPE(AeroDyn_Data),       INTENT(INOUT) :: AD                  !< AeroDyn data
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
+   TYPE(SeaState_Data),      INTENT(INOUT) :: SeaSt               !< SeaState data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
    TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm data
    TYPE(MAP_Data),           INTENT(INOUT) :: MAPp                !< MAP data
@@ -6206,6 +6325,23 @@ SUBROUTINE FAST_InitSteadyOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, H
       END IF  ! CompInflow
 
 
+      ! SeaSt
+      if ( p_FAST%CompSeaSt == Module_SeaSt ) then
+         allocate( SeaSt%Output( p_FAST%LinInterpOrder+1 ), STAT = ErrStat2 )
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, "Error allocating SeaSt%Output.", ErrStat, ErrMsg, RoutineName )
+         else
+            do j = 1, p_FAST%LinInterpOrder + 1
+               call SeaSt_CopyOutput(SeaSt%y, SeaSt%Output(j), MESH_NEWCOPY, ErrStat2, ErrMsg2)
+                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+            end do
+
+            call SeaSt_CopyOutput(SeaSt%y, SeaSt%y_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+         end if
+      endif  ! CompSeaSt
+
+
       ! ServoDyn
       IF ( p_FAST%CompServo == Module_SrvD ) THEN
 
@@ -6313,7 +6449,7 @@ END SUBROUTINE FAST_InitSteadyOutputs
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine saves outputs for future interpolation at a desired azimuth.
-SUBROUTINE FAST_SaveOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
+SUBROUTINE FAST_SaveOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SeaSt, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                    IceF, IceD, ErrStat, ErrMsg )
 
    REAL(DbKi),               INTENT(IN   ) :: psi                 !< psi (rotor azimuth) at which the outputs are defined
@@ -6326,6 +6462,7 @@ SUBROUTINE FAST_SaveOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SD,
    TYPE(AeroDyn_Data),       INTENT(INOUT) :: AD                  !< AeroDyn data
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
+   TYPE(SeaState_Data),      INTENT(INOUT) :: SeaSt               !< SeaState data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
    TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm data
    TYPE(MAP_Data),           INTENT(INOUT) :: MAPp                !< MAP data
@@ -6414,6 +6551,18 @@ SUBROUTINE FAST_SaveOutputs( psi, p_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SD,
       END IF  ! CompInflow
       
       
+      ! SeaState
+      if ( p_FAST%CompSeaSt == Module_SeaSt ) then
+         do j = p_FAST%LinInterpOrder, 1, -1
+            call SeaSt_CopyOutput (SeaSt%Output(j),  SeaSt%Output(j+1),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+         enddo
+
+         call SeaSt_CopyOutput (SeaSt%y,  SeaSt%Output(1),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+      endif  ! CompSeaSt
+
+
       ! ServoDyn
       IF ( p_FAST%CompServo == Module_SrvD ) THEN
          
@@ -6500,7 +6649,7 @@ END SUBROUTINE FAST_SaveOutputs
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine interpolates the outputs at the target azimuths, computes the compared to the previous rotation, and stores
 !! them for future rotation .
-SUBROUTINE FAST_DiffInterpOutputs( psi_target, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
+SUBROUTINE FAST_DiffInterpOutputs( psi_target, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SeaSt, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                    IceF, IceD, ErrStat, ErrMsg )
 
    REAL(DbKi),               INTENT(IN   ) :: psi_target          !< psi (rotor azimuth) at which the outputs are requested
@@ -6514,6 +6663,7 @@ SUBROUTINE FAST_DiffInterpOutputs( psi_target, p_FAST, y_FAST, m_FAST, ED, BD, S
    TYPE(AeroDyn_Data),       INTENT(INOUT) :: AD                  !< AeroDyn data
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
+   TYPE(SeaState_Data),      INTENT(INOUT) :: SeaSt               !< SeaState data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
    TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm data
    TYPE(MAP_Data),           INTENT(INOUT) :: MAPp                !< MAP data
@@ -6589,6 +6739,18 @@ SUBROUTINE FAST_DiffInterpOutputs( psi_target, p_FAST, y_FAST, m_FAST, ED, BD, S
                            IfW%y_interp, IfW%m, ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_IfW)%Instance(1)%op_y)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       END IF  ! CompInflow
+
+
+      ! SeaState
+      if ( p_FAST%CompSeaSt == Module_SeaSt ) then
+         ! No normal outputs to extrapolate
+         !call SeaSt_Output_ExtrapInterp (SeaSt%Output, m_FAST%Lin%Psi,  SeaSt%y_interp, psi_target, ErrStat2, ErrMsg2)
+         !   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+
+         call SeaSt_GetOP( t_global, SeaSt%Input(1), SeaSt%p, SeaSt%x(STATE_CURR), SeaSt%xd(STATE_CURR), SeaSt%z(STATE_CURR), SeaSt%OtherSt(STATE_CURR), &
+                           SeaSt%y_interp, SeaSt%m, ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_SeaSt)%Instance(1)%op_y)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      endif  ! CompSeaSt
 
 
       ! ServoDyn

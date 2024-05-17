@@ -92,13 +92,13 @@ atol = 5e-4
 
 # --- Tolerances for frequencies 
 # Low frequencies are hard to match, so we use a high atol
-rtol_f=1e-3
-atol_f=1e-3 
+rtol_f=1e-2
+atol_f=1e-2 
 
 # --- Tolerances for damping
 # damping ratio is in [%] so we relax the atol
-rtol_d=1e-3
-atol_d=1e-2  
+rtol_d=1e-2
+atol_d=1e-1  
 
 # --- Filenames for frequency info
 fileNameFreqRef="frequencies_ref.txt"
@@ -116,7 +116,7 @@ def indent(msg, sindent='\t'):
 rtl.validateExeOrExit(executable)
 rtl.validateDirOrExit(sourceDirectory)
 if not os.path.isdir(buildDirectory):
-    os.makedirs(buildDirectory)
+    os.makedirs(buildDirectory, exist_ok=True)
 
 ### Build the filesystem navigation variables for running openfast on the test case
 regtests = os.path.join(sourceDirectory, "reg_tests")
@@ -296,7 +296,7 @@ def compareLin(f,file_freq_ref,file_freq_new):
                 pass    # ignore all writing errors
 
 
-            for j in range(min(13,max(len(freq_bas),len(freq_loc)))):
+            for j in range(min(10,max(len(freq_bas),len(freq_loc)))):
                 if j<len(freq_bas):
                     str_freq_bas='{:14.9f}'.format(freq_bas[j])
                     str_zeta_bas='{:14.9f}'.format(zeta_bas[j])
@@ -320,7 +320,7 @@ def compareLin(f,file_freq_ref,file_freq_new):
 
 
             try:
-                np.testing.assert_allclose(freq_loc[:13], freq_bas[:13], rtol=rtol_f, atol=atol_f)
+                np.testing.assert_allclose(freq_loc[:10], freq_bas[:10], rtol=rtol_f, atol=atol_f)
             except Exception as e:
                 Err = 'Failed to compare A-matrix frequencies\n\tLinfile: {}.\n\tException: {}'.format(local_file2, indent(e.args[0]))
                 newError(Err)

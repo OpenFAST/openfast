@@ -461,6 +461,12 @@ typedef   ^      ^                   HydroDyn_DiscreteStateType            xd_HD
 typedef   ^      ^                   HydroDyn_ConstraintStateType           z_HD      {:}    -   -   "Constraint states"
 typedef   ^      ^                   HydroDyn_OtherStateType          OtherSt_HD      {:}    -   -   "Other states"
 typedef   ^      ^                   HydroDyn_InputType                     u_HD      {:}    -   -   "System inputs"
+# ..... SeaSt OP data .......................................................................................................
+typedef   FAST   FAST_LinStateSave   SeaSt_ContinuousStateType             x_SeaSt    {:}    -   -   "Continuous states"
+typedef   ^      ^                   SeaSt_DiscreteStateType              xd_SeaSt    {:}    -   -   "Discrete states"
+typedef   ^      ^                   SeaSt_ConstraintStateType             z_SeaSt    {:}    -   -   "Constraint states"
+typedef   ^      ^                   SeaSt_OtherStateType            OtherSt_SeaSt    {:}    -   -   "Other states"
+typedef   ^      ^                   SeaSt_InputType                       u_SeaSt    {:}    -   -   "System inputs"
 # ..... IceFloe OP data .......................................................................................................
 typedef   FAST   FAST_LinStateSave   IceFloe_ContinuousStateType            x_IceF    {:}    -   -   "Continuous states"
 typedef   ^      ^                   IceFloe_DiscreteStateType             xd_IceF    {:}    -   -   "Discrete states"
@@ -1013,7 +1019,7 @@ typedef   ^   FAST_InitData    IceD_InitOutputType         OutData_IceD     -  -
 typedef	^	FAST_ExternInitType	DbKi	Tmax	-	-1	-	"External code specified Tmax"	s
 typedef	^	FAST_ExternInitType	IntKi	SensorType	-	SensorType_None	-	"lidar sensor type, which should not be pulsed at the moment; this input should be replaced with a section in the InflowWind input file"	-
 typedef	^	FAST_ExternInitType	LOGICAL	LidRadialVel	-	-	-	"TRUE => return radial component, FALSE => return 'x' direction estimate"	-
-typedef	^	FAST_ExternInitType	IntKi	TurbineID	-	0	-	"ID number for turbine (used to create output file naming convention)"	-
+typedef	^	FAST_ExternInitType	IntKi	TurbIDforName	-	-1	-	"ID number for turbine (used to create output file naming convention)"	-
 typedef	^	FAST_ExternInitType	ReKi	TurbinePos	{3}	-	-	"Initial position of turbine base (origin used for graphics or in FAST.Farm)"	m
 typedef ^   FAST_ExternInitType IntKi   WaveFieldMod -  -   -   "Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin"   -
 typedef	^	FAST_ExternInitType	IntKi	NumSC2CtrlGlob	-	-	-	"number of global controller inputs [from supercontroller]"	-

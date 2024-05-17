@@ -15,6 +15,7 @@
 ###################################################################################################################################
 # ...... Include files (definitions from NWTC Library) ............................................................................
 include	Registry_NWTC_Library.txt
+include IfW_FlowField.txt
 usefrom ExtLoadsDX_Registry.txt
 
 # ..... Initialization data .......................................................................................................
@@ -43,12 +44,14 @@ typedef ^                       InitInputType   ReKi    BldChord       {:}{:}   
 typedef ^                       InitInputType   ReKi    BldRloc        {:}{:}   -	-	"Radial location of each node along the blade"	m
 typedef ^                       InitInputType   ReKi    TwrDia         {:}   -	-	"Tower diameter (NumTwrNodes)"	m
 typedef ^                       InitInputType   ReKi    TwrHloc        {:}   -	-	"Height location of each node along the tower"	m
+typedef ^                       InitInputType   IntKi   nNodesVel       -    -	-	"Number of nodes velocity data is needed from (for sizing array)"	-
 
 # Define outputs from the initialization routine here:
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-       
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
 typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
 typedef	^	InitOutputType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
+typedef	^	InitOutputType	FlowFieldType	*FlowField	-	-	-	"Pointer of flow field data type"	-
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
@@ -58,8 +61,9 @@ typedef ^       ContinuousStateType	ReKi	blah    -       -       -       "Someth
 typedef ^       DiscreteStateType	ReKi	blah    -       -       -       "Something"     -
 
 #Defin misc variables here
-typedef ^       MiscVarType             ReKi    az      -       -      -        "Current azimuth"     -
-typedef ^       MiscVarType             ReKi    phi_cfd   -   -      -          "Blending ratio of load from external driver [0-1]"      - 
+typedef ^       MiscVarType             ReKi    az          - - -  "Current azimuth"     -
+typedef ^       MiscVarType             ReKi    phi_cfd     - - -  "Blending ratio of load from external driver [0-1]"      - 
+typedef ^       MiscVarType    FlowFieldType   &FlowField   - - -  "Flow field data type"   - 
 
 # Define constraint states here:
 typedef ^       ConstraintStateType	ReKi	blah    -       -       -       "Something"     -

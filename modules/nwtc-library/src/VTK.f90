@@ -5,10 +5,9 @@
 module VTK
 
    use Precision, only: IntKi, SiKi, ReKi
-   use NWTC_Base, only: ErrID_None, ErrID_Fatal, AbortErrLev, ErrMsgLen
+   use NWTC_Base, only: ErrID_None, ErrID_Fatal, AbortErrLev, ErrMsgLen, SetErrStat
    use NWTC_IO, only: GetNewUnit, NewLine, WrScr, ReadStr, OpenFOutFile
    use NWTC_IO, only: OpenFinpFile, ReadCom, Conv2UC
-   use NWTC_IO, only: SetErrStat
 
    implicit none
 
