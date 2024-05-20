@@ -78,6 +78,8 @@ IMPLICIT NONE
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
     INTEGER(IntKi)  :: GearBox_index = 0_IntKi      !< Index to gearbox rotation in state array (for steady-state calculations) [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Platform large yaw model [-]
+    REAL(ReKi)  :: PtfmRefY = 0.0_ReKi      !< Initial reference yaw offset [radians]
   END TYPE ED_InitOutputType
 ! =======================
 ! =========  BladeInputData  =======
@@ -125,6 +127,8 @@ IMPLICIT NONE
     LOGICAL  :: PtfmRDOF = .false.      !< Platform roll tilt rotation DOF [-]
     LOGICAL  :: PtfmPDOF = .false.      !< Platform pitch tilt rotation DOF [-]
     LOGICAL  :: PtfmYDOF = .false.      !< Platform yaw rotation DOF [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Platform large yaw model [-]
+    REAL(ReKi)  :: PtfmYCutoff = 0.0_ReKi      !< Low-pass cutoff frequency for filtering the platform yaw motion to obtain the reference yaw offset [Hz]
     REAL(ReKi)  :: OoPDefl = 0.0_ReKi      !< Initial out-of-plane blade-tip displacement [meters]
     REAL(ReKi)  :: IPDefl = 0.0_ReKi      !< Initial in-plane blade-tip deflection [meters]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlPitch      !< Initial blade pitch angles [radians]
@@ -140,6 +144,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: PtfmRoll = 0.0_ReKi      !< Initial roll tilt rotational displacement of platform [radians]
     REAL(ReKi)  :: PtfmPitch = 0.0_ReKi      !< Initial pitch tilt rotational displacement of platform [radians]
     REAL(ReKi)  :: PtfmYaw = 0.0_ReKi      !< Initial yaw rotational displacement of platform [radians]
+    REAL(ReKi)  :: PtfmRefY = 0.0_ReKi      !< Initial reference yaw offset [radians]
     INTEGER(IntKi)  :: NumBl = 0_IntKi      !< Number of blades [-]
     REAL(ReKi)  :: TipRad = 0.0_ReKi      !< Preconed blade-tip radius (distance from the rotor apex to the blade tip) [meters]
     REAL(ReKi)  :: HubRad = 0.0_ReKi      !< Preconed hub radius (distance from the rotor apex to the blade root) [meters]
@@ -513,7 +518,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  ED_DiscreteStateType  =======
   TYPE, PUBLIC :: ED_DiscreteStateType
-    REAL(ReKi)  :: DummyDiscState = 0.0_ReKi      !< Remove this variable if you have discrete states [-]
+    REAL(ReKi)  :: PtfmRefY = 0.0_ReKi      !< Reference platform yaw offset from the previous time step serving as the low-pass filter state [radians]
   END TYPE ED_DiscreteStateType
 ! =======================
 ! =========  ED_ConstraintStateType  =======
@@ -791,6 +796,8 @@ IMPLICIT NONE
     REAL(R8Ki)  :: M_CD = 0.0_R8Ki      !< Dynamic friction moment at null yaw rate [N-m]
     REAL(R8Ki)  :: M_CSMAX = 0.0_R8Ki      !< Maximum Coulomb friction torque [N-m]
     REAL(R8Ki)  :: sig_v = 0.0_R8Ki      !< Viscous friction coefficient [N-m/(rad/s)]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Platform large yaw model [-]
+    REAL(ReKi)  :: CYawFilt = 0.0_ReKi      !< Low-pass filter constant for reference platform yaw position PtfmRefY [-]
     INTEGER(IntKi)  :: BldNd_NumOuts = 0_IntKi      !< Number of requested output channels per blade node (ED_AllBldNdOuts) [-]
     INTEGER(IntKi)  :: BldNd_TotNumOuts = 0_IntKi      !< Total number of requested output channels of blade node information (BldNd_NumOuts * BldNd_BlOutNd * BldNd_BladesOut -- ED_AllBldNdOuts) [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: BldNd_OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
@@ -866,6 +873,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: LSShftFxa = 0.0_ReKi      !< Rotating low-speed shaft force x [N]
     REAL(ReKi)  :: LSShftFys = 0.0_ReKi      !< Nonrotating low-speed shaft force y [N]
     REAL(ReKi)  :: LSShftFzs = 0.0_ReKi      !< Nonrotating low-speed shaft force z [N]
+    REAL(ReKi)  :: PtfmRefY = 0.0_ReKi      !< Reference yaw position of the PRP relative to the inertial frame [radians]
   END TYPE ED_OutputType
 ! =======================
 CONTAINS
@@ -1120,6 +1128,8 @@ subroutine ED_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
    end if
    DstInitOutputData%GearBox_index = SrcInitOutputData%GearBox_index
+   DstInitOutputData%PtfmYMod = SrcInitOutputData%PtfmYMod
+   DstInitOutputData%PtfmRefY = SrcInitOutputData%PtfmRefY
 end subroutine
 
 subroutine ED_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -1207,6 +1217,8 @@ subroutine ED_PackInitOutput(RF, Indata)
    call RegPackAlloc(RF, InData%RotFrame_u)
    call RegPackAlloc(RF, InData%IsLoad_u)
    call RegPack(RF, InData%GearBox_index)
+   call RegPack(RF, InData%PtfmYMod)
+   call RegPack(RF, InData%PtfmRefY)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1246,6 +1258,8 @@ subroutine ED_UnPackInitOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%RotFrame_u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%IsLoad_u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%GearBox_index); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ED_CopyBladeInputData(SrcBladeInputDataData, DstBladeInputDataData, CtrlCode, ErrStat, ErrMsg)
@@ -1578,6 +1592,8 @@ subroutine ED_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%PtfmRDOF = SrcInputFileData%PtfmRDOF
    DstInputFileData%PtfmPDOF = SrcInputFileData%PtfmPDOF
    DstInputFileData%PtfmYDOF = SrcInputFileData%PtfmYDOF
+   DstInputFileData%PtfmYMod = SrcInputFileData%PtfmYMod
+   DstInputFileData%PtfmYCutoff = SrcInputFileData%PtfmYCutoff
    DstInputFileData%OoPDefl = SrcInputFileData%OoPDefl
    DstInputFileData%IPDefl = SrcInputFileData%IPDefl
    if (allocated(SrcInputFileData%BlPitch)) then
@@ -1604,6 +1620,7 @@ subroutine ED_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%PtfmRoll = SrcInputFileData%PtfmRoll
    DstInputFileData%PtfmPitch = SrcInputFileData%PtfmPitch
    DstInputFileData%PtfmYaw = SrcInputFileData%PtfmYaw
+   DstInputFileData%PtfmRefY = SrcInputFileData%PtfmRefY
    DstInputFileData%NumBl = SrcInputFileData%NumBl
    DstInputFileData%TipRad = SrcInputFileData%TipRad
    DstInputFileData%HubRad = SrcInputFileData%HubRad
@@ -1991,6 +2008,8 @@ subroutine ED_PackInputFile(RF, Indata)
    call RegPack(RF, InData%PtfmRDOF)
    call RegPack(RF, InData%PtfmPDOF)
    call RegPack(RF, InData%PtfmYDOF)
+   call RegPack(RF, InData%PtfmYMod)
+   call RegPack(RF, InData%PtfmYCutoff)
    call RegPack(RF, InData%OoPDefl)
    call RegPack(RF, InData%IPDefl)
    call RegPackAlloc(RF, InData%BlPitch)
@@ -2006,6 +2025,7 @@ subroutine ED_PackInputFile(RF, Indata)
    call RegPack(RF, InData%PtfmRoll)
    call RegPack(RF, InData%PtfmPitch)
    call RegPack(RF, InData%PtfmYaw)
+   call RegPack(RF, InData%PtfmRefY)
    call RegPack(RF, InData%NumBl)
    call RegPack(RF, InData%TipRad)
    call RegPack(RF, InData%HubRad)
@@ -2180,6 +2200,8 @@ subroutine ED_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%PtfmRDOF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmPDOF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmYDOF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmYCutoff); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OoPDefl); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%IPDefl); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BlPitch); if (RegCheckErr(RF, RoutineName)) return
@@ -2195,6 +2217,7 @@ subroutine ED_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%PtfmRoll); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmPitch); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmYaw); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumBl); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TipRad); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HubRad); if (RegCheckErr(RF, RoutineName)) return
@@ -4649,7 +4672,7 @@ subroutine ED_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
    character(*), parameter        :: RoutineName = 'ED_CopyDiscState'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   DstDiscStateData%DummyDiscState = SrcDiscStateData%DummyDiscState
+   DstDiscStateData%PtfmRefY = SrcDiscStateData%PtfmRefY
 end subroutine
 
 subroutine ED_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
@@ -4666,7 +4689,7 @@ subroutine ED_PackDiscState(RF, Indata)
    type(ED_DiscreteStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ED_PackDiscState'
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, InData%DummyDiscState)
+   call RegPack(RF, InData%PtfmRefY)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -4675,7 +4698,7 @@ subroutine ED_UnPackDiscState(RF, OutData)
    type(ED_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ED_UnPackDiscState'
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpack(RF, OutData%DummyDiscState); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ED_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg)
@@ -5973,6 +5996,8 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%M_CD = SrcParamData%M_CD
    DstParamData%M_CSMAX = SrcParamData%M_CSMAX
    DstParamData%sig_v = SrcParamData%sig_v
+   DstParamData%PtfmYMod = SrcParamData%PtfmYMod
+   DstParamData%CYawFilt = SrcParamData%CYawFilt
    DstParamData%BldNd_NumOuts = SrcParamData%BldNd_NumOuts
    DstParamData%BldNd_TotNumOuts = SrcParamData%BldNd_TotNumOuts
    if (allocated(SrcParamData%BldNd_OutParam)) then
@@ -6477,6 +6502,8 @@ subroutine ED_PackParam(RF, Indata)
    call RegPack(RF, InData%M_CD)
    call RegPack(RF, InData%M_CSMAX)
    call RegPack(RF, InData%sig_v)
+   call RegPack(RF, InData%PtfmYMod)
+   call RegPack(RF, InData%CYawFilt)
    call RegPack(RF, InData%BldNd_NumOuts)
    call RegPack(RF, InData%BldNd_TotNumOuts)
    call RegPack(RF, allocated(InData%BldNd_OutParam))
@@ -6739,6 +6766,8 @@ subroutine ED_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%M_CD); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%M_CSMAX); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%sig_v); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CYawFilt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BldNd_NumOuts); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BldNd_TotNumOuts); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%BldNd_OutParam)) deallocate(OutData%BldNd_OutParam)
@@ -7068,6 +7097,7 @@ subroutine ED_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
    DstOutputData%LSShftFxa = SrcOutputData%LSShftFxa
    DstOutputData%LSShftFys = SrcOutputData%LSShftFys
    DstOutputData%LSShftFzs = SrcOutputData%LSShftFzs
+   DstOutputData%PtfmRefY = SrcOutputData%PtfmRefY
 end subroutine
 
 subroutine ED_DestroyOutput(OutputData, ErrStat, ErrMsg)
@@ -7187,6 +7217,7 @@ subroutine ED_PackOutput(RF, Indata)
    call RegPack(RF, InData%LSShftFxa)
    call RegPack(RF, InData%LSShftFys)
    call RegPack(RF, InData%LSShftFzs)
+   call RegPack(RF, InData%PtfmRefY)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -7262,6 +7293,7 @@ subroutine ED_UnPackOutput(RF, OutData)
    call RegUnpack(RF, OutData%LSShftFxa); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LSShftFys); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LSShftFzs); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ED_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)
@@ -7645,6 +7677,7 @@ SUBROUTINE ED_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg 
    y_out%LSShftFxa = a1*y1%LSShftFxa + a2*y2%LSShftFxa
    y_out%LSShftFys = a1*y1%LSShftFys + a2*y2%LSShftFys
    y_out%LSShftFzs = a1*y1%LSShftFzs + a2*y2%LSShftFzs
+   y_out%PtfmRefY = a1*y1%PtfmRefY + a2*y2%PtfmRefY
 END SUBROUTINE
 
 SUBROUTINE ED_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, ErrMsg )
@@ -7766,6 +7799,7 @@ SUBROUTINE ED_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Err
    y_out%LSShftFxa = a1*y1%LSShftFxa + a2*y2%LSShftFxa + a3*y3%LSShftFxa
    y_out%LSShftFys = a1*y1%LSShftFys + a2*y2%LSShftFys + a3*y3%LSShftFys
    y_out%LSShftFzs = a1*y1%LSShftFzs + a2*y2%LSShftFzs + a3*y3%LSShftFzs
+   y_out%PtfmRefY = a1*y1%PtfmRefY + a2*y2%PtfmRefY + a3*y3%PtfmRefY
 END SUBROUTINE
 END MODULE ElastoDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

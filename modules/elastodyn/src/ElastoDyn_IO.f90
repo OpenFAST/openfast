@@ -2980,6 +2980,38 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
          RETURN
       END IF
 
+   !---------------------- LARGE YAW MODEL -----------------------------------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: LARGE YAW MODEL', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+
+      ! PtfmYMod - Large yaw offset modeling (0: static, 1: dynamic):
+   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmYMod, "PtfmYMod", "Large yaw offset modeling (0: static, 1: dynamic)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+
+      ! PtfmRefY - Constant or initial platform reference yaw offset (rad):
+   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmRefY, "PtfmRefY", "Constant or initial platform reference yaw offset (rad)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+
+      ! PtfmYCutOff - Cutoff frequency for the low-pass filtering of PRP yaw motion when PtfmYMod=1 [unused when PtfmYMod=0] (Hz):
+   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmYCutOff, "PtfmYCutOff", "Cutoff frequency for the low-pass filtering of PRP yaw motion when PtfmYMod=1 [unused when PtfmYMod=0] (Hz)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+
    !---------------------- INITIAL CONDITIONS --------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Initial Conditions', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )

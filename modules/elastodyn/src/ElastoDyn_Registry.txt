@@ -58,6 +58,8 @@ typedef	^	InitOutputType	IntKi	DerivOrder_x {:}	-	-	"Integer that tells FAST/MBC
 typedef	^	InitOutputType	LOGICAL	RotFrame_u	{:}	-	-	"Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
 typedef	^	InitOutputType	LOGICAL	IsLoad_u	{:}	-	-	"Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
 typedef	^	InitOutputType	IntKi	GearBox_index	-	-	-	"Index to gearbox rotation in state array (for steady-state calculations)"   -
+typedef ^       InitOutputType  IntKi   PtfmYMod	-       -       -       "Platform large yaw model"      -
+typedef ^       InitOutputType  ReKi    PtfmRefY        -       -       -       "Initial reference yaw offset"	radians
 
 # ..... Blade Input file data ...........................................................................................................
 typedef	ElastoDyn/ED	BladeInputData	IntKi	NBlInpSt	-	-	-	"Number of blade input stations"	-
@@ -103,6 +105,8 @@ typedef	^	ED_InputFile	LOGICAL	PtfmHvDOF	-	-	-	"Platform vertical heave translat
 typedef	^	ED_InputFile	LOGICAL	PtfmRDOF	-	-	-	"Platform roll tilt rotation DOF"	-
 typedef	^	ED_InputFile	LOGICAL	PtfmPDOF	-	-	-	"Platform pitch tilt rotation DOF"	-
 typedef	^	ED_InputFile	LOGICAL	PtfmYDOF	-	-	-	"Platform yaw rotation DOF"	-
+typedef ^       ED_InputFile    IntKi   PtfmYMod        -       -       -       "Platform large yaw model"      -
+typedef ^       ED_InputFile    ReKi    PtfmYCutoff     -       -       -       "Low-pass cutoff frequency for filtering the platform yaw motion to obtain the reference yaw offset"   Hz
 typedef	^	ED_InputFile	ReKi	OoPDefl	-	-	-	"Initial out-of-plane blade-tip displacement"	meters
 typedef	^	ED_InputFile	ReKi	IPDefl	-	-	-	"Initial in-plane blade-tip deflection"	meters
 typedef	^	ED_InputFile	ReKi	BlPitch	{:}	-	-	"Initial blade pitch angles"	radians
@@ -118,6 +122,7 @@ typedef	^	ED_InputFile	ReKi	PtfmHeave	-	-	-	"Initial vertical heave translationa
 typedef	^	ED_InputFile	ReKi	PtfmRoll	-	-	-	"Initial roll tilt rotational displacement of platform"	radians
 typedef	^	ED_InputFile	ReKi	PtfmPitch	-	-	-	"Initial pitch tilt rotational displacement of platform"	radians
 typedef	^	ED_InputFile	ReKi	PtfmYaw	-	-	-	"Initial yaw rotational displacement of platform"	radians
+typedef ^       ED_InputFile    ReKi    PtfmRefY        -       -       -       "Initial reference yaw offset"	radians
 typedef	^	ED_InputFile	IntKi	NumBl	-	-	-	"Number of blades"	-
 typedef	^	ED_InputFile	ReKi	TipRad	-	-	-	"Preconed blade-tip radius (distance from the rotor apex to the blade tip)"	meters
 typedef	^	ED_InputFile	ReKi	HubRad	-	-	-	"Preconed hub radius (distance from the rotor apex to the blade root)"	meters
@@ -510,7 +515,7 @@ typedef	^	ContinuousStateType	R8Ki	QT	{:}	-	-	"Current estimate of Q (displaceme
 typedef	^	ContinuousStateType	^	QDT	{:}	-	-	"Current estimate of QD (velocity matrix) for each degree of freedom"
 
 # Define discrete (nondifferentiable) states here:
-typedef	^	DiscreteStateType	ReKi	DummyDiscState	-	-	-	"Remove this variable if you have discrete states"	-
+typedef	^	DiscreteStateType	ReKi	PtfmRefY	-	-	-	"Reference platform yaw offset from the previous time step serving as the low-pass filter state"	radians
 
 # Define constraint states here:
 typedef	^	ConstraintStateType	ReKi	DummyConstrState	-	-	-	"Remove this variable if you have constraint states"	-
@@ -777,6 +782,8 @@ typedef ^       ParameterType   IntKi   YawFrctMod      -       -       -       
 typedef ^       ParameterType   R8Ki    M_CD    -       -       -       "Dynamic friction moment at null yaw rate"      N-m
 typedef ^       ParameterType   R8Ki    M_CSMAX -       -       -       "Maximum Coulomb friction torque"       N-m
 typedef ^       ParameterType   R8Ki    sig_v   -       -       -       "Viscous friction coefficient"  N-m/(rad/s)
+typedef ^       ParameterType   IntKi   PtfmYMod	-       -       -       "Platform large yaw model"      -
+typedef ^       ParameterType   ReKi    CYawFilt	-       -       -       "Low-pass filter constant for reference platform yaw position PtfmRefY"   -
 #typedef        ^       ParameterType   R8Ki    thr_omg -       -       -       "Yaw rate stiction threshold"   rad/s
 #typedef        ^       ParameterType   R8Ki    thr_omgdot      -       -       -       "Yaw acceleration stiction threshold"   rad/s^2
 
@@ -859,3 +866,4 @@ typedef	^	OutputType	ReKi	RotPwr	-	-	-	"Rotor power (this is equivalent to the l
 typedef	^	OutputType	ReKi	LSShftFxa	-	-	-	"Rotating low-speed shaft force x"	N
 typedef	^	OutputType	ReKi	LSShftFys	-	-	-	"Nonrotating low-speed shaft force y"	N
 typedef	^	OutputType	ReKi	LSShftFzs	-	-	-	"Nonrotating low-speed shaft force z"	N
+typedef ^       OutputType      ReKi    PtfmRefY        -       -       -       "Reference yaw position of the PRP relative to the inertial frame"	radians
