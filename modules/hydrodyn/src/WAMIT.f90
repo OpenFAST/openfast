@@ -1868,15 +1868,16 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       INTEGER(IntKi)                       :: I,iStart                                ! Generic index
       REAL(ReKi)                           :: q(6*p%NBody), qdot(6*p%NBody), qdotdot(6*p%NBody)  ! kinematics for all WAMIT bodies
       REAL(ReKi)                           :: rotdisp(3)                              ! small angle rotational displacements
-      integer(IntKi)                       :: iBody                                   ! Counter for WAMIT bodies.  If NBodyMod > 1 then NBody = 1, and hence iBody = 1
-      integer(IntKi)                       :: indxStart, indxEnd                      ! Starting and ending indices for the iBody_th sub vector in an NBody long vector
-      real(ReKi)                           :: bodyPosition(3)                         ! x-y displaced location of a WAMIT body (relative to 
-      real(ReKi)                           :: tmpVec3(3),tmpVec6(6)
-      REAL(ReKi)                           :: LrgAngle = 0.4                          ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
+      INTEGER(IntKi)                       :: iBody                                   ! Counter for WAMIT bodies.  If NBodyMod > 1 then NBody = 1, and hence iBody = 1
+      INTEGER(IntKi)                       :: indxStart, indxEnd                      ! Starting and ending indices for the iBody_th sub vector in an NBody long vector
+      REAL(ReKi)                           :: bodyPosition(3)                         ! x-y displaced location of a WAMIT body (relative to 
+      REAL(ReKi)                           :: tmpVec3(3),tmpVec6(6)
+      REAL(ReKi),      PARAMETER           :: LrgAngle = 0.4                          ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
 
         ! Error handling
-      CHARACTER(1024)                        :: ErrMsg2                              ! Temporary error message for calls
-      INTEGER(IntKi)                         :: ErrStat2                             ! Temporary error status for calls
+      CHARACTER(1024)                      :: ErrMsg2                                 ! Temporary error message for calls
+      INTEGER(IntKi)                       :: ErrStat2                                ! Temporary error status for calls
+      CHARACTER(*),    PARAMETER           :: RoutineName = 'WAMIT_Init'
 
          ! Initialize ErrStat
          
@@ -1910,7 +1911,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
                iStart = (iBody-1)*6+1
                ! WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: PRP yaw offset, 5th: Force component for each WAMIT Body
                m%F_Waves1(iStart:iStart+5) = WAMIT_ForceWaves_Interp( Time, bodyPosition, p%WaveExctnGrid(:,:,:,:,iStart:iStart+5), p%ExctnGridParams, m%WaveField_m, ErrStat2, ErrMsg2 )
-                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             END DO
 
          else ! p%ExctnDisp > 0
@@ -1935,14 +1936,15 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
                iStart = (iBody-1)*6+1
                ! WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: PRP yaw offset, 5th: Force component for each WAMIT Body
                m%F_Waves1(iStart:iStart+5) = WAMIT_ForceWaves_Interp( Time, bodyPosition, p%WaveExctnGrid(:,:,:,:,iStart:iStart+5), p%ExctnGridParams, m%WaveField_m, ErrStat2, ErrMsg2 )
-                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             END DO
          end if
 
       else if ( p%ExctnMod == 2 ) then
          
          call SS_Exc_CalcOutput( Time, m%SS_Exctn_u, p%SS_Exctn, x%SS_Exctn, xd%SS_Exctn,  &
-                                z%SS_Exctn, OtherState%SS_Exctn, m%SS_Exctn_y, m%SS_Exctn, ErrStat, ErrMsg )
+                                z%SS_Exctn, OtherState%SS_Exctn, m%SS_Exctn_y, m%SS_Exctn, ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          m%F_Waves1  (:) = m%SS_Exctn_y%y
          
       end if
@@ -1955,12 +1957,14 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          ! rotdisp(3) = rotdisp(3) - u%PtfmRefY ! Remove the large yaw offset
          rotdisp    = EulerExtractZYX ( u%Mesh%Orientation(:,:,iBody) )
          IF ( ABS(rotdisp(1)) > LrgAngle ) THEN
-            ErrStat = ErrID_Severe
-            ErrMsg  = 'Roll angle of a potential-flow body violated the small angle assumption. The solution might be inaccurate.'
+            ErrStat2 = ErrID_Severe
+            ErrMsg2  = 'Roll angle of a potential-flow body violated the small angle assumption. The solution might be inaccurate.'
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END IF
          IF ( ABS(rotdisp(2)) > LrgAngle ) THEN
-            ErrStat = ErrID_Severe
-            ErrMsg  = 'Pitch angle of a potential-flow body violated the small angle assumption. The solution might be inaccurate.'
+            ErrStat2 = ErrID_Severe
+            ErrMsg2  = 'Pitch angle of a potential-flow body violated the small angle assumption. The solution might be inaccurate.'
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END IF
 
 
@@ -1972,11 +1976,11 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
 
 
          ! Get velocity and acceleration in the heading frame
-         call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%TranslationVel(:,iBody), tmpVec6(1:3), ErrStat, ErrMsg)
-         call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%RotationVel(:,iBody),    tmpVec6(4:6), ErrStat, ErrMsg)
+         call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%TranslationVel(:,iBody), tmpVec6(1:3), ErrStat2, ErrMsg2)
+         call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%RotationVel(:,iBody),    tmpVec6(4:6), ErrStat2, ErrMsg2)
          qdot   (indxStart:indxEnd)   = tmpVec6
-         call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%TranslationAcc(:,iBody), tmpVec6(1:3), ErrStat, ErrMsg)
-         call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%RotationAcc(:,iBody),    tmpVec6(4:6), ErrStat, ErrMsg)
+         call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%TranslationAcc(:,iBody), tmpVec6(1:3), ErrStat2, ErrMsg2)
+         call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%RotationAcc(:,iBody),    tmpVec6(4:6), ErrStat2, ErrMsg2)
          qdotdot(indxStart:indxEnd)   = tmpVec6
          
       end do
@@ -1997,13 +2001,13 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       do iBody = 1, p%NBody
          indxStart = (iBody-1)*6+1
          indxEnd   = indxStart+2
-         ! call hiFrameTransform( h2i, u%PtfmRefY, m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
-         call hiFrameTransform( h2i, q(iBody*6), m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
+         ! call hiFrameTransform( h2i, u%PtfmRefY, m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat2, ErrMsg2 )
+         call hiFrameTransform( h2i, q(iBody*6), m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat2, ErrMsg2 )
          m%F_HS(indxStart:indxEnd) = tmpVec3
          indxStart = indxEnd+1
          indxEnd   = indxStart+2
-         ! call hiFrameTransform( h2i, u%PtfmRefY, m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
-         call hiFrameTransform( h2i, q(iBody*6), m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
+         ! call hiFrameTransform( h2i, u%PtfmRefY, m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat2, ErrMsg2 )
+         call hiFrameTransform( h2i, q(iBody*6), m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat2, ErrMsg2 )
          m%F_HS(indxStart:indxEnd) = tmpVec3
       end do   
       
@@ -2014,13 +2018,15 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       IF ( p%RdtnMod == 1 )  THEN ! .TRUE. when we will be modeling wave radiation damping.
          m%Conv_Rdtn_u%Velocity = qdot
          CALL Conv_Rdtn_CalcOutput( Time, m%Conv_Rdtn_u, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn,  &
-                                z%Conv_Rdtn, OtherState%Conv_Rdtn, m%Conv_Rdtn_y, m%Conv_Rdtn, ErrStat, ErrMsg )
+                                z%Conv_Rdtn, OtherState%Conv_Rdtn, m%Conv_Rdtn_y, m%Conv_Rdtn, ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          m%F_Rdtn  (:) = m%Conv_Rdtn_y%F_Rdtn       
 
       ELSE IF ( p%RdtnMod == 2 )  THEN 
          m%SS_Rdtn_u%dq = qdot
          CALL SS_Rad_CalcOutput( Time, m%SS_Rdtn_u, p%SS_Rdtn, x%SS_Rdtn, xd%SS_Rdtn,  &
-                                z%SS_Rdtn, OtherState%SS_Rdtn, m%SS_Rdtn_y, m%SS_Rdtn, ErrStat, ErrMsg )
+                                z%SS_Rdtn, OtherState%SS_Rdtn, m%SS_Rdtn_y, m%SS_Rdtn, ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          m%F_Rdtn  (:) = m%SS_Rdtn_y%y
       ELSE ! We must not be modeling wave radiation damping.
 
@@ -2033,12 +2039,12 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       do iBody = 1, p%NBody
          indxStart = (iBody-1)*6+1
          indxEnd   = indxStart+2
-         call hiFrameTransform( h2i, u%PtfmRefY, m%F_Rdtn(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
+         call hiFrameTransform( h2i, u%PtfmRefY, m%F_Rdtn(indxStart:indxEnd), tmpVec3, ErrStat2, ErrMsg2 )
          m%F_Rdtn(indxStart:indxEnd) = tmpVec3
 
          indxStart = indxEnd+1
          indxEnd   = indxStart+2
-         call hiFrameTransform( h2i, u%PtfmRefY, m%F_Rdtn(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
+         call hiFrameTransform( h2i, u%PtfmRefY, m%F_Rdtn(indxStart:indxEnd), tmpVec3, ErrStat2, ErrMsg2 )
          m%F_Rdtn(indxStart:indxEnd) = tmpVec3
       end do
 
@@ -2054,12 +2060,12 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       do iBody = 1, p%NBody
          indxStart = (iBody-1)*6+1
          indxEnd   = indxStart+2
-         call hiFrameTransform( h2i, u%PtfmRefY, m%F_PtfmAM(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
+         call hiFrameTransform( h2i, u%PtfmRefY, m%F_PtfmAM(indxStart:indxEnd), tmpVec3, ErrStat2, ErrMsg2 )
          m%F_PtfmAM(indxStart:indxEnd) = tmpVec3
 
          indxStart = indxEnd+1
          indxEnd   = indxStart+2
-         call hiFrameTransform( h2i, u%PtfmRefY, m%F_PtfmAM(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
+         call hiFrameTransform( h2i, u%PtfmRefY, m%F_PtfmAM(indxStart:indxEnd), tmpVec3, ErrStat2, ErrMsg2 )
          m%F_PtfmAM(indxStart:indxEnd) = tmpVec3
       end do
       
