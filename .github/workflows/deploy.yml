@@ -5,6 +5,8 @@
 name: deploy
 
 on:
+  workflow_dispatch:
+
   release:
     types:
       - released
