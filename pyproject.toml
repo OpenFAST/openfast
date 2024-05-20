@@ -11,18 +11,15 @@ authors = [
     "John Jasa",
 ]
 readme = "openfast_python/README.md"
-packages = [{include = "openfast_python/openfast"}]
+packages = [{include = "openfast", from = "openfast_python"}]
 
 
 [tool.poetry.dependencies]
 python = "^3.9"
-rosco = "^2.9"
 numpy = "^1"
 pandas = "^2"
 xlrd = "^2"
 ruamel_yaml = "^0.18"
-pcrunch = "^1.1.0"
-
 
 [build-system]
 requires = ["poetry-core"]
