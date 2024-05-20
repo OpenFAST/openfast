@@ -1872,6 +1872,8 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       integer(IntKi)                       :: indxStart, indxEnd                      ! Starting and ending indices for the iBody_th sub vector in an NBody long vector
       real(ReKi)                           :: bodyPosition(3)                         ! x-y displaced location of a WAMIT body (relative to 
       real(ReKi)                           :: tmpVec3(3),tmpVec6(6)
+      REAL(ReKi)                           :: LrgAngle = 0.4                          ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
+
         ! Error handling
       CHARACTER(1024)                        :: ErrMsg2                              ! Temporary error message for calls
       INTEGER(IntKi)                         :: ErrStat2                             ! Temporary error status for calls
@@ -1949,14 +1951,25 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       do iBody = 1, p%NBody
          
          ! Determine the rotational angles from the direction-cosine matrix
-         rotdisp   = GetRotAngs ( u%PtfmRefY, u%Mesh%Orientation(:,:,iBody), ErrStat, ErrMsg )
-         rotdisp(3) = rotdisp(3) - u%PtfmRefY ! Remove the large yaw offset
+         ! rotdisp   = GetRotAngs ( u%PtfmRefY, u%Mesh%Orientation(:,:,iBody), ErrStat, ErrMsg )
+         ! rotdisp(3) = rotdisp(3) - u%PtfmRefY ! Remove the large yaw offset
+         rotdisp    = EulerExtractZYX ( u%Mesh%Orientation(:,:,iBody) )
+         IF ( ABS(rotdisp(1)) > LrgAngle ) THEN
+            ErrStat = ErrID_Severe
+            ErrMsg  = 'Roll angle of a potential-flow body violated the small angle assumption. The solution might be inaccurate.'
+         END IF
+         IF ( ABS(rotdisp(2)) > LrgAngle ) THEN
+            ErrStat = ErrID_Severe
+            ErrMsg  = 'Pitch angle of a potential-flow body violated the small angle assumption. The solution might be inaccurate.'
+         END IF
+
 
          indxStart = (iBody-1)*6+1
          indxEnd   = indxStart+5
 
-         ! Displacement: does not contain the large yaw offset; Small rotation about reference yaw only
-         q      (indxStart:indxEnd)   = reshape((/real(u%Mesh%TranslationDisp(:,iBody),ReKi),rotdisp(:)/),(/6/))
+         ! Displacement with Tait-Bryan angles folloing the Z-Y-X convention
+         q(indxStart:indxEnd) = reshape((/real(u%Mesh%TranslationDisp(:,iBody),ReKi),rotdisp(:)/),(/6/))
+
 
          ! Get velocity and acceleration in the heading frame
          call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%TranslationVel(:,iBody), tmpVec6(1:3), ErrStat, ErrMsg)
@@ -1970,10 +1983,13 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       
       ! Compute the load contribution from hydrostatics:
       ! Hydrostatic load in the yaw-offset frame
-      m%F_HS = -matmul(p%HdroSttc,q)
+      ! m%F_HS = -matmul(p%HdroSttc,q)
+      m%F_HS = 0.
       do iBody = 1, p%NBody
          indxStart = (iBody-1)*6+1
          indxEnd   = indxStart+5
+         m%F_HS((indxStart+2):(indxEnd-1)) = -matmul(p%HdroSttc((indxStart+2):(indxEnd-1),(indxStart+2):(indxEnd-1)),&
+                                                              q((indxStart+2):(indxEnd-1)))
          m%F_HS(indxStart:indxEnd) =  m%F_HS(indxStart:indxEnd) + p%F_HS_Moment_Offset(:,iBody)
       end do 
 
@@ -1981,11 +1997,13 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       do iBody = 1, p%NBody
          indxStart = (iBody-1)*6+1
          indxEnd   = indxStart+2
-         call hiFrameTransform( h2i, u%PtfmRefY, m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
+         ! call hiFrameTransform( h2i, u%PtfmRefY, m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
+         call hiFrameTransform( h2i, q(iBody*6), m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
          m%F_HS(indxStart:indxEnd) = tmpVec3
          indxStart = indxEnd+1
          indxEnd   = indxStart+2
-         call hiFrameTransform( h2i, u%PtfmRefY, m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
+         ! call hiFrameTransform( h2i, u%PtfmRefY, m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
+         call hiFrameTransform( h2i, q(iBody*6), m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat, ErrMsg )
          m%F_HS(indxStart:indxEnd) = tmpVec3
       end do   
       
