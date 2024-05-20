@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "openfast"
+version = "3.5.4"
+description = "Readers and writers for OpenFAST files."
+authors = [
+    "NREL WISDEM Team <systems.engineering@nrel.gov>",
+    "dzalkind",
+    "Garrett Barter <garrett.barter@nrel.gov>",
+    "Pietro Bortolotti <ptrbortolotti@gmail.com>",
+    "Mayank Chetan",
+    "John Jasa",
+]
+readme = "openfast_python/README.md"
+packages = [{include = "openfast_python/openfast"}]
+
+
+[tool.poetry.dependencies]
+python = "^3.9"
+rosco = "^2.9"
+numpy = "^1"
+pandas = "^2"
+xlrd = "^2"
+ruamel_yaml = "^0.18"
+pcrunch = "^1.1.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

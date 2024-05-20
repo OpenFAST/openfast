@@ -1,0 +1,147 @@
+------- AERODYN v15.03.* INPUT FILE ------------------------------------------------
+IEA 15 MW Offshore Reference Turbine
+======  General Options  ============================================================================
+False                    Echo         - Echo the input to "<rootname>.AD.ech"?  (flag)
+"default"                DTAero       - Time interval for aerodynamic calculations {or "default"} (s)
+1                        WakeMod      - Type of wake/induction model (switch) {0=none, 1=BEMT, 2=DBEMT, 3=OLAF} [WakeMod cannot be 2 or 3 when linearizing]
+2                        AFAeroMod    - Type of blade airfoil aerodynamics model (switch) {1=steady model, 2=Beddoes-Leishman unsteady model} [AFAeroMod must be 1 when linearizing]
+1                        TwrPotent    - Type tower influence on wind based on potential flow around the tower (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
+1                        TwrShadow    - Calculate tower influence on wind based on downstream tower shadow (switch) {0=none, 1=Powles model, 2=Eames model}
+True                     TwrAero      - Calculate tower aerodynamic loads? (flag)
+False                    FrozenWake   - Assume frozen wake during linearization? (flag) [used only when WakeMod=1 and when linearizing]
+False                    CavitCheck   - Perform cavitation check? (flag) [AFAeroMod must be 1 when CavitCheck=true]
+False                    CompAA       - Flag to compute AeroAcoustics calculation [used only when WakeMod = 1 or 2]
+"AeroAcousticsInput.dat" AA_InputFile - AeroAcoustics input file [used only when CompAA=true]
+======  Environmental Conditions  ===================================================================
+"default"                AirDens     - Air density (kg/m^3)
+"default"                KinVisc     - Kinematic air viscosity (m^2/s)
+"default"                SpdSound    - Speed of sound (m/s)
+"default"                Patm        - Atmospheric pressure (Pa) [used only when CavitCheck=True]
+"default"                Pvap        - Vapour pressure of fluid (Pa) [used only when CavitCheck=True]
+======  Blade-Element/Momentum Theory Options  ====================================================== [used only when WakeMod=1]
+2                      SkewMod     - Type of skewed-wake correction model (switch) {1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0 or 3]
+"default"            SkewModFactor - Constant used in Pitt/Peters skewed wake model {or "default" is 15/32*pi} (-) [used only when SkewMod=2; unused when WakeMod=0 or 3]
+True                   TipLoss     - Use the Prandtl tip-loss model? (flag) [unused when WakeMod=0 or 3]
+True                   HubLoss     - Use the Prandtl hub-loss model? (flag) [unused when WakeMod=0 or 3]
+True                   TanInd      - Include tangential induction in BEMT calculations? (flag) [unused when WakeMod=0 or 3]
+True                   AIDrag      - Include the drag term in the axial-induction calculation? (flag) [unused when WakeMod=0 or 3]
+True                   TIDrag      - Include the drag term in the tangential-induction calculation? (flag) [unused when WakeMod=0,3 or TanInd=FALSE]
+"Default"              IndToler    - Convergence tolerance for BEMT nonlinear solve residual equation {or "default"} (-) [unused when WakeMod=0 or 3]
+500                    MaxIter     - Maximum number of iteration steps (-) [unused when WakeMod=0]
+======  Dynamic Blade-Element/Momentum Theory Options  ====================================================== [used only when WakeMod=1]
+2                      DBEMT_Mod   - Type of dynamic BEMT (DBEMT) model {1=constant tau1, 2=time-dependent tau1} (-) [used only when WakeMod=2]
+2                      tau1_const  - Time constant for DBEMT (s) [used only when WakeMod=2 and DBEMT_Mod=1]
+======  OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options  ================== [used only when WakeMod=3]
+"unused"               OLAFInputFileName - Input file for OLAF [used only when WakeMod=3]
+======  Beddoes-Leishman Unsteady Airfoil Aerodynamics Options  ===================================== [used only when AFAeroMod=2]
+3                      UAMod       - Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [used only when AFAeroMod=2]
+True                   FLookup     - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when AFAeroMod=2]
+0.0                    UAStartRad  - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2]
+1.0                    UAEndRad     - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2]
+======  Airfoil Information =========================================================================
+1                      AFTabMod    - Interpolation method for multiple airfoil tables {1=1D interpolation on AoA (first table only); 2=2D interpolation on AoA and Re; 3=2D interpolation on AoA and UserProp} (-)
+1                      InCol_Alfa  - The column in the airfoil tables that contains the angle of attack (-)
+2                      InCol_Cl    - The column in the airfoil tables that contains the lift coefficient (-)
+3                      InCol_Cd    - The column in the airfoil tables that contains the drag coefficient (-)
+4                      InCol_Cm    - The column in the airfoil tables that contains the pitching-moment coefficient; use zero if there is no Cm column (-)
+0                      InCol_Cpmin - The column in the airfoil tables that contains the Cpmin coefficient; use zero if there is no Cpmin column (-)
+50                     NumAFfiles  - Number of airfoil files used (-)
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_00.dat"    AFNames            - Airfoil file names (NumAFfiles lines) (quoted strings)
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_01.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_02.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_03.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_04.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_05.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_06.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_07.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_08.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_09.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_10.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_11.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_12.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_13.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_14.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_15.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_16.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_17.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_18.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_19.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_20.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_21.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_22.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_23.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_24.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_25.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_26.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_27.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_28.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_29.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_30.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_31.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_32.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_33.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_34.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_35.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_36.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_37.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_38.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_39.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_40.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_41.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_42.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_43.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_44.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_45.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_46.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_47.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_48.dat"
+"../IEA-15-240-RWT/Airfoils/IEA-15-240-RWT_AeroDyn15_Polar_49.dat"
+======  Rotor/Blade Properties  =====================================================================
+True                   UseBlCm     - Include aerodynamic pitching moment in calculations?  (flag)
+"../IEA-15-240-RWT/IEA-15-240-RWT_AeroDyn15_blade.dat" ADBlFile(1) - Name of file containing distributed aerodynamic properties for Blade #1 (-)
+"../IEA-15-240-RWT/IEA-15-240-RWT_AeroDyn15_blade.dat" ADBlFile(2) - Name of file containing distributed aerodynamic properties for Blade #2 (-) [unused if NumBl < 2]
+"../IEA-15-240-RWT/IEA-15-240-RWT_AeroDyn15_blade.dat" ADBlFile(3) - Name of file containing distributed aerodynamic properties for Blade #3 (-) [unused if NumBl < 3]
+======  Tower Influence and Aerodynamics ============================================================= [used only when TwrPotent/=0, TwrShadow/=0, or TwrAero=True]
+11                     NumTwrNds   - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, or TwrAero=True]
+TwrElev        TwrDiam        TwrCd         TwrTI (used only with TwrShadow=2)
+(m)              (m)           (-)               (-)
+  15.           10.            0.5               0.1
+  28.           10.            0.5               0.1
+  41.            9.926         0.5               0.1
+  54.            9.443         0.5               0.1
+  67.            8.833         0.5               0.1
+  80.            8.151         0.5               0.1
+  93.            7.39          0.5               0.1
+ 106.            6.909         0.5               0.1
+ 119.            6.748         0.5               0.1
+ 132.            6.572         0.5               0.1
+ 144.386         6.5           0.5               0.1
+======  Outputs  ====================================================================================
+True                   SumPrint    - Generate a summary file listing input options and interpolated properties to "<rootname>.AD.sum"?  (flag)
+9                      NBlOuts     - Number of blade node outputs [0 - 9] (-)
+1, 6, 11, 20, 30, 38, 43, 47, 50 BlOutNd     - Blade nodes whose values will be output  (-)
+0                      NTwOuts     - Number of tower node outputs [0 - 9]  (-)
+1, 2, 3, 4, 5          TwOutNd     - Tower nodes whose values will be output  (-)
+                   OutList             - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
+"RtAeroFxh"
+"RtAeroFyh"
+"RtAeroFzh"
+"RtAeroMxh"
+"RtAeroMyh"
+"RtAeroMzh"
+"RtVAvgxh"
+"RtAeroCp"
+"RtAeroCt"
+"RtArea"
+"RtSpeed"
+"RtTSR"
+END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
+---------------------- NODE OUTPUTS --------------------------------------------
+          3   BldNd_BladesOut  - Blades to output
+         99   BldNd_BlOutNd   - Blade nodes on each blade (currently unused)
+              OutList     - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx, AeroDyn_Nodes tab for a listing of available output channels, (-)
+"VUndx"     - x-component of undisturbed wind velocity at each node
+"VUndy"     - y-component of undisturbed wind velocity at each node
+"VUndz"     - z-component of undisturbed wind velocity at each node
+END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
+---------------------------------------------------------------------------------------

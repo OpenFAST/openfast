@@ -1,0 +1,49 @@
+#  --------------------- ROSCO controller tuning input file -------------------
+    # Written for use with ROSCO_Toolbox tuning procedures
+    # Turbine: IEA 15MW Reference Wind Turbine
+# ------------------------------ OpenFAST PATH DEFINITIONS ------------------------------
+path_params:
+  FAST_InputFile: 'IEA-15-240-RWT-Monopile.fst'                                                                # Name of *.fst file
+  FAST_directory: '.'                     # Main OpenFAST model directory, where the *.fst lives 
+  rotor_performance_filename:  '../IEA-15-240-RWT/Cp_Ct_Cq.IEA15MW.txt'     
+# -------------------------------- TURBINE PARAMETERS ----------------------------------- 
+turbine_params:
+  rotor_inertia:      310619488.            # Rotor inertia [kg m^2], {Available in Elastodyn .sum file}
+  rated_rotor_speed:  0.7916813478          # Rated rotor speed [rad/s]
+  v_min:              3.                    # Cut-in wind speed [m/s] 
+  v_rated:            10.59                 # Rated wind speed [m/s]
+  v_max:              25.0                  # Cut-out wind speed [m/s], -- Does not need to be exact (JUST ASSUME FOR NOW)
+  max_pitch_rate:     0.0349                # Maximum blade pitch rate [rad/s]
+  max_torque_rate:    4500000.              # Maximum torque rate [Nm/s], {~1/4 VS_RtTq/s}
+  rated_power:        15000000.             # Rated Power [W]
+  bld_edgewise_freq:  4.0324                # Blade edgewise first natural frequency [rad/s]
+  bld_flapwise_freq:  3.4872                # Blade flapwise first natural frequency [rad/s]
+  TSR_operational:    9.0
+
+#------------------------------- CONTROLLER PARAMETERS ----------------------------------
+controller_params:
+  # Controller flags 
+  LoggingLevel:       1                     # {0: write no debug files, 1: write standard output .dbg-file, 2: write standard output .dbg-file and complete avrSWAP-array .dbg2-file
+  F_LPFType:          2                     # {1: first-order low-pass filter, 2: second-order low-pass filter}, [rad/s] (currently filters generator speed and pitch control signals)
+  F_NotchType:        0                     # Notch on the measured generator speed {0: disable, 1: enable} 
+  IPC_ControlMode:    0                     # Turn Individual Pitch Control (IPC) for fatigue load reductions (pitch contribution) {0: off, 1: 1P reductions, 2: 1P+2P reductions}
+  VS_ControlMode:     2                     # Generator torque control mode in above rated conditions {0: constant torque, 1: constant power, 2: TSR tracking PI control}
+  PC_ControlMode:     1                     # Blade pitch control mode {0: No pitch, fix to fine pitch, 1: active PI blade pitch control}
+  Y_ControlMode:      0                     # Yaw control mode {0: no yaw control, 1: yaw rate control, 2: yaw-by-IPC}
+  SS_Mode:            1                     # Setpoint Smoother mode {0: no setpoint smoothing, 1: introduce setpoint smoothing}
+  WE_Mode:            2                     # Wind speed estimator mode {0: One-second low pass filtered hub height wind speed, 1: Immersion and Invariance Estimator (Ortega et al.)}
+  PS_Mode:            2                     # Pitch saturation mode {0: no pitch saturation, 1: peak shaving, 2: Cp-maximizing pitch saturation, 3: peak shaving and Cp-maximizing pitch saturation}
+  SD_Mode:            0                     # Shutdown mode {0: no shutdown procedure, 1: pitch to max pitch at shutdown}
+  Fl_Mode:            0                     # Floating specific feedback mode {0: no nacelle velocity feedback, 1: nacelle velocity feedback}
+  Flp_Mode:           0                     # Flap control mode {0: no flap control, 1: steady state flap angle, 2: Proportional flap control}
+  # Controller parameters       
+  zeta_pc:            1.0                   # Pitch controller desired damping ratio [-]
+  omega_pc:           0.2                  # Pitch controller desired natural frequency [rad/s]
+  zeta_vs:            0.85                   # Torque controller desired damping ratio [-]
+  omega_vs:           0.12                 # Torque controller desired natural frequency [rad/s]
+  # Optional - these can be defined, but do not need to be
+  min_pitch:          0.0                   # Minimum pitch angle [rad], {default = 0 degrees}
+  vs_minspd:          0.523598775           # Minimum rotor speed [rad/s], {default = 0 rad/s}
+  twr_freq:           3.355 # for semi only!
+  ptfm_freq:          0.213 # for semi only!
+ 

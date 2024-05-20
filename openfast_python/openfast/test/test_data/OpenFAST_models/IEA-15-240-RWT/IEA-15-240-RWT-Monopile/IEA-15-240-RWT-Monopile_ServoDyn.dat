@@ -1,0 +1,110 @@
+------- SERVODYN v1.05.* INPUT FILE --------------------------------------------
+IEA 15 MW offshore reference model monopile configuration
+---------------------- SIMULATION CONTROL --------------------------------------
+False                  Echo        - Echo input data to <RootName>.ech (flag)
+"default"              DT          - Communication interval for controllers (s) (or "default")
+---------------------- PITCH CONTROL -------------------------------------------
+5                      PCMode      - Pitch control mode {0: none, 3: user-defined from routine PitchCntrl, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
+0.0                    TPCOn       - Time to enable active pitch control (s) [unused when PCMode=0]
+9999.9                 TPitManS(1) - Time to start override pitch maneuver for blade 1 and end standard pitch control (s)
+9999.9                 TPitManS(2) - Time to start override pitch maneuver for blade 2 and end standard pitch control (s)
+9999.9                 TPitManS(3) - Time to start override pitch maneuver for blade 3 and end standard pitch control (s) [unused for 2 blades]
+2.0                    PitManRat(1) - Pitch rate at which override pitch maneuver heads toward final pitch angle for blade 1 (deg/s)
+2.0                    PitManRat(2) - Pitch rate at which override pitch maneuver heads toward final pitch angle for blade 2 (deg/s)
+2.0                    PitManRat(3) - Pitch rate at which override pitch maneuver heads toward final pitch angle for blade 3 (deg/s) [unused for 2 blades]
+0.0                    BlPitchF(1) - Blade 1 final pitch for pitch maneuvers (degrees)
+0.0                    BlPitchF(2) - Blade 2 final pitch for pitch maneuvers (degrees)
+0.0                    BlPitchF(3) - Blade 3 final pitch for pitch maneuvers (degrees) [unused for 2 blades]
+---------------------- GENERATOR AND TORQUE CONTROL ----------------------------
+5                      VSContrl    - Variable-speed control mode {0: none, 1: simple VS, 3: user-defined from routine UserVSCont, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
+1                      GenModel    - Generator model {1: simple, 2: Thevenin, 3: user-defined from routine UserGen} (switch) [used only when VSContrl=0]
+95.756                 GenEff      - Generator efficiency [ignored by the Thevenin and user-defined generator models] (%)
+True                   GenTiStr    - Method to start the generator {T: timed using TimGenOn, F: generator speed using SpdGenOn} (flag)
+True                   GenTiStp    - Method to stop the generator {T: timed using TimGenOf, F: when generator power = 0} (flag)
+9999.9                 SpdGenOn    - Generator speed to turn on the generator for a startup (HSS speed) (rpm) [used only when GenTiStr=False]
+0.0                    TimGenOn    - Time to turn on the generator for a startup (s) [used only when GenTiStr=True]
+9999.9                 TimGenOf    - Time to turn off the generator (s) [used only when GenTiStp=True]
+---------------------- SIMPLE VARIABLE-SPEED TORQUE CONTROL --------------------
+9999.9                 VS_RtGnSp   - Rated generator speed for simple variable-speed generator control (HSS side) (rpm) [used only when VSContrl=1]
+9999.9                 VS_RtTq     - Rated generator torque/constant generator torque in Region 3 for simple variable-speed generator control (HSS side) (N-m) [used only when VSContrl=1]
+9999.9                 VS_Rgn2K    - Generator torque constant in Region 2 for simple variable-speed generator control (HSS side) (N-m/rpm^2) [used only when VSContrl=1]
+9999.9                 VS_SlPc     - Rated generator slip percentage in Region 2 1/2 for simple variable-speed generator control (%) [used only when VSContrl=1]
+---------------------- SIMPLE INDUCTION GENERATOR ------------------------------
+9999.9                 SIG_SlPc    - Rated generator slip percentage (%) [used only when VSContrl=0 and GenModel=1]
+9999.9                 SIG_SySp    - Synchronous (zero-torque) generator speed (rpm) [used only when VSContrl=0 and GenModel=1]
+9999.9                 SIG_RtTq    - Rated torque (N-m) [used only when VSContrl=0 and GenModel=1]
+9999.9                 SIG_PORt    - Pull-out ratio (Tpullout/Trated) (-) [used only when VSContrl=0 and GenModel=1]
+---------------------- THEVENIN-EQUIVALENT INDUCTION GENERATOR -----------------
+9999.9                 TEC_Freq    - Line frequency [50 or 60] (Hz) [used only when VSContrl=0 and GenModel=2]
+100                    TEC_NPol    - Number of poles [even integer > 0] (-) [used only when VSContrl=0 and GenModel=2]
+9999.9                 TEC_SRes    - Stator resistance (ohms) [used only when VSContrl=0 and GenModel=2]
+9999.9                 TEC_RRes    - Rotor resistance (ohms) [used only when VSContrl=0 and GenModel=2]
+9999.9                 TEC_VLL     - Line-to-line RMS voltage (volts) [used only when VSContrl=0 and GenModel=2]
+9999.9                 TEC_SLR     - Stator leakage reactance (ohms) [used only when VSContrl=0 and GenModel=2]
+9999.9                 TEC_RLR     - Rotor leakage reactance (ohms) [used only when VSContrl=0 and GenModel=2]
+9999.9                 TEC_MR      - Magnetizing reactance (ohms) [used only when VSContrl=0 and GenModel=2]
+---------------------- HIGH-SPEED SHAFT BRAKE ----------------------------------
+0                      HSSBrMode   - HSS brake model {0: none, 1: simple, 3: user-defined from routine UserHSSBr, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
+9999.9                 THSSBrDp    - Time to initiate deployment of the HSS brake (s)
+9999.9                 HSSBrDT     - Time for HSS-brake to reach full deployment once initiated (sec) [used only when HSSBrMode=1]
+9999.9                 HSSBrTqF    - Fully deployed HSS-brake torque (N-m)
+---------------------- NACELLE-YAW CONTROL -------------------------------------
+0                      YCMode      - Yaw control mode {0: none, 3: user-defined from routine UserYawCont, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
+9999.9                 TYCOn       - Time to enable active yaw control (s) [unused when YCMode=0]
+0.0                    YawNeut     - Neutral yaw position--yaw spring force is zero at this yaw (degrees)
+3256731209.0           YawSpr      - Nacelle-yaw spring constant (N-m/rad)
+2621683.0              YawDamp     - Nacelle-yaw damping constant (N-m/(rad/s))
+9999.9                 TYawManS    - Time to start override yaw maneuver and end standard yaw control (s)
+0.25                   YawManRat   - Yaw maneuver rate (in absolute value) (deg/s)
+0.0                    NacYawF     - Final yaw angle for override yaw maneuvers (degrees)
+---------------------- AERODYNAMIC FLOW CONTROL --------------------------------
+          0   AfCmode      - Airfoil control mode {0: none, 1: cosine wave cycle, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
+          0   AfC_Mean     - Mean level for cosine cycling or steady value (-) [used only with AfCmode==1]
+          0   AfC_Amp      - Amplitude for for cosine cycling of flap signal (-) [used only with AfCmode==1]
+          0   AfC_Phase    - Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of flap signal (deg) [used only with AfCmode==1]
+---------------------- STRUCTURAL CONTROL --------------------------------------
+0             NumBStC      - Number of blade structural controllers (integer)
+"unused"      BStCfiles    - Name of the files for blade structural controllers (quoted strings) [unused when NumBStC==0]
+0             NumNStC      - Number of nacelle structural controllers (integer)
+"unused"      NStCfiles    - Name of the files for nacelle structural controllers (quoted strings) [unused when NumNStC==0]
+0             NumTStC      - Number of tower structural controllers (integer)
+"unused"      TStCfiles    - Name of the files for tower structural controllers (quoted strings) [unused when NumTStC==0]
+0             NumSStC      - Number of substructure structural controllers (integer)
+"unused"      SStCfiles    - Name of the files for substructure structural controllers (quoted strings) [unused when NumSStC==0]
+---------------------- CABLE CONTROL -------------------------------------------
+          0   CCmode       - Cable control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
+---------------------- BLADED INTERFACE ---------------------------------------- [used only with Bladed Interface]
+"../../../../../local/lib/libdiscon.dylib"  DLL_FileName - Name/location of the dynamic library {.dll [Windows] or .so [Linux]} in the Bladed-DLL format (-) [used only with Bladed Interface]
+"DISCON-Monopile.IN"   DLL_InFile  - Name of input file sent to the DLL (-) [used only with Bladed Interface]
+"DISCON"               DLL_ProcName - Name of procedure in DLL to be called (-) [case sensitive; used only with DLL Interface]
+"default"              DLL_DT      - Communication interval for dynamic library (s) (or "default") [used only with Bladed Interface]
+False                  DLL_Ramp    - Whether a linear ramp should be used between DLL_DT time steps [introduces time shift when true] (flag) [used only with Bladed Interface]
+9999.9                 BPCutoff    - Cuttoff frequency for low-pass filter on blade pitch from DLL (Hz) [used only with Bladed Interface]
+0.0                    NacYaw_North - Reference yaw angle of the nacelle when the upwind end points due North (deg) [used only with Bladed Interface]
+0                      Ptch_Cntrl  - Record 28: Use individual pitch control {0: collective pitch; 1: individual pitch control} (switch) [used only with Bladed Interface]
+0.0                    Ptch_SetPnt - Record  5: Below-rated pitch angle set-point (deg) [used only with Bladed Interface]
+0.0                    Ptch_Min    - Record  6: Minimum pitch angle (deg) [used only with Bladed Interface]
+0.0                    Ptch_Max    - Record  7: Maximum pitch angle (deg) [used only with Bladed Interface]
+0.0                    PtchRate_Min - Record  8: Minimum pitch rate (most negative value allowed) (deg/s) [used only with Bladed Interface]
+0.0                    PtchRate_Max - Record  9: Maximum pitch rate  (deg/s) [used only with Bladed Interface]
+0.0                    Gain_OM     - Record 16: Optimal mode gain (Nm/(rad/s)^2) [used only with Bladed Interface]
+0.0                    GenSpd_MinOM - Record 17: Minimum generator speed (rpm) [used only with Bladed Interface]
+0.0                    GenSpd_MaxOM - Record 18: Optimal mode maximum speed (rpm) [used only with Bladed Interface]
+0.0                    GenSpd_Dem  - Record 19: Demanded generator speed above rated (rpm) [used only with Bladed Interface]
+0.0                    GenTrq_Dem  - Record 22: Demanded generator torque above rated (Nm) [used only with Bladed Interface]
+0.0                    GenPwr_Dem  - Record 13: Demanded power (W) [used only with Bladed Interface]
+---------------------- BLADED INTERFACE TORQUE-SPEED LOOK-UP TABLE -------------
+0                      DLL_NumTrq  - Record 26: No. of points in torque-speed look-up table {0 = none and use the optimal mode parameters; nonzero = ignore the optimal mode PARAMETERs by setting Record 16 to 0.0} (-) [used only with Bladed Interface]
+GenSpd_TLU            	GenTrq_TLU            
+(rpm)                 	(Nm)                  
+---------------------- OUTPUT --------------------------------------------------
+True                   SumPrint    - Print summary data to <RootName>.sum (flag) (currently unused)
+1                      OutFile     - Switch to determine where output will be placed: {1: in module output file only; 2: in glue code output file only; 3: both} (currently unused)
+True                   TabDelim    - Use tab delimiters in text tabular output file? (flag) (currently unused)
+"ES10.3E2"             OutFmt      - Format used for text tabular output (except time).  Resulting field should be 10 characters. (quoted string) (currently unused)
+0.0                    TStart      - Time to begin tabular output (s) (currently unused)
+              OutList      - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
+"GenPwr"
+"GenTq"
+END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
+---------------------------------------------------------------------------------------
