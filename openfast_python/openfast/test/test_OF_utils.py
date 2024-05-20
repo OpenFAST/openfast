@@ -5,6 +5,7 @@ import platform
 
 from openfast.FAST_reader import InputReader_OpenFAST
 from openfast.FAST_writer import InputWriter_OpenFAST
+from openfast.FAST_output_reader import FASTOutputFile
 
 REPOSITORY_ROOT = osp.dirname(osp.dirname(osp.dirname(osp.dirname(__file__))))
 TEST_DATA_DIR = osp.join(REPOSITORY_ROOT, "openfast_python", "openfast", "test", "test_data")
@@ -22,7 +23,7 @@ bin_dir  = osp.dirname(of_path)
 
 class TestOFutils(unittest.TestCase):
 
-    def testOF_utils(self):
+    def testOF_Inputs(self):
         # Read input deck
         fast_reader = InputReader_OpenFAST()
         fast_writer = InputWriter_OpenFAST()
@@ -60,6 +61,25 @@ class TestOFutils(unittest.TestCase):
                 self.assertTrue(True)
             except:
                 self.assertEqual('Running','Success')
+
+    def testOF_Outputs(self):
+        # Read output deck
+        asciiOutput = osp.join('temp','OpenFAST',f'iea15.out')
+        binaryOutput = osp.join('temp','OpenFAST',f'iea15.outb')
+        
+        with self.subTest('Reading ASCII output', i=0):
+            try:
+                fast_outout = FASTOutputFile(filename=asciiOutput)
+                self.assertTrue(True)
+            except:
+                self.assertEqual('Writing','Success')
+
+        with self.subTest('Reading Binary output', i=1):
+            try:
+                fast_outout = FASTOutputFile(filename=binaryOutput)
+                self.assertTrue(True)
+            except:
+                self.assertEqual('Writing','Success')
 
 
 if __name__ == "__main__":
