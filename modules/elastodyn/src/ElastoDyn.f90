@@ -493,6 +493,8 @@ SUBROUTINE ED_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""            
       
+         ! Passing in u(1) as a dummy. ED_UpdateDiscState does not require input, u, only the continuous state, x.
+      CALL ED_UpdateDiscState( t, n, u(1), p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
       SELECT CASE ( p%method )
          
@@ -525,8 +527,6 @@ SUBROUTINE ED_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
       
       IF ( ( x%QT(DOF_GeAz) + x%QT(DOF_DrTr) ) >= TwoPi_D )  x%QT(DOF_GeAz) = x%QT(DOF_GeAz) - TwoPi_D
             
-      CALL ED_UpdateDiscState( t, n, u(1), p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-      
 END SUBROUTINE ED_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
@@ -1806,7 +1806,7 @@ END IF
    ELSE IF (p%PtfmYMod .EQ. 1) THEN
       y%PtfmRefY = p%CYawFilt * xd%PtfmRefY + (1.0-p%CYawFilt) * x%QT(DOF_Y)
    END IF
-      
+     
    !...............................................................................................................................
    ! Outputs required for external tower loads
    !...............................................................................................................................
