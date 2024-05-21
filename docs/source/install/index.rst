@@ -193,13 +193,13 @@ To pull and run with local files:
 
 .. code-block:: shell
 
-    docker run --rm -it --volume=/path/to/files:/files ghcr.io/OpenFAST/openfast:latest openfast /files/main.fst
+    docker run --rm -it --volume=/path/to/files:/files ghcr.io/openfast/openfast:latest openfast /files/main.fst
 
 For running the container interactively:
 
 .. code-block:: shell
 
-    docker run --rm -it --volume=/path/to/files:/files ghcr.io/OpenFAST/openfast:latest /bin/bash
+    docker run --rm -it --volume=/path/to/files:/files ghcr.io/openfast/openfast:latest /bin/bash
 
 
 Build your own images
