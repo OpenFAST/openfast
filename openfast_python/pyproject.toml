@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "octue-openfast"
-version = "3.5.4.beta-0"
+version = "3.5.4.beta-1"
 description = "Readers and writers for OpenFAST files."
 authors = [
     "NREL WISDEM Team <systems.engineering@nrel.gov>",
