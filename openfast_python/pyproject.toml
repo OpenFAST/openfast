@@ -20,6 +20,12 @@ numpy = "^1"
 pandas = "^2"
 xlrd = "^2"
 ruamel_yaml = "^0.18"
+rosco = {version = "^2.9.2", optional = true}
+
+
+[tool.poetry.extras]
+rosco = ["rosco"]
+
 
 [build-system]
 requires = ["poetry-core"]
