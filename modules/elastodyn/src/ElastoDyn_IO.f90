@@ -4569,6 +4569,13 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrSta
       CALL SetErrStat(ErrID_Fatal,'ShftTilt must be between -pi/2 and pi/2 radians (i.e., in the range [-90, 90] degrees).',ErrStat,ErrMsg,RoutineName)
    END IF
 
+      ! Check the inputs associated with large platform yaw modeling, PtfmYMod and PtfmYCutoff, are valid
+   IF ( (InputFileData%PtfmYMod .NE. 0_IntKi) .AND. (InputFileData%PtfmYMod .NE. 1_IntKi) ) THEN
+      CALL SetErrStat( ErrID_Fatal, 'PtfmYMod must be 0 (static platform reference yaw offset) or 1 (dynamic platform reference yaw offset)',ErrStat,ErrMsg,RoutineName)
+   END IF
+   IF ( (InputFileData%PtfmYMod .EQ. 1_IntKi) .AND. (InputFileData%PtfmYCutOff <= 0_ReKi) ) THEN
+      CALL SetErrStat( ErrID_Fatal, 'PtfmYCutOff must be greater than 0 Hz.',ErrStat,ErrMsg,RoutineName)
+   END IF
 
       ! Check for violations of the small-angle assumption (15-degree limit, using radians):
    IF ( ABS( InputFileData%PtfmRoll ) > SmallAngleLimit_Rad ) THEN

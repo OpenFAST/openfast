@@ -1872,7 +1872,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       INTEGER(IntKi)                       :: indxStart, indxEnd                      ! Starting and ending indices for the iBody_th sub vector in an NBody long vector
       REAL(ReKi)                           :: bodyPosition(3)                         ! x-y displaced location of a WAMIT body (relative to 
       REAL(ReKi)                           :: tmpVec3(3),tmpVec6(6)
-      REAL(ReKi),      PARAMETER           :: LrgAngle = 0.4                          ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
+      REAL(ReKi),      PARAMETER           :: LrgAngle = 0.261799387799149            ! Threshold for platform roll and pitch rotation (15 deg). This is consistent with the ElastoDyn check.
 
         ! Error handling
       CHARACTER(1024)                      :: ErrMsg2                                 ! Temporary error message for calls
