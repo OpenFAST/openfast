@@ -56,17 +56,18 @@ param       ^       -           IntKi           VF_TransAcc         -   8   -   
 param       ^       -           IntKi           VF_AngularAcc       -   9   -   ""  -
 param       ^       -           IntKi           VF_Scalar           -  10   -   ""  -
 
-param       ^       -           IntKi           VF_None             -   0   -   "Variable with no flags"  -
-param       ^       -           IntKi           VF_Mesh             -   1   -   "Variable contained in mesh"  -
-param       ^       -           IntKi           VF_Line             -   2   -   "Variable is for a line mesh"  -
-param       ^       -           IntKi           VF_RotFrame         -   4   -   "Variable in rotating frame"  -
-param       ^       -           IntKi           VF_Linearize        -   8   -   "Variable for linearization"  -
-param       ^       -           IntKi           VF_ExtLin           -  16   -   "Variable for extended linearization"  -
-param       ^       -           IntKi           VF_WriteOut         -  32   -   "Variable for write output"  -
-param       ^       -           IntKi           VF_Solve            -  64   -   "Variable for solver"  -
-param       ^       -           IntKi           VF_AeroMap          - 128   -   "Variable for aeromap"  -
-param       ^       -           IntKi           VF_DerivOrder1      - 256   -   "Variable is derivative order 1 in linearization file"  -
-param       ^       -           IntKi           VF_DerivOrder2      - 512   -   "Variable is derivative order 2 in linearization file"  -
+param       ^       -           IntKi           VF_None             -    0  -   "Variable with no flags"  -
+param       ^       -           IntKi           VF_Mesh             -    1  -   "Variable contained in mesh"  -
+param       ^       -           IntKi           VF_Line             -    2  -   "Variable is for a line mesh"  -
+param       ^       -           IntKi           VF_RotFrame         -    4  -   "Variable in rotating frame"  -
+param       ^       -           IntKi           VF_Linearize        -    8  -   "Variable for linearization"  -
+param       ^       -           IntKi           VF_ExtLin           -   16  -   "Variable for extended linearization"  -
+param       ^       -           IntKi           VF_SmallAngle       -   32  -   "Use small angles to calculate difference in linearization"  -
+param       ^       -           IntKi           VF_WriteOut         -   64  -   "Variable for write output"  -
+param       ^       -           IntKi           VF_Solve            -  128  -   "Variable for solver"  -
+param       ^       -           IntKi           VF_AeroMap          -  256  -   "Variable for aeromap"  -
+param       ^       -           IntKi           VF_DerivOrder1      -  512  -   "Variable is derivative order 1 in linearization file"  -
+param       ^       -           IntKi           VF_DerivOrder2      - 1024  -   "Variable is derivative order 2 in linearization file"  -
 
 param       ^       -           IntKi           VC_None             -   0   -   ""  -
 param       ^       -           IntKi           VC_Tight            -   1   -   ""  -

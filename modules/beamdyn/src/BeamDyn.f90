@@ -53,7 +53,7 @@ MODULE BeamDyn
    PUBLIC :: BD_UpdateGlobalRef      !< update the BeamDyn reference.  The reference for the calculations follows u%RootMotionMesh
                                                !  and therefore x%q must be updated from T -> T+DT to include the root motion from T->T+DT
 
-   PUBLIC :: BD_PackStateOP, BD_UnpackStateOP
+   PUBLIC :: BD_PackContStateQuatOP, BD_UnpackContStateQuatOP
    PUBLIC :: BD_PackInputOP, BD_UnpackInputOP
    PUBLIC :: BD_PackOutputOP
 
@@ -62,7 +62,7 @@ MODULE BeamDyn
    ! the development of the tight coupling algorithm for OpenFAST, we decided to try changing all the states in BeamDyn to
    ! follow the moving BladeRootMotion mesh.  This requires changing the states after an UpdateStates call to be relative to
    ! the new BladeRootMotion mesh orientation and position.
-   ! Upadate the reference frame after each State update (or use the old method)?
+   ! Update the reference frame after each State update (or use the old method)?
    LOGICAL, PARAMETER :: ChangeRefFrame = .false.
 
 CONTAINS
@@ -6009,7 +6009,7 @@ contains
    end function Failed
 end subroutine
 
-subroutine BD_PackStateOP(p, x, Values)
+subroutine BD_PackContStateQuatOP(p, x, Values)
    type(BD_ParameterType), intent(in)        :: p
    type(BD_ContinuousStateType), intent(in)  :: x
    real(R8Ki), intent(out)                   :: Values(:)
@@ -6018,19 +6018,19 @@ subroutine BD_PackStateOP(p, x, Values)
       associate (Var => p%Vars%x(i))
          select case(Var%Field)
          case (VF_TransDisp)
-            Values(Var%iLoc(1):Var%iLoc(2)) = x%q(1:3,Var%iUsr(1))      ! XYZ displacement
+            Values(Var%iLoc(1):Var%iLoc(2)) = x%q(1:3,Var%iUsr(1))               ! XYZ displacement
          case (VF_Orientation)
-            Values(Var%iLoc(1):Var%iLoc(2)) = x%q(4:6,Var%iUsr(1))      ! WM Parameters
+            Values(Var%iLoc(1):Var%iLoc(2)) = wm_to_quat(x%q(4:6,Var%iUsr(1)))   ! WM to quaternion
          case (VF_TransVel)
-            Values(Var%iLoc(1):Var%iLoc(2)) = x%dqdt(1:3,Var%iUsr(1))   ! XYZ velocity
+            Values(Var%iLoc(1):Var%iLoc(2)) = x%dqdt(1:3,Var%iUsr(1))            ! XYZ velocity
          case (VF_AngularVel)
-            Values(Var%iLoc(1):Var%iLoc(2)) = x%dqdt(4:6,Var%iUsr(1))   ! Angular velocity
+            Values(Var%iLoc(1):Var%iLoc(2)) = x%dqdt(4:6,Var%iUsr(1))            ! Angular velocity
          end select
       end associate
    end do
 end subroutine
 
-subroutine BD_UnpackStateOP(p, Values, x)
+subroutine BD_UnpackContStateQuatOP(p, Values, x)
    type(BD_ParameterType), intent(in)           :: p
    real(R8Ki), intent(in)                       :: Values(:)
    type(BD_ContinuousStateType), intent(inout)  :: x
@@ -6039,13 +6039,34 @@ subroutine BD_UnpackStateOP(p, Values, x)
       associate (Var => p%Vars%x(i))
          select case(Var%Field)
          case (VF_TransDisp)
-            x%q(1:3,Var%iUsr(1)) = Values(Var%iLoc(1):Var%iLoc(2))      ! XYZ displacement
+            x%q(1:3,Var%iUsr(1)) = Values(Var%iLoc(1):Var%iLoc(2))               ! XYZ displacement
          case (VF_Orientation)
-            x%q(4:6,Var%iUsr(1)) = Values(Var%iLoc(1):Var%iLoc(2))      ! WM parameters
+            x%q(4:6,Var%iUsr(1)) = quat_to_wm(Values(Var%iLoc(1):Var%iLoc(2)))   ! Quaternion to WM
          case (VF_TransVel)
-            x%dqdt(1:3,Var%iUsr(1)) = Values(Var%iLoc(1):Var%iLoc(2))   ! XYZ velocity
+            x%dqdt(1:3,Var%iUsr(1)) = Values(Var%iLoc(1):Var%iLoc(2))            ! XYZ velocity
          case (VF_AngularVel)
-            x%dqdt(4:6,Var%iUsr(1)) = Values(Var%iLoc(1):Var%iLoc(2))   ! Angular velocity
+            x%dqdt(4:6,Var%iUsr(1)) = Values(Var%iLoc(1):Var%iLoc(2))            ! Angular velocity
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine BD_PackContStateOP(p, x, Values)
+   type(BD_ParameterType), intent(in)        :: p
+   type(BD_ContinuousStateType), intent(in)  :: x
+   real(R8Ki), intent(out)                   :: Values(:)
+   integer(IntKi)                            :: i
+   do i = 1, size(p%Vars%x)
+      associate (Var => p%Vars%x(i))
+         select case(Var%Field)
+         case (VF_TransDisp)
+            Values(Var%iLoc(1):Var%iLoc(2)) = x%q(1:3,Var%iUsr(1))      ! XYZ velocity
+         case (VF_Orientation)
+            Values(Var%iLoc(1):Var%iLoc(2)) = x%q(4:6,Var%iUsr(1))      ! Angular velocity
+         case (VF_TransVel)
+            Values(Var%iLoc(1):Var%iLoc(2)) = x%dqdt(1:3,Var%iUsr(1))   ! XYZ acceleration
+         case (VF_AngularVel)
+            Values(Var%iLoc(1):Var%iLoc(2)) = x%dqdt(4:6,Var%iUsr(1))   ! Angular acceleration
          end select
       end associate
    end do
@@ -6200,13 +6221,13 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
             call BD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
             call BD_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call BD_PackStateOP(p, m%dxdt_lin, m%Jac%x_pos)
+            call BD_PackContStateOP(p, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
             call BD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
             call BD_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call BD_PackStateOP(p, m%dxdt_lin, m%Jac%x_neg)
+            call BD_PackContStateOP(p, m%dxdt_lin, m%Jac%x_neg)
 
             ! Calculate column index
             col = p%Vars%u(i)%iLoc(1) + j - 1
@@ -6297,7 +6318,7 @@ SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
    ! Copy state values
    call BD_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-   call BD_PackStateOP(p, x, m%Jac%x)
+   call BD_PackContStateQuatOP(p, x, m%Jac%x)
    
    ! If rotate states is enabled
    if (p%RotStates) then
@@ -6338,13 +6359,13 @@ SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-            call BD_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
+            call BD_UnpackContStateQuatOP(p, m%Jac%x_perturb, m%x_perturb)
             call BD_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2, NeedWriteOutput=IsFullLin); if (Failed()) return
             call BD_PackOutputOP(p, m%y_lin, m%Jac%y_pos, IsFullLin)
 
             ! Calculate negative perturbation
             call MV_Perturb(p%Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-            call BD_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
+            call BD_UnpackContStateQuatOP(p, m%Jac%x_perturb, m%x_perturb)
             call BD_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2, NeedWriteOutput=IsFullLin); if (Failed()) return
             call BD_PackOutputOP(p, m%y_lin, m%Jac%y_neg, IsFullLin)
 
@@ -6386,15 +6407,15 @@ SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-            call BD_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
+            call BD_UnpackContStateQuatOP(p, m%Jac%x_perturb, m%x_perturb)
             call BD_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call BD_PackStateOP(p, m%dxdt_lin, m%Jac%x_pos)
+            call BD_PackContStateOP(p, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(p%Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-            call BD_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
+            call BD_UnpackContStateQuatOP(p, m%Jac%x_perturb, m%x_perturb)
             call BD_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call BD_PackStateOP(p, m%dxdt_lin, m%Jac%x_neg)
+            call BD_PackContStateOP(p, m%dxdt_lin, m%Jac%x_neg)
 
             ! Calculate column index
             col = p%Vars%x(i)%iLoc(1) + j - 1
@@ -6640,7 +6661,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, FlagF
          call AllocAry(x_op, p%Vars%Nx, 'x_op', ErrStat2, ErrMsg2); if (Failed()) return
       end if
 
-      call BD_PackStateOP(p, x, x_op)
+      call BD_PackContStateOP(p, x, x_op)
 
    end if
 
@@ -6653,7 +6674,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, FlagF
       end if
       
       call BD_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-      call BD_PackStateOP(p, m%dxdt_lin, dx_op)
+      call BD_PackContStateOP(p, m%dxdt_lin, dx_op)
 
    end if
 

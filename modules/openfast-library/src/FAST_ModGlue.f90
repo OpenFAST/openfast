@@ -469,7 +469,7 @@ subroutine ModGlue_Linearize_OP(Turbine, Mods, ModGlue, p, m, p_FAST, m_FAST, y_
       end associate
    end do
 
-   ! Linearize mesh mappings to popoulate dUdy and dUdu
+   ! Linearize mesh mappings to populate dUdy and dUdu
    ModGlue%Lin%dUdy = 0.0_R8Ki
    call Eye2D(ModGlue%Lin%dUdu, ErrStat2, ErrMsg2); if (Failed()) return
    call FAST_LinearizeMappings(Turbine, Mods, m%Mappings, p%iMod, p%IdxLin, ErrStat2, ErrMsg2, ModGlue%Lin%dUdu, ModGlue%Lin%dUdy)
@@ -522,10 +522,8 @@ subroutine ModLin_StateMatrices(ModGlue, JacScaleFactor, ErrStat, ErrMsg)
 
    ! *** get G matrix ****
    !----------------------
-   if (.not. allocated(G)) then
-      call AllocAry(G, size(dUdu, 1), size(dUdu, 2), 'G', ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(ipiv, ModGlue%Vars%Nu, 'ipiv', ErrStat2, ErrMsg2); if (Failed()) return
-   end if
+   call AllocAry(G, size(dUdu, 1), size(dUdu, 2), 'G', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(ipiv, ModGlue%Vars%Nu, 'ipiv', ErrStat2, ErrMsg2); if (Failed()) return
 
    !G = dUdu + matmul(dUdy, y_FAST%Lin%Glue%D)
    G = dUdu
@@ -595,42 +593,58 @@ subroutine Precondition(uVars, G, dUdu, dUdy, JacScaleFactor)
    real(R8Ki), intent(inout)     :: dUdy(:, :)     !< jacobian in FAST linearization from right-hand-side of equation
    real(R8Ki), intent(in)        :: JacScaleFactor !< jacobian scale factor
    real(R8Ki), allocatable       :: diag(:)        !< diagonal elements of G
-   integer(IntKi)                :: i
+   integer(IntKi)                :: LoadFlags
+   integer(IntKi)                :: i, j, k
+   logical                       :: isRowLoad, isColLoad
+   logical, allocatable          :: isLoad(:)
 
-   ! Copy diagonal of G into temporary array, to be restored after conditioning,
-   ! this is done to avoid loss of precision in the diagonal terms
-   allocate (diag(size(G, 1)))
-   do i = 1, size(diag)
-      diag(i) = G(i, i)
-   end do
+   allocate(isLoad(size(dUdu,1)))
+   isLoad=.false.
 
-   ! Loop through glue code input varies
+   ! Loop through glue code input variables (cols)
    do i = 1, size(uVars)
 
-      ! If variable is not a load (force or moment), continue
-      if (.not. MV_HasFlags(uVars(i), ior(VF_Force, VF_Moment))) cycle
+      ! Get if col variable is a load
+      isColLoad = uVars(i)%Field == VF_Force .or. uVars(i)%Field == VF_Moment
 
-      ! Otherwise get variable start and end indices in matrix
+      ! Get col variable start and end indices in matrix
       associate (iLoc => uVars(i)%iLoc)
 
-         ! Multiply columns of G
-         G(:, iLoc(1):iLoc(2)) = G(:, iLoc(1):iLoc(2))*JacScaleFactor
+         isLoad(iLoc(1):iLoc(2)) = isColLoad
 
-         ! Divide rows of G
-         G(iLoc(1):iLoc(2), :) = G(iLoc(1):iLoc(2), :)/JacScaleFactor
+         ! Loop through glue code input variables (rows)
+         do j = 1, size(uVars)
 
-         ! Divide rows of dUdu
-         dUdu(iLoc(1):iLoc(2), :) = dUdu(iLoc(1):iLoc(2), :)/JacScaleFactor
+            ! Get if row variable is a load
+            isRowLoad = uVars(j)%Field == VF_Force .or. uVars(j)%Field == VF_Moment
 
-         ! Divide rows of dUdy
-         dUdy(iLoc(1):iLoc(2), :) = dUdy(iLoc(1):iLoc(2), :)/JacScaleFactor
+            ! Get row variable start and end indices in matrix
+            associate (jLoc => uVars(j)%iLoc)
+
+               if (isColLoad .and. (.not. isRowLoad)) then
+
+                  ! Multiply columns of G
+                  G(jLoc(1):jLoc(2), iLoc(1):iLoc(2)) = G(jLoc(1):jLoc(2), iLoc(1):iLoc(2))*JacScaleFactor
+
+               else if (isRowLoad .and. (.not. isColLoad)) then
+
+                  ! Divide rows of G
+                  G(jLoc(1):jLoc(2), iLoc(1):iLoc(2)) = G(jLoc(1):jLoc(2), iLoc(1):iLoc(2))/JacScaleFactor
+
+               end if
+
+            end associate
+
+         end do
+
+         ! Divide rows of dUdu and dUdy by scale factor
+         if (isColLoad) then
+            dUdu(iLoc(1):iLoc(2), :) = dUdu(iLoc(1):iLoc(2), :)/JacScaleFactor
+            dUdy(iLoc(1):iLoc(2), :) = dUdy(iLoc(1):iLoc(2), :)/JacScaleFactor
+         end if
 
       end associate
-   end do
 
-   ! Restore diagonal of G from temporary array
-   do i = 1, size(diag)
-      G(i, i) = diag(i)
    end do
 
 end subroutine
@@ -648,19 +662,21 @@ subroutine Postcondition(uVars, dUdu, dUdy, JacScaleFactor)
    ! Loop through glue code input varies
    do i = 1, size(uVars)
 
-      ! If variable is not a load (force or moment), continue
-      if (.not. MV_HasFlags(uVars(i), ior(VF_Force, VF_Moment))) cycle
+      ! If variable is a (force or moment), apply post-conditioner
+      if (uVars(i)%Field == VF_Force .or. uVars(i)%Field == VF_Moment) then
 
-      ! Otherwise get variable start and end indices in matrix
-      associate (iLoc => uVars(i)%iLoc)
+         ! Otherwise get variable start and end indices in matrix
+         associate (iLoc => uVars(i)%iLoc)
 
-         ! Multiply rows of dUdu
-         dUdu(iLoc(1):iLoc(2), :) = dUdu(iLoc(1):iLoc(2), :)*JacScaleFactor
+            ! Multiply rows of dUdu
+            dUdu(iLoc(1):iLoc(2), :) = dUdu(iLoc(1):iLoc(2), :)*JacScaleFactor
 
-         ! Multiply rows of dUdy
-         dUdy(iLoc(1):iLoc(2), :) = dUdy(iLoc(1):iLoc(2), :)*JacScaleFactor
+            ! Multiply rows of dUdy
+            dUdy(iLoc(1):iLoc(2), :) = dUdy(iLoc(1):iLoc(2), :)*JacScaleFactor
 
-      end associate
+         end associate
+
+      end if
    end do
 
 end subroutine
@@ -904,8 +920,8 @@ subroutine WrLinFile_txt_Table(VarAry, FlagFilter, p_FAST, Un, RowCol, op, IsDer
                ! Skip writing if not the first value in orientation (3 values)
                if (mod(j - 1, 3) /= 0) cycle
 
-               ! Convert WM parameters to DCM
-               DCM = wm_to_dcm(real(op(i_op:i_op + 2), R8Ki))
+               ! Convert quaternion parameters to DCM
+               DCM = quat_to_dcm(real(op(i_op:i_op + 2), R8Ki))
 
                ! Write 3 rows of data (full dcm)
                write (Un, FmtRot) RowColIdx + 0, dcm(1, 1), dcm(1, 2), dcm(1, 3), VarRotFrame, VarDerivOrder, trim(Var%LinNames(j + 0))

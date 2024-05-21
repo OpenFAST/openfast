@@ -314,9 +314,9 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
                  os_BD => T%BD%OtherSt(ModData%Ins, STATE_PRED))
 
          ! Transfer tight coupling states to module
-         call BD_PackStateOP(p_BD, x_BD, m_BD%Jac%x)
+         call BD_PackContStateQuatOP(p_BD, x_BD, m_BD%Jac%x)
          ! call XferGblToLoc1D(ModData%ixs, x_TC, m_BD%Jac%x)
-         call BD_UnpackStateOP(p_BD, m_BD%Jac%x, x_BD)
+         call BD_UnpackContStateQuatOP(p_BD, m_BD%Jac%x, x_BD)
 
          ! TODO: Fix state reset
          ! Set BD accelerations and algorithmic accelerations from q matrix
@@ -348,7 +348,7 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
          ! end do
 
          ! Transfer updated states to solver
-         call BD_PackStateOP(p_BD, x_BD, m_BD%Jac%x)
+         call BD_PackContStateQuatOP(p_BD, x_BD, m_BD%Jac%x)
          ! call XferLocToGbl1D(ModData%ixs, m_BD%Jac%x, x_TC)
       end associate
 

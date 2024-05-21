@@ -1404,7 +1404,6 @@ subroutine InitMappings_SrvD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
    ! MeshMapCreate( PlatformMotion, SrvD%u%PtfmMotionMesh, MeshMapData%ED_P_2_SrvD_P_P, ErrStat2, ErrMsg2 )
 
-
    select case (SrcMod%ID)
 
    case (Module_BD)
@@ -1895,7 +1894,7 @@ subroutine FAST_LinearizeMappings(Turbine, Mods, Mappings, ModOrder, Idx, ErrSta
    character(*), parameter       :: RoutineName = 'FAST_LinearizeMappings'
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
-   integer(IntKi)                :: iLocSrc(2), iLocDst(2)
+   integer(IntKi)                :: iLocSrc(2), iLocDst(2), nLocSrc, nLocDst
    integer(IntKi)                :: i, j, k
    type(MeshType), pointer       :: SrcMesh, DstMesh
    type(MeshType), pointer       :: SrcDispMesh, DstDispMesh
@@ -1920,8 +1919,23 @@ subroutine FAST_LinearizeMappings(Turbine, Mods, Mappings, ModOrder, Idx, ErrSta
                call Idx_GetValLoc(Idx%u, Mapping%DstModIdx, Mapping%iVarDst, iGbl=iLocDst)
                if (iLocSrc(1) == 0 .or. iLocDst(1) == 0) cycle
 
-               ! Set coupling terms in dUdy to -1
-               dUdy(iLocDst(1):iLocDst(2), iLocSrc(1):iLocSrc(2)) = -1.0_R8Ki
+               ! Get number of source and destination locations
+               nLocSrc = iLocSrc(2) - iLocSrc(1) + 1
+               nLocDst = iLocDst(2) - iLocDst(1) + 1
+
+               ! If source has multiple locations, destination must have same number, connect 1-to-1
+               ! MapVariable checks that variables have same number if nLocSrc > 1
+               if (nLocSrc > 1) then
+                  do k = 0, nLocDst - 1
+                     dUdy(iLocDst(1) + k, iLocSrc(1) + k) = -1.0_R8Ki
+                  end do
+               else if (nLocDst == 1) then
+                  ! Source and destination have one location
+                  dUdy(iLocDst(1), iLocSrc(1)) = -1.0_R8Ki
+               else                          
+                  ! One source location to many destination locations
+                  dUdy(iLocDst(1):iLocDst(2), iLocSrc(1)) = -1.0_R8Ki
+               end if
 
             case (Map_MotionMesh)
 
@@ -2028,23 +2042,23 @@ contains
 
    subroutine Assemble_dUdu(Mapping)
       type(TC_MappingType), intent(in) :: Mapping
-   
+
       ! Effect of input Translation Displacement on input Translation Velocity
       if (allocated(Mapping%MeshMap%dM%tv_uD)) then
          call SumBlock(Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransDisp, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransVel, Mapping%MeshMap%dM%tv_uD, dUdu)
       end if
-   
+
       ! Effect of input Translation Displacement on input Translation Acceleration
       if (allocated(Mapping%MeshMap%dM%ta_uD)) then
          call SumBlock(Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransDisp, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransAcc, Mapping%MeshMap%dM%ta_uD, dUdu)
       end if
-   
+
       ! Effect of input Translation Displacement on input Moments
       if (allocated(Mapping%MeshMap%dM%M_uS)) then
          call SumBlock(Idx%u, Mapping%SrcModIdx, Mapping%iVarSrcDispTransDisp, Idx%u, Mapping%DstModIdx, Mapping%iVarDstMoment, Mapping%MeshMap%dM%M_uS, dUdu)
       end if
    end subroutine
-   
+
    !> Assemble_dUdy_Loads assembles the linearization matrices for transfer of
    !! load fields between two meshes. It sets the following block matrix, which
    !! is the dUdy block for transfering output (source) mesh  to the input
@@ -2053,18 +2067,18 @@ contains
    !!      | M_fm   M_li |        | M^S |
    subroutine Assemble_dUdy_Loads(Mapping)
       type(TC_MappingType), intent(inout) :: Mapping
-   
+
       ! Load identity
       if (allocated(Mapping%MeshMap%dM%li)) then
          call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcForce, Idx%u, Mapping%DstModIdx, Mapping%iVarDstForce, Mapping%MeshMap%dM%li, dUdy)
          call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcMoment, Idx%u, Mapping%DstModIdx, Mapping%iVarDstMoment, Mapping%MeshMap%dM%li, dUdy)
       end if
-   
+
       ! Force to Moment
       if (allocated(Mapping%MeshMap%dM%m_f)) then
          call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcForce, Idx%u, Mapping%DstModIdx, Mapping%iVarDstMoment, Mapping%MeshMap%dM%m_f, dUdy)
       end if
-   
+
       ! Destination Translation Displacement to Moment
       if (allocated(Mapping%MeshMap%dM%m_uD)) then
          if (Mapping%DstUsesSibling) then
@@ -2079,7 +2093,7 @@ contains
          end if
       end if
    end subroutine
-   
+
    !> Assemble_dUdy_Motions assembles the linearization matrices for transfer of
    !! motion fields between two meshes. It set the following block matrix, which
    !! is the dUdy block for transfering output (source) mesh  to the input
@@ -2094,7 +2108,7 @@ contains
    !! u^S, theta^S, v^S, omega^S, a^S, alpha^S
    subroutine Assemble_dUdy_Motions(Mapping)
       type(TC_MappingType), intent(inout) :: Mapping
-   
+
       ! Motion identity
       if (allocated(Mapping%MeshMap%dM%mi)) then
          call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcTransDisp, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransDisp, Mapping%MeshMap%dM%mi, dUdy)
@@ -2104,30 +2118,30 @@ contains
          call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcTransAcc, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransAcc, Mapping%MeshMap%dM%mi, dUdy)
          call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcAngularAcc, Idx%u, Mapping%DstModIdx, Mapping%iVarDstAngularAcc, Mapping%MeshMap%dM%mi, dUdy)
       end if
-   
+
       ! Rotation to Translation
       if (allocated(Mapping%MeshMap%dM%fx_p)) then
          call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcOrientation, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransDisp, Mapping%MeshMap%dM%fx_p, dUdy)
          call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcAngularVel, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransVel, Mapping%MeshMap%dM%fx_p, dUdy)
          call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcAngularAcc, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransAcc, Mapping%MeshMap%dM%fx_p, dUdy)
       end if
-   
+
       ! Translation displacement to Translation velocity
       if (allocated(Mapping%MeshMap%dM%tv_us)) then
          call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcTransDisp, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransVel, Mapping%MeshMap%dM%tv_us, dUdy)
       end if
-   
+
       ! Translation displacement to Translation acceleration
       if (allocated(Mapping%MeshMap%dM%ta_us)) then
          call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcTransDisp, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransAcc, Mapping%MeshMap%dM%ta_us, dUdy)
       end if
-   
+
       ! Angular velocity to Translation acceleration
       if (allocated(Mapping%MeshMap%dM%ta_rv)) then
          call SumBlock(Idx%y, Mapping%SrcModIdx, Mapping%iVarSrcAngularVel, Idx%u, Mapping%DstModIdx, Mapping%iVarDstTransAcc, Mapping%MeshMap%dM%ta_rv, dUdy)
       end if
    end subroutine
-   
+
    subroutine SumBlock(IdxSrc, iModSrc, iVarSrc, IdxDst, iModDst, iVarDst, SrcM, DstM)
       type(VarIdxType), intent(in)     :: IdxDst, IdxSrc
       integer(IntKi), intent(in)       :: iModDst, iModSrc
@@ -2142,10 +2156,10 @@ contains
       ! Get global indices for source/destination modules/variables
       call Idx_GetValLoc(IdxSrc, iModSrc, iVarSrc, iGbl=iLocSrc)
       call Idx_GetValLoc(IdxDst, iModDst, iVarDst, iGbl=iLocDst)
-      
+
       ! If no global indices for source or destination, return
       if (iLocDst(1) == 0 .or. iLocSrc(1) == 0) return
-      
+
       ! Subtracts the source matrix from the destination sub-matrix
       associate (DstSubM => DstM(iLocDst(1):iLocDst(2), iLocSrc(1):iLocSrc(2)))
          DstSubM = DstSubM - SrcM
@@ -2157,7 +2171,6 @@ contains
       if (Failed) call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    end function
 end subroutine
-
 
 subroutine FAST_InputSolve(ModData, Mods, Mappings, Turbine, ErrStat, ErrMsg, UseU)
    type(ModDataType), intent(in)          :: ModData     !< Module data
@@ -2354,7 +2367,7 @@ subroutine Custom_InputSolve(T, Mapping, ErrStat, ErrMsg, UseU)
    case (Custom_SrvD_to_IfW)
 
       ! Set hub position so ServoDyn can get hub wind speed
-      u_IfW%PositionXYZ(:,1) = T%ED%y%HubPtMotion%Position(:, 1)
+      u_IfW%PositionXYZ(:, 1) = T%ED%y%HubPtMotion%Position(:, 1)
 
 !-------------------------------------------------------------------------------
 ! MoorDyn Inputs
