@@ -27,9 +27,13 @@ jobs:
 
       - name: Build a binary wheel and a source tarball
         run: poetry build
+        working-directory: openfast_python
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@v1.8.14
+        with:
+          packages-dir: openfast_python/dist
+
 
   docker-build-and-push:
     runs-on: ubuntu-latest
