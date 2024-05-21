@@ -25,6 +25,7 @@
 module ModVar
 use NWTC_Library_Types
 use NWTC_IO
+use NWTC_Num
 use ModMesh
 implicit none
 
@@ -34,7 +35,7 @@ public :: MV_ComputeCentralDiff, MV_Perturb, MV_ComputeDiff
 public :: MV_AddVar, MV_AddMeshVar
 public :: MV_HasFlags, MV_SetFlags, MV_UnsetFlags, MV_NumVars
 public :: LoadFields, MotionFields, TransFields, AngularFields
-public :: wm_to_dcm, wm_compose, wm_from_dcm, wm_inv, wm_to_rvec, wm_from_rvec
+public :: quat_to_dcm, quat_compose, dcm_to_quat, quat_inv, quat_to_rvec, rvec_to_quat, wm_to_quat, quat_to_wm
 public :: MV_FieldString, IdxStr
 
 integer(IntKi), parameter :: &
@@ -471,7 +472,7 @@ subroutine MV_PackMesh(VarAry, iVar, Mesh, Values)
             Values(iLoc(1):iLoc(2)) = pack(Mesh%TranslationDisp, .true.)
          case (VF_Orientation)
             do j = 1, VarAry(i)%Nodes
-               Values(iLoc(1) + 3*(j - 1):iLoc(1) + 3*j) = wm_from_dcm(Mesh%Orientation(:, :, j))
+               Values(iLoc(1) + 3*(j - 1):iLoc(1) + 3*j) = dcm_to_quat(Mesh%Orientation(:, :, j))
             end do
          case (VF_TransVel)
             Values(iLoc(1):iLoc(2)) = pack(Mesh%TranslationVel, .true.)
@@ -508,7 +509,7 @@ subroutine MV_UnpackMesh(VarAry, iVar, Values, Mesh)
             Mesh%TranslationDisp = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%TranslationDisp))
          case (VF_Orientation)
             do j = 1, VarAry(i)%Nodes
-               Mesh%Orientation(:, :, j) = wm_to_dcm(Values(iLoc(1) + 3*(j - 1):iLoc(1) + 3*j))
+               Mesh%Orientation(:, :, j) = quat_to_dcm(Values(iLoc(1) + 3*(j - 1):iLoc(1) + 3*j))
             end do
          case (VF_TransVel)
             Mesh%TranslationVel = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%TranslationVel))
@@ -533,7 +534,7 @@ subroutine MV_Perturb(Var, iLin, PerturbSign, BaseAry, PerturbAry)
    real(R8Ki), intent(inout)        :: PerturbAry(:)
 
    real(R8Ki)                       :: Perturb
-   real(R8Ki)                       :: WM(3), rotvec(3)
+   real(R8Ki)                       :: quat(3), quat_p(3), rotvec(3)
    integer(IntKi)                   :: i, j
 
    ! Copy base array to perturbed array
@@ -545,16 +546,15 @@ subroutine MV_Perturb(Var, iLin, PerturbSign, BaseAry, PerturbAry)
    ! Index of perturbation value in array
    i = Var%iLoc(1) + iLin - 1
 
-   ! If variable field is orientation, perturbation is in WM parameters
+   ! If variable field is orientation, perturbation is in radians
    if (Var%Field == VF_Orientation) then
-      j = mod(iLin - 1, 3)                                        ! component being modified (0, 1, 2)
-      rotvec = 0.0_R8Ki                                           ! Init WM perturbation to zero
-      rotvec(j + 1) = Perturb                                     ! WM perturbation around X,Y,Z axis
-      i = i - j                                                   ! index of start of WM parameters (3)
-      WM = PerturbAry(i:i + 2)                                    ! Current WM parameters value
-      PerturbAry(i:i + 2) = wm_compose(wm_from_rvec(rotvec), WM)  ! Compose value and perturbation
+      j = mod(iLin - 1, 3)                             ! component being modified (0, 1, 2)
+      quat_p = perturb_quat(Perturb, j + 1)            ! Quaternion of perturbed angle
+      i = i - j                                        ! index of start of quaternion parameters (3)
+      quat = BaseAry(i:i + 2)                          ! Current quat parameters value
+      PerturbAry(i:i + 2) = quat_compose(quat_p, quat) ! Compose perturbation and current rotation
    else
-      PerturbAry(i) = PerturbAry(i) + Perturb                     ! Add perturbation
+      PerturbAry(i) = PerturbAry(i) + Perturb  ! Add perturbation directly
    end if
 
 end subroutine
@@ -565,7 +565,10 @@ subroutine MV_ComputeDiff(VarAry, PosAry, NegAry, DiffAry)
    real(R8Ki), intent(in)        :: NegAry(:)      ! Negative result array
    real(R8Ki), intent(inout)     :: DiffAry(:)     ! Array containing difference
    integer(IntKi)                :: i, j, k
-   real(R8Ki)                    :: DeltaWM(3), R(3, 3), C1(3), C2(3)
+   real(R8Ki)                    :: delta(3), R(3, 3), quat_pos(3), quat_neg(3)
+   real(R8Ki)                    :: ang_pos(3), ang_neg(3)
+   integer(IntKi)                :: ErrStat
+   character(ErrMsgLen)          :: ErrMsg
 
    ! Loop through variables
    do i = 1, size(VarAry)
@@ -576,14 +579,31 @@ subroutine MV_ComputeDiff(VarAry, PosAry, NegAry, DiffAry)
          ! Loop through nodes
          do j = 1, VarAry(i)%Nodes
 
-            ! Get vector of indicies of WM rotation parameters in array
+            ! Get vector of indices of rotation parameters in array
             k = VarAry(i)%iLoc(1) + 3*(j - 1)
 
-            ! Compose WM parameters to go from negative to positive array
-            DeltaWM = wm_compose((PosAry(k:k + 2)), wm_inv(NegAry(k:k + 2)))
+            ! Quaternions from negative and positive perturbations
+            quat_neg = NegAry(k:k + 2)
+            quat_pos = PosAry(k:k + 2)
 
-            ! Calculate change in rotation in XYZ in radians
-            DiffAry(k:k + 2) = wm_to_rvec(DeltaWM)
+            ! If variable has flag to use small angles when computing difference
+            if (MV_HasFlags(VarAry(i), VF_SmallAngle)) then
+
+               ang_pos = GetSmllRotAngs(quat_to_dcm(quat_pos), ErrStat, ErrMsg)
+               ang_neg = GetSmllRotAngs(quat_to_dcm(quat_neg), ErrStat, ErrMsg)
+
+               DiffAry(k:k + 2) = ang_pos - ang_neg
+            else
+
+               ! Calculate relative rotation from negative to positive perturbation
+               delta = quat_compose(quat_pos, quat_inv(quat_neg))
+
+               ! Convert relative rotation from quaternion to rotation vector
+               DiffAry(k:k + 2) = GetSmllRotAngs(quat_to_dcm(delta), ErrStat, ErrMsg) 
+               
+               ! DiffAry(k:k + 2) = quat_to_rvec(delta)
+            end if
+
          end do
 
       else
@@ -698,7 +718,7 @@ subroutine MV_AddVar(VarAry, Name, Field, Num, Flags, iUsr, jUsr, DerivOrder, Pe
    Var = ModVarType(Name=Name, Field=Field)
 
    ! If number of values is zero, return
-   if (present(Num)) then 
+   if (present(Num)) then
       if (Num == 0) return
       Var%Num = Num
    end if
@@ -805,164 +825,179 @@ end function
 ! Rotation Utilities
 !-------------------------------------------------------------------------------
 
-pure function quat_from_dcm(R) result(q)
-   real(R8Ki), intent(in)  :: R(3, 3)
-   real(R8Ki)              :: q(4), C
-   integer(IntKi)          :: j
-
-   q = [(1.0_R8Ki + R(1, 1) - R(2, 2) - R(3, 3)), &
-        (1.0_R8Ki - R(1, 1) + R(2, 2) - R(3, 3)), &
-        (1.0_R8Ki - R(1, 1) - R(2, 2) + R(3, 3)), &
-        (1.0_R8Ki + R(1, 1) + R(2, 2) + R(3, 3))]
-
-   ! Get index of max value in q
-   j = maxloc(q, dim=1)
-
-   ! Calculate quaternion from direction cosine matrix
-   C = q(j)
-   select case (j)
+function perturb_quat(theta, idir) result(q)
+   real(R8Ki), intent(in)     :: theta
+   integer(IntKi), intent(in) :: idir
+   real(R8Ki)                 :: rvec(3), q(3), dcm(3, 3)
+   integer(IntKi)             :: ErrStat
+   character(ErrMsgLen)       :: ErrMsg
+   select case (idir)
    case (1)
-      q = [C, (R(1, 2) + R(2, 1)), (R(3, 1) + R(1, 3)), (R(2, 3) - R(3, 2))]
+      ! q = rvec_to_quat([theta, 0.0_R8Ki, 0.0_R8Ki])
+      call SmllRotTrans('linearization perturbation', theta, 0.0_R8Ki, 0.0_R8Ki, dcm, ErrStat=ErrStat, ErrMsg=ErrMsg)
+      q = dcm_to_quat(dcm)
    case (2)
-      q = [(R(1, 2) + R(2, 1)), C, (R(2, 3) + R(3, 2)), (R(3, 1) - R(1, 3))]
+      ! q = rvec_to_quat([0.0_R8Ki, theta, 0.0_R8Ki])
+      call SmllRotTrans('linearization perturbation', 0.0_R8Ki, theta, 0.0_R8Ki, dcm, ErrStat=ErrStat, ErrMsg=ErrMsg)
+      q = dcm_to_quat(dcm)
    case (3)
-      q = [(R(3, 1) + R(1, 3)), (R(2, 3) + R(3, 2)), C, (R(1, 2) - R(2, 1))]
-   case (4)
-      q = [(R(2, 3) - R(3, 2)), (R(3, 1) - R(1, 3)), (R(1, 2) - R(2, 1)), C]
+      ! q = rvec_to_quat([0.0_R8Ki, 0.0_R8Ki, theta])
+      call SmllRotTrans('linearization perturbation', 0.0_R8Ki, 0.0_R8Ki, theta, dcm, ErrStat=ErrStat, ErrMsg=ErrMsg)
+      q = dcm_to_quat(dcm)
    end select
-   q = q/(2.0_R8Ki*sqrt(C))
-   if (q(4) < 0.0_R8Ki) q = -q
 end function
 
-pure function quat_to_dcm(q) result(R)
-   real(R8Ki), intent(in)  :: q(4)
-   real(R8Ki)              :: R(3, 3)
-   real(R8Ki)              :: q1, q2, q3, q4
-   q1 = q(1); q2 = q(2); q3 = q(3); q4 = q(4)
-   R(1, :) = [q4*q4 + q1*q1 - q2*q2 - q3*q3, 2*(q1*q2 + q3*q4), 2*(q1*q3 - q2*q4)]
-   R(2, :) = [2*(q1*q2 - q3*q4), q4*q4 - q1*q1 + q2*q2 - q3*q3, 2*(q2*q3 + q1*q4)]
-   R(3, :) = [2*(q1*q3 + q2*q4), 2*(q2*q3 - q1*q4), q4*q4 - q1*q1 - q2*q2 + q3*q3]
+pure function quat_canonical(q0, q) result(qc)
+   real(R8Ki), intent(in)  :: q0, q(3)
+   real(R8Ki)              :: qc(3)
+   integer(IntKi)          :: i
+   qc = q
+   if (q0 > 0.0_R8Ki) return
+   if (q0 < 0.0_R8Ki) then
+      qc = -q
+      return
+   end if
+   do i = 1, 3
+      if (q(i) > 0.0_R8Ki) return
+      if (q(i) < 0.0_R8Ki) then
+         qc = -q
+         return
+      end if
+   end do
+end function
+
+pure function dcm_to_quat(dcm) result(q)
+   real(R8Ki), intent(in)  :: dcm(3, 3)
+   real(R8Ki)              :: q(3), R(3, 3), C, s, tr, q0
+
+   R = transpose(dcm)
+
+   tr = R(1, 1) + R(2, 2) + R(3, 3)
+
+   if (tr > 0.0_R8Ki) then
+      s = 0.5_R8Ki/sqrt(tr + 1.0_R8Ki)
+      q0 = 0.25_R8Ki/s
+      q(1) = (R(3, 2) - R(2, 3))*s
+      q(2) = (R(1, 3) - R(3, 1))*s
+      q(3) = (R(2, 1) - R(1, 2))*s
+   else if (R(1, 1) > R(2, 2) .and. R(1, 1) > R(3, 3)) then
+      s = 2.0_R8Ki*sqrt(1.0_R8Ki + R(1, 1) - R(2, 2) - R(3, 3))
+      q0 = (R(3, 2) - R(2, 3))/s
+      q(1) = 0.25_R8Ki*s
+      q(2) = (R(1, 2) + R(2, 1))/s
+      q(3) = (R(1, 3) + R(3, 1))/s
+   elseif (R(2, 2) > R(3, 3)) then
+      s = 2.0_R8Ki*sqrt(1.0_R8Ki + R(2, 2) - R(1, 1) - R(3, 3))
+      q0 = (R(1, 3) - R(3, 1))/s
+      q(1) = (R(1, 2) + R(2, 1))/s
+      q(2) = 0.25_R8Ki*s
+      q(3) = (R(2, 3) + R(3, 2))/s
+   else
+      s = 2.0_R8Ki*sqrt(1.0_R8Ki + R(3, 3) - R(1, 1) - R(2, 2))
+      q0 = (R(2, 1) - R(1, 2))/s
+      q(1) = (R(1, 3) + R(3, 1))/s
+      q(2) = (R(2, 3) + R(3, 2))/s
+      q(3) = 0.25_R8Ki*s
+   end if
+   q = quat_canonical(q0, q)
+end function
+
+pure function quat_compose(q1, q2) result(q)
+   real(R8Ki), intent(in)  :: q1(3), q2(3)
+   real(R8Ki)              :: q(3), q0
+   real(R8Ki)              :: w1, x1, y1, z1
+   real(R8Ki)              :: w2, x2, y2, z2
+   w1 = sqrt(1.0_R8Ki - dot_product(q1, q1))
+   x1 = q1(1); y1 = q1(2); z1 = q1(3)
+   w2 = sqrt(1.0_R8Ki - dot_product(q2, q2))
+   x2 = q2(1); y2 = q2(2); z2 = q2(3)
+   q0 = w1*w2 - x1*x2 - y1*y2 - z1*z2
+   q(1) = w1*x2 + x1*w2 + y1*z2 - z1*y2
+   q(2) = w1*y2 - x1*z2 + y1*w2 + z1*x2
+   q(3) = w1*z2 + x1*y2 - y1*x2 + z1*w2
+   q = quat_canonical(q0, q)
+end function
+
+pure function quat_inv(q) result(qi)
+   real(R8Ki), intent(in)  :: q(3)
+   real(R8Ki)              :: qi(3)
+   qi = -q
+end function
+
+pure function quat_to_rvec(q) result(rvec)
+   real(R8Ki), intent(in)  :: q(3)
+   real(R8Ki)              :: q0, theta, tmp, rvec(3)
+   q0 = sqrt(1.0_R8Ki - dot_product(q, q))
+   theta = 2.0_R8Ki*acos(q0)
+   tmp = sqrt(1.0_R8Ki - q0*q0)
+   if (tmp < epsilon(tmp)) then
+      rvec = 0.0_R8Ki
+   else
+      rvec(1) = theta*q(1)/tmp
+      rvec(2) = theta*q(2)/tmp
+      rvec(3) = theta*q(3)/tmp
+   end if
+end function
+
+pure function rvec_to_quat(rvec) result(q)
+   real(R8Ki), intent(in)  :: rvec(3)
+   real(R8Ki)              :: theta, q0, q(3)
+   theta = sqrt(dot_product(rvec, rvec))
+   q0 = cos(theta/2.0_R8Ki)
+   q = rvec/theta*sin(theta/2.0_R8Ki)
+   q = quat_canonical(q0, q)
+end function
+
+pure function quat_to_dcm(q) result(dcm)
+   real(R8Ki), intent(in)  :: q(3)
+   real(R8Ki)              :: dcm(3, 3)
+   real(R8Ki)              :: q0, q0q0, q1q1, q2q2, q3q3
+   real(R8Ki)              :: q1q2, q2q3, q1q3, q0q1, q0q2, q0q3
+
+   ! q is assumed to be a unit quaternion
+   q0 = sqrt(1.0_R8Ki - dot_product(q, q))
+
+   q0q0 = q0*q0
+   q1q1 = q(1)*q(1)
+   q2q2 = q(2)*q(2)
+   q3q3 = q(3)*q(3)
+
+   q1q2 = q(1)*q(2)
+   q2q3 = q(2)*q(3)
+   q1q3 = q(1)*q(3)
+
+   q0q1 = q0*q(1)
+   q0q2 = q0*q(2)
+   q0q3 = q0*q(3)
+
+   dcm(1, 1) = q0q0 + q1q1 - q2q2 - q3q3
+   dcm(2, 1) = 2.0_R8Ki*(q1q2 - q0q3)
+   dcm(3, 1) = 2.0_R8Ki*(q1q3 + q0q2)
+
+   dcm(1, 2) = 2.0_R8Ki*(q1q2 + q0q3)
+   dcm(2, 2) = q0q0 - q1q1 + q2q2 - q3q3
+   dcm(3, 2) = 2.0_R8Ki*(q2q3 - q0q1)
+
+   dcm(1, 3) = 2.0_R8Ki*(q1q3 - q0q2)
+   dcm(2, 3) = 2.0_R8Ki*(q2q3 + q0q1)
+   dcm(3, 3) = q0q0 - q1q1 - q2q2 + q3q3
 end function
 
 pure function wm_to_quat(c) result(q)
    real(R8Ki), intent(in)  :: c(3)
-   real(R8Ki)              :: q(4)
-   real(R8Ki)              :: c0, e0, e(3)
+   real(R8Ki)              :: c0, q0, q(3)
    c0 = 2.0_R8Ki - dot_product(c, c)/8.0_R8Ki
-   e0 = c0/(4.0_R8Ki - c0)
-   e = c/(4.0_R8Ki - c0)
-   q = [e, e0]
+   q0 = c0/(4.0_R8Ki - c0)
+   q = c/(4.0_R8Ki - c0)
+   q = quat_canonical(q0, q)
 end function
 
-pure function wm_from_quat(q) result(c)
-   real(R8Ki), intent(in)  :: q(4)
+pure function quat_to_wm(q) result(c)
+   real(R8Ki), intent(in)  :: q(3)
    real(R8Ki)              :: c(3)
-   real(R8Ki)              :: e0, e(3)
-   e0 = q(4)
-   e = q(1:3)
-   c = 4.0_R8Ki*e/(1.0_R8Ki + e0)
-end function
-
-pure function wm_to_dcm(c) result(R)
-   real(R8Ki), intent(in)  :: c(3)
-   real(R8Ki)              :: R(3, 3), c0, c1, c2, c3
-   integer(IntKi)          :: i, j
-   c1 = c(1)
-   c2 = c(2)
-   c3 = c(3)
-   c0 = 2.0_R8Ki - dot_product(c, c)/8.0_R8Ki
-   R(:, 1) = [c0*c0 + c1*c1 - c2*c2 - c3*c3, &
-              2.0_R8Ki*(c1*c2 - c0*c3), &
-              2.0_R8Ki*(c1*c3 + c0*c2)]
-   R(:, 2) = [2.0_R8Ki*(c1*c2 + c0*c3), &
-              c0*c0 - c1*c1 + c2*c2 - c3*c3, &
-              2.0_R8Ki*(c2*c3 - c0*c1)]
-   R(:, 3) = [2.0_R8Ki*(c1*c3 - c0*c2), &
-              2.0_R8Ki*(c2*c3 + c0*c1), &
-              c0*c0 - c1*c1 - c2*c2 + c3*c3]
-   R = R/(4.0_R8Ki - c0)**2
-end function
-
-pure function wm_from_dcm(dcm) result(c)
-   real(R8Ki), intent(in)  :: dcm(3, 3)
-   real(R8Ki)              :: pivot(4) ! Trace of the rotation matrix and diagonal elements
-   real(R8Ki)              :: sm(0:3)
-   real(R8Ki)              :: em
-   real(R8Ki)              :: Rr(3, 3), c(3)
-   integer                 :: i        ! case indicator
-
-   Rr = transpose(dcm)
-
-   ! mjs--find max value of T := Tr(Rr) and diagonal elements of Rr
-   ! This tells us which denominator is largest (and less likely to produce numerical noise)
-   pivot = [Rr(1, 1) + Rr(2, 2) + Rr(3, 3), Rr(1, 1), Rr(2, 2), Rr(3, 3)]
-   i = maxloc(pivot, 1) - 1 ! our sm array starts at 0, so we need to subtract 1 here to get the correct index
-
-   select case (i)
-   case (3)
-      sm(0) = Rr(2, 1) - Rr(1, 2)                           !  4 c_0 c_3 t_{r0}
-      sm(1) = Rr(1, 3) + Rr(3, 1)                           !  4 c_1 c_3 t_{r0}
-      sm(2) = Rr(2, 3) + Rr(3, 2)                           !  4 c_2 c_3 t_{r0}
-      sm(3) = 1.0_R8Ki - Rr(1, 1) - Rr(2, 2) + Rr(3, 3)      !  4 c_3 c_3 t_{r0}
-   case (2)
-      sm(0) = Rr(1, 3) - Rr(3, 1)                           !  4 c_0 c_2 t_{r0}
-      sm(1) = Rr(1, 2) + Rr(2, 1)                           !  4 c_1 c_2 t_{r0}
-      sm(2) = 1.0_R8Ki - Rr(1, 1) + Rr(2, 2) - Rr(3, 3)      !  4 c_2 c_2 t_{r0}
-      sm(3) = Rr(2, 3) + Rr(3, 2)                           !  4 c_3 c_2 t_{r0}
-   case (1)
-      sm(0) = Rr(3, 2) - Rr(2, 3)                           !  4 c_0 c_1 t_{r0}
-      sm(1) = 1.0_R8Ki + Rr(1, 1) - Rr(2, 2) - Rr(3, 3)      !  4 c_1 c_1 t_{r0}
-      sm(2) = Rr(1, 2) + Rr(2, 1)                           !  4 c_2 c_1 t_{r0}
-      sm(3) = Rr(1, 3) + Rr(3, 1)                           !  4 c_3 c_1 t_{r0}
-   case (0)
-      sm(0) = 1.0_R8Ki + Rr(1, 1) + Rr(2, 2) + Rr(3, 3)      !  4 c_0 c_0 t_{r0}
-      sm(1) = Rr(3, 2) - Rr(2, 3)                           !  4 c_1 c_0 t_{r0}
-      sm(2) = Rr(1, 3) - Rr(3, 1)                           !  4 c_2 c_0 t_{r0}
-      sm(3) = Rr(2, 1) - Rr(1, 2)                           !  4 c_3 c_0 t_{r0}
-   end select
-
-   em = sm(0) + SIGN(2.0_R8Ki*SQRT(sm(i)), sm(0))
-   em = 4.0_R8Ki/em                                        ! 1 / ( 4 t_{r0} c_{i} ), assuming 0 <= c_0 < 4 and c_{i} > 0
-   c = em*sm(1:3)
-end function
-
-pure function wm_to_rvec(c) result(rvec)
-   real(R8Ki), intent(in) :: c(3)
-   real(R8Ki)             :: phi, m, rvec(3)
-   m = sqrt(dot_product(c, c))
-   if (m == 0.0_R8Ki) then
-      rvec = 0.0_R8Ki
-      return
-   end if
-   phi = 4.0_R8Ki*atan(m/4.0_R8Ki)
-   rvec = phi*c/m
-end function
-
-pure function wm_from_rvec(rvec) result(c)
-   real(R8Ki), intent(in) :: rvec(3)
-   real(R8Ki)             :: phi, c(3)
-   phi = sqrt(dot_product(rvec, rvec))
-   if (phi == 0.0_R8Ki) then
-      c = 0.0_R8Ki
-      return
-   end if
-   c = 4.0_R8Ki*tan(phi/4.0_R8Ki)*rvec/phi
-end function
-
-pure function wm_compose(p, q) result(r)
-   real(R8Ki), intent(in)  :: p(3), q(3)
-   real(R8Ki)              :: r(3)
-   real(R8Ki)              :: p0, q0, D1, D2
-   p0 = 2.0_R8Ki - dot_product(p, p)/8.0_R8Ki
-   q0 = 2.0_R8Ki - dot_product(q, q)/8.0_R8Ki
-   D1 = (4.0_R8Ki - p0)*(4.0_R8Ki - q0)
-   D2 = p0*q0 - dot_product(p, q)
-   r = 4.0_R8Ki*(q0*p + p0*q + cross(p, q))
-   if (D2 >= 0.0_R8Ki) then
-      r = r/(D1 + D2)
-   else
-      r = -r/(D1 - D2)
-   end if
+   real(R8Ki)              :: q0
+   q0 = sqrt(1.0_R8Ki - dot_product(q, q))
+   c = 4.0_R8Ki*q/(1.0_R8Ki + q0)
 end function
 
 pure function wm_inv(c) result(cinv)
