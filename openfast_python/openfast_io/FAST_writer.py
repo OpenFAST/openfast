@@ -6,7 +6,7 @@ import operator
 import numpy as np
 from functools import reduce
 
-from openfast.FAST_reader import InputReader_OpenFAST
+from openfast_io.FAST_reader import InputReader_OpenFAST
 
 try:
     from rosco.toolbox import utilities as ROSCO_utilities

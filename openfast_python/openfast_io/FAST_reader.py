@@ -2,7 +2,7 @@ import os, re, copy
 import numpy as np
 from functools import reduce
 import operator
-from openfast.FAST_vars_out import FstOutput
+from openfast_io.FAST_vars_out import FstOutput
 
 try:
     from rosco.toolbox.utilities import read_DISCON, load_from_txt

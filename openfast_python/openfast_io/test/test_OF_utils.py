@@ -3,9 +3,9 @@ import os.path as osp
 import subprocess, sys
 import platform
 
-from openfast.FAST_reader import InputReader_OpenFAST
-from openfast.FAST_writer import InputWriter_OpenFAST
-from openfast.FAST_output_reader import FASTOutputFile
+from openfast_io.FAST_reader import InputReader_OpenFAST
+from openfast_io.FAST_writer import InputWriter_OpenFAST
+from openfast_io.FAST_output_reader import FASTOutputFile
 
 REPOSITORY_ROOT = osp.dirname(osp.dirname(osp.dirname(osp.dirname(__file__))))
 RTESTS_DIR = osp.join(REPOSITORY_ROOT, "reg_tests","r-test")
