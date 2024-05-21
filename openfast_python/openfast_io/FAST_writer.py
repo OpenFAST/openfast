@@ -200,7 +200,7 @@ class InputWriter_OpenFAST(object):
         # ===== .fst Input File =====
 
         f.write('------- OpenFAST INPUT FILE -------------------------------------------\n')
-        f.write('Generated with AeroElasticSE FAST driver\n')
+        f.write('Generated with OpenFAST_IO\n')
         f.write('---------------------- SIMULATION CONTROL --------------------------------------\n')
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['Fst']['Echo'], 'Echo', '- Echo input data to <RootName>.ech (flag)\n'))
         f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['Fst']['AbortLevel']+'"', 'AbortLevel', '- Error level when simulation should abort (string) {"WARNING", "SEVERE", "FATAL"}\n'))
@@ -282,7 +282,7 @@ class InputWriter_OpenFAST(object):
         f = open(ed_file, 'w')
 
         f.write('------- ELASTODYN v1.03.* INPUT FILE -------------------------------------------\n')
-        f.write('Generated with AeroElasticSE FAST driver\n')
+        f.write('Generated with OpenFAST_IO\n')
 
         # ElastoDyn Simulation Control (ed_sim_ctrl)
         f.write('---------------------- SIMULATION CONTROL --------------------------------------\n')
@@ -445,7 +445,7 @@ class InputWriter_OpenFAST(object):
         f = open(blade_file, 'w')
 
         f.write('------- ELASTODYN V1.00.* INDIVIDUAL BLADE INPUT FILE --------------------------\n')
-        f.write('Generated with AeroElasticSE FAST driver\n')
+        f.write('Generated with OpenFAST_IO\n')
         f.write('---------------------- BLADE PARAMETERS ----------------------------------------\n')
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['NBlInpSt'], 'NBlInpSt', '- Number of blade input stations (-)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['BldFlDmp1'], 'BldFlDmp1', '- Blade flap mode #1 structural damping in percent of critical (%)\n'))
@@ -496,7 +496,7 @@ class InputWriter_OpenFAST(object):
         f = open(tower_file, 'w')
 
         f.write('------- ELASTODYN V1.00.* TOWER INPUT FILE -------------------------------------\n')
-        f.write('Generated with AeroElasticSE FAST driver\n')
+        f.write('Generated with OpenFAST_IO\n')
         f.write('---------------------- TOWER PARAMETERS ----------------------------------------\n')
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynTower']['NTwInpSt'],  'NTwInpSt', '- Number of input stations to specify tower geometry\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynTower']['TwrFADmp1'], 'TwrFADmp(1)', '- Tower 1st fore-aft mode structural damping ratio (%)\n'))
@@ -558,7 +558,7 @@ class InputWriter_OpenFAST(object):
         f            = open(beamdyn_file, 'w')
 
         f.write('--------- BEAMDYN with OpenFAST INPUT FILE -------------------------------------------\n')
-        f.write('Generated with AeroElasticSE FAST driver\n')
+        f.write('Generated with OpenFAST_IO\n')
         f.write('---------------------- SIMULATION CONTROL --------------------------------------\n')
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['Echo'], 'Echo', '- Echo input data to "<RootName>.ech" (flag)\n'))
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['QuasiStaticInit'], 'QuasiStaticInit', '- Use quasistatic pre-conditioning with centripetal accelerations in initialization (flag) [dynamic solve only]\n'))
@@ -647,7 +647,7 @@ class InputWriter_OpenFAST(object):
         f = open(bd_blade_file, 'w')
 
         f.write('------- BEAMDYN V1.00.* INDIVIDUAL BLADE INPUT FILE --------------------------\n')
-        f.write('Generated with AeroElasticSE FAST driver\n')
+        f.write('Generated with OpenFAST_IO\n')
         f.write('---------------------- BLADE PARAMETERS --------------------------------------\n')
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDynBlade']['station_total'], 'station_total', '- Number of blade input stations (-)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDynBlade']['damp_type'], 'damp_type', '- Damping type: 0: no damping; 1: damped\n'))
@@ -675,7 +675,7 @@ class InputWriter_OpenFAST(object):
         f = open(inflow_file, 'w')
 
         f.write('------- InflowWind v3.01.* INPUT FILE -------------------------------------------------------------------------\n')
-        f.write('Generated with AeroElasticSE FAST driver\n')
+        f.write('Generated with OpenFAST_IO\n')
         f.write('---------------------------------------------------------------------------------------------------------------\n')
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['Echo'], 'Echo', '- Echo input data to <RootName>.ech (flag)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['WindType'], 'WindType', '- switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; 4=binary Bladed-style FF; 5=HAWC format; 6=User defined; 7=native Bladed FF)\n'))
@@ -777,7 +777,7 @@ class InputWriter_OpenFAST(object):
         f = open(ad_file, 'w')
 
         f.write('------- AERODYN v15.03.* INPUT FILE ------------------------------------------------\n')
-        f.write('Generated with AeroElasticSE FAST driver\n')
+        f.write('Generated with OpenFAST_IO\n')
         f.write('======  General Options  ============================================================================\n')
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['Echo'], 'Echo', '- Echo the input to "<rootname>.AD.ech"?  (flag)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['DTAero'], 'DTAero', '- Time interval for aerodynamic calculations {or "default"} (s)\n'))
@@ -893,7 +893,7 @@ class InputWriter_OpenFAST(object):
         f = open(filename, 'w')
 
         f.write('------- AERODYN v15.00.* BLADE DEFINITION INPUT FILE -------------------------------------\n')
-        f.write('Generated with AeroElasticSE FAST driver\n')
+        f.write('Generated with OpenFAST_IO\n')
         f.write('======  Blade Properties =================================================================\n')
         f.write('{:<11d} {:<11} {:}'.format(self.fst_vt['AeroDynBlade']['NumBlNds'], 'NumBlNds', '- Number of blade nodes used in the analysis (-)\n'))
         f.write('    BlSpn        BlCrvAC        BlSwpAC        BlCrvAng       BlTwist        BlChord          BlAFID\n')
@@ -937,7 +937,7 @@ class InputWriter_OpenFAST(object):
             f = open(af_file, 'w')
 
             f.write('! ------------ AirfoilInfo v1.01.x Input File ----------------------------------\n')
-            f.write('! AeroElasticSE FAST driver\n')
+            f.write('! Generated with OpenFAST_IO\n')
             f.write('! line\n')
             f.write('! line\n')
             f.write('! ------------------------------------------------------------------------------\n')
@@ -1171,7 +1171,7 @@ class InputWriter_OpenFAST(object):
         f = open(filename, 'w')
 
         f.write('AeroDyn tower file, Aerodyn v14.04 formatting\n')
-        f.write('Generated with AeroElasticSE FAST driver\n')
+        f.write('Generated with OpenFAST_IO\n')
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['AeroDynTower']['NTwrHt'], 'NTwrHt', '- Number of tower input height stations listed (-)\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['AeroDynTower']['NTwrRe'], 'NTwrRe', '- Number of tower Re values (-)\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['AeroDynTower']['NTwrCD'], 'NTwrCD', '- Number of tower CD columns (-) Note: For current versions, this MUST be 1\n'))
@@ -1194,7 +1194,7 @@ class InputWriter_OpenFAST(object):
 
         f = open(filename, 'w')
         f.write('AeroDyn airfoil file, Aerodyn v14.04 formatting\n')
-        f.write('Generated with AeroElasticSE FAST driver\n')
+        f.write('Generated with OpenFAST_IO\n')
 
         f.write('{:9d}\t{:}'.format(self.fst_vt['AeroDynBlade']['af_data'][a_i]['number_tables'], 'Number of airfoil tables in this file\n'))
         for i in range(self.fst_vt['AeroDynBlade']['af_data'][a_i]['number_tables']):
@@ -1227,7 +1227,7 @@ class InputWriter_OpenFAST(object):
         f = open(olaf_file, 'w')
         
         f.write('--------------------------- OLAF (cOnvecting LAgrangian Filaments) INPUT FILE -----------------\n')
-        f.write('Generated by WEIS\n')
+        f.write('Generated by OpenFAST_IO\n')
         f.write('--------------------------- GENERAL OPTIONS ---------------------------------------------------\n')
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['OLAF']['IntMethod'], 'IntMethod', '- Integration method {1: RK4, 5: Forward Euler 1st order, default: 5} (switch)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['OLAF']['DTfvw'], 'DTfvw', '- Time interval for wake propagation. {default: dtaero} (s)\n'))
@@ -1287,7 +1287,7 @@ class InputWriter_OpenFAST(object):
         f = open(sd_file,'w')
 
         f.write('------- SERVODYN v1.05.* INPUT FILE --------------------------------------------\n')
-        f.write('Generated with AeroElasticSE FAST driver\n')
+        f.write('Generated with OpenFAST_IO\n')
         f.write('---------------------- SIMULATION CONTROL --------------------------------------\n')
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ServoDyn']['Echo'], 'Echo', '- Echo input data to <RootName>.ech (flag)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ServoDyn']['DT'], 'DT', '- Communication interval for controllers (s) (or "default")\n'))
@@ -1429,7 +1429,7 @@ class InputWriter_OpenFAST(object):
         turbine.Cq_table                = self.fst_vt['DISCON_in']['Cq_table']
         turbine.pitch_initial_rad       = self.fst_vt['DISCON_in']['Cp_pitch_initial_rad']
         turbine.TSR_initial             = self.fst_vt['DISCON_in']['Cp_TSR_initial']
-        turbine.TurbineName             = 'WEIS Turbine'
+        turbine.TurbineName             = 'OpenFAST_IO Turbine'
 
         # Define DISCON infile paths
         self.fst_vt['ServoDyn']['DLL_InFile'] = self.FAST_namingOut + '_DISCON.IN'
@@ -1458,7 +1458,7 @@ class InputWriter_OpenFAST(object):
         f = open(hd_file, 'w')
 
         f.write('------- HydroDyn v2.03.* Input File --------------------------------------------\n')
-        f.write('Generated with AeroElasticSE FAST driver\n')
+        f.write('Generated with OpenFAST_IO\n')
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['HydroDyn']['Echo'], 'Echo', '- Echo the input file data (flag)\n'))
         f.write('---------------------- ENVIRONMENTAL CONDITIONS --------------------------------\n')
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['HydroDyn']['WtrDens'], 'WtrDens', '- Water density (kg/m^3)\n'))
@@ -1759,7 +1759,7 @@ class InputWriter_OpenFAST(object):
         f = open(sd_file, 'w')
 
         f.write('----------- SubDyn v1.01.x MultiMember Support Structure Input File ------------\n')
-        f.write('Generated with AeroElasticSE FAST driver\n')
+        f.write('Generated with OpenFAST_IO\n')
         f.write('-------------------------- SIMULATION CONTROL  ---------------------------------\n')
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['SubDyn']['Echo'], 'Echo', '- Echo input data to "<rootname>.SD.ech" (flag)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SubDyn']['SDdeltaT'], 'SDdeltaT', '- Local Integration Step. If "default", the glue-code integration step will be used.\n'))
@@ -2032,7 +2032,7 @@ class InputWriter_OpenFAST(object):
         f = open(moordyn_file, 'w')
 
         f.write('--------------------- MoorDyn Input File ------------------------------------\n')
-        f.write('Generated with AeroElasticSE FAST driver\n')
+        f.write('Generated with OpenFAST_IO\n')
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['Echo'], 'Echo', '- echo the input file data (flag)\n'))
         f.write('----------------------- LINE TYPES ------------------------------------------\n')
         f.write(" ".join(['{:^11s}'.format(i) for i in ['Name', 'Diam', 'MassDen', 'EA', 'BA/-zeta', 'EI', 'Cd', 'Ca', 'CdAx', 'CaAx']])+'\n')
@@ -2116,7 +2116,7 @@ class InputWriter_OpenFAST(object):
         f = open(stc_file, 'w')
         
         f.write('------- STRUCTURAL CONTROL (StC) INPUT FILE ----------------------------\n')
-        f.write('Generated with AeroElasticSE FAST driver within WEIS\n')
+        f.write('Generated with OpenFAST_IO\n')
         
         f.write('---------------------- SIMULATION CONTROL --------------------------------------\n')
         f.write('{!s:<22} {:<11} {:}'.format(StC_vt['Echo'], 'Echo', '- Echo input data to "<rootname>.SD.ech" (flag)\n'))

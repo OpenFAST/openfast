@@ -2,6 +2,7 @@
 name = "octue-openfast"
 version = "3.5.4.beta-1"
 description = "Readers and writers for OpenFAST files."
+license = "Apache-2.0"
 authors = [
     "NREL WISDEM Team <systems.engineering@nrel.gov>",
     "dzalkind",

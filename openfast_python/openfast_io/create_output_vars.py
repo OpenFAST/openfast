@@ -78,8 +78,8 @@ if __name__=="__main__":
 
     try:
         # File Location
-        weis_dir = os.path.dirname( os.path.dirname( os.path.dirname( os.path.dirname( os.path.realpath(__file__) ) ) ) ) + os.sep
-        outlist_fast_lib = os.path.join(weis_dir, 'OpenFAST', 'docs', 'OtherSupporting' , 'OutListParameters.xlsx')
+        root_dir = os.path.dirname( os.path.dirname( ( os.path.realpath(__file__) ) ) ) + os.sep
+        outlist_fast_lib = os.path.join(root_dir, 'docs', 'OtherSupporting' , 'OutListParameters.xlsx')
         # Sheets to grab
         sheet_list = ['ElastoDyn', 'BeamDyn', 'ServoDyn', 'AeroDyn', 'InflowWind', 'WAMIT', 'HydroDyn', 'Morison', # 'SubDyn'
                         'ElastoDyn_Nodes','BeamDyn_Nodes','AeroDyn_Nodes'] 
