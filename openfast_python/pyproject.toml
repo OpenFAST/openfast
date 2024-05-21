@@ -11,7 +11,7 @@ authors = [
     "John Jasa",
 ]
 readme = "README.md"
-packages = [{include = "openfast"}]
+packages = [{include = "openfast_io"}]
 
 
 [tool.poetry.dependencies]
