@@ -4581,9 +4581,9 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrSta
                                     //TRIM(Num2LStr(SmallAngleLimit_Rad))//' radians.',ErrStat,ErrMsg,RoutineName)
    END IF
 
-   IF ( ABS( InputFileData%PtfmYaw ) > SmallAngleLimit_Rad ) THEN
+   IF ( ABS( InputFileData%PtfmYaw - InputFileData%PtfmRefY ) > SmallAngleLimit_Rad ) THEN
       CALL SetErrStat( ErrID_Fatal, 'PtfmYaw must be between -'//TRIM(Num2LStr(SmallAngleLimit_Rad))//' and ' &
-                                    //TRIM(Num2LStr(SmallAngleLimit_Rad))//' radians.',ErrStat,ErrMsg,RoutineName)
+                                    //TRIM(Num2LStr(SmallAngleLimit_Rad))//' radians from PtfmRefY.',ErrStat,ErrMsg,RoutineName)
    END IF
 
       ! Check the output parameters:
