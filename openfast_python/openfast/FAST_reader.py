@@ -4,9 +4,12 @@ from functools import reduce
 import operator
 from openfast.FAST_vars_out import FstOutput
 
-from rosco.toolbox.utilities import read_DISCON, load_from_txt
-from rosco.toolbox import turbine as ROSCO_turbine
-ROSCO = True
+try:
+    from rosco.toolbox.utilities import read_DISCON, load_from_txt
+    from rosco.toolbox import turbine as ROSCO_turbine
+    ROSCO = True
+except:
+    ROSCO = False
 
 
 def readline_filterComments(f):

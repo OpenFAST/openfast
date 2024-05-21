@@ -162,17 +162,17 @@ class InputWriter_OpenFAST(object):
             self.write_AeroDyn15()
         
         if self.fst_vt['Fst']['CompServo'] == 1:
-	        if 'DISCON_in' in self.fst_vt and ROSCO:
-	            self.write_DISCON_in()
-	        self.write_ServoDyn()
-	        for i_NStC, NStC in enumerate(self.fst_vt['NStC']):
-	            self.write_StC(NStC,self.fst_vt['ServoDyn']['NStCfiles'][i_NStC])
-	        for i_BStC, BStC in enumerate(self.fst_vt['BStC']):
-	            self.write_StC(BStC,self.fst_vt['ServoDyn']['BStCfiles'][i_BStC])
-	        for i_TStC, TStC in enumerate(self.fst_vt['TStC']):
-	            self.write_StC(TStC,self.fst_vt['ServoDyn']['TStCfiles'][i_TStC])
-	        for i_SStC, SStC in enumerate(self.fst_vt['SStC']):
-	            self.write_StC(SStC,self.fst_vt['ServoDyn']['SStCfiles'][i_SStC])
+            if 'DISCON_in' in self.fst_vt and ROSCO:
+                self.write_DISCON_in()
+            self.write_ServoDyn()
+            for i_NStC, NStC in enumerate(self.fst_vt['NStC']):
+                self.write_StC(NStC,self.fst_vt['ServoDyn']['NStCfiles'][i_NStC])
+            for i_BStC, BStC in enumerate(self.fst_vt['BStC']):
+                self.write_StC(BStC,self.fst_vt['ServoDyn']['BStCfiles'][i_BStC])
+            for i_TStC, TStC in enumerate(self.fst_vt['TStC']):
+                self.write_StC(TStC,self.fst_vt['ServoDyn']['TStCfiles'][i_TStC])
+            for i_SStC, SStC in enumerate(self.fst_vt['SStC']):
+                self.write_StC(SStC,self.fst_vt['ServoDyn']['SStCfiles'][i_SStC])
         
         if self.fst_vt['Fst']['CompHydro'] == 1:
             self.write_HydroDyn()
