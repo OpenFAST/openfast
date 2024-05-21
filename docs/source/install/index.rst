@@ -15,6 +15,9 @@ code,** refer to the table in the :ref:`download_binaries` or :ref:`use_docker`
 sections and read the corresponding documentation for specific instructions.
 For instructions on compiling, see :ref:`compile_from_source`.
 
+To manipulate OpenFAST files using python, see :ref:`python_wrapper`.
+
+
 .. _download_binaries:
 
 Download binaries
@@ -207,6 +210,26 @@ Build your own images
 ---------------------
 You can also build your own custom images using our `Dockerfile` or base your images on ours. See
 `here <https://github.com/OpenFAST/openfast/blob/main/share/docker/README.md>`_ for more information on this.
+
+
+.. _python_wrapper
+
+Install the ``openfast_io`` python wrapper
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The ``openfast_io`` python package is a wrapper comprising readers and writers for converting OpenFAST files to/from
+python objects. You can install it with:
+
+.. code-block::
+
+    pip install openfast_io
+
+or
+
+.. code-block::
+
+    poetry add openfast_io
+
+For more information and installation options, see `here <https://github.com/OpenFAST/openfast/blob/main/openfast_python/README.md>`_.
 
 
 .. _compile_from_source:
