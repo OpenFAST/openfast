@@ -1849,7 +1849,7 @@ CONTAINS
          ! CALL SmllRotTrans('PtfmInit', InitInp%PtfmInit(4,iTurb),InitInp%PtfmInit(5,iTurb),InitInp%PtfmInit(6,iTurb), OrMat, '', ErrStat2, ErrMsg2)
          ! CALL CheckError( ErrStat2, ErrMsg2 )
          ! IF (ErrStat >= AbortErrLev) RETURN
-         OrMat = EulerConstructZYXR8((/InitInp%PtfmInit(4,iTurb),InitInp%PtfmInit(5,iTurb),InitInp%PtfmInit(6,iTurb)/))
+         OrMat = EulerConstructZYX((/InitInp%PtfmInit(4,iTurb),InitInp%PtfmInit(5,iTurb),InitInp%PtfmInit(6,iTurb)/))
          
          ! count number of coupling nodes needed for the mesh of this turbine
          K = p%nCpldBodies(iTurb) + p%nCpldRods(iTurb) + p%nCpldPoints(iTurb)
