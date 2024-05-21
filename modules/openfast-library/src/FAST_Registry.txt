@@ -193,6 +193,21 @@ typedef	^	FAST_ParameterType	IntKi	Lin_ModOrder	{NumModules}	-	-	"indices that d
 typedef  ^  FAST_ParameterType  IntKi    LinInterpOrder     -  -  -  "Interpolation order for CalcSteady solution" -
 #typedef	^	FAST_ParameterType	LOGICAL	CheckHSSBrTrqC	-	-	-	"Flag to determine if we should check HSSBrTrqC extrapolation to ElastoDyn"	-
 
+# ................................................... ZMQ PROTOCOL ........................................................... 
+typedef	^	FAST_ParameterType	LOGICAL	            ZmqOn	                -	.false.	    -	"zmq activation flag"     -  
+typedef	^	FAST_ParameterType	CHARACTER(1024)	    ZmqInAddress            -	-	        -	"address for ZMQ REQ-REP protocol" - 
+typedef	^	FAST_ParameterType	IntKi	            ZmqInNbr                -	-	        -	"number of ZMQ REQ-REP channels" - 
+typedef	^	FAST_ParameterType	CHARACTER(ChanLen)	ZmqInChannels           {:}	-	        -	"address for ZMQ REQ-REP protocol" - 
+
+typedef	^	FAST_ParameterType	CHARACTER(1024)	    ZmqOutAddress           -	-	        -	"address for ZMQ PUB-SUB protocol" - 
+typedef	^	FAST_ParameterType	IntKi	            ZmqOutNbr               -	-	        -	"number of ZMQ PUB-SUB channels" - 
+
+typedef	^	FAST_ParameterType	CHARACTER(ChanLen)	ZmqOutChannels          {:}	-	        -	"variables to pass ZMQ PUB-SUB protocol" - 
+typedef ^   FAST_ParameterType	IntKi           	ZmqOutChnlsIdx          {:}	-	        -	"indexes of channels to be broadcasted" - 
+
+typedef	^	FAST_ParameterType	CHARACTER(ChanLen)	ZmqOutChannelsNames     {:}	-	        -	"names for ZMQ PUB-SUB protocol" -  
+typedef	^	FAST_ParameterType	ReKi	            ZmqOutChannelsAry       {:}	-	        -	"array to pass ZMQ PUB-SUB protocol" - 
+# ............................................................................................................................
 
 # SAVED OPERATING POINT DATA FOR VTKLIN (visualization of mode shapes from linearization analysis)
 # ..... IceDyn OP data .......................................................................................................

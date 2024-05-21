@@ -65,8 +65,11 @@ add_library(openfast_postlib
   src/FAST_Mods.f90
   src/FAST_Subs.f90
   src/FAST_Solver.f90
+  src/zmq_client.c
 )
-target_link_libraries(openfast_postlib openfast_prelib foamfastlib scfastlib)
+
+target_link_libraries(openfast_postlib openfast_prelib foamfastlib scfastlib zmq cjson)
+
 target_include_directories(openfast_postlib PUBLIC 
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>  
 )
