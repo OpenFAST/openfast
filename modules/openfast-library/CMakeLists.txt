@@ -68,11 +68,27 @@ add_library(openfast_postlib
   src/zmq_client.c
 )
 
-target_link_libraries(openfast_postlib openfast_prelib foamfastlib scfastlib zmq cjson)
-
-target_include_directories(openfast_postlib PUBLIC 
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>  
+# Specify the include directories for ZeroMQ and cJSON
+include_directories(
+  /opt/homebrew/Cellar/zeromq/4.3.5_1/include
+  /opt/homebrew/Cellar/cjson/1.7.18/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
+
+# Specify the library directories for ZeroMQ and cJSON
+link_directories(
+  /opt/homebrew/Cellar/zeromq/4.3.5_1/lib
+  /opt/homebrew/Cellar/cjson/1.7.18/lib
+)
+
+target_link_libraries(openfast_postlib
+  openfast_prelib
+  foamfastlib
+  scfastlib
+  /opt/homebrew/Cellar/zeromq/4.3.5_1/lib/libzmq.dylib
+  /opt/homebrew/Cellar/cjson/1.7.18/lib/libcjson.dylib
+)
+
 set_target_properties(openfast_postlib PROPERTIES PUBLIC_HEADER src/FAST_Library.h)
 
 # OpenFAST Library static (openfast, FAST.Farm, Simulink)

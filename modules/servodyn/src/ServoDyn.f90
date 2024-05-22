@@ -4855,7 +4855,8 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, UnSum, ErrStat, ErrMsg )
    if (UnSum >0) then
       write(UnSum, '(A)')  ' Unless specified, units are consistent with Input units, [SI] system is advised.'
       write(UnSum, '(A)') SectionDivide
-      write(UnSum, '(A)')                 ' Pitch control mode {0: none, 3: user-defined from routine PitchCntrl, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL, 9: ZmqIn} (switch)'      write(UnSum, '(A43,I2)')            '   PCMode -- Pitch control mode:           ',p%PCMode
+      write(UnSum, '(A)')                 ' Pitch control mode {0: none, 3: user-defined from routine PitchCntrl, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL, 9: ZmqIn} (switch)'      
+      write(UnSum, '(A43,I2)')            '   PCMode -- Pitch control mode:           ',p%PCMode
       write(UnSum, '(A43,ES20.12e3)')     '   TPCOn  -- pitch control start time:     ',p%TPCOn
       write(UnSum, '(A)')                 '   -------------------'
       write(UnSum, '(A43,3ES12.5e2)')     '   TPitManS  -- pitch override start time: ',p%TPitManS( 1:min(p%NumBl,size(InputFileData%TPitManS)))

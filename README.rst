@@ -1,3 +1,17 @@
+OpenFAST ZMQ PR
+========
+OpenFAST with ZMQ for interfacing with other applications, developed at NREL during my research stay (2023-11 - 2024 - 01).
+
+
+Requirements
+----
+```
+cJSON
+ZMQ
+```
+
+
+========
 OpenFAST
 ========
 

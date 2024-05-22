@@ -55,3 +55,6 @@ vs-build/
 varcache
 *.slxc
 
+# old repo for zmq pr
+/RealTimeFAST 
+/cJSON 

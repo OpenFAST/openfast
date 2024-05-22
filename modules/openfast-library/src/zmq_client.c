@@ -7,8 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <zmq.h>
-#include </home/cJSON/cJSON.h>
+#include </opt/homebrew/Cellar/zeromq/4.3.5_1/include/zmq.h>
+#include </Users/lorenzoschena/Desktop/Workspace/openfast/cJSON/cJSON.h>
 
 // Initializing publisher and requester as global variables
 
@@ -366,7 +366,7 @@ float *zmq_req_rep(const char *socket_address, const char *request) {
     
     if (requester == NULL) {
         printf("Socket not initialized. Call zmq_initialize_requester first.\n");
-        return -1; // Return error if socket is not initialized
+        return NULL; // Return error if socket is not initialized
     }
 
     int req_count, send_status_req;
