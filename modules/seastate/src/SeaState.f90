@@ -495,7 +495,7 @@ subroutine SeaSt_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrS
    call MV_AddVar(p%Vars%u, "Wave1Elev", VF_Scalar, &
                   VarIdx=p%iVarWave1ElevU, &
                   Flags=VF_ExtLin, &
-                  Perturb=0.02_ReKi * Pi / 180.0_ReKi * max(1.0_ReKi, p%WaveField%WtrDpth), &
+                  Perturb=0.02_R8Ki * Pi / 180.0_R8Ki * max(1.0_R8Ki, p%WaveField%WtrDpth), &
                   LinNames=['Extended input: wave elevation at platform ref point, m'])
 
 
