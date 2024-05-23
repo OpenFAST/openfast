@@ -735,16 +735,14 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          p_FAST%VTK_surface%NWaveElevPts(2) = 0
       endif
 
+      CALL MV_AddModule(y_FAST%Modules, Module_SeaSt, 'SEA', 1, p_FAST%dt_module(Module_SeaSt), p_FAST%DT, &
+                        Init%OutData_SeaSt%Vars, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
       allocate( y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1), stat=ErrStat2)
       if (ErrStat2 /= 0 ) then
          call SetErrStat(ErrID_Fatal, "Error allocating Lin%Modules(SeaSt).", ErrStat, ErrMsg, RoutineName )
       else
-         if (allocated(Init%OutData_SeaSt%LinNames_y)) call move_alloc(Init%OutData_SeaSt%LinNames_y,y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1)%Names_y )
-         if (allocated(Init%OutData_SeaSt%LinNames_u)) call move_alloc(Init%OutData_SeaSt%LinNames_u,y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1)%Names_u )
-         if (allocated(Init%OutData_SeaSt%RotFrame_y)) call move_alloc(Init%OutData_SeaSt%RotFrame_y,y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1)%RotFrame_y )
-         if (allocated(Init%OutData_SeaSt%RotFrame_u)) call move_alloc(Init%OutData_SeaSt%RotFrame_u,y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1)%RotFrame_u )
-         if (allocated(Init%OutData_SeaSt%IsLoad_u  )) call move_alloc(Init%OutData_SeaSt%IsLoad_u  ,y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1)%IsLoad_u   )
-
          if (allocated(Init%OutData_SeaSt%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_SeaSt)%Instance(1)%NumOutputs = size(Init%OutData_SeaSt%WriteOutputHdr)
       end if
 

@@ -588,7 +588,11 @@ subroutine FAST_GetOP(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg, FlagFilt
                     T%SD%OtherSt(ThisState), T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
                     u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
 
-!  case (Module_SeaSt)
+   case (Module_SeaSt)
+      call SeaSt_GetOP(ThisTime, T%SeaSt%Input(1), T%SeaSt%p, T%SeaSt%x(ThisState), T%SeaSt%xd(ThisState), T%SeaSt%z(ThisState), &
+                    T%SeaSt%OtherSt(ThisState), T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
+                    u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+
    case (Module_SrvD)
       call SrvD_GetOP(ThisTime, T%SrvD%Input(1), T%SrvD%p, T%SrvD%x(ThisState), T%SrvD%xd(ThisState), T%SrvD%z(ThisState), &
                       T%SrvD%OtherSt(ThisState), T%SrvD%y, T%SrvD%m, ErrStat2, ErrMsg2, &
@@ -666,6 +670,11 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg,
       call SD_JacobianPInput(ThisTime, T%SD%Input(1), T%SD%p, T%SD%x(ThisState), T%SD%xd(ThisState), &
                              T%SD%z(ThisState), T%SD%OtherSt(ThisState), T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
                              FlagFilter=FlagFilter, dYdu=dYdu, dXdu=dXdu)
+
+   case (Module_SeaSt)
+      call SeaSt_JacobianPInput(ThisTime, T%SeaSt%Input(1), T%SeaSt%p, T%SeaSt%x(ThisState), T%SeaSt%xd(ThisState), &
+                             T%SeaSt%z(ThisState), T%SeaSt%OtherSt(ThisState), T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
+                             dYdu=dYdu, dXdu=dXdu)
 
    case (Module_SrvD)
       call SrvD_JacobianPInput(ThisTime, T%SrvD%Input(1), T%SrvD%p, T%SrvD%x(ThisState), T%SrvD%xd(ThisState), &
@@ -757,6 +766,13 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, ThisState, T, ErrStat, Err
                                  T%SD%z(ThisState), T%SD%OtherSt(ThisState), &
                                  T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
                                  FlagFilter=FlagFilter, dYdx=dYdx, dXdx=dXdx)
+
+   case (Module_SeaSt)
+      call SeaSt_JacobianPContState(ThisTime, T%SeaSt%Input(1), T%SeaSt%p, &
+                                 T%SeaSt%x(ThisState), T%SeaSt%xd(ThisState), &
+                                 T%SeaSt%z(ThisState), T%SeaSt%OtherSt(ThisState), &
+                                 T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
+                                 dYdx=dYdx, dXdx=dXdx)
 
    case (Module_SrvD)
       call SrvD_JacobianPContState(ThisTime, T%SrvD%Input(1), T%SrvD%p, &

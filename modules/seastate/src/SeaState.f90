@@ -336,7 +336,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
          ! set the Jacobian info if we don't have a fatal error
          if (ErrStat < AbortErrLev) then
-            call SeaSt_Init_Jacobian(p, InitOut, ErrStat2, ErrMsg2)
+            call SeaSt_InitVars(u, p, x, y, m, InitOut,  InputFileData, InitInp%Linearize, ErrStat2, ErrMsg2)
             if (Failed()) return
          endif
       end if
@@ -447,6 +447,94 @@ CONTAINS
    end subroutine SurfaceVisGenerate
 
 END SUBROUTINE SeaSt_Init
+
+subroutine SeaSt_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat, ErrMsg)
+   type(SeaSt_InputType),           intent(inout)  :: u              !< An initial guess for the input; input mesh must be defined
+   type(SeaSt_ParameterType),       intent(inout)  :: p              !< Parameters
+   type(SeaSt_ContinuousStateType), intent(inout)  :: x              !< Continuous state
+   type(SeaSt_OutputType),          intent(inout)  :: y              !< Initial system outputs (outputs are not calculated;
+   type(SeaSt_MiscVarType),         intent(inout)  :: m              !< Misc variables for optimization (not copied in glue code)
+   type(SeaSt_InitOutputType),      intent(inout)  :: InitOut        !< Output for initialization routine
+   type(SeaSt_InputFile),           intent(in)     :: InputFileData  !< Input file data
+   logical,                         intent(in)     :: Linearize      !< Flag to initialize linearization variables
+   integer(IntKi),                  intent(out)    :: ErrStat        !< Error status of the operation
+   character(*),                    intent(out)    :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter       :: RoutineName = 'ED_InitVars'
+   integer(IntKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
+
+   integer(IntKi)                :: i, j, k
+   integer(IntKi), allocatable   :: BladeMeshFields(:)
+   real(R8Ki)                    :: MaxThrust, MaxTorque, ScaleLength
+   integer(IntKi)                :: Flags, Field
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   ! Allocate space for variables (deallocate if already allocated)
+   if (associated(p%Vars)) deallocate(p%Vars)
+   allocate(p%Vars, stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat(ErrID_Fatal, "Error allocating vars", ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Associate pointer in init output
+   InitOut%Vars => p%Vars
+
+   !----------------------------------------------------------------------------
+   ! Continuous State Variables
+   !----------------------------------------------------------------------------   
+
+   !----------------------------------------------------------------------------
+   ! Input variables
+   !----------------------------------------------------------------------------
+
+   ! Extended input
+   call MV_AddVar(p%Vars%u, "Wave1Elev", VF_Scalar, &
+                  VarIdx=p%iVarWave1ElevU, &
+                  Flags=VF_ExtLin, &
+                  Perturb=0.02_ReKi * Pi / 180.0_ReKi * max(1.0_ReKi, p%WaveField%WtrDpth), &
+                  LinNames=['Extended input: wave elevation at platform ref point, m'])
+
+
+   !----------------------------------------------------------------------------
+   ! Output variables
+   !----------------------------------------------------------------------------
+
+   ! Extended output
+   call MV_AddVar(p%Vars%y, "Wave1Elev", VF_Scalar, &
+                  VarIdx=p%iVarWave1ElevY, &
+                  Flags=VF_ExtLin, &
+                  LinNames=['Extended output: wave elevation at platform ref point, m'])
+
+
+   ! Output variables
+   call MV_AddVar(p%Vars%y, "WriteOutput", VF_Scalar, Num=p%NumOuts, &
+                  Flags=VF_WriteOut, &
+                  VarIdx=p%iVarWriteOutput, &
+                  LinNames=[(WriteOutputLinName(i), i = 1, p%numOuts)])
+
+   !----------------------------------------------------------------------------
+   ! Initialize Variables and Jacobian data
+   !----------------------------------------------------------------------------
+
+   call MV_InitVarsJac(p%Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+
+   call SeaSt_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call SeaSt_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+
+contains
+   character(LinChanLen) function WriteOutputLinName(idx)
+      integer(IntKi), intent(in) :: idx
+      WriteOutputLinName = trim(InitOut%WriteOutputHdr(idx))//', '//trim(InitOut%WriteOutputUnt(idx))
+   end function
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE AddArrays_4D(Array1, Array2, ArrayName, ErrStat, ErrMsg)
    REAL(SiKi),                      INTENT(INOUT)  :: Array1(:,:,:,:)
@@ -735,98 +823,6 @@ END SUBROUTINE SeaSt_CalcConstrStateResidual
 
 
 
-!----------------------------------------------------------------------------------------------------------------------------------
-! Linearization routines
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Initialize Jacobian info for linearization (only u and y)
-subroutine SeaSt_Init_Jacobian(p, InitOut, ErrStat, ErrMsg)
-   type(SeaSt_ParameterType),          intent(inout)  :: p          !< Parameters
-   type(SeaSt_InitOutputType),         intent(inout)  :: InitOut     !< Output for initialization routine
-   integer(IntKi),                     intent(  out)  :: ErrStat     !< Error status of the operation
-   character(*),                       intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-   integer(IntKi)          :: nu, ny      ! counters for number of u and y linearization terms
-   integer(IntKi)          :: i, idx      ! generic indexing
-   integer(IntKi)          :: ExtStart    ! start of Extended input/output
-   integer(IntKi)          :: ErrStat2
-   character(ErrMsgLen)    :: ErrMsg2
-   character(*), parameter :: RoutineName = 'SeaSt_Init_Jacobian'
-
-   ! Initialize ErrStat
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-
-   !--------------------------
-   ! Init Jacobians for u
-   !--------------------------
-
-   ! One extended input (WaveElev0), and no regular inputs.  Starts at first index.
-   nu = 1
-   p%LinParams%NumExtendedInputs  = 1
-   ! Total number of inputs (including regular and extended inputs)
-   p%LinParams%Jac_nu = nu
-
-   ! Allocate storage for names, indexing, and perturbations
-   call AllocAry(InitOut%LinNames_u, nu, "LinNames_u",   ErrStat2, ErrMsg2);   if (Failed()) return
-   call AllocAry(InitOut%RotFrame_u, nu, "RotFrame_u",   ErrStat2, ErrMsg2);   if (Failed()) return
-   call AllocAry(InitOut%IsLoad_u,   nu, "IsLoad_u",     ErrStat2, ErrMsg2);   if (Failed()) return
-   call AllocAry(p%LinParams%du,     nu, "LinParams%du", ErrStat2, ErrMsg2);   if (Failed()) return
-
-   ! Step through list of inputs and save names.  No regular inputs, so we skip directly to the Extended input
-   ! WaveElev0 - extended input
-   ExtStart = 1
-   InitOut%LinNames_u(ExtStart) = 'Extended input: wave elevation at platform ref point, m'
-   InitOut%RotFrame_u(ExtStart) = .false.
-   InitOut%IsLoad_u(  ExtStart) = .false.
-
-   p%LinParams%Jac_u_idxStartList%Extended = ExtStart
-   p%LinParams%du(ExtStart) = 0.02_ReKi * Pi / 180.0_ReKi * max(1.0_ReKi, p%WaveField%WtrDpth)  ! TODO: check that this is the correct perturbation to use
-
-
-   !--------------------------
-   ! Init Jacobians for y
-   !--------------------------
-
-   ! No regular outputs, only the extended outputs and the WrOuts
-   p%LinParams%NumExtendedOutputs = 1
-   ExtStart = 1   ! Extended output is the first output
-   ny = 1         ! one extended output
-   p%LinParams%Jac_y_idxStartList%Extended = 1
-
-   ! Nunber of WrOuts (only if output to OpenFAST)
-   if ( p%OutSwtch /= 1 .and. allocated(InitOut%WriteOutputHdr) ) then
-      ny = ny + size(InitOut%WriteOutputHdr)
-   endif
-
-   ! start position for WrOuts (may be beyond ny)
-   p%LinParams%Jac_y_idxStartList%WrOuts = p%LinParams%Jac_y_idxStartList%Extended + p%LinParams%NumExtendedOutputs
-
-   ! Total number of outs (including regular outs and extended outs)
-   p%LinParams%Jac_ny = ny
-
-   ! allocate some things
-   call AllocAry(InitOut%LinNames_y, ny, "LinNames_y", ErrStat2, ErrMsg2);   if (Failed()) return;
-   call AllocAry(InitOut%RotFrame_y, ny, "RotFrame_y", ErrStat2, ErrMsg2);   if (Failed()) return;
-   InitOut%RotFrame_y = .false.  ! No outputs in rotating frame
-
-   ! Set names: no regular output, so start at extended output
-   InitOut%LinNames_y(ExtStart) = 'Extended output: wave elevation at platform ref point, m'
-
-   ! WrOuts names (only if output to OpenFAST)
-   if ( p%OutSwtch > 1 .and. allocated(InitOut%WriteOutputHdr) ) then
-      do i = 1,size(InitOut%WriteOutputHdr)
-         idx = p%LinParams%Jac_y_idxStartList%WrOuts - 1 + i   ! current index
-         InitOut%LinNames_y(idx) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))
-      enddo
-   endif
-
-
-contains
-   logical function Failed()
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
-   end function Failed
-end subroutine SeaSt_Init_Jacobian
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Linearization Jacobians dY/du, dX/du, dXd/du, and dZ/du
@@ -856,45 +852,33 @@ subroutine SeaSt_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, E
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   if ( present( dYdu ) ) then
-
-      ! If dYdu is allocated, make sure it is the correct size
-      if (allocated(dYdu)) then
-         if (size(dYdu,1) /= p%LinParams%Jac_ny .or. size(dYdu,2) /= p%LinParams%Jac_nu)  deallocate (dYdu)
+   ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u)
+   if (present(dYdu)) then
+      
+      if (.not. allocated(dYdu)) then
+         call AllocAry(dYdu, p%Vars%Ny, p%Vars%Nu, 'dYdu', ErrStat2, ErrMsg2); if(Failed()) return
       endif
 
-      ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
-      !  -  inputs are extended inputs only
-      !  -  outputs are the extended outputs and the WriteOutput values
-      if (.not. ALLOCATED(dYdu)) then
-         call AllocAry( dYdu, p%LinParams%Jac_ny, p%LinParams%Jac_nu, 'dYdu', ErrStat2, ErrMsg2 )
-         if (Failed()) return
-      end if
-
+      ! Initialize Jacobian to zero
       dYdu = 0.0_R8Ki
 
-      ! Extended inputs to extended outputs (direct pass-through)
-      do i=1,min(p%LinParams%NumExtendedInputs,p%LinParams%NumExtendedOutputs)
-         idx_du = p%LinParams%Jac_u_idxStartList%Extended + i - 1
-         idx_dY = p%LinParams%Jac_y_idxStartList%Extended + i - 1
-         dYdu(idx_dY,idx_du) = 1.0_R8Ki
-      enddo
-
+      ! Extended input to extended output (direct pass-through)
+      dYdu(p%Vars%y(p%iVarWave1ElevY)%iLoc(1), p%Vars%u(p%iVarWave1ElevU)%iLoc(1)) = 1.0_R8Ki
+      
       ! It isn't possible to determine the relationship between the extended input and the WrOuts.  So we leave them all zero.
 
    endif
 
-
    ! No states or constraints, so deallocate any such matrices
-   if ( present( dXdu ) ) then
+   if (present(dXdu)) then
       if (allocated(dXdu)) deallocate(dXdu)
    endif
 
-   if ( present( dXddu ) ) then
+   if (present(dXddu)) then
       if (allocated(dXddu)) deallocate(dXddu)
    endif
 
-   if ( present( dZdu ) ) then
+   if (present(dZdu)) then
       if (allocated(dZdu)) deallocate(dZdu)
    endif
 
@@ -1058,42 +1042,30 @@ subroutine SeaSt_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-
-   if ( present( u_op ) ) then
+   if (present(u_op)) then
       if (.not. allocated(u_op)) then
-         call AllocAry(u_op, p%LinParams%Jac_nu, 'u_op', ErrStat2, ErrMsg2)
+         call AllocAry(u_op, p%Vars%Nu, 'u_op', ErrStat2, ErrMsg2)
          if (Failed()) return
       end if
 
       ! no regular inputs, only extended input
-      u_op(p%LinParams%Jac_u_idxStartList%Extended) = 0.0_ReKi    ! WaveElev0 is zero to be consistent with linearization requirements
+      u_op(p%Vars%u(p%iVarWave1ElevU)%iLoc(1)) = 0.0_ReKi    ! WaveElev0 is zero to be consistent with linearization requirements
+
       ! NOTE: if more extended inputs are added, place them here
    end if
 
-   if ( present( y_op ) ) then
+   if (present(y_op)) then
       if (.not. allocated(y_op)) then
-         call AllocAry(y_op, p%LinParams%Jac_ny, 'y_op', ErrStat2, ErrMsg2)
+         call AllocAry(y_op, p%Vars%Ny, 'y_op', ErrStat2, ErrMsg2)
          if (Failed()) return
       end if
 
       ! no regular outputs, only extended output and WrOuts
-      y_op(p%LinParams%Jac_y_idxStartList%Extended) = 0.0_ReKi    ! WaveElev0 is zero to be consistent with linearization requirements
-      ! NOTE: if more extended inputs are added, place them here
+      y_op(p%Vars%y(p%iVarWave1ElevY)%iLoc(1)) = 0.0_ReKi    ! WaveElev0 is zero to be consistent with linearization requirements
+      
+      call MV_Pack(p%Vars%y, p%iVarWriteOutput, y%WriteOutput, y_op)
 
-      ! WrOuts may not be sent to OpenFAST (y_op sized smaller if WrOuts not sent to OpenFAST)
-      if (p%LinParams%Jac_y_idxStartList%WrOuts <= p%LinParams%Jac_ny) then
-         idxStart = p%LinParams%Jac_y_idxStartList%WrOuts
-         idxEnd   = p%LinParams%Jac_y_idxStartList%WrOuts + p%NumOuts - 1
-         ! unnecessary array check to make me feel better about the potentially sloppy indexing
-         if (idxEnd > p%LinParams%Jac_ny) then
-            ErrStat2 = ErrID_Fatal; ErrMsg2 = "Error in the y_op sizing -- u_op not large enough for WrOuts"
-            if (Failed()) return
-         endif
-         ! copy over the returned outputs
-         y_op(idxStart:idxEnd) = y%WriteOutput(1:p%NumOuts)
-      endif
    end if
-
 
 contains
    logical function Failed()

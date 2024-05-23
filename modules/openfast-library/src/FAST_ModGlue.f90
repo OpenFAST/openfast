@@ -514,6 +514,13 @@ subroutine ModLin_StateMatrices(ModGlue, JacScaleFactor, ErrStat, ErrMsg)
    ! C = dYdx
    ! D = dYdu
 
+   ! call DumpMatrix(1000, "dUdu.bin", ModGlue%Lin%dUdu, ErrStat2, ErrMsg2); if (Failed()) return
+   ! call DumpMatrix(1000, "dUdy.bin", ModGlue%Lin%dUdy, ErrStat2, ErrMsg2); if (Failed()) return
+   ! call DumpMatrix(1000, "A.bin", ModGlue%Lin%dXdx, ErrStat2, ErrMsg2); if (Failed()) return
+   ! call DumpMatrix(1000, "B.bin", ModGlue%Lin%dXdu, ErrStat2, ErrMsg2); if (Failed()) return
+   ! call DumpMatrix(1000, "C.bin", ModGlue%Lin%dYdx, ErrStat2, ErrMsg2); if (Failed()) return
+   ! call DumpMatrix(1000, "D.bin", ModGlue%Lin%dYdu, ErrStat2, ErrMsg2); if (Failed()) return
+
    ! Create copies of dUdu and dUdy for calculating matrices
    call AllocAry(dUdu, size(ModGlue%Lin%dUdu, 1), size(ModGlue%Lin%dUdu, 2), 'dUdu', ErrStat2, ErrMsg2); if (Failed()) return
    call AllocAry(dUdy, size(ModGlue%Lin%dUdy, 1), size(ModGlue%Lin%dUdy, 2), 'dUdy', ErrStat2, ErrMsg2); if (Failed()) return
@@ -548,7 +555,7 @@ subroutine ModLin_StateMatrices(ModGlue, JacScaleFactor, ErrStat, ErrMsg)
    deallocate (G)
    deallocate (ipiv)
 
-   ! after this call, dUdu holds G^(-1)*dUdu and dUdy holds G^(-1)*dUdy:
+   ! After this call, dUdu holds G^(-1)*dUdu and dUdy holds G^(-1)*dUdy
    call Postcondition(ModGlue%Vars%u, dUdu, dUdy, JacScaleFactor)
 
    ! Allocate tmp matrix for A and C calculations

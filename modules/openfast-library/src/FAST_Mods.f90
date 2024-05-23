@@ -76,7 +76,7 @@ MODULE FAST_ModTypes
 
    !< Linearization module ID array (order determines Jacobian layout)
    integer(IntKi), parameter :: LinMods(*) = &
-      [Module_IfW, Module_SrvD, Module_ED, Module_BD, Module_AD, &
+      [Module_IfW, Module_SeaSt, Module_SrvD, Module_ED, Module_BD, Module_AD, &
        Module_HD, Module_SD, Module_MAP, Module_MD]      
 
 END MODULE FAST_ModTypes
