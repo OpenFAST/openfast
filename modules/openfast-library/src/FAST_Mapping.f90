@@ -1630,24 +1630,21 @@ contains
    ! IsSiblingMesh returns true if MeshB is a sibling of MeshA
    ! (can't just check pointers as they won't match after restart,
    ! also there can only be one sibling mesh so doesn't work for cousins)
-   logical function IsSiblingMesh(MeshA, MeshB)
+   pure logical function IsSiblingMesh(MeshA, MeshB)
       type(MeshType), intent(in) :: MeshA, MeshB
       integer(IntKi)             :: i, j
-      IsSiblingMesh = (MeshA%Nnodes == MeshB%Nnodes)
-      if (.not. IsSiblingMesh) return
-      IsSiblingMesh = IsSiblingMesh .and. &
-                      all(MeshA%Position == MeshB%Position) .and. &
-                      all(MeshA%RefOrientation == MeshB%RefOrientation)
+      IsSiblingMesh = .false.
+      if (MeshA%Nnodes /= MeshB%Nnodes) return
+      if (any(MeshA%Position /= MeshB%Position)) return
+      if (any(MeshA%RefOrientation /= MeshB%RefOrientation)) return
       do i = 1, NELEMKINDS
-         IsSiblingMesh = IsSiblingMesh .and. &
-                         (MeshA%ElemTable(i)%nelem == MeshB%ElemTable(i)%nelem) .and. &
-                         (MeshA%ElemTable(i)%XElement == MeshB%ElemTable(i)%XElement)
-         if (.not. IsSiblingMesh) return
+         if (MeshA%ElemTable(i)%nelem /= MeshB%ElemTable(i)%nelem) return
+         if (MeshA%ElemTable(i)%XElement /= MeshB%ElemTable(i)%XElement) return
          do j = 1, MeshA%ElemTable(i)%nelem
-            IsSiblingMesh = IsSiblingMesh .and. all(MeshA%ElemTable(i)%Elements(j)%ElemNodes == &
-                                                    MeshB%ElemTable(i)%Elements(j)%ElemNodes)
+            if (any(MeshA%ElemTable(i)%Elements(j)%ElemNodes /= MeshB%ElemTable(i)%Elements(j)%ElemNodes)) return
          end do
       end do
+      IsSiblingMesh = .true.
    end function
 end subroutine
 
@@ -1932,7 +1929,7 @@ subroutine FAST_LinearizeMappings(Turbine, Mods, Mappings, ModOrder, Idx, ErrSta
                else if (nLocDst == 1) then
                   ! Source and destination have one location
                   dUdy(iLocDst(1), iLocSrc(1)) = -1.0_R8Ki
-               else                          
+               else
                   ! One source location to many destination locations
                   dUdy(iLocDst(1):iLocDst(2), iLocSrc(1)) = -1.0_R8Ki
                end if

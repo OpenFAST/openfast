@@ -437,34 +437,10 @@ subroutine ModGlue_Linearize_OP(Turbine, Mods, ModGlue, p, m, p_FAST, m_FAST, y_
          end if
 
          ! Check for NaNs or infinity in module Jacobian matrices
-         if (allocated(ModData%Lin%dYdu)) then
-            if (any(isnan(ModData%Lin%dYdu))) then
-               ErrStat = ErrID_Fatal
-               ErrMsg = 'NaNs detected in dYdu for module '//ModData%Abbr
-               return
-            end if
-         end if
-         if (allocated(ModData%Lin%dXdu)) then
-            if (any(isnan(ModData%Lin%dXdu))) then
-               ErrStat = ErrID_Fatal
-               ErrMsg = 'NaNs detected in dXdu for module '//ModData%Abbr
-               return
-            end if
-         end if
-         if (allocated(ModData%Lin%dYdx)) then
-            if (any(isnan(ModData%Lin%dYdx))) then
-               ErrStat = ErrID_Fatal
-               ErrMsg = 'NaNs detected in dYdx for module '//ModData%Abbr
-               return
-            end if
-         end if
-         if (allocated(ModData%Lin%dXdx)) then
-            if (any(isnan(ModData%Lin%dXdx))) then
-               ErrStat = ErrID_Fatal
-               ErrMsg = 'NaNs detected in dXdx for module '//ModData%Abbr
-               return
-            end if
-         end if
+         if (JacobianHasNaNs(ModData%Lin%dYdu, "dYdu", ModData%Abbr)) return
+         if (JacobianHasNaNs(ModData%Lin%dXdu, "dXdu", ModData%Abbr)) return
+         if (JacobianHasNaNs(ModData%Lin%dYdx, "dYdx", ModData%Abbr)) return
+         if (JacobianHasNaNs(ModData%Lin%dXdx, "dXdx", ModData%Abbr)) return
 
       end associate
    end do
@@ -488,6 +464,17 @@ subroutine ModGlue_Linearize_OP(Turbine, Mods, ModGlue, p, m, p_FAST, m_FAST, y_
    m_FAST%Lin%NextLinTimeIndx = m_FAST%Lin%NextLinTimeIndx + 1
 
 contains
+   logical function JacobianHasNaNs(Jac, label, abbr)
+      real(R8Ki), allocatable, intent(in) :: Jac(:,:)
+      character(*), intent(in)            :: label, abbr
+      JacobianHasNaNs = .false.
+      if (.not. allocated(Jac)) return
+      if (size(Jac) == 0) return
+      if (.not. any(isnan(Jac))) return
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'NaNs detected in dXdx for module '//abbr
+      JacobianHasNaNs = .true.
+   end function
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       Failed = ErrStat >= AbortErrLev
