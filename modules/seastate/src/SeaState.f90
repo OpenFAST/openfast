@@ -334,13 +334,13 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
             call SetErrStat( ErrID_Fatal, 'Constrained wave conditions cannot be used for linearization. Set ConstWaveMod=0.', ErrStat, ErrMsg, RoutineName )
          end if
 
-         ! set the Jacobian info if we don't have a fatal error
-         if (ErrStat < AbortErrLev) then
-            call SeaSt_InitVars(u, p, x, y, m, InitOut,  InputFileData, InitInp%Linearize, ErrStat2, ErrMsg2)
-            if (Failed()) return
-         endif
       end if
 
+         ! Initialize module variables if we don't have a fatal error
+      if (ErrStat < AbortErrLev) then
+         call SeaSt_InitVars(u, p, x, y, m, InitOut,  InputFileData, InitInp%Linearize, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      endif
 
          ! Destroy the local initialization data
       CALL CleanUp()
@@ -1026,12 +1026,12 @@ subroutine SeaSt_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_
    type(SeaSt_MiscVarType),            intent(inout)  :: m          !< Misc/optimization variables
    integer(IntKi),                     intent(  out)  :: ErrStat    !< Error status of the operation
    character(*),                       intent(  out)  :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   real(ReKi), allocatable, optional,  intent(inout)  :: u_op(:)    !< values of linearized inputs
-   real(ReKi), allocatable, optional,  intent(inout)  :: y_op(:)    !< values of linearized outputs
-   real(ReKi), allocatable, optional,  intent(inout)  :: x_op(:)    !< values of linearized continuous states
-   real(ReKi), allocatable, optional,  intent(inout)  :: dx_op(:)   !< values of first time derivatives of linearized continuous states
-   real(ReKi), allocatable, optional,  intent(inout)  :: xd_op(:)   !< values of linearized discrete states
-   real(ReKi), allocatable, optional,  intent(inout)  :: z_op(:)    !< values of linearized constraint states
+   real(R8Ki), allocatable, optional,  intent(inout)  :: u_op(:)    !< values of linearized inputs
+   real(R8Ki), allocatable, optional,  intent(inout)  :: y_op(:)    !< values of linearized outputs
+   real(R8Ki), allocatable, optional,  intent(inout)  :: x_op(:)    !< values of linearized continuous states
+   real(R8Ki), allocatable, optional,  intent(inout)  :: dx_op(:)   !< values of first time derivatives of linearized continuous states
+   real(R8Ki), allocatable, optional,  intent(inout)  :: xd_op(:)   !< values of linearized discrete states
+   real(R8Ki), allocatable, optional,  intent(inout)  :: z_op(:)    !< values of linearized constraint states
 
    integer(IntKi)          :: idxStart, idxEnd
    integer(IntKi)          :: ErrStat2
