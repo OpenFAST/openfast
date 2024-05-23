@@ -6013,6 +6013,7 @@ subroutine BD_PackContStateQuatOP(p, x, Values)
    type(BD_ParameterType), intent(in)        :: p
    type(BD_ContinuousStateType), intent(in)  :: x
    real(R8Ki), intent(out)                   :: Values(:)
+   real(R8Ki)                                :: quat(3)
    integer(IntKi)                            :: i
    do i = 1, size(p%Vars%x)
       associate (Var => p%Vars%x(i))
@@ -6020,7 +6021,8 @@ subroutine BD_PackContStateQuatOP(p, x, Values)
          case (VF_TransDisp)
             Values(Var%iLoc(1):Var%iLoc(2)) = x%q(1:3,Var%iUsr(1))               ! XYZ displacement
          case (VF_Orientation)
-            Values(Var%iLoc(1):Var%iLoc(2)) = wm_to_quat(x%q(4:6,Var%iUsr(1)))   ! WM to quaternion
+            quat = wm_to_quat(wm_inv(x%q(4:6,Var%iUsr(1))))
+            Values(Var%iLoc(1):Var%iLoc(2)) = quat                               ! WM to quaternion
          case (VF_TransVel)
             Values(Var%iLoc(1):Var%iLoc(2)) = x%dqdt(1:3,Var%iUsr(1))            ! XYZ velocity
          case (VF_AngularVel)
@@ -6034,6 +6036,7 @@ subroutine BD_UnpackContStateQuatOP(p, Values, x)
    type(BD_ParameterType), intent(in)           :: p
    real(R8Ki), intent(in)                       :: Values(:)
    type(BD_ContinuousStateType), intent(inout)  :: x
+   real(R8Ki)                                   :: wm(3)
    integer(IntKi)                               :: i
    do i = 1, size(p%Vars%x)
       associate (Var => p%Vars%x(i))
@@ -6041,7 +6044,8 @@ subroutine BD_UnpackContStateQuatOP(p, Values, x)
          case (VF_TransDisp)
             x%q(1:3,Var%iUsr(1)) = Values(Var%iLoc(1):Var%iLoc(2))               ! XYZ displacement
          case (VF_Orientation)
-            x%q(4:6,Var%iUsr(1)) = quat_to_wm(Values(Var%iLoc(1):Var%iLoc(2)))   ! Quaternion to WM
+            wm = wm_inv(quat_to_wm(Values(Var%iLoc(1):Var%iLoc(2))))
+            x%q(4:6,Var%iUsr(1)) = wm                                            ! Quaternion to WM
          case (VF_TransVel)
             x%dqdt(1:3,Var%iUsr(1)) = Values(Var%iLoc(1):Var%iLoc(2))            ! XYZ velocity
          case (VF_AngularVel)
@@ -6178,6 +6182,9 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          ! Loop through number of linearization perturbations in variable
          do j = 1, p%Vars%u(i)%Num
 
+            ! Calculate column index
+            col = p%Vars%u(i)%iLoc(1) + j - 1
+
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
             call BD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
@@ -6189,9 +6196,6 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             call BD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
             call BD_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2, NeedWriteOutput=IsFullLin); if (Failed()) return
             call BD_PackOutputOP(p, m%y_lin, m%Jac%y_neg, IsFullLin)
-
-            ! Calculate column index
-            col = p%Vars%u(i)%iLoc(1) + j - 1
 
             ! Get partial derivative via central difference and store in full linearization array
             call MV_ComputeCentralDiff(p%Vars%y, p%Vars%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,col))

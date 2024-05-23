@@ -35,8 +35,9 @@ public :: MV_ComputeCentralDiff, MV_Perturb, MV_ComputeDiff
 public :: MV_AddVar, MV_AddMeshVar
 public :: MV_HasFlags, MV_SetFlags, MV_UnsetFlags, MV_NumVars
 public :: LoadFields, MotionFields, TransFields, AngularFields
-public :: quat_to_dcm, quat_compose, dcm_to_quat, quat_inv, quat_to_rvec, rvec_to_quat, wm_to_quat, quat_to_wm
+public :: quat_to_dcm, dcm_to_quat, quat_inv, quat_to_rvec, rvec_to_quat, wm_to_quat, quat_to_wm, wm_inv
 public :: MV_FieldString, IdxStr
+public :: DumpMatrix
 
 integer(IntKi), parameter :: &
    LoadFields(*) = [VF_Force, VF_Moment], &
@@ -457,7 +458,7 @@ subroutine MV_PackMesh(VarAry, iVar, Mesh, Values)
    integer(IntKi), intent(in)    :: iVar
    type(MeshType), intent(in)    :: Mesh
    real(R8Ki), intent(inout)     :: Values(:)
-   integer(IntKi)                :: MeshID, i, j
+   integer(IntKi)                :: MeshID, i, j, k
    if (iVar == 0) return
    MeshID = VarAry(iVar)%MeshID
    do i = iVar, size(VarAry)
@@ -471,8 +472,10 @@ subroutine MV_PackMesh(VarAry, iVar, Mesh, Values)
          case (VF_TransDisp)
             Values(iLoc(1):iLoc(2)) = pack(Mesh%TranslationDisp, .true.)
          case (VF_Orientation)
+            k = iLoc(1)
             do j = 1, VarAry(i)%Nodes
-               Values(iLoc(1) + 3*(j - 1):iLoc(1) + 3*j) = dcm_to_quat(Mesh%Orientation(:, :, j))
+               Values(k:k + 2) = dcm_to_quat(Mesh%Orientation(:, :, j))
+               k = k + 3
             end do
          case (VF_TransVel)
             Values(iLoc(1):iLoc(2)) = pack(Mesh%TranslationVel, .true.)
@@ -494,7 +497,7 @@ subroutine MV_UnpackMesh(VarAry, iVar, Values, Mesh)
    integer(IntKi), intent(in) :: iVar
    real(R8Ki), intent(in)        :: Values(:)
    type(MeshType), intent(inout) :: Mesh
-   integer(IntKi)                :: MeshID, i, j
+   integer(IntKi)                :: MeshID, i, j, k
    if (iVar == 0) return
    MeshID = VarAry(iVar)%MeshID
    do i = iVar, size(VarAry)
@@ -508,8 +511,10 @@ subroutine MV_UnpackMesh(VarAry, iVar, Values, Mesh)
          case (VF_TransDisp)
             Mesh%TranslationDisp = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%TranslationDisp))
          case (VF_Orientation)
+            k = iLoc(1)
             do j = 1, VarAry(i)%Nodes
-               Mesh%Orientation(:, :, j) = quat_to_dcm(Values(iLoc(1) + 3*(j - 1):iLoc(1) + 3*j))
+               Mesh%Orientation(:, :, j) = quat_to_dcm(Values(k:k + 2))
+               k = k + 3
             end do
          case (VF_TransVel)
             Mesh%TranslationVel = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%TranslationVel))
@@ -534,7 +539,7 @@ subroutine MV_Perturb(Var, iLin, PerturbSign, BaseAry, PerturbAry)
    real(R8Ki), intent(inout)        :: PerturbAry(:)
 
    real(R8Ki)                       :: Perturb
-   real(R8Ki)                       :: quat(3), quat_p(3), rotvec(3)
+   real(R8Ki)                       :: quat(3), quat_p(3)
    integer(IntKi)                   :: i, j
 
    ! Copy base array to perturbed array
@@ -548,13 +553,14 @@ subroutine MV_Perturb(Var, iLin, PerturbSign, BaseAry, PerturbAry)
 
    ! If variable field is orientation, perturbation is in radians
    if (Var%Field == VF_Orientation) then
-      j = mod(iLin - 1, 3)                             ! component being modified (0, 1, 2)
-      quat_p = perturb_quat(Perturb, j + 1)            ! Quaternion of perturbed angle
-      i = i - j                                        ! index of start of quaternion parameters (3)
-      quat = BaseAry(i:i + 2)                          ! Current quat parameters value
-      PerturbAry(i:i + 2) = quat_compose(quat_p, quat) ! Compose perturbation and current rotation
+      j = mod(iLin - 1, 3)                      ! component being modified (0, 1, 2)
+      quat_p = perturb_quat(Perturb, j + 1)     ! Quaternion of perturbed angle
+      i = i - j                                 ! index of start of quaternion parameters (3)
+      quat = BaseAry(i:i + 2)                   ! Current quat parameters value
+      quat = quat_compose(quat, quat_p)         ! Compose perturbation and current rotation
+      PerturbAry(i:i + 2) = quat                ! Save perturbed quaternion in array
    else
-      PerturbAry(i) = PerturbAry(i) + Perturb  ! Add perturbation directly
+      PerturbAry(i) = PerturbAry(i) + Perturb   ! Add perturbation directly
    end if
 
 end subroutine
@@ -576,11 +582,11 @@ subroutine MV_ComputeDiff(VarAry, PosAry, NegAry, DiffAry)
       ! If variable field is orientation
       if (VarAry(i)%Field == VF_Orientation) then
 
+         ! Starting index into arrays
+         k = VarAry(i)%iLoc(1)
+
          ! Loop through nodes
          do j = 1, VarAry(i)%Nodes
-
-            ! Get vector of indices of rotation parameters in array
-            k = VarAry(i)%iLoc(1) + 3*(j - 1)
 
             ! Quaternions from negative and positive perturbations
             quat_neg = NegAry(k:k + 2)
@@ -596,13 +602,16 @@ subroutine MV_ComputeDiff(VarAry, PosAry, NegAry, DiffAry)
             else
 
                ! Calculate relative rotation from negative to positive perturbation
-               delta = quat_compose(quat_pos, quat_inv(quat_neg))
+               delta = quat_compose(-quat_neg, quat_pos)
 
                ! Convert relative rotation from quaternion to rotation vector
-               DiffAry(k:k + 2) = GetSmllRotAngs(quat_to_dcm(delta), ErrStat, ErrMsg) 
-               
+               DiffAry(k:k + 2) = GetSmllRotAngs(quat_to_dcm(delta), ErrStat, ErrMsg)
+
                ! DiffAry(k:k + 2) = quat_to_rvec(delta)
             end if
+
+            ! Increment starting index
+            k = k + 3
 
          end do
 
@@ -866,40 +875,128 @@ pure function quat_canonical(q0, q) result(qc)
    end do
 end function
 
-pure function dcm_to_quat(dcm) result(q)
+function dcm_to_quat(dcm) result(q)
    real(R8Ki), intent(in)  :: dcm(3, 3)
-   real(R8Ki)              :: q(3), R(3, 3), C, s, tr, q0
+   real(R8Ki)              :: q(3)
+   real(R8Ki)              :: t, s, qw
 
-   R = transpose(dcm)
+   ! Trace of matrix
+   t = dcm(1, 1) + dcm(2, 2) + dcm(3, 3)
 
-   tr = R(1, 1) + R(2, 2) + R(3, 3)
-
-   if (tr > 0.0_R8Ki) then
-      s = 0.5_R8Ki/sqrt(tr + 1.0_R8Ki)
-      q0 = 0.25_R8Ki/s
-      q(1) = (R(3, 2) - R(2, 3))*s
-      q(2) = (R(1, 3) - R(3, 1))*s
-      q(3) = (R(2, 1) - R(1, 2))*s
-   else if (R(1, 1) > R(2, 2) .and. R(1, 1) > R(3, 3)) then
-      s = 2.0_R8Ki*sqrt(1.0_R8Ki + R(1, 1) - R(2, 2) - R(3, 3))
-      q0 = (R(3, 2) - R(2, 3))/s
-      q(1) = 0.25_R8Ki*s
-      q(2) = (R(1, 2) + R(2, 1))/s
-      q(3) = (R(1, 3) + R(3, 1))/s
-   elseif (R(2, 2) > R(3, 3)) then
-      s = 2.0_R8Ki*sqrt(1.0_R8Ki + R(2, 2) - R(1, 1) - R(3, 3))
-      q0 = (R(1, 3) - R(3, 1))/s
-      q(1) = (R(1, 2) + R(2, 1))/s
-      q(2) = 0.25_R8Ki*s
-      q(3) = (R(2, 3) + R(3, 2))/s
+   if (t > 0.0) then
+      s = 0.5/sqrt(t + 1.0)
+      qw = 0.25/s
+      q(1) = (dcm(3, 2) - dcm(2, 3))*s
+      q(2) = (dcm(1, 3) - dcm(3, 1))*s
+      q(3) = (dcm(2, 1) - dcm(1, 2))*s
+   else if (dcm(1, 1) > dcm(2, 2) .and. dcm(1, 1) > dcm(3, 3)) then
+      s = 2.0*sqrt(1.0 + dcm(1, 1) - dcm(2, 2) - dcm(3, 3))
+      qw = (dcm(3, 2) - dcm(2, 3))/s
+      q(1) = 0.25*s
+      q(2) = (dcm(1, 2) + dcm(2, 1))/s
+      q(3) = (dcm(1, 3) + dcm(3, 1))/s
+   else if (dcm(2, 2) > dcm(3, 3)) then
+      s = 2.0*sqrt(1.0 + dcm(2, 2) - dcm(1, 1) - dcm(3, 3))
+      qw = (dcm(1, 3) - dcm(3, 1))/s
+      q(1) = (dcm(1, 2) + dcm(2, 1))/s
+      q(2) = 0.25*s
+      q(3) = (dcm(2, 3) + dcm(3, 2))/s
    else
-      s = 2.0_R8Ki*sqrt(1.0_R8Ki + R(3, 3) - R(1, 1) - R(2, 2))
-      q0 = (R(2, 1) - R(1, 2))/s
-      q(1) = (R(1, 3) + R(3, 1))/s
-      q(2) = (R(2, 3) + R(3, 2))/s
-      q(3) = 0.25_R8Ki*s
+      s = 2.0*sqrt(1.0 + dcm(3, 3) - dcm(1, 1) - dcm(2, 2))
+      qw = (dcm(2, 1) - dcm(1, 2))/s
+      q(1) = (dcm(1, 3) + dcm(3, 1))/s
+      q(2) = (dcm(2, 3) + dcm(3, 2))/s
+      q(3) = 0.25*s
    end if
-   q = quat_canonical(q0, q)
+
+   q = quat_canonical(qw, q)
+end function
+
+! dcm_to_quat2 returns a quaternion from a DCM based on eigenanalysis
+! https://en.wikipedia.org/wiki/Rotation_matrix#Quaternion
+function dcm_to_quat2(dcm) result(q)
+   real(R8Ki), intent(in)     :: dcm(3, 3)
+   real(R8Ki)                 :: q(3)
+   integer(IntKi), parameter  :: n = 4
+   real(R8Ki)                 :: Qxx, Qxy, Qxz, Qyx, Qyy, Qyz, Qzx, Qzy, Qzz
+   real(R8Ki)                 :: A(n, n), wr(n), wi(n), vl(n, n), vr(n, n), work(4*n)
+   integer(IntKi)             :: info, lwork, i
+
+   Qxx = dcm(1, 1)
+   Qyx = dcm(2, 1)
+   Qzx = dcm(3, 1)
+   Qxy = dcm(1, 2)
+   Qyy = dcm(2, 2)
+   Qzy = dcm(3, 2)
+   Qxz = dcm(1, 3)
+   Qyz = dcm(2, 3)
+   Qzz = dcm(3, 3)
+
+   A(:,1) = [Qxx - Qyy - Qzz, Qyx + Qxy, Qzx + Qxz, Qzy - Qyz]/ 3.0_R8Ki
+   A(:,2) = [Qyx + Qxy, Qyy - Qxx - Qzz, Qzy + Qyz, Qxz - Qzx]/ 3.0_R8Ki
+   A(:,3) = [Qzx + Qxz, Qzy + Qyz, Qzz - Qxx - Qyy, Qyx - Qxy]/ 3.0_R8Ki
+   A(:,4) = [Qzy - Qyz, Qxz - Qzx, Qyx - Qxy, Qxx + Qyy + Qzz]/ 3.0_R8Ki
+
+   lwork = 4*n
+
+   call dgeev('N', 'V', n, A, n, wr, wi, vl, n, vr, n, work, lwork, info)
+
+   ! If error calculating eigenvector/eigenvalues
+   if (info /= 0) then
+      q = 0.0_R8Ki
+      return
+   end if
+   
+   ! Get index of maximum real eigenvalue
+   i = maxloc(wr, dim=1)
+
+   ! Canonical form of quaternion
+   q = quat_canonical(vr(4,i), vr(1:3,i))
+end function
+
+! quat_to_dcm returns a dcm based on the quaternion where q is a unit quaternion with a positive scalar component
+! https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation#Quaternion-derived_rotation_matrix
+pure function quat_to_dcm(q) result(dcm)
+   real(R8Ki), intent(in)  :: q(3)
+   real(R8Ki)              :: dcm(3, 3)
+   real(R8Ki)              :: w, ww, xx, yy, zz, n, s
+   real(R8Ki)              :: xy, yz, xz, wx, wy, wz
+
+   ! Calculate scalar component
+   w = sqrt(1.0_R8Ki - dot_product(q, q))
+
+   ww = w*w
+   xx = q(1)*q(1)
+   yy = q(2)*q(2)
+   zz = q(3)*q(3)
+
+   xy = q(1)*q(2)
+   yz = q(2)*q(3)
+   xz = q(1)*q(3)
+
+   wx = q(1)*w
+   wy = q(2)*w
+   wz = q(3)*w
+
+   n = ww + xx + yy + zz
+   if (n < epsilon(n)) then
+      s = 0.0_R8Ki
+   else
+      s = 2.0_R8Ki/n
+   end if
+
+   dcm(1, 1) = 1.0_R8Ki - s*(yy + zz)
+   dcm(2, 1) = s*(xy + wz)
+   dcm(3, 1) = s*(xz - wy)
+
+   dcm(1, 2) = s*(xy - wz)
+   dcm(2, 2) = 1.0_R8Ki - s*(xx + zz)
+   dcm(3, 2) = s*(yz + wx)
+
+   dcm(1, 3) = s*(xz + wy)
+   dcm(2, 3) = s*(yz - wx)
+   dcm(3, 3) = 1.0_R8Ki - s*(xx + yy)
+
 end function
 
 pure function quat_compose(q1, q2) result(q)
@@ -924,18 +1021,21 @@ pure function quat_inv(q) result(qi)
    qi = -q
 end function
 
+! https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation#Recovering_the_axis-angle_representation
 pure function quat_to_rvec(q) result(rvec)
    real(R8Ki), intent(in)  :: q(3)
-   real(R8Ki)              :: q0, theta, tmp, rvec(3)
-   q0 = sqrt(1.0_R8Ki - dot_product(q, q))
-   theta = 2.0_R8Ki*acos(q0)
-   tmp = sqrt(1.0_R8Ki - q0*q0)
-   if (tmp < epsilon(tmp)) then
+   real(R8Ki)              :: qr, theta, tmp, rvec(3), m
+
+   ! Magnitude of imaginary part
+   m = sqrt(dot_product(q, q))
+
+   ! If this is an identity quaternion, qr == 1, rotation vector is zero
+   if (m < epsilon(m)) then
       rvec = 0.0_R8Ki
    else
-      rvec(1) = theta*q(1)/tmp
-      rvec(2) = theta*q(2)/tmp
-      rvec(3) = theta*q(3)/tmp
+      qr = sqrt(1.0_R8Ki - m*m)        ! Scalar part
+      theta = 2.0_R8Ki*atan2(m, qr)  ! Angle
+      rvec = theta*q/m
    end if
 end function
 
@@ -946,41 +1046,6 @@ pure function rvec_to_quat(rvec) result(q)
    q0 = cos(theta/2.0_R8Ki)
    q = rvec/theta*sin(theta/2.0_R8Ki)
    q = quat_canonical(q0, q)
-end function
-
-pure function quat_to_dcm(q) result(dcm)
-   real(R8Ki), intent(in)  :: q(3)
-   real(R8Ki)              :: dcm(3, 3)
-   real(R8Ki)              :: q0, q0q0, q1q1, q2q2, q3q3
-   real(R8Ki)              :: q1q2, q2q3, q1q3, q0q1, q0q2, q0q3
-
-   ! q is assumed to be a unit quaternion
-   q0 = sqrt(1.0_R8Ki - dot_product(q, q))
-
-   q0q0 = q0*q0
-   q1q1 = q(1)*q(1)
-   q2q2 = q(2)*q(2)
-   q3q3 = q(3)*q(3)
-
-   q1q2 = q(1)*q(2)
-   q2q3 = q(2)*q(3)
-   q1q3 = q(1)*q(3)
-
-   q0q1 = q0*q(1)
-   q0q2 = q0*q(2)
-   q0q3 = q0*q(3)
-
-   dcm(1, 1) = q0q0 + q1q1 - q2q2 - q3q3
-   dcm(2, 1) = 2.0_R8Ki*(q1q2 - q0q3)
-   dcm(3, 1) = 2.0_R8Ki*(q1q3 + q0q2)
-
-   dcm(1, 2) = 2.0_R8Ki*(q1q2 + q0q3)
-   dcm(2, 2) = q0q0 - q1q1 + q2q2 - q3q3
-   dcm(3, 2) = 2.0_R8Ki*(q2q3 - q0q1)
-
-   dcm(1, 3) = 2.0_R8Ki*(q1q3 - q0q2)
-   dcm(2, 3) = 2.0_R8Ki*(q2q3 + q0q1)
-   dcm(3, 3) = q0q0 - q1q1 - q2q2 + q3q3
 end function
 
 pure function wm_to_quat(c) result(q)
@@ -1011,5 +1076,29 @@ pure function cross(a, b) result(c)
    real(R8Ki)             :: c(3)
    c = [a(2)*b(3) - a(3)*b(2), a(3)*b(1) - a(1)*b(3), a(1)*b(2) - b(1)*a(2)]
 end function
+
+!-------------------------------------------------------------------------------
+! Debugging
+!-------------------------------------------------------------------------------
+
+subroutine DumpMatrix(unit, filename, A, ErrStat, ErrMsg)
+   integer(IntKi), intent(in)             :: unit
+   character(*), intent(in)               :: filename
+   real(R8Ki), intent(in)                 :: A(:, :)
+   integer(IntKi), intent(out)            :: ErrStat
+   character(*), intent(out)              :: ErrMsg
+
+   character(*), parameter                :: RoutineName = 'DumpMatrix'
+   integer(IntKi)                         :: ErrStat2
+   character(ErrMsgLen)                   :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   call OpenBOutFile(unit, filename, ErrStat2, ErrMsg2)
+   write (unit) int(shape(A), B4Ki)
+   write (unit) pack(A, .true.)
+   close (unit)
+end subroutine
 
 end module
