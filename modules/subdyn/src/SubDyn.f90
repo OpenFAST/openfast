@@ -496,6 +496,7 @@ subroutine SD_InitVars(Init, u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
 
    ! Output variables
    call MV_AddVar(p%Vars%y, "WriteOutput", VF_Scalar, Num=p%NumOuts, &
+                  Flags=VF_WriteOut, &
                   VarIdx=p%iVarWriteOutput, &
                   LinNames=[(WriteOutputLinName(i), i = 1, p%numOuts)])
 
