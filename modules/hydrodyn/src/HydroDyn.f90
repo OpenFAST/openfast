@@ -1741,12 +1741,8 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          ! If variable flag not in flag filter, skip
          if (.not. MV_HasFlags(p%Vars%u(i), FlagFilterLoc)) cycle
 
-         ! If this index is extended input
-         if (i == p%iVarWaveElev0 .or. i == p%iVarHWindSpeed .or. &
-             i == p%iVarPLexp .or. i == p%iVarPropagationDir) then
-            dYdu(:, p%Vars%u(i)%iLoc(1)) = 0
-            cycle
-         end if
+         ! If variable is extended input, skip
+         if (MV_HasFlags(p%Vars%u(i), VF_ExtLin)) cycle
 
          ! Loop through number of linearization perturbations in variable
          do j = 1, p%Vars%u(i)%Num
@@ -1771,13 +1767,11 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          end do
       end do
 
-      !-------------------
-      ! extended inputs
-      ! WaveElev0 column -- from SeaState
-      ! dYdu(:,n_du_norm+1) = 0.0_ReKi
-
-      ! HWindSpeed / PLexp / PropagationDir -- from Ifw/FlowField for turbulent sea current
-      ! dYdu(:,n_du_norm+2:n_du_norm+4) = 0.0_ReKi
+      ! Set extended inputs
+      dYdu(:, p%Vars%u(p%iVarWaveElev0)%iLoc(1)) = 0.0_R8Ki
+      dYdu(:, p%Vars%u(p%iVarHWindSpeed)%iLoc(1)) = 0.0_R8Ki
+      dYdu(:, p%Vars%u(p%iVarPLexp)%iLoc(1)) = 0.0_R8Ki
+      dYdu(:, p%Vars%u(p%iVarPropagationDir)%iLoc(1)) = 0.0_R8Ki
       
    END IF
    
@@ -1804,7 +1798,7 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       end do
 
       startingI = p%totalStates - p%totalRdtnStates
-      startingJ = p%Vars%Nu - 1 - 18 - 4*3*p%NBody !  subtract 1 for WaveElev0, then 6*3 for PRPMesh and then 4*3*NBody to place us at the beginning of the velocity inputs
+      startingJ = p%Vars%Nu - 4 - 18 - 4*3*p%NBody !  subtract 4 for extended inputs and 4*3*NBody to place us at the beginning of the velocity inputs
       ! B is numStates by 6*NBody where NBody =1 if NBodyMod=2 or 3, but could be >1 for NBodyMod=1
       if ( p%NBodyMod == 1 ) then
          ! Example for NBodyMod=1 and NBody = 2,
@@ -1988,9 +1982,8 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
             
    end if
 
-   IF ( PRESENT( dXdx ) ) THEN
-
-      ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
+   ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
+   IF (present(dXdx)) then
 
       ! allocate dXdu if necessary
       if (.not. allocated(dXdx)) then
@@ -2239,7 +2232,6 @@ contains
       Failed =  ErrStat >= AbortErrLev
    end function Failed
 END SUBROUTINE HD_GetOP
-
 
 subroutine HD_PackStateValues(p, x, ary)
    type(HydroDyn_ParameterType), intent(in)        :: p
