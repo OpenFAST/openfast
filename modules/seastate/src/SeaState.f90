@@ -492,20 +492,19 @@ subroutine SeaSt_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrS
    !----------------------------------------------------------------------------
 
    ! Extended input
-   call MV_AddVar(p%Vars%u, "Wave1Elev", VF_Scalar, &
-                  VarIdx=p%iVarWave1ElevU, &
+   call MV_AddVar(p%Vars%u, "WaveElev0", VF_Scalar, &
+                  VarIdx=p%iVarWaveElev0U, &
                   Flags=VF_ExtLin, &
                   Perturb=0.02_R8Ki * Pi / 180.0_R8Ki * max(1.0_R8Ki, p%WaveField%WtrDpth), &
                   LinNames=['Extended input: wave elevation at platform ref point, m'])
-
 
    !----------------------------------------------------------------------------
    ! Output variables
    !----------------------------------------------------------------------------
 
    ! Extended output
-   call MV_AddVar(p%Vars%y, "Wave1Elev", VF_Scalar, &
-                  VarIdx=p%iVarWave1ElevY, &
+   call MV_AddVar(p%Vars%y, "WaveElev0", VF_Scalar, &
+                  VarIdx=p%iVarWaveElev0Y, &
                   Flags=VF_ExtLin, &
                   LinNames=['Extended output: wave elevation at platform ref point, m'])
 
@@ -863,7 +862,7 @@ subroutine SeaSt_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, E
       dYdu = 0.0_R8Ki
 
       ! Extended input to extended output (direct pass-through)
-      dYdu(p%Vars%y(p%iVarWave1ElevY)%iLoc(1), p%Vars%u(p%iVarWave1ElevU)%iLoc(1)) = 1.0_R8Ki
+      dYdu(p%Vars%y(p%iVarWaveElev0Y)%iLoc(1), p%Vars%u(p%iVarWaveElev0U)%iLoc(1)) = 1.0_R8Ki
       
       ! It isn't possible to determine the relationship between the extended input and the WrOuts.  So we leave them all zero.
 
@@ -1049,7 +1048,7 @@ subroutine SeaSt_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_
       end if
 
       ! no regular inputs, only extended input
-      u_op(p%Vars%u(p%iVarWave1ElevU)%iLoc(1)) = 0.0_ReKi    ! WaveElev0 is zero to be consistent with linearization requirements
+      u_op(p%Vars%u(p%iVarWaveElev0U)%iLoc(1)) = 0.0_ReKi    ! WaveElev0 is zero to be consistent with linearization requirements
 
       ! NOTE: if more extended inputs are added, place them here
    end if
@@ -1061,7 +1060,7 @@ subroutine SeaSt_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_
       end if
 
       ! no regular outputs, only extended output and WrOuts
-      y_op(p%Vars%y(p%iVarWave1ElevY)%iLoc(1)) = 0.0_ReKi    ! WaveElev0 is zero to be consistent with linearization requirements
+      y_op(p%Vars%y(p%iVarWaveElev0Y)%iLoc(1)) = 0.0_ReKi    ! WaveElev0 is zero to be consistent with linearization requirements
       
       call MV_Pack(p%Vars%y, p%iVarWriteOutput, y%WriteOutput, y_op)
 

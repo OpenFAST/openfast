@@ -140,8 +140,8 @@ IMPLICIT NONE
 ! =========  SeaSt_ParameterType  =======
   TYPE, PUBLIC :: SeaSt_ParameterType
     TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
-    INTEGER(IntKi)  :: iVarWave1ElevU = 0_IntKi      !< Index of Wave1Elev input variable [-]
-    INTEGER(IntKi)  :: iVarWave1ElevY = 0_IntKi      !< Index of Wave1Elev output variable [-]
+    INTEGER(IntKi)  :: iVarWaveElev0U = 0_IntKi      !< Index of WaveElev0 input variable [-]
+    INTEGER(IntKi)  :: iVarWaveElev0Y = 0_IntKi      !< Index of WaveElev0 output variable [-]
     INTEGER(IntKi)  :: iVarWriteOutput = 0_IntKi      !< Index of WriteOutput variable [-]
     REAL(DbKi)  :: WaveDT = 0.0_R8Ki      !< Wave DT [sec]
     INTEGER(IntKi)  :: NGridPts = 0_IntKi      !< Number of data points in the wave kinematics grid [-]
@@ -919,8 +919,8 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end if
-   DstParamData%iVarWave1ElevU = SrcParamData%iVarWave1ElevU
-   DstParamData%iVarWave1ElevY = SrcParamData%iVarWave1ElevY
+   DstParamData%iVarWaveElev0U = SrcParamData%iVarWaveElev0U
+   DstParamData%iVarWaveElev0Y = SrcParamData%iVarWaveElev0Y
    DstParamData%iVarWriteOutput = SrcParamData%iVarWriteOutput
    DstParamData%WaveDT = SrcParamData%WaveDT
    DstParamData%NGridPts = SrcParamData%NGridPts
@@ -1089,8 +1089,8 @@ subroutine SeaSt_PackParam(RF, Indata)
          call NWTC_Library_PackModVarsType(RF, InData%Vars) 
       end if
    end if
-   call RegPack(RF, InData%iVarWave1ElevU)
-   call RegPack(RF, InData%iVarWave1ElevY)
+   call RegPack(RF, InData%iVarWaveElev0U)
+   call RegPack(RF, InData%iVarWaveElev0Y)
    call RegPack(RF, InData%iVarWriteOutput)
    call RegPack(RF, InData%WaveDT)
    call RegPack(RF, InData%NGridPts)
@@ -1158,8 +1158,8 @@ subroutine SeaSt_UnPackParam(RF, OutData)
    else
       OutData%Vars => null()
    end if
-   call RegUnpack(RF, OutData%iVarWave1ElevU); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarWave1ElevY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarWaveElev0U); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarWaveElev0Y); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarWriteOutput); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveDT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NGridPts); if (RegCheckErr(RF, RoutineName)) return

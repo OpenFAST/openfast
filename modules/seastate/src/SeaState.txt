@@ -122,8 +122,8 @@ typedef   ^                            OtherStateType                R8Ki    Unu
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
 typedef   ^                  ParameterType          ModVarsType             &Vars              -       -      -  "Module Variables"
-typedef   ^                  ^                      IntKi                    iVarWave1ElevU    -       -      -  "Index of Wave1Elev input variable"        -
-typedef   ^                  ^                      IntKi                    iVarWave1ElevY    -       -      -  "Index of Wave1Elev output variable"        -
+typedef   ^                  ^                      IntKi                    iVarWaveElev0U    -       -      -  "Index of WaveElev0 input variable"        -
+typedef   ^                  ^                      IntKi                    iVarWaveElev0Y    -       -      -  "Index of WaveElev0 output variable"        -
 typedef   ^                  ^                      IntKi                    iVarWriteOutput   -       -      -  "Index of WriteOutput variable"        -
 typedef   ^                  ^                      DbKi                     WaveDT            -       -      -  "Wave DT" sec
 typedef   ^                  ^                      INTEGER                  NGridPts          -       -      -  "Number of data points in the wave kinematics grid"        -

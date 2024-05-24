@@ -391,7 +391,7 @@ subroutine FAST_InitMappings(Mods, Mappings, Turbine, ErrStat, ErrMsg)
          case (Module_SD)
             call InitMappings_SD(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_SeaSt)
-            ! call InitMappings_SeaSt(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+            call InitMappings_SeaSt(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_SrvD)
             call InitMappings_SrvD(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          end select
@@ -1039,6 +1039,13 @@ subroutine InitMappings_HD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
                          Active=Turbine%p_FAST%CompSub /= Module_SD); if(Failed()) return
 
+   case (Module_SeaSt)
+
+      call MapVariable(Mappings, "SEA WaveElev0 -> HD WaveElev0", &
+                       SrcMod=SrcMod, iVarSrc=Turbine%SeaSt%p%iVarWaveElev0Y, &
+                       DstMod=DstMod, iVarDst=Turbine%HD%p%iVarWaveElev0, &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
+
    case (Module_SD)
 
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
@@ -1286,7 +1293,7 @@ subroutine InitMappings_SD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
 
-   character(*), parameter    :: RoutineName = 'InitMappings_BD'
+   character(*), parameter    :: RoutineName = 'InitMappings_SD'
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
    integer(IntKi)             :: i, j
@@ -1377,6 +1384,34 @@ subroutine InitMappings_SD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                           DstDispMeshLoc=MeshLocType(SD_y_y3Mesh), &                ! SD%y%y3Mesh
                           ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
       end do
+
+   end select
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
+end subroutine
+
+subroutine InitMappings_SeaSt(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
+   type(TC_MappingType), allocatable      :: Mappings(:)
+   type(ModDataType), intent(in)          :: SrcMod, DstMod
+   type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
+   integer(IntKi), intent(out)            :: ErrStat
+   character(*), intent(out)              :: ErrMsg
+
+   character(*), parameter    :: RoutineName = 'InitMappings_SeaSt'
+   integer(IntKi)             :: ErrStat2
+   character(ErrMsgLen)       :: ErrMsg2
+   integer(IntKi)             :: i, j
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   select case (SrcMod%ID)
+
+      ! No inputs to SeaState currently
 
    end select
 
