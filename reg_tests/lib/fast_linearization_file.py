@@ -112,7 +112,9 @@ class FASTLinearizationFile(dict):
 
             # Read rows from file, raise exception on failure
             try:
-                vals = np.genfromtxt(fid, dtype=np.float64, max_rows=n)
+                vals = np.empty([n,m], np.float64)
+                for i in range(n):
+                    vals[i,:] = f.readline().split()
             except:
                 raise Exception('Failed to convert into an array of float the matrix `{}`\n\tin linfile: {}'.format(name, self.filename))
             
