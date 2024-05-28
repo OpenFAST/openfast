@@ -265,9 +265,16 @@ typedef  ^            ^                DbKi               EndMomentB   {3}      
 typedef  ^            ^                IntKi              LineUnOut     -        -  -   "unit number of line output file"
 typedef  ^            ^                DbKi               LineWrOutput {:}       -  -   "one row of output data for this line"
 
-# this is the Fail type, which holds data for possible line failure descriptors  TO BE FILLED IN LATER
-typedef  ^            MD_Fail          IntKi              IdNum         -        -  -   "integer identifier of this failure"
-
+# this is the Fail type, which holds data for possible line failure descriptors 
+typedef  ^            MD_Fail          IntKi              IdNum           -        -  -   "integer identifier of this failure" "-"
+typedef  ^            ^                IntKi              attachID        -        -  -   "ID of connection or Rod the lines are attached to" "-"
+typedef  ^            ^                IntKi              isRod           -        -  -   "1 Rod end A, 2 Rod end B, 0 if point" "-"
+typedef  ^            ^                IntKi              lineIDs         {30}     -  -   "array of one or more lines to detach (starting from 1...)" "-"
+typedef  ^            ^                IntKi              lineTops        {30}     -  -   "an array that will be FILLED IN to return which end of each line was disconnected ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)" "-"
+typedef  ^            ^                IntKi              nLinesToDetach  -        -  -   "how many lines to dettach" "-"
+typedef  ^            ^                DbKi               failTime        -        -  -   "time of failure" "s"
+typedef  ^            ^                DbKi               failTen         -        -  -   "tension threshold of failure" "N"
+typedef  ^            ^                IntKi              failStatus      -        -  -   "0 not failed yet, 1 failed, 2 invalid" "-"
 
 # this is the MDOutParmType - a less literal alternative of the NWTC OutParmType for MoorDyn (to avoid huge lists of possible output channel permutations)
 typedef  ^            MD_OutParmType   CHARACTER(10)      Name          -        -  -   "name of output channel"
@@ -333,6 +340,7 @@ typedef   ^       ^                    IntKi               RodStateIsN      {:} 
 typedef   ^       ^                    IntKi               BodyStateIs1     {:}  -  -   "starting index of each body's states in state vector"                 ""
 typedef   ^       ^                    IntKi               BodyStateIsN     {:}  -  -   "ending index of each body's states in state vector"                 ""
 typedef   ^       ^                    IntKi               Nx                -   -  -   "number of states and size of state vector"                 ""
+typedef   ^       ^                    IntKi               Nxtra             -   -  -   "number of states and size of state vector including points for potential line failures"                 ""
 typedef   ^       ^                    IntKi               WaveTi            -   -  -   "current interpolation index for wave time series data"                 ""
 typedef   ^       ^           MD_ContinuousStateType       xTemp             -   -  -   "contains temporary state vector used in integration (put here so it's only allocated once)"
 typedef   ^       ^           MD_ContinuousStateType       xdTemp            -   -  -   "contains temporary state derivative vector used in integration (put here so it's only allocated once)"

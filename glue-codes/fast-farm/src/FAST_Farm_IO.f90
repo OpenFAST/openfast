@@ -1127,7 +1127,7 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
       if (WD_InitInp%WAT_k_Grad(4) <  WD_InitInp%WAT_k_Grad(3))                          call SetErrStat(ErrID_Fatal,'WAT_k_Grad(4) (D_max) must be greater than D_min.',ErrStat,ErrMsg,RoutineName)
       if (WD_InitInp%WAT_k_Grad(5) < 0.0_ReKi)                                           call SetErrStat(ErrID_Fatal,'WAT_k_Grad(5) (e) must be >=0.',ErrStat,ErrMsg,RoutineName)
       ! summary table
-      call WrScr('  WAT: coefficients:')
+      call WrScr('  Wake-Added Turbulence (WAT): coefficients:')
       call WrScr('                k_c      f_min    D_min    D_max    e')
       write(tmpStr,'(A6,A6,6(f9.3))') '','k_Def', WD_InitInp%WAT_k_Def( 1),WD_InitInp%WAT_k_Def( 2),WD_InitInp%WAT_k_Def( 3),WD_InitInp%WAT_k_Def( 4),WD_InitInp%WAT_k_Def( 5)
       call WrScr(tmpStr)

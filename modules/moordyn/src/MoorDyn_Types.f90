@@ -290,6 +290,14 @@ IMPLICIT NONE
 ! =========  MD_Fail  =======
   TYPE, PUBLIC :: MD_Fail
     INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this failure [-]
+    INTEGER(IntKi)  :: attachID = 0_IntKi      !< ID of connection or Rod the lines are attached to [-]
+    INTEGER(IntKi)  :: isRod = 0_IntKi      !< 1 Rod end A, 2 Rod end B, 0 if point [-]
+    INTEGER(IntKi) , DIMENSION(1:30)  :: lineIDs = 0_IntKi      !< array of one or more lines to detach (starting from 1...) [-]
+    INTEGER(IntKi) , DIMENSION(1:30)  :: lineTops = 0_IntKi      !< an array that will be FILLED IN to return which end of each line was disconnected ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
+    INTEGER(IntKi)  :: nLinesToDetach = 0_IntKi      !< how many lines to dettach [-]
+    REAL(DbKi)  :: failTime = 0.0_R8Ki      !< time of failure [s]
+    REAL(DbKi)  :: failTen = 0.0_R8Ki      !< tension threshold of failure [N]
+    INTEGER(IntKi)  :: failStatus = 0_IntKi      !< 0 not failed yet, 1 failed, 2 invalid [-]
   END TYPE MD_Fail
 ! =======================
 ! =========  MD_OutParmType  =======
@@ -368,6 +376,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BodyStateIs1      !< starting index of each body's states in state vector []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BodyStateIsN      !< ending index of each body's states in state vector []
     INTEGER(IntKi)  :: Nx = 0_IntKi      !< number of states and size of state vector []
+    INTEGER(IntKi)  :: Nxtra = 0_IntKi      !< number of states and size of state vector including points for potential line failures []
     INTEGER(IntKi)  :: WaveTi = 0_IntKi      !< current interpolation index for wave time series data []
     TYPE(MD_ContinuousStateType)  :: xTemp      !< contains temporary state vector used in integration (put here so it's only allocated once) [-]
     TYPE(MD_ContinuousStateType)  :: xdTemp      !< contains temporary state derivative vector used in integration (put here so it's only allocated once) [-]
@@ -2173,6 +2182,14 @@ subroutine MD_CopyFail(SrcFailData, DstFailData, CtrlCode, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstFailData%IdNum = SrcFailData%IdNum
+   DstFailData%attachID = SrcFailData%attachID
+   DstFailData%isRod = SrcFailData%isRod
+   DstFailData%lineIDs = SrcFailData%lineIDs
+   DstFailData%lineTops = SrcFailData%lineTops
+   DstFailData%nLinesToDetach = SrcFailData%nLinesToDetach
+   DstFailData%failTime = SrcFailData%failTime
+   DstFailData%failTen = SrcFailData%failTen
+   DstFailData%failStatus = SrcFailData%failStatus
 end subroutine
 
 subroutine MD_DestroyFail(FailData, ErrStat, ErrMsg)
@@ -2190,6 +2207,14 @@ subroutine MD_PackFail(RF, Indata)
    character(*), parameter         :: RoutineName = 'MD_PackFail'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%IdNum)
+   call RegPack(RF, InData%attachID)
+   call RegPack(RF, InData%isRod)
+   call RegPack(RF, InData%lineIDs)
+   call RegPack(RF, InData%lineTops)
+   call RegPack(RF, InData%nLinesToDetach)
+   call RegPack(RF, InData%failTime)
+   call RegPack(RF, InData%failTen)
+   call RegPack(RF, InData%failStatus)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2199,6 +2224,14 @@ subroutine MD_UnPackFail(RF, OutData)
    character(*), parameter            :: RoutineName = 'MD_UnPackFail'
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%IdNum); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%attachID); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%isRod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%lineIDs); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%lineTops); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nLinesToDetach); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%failTime); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%failTen); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%failStatus); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyOutParmType(SrcOutParmTypeData, DstOutParmTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -3016,6 +3049,7 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%BodyStateIsN = SrcMiscData%BodyStateIsN
    end if
    DstMiscData%Nx = SrcMiscData%Nx
+   DstMiscData%Nxtra = SrcMiscData%Nxtra
    DstMiscData%WaveTi = SrcMiscData%WaveTi
    call MD_CopyContState(SrcMiscData%xTemp, DstMiscData%xTemp, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3313,6 +3347,7 @@ subroutine MD_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%BodyStateIs1)
    call RegPackAlloc(RF, InData%BodyStateIsN)
    call RegPack(RF, InData%Nx)
+   call RegPack(RF, InData%Nxtra)
    call RegPack(RF, InData%WaveTi)
    call MD_PackContState(RF, InData%xTemp) 
    call MD_PackContState(RF, InData%xdTemp) 
@@ -3443,6 +3478,7 @@ subroutine MD_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%BodyStateIs1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BodyStateIsN); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Nx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Nxtra); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveTi); if (RegCheckErr(RF, RoutineName)) return
    call MD_UnpackContState(RF, OutData%xTemp) ! xTemp 
    call MD_UnpackContState(RF, OutData%xdTemp) ! xdTemp 
