@@ -661,19 +661,67 @@ When **WAT=1** the dimensions in each directions are taken as :math:`dx=dy=dz=0.
 When set to True, the input turbulence box is scaled so that it has zero mean and unit standard deviation at every node.
 DEFAULT is False.
 
-**WAT_k_Def** [float]
-Parameter for the influence of the wake deficit in the wake-added turbulence 
-[>=0.0, no upper bound]
-Currently uncalibrated, no default value. Anticipated value is expected to be around 0.5.
+**WAT_k_Def** [five floats, comma separated] :math:`[k_\text{def}, k_\text{FMin}, k_\text{DMin}, k_\text{DMax}, e]`
+Tuning parameter for quasi-steady wake deficit effect in the wake-added
+turbulence scaling factor.  This tuning paramater is a function of the
+downstream position from the rotor using a set of five parameters.  See equation
+:eq:`eq:kDefGradDefaults` in section :numref:`FF:WAT` (FAST.Farm theory) for
+details on the function used for **WAT_k_Def**. If the DEFAULT keyword is
+specified, all five parameters will be set to the default values specified
+below. The five parameters in order are:
 
-**WAT_k_Grad** [float]
-Parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added turbulence 
-[>=0.0, no upper bound].
-Currently uncalibrated, no default value. Anticipated value is expected to be around 0.5.
+   -  :math:`k_\text{def}` [-] (:math:`\gt 0`)
+         | DEFAULT value: :math:`k_\text{def} = 0.6`.
+         | Calibrated coefficient for the maximum value of **WAT_k_Def**.
 
-**WAT_D_BrkDwn** [float, dimensionless]
-Downstream distance in rotor diameter after which WAT scaling has reached 100% capacity.
-DEFAULT is 1 (i.e. 1D)
+   -  :math:`k_\text{FMin}` [-]  (:math:`\ge 0`, :math:`\le 1`)
+         | DEFAULT value: :math:`k_\text{FMin} = 0.0`.
+         | Calibrated parameter defining defines the value at the minimum region.
+
+   -  :math:`k_\text{DMin}` [-] (:math:`\ge 0`)
+         | DEFAULT value: :math:`k_\text{DMin} = 0.0`.
+         | Calibrated parameter defining the transitional diameter fraction
+            between the minimum and exponential regions.
+
+   -  :math:`k_\text{DMax}` [-] (:math:`\ge k_\text{DMin}`)
+         | DEFAULT value: :math:`k_\text{DMax} = 2.0`.
+         | Calibrated parameter defining the transitional diameter fraction
+            between the exponential and maximum regions. 
+
+   -  :math:`e` [-] (:math:`\ge 0`)
+         | DEFAULT value: :math:`e = 1.0`.
+         | Calibrated parameter defining the exponent in the exponential region.
+
+**WAT_k_Grad** [five floats, comma separated] :math:`[k_\text{Grad}, k_\text{FMin}, k_\text{DMin}, k_\text{DMax}, e]`
+Tuning parameter for gradient of the wake deficit in the wake-added turbulence
+scaling factor.  This tuning paramater is a function of the downstream position
+from the rotor using a set of five parameters.  See equation
+:eq:`eq:kDefGradDefaults` in section :numref:`FF:WAT` (FAST.Farm theory) for
+details on the function used for **WAT_k_Grad**. If the DEFAULT keyword is
+specified, all five parameters will be set to the default values specified
+below. The five parameters in order are:
+
+   -  :math:`k_\text{grad}` [-] (:math:`\gt 0`)
+         | DEFAULT value: :math:`k_\text{grad} = 3.0`.
+         | Calibrated coefficient for the maximum value of **WAT_k_Grad**.
+
+   -  :math:`k_\text{FMin}` [-]  (:math:`\ge 0`, :math:`\le 1`)
+         | DEFAULT value: :math:`k_\text{FMin} = 0.0`.
+         | Calibrated parameter defining defines the value at the minimum region.
+
+   -  :math:`k_\text{DMin}` [-] (:math:`\ge 0`)
+         | DEFAULT value: :math:`k_\text{DMin} = 0.0`.
+         | Calibrated parameter defining the transitional diameter fraction
+            between the minimum and exponential regions.
+
+   -  :math:`k_\text{DMax}` [-] (:math:`\ge k_\text{DMin}`)
+         | DEFAULT value: :math:`k_\text{DMax} = 12.0`.
+         | Calibrated parameter defining the transitional diameter fraction
+            between the exponential and maximum regions. 
+
+   -  :math:`e` [-] (:math:`\ge 0`)
+         | DEFAULT value: :math:`e = 0.65`.
+         | Calibrated parameter defining the exponent in the exponential region.
 
 
 

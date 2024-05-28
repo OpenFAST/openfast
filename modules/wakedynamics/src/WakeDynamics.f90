@@ -462,14 +462,6 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%WAT_k_Grad    = InitInp%InputFileData%WAT_k_Grad
    p%WAT_k_Off     = InitInp%InputFileData%WAT_k_Off
 
-   if (EqualRealNos(InitInp%InputFileData%WAT_D_BrkDwn, 0.0_ReKi)) then
-      p%WAT_k_BrkDwn = 0.0_ReKi
-   else
-      !p%WAT_k_BrkDwn= log(0.01_ReKi)/InitInp%InputFileData%WAT_D_BrkDwn ! 1-exp(-k x/D) = 1-1e-2, we keep k as negative
-      !p%WAT_k_BrkDwn= asin(0.99_ReKi)/InitInp%InputFileData%WAT_D_BrkDwn ! sin(x/D *k) =0.
-      p%WAT_k_BrkDwn= 1.00**(1./nExpBrkDwn) /InitInp%InputFileData%WAT_D_BrkDwn ! (k x/D)**n 
-   endif
-   
    ! Finite difference grid coordinates r, y, z
    allocate(p%r(0:p%NumRadii-1),             stat=errStat2);  if (Failed0('p%r.')) return;
    allocate(p%y(-p%NumRadii+1:p%NumRadii-1), stat=errStat2);  if (Failed0('p%y.')) return;
@@ -1575,7 +1567,7 @@ contains
    subroutine Calc_k_WAT()
       integer(intKi) :: i, iy, iz
       real(ReKi)     :: C, S, dvdr, dvdtheta_r, R, r_tmp
-      real(ReKi)     :: x_over_D, k_Scale, U0
+      real(ReKi)     :: x_over_D, U0, k_Def, k_Grad
       character(1024):: tmpStr
       logical, parameter :: verbose =.False.
 
@@ -1589,12 +1581,13 @@ contains
             if(verbose) call WrScr(trim(tmpStr))
          else
             ! Scaling factor, onset of vortex breakdown
-            x_over_D = xd%x_plane(i)/u%D_rotor 
-            if ((p%WAT_k_BrkDwn<=0) .or. (p%WAT_k_BrkDwn*x_over_D>=1)) then
-               k_Scale =  1.0_ReKi
-            else
-               k_Scale = exp_safe(nExpBrkDwn * log(p%WAT_k_BrkDwn*x_over_D))
-            endif
+            x_over_D = xd%x_plane(i)/u%D_rotor
+            ! calculate k_Def and k_Grad with EddyFilter (see Torque 2024, E. Branlard for derivation)
+            ! NOTE:  order swap of coefficients here
+            !        k_Def and k_Grad contain in order (k_c, FMin, DMin, DMax, Exp)
+            !        EddyFilter: (x_plane, D_rotor, C_Dmin, C_Dmax, C_Fmin, C_Exp)
+            k_Def  = p%WAT_k_Def( 1) * EddyFilter(x_over_D, u%D_rotor, p%WAT_k_Def( 3), p%WAT_k_Def( 4), p%WAT_k_Def( 2), p%WAT_k_Def( 5) )
+            k_Grad = p%WAT_k_Grad(1) * EddyFilter(x_over_D, u%D_rotor, p%WAT_k_Grad(3), p%WAT_k_Grad(4), p%WAT_k_Grad(2), p%WAT_k_Grad(5) )
             do iz = -p%NumRadii+1, p%NumRadii-1
                do iy = -p%NumRadii+1, p%NumRadii-1
                   ! Polar gradients
@@ -1610,12 +1603,12 @@ contains
                   endif
                   dvdr = m%dvx_dy(iy,iz,i) * C  + m%dvx_dz(iy,iz,i) * S
                   ! Calculate scaling factor k_mt for wake-added Turbulence (equation 16)
-                  y%WAT_k(iy,iz,i) = k_Scale * (p%WAT_k_Def /U0 *       abs(y%Vx_wake2(iy,iz,i)) & 
-                                   &  +         p%WAT_k_Grad/U0 * R * ( abs(dvdr) + abs(dvdtheta_r) )) &
+                  y%WAT_k(iy,iz,i) =           (k_Def /U0 *       abs(y%Vx_wake2(iy,iz,i)) &
+                                   &  +         k_Grad/U0 * R * ( abs(dvdr) + abs(dvdtheta_r) )) &
                                    &  + p%WAT_k_Off
                end do ! iy
             end do ! iz
-            if(verbose) write(tmpStr,'(A,I3,A,F6.2,A,F6.3,A,F6.3,A,F8.3)') 'Plane:',i,'  x/D:',xd%x_plane(i)/u%D_rotor,'  scale:', k_Scale, '  kmax:',maxval(y%WAT_k(:,:,i)), '  velmax:',maxval(abs(y%Vx_wake2(:,:,i))) 
+            if(verbose) write(tmpStr,'(A,I3,A,F6.2,A,F6.3,A,F6.3,A,F8.3)') 'Plane:',i,'  x/D:',xd%x_plane(i)/u%D_rotor,'  kmax:',maxval(y%WAT_k(:,:,i)), '  velmax:',maxval(abs(y%Vx_wake2(:,:,i)))
             if(verbose) call WrScr(trim(tmpStr))
          endif
       end do !i, planes

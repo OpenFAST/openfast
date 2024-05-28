@@ -1304,8 +1304,7 @@ from the turbulent mixing in the wake.
 It is modeled by scaling up a background (undisturbed) turbulence.
 
 
-The theory for WAT will be presented in more details in the future as part of a journal publication.
-
+The theory for WAT will is presented in more detail in :cite:`ff-Branlard2024`.
 
 The basic principle for the wake-added turbulence is illustrated in :numref:`FF:WATSketch`. 
 
@@ -1329,17 +1328,67 @@ frame. More details follow.
 The scaling factor, expressed in terms of the wake deficit :math:`V_x^{Wake}`, is determined at each wake plane as:
 
 .. math::
-
    \begin{aligned}
       k_{} (x,y,z) = 
-          \frac{k_\text{def} }{\overline{U}} \left| V_x^{Wake}(x,y,z) \right|
-        + \frac{k_\text{grad}D}{2\overline{U}} \left[\left|{\frac{\partial {V_x^{Wake}(x,y,z)}}{\partial r}}\right| +  \left|{\frac{1}{r}\frac{\partial {V_x^{Wake}(x,y,z)}}{\partial \theta}}\right|  \right]  
-        \end{aligned}
+          \frac{k_\text{def}^\text{WAT}  }{ \overline{U}} \left| V_x^{Wake}(x,y,z) \right|
+        + \frac{k_\text{grad}^\text{WAT}D}{2\overline{U}} \left[\left|{\frac{\partial {V_x^{Wake}(x,y,z)}}{\partial r}}\right| +  \left|{\frac{1}{r}\frac{\partial {V_x^{Wake}(x,y,z)}}{\partial \theta}}\right|  \right]  
+   \end{aligned}
 
-where :math:`D` is a reference diameter, and :math:`\bar{U}` is the mean velocity taken as the filtered velocity at the turbine location normal to the rotor disk.
-The coordinates :math:`x,y,z` and :math:`r,\theta` are taken in the meandering frame of reference.
-The parameters :math:`k_\text{def}` and :math:`k_\text{grad}` are tuning constant of the model. They will be calibrated in future studies.
+where :math:`D` is a reference diameter, and :math:`\bar{U}` is the mean
+velocity taken as the filtered velocity at the turbine location normal to the
+rotor disk.  The coordinates :math:`x,y,z` and :math:`r,\theta` are taken in the
+meandering frame of reference.  The parameters :math:`k_\text{def}^\text{WAT}`
+and :math:`k_\text{grad}^\text{WAT}` are tuning paramters of the model
+respectively multiplying the quasi-steady wake deficit and the gradient of the
+wake deficit. These are based on an eddy-viscosity filter with five calibrated
+parameters to give a more realistic dependence on downstream position.  The
+general form for both is given in Equation :eq:`eq:kDefGrad`,
 
+.. math::
+   k_\text{def/grad}^\text{WAT} \left( \tilde{x}, k_\text{c}, f_\text{min}, D_\text{min}, D_\text{max}, e \right) = k_\text{c} \left( f_\text{min} + (1 - f_\text{min}) \left[ \frac{\tilde{x} - D_\text{min}}{D_\text{max} - D_\text{min}} \right]^e \right)
+   :label: eq:kDefGrad
+
+where :math:`\tilde{x} = x/D`, and :math:`k_\text{c}` is either
+:math:`k_\text{def}` or :math:`k_\text{grad}`.  This function is capped between
+:math:`k_\text{c} f_\text{min}` and :math:`k_\text{c}` when :math:`\tilde{x}` is
+not between :math:`D_\text{min}` and :math:`D_\text{max}`.  The tuning
+parameters are shown in :eq:`eq:kDefGradDefaults`.
+
+.. math::
+   \begin{matrix}
+                               & & k_\text{def/grad} & f_\text{min}   & D_\text{min} & D_\text{max}       & e       \\
+                               & & (\gt 0)           & (\ge 0, \le 1) & (\ge 0)      & (\ge k_\text{min}) & (\ge 0) \\\hline
+      k_\text{def}^\text{WAT}  & & 0.6               & 0              & 0            & 2                  & 1       \\
+      k_\text{grad}^\text{WAT} & & 3                 & 0              & 0            & 12                 & 0.65    \\
+   \end{matrix}
+   :label: eq:kDefGradDefaults
+
+These parameters were chosen as they fit relatively well for stable and neutral
+cases (prior studies have shown that FAST.Farm matches LES well for unstable
+cases with high ambient turbulence where a WAT model seems unnecessary), as seen
+in :numref:`FF:WAT:TuneParam`.
+
+.. figure:: Pictures/KFitDownstreamConcatNEW.png
+   :alt: Fitted tuning parameters
+   :name: FF:WAT:TuneParam
+   :width: 100%
+   :align: center
+
+   Fitted tuning parameters as a function of downstream distance for different stability cases. Values for different fitting options and smoothing are shown with lighter colors, and the averages are shown with darker colors. The model and recommended default values are given as the black dashed line.  Note that results for the unstable case beyond *8D* are uncertain due to the strong wake decay.
+
+We chose to enforce a zero value at :math:`\tilde{x}=0`, as this is the expected
+behavior for a case with no background turbulence intensity. The progressive
+ramp-up of the :math:`k` factors is characteristic of what would be expected as
+the vortices progressively break down downstream as seen in
+:numref:`FF:WAT:NoTI`.
+
+.. figure:: Pictures/FF-WakeNoTI.png
+   :alt: Single wind turbine with and without WAT
+   :name: FF:WAT:NoTI
+   :width: 100%
+   :align: center
+
+   Instantaneous velocity field in the wake of one wind turbine in uniform 8 m/s inflow without (left) and with (right) WAT implemented in FAST.Farm.
 
 
 **Unit turbulence boxes** 

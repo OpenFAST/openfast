@@ -55,11 +55,9 @@ typedef  ^                 WD_InputFileType  ReKi            k_vCurl        - - 
 typedef  ^                 WD_InputFileType  Logical         OutAllPlanes   - - -  "Output all planes" - 
 # wake added turbulence (WAT) inputs
 typedef  ^                 WD_InputFileType  Logical         WAT            -  - - "Switch for turning on and off wake-added turbulence" -
-typedef  ^                 WD_InputFileType  ReKi            WAT_k_Def      -  - - "Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6]" -
-typedef  ^                 WD_InputFileType  ReKi            WAT_k_Grad     -  - - "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35]" -
+typedef  ^                 WD_InputFileType  ReKi            WAT_k_Def     {5} - - "Calibrated parameters for the influence of the maximum wake deficit on wake-added turbulence (set of 5 parameters: k_Def , FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >=0.0] or DEFAULT [DEFAULT=[0.6, 0.0, 0.0, 2.0, 1.0 ]]" -
+typedef  ^                 WD_InputFileType  ReKi            WAT_k_Grad    {5} - - ""Calibrated parameters for the influence of the radial velocity gradient of the wake deficit on wake-added turbulence (set of 5 parameters: k_Grad, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >=0.0] or DEFAULT [DEFAULT=[3.0, 0.0, 0.0, 12.0, 0.65]"" -
 typedef  ^                 WD_InputFileType  ReKi            WAT_k_Off      -  - 0 "Constant Offset added to the wake-added turbulence k-factor" -
-typedef  ^                 WD_InputFileType  ReKi            WAT_D_BrkDwn   -  - - "Downstream distance in rotor diameter after which WAT scaling has reched 99% capacity" -
-
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -176,11 +174,9 @@ typedef ^ ParameterType  CHARACTER(1024)  OutFileVTKDir  - - -    "The parent di
 typedef ^ ParameterType  IntKi            TurbNum        - 0 -    "Turbine ID number (start with 1; end with number of turbines)"      -
 # wake added turbulence (WAT) parameters
 typedef ^ ParameterType  Logical          WAT            -  - -   "Switch for turning on and off wake-added turbulence" -
-typedef ^ ParameterType  ReKi             WAT_k_Def      -  - -   "Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6]" -
-typedef ^ ParameterType  ReKi             WAT_k_Grad     -  - -   "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35]" -
+typedef ^ ParameterType  ReKi             WAT_k_Def     {5} - -   "Calibrated parameters for the influence of the maximum wake deficit on wake-added turbulence (set of 5 parameters: k_Def , FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >=0.0] or DEFAULT [DEFAULT=[0.6, 0.0, 0.0, 2.0, 1.0 ]]" -
+typedef ^ ParameterType  ReKi             WAT_k_Grad    {5} - -   ""Calibrated parameters for the influence of the radial velocity gradient of the wake deficit on wake-added turbulence (set of 5 parameters: k_Grad, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >=0.0] or DEFAULT [DEFAULT=[3.0, 0.0, 0.0, 12.0, 0.65]"" -
 typedef ^ ParameterType  ReKi             WAT_k_Off      -  - 0   "Constant Offset added to the wake-added turbulence k-factor" -
-typedef ^ ParameterType  ReKi             WAT_k_BrkDwn   -  - -   "Constant for the breakdown of vortices in the wake and trigger the Wake-Added-Turbulence" -
-#typdef  ^ ParameterType  IntKi            nh             -  - - "Number of high-resolution time step within a low resolution time step" -
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 typedef      ^      InputType          ReKi       xhat_disk            {3}     -      -      "Orientation of rotor centerline, normal to disk"      -

@@ -72,10 +72,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: k_vCurl = 0.0_ReKi      !< Calibrated parameter for the eddy viscosity in curled-wake model [>=0.0] [-]
     LOGICAL  :: OutAllPlanes = .false.      !< Output all planes [-]
     LOGICAL  :: WAT = .false.      !< Switch for turning on and off wake-added turbulence [-]
-    REAL(ReKi)  :: WAT_k_Def = 0.0_ReKi      !< Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6] [-]
-    REAL(ReKi)  :: WAT_k_Grad = 0.0_ReKi      !< Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35] [-]
+    REAL(ReKi) , DIMENSION(1:5)  :: WAT_k_Def = 0.0_ReKi      !< Calibrated parameters for the influence of the maximum wake deficit on wake-added turbulence (set of 5 parameters: k_Def , FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >=0.0] or DEFAULT [DEFAULT=[0.6, 0.0, 0.0, 2.0, 1.0 ]] [-]
+    REAL(ReKi) , DIMENSION(1:5)  :: WAT_k_Grad = 0.0_ReKi      !<  [Calibrated]
     REAL(ReKi)  :: WAT_k_Off = 0.0_ReKi      !< Constant Offset added to the wake-added turbulence k-factor [-]
-    REAL(ReKi)  :: WAT_D_BrkDwn = 0.0_ReKi      !< Downstream distance in rotor diameter after which WAT scaling has reched 99% capacity [-]
   END TYPE WD_InputFileType
 ! =======================
 ! =========  WD_InitInputType  =======
@@ -196,10 +195,9 @@ IMPLICIT NONE
     CHARACTER(1024)  :: OutFileVTKDir      !< The parent directory for all VTK files written by WD [-]
     INTEGER(IntKi)  :: TurbNum = 0      !< Turbine ID number (start with 1; end with number of turbines) [-]
     LOGICAL  :: WAT = .false.      !< Switch for turning on and off wake-added turbulence [-]
-    REAL(ReKi)  :: WAT_k_Def = 0.0_ReKi      !< Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6] [-]
-    REAL(ReKi)  :: WAT_k_Grad = 0.0_ReKi      !< Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35] [-]
+    REAL(ReKi) , DIMENSION(1:5)  :: WAT_k_Def = 0.0_ReKi      !< Calibrated parameters for the influence of the maximum wake deficit on wake-added turbulence (set of 5 parameters: k_Def , FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >=0.0] or DEFAULT [DEFAULT=[0.6, 0.0, 0.0, 2.0, 1.0 ]] [-]
+    REAL(ReKi) , DIMENSION(1:5)  :: WAT_k_Grad = 0.0_ReKi      !<  [Calibrated]
     REAL(ReKi)  :: WAT_k_Off = 0.0_ReKi      !< Constant Offset added to the wake-added turbulence k-factor [-]
-    REAL(ReKi)  :: WAT_k_BrkDwn = 0.0_ReKi      !< Constant for the breakdown of vortices in the wake and trigger the Wake-Added-Turbulence [-]
   END TYPE WD_ParameterType
 ! =======================
 ! =========  WD_InputType  =======
@@ -276,7 +274,6 @@ subroutine WD_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ctrl
    DstInputFileTypeData%WAT_k_Def = SrcInputFileTypeData%WAT_k_Def
    DstInputFileTypeData%WAT_k_Grad = SrcInputFileTypeData%WAT_k_Grad
    DstInputFileTypeData%WAT_k_Off = SrcInputFileTypeData%WAT_k_Off
-   DstInputFileTypeData%WAT_D_BrkDwn = SrcInputFileTypeData%WAT_D_BrkDwn
 end subroutine
 
 subroutine WD_DestroyInputFileType(InputFileTypeData, ErrStat, ErrMsg)
@@ -326,7 +323,6 @@ subroutine WD_PackInputFileType(RF, Indata)
    call RegPack(RF, InData%WAT_k_Def)
    call RegPack(RF, InData%WAT_k_Grad)
    call RegPack(RF, InData%WAT_k_Off)
-   call RegPack(RF, InData%WAT_D_BrkDwn)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -368,7 +364,6 @@ subroutine WD_UnPackInputFileType(RF, OutData)
    call RegUnpack(RF, OutData%WAT_k_Def); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WAT_k_Grad); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WAT_k_Off); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%WAT_D_BrkDwn); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
@@ -1413,7 +1408,6 @@ subroutine WD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%WAT_k_Def = SrcParamData%WAT_k_Def
    DstParamData%WAT_k_Grad = SrcParamData%WAT_k_Grad
    DstParamData%WAT_k_Off = SrcParamData%WAT_k_Off
-   DstParamData%WAT_k_BrkDwn = SrcParamData%WAT_k_BrkDwn
 end subroutine
 
 subroutine WD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -1480,7 +1474,6 @@ subroutine WD_PackParam(RF, Indata)
    call RegPack(RF, InData%WAT_k_Def)
    call RegPack(RF, InData%WAT_k_Grad)
    call RegPack(RF, InData%WAT_k_Off)
-   call RegPack(RF, InData%WAT_k_BrkDwn)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1533,7 +1526,6 @@ subroutine WD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%WAT_k_Def); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WAT_k_Grad); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WAT_k_Off); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%WAT_k_BrkDwn); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
