@@ -75,7 +75,7 @@ subroutine Idx_Init(Mods, ModOrder, Idx, FlagFilter, ErrStat, ErrMsg)
    ErrMsg = ""
 
    ! Destroy VarIdx in case it has been previously used
-   call FAST_DestroyVarsIdxType(Idx, ErrStat2, ErrMsg2); if (Failed()) return
+   call Glue_DestroyVarsIdxType(Idx, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Save filter in index
    Idx%FlagFilter = FlagFilter

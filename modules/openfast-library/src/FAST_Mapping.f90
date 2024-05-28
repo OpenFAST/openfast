@@ -329,7 +329,7 @@ end function
 
 subroutine FAST_InitMappings(Mods, Mappings, Turbine, ErrStat, ErrMsg)
    type(ModDataType), intent(inout)                   :: Mods(:)     !< Module data
-   type(TC_MappingType), allocatable, intent(inout)   :: Mappings(:)
+   type(MappingType), allocatable, intent(inout)   :: Mappings(:)
    type(FAST_TurbineType), intent(inout)              :: Turbine     !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
@@ -430,7 +430,7 @@ contains
 end subroutine
 
 subroutine InitMappings_AD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
-   type(TC_MappingType), allocatable      :: Mappings(:)
+   type(MappingType), allocatable      :: Mappings(:)
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine
    integer(IntKi), intent(out)            :: ErrStat
@@ -525,7 +525,7 @@ contains
 end subroutine
 
 subroutine InitMappings_BD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
-   type(TC_MappingType), allocatable      :: Mappings(:)
+   type(MappingType), allocatable      :: Mappings(:)
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
@@ -589,7 +589,7 @@ contains
 end subroutine
 
 subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
-   type(TC_MappingType), allocatable      :: Mappings(:)
+   type(MappingType), allocatable      :: Mappings(:)
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
@@ -834,7 +834,7 @@ contains
 end subroutine
 
 subroutine InitMappings_ExtLd(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
-   type(TC_MappingType), allocatable      :: Mappings(:)
+   type(MappingType), allocatable      :: Mappings(:)
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
@@ -908,7 +908,7 @@ contains
 end subroutine
 
 subroutine InitMappings_ExtPtfm(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
-   type(TC_MappingType), allocatable      :: Mappings(:)
+   type(MappingType), allocatable      :: Mappings(:)
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
@@ -950,7 +950,7 @@ contains
 end subroutine
 
 subroutine InitMappings_FEAM(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
-   type(TC_MappingType), allocatable      :: Mappings(:)
+   type(MappingType), allocatable      :: Mappings(:)
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
@@ -1004,7 +1004,7 @@ contains
 end subroutine
 
 subroutine InitMappings_HD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
-   type(TC_MappingType), allocatable      :: Mappings(:)
+   type(MappingType), allocatable      :: Mappings(:)
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
@@ -1067,7 +1067,7 @@ contains
 end subroutine
 
 subroutine InitMappings_IceD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
-   type(TC_MappingType), allocatable      :: Mappings(:)
+   type(MappingType), allocatable      :: Mappings(:)
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine
    integer(IntKi), intent(out)            :: ErrStat
@@ -1106,7 +1106,7 @@ contains
 end subroutine
 
 subroutine InitMappings_IceF(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
-   type(TC_MappingType), allocatable      :: Mappings(:)
+   type(MappingType), allocatable      :: Mappings(:)
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine
    integer(IntKi), intent(out)            :: ErrStat
@@ -1145,7 +1145,7 @@ contains
 end subroutine
 
 subroutine InitMappings_IfW(Mappings, SrcMod, DstMod, T, ErrStat, ErrMsg)
-   type(TC_MappingType), allocatable      :: Mappings(:)
+   type(MappingType), allocatable      :: Mappings(:)
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: T           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
@@ -1173,7 +1173,7 @@ contains
 end subroutine
 
 subroutine InitMappings_MAP(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
-   type(TC_MappingType), allocatable      :: Mappings(:)
+   type(MappingType), allocatable      :: Mappings(:)
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
@@ -1212,7 +1212,7 @@ contains
 end subroutine
 
 subroutine InitMappings_MD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
-   type(TC_MappingType), allocatable      :: Mappings(:)
+   type(MappingType), allocatable         :: Mappings(:)
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
@@ -1256,7 +1256,7 @@ contains
 end subroutine
 
 subroutine InitMappings_Orca(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
-   type(TC_MappingType), allocatable      :: Mappings(:)
+   type(MappingType), allocatable      :: Mappings(:)
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
@@ -1287,7 +1287,7 @@ contains
 end subroutine
 
 subroutine InitMappings_SD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
-   type(TC_MappingType), allocatable      :: Mappings(:)
+   type(MappingType), allocatable      :: Mappings(:)
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
@@ -1395,7 +1395,7 @@ contains
 end subroutine
 
 subroutine InitMappings_SeaSt(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
-   type(TC_MappingType), allocatable      :: Mappings(:)
+   type(MappingType), allocatable      :: Mappings(:)
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
@@ -1423,7 +1423,7 @@ contains
 end subroutine
 
 subroutine InitMappings_SrvD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
-   type(TC_MappingType), allocatable      :: Mappings(:)
+   type(MappingType), allocatable      :: Mappings(:)
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
@@ -1539,7 +1539,7 @@ end subroutine
 subroutine MapLoadMesh(Turbine, Mappings, SrcMod, SrcMeshLoc, SrcDispMeshLoc, &
                        DstMod, DstMeshLoc, DstDispMeshLoc, ErrStat, ErrMsg, Active)
    type(FAST_TurbineType), target         :: Turbine
-   type(TC_MappingType), allocatable      :: Mappings(:)
+   type(MappingType), allocatable      :: Mappings(:)
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    type(MeshLocType), intent(in)          :: SrcMeshLoc, DstMeshLoc
    type(MeshLocType), intent(in)          :: SrcDispMeshLoc, DstDispMeshLoc
@@ -1550,7 +1550,7 @@ subroutine MapLoadMesh(Turbine, Mappings, SrcMod, SrcMeshLoc, SrcDispMeshLoc, &
    character(*), parameter                :: RoutineName = 'MapLoadMesh'
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
-   type(TC_MappingType)                   :: Mapping
+   type(MappingType)                   :: Mapping
    type(MeshType), pointer                :: SrcMesh, SrcDispMesh
    type(MeshType), pointer                :: DstMesh, DstDispMesh
    type(MeshType)                         :: DstMotionMesh
@@ -1685,7 +1685,7 @@ end subroutine
 
 subroutine MapMotionMesh(Turbine, Mappings, SrcMod, SrcMeshLoc, DstMod, DstMeshLoc, ErrStat, ErrMsg, Active)
    type(FAST_TurbineType), target         :: Turbine
-   type(TC_MappingType), allocatable      :: Mappings(:)
+   type(MappingType), allocatable      :: Mappings(:)
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    type(MeshLocType), intent(in)          :: SrcMeshLoc, DstMeshLoc
    integer(IntKi), intent(out)            :: ErrStat
@@ -1695,7 +1695,7 @@ subroutine MapMotionMesh(Turbine, Mappings, SrcMod, SrcMeshLoc, DstMod, DstMeshL
    character(*), parameter                :: RoutineName = 'MapMotionMesh'
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
-   type(TC_MappingType)                   :: Mapping
+   type(MappingType)                   :: Mapping
    type(MeshType), pointer                :: SrcMesh, DstMesh
 
    ErrStat = ErrID_None
@@ -1756,14 +1756,14 @@ contains
 end subroutine
 
 subroutine MapVariable(Maps, Key, SrcMod, DstMod, iVarSrc, iVarDst, ErrStat, ErrMsg, Active)
-   type(TC_MappingType), allocatable      :: Maps(:)
+   type(MappingType), allocatable      :: Maps(:)
    character(*), intent(in)               :: Key
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    integer(IntKi), intent(in)             :: iVarSrc, iVarDst
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
    logical, optional, intent(in)          :: Active
-   type(TC_MappingType)                   :: Mapping
+   type(MappingType)                   :: Mapping
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -1810,11 +1810,11 @@ end subroutine
 !> MapCustom creates a custom mapping that is not included in linearization.
 !! Each custom mapping needs an entry in FAST_InputSolve to actually perform the transfer.
 subroutine MapCustom(Maps, Desc, SrcMod, DstMod, Active)
-   type(TC_MappingType), allocatable      :: Maps(:)
+   type(MappingType), allocatable      :: Maps(:)
    character(*), intent(in)               :: Desc
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    logical, optional, intent(in)          :: Active
-   type(TC_MappingType)                   :: Mapping
+   type(MappingType)                   :: Mapping
 
    if (present(Active)) then
       if (.not. Active) return
@@ -1834,7 +1834,7 @@ subroutine MapCustom(Maps, Desc, SrcMod, DstMod, Active)
 end subroutine
 
 subroutine InitMeshVarLocs(Mapping, SrcMod, DstMod, SrcMesh, DstMesh, SrcDispMesh, DstDispMesh)
-   type(TC_MappingType), intent(inout)    :: Mapping
+   type(MappingType), intent(inout)    :: Mapping
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    type(MeshType), intent(in)             :: SrcMesh, DstMesh
    type(MeshType), optional, intent(in)   :: SrcDispMesh, DstDispMesh
@@ -1916,7 +1916,7 @@ end function
 subroutine FAST_LinearizeMappings(Turbine, Mods, Mappings, ModOrder, Idx, ErrStat, ErrMsg, dUdu, dUdy)
    type(FAST_TurbineType), target, intent(inout)   :: Turbine     !< Turbine type
    type(ModDataType), intent(in)                   :: Mods(:)     !< Module data
-   type(TC_MappingType), intent(inout)             :: Mappings(:)
+   type(MappingType), intent(inout)             :: Mappings(:)
    integer(IntKi), intent(in)                      :: ModOrder(:)
    type(VarsIdxType), intent(in)                   :: Idx
    integer(IntKi), intent(out)                     :: ErrStat
@@ -2073,7 +2073,7 @@ contains
    end subroutine
 
    subroutine Assemble_dUdu(Mapping)
-      type(TC_MappingType), intent(in) :: Mapping
+      type(MappingType), intent(in) :: Mapping
 
       ! Effect of input Translation Displacement on input Translation Velocity
       if (allocated(Mapping%MeshMap%dM%tv_uD)) then
@@ -2098,7 +2098,7 @@ contains
    !! M = -| M_li   0    | * M_mi | F^S |
    !!      | M_fm   M_li |        | M^S |
    subroutine Assemble_dUdy_Loads(Mapping)
-      type(TC_MappingType), intent(inout) :: Mapping
+      type(MappingType), intent(inout) :: Mapping
 
       ! Load identity
       if (allocated(Mapping%MeshMap%dM%li)) then
@@ -2139,7 +2139,7 @@ contains
    !! where the matrices correspond to
    !! u^S, theta^S, v^S, omega^S, a^S, alpha^S
    subroutine Assemble_dUdy_Motions(Mapping)
-      type(TC_MappingType), intent(inout) :: Mapping
+      type(MappingType), intent(inout) :: Mapping
 
       ! Motion identity
       if (allocated(Mapping%MeshMap%dM%mi)) then
@@ -2207,7 +2207,7 @@ end subroutine
 subroutine FAST_InputSolve(ModData, Mods, Mappings, Turbine, ErrStat, ErrMsg, UseU)
    type(ModDataType), intent(in)          :: ModData     !< Module data
    type(ModDataType), intent(in)          :: Mods(:)     !< Module data
-   type(TC_MappingType), intent(inout)    :: Mappings(:) !< Mesh and variable mappings
+   type(MappingType), intent(inout)    :: Mappings(:) !< Mesh and variable mappings
    type(FAST_TurbineType), intent(inout)  :: Turbine     !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -2294,7 +2294,7 @@ end subroutine
 
 subroutine Custom_InputSolve(T, Mapping, ErrStat, ErrMsg, UseU)
    type(FAST_TurbineType), target, intent(inout)   :: T     !< Turbine type
-   type(TC_MappingType), intent(in)                :: Mapping
+   type(MappingType), intent(in)                :: Mapping
    integer(IntKi), intent(out)                     :: ErrStat
    character(*), intent(out)                       :: ErrMsg
    logical, intent(in)                             :: UseU        ! Flag to transfer to u instead of Input
@@ -2539,7 +2539,7 @@ end subroutine
 
 subroutine FAST_ResetRemapFlags(Mods, Maps, T, ErrStat, ErrMsg)
    type(ModDataType), intent(in)           :: Mods(:) !< Module data
-   type(TC_MappingType), intent(inout)     :: Maps(:)
+   type(MappingType), intent(inout)     :: Maps(:)
    type(FAST_TurbineType), intent(inout)   :: T       !< Turbine type
    integer(IntKi), intent(out)             :: ErrStat
    character(*), intent(out)               :: ErrMsg

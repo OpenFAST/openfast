@@ -50,18 +50,18 @@ SUBROUTINE FAST_InitializeAll_T( t_initial, TurbID, Turbine, ErrStat, ErrMsg, In
 
    IF (PRESENT(InFile)) THEN
       IF (PRESENT(ExternInitData)) THEN
-         CALL FAST_InitializeAll( t_initial, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
+         CALL FAST_InitializeAll( t_initial, Turbine%m_Glue, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                      Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%ExtLd, Turbine%IfW, Turbine%ExtInfw, Turbine%SC_DX,&
                      Turbine%SeaSt, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, CompAeroMaps, ErrStat, ErrMsg, InFile, ExternInitData )
       ELSE
-         CALL FAST_InitializeAll( t_initial, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
+         CALL FAST_InitializeAll( t_initial, Turbine%m_Glue, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                      Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%ExtLd, Turbine%IfW, Turbine%ExtInfw, Turbine%SC_DX, &
                      Turbine%SeaSt, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, CompAeroMaps, ErrStat, ErrMsg, InFile  )
       END IF
    ELSE
-      CALL FAST_InitializeAll( t_initial, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
+      CALL FAST_InitializeAll( t_initial, Turbine%m_Glue, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                      Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%ExtLd, Turbine%IfW, Turbine%ExtInfw, Turbine%SC_DX, &
                      Turbine%SeaSt, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, CompAeroMaps, ErrStat, ErrMsg )
@@ -69,19 +69,19 @@ SUBROUTINE FAST_InitializeAll_T( t_initial, TurbID, Turbine, ErrStat, ErrMsg, In
 
    if(ErrStat >= AbortErrLev) return
 
-   call ModGlue_Init(Turbine%y_FAST%ModGlue, Turbine%y_FAST%Modules, &
-                    Turbine%p_FAST%ModLin, Turbine%m_FAST%ModLin, &
+   call ModGlue_Init(Turbine%p_Glue, Turbine%m_Glue, Turbine%y_Glue, &
                     Turbine%p_FAST, Turbine%m_FAST, Turbine, ErrStat, ErrMsg)
 
 END SUBROUTINE FAST_InitializeAll_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to call Init routine for each module. This routine sets all of the init input data for each module.
-SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, ExtLd, IfW, ExtInfw, SC_DX, SeaSt, HD, SD, ExtPtfm, &
+SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, ExtLd, IfW, ExtInfw, SC_DX, SeaSt, HD, SD, ExtPtfm, &
                                MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, CompAeroMaps, ErrStat, ErrMsg, InFile, ExternInitData )
 
    use ElastoDyn_Parameters, only: Method_RK4
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           !< initial time
+   TYPE(Glue_MiscVarType),   INTENT(INOUT) :: m_Glue              !< Miscellaneous variables glue code
    TYPE(FAST_ParameterType), INTENT(INOUT) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              !< Output variables for the glue code
    TYPE(FAST_MiscVarType),   INTENT(INOUT) :: m_FAST              !< Miscellaneous variables
@@ -298,7 +298,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    end if
 
       ! Add module to array of modules
-      CALL MV_AddModule(y_FAST%Modules, Module_ED, 'ED', 1, p_FAST%dt_module(Module_ED), p_FAST%DT, &
+      CALL MV_AddModule(m_Glue%ModData, Module_ED, 'ED', 1, p_FAST%dt_module(Module_ED), p_FAST%DT, &
                         Init%OutData_ED%Vars, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -438,7 +438,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          end if
 
          ! Add module instance to array of modules
-         CALL MV_AddModule(y_FAST%Modules, Module_BD, 'BD', k, p_FAST%dt_module(Module_BD), p_FAST%DT, Init%OutData_BD(k)%Vars, ErrStat2, ErrMsg2)
+         CALL MV_AddModule(m_Glue%ModData, Module_BD, 'BD', k, p_FAST%dt_module(Module_BD), p_FAST%DT, Init%OutData_BD(k)%Vars, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
       END DO
@@ -576,7 +576,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          y_FAST%Lin%WindSpeed = Init%OutData_IfW%WindFileInfo%MWS
       end if
 
-      CALL MV_AddModule(y_FAST%Modules, Module_IfW, 'IfW', 1, p_FAST%dt_module(Module_IfW), p_FAST%DT, &
+      CALL MV_AddModule(m_Glue%ModData, Module_IfW, 'IfW', 1, p_FAST%dt_module(Module_IfW), p_FAST%DT, &
                         Init%OutData_IfW%Vars, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -735,7 +735,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          p_FAST%VTK_surface%NWaveElevPts(2) = 0
       endif
 
-      CALL MV_AddModule(y_FAST%Modules, Module_SeaSt, 'SEA', 1, p_FAST%dt_module(Module_SeaSt), p_FAST%DT, &
+      CALL MV_AddModule(m_Glue%ModData, Module_SeaSt, 'SEA', 1, p_FAST%dt_module(Module_SeaSt), p_FAST%DT, &
                         Init%OutData_SeaSt%Vars, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -869,7 +869,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
       ! Initialize a module instance for each rotor
       do i = 1, size(Init%OutData_AD%rotors)
-         CALL MV_AddModule(y_FAST%Modules, Module_AD, 'AD', i, p_FAST%dt_module(Module_AD), p_FAST%DT, &
+         CALL MV_AddModule(m_Glue%ModData, Module_AD, 'AD', i, p_FAST%dt_module(Module_AD), p_FAST%DT, &
                            Init%OutData_AD%rotors(i)%Vars, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end do
@@ -982,7 +982,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       CALL SetModuleSubstepTime(Module_HD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-      CALL MV_AddModule(y_FAST%Modules, Module_HD, 'HD', 1, p_FAST%dt_module(Module_HD), p_FAST%DT, &
+      CALL MV_AddModule(m_Glue%ModData, Module_HD, 'HD', 1, p_FAST%dt_module(Module_HD), p_FAST%DT, &
                         Init%OutData_HD%Vars, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -1081,7 +1081,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          if (allocated(Init%OutData_SD%DerivOrder_x)) call move_alloc(Init%OutData_SD%DerivOrder_x,y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%DerivOrder_x)
       end if
 
-      CALL MV_AddModule(y_FAST%Modules, Module_SD, 'SD', 1, p_FAST%dt_module(Module_SD), p_FAST%DT, &
+      CALL MV_AddModule(m_Glue%ModData, Module_SD, 'SD', 1, p_FAST%dt_module(Module_SD), p_FAST%DT, &
                         Init%OutData_SD%Vars, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -1206,7 +1206,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       CALL SetModuleSubstepTime(Module_MAP, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-      CALL MV_AddModule(y_FAST%Modules, Module_MAP, 'MAP', 1, p_FAST%dt_module(Module_MAP), p_FAST%DT, &
+      CALL MV_AddModule(m_Glue%ModData, Module_MAP, 'MAP', 1, p_FAST%dt_module(Module_MAP), p_FAST%DT, &
                         Init%OutData_MAP%Vars, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -1275,7 +1275,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          if (allocated(Init%OutData_MD%DerivOrder_x)) call move_alloc(Init%OutData_MD%DerivOrder_x,y_FAST%Lin%Modules(MODULE_MD)%Instance(1)%DerivOrder_x)
       end if
 
-      CALL MV_AddModule(y_FAST%Modules, Module_MD, 'MD', 1, p_FAST%dt_module(Module_MD), p_FAST%DT, &
+      CALL MV_AddModule(m_Glue%ModData, Module_MD, 'MD', 1, p_FAST%dt_module(Module_MD), p_FAST%DT, &
                         Init%OutData_MD%Vars, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -1588,7 +1588,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       CALL SetModuleSubstepTime(Module_SrvD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-      CALL MV_AddModule(y_FAST%Modules, Module_SrvD, 'SrvD', 1, p_FAST%dt_module(Module_SrvD), p_FAST%DT, &
+      CALL MV_AddModule(m_Glue%ModData, Module_SrvD, 'SrvD', 1, p_FAST%dt_module(Module_SrvD), p_FAST%DT, &
                         Init%OutData_SrvD%Vars, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -9343,9 +9343,8 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
 
          if ( EqualRealNos( t_global, next_lin_time ) .or. t_global > next_lin_time ) then
 
-            call ModGlue_Linearize_OP(Turbine, Turbine%y_FAST%Modules, Turbine%y_FAST%ModGlue,  &
-                                     Turbine%p_FAST%ModLin, Turbine%m_FAST%ModLin, Turbine%p_FAST, Turbine%m_FAST, &
-                                     Turbine%y_FAST, t_global, ErrStat2, ErrMsg2)
+            call ModGlue_Linearize_OP(Turbine, Turbine%p_Glue, Turbine%m_Glue, Turbine%y_Glue, &
+                                      Turbine%p_FAST, Turbine%m_FAST, Turbine%y_FAST, t_global, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                if (ErrStat >= AbortErrLev) return
 
@@ -9399,9 +9398,8 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                IF (ErrStat >= AbortErrLev) RETURN
 
-            call ModGlue_Linearize_OP(Turbine, Turbine%y_FAST%Modules, Turbine%y_FAST%ModGlue, &
-               Turbine%p_FAST%ModLin, Turbine%m_FAST%ModLin, Turbine%p_FAST, Turbine%m_FAST, &
-               Turbine%y_FAST, t_global, ErrStat2, ErrMsg2)
+            call ModGlue_Linearize_OP(Turbine, Turbine%p_Glue, Turbine%m_Glue, Turbine%y_Glue, &
+               Turbine%p_FAST, Turbine%m_FAST, Turbine%y_FAST, t_global, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                if (ErrStat >= AbortErrLev) return
 

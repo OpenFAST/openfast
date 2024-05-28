@@ -35,14 +35,13 @@ public :: ModGlue_Init, ModGlue_Linearize_OP, MV_AddModule
 
 contains
 
-subroutine ModGlue_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
+subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
 
-   type(ModDataType), intent(inout)                :: ModGlue  !< Module data for glue code
-   type(ModDataType), allocatable, intent(inout)   :: Mods(:)  !< Data for all modules
-   type(ML_ParameterType), intent(inout)           :: p        !< ModLin parameters
-   type(ML_MiscVarType), intent(inout)             :: m        !< ModLin miscvars
-   type(FAST_ParameterType), intent(inout)         :: p_FAST
-   type(FAST_MiscVarType), intent(inout)           :: m_FAST
+   type(Glue_ParameterType), intent(inout)         :: p        !< Glue Parameters
+   type(Glue_MiscVarType), intent(inout)           :: m        !< Glue MiscVars
+   type(Glue_OutputFileType), intent(inout)        :: y        !< Glue Output
+   type(FAST_ParameterType), intent(inout)         :: p_FAST   !< FAST Parameters
+   type(FAST_MiscVarType), intent(inout)           :: m_FAST   !< FAST MiscVars
    type(FAST_TurbineType), intent(inout)           :: Turbine
    integer(IntKi), intent(out)                     :: ErrStat
    character(*), intent(out)                       :: ErrMsg
@@ -78,16 +77,16 @@ subroutine ModGlue_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, E
    !----------------------------------------------------------------------------
 
    ! If no modules were added, return error
-   if (.not. allocated(Mods)) then
+   if (.not. allocated(m%ModData)) then
       call SetErrStat(ErrID_Fatal, "No modules were used", ErrStat, ErrMsg, RoutineName)
       return
    end if
 
    ! Create array of indices for Mods array
-   modIdx = [(i, i=1, size(Mods))]
+   modIdx = [(i, i=1, size(m%ModData))]
 
    ! Get array of module IDs
-   modIDs = [(Mods(i)%ID, i=1, size(Mods))]
+   modIDs = [(m%ModData(i)%ID, i=1, size(m%ModData))]
 
    ! Establish module index order for linearization
    allocate (p%iMod(0))
@@ -96,9 +95,9 @@ subroutine ModGlue_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, E
    end do
 
    ! Loop through modules, if module is not in index, return with error
-   do i = 1, size(Mods)
+   do i = 1, size(m%ModData)
       if (.not. any(i == p%iMod)) then
-         call SetErrStat(ErrID_Fatal, "Module "//trim(Mods(i)%Abbr)//" not supported in linearization", &
+         call SetErrStat(ErrID_Fatal, "Module "//trim(m%ModData(i)%Abbr)//" not supported in linearization", &
                          ErrStat, ErrMsg, RoutineName)
          return
       end if
@@ -109,21 +108,21 @@ subroutine ModGlue_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, E
    !----------------------------------------------------------------------------
 
    ! Allocate variable structure for glue
-   allocate (ModGlue%Vars)
+   allocate (y%ModGlue%Vars)
 
    ! Initialize number of values in each variable group
-   ModGlue%Vars%Nx = 0
-   ModGlue%Vars%Nxd = 0
-   ModGlue%Vars%Nz = 0
-   ModGlue%Vars%Nu = 0
-   ModGlue%Vars%Ny = 0
+   y%ModGlue%Vars%Nx = 0
+   y%ModGlue%Vars%Nxd = 0
+   y%ModGlue%Vars%Nz = 0
+   y%ModGlue%Vars%Nu = 0
+   y%ModGlue%Vars%Ny = 0
 
    ! Allocate arrays for glue variables
-   allocate (ModGlue%Vars%x(0), ModGlue%Vars%xd(0), ModGlue%Vars%z(0), ModGlue%Vars%u(0), ModGlue%Vars%y(0))
+   allocate (y%ModGlue%Vars%x(0), y%ModGlue%Vars%xd(0), y%ModGlue%Vars%z(0), y%ModGlue%Vars%u(0), y%ModGlue%Vars%y(0))
 
    ! Loop through each module by index
    do i = 1, size(p%iMod)
-      associate (ModData => Mods(p%iMod(i)))
+      associate (ModData => m%ModData(p%iMod(i)))
 
          ! Create variable name prefix for linearization names. Add instance
          ! number to module abbreviation if more than 1 instance or the module is BeamDyn
@@ -142,42 +141,42 @@ subroutine ModGlue_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, E
          end do
 
          ! Set module data start index in global arrays, increment data size
-         ModGlue%Vars%Nx = ModGlue%Vars%Nx + ModData%Vars%Nx
+         y%ModGlue%Vars%Nx = y%ModGlue%Vars%Nx + ModData%Vars%Nx
 
          ! Save start index of module variables and append to glue code variables
-         k = size(ModGlue%Vars%x) + 1
-         ModGlue%Vars%x = [ModGlue%Vars%x, ModData%Vars%x]
+         k = size(y%ModGlue%Vars%x) + 1
+         y%ModGlue%Vars%x = [y%ModGlue%Vars%x, ModData%Vars%x]
 
          ! Loop through added variables and add name prefix to linearization names
-         call AddLinNamePrefix(ModGlue%Vars%x(k:), NamePrefix)
+         call AddLinNamePrefix(y%ModGlue%Vars%x(k:), NamePrefix)
 
          !----------------------------------------------------------------------
          ! Module discrete state variables
          !----------------------------------------------------------------------
 
          ! Set module data start index in global arrays, increment data size
-         ModGlue%Vars%Nxd = ModGlue%Vars%Nxd + ModData%Vars%Nxd
+         y%ModGlue%Vars%Nxd = y%ModGlue%Vars%Nxd + ModData%Vars%Nxd
 
          ! Save start index of module variables and append to glue code variables
-         k = size(ModGlue%Vars%xd) + 1
-         ModGlue%Vars%xd = [ModGlue%Vars%xd, ModData%Vars%xd]
+         k = size(y%ModGlue%Vars%xd) + 1
+         y%ModGlue%Vars%xd = [y%ModGlue%Vars%xd, ModData%Vars%xd]
 
          ! Loop through added variables and add name prefix to linearization names
-         call AddLinNamePrefix(ModGlue%Vars%xd(k:), NamePrefix)
+         call AddLinNamePrefix(y%ModGlue%Vars%xd(k:), NamePrefix)
 
          !----------------------------------------------------------------------
          ! Module constraint state variables
          !----------------------------------------------------------------------
 
          ! Set module data start index in global arrays, increment data size
-         ModGlue%Vars%Nz = ModGlue%Vars%Nz + ModData%Vars%Nz
+         y%ModGlue%Vars%Nz = y%ModGlue%Vars%Nz + ModData%Vars%Nz
 
          ! Save start index of module variables and append to glue code variables
-         k = size(ModGlue%Vars%z) + 1
-         ModGlue%Vars%z = [ModGlue%Vars%z, ModData%Vars%z]
+         k = size(y%ModGlue%Vars%z) + 1
+         y%ModGlue%Vars%z = [y%ModGlue%Vars%z, ModData%Vars%z]
 
          ! Loop through added variables and add name prefix to linearization names
-         call AddLinNamePrefix(ModGlue%Vars%z(k:), NamePrefix)
+         call AddLinNamePrefix(y%ModGlue%Vars%z(k:), NamePrefix)
 
          !----------------------------------------------------------------------
          ! Module input variables
@@ -198,14 +197,14 @@ subroutine ModGlue_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, E
          end select
 
          ! Set module data start index in global arrays, increment data size
-         ModGlue%Vars%Nu = ModGlue%Vars%Nu + ModData%Vars%Nu
+         y%ModGlue%Vars%Nu = y%ModGlue%Vars%Nu + ModData%Vars%Nu
 
          ! Save start index of module variables and append to glue code variables
-         k = size(ModGlue%Vars%u) + 1
-         ModGlue%Vars%u = [ModGlue%Vars%u, ModData%Vars%u]
+         k = size(y%ModGlue%Vars%u) + 1
+         y%ModGlue%Vars%u = [y%ModGlue%Vars%u, ModData%Vars%u]
 
          ! Loop through added variables and add name prefix to linearization names
-         call AddLinNamePrefix(ModGlue%Vars%u(k:), NamePrefix)
+         call AddLinNamePrefix(y%ModGlue%Vars%u(k:), NamePrefix)
 
          !----------------------------------------------------------------------
          ! Module output variables
@@ -232,30 +231,30 @@ subroutine ModGlue_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, E
          end select
 
          ! Set module data start index in global arrays, increment data size
-         ModGlue%Vars%Ny = ModGlue%Vars%Ny + ModData%Vars%Ny
+         y%ModGlue%Vars%Ny = y%ModGlue%Vars%Ny + ModData%Vars%Ny
 
          ! Save start index of module variables and append to glue code variables
-         k = size(ModGlue%Vars%y) + 1
-         ModGlue%Vars%y = [ModGlue%Vars%y, ModData%Vars%y]
+         k = size(y%ModGlue%Vars%y) + 1
+         y%ModGlue%Vars%y = [y%ModGlue%Vars%y, ModData%Vars%y]
 
          ! Loop through added variables and add name prefix to linearization names
-         call AddLinNamePrefix(ModGlue%Vars%y(k:), NamePrefix)
+         call AddLinNamePrefix(y%ModGlue%Vars%y(k:), NamePrefix)
 
       end associate
    end do
 
    ! Calculate number of values in each group and set data location index
-   call CalcVarDataLoc(ModGlue%Vars%x, ModGlue%Vars%Nx)
-   call CalcVarDataLoc(ModGlue%Vars%xd, ModGlue%Vars%Nxd)
-   call CalcVarDataLoc(ModGlue%Vars%z, ModGlue%Vars%Nz)
-   call CalcVarDataLoc(ModGlue%Vars%u, ModGlue%Vars%Nu)
-   call CalcVarDataLoc(ModGlue%Vars%y, ModGlue%Vars%Ny)
+   call CalcVarDataLoc(y%ModGlue%Vars%x, y%ModGlue%Vars%Nx)
+   call CalcVarDataLoc(y%ModGlue%Vars%xd, y%ModGlue%Vars%Nxd)
+   call CalcVarDataLoc(y%ModGlue%Vars%z, y%ModGlue%Vars%Nz)
+   call CalcVarDataLoc(y%ModGlue%Vars%u, y%ModGlue%Vars%Nu)
+   call CalcVarDataLoc(y%ModGlue%Vars%y, y%ModGlue%Vars%Ny)
 
    !----------------------------------------------------------------------------
    ! Mesh Mapping
    !----------------------------------------------------------------------------
 
-   call FAST_InitMappings(Mods, m%Mappings, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+   call FAST_InitMappings(m%ModData, m%Mappings, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
 
    !----------------------------------------------------------------------------
    ! Allocate linearization arrays and matrices
@@ -265,23 +264,29 @@ subroutine ModGlue_Init(ModGlue, Mods, p, m, p_FAST, m_FAST, Turbine, ErrStat, E
    if (p_FAST%Linearize) then
 
       ! Initialize linearization index
-      call Idx_Init(Mods, p%iMod, p%IdxLin, VF_None, ErrStat2, ErrMsg2); if (Failed()) return
+      call Idx_Init(m%ModData, p%iMod, p%IdxLin, VF_None, ErrStat2, ErrMsg2); if (Failed()) return
 
       ! Allocate linearization arrays
-      call AllocAry(ModGlue%Lin%x, ModGlue%Vars%Nx, "x", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(ModGlue%Lin%dx, ModGlue%Vars%Nx, "dx", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(ModGlue%Lin%xd, ModGlue%Vars%Nxd, "xd", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(ModGlue%Lin%z, ModGlue%Vars%Nz, "z", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(ModGlue%Lin%u, ModGlue%Vars%Nu, "u", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(ModGlue%Lin%y, ModGlue%Vars%Ny, "y", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(y%ModGlue%Lin%x, y%ModGlue%Vars%Nx, "x", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(y%ModGlue%Lin%dx, y%ModGlue%Vars%Nx, "dx", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(y%ModGlue%Lin%xd, y%ModGlue%Vars%Nxd, "xd", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(y%ModGlue%Lin%z, y%ModGlue%Vars%Nz, "z", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(y%ModGlue%Lin%u, y%ModGlue%Vars%Nu, "u", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(y%ModGlue%Lin%y, y%ModGlue%Vars%Ny, "y", ErrStat2, ErrMsg2); if (Failed()) return
 
       ! Allocate full Jacobian matrices
-      call AllocAry(ModGlue%Lin%dYdu, ModGlue%Vars%Ny, ModGlue%Vars%Nu, "dYdu", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(ModGlue%Lin%dXdu, ModGlue%Vars%Nx, ModGlue%Vars%Nu, "dXdu", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(ModGlue%Lin%dYdx, ModGlue%Vars%Ny, ModGlue%Vars%Nx, "dYdx", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(ModGlue%Lin%dXdx, ModGlue%Vars%Nx, ModGlue%Vars%Nx, "dXdx", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(ModGlue%Lin%dUdu, ModGlue%Vars%Nu, ModGlue%Vars%Nu, "dUdu", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(ModGlue%Lin%dUdy, ModGlue%Vars%Nu, ModGlue%Vars%Ny, "dUdy", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(y%ModGlue%Lin%dYdu, y%ModGlue%Vars%Ny, y%ModGlue%Vars%Nu, "dYdu", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(y%ModGlue%Lin%dXdu, y%ModGlue%Vars%Nx, y%ModGlue%Vars%Nu, "dXdu", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(y%ModGlue%Lin%dYdx, y%ModGlue%Vars%Ny, y%ModGlue%Vars%Nx, "dYdx", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(y%ModGlue%Lin%dXdx, y%ModGlue%Vars%Nx, y%ModGlue%Vars%Nx, "dXdx", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(y%ModGlue%Lin%dUdu, y%ModGlue%Vars%Nu, y%ModGlue%Vars%Nu, "dUdu", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(y%ModGlue%Lin%dUdy, y%ModGlue%Vars%Nu, y%ModGlue%Vars%Ny, "dUdy", ErrStat2, ErrMsg2); if (Failed()) return
+
+      ! Initialize arrays to store operating point states and input
+      call AllocAry(y%OP%x, y%ModGlue%Vars%Nx, p_FAST%NLinTimes, "x", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(y%OP%xd, y%ModGlue%Vars%Nxd, p_FAST%NLinTimes, "xd", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(y%OP%z, y%ModGlue%Vars%Nz, p_FAST%NLinTimes, "z", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(y%OP%u, y%ModGlue%Vars%Nu, p_FAST%NLinTimes, "u", ErrStat2, ErrMsg2); if (Failed()) return
    end if
 
 contains
@@ -316,12 +321,11 @@ subroutine AddLinNamePrefix(VarAry, Prefix)
    end do
 end subroutine
 
-subroutine ModGlue_Linearize_OP(Turbine, Mods, ModGlue, p, m, p_FAST, m_FAST, y_FAST, t_global, ErrStat, ErrMsg)
+subroutine ModGlue_Linearize_OP(Turbine, p, m, y, p_FAST, m_FAST, y_FAST, t_global, ErrStat, ErrMsg)
 
-   type(ModDataType), intent(inout)          :: Mods(:)  !< Data for all modules
-   type(ModDataType), intent(inout)          :: ModGlue  !< Module data for glue code
-   type(ML_ParameterType), intent(inout)     :: p        !< ModLin parameters
-   type(ML_MiscVarType), intent(inout)       :: m        !< ModLin MiscVars
+   type(Glue_ParameterType), intent(inout)   :: p        !< Glue parameters
+   type(Glue_MiscVarType), intent(inout)     :: m        !< Glue MiscVars
+   type(Glue_OutputFileType), intent(inout)  :: y        !< Glue Output
    type(FAST_ParameterType), intent(in)      :: p_FAST
    type(FAST_MiscVarType), intent(inout)     :: m_FAST
    type(FAST_OutputFileType), intent(inout)  :: y_FAST
@@ -372,14 +376,14 @@ subroutine ModGlue_Linearize_OP(Turbine, Mods, ModGlue, p, m, p_FAST, m_FAST, y_
    iy = 1
 
    ! Initialize data in Jacobian matrices to zero
-   ModGlue%Lin%dYdu = 0.0_R8Ki
-   ModGlue%Lin%dXdu = 0.0_R8Ki
-   ModGlue%Lin%dYdx = 0.0_R8Ki
-   ModGlue%Lin%dXdx = 0.0_R8Ki
+   y%ModGlue%Lin%dYdu = 0.0_R8Ki
+   y%ModGlue%Lin%dXdu = 0.0_R8Ki
+   y%ModGlue%Lin%dYdx = 0.0_R8Ki
+   y%ModGlue%Lin%dXdx = 0.0_R8Ki
 
    ! Loop through modules by index
    do i = 1, size(p%iMod)
-      associate (ModData => Mods(p%iMod(i)))
+      associate (ModData => m%ModData(p%iMod(i)))
 
          ! Derivatives wrt input
          call FAST_JacobianPInput(ModData, t_global, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
@@ -400,18 +404,18 @@ subroutine ModGlue_Linearize_OP(Turbine, Mods, ModGlue, p, m, p_FAST, m_FAST, y_
          if (Failed()) return
 
          ! Copy module linearization arrays into glue linearization arrays
-         if ((size(ModGlue%Lin%x) > 0) .and. allocated(ModData%Lin%x)) ModGlue%Lin%x(ix:ix + ModData%Vars%Nx - 1) = ModData%Lin%x
-         if ((size(ModGlue%Lin%dx) > 0) .and. allocated(ModData%Lin%dx)) ModGlue%Lin%dx(ix:ix + ModData%Vars%Nx - 1) = ModData%Lin%dx
-         if ((size(ModGlue%Lin%xd) > 0) .and. allocated(ModData%Lin%xd)) ModGlue%Lin%xd(ixd:ixd + ModData%Vars%Nxd - 1) = ModData%Lin%xd
-         if ((size(ModGlue%Lin%z) > 0) .and. allocated(ModData%Lin%z)) ModGlue%Lin%z(iz:iz + ModData%Vars%Nz - 1) = ModData%Lin%z
-         if ((size(ModGlue%Lin%u) > 0) .and. allocated(ModData%Lin%u)) ModGlue%Lin%u(iu:iu + ModData%Vars%Nu - 1) = ModData%Lin%u
-         if ((size(ModGlue%Lin%y) > 0) .and. allocated(ModData%Lin%y)) ModGlue%Lin%y(iy:iy + ModData%Vars%Ny - 1) = ModData%Lin%y
+         if ((size(y%ModGlue%Lin%x) > 0) .and. allocated(ModData%Lin%x)) y%ModGlue%Lin%x(ix:ix + ModData%Vars%Nx - 1) = ModData%Lin%x
+         if ((size(y%ModGlue%Lin%dx) > 0) .and. allocated(ModData%Lin%dx)) y%ModGlue%Lin%dx(ix:ix + ModData%Vars%Nx - 1) = ModData%Lin%dx
+         if ((size(y%ModGlue%Lin%xd) > 0) .and. allocated(ModData%Lin%xd)) y%ModGlue%Lin%xd(ixd:ixd + ModData%Vars%Nxd - 1) = ModData%Lin%xd
+         if ((size(y%ModGlue%Lin%z) > 0) .and. allocated(ModData%Lin%z)) y%ModGlue%Lin%z(iz:iz + ModData%Vars%Nz - 1) = ModData%Lin%z
+         if ((size(y%ModGlue%Lin%u) > 0) .and. allocated(ModData%Lin%u)) y%ModGlue%Lin%u(iu:iu + ModData%Vars%Nu - 1) = ModData%Lin%u
+         if ((size(y%ModGlue%Lin%y) > 0) .and. allocated(ModData%Lin%y)) y%ModGlue%Lin%y(iy:iy + ModData%Vars%Ny - 1) = ModData%Lin%y
 
-         ! Copy module Jacobians into glue code Jacobians
-         if ((size(ModGlue%Lin%dYdu) > 0) .and. allocated(ModData%Lin%dYdu)) ModGlue%Lin%dYdu(iy:iy + ModData%Vars%Ny - 1, iu:iu + ModData%Vars%Nu - 1) = ModData%Lin%dYdu
-         if ((size(ModGlue%Lin%dXdu) > 0) .and. allocated(ModData%Lin%dXdu)) ModGlue%Lin%dXdu(ix:ix + ModData%Vars%Nx - 1, iu:iu + ModData%Vars%Nu - 1) = ModData%Lin%dXdu
-         if ((size(ModGlue%Lin%dYdx) > 0) .and. allocated(ModData%Lin%dYdx)) ModGlue%Lin%dYdx(iy:iy + ModData%Vars%Ny - 1, ix:ix + ModData%Vars%Nx - 1) = ModData%Lin%dYdx
-         if ((size(ModGlue%Lin%dXdx) > 0) .and. allocated(ModData%Lin%dXdx)) ModGlue%Lin%dXdx(ix:ix + ModData%Vars%Nx - 1, ix:ix + ModData%Vars%Nx - 1) = ModData%Lin%dXdx
+         ! Copy module Jacobians into glue code Jacobian
+         if ((size(y%ModGlue%Lin%dYdu) > 0) .and. allocated(ModData%Lin%dYdu)) y%ModGlue%Lin%dYdu(iy:iy + ModData%Vars%Ny - 1, iu:iu + ModData%Vars%Nu - 1) = ModData%Lin%dYdu
+         if ((size(y%ModGlue%Lin%dXdu) > 0) .and. allocated(ModData%Lin%dXdu)) y%ModGlue%Lin%dXdu(ix:ix + ModData%Vars%Nx - 1, iu:iu + ModData%Vars%Nu - 1) = ModData%Lin%dXdu
+         if ((size(y%ModGlue%Lin%dYdx) > 0) .and. allocated(ModData%Lin%dYdx)) y%ModGlue%Lin%dYdx(iy:iy + ModData%Vars%Ny - 1, ix:ix + ModData%Vars%Nx - 1) = ModData%Lin%dYdx
+         if ((size(y%ModGlue%Lin%dXdx) > 0) .and. allocated(ModData%Lin%dXdx)) y%ModGlue%Lin%dXdx(ix:ix + ModData%Vars%Nx - 1, ix:ix + ModData%Vars%Nx - 1) = ModData%Lin%dXdx
 
          ! Increment starting index for next module
          ix = ix + ModData%Vars%Nx
@@ -426,12 +430,12 @@ subroutine ModGlue_Linearize_OP(Turbine, Mods, ModGlue, p, m, p_FAST, m_FAST, y_
             ! Assemble output file name based on module abbreviation
             ! If module is BeamDyn or more than one instance, include instance
             OutFileName = trim(LinRootName)//'.'//trim(ModData%Abbr)//".lin"
-            if ((ModData%ID == Module_BD) .or. (count(Mods%ID == ModData%ID) > 1)) then
+            if ((ModData%ID == Module_BD) .or. (count(m%ModData%ID == ModData%ID) > 1)) then
                OutFileName = trim(LinRootName)//'.'//trim(ModData%Abbr)//trim(Num2LStr(ModData%Ins))//".lin"
             end if
 
             ! Write linearization matrices
-            call WriteModuleLinearMatrices(ModData, p_FAST, y_FAST, t_global, Un, OutFileName, ErrStat2, ErrMsg2)
+            call CalcWriteLinearMatrices(ModData, p_FAST, y_FAST, t_global, Un, OutFileName, .false., ErrStat2, ErrMsg2)
             if (Failed()) return
 
          end if
@@ -442,22 +446,24 @@ subroutine ModGlue_Linearize_OP(Turbine, Mods, ModGlue, p, m, p_FAST, m_FAST, y_
          if (JacobianHasNaNs(ModData%Lin%dYdx, "dYdx", ModData%Abbr)) return
          if (JacobianHasNaNs(ModData%Lin%dXdx, "dXdx", ModData%Abbr)) return
 
+         ! Copy arrays into linearization operating points
+         if (size(y%ModGlue%Lin%x) > 0) y%OP%x(:,m_FAST%Lin%NextLinTimeIndx) = y%ModGlue%Lin%x
+         if (size(y%ModGlue%Lin%xd) > 0) y%OP%xd(:,m_FAST%Lin%NextLinTimeIndx) = y%ModGlue%Lin%xd
+         if (size(y%ModGlue%Lin%z) > 0) y%OP%z(:,m_FAST%Lin%NextLinTimeIndx) = y%ModGlue%Lin%z
+         if (size(y%ModGlue%Lin%u) > 0) y%OP%u(:,m_FAST%Lin%NextLinTimeIndx) = y%ModGlue%Lin%u
+
       end associate
    end do
 
    ! Linearize mesh mappings to populate dUdy and dUdu
-   ModGlue%Lin%dUdy = 0.0_R8Ki
-   call Eye2D(ModGlue%Lin%dUdu, ErrStat2, ErrMsg2); if (Failed()) return
-   call FAST_LinearizeMappings(Turbine, Mods, m%Mappings, p%iMod, p%IdxLin, ErrStat2, ErrMsg2, ModGlue%Lin%dUdu, ModGlue%Lin%dUdy)
+   y%ModGlue%Lin%dUdy = 0.0_R8Ki
+   call Eye2D(y%ModGlue%Lin%dUdu, ErrStat2, ErrMsg2); if (Failed()) return
+   call FAST_LinearizeMappings(Turbine, m%ModData, m%Mappings, p%iMod, p%IdxLin, ErrStat2, ErrMsg2, y%ModGlue%Lin%dUdu, y%ModGlue%Lin%dUdy)
    if (Failed()) return
 
-   ! Calculate the glue code state matrices (A, B, C, D)
-   call ModLin_StateMatrices(ModGlue, real(p_FAST%UJacSclFact, R8Ki), ErrStat2, ErrMsg2)
-   if (Failed()) return
-
-   ! Write glue code data
+   ! Write glue code matrices to file
    OutFileName = trim(LinRootName)//".lin"
-   call WriteModuleLinearMatrices(ModGlue, p_FAST, y_FAST, t_global, Un, OutFileName, ErrStat2, ErrMsg2, IsGlue=.true.)
+   call CalcWriteLinearMatrices(y%ModGlue, p_FAST, y_FAST, t_global, Un, OutFileName, .true., ErrStat2, ErrMsg2)
    if (Failed()) return
 
    ! Update index for next linearization time
@@ -484,7 +490,7 @@ end subroutine
 !> ModLin_StateMatrices forms the full-system state matrices for linearization: A, B, C, and D.
 !! Note that it uses LAPACK_GEMM instead of MATMUL for matrix multiplications because of stack-space issues (these
 !! matrices get large quickly).
-subroutine ModLin_StateMatrices(ModGlue, JacScaleFactor, ErrStat, ErrMsg)
+subroutine CalcGlueStateMatrices(ModGlue, JacScaleFactor, ErrStat, ErrMsg)
    type(ModDataType), intent(inout) :: ModGlue        !< Glue module data
    real(R8Ki), intent(in)           :: JacScaleFactor !< Scale factor for conditioning the Jacobians
    integer(IntKi), intent(out)      :: ErrStat        !< Error status of the operation
@@ -493,7 +499,7 @@ subroutine ModLin_StateMatrices(ModGlue, JacScaleFactor, ErrStat, ErrMsg)
    character(*), parameter          :: RoutineName = 'ModLin_StateMatrices'
    integer(IntKi)                   :: ErrStat2
    character(ErrMsgLen)             :: ErrMsg2
-   real(R8Ki), allocatable          :: G(:, :), tmp(:, :), dUdu(:, :), dUdy(:, :)
+   real(R8Ki), allocatable          :: G(:, :), tmp(:, :)
    integer(IntKi), allocatable      :: ipiv(:)
 
    ! A = dXdx
@@ -508,48 +514,42 @@ subroutine ModLin_StateMatrices(ModGlue, JacScaleFactor, ErrStat, ErrMsg)
    ! call DumpMatrix(1000, "C.bin", ModGlue%Lin%dYdx, ErrStat2, ErrMsg2); if (Failed()) return
    ! call DumpMatrix(1000, "D.bin", ModGlue%Lin%dYdu, ErrStat2, ErrMsg2); if (Failed()) return
 
-   ! Create copies of dUdu and dUdy for calculating matrices
-   call AllocAry(dUdu, size(ModGlue%Lin%dUdu, 1), size(ModGlue%Lin%dUdu, 2), 'dUdu', ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(dUdy, size(ModGlue%Lin%dUdy, 1), size(ModGlue%Lin%dUdy, 2), 'dUdy', ErrStat2, ErrMsg2); if (Failed()) return
-   dUdu = ModGlue%Lin%dUdu
-   dUdy = ModGlue%Lin%dUdy
-
    ! *** get G matrix ****
    !----------------------
-   call AllocAry(G, size(dUdu, 1), size(dUdu, 2), 'G', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(G, size(ModGlue%Lin%dUdu, 1), size(ModGlue%Lin%dUdu, 2), 'G', ErrStat2, ErrMsg2); if (Failed()) return
    call AllocAry(ipiv, ModGlue%Vars%Nu, 'ipiv', ErrStat2, ErrMsg2); if (Failed()) return
 
    !G = dUdu + matmul(dUdy, y_FAST%Lin%Glue%D)
-   G = dUdu
-   call LAPACK_GEMM('N', 'N', 1.0_R8Ki, dUdy, ModGlue%Lin%dYdu, 1.0_R8Ki, G, ErrStat2, ErrMsg2); if (Failed()) return
+   G = ModGlue%Lin%dUdu
+   call LAPACK_GEMM('N', 'N', 1.0_R8Ki, ModGlue%Lin%dUdy, ModGlue%Lin%dYdu, 1.0_R8Ki, G, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! G can be ill-conditioned, so we are going to precondition with G_hat = S^(-1) * G * S
    ! we will also multiply the right-hand-side of the equations that need G inverse so that
    ! dUdy_hat = S^(-1)*dUdy and dUdu_hat = S^(-1)*dUdu
-   call Precondition(ModGlue%Vars%u, G, dUdu, dUdy, JacScaleFactor)
+   call Precondition(ModGlue%Vars%u, G, ModGlue%Lin%dUdu, ModGlue%Lin%dUdy, JacScaleFactor)
 
    ! Form G_hat^(-1) * (S^-1*dUdy) and G^(-1) * (S^-1*dUdu)
    ! factor G for the two solves:
    call LAPACK_getrf(M=size(G, 1), N=size(G, 2), A=G, IPIV=ipiv, ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
    ! after the this solve, dUdy holds G_hat^(-1) * dUdy_hat:
-   call LAPACK_getrs(trans='N', N=size(G, 2), A=G, IPIV=ipiv, B=dUdy, ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
+   call LAPACK_getrs(trans='N', N=size(G, 2), A=G, IPIV=ipiv, B=ModGlue%Lin%dUdy, ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
    ! after the this solve, dUdu holds G_hat^(-1) * dUdu_hat:
-   call LAPACK_getrs(trans='N', N=size(G, 2), A=G, IPIV=ipiv, B=dUdu, ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
+   call LAPACK_getrs(trans='N', N=size(G, 2), A=G, IPIV=ipiv, B=ModGlue%Lin%dUdu, ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
    ! Deallocate G and ipiv because the solves are complete
    deallocate (G)
    deallocate (ipiv)
 
    ! After this call, dUdu holds G^(-1)*dUdu and dUdy holds G^(-1)*dUdy
-   call Postcondition(ModGlue%Vars%u, dUdu, dUdy, JacScaleFactor)
+   call Postcondition(ModGlue%Vars%u, ModGlue%Lin%dUdu, ModGlue%Lin%dUdy, JacScaleFactor)
 
    ! Allocate tmp matrix for A and C calculations
    call AllocAry(tmp, ModGlue%Vars%Nu, ModGlue%Vars%Nx, 'G^-1*dUdy*C', ErrStat2, ErrMsg2); if (Failed()) return
 
    ! tmp = G^(-1) * dUdy * diag(C)
-   call LAPACK_GEMM('N', 'N', 1.0_R8Ki, dUdy, ModGlue%Lin%dYdx, 0.0_R8Ki, tmp, ErrStat2, ErrMsg2); if (Failed()) return
+   call LAPACK_GEMM('N', 'N', 1.0_R8Ki, ModGlue%Lin%dUdy, ModGlue%Lin%dYdx, 0.0_R8Ki, tmp, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! A
    ! dXdx = dXdx - matmul(dXdu, tmp)
@@ -562,12 +562,12 @@ subroutine ModLin_StateMatrices(ModGlue, JacScaleFactor, ErrStat, ErrMsg)
    ! B
    tmp = ModGlue%Lin%dXdu
    ! dXdu = matmul(dXdu, dUdu)
-   call LAPACK_GEMM('N', 'N', 1.0_R8Ki, tmp, dUdu, 0.0_R8Ki, ModGlue%Lin%dXdu, ErrStat2, ErrMsg2); if (Failed()) return
+   call LAPACK_GEMM('N', 'N', 1.0_R8Ki, tmp, ModGlue%Lin%dUdu, 0.0_R8Ki, ModGlue%Lin%dXdu, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! D
    tmp = ModGlue%Lin%dYdu
    ! D = matmul(dYdu, dUdu)
-   call LAPACK_GEMM('N', 'N', 1.0_R8Ki, tmp, dUdu, 0.0_R8Ki, ModGlue%Lin%dYdu, ErrStat2, ErrMsg2); if (Failed()) return
+   call LAPACK_GEMM('N', 'N', 1.0_R8Ki, tmp, ModGlue%Lin%dUdu, 0.0_R8Ki, ModGlue%Lin%dYdu, ErrStat2, ErrMsg2); if (Failed()) return
 
 contains
    logical function Failed()
@@ -675,17 +675,17 @@ subroutine Postcondition(uVars, dUdu, dUdy, JacScaleFactor)
 
 end subroutine
 
-subroutine WriteModuleLinearMatrices(ModData, p_FAST, y_FAST, t_global, Un, OutFileName, ErrStat, ErrMsg, IsGlue)
+subroutine CalcWriteLinearMatrices(ModData, p_FAST, y_FAST, t_global, Un, OutFileName, IsGlue, ErrStat, ErrMsg)
 
-   type(ModDataType), intent(in)    :: ModData        !< Module data
+   type(ModDataType), intent(inout) :: ModData        !< Module data
    type(FAST_ParameterType)         :: p_FAST         !< Parameters
    type(FAST_OutputFileType)        :: y_FAST         !< Output variables
    real(DbKi), intent(in)           :: t_global       !< current time step (written in file)
    integer(IntKi), intent(out)      :: Un             !< Unit number for file
    character(*), intent(in)         :: OutFileName    !< output file name
+   logical                          :: IsGlue         !< Flag indicating this is writing glue code matrices
    integer(IntKi), intent(out)      :: ErrStat        !< Error status of the operation
    character(*), intent(out)        :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-   logical, optional                :: IsGlue         !< Flag indicating this is writing glue code matrices
 
    character(*), parameter          :: RoutineName = 'WriteModuleLinearMatrices'
    integer(IntKi)                   :: ErrStat2
@@ -695,14 +695,9 @@ subroutine WriteModuleLinearMatrices(ModData, p_FAST, y_FAST, t_global, Un, OutF
    integer(IntKi)                   :: Nx, Nxd, Nz, Nu, Ny
    character(50)                    :: Fmt
    logical, allocatable             :: uUse(:), yUse(:)
-   logical                          :: IsGlueLoc
 
    ErrStat = ErrID_None
    ErrMsg = ""
-
-   ! Set local flag for if glue code matrices are being written
-   IsGlueLoc = .false.
-   if (present(IsGlue)) IsGlueLoc = IsGlue
 
    ! Open linearization file
    call OpenFOutFile(Un, OutFileName, ErrStat2, ErrMsg2); if (Failed()) return
@@ -776,7 +771,6 @@ subroutine WriteModuleLinearMatrices(ModData, p_FAST, y_FAST, t_global, Un, OutF
    end if
 
    ! Create boolean array indicating which input values to write
-   ! (iLoc is used here because)
    allocate (uUse(ModData%Vars%Nu))
    uUse = .false.
    do i = 1, size(ModData%Vars%u)
@@ -794,9 +788,10 @@ subroutine WriteModuleLinearMatrices(ModData, p_FAST, y_FAST, t_global, Un, OutF
       end associate
    end do
 
+   ! If Jacobian matrix output is requested
    if (p_FAST%LinOutJac) then
       write (Un, '(/,A,/)') 'Jacobian matrices:'
-      if (IsGlueLoc) then
+      if (IsGlue) then
          call WrPartialMatrix(ModData%Lin%dUdu, Un, p_FAST%OutFmt, 'dUdu', UseRow=uUse, UseCol=uUse)
          call WrPartialMatrix(ModData%Lin%dUdy, Un, p_FAST%OutFmt, 'dUdy', UseRow=uUse, UseCol=yUse)
       else
@@ -807,6 +802,15 @@ subroutine WriteModuleLinearMatrices(ModData, p_FAST, y_FAST, t_global, Un, OutF
       end if
    end if
 
+   ! If this is glue code module, calculate the glue code state matrices (A, B, C, D)
+   ! Called here, after writing dUdu and dUdy, because those matrices are overwritten
+   ! in the process of calculating the other state matrices
+   if (IsGlue) then
+      call CalcGlueStateMatrices(ModData, real(p_FAST%UJacSclFact, R8Ki), ErrStat2, ErrMsg2)
+      if (Failed()) return
+   end if
+
+   ! Write the linearized state matrices
    write (Un, '(/,A,/)') 'Linearized state matrices:'
    if (allocated(ModData%Lin%dXdx)) call WrPartialMatrix(ModData%Lin%dXdx, Un, p_FAST%OutFmt, 'A')
    if (allocated(ModData%Lin%dXdu)) call WrPartialMatrix(ModData%Lin%dXdu, Un, p_FAST%OutFmt, 'B', UseCol=uUse)
@@ -823,7 +827,7 @@ contains
       Failed = ErrStat >= AbortErrLev
       if (Failed) close (Un)
    end function Failed
-end subroutine WriteModuleLinearMatrices
+end subroutine CalcWriteLinearMatrices
 
 subroutine WrLinFile_txt_Table(VarAry, FlagFilter, p_FAST, Un, RowCol, op, IsDeriv, ShowRot)
 
@@ -956,7 +960,7 @@ subroutine Idx_Init(Mods, ModOrder, Idx, FlagFilter, ErrStat, ErrMsg)
    ErrMsg = ""
 
    ! Destroy VarIdx in case it has been previously used
-   call FAST_DestroyVarsIdxType(Idx, ErrStat2, ErrMsg2); if (Failed()) return
+   call Glue_DestroyVarsIdxType(Idx, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Save filter in index
    Idx%FlagFilter = FlagFilter

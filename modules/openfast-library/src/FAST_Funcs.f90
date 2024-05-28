@@ -443,7 +443,7 @@ end subroutine
 
 subroutine FAST_CalcOutput(ModData, Maps, ThisTime, ThisState, T, ErrStat, ErrMsg)
    type(ModDataType), intent(in)           :: ModData     !< Module data
-   type(TC_MappingType), intent(inout)     :: Maps(:)     !< Output->Input mappings
+   type(MappingType), intent(inout)        :: Maps(:)     !< Output->Input mappings
    real(DbKi), intent(in)                  :: ThisTime    !< Time
    integer(IntKi), intent(in)              :: ThisState   !< State index
    type(FAST_TurbineType), intent(inout)   :: T           !< Turbine type

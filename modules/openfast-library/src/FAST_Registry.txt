@@ -11,6 +11,7 @@
 ###################################################################################################################################
 # ...... Include files (definitions from NWTC Library and module components) ............................................................................
 include	Registry_NWTC_Library.txt
+usefrom Glue_Registry.txt
 usefrom	ElastoDyn_Registry.txt
 usefrom	Registry_BeamDyn.txt
 usefrom	ServoDyn_Registry.txt
@@ -106,180 +107,6 @@ typedef	^	FAST_SS_CaseType	ReKi	RotSpeed	-	-	-	"Rotor speed for this case of the
 typedef	^	FAST_SS_CaseType	ReKi	TSR	-	-	-	"TSR for this case of the steady-state solve [>0]"	"(-)"
 typedef	^	FAST_SS_CaseType	ReKi	WindSpeed	-	-	-	"Windspeed for this case of the steady-state solve [>0]"	"(m/s)"
 typedef	^	FAST_SS_CaseType	ReKi	Pitch	-	-	-	"Pitch angle for this case of the steady-state solve"	"(rad)"
-
-
-# ..... Tight Coupling Generalized Alpha Solver Data .............
-
-# Mapping Type
-param	^ -                 IntKi                   Map_LoadMesh    -  1  -     "Load mesh mapping type"	-
-param	^ -                 IntKi                   Map_MotionMesh  -  2  -     "Motion mesh mapping type"	-
-param	^ -                 IntKi                   Map_Variable    -  3  -     "Individual variable mapping type"	-
-param	^ -                 IntKi                   Map_Custom      -  4  -     "Custom mapping not used for linearization"	-
-typedef ^ TC_MappingType    character(128)          Desc            -  -  -     "Description of mapping (used to lookup non-mesh maps)" -
-typedef ^ ^                 IntKi                   SrcModIdx       -  0  -     "Source module index in ModData array" -
-typedef ^ ^                 IntKi                   DstModIdx       -  0  -     "Destination module index in ModData array" -
-typedef ^ ^                 IntKi                   SrcModID        -  0  -     "Source module ID" -
-typedef ^ ^                 IntKi                   DstModID        -  0  -     "Destination module ID" -
-typedef ^ ^                 IntKi                   SrcIns          -  0  -     "Source module Instance" -
-typedef ^ ^                 IntKi                   DstIns          -  0  -     "Destination module Instance" -
-typedef ^ ^                 IntKi                   SrcMeshID       -  0  -     "Source mesh identifier" -
-typedef ^ ^                 IntKi                   DstMeshID       -  0  -     "Destination mesh identifier" -
-typedef ^ ^                 IntKi                   iVarSrc         -  0  -     "Source variable index" -
-typedef ^ ^                 IntKi                   iVarDst         -  0  -     "Destination variable index" -
-typedef ^ ^                 IntKi                   SrcDispMeshID   -  0  -     "Source displacement mesh identifier" -
-typedef ^ ^                 IntKi                   DstDispMeshID   -  0  -     "Destination displacement mesh identifier" -
-typedef ^ ^                 MeshLocType             SrcMeshLoc      -  -  -     "Source mesh locator (number and indices)" -
-typedef ^ ^                 MeshLocType             DstMeshLoc      -  -  -     "Destination mesh locator (number and indices)" -
-typedef ^ ^                 MeshLocType             SrcDispMeshLoc  -  -  -     "Source displacement mesh locator (number and indices)" -
-typedef ^ ^                 MeshLocType             DstDispMeshLoc  -  -  -     "Destination displacement mesh locator (number and indices)" -
-typedef ^ ^                 IntKi                   MapType         -  0  -     "Integer denoting mapping type (1=Load Mesh, 2=Motion Mesh, 3=Non-Mesh)" -
-typedef ^ ^                 IntKi                   XfrType         -  0  -     "Integer denoting transfer type (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L)" -
-typedef ^ ^                 IntKi                   XfrTypeAux      -  0  -     "Integer denoting transfer type (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L)" -
-typedef ^ ^                 logical                 Ready           -  F  -     "Flag indicating Source has been ready to be transferred" -
-typedef ^ ^                 logical                 DstUsesSibling  -  F  -     "Flag indicating the destination displacement mesh is a sibling of the destination load mesh" -
-typedef ^ ^                 MeshType                TmpLoadMesh     -  -  -     "Temporary load mesh for intermediate transfers" -
-typedef ^ ^                 MeshType                TmpMotionMesh   -  -  -     "Temporary motion mesh for intermediate transfers" -
-typedef ^ ^                 R8Ki                    TmpMatrix       :: -  -     "Temporary matrix for performing transfer for destination load meshes without sibling motion meshes" -
-typedef ^ ^                 MeshMapType             MeshMap         -  -  -     "Mesh mapping from Source variable to Destination variable" -
-typedef ^ ^                 MeshMapType             MeshMapAux      -  -  -     "Auxiliary mesh mapping for destination load meshes without sibling motion mesh" -
-typedef ^ ^                 IntKi                   iVarSrcTransDisp       - - - "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi                   iVarSrcTransVel        - - - "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi                   iVarSrcTransAcc        - - - "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi                   iVarSrcOrientation     - - - "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi                   iVarSrcAngularVel      - - - "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi                   iVarSrcAngularAcc      - - - "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi                   iVarSrcForce           - - - "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi                   iVarSrcMoment          - - - "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi                   iVarSrcDispTransDisp   - - - "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi                   iVarDstTransDisp       - - - "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi                   iVarDstTransVel        - - - "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi                   iVarDstTransAcc        - - - "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi                   iVarDstOrientation     - - - "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi                   iVarDstAngularVel      - - - "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi                   iVarDstAngularAcc      - - - "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi                   iVarDstForce           - - - "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi                   iVarDstMoment          - - - "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi                   iVarDstDispTransDisp   - - - "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi                   iVarDstDispOrientation - - - "Var index for linearized mesh mapping"
-
-# Parameters 
-typedef ^ TC_ParameterType  R8Ki            DT                     -  -  -      "solution time step" -
-typedef ^ ^                 R8Ki            ConvTol                -  -  -      "Solution convergence tolerance" -
-typedef ^ ^                 IntKi           NumCrctn               -  -  -      "" -
-typedef ^ ^                 IntKi           MaxConvIter            -  -  -      "" -
-typedef ^ ^                 IntKi           NIter_UJac             -  -  -      "Number of solution iterations between updating the Jacobian" -
-typedef ^ ^                 IntKi           NStep_UJac             -  -  -      "Number of global time steps between updating the Jacobian" -
-typedef ^ ^                 R8Ki            Scale_UJac             -  -  -      "" -
-typedef ^ ^                 R8Ki            AccBlend               -  1  -      "" -
-typedef ^ ^                 R8Ki            RhoInf                 -  -  -      "Rho infinity used for calculating Generalized-alpha coefficients" -
-typedef ^ ^                 R8Ki            AlphaM                 -  -  -      "Generalized-alpha alpha_m coefficient" -
-typedef ^ ^                 R8Ki            AlphaF                 -  -  -      "Generalized-alpha alpha_f coefficient" -
-typedef ^ ^                 R8Ki            Beta                   -  -  -      "Generalized-alpha beta coefficient" -
-typedef ^ ^                 R8Ki            Gamma                  -  -  -      "Generalized-alpha gamma coefficient" -
-typedef ^ ^                 R8Ki            C                      7  -  -      "Generalized-alpha coefficient array" -
-typedef ^ ^                 IntKi           iX1                    2  -  -      "" -
-typedef ^ ^                 IntKi           iX2                    2  -  -      "" -
-typedef ^ ^                 IntKi           iUT                    2  -  -      "" -
-typedef ^ ^                 IntKi           iU1                    2  -  -      "" -
-typedef ^ ^                 IntKi           iyT                    2  -  -      "" -
-typedef ^ ^                 IntKi           iy1                    2  -  -      "" -
-typedef ^ ^                 IntKi           iJX                    2  -  -      "Indices of Jacobian q variables" -
-typedef ^ ^                 IntKi           iJU                    2  -  -      "Indices of Jacobian input variables" -
-typedef ^ ^                 IntKi           iJUT                   2  -  -      "Indices of Jacobian input variables from tight coupling" -
-typedef ^ ^                 IntKi           iJL                    :  -  -      "Indices of Jacobian load variables" -
-typedef ^ ^                 IntKi           ixqd                   :: -  -      "" -
-typedef ^ ^                 IntKi           iModInit               :  -  -      "ModData index order for step 0 initialization" -
-typedef ^ ^                 IntKi           iModTC                 :  -  -      "ModData index order for tight coupling modules" -
-typedef ^ ^                 IntKi           iModBD                 :  -  -      "ModData index order for BD modules" -
-typedef ^ ^                 IntKi           iModOpt1               :  -  -      "ModData index order for option 1 modules" -
-typedef ^ ^                 IntKi           iModOpt1US             :  -  -      "ModData index order for option 1 modules to update states" -
-typedef ^ ^                 IntKi           iModOpt2               :  -  -      "ModData index order for option 2 modules" -
-typedef ^ ^                 IntKi           iModPost               :  -  -      "ModData index order for post option 1 modules" -
-
-typedef ^ ModLinTCType      R8Ki            x                      :  -  -      ""  -
-typedef ^ ^                 R8Ki            dx                     :  -  -      ""  -
-typedef ^ ^                 R8Ki            xd                     :  -  -      ""  -
-typedef ^ ^                 R8Ki            z                      :  -  -      ""  -
-typedef ^ ^                 R8Ki            u                      :  -  -      ""  -
-typedef ^ ^                 R8Ki            y                      :  -  -      ""  -
-typedef ^ ^                 R8Ki            u_perturb              :  -  -      ""  -
-typedef ^ ^                 R8Ki            x_perturb              :  -  -      ""  -
-typedef ^ ^                 R8Ki            x_pos                  :  -  -      ""  -
-typedef ^ ^                 R8Ki            x_neg                  :  -  -      ""  -
-typedef ^ ^                 R8Ki            y_pos                  :  -  -      ""  -
-typedef ^ ^                 R8Ki            y_neg                  :  -  -      ""  -
-typedef ^ ^                 R8Ki            dYdx                   :: -  -      ""  -
-typedef ^ ^                 R8Ki            dXdx                   :: -  -      ""  -
-typedef ^ ^                 R8Ki            dYdu                   :: -  -      ""  -
-typedef ^ ^                 R8Ki            dXdu                   :: -  -      ""  -
-typedef ^ ^                 R8Ki            dUdu                   :: -  -      ""  -
-typedef ^ ^                 R8Ki            dUdy                   :: -  -      ""  -
-typedef ^ ^                 R8Ki            StateRotation          :: -  -      ""  -
-
-typedef ^ ModDataType       character(ChanLen) Abbr                -  -  -      "Module name abbreviation"  -
-typedef ^ ^                 IntKi           ID                     -  0  -      "Module identification number"  -
-typedef ^ ^                 IntKi           Idx                    -  0  -      "Module index in array of modules"  -
-typedef ^ ^                 IntKi           Ins                    -  0  -      "Module instance number"  -
-typedef ^ ^                 R8Ki            DT                     -  0  -      "Module time step"  -
-typedef ^ ^                 IntKi           SubSteps               -  0  -      "Module number of substeps per solver time step"  -
-typedef ^ ^                 ModVarsType    *Vars                   -  -  -      "Pointer to module variables type"  -
-typedef ^ ^                 ModLinTCType    Lin                    -  -  -      "Module linearization data"  -
-typedef ^ ^                 IntKi           SrcMaps                :  -  -      "Indices of mappings where module is the source"
-typedef ^ ^                 IntKi           DstMaps                :  -  -      "Indices of mappings where module is the destination"
-
-# Variable indexing
-typedef ^ VarIdxType        IntKi           ModVarStart            :  -  -      "Variable start index from module index"  -
-typedef ^ ^                 IntKi           ValLocGbl              :: -  -      "Variable local and global value indices"  -
-typedef ^ VarsIdxType       IntKi           FlagFilter             -  -  -      ""  -
-typedef ^ ^                 IntKi           Nx                     -  -  -      ""  -
-typedef ^ ^                 IntKi           Nxd                    -  -  -      ""  -
-typedef ^ ^                 IntKi           Nz                     -  -  -      ""  -
-typedef ^ ^                 IntKi           Nu                     -  -  -      ""  -
-typedef ^ ^                 IntKi           Ny                     -  -  -      ""  -
-typedef ^ ^                 VarIdxType      x                      -  -  -      ""  -
-typedef ^ ^                 VarIdxType      xd                     -  -  -      ""  -
-typedef ^ ^                 VarIdxType      z                      -  -  -      ""  -
-typedef ^ ^                 VarIdxType      u                      -  -  -      ""  -
-typedef ^ ^                 VarIdxType      y                      -  -  -      ""  -
-typedef ^ ^                 ModLinTCType    Lin                    -  -  -      "Linearization matrices"  -
-
-typedef ^ ML_ParameterType  IntKi           iMod                   :  -  -      "ModData index order for linearization" -
-typedef ^ ^                 VarsIdxType     IdxLin                 -  -  -      "Variable index for linearization data" -
-typedef ^ ML_MiscVarType    TC_MappingType  Mappings               :  -  -      "Module mesh mapping" -
-typedef ^ ML_OutputType     ModLinTCType    Lin                    :  -  -      "Module linearization type" -
-
-# Misc/Optimization variables 
-typedef ^ TC_MiscVarType    R8Ki            q                      :: -  -      "" -
-typedef ^ ^                 R8Ki            qn                     :: -  -      "" -
-typedef ^ ^                 R8Ki            x                      :  -  -      "" -
-typedef ^ ^                 R8Ki            xn                     :  -  -      "" -
-typedef ^ ^                 R8Ki            dxdt                   :  -  -      "" -
-typedef ^ ^                 R8Ki            u                      :  -  -      "" -
-typedef ^ ^                 R8Ki            un                     :  -  -      "" -
-typedef ^ ^                 R8Ki            u_tmp                  :  -  -      "" -
-typedef ^ ^                 R8Ki            y                      :  -  -      "" -
-typedef ^ ^                 R8Ki            dYdx                   :: -  -      "" -
-typedef ^ ^                 R8Ki            dYdu                   :: -  -      "" -
-typedef ^ ^                 R8Ki            dXdx                   :: -  -      "" -
-typedef ^ ^                 R8Ki            dXdu                   :: -  -      "" -
-typedef ^ ^                 R8Ki            dUdu                   :: -  -      "" -
-typedef ^ ^                 R8Ki            dUdy                   :: -  -      "" -
-typedef ^ ^                 R8Ki            GinvdUdu                :: -  -      "" -
-typedef ^ ^                 R8Ki            dUdyHat                :: -  -      "" -
-typedef ^ ^                 R8Ki            XB                     :: -  -      "" -
-typedef ^ ^                 R8Ki            G                      :: -  -      "Used to merge state matrices" -
-typedef ^ ^                 R8Ki            Jac                    :: -  -      "" -
-typedef ^ ^                 IntKi           IPIV                   :  -  -      "" -
-typedef ^ ^                 IntKi           IterTotal              -  0  -      "" -
-typedef ^ ^                 IntKi           IterUntilUJac          -  0  -      "Number of convergence iterations until Jacobian update" -
-typedef ^ ^                 IntKi           StepsUntilUJac         -  0  -      "Number of time steps until Jacobian update" -
-typedef ^ ^                 R8Ki            dq                     :: -  -      "Change in q" -
-typedef ^ ^                 R8Ki            dx                     :  -  -      "Change in x" -
-typedef ^ ^                 R8Ki            du                     :  -  -      "" -
-typedef ^ ^                 R8Ki            UDiff                  :  -  -      "" -
-typedef ^ ^                 logical         ConvWarn               -  -  -      "Flag to warn about convergence failure" -
-typedef ^ ^                 TC_MappingType  Mappings               :  -  -      "Array of mesh mappings in solver" -
-
 
 # ..... FAST_ParameterType data .......................................................................................................
 # Misc data for coupling:
@@ -387,8 +214,6 @@ typedef	^	FAST_ParameterType	IntKi	Lin_NumMods	-	-	-	"number of modules in the l
 typedef	^	FAST_ParameterType	IntKi	Lin_ModOrder	{NumModules}	-	-	"indices that determine which order the modules are in the glue-code linearization matrix"
 typedef  ^  FAST_ParameterType  IntKi    LinInterpOrder     -  -  -  "Interpolation order for CalcSteady solution" -
 #typedef	^	FAST_ParameterType	LOGICAL	CheckHSSBrTrqC	-	-	-	"Flag to determine if we should check HSSBrTrqC extrapolation to ElastoDyn"	-
-
-typedef	^	FAST_ParameterType	ML_ParameterType ModLin	-	-	-	"Module data based linearization"
 
 # Parameters for steady-state calculations:
 typedef	^	FAST_ParameterType	LOGICAL	CompAeroMaps	-	-	-	"Flag to determine if we are calculating aero maps"	-
@@ -575,8 +400,6 @@ typedef   ^   FAST_OutputFileType   FAST_LinStateSave   op   -   -   -   "operat
 typedef	^	FAST_OutputFileType	ReKi	DriverWriteOutput	{6}	-	-	"pitch and tsr for current aero map case, plus error, number of iterations, wind speed, rotor speed"
 #typedef	^	FAST_OutputFileType	CHARACTER(ChanLen)	DriverWriteOutputHdr	{:}	-	-	"headers of data output from the driver"
 #typedef	^	FAST_OutputFileType	CHARACTER(ChanLen)	DriverWriteOutputUnit	{:}	-	-	"units of data output from the driver"
-typedef	^	FAST_OutputFileType	ModDataType	Modules	{:}	-	-	"module variable and value data"	-
-typedef	^	FAST_OutputFileType	ModDataType	ModGlue	-	-	-	"module variable and value data"	-
 
 
 # ..... IceDyn data .......................................................................................................
@@ -973,7 +796,6 @@ typedef	^	FAST_MiscVarType	INTEGER	SimStrtTime	{8}	-	-	"Start time of simulation
 typedef	^	FAST_MiscVarType	Logical	calcJacobian	-	-	-	"Should we calculate Jacobians in Option 1?"	(flag)
 typedef	^	FAST_MiscVarType	FAST_ExternInputType	ExternInput	-	-	-	"external input values"	-
 typedef	^	FAST_MiscVarType	FAST_MiscLinType	Lin	-	-	-	"misc data for linearization analysis"	-
-typedef	^	FAST_MiscVarType	ML_MiscVarType	ModLin	-	-	-	"Module linearization Miscellaneous variables"	-
 
 
 # ..... FAST_InitData data .......................................................................................................
@@ -1050,6 +872,9 @@ typedef	^	FAST_TurbineType	IntKi	TurbID	-	1	-	"Turbine ID Number"	-
 typedef	^	FAST_TurbineType	FAST_ParameterType	p_FAST	-	-	-	"Parameters for the glue code"	-
 typedef	^	FAST_TurbineType	FAST_OutputFileType	y_FAST	-	-	-	"Output variables for the glue code"	-
 typedef	^	FAST_TurbineType	FAST_MiscVarType	m_FAST	-	-	-	"Miscellaneous variables"	-
+typedef	^	FAST_TurbineType	Glue_ParameterType	p_Glue	-	-	-	"Parameters for the glue code"	-
+typedef	^	FAST_TurbineType	Glue_OutputFileType	y_Glue	-	-	-	"Output variables for the glue code"	-
+typedef	^	FAST_TurbineType	Glue_MiscVarType	m_Glue	-	-	-	"Miscellaneous variables"	-
 typedef	^	FAST_TurbineType	FAST_ModuleMapType	MeshMapData	-	-	-	"Data for mapping between modules"	-
 typedef	^	FAST_TurbineType	ElastoDyn_Data	ED	-	-	-	"Data for the ElastoDyn module"	-
 typedef	^	FAST_TurbineType	BeamDyn_Data	BD	-	-	-	"Data for the BeamDyn module"	-

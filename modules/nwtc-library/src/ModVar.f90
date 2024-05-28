@@ -57,6 +57,8 @@ interface MV_Unpack
    module procedure MV_UnpackMesh
 end interface
 
+logical, parameter   :: UseSmallRotAngs = .true.
+
 contains
 
 function MV_FieldString(Field) result(str)
@@ -592,22 +594,33 @@ subroutine MV_ComputeDiff(VarAry, PosAry, NegAry, DiffAry)
             quat_neg = NegAry(k:k + 2)
             quat_pos = PosAry(k:k + 2)
 
-            ! If variable has flag to use small angles when computing difference
-            if (MV_HasFlags(VarAry(i), VF_SmallAngle)) then
+            ! If flag set to use small angle rotations
+            if (UseSmallRotAngs) then
 
-               ang_pos = GetSmllRotAngs(quat_to_dcm(quat_pos), ErrStat, ErrMsg)
-               ang_neg = GetSmllRotAngs(quat_to_dcm(quat_neg), ErrStat, ErrMsg)
+               ! If variable has flag to use small angles when computing difference
+               if (MV_HasFlags(VarAry(i), VF_SmallAngle)) then
 
-               DiffAry(k:k + 2) = ang_pos - ang_neg
+                  ang_pos = GetSmllRotAngs(quat_to_dcm(quat_pos), ErrStat, ErrMsg)
+                  ang_neg = GetSmllRotAngs(quat_to_dcm(quat_neg), ErrStat, ErrMsg)
+
+                  DiffAry(k:k + 2) = ang_pos - ang_neg
+               else
+
+                  ! Calculate relative rotation from negative to positive perturbation
+                  delta = quat_compose(-quat_neg, quat_pos)
+
+                  ! Convert relative rotation from quaternion to rotation vector
+                  DiffAry(k:k + 2) = GetSmllRotAngs(quat_to_dcm(delta), ErrStat, ErrMsg)
+               end if
+
             else
 
                ! Calculate relative rotation from negative to positive perturbation
                delta = quat_compose(-quat_neg, quat_pos)
 
-               ! Convert relative rotation from quaternion to rotation vector
-               DiffAry(k:k + 2) = GetSmllRotAngs(quat_to_dcm(delta), ErrStat, ErrMsg)
+               ! Convert delta quaternion to rotation vector and store in diff array
+               DiffAry(k:k + 2) = quat_to_rvec(delta)
 
-               ! DiffAry(k:k + 2) = quat_to_rvec(delta)
             end if
 
             ! Increment starting index
@@ -840,20 +853,29 @@ function perturb_quat(theta, idir) result(q)
    real(R8Ki)                 :: rvec(3), q(3), dcm(3, 3)
    integer(IntKi)             :: ErrStat
    character(ErrMsgLen)       :: ErrMsg
-   select case (idir)
-   case (1)
-      ! q = rvec_to_quat([theta, 0.0_R8Ki, 0.0_R8Ki])
-      call SmllRotTrans('linearization perturbation', theta, 0.0_R8Ki, 0.0_R8Ki, dcm, ErrStat=ErrStat, ErrMsg=ErrMsg)
-      q = dcm_to_quat(dcm)
-   case (2)
-      ! q = rvec_to_quat([0.0_R8Ki, theta, 0.0_R8Ki])
-      call SmllRotTrans('linearization perturbation', 0.0_R8Ki, theta, 0.0_R8Ki, dcm, ErrStat=ErrStat, ErrMsg=ErrMsg)
-      q = dcm_to_quat(dcm)
-   case (3)
-      ! q = rvec_to_quat([0.0_R8Ki, 0.0_R8Ki, theta])
-      call SmllRotTrans('linearization perturbation', 0.0_R8Ki, 0.0_R8Ki, theta, dcm, ErrStat=ErrStat, ErrMsg=ErrMsg)
-      q = dcm_to_quat(dcm)
-   end select
+
+   if (UseSmallRotAngs) then
+      select case (idir)
+      case (1)
+         call SmllRotTrans('linearization perturbation', theta, 0.0_R8Ki, 0.0_R8Ki, dcm, ErrStat=ErrStat, ErrMsg=ErrMsg)
+         q = dcm_to_quat(dcm)
+      case (2)
+         call SmllRotTrans('linearization perturbation', 0.0_R8Ki, theta, 0.0_R8Ki, dcm, ErrStat=ErrStat, ErrMsg=ErrMsg)
+         q = dcm_to_quat(dcm)
+      case (3)
+         call SmllRotTrans('linearization perturbation', 0.0_R8Ki, 0.0_R8Ki, theta, dcm, ErrStat=ErrStat, ErrMsg=ErrMsg)
+         q = dcm_to_quat(dcm)
+      end select
+   else
+      select case (idir)
+      case (1)
+         q = rvec_to_quat([theta, 0.0_R8Ki, 0.0_R8Ki])
+      case (2)
+         q = rvec_to_quat([0.0_R8Ki, theta, 0.0_R8Ki])
+      case (3)
+         q = rvec_to_quat([0.0_R8Ki, 0.0_R8Ki, theta])
+      end select
+   end if
 end function
 
 pure function quat_canonical(q0, q) result(qc)

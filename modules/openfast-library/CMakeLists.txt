@@ -15,6 +15,7 @@
 #
 
 if (GENERATE_TYPES)
+  generate_f90_types(src/Glue_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/Glue_Types.f90 -noextrap)
   generate_f90_types(src/FAST_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/FAST_Types.f90 -noextrap)
 endif()
 
@@ -38,6 +39,7 @@ elseif (${_compiler_id} MATCHES "^INTEL" AND ${_build_type} STREQUAL "RELEASE" A
 endif()
 
 add_library(openfast_prelib STATIC
+  src/Glue_Types.f90
   src/FAST_Types.f90
 )
 target_link_libraries(openfast_prelib 
