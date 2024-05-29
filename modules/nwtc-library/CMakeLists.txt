@@ -68,7 +68,6 @@ set(NWTCLIBS_SOURCES
   src/NWTC_Base.f90
   src/SingPrec.f90
   src/ModReg.f90
-  src/ModVar.f90
 
   src/ModMesh.f90
   src/ModMesh_Mapping.f90
