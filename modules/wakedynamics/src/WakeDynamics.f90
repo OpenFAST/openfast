@@ -34,7 +34,6 @@ module WakeDynamics
    
    type(ProgDesc), parameter  :: WD_Ver = ProgDesc( 'WakeDynamics', '', '' )
    character(*),   parameter  :: WD_Nickname = 'WD'      
-   real(ReKi) ,    parameter  :: nExpBrkDwn = 1.
 
    ! ..... Public Subroutines ...................................................................................................
 
@@ -1450,8 +1449,6 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
 ! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
 ! placed in the y%WriteOutput(:) array.
 !..................................................................................................................................
-   use VTK ! 
-
    REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
    TYPE(WD_InputType),           INTENT(IN   )  :: u           !< Inputs at Time t
    TYPE(WD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
@@ -1580,14 +1577,12 @@ contains
             if(verbose) write(tmpStr,'(A,I3,A)') 'Plane:',i,' Velocity zero'
             if(verbose) call WrScr(trim(tmpStr))
          else
-            ! Scaling factor, onset of vortex breakdown
-            x_over_D = xd%x_plane(i)/u%D_rotor
             ! calculate k_Def and k_Grad with EddyFilter (see Torque 2024, E. Branlard for derivation)
             ! NOTE:  order swap of coefficients here
             !        k_Def and k_Grad contain in order (k_c, FMin, DMin, DMax, Exp)
             !        EddyFilter: (x_plane, D_rotor, C_Dmin, C_Dmax, C_Fmin, C_Exp)
-            k_Def  = p%WAT_k_Def( 1) * EddyFilter(x_over_D, u%D_rotor, p%WAT_k_Def( 3), p%WAT_k_Def( 4), p%WAT_k_Def( 2), p%WAT_k_Def( 5) )
-            k_Grad = p%WAT_k_Grad(1) * EddyFilter(x_over_D, u%D_rotor, p%WAT_k_Grad(3), p%WAT_k_Grad(4), p%WAT_k_Grad(2), p%WAT_k_Grad(5) )
+            k_Def  = p%WAT_k_Def( 1) * EddyFilter(xd%x_plane(i), u%D_rotor, p%WAT_k_Def( 3), p%WAT_k_Def( 4), p%WAT_k_Def( 2), p%WAT_k_Def( 5) )
+            k_Grad = p%WAT_k_Grad(1) * EddyFilter(xd%x_plane(i), u%D_rotor, p%WAT_k_Grad(3), p%WAT_k_Grad(4), p%WAT_k_Grad(2), p%WAT_k_Grad(5) )
             do iz = -p%NumRadii+1, p%NumRadii-1
                do iy = -p%NumRadii+1, p%NumRadii-1
                   ! Polar gradients
