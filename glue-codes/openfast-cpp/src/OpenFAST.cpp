@@ -2903,7 +2903,7 @@ void fast::OpenFAST::writeRestartFile(int iTurbLoc, int n_t_global) {
     //Find the file and open it in append mode
     std::stringstream rstfile_ss;
     rstfile_ss << "turb_" ;
-    rstfile_ss << std::setfill('0') << std::setw(2) << turbineMapProcToGlob[iTurbLoc];
+    rstfile_ss << std::setfill('0') << std::setw(2) << turbineData[iTurbLoc].TurbID;
     rstfile_ss << "_rst.nc";
     std::string rst_filename = rstfile_ss.str();
     int ierr = nc_open(rst_filename.c_str(), NC_WRITE, &ncid);
