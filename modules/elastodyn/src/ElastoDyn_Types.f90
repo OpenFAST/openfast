@@ -175,6 +175,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: PtfmRIner = 0.0_ReKi      !< Platform inertia for roll tilt rotation about the platform CM [kg m^2]
     REAL(ReKi)  :: PtfmPIner = 0.0_ReKi      !< Platform inertia for pitch tilt rotation about the platform CM [kg m^2]
     REAL(ReKi)  :: PtfmYIner = 0.0_ReKi      !< Platform inertia for yaw rotation about the platform CM [kg m^2]
+    REAL(ReKi)  :: PtfmXYIner = 0.0_ReKi      !< Platform xy inertia about the platform CM [kg m^2]
+    REAL(ReKi)  :: PtfmYZIner = 0.0_ReKi      !< Platform yz inertia for pitch tilt rotation about the platform CM [kg m^2]
+    REAL(ReKi)  :: PtfmXZIner = 0.0_ReKi      !< Platform xz inertia for yaw rotation about the platform CM [kg m^2]
     REAL(ReKi)  :: BldNodes = 0.0_ReKi      !< Number of blade nodes (per blade) used for analysis [-]
     TYPE(ED_BladeMeshInputData) , DIMENSION(:), ALLOCATABLE  :: InpBlMesh      !< Input data for blade discretizations (could be on each blade) [see BladeMeshInputData]
     TYPE(BladeInputData) , DIMENSION(:), ALLOCATABLE  :: InpBl      !< Input data for individual blades [see BladeInputData type]
@@ -688,6 +691,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: PtfmPIner = 0.0_ReKi      !< Platform inertia for pitch tilt rotation about the platform CM. [-]
     REAL(ReKi)  :: PtfmRIner = 0.0_ReKi      !< Platform inertia for roll tilt rotation about the platform CM. [-]
     REAL(ReKi)  :: PtfmYIner = 0.0_ReKi      !< Platform inertia for yaw rotation about the platform CM. [-]
+    REAL(ReKi)  :: PtfmXYIner = 0.0_ReKi      !< Platform xy inertia about the platform CM [kg m^2]
+    REAL(ReKi)  :: PtfmYZIner = 0.0_ReKi      !< Platform yz inertia for pitch tilt rotation about the platform CM [kg m^2]
+    REAL(ReKi)  :: PtfmXZIner = 0.0_ReKi      !< Platform xz inertia for yaw rotation about the platform CM [kg m^2]
     REAL(ReKi)  :: RFrlMass = 0.0_ReKi      !< Rotor-furl mass [-]
     REAL(ReKi)  :: RotIner = 0.0_ReKi      !< Inertia of rotor about its centerline [-]
     REAL(ReKi)  :: RotMass = 0.0_ReKi      !< Rotor mass (blades, tips, and hub) [-]
@@ -1655,6 +1661,9 @@ subroutine ED_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%PtfmRIner = SrcInputFileData%PtfmRIner
    DstInputFileData%PtfmPIner = SrcInputFileData%PtfmPIner
    DstInputFileData%PtfmYIner = SrcInputFileData%PtfmYIner
+   DstInputFileData%PtfmXYIner = SrcInputFileData%PtfmXYIner
+   DstInputFileData%PtfmYZIner = SrcInputFileData%PtfmYZIner
+   DstInputFileData%PtfmXZIner = SrcInputFileData%PtfmXZIner
    DstInputFileData%BldNodes = SrcInputFileData%BldNodes
    if (allocated(SrcInputFileData%InpBlMesh)) then
       LB(1:1) = lbound(SrcInputFileData%InpBlMesh, kind=B8Ki)
@@ -2035,6 +2044,9 @@ subroutine ED_PackInputFile(RF, Indata)
    call RegPack(RF, InData%PtfmRIner)
    call RegPack(RF, InData%PtfmPIner)
    call RegPack(RF, InData%PtfmYIner)
+   call RegPack(RF, InData%PtfmXYIner)
+   call RegPack(RF, InData%PtfmYZIner)
+   call RegPack(RF, InData%PtfmXZIner)
    call RegPack(RF, InData%BldNodes)
    call RegPack(RF, allocated(InData%InpBlMesh))
    if (allocated(InData%InpBlMesh)) then
@@ -2224,6 +2236,9 @@ subroutine ED_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%PtfmRIner); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmPIner); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmYIner); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmXYIner); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmYZIner); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmXZIner); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BldNodes); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%InpBlMesh)) deallocate(OutData%InpBlMesh)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
@@ -5478,6 +5493,9 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%PtfmPIner = SrcParamData%PtfmPIner
    DstParamData%PtfmRIner = SrcParamData%PtfmRIner
    DstParamData%PtfmYIner = SrcParamData%PtfmYIner
+   DstParamData%PtfmXYIner = SrcParamData%PtfmXYIner
+   DstParamData%PtfmYZIner = SrcParamData%PtfmYZIner
+   DstParamData%PtfmXZIner = SrcParamData%PtfmXZIner
    DstParamData%RFrlMass = SrcParamData%RFrlMass
    DstParamData%RotIner = SrcParamData%RotIner
    DstParamData%RotMass = SrcParamData%RotMass
@@ -6356,6 +6374,9 @@ subroutine ED_PackParam(RF, Indata)
    call RegPack(RF, InData%PtfmPIner)
    call RegPack(RF, InData%PtfmRIner)
    call RegPack(RF, InData%PtfmYIner)
+   call RegPack(RF, InData%PtfmXYIner)
+   call RegPack(RF, InData%PtfmYZIner)
+   call RegPack(RF, InData%PtfmXZIner)
    call RegPack(RF, InData%RFrlMass)
    call RegPack(RF, InData%RotIner)
    call RegPack(RF, InData%RotMass)
@@ -6618,6 +6639,9 @@ subroutine ED_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%PtfmPIner); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmRIner); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmYIner); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmXYIner); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmYZIner); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmXZIner); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RFrlMass); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RotIner); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RotMass); if (RegCheckErr(RF, RoutineName)) return
