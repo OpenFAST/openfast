@@ -183,16 +183,16 @@ IMPLICIT NONE
     REAL(ReKi)  :: C_HWkDfl_x = 0.0_ReKi      !< Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance [-]
     REAL(ReKi)  :: C_HWkDfl_xY = 0.0_ReKi      !< Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error [1/rad]
     REAL(ReKi)  :: C_NearWake = 0.0_ReKi      !< Calibrated parameter for near-wake correction [-]
+    REAL(ReKi)  :: k_vAmb = 0.0_ReKi      !< Calibrated parameter for the influence of ambient turbulence in the eddy viscosity [-]
     REAL(ReKi)  :: C_vAmb_DMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the minimum and exponential regions [-]
     REAL(ReKi)  :: C_vAmb_DMax = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the exponential and maximum regions [-]
     REAL(ReKi)  :: C_vAmb_FMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the functional value in the minimum region [-]
     REAL(ReKi)  :: C_vAmb_Exp = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the exponent in the exponential region [-]
+    REAL(ReKi)  :: k_vShr = 0.0_ReKi      !< Calibrated parameter for the influence of the shear layer in the eddy viscosity [-]
     REAL(ReKi)  :: C_vShr_DMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the minimum and exponential regions [-]
     REAL(ReKi)  :: C_vShr_DMax = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the exponential and maximum regions [-]
     REAL(ReKi)  :: C_vShr_FMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the shear layer defining the functional value in the minimum region [-]
     REAL(ReKi)  :: C_vShr_Exp = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region [-]
-    REAL(ReKi)  :: k_vAmb = 0.0_ReKi      !< Calibrated parameter for the influence of ambient turbulence in the eddy viscosity [-]
-    REAL(ReKi)  :: k_vShr = 0.0_ReKi      !< Calibrated parameter for the influence of the shear layer in the eddy viscosity [-]
     INTEGER(IntKi)  :: Mod_WakeDiam = 0_IntKi      !< Wake diameter calculation model [-]
     REAL(ReKi)  :: C_WakeDiam = 0.0_ReKi      !< Calibrated parameter for wake diameter calculation [-]
     INTEGER(IntKi)  :: FilterInit = 0_IntKi      !< Switch to filter the initial wake plane deficit and select the number of grid points for the filter {0: no filter, 1: filter of size 1} or DEFAULT [DEFAULT=0: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wwake is 2] (switch) [-]
@@ -1421,16 +1421,16 @@ subroutine WD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%C_HWkDfl_x = SrcParamData%C_HWkDfl_x
    DstParamData%C_HWkDfl_xY = SrcParamData%C_HWkDfl_xY
    DstParamData%C_NearWake = SrcParamData%C_NearWake
+   DstParamData%k_vAmb = SrcParamData%k_vAmb
    DstParamData%C_vAmb_DMin = SrcParamData%C_vAmb_DMin
    DstParamData%C_vAmb_DMax = SrcParamData%C_vAmb_DMax
    DstParamData%C_vAmb_FMin = SrcParamData%C_vAmb_FMin
    DstParamData%C_vAmb_Exp = SrcParamData%C_vAmb_Exp
+   DstParamData%k_vShr = SrcParamData%k_vShr
    DstParamData%C_vShr_DMin = SrcParamData%C_vShr_DMin
    DstParamData%C_vShr_DMax = SrcParamData%C_vShr_DMax
    DstParamData%C_vShr_FMin = SrcParamData%C_vShr_FMin
    DstParamData%C_vShr_Exp = SrcParamData%C_vShr_Exp
-   DstParamData%k_vAmb = SrcParamData%k_vAmb
-   DstParamData%k_vShr = SrcParamData%k_vShr
    DstParamData%Mod_WakeDiam = SrcParamData%Mod_WakeDiam
    DstParamData%C_WakeDiam = SrcParamData%C_WakeDiam
    DstParamData%FilterInit = SrcParamData%FilterInit
@@ -1494,16 +1494,16 @@ subroutine WD_PackParam(RF, Indata)
    call RegPack(RF, InData%C_HWkDfl_x)
    call RegPack(RF, InData%C_HWkDfl_xY)
    call RegPack(RF, InData%C_NearWake)
+   call RegPack(RF, InData%k_vAmb)
    call RegPack(RF, InData%C_vAmb_DMin)
    call RegPack(RF, InData%C_vAmb_DMax)
    call RegPack(RF, InData%C_vAmb_FMin)
    call RegPack(RF, InData%C_vAmb_Exp)
+   call RegPack(RF, InData%k_vShr)
    call RegPack(RF, InData%C_vShr_DMin)
    call RegPack(RF, InData%C_vShr_DMax)
    call RegPack(RF, InData%C_vShr_FMin)
    call RegPack(RF, InData%C_vShr_Exp)
-   call RegPack(RF, InData%k_vAmb)
-   call RegPack(RF, InData%k_vShr)
    call RegPack(RF, InData%Mod_WakeDiam)
    call RegPack(RF, InData%C_WakeDiam)
    call RegPack(RF, InData%FilterInit)
@@ -1553,16 +1553,16 @@ subroutine WD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%C_HWkDfl_x); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_HWkDfl_xY); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_NearWake); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k_vAmb); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vAmb_DMin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vAmb_DMax); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vAmb_FMin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vAmb_Exp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k_vShr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vShr_DMin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vShr_DMax); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vShr_FMin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vShr_Exp); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%k_vAmb); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%k_vShr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Mod_WakeDiam); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_WakeDiam); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FilterInit); if (RegCheckErr(RF, RoutineName)) return

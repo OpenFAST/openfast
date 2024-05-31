@@ -492,67 +492,65 @@ for the near-wake correction and must be greater than one. If the
 DEFAULT keyword is specified in place of a numerical value,
 **C_NearWake** is set to :math:`1.8`.
 
-**k_vAmb** [-] (:math:`k_{\nu Amb}`) is the calibrated parameter for the
-ambient turbulence influence in the eddy viscosity and must be greater
-than zero. If the DEFAULT keyword is specified in place of a numerical
-value, **k_vAmb** is set to :math:`0.05`.
 
-**k_vShr** [-] (:math:`k_{\nu Shr}`) is the calibrated parameter for the
-wake shear layer influence in the eddy viscosity and must be greater
-than zero. If the DEFAULT keyword is specified in place of a numerical
-value, **k_vShr** is set to :math:`0.016`.
+**k_vAmb** [five floats, comma separated] :math:`[k_{\nu Amb}, C_{\nu Amb}^{FMin}, C_{\nu Amb}^{DMin}, C_{\nu Amb}^{DMax}, C_{\nu Amb}^{Exp}]`
+Tuning parameters for the ambient turbulence influence in the eddy viscosity. If
+the DEFAULT keyword is specified, all five parameters will be set to the default
+values specified below. The five parameters in order are:
 
-**C_vAmb_DMin** [-] (:math:`C_{\nu Amb}^{DMin}`) is a calibrated
-parameter in the eddy viscosity filter function for ambient turbulence.
-It defines the transitional diameter fraction between the minimum and
-exponential regions and must be greater than or equal to zero. If the
-DEFAULT keyword is specified in place of a numerical value,
-**C_vAmb_DMin** is set to :math:`0.0`.
+   -  :math:`k_{\nu Amb}` [-] (:math:`\gt 0`)
+         | DEFAULT value: :math:`k_{\nu Amb} = 0.05`
+         | Calibrated coefficient for the maximum value of **k_vAmb**.
 
-**C_vAmb_DMax** [-] (:math:`C_{\nu Amb}^{DMax}`) is a calibrated
-parameter in the eddy viscosity filter function for ambient turbulence.
-It defines the transitional diameter fraction between the exponential
-and maximum regions and must be greater than **C_vAmb_DMin**. If the
-DEFAULT keyword is specified in place of a numerical value,
-**C_vAmb_DMax** is set to :math:`1.0`.
+   -  :math:`C_{\nu Amb}^{FMin}` [-]  (:math:`\ge 0`, :math:`\le 1`)
+         | DEFAULT value: :math:`C_{\nu Amb}^{FMin} = 1.0`.
+         | Calibrated parameter defining defines the value at the minimum region.
 
-**C_vAmb_FMin** [-] (:math:`C_{\nu Amb}^{FMin}`) is a calibrated
-parameter in the eddy viscosity filter function for ambient turbulence.
-It defines the value in the minimum region and must be between zero and
-one (inclusive). If the DEFAULT keyword is specified in place of a
-numerical value, **C_vAmb_FMin** is set to :math:`1.0`.
+   -  :math:`C_{\nu Amb}^{DMin}` [-] (:math:`\ge 0`)
+         | DEFAULT value: :math:`C_{\nu Amb}^{DMin} = 0.0`.
+         | Calibrated parameter defining the transitional diameter fraction
+            between the minimum and exponential regions.
 
-**C_vAmb_Exp** [-] (:math:`C_{\nu Amb}^{Exp}`) is a calibrated parameter
-in the eddy viscosity filter function for ambient turbulence. It defines
-the exponent in the exponential region and must be greater than zero. If
-the DEFAULT keyword is specified in place of a numerical value,
-**C_vAmb_Exp** is set to :math:`0.01`.
+   -  :math:`C_{\nu Amb}^{DMax}` [-] (:math:`\ge k_\text{DMin}`)
+         | DEFAULT value: :math:`C_{\nu Amb}^{DMax} = 1.0`.
+         | Calibrated parameter defining the transitional diameter fraction
+            between the exponential and maximum regions. 
 
-**C_vShr_DMin** [-] (:math:`C_{\nu Shr}^{DMin}`) is a calibrated
-parameter in the eddy viscosity filter function for the wake shear
-layer. It defines the transitional diameter fraction between the minimum
-and exponential regions and must be greater than or equal to zero. If
-the DEFAULT keyword is specified in place of a numerical value,
-**C_vShr_DMin** is set to :math:`3.0`.
+   -  :math:`C_{\nu Amb}^{Exp}` [-] (:math:`\gt 0`)
+         | DEFAULT value: :math:`C_{\nu Amb}^{Exp} = 0.01`.
+         | Calibrated parameter defining the exponent in the exponential region.
 
-**C_vShr_DMax** [-] (:math:`C_{\nu Shr}^{DMax}`) is a calibrated
-parameter in the eddy viscosity filter function for the wake shear
-layer. It defines the transitional diameter fraction between the
-exponential and maximum regions and must be greater than
-**C_vShr_DMin**. If the DEFAULT keyword is specified in place of a
-numerical value, **C_vShr_DMax** is set to :math:`25.0`.
 
-**C_vShr_FMin** [-] (:math:`C_{\nu Shr}^{FMin}`) is a calibrated
-parameter in the eddy viscosity filter function for the wake shear
-layer. It defines the value in the minimum region and must be between
-zero and one (inclusive). If the DEFAULT keyword is specified in place
-of a numerical value, **C_vShr_FMin** is set to :math:`0.2`.
+**k_vShr** [five floats, comma separated] :math:`[k_{\nu Shr}, C_{\nu Shr}^{FMin}, C_{\nu Shr}^{DMin}, C_{\nu Shr}^{DMax}, C_{\nu Shr}^{Exp}]`
+Tuning parameters for the wake shear layer influence in the eddy viscosity. If
+the DEFAULT keyword is specified, all five parameters will be set to the default
+values specified below. The five parameters in order are:
 
-**C_vShr_Exp** [-] (:math:`C_{\nu Shr}^{Exp}`) is a calibrated parameter
-in the eddy viscosity filter function for the wake shear layer. It
-defines the exponent in the exponential region and must be greater than
-zero. If the DEFAULT keyword is specified in place of a numerical value,
-**C_vShr_Exp** is set to :math:`0.1`.
+   -  :math:`k_{\nu Shr}` [-] (:math:`\gt 0`)
+         | DEFAULT value: :math:`k_{\nu Shr} = 0.016`
+         | Calibrated coefficient for the maximum value of **k_vShr**.
+
+   -  :math:`C_{\nu Shr}^{FMin}` [-]  (:math:`\ge 0`, :math:`\le 1`)
+         | DEFAULT value: :math:`C_{\nu Shr}^{FMin} = 0.2`.
+         | Calibrated parameter defining defines the value at the minimum region.
+
+   -  :math:`C_{\nu Shr}^{DMin}` [-] (:math:`\ge 0`)
+         | DEFAULT value: :math:`C_{\nu Shr}^{DMin} = 3.0`.
+         | Calibrated parameter defining the transitional diameter fraction
+            between the minimum and exponential regions.
+
+   -  :math:`C_{\nu Shr}^{DMax}` [-] (:math:`\ge k_\text{DMin}`)
+         | DEFAULT value: :math:`C_{\nu Shr}^{DMax} = 25.0`.
+         | Calibrated parameter defining the transitional diameter fraction
+            between the exponential and maximum regions. 
+
+   -  :math:`C_{\nu Shr}^{Exp}` [-] (:math:`\gt 0`)
+         | DEFAULT value: :math:`C_{\nu Shr}^{Exp} = 0.1`.
+         | Calibrated parameter defining the exponent in the exponential region.
+
+
+
+
 
 **Mod_WakeDiam** [switch] specifies the wake diameter calculation model
 (method). There are four options: 1) use the rotor diameter
@@ -662,7 +660,7 @@ When set to True, the input turbulence box is scaled so that it has zero mean an
 DEFAULT is False.
 
 **WAT_k_Def** [five floats, comma separated] :math:`[k_\text{def}, k_\text{FMin}, k_\text{DMin}, k_\text{DMax}, e]`
-Tuning parameter for quasi-steady wake deficit effect in the wake-added
+Tuning parameters for quasi-steady wake deficit effect in the wake-added
 turbulence scaling factor.  This tuning paramater is a function of the
 downstream position from the rotor using a set of five parameters.  See equation
 :eq:`eq:kDefGradDefaults` in section :numref:`FF:WAT` (FAST.Farm theory) for
@@ -693,7 +691,7 @@ below. The five parameters in order are:
          | Calibrated parameter defining the exponent in the exponential region.
 
 **WAT_k_Grad** [five floats, comma separated] :math:`[k_\text{Grad}, k_\text{FMin}, k_\text{DMin}, k_\text{DMax}, e]`
-Tuning parameter for gradient of the wake deficit in the wake-added turbulence
+Tuning parameters for gradient of the wake deficit in the wake-added turbulence
 scaling factor.  This tuning paramater is a function of the downstream position
 from the rotor using a set of five parameters.  See equation
 :eq:`eq:kDefGradDefaults` in section :numref:`FF:WAT` (FAST.Farm theory) for

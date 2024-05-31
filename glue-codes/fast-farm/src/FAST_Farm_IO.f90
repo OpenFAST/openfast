@@ -781,55 +781,25 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       "Calibrated parameter for the near-wake correction (-) [>1.0] or DEFAULT [DEFAULT=1.8]", &
       1.8_ReKi, ErrStat2, ErrMsg2, UnEc); if (Failed()) return
 
-   ! k_vAmb
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_vAmb, "k_vAmb", &
-      "Calibrated parameter for the influence of ambient turbulence in the eddy viscosity (-) [>=0.0] or DEFAULT [DEFAULT=0.05]", &
-      0.05_ReKi, ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   ! k_vAmb - Calibrated parameters for the influence of the shear layer in the eddy viscosity (set of 5 parameters: k, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=0.05, 1.0, 0.0, 1.0, 0.01]
+   call ReadAryWDefault( UnIn, InputFile, TmpRAry5,  5, "k_vAmb",  &
+      "Calibrated parameters for the influence of the shear layer in the eddy viscosity (set of 5 parameters: k, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=0.05, 1.0, 0.0, 1.0, 0.01]", &
+      (/ 0.05_ReKi, 1.0_ReKi, 0.0_ReKi, 1.0_ReKi, 0.01_ReKi /), ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+      WD_InitInp%k_vAmb      = TmpRAry5(1)   ! Calibrated parameter for the influence of ambient turbulence in the eddy viscosity (-) [>=0.0] or DEFAULT [DEFAULT=0.05]
+      WD_InitInp%C_vAmb_FMin = TmpRAry5(2)   ! Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the value in the minimum region (-) [>=0.0 and <=1.0] or DEFAULT [DEFAULT=1.0]
+      WD_InitInp%C_vAmb_DMin = TmpRAry5(3)   ! Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the minimum and exponential regions (-) [>=0.0] or DEFAULT [DEFAULT=0.0]
+      WD_InitInp%C_vAmb_DMax = TmpRAry5(4)   ! Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the exponential and maximum regions (-) [> C_vAmb_DMin  ] or DEFAULT [DEFAULT=1.0]
+      WD_InitInp%C_vAmb_Exp  = TmpRAry5(5)   ! Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the exponent in the exponential region (-) [> 0.0] or DEFAULT [DEFAULT=0.01]
 
-   ! k_vShr
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_vShr, "k_vShr", &
-      "Calibrated parameter for the influence of the shear layer in the eddy viscosity (-) [>=0.0] or DEFAULT [DEFAULT=0.016]", &
-      0.016_ReKi, ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-
-   ! C_vAmb_DMin
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vAmb_DMin, "C_vAmb_DMin", &
-      "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the minimum and exponential regions (-) [>=0.0] or DEFAULT [DEFAULT=0.0]", &
-      0.0_ReKi, ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-
-   ! C_vAmb_DMax
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vAmb_DMax, "C_vAmb_DMax", &
-      "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the exponential and maximum regions (-) [> C_vAmb_DMin  ] or DEFAULT [DEFAULT=1.0]", &
-      1.0_ReKi, ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-
-   ! C_vAmb_FMin
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vAmb_FMin, "C_vAmb_FMin", &
-      "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the value in the minimum region (-) [>=0.0 and <=1.0] or DEFAULT [DEFAULT=1.0]", &
-      1.0_ReKi, ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-
-   ! C_vAmb_Exp
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vAmb_Exp, "C_vAmb_Exp", &
-      "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the exponent in the exponential region (-) [> 0.0] or DEFAULT [DEFAULT=0.01]", &
-      0.01_ReKi, ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-
-   ! C_vShr_DMin
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vShr_DMin, "C_vShr_DMin", &
-      "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the minimum and exponential regions (-) [>=0.0] or DEFAULT [DEFAULT=3.0]", &
-      3.0_ReKi, ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-
-   ! C_vShr_DMax
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vShr_DMax, "C_vShr_DMax", &
-      "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the exponential and maximum regions (-) [> C_vShr_DMin] or DEFAULT [DEFAULT=25.0]", &
-      25.0_ReKi, ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-
-   ! C_vShr_FMin
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vShr_FMin, "C_vShr_FMin", &
-      "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the value in the minimum region (-) [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.2]", &
-      0.2_ReKi, ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-
-   ! C_vShr_Exp
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vShr_Exp, "C_vShr_Exp", &
-      "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region (-) [> 0.0] or DEFAULT [DEFAULT=0.1]", &
-      0.1_ReKi, ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   ! k_vShr - Calibrated parameters for the influence of the ambient turbulence in the eddy viscosity (set of 5 parameters: k, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=0.016, 0.2, 3.0, 25.0, 0.1]
+   call ReadAryWDefault( UnIn, InputFile, TmpRAry5,  5, "k_vShr",  &
+      "Calibrated parameters for the influence of the ambient turbulence in the eddy viscosity (set of 5 parameters: k, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=0.016, 0.2, 3.0, 25.0, 0.1]", &
+      (/ 0.016_ReKi, 0.2_ReKi, 3.0_ReKi, 25.0_ReKi, 0.1_ReKi /), ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+      WD_InitInp%k_vShr      = TmpRAry5(1)   ! Calibrated parameter for the influence of the shear layer in the eddy viscosity (-) [>=0.0] or DEFAULT [DEFAULT=0.016]
+      WD_InitInp%C_vShr_FMin = TmpRAry5(2)   ! Calibrated parameter in the eddy viscosity filter function for the shear layer defining the value in the minimum region (-) [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.2]
+      WD_InitInp%C_vShr_DMin = TmpRAry5(3)   ! Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the minimum and exponential regions (-) [>=0.0] or DEFAULT [DEFAULT=3.0]
+      WD_InitInp%C_vShr_DMax = TmpRAry5(4)   ! Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the exponential and maximum regions (-) [> C_vShr_DMin] or DEFAULT [DEFAULT=25.0]
+      WD_InitInp%C_vShr_Exp  = TmpRAry5(5)   ! Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region (-) [> 0.0] or DEFAULT [DEFAULT=0.1]
 
    ! Mod_WakeDiam - Wake diameter calculation model (-) (switch) {1: rotor diameter, 2: velocity-based, 3: mass-flux based, 4: momentum-flux based} or DEFAULT [DEFAULT=1]:
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%Mod_WakeDiam, "Mod_WakeDiam", &
@@ -1070,19 +1040,19 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    IF (WD_InitInp%sigma_D < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'sigma_D needs to be postive',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%f_c <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'f_c (cut-off [corner] frequency) must be more than 0 Hz.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%C_NearWake <= 1.0_Reki) CALL SetErrStat(ErrID_Fatal,'C_NearWake parameter must be greater than 1.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%k_vAmb < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'k_vAmb parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%k_vShr < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'k_vShr parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%k_vCurl < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'k_vCurl parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
 
-   IF (WD_InitInp%C_vAmb_DMin < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'C_vAmb_DMin parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%C_vAmb_DMax <= WD_InitInp%C_vAmb_DMin) CALL SetErrStat(ErrID_Fatal,'C_vAmb_DMax parameter must be larger than C_vAmb_DMin.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%C_vAmb_FMin < 0.0_Reki .or. WD_InitInp%C_vAmb_FMin > 1.0_Reki) CALL SetErrStat(ErrID_Fatal,'C_vAmb_FMin parameter must be between 0 and 1 (inclusive).',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%C_vAmb_Exp  <= 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'C_vAmb_Exp parameter must be positive.',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%k_vAmb      <  0.0_Reki)                                        CALL SetErrStat(ErrID_Fatal,'k_vAmb(1) (k_vAmb) must not be negative.',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%C_vAmb_FMin <  0.0_Reki .or. WD_InitInp%C_vAmb_FMin > 1.0_Reki) CALL SetErrStat(ErrID_Fatal,'k_vAmb(2) (FMin) must be between 0 and 1 (inclusive).',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%C_vAmb_DMin <  0.0_Reki)                                        CALL SetErrStat(ErrID_Fatal,'k_vAmb(3) (DMin) must not be negative.',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%C_vAmb_DMax <= WD_InitInp%C_vAmb_DMin)                          CALL SetErrStat(ErrID_Fatal,'k_vAmb(4) (DMax) must be larger than DMin.',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%C_vAmb_Exp  <= 0.0_Reki)                                        CALL SetErrStat(ErrID_Fatal,'k_vAmb(5) (e) must be positive.',ErrStat,ErrMsg,RoutineName)
 
-   IF (WD_InitInp%C_vShr_DMin < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'C_vShr_DMin parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%C_vShr_DMax <= WD_InitInp%C_vShr_DMin) CALL SetErrStat(ErrID_Fatal,'C_vShr_DMax parameter must be larger than C_vShr_DMin.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%C_vShr_FMin < 0.0_Reki .or. WD_InitInp%C_vShr_FMin > 1.0_ReKi) CALL SetErrStat(ErrID_Fatal,'C_vShr_FMin parameter must be between 0 and 1 (inclusive).',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%C_vShr_Exp  <= 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'C_vShr_Exp parameter must be positive.',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%k_vShr      <  0.0_Reki)                                        CALL SetErrStat(ErrID_Fatal,'k_vShr(1) (k_vShr) must not be negative.',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%C_vShr_FMin <  0.0_Reki .or. WD_InitInp%C_vShr_FMin > 1.0_ReKi) CALL SetErrStat(ErrID_Fatal,'k_vShr(2) (FMin) must be between 0 and 1 (inclusive).',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%C_vShr_DMin <  0.0_Reki)                                        CALL SetErrStat(ErrID_Fatal,'k_vShr(3) (DMin) must not be negative.',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%C_vShr_DMax <= WD_InitInp%C_vShr_DMin)                          CALL SetErrStat(ErrID_Fatal,'k_vShr(4) (DMax) must be larger than DMin.',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%C_vShr_Exp  <= 0.0_Reki)                                        CALL SetErrStat(ErrID_Fatal,'k_vShr(5) (e) must be positive.',ErrStat,ErrMsg,RoutineName)
 
    IF (WD_InitInp%Mod_WakeDiam < WakeDiamMod_RotDiam .or. WD_InitInp%Mod_WakeDiam > WakeDiamMod_MtmFlux) THEN
       call SetErrStat(ErrID_Fatal,'Wake diameter calculation model, Mod_WakeDiam, must be 1 (rotor diameter), 2 (velocity-based), 3 (mass-flux based), 4 (momentum-flux based) or DEFAULT.',ErrStat,ErrMsg,RoutineName)
