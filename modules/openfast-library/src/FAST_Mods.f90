@@ -40,6 +40,10 @@ MODULE FAST_ModTypes
    INTEGER(IntKi), PARAMETER :: STATE_SAVED_CURR        = 3
    INTEGER(IntKi), PARAMETER :: STATE_SAVED_PRED        = 4
    
+   ! input array indices
+   INTEGER(IntKi), PARAMETER :: INPUT_TEMP              = 0
+   INTEGER(IntKi), PARAMETER :: INPUT_CURR              = 1
+   
    ! VTK visualization
    INTEGER(IntKi), PARAMETER :: VTK_Unknown             = -1         !< unknown option (will produce error)
    INTEGER(IntKi), PARAMETER :: VTK_None                =  0         !< none (no VTK output)

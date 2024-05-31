@@ -1,5 +1,5 @@
 !**********************************************************************************************************************************
-! FAST_ModLin.f90 performs linearization using the ModVars module.
+! FAST_ModGlue.f90 performs linearization using the ModVars module.
 !..................................................................................................................................
 ! LICENSING
 ! Copyright (C) 2024  National Renewable Energy Laboratory
@@ -31,7 +31,9 @@ use FAST_Mapping
 implicit none
 
 private
-public :: ModGlue_Init, ModGlue_Linearize_OP, MV_AddModule
+public :: ModGlue_Init, MV_AddModule
+public :: ModGlue_Linearize_OP, ModGlue_CalcSteady
+public :: ModGlue_SaveOperatingPoint, ModGlue_RestoreOperatingPoint
 
 contains
 
@@ -46,7 +48,7 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
    integer(IntKi), intent(out)                     :: ErrStat
    character(*), intent(out)                       :: ErrMsg
 
-   character(*), parameter                         :: RoutineName = 'ModLin_Init'
+   character(*), parameter                         :: RoutineName = 'ModGlue_Init'
    integer(IntKi)                                  :: ErrStat2
    character(ErrMsgLen)                            :: ErrMsg2
    integer(IntKi), allocatable                     :: modIDs(:), modIdx(:)
@@ -59,45 +61,31 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
    ErrMsg = ""
 
    !----------------------------------------------------------------------------
-   ! FAST Lin Settings
-   !----------------------------------------------------------------------------
-
-   m_FAST%Lin%NextLinTimeIndx = 1
-   m_FAST%Lin%CopyOP_CtrlCode = MESH_NEWCOPY
-   m_FAST%Lin%n_rot = 0
-   m_FAST%Lin%IsConverged = .false.
-   m_FAST%Lin%FoundSteady = .false.
-   m_FAST%Lin%ForceLin = .false.
-   m_FAST%Lin%AzimIndx = 1
-
-   p_FAST%AzimDelta = TwoPi/p_FAST%NLinTimes
-
-   !----------------------------------------------------------------------------
    ! Module order and indexing
    !----------------------------------------------------------------------------
 
    ! If no modules were added, return error
-   if (.not. allocated(m%ModData)) then
+   if (.not. allocated(m%Modules)) then
       call SetErrStat(ErrID_Fatal, "No modules were used", ErrStat, ErrMsg, RoutineName)
       return
    end if
 
    ! Create array of indices for Mods array
-   modIdx = [(i, i=1, size(m%ModData))]
+   modIdx = [(i, i=1, size(m%Modules))]
 
    ! Get array of module IDs
-   modIDs = [(m%ModData(i)%ID, i=1, size(m%ModData))]
+   modIDs = [(m%Modules(i)%ID, i=1, size(m%Modules))]
 
    ! Establish module index order for linearization
-   allocate (p%iMod(0))
+   allocate (p%Lin%iMod(0))
    do i = 1, size(LinMods)
-      p%iMod = [p%iMod, pack(modIdx, ModIDs == LinMods(i))]
+      p%Lin%iMod = [p%Lin%iMod, pack(modIdx, ModIDs == LinMods(i))]
    end do
 
    ! Loop through modules, if module is not in index, return with error
-   do i = 1, size(m%ModData)
-      if (.not. any(i == p%iMod)) then
-         call SetErrStat(ErrID_Fatal, "Module "//trim(m%ModData(i)%Abbr)//" not supported in linearization", &
+   do i = 1, size(m%Modules)
+      if (.not. any(i == p%Lin%iMod)) then
+         call SetErrStat(ErrID_Fatal, "Module "//trim(m%Modules(i)%Abbr)//" not supported in linearization", &
                          ErrStat, ErrMsg, RoutineName)
          return
       end if
@@ -121,8 +109,8 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
    allocate (y%ModGlue%Vars%x(0), y%ModGlue%Vars%xd(0), y%ModGlue%Vars%z(0), y%ModGlue%Vars%u(0), y%ModGlue%Vars%y(0))
 
    ! Loop through each module by index
-   do i = 1, size(p%iMod)
-      associate (ModData => m%ModData(p%iMod(i)))
+   do i = 1, size(p%Lin%iMod)
+      associate (ModData => m%Modules(p%Lin%iMod(i)))
 
          ! Create variable name prefix for linearization names. Add instance
          ! number to module abbreviation if more than 1 instance or the module is BeamDyn
@@ -254,7 +242,7 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
    ! Mesh Mapping
    !----------------------------------------------------------------------------
 
-   call FAST_InitMappings(m%ModData, m%Mappings, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+   call FAST_InitMappings(m%Modules, m%Mappings, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
 
    !----------------------------------------------------------------------------
    ! Allocate linearization arrays and matrices
@@ -263,8 +251,22 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
    ! If linearization is enabled
    if (p_FAST%Linearize) then
 
+      ! Copy linearization parameters
+      p%Lin%NumTimes = p_FAST%NLinTimes
+      p%Lin%InterpOrder = p_FAST%InterpOrder
+      if (allocated(m_FAST%Lin%LinTimes)) then
+         y%Lin%Times = m_FAST%Lin%LinTimes
+      end if
+
+      ! Initialize indices
+      m%Lin%TimeIndex = 1
+      m%Lin%AzimuthIndex = 1
+
+      ! Set flag to save operating points during linearization if mode shapes requested
+      p%Lin%SaveOPs = p_FAST%WrVTK == VTK_ModeShapes
+
       ! Initialize linearization index
-      call Idx_Init(m%ModData, p%iMod, p%IdxLin, VF_None, ErrStat2, ErrMsg2); if (Failed()) return
+      call Idx_Init(m%Modules, p%Lin%iMod, p%Lin%Idx, VF_None, ErrStat2, ErrMsg2); if (Failed()) return
 
       ! Allocate linearization arrays
       call AllocAry(y%ModGlue%Lin%x, y%ModGlue%Vars%Nx, "x", ErrStat2, ErrMsg2); if (Failed()) return
@@ -283,10 +285,51 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
       call AllocAry(y%ModGlue%Lin%dUdy, y%ModGlue%Vars%Nu, y%ModGlue%Vars%Ny, "dUdy", ErrStat2, ErrMsg2); if (Failed()) return
 
       ! Initialize arrays to store operating point states and input
-      call AllocAry(y%OP%x, y%ModGlue%Vars%Nx, p_FAST%NLinTimes, "x", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(y%OP%xd, y%ModGlue%Vars%Nxd, p_FAST%NLinTimes, "xd", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(y%OP%z, y%ModGlue%Vars%Nz, p_FAST%NLinTimes, "z", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(y%OP%u, y%ModGlue%Vars%Nu, p_FAST%NLinTimes, "u", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(y%Lin%x, y%ModGlue%Vars%Nx, p%Lin%NumTimes, "Lin%x", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(y%Lin%xd, y%ModGlue%Vars%Nxd, p%Lin%NumTimes, "Lin%xd", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(y%Lin%z, y%ModGlue%Vars%Nz, p%Lin%NumTimes, "Lin%z", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(y%Lin%u, y%ModGlue%Vars%Nu, p%Lin%NumTimes, "Lin%u", ErrStat2, ErrMsg2); if (Failed()) return
+
+      ! If steady state calculation is enabled
+      if (p_FAST%CalcSteady) then
+
+         ! Disable saving of OPs during linearization as ModGlue_CalcSteady saves them automatically
+         p%Lin%SaveOPs = .false.
+
+         ! Initialize variables
+         m%CS%AzimuthDelta = TwoPi_D/p%Lin%NumTimes
+         m%CS%NumRotations = 0
+         m%CS%IsConverged = .false.
+         m%CS%FoundSteady = .false.
+         m%CS%ForceLin = .false.
+
+         ! Calculate number of output values (ignoring write outputs)
+         m%CS%NumOutputs = 0
+         do i = 1, size(y%ModGlue%Vars%y)
+            associate (Var => y%ModGlue%Vars%y(i))
+               if (.not. MV_HasFlags(Var, VF_WriteOut)) m%CS%NumOutputs = m%CS%NumOutputs + Var%Num
+            end associate
+         end do
+
+         ! Allocate arrays
+         call AllocAry(y%Lin%Times, p%Lin%NumTimes, "Lin%Times", ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(m%CS%AzimuthTarget, p%Lin%NumTimes, "CS%AzimuthTarget", ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(m%CS%psi_buffer, p_FAST%LinInterpOrder + 1, "CS%psi_buffer", ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(m%CS%y_buffer, y%ModGlue%Vars%Ny, p_FAST%LinInterpOrder + 1, "CS%y_buffer", ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(m%CS%y_interp, y%ModGlue%Vars%Ny, "CS%y_interp", ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(m%CS%y_diff, y%ModGlue%Vars%Ny, "CS%y_diff", ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(m%CS%y_azimuth, y%ModGlue%Vars%Ny, p%Lin%NumTimes, "CS%y_azimuth", ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(m%CS%y_ref, y%ModGlue%Vars%Ny, "CS%y_ref", ErrStat2, ErrMsg2); if (Failed()) return
+
+         ! Initialize arrays to zero
+         m%CS%psi_buffer = 0.0_R8Ki
+         m%CS%y_buffer = 0.0_R8Ki
+         m%CS%y_interp = 0.0_R8Ki
+         m%CS%y_diff = 0.0_R8Ki
+         m%CS%y_azimuth = 0.0_R8Ki
+         m%CS%y_ref = 1.0_R8Ki
+
+      end if
    end if
 
 contains
@@ -321,6 +364,331 @@ subroutine AddLinNamePrefix(VarAry, Prefix)
    end do
 end subroutine
 
+subroutine ModGlue_CalcSteady(n_t_global, t_global, p, m, y, p_FAST, m_FAST, T, ErrStat, ErrMsg)
+
+   integer(IntKi), intent(IN)                :: n_t_global     !< integer time step
+   real(DbKi), intent(IN)                    :: t_global       !< current simulation time
+   type(Glue_ParameterType), intent(inout)   :: p              !< Glue Parameters
+   type(Glue_MiscVarType), intent(inout)     :: m              !< Glue MiscVars
+   type(Glue_OutputFileType), intent(inout)  :: y              !< Glue Output
+   type(FAST_ParameterType), intent(inout)   :: p_FAST         !< FAST Parameters
+   type(FAST_MiscVarType), intent(inout)     :: m_FAST         !< FAST MiscVars
+   type(FAST_TurbineType), intent(inout)     :: T              !< Turbine Type
+   integer(IntKi), intent(OUT)               :: ErrStat        !< Error status of the operation
+   character(*), intent(OUT)                 :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter :: RoutineName = 'ModGlue_CalcSteady'
+   integer(IntKi)          :: ErrStat2
+   character(ErrMsgLen)    :: ErrMsg2
+   real(DbKi)              :: DeltaAzimuth, AzimuthTargetDelta, AzimuthTarget
+   real(DbKi)              :: psi                              !< psi (rotor azimuth) at which the outputs are defined
+   real(DbKi)              :: error
+   logical                 :: ProcessAzimuth
+   integer(IntKi)          :: i, j, iy
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   ! Get current azimuth angle from ElastoDyn output
+   psi = real(T%ED%y%LSSTipPxa, R8Ki)
+   call Zero2TwoPi(psi)
+
+   ! Cyclic shift psi buffer and set first index to new psi
+   do i = size(m%CS%psi_buffer) - 1, 1, -1
+      m%CS%psi_buffer(i + 1) = m%CS%psi_buffer(i)
+   end do
+   ! If passing the 2PI boundary, subtract 2PI from saved values so interpolation works correctly
+   if (psi < m%CS%psi_buffer(1)) m%CS%psi_buffer = m%CS%psi_buffer - TwoPi_D
+   m%CS%psi_buffer(1) = psi
+
+   ! Cyclic shift output buffer and collect outputs from all modules
+   do i = size(m%CS%psi_buffer) - 1, 1, -1
+      m%CS%y_buffer(:, i + 1) = m%CS%y_buffer(:, i)
+   end do
+
+   ! Loop through modules and collect output
+   iy = 1
+   do j = 1, size(p%Lin%iMod)
+      associate (ModData => m%Modules(p%Lin%iMod(j)))
+
+         ! Skip of module has no outputs
+         if (ModData%Vars%Ny == 0) cycle
+
+         ! Get outputs
+         call FAST_GetOP(ModData, t_global, STATE_CURR, T, ErrStat2, ErrMsg2, y_op=ModData%Lin%y)
+         if (Failed()) return
+
+         ! Copy outputs to buffer
+         m%CS%y_buffer(iy:iy + ModData%Vars%Ny - 1, 1) = ModData%Lin%y
+
+         ! Increment output index
+         iy = iy + ModData%Vars%Ny
+      end associate
+   end do
+
+   ! If first call
+   if (n_t_global == 0) then
+
+      ! Initialize azimuth targets
+      do i = 1, p%Lin%NumTimes
+         m%CS%AzimuthTarget(i) = (i - 1)*m%CS%AzimuthDelta + psi
+         call Zero2TwoPi(m%CS%AzimuthTarget(i))
+      end do
+
+      ! Initialize psi buffer for interpolation based on time step and rotor speed
+      do i = 1, size(m%CS%psi_buffer)
+         m%CS%psi_buffer(i) = psi - (i - 1)*p_FAST%DT*T%ED%y%LSS_Spd
+      end do
+
+      ! Initialize output buffer by copying outputs from first buffer location
+      do i = 2, size(m%CS%y_buffer, 2)
+         m%CS%y_buffer(:, i) = m%CS%y_buffer(:, 1)
+      end do
+
+   end if
+
+   ! Calculate change in azimuth from last call, if change is too great, return error
+   DeltaAzimuth = psi - m%CS%psi_buffer(1)
+   call Zero2TwoPi(DeltaAzimuth)
+   if (DeltaAzimuth > m%CS%AzimuthDelta) then
+      call SetErrStat(ErrID_Fatal, "The rotor is spinning too fast. The time step or NLinTimes is too large when CalcSteady=true.", ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Get the current azimuth target
+   AzimuthTarget = m%CS%AzimuthTarget(m%Lin%AzimuthIndex)
+
+   ! Difference between current azimuth and the target
+   AzimuthTargetDelta = psi - AzimuthTarget
+
+   ! Set flag to process next azimuth if psi is greater than the next azimuth target
+   ! and the difference between psi and the target is less than the AzimuthDelta (difference between targets)
+   ProcessAzimuth = (AzimuthTargetDelta >= 0.0_R8Ki) .and. (AzimuthTargetDelta < m%CS%AzimuthDelta)
+
+   ! If this is the last step, force linearization
+   if (t_global >= p_FAST%TMax - 0.5_DbKi*p_FAST%DT) then
+      m%CS%ForceLin = .true.
+      m%Lin%AzimuthIndex = 1
+      ProcessAzimuth = .true.
+   end if
+
+   ! If flag is set to process azimuth
+   if (ProcessAzimuth) then
+
+      ! Interpolate outputs to target azimuth
+      call InterpOutputsToAzimuth()
+
+      ! If converged
+      if (m%CS%IsConverged) then
+
+         ! Calculate error between interpolated outputs and outputs at this
+         ! azimuth from the previous rotation
+         error = CalcOutputErrorAtAzimuth()
+
+         ! Update converged flag based on error and tolerance
+         m%CS%IsConverged = error < p_FAST%TrimTol
+      end if
+
+      ! Save interpolated outputs for this azimuth
+      m%CS%y_azimuth(:, m%Lin%AzimuthIndex) = m%CS%y_interp
+
+      ! If linearization is forced
+      if (m%CS%ForceLin) m%CS%IsConverged = .true.
+
+      ! If converged or in first rotation, save this operating point for linearization later
+      if (m%CS%IsConverged .or. m%CS%NumRotations == 0) then !
+         y%Lin%Times(m%Lin%AzimuthIndex) = t_global
+         call ModGlue_SaveOperatingPoint(p, m, m%Lin%AzimuthIndex, m%CS%NumRotations == 0, T, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end if
+
+      ! Increment the azimuth index counter
+      m%Lin%AzimuthIndex = m%Lin%AzimuthIndex + 1
+
+      ! If we've completed one rotor revolution
+      if (m%Lin%AzimuthIndex > p%Lin%NumTimes) then
+
+         ! Increment number of rotations
+         m%CS%NumRotations = m%CS%NumRotations + 1
+
+         ! Save if steady state has been found
+         m%CS%FoundSteady = m%CS%IsConverged
+
+         ! If steady state has been found, return
+         if (m%CS%FoundSteady) return
+
+         ! Compute the reference values for this rotor revolution
+         m%CS%y_ref = max(maxval(m%CS%y_azimuth, dim=2) - minval(m%CS%y_azimuth, dim=2), 0.01_R8Ki)
+
+         ! Check errors next rotor revolution
+         m%CS%IsConverged = .true.
+
+         ! Reset the azimuth index
+         m%Lin%AzimuthIndex = 1
+
+         ! Forcing linearization if time is close to tmax (with sufficient margin)
+
+         ! If rotor has nonzero speed
+         if (T%ED%p%RotSpeed > 0) then
+
+            ! If simulation is at least 10 revolutions, and error in rotor speed less than 0.1%
+            if ((p_FAST%TMax > 10*(TwoPi_D)/T%ED%p%RotSpeed) .and. &
+                (t_global >= p_FAST%TMax - 2._DbKi*(TwoPi_D)/T%ED%p%RotSpeed)) then
+               if (abs(T%ED%y%RotSpeed - T%ED%p%RotSpeed)/T%ED%p%RotSpeed < 0.001) then
+                  m%CS%ForceLin = .true.
+               end if
+            end if
+         else
+            if (t_global >= p_FAST%TMax - 1.5_DbKi*p_FAST%DT) then
+               m%CS%ForceLin = .true.
+            end if
+         end if
+
+      end if
+   end if
+
+   ! If linearization is being forced, set flags and display message
+   if (m%CS%ForceLin) then
+      m%CS%IsConverged = .true.
+      m%CS%FoundSteady = .true.
+      call WrScr('')
+      call WrScr('[WARNING] Steady state not found before end of simulation. Forcing linearization.')
+   end if
+
+contains
+
+   subroutine InterpOutputsToAzimuth()
+      real(R8Ki)     :: a1, a2, a3     !< interpolation coefficients
+      real(R8Ki)     :: ti(3), to      !< temporary variables for interpolation
+      real(R8Ki)     :: q01, q1(3)
+      real(R8Ki)     :: q02, q2(3)
+      real(R8Ki)     :: q0o, qo(3)
+      real(R8Ki)     :: dot, theta, sin_theta, a, b
+      integer(IntKi) :: k, iq1, iq2
+      logical        :: first_quat
+
+      ! Switch based on interpolation order
+      select case (p%Lin%InterpOrder)
+      case (0)
+         m%CS%y_interp = m%CS%y_buffer(:, 1)
+         return
+      case (1)
+         ti(1:2) = m%CS%psi_buffer - m%CS%psi_buffer(1)
+         to = AzimuthTarget - m%CS%psi_buffer(1)
+         a1 = -(to - ti(2))/ti(2)
+         a2 = to/ti(2)
+         m%CS%y_interp = a1*m%CS%y_buffer(:, 1) + a2*m%CS%y_buffer(:, 2)
+      case (2)
+         ti = m%CS%psi_buffer - m%CS%psi_buffer(1)
+         to = AzimuthTarget - m%CS%psi_buffer(1)
+         a1 = (to - ti(2))*(to - ti(3))/((ti(1) - ti(2))*(ti(1) - ti(3)))
+         a2 = (to - ti(1))*(to - ti(3))/((ti(2) - ti(1))*(ti(2) - ti(3)))
+         a3 = (to - ti(1))*(to - ti(2))/((ti(3) - ti(1))*(ti(3) - ti(2)))
+         m%CS%y_interp = a1*m%CS%y_buffer(:, 1) + a2*m%CS%y_buffer(:, 2) + a3*m%CS%y_buffer(:, 3)
+      case default
+         m%CS%y_interp = 0.0_R8Ki
+         return
+      end select
+
+      ! Loop through glue output variables
+      first_quat = .true.
+      do i = 1, size(y%ModGlue%Vars%y)
+         associate (Var => y%ModGlue%Vars%y(i))
+
+            ! Switch based on variable field type
+            select case (Var%Field)
+            case (VF_Orientation)
+
+               ! If first quaternion, calculate interpolation coefficients for quadratic interp
+               if (first_quat) then
+                  first_quat = .false.
+                  select case (p%Lin%InterpOrder)
+                  case (1)
+                     iq1 = 1
+                     iq2 = 2
+                  case (2)
+                     ! Determine if azimuth target is between indices 1,2 or 2,3
+                     if (AzimuthTarget >= m%CS%psi_buffer(2)) then
+                        iq1 = 1
+                        iq2 = 2
+                     else
+                        iq1 = 2
+                        iq2 = 3
+                     end if
+                     to = (AzimuthTarget - m%CS%psi_buffer(iq1))/(m%CS%psi_buffer(iq2) - m%CS%psi_buffer(iq1))
+                  end select
+               end if
+
+               k = Var%iLoc(1)
+               do j = 1, Var%Nodes
+                  q1 = m%CS%y_buffer(k:k + 2, iq1)
+                  q2 = m%CS%y_buffer(k:k + 2, iq2)
+                  q01 = quat_scalar(q1)
+                  q02 = quat_scalar(q2)
+                  dot = q01*q02 + dot_product(q1, q2)
+                  if (dot < 0.0_R8Ki) then
+                     dot = -dot
+                     q02 = -q02
+                     q2 = -q2
+                  end if
+                  if (dot > 0.9995_R8Ki) then
+                     q0o = (1.0_R8Ki - to)*q01 + to*q02
+                     qo = (1.0_R8Ki - to)*q1 + to*q2
+                  else
+                     theta = acos(dot)
+                     sin_theta = sin(theta)
+                     a = sin((1.0_R8Ki - to)*theta)/sin_theta
+                     b = sin(to*theta)/sin_theta
+                     q0o = a*q01 + b*q02
+                     qo = a*q1 + b*q2
+                  end if
+                  qo = quat_canonical(q0o, qo)
+                  m%CS%y_interp(k:k + 2) = qo
+                  k = k + 3
+               end do
+
+            end select
+
+         end associate
+      end do
+   end subroutine
+
+   function CalcOutputErrorAtAzimuth() result(eps_squared)
+      real(R8Ki)  :: eps_squared_sum, eps_squared
+
+      ! Calculate difference between interpolated outputs for this rotation and
+      ! interpolated outputs from previous rotation
+      call MV_ComputeDiff(y%ModGlue%Vars%y, m%CS%y_interp, m%CS%y_azimuth(:, m%Lin%AzimuthIndex), m%CS%y_diff)
+
+      ! Initialize epsilon squared sum
+      eps_squared_sum = 0
+
+      ! Loop through glue output variables, ignore write outputs
+      do i = 1, size(y%ModGlue%Vars%y)
+         associate (Var => y%ModGlue%Vars%y(i))
+            if (MV_HasFlags(Var, VF_WriteOut)) cycle
+
+            ! Loop through values in variable
+            do j = Var%iLoc(1), Var%iLoc(2)
+
+               ! If difference is not essentially zero, sum difference
+               if (.not. EqualRealNos(m%CS%y_diff(j), 0.0_R8Ki)) then
+                  eps_squared_sum = eps_squared_sum + (m%CS%y_diff(j)/m%CS%y_ref(j))**2
+               end if
+            end do
+         end associate
+      end do
+
+      ! Normalize error by number of outputs
+      eps_squared = eps_squared_sum/m%CS%NumOutputs
+   end function
+
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
+
 subroutine ModGlue_Linearize_OP(Turbine, p, m, y, p_FAST, m_FAST, y_FAST, t_global, ErrStat, ErrMsg)
 
    type(Glue_ParameterType), intent(inout)   :: p        !< Glue parameters
@@ -334,12 +702,13 @@ subroutine ModGlue_Linearize_OP(Turbine, p, m, y, p_FAST, m_FAST, y_FAST, t_glob
    integer(IntKi), intent(out)               :: ErrStat
    character(*), intent(out)                 :: ErrMsg
 
-   character(*), parameter                   :: RoutineName = 'ModLin_Init'
+   character(*), parameter                   :: RoutineName = 'ModGlue_Linearize_OP'
    integer(IntKi)                            :: ErrStat2
    character(ErrMsgLen)                      :: ErrMsg2
    integer(IntKi)                            :: i, j, k
    integer(IntKi)                            :: ix, ixd, iz, iu, iy
    integer(IntKi)                            :: Un
+   integer(IntKi)                            :: StateLinIndex, InputLinIndex
    character(200)                            :: SimStr
    character(MaxWrScrLen)                    :: BlankLine
    character(1024)                           :: LinRootName
@@ -354,16 +723,29 @@ subroutine ModGlue_Linearize_OP(Turbine, p, m, y, p_FAST, m_FAST, y_FAST, t_glob
    BlankLine = ""
    call WrOver(BlankLine)  ! BlankLine contains MaxWrScrLen spaces
    SimStr = '(RotSpeed='//trim(Num2LStr(Turbine%ED%y%RotSpeed*RPS2RPM, Fmt))//' rpm, BldPitch1='//trim(Num2LStr(Turbine%ED%y%BlPitch(1)*R2D, Fmt))//' deg)'
-   call WrOver(' Performing linearization '//trim(Num2LStr(Turbine%m_FAST%Lin%NextLinTimeIndx))//' at simulation time '//TRIM(Num2LStr(t_global))//' s. '//trim(SimStr))
+   call WrOver(' Performing linearization '//trim(Num2LStr(m%Lin%TimeIndex))//' at simulation time '//TRIM(Num2LStr(t_global))//' s. '//trim(SimStr))
    call WrScr('')
 
+   !----------------------------------------------------------------------------
+   ! Save operating point
+   !----------------------------------------------------------------------------
+
+   ! If flag set to save operating points during linearization
+   if (p%Lin%SaveOPs) then
+      call ModGlue_SaveOperatingPoint(p, m, m%Lin%TimeIndex, .true., Turbine, ErrStat2, ErrMsg2)
+      if (Failed()) return
+   end if
+
+   !----------------------------------------------------------------------------
+   ! Initialization
+   !----------------------------------------------------------------------------
+
    ! Get parameters
-   ! NumBl = size(T%ED%Input(1)%BlPitchCom)
    y_FAST%Lin%RotSpeed = Turbine%ED%y%RotSpeed
    y_FAST%Lin%Azimuth = Turbine%ED%y%LSSTipPxa
 
    ! Assemble linearization root file name
-   LinRootName = trim(p_FAST%OutFileRoot)//'.'//trim(Num2LStr(m_FAST%Lin%NextLinTimeIndx))
+   LinRootName = trim(p_FAST%OutFileRoot)//'.'//trim(Num2LStr(m%Lin%TimeIndex))
 
    ! Get unit number for writing files
    call GetNewUnit(Un, ErrStat2, ErrMsg2); if (Failed()) return
@@ -381,16 +763,16 @@ subroutine ModGlue_Linearize_OP(Turbine, p, m, y, p_FAST, m_FAST, y_FAST, t_glob
    y%ModGlue%Lin%dYdx = 0.0_R8Ki
    y%ModGlue%Lin%dXdx = 0.0_R8Ki
 
-   ! Loop through modules by index
-   do i = 1, size(p%iMod)
-      associate (ModData => m%ModData(p%iMod(i)))
+   ! Loop through linearization modules by index
+   do i = 1, size(p%Lin%iMod)
+      associate (ModData => m%Modules(p%Lin%iMod(i)))
 
-         ! Derivatives wrt input
+         ! Derivatives with respect to input
          call FAST_JacobianPInput(ModData, t_global, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
                                   dYdu=ModData%Lin%dYdu, dXdu=ModData%Lin%dXdu)
          if (Failed()) return
 
-         ! Derivatives wrt continuous state
+         ! Derivatives with respect to continuous state
          call FAST_JacobianPContState(ModData, t_global, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
                                       dYdx=ModData%Lin%dYdx, dXdx=ModData%Lin%dXdx, &
                                       StateRotation=ModData%Lin%StateRotation)
@@ -430,7 +812,7 @@ subroutine ModGlue_Linearize_OP(Turbine, p, m, y, p_FAST, m_FAST, y_FAST, t_glob
             ! Assemble output file name based on module abbreviation
             ! If module is BeamDyn or more than one instance, include instance
             OutFileName = trim(LinRootName)//'.'//trim(ModData%Abbr)//".lin"
-            if ((ModData%ID == Module_BD) .or. (count(m%ModData%ID == ModData%ID) > 1)) then
+            if ((ModData%ID == Module_BD) .or. (count(m%Modules%ID == ModData%ID) > 1)) then
                OutFileName = trim(LinRootName)//'.'//trim(ModData%Abbr)//trim(Num2LStr(ModData%Ins))//".lin"
             end if
 
@@ -447,10 +829,10 @@ subroutine ModGlue_Linearize_OP(Turbine, p, m, y, p_FAST, m_FAST, y_FAST, t_glob
          if (JacobianHasNaNs(ModData%Lin%dXdx, "dXdx", ModData%Abbr)) return
 
          ! Copy arrays into linearization operating points
-         if (size(y%ModGlue%Lin%x) > 0) y%OP%x(:,m_FAST%Lin%NextLinTimeIndx) = y%ModGlue%Lin%x
-         if (size(y%ModGlue%Lin%xd) > 0) y%OP%xd(:,m_FAST%Lin%NextLinTimeIndx) = y%ModGlue%Lin%xd
-         if (size(y%ModGlue%Lin%z) > 0) y%OP%z(:,m_FAST%Lin%NextLinTimeIndx) = y%ModGlue%Lin%z
-         if (size(y%ModGlue%Lin%u) > 0) y%OP%u(:,m_FAST%Lin%NextLinTimeIndx) = y%ModGlue%Lin%u
+         if (size(y%ModGlue%Lin%x) > 0) y%Lin%x(:, m%Lin%TimeIndex) = y%ModGlue%Lin%x
+         if (size(y%ModGlue%Lin%xd) > 0) y%Lin%xd(:, m%Lin%TimeIndex) = y%ModGlue%Lin%xd
+         if (size(y%ModGlue%Lin%z) > 0) y%Lin%z(:, m%Lin%TimeIndex) = y%ModGlue%Lin%z
+         if (size(y%ModGlue%Lin%u) > 0) y%Lin%u(:, m%Lin%TimeIndex) = y%ModGlue%Lin%u
 
       end associate
    end do
@@ -458,7 +840,7 @@ subroutine ModGlue_Linearize_OP(Turbine, p, m, y, p_FAST, m_FAST, y_FAST, t_glob
    ! Linearize mesh mappings to populate dUdy and dUdu
    y%ModGlue%Lin%dUdy = 0.0_R8Ki
    call Eye2D(y%ModGlue%Lin%dUdu, ErrStat2, ErrMsg2); if (Failed()) return
-   call FAST_LinearizeMappings(Turbine, m%ModData, m%Mappings, p%iMod, p%IdxLin, ErrStat2, ErrMsg2, y%ModGlue%Lin%dUdu, y%ModGlue%Lin%dUdy)
+   call FAST_LinearizeMappings(Turbine, m%Modules, m%Mappings, p%Lin%iMod, p%Lin%Idx, ErrStat2, ErrMsg2, y%ModGlue%Lin%dUdu, y%ModGlue%Lin%dUdy)
    if (Failed()) return
 
    ! Write glue code matrices to file
@@ -467,11 +849,11 @@ subroutine ModGlue_Linearize_OP(Turbine, p, m, y, p_FAST, m_FAST, y_FAST, t_glob
    if (Failed()) return
 
    ! Update index for next linearization time
-   m_FAST%Lin%NextLinTimeIndx = m_FAST%Lin%NextLinTimeIndx + 1
+   m%Lin%TimeIndex = m%Lin%TimeIndex + 1
 
 contains
    logical function JacobianHasNaNs(Jac, label, abbr)
-      real(R8Ki), allocatable, intent(in) :: Jac(:,:)
+      real(R8Ki), allocatable, intent(in) :: Jac(:, :)
       character(*), intent(in)            :: label, abbr
       JacobianHasNaNs = .false.
       if (.not. allocated(Jac)) return
@@ -487,7 +869,103 @@ contains
    end function Failed
 end subroutine
 
-!> ModLin_StateMatrices forms the full-system state matrices for linearization: A, B, C, and D.
+subroutine ModGlue_SaveOperatingPoint(p, m, OPIndex, NewCopy, Turbine, ErrStat, ErrMsg)
+   type(Glue_ParameterType), intent(in)   :: p
+   type(Glue_MiscVarType), intent(inout)  :: m
+   integer(IntKi), intent(in)             :: OPIndex
+   logical, intent(in)                    :: NewCopy
+   type(FAST_TurbineType), intent(inout)  :: Turbine
+   integer(IntKi), intent(out)            :: ErrStat
+   character(*), intent(out)              :: ErrMsg
+
+   character(*), parameter  :: RoutineName = 'ModGlue_SaveOperatingPoint'
+   integer(IntKi)           :: ErrStat2
+   character(ErrMsgLen)     :: ErrMsg2
+   integer(IntKi)           :: StateIndex, InputIndex, CtrlCode, i
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   ! Set CtrlCode based on NewCopy flag
+   if (NewCopy) then
+      CtrlCode = MESH_NEWCOPY
+   else
+      CtrlCode = MESH_UPDATECOPY
+   end if
+
+   ! Index into state array where linearization data will be stored for this OP
+   StateIndex = NumStateTimes + OPIndex
+
+   ! Index into input save array where linearization data will be stored for OP
+   InputIndex = Turbine%p_FAST%InterpOrder + 1 + OPIndex
+
+   ! Loop through modules by index
+   do i = 1, size(p%Lin%iMod)
+      associate (ModData => m%Modules(p%Lin%iMod(i)))
+
+         ! Copy current module state to linearization save location
+         call FAST_CopyStates(ModData, Turbine, STATE_CURR, StateIndex, CtrlCode, ErrStat2, ErrMsg2)
+         if (Failed()) return
+
+         ! Copy current module output to linearization save location
+         call FAST_CopyInput(ModData, Turbine, INPUT_CURR, -InputIndex, CtrlCode, ErrStat2, ErrMsg2)
+         if (Failed()) return
+
+      end associate
+   end do
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
+
+subroutine ModGlue_RestoreOperatingPoint(p, m, OPIndex, Turbine, ErrStat, ErrMsg)
+   type(Glue_ParameterType), intent(in)   :: p
+   type(Glue_MiscVarType), intent(inout)  :: m
+   integer(IntKi), intent(in)             :: OPIndex
+   type(FAST_TurbineType), intent(inout)  :: Turbine
+   integer(IntKi), intent(out)            :: ErrStat
+   character(*), intent(out)              :: ErrMsg
+
+   character(*), parameter  :: RoutineName = 'ModGlue_RestoreOperatingPoint'
+   integer(IntKi)           :: ErrStat2
+   character(ErrMsgLen)     :: ErrMsg2
+   integer(IntKi)           :: StateIndex, InputIndex, i
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   ! Index into state array where linearization data will be stored for this OP
+   StateIndex = NumStateTimes + OPIndex
+
+   ! Index into input save array where linearization data will be stored for OP
+   InputIndex = Turbine%p_FAST%InterpOrder + 1 + OPIndex
+
+   ! Loop through modules by index
+   do i = 1, size(p%Lin%iMod)
+      associate (ModData => m%Modules(p%Lin%iMod(i)))
+
+         ! Copy current module state to linearization save location
+         call FAST_CopyStates(ModData, Turbine, StateIndex, STATE_CURR, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+         if (Failed()) return
+
+         ! Copy current module input to linearization save location
+         call FAST_CopyInput(ModData, Turbine, -InputIndex, INPUT_CURR, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+         if (Failed()) return
+
+      end associate
+   end do
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
+
+!> CalcGlueStateMatrices forms the full-system state matrices for linearization: A, B, C, and D.
 !! Note that it uses LAPACK_GEMM instead of MATMUL for matrix multiplications because of stack-space issues (these
 !! matrices get large quickly).
 subroutine CalcGlueStateMatrices(ModGlue, JacScaleFactor, ErrStat, ErrMsg)
@@ -496,7 +974,7 @@ subroutine CalcGlueStateMatrices(ModGlue, JacScaleFactor, ErrStat, ErrMsg)
    integer(IntKi), intent(out)      :: ErrStat        !< Error status of the operation
    character(*), intent(out)        :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
-   character(*), parameter          :: RoutineName = 'ModLin_StateMatrices'
+   character(*), parameter          :: RoutineName = 'CalcGlueStateMatrices'
    integer(IntKi)                   :: ErrStat2
    character(ErrMsgLen)             :: ErrMsg2
    real(R8Ki), allocatable          :: G(:, :), tmp(:, :)
@@ -592,8 +1070,8 @@ subroutine Precondition(uVars, G, dUdu, dUdy, JacScaleFactor)
    logical                       :: isRowLoad, isColLoad
    logical, allocatable          :: isLoad(:)
 
-   allocate(isLoad(size(dUdu,1)))
-   isLoad=.false.
+   allocate (isLoad(size(dUdu, 1)))
+   isLoad = .false.
 
    ! Loop through glue code input variables (cols)
    do i = 1, size(uVars)

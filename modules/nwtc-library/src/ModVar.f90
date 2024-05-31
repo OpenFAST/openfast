@@ -35,7 +35,7 @@ public :: MV_ComputeCentralDiff, MV_Perturb, MV_ComputeDiff
 public :: MV_AddVar, MV_AddMeshVar
 public :: MV_HasFlags, MV_SetFlags, MV_UnsetFlags, MV_NumVars
 public :: LoadFields, MotionFields, TransFields, AngularFields
-public :: quat_to_dcm, dcm_to_quat, quat_inv, quat_to_rvec, rvec_to_quat, wm_to_quat, quat_to_wm, wm_inv
+public :: quat_to_dcm, dcm_to_quat, quat_inv, quat_to_rvec, rvec_to_quat, wm_to_quat, quat_to_wm, wm_inv, quat_scalar, quat_canonical
 public :: MV_FieldString, IdxStr
 public :: DumpMatrix
 
@@ -878,20 +878,35 @@ function perturb_quat(theta, idir) result(q)
    end if
 end function
 
+pure function quat_scalar(q) result(w)
+   real(R8Ki), intent(in)  :: q(3)
+   real(R8Ki)              :: im, w
+   ! Calculate magnitude of imaginary part of quaternion
+   im = dot_product(q, q)
+   if (im < 1.0_R8Ki) then
+      w = sqrt(1.0_R8Ki - im)
+   else if (im > 1.0_R8Ki) then
+      w = 0.0_R8Ki
+   else
+      w = 0.0_R8Ki
+   end if
+end function
+
 pure function quat_canonical(q0, q) result(qc)
    real(R8Ki), intent(in)  :: q0, q(3)
-   real(R8Ki)              :: qc(3)
+   real(R8Ki)              :: qc(3), m
    integer(IntKi)          :: i
-   qc = q
+   m = q0*q0 + dot_product(q, q)
+   qc = q / m
    if (q0 > 0.0_R8Ki) return
    if (q0 < 0.0_R8Ki) then
-      qc = -q
+      qc = -qc
       return
    end if
    do i = 1, 3
       if (q(i) > 0.0_R8Ki) return
       if (q(i) < 0.0_R8Ki) then
-         qc = -q
+         qc = -qc
          return
       end if
    end do
@@ -905,30 +920,30 @@ function dcm_to_quat(dcm) result(q)
    ! Trace of matrix
    t = dcm(1, 1) + dcm(2, 2) + dcm(3, 3)
 
-   if (t > 0.0) then
-      s = 0.5/sqrt(t + 1.0)
-      qw = 0.25/s
-      q(1) = (dcm(3, 2) - dcm(2, 3))*s
-      q(2) = (dcm(1, 3) - dcm(3, 1))*s
-      q(3) = (dcm(2, 1) - dcm(1, 2))*s
-   else if (dcm(1, 1) > dcm(2, 2) .and. dcm(1, 1) > dcm(3, 3)) then
-      s = 2.0*sqrt(1.0 + dcm(1, 1) - dcm(2, 2) - dcm(3, 3))
-      qw = (dcm(3, 2) - dcm(2, 3))/s
-      q(1) = 0.25*s
-      q(2) = (dcm(1, 2) + dcm(2, 1))/s
-      q(3) = (dcm(1, 3) + dcm(3, 1))/s
-   else if (dcm(2, 2) > dcm(3, 3)) then
-      s = 2.0*sqrt(1.0 + dcm(2, 2) - dcm(1, 1) - dcm(3, 3))
-      qw = (dcm(1, 3) - dcm(3, 1))/s
-      q(1) = (dcm(1, 2) + dcm(2, 1))/s
-      q(2) = 0.25*s
-      q(3) = (dcm(2, 3) + dcm(3, 2))/s
+   if (t > 0.0_R8Ki) then
+      S = sqrt(t + 1.0_R8Ki)*2.0_R8Ki  ! S=4*qw
+      qw = 0.25_R8Ki*S
+      q(1) = (dcm(3, 2) - dcm(2, 3))/S
+      q(2) = (dcm(1, 3) - dcm(3, 1))/S
+      q(3) = (dcm(2, 1) - dcm(1, 2))/S
+   elseif ((dcm(1, 1) > dcm(2, 2)) .and. (dcm(1, 1) > dcm(3, 3))) then
+      S = sqrt(1.0_R8Ki + dcm(1, 1) - dcm(2, 2) - dcm(3, 3))*2.0_R8Ki  ! S=4*qx
+      qw = (dcm(3, 2) - dcm(2, 3))/S
+      q(1) = 0.25_R8Ki*S
+      q(2) = (dcm(1, 2) + dcm(2, 1))/S
+      q(3) = (dcm(1, 3) + dcm(3, 1))/S
+   elseif (dcm(2, 2) > dcm(3, 3)) then
+      S = sqrt(1.0_R8Ki + dcm(2, 2) - dcm(1, 1) - dcm(3, 3))*2.0_R8Ki  ! S=4*qy
+      qw = (dcm(1, 3) - dcm(3, 1))/S
+      q(1) = (dcm(1, 2) + dcm(2, 1))/S
+      q(2) = 0.25_R8Ki*S
+      q(3) = (dcm(2, 3) + dcm(3, 2))/S
    else
-      s = 2.0*sqrt(1.0 + dcm(3, 3) - dcm(1, 1) - dcm(2, 2))
-      qw = (dcm(2, 1) - dcm(1, 2))/s
-      q(1) = (dcm(1, 3) + dcm(3, 1))/s
-      q(2) = (dcm(2, 3) + dcm(3, 2))/s
-      q(3) = 0.25*s
+      S = sqrt(1.0_R8Ki + dcm(3, 3) - dcm(1, 1) - dcm(2, 2))*2.0_R8Ki  ! S=4*qz
+      qw = (dcm(2, 1) - dcm(1, 2))/S
+      q(1) = (dcm(1, 3) + dcm(3, 1))/S
+      q(2) = (dcm(2, 3) + dcm(3, 2))/S
+      q(3) = 0.25_R8Ki*S
    end if
 
    q = quat_canonical(qw, q)
@@ -954,10 +969,10 @@ function dcm_to_quat2(dcm) result(q)
    Qyz = dcm(2, 3)
    Qzz = dcm(3, 3)
 
-   A(:,1) = [Qxx - Qyy - Qzz, Qyx + Qxy, Qzx + Qxz, Qzy - Qyz]/ 3.0_R8Ki
-   A(:,2) = [Qyx + Qxy, Qyy - Qxx - Qzz, Qzy + Qyz, Qxz - Qzx]/ 3.0_R8Ki
-   A(:,3) = [Qzx + Qxz, Qzy + Qyz, Qzz - Qxx - Qyy, Qyx - Qxy]/ 3.0_R8Ki
-   A(:,4) = [Qzy - Qyz, Qxz - Qzx, Qyx - Qxy, Qxx + Qyy + Qzz]/ 3.0_R8Ki
+   A(:, 1) = [Qxx - Qyy - Qzz, Qyx + Qxy, Qzx + Qxz, Qzy - Qyz]/3.0_R8Ki
+   A(:, 2) = [Qyx + Qxy, Qyy - Qxx - Qzz, Qzy + Qyz, Qxz - Qzx]/3.0_R8Ki
+   A(:, 3) = [Qzx + Qxz, Qzy + Qyz, Qzz - Qxx - Qyy, Qyx - Qxy]/3.0_R8Ki
+   A(:, 4) = [Qzy - Qyz, Qxz - Qzx, Qyx - Qxy, Qxx + Qyy + Qzz]/3.0_R8Ki
 
    lwork = 4*n
 
@@ -968,12 +983,12 @@ function dcm_to_quat2(dcm) result(q)
       q = 0.0_R8Ki
       return
    end if
-   
+
    ! Get index of maximum real eigenvalue
    i = maxloc(wr, dim=1)
 
    ! Canonical form of quaternion
-   q = quat_canonical(vr(4,i), vr(1:3,i))
+   q = quat_canonical(vr(4, i), vr(1:3, i))
 end function
 
 ! quat_to_dcm returns a dcm based on the quaternion where q is a unit quaternion with a positive scalar component
@@ -985,7 +1000,7 @@ pure function quat_to_dcm(q) result(dcm)
    real(R8Ki)              :: xy, yz, xz, wx, wy, wz
 
    ! Calculate scalar component
-   w = sqrt(1.0_R8Ki - dot_product(q, q))
+   w = quat_scalar(q)
 
    ww = w*w
    xx = q(1)*q(1)
@@ -1026,9 +1041,9 @@ pure function quat_compose(q1, q2) result(q)
    real(R8Ki)              :: q(3), q0
    real(R8Ki)              :: w1, x1, y1, z1
    real(R8Ki)              :: w2, x2, y2, z2
-   w1 = sqrt(1.0_R8Ki - dot_product(q1, q1))
+   w1 = quat_scalar(q1)
    x1 = q1(1); y1 = q1(2); z1 = q1(3)
-   w2 = sqrt(1.0_R8Ki - dot_product(q2, q2))
+   w2 = quat_scalar(q2)
    x2 = q2(1); y2 = q2(2); z2 = q2(3)
    q0 = w1*w2 - x1*x2 - y1*y2 - z1*z2
    q(1) = w1*x2 + x1*w2 + y1*z2 - z1*y2
@@ -1083,7 +1098,7 @@ pure function quat_to_wm(q) result(c)
    real(R8Ki), intent(in)  :: q(3)
    real(R8Ki)              :: c(3)
    real(R8Ki)              :: q0
-   q0 = sqrt(1.0_R8Ki - dot_product(q, q))
+   q0 = quat_scalar(q)
    c = 4.0_R8Ki*q/(1.0_R8Ki + q0)
 end function
 

@@ -590,8 +590,8 @@ subroutine FAST_GetOP(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg, FlagFilt
 
    case (Module_SeaSt)
       call SeaSt_GetOP(ThisTime, T%SeaSt%Input(1), T%SeaSt%p, T%SeaSt%x(ThisState), T%SeaSt%xd(ThisState), T%SeaSt%z(ThisState), &
-                    T%SeaSt%OtherSt(ThisState), T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
-                    u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+                       T%SeaSt%OtherSt(ThisState), T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
+                       u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
 
    case (Module_SrvD)
       call SrvD_GetOP(ThisTime, T%SrvD%Input(1), T%SrvD%p, T%SrvD%x(ThisState), T%SrvD%xd(ThisState), T%SrvD%z(ThisState), &
@@ -673,8 +673,8 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg,
 
    case (Module_SeaSt)
       call SeaSt_JacobianPInput(ThisTime, T%SeaSt%Input(1), T%SeaSt%p, T%SeaSt%x(ThisState), T%SeaSt%xd(ThisState), &
-                             T%SeaSt%z(ThisState), T%SeaSt%OtherSt(ThisState), T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
-                             dYdu=dYdu, dXdu=dXdu)
+                                T%SeaSt%z(ThisState), T%SeaSt%OtherSt(ThisState), T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
+                                dYdu=dYdu, dXdu=dXdu)
 
    case (Module_SrvD)
       call SrvD_JacobianPInput(ThisTime, T%SrvD%Input(1), T%SrvD%p, T%SrvD%x(ThisState), T%SrvD%xd(ThisState), &
@@ -769,10 +769,10 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, ThisState, T, ErrStat, Err
 
    case (Module_SeaSt)
       call SeaSt_JacobianPContState(ThisTime, T%SeaSt%Input(1), T%SeaSt%p, &
-                                 T%SeaSt%x(ThisState), T%SeaSt%xd(ThisState), &
-                                 T%SeaSt%z(ThisState), T%SeaSt%OtherSt(ThisState), &
-                                 T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
-                                 dYdx=dYdx, dXdx=dXdx)
+                                    T%SeaSt%x(ThisState), T%SeaSt%xd(ThisState), &
+                                    T%SeaSt%z(ThisState), T%SeaSt%OtherSt(ThisState), &
+                                    T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
+                                    dYdx=dYdx, dXdx=dXdx)
 
    case (Module_SrvD)
       call SrvD_JacobianPContState(ThisTime, T%SrvD%Input(1), T%SrvD%p, &
@@ -844,8 +844,34 @@ subroutine FAST_CopyStates(ModData, T, Src, Dst, CtrlCode, ErrStat, ErrMsg)
       call ED_CopyConstrState(T%ED%z(Src), T%ED%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
       call ED_CopyOtherState(T%ED%OtherSt(Src), T%ED%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
-!  case (Module_ExtPtfm)
-!  case (Module_FEAM)
+   case (Module_ExtInfw)
+
+      ! call ExtInfw_CopyContState(T%ExtInfw%x(Src), T%ExtInfw%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      ! call ExtInfw_CopyDiscState(T%ExtInfw%xd(Src), T%ExtInfw%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      ! call ExtInfw_CopyConstrState(T%ExtInfw%z(Src), T%ExtInfw%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      ! call ExtInfw_CopyOtherState(T%ExtInfw%OtherSt(Src), T%ExtInfw%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+
+   case (Module_ExtLd)
+
+      call ExtLd_CopyContState(T%ExtLd%x(Src), T%ExtLd%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ExtLd_CopyDiscState(T%ExtLd%xd(Src), T%ExtLd%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ExtLd_CopyConstrState(T%ExtLd%z(Src), T%ExtLd%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ExtLd_CopyOtherState(T%ExtLd%OtherSt(Src), T%ExtLd%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+
+   case (Module_ExtPtfm)
+
+      call ExtPtfm_CopyContState(T%ExtPtfm%x(Src), T%ExtPtfm%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ExtPtfm_CopyDiscState(T%ExtPtfm%xd(Src), T%ExtPtfm%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ExtPtfm_CopyConstrState(T%ExtPtfm%z(Src), T%ExtPtfm%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ExtPtfm_CopyOtherState(T%ExtPtfm%OtherSt(Src), T%ExtPtfm%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+
+   case (Module_FEAM)
+
+      call FEAM_CopyContState(T%FEAM%x(Src), T%FEAM%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call FEAM_CopyDiscState(T%FEAM%xd(Src), T%FEAM%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call FEAM_CopyConstrState(T%FEAM%z(Src), T%FEAM%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call FEAM_CopyOtherState(T%FEAM%OtherSt(Src), T%FEAM%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+
    case (Module_HD)
 
       call HydroDyn_CopyContState(T%HD%x(Src), T%HD%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
@@ -853,8 +879,20 @@ subroutine FAST_CopyStates(ModData, T, Src, Dst, CtrlCode, ErrStat, ErrMsg)
       ! call HydroDyn_CopyConstrState(T%HD%z(Src), T%HD%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
       ! call HydroDyn_CopyOtherState(T%HD%OtherSt(Src), T%HD%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
-!  case (Module_IceD)
-!  case (Module_IceF)
+   case (Module_IceD)
+
+      call IceD_CopyContState(T%IceD%x(Src, ModData%Ins), T%IceD%x(Dst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call IceD_CopyDiscState(T%IceD%xd(Src, ModData%Ins), T%IceD%xd(Dst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call IceD_CopyConstrState(T%IceD%z(Src, ModData%Ins), T%IceD%z(Dst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call IceD_CopyOtherState(T%IceD%OtherSt(Src, ModData%Ins), T%IceD%OtherSt(Dst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+
+   case (Module_IceF)
+
+      call IceFloe_CopyContState(T%IceF%x(Src), T%IceF%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call IceFloe_CopyDiscState(T%IceF%xd(Src), T%IceF%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call IceFloe_CopyConstrState(T%IceF%z(Src), T%IceF%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call IceFloe_CopyOtherState(T%IceF%OtherSt(Src), T%IceF%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+
    case (Module_IfW)
 
       ! call IfW_CopyContState(T%IfW%x(Src), T%IfW%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
@@ -862,10 +900,27 @@ subroutine FAST_CopyStates(ModData, T, Src, Dst, CtrlCode, ErrStat, ErrMsg)
       ! call IfW_CopyConstrState(T%IfW%z(Src), T%IfW%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
       ! call IfW_CopyOtherState(T%IfW%OtherSt(Src), T%IfW%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
-!  case (Module_MAP)
-!  case (Module_MD)
-!  case (Module_OpFM)
-!  case (Module_Orca)
+   case (Module_MAP)
+
+      call MAP_CopyContState(T%MAP%x(Src), T%MAP%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call MAP_CopyDiscState(T%MAP%xd(Src), T%MAP%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call MAP_CopyConstrState(T%MAP%z(Src), T%MAP%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      ! call MAP_CopyOtherState(T%MAP%OtherSt(Src), T%MAP%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+
+   case (Module_MD)
+
+      call MD_CopyContState(T%MD%x(Src), T%MD%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call MD_CopyDiscState(T%MD%xd(Src), T%MD%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call MD_CopyConstrState(T%MD%z(Src), T%MD%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call MD_CopyOtherState(T%MD%OtherSt(Src), T%MD%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+
+   case (Module_Orca)
+
+      call Orca_CopyContState(T%Orca%x(Src), T%Orca%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call Orca_CopyDiscState(T%Orca%xd(Src), T%Orca%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call Orca_CopyConstrState(T%Orca%z(Src), T%Orca%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call Orca_CopyOtherState(T%Orca%OtherSt(Src), T%Orca%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+
    case (Module_SD)
 
       call SD_CopyContState(T%SD%x(Src), T%SD%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
@@ -873,7 +928,13 @@ subroutine FAST_CopyStates(ModData, T, Src, Dst, CtrlCode, ErrStat, ErrMsg)
       call SD_CopyConstrState(T%SD%z(Src), T%SD%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
       call SD_CopyOtherState(T%SD%OtherSt(Src), T%SD%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
-!  case (Module_SeaSt)
+   case (Module_SeaSt)
+
+      call SeaSt_CopyContState(T%SeaSt%x(Src), T%SeaSt%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call SeaSt_CopyDiscState(T%SeaSt%xd(Src), T%SeaSt%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call SeaSt_CopyConstrState(T%SeaSt%z(Src), T%SeaSt%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call SeaSt_CopyOtherState(T%SeaSt%OtherSt(Src), T%SeaSt%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+
    case (Module_SrvD)
 
       call SrvD_CopyContState(T%SrvD%x(Src), T%SrvD%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
@@ -893,10 +954,9 @@ contains
    end function
 end subroutine
 
-subroutine FAST_CopyInputs(ModData, T, DstInputTime, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
+subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
    type(ModDataType), intent(in)                      :: ModData        !< Module data
-   type(FAST_TurbineType), intent(inout)              :: T              !< Turbine type
-   real(DbKi), intent(in)                             :: DstInputTime   !< Destination input time
+   type(FAST_TurbineType), target, intent(inout)      :: T              !< Turbine type
    integer(IntKi), intent(in)                         :: iSrc, iDst     !< Input indices
    integer(IntKi), intent(in)                         :: CtrlCode       !< Mesh copy code
    integer(IntKi), intent(out)                        :: ErrStat
@@ -911,95 +971,466 @@ subroutine FAST_CopyInputs(ModData, T, DstInputTime, iSrc, iDst, CtrlCode, ErrSt
    ErrStat = ErrID_None
    ErrMsg = ''
 
+   ! If source and destination indices are the same, return error
+   if (iSrc == iDst) then
+      call SetErrStat(ErrID_Fatal, "invalid indices: iSrc == iDst", ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
    ! Select based on module ID
    select case (ModData%ID)
 
    case (Module_AD)
 
-      if (iDst > 0) T%AD%InputTimes(iDst) = DstInputTime
-      if (iSrc > 0 .and. iDst > 0) then
-         call AD_CopyInput(T%AD%Input(iSrc), T%AD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-      else if (iSrc > 0) then
-         call AD_CopyInput(T%AD%Input(iSrc), T%AD%u, CtrlCode, Errstat2, ErrMsg2)
-      else
-         call AD_CopyInput(T%AD%u, T%AD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-      end if
+      select case (iSrc)
+      case (:-1)
+         select case (iDst)
+         case (:-1)
+            call AD_CopyInput(T%AD%Input_Saved(-iSrc), T%AD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call AD_CopyInput(T%AD%Input_Saved(-iSrc), T%AD%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call AD_CopyInput(T%AD%Input_Saved(-iSrc), T%AD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (0)
+         select case (iDst)
+         case (:-1)
+            call AD_CopyInput(T%AD%u, T%AD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call AD_CopyInput(T%AD%u, T%AD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (1:)
+         select case (iDst)
+         case (:-1)
+            call AD_CopyInput(T%AD%Input(iSrc), T%AD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call AD_CopyInput(T%AD%Input(iSrc), T%AD%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call AD_CopyInput(T%AD%Input(iSrc), T%AD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      end select
 
    case (Module_BD)
 
-      if (iDst > 0) T%BD%InputTimes(iDst, ModData%Ins) = DstInputTime
-      if (iSrc > 0 .and. iDst > 0) then
-         call BD_CopyInput(T%BD%Input(iSrc, ModData%Ins), T%BD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-      else if (iSrc > 0) then
-         call BD_CopyInput(T%BD%Input(iSrc, ModData%Ins), T%BD%u(ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-      else
-         call BD_CopyInput(T%BD%u(ModData%Ins), T%BD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-      end if
+      select case (iSrc)
+      case (:-1)
+         select case (iDst)
+         case (:-1)
+            call BD_CopyInput(T%BD%Input_Saved(-iSrc, ModData%Ins), T%BD%Input_Saved(-iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call BD_CopyInput(T%BD%Input_Saved(-iSrc, ModData%Ins), T%BD%u(ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call BD_CopyInput(T%BD%Input_Saved(-iSrc, ModData%Ins), T%BD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (0)
+         select case (iDst)
+         case (:-1)
+            call BD_CopyInput(T%BD%u(ModData%Ins), T%BD%Input_Saved(-iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call BD_CopyInput(T%BD%u(ModData%Ins), T%BD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (1:)
+         select case (iDst)
+         case (:-1)
+            call BD_CopyInput(T%BD%Input(iSrc, ModData%Ins), T%BD%Input_Saved(-iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call BD_CopyInput(T%BD%Input(iSrc, ModData%Ins), T%BD%u(ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call BD_CopyInput(T%BD%Input(iSrc, ModData%Ins), T%BD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      end select
 
    case (Module_ED)
 
-      if (iDst > 0) T%ED%InputTimes(iDst) = DstInputTime
-      if (iSrc > 0 .and. iDst > 0) then
-         call ED_CopyInput(T%ED%Input(iSrc), T%ED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-      else if (iSrc > 0) then
-         call ED_CopyInput(T%ED%Input(iSrc), T%ED%u, CtrlCode, Errstat2, ErrMsg2)
-      else
-         call ED_CopyInput(T%ED%u, T%ED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-      end if
+      select case (iSrc)
+      case (:-1)
+         select case (iDst)
+         case (:-1)
+            call ED_CopyInput(T%ED%Input_Saved(-iSrc), T%ED%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call ED_CopyInput(T%ED%Input_Saved(-iSrc), T%ED%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call ED_CopyInput(T%ED%Input_Saved(-iSrc), T%ED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (0)
+         select case (iDst)
+         case (:-1)
+            call ED_CopyInput(T%ED%u, T%ED%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call ED_CopyInput(T%ED%u, T%ED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (1:)
+         select case (iDst)
+         case (:-1)
+            call ED_CopyInput(T%ED%Input(iSrc), T%ED%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call ED_CopyInput(T%ED%Input(iSrc), T%ED%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call ED_CopyInput(T%ED%Input(iSrc), T%ED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      end select
 
-!  case (Module_ExtPtfm)
-!  case (Module_FEAM)
+   case (Module_ExtPtfm)
+
+      select case (iSrc)
+      case (:-1)
+         select case (iDst)
+         case (:-1)
+            call ExtPtfm_CopyInput(T%ExtPtfm%Input_Saved(-iSrc), T%ExtPtfm%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call ExtPtfm_CopyInput(T%ExtPtfm%Input_Saved(-iSrc), T%ExtPtfm%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call ExtPtfm_CopyInput(T%ExtPtfm%Input_Saved(-iSrc), T%ExtPtfm%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (0)
+         select case (iDst)
+         case (:-1)
+            call ExtPtfm_CopyInput(T%ExtPtfm%u, T%ExtPtfm%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call ExtPtfm_CopyInput(T%ExtPtfm%u, T%ExtPtfm%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (1:)
+         select case (iDst)
+         case (:-1)
+            call ExtPtfm_CopyInput(T%ExtPtfm%Input(iSrc), T%ExtPtfm%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call ExtPtfm_CopyInput(T%ExtPtfm%Input(iSrc), T%ExtPtfm%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call ExtPtfm_CopyInput(T%ExtPtfm%Input(iSrc), T%ExtPtfm%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      end select
+
+   case (Module_FEAM)
+
+      select case (iSrc)
+      case (:-1)
+         select case (iDst)
+         case (:-1)
+            call FEAM_CopyInput(T%FEAM%Input_Saved(-iSrc), T%FEAM%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call FEAM_CopyInput(T%FEAM%Input_Saved(-iSrc), T%FEAM%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call FEAM_CopyInput(T%FEAM%Input_Saved(-iSrc), T%FEAM%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (0)
+         select case (iDst)
+         case (:-1)
+            call FEAM_CopyInput(T%FEAM%u, T%FEAM%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call FEAM_CopyInput(T%FEAM%u, T%FEAM%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (1:)
+         select case (iDst)
+         case (:-1)
+            call FEAM_CopyInput(T%FEAM%Input(iSrc), T%FEAM%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call FEAM_CopyInput(T%FEAM%Input(iSrc), T%FEAM%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call FEAM_CopyInput(T%FEAM%Input(iSrc), T%FEAM%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      end select
+
    case (Module_HD)
 
-      if (iDst > 0) T%HD%InputTimes(iDst) = DstInputTime
-      if (iSrc > 0 .and. iDst > 0) then
-         call HydroDyn_CopyInput(T%HD%Input(iSrc), T%HD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-      else if (iSrc > 0) then
-         call HydroDyn_CopyInput(T%HD%Input(iSrc), T%HD%u, CtrlCode, Errstat2, ErrMsg2)
-      else
-         call HydroDyn_CopyInput(T%HD%u, T%HD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-      end if
+      select case (iSrc)
+      case (:-1)
+         select case (iDst)
+         case (:-1)
+            call HydroDyn_CopyInput(T%HD%Input_Saved(-iSrc), T%HD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call HydroDyn_CopyInput(T%HD%Input_Saved(-iSrc), T%HD%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call HydroDyn_CopyInput(T%HD%Input_Saved(-iSrc), T%HD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (0)
+         select case (iDst)
+         case (:-1)
+            call HydroDyn_CopyInput(T%HD%u, T%HD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call HydroDyn_CopyInput(T%HD%u, T%HD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (1:)
+         select case (iDst)
+         case (:-1)
+            call HydroDyn_CopyInput(T%HD%Input(iSrc), T%HD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call HydroDyn_CopyInput(T%HD%Input(iSrc), T%HD%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call HydroDyn_CopyInput(T%HD%Input(iSrc), T%HD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      end select
 
-!  case (Module_IceD)
-!  case (Module_IceF)
+   case (Module_IceD)
+
+      select case (iSrc)
+      case (:-1)
+         select case (iDst)
+         case (:-1)
+            call IceD_CopyInput(T%IceD%Input_Saved(-iSrc, ModData%Ins), T%IceD%Input_Saved(-iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call IceD_CopyInput(T%IceD%Input_Saved(-iSrc, ModData%Ins), T%IceD%u(ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call IceD_CopyInput(T%IceD%Input_Saved(-iSrc, ModData%Ins), T%IceD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (0)
+         select case (iDst)
+         case (:-1)
+            call IceD_CopyInput(T%IceD%u(ModData%Ins), T%IceD%Input_Saved(-iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call IceD_CopyInput(T%IceD%u(ModData%Ins), T%IceD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (1:)
+         select case (iDst)
+         case (:-1)
+            call IceD_CopyInput(T%IceD%Input(iSrc, ModData%Ins), T%IceD%Input_Saved(-iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call IceD_CopyInput(T%IceD%Input(iSrc, ModData%Ins), T%IceD%u(ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call IceD_CopyInput(T%IceD%Input(iSrc, ModData%Ins), T%IceD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      end select
+
+   case (Module_IceF)
+
+      select case (iSrc)
+      case (:-1)
+         select case (iDst)
+         case (:-1)
+            call IceFloe_CopyInput(T%IceF%Input_Saved(-iSrc), T%IceF%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call IceFloe_CopyInput(T%IceF%Input_Saved(-iSrc), T%IceF%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call IceFloe_CopyInput(T%IceF%Input_Saved(-iSrc), T%IceF%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (0)
+         select case (iDst)
+         case (:-1)
+            call IceFloe_CopyInput(T%IceF%u, T%IceF%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call IceFloe_CopyInput(T%IceF%u, T%IceF%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (1:)
+         select case (iDst)
+         case (:-1)
+            call IceFloe_CopyInput(T%IceF%Input(iSrc), T%IceF%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call IceFloe_CopyInput(T%IceF%Input(iSrc), T%IceF%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call IceFloe_CopyInput(T%IceF%Input(iSrc), T%IceF%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      end select
 
    case (Module_IfW)
 
-      if (iDst > 0) T%IfW%InputTimes(iDst) = DstInputTime
-      if (iSrc > 0 .and. iDst > 0) then
-         call InflowWind_CopyInput(T%IfW%Input(iSrc), T%IfW%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-      else if (iSrc > 0) then
-         call InflowWind_CopyInput(T%IfW%Input(iSrc), T%IfW%u, CtrlCode, Errstat2, ErrMsg2)
-      else
-         call InflowWind_CopyInput(T%IfW%u, T%IfW%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-      end if
+      select case (iSrc)
+      case (:-1)
+         select case (iDst)
+         case (:-1)
+            call InflowWind_CopyInput(T%IfW%Input_Saved(-iSrc), T%IfW%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call InflowWind_CopyInput(T%IfW%Input_Saved(-iSrc), T%IfW%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call InflowWind_CopyInput(T%IfW%Input_Saved(-iSrc), T%IfW%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (0)
+         select case (iDst)
+         case (:-1)
+            call InflowWind_CopyInput(T%IfW%u, T%IfW%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call InflowWind_CopyInput(T%IfW%u, T%IfW%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (1:)
+         select case (iDst)
+         case (:-1)
+            call InflowWind_CopyInput(T%IfW%Input(iSrc), T%IfW%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call InflowWind_CopyInput(T%IfW%Input(iSrc), T%IfW%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call InflowWind_CopyInput(T%IfW%Input(iSrc), T%IfW%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      end select
 
-!  case (Module_MAP)
-!  case (Module_MD)
-!  case (Module_OpFM)
-!  case (Module_Orca)
+   case (Module_MAP)
+
+      select case (iSrc)
+      case (:-1)
+         select case (iDst)
+         case (:-1)
+            call MAP_CopyInput(T%MAP%Input_Saved(-iSrc), T%MAP%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call MAP_CopyInput(T%MAP%Input_Saved(-iSrc), T%MAP%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call MAP_CopyInput(T%MAP%Input_Saved(-iSrc), T%MAP%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (0)
+         select case (iDst)
+         case (:-1)
+            call MAP_CopyInput(T%MAP%u, T%MAP%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call MAP_CopyInput(T%MAP%u, T%MAP%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (1:)
+         select case (iDst)
+         case (:-1)
+            call MAP_CopyInput(T%MAP%Input(iSrc), T%MAP%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call MAP_CopyInput(T%MAP%Input(iSrc), T%MAP%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call MAP_CopyInput(T%MAP%Input(iSrc), T%MAP%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      end select
+
+   case (Module_MD)
+
+      select case (iSrc)
+      case (:-1)
+         select case (iDst)
+         case (:-1)
+            call MD_CopyInput(T%MD%Input_Saved(-iSrc), T%MD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call MD_CopyInput(T%MD%Input_Saved(-iSrc), T%MD%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call MD_CopyInput(T%MD%Input_Saved(-iSrc), T%MD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (0)
+         select case (iDst)
+         case (:-1)
+            call MD_CopyInput(T%MD%u, T%MD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call MD_CopyInput(T%MD%u, T%MD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (1:)
+         select case (iDst)
+         case (:-1)
+            call MD_CopyInput(T%MD%Input(iSrc), T%MD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call MD_CopyInput(T%MD%Input(iSrc), T%MD%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call MD_CopyInput(T%MD%Input(iSrc), T%MD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      end select
+
+      ! case (Module_ExtInfw)
+
+   case (Module_Orca)
+
+      select case (iSrc)
+      case (:-1)
+         select case (iDst)
+         case (:-1)
+            call Orca_CopyInput(T%Orca%Input_Saved(-iSrc), T%Orca%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call Orca_CopyInput(T%Orca%Input_Saved(-iSrc), T%Orca%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call Orca_CopyInput(T%Orca%Input_Saved(-iSrc), T%Orca%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (0)
+         select case (iDst)
+         case (:-1)
+            call Orca_CopyInput(T%Orca%u, T%Orca%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call Orca_CopyInput(T%Orca%u, T%Orca%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (1:)
+         select case (iDst)
+         case (:-1)
+            call Orca_CopyInput(T%Orca%Input(iSrc), T%Orca%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call Orca_CopyInput(T%Orca%Input(iSrc), T%Orca%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call Orca_CopyInput(T%Orca%Input(iSrc), T%Orca%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      end select
+
    case (Module_SD)
 
-      if (iDst > 0) T%SD%InputTimes(iDst) = DstInputTime
-      if (iSrc > 0 .and. iDst > 0) then
-         call SD_CopyInput(T%SD%Input(iSrc), T%SD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-      else if (iSrc > 0) then
-         call SD_CopyInput(T%SD%Input(iSrc), T%SD%u, CtrlCode, Errstat2, ErrMsg2)
-      else
-         call SD_CopyInput(T%SD%u, T%SD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-      end if
+      select case (iSrc)
+      case (:-1)
+         select case (iDst)
+         case (:-1)
+            call SD_CopyInput(T%SD%Input_Saved(-iSrc), T%SD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call SD_CopyInput(T%SD%Input_Saved(-iSrc), T%SD%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call SD_CopyInput(T%SD%Input_Saved(-iSrc), T%SD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (0)
+         select case (iDst)
+         case (:-1)
+            call SD_CopyInput(T%SD%u, T%SD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call SD_CopyInput(T%SD%u, T%SD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (1:)
+         select case (iDst)
+         case (:-1)
+            call SD_CopyInput(T%SD%Input(iSrc), T%SD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call SD_CopyInput(T%SD%Input(iSrc), T%SD%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call SD_CopyInput(T%SD%Input(iSrc), T%SD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      end select
 
-!  case (Module_SeaSt)
+   case (Module_SeaSt)
+
+      select case (iSrc)
+      case (:-1)
+         select case (iDst)
+         case (:-1)
+            call SeaSt_CopyInput(T%SeaSt%Input_Saved(-iSrc), T%SeaSt%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call SeaSt_CopyInput(T%SeaSt%Input_Saved(-iSrc), T%SeaSt%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call SeaSt_CopyInput(T%SeaSt%Input_Saved(-iSrc), T%SeaSt%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (0)
+         select case (iDst)
+         case (:-1)
+            call SeaSt_CopyInput(T%SeaSt%u, T%SeaSt%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call SeaSt_CopyInput(T%SeaSt%u, T%SeaSt%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (1:)
+         select case (iDst)
+         case (:-1)
+            call SeaSt_CopyInput(T%SeaSt%Input(iSrc), T%SeaSt%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call SeaSt_CopyInput(T%SeaSt%Input(iSrc), T%SeaSt%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call SeaSt_CopyInput(T%SeaSt%Input(iSrc), T%SeaSt%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      end select
+
    case (Module_SrvD)
 
-      if (iDst > 0) T%SrvD%InputTimes(iDst) = DstInputTime
-      if (iSrc > 0 .and. iDst > 0) then
-         call SrvD_CopyInput(T%SrvD%Input(iSrc), T%SrvD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-      else if (iSrc > 0) then
-         call SrvD_CopyInput(T%SrvD%Input(iSrc), T%SrvD%u, CtrlCode, Errstat2, ErrMsg2)
-      else
-         call SrvD_CopyInput(T%SrvD%u, T%SrvD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-      end if
+      select case (iSrc)
+      case (:-1)
+         select case (iDst)
+         case (:-1)
+            call SrvD_CopyInput(T%SrvD%Input_Saved(-iSrc), T%SrvD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call SrvD_CopyInput(T%SrvD%Input_Saved(-iSrc), T%SrvD%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call SrvD_CopyInput(T%SrvD%Input_Saved(-iSrc), T%SrvD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (0)
+         select case (iDst)
+         case (:-1)
+            call SrvD_CopyInput(T%SrvD%u, T%SrvD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call SrvD_CopyInput(T%SrvD%u, T%SrvD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (1:)
+         select case (iDst)
+         case (:-1)
+            call SrvD_CopyInput(T%SrvD%Input(iSrc), T%SrvD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0)
+            call SrvD_CopyInput(T%SrvD%Input(iSrc), T%SrvD%u, CtrlCode, Errstat2, ErrMsg2)
+         case (1:)
+            call SrvD_CopyInput(T%SrvD%Input(iSrc), T%SrvD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      end select
 
    case default
       ErrStat2 = ErrID_Fatal

@@ -122,7 +122,7 @@ subroutine FAST_AeroMapDriver(Turbine, ErrStat, ErrMsg)
                            ErrStat2, ErrMsg2); if (Failed()) return
 
       ! Copy inputs to second index
-      call FAST_CopyInputs(Turbine%y_FAST%Modules(iModOrder(i)), Turbine, 0.0_DbKi, iSrc=1, iDst=2, CtrlCode=MESH_NEWCOPY, &
+      call FAST_CopyInput(Turbine%y_FAST%Modules(iModOrder(i)), Turbine, 0.0_DbKi, iSrc=1, iDst=2, CtrlCode=MESH_NEWCOPY, &
                            ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
    end do
 

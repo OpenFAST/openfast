@@ -146,10 +146,18 @@ IMPLICIT NONE
     TYPE(Glue_LinType)  :: Lin      !< Linearization matrices [-]
   END TYPE VarsIdxType
 ! =======================
+! =========  Glue_LinParam  =======
+  TYPE, PUBLIC :: Glue_LinParam
+    INTEGER(IntKi)  :: NumTimes = 0_IntKi      !< Number of times to linearize [-]
+    INTEGER(IntKi)  :: InterpOrder = 0_IntKi      !< Interpolation order [-]
+    LOGICAL  :: SaveOPs = .false.      !< flag to save operating points during linearization [-]
+    TYPE(VarsIdxType)  :: Idx      !< Variable index for linearization data [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iMod      !< ModData index order for linearization [-]
+  END TYPE Glue_LinParam
+! =======================
 ! =========  Glue_ParameterType  =======
   TYPE, PUBLIC :: Glue_ParameterType
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iMod      !< ModData index order for linearization [-]
-    TYPE(VarsIdxType)  :: IdxLin      !< Variable index for linearization data [-]
+    TYPE(Glue_LinParam)  :: Lin      !< Linearization parameters [-]
     REAL(R8Ki)  :: DT = 0.0_R8Ki      !< solution time step [-]
     REAL(R8Ki)  :: ConvTol = 0.0_R8Ki      !< Solution convergence tolerance [-]
     INTEGER(IntKi)  :: NumCrctn = 0_IntKi      !<  [-]
@@ -186,23 +194,50 @@ IMPLICIT NONE
 ! =======================
 ! =========  Glue_LinSave  =======
   TYPE, PUBLIC :: Glue_LinSave
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: Times      !< linearization times [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: u      !< linearization operating point input [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: x      !< linearization operating point continuous state [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: xd      !< linearization operating point discrete state [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: z      !< linearization operating point constraint state [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: OtherSt      !< linearization operating point other state [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: u      !< linearization operating point input [-]
   END TYPE Glue_LinSave
 ! =======================
 ! =========  Glue_OutputFileType  =======
   TYPE, PUBLIC :: Glue_OutputFileType
     TYPE(ModDataType)  :: ModGlue      !< glue module data [-]
-    TYPE(Glue_LinSave)  :: OP 
+    TYPE(Glue_LinSave)  :: Lin      !< Operating point data for linearization [-]
   END TYPE Glue_OutputFileType
+! =======================
+! =========  Glue_CalcSteady  =======
+  TYPE, PUBLIC :: Glue_CalcSteady
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: AzimuthTarget      !< target azimuth positions where outputs are calculated [-]
+    REAL(R8Ki)  :: AzimuthDelta = 0.0_R8Ki      !<  [-]
+    LOGICAL  :: IsConverged = .false.      !< Steady State calculation is converged [-]
+    LOGICAL  :: FoundSteady = .false.      !<  [-]
+    LOGICAL  :: ForceLin = .false.      !<  [-]
+    INTEGER(IntKi)  :: NumRotations = 0_IntKi      !< Number of rotor rotations [-]
+    INTEGER(IntKi)  :: NumOutputs = 0_IntKi      !< Number of output values (ignoring write outputs) [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: psi_buffer      !< azimuth buffer for interpolation [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: y_buffer      !< output buffer for interpolation [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: y_azimuth      !< output values at target azimuths [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: y_interp      !< output values interpolated to target azimuth [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: y_diff      !< difference between outputs from current and previous rotation [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: y_ref      !< reference output values for error calculation [-]
+  END TYPE Glue_CalcSteady
+! =======================
+! =========  Glue_LinMisc  =======
+  TYPE, PUBLIC :: Glue_LinMisc
+    INTEGER(IntKi)  :: TimeIndex = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: AzimuthIndex = 0_IntKi      !<  [-]
+    LOGICAL  :: IsConverged = .false.      !<  [-]
+  END TYPE Glue_LinMisc
 ! =======================
 ! =========  Glue_MiscVarType  =======
   TYPE, PUBLIC :: Glue_MiscVarType
-    TYPE(ModDataType) , DIMENSION(:), ALLOCATABLE  :: ModData      !< module variable and value data [-]
+    TYPE(ModDataType) , DIMENSION(:), ALLOCATABLE  :: Modules      !< module variable and value data [-]
     TYPE(MappingType) , DIMENSION(:), ALLOCATABLE  :: Mappings      !< Module mapping [-]
+    TYPE(Glue_LinMisc)  :: Lin      !< Linearization misc vars [-]
+    TYPE(Glue_CalcSteady)  :: CS      !< CalcSteady calculation data [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: q      !<  [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: qn      !<  [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: x      !<  [-]
@@ -1130,6 +1165,82 @@ subroutine Glue_UnPackVarsIdxType(RF, OutData)
    call Glue_UnpackLinType(RF, OutData%Lin) ! Lin 
 end subroutine
 
+subroutine Glue_CopyLinParam(SrcLinParamData, DstLinParamData, CtrlCode, ErrStat, ErrMsg)
+   type(Glue_LinParam), intent(in) :: SrcLinParamData
+   type(Glue_LinParam), intent(inout) :: DstLinParamData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'Glue_CopyLinParam'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstLinParamData%NumTimes = SrcLinParamData%NumTimes
+   DstLinParamData%InterpOrder = SrcLinParamData%InterpOrder
+   DstLinParamData%SaveOPs = SrcLinParamData%SaveOPs
+   call Glue_CopyVarsIdxType(SrcLinParamData%Idx, DstLinParamData%Idx, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcLinParamData%iMod)) then
+      LB(1:1) = lbound(SrcLinParamData%iMod, kind=B8Ki)
+      UB(1:1) = ubound(SrcLinParamData%iMod, kind=B8Ki)
+      if (.not. allocated(DstLinParamData%iMod)) then
+         allocate(DstLinParamData%iMod(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinParamData%iMod.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLinParamData%iMod = SrcLinParamData%iMod
+   end if
+end subroutine
+
+subroutine Glue_DestroyLinParam(LinParamData, ErrStat, ErrMsg)
+   type(Glue_LinParam), intent(inout) :: LinParamData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'Glue_DestroyLinParam'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call Glue_DestroyVarsIdxType(LinParamData%Idx, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(LinParamData%iMod)) then
+      deallocate(LinParamData%iMod)
+   end if
+end subroutine
+
+subroutine Glue_PackLinParam(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(Glue_LinParam), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Glue_PackLinParam'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%NumTimes)
+   call RegPack(RF, InData%InterpOrder)
+   call RegPack(RF, InData%SaveOPs)
+   call Glue_PackVarsIdxType(RF, InData%Idx) 
+   call RegPackAlloc(RF, InData%iMod)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine Glue_UnPackLinParam(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(Glue_LinParam), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Glue_UnPackLinParam'
+   integer(B8Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%NumTimes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%InterpOrder); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SaveOPs); if (RegCheckErr(RF, RoutineName)) return
+   call Glue_UnpackVarsIdxType(RF, OutData%Idx) ! Idx 
+   call RegUnpackAlloc(RF, OutData%iMod); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
 subroutine Glue_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    type(Glue_ParameterType), intent(in) :: SrcParamData
    type(Glue_ParameterType), intent(inout) :: DstParamData
@@ -1142,19 +1253,7 @@ subroutine Glue_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Glue_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(SrcParamData%iMod)) then
-      LB(1:1) = lbound(SrcParamData%iMod, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%iMod, kind=B8Ki)
-      if (.not. allocated(DstParamData%iMod)) then
-         allocate(DstParamData%iMod(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iMod.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%iMod = SrcParamData%iMod
-   end if
-   call Glue_CopyVarsIdxType(SrcParamData%IdxLin, DstParamData%IdxLin, CtrlCode, ErrStat2, ErrMsg2)
+   call Glue_CopyLinParam(SrcParamData%Lin, DstParamData%Lin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstParamData%DT = SrcParamData%DT
@@ -1299,10 +1398,7 @@ subroutine Glue_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Glue_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(ParamData%iMod)) then
-      deallocate(ParamData%iMod)
-   end if
-   call Glue_DestroyVarsIdxType(ParamData%IdxLin, ErrStat2, ErrMsg2)
+   call Glue_DestroyLinParam(ParamData%Lin, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%iJL)) then
       deallocate(ParamData%iJL)
@@ -1338,8 +1434,7 @@ subroutine Glue_PackParam(RF, Indata)
    type(Glue_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Glue_PackParam'
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPackAlloc(RF, InData%iMod)
-   call Glue_PackVarsIdxType(RF, InData%IdxLin) 
+   call Glue_PackLinParam(RF, InData%Lin) 
    call RegPack(RF, InData%DT)
    call RegPack(RF, InData%ConvTol)
    call RegPack(RF, InData%NumCrctn)
@@ -1383,8 +1478,7 @@ subroutine Glue_UnPackParam(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpackAlloc(RF, OutData%iMod); if (RegCheckErr(RF, RoutineName)) return
-   call Glue_UnpackVarsIdxType(RF, OutData%IdxLin) ! IdxLin 
+   call Glue_UnpackLinParam(RF, OutData%Lin) ! Lin 
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ConvTol); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumCrctn); if (RegCheckErr(RF, RoutineName)) return
@@ -1430,6 +1524,30 @@ subroutine Glue_CopyLinSave(SrcLinSaveData, DstLinSaveData, CtrlCode, ErrStat, E
    character(*), parameter        :: RoutineName = 'Glue_CopyLinSave'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(SrcLinSaveData%Times)) then
+      LB(1:1) = lbound(SrcLinSaveData%Times, kind=B8Ki)
+      UB(1:1) = ubound(SrcLinSaveData%Times, kind=B8Ki)
+      if (.not. allocated(DstLinSaveData%Times)) then
+         allocate(DstLinSaveData%Times(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinSaveData%Times.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLinSaveData%Times = SrcLinSaveData%Times
+   end if
+   if (allocated(SrcLinSaveData%u)) then
+      LB(1:2) = lbound(SrcLinSaveData%u, kind=B8Ki)
+      UB(1:2) = ubound(SrcLinSaveData%u, kind=B8Ki)
+      if (.not. allocated(DstLinSaveData%u)) then
+         allocate(DstLinSaveData%u(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinSaveData%u.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLinSaveData%u = SrcLinSaveData%u
+   end if
    if (allocated(SrcLinSaveData%x)) then
       LB(1:2) = lbound(SrcLinSaveData%x, kind=B8Ki)
       UB(1:2) = ubound(SrcLinSaveData%x, kind=B8Ki)
@@ -1478,18 +1596,6 @@ subroutine Glue_CopyLinSave(SrcLinSaveData, DstLinSaveData, CtrlCode, ErrStat, E
       end if
       DstLinSaveData%OtherSt = SrcLinSaveData%OtherSt
    end if
-   if (allocated(SrcLinSaveData%u)) then
-      LB(1:2) = lbound(SrcLinSaveData%u, kind=B8Ki)
-      UB(1:2) = ubound(SrcLinSaveData%u, kind=B8Ki)
-      if (.not. allocated(DstLinSaveData%u)) then
-         allocate(DstLinSaveData%u(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinSaveData%u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinSaveData%u = SrcLinSaveData%u
-   end if
 end subroutine
 
 subroutine Glue_DestroyLinSave(LinSaveData, ErrStat, ErrMsg)
@@ -1499,6 +1605,12 @@ subroutine Glue_DestroyLinSave(LinSaveData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Glue_DestroyLinSave'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(LinSaveData%Times)) then
+      deallocate(LinSaveData%Times)
+   end if
+   if (allocated(LinSaveData%u)) then
+      deallocate(LinSaveData%u)
+   end if
    if (allocated(LinSaveData%x)) then
       deallocate(LinSaveData%x)
    end if
@@ -1511,9 +1623,6 @@ subroutine Glue_DestroyLinSave(LinSaveData, ErrStat, ErrMsg)
    if (allocated(LinSaveData%OtherSt)) then
       deallocate(LinSaveData%OtherSt)
    end if
-   if (allocated(LinSaveData%u)) then
-      deallocate(LinSaveData%u)
-   end if
 end subroutine
 
 subroutine Glue_PackLinSave(RF, Indata)
@@ -1521,11 +1630,12 @@ subroutine Glue_PackLinSave(RF, Indata)
    type(Glue_LinSave), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Glue_PackLinSave'
    if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%Times)
+   call RegPackAlloc(RF, InData%u)
    call RegPackAlloc(RF, InData%x)
    call RegPackAlloc(RF, InData%xd)
    call RegPackAlloc(RF, InData%z)
    call RegPackAlloc(RF, InData%OtherSt)
-   call RegPackAlloc(RF, InData%u)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1537,11 +1647,12 @@ subroutine Glue_UnPackLinSave(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%Times); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%x); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%xd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%z); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%OtherSt); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%u); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Glue_CopyOutputFileType(SrcOutputFileTypeData, DstOutputFileTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -1558,7 +1669,7 @@ subroutine Glue_CopyOutputFileType(SrcOutputFileTypeData, DstOutputFileTypeData,
    call Glue_CopyModDataType(SrcOutputFileTypeData%ModGlue, DstOutputFileTypeData%ModGlue, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call Glue_CopyLinSave(SrcOutputFileTypeData%OP, DstOutputFileTypeData%OP, CtrlCode, ErrStat2, ErrMsg2)
+   call Glue_CopyLinSave(SrcOutputFileTypeData%Lin, DstOutputFileTypeData%Lin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 end subroutine
@@ -1574,7 +1685,7 @@ subroutine Glue_DestroyOutputFileType(OutputFileTypeData, ErrStat, ErrMsg)
    ErrMsg  = ''
    call Glue_DestroyModDataType(OutputFileTypeData%ModGlue, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call Glue_DestroyLinSave(OutputFileTypeData%OP, ErrStat2, ErrMsg2)
+   call Glue_DestroyLinSave(OutputFileTypeData%Lin, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
@@ -1584,7 +1695,7 @@ subroutine Glue_PackOutputFileType(RF, Indata)
    character(*), parameter         :: RoutineName = 'Glue_PackOutputFileType'
    if (RF%ErrStat >= AbortErrLev) return
    call Glue_PackModDataType(RF, InData%ModGlue) 
-   call Glue_PackLinSave(RF, InData%OP) 
+   call Glue_PackLinSave(RF, InData%Lin) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1594,7 +1705,228 @@ subroutine Glue_UnPackOutputFileType(RF, OutData)
    character(*), parameter            :: RoutineName = 'Glue_UnPackOutputFileType'
    if (RF%ErrStat /= ErrID_None) return
    call Glue_UnpackModDataType(RF, OutData%ModGlue) ! ModGlue 
-   call Glue_UnpackLinSave(RF, OutData%OP) ! OP 
+   call Glue_UnpackLinSave(RF, OutData%Lin) ! Lin 
+end subroutine
+
+subroutine Glue_CopyCalcSteady(SrcCalcSteadyData, DstCalcSteadyData, CtrlCode, ErrStat, ErrMsg)
+   type(Glue_CalcSteady), intent(in) :: SrcCalcSteadyData
+   type(Glue_CalcSteady), intent(inout) :: DstCalcSteadyData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'Glue_CopyCalcSteady'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(SrcCalcSteadyData%AzimuthTarget)) then
+      LB(1:1) = lbound(SrcCalcSteadyData%AzimuthTarget, kind=B8Ki)
+      UB(1:1) = ubound(SrcCalcSteadyData%AzimuthTarget, kind=B8Ki)
+      if (.not. allocated(DstCalcSteadyData%AzimuthTarget)) then
+         allocate(DstCalcSteadyData%AzimuthTarget(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstCalcSteadyData%AzimuthTarget.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstCalcSteadyData%AzimuthTarget = SrcCalcSteadyData%AzimuthTarget
+   end if
+   DstCalcSteadyData%AzimuthDelta = SrcCalcSteadyData%AzimuthDelta
+   DstCalcSteadyData%IsConverged = SrcCalcSteadyData%IsConverged
+   DstCalcSteadyData%FoundSteady = SrcCalcSteadyData%FoundSteady
+   DstCalcSteadyData%ForceLin = SrcCalcSteadyData%ForceLin
+   DstCalcSteadyData%NumRotations = SrcCalcSteadyData%NumRotations
+   DstCalcSteadyData%NumOutputs = SrcCalcSteadyData%NumOutputs
+   if (allocated(SrcCalcSteadyData%psi_buffer)) then
+      LB(1:1) = lbound(SrcCalcSteadyData%psi_buffer, kind=B8Ki)
+      UB(1:1) = ubound(SrcCalcSteadyData%psi_buffer, kind=B8Ki)
+      if (.not. allocated(DstCalcSteadyData%psi_buffer)) then
+         allocate(DstCalcSteadyData%psi_buffer(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstCalcSteadyData%psi_buffer.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstCalcSteadyData%psi_buffer = SrcCalcSteadyData%psi_buffer
+   end if
+   if (allocated(SrcCalcSteadyData%y_buffer)) then
+      LB(1:2) = lbound(SrcCalcSteadyData%y_buffer, kind=B8Ki)
+      UB(1:2) = ubound(SrcCalcSteadyData%y_buffer, kind=B8Ki)
+      if (.not. allocated(DstCalcSteadyData%y_buffer)) then
+         allocate(DstCalcSteadyData%y_buffer(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstCalcSteadyData%y_buffer.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstCalcSteadyData%y_buffer = SrcCalcSteadyData%y_buffer
+   end if
+   if (allocated(SrcCalcSteadyData%y_azimuth)) then
+      LB(1:2) = lbound(SrcCalcSteadyData%y_azimuth, kind=B8Ki)
+      UB(1:2) = ubound(SrcCalcSteadyData%y_azimuth, kind=B8Ki)
+      if (.not. allocated(DstCalcSteadyData%y_azimuth)) then
+         allocate(DstCalcSteadyData%y_azimuth(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstCalcSteadyData%y_azimuth.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstCalcSteadyData%y_azimuth = SrcCalcSteadyData%y_azimuth
+   end if
+   if (allocated(SrcCalcSteadyData%y_interp)) then
+      LB(1:1) = lbound(SrcCalcSteadyData%y_interp, kind=B8Ki)
+      UB(1:1) = ubound(SrcCalcSteadyData%y_interp, kind=B8Ki)
+      if (.not. allocated(DstCalcSteadyData%y_interp)) then
+         allocate(DstCalcSteadyData%y_interp(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstCalcSteadyData%y_interp.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstCalcSteadyData%y_interp = SrcCalcSteadyData%y_interp
+   end if
+   if (allocated(SrcCalcSteadyData%y_diff)) then
+      LB(1:1) = lbound(SrcCalcSteadyData%y_diff, kind=B8Ki)
+      UB(1:1) = ubound(SrcCalcSteadyData%y_diff, kind=B8Ki)
+      if (.not. allocated(DstCalcSteadyData%y_diff)) then
+         allocate(DstCalcSteadyData%y_diff(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstCalcSteadyData%y_diff.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstCalcSteadyData%y_diff = SrcCalcSteadyData%y_diff
+   end if
+   if (allocated(SrcCalcSteadyData%y_ref)) then
+      LB(1:1) = lbound(SrcCalcSteadyData%y_ref, kind=B8Ki)
+      UB(1:1) = ubound(SrcCalcSteadyData%y_ref, kind=B8Ki)
+      if (.not. allocated(DstCalcSteadyData%y_ref)) then
+         allocate(DstCalcSteadyData%y_ref(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstCalcSteadyData%y_ref.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstCalcSteadyData%y_ref = SrcCalcSteadyData%y_ref
+   end if
+end subroutine
+
+subroutine Glue_DestroyCalcSteady(CalcSteadyData, ErrStat, ErrMsg)
+   type(Glue_CalcSteady), intent(inout) :: CalcSteadyData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Glue_DestroyCalcSteady'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(CalcSteadyData%AzimuthTarget)) then
+      deallocate(CalcSteadyData%AzimuthTarget)
+   end if
+   if (allocated(CalcSteadyData%psi_buffer)) then
+      deallocate(CalcSteadyData%psi_buffer)
+   end if
+   if (allocated(CalcSteadyData%y_buffer)) then
+      deallocate(CalcSteadyData%y_buffer)
+   end if
+   if (allocated(CalcSteadyData%y_azimuth)) then
+      deallocate(CalcSteadyData%y_azimuth)
+   end if
+   if (allocated(CalcSteadyData%y_interp)) then
+      deallocate(CalcSteadyData%y_interp)
+   end if
+   if (allocated(CalcSteadyData%y_diff)) then
+      deallocate(CalcSteadyData%y_diff)
+   end if
+   if (allocated(CalcSteadyData%y_ref)) then
+      deallocate(CalcSteadyData%y_ref)
+   end if
+end subroutine
+
+subroutine Glue_PackCalcSteady(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(Glue_CalcSteady), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Glue_PackCalcSteady'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%AzimuthTarget)
+   call RegPack(RF, InData%AzimuthDelta)
+   call RegPack(RF, InData%IsConverged)
+   call RegPack(RF, InData%FoundSteady)
+   call RegPack(RF, InData%ForceLin)
+   call RegPack(RF, InData%NumRotations)
+   call RegPack(RF, InData%NumOutputs)
+   call RegPackAlloc(RF, InData%psi_buffer)
+   call RegPackAlloc(RF, InData%y_buffer)
+   call RegPackAlloc(RF, InData%y_azimuth)
+   call RegPackAlloc(RF, InData%y_interp)
+   call RegPackAlloc(RF, InData%y_diff)
+   call RegPackAlloc(RF, InData%y_ref)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine Glue_UnPackCalcSteady(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(Glue_CalcSteady), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Glue_UnPackCalcSteady'
+   integer(B8Ki)   :: LB(2), UB(2)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%AzimuthTarget); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%AzimuthDelta); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%IsConverged); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%FoundSteady); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ForceLin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumRotations); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumOutputs); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%psi_buffer); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%y_buffer); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%y_azimuth); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%y_interp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%y_diff); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%y_ref); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine Glue_CopyLinMisc(SrcLinMiscData, DstLinMiscData, CtrlCode, ErrStat, ErrMsg)
+   type(Glue_LinMisc), intent(in) :: SrcLinMiscData
+   type(Glue_LinMisc), intent(inout) :: DstLinMiscData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Glue_CopyLinMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstLinMiscData%TimeIndex = SrcLinMiscData%TimeIndex
+   DstLinMiscData%AzimuthIndex = SrcLinMiscData%AzimuthIndex
+   DstLinMiscData%IsConverged = SrcLinMiscData%IsConverged
+end subroutine
+
+subroutine Glue_DestroyLinMisc(LinMiscData, ErrStat, ErrMsg)
+   type(Glue_LinMisc), intent(inout) :: LinMiscData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Glue_DestroyLinMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
+
+subroutine Glue_PackLinMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(Glue_LinMisc), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Glue_PackLinMisc'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%TimeIndex)
+   call RegPack(RF, InData%AzimuthIndex)
+   call RegPack(RF, InData%IsConverged)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine Glue_UnPackLinMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(Glue_LinMisc), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Glue_UnPackLinMisc'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%TimeIndex); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%AzimuthIndex); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%IsConverged); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Glue_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
@@ -1610,18 +1942,18 @@ subroutine Glue_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Glue_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(SrcMiscData%ModData)) then
-      LB(1:1) = lbound(SrcMiscData%ModData, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%ModData, kind=B8Ki)
-      if (.not. allocated(DstMiscData%ModData)) then
-         allocate(DstMiscData%ModData(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcMiscData%Modules)) then
+      LB(1:1) = lbound(SrcMiscData%Modules, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%Modules, kind=B8Ki)
+      if (.not. allocated(DstMiscData%Modules)) then
+         allocate(DstMiscData%Modules(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ModData.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Modules.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
       do i1 = LB(1), UB(1)
-         call Glue_CopyModDataType(SrcMiscData%ModData(i1), DstMiscData%ModData(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call Glue_CopyModDataType(SrcMiscData%Modules(i1), DstMiscData%Modules(i1), CtrlCode, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
@@ -1642,6 +1974,12 @@ subroutine Glue_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          if (ErrStat >= AbortErrLev) return
       end do
    end if
+   call Glue_CopyLinMisc(SrcMiscData%Lin, DstMiscData%Lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call Glue_CopyCalcSteady(SrcMiscData%CS, DstMiscData%CS, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcMiscData%q)) then
       LB(1:2) = lbound(SrcMiscData%q, kind=B8Ki)
       UB(1:2) = ubound(SrcMiscData%q, kind=B8Ki)
@@ -1947,14 +2285,14 @@ subroutine Glue_DestroyMisc(MiscData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Glue_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(MiscData%ModData)) then
-      LB(1:1) = lbound(MiscData%ModData, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%ModData, kind=B8Ki)
+   if (allocated(MiscData%Modules)) then
+      LB(1:1) = lbound(MiscData%Modules, kind=B8Ki)
+      UB(1:1) = ubound(MiscData%Modules, kind=B8Ki)
       do i1 = LB(1), UB(1)
-         call Glue_DestroyModDataType(MiscData%ModData(i1), ErrStat2, ErrMsg2)
+         call Glue_DestroyModDataType(MiscData%Modules(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end do
-      deallocate(MiscData%ModData)
+      deallocate(MiscData%Modules)
    end if
    if (allocated(MiscData%Mappings)) then
       LB(1:1) = lbound(MiscData%Mappings, kind=B8Ki)
@@ -1965,6 +2303,10 @@ subroutine Glue_DestroyMisc(MiscData, ErrStat, ErrMsg)
       end do
       deallocate(MiscData%Mappings)
    end if
+   call Glue_DestroyLinMisc(MiscData%Lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Glue_DestroyCalcSteady(MiscData%CS, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%q)) then
       deallocate(MiscData%q)
    end if
@@ -2046,13 +2388,13 @@ subroutine Glue_PackMisc(RF, Indata)
    integer(B8Ki)   :: i1, i2
    integer(B8Ki)   :: LB(2), UB(2)
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, allocated(InData%ModData))
-   if (allocated(InData%ModData)) then
-      call RegPackBounds(RF, 1, lbound(InData%ModData, kind=B8Ki), ubound(InData%ModData, kind=B8Ki))
-      LB(1:1) = lbound(InData%ModData, kind=B8Ki)
-      UB(1:1) = ubound(InData%ModData, kind=B8Ki)
+   call RegPack(RF, allocated(InData%Modules))
+   if (allocated(InData%Modules)) then
+      call RegPackBounds(RF, 1, lbound(InData%Modules, kind=B8Ki), ubound(InData%Modules, kind=B8Ki))
+      LB(1:1) = lbound(InData%Modules, kind=B8Ki)
+      UB(1:1) = ubound(InData%Modules, kind=B8Ki)
       do i1 = LB(1), UB(1)
-         call Glue_PackModDataType(RF, InData%ModData(i1)) 
+         call Glue_PackModDataType(RF, InData%Modules(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%Mappings))
@@ -2064,6 +2406,8 @@ subroutine Glue_PackMisc(RF, Indata)
          call Glue_PackMappingType(RF, InData%Mappings(i1)) 
       end do
    end if
+   call Glue_PackLinMisc(RF, InData%Lin) 
+   call Glue_PackCalcSteady(RF, InData%CS) 
    call RegPackAlloc(RF, InData%q)
    call RegPackAlloc(RF, InData%qn)
    call RegPackAlloc(RF, InData%x)
@@ -2104,17 +2448,17 @@ subroutine Glue_UnPackMisc(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
-   if (allocated(OutData%ModData)) deallocate(OutData%ModData)
+   if (allocated(OutData%Modules)) deallocate(OutData%Modules)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
       call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%ModData(LB(1):UB(1)),stat=stat)
+      allocate(OutData%Modules(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ModData.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Modules.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call Glue_UnpackModDataType(RF, OutData%ModData(i1)) ! ModData 
+         call Glue_UnpackModDataType(RF, OutData%Modules(i1)) ! Modules 
       end do
    end if
    if (allocated(OutData%Mappings)) deallocate(OutData%Mappings)
@@ -2130,6 +2474,8 @@ subroutine Glue_UnPackMisc(RF, OutData)
          call Glue_UnpackMappingType(RF, OutData%Mappings(i1)) ! Mappings 
       end do
    end if
+   call Glue_UnpackLinMisc(RF, OutData%Lin) ! Lin 
+   call Glue_UnpackCalcSteady(RF, OutData%CS) ! CS 
    call RegUnpackAlloc(RF, OutData%q); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%qn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%x); if (RegCheckErr(RF, RoutineName)) return

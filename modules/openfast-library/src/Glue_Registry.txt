@@ -130,8 +130,13 @@ typedef ^ ^                     Glue_LinType    Lin                     -  -  - 
 # Glue Parameters
 #----------------------------------------------------------------------------------------------------------------------------------
 
-typedef ^ Glue_ParameterType    IntKi           iMod                    :  -  -     "ModData index order for linearization" -
-typedef ^ ^                     VarsIdxType     IdxLin                  -  -  -     "Variable index for linearization data" -
+typedef ^ Glue_LinParam         IntKi           NumTimes                -  -  -     "Number of times to linearize" -
+typedef ^ ^                     IntKi           InterpOrder             -  -  -     "Interpolation order" -
+typedef ^ ^                     logical         SaveOPs                 -  -  -     "flag to save operating points during linearization" -
+typedef ^ ^                     VarsIdxType     Idx                     -  -  -     "Variable index for linearization data" -
+typedef ^ ^                     IntKi           iMod                    :  -  -     "ModData index order for linearization" -
+
+typedef ^ Glue_ParameterType    Glue_LinParam   Lin                     -  -  -     "Linearization parameters"
 typedef ^ ^                     R8Ki            DT                      -  -  -     "solution time step" -
 typedef ^ ^                     R8Ki            ConvTol                 -  -  -     "Solution convergence tolerance" -
 typedef ^ ^                     IntKi           NumCrctn                -  -  -     "" -
@@ -169,21 +174,42 @@ typedef ^ ^                     IntKi           iModPost                :  -  - 
 # Output Data
 #----------------------------------------------------------------------------------------------------------------------------------
 
-typedef ^ Glue_LinSave          R8Ki            x                       :: -  -     "linearization operating point continuous state" -
+typedef ^ Glue_LinSave          R8Ki            Times                   :  -  -     "linearization times" -
+typedef ^ ^                     R8Ki            u                       :: -  -     "linearization operating point input" -
+typedef ^ ^                     R8Ki            x                       :: -  -     "linearization operating point continuous state" -
 typedef ^ ^                     R8Ki            xd                      :: -  -     "linearization operating point discrete state" -
 typedef ^ ^                     R8Ki            z                       :: -  -     "linearization operating point constraint state" -
 typedef ^ ^                     R8Ki            OtherSt                 :: -  -     "linearization operating point other state" -
-typedef ^ ^                     R8Ki            u                       :: -  -     "linearization operating point input" -
 
 typedef ^ Glue_OutputFileType   ModDataType     ModGlue                 -  -  -     "glue module data" -
-typedef ^ ^                     Glue_LinSave    OP                      -  -  -     "Operating point data for linearization
+typedef ^ ^                     Glue_LinSave    Lin                     -  -  -     "Operating point data for linearization"
 
 #----------------------------------------------------------------------------------------------------------------------------------
 # Miscellaneous Data
 #----------------------------------------------------------------------------------------------------------------------------------
 
-typedef ^ Glue_MiscVarType      ModDataType     ModData                 :  -  -     "module variable and value data" -
+typedef ^ Glue_CalcSteady       R8Ki            AzimuthTarget           :  -  -     "target azimuth positions where outputs are calculated" -
+typedef ^ ^                     R8Ki            AzimuthDelta            -  -  -     "" -
+typedef ^ ^                     logical         IsConverged             -  -  -     "Steady State calculation is converged" -
+typedef ^ ^                     logical         FoundSteady             -  -  -     "" -
+typedef ^ ^                     logical         ForceLin                -  -  -     "" -
+typedef ^ ^                     IntKi           NumRotations            -  -  -     "Number of rotor rotations" -
+typedef ^ ^                     IntKi           NumOutputs              -  -  -     "Number of output values (ignoring write outputs)" -
+typedef ^ ^                     R8Ki            psi_buffer              :  -  -     "azimuth buffer for interpolation" -
+typedef ^ ^                     R8Ki            y_buffer                :: -  -     "output buffer for interpolation" -
+typedef ^ ^                     R8Ki            y_azimuth               :: -  -     "output values at target azimuths" -
+typedef ^ ^                     R8Ki            y_interp                :  -  -     "output values interpolated to target azimuth" -
+typedef ^ ^                     R8Ki            y_diff                  :  -  -     "difference between outputs from current and previous rotation" -
+typedef ^ ^                     R8Ki            y_ref                   :  -  -     "reference output values for error calculation" -
+
+typedef ^ Glue_LinMisc          IntKi           TimeIndex               -  -  -     "" -
+typedef ^ ^                     IntKi           AzimuthIndex            -  -  -     "" -
+typedef ^ ^                     logical         IsConverged             -  -  -     "" -
+
+typedef ^ Glue_MiscVarType      ModDataType     Modules                 :  -  -     "module variable and value data" -
 typedef ^ ^                     MappingType     Mappings                :  -  -     "Module mapping" -
+typedef ^ ^                     Glue_LinMisc    Lin                     -  -  -     "Linearization misc vars"
+typedef ^ ^                     Glue_CalcSteady CS                      -  -  -     "CalcSteady calculation data"
 typedef ^ ^                     R8Ki            q                       :: -  -     "" -
 typedef ^ ^                     R8Ki            qn                      :: -  -     "" -
 typedef ^ ^                     R8Ki            x                       :  -  -     "" -

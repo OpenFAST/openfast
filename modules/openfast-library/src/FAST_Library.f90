@@ -318,7 +318,7 @@ subroutine FAST_Update(iTurb_c, NumInputs_c, NumOutputs_c, InputAry, OutputAry, 
          ErrMsg = TRIM(ErrMsg)//NewLine//TRIM(ErrMsg2)
       end if
 
-      IF ( Turbine(iTurb)%m_FAST%Lin%FoundSteady) THEN
+      IF ( Turbine(iTurb)%m_Glue%CS%FoundSteady) THEN
          EndSimulationEarly = .TRUE.
       END IF
 
