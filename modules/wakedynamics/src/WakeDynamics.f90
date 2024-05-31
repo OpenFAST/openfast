@@ -435,16 +435,16 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%C_HWkDfl_x    = InitInp%InputFileData%C_HWkDfl_x 
    p%C_HWkDfl_xY   = InitInp%InputFileData%C_HWkDfl_xY
    p%C_NearWake    = InitInp%InputFileData%C_NearWake  
+   p%k_vAmb        = InitInp%InputFileData%k_vAmb
+   p%C_vAmb_FMin   = InitInp%InputFileData%C_vAmb_FMin
    p%C_vAmb_DMin   = InitInp%InputFileData%C_vAmb_DMin 
    p%C_vAmb_DMax   = InitInp%InputFileData%C_vAmb_DMax 
-   p%C_vAmb_FMin   = InitInp%InputFileData%C_vAmb_FMin 
    p%C_vAmb_Exp    = InitInp%InputFileData%C_vAmb_Exp  
+   p%k_vShr        = InitInp%InputFileData%k_vShr
+   p%C_vShr_FMin   = InitInp%InputFileData%C_vShr_FMin
    p%C_vShr_DMin   = InitInp%InputFileData%C_vShr_DMin 
    p%C_vShr_DMax   = InitInp%InputFileData%C_vShr_DMax 
-   p%C_vShr_FMin   = InitInp%InputFileData%C_vShr_FMin 
    p%C_vShr_Exp    = InitInp%InputFileData%C_vShr_Exp  
-   p%k_vAmb        = InitInp%InputFileData%k_vAmb      
-   p%k_vShr        = InitInp%InputFileData%k_vShr      
    p%Mod_WakeDiam  = InitInp%InputFileData%Mod_WakeDiam
    p%C_WakeDiam    = InitInp%InputFileData%C_WakeDiam  
    ! Curl variables
@@ -456,10 +456,17 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%k_vCurl       = InitInp%InputFileData%k_vCurl  
    p%OutAllPlanes  = InitInp%InputFileData%OutAllPlanes  
    ! Wake-Added Turbulence (WAT) variables
-   p%WAT           = InitInp%InputFileData%WAT  
-   p%WAT_k_Def     = InitInp%InputFileData%WAT_k_Def  
-   p%WAT_k_Grad    = InitInp%InputFileData%WAT_k_Grad
-   p%WAT_k_Off     = InitInp%InputFileData%WAT_k_Off
+   p%WAT             = InitInp%InputFileData%WAT
+   p%WAT_k_Def_k_c   = InitInp%InputFileData%WAT_k_Def_k_c
+   p%WAT_k_Def_FMin  = InitInp%InputFileData%WAT_k_Def_FMin
+   p%WAT_k_Def_DMin  = InitInp%InputFileData%WAT_k_Def_DMin
+   p%WAT_k_Def_DMax  = InitInp%InputFileData%WAT_k_Def_DMax
+   p%WAT_k_Def_Exp   = InitInp%InputFileData%WAT_k_Def_Exp
+   p%WAT_k_Grad_k_c  = InitInp%InputFileData%WAT_k_Grad_k_c
+   p%WAT_k_Grad_FMin = InitInp%InputFileData%WAT_k_Grad_FMin
+   p%WAT_k_Grad_DMin = InitInp%InputFileData%WAT_k_Grad_DMin
+   p%WAT_k_Grad_DMax = InitInp%InputFileData%WAT_k_Grad_DMax
+   p%WAT_k_Grad_Exp  = InitInp%InputFileData%WAT_k_Grad_Exp
 
    ! Finite difference grid coordinates r, y, z
    allocate(p%r(0:p%NumRadii-1),             stat=errStat2);  if (Failed0('p%r.')) return;
@@ -1578,11 +1585,8 @@ contains
             if(verbose) call WrScr(trim(tmpStr))
          else
             ! calculate k_Def and k_Grad with EddyFilter (see Torque 2024, E. Branlard for derivation)
-            ! NOTE:  order swap of coefficients here
-            !        k_Def and k_Grad contain in order (k_c, FMin, DMin, DMax, Exp)
-            !        EddyFilter: (x_plane, D_rotor, C_Dmin, C_Dmax, C_Fmin, C_Exp)
-            k_Def  = p%WAT_k_Def( 1) * EddyFilter(xd%x_plane(i), u%D_rotor, p%WAT_k_Def( 3), p%WAT_k_Def( 4), p%WAT_k_Def( 2), p%WAT_k_Def( 5) )
-            k_Grad = p%WAT_k_Grad(1) * EddyFilter(xd%x_plane(i), u%D_rotor, p%WAT_k_Grad(3), p%WAT_k_Grad(4), p%WAT_k_Grad(2), p%WAT_k_Grad(5) )
+            k_Def  = p%WAT_k_Def_k_c  * EddyFilter(xd%x_plane(i), u%D_rotor, p%WAT_k_Def_Dmin,  p%WAT_k_Def_Dmax,  p%WAT_k_Def_Fmin,  p%WAT_k_Def_Exp  )
+            k_Grad = p%WAT_k_Grad_k_c * EddyFilter(xd%x_plane(i), u%D_rotor, p%WAT_k_Grad_Dmin, p%WAT_k_Grad_Dmax, p%WAT_k_Grad_Fmin, p%WAT_k_Grad_Exp )
             do iz = -p%NumRadii+1, p%NumRadii-1
                do iy = -p%NumRadii+1, p%NumRadii-1
                   ! Polar gradients
@@ -1599,8 +1603,7 @@ contains
                   dvdr = m%dvx_dy(iy,iz,i) * C  + m%dvx_dz(iy,iz,i) * S
                   ! Calculate scaling factor k_mt for wake-added Turbulence (equation 16)
                   y%WAT_k(iy,iz,i) =           (k_Def /U0 *       abs(y%Vx_wake2(iy,iz,i)) &
-                                   &  +         k_Grad/U0 * R * ( abs(dvdr) + abs(dvdtheta_r) )) &
-                                   &  + p%WAT_k_Off
+                                   &  +         k_Grad/U0 * R * ( abs(dvdr) + abs(dvdtheta_r) ))
                end do ! iy
             end do ! iz
             if(verbose) write(tmpStr,'(A,I3,A,F6.2,A,F6.3,A,F6.3,A,F8.3)') 'Plane:',i,'  x/D:',xd%x_plane(i)/u%D_rotor,'  kmax:',maxval(y%WAT_k(:,:,i)), '  velmax:',maxval(abs(y%Vx_wake2(:,:,i)))

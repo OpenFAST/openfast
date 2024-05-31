@@ -688,7 +688,7 @@ below. The five parameters in order are:
          | Calibrated parameter defining the transitional diameter fraction
             between the exponential and maximum regions. 
 
-   -  :math:`e` [-] (:math:`\ge 0`)
+   -  :math:`e` [-] (:math:`\gt 0`)
          | DEFAULT value: :math:`e = 1.0`.
          | Calibrated parameter defining the exponent in the exponential region.
 
@@ -719,7 +719,7 @@ below. The five parameters in order are:
          | Calibrated parameter defining the transitional diameter fraction
             between the exponential and maximum regions. 
 
-   -  :math:`e` [-] (:math:`\ge 0`)
+   -  :math:`e` [-] (:math:`\gt 0`)
          | DEFAULT value: :math:`e = 0.65`.
          | Calibrated parameter defining the exponent in the exponential region.
 

@@ -1357,7 +1357,7 @@ parameters are shown in :eq:`eq:kDefGradDefaults`.
 .. math::
    \begin{matrix}
                                & & k_\text{def/grad} & f_\text{min}   & D_\text{min} & D_\text{max}       & e       \\
-                               & & (\gt 0)           & (\ge 0, \le 1) & (\ge 0)      & (\ge k_\text{min}) & (\ge 0) \\\hline
+                               & & (\gt 0)           & (\ge 0, \le 1) & (\ge 0)      & (\gt k_\text{min}) & (\gt 0) \\\hline
       k_\text{def}^\text{WAT}  & & 0.6               & 0              & 0            & 2                  & 1       \\
       k_\text{grad}^\text{WAT} & & 3                 & 0              & 0            & 12                 & 0.65    \\
    \end{matrix}

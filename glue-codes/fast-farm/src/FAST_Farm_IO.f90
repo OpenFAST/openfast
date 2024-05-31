@@ -564,6 +564,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    CHARACTER(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
    CHARACTER(*),   PARAMETER     :: RoutineName = 'Farm_ReadPrimaryFile'
    Real(ReKi)                    :: DefaultReVal ! Default real value
+   real(ReKi)                    :: TmpRAry5(5)    ! Temporary array for reading in array of 5
 
       ! Initialize some variables:
    UnEc = -1
@@ -875,12 +876,22 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    call ReadAry( UnIn, InputFile, p%WAT_NxNyNz, 3, "WAT_NxNyNz", "Number of points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2] (m)", ErrStat2, ErrMsg2, UnEc ); if(failed()) return
    call ReadAry( UnIn, InputFile, p%WAT_DxDyDz, 3, "WAT_DxDyDz", "Distance (in meters) between points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2] (m)", ErrStat2, ErrMsg2, UnEc ); if(failed()) return
    call ReadVarWDefault( UnIn, InputFile, p%WAT_ScaleBox, "WAT_ScaleBox",   "Flag to scale the input turbulence box to zero mean and unit standard deviation at every node",  .False., ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   call ReadAryWDefault( UnIn, InputFile, WD_InitInp%WAT_k_Def,  5, "WAT_k_Def",  &
+   call ReadAryWDefault( UnIn, InputFile, TmpRAry5,  5, "WAT_k_Def",  &
          "Calibrated parameters for the influence of the maximum wake deficit on wake-added turbulence (set of 5 parameters: k_Def , DMin, DMax, FMin, Exp) (-) [>=0.0, >=0.0, >DMin, >=0.0 and <=1.0, >=0.0] or DEFAULT [DEFAULT=[0.6, 0.0, 0.0,  2.0, 1.0 ]]", &
          (/0.6_ReKi, 0.0_ReKi, 0.0_ReKi, 2.0_ReKi, 1.00_ReKi/), ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   call ReadAryWDefault( UnIn, InputFile, WD_InitInp%WAT_k_Grad, 5, "WAT_k_Grad", &
+      WD_InitInp%WAT_k_Def_k_c  = TmpRAry5(1)
+      WD_InitInp%WAT_k_Def_FMin = TmpRAry5(2)
+      WD_InitInp%WAT_k_Def_DMin = TmpRAry5(3)
+      WD_InitInp%WAT_k_Def_DMax = TmpRAry5(4)
+      WD_InitInp%WAT_k_Def_Exp  = TmpRAry5(5)
+   call ReadAryWDefault( UnIn, InputFile, TmpRAry5, 5, "WAT_k_Grad", &
          "Calibrated parameters for the influence of the radial velocity gradient of the wake deficit on wake-added turbulence (set of 5 parameters: k_Grad, DMin, DMax, FMin, Exp) (-) [>=0.0, >=0.0, >DMin, >=0.0 and <=1.0, >=0.0] or DEFAULT [DEFAULT=[3.0, 0.0, 0.0, 12.0, 0.65]",  &
          (/3.0_ReKi, 0.0_ReKi, 0.0_ReKi,12.0_ReKi, 0.65_ReKi/), ErrStat2, ErrMsg2, UnEc); if(failed()) return
+      WD_InitInp%WAT_k_Grad_k_c  = TmpRAry5(1)
+      WD_InitInp%WAT_k_Grad_FMin = TmpRAry5(2)
+      WD_InitInp%WAT_k_Grad_DMin = TmpRAry5(3)
+      WD_InitInp%WAT_k_Grad_DMax = TmpRAry5(4)
+      WD_InitInp%WAT_k_Grad_Exp  = TmpRAry5(5)
    if ( PathIsRelative( p%WAT_BoxFile ) ) p%WAT_BoxFile = TRIM(PriPath)//TRIM(p%WAT_BoxFile)
    if (p%WAT > 0_IntKi) WD_InitInp%WAT = .true.
 
@@ -980,21 +991,6 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    CALL ReadOutputList ( UnIn, InputFile, OutList, p%NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  ); if (Failed()) return     ! Routine in NWTC Subroutine Library
 
 
-   !---------------------- READ EXTRA INPUTS -----------------------------------
-   WD_InitInp%WAT_k_Off=0.0
-   do while(ErrStat2==ErrID_None)
-      read(UnIn, '(A)', iostat=ErrStat2) sDummy
-      if (ErrStat2/=ErrID_None) exit
-      call Conv2UC(sDummy)  ! to uppercase
-      if (index(sDummy, '!') == 1 .or. index(sDummy, '=') == 1 .or. index(sDummy, '#') == 1) then
-         ! pass comment lines
-      elseif (index(sDummy, 'WAT_K_OFF')>1) then
-         read(sDummy, *) WD_InitInp%WAT_k_Off
-         print*,'   >>> WAT_K_OFF:',WD_InitInp%WAT_k_Off
-      !else
-      !   print*,'[WARN] Line ignored: '//trim(sDummy)
-      endif
-   enddo
    !---------------------- END OF FILE -----------------------------------------
 
    call cleanup()
@@ -1115,23 +1111,23 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    if (p%WAT < 0_IntKi .or. p%WAT > 2_IntKi) CALL SetErrStat(ErrID_Fatal,'WAT option must be 0: no wake added turbulence, 1: predefined turbulence box, or 2: user defined turbulence box.',ErrStat,ErrMsg,RoutineName)
    if (p%WAT>0) then
       ! Checks on k_Def
-      if (WD_InitInp%WAT_k_Def(1) <= 0.0_ReKi)                                         call SetErrStat(ErrID_Fatal,'WAT_k_Def(1) (k_def) must be >0.',ErrStat,ErrMsg,RoutineName)
-      if (WD_InitInp%WAT_k_Def(2) <  0.0_ReKi .or. WD_InitInp%WAT_k_Def(2) > 1.0_ReKi) call SetErrStat(ErrID_Fatal,'WAT_k_Def(2) (f_min) must be >=0 and <=1.',ErrStat,ErrMsg,RoutineName)
-      if (WD_InitInp%WAT_k_Def(3) <  0.0_ReKi)                                         call SetErrStat(ErrID_Fatal,'WAT_k_Def(3) (D_min) must be >=0.',ErrStat,ErrMsg,RoutineName)
-      if (WD_InitInp%WAT_k_Def(4) <  WD_InitInp%WAT_k_Def(3))                          call SetErrStat(ErrID_Fatal,'WAT_k_Def(4) (D_max) must be greater than D_min.',ErrStat,ErrMsg,RoutineName)
-      if (WD_InitInp%WAT_k_Def(5) < 0.0_ReKi)                                          call SetErrStat(ErrID_Fatal,'WAT_k_Def(5) (e) must be >=0.',ErrStat,ErrMsg,RoutineName)
+      if (WD_InitInp%WAT_k_Def_k_c  <= 0.0_ReKi)                                           call SetErrStat(ErrID_Fatal,'WAT_k_Def(1) (k_def) must be >0.',ErrStat,ErrMsg,RoutineName)
+      if (WD_InitInp%WAT_k_Def_FMin <  0.0_ReKi .or. WD_InitInp%WAT_k_Def_FMin > 1.0_ReKi) call SetErrStat(ErrID_Fatal,'WAT_k_Def(2) (f_min) must be >=0 and <=1.',ErrStat,ErrMsg,RoutineName)
+      if (WD_InitInp%WAT_k_Def_DMin <  0.0_ReKi)                                           call SetErrStat(ErrID_Fatal,'WAT_k_Def(3) (D_min) must be >=0.',ErrStat,ErrMsg,RoutineName)
+      if (WD_InitInp%WAT_k_Def_DMax <= WD_InitInp%WAT_k_Def_DMin)                          call SetErrStat(ErrID_Fatal,'WAT_k_Def(4) (D_max) must be greater than D_min.',ErrStat,ErrMsg,RoutineName)
+      if (WD_InitInp%WAT_k_Def_Exp  <  0.0_ReKi)                                           call SetErrStat(ErrID_Fatal,'WAT_k_Def(5) (e) must be >0.',ErrStat,ErrMsg,RoutineName)
       ! Tests on k_Grad
-      if (WD_InitInp%WAT_k_Grad(1) <= 0.0_ReKi)                                          call SetErrStat(ErrID_Fatal,'WAT_k_Grad(1) (k_def) must be >0.',ErrStat,ErrMsg,RoutineName)
-      if (WD_InitInp%WAT_k_Grad(2) <  0.0_ReKi .or. WD_InitInp%WAT_k_Grad(2) > 1.0_ReKi) call SetErrStat(ErrID_Fatal,'WAT_k_Grad(2) (f_min) must be >=0 and <=1.',ErrStat,ErrMsg,RoutineName)
-      if (WD_InitInp%WAT_k_Grad(3) <  0.0_ReKi)                                          call SetErrStat(ErrID_Fatal,'WAT_k_Grad(3) (D_min) must be >=0.',ErrStat,ErrMsg,RoutineName)
-      if (WD_InitInp%WAT_k_Grad(4) <  WD_InitInp%WAT_k_Grad(3))                          call SetErrStat(ErrID_Fatal,'WAT_k_Grad(4) (D_max) must be greater than D_min.',ErrStat,ErrMsg,RoutineName)
-      if (WD_InitInp%WAT_k_Grad(5) < 0.0_ReKi)                                           call SetErrStat(ErrID_Fatal,'WAT_k_Grad(5) (e) must be >=0.',ErrStat,ErrMsg,RoutineName)
+      if (WD_InitInp%WAT_k_Grad_k_c  <= 0.0_ReKi)                                            call SetErrStat(ErrID_Fatal,'WAT_k_Grad(1) (k_def) must be >0.',ErrStat,ErrMsg,RoutineName)
+      if (WD_InitInp%WAT_k_Grad_FMin <  0.0_ReKi .or. WD_InitInp%WAT_k_Grad_FMin > 1.0_ReKi) call SetErrStat(ErrID_Fatal,'WAT_k_Grad(2) (f_min) must be >=0 and <=1.',ErrStat,ErrMsg,RoutineName)
+      if (WD_InitInp%WAT_k_Grad_DMin <  0.0_ReKi)                                            call SetErrStat(ErrID_Fatal,'WAT_k_Grad(3) (D_min) must be >=0.',ErrStat,ErrMsg,RoutineName)
+      if (WD_InitInp%WAT_k_Grad_DMax <= WD_InitInp%WAT_k_Grad_DMin)                          call SetErrStat(ErrID_Fatal,'WAT_k_Grad(4) (D_max) must be greater than D_min.',ErrStat,ErrMsg,RoutineName)
+      if (WD_InitInp%WAT_k_Grad_Exp  <  0.0_ReKi)                                            call SetErrStat(ErrID_Fatal,'WAT_k_Grad(5) (e) must be >0.',ErrStat,ErrMsg,RoutineName)
       ! summary table
       call WrScr('  Wake-Added Turbulence (WAT): coefficients:')
       call WrScr('                k_c      f_min    D_min    D_max    e')
-      write(tmpStr,'(A6,A6,6(f9.3))') '','k_Def', WD_InitInp%WAT_k_Def( 1),WD_InitInp%WAT_k_Def( 2),WD_InitInp%WAT_k_Def( 3),WD_InitInp%WAT_k_Def( 4),WD_InitInp%WAT_k_Def( 5)
+      write(tmpStr,'(A6,A6,6(f9.3))') '','k_Def', WD_InitInp%WAT_k_Def_k_c, WD_InitInp%WAT_k_Def_FMin, WD_InitInp%WAT_k_Def_DMin, WD_InitInp%WAT_k_Def_DMax, WD_InitInp%WAT_k_Def_Exp
       call WrScr(tmpStr)
-      write(tmpStr,'(A6,A6,6(f9.3))') '','k_Grad',WD_InitInp%WAT_k_Grad(1),WD_InitInp%WAT_k_Grad(2),WD_InitInp%WAT_k_Grad(3),WD_InitInp%WAT_k_Grad(4),WD_InitInp%WAT_k_Grad(5)
+      write(tmpStr,'(A6,A6,6(f9.3))') '','k_Grad',WD_InitInp%WAT_k_Grad_k_c,WD_InitInp%WAT_k_Grad_FMin,WD_InitInp%WAT_k_Grad_DMin,WD_InitInp%WAT_k_Grad_DMax,WD_InitInp%WAT_k_Grad_Exp
       call WrScr(tmpStr)
    endif
 
