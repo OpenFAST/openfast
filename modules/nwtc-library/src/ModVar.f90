@@ -669,12 +669,9 @@ subroutine MV_ExtrapInterp(VarAry, y, tin, y_out, tin_out, ErrStat, ErrMsg)
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
    integer(IntKi)                :: InterpOrder
-   real(R8Ki)                    :: t(3), t_out, a1, a2, a3, ti
-   real(R8Ki)                    :: q1(4), q2(4), q(4)
-   real(R8Ki)                    :: dot, theta, sin_theta, a, b
+   real(R8Ki)                    :: t(3), t_out, a1, a2, a3
+   real(R8Ki)                    :: q1(4), q2(4), q3(4), q(4)
    integer(IntKi)                :: i, j, k
-   integer(IntKi), parameter     :: iq1 = 1
-   integer(IntKi)                :: iq2
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -702,7 +699,56 @@ subroutine MV_ExtrapInterp(VarAry, y, tin, y_out, tin_out, ErrStat, ErrMsg)
       a1 = -(t_out - t(2))/t(2)
       a2 = t_out/t(2)
       y_out = a1*y(:, 1) + a2*y(:, 2)
-      iq2 = 2
+
+      ! Loop through glue output variables
+      do i = 1, size(VarAry)
+
+         ! Switch based on variable field type
+         select case (VarAry(i)%Field)
+
+         case (FieldOrientation)   ! SLERP for orientation quaternions
+
+            k = VarAry(i)%iLoc(1)
+            do j = 1, VarAry(i)%Nodes
+
+               ! Get quaternion 1 from array, calculate scalar
+               q1(2:4) = y(k:k + 2, 1)
+               q1(1) = quat_scalar(q1(2:4))
+
+               ! Get quaternion 2 from array, calculate scalar
+               q2(2:4) = y(k:k + 2, 2)
+               q2(1) = quat_scalar(q2(2:4))
+
+               ! Calculate dot product of two quaternions
+               ! Make quaternion 2 consistent with quaternion 1 for interp
+               if (dot_product(q1, q2) < 0.0_R8Ki) q2 = -q2
+
+               ! Interpolate quaternion components
+               q = a1*q1 + a2*q2
+
+               ! Store canonical quaternion in output array
+               y_out(k:k + 2) = quat_canonical(q(1), q(2:4))
+
+               ! Increment quaternion index
+               k = k + 3
+            end do
+
+         case (FieldScalar) ! Scalar field
+
+            ! If field is on the range [0,2PI], perform angular interp
+            if (MV_HasFlags(VarAry(i), VF_2PI)) then
+
+               k = VarAry(i)%iLoc(1)
+               do j = 1, VarAry(i)%Num
+                  call Angles_ExtrapInterp(y(k, 1), y(k, 2), t(1:2), y_out(k), t_out)
+                  k = k + 1
+               end do
+
+            end if
+
+         end select
+
+      end do
 
    case (2) ! Quadratic Interpolation
 
@@ -712,7 +758,60 @@ subroutine MV_ExtrapInterp(VarAry, y, tin, y_out, tin_out, ErrStat, ErrMsg)
       a2 = (t_out - t(1))*(t_out - t(3))/((t(2) - t(1))*(t(2) - t(3)))
       a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
       y_out = a1*y(:, 1) + a2*y(:, 2) + a3*y(:, 3)
-      iq2 = 3
+
+      ! Loop through glue output variables
+      do i = 1, size(VarAry)
+
+         ! Switch based on variable field type
+         select case (VarAry(i)%Field)
+
+         case (FieldOrientation)   ! SLERP for orientation quaternions
+
+            k = VarAry(i)%iLoc(1)
+            do j = 1, VarAry(i)%Nodes
+
+               ! Get quaternion 1 from array, calculate scalar
+               q1(2:4) = y(k:k + 2, 1)
+               q1(1) = quat_scalar(q1(2:4))
+
+               ! Get quaternion 2 from array, calculate scalar
+               q2(2:4) = y(k:k + 2, 2)
+               q2(1) = quat_scalar(q2(2:4))
+
+               ! Get quaternion 3 from array, calculate scalar
+               q3(2:4) = y(k:k + 2, 3)
+               q3(1) = quat_scalar(q2(2:4))
+
+               ! Make quaternions 2 and 3 consistent with quaternion 1
+               if (dot_product(q1, q2) < 0.0_R8Ki) q2 = -q2
+               if (dot_product(q1, q3) < 0.0_R8Ki) q3 = -q3
+
+               ! Interpolate quaternion components
+               q = a1*q1 + a2*q2 + a3*q3
+
+               ! Store canonical quaternion in output array
+               y_out(k:k + 2) = quat_canonical(q(1), q(2:4))
+
+               ! Increment quaternion index
+               k = k + 3
+            end do
+
+         case (FieldScalar) ! Scalar field
+
+            ! If field is on the range [0,2PI], perform angular interp
+            if (MV_HasFlags(VarAry(i), VF_2PI)) then
+
+               k = VarAry(i)%iLoc(1)
+               do j = 1, VarAry(i)%Num
+                  call Angles_ExtrapInterp(y(k, 1), y(k, 2), y(k, 3), t, y_out(k), t_out)
+                  k = k + 1
+               end do
+
+            end if
+
+         end select
+
+      end do
 
    case default
 
@@ -720,65 +819,6 @@ subroutine MV_ExtrapInterp(VarAry, y, tin, y_out, tin_out, ErrStat, ErrMsg)
       call SetErrStat(ErrID_Fatal, 'size(t) must be less than 4 (order must be less than 3).', ErrStat, ErrMsg, RoutineName)
       return
    end select
-
-   ! If order is zero, return since interp is a copy
-   if (InterpOrder == 0) return
-
-   !----------------------------------------------------------------------------
-   ! Handle variables that can't be linearly interpolated (ie. orientations)
-   !----------------------------------------------------------------------------
-
-   ! Calculate interpolation parameter [0,1]
-   ti = t_out/t(iq2)
-
-   ! Loop through glue output variables
-   do i = 1, size(VarAry)
-
-      ! Switch based on variable field type
-      select case (VarAry(i)%Field)
-
-      case (FieldOrientation)   ! SLERP for orientation quaternions
-
-         k = VarAry(i)%iLoc(1)
-         do j = 1, VarAry(i)%Nodes
-
-            ! Get quaternion 1 from array, calculate scalar
-            q1(2:4) = y(k:k + 2, iq1)
-            q1(1) = quat_scalar(q1(2:4))
-
-            ! Get quaternion 2 from array, calculate scalar
-            q2(2:4) = y(k:k + 2, iq2)
-            q2(1) = quat_scalar(q2(2:4))
-
-            ! Calculate dot product of two quaternions
-            ! If dot product is negative, invert second quaternion
-            dot = dot_product(q1, q2)
-            if (dot < 0.0_R8Ki) then
-               dot = -dot
-               q2 = -q2
-            end if
-
-            ! If the quaternions are very close, use linear interpolation
-            if (dot > 0.9995_R8Ki) then
-               q = (1.0_R8Ki - ti)*q1 + ti*q2
-            else
-               theta = acos(dot)
-               sin_theta = sin(theta)
-               a = sin((1.0_R8Ki - ti)*theta)/sin_theta
-               b = sin(ti*theta)/sin_theta
-               q = a*q1 + b*q2
-            end if
-
-            ! Store canonical quaternion in output array
-            y_out(k:k + 2) = quat_canonical(q(1), q(2:4))
-
-            ! Increment quaternion index
-            k = k + 3
-         end do
-
-      end select
-
-   end do
 
 end subroutine
 
@@ -1027,18 +1067,23 @@ pure function quat_canonical(q0, q) result(qc)
    integer(IntKi)          :: i
    m = q0*q0 + dot_product(q, q)
    qc = q/m
-   if (q0 > 0.0_R8Ki) return
    if (q0 < 0.0_R8Ki) then
-      qc = -qc
-      return
+      qc = -q/m
+   else
+      qc = q/m
    end if
-   do i = 1, 3
-      if (q(i) > 0.0_R8Ki) return
-      if (q(i) < 0.0_R8Ki) then
-         qc = -qc
-         return
-      end if
-   end do
+   ! if (q0 > 0.0_R8Ki) return
+   ! if (q0 < 0.0_R8Ki) then
+   !    qc = -qc
+   !    return
+   ! end if
+   ! do i = 1, 3
+   !    if (q(i) > 0.0_R8Ki) return
+   !    if (q(i) < 0.0_R8Ki) then
+   !       qc = -qc
+   !       return
+   !    end if
+   ! end do
 end function
 
 function dcm_to_quat(dcm) result(q)
