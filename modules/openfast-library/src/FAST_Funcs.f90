@@ -322,10 +322,10 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
          ! Set BD accelerations and algorithmic accelerations from q matrix
          ! do j = 1, size(p_BD%Vars%x)
          !    select case (p_BD%Vars%x(j)%Field)
-         !    case (VF_TransDisp)
+         !    case (FieldTransDisp)
          !       os_BD%acc(1:3, p_BD%Vars%x(j)%iUsr(1)) = q_TC(p_BD%Vars%x(j)%iq, 3)
          !       os_BD%xcc(1:3, p_BD%Vars%x(j)%iUsr(1)) = q_TC(p_BD%Vars%x(j)%iq, 4)
-         !    case (VF_Orientation)
+         !    case (FieldOrientation)
          !       os_BD%acc(4:6, p_BD%Vars%x(j)%iUsr(1)) = q_TC(p_BD%Vars%x(j)%iq, 3)
          !       os_BD%xcc(4:6, p_BD%Vars%x(j)%iUsr(1)) = q_TC(p_BD%Vars%x(j)%iq, 4)
          !    end select
@@ -338,10 +338,10 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
          ! Update q matrix accelerations and algorithmic accelerations from BD
          ! do j = 1, size(p_BD%Vars%x)
          !    select case (p_BD%Vars%x(j)%Field)
-         !    case (VF_TransDisp)
+         !    case (FieldTransDisp)
          !       q_TC(p_BD%Vars%x(j)%iq, 3) = os_BD%acc(1:3, p_BD%Vars%x(j)%iUsr(1))
          !       q_TC(p_BD%Vars%x(j)%iq, 4) = os_BD%xcc(1:3, p_BD%Vars%x(j)%iUsr(1))
-         !    case (VF_Orientation)
+         !    case (FieldOrientation)
          !       q_TC(p_BD%Vars%x(j)%iq, 3) = os_BD%acc(4:6, p_BD%Vars%x(j)%iUsr(1))
          !       q_TC(p_BD%Vars%x(j)%iq, 4) = os_BD%xcc(4:6, p_BD%Vars%x(j)%iUsr(1))
          !    end select

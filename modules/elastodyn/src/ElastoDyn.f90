@@ -11256,112 +11256,112 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
    !----------------------------------------------------------------------------
 
    ! Add continuous state variables (translation and rotation)
-   call MV_AddVar(p%Vars%x, 'PlatformSurge', VF_TransDisp, &
+   call MV_AddVar(p%Vars%x, 'PlatformSurge', FieldTransDisp, &
                   Flags=VF_DerivOrder2, &
                   iUsr=DOF_Sg, &
                   Perturb=0.2_R8Ki * D2R_D * max(p%TowerHt, 1.0_ReKi), &
                   LinNames=['Platform horizontal surge translation DOF (internal DOF index = DOF_Sg), m'], &
                   Active=InputFileData%PtfmSgDOF)
 
-   call MV_AddVar(p%Vars%x, 'PlatformSway', VF_TransDisp, &
+   call MV_AddVar(p%Vars%x, 'PlatformSway', FieldTransDisp, &
                   Flags=VF_DerivOrder2, &
                   iUsr=DOF_Sw, &
                   Perturb=0.2_R8Ki * D2R_D * max(p%TowerHt, 1.0_ReKi), &
                   LinNames=['Platform horizontal sway translation DOF (internal DOF index = DOF_Sw), m'], &
                   Active=InputFileData%PtfmSwDOF)
 
-   call MV_AddVar(p%Vars%x, 'PlatformHeave', VF_TransDisp, &
+   call MV_AddVar(p%Vars%x, 'PlatformHeave', FieldTransDisp, &
                   Flags=VF_DerivOrder2, &
                   iUsr=DOF_Hv, &
                   Perturb=0.2_R8Ki * D2R_D * max(p%TowerHt, 1.0_ReKi), &
                   LinNames=['Platform vertical heave translation DOF (internal DOF index = DOF_Hv), m'], &
                   Active=InputFileData%PtfmHvDOF)
 
-   call MV_AddVar(p%Vars%x, 'PlatformRoll', VF_AngularDisp, &
+   call MV_AddVar(p%Vars%x, 'PlatformRoll', FieldAngularDisp, &
                   Flags=VF_DerivOrder2, &
                   iUsr=DOF_R, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Platform roll tilt rotation DOF (internal DOF index = DOF_R), rad'], &
                   Active=InputFileData%PtfmRDOF)
 
-   call MV_AddVar(p%Vars%x, 'PlatformPitch', VF_AngularDisp, &
+   call MV_AddVar(p%Vars%x, 'PlatformPitch', FieldAngularDisp, &
                   Flags=VF_DerivOrder2, &
                   iUsr=DOF_P, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Platform pitch tilt rotation DOF (internal DOF index = DOF_P), rad'], &
                   Active=InputFileData%PtfmPDOF)
 
-   call MV_AddVar(p%Vars%x, 'PlatformYaw', VF_AngularDisp, &
+   call MV_AddVar(p%Vars%x, 'PlatformYaw', FieldAngularDisp, &
                   Flags=VF_DerivOrder2, &
                   iUsr=DOF_Y, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Platform yaw rotation DOF (internal DOF index = DOF_Y), rad'], &
                   Active=InputFileData%PtfmYDOF)
 
-   call MV_AddVar(p%Vars%x, 'TowerFA1', VF_TransDisp, &
+   call MV_AddVar(p%Vars%x, 'TowerFA1', FieldTransDisp, &
                   Flags=VF_DerivOrder2, &
                   iUsr=DOF_TFA1, &
                   Perturb=0.020_R8Ki * D2R_D * p%TwrFlexL, &
                   LinNames=['1st tower fore-aft bending mode DOF (internal DOF index = DOF_TFA1), m'], &
                   Active=InputFileData%TwFADOF1)
 
-   call MV_AddVar(p%Vars%x, 'TowerSS1', VF_TransDisp, &
+   call MV_AddVar(p%Vars%x, 'TowerSS1', FieldTransDisp, &
                   Flags=VF_DerivOrder2, &
                   iUsr=DOF_TSS1, &
                   Perturb=0.020_R8Ki * D2R_D * p%TwrFlexL, &
                   LinNames=['1st tower side-to-side bending mode DOF (internal DOF index = DOF_TSS1), m'], &
                   Active=InputFileData%TwSSDOF1)
 
-   call MV_AddVar(p%Vars%x, 'TowerFA2', VF_TransDisp, &
+   call MV_AddVar(p%Vars%x, 'TowerFA2', FieldTransDisp, &
                   Flags=VF_DerivOrder2, &
                   iUsr=DOF_TFA2, &
                   Perturb=0.002_R8Ki * D2R_D * p%TwrFlexL, &
                   LinNames=['2nd tower fore-aft bending mode DOF (internal DOF index = DOF_TFA2), m'], &
                   Active=InputFileData%TwFADOF2)
 
-   call MV_AddVar(p%Vars%x, 'TowerSS2', VF_TransDisp, &
+   call MV_AddVar(p%Vars%x, 'TowerSS2', FieldTransDisp, &
                   Flags=VF_DerivOrder2, &
                   iUsr=DOF_TSS2, &
                   Perturb=0.002_R8Ki * D2R_D * p%TwrFlexL, &
                   LinNames=['2nd tower side-to-side bending mode DOF (internal DOF index = DOF_TSS2), m'], &
                   Active=InputFileData%TwSSDOF2)
 
-   call MV_AddVar(p%Vars%x, 'NacelleYaw', VF_AngularDisp, &
+   call MV_AddVar(p%Vars%x, 'NacelleYaw', FieldAngularDisp, &
                   Flags=VF_DerivOrder2, &
                   iUsr=DOF_Yaw, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Nacelle yaw DOF (internal DOF index = DOF_Yaw), rad'], &
                   Active=InputFileData%YawDOF)
 
-   call MV_AddVar(p%Vars%x, 'RotorFurl', VF_AngularDisp, &
+   call MV_AddVar(p%Vars%x, 'RotorFurl', FieldAngularDisp, &
                   Flags=VF_DerivOrder2 + VF_AeroMap, &
                   iUsr=DOF_RFrl, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Rotor-furl DOF (internal DOF index = DOF_RFrl), rad'], &
                   Active=InputFileData%RFrlDOF)
 
-   call MV_AddVar(p%Vars%x, 'GeneratorAzimuth', VF_AngularDisp, &
+   call MV_AddVar(p%Vars%x, 'GeneratorAzimuth', FieldAngularDisp, &
                   Flags=VF_DerivOrder2, &
                   iUsr=DOF_GeAz, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Variable speed generator DOF (internal DOF index = DOF_GeAz), rad'], &
                   Active=InputFileData%GenDOF)
 
-   call MV_AddVar(p%Vars%x, 'DrivetrainFlexibility', VF_AngularDisp, &
+   call MV_AddVar(p%Vars%x, 'DrivetrainFlexibility', FieldAngularDisp, &
                   Flags=VF_DerivOrder2, &
                   iUsr=DOF_DrTr, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Drivetrain rotational-flexibility DOF (internal DOF index = DOF_DrTr), rad'], &
                   Active=InputFileData%DrTrDOF)
 
-   call MV_AddVar(p%Vars%x, 'TailFurl', VF_AngularDisp, &
+   call MV_AddVar(p%Vars%x, 'TailFurl', FieldAngularDisp, &
                   Flags=VF_DerivOrder2 + VF_AeroMap, &
                   iUsr=DOF_TFrl, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Tail-furl DOF (internal DOF index = DOF_TFrl), rad'], &
                   Active=InputFileData%TFrlDOF)
 
-   call MV_AddVar(p%Vars%x, 'RotorTeeter', VF_AngularDisp, &
+   call MV_AddVar(p%Vars%x, 'RotorTeeter', FieldAngularDisp, &
                   Flags=VF_DerivOrder2, &
                   iUsr=DOF_Teet, &
                   Perturb=2.0_R8Ki * D2R_D, &
@@ -11371,7 +11371,7 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
    do i = 1, p%NumBl
       Flags = ior(VF_RotFrame, VF_DerivOrder2)
       if (i == 1) Flags = ior(Flags, VF_AeroMap)
-      call MV_AddVar(p%Vars%x, 'Blade'//trim(Num2LStr(i))//'Flap1', VF_TransDisp, &
+      call MV_AddVar(p%Vars%x, 'Blade'//trim(Num2LStr(i))//'Flap1', FieldTransDisp, &
                      Flags=Flags, &
                      iUsr=DOF_BF(i,1), &
                      Perturb=0.20_R8Ki * D2R_D * p%BldFlexL, &
@@ -11383,7 +11383,7 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
    do i = 1, p%NumBl
       Flags = ior(VF_RotFrame, VF_DerivOrder2)
       if (i == 1) Flags = ior(Flags, VF_AeroMap)
-      call MV_AddVar(p%Vars%x, 'Blade'//trim(Num2LStr(i))//'Edge1', VF_TransDisp, &
+      call MV_AddVar(p%Vars%x, 'Blade'//trim(Num2LStr(i))//'Edge1', FieldTransDisp, &
                      Flags=Flags, &
                      iUsr=DOF_BE(i,1), &
                      Perturb=0.20_R8Ki * D2R_D * p%BldFlexL, &
@@ -11395,7 +11395,7 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
    do i = 1, p%NumBl
       Flags = ior(VF_RotFrame, VF_DerivOrder2)
       if (i == 1) Flags = ior(Flags, VF_AeroMap)
-      call MV_AddVar(p%Vars%x, 'Blade'//trim(Num2LStr(i))//'Flap2', VF_TransDisp, &
+      call MV_AddVar(p%Vars%x, 'Blade'//trim(Num2LStr(i))//'Flap2', FieldTransDisp, &
                      Flags=Flags, &
                      iUsr=DOF_BF(i,2), &
                      Perturb=0.02_R8Ki * D2R_D * p%BldFlexL, &
@@ -11412,8 +11412,8 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
          p%Vars%x(i)%Perturb = max(p%Vars%x(i)%Perturb, MinPerturb)
 
          ! Update from position to velocity
-         if (p%Vars%x(i)%Field == VF_TransDisp) Field = VF_TransVel
-         if (p%Vars%x(i)%Field == VF_AngularDisp) Field = VF_AngularVel
+         if (p%Vars%x(i)%Field == FieldTransDisp) Field = FieldTransVel
+         if (p%Vars%x(i)%Field == FieldAngularDisp) Field = FieldAngularVel
          
          ! Add variable (only active variables are in x)
          call MV_AddVar(p%Vars%x, p%Vars%x(i)%Name, Field, &
@@ -11490,28 +11490,28 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
                                 MaxTorque / 100.0_R8Ki])
 
    ! Non-mesh input variables
-   call MV_AddVar(p%Vars%u, "BlPitchCom", VF_Scalar, &
+   call MV_AddVar(p%Vars%u, "BlPitchCom", FieldScalar, &
                   VarIdx=p%iVarBlPitchCom, &
                   Num=p%NumBl, &
-                  Flags=VF_RotFrame + VF_Linearize, &
+                  Flags=VF_RotFrame + VF_Linearize + VF_2PI, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=[('Blade '//trim(num2lstr(i))//' pitch command, rad', i=1,p%NumBl)])
 
-   call MV_AddVar(p%Vars%u, "YawMom", VF_Scalar, &
+   call MV_AddVar(p%Vars%u, "YawMom", FieldScalar, &
                   VarIdx=p%iVarYawMom, &
                   Flags=VF_Linearize, &
                   Perturb=MaxTorque / 100.0_R8Ki, &
                   LinNames=['Yaw moment, Nm'])
 
-   call MV_AddVar(p%Vars%u, "GenTrq", VF_Scalar, &
+   call MV_AddVar(p%Vars%u, "GenTrq", FieldScalar, &
                   VarIdx=p%iVarGenTrq, &
                   Flags=VF_Linearize, &
                   Perturb=MaxTorque / (100.0_R8Ki*p%GBRatio), &
                   LinNames=['Generator torque, Nm'])
 
-   call MV_AddVar(p%Vars%u, "BlPitchComC", VF_Scalar, &
+   call MV_AddVar(p%Vars%u, "BlPitchComC", FieldScalar, &
                   VarIdx=p%iVarBlPitchComC, &
-                  Flags=VF_ExtLin + VF_Linearize, &
+                  Flags=VF_ExtLin + VF_Linearize + VF_2PI, &
                   LinNames=['Extended input: collective blade-pitch command, rad'])
    
    ! Set minimum input perturbations
@@ -11537,7 +11537,7 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
          if (i == 1) then
             do j = p%iVarBladeMotion(i), size(p%Vars%y)
                select case (p%Vars%y(j)%Field)
-               case (VF_TransDisp, VF_AngularDisp, VF_TransVel, VF_AngularVel)
+               case (FieldTransDisp, FieldAngularDisp, FieldTransVel, FieldAngularVel)
                   call MV_SetFlags(p%Vars%y(j), VF_AeroMap)
                end select
             end do
@@ -11556,7 +11556,7 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
                       Flags=ior(VF_Line, VF_SmallAngle))
 
    call MV_AddMeshVar(p%Vars%y, 'Hub', &
-                      Fields=[VF_TransDisp, VF_Orientation, VF_AngularVel], &
+                      Fields=[FieldTransDisp, FieldOrientation, FieldAngularVel], &
                       VarIdx=p%iVarHubMotion, &
                       Mesh=y%HubPtMotion)
 
@@ -11571,26 +11571,27 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
                       Mesh=y%NacelleMotion)
 
    call MV_AddMeshVar(p%Vars%y, 'TailFin', &
-                      Fields=[VF_TransDisp, VF_Orientation, VF_TransVel, VF_AngularVel], &
+                      Fields=[FieldTransDisp, FieldOrientation, FieldTransVel, FieldAngularVel], &
                       VarIdx=p%iVarTFinCMMotion, &
                       Mesh=y%TFinCMMotion)
 
-   call MV_AddVar(p%Vars%y, 'Yaw', VF_AngularDisp, &
+   call MV_AddVar(p%Vars%y, 'Yaw', FieldScalar, &
+                  Flags=VF_2PI, &
                   VarIdx=p%iVarYaw, &
                   LinNames=['Yaw, rad'])
 
-   call MV_AddVar(p%Vars%y, 'YawRate', VF_Scalar, &
+   call MV_AddVar(p%Vars%y, 'YawRate', FieldScalar, &
                   VarIdx=p%iVarYawRate, &
                   LinNames=['YawRate, rad/s'])
 
-   call MV_AddVar(p%Vars%y, 'HSS_Spd', VF_Scalar, &
+   call MV_AddVar(p%Vars%y, 'HSS_Spd', FieldScalar, &
                   VarIdx=p%iVarHSS_Spd, &
                   LinNames=['HSS_Spd, rad/s'])
 
    ! Write output variables
    p%iVarWriteOut = size(p%Vars%y) + 1
    do i = 1, p%NumOuts
-      call MV_AddVar(p%Vars%y, p%OutParam(i)%Name, VF_Scalar, &
+      call MV_AddVar(p%Vars%y, p%OutParam(i)%Name, FieldScalar, &
                      Flags=VF_WriteOut + OutParamFlags(p%OutParam(i)%Indx), &
                      iUsr=i, &
                      LinNames=[trim(p%OutParam(i)%Name)//', '//trim(p%OutParam(i)%Units)], &
@@ -11599,7 +11600,7 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
    k = p%NumOuts + 1
    do i = 1, p%BldNd_NumOuts
       do j = 1, p%BldNd_BladesOut
-         call MV_AddVar(p%Vars%y, p%BldNd_OutParam(i)%Name, VF_Scalar, &
+         call MV_AddVar(p%Vars%y, p%BldNd_OutParam(i)%Name, FieldScalar, &
                         Num=p%BldNodes, &
                         Flags=VF_WriteOut + VF_RotFrame, &
                         iUsr=k, &
@@ -11658,9 +11659,9 @@ subroutine ED_PackContStateOP(p, x, ary)
    integer(IntKi)                            :: i
    do i = 1, size(p%Vars%x)
       select case(p%Vars%x(i)%Field)
-      case (VF_TransDisp, VF_AngularDisp)
+      case (FieldTransDisp, FieldAngularDisp)
          ary(p%Vars%x(i)%iLoc(1)) = x%QT(p%Vars%x(i)%iUsr(1))
-      case (VF_TransVel, VF_AngularVel)
+      case (FieldTransVel, FieldAngularVel)
          ary(p%Vars%x(i)%iLoc(1)) = x%QDT(p%Vars%x(i)%iUsr(1))
       case default
          ary(p%Vars%x(i)%iLoc(1)) = 0.0_R8Ki
@@ -11675,9 +11676,9 @@ subroutine ED_UnpackStateOP(p, ary, x)
    integer(IntKi)                               :: i
    do i = 1, size(p%Vars%x)
       select case(p%Vars%x(i)%Field)
-      case (VF_TransDisp, VF_AngularDisp)
+      case (FieldTransDisp, FieldAngularDisp)
          x%QT(p%Vars%x(i)%iUsr) = ary(p%Vars%x(i)%iLoc(1))
-      case (VF_TransVel, VF_AngularVel)
+      case (FieldTransVel, FieldAngularVel)
          x%QDT(p%Vars%x(i)%iUsr) = ary(p%Vars%x(i)%iLoc(1))
       end select
    end do

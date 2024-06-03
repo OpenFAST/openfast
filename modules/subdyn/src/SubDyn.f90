@@ -450,11 +450,11 @@ subroutine SD_InitVars(Init, u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    ! Continuous State Variables
    !----------------------------------------------------------------------------
 
-   call MV_AddVar(p%Vars%x, "Modes", VF_Scalar, p%nDOFM, jUsr=1, DerivOrder=0, &
+   call MV_AddVar(p%Vars%x, "Modes", FieldScalar, p%nDOFM, jUsr=1, DerivOrder=0, &
                   Perturb=2.0_ReKi*D2R_D, &
                   LinNames=[('Craig-Bampton mode '//trim(num2lstr(i))//' amplitude, -', i=1, p%nDOFM)])
 
-   call MV_AddVar(p%Vars%x, "Modes", VF_Scalar, p%nDOFM, jUsr=2, DerivOrder=1, &
+   call MV_AddVar(p%Vars%x, "Modes", FieldScalar, p%nDOFM, jUsr=2, DerivOrder=1, &
                   Perturb=2.0_ReKi*D2R_D, &
                   LinNames=[('First time derivative of Craig-Bampton mode '//trim(num2lstr(i))//' amplitude, -/s', i=1, p%nDOFM)])
 
@@ -495,7 +495,7 @@ subroutine SD_InitVars(Init, u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
                       Mesh=y%Y3Mesh)
 
    ! Output variables
-   call MV_AddVar(p%Vars%y, "WriteOutput", VF_Scalar, Num=p%NumOuts, &
+   call MV_AddVar(p%Vars%y, "WriteOutput", FieldScalar, Num=p%NumOuts, &
                   Flags=VF_WriteOut, &
                   VarIdx=p%iVarWriteOutput, &
                   LinNames=[(WriteOutputLinName(i), i = 1, p%numOuts)])

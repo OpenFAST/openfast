@@ -40,10 +40,10 @@ public :: MV_FieldString, IdxStr
 public :: DumpMatrix
 
 integer(IntKi), parameter :: &
-   LoadFields(*) = [VF_Force, VF_Moment], &
-   TransFields(*) = [VF_TransDisp, VF_TransVel, VF_TransAcc], &
-   AngularFields(*) = [VF_Orientation, VF_AngularDisp, VF_AngularVel, VF_AngularAcc], &
-   MotionFields(*) = [VF_TransDisp, VF_Orientation, VF_TransVel, VF_AngularVel, VF_TransAcc, VF_AngularAcc]
+   LoadFields(*) = [FieldForce, FieldMoment], &
+   TransFields(*) = [FieldTransDisp, FieldTransVel, FieldTransAcc], &
+   AngularFields(*) = [FieldOrientation, FieldAngularDisp, FieldAngularVel, FieldAngularAcc], &
+   MotionFields(*) = [FieldTransDisp, FieldOrientation, FieldTransVel, FieldAngularVel, FieldTransAcc, FieldAngularAcc]
 
 interface MV_Pack
    module procedure MV_PackVarRank0R4, MV_PackVarRank1R4, MV_PackVarRank2R4
@@ -65,24 +65,24 @@ function MV_FieldString(Field) result(str)
    integer(IntKi), intent(in) :: Field
    character(16)              :: str
    select case (Field)
-   case (VF_AngularAcc)
-      str = "VF_AngularAcc"
-   case (VF_AngularDisp)
-      str = "VF_AngularDisp"
-   case (VF_AngularVel)
-      str = "VF_AngularVel"
-   case (VF_Force)
-      str = "VF_Force"
-   case (VF_Moment)
-      str = "VF_Moment"
-   case (VF_Orientation)
-      str = "VF_Orientation"
-   case (VF_TransAcc)
-      str = "VF_TransAcc"
-   case (VF_TransDisp)
-      str = "VF_TransDisp"
-   case (VF_TransVel)
-      str = "VF_TransVel"
+   case (FieldAngularAcc)
+      str = "FieldAngularAcc"
+   case (FieldAngularDisp)
+      str = "FieldAngularDisp"
+   case (FieldAngularVel)
+      str = "FieldAngularVel"
+   case (FieldForce)
+      str = "FieldForce"
+   case (FieldMoment)
+      str = "FieldMoment"
+   case (FieldOrientation)
+      str = "FieldOrientation"
+   case (FieldTransAcc)
+      str = "FieldTransAcc"
+   case (FieldTransDisp)
+      str = "FieldTransDisp"
+   case (FieldTransVel)
+      str = "FieldTransVel"
    case default
       str = "Unknown"
    end select
@@ -243,21 +243,21 @@ subroutine ModVarType_Init(Var, Index, Linearize, ErrStat, ErrMsg)
 
          ! Switch based on field number
          select case (Var%Field)
-         case (VF_Force)
+         case (FieldForce)
             Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" force, node "//trim(num2lstr(i))//', N'//UnitDesc, j=1, 3), i=1, Var%Nodes)]
-         case (VF_Moment)
+         case (FieldMoment)
             Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" moment, node "//trim(num2lstr(i))//', Nm'//UnitDesc, j=1, 3), i=1, Var%Nodes)]
-         case (VF_TransDisp)
+         case (FieldTransDisp)
             Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" translation displacement, node "//trim(num2lstr(i))//', m', j=1, 3), i=1, Var%Nodes)]
-         case (VF_Orientation)
+         case (FieldOrientation)
             Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" orientation angle, node "//trim(num2lstr(i))//', rad', j=1, 3), i=1, Var%Nodes)]
-         case (VF_TransVel)
+         case (FieldTransVel)
             Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" translation velocity, node "//trim(num2lstr(i))//', m/s', j=1, 3), i=1, Var%Nodes)]
-         case (VF_AngularVel)
+         case (FieldAngularVel)
             Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" rotation velocity, node "//trim(num2lstr(i))//', rad/s', j=1, 3), i=1, Var%Nodes)]
-         case (VF_TransAcc)
+         case (FieldTransAcc)
             Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" translation acceleration, node "//trim(num2lstr(i))//', m/s^2', j=1, 3), i=1, Var%Nodes)]
-         case (VF_AngularAcc)
+         case (FieldAngularAcc)
             Var%LinNames = [character(LinChanLen) ::((trim(Var%Name)//" "//Comp(j)//" rotation acceleration, node "//trim(num2lstr(i))//', rad/s^2', j=1, 3), i=1, Var%Nodes)]
          case default
             call SetErrStat(ErrID_Fatal, "Invalid mesh field type", ErrStat, ErrMsg, RoutineName)
@@ -467,27 +467,27 @@ subroutine MV_PackMesh(VarAry, iVar, Mesh, Values)
       if (VarAry(i)%MeshID /= MeshID) exit
       associate (iLoc => VarAry(i)%iLoc)
          select case (VarAry(i)%Field)
-         case (VF_Force)
+         case (FieldForce)
             Values(iLoc(1):iLoc(2)) = pack(Mesh%Force, .true.)
-         case (VF_Moment)
+         case (FieldMoment)
             Values(iLoc(1):iLoc(2)) = pack(Mesh%Moment, .true.)
-         case (VF_TransDisp)
+         case (FieldTransDisp)
             Values(iLoc(1):iLoc(2)) = pack(Mesh%TranslationDisp, .true.)
-         case (VF_Orientation)
+         case (FieldOrientation)
             k = iLoc(1)
             do j = 1, VarAry(i)%Nodes
                Values(k:k + 2) = dcm_to_quat(Mesh%Orientation(:, :, j))
                k = k + 3
             end do
-         case (VF_TransVel)
+         case (FieldTransVel)
             Values(iLoc(1):iLoc(2)) = pack(Mesh%TranslationVel, .true.)
-         case (VF_AngularVel)
+         case (FieldAngularVel)
             Values(iLoc(1):iLoc(2)) = pack(Mesh%RotationVel, .true.)
-         case (VF_TransAcc)
+         case (FieldTransAcc)
             Values(iLoc(1):iLoc(2)) = pack(Mesh%TranslationAcc, .true.)
-         case (VF_AngularAcc)
+         case (FieldAngularAcc)
             Values(iLoc(1):iLoc(2)) = pack(Mesh%RotationAcc, .true.)
-         case (VF_Scalar)
+         case (FieldScalar)
             Values(iLoc(1):iLoc(2)) = pack(Mesh%Scalars, .true.)
          end select
       end associate
@@ -506,27 +506,27 @@ subroutine MV_UnpackMesh(VarAry, iVar, Values, Mesh)
       if (VarAry(i)%MeshID /= MeshID) exit
       associate (iLoc => VarAry(i)%iLoc)
          select case (VarAry(i)%Field)
-         case (VF_Force)
+         case (FieldForce)
             Mesh%Force = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%Force))
-         case (VF_Moment)
+         case (FieldMoment)
             Mesh%Moment = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%Moment))
-         case (VF_TransDisp)
+         case (FieldTransDisp)
             Mesh%TranslationDisp = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%TranslationDisp))
-         case (VF_Orientation)
+         case (FieldOrientation)
             k = iLoc(1)
             do j = 1, VarAry(i)%Nodes
                Mesh%Orientation(:, :, j) = quat_to_dcm(Values(k:k + 2))
                k = k + 3
             end do
-         case (VF_TransVel)
+         case (FieldTransVel)
             Mesh%TranslationVel = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%TranslationVel))
-         case (VF_AngularVel)
+         case (FieldAngularVel)
             Mesh%RotationVel = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%RotationVel))
-         case (VF_TransAcc)
+         case (FieldTransAcc)
             Mesh%TranslationAcc = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%TranslationAcc))
-         case (VF_AngularAcc)
+         case (FieldAngularAcc)
             Mesh%RotationAcc = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%RotationAcc))
-         case (VF_Scalar)
+         case (FieldScalar)
             Mesh%Scalars = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%Scalars))
          end select
       end associate
@@ -554,7 +554,7 @@ subroutine MV_Perturb(Var, iLin, PerturbSign, BaseAry, PerturbAry)
    i = Var%iLoc(1) + iLin - 1
 
    ! If variable field is orientation, perturbation is in radians
-   if (Var%Field == VF_Orientation) then
+   if (Var%Field == FieldOrientation) then
       j = mod(iLin - 1, 3)                      ! component being modified (0, 1, 2)
       quat_p = perturb_quat(Perturb, j + 1)     ! Quaternion of perturbed angle
       i = i - j                                 ! index of start of quaternion parameters (3)
@@ -582,7 +582,7 @@ subroutine MV_ComputeDiff(VarAry, PosAry, NegAry, DiffAry)
    do i = 1, size(VarAry)
 
       ! If variable field is orientation
-      if (VarAry(i)%Field == VF_Orientation) then
+      if (VarAry(i)%Field == FieldOrientation) then
 
          ! Starting index into arrays
          k = VarAry(i)%iLoc(1)
@@ -737,7 +737,7 @@ subroutine MV_ExtrapInterp(VarAry, y, tin, y_out, tin_out, ErrStat, ErrMsg)
       ! Switch based on variable field type
       select case (VarAry(i)%Field)
 
-      case (VF_Orientation)   ! SLERP for orientation quaternions
+      case (FieldOrientation)   ! SLERP for orientation quaternions
 
          k = VarAry(i)%iLoc(1)
          do j = 1, VarAry(i)%Nodes
@@ -891,11 +891,11 @@ subroutine MV_AddVar(VarAry, Name, Field, Num, Flags, iUsr, jUsr, DerivOrder, Pe
       Var%DerivOrder = DerivOrder
    else
       select case (Var%Field)
-      case (VF_Orientation, VF_TransDisp, VF_AngularDisp)   ! Position/displacement
+      case (FieldOrientation, FieldTransDisp, FieldAngularDisp)   ! Position/displacement
          Var%DerivOrder = 0
-      case (VF_TransVel, VF_AngularVel)                     ! Velocity
+      case (FieldTransVel, FieldAngularVel)                     ! Velocity
          Var%DerivOrder = 1
-      case (VF_TransAcc, VF_AngularAcc)                     ! Acceleration
+      case (FieldTransAcc, FieldAngularAcc)                     ! Acceleration
          Var%DerivOrder = 2
       case default
          Var%DerivOrder = -1

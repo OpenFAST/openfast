@@ -984,7 +984,7 @@ subroutine Precondition(uVars, G, dUdu, dUdy, JacScaleFactor)
    do i = 1, size(uVars)
 
       ! Get if col variable is a load
-      isColLoad = uVars(i)%Field == VF_Force .or. uVars(i)%Field == VF_Moment
+      isColLoad = uVars(i)%Field == FieldForce .or. uVars(i)%Field == FieldMoment
 
       ! Get col variable start and end indices in matrix
       associate (iLoc => uVars(i)%iLoc)
@@ -995,7 +995,7 @@ subroutine Precondition(uVars, G, dUdu, dUdy, JacScaleFactor)
          do j = 1, size(uVars)
 
             ! Get if row variable is a load
-            isRowLoad = uVars(j)%Field == VF_Force .or. uVars(j)%Field == VF_Moment
+            isRowLoad = uVars(j)%Field == FieldForce .or. uVars(j)%Field == FieldMoment
 
             ! Get row variable start and end indices in matrix
             associate (jLoc => uVars(j)%iLoc)
@@ -1042,7 +1042,7 @@ subroutine Postcondition(uVars, dUdu, dUdy, JacScaleFactor)
    do i = 1, size(uVars)
 
       ! If variable is a (force or moment), apply post-conditioner
-      if (uVars(i)%Field == VF_Force .or. uVars(i)%Field == VF_Moment) then
+      if (uVars(i)%Field == FieldForce .or. uVars(i)%Field == FieldMoment) then
 
          ! Otherwise get variable start and end indices in matrix
          associate (iLoc => uVars(i)%iLoc)
@@ -1298,7 +1298,7 @@ subroutine WrLinFile_txt_Table(VarAry, FlagFilter, p_FAST, Un, RowCol, op, IsDer
             i_op = Var%iLoc(1) + j - 1
 
             ! If variable is orientation and show rotation matrix flag is true
-            if (ShowRotLoc .and. (Var%Field == VF_Orientation)) then
+            if (ShowRotLoc .and. (Var%Field == FieldOrientation)) then
 
                ! Skip writing if not the first value in orientation (3 values)
                if (mod(j - 1, 3) /= 0) cycle

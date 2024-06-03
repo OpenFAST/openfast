@@ -1847,34 +1847,34 @@ subroutine InitMeshVarLocs(Mapping, SrcMod, DstMod, SrcMesh, DstMesh, SrcDispMes
    Mapping%XfrType = MeshTransferType(SrcMesh, DstMesh)
 
    ! Get data locations for variables of source mesh fields
-   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_TransDisp, Mapping%iVarSrcTransDisp)
-   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_TransVel, Mapping%iVarSrcTransVel)
-   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_TransAcc, Mapping%iVarSrcTransAcc)
-   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_Orientation, Mapping%iVarSrcOrientation)
-   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_AngularVel, Mapping%iVarSrcAngularVel)
-   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_AngularAcc, Mapping%iVarSrcAngularAcc)
-   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_Force, Mapping%iVarSrcForce)
-   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, VF_Moment, Mapping%iVarSrcMoment)
+   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, FieldTransDisp, Mapping%iVarSrcTransDisp)
+   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, FieldTransVel, Mapping%iVarSrcTransVel)
+   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, FieldTransAcc, Mapping%iVarSrcTransAcc)
+   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, FieldOrientation, Mapping%iVarSrcOrientation)
+   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, FieldAngularVel, Mapping%iVarSrcAngularVel)
+   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, FieldAngularAcc, Mapping%iVarSrcAngularAcc)
+   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, FieldForce, Mapping%iVarSrcForce)
+   call FindVarByMeshAndField(SrcMod%Vars%y, SrcMesh%ID, FieldMoment, Mapping%iVarSrcMoment)
 
    ! Get data locations for variables of destination mesh fields
-   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_TransDisp, Mapping%iVarDstTransDisp)
-   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_TransVel, Mapping%iVarDstTransVel)
-   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_TransAcc, Mapping%iVarDstTransAcc)
-   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_Orientation, Mapping%iVarDstOrientation)
-   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_AngularVel, Mapping%iVarDstAngularVel)
-   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_AngularAcc, Mapping%iVarDstAngularAcc)
-   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_Force, Mapping%iVarDstForce)
-   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, VF_Moment, Mapping%iVarDstMoment)
+   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, FieldTransDisp, Mapping%iVarDstTransDisp)
+   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, FieldTransVel, Mapping%iVarDstTransVel)
+   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, FieldTransAcc, Mapping%iVarDstTransAcc)
+   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, FieldOrientation, Mapping%iVarDstOrientation)
+   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, FieldAngularVel, Mapping%iVarDstAngularVel)
+   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, FieldAngularAcc, Mapping%iVarDstAngularAcc)
+   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, FieldForce, Mapping%iVarDstForce)
+   call FindVarByMeshAndField(DstMod%Vars%u, DstMesh%ID, FieldMoment, Mapping%iVarDstMoment)
 
    if (present(SrcDispMesh)) then
       Mapping%SrcDispMeshID = SrcDispMesh%ID
-      call FindVarByMeshAndField(SrcMod%Vars%u, SrcDispMesh%ID, VF_TransDisp, Mapping%iVarSrcDispTransDisp)
+      call FindVarByMeshAndField(SrcMod%Vars%u, SrcDispMesh%ID, FieldTransDisp, Mapping%iVarSrcDispTransDisp)
    end if
 
    if (present(DstDispMesh)) then
       Mapping%DstDispMeshID = DstDispMesh%ID
-      call FindVarByMeshAndField(DstMod%Vars%y, DstDispMesh%ID, VF_TransDisp, Mapping%iVarDstDispTransDisp)
-      call FindVarByMeshAndField(DstMod%Vars%y, DstDispMesh%ID, VF_Orientation, Mapping%iVarDstDispOrientation)
+      call FindVarByMeshAndField(DstMod%Vars%y, DstDispMesh%ID, FieldTransDisp, Mapping%iVarDstDispTransDisp)
+      call FindVarByMeshAndField(DstMod%Vars%y, DstDispMesh%ID, FieldOrientation, Mapping%iVarDstDispOrientation)
    end if
 
 contains

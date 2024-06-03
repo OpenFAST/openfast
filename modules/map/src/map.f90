@@ -750,7 +750,7 @@ IF (ErrStat >= AbortErrLev) RETURN
       ! Input variables
       !-------------------------------------------------------------------------
 
-      call MV_AddMeshVar(p%Vars%u, "PtFairDisplacement", [VF_TransDisp], &
+      call MV_AddMeshVar(p%Vars%u, "PtFairDisplacement", [FieldTransDisp], &
                          VarIdx=p%iVarPtFairDisplacement, &
                          Mesh=u%PtFairDisplacement, &
                          Perturbs=[0.2_R8Ki*D2R * max(p%depth,1.0_R8Ki)])
@@ -759,12 +759,12 @@ IF (ErrStat >= AbortErrLev) RETURN
       ! Output variables
       !-------------------------------------------------------------------------
 
-      call MV_AddMeshVar(p%Vars%y, "FairleadLoads", [VF_Force], &
+      call MV_AddMeshVar(p%Vars%y, "FairleadLoads", [FieldForce], &
                          VarIdx=p%iVarPtFairleadLoad, &
                          Mesh=y%ptFairleadLoad)
 
       ! Write outputs
-      call MV_AddVar(p%Vars%y, "WriteOutput", VF_Scalar, &
+      call MV_AddVar(p%Vars%y, "WriteOutput", FieldScalar, &
                      VarIdx=p%iVarWriteOutput, &
                      Flags=VF_WriteOut, &
                      Num=p%numOuts,&

@@ -492,7 +492,7 @@ subroutine SeaSt_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrS
    !----------------------------------------------------------------------------
 
    ! Extended input
-   call MV_AddVar(p%Vars%u, "WaveElev0", VF_Scalar, &
+   call MV_AddVar(p%Vars%u, "WaveElev0", FieldScalar, &
                   VarIdx=p%iVarWaveElev0U, &
                   Flags=VF_ExtLin, &
                   Perturb=0.02_R8Ki * Pi / 180.0_R8Ki * max(1.0_R8Ki, p%WaveField%WtrDpth), &
@@ -503,14 +503,14 @@ subroutine SeaSt_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrS
    !----------------------------------------------------------------------------
 
    ! Extended output
-   call MV_AddVar(p%Vars%y, "WaveElev0", VF_Scalar, &
+   call MV_AddVar(p%Vars%y, "WaveElev0", FieldScalar, &
                   VarIdx=p%iVarWaveElev0Y, &
                   Flags=VF_ExtLin, &
                   LinNames=['Extended output: wave elevation at platform ref point, m'])
 
 
    ! Output variables
-   call MV_AddVar(p%Vars%y, "WriteOutput", VF_Scalar, Num=p%NumOuts, &
+   call MV_AddVar(p%Vars%y, "WriteOutput", FieldScalar, Num=p%NumOuts, &
                   Flags=VF_WriteOut, &
                   VarIdx=p%iVarWriteOutput, &
                   LinNames=[(WriteOutputLinName(i), i = 1, p%numOuts)])

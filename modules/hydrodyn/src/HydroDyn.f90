@@ -980,7 +980,7 @@ subroutine HydroDyn_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, E
    do k = 1, p%nWAMITObj
       if (p%WAMIT(k)%SS_Exctn%numStates == 0) cycle
       if (p%NBody > 1) BodyDesc = 'B'//trim(Num2LStr(k))
-      call MV_AddVar(p%Vars%x, "WAMIT("//trim(Num2LStr(k))//")%SS_Exctn", VF_Scalar, &
+      call MV_AddVar(p%Vars%x, "WAMIT("//trim(Num2LStr(k))//")%SS_Exctn", FieldScalar, &
                      Flags=VF_DerivOrder1, &
                      Num=p%WAMIT(k)%SS_Exctn%numStates, &
                      Perturb=20000.0_R8Ki * D2R_D, &
@@ -990,7 +990,7 @@ subroutine HydroDyn_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, E
    do k = 1, p%nWAMITObj
       if (p%WAMIT(k)%SS_Rdtn%numStates == 0) cycle
       if (p%NBody > 1) BodyDesc = 'B'//trim(Num2LStr(k))
-      call MV_AddVar(p%Vars%x, "WAMIT("//trim(Num2LStr(k))//")%SS_Rdtn", VF_Scalar, &
+      call MV_AddVar(p%Vars%x, "WAMIT("//trim(Num2LStr(k))//")%SS_Rdtn", FieldScalar, &
                      Flags=VF_DerivOrder1, &
                      Num=p%WAMIT(k)%SS_Rdtn%numStates, &
                      Perturb=2.0_R8Ki * D2R_D , &
@@ -1006,12 +1006,12 @@ subroutine HydroDyn_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, E
    PerturbRot = 2*D2R
 
    ! Create perturbation array (order based on MotionFields)
-   Perturbs = [PerturbTrans, &  ! VF_TransDisp
-               PerturbRot, &    ! VF_Orientation
-               PerturbTrans, &  ! VF_TransVel
-               PerturbRot, &    ! VF_AngularVel
-               PerturbTrans, &  ! VF_TransAcc
-               PerturbRot]      ! VF_AngularAcc
+   Perturbs = [PerturbTrans, &  ! FieldTransDisp
+               PerturbRot, &    ! FieldOrientation
+               PerturbTrans, &  ! FieldTransVel
+               PerturbRot, &    ! FieldAngularVel
+               PerturbTrans, &  ! FieldTransAcc
+               PerturbRot]      ! FieldAngularAcc
 
    call MV_AddMeshVar(p%Vars%u, "Morison", MotionFields, u%Morison%Mesh, &
                       VarIdx=p%iVarMorisonMotionMesh, &
@@ -1025,22 +1025,22 @@ subroutine HydroDyn_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, E
                       VarIdx=p%iVarPRPMotionMesh, &
                       Perturbs=Perturbs)
 
-   call MV_AddVar(p%Vars%u, "WaveElev0", VF_Scalar, &
+   call MV_AddVar(p%Vars%u, "WaveElev0", FieldScalar, &
                   VarIdx=p%iVarWaveElev0, &
                   Flags=VF_ExtLin + VF_Linearize, &
                   LinNames=['Extended input: wave elevation at platform ref point, m'])
 
-   call MV_AddVar(p%Vars%u, "HWindSpeed", VF_Scalar, &
+   call MV_AddVar(p%Vars%u, "HWindSpeed", FieldScalar, &
                   VarIdx=p%iVarHWindSpeed, &
                   Flags=VF_ExtLin + VF_Linearize, &
                   LinNames=['Extended input: horizontal current speed (steady/uniform wind), m/s'])
 
-   call MV_AddVar(p%Vars%u, "PLexp", VF_Scalar, &
+   call MV_AddVar(p%Vars%u, "PLexp", FieldScalar, &
                   VarIdx=p%iVarPLexp, &
                   Flags=VF_ExtLin + VF_Linearize, &
                   LinNames=['Extended input: vertical power-law shear exponent, -'])
 
-   call MV_AddVar(p%Vars%u, "PropagationDir", VF_Scalar, &
+   call MV_AddVar(p%Vars%u, "PropagationDir", FieldScalar, &
                   VarIdx=p%iVarPropagationDir, &
                   Flags=VF_ExtLin + VF_Linearize, &
                   LinNames=['Extended input: propagation direction, rad'])
@@ -1053,7 +1053,7 @@ subroutine HydroDyn_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, E
 
    call MV_AddMeshVar(p%Vars%y, "WAMITLoads", LoadFields, y%WAMITMesh, VarIdx=p%iVarWAMITLoadMesh)
 
-   call MV_AddVar(p%Vars%y, "WriteOutput", VF_Scalar, &
+   call MV_AddVar(p%Vars%y, "WriteOutput", FieldScalar, &
                   VarIdx=p%iVarWriteOut, &
                   Flags=VF_WriteOut, &
                   Num=p%NumTotalOuts, &

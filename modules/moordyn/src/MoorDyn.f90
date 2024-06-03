@@ -2804,18 +2804,18 @@ CONTAINS
          ! If coupled pinned body
          if (m%BodyList(m%FreeBodyIs(l))%typeNum == 2) then 
             ! Add angular displacement
-            call MV_AddVar(p%Vars%x, LinStr, VF_AngularDisp, Num=3, Flags=VF_DerivOrder2, &
+            call MV_AddVar(p%Vars%x, LinStr, FieldAngularDisp, Num=3, Flags=VF_DerivOrder2, &
                            iUsr=m%BodyStateIs1(l)+3, &   ! x%state index
                            Perturb=0.02_R8Ki, &
                            LinNames=[(trim(LinStr)//AngularDispSuffix(j), j=1,3)])
          else
             ! Add translation displacement
-            call MV_AddVar(p%Vars%x, LinStr, VF_TransDisp, Num=3, Flags=VF_DerivOrder2, &
+            call MV_AddVar(p%Vars%x, LinStr, FieldTransDisp, Num=3, Flags=VF_DerivOrder2, &
                            iUsr=m%BodyStateIs1(l)+6, &   ! x%state index
                            Perturb=dl_slack_min, &
                            LinNames=[(trim(LinStr)//TransDispSuffix(j), j=1,3)])
             ! Add angular displacement
-            call MV_AddVar(p%Vars%x, LinStr, VF_AngularDisp, Num=3, Flags=VF_DerivOrder2, &
+            call MV_AddVar(p%Vars%x, LinStr, FieldAngularDisp, Num=3, Flags=VF_DerivOrder2, &
                            iUsr=m%BodyStateIs1(l)+9, &   ! x%state index
                            Perturb=0.02_R8Ki, &
                            LinNames=[(trim(LinStr)//AngularDispSuffix(j), j=1,3)])
@@ -2829,18 +2829,18 @@ CONTAINS
          ! If pinned rod
          if (abs(m%RodList(m%FreeRodIs(l))%typeNum) == 1) then
             ! Add angular displacement
-            call MV_AddVar(p%Vars%x, LinStr, VF_AngularDisp, Num=3, Flags=VF_DerivOrder2, &
+            call MV_AddVar(p%Vars%x, LinStr, FieldAngularDisp, Num=3, Flags=VF_DerivOrder2, &
                            iUsr=m%RodStateIs1(l)+3, & ! x%state index
                            Perturb=0.02_R8Ki, &
                            LinNames=[(trim(LinStr)//AngularDispSuffix(j), j=1,3)])
          else
             ! Add translation displacement
-            call MV_AddVar(p%Vars%x, LinStr, VF_TransDisp, Num=3, Flags=VF_DerivOrder2, &
+            call MV_AddVar(p%Vars%x, LinStr, FieldTransDisp, Num=3, Flags=VF_DerivOrder2, &
                            iUsr=m%RodStateIs1(l)+6, & ! x%state index
                            Perturb=dl_slack_min, &
                            LinNames=[(trim(LinStr)//TransDispSuffix(j), j=1,3)])
             ! Add angular displacement
-            call MV_AddVar(p%Vars%x, LinStr, VF_AngularDisp, Num=3, Flags=VF_DerivOrder2, &
+            call MV_AddVar(p%Vars%x, LinStr, FieldAngularDisp, Num=3, Flags=VF_DerivOrder2, &
                            iUsr=m%RodStateIs1(l)+9, & ! x%state index
                            Perturb=0.02_R8Ki, &
                            LinNames=[(trim(LinStr)//AngularDispSuffix(j), j=1,3)])
@@ -2851,7 +2851,7 @@ CONTAINS
       do l = 1, p%nFreePoints                   ! Point m%PointList(m%FreePointIs(l))
          ! corresponds to state indices: (m%PointStateIs1(l)+3:m%PointStateIs1(l)+5)
          LinStr = 'Point '//Num2LStr(m%FreeRodIs(l))
-         call MV_AddVar(p%Vars%x, LinStr, VF_TransDisp, Num=3, Flags=VF_DerivOrder2, &
+         call MV_AddVar(p%Vars%x, LinStr, FieldTransDisp, Num=3, Flags=VF_DerivOrder2, &
                         iUsr=m%PointStateIs1(l)+3, &  ! x%state index
                         Perturb=dl_slack_min, &
                         LinNames=[(trim(LinStr)//TransDispSuffix(j), j=1,3)])
@@ -2863,7 +2863,7 @@ CONTAINS
          N = m%LineList(l)%N                 ! number of segments in the line
          do i = 0, N-2
             LinStr = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))
-            call MV_AddVar(p%Vars%x, LinStr, VF_TransDisp, Num=3, Flags=VF_DerivOrder2, &
+            call MV_AddVar(p%Vars%x, LinStr, FieldTransDisp, Num=3, Flags=VF_DerivOrder2, &
                            iUsr=m%LineStateIs1(l) + 3*N + 3*i - 3, & ! x%state index
                            Perturb=dl_slack_min, &
                            LinNames=[(trim(LinStr)//TransDispSuffix(j), j=1,3)])
@@ -2881,18 +2881,18 @@ CONTAINS
          ! If coupled pinned body
          if (m%BodyList(m%FreeBodyIs(l))%typeNum == 2) then 
             ! Add angular displacement
-            call MV_AddVar(p%Vars%x, LinStr, VF_AngularVel, Num=3, Flags=VF_DerivOrder2, &
+            call MV_AddVar(p%Vars%x, LinStr, FieldAngularVel, Num=3, Flags=VF_DerivOrder2, &
                            iUsr=m%BodyStateIs1(l)+0, &   ! x%state index
                            Perturb=0.1_R8Ki, &
                            LinNames=[(trim(LinStr)//AngularVelSuffix(j), j=1,3)])
          else
             ! Add translation displacement
-            call MV_AddVar(p%Vars%x, LinStr, VF_TransVel, Num=3, Flags=VF_DerivOrder2, &
+            call MV_AddVar(p%Vars%x, LinStr, FieldTransVel, Num=3, Flags=VF_DerivOrder2, &
                            iUsr=m%BodyStateIs1(l)+0, &   ! x%state index
                            Perturb=0.1_R8Ki, &
                            LinNames=[(trim(LinStr)//TransVelSuffix(j), j=1,3)])
             ! Add angular displacement
-            call MV_AddVar(p%Vars%x, LinStr, VF_AngularVel, Num=3, Flags=VF_DerivOrder2, &
+            call MV_AddVar(p%Vars%x, LinStr, FieldAngularVel, Num=3, Flags=VF_DerivOrder2, &
                            iUsr=m%BodyStateIs1(l)+3, &   ! x%state index
                            Perturb=0.1_R8Ki, &
                            LinNames=[(trim(LinStr)//AngularVelSuffix(j), j=1,3)])
@@ -2906,18 +2906,18 @@ CONTAINS
          ! If pinned rod
          if (abs(m%RodList(m%FreeRodIs(l))%typeNum) == 1) then
             ! Add angular displacement
-            call MV_AddVar(p%Vars%x, LinStr, VF_AngularVel, Num=3, Flags=VF_DerivOrder2, &
+            call MV_AddVar(p%Vars%x, LinStr, FieldAngularVel, Num=3, Flags=VF_DerivOrder2, &
                            iUsr=m%RodStateIs1(l)+0, & ! x%state index
                            Perturb=0.1_R8Ki, &
                            LinNames=[(trim(LinStr)//AngularVelSuffix(j), j=1,3)])
          else
             ! Add translation displacement
-            call MV_AddVar(p%Vars%x, LinStr, VF_TransVel, Num=3, Flags=VF_DerivOrder2, &
+            call MV_AddVar(p%Vars%x, LinStr, FieldTransVel, Num=3, Flags=VF_DerivOrder2, &
                            iUsr=m%RodStateIs1(l)+0, & ! x%state index
                            Perturb=0.1_R8Ki, &
                            LinNames=[(trim(LinStr)//TransVelSuffix(j), j=1,3)])
             ! Add angular displacement
-            call MV_AddVar(p%Vars%x, LinStr, VF_AngularVel, Num=3, Flags=VF_DerivOrder2, &
+            call MV_AddVar(p%Vars%x, LinStr, FieldAngularVel, Num=3, Flags=VF_DerivOrder2, &
                            iUsr=m%RodStateIs1(l)+3, & ! x%state index
                            Perturb=0.02_R8Ki, &
                            LinNames=[(trim(LinStr)//AngularVelSuffix(j), j=1,3)])
@@ -2928,7 +2928,7 @@ CONTAINS
       do l = 1, p%nFreePoints                   ! Point m%PointList(m%FreePointIs(l))
          ! corresponds to state indices: (m%PointStateIs1(l)+3:m%PointStateIs1(l)+5)
          LinStr = 'Point '//Num2LStr(m%FreeRodIs(l))
-         call MV_AddVar(p%Vars%x, LinStr, VF_TransVel, Num=3, Flags=VF_DerivOrder2, &
+         call MV_AddVar(p%Vars%x, LinStr, FieldTransVel, Num=3, Flags=VF_DerivOrder2, &
                         iUsr=m%PointStateIs1(l)+0, &  ! x%state index
                         Perturb=0.1_R8Ki, &
                         LinNames=[(trim(LinStr)//TransVelSuffix(j), j=1,3)])
@@ -2940,7 +2940,7 @@ CONTAINS
          N = m%LineList(l)%N                 ! number of segments in the line
          do i = 0, N-2
             LinStr = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))
-            call MV_AddVar(p%Vars%x, LinStr, VF_TransVel, Num=3, Flags=VF_DerivOrder2, &
+            call MV_AddVar(p%Vars%x, LinStr, FieldTransVel, Num=3, Flags=VF_DerivOrder2, &
                            iUsr=m%LineStateIs1(l) + 3*i + 0, & ! x%state index
                            Perturb=0.1_R8Ki, &
                            LinNames=[(trim(LinStr)//TransVelSuffix(j), j=1,3)])
@@ -2956,12 +2956,12 @@ CONTAINS
       call MV_AddMeshVar(p%Vars%u, "CoupledKinematics", MotionFields, &
                          VarIdx=p%iVarCoupledKinematics, &
                          Mesh=u%CoupledKinematics(1), &
-                         Perturbs=[dl_slack_min, & ! VF_TransDisp
-                                   0.1_R8Ki, &     ! VF_Orientation
-                                   0.1_R8Ki, &     ! VF_TransVel
-                                   0.1_R8Ki, &     ! VF_AngularVel
-                                   0.1_R8Ki, &     ! VF_TransAcc
-                                   0.1_R8Ki])      ! VF_AngularAcc
+                         Perturbs=[dl_slack_min, & ! FieldTransDisp
+                                   0.1_R8Ki, &     ! FieldOrientation
+                                   0.1_R8Ki, &     ! FieldTransVel
+                                   0.1_R8Ki, &     ! FieldAngularVel
+                                   0.1_R8Ki, &     ! FieldTransAcc
+                                   0.1_R8Ki])      ! FieldAngularAcc
 
       ! This could be stored more efficiently, but maintains order compatible with previous implementation.
       if (.not. allocated(u%DeltaL)) then
@@ -2988,12 +2988,12 @@ CONTAINS
                LinStr = '(lines: none)'
             end if
 
-            call MV_AddVar(p%Vars%u, "DeltaL "//trim(num2lstr(i)), VF_TransDisp, &
+            call MV_AddVar(p%Vars%u, "DeltaL "//trim(num2lstr(i)), FieldTransDisp, &
                            iUsr=i, &
                            Perturb=dl_slack_min, &
                            LinNames=['CtrlChan DeltaL '//trim(num2lstr(i))//', m '//trim(LinStr)])
 
-            call MV_AddVar(p%Vars%u, "DeltaLdot "//trim(num2lstr(i)), VF_TransVel, &
+            call MV_AddVar(p%Vars%u, "DeltaLdot "//trim(num2lstr(i)), FieldTransVel, &
                            iUsr=i, &
                            Perturb=0.2_R8Ki, &
                            LinNames=['CtrlChan DeltaLdot '//trim(num2lstr(i))//', m/s'//trim(LinStr)])
@@ -3009,7 +3009,7 @@ CONTAINS
                          Mesh=y%CoupledLoads(1))
 
       ! Write outputs
-      call MV_AddVar(p%Vars%y, "WriteOutput", VF_Scalar, &
+      call MV_AddVar(p%Vars%y, "WriteOutput", FieldScalar, &
                      VarIdx=p%iVarWriteOutput, &
                      Flags=VF_WriteOut, &
                      Num=p%numOuts,&

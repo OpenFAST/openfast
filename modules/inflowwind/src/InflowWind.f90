@@ -677,17 +677,17 @@ subroutine IfW_InitVars(InitInp, p, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    ! Input variables
    !----------------------------------------------------------------------------
 
-   call MV_AddVar(p%Vars%u, "HWindSpeed", VF_Scalar, &
+   call MV_AddVar(p%Vars%u, "HWindSpeed", FieldScalar, &
                   VarIdx=p%iVarHWindSpeed, &
                   Flags=ior(VF_ExtLin, VF_Linearize), &
                   LinNames=['Extended input: horizontal wind speed (steady/uniform wind), m/s'])
 
-   call MV_AddVar(p%Vars%u, "PLExp", VF_Scalar, &
+   call MV_AddVar(p%Vars%u, "PLExp", FieldScalar, &
                   VarIdx=p%iVarPLExp, &
                   Flags=ior(VF_ExtLin, VF_Linearize), &
                   LinNames=['Extended input: vertical power-law shear exponent, -'])
 
-   call MV_AddVar(p%Vars%u, "PropagationDir", VF_Scalar, &
+   call MV_AddVar(p%Vars%u, "PropagationDir", FieldScalar, &
                   VarIdx=p%iVarPropagationDir, &
                   Flags=ior(VF_ExtLin, VF_Linearize), &
                   LinNames=['Extended input: propagation direction, rad'])
@@ -696,22 +696,22 @@ subroutine IfW_InitVars(InitInp, p, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    ! Output variables
    !----------------------------------------------------------------------------
 
-   call MV_AddVar(p%Vars%y, "HWindSpeed", VF_Scalar, &
+   call MV_AddVar(p%Vars%y, "HWindSpeed", FieldScalar, &
                   VarIdx=p%iVarHWindSpeedY, &
                   Flags=VF_ExtLin, &
                   LinNames=['Extended output: horizontal wind speed (steady/uniform wind), m/s'])
 
-   call MV_AddVar(p%Vars%y, "PLExp", VF_Scalar, &
+   call MV_AddVar(p%Vars%y, "PLExp", FieldScalar, &
                   VarIdx=p%iVarPLExpY, &
                   Flags=VF_ExtLin, &
                   LinNames=['Extended output: vertical power-law shear exponent, -'])
 
-   call MV_AddVar(p%Vars%y, "PropagationDir", VF_Scalar, &
+   call MV_AddVar(p%Vars%y, "PropagationDir", FieldScalar, &
                   VarIdx=p%iVarPropagationDirY, &
                   Flags=VF_ExtLin, &
                   LinNames=['Extended output: propagation direction, rad'])
 
-   call MV_AddVar(p%Vars%y, "WriteOutput", VF_Scalar, &
+   call MV_AddVar(p%Vars%y, "WriteOutput", FieldScalar, &
                   VarIdx=p%iVarWriteOutput, &
                   Flags=VF_WriteOut, &
                   Num=p%NumOuts, &

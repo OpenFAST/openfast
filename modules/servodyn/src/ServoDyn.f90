@@ -676,7 +676,7 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
    do i = 1, p%NumBStC
       do j = 1, p%NumBl
          Desc = 'Blade '//trim(Num2LStr(i))//' StC '//Num2LStr(j)
-         call MV_AddVar(p%Vars%x, Desc, VF_Scalar, Num=6, &
+         call MV_AddVar(p%Vars%x, Desc, FieldScalar, Num=6, &
                         Flags=VF_DerivOrder2+VF_RotFrame, &
                         LinNames=[(trim(Desc)//StCLabels(k), k = 1, 6)], &
                         Perturb=xPerturb)
@@ -686,7 +686,7 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
    ! Nacelle Structural Controller
    do j = 1, p%NumNStC
       Desc = 'Nacelle StC '//Num2LStr(j)
-      call MV_AddVar(p%Vars%x, Desc, VF_Scalar, Num=6, &
+      call MV_AddVar(p%Vars%x, Desc, FieldScalar, Num=6, &
                      Flags=VF_DerivOrder2, &
                      LinNames=[(trim(Desc)//StCLabels(k), k = 1, 6)], &
                      Perturb=xPerturb)
@@ -695,7 +695,7 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
    ! Tower Structural Controller
    do j = 1, p%NumTStC
       Desc = 'Tower StC '//Num2LStr(j)
-      call MV_AddVar(p%Vars%x, Desc, VF_Scalar, Num=6, &
+      call MV_AddVar(p%Vars%x, Desc, FieldScalar, Num=6, &
                      Flags=VF_DerivOrder2, &
                      LinNames=[(trim(Desc)//StCLabels(k), k = 1, 6)], &
                      Perturb=xPerturb)
@@ -704,7 +704,7 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
    ! Substructure Structural Controller
    do j = 1, p%NumSStC
       Desc = 'Substructure StC '//Num2LStr(j)
-      call MV_AddVar(p%Vars%x, Desc, VF_Scalar, Num=6, &
+      call MV_AddVar(p%Vars%x, Desc, FieldScalar, Num=6, &
                      Flags=VF_DerivOrder2, &
                      LinNames=[(trim(Desc)//StCLabels(k), k = 1, 6)], &
                      Perturb=xPerturb)
@@ -718,11 +718,11 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
    uPerturbAng = 0.2_R8Ki * Pi_R8 / 180.0_R8Ki
    uPerturbs = [uPerturbTrans, uPerturbAng, uPerturbTrans, uPerturbAng, uPerturbTrans, uPerturbAng]
 
-   call MV_AddVar(p%Vars%u, "Yaw", VF_Scalar, VarIdx=p%iVarYaw, LinNames=['Yaw, rad'])
+   call MV_AddVar(p%Vars%u, "Yaw", FieldScalar, Flags=VF_2PI, VarIdx=p%iVarYaw, LinNames=['Yaw, rad'])
 
-   call MV_AddVar(p%Vars%u, "YawRate", VF_Scalar, VarIdx=p%iVarYawRate, LinNames=['YawRate, rad/s'])
+   call MV_AddVar(p%Vars%u, "YawRate", FieldScalar, VarIdx=p%iVarYawRate, LinNames=['YawRate, rad/s'])
 
-   call MV_AddVar(p%Vars%u, "HSS_Spd", VF_Scalar, VarIdx=p%iVarHSS_Spd, LinNames=['HSS_Spd, rad/s'])
+   call MV_AddVar(p%Vars%u, "HSS_Spd", FieldScalar, VarIdx=p%iVarHSS_Spd, LinNames=['HSS_Spd, rad/s'])
 
    ! Structural controllers
    do j = 1, p%NumBStC
@@ -755,21 +755,21 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
    ! Output variables
    !----------------------------------------------------------------------------
 
-   call MV_AddVar(p%Vars%y, "BlPitchCom", VF_Scalar, &
+   call MV_AddVar(p%Vars%y, "BlPitchCom", FieldScalar, &
                   VarIdx=p%iVarBlPitchCom, &
-                  Flags=VF_RotFrame, &
+                  Flags=VF_RotFrame + VF_2PI, &
                   Num=size(y%BlPitchCom), &
                   LinNames=[('BlPitchCom('//trim(Num2LStr(i))//'), rad', i = 1, size(y%BlPitchCom))])
 
-   call MV_AddVar(p%Vars%y, "YawMom", VF_Scalar, &
+   call MV_AddVar(p%Vars%y, "YawMom", FieldScalar, &
                   VarIdx=p%iVarYawMom, &
                   LinNames=['YawMom, Nm'])
 
-   call MV_AddVar(p%Vars%y, "GenTrq", VF_Scalar, &
+   call MV_AddVar(p%Vars%y, "GenTrq", FieldScalar, &
                   VarIdx=p%iVarGenTrq, &
                   LinNames=['GenTrq, Nm'])
 
-   call MV_AddVar(p%Vars%y, "ElecPwr", VF_Scalar, &
+   call MV_AddVar(p%Vars%y, "ElecPwr", FieldScalar, &
                   VarIdx=p%iVarElecPwr, &
                   LinNames=['ElecPwr, W'])
 
@@ -822,7 +822,7 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
       p%iVarWriteOutput = 0
    end if
    do i = 1, p%NumOuts
-      call MV_AddVar(p%Vars%y, p%OutParam(i)%Name, VF_Scalar, &
+      call MV_AddVar(p%Vars%y, p%OutParam(i)%Name, FieldScalar, &
                      Flags=VF_WriteOut + OutParamFlags(p%OutParam(i)%Indx), &
                      iUsr=i, &
                      LinNames=[trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units], &

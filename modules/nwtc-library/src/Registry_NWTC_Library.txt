@@ -45,16 +45,16 @@ typedef     ^             ^              CHARACTER(6)                RNG_type
 
 param       ^       -           IntKi           VarNameLen          -   64  -   ""  -
 
-param       ^       -           IntKi           VF_Force            -   1   -   ""  -
-param       ^       -           IntKi           VF_Moment           -   2   -   ""  -
-param       ^       -           IntKi           VF_Orientation      -   3   -   ""  -
-param       ^       -           IntKi           VF_TransDisp        -   4   -   ""  -
-param       ^       -           IntKi           VF_AngularDisp      -   5   -   ""  -
-param       ^       -           IntKi           VF_TransVel         -   6   -   ""  -
-param       ^       -           IntKi           VF_AngularVel       -   7   -   ""  -
-param       ^       -           IntKi           VF_TransAcc         -   8   -   ""  -
-param       ^       -           IntKi           VF_AngularAcc       -   9   -   ""  -
-param       ^       -           IntKi           VF_Scalar           -  10   -   ""  -
+param       ^       -           IntKi           FieldForce          -   1   -   ""  -
+param       ^       -           IntKi           FieldMoment         -   2   -   ""  -
+param       ^       -           IntKi           FieldOrientation    -   3   -   ""  -
+param       ^       -           IntKi           FieldTransDisp      -   4   -   ""  -
+param       ^       -           IntKi           FieldAngularDisp    -   5   -   ""  -
+param       ^       -           IntKi           FieldTransVel       -   6   -   ""  -
+param       ^       -           IntKi           FieldAngularVel     -   7   -   ""  -
+param       ^       -           IntKi           FieldTransAcc       -   8   -   ""  -
+param       ^       -           IntKi           FieldAngularAcc     -   9   -   ""  -
+param       ^       -           IntKi           FieldScalar         -  10   -   ""  -
 
 param       ^       -           IntKi           VF_None             -    0  -   "Variable with no flags"  -
 param       ^       -           IntKi           VF_Mesh             -    1  -   "Variable contained in mesh"  -
@@ -63,11 +63,12 @@ param       ^       -           IntKi           VF_RotFrame         -    4  -   
 param       ^       -           IntKi           VF_Linearize        -    8  -   "Variable for linearization"  -
 param       ^       -           IntKi           VF_ExtLin           -   16  -   "Variable for extended linearization"  -
 param       ^       -           IntKi           VF_SmallAngle       -   32  -   "Use small angles to calculate difference in linearization"  -
-param       ^       -           IntKi           VF_WriteOut         -   64  -   "Variable for write output"  -
-param       ^       -           IntKi           VF_Solve            -  128  -   "Variable for solver"  -
-param       ^       -           IntKi           VF_AeroMap          -  256  -   "Variable for aeromap"  -
-param       ^       -           IntKi           VF_DerivOrder1      -  512  -   "Variable is derivative order 1 in linearization file"  -
-param       ^       -           IntKi           VF_DerivOrder2      - 1024  -   "Variable is derivative order 2 in linearization file"  -
+param       ^       -           IntKi           VF_2PI              -   64  -   "Variable is an angle with range [0,2pi]"  -
+param       ^       -           IntKi           VF_WriteOut         -  128  -   "Variable for write output"  -
+param       ^       -           IntKi           VF_Solve            -  256  -   "Variable for solver"  -
+param       ^       -           IntKi           VF_AeroMap          -  512  -   "Variable for aeromap"  -
+param       ^       -           IntKi           VF_DerivOrder1      - 1024  -   "Variable is derivative order 1 in linearization file"  -
+param       ^       -           IntKi           VF_DerivOrder2      - 2048  -   "Variable is derivative order 2 in linearization file"  -
 
 param       ^       -           IntKi           VC_None             -   0   -   ""  -
 param       ^       -           IntKi           VC_Tight            -   1   -   ""  -

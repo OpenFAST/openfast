@@ -5850,7 +5850,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    do i = 2, p%node_total
       label = 'finite element node '//trim(num2lstr(i))//' (number of elements = '//&
                   trim(num2lstr(p%elem_total))//'; element order = '//trim(num2lstr(p%nodes_per_elem-1))//')'
-      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), VF_TransDisp, &
+      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldTransDisp, &
                      Num=3, &
                      Flags=Flags, &
                      iUsr=i, &
@@ -5858,7 +5858,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
                      LinNames=[trim(label)//' translational displacement in X, m', &
                                trim(label)//' translational displacement in Y, m', &
                                trim(label)//' translational displacement in Z, m'])
-      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), VF_Orientation, &
+      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldOrientation, &
                      Num=3, &
                      Flags=Flags, &
                      iUsr=i, &
@@ -5872,7 +5872,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    do i = 2, p%node_total
       label = 'First time derivative of finite element node '//trim(num2lstr(i))//' (number of elements = '//&
                   trim(num2lstr(p%elem_total))//'; element order = '//trim(num2lstr(p%nodes_per_elem-1))//')'
-      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), VF_TransVel, &
+      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldTransVel, &
                      Num=3, &
                      Flags=Flags, &
                      iUsr=i, &
@@ -5880,7 +5880,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
                      LinNames=[trim(label)//' translational displacement in X, m/s', &
                                trim(label)//' translational displacement in Y, m/s', &
                                trim(label)//' translational displacement in Z, m/s'])
-      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), VF_AngularVel, &
+      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldAngularVel, &
                      Num=3, &
                      Flags=Flags, &
                      iUsr=i, &
@@ -5900,23 +5900,23 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    call MV_AddMeshVar(p%Vars%u, "RootMotion", MotionFields, &
                       VarIdx=p%iVarRootMotion, &
                       Mesh=u%RootMotion, &
-                      Perturbs=[0.2_R8Ki*D2R_D * p%blade_length, &    ! VF_TransDisp
-                                0.2_R8Ki*D2R_D, &                     ! VF_Orientation
-                                0.2_R8Ki*D2R_D * p%blade_length, &    ! VF_TransVel
-                                0.2_R8Ki*D2R_D, &                     ! VF_AngularVel
-                                0.2_R8Ki*D2R_D * p%blade_length, &    ! VF_TransAcc
-                                0.2_R8Ki*D2R_D])                      ! VF_AngularAcc
+                      Perturbs=[0.2_R8Ki*D2R_D * p%blade_length, &    ! FieldTransDisp
+                                0.2_R8Ki*D2R_D, &                     ! FieldOrientation
+                                0.2_R8Ki*D2R_D * p%blade_length, &    ! FieldTransVel
+                                0.2_R8Ki*D2R_D, &                     ! FieldAngularVel
+                                0.2_R8Ki*D2R_D * p%blade_length, &    ! FieldTransAcc
+                                0.2_R8Ki*D2R_D])                      ! FieldAngularAcc
    call MV_AddMeshVar(p%Vars%u, "PointLoad", LoadFields, &
                       VarIdx=p%iVarPointLoad, &
                       Mesh=u%PointLoad, &
-                      Perturbs=[MaxThrust/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes), &  ! VF_Force
-                                MaxTorque/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes)])   ! VF_Moment
+                      Perturbs=[MaxThrust/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes), &  ! FieldForce
+                                MaxTorque/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes)])   ! FieldMoment
    call MV_AddMeshVar(p%Vars%u, "DistrLoad", LoadFields, &
                       VarIdx=p%iVarDistrLoad, &
                       Flags=ior(VF_Line, VF_AeroMap), &
                       Mesh=u%DistrLoad, &
-                      Perturbs=[MaxThrust/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes), &  ! VF_Force
-                                MaxTorque/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes)])   ! VF_Moment
+                      Perturbs=[MaxThrust/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes), &  ! FieldForce
+                                MaxTorque/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes)])   ! FieldMoment
 
    !----------------------------------------------------------------------------
    ! Output variables
@@ -5932,7 +5932,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    if (p%CompAeroMaps) then
       do i = p%iVarBldMotion, size(p%Vars%y)
          select case (p%Vars%y(i)%Field)
-         case (VF_TransDisp, VF_Orientation, VF_TransVel, VF_AngularVel)
+         case (FieldTransDisp, FieldOrientation, FieldTransVel, FieldAngularVel)
             call MV_SetFlags(p%Vars%y(i), VF_AeroMap)
          end select
       end do
@@ -5940,7 +5940,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
 
    p%iVarWriteOutput = size(p%Vars%y) + 1
    do i = 1, p%NumOuts
-      call MV_AddVar(p%Vars%y, p%OutParam(i)%Name, VF_Scalar, &
+      call MV_AddVar(p%Vars%y, p%OutParam(i)%Name, FieldScalar, &
                      VarIdx = j, &
                      Flags=VF_WriteOut + OutParamFlags(p%OutParam(i)%Indx), &
                      iUsr=i, &
@@ -5950,7 +5950,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
 
    idx = p%NumOuts + 1
    do i = 1, p%BldNd_NumOuts
-      call MV_AddVar(p%Vars%y, p%BldNd_OutParam(i)%Name, VF_Scalar, &
+      call MV_AddVar(p%Vars%y, p%BldNd_OutParam(i)%Name, FieldScalar, &
                      VarIdx = j, &
                      Num=size(p%BldNd_BlOutNd), &
                      Flags=VF_WriteOut + BldNd_OutParamFlags(p%BldNd_OutParam(i)%Name), &
@@ -6018,14 +6018,14 @@ subroutine BD_PackContStateQuatOP(p, x, Values)
    do i = 1, size(p%Vars%x)
       associate (Var => p%Vars%x(i))
          select case(Var%Field)
-         case (VF_TransDisp)
+         case (FieldTransDisp)
             Values(Var%iLoc(1):Var%iLoc(2)) = x%q(1:3,Var%iUsr(1))               ! XYZ displacement
-         case (VF_Orientation)
+         case (FieldOrientation)
             quat = wm_to_quat(wm_inv(x%q(4:6,Var%iUsr(1))))
             Values(Var%iLoc(1):Var%iLoc(2)) = quat                               ! WM to quaternion
-         case (VF_TransVel)
+         case (FieldTransVel)
             Values(Var%iLoc(1):Var%iLoc(2)) = x%dqdt(1:3,Var%iUsr(1))            ! XYZ velocity
-         case (VF_AngularVel)
+         case (FieldAngularVel)
             Values(Var%iLoc(1):Var%iLoc(2)) = x%dqdt(4:6,Var%iUsr(1))            ! Angular velocity
          end select
       end associate
@@ -6041,14 +6041,14 @@ subroutine BD_UnpackContStateQuatOP(p, Values, x)
    do i = 1, size(p%Vars%x)
       associate (Var => p%Vars%x(i))
          select case(Var%Field)
-         case (VF_TransDisp)
+         case (FieldTransDisp)
             x%q(1:3,Var%iUsr(1)) = Values(Var%iLoc(1):Var%iLoc(2))               ! XYZ displacement
-         case (VF_Orientation)
+         case (FieldOrientation)
             wm = wm_inv(quat_to_wm(Values(Var%iLoc(1):Var%iLoc(2))))
             x%q(4:6,Var%iUsr(1)) = wm                                            ! Quaternion to WM
-         case (VF_TransVel)
+         case (FieldTransVel)
             x%dqdt(1:3,Var%iUsr(1)) = Values(Var%iLoc(1):Var%iLoc(2))            ! XYZ velocity
-         case (VF_AngularVel)
+         case (FieldAngularVel)
             x%dqdt(4:6,Var%iUsr(1)) = Values(Var%iLoc(1):Var%iLoc(2))            ! Angular velocity
          end select
       end associate
@@ -6063,13 +6063,13 @@ subroutine BD_PackContStateOP(p, x, Values)
    do i = 1, size(p%Vars%x)
       associate (Var => p%Vars%x(i))
          select case(Var%Field)
-         case (VF_TransDisp)
+         case (FieldTransDisp)
             Values(Var%iLoc(1):Var%iLoc(2)) = x%q(1:3,Var%iUsr(1))      ! XYZ velocity
-         case (VF_Orientation)
+         case (FieldOrientation)
             Values(Var%iLoc(1):Var%iLoc(2)) = x%q(4:6,Var%iUsr(1))      ! Angular velocity
-         case (VF_TransVel)
+         case (FieldTransVel)
             Values(Var%iLoc(1):Var%iLoc(2)) = x%dqdt(1:3,Var%iUsr(1))   ! XYZ acceleration
-         case (VF_AngularVel)
+         case (FieldAngularVel)
             Values(Var%iLoc(1):Var%iLoc(2)) = x%dqdt(4:6,Var%iUsr(1))   ! Angular acceleration
          end select
       end associate
