@@ -476,7 +476,8 @@ subroutine ModGlue_CalcSteady(n_t_global, t_global, p, m, y, p_FAST, m_FAST, T, 
    if (ProcessAzimuth) then
 
       ! Interpolate outputs to target azimuth
-      call InterpOutputsToAzimuth()
+      call MV_ExtrapInterp(y%ModGlue%Vars%y, m%CS%y_buffer, m%CS%psi_buffer, &
+                           m%CS%y_interp, AzimuthTarget, ErrStat2, ErrMsg2)
 
       ! If converged
       if (m%CS%IsConverged) then
@@ -557,102 +558,6 @@ subroutine ModGlue_CalcSteady(n_t_global, t_global, p, m, y, p_FAST, m_FAST, T, 
 
 contains
 
-   subroutine InterpOutputsToAzimuth()
-      real(R8Ki)     :: a1, a2, a3     !< interpolation coefficients
-      real(R8Ki)     :: ti(3), to      !< temporary variables for interpolation
-      real(R8Ki)     :: q01, q1(3)
-      real(R8Ki)     :: q02, q2(3)
-      real(R8Ki)     :: q0o, qo(3)
-      real(R8Ki)     :: dot, theta, sin_theta, a, b
-      integer(IntKi) :: k, iq1, iq2
-      logical        :: first_quat
-
-      ! Switch based on interpolation order
-      select case (p%Lin%InterpOrder)
-      case (0)
-         m%CS%y_interp = m%CS%y_buffer(:, 1)
-         return
-      case (1)
-         ti(1:2) = m%CS%psi_buffer - m%CS%psi_buffer(1)
-         to = AzimuthTarget - m%CS%psi_buffer(1)
-         a1 = -(to - ti(2))/ti(2)
-         a2 = to/ti(2)
-         m%CS%y_interp = a1*m%CS%y_buffer(:, 1) + a2*m%CS%y_buffer(:, 2)
-      case (2)
-         ti = m%CS%psi_buffer - m%CS%psi_buffer(1)
-         to = AzimuthTarget - m%CS%psi_buffer(1)
-         a1 = (to - ti(2))*(to - ti(3))/((ti(1) - ti(2))*(ti(1) - ti(3)))
-         a2 = (to - ti(1))*(to - ti(3))/((ti(2) - ti(1))*(ti(2) - ti(3)))
-         a3 = (to - ti(1))*(to - ti(2))/((ti(3) - ti(1))*(ti(3) - ti(2)))
-         m%CS%y_interp = a1*m%CS%y_buffer(:, 1) + a2*m%CS%y_buffer(:, 2) + a3*m%CS%y_buffer(:, 3)
-      case default
-         m%CS%y_interp = 0.0_R8Ki
-         return
-      end select
-
-      ! Loop through glue output variables
-      first_quat = .true.
-      do i = 1, size(y%ModGlue%Vars%y)
-         associate (Var => y%ModGlue%Vars%y(i))
-
-            ! Switch based on variable field type
-            select case (Var%Field)
-            case (VF_Orientation)
-
-               ! If first quaternion, calculate interpolation coefficients for quadratic interp
-               if (first_quat) then
-                  first_quat = .false.
-                  select case (p%Lin%InterpOrder)
-                  case (1)
-                     iq1 = 1
-                     iq2 = 2
-                  case (2)
-                     ! Determine if azimuth target is between indices 1,2 or 2,3
-                     if (AzimuthTarget >= m%CS%psi_buffer(2)) then
-                        iq1 = 1
-                        iq2 = 2
-                     else
-                        iq1 = 2
-                        iq2 = 3
-                     end if
-                     to = (AzimuthTarget - m%CS%psi_buffer(iq1))/(m%CS%psi_buffer(iq2) - m%CS%psi_buffer(iq1))
-                  end select
-               end if
-
-               k = Var%iLoc(1)
-               do j = 1, Var%Nodes
-                  q1 = m%CS%y_buffer(k:k + 2, iq1)
-                  q2 = m%CS%y_buffer(k:k + 2, iq2)
-                  q01 = quat_scalar(q1)
-                  q02 = quat_scalar(q2)
-                  dot = q01*q02 + dot_product(q1, q2)
-                  if (dot < 0.0_R8Ki) then
-                     dot = -dot
-                     q02 = -q02
-                     q2 = -q2
-                  end if
-                  if (dot > 0.9995_R8Ki) then
-                     q0o = (1.0_R8Ki - to)*q01 + to*q02
-                     qo = (1.0_R8Ki - to)*q1 + to*q2
-                  else
-                     theta = acos(dot)
-                     sin_theta = sin(theta)
-                     a = sin((1.0_R8Ki - to)*theta)/sin_theta
-                     b = sin(to*theta)/sin_theta
-                     q0o = a*q01 + b*q02
-                     qo = a*q1 + b*q2
-                  end if
-                  qo = quat_canonical(q0o, qo)
-                  m%CS%y_interp(k:k + 2) = qo
-                  k = k + 3
-               end do
-
-            end select
-
-         end associate
-      end do
-   end subroutine
-
    function CalcOutputErrorAtAzimuth() result(eps_squared)
       real(R8Ki)  :: eps_squared_sum, eps_squared
 
@@ -663,9 +568,11 @@ contains
       ! Initialize epsilon squared sum
       eps_squared_sum = 0
 
-      ! Loop through glue output variables, ignore write outputs
+      ! Loop through glue output variables
       do i = 1, size(y%ModGlue%Vars%y)
          associate (Var => y%ModGlue%Vars%y(i))
+
+            ! Skip write outputs
             if (MV_HasFlags(Var, VF_WriteOut)) cycle
 
             ! Loop through values in variable

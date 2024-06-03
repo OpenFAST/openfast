@@ -31,11 +31,11 @@ implicit none
 
 private
 public :: MV_InitVarsJac, MV_Pack, MV_Unpack
-public :: MV_ComputeCentralDiff, MV_Perturb, MV_ComputeDiff
+public :: MV_ComputeCentralDiff, MV_Perturb, MV_ComputeDiff, MV_ExtrapInterp
 public :: MV_AddVar, MV_AddMeshVar
 public :: MV_HasFlags, MV_SetFlags, MV_UnsetFlags, MV_NumVars
 public :: LoadFields, MotionFields, TransFields, AngularFields
-public :: quat_to_dcm, dcm_to_quat, quat_inv, quat_to_rvec, rvec_to_quat, wm_to_quat, quat_to_wm, wm_inv, quat_scalar, quat_canonical
+public :: quat_to_dcm, dcm_to_quat, quat_inv, quat_to_rvec, rvec_to_quat, wm_to_quat, quat_to_wm, wm_inv
 public :: MV_FieldString, IdxStr
 public :: DumpMatrix
 
@@ -653,6 +653,135 @@ subroutine MV_ComputeCentralDiff(VarAry, Delta, PosAry, NegAry, DerivAry)
 
 end subroutine
 
+!> MV_ExtrapInterp interpolates arrays of variable data to the target x value from
+!! the array of x values. Supports constant, linear, and quadratic interpolation
+!! similar to the ExtrapInterp routines created by the registry.
+subroutine MV_ExtrapInterp(VarAry, y, tin, y_out, tin_out, ErrStat, ErrMsg)
+   type(ModVarType), intent(in)  :: VarAry(:)      ! Array of variables
+   real(R8Ki), intent(in)        :: y(:, :)
+   real(R8Ki), intent(in)        :: tin(:)
+   real(R8Ki), intent(inout)     :: y_out(:)
+   real(R8Ki), intent(in)        :: tin_out
+   integer(IntKi), intent(out)   :: ErrStat
+   character(*), intent(out)     :: ErrMsg
+
+   character(*), parameter       :: RoutineName = 'MV_ExtrapInterp'
+   integer(IntKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
+   integer(IntKi)                :: InterpOrder
+   real(R8Ki)                    :: t(3), t_out, a1, a2, a3, ti
+   real(R8Ki)                    :: q1(4), q2(4), q(4)
+   real(R8Ki)                    :: dot, theta, sin_theta, a, b
+   integer(IntKi)                :: i, j, k
+   integer(IntKi), parameter     :: iq1 = 1
+   integer(IntKi)                :: iq2
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   ! Check that array sizes match
+   if (size(t) /= size(y, 2)) then
+      call SetErrStat(ErrID_Fatal, 'size(t) must equal size(y)', ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Calculate interpolation order
+   InterpOrder = size(t) - 1
+
+   ! Switch based on interpolation order
+   select case (InterpOrder)
+
+   case (0) ! Constant interpolation (copy)
+
+      y_out = y(:, 1)
+
+   case (1) ! Linear Interpolation
+
+      t(1:2) = tin - tin(1)
+      t_out = tin_out - tin(1)
+      a1 = -(t_out - t(2))/t(2)
+      a2 = t_out/t(2)
+      y_out = a1*y(:, 1) + a2*y(:, 2)
+      iq2 = 2
+
+   case (2) ! Quadratic Interpolation
+
+      t = tin - tin(1)
+      t_out = tin_out - tin(1)
+      a1 = (t_out - t(2))*(t_out - t(3))/((t(1) - t(2))*(t(1) - t(3)))
+      a2 = (t_out - t(1))*(t_out - t(3))/((t(2) - t(1))*(t(2) - t(3)))
+      a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
+      y_out = a1*y(:, 1) + a2*y(:, 2) + a3*y(:, 3)
+      iq2 = 3
+
+   case default
+
+      ! Unsupported Interpolation
+      call SetErrStat(ErrID_Fatal, 'size(t) must be less than 4 (order must be less than 3).', ErrStat, ErrMsg, RoutineName)
+      return
+   end select
+
+   ! If order is zero, return since interp is a copy
+   if (InterpOrder == 0) return
+
+   !----------------------------------------------------------------------------
+   ! Handle variables that can't be linearly interpolated (ie. orientations)
+   !----------------------------------------------------------------------------
+
+   ! Calculate interpolation parameter [0,1]
+   ti = t_out/t(iq2)
+
+   ! Loop through glue output variables
+   do i = 1, size(VarAry)
+
+      ! Switch based on variable field type
+      select case (VarAry(i)%Field)
+
+      case (VF_Orientation)   ! SLERP for orientation quaternions
+
+         k = VarAry(i)%iLoc(1)
+         do j = 1, VarAry(i)%Nodes
+
+            ! Get quaternion 1 from array, calculate scalar
+            q1(2:4) = y(k:k + 2, iq1)
+            q1(1) = quat_scalar(q1(2:4))
+
+            ! Get quaternion 2 from array, calculate scalar
+            q2(2:4) = y(k:k + 2, iq2)
+            q2(1) = quat_scalar(q2(2:4))
+
+            ! Calculate dot product of two quaternions
+            ! If dot product is negative, invert second quaternion
+            dot = dot_product(q1, q2)
+            if (dot < 0.0_R8Ki) then
+               dot = -dot
+               q2 = -q2
+            end if
+
+            ! If the quaternions are very close, use linear interpolation
+            if (dot > 0.9995_R8Ki) then
+               q = (1.0_R8Ki - ti)*q1 + ti*q2
+            else
+               theta = acos(dot)
+               sin_theta = sin(theta)
+               a = sin((1.0_R8Ki - ti)*theta)/sin_theta
+               b = sin(ti*theta)/sin_theta
+               q = a*q1 + b*q2
+            end if
+
+            ! Store canonical quaternion in output array
+            y_out(k:k + 2) = quat_canonical(q(1), q(2:4))
+
+            ! Increment quaternion index
+            k = k + 3
+         end do
+
+      end select
+
+   end do
+
+end subroutine
+
 !-------------------------------------------------------------------------------
 ! Functions for adding Variables
 !-------------------------------------------------------------------------------
@@ -897,7 +1026,7 @@ pure function quat_canonical(q0, q) result(qc)
    real(R8Ki)              :: qc(3), m
    integer(IntKi)          :: i
    m = q0*q0 + dot_product(q, q)
-   qc = q / m
+   qc = q/m
    if (q0 > 0.0_R8Ki) return
    if (q0 < 0.0_R8Ki) then
       qc = -qc
