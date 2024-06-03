@@ -29,6 +29,7 @@ MODULE NWTC_Library
          !     NWTC_Library.f90
          !     NWTC_Library_Types.f90
          !     NWTC_Num.f90
+         !     NWTC_Str.f90
          !     ModMesh.f90
          !     ModMesh_Types.f90
          !
@@ -51,6 +52,7 @@ MODULE NWTC_Library
          !     NWTC_Library_Types.f90
          !     NWTC_IO.f90
          !     NWTC_Num.f90
+         !     NWTC_Str.f90
          !     ModMesh_Types.f90
          !     ModMesh.f90
          !     ModMesh_Mapping.f90  (remove if compiling with -DNO_MESHMAPPING)
@@ -73,6 +75,7 @@ MODULE NWTC_Library
 
     USE NWTC_Library_Types
     USE NWTC_Num  ! technically we don't need to specify this if we have ModMesh (because ModMesh USEs NWTC_Num)
+    USE NWTC_Str  ! String utils
     USE ModMesh
     USE ModReg
     USE ModVar

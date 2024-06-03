@@ -448,13 +448,13 @@ subroutine AWAE_Dvr_Init( AWAE_InitInp,  AWAE_InitOut, AWAE_u,AWAE_p, AWAE_xd,  
    call NWTC_Init()
       
       ! Display the copyright notice
-   CAlL DispCopyrightLicense( version )
+!   CAlL DispCopyrightLicense( version )
    
       ! Tell our users what they're running
    call WrScr( ' Running '//GetNVD( version )//NewLine//' linked with '//trim( GetNVD( NWTC_Ver ))//NewLine )
 
    inputFile = ""  ! initialize to empty string to make sure it's input from the command line
-   call CheckArgs( inputFile, ErrStat2 )
+!   call CheckArgs( inputFile, ErrStat2 )
    if (len_trim(inputFile) == 0) then ! no input file was specified
       call SetErrStat(ErrID_Fatal, 'The required input file was not specified on the command line.', ErrStat, ErrMsg, RoutineName) 
                       
