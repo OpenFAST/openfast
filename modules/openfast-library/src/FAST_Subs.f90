@@ -565,7 +565,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, BD
 
       ! TODO: Fix
       ! Add module to list of modules, return on error
-      ! CALL MV_AddModule(m_Glue%ModData, Module_ExtInfw, 'ExtInfw', 1, p_FAST%dt_module(Module_ExtInfw), p_FAST%DT, &
+      ! CALL MV_AddModule(m_Glue%Modules, Module_ExtInfw, 'ExtInfw', 1, p_FAST%dt_module(Module_ExtInfw), p_FAST%DT, &
       !                   Init%OutData_ExtInfw%Vars, ErrStat2, ErrMsg2)
       ! if (Failed()) return
 
@@ -757,7 +757,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, BD
 
          ! TODO: Fix
          ! Add module to list of modules, return on error
-         ! CALL MV_AddModule(m_Glue%ModData, Module_ExtLd, 'ExtLd', 1, p_FAST%dt_module(Module_ExtLd), p_FAST%DT, &
+         ! CALL MV_AddModule(m_Glue%Modules, Module_ExtLd, 'ExtLd', 1, p_FAST%dt_module(Module_ExtLd), p_FAST%DT, &
          !                   Init%OutData_ExtLd%Vars, ErrStat2, ErrMsg2)
          ! if (Failed()) return
 
@@ -1029,10 +1029,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, BD
       CALL SetModuleSubstepTime(Module_FEAM, p_FAST, y_FAST, ErrStat2, ErrMsg2)
       if (Failed()) return
 
-      ! TODO
-      ! CALL MV_AddModule(m_Glue%ModData, Module_FEAM, 'FEAM', 1, p_FAST%dt_module(Module_FEAM), p_FAST%DT, &
-      !                   Init%OutData_FEAM%Vars, ErrStat2, ErrMsg2)
-      ! if (Failed()) return
+      CALL MV_AddModule(m_Glue%Modules, Module_FEAM, 'FEAM', 1, p_FAST%dt_module(Module_FEAM), p_FAST%DT, &
+                        Init%OutData_FEAM%Vars, ErrStat2, ErrMsg2)
+      if (Failed()) return
 
    case (Module_Orca) 
 
@@ -1048,10 +1047,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, BD
       CALL SetModuleSubstepTime(MODULE_Orca, p_FAST, y_FAST, ErrStat2, ErrMsg2)
       if (Failed()) return
 
-      ! TODO
-      ! CALL MV_AddModule(m_Glue%ModData, Module_Orca, 'Orca', 1, p_FAST%dt_module(Module_Orca), p_FAST%DT, &
-      !                   Init%OutData_Orca%Vars, ErrStat2, ErrMsg2)
-      ! if (Failed()) return
+      CALL MV_AddModule(m_Glue%Modules, Module_Orca, 'Orca', 1, p_FAST%dt_module(Module_Orca), p_FAST%DT, &
+                        Init%OutData_Orca%Vars, ErrStat2, ErrMsg2)
+      if (Failed()) return
 
    END select
 
@@ -1088,7 +1086,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, BD
       if (Failed()) return
 
       ! Add module to list of modules
-      ! CALL MV_AddModule(m_Glue%ModData, Module_IceD, 'IceD', 1, p_FAST%dt_module(Module_IceD), p_FAST%DT, &
+      ! CALL MV_AddModule(m_Glue%Modules, Module_IceD, 'IceD', 1, p_FAST%dt_module(Module_IceD), p_FAST%DT, &
       !                   Init%OutData_IceD%Vars, ErrStat2, ErrMsg2)
       ! if (Failed()) return
 
@@ -1161,7 +1159,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, BD
          END IF
 
          ! Add module to list of modules
-         ! CALL MV_AddModule(m_Glue%ModData, Module_IceD, 'IceD', 1, p_FAST%dt_module(Module_IceD), p_FAST%DT, &
+         ! CALL MV_AddModule(m_Glue%Modules, Module_IceD, 'IceD', 1, p_FAST%dt_module(Module_IceD), p_FAST%DT, &
          !                   Init%OutData_IceD%Vars, ErrStat2, ErrMsg2)
          ! if (Failed()) return
       END DO

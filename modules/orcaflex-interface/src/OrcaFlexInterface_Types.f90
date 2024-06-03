@@ -47,6 +47,7 @@ IMPLICIT NONE
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
   END TYPE Orca_InitOutputType
 ! =======================
 ! =========  Orca_InputFile  =======
@@ -65,6 +66,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  Orca_MiscVarType  =======
   TYPE, PUBLIC :: Orca_MiscVarType
+    TYPE(ModJacType)  :: Jac      !< Jacobian matrices and arrays corresponding to module variables [-]
     REAL(ReKi) , DIMENSION(1:6,1:6)  :: PtfmAM = 0.0_ReKi      !< Added mass matrix results from OrcaFlex [-]
     REAL(ReKi) , DIMENSION(1:6)  :: PtfmFt = 0.0_ReKi      !< Force/moment results from OrcaFlex [-]
     REAL(ReKi) , DIMENSION(1:6)  :: F_PtfmAM = 0.0_ReKi      !< Force/moment results calculated from the added mass and accel [-]
@@ -74,6 +76,9 @@ IMPLICIT NONE
 ! =======================
 ! =========  Orca_ParameterType  =======
   TYPE, PUBLIC :: Orca_ParameterType
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
+    INTEGER(IntKi)  :: iVarPtfmMeshU = 0_IntKi      !< Index of platform mesh input variable [-]
+    INTEGER(IntKi)  :: iVarPtfmMeshY = 0_IntKi      !< Index of platform mesh output variable [-]
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [seconds]
     TYPE(DLL_Type)  :: DLL_Orca      !< Info for the OrcaFlex DLL [-]
     CHARACTER(1024)  :: SimNamePath      !< Path with simulation rootname with null end character for passing to C [-]
@@ -193,6 +198,7 @@ subroutine Orca_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
       end if
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
    end if
+   DstInitOutputData%Vars => SrcInitOutputData%Vars
 end subroutine
 
 subroutine Orca_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -212,16 +218,25 @@ subroutine Orca_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%WriteOutputUnt)) then
       deallocate(InitOutputData%WriteOutputUnt)
    end if
+   nullify(InitOutputData%Vars)
 end subroutine
 
 subroutine Orca_PackInitOutput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(Orca_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Orca_PackInitOutput'
+   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
+   call RegPack(RF, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
+      end if
+   end if
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -232,10 +247,30 @@ subroutine Orca_UnPackInitOutput(RF, OutData)
    integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(B8Ki)   :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
 end subroutine
 
 subroutine Orca_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg)
@@ -334,9 +369,13 @@ subroutine Orca_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    character(*),    intent(  out) :: ErrMsg
    integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Orca_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    DstMiscData%PtfmAM = SrcMiscData%PtfmAM
    DstMiscData%PtfmFt = SrcMiscData%PtfmFt
    DstMiscData%F_PtfmAM = SrcMiscData%F_PtfmAM
@@ -359,9 +398,13 @@ subroutine Orca_DestroyMisc(MiscData, ErrStat, ErrMsg)
    type(Orca_MiscVarType), intent(inout) :: MiscData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Orca_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%AllOuts)) then
       deallocate(MiscData%AllOuts)
    end if
@@ -372,6 +415,7 @@ subroutine Orca_PackMisc(RF, Indata)
    type(Orca_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Orca_PackMisc'
    if (RF%ErrStat >= AbortErrLev) return
+   call NWTC_Library_PackModJacType(RF, InData%Jac) 
    call RegPack(RF, InData%PtfmAM)
    call RegPack(RF, InData%PtfmFt)
    call RegPack(RF, InData%F_PtfmAM)
@@ -388,6 +432,7 @@ subroutine Orca_UnPackMisc(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
+   call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
    call RegUnpack(RF, OutData%PtfmAM); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmFt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%F_PtfmAM); if (RegCheckErr(RF, RoutineName)) return
@@ -408,6 +453,20 @@ subroutine Orca_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Orca_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (associated(SrcParamData%Vars)) then
+      if (.not. associated(DstParamData%Vars)) then
+         allocate(DstParamData%Vars, stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Vars.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end if
+   DstParamData%iVarPtfmMeshU = SrcParamData%iVarPtfmMeshU
+   DstParamData%iVarPtfmMeshY = SrcParamData%iVarPtfmMeshY
    DstParamData%DT = SrcParamData%DT
    DstParamData%DLL_Orca = SrcParamData%DLL_Orca
    DstParamData%SimNamePath = SrcParamData%SimNamePath
@@ -442,6 +501,12 @@ subroutine Orca_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Orca_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (associated(ParamData%Vars)) then
+      call NWTC_Library_DestroyModVarsType(ParamData%Vars, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      deallocate(ParamData%Vars)
+      ParamData%Vars => null()
+   end if
    call FreeDynamicLib( ParamData%DLL_Orca, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%OutParam)) then
@@ -461,7 +526,17 @@ subroutine Orca_PackParam(RF, Indata)
    character(*), parameter         :: RoutineName = 'Orca_PackParam'
    integer(B8Ki)   :: i1
    integer(B8Ki)   :: LB(1), UB(1)
+   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
+      end if
+   end if
+   call RegPack(RF, InData%iVarPtfmMeshU)
+   call RegPack(RF, InData%iVarPtfmMeshY)
    call RegPack(RF, InData%DT)
    call DLLTypePack(RF, InData%DLL_Orca) 
    call RegPack(RF, InData%SimNamePath)
@@ -487,7 +562,29 @@ subroutine Orca_UnPackParam(RF, OutData)
    integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(B8Ki)   :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
+   call RegUnpack(RF, OutData%iVarPtfmMeshU); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarPtfmMeshY); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call DLLTypeUnpack(RF, OutData%DLL_Orca) ! DLL_Orca 
    call RegUnpack(RF, OutData%SimNamePath); if (RegCheckErr(RF, RoutineName)) return

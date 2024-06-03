@@ -90,6 +90,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Pointer to module variables [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LAnchxi      !< Anchor coordinate [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LAnchyi      !< Anchor coordinate [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LAnchzi      !< Anchor coordinate [-]
@@ -132,6 +133,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  FEAM_MiscVarType  =======
   TYPE, PUBLIC :: FEAM_MiscVarType
+    TYPE(ModJacType)  :: Jac      !< Jacobian matrices and arrays corresponding to module variables [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: GLF      !< Global forcing matrix [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: GLK      !< Global stiffness matrix [-]
     REAL(ReKi) , DIMENSION(1:15,1:15)  :: EMASS = 0.0_ReKi      !< Line element mass [-]
@@ -162,6 +164,9 @@ IMPLICIT NONE
   TYPE, PUBLIC :: FEAM_ParameterType
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [seconds]
     REAL(ReKi) , DIMENSION(1:3)  :: GRAV = 0.0_ReKi      !< Gravity [-]
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
+    INTEGER(IntKi)  :: iVarPtFairleadDisplacement = 0_IntKi      !< Index for PtFairleadDisplacement [-]
+    INTEGER(IntKi)  :: iVarPtFairleadLoad = 0_IntKi      !< Index for PtFairleadLoad [-]
     REAL(ReKi)  :: Eps = 0.0_ReKi      !< Tolerance for static iteration [-]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravity [-]
     REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density [-]
@@ -762,6 +767,7 @@ subroutine FEAM_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInitOutputData%Vars => SrcInitOutputData%Vars
    if (allocated(SrcInitOutputData%LAnchxi)) then
       LB(1:1) = lbound(SrcInitOutputData%LAnchxi, kind=B8Ki)
       UB(1:1) = ubound(SrcInitOutputData%LAnchxi, kind=B8Ki)
@@ -853,6 +859,7 @@ subroutine FEAM_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   nullify(InitOutputData%Vars)
    if (allocated(InitOutputData%LAnchxi)) then
       deallocate(InitOutputData%LAnchxi)
    end if
@@ -877,10 +884,18 @@ subroutine FEAM_PackInitOutput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(FEAM_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FEAM_PackInitOutput'
+   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
+   call RegPack(RF, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
+      end if
+   end if
    call RegPackAlloc(RF, InData%LAnchxi)
    call RegPackAlloc(RF, InData%LAnchyi)
    call RegPackAlloc(RF, InData%LAnchzi)
@@ -897,10 +912,30 @@ subroutine FEAM_UnPackInitOutput(RF, OutData)
    integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(B8Ki)   :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
    call RegUnpackAlloc(RF, OutData%LAnchxi); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LAnchyi); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LAnchzi); if (RegCheckErr(RF, RoutineName)) return
@@ -1227,9 +1262,13 @@ subroutine FEAM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    character(*),    intent(  out) :: ErrMsg
    integer(B8Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FEAM_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcMiscData%GLF)) then
       LB(1:2) = lbound(SrcMiscData%GLF, kind=B8Ki)
       UB(1:2) = ubound(SrcMiscData%GLF, kind=B8Ki)
@@ -1370,9 +1409,13 @@ subroutine FEAM_DestroyMisc(MiscData, ErrStat, ErrMsg)
    type(FEAM_MiscVarType), intent(inout) :: MiscData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FEAM_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%GLF)) then
       deallocate(MiscData%GLF)
    end if
@@ -1410,6 +1453,7 @@ subroutine FEAM_PackMisc(RF, Indata)
    type(FEAM_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FEAM_PackMisc'
    if (RF%ErrStat >= AbortErrLev) return
+   call NWTC_Library_PackModJacType(RF, InData%Jac) 
    call RegPackAlloc(RF, InData%GLF)
    call RegPackAlloc(RF, InData%GLK)
    call RegPack(RF, InData%EMASS)
@@ -1445,6 +1489,7 @@ subroutine FEAM_UnPackMisc(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
+   call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
    call RegUnpackAlloc(RF, OutData%GLF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%GLK); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EMASS); if (RegCheckErr(RF, RoutineName)) return
@@ -1486,6 +1531,20 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    ErrMsg  = ''
    DstParamData%DT = SrcParamData%DT
    DstParamData%GRAV = SrcParamData%GRAV
+   if (associated(SrcParamData%Vars)) then
+      if (.not. associated(DstParamData%Vars)) then
+         allocate(DstParamData%Vars, stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Vars.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end if
+   DstParamData%iVarPtFairleadDisplacement = SrcParamData%iVarPtFairleadDisplacement
+   DstParamData%iVarPtFairleadLoad = SrcParamData%iVarPtFairleadLoad
    DstParamData%Eps = SrcParamData%Eps
    DstParamData%Gravity = SrcParamData%Gravity
    DstParamData%WtrDens = SrcParamData%WtrDens
@@ -1751,6 +1810,12 @@ subroutine FEAM_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FEAM_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (associated(ParamData%Vars)) then
+      call NWTC_Library_DestroyModVarsType(ParamData%Vars, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      deallocate(ParamData%Vars)
+      ParamData%Vars => null()
+   end if
    if (allocated(ParamData%NEQ)) then
       deallocate(ParamData%NEQ)
    end if
@@ -1819,9 +1884,19 @@ subroutine FEAM_PackParam(RF, Indata)
    character(*), parameter         :: RoutineName = 'FEAM_PackParam'
    integer(B8Ki)   :: i1, i2, i3, i4
    integer(B8Ki)   :: LB(4), UB(4)
+   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%DT)
    call RegPack(RF, InData%GRAV)
+   call RegPack(RF, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
+      end if
+   end if
+   call RegPack(RF, InData%iVarPtFairleadDisplacement)
+   call RegPack(RF, InData%iVarPtFairleadLoad)
    call RegPack(RF, InData%Eps)
    call RegPack(RF, InData%Gravity)
    call RegPack(RF, InData%WtrDens)
@@ -1891,9 +1966,31 @@ subroutine FEAM_UnPackParam(RF, OutData)
    integer(B8Ki)   :: LB(4), UB(4)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(B8Ki)   :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%GRAV); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
+   call RegUnpack(RF, OutData%iVarPtFairleadDisplacement); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarPtFairleadLoad); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Eps); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WtrDens); if (RegCheckErr(RF, RoutineName)) return
