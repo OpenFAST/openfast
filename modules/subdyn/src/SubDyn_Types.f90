@@ -323,12 +323,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: OutAllInt = 0_IntKi      !< Integer version of OutAll [-]
     INTEGER(IntKi)  :: OutAllDims = 0_IntKi      !< Integer version of OutAll [-]
     INTEGER(IntKi)  :: OutDec = 0_IntKi      !< Output Decimation for Requested Channels [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
-    REAL(R8Ki) , DIMENSION(1:2)  :: dx = 0.0_R8Ki      !< vector that determines size of perturbation for x (continuous states) [-]
-    INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix [-]
-    INTEGER(IntKi)  :: Jac_nx = 0_IntKi      !< half the number of continuous states in jacobian matrix [-]
-    LOGICAL  :: RotStates = .false.      !< Orient states in rotating frame during linearization? (flag) [-]
   END TYPE SD_ParameterType
 ! =======================
 ! =========  SD_InputType  =======
@@ -2877,34 +2871,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%OutAllInt = SrcParamData%OutAllInt
    DstParamData%OutAllDims = SrcParamData%OutAllDims
    DstParamData%OutDec = SrcParamData%OutDec
-   if (allocated(SrcParamData%Jac_u_indx)) then
-      LB(1:2) = lbound(SrcParamData%Jac_u_indx, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%Jac_u_indx, kind=B8Ki)
-      if (.not. allocated(DstParamData%Jac_u_indx)) then
-         allocate(DstParamData%Jac_u_indx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_u_indx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_u_indx = SrcParamData%Jac_u_indx
-   end if
-   if (allocated(SrcParamData%du)) then
-      LB(1:1) = lbound(SrcParamData%du, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%du, kind=B8Ki)
-      if (.not. allocated(DstParamData%du)) then
-         allocate(DstParamData%du(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%du.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%du = SrcParamData%du
-   end if
-   DstParamData%dx = SrcParamData%dx
-   DstParamData%Jac_ny = SrcParamData%Jac_ny
-   DstParamData%Jac_nx = SrcParamData%Jac_nx
-   DstParamData%RotStates = SrcParamData%RotStates
 end subroutine
 
 subroutine SD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -3137,12 +3103,6 @@ subroutine SD_DestroyParam(ParamData, ErrStat, ErrMsg)
       end do
       deallocate(ParamData%OutParam)
    end if
-   if (allocated(ParamData%Jac_u_indx)) then
-      deallocate(ParamData%Jac_u_indx)
-   end if
-   if (allocated(ParamData%du)) then
-      deallocate(ParamData%du)
-   end if
 end subroutine
 
 subroutine SD_PackParam(RF, Indata)
@@ -3319,12 +3279,6 @@ subroutine SD_PackParam(RF, Indata)
    call RegPack(RF, InData%OutAllInt)
    call RegPack(RF, InData%OutAllDims)
    call RegPack(RF, InData%OutDec)
-   call RegPackAlloc(RF, InData%Jac_u_indx)
-   call RegPackAlloc(RF, InData%du)
-   call RegPack(RF, InData%dx)
-   call RegPack(RF, InData%Jac_ny)
-   call RegPack(RF, InData%Jac_nx)
-   call RegPack(RF, InData%RotStates)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -3544,12 +3498,6 @@ subroutine SD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%OutAllInt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutAllDims); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutDec); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_u_indx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%du); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%dx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Jac_ny); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Jac_nx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%RotStates); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine SD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)

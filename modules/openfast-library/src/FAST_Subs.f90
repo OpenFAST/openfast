@@ -959,7 +959,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, BD
       Init%InData_MAP%summary_file_name =  TRIM(p_FAST%OutFileRoot)//'.MAP.sum'        ! Output file name
       Init%InData_MAP%depth             = -Init%OutData_SeaSt%WaveField%WtrDpth    ! This need to be set according to the water depth in SeaState
 
-      Init%InData_MAP%LinInitInp%Linearize = p_FAST%Linearize
+      Init%InData_MAP%Linearize         = p_FAST%Linearize
 
       CALL MAP_Init(Init%InData_MAP, MAPp%Input(1), MAPp%p,  &
                     MAPp%x(STATE_CURR), MAPp%xd(STATE_CURR), MAPp%z(STATE_CURR), MAPp%OtherSt, &

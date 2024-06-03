@@ -29,6 +29,7 @@ typedef struct MAP_InitInputType {
 	char node_input_str[255];
 	char line_input_str[255];
 	char option_input_str[255];
+	bool Linearize;
 } MAP_InitInputType_t;
 
 typedef struct MAP_InitOutputType {

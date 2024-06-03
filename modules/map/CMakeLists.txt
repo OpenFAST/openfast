@@ -25,7 +25,6 @@ if (NOT WIN32)
 endif()
 
 if (GENERATE_TYPES)
-  generate_f90_types(src/MAP_Fortran_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/MAP_Fortran_Types.f90 -noextrap)
   generate_f90_types(src/MAP_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/MAP_Types.f90 -ccode)
 endif()
 
@@ -35,7 +34,6 @@ file(GLOB MAP_C_HEADERS src/*.h src/*/*.h)
 add_library(maplib STATIC
   src/map.f90
   src/MAP_Types.f90
-  src/MAP_Fortran_Types.f90
   ${MAP_CLIB_SOURCES}
 )
 target_link_libraries(maplib nwtclibs)

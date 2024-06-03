@@ -13,7 +13,6 @@
 
 
 include Registry_NWTC_Library.txt
-usefrom MAP_Fortran_Registry.txt
 
 ## ============================== Define input types here: ============================================================================================================================================             
 typedef         MAP    InitInputType        R8Ki             gravity            -        -999.9               -            "gravity constant"   "[m/s^2]"   
@@ -25,7 +24,7 @@ typedef         ^       ^                   CHARACTER(255)   library_input_str  
 typedef         ^       ^                   CHARACTER(255)   node_input_str     -         ""                  -            "node string information (from input file)"  
 typedef         ^       ^                   CHARACTER(255)   line_input_str     -         ""                  -            "element library string information (from input file)"   
 typedef         ^       ^                   CHARACTER(255)   option_input_str   -         ""                  -            "solver options library string information (from input file)" 
-typedef         ^       ^                   Lin_InitInputType LinInitInp           -          -                  -            " " -
+typedef         ^       ^                   logical          Linearize          -         ""                  -            "Flag to perform linearization" 
 ## ============================== Define Initialization outputs here: ================================================================================================================================
 typedef         ^       InitOutputType      CHARACTER(99)    progName           -         ""                  -            "program name"
 typedef         ^       ^                   CHARACTER(99)    version            -         ""                  -            "version numnber"
@@ -33,7 +32,6 @@ typedef         ^       ^                   CHARACTER(24)    compilingData      
 typedef         ^       ^                   CHARACTER(15)    writeOutputHdr    {:}        ""                  -            "first line output file contents: output variable names"
 typedef         ^       ^                   CHARACTER(15)    writeOutputUnt    {:}        ""                  -            "second line of output file contents: units"
 typedef         ^       ^                   ProgDesc         Ver                -         ""                  -            "this module's name, version, and date"
-typedef         ^       ^                   Lin_InitOutputType  LinInitOut      -          -                  -            "Init Output linearization data (fortran-only)" -
 typedef         ^       ^                   ModVarsType     *Vars               -          -                  -            "Module Variables"  -
 
 ## ============================== Define Continuous states here: =====================================================================================================================================
@@ -88,7 +86,6 @@ typedef         ^        ^                   R8Ki             dt                
 typedef          ^       ^                   CHARACTER(255)   InputLines         {500}     -                   -            "input file line for restart"
 typedef          ^       ^                   CHARACTER(1)     InputLineType      {500}     -                   -            "input file line type for restart"
 typedef          ^       ^                   INTEGER          numOuts           -          0                   -            "Number of write outputs" -
-typedef          ^       ^                   Lin_ParamType    LinParams         -          -                  -             "Parameter linearization data (fortran-only)"
 
 # ============================== Inputs ============================================================================================================================================    
 typedef         ^       InputType           R8Ki             x                 {:}        -                   -            "fairlead x displacement"  "[m]"                 

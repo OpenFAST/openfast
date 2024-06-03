@@ -248,12 +248,6 @@ typedef   ^        ParameterType    ^           QPtw_ShpDer_ShpDer_Jac {:}{:}{:}
 typedef   ^        ParameterType    ^           QPtw_Shp_Jac           {:}{:}{:}     - - "optimization variable: QPtw_Shp_Jac(idx_qp,i,nelem) = p%Shp(i,idx_qp)*p%QPtWeight(idx_qp)*p%Jacobian(idx_qp,nelem)" -
 typedef   ^        ParameterType    ^           QPtw_ShpDer            {:}{:}        - - "optimization variable: QPtw_ShpDer(idx_qp,i) = p%ShpDer(i,idx_qp)*p%QPtWeight(idx_qp)" -
 typedef   ^        ParameterType    ^           FEweight               {:}{:}        - - "weighting factors for integrating local sectional loads" -
-
-typedef   ^        ParameterType    Integer     Jac_u_indx             {:}{:}        - - "matrix to help fill/pack the u vector in computing the jacobian" -
-typedef   ^        ParameterType    R8Ki        du                     {:}           - - "vector that determines size of perturbation for u (inputs)"
-typedef   ^        ParameterType    R8Ki        dx                     {6}           - - "vector that determines size of perturbation for x (continuous states)"
-typedef   ^        ParameterType    Integer     Jac_ny                  -            - - "number of outputs in jacobian matrix" -
-typedef   ^        ParameterType    Integer     Jac_nx                  -            - - "half the number of continuous states in jacobian matrix" -
 typedef   ^        ParameterType    logical     RotStates               -            - - "Orient states in rotating frame during linearization? (flag)" -
 typedef   ^        ParameterType    LOGICAL     CompAeroMaps            -   .FALSE.    - "flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false)"	-
 
