@@ -369,7 +369,7 @@ subroutine FEAM_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
        return
     end if
  
-    ! Add pointers to vars to inititialization output
+    ! Add pointers to vars to initialization output
     InitOut%Vars => p%Vars
  
     !---------------------------------------------------------------------------

@@ -52,6 +52,7 @@ typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the
 typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
 typedef	^	InitOutputType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 typedef	^	InitOutputType	FlowFieldType	*FlowField	-	-	-	"Pointer of flow field data type"	-
+typedef	^	InitOutputType	ModVarsType      *Vars      -   -   -   "Module Variables"
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
@@ -64,6 +65,7 @@ typedef ^       DiscreteStateType	ReKi	blah    -       -       -       "Somethin
 typedef ^       MiscVarType             ReKi    az          - - -  "Current azimuth"     -
 typedef ^       MiscVarType             ReKi    phi_cfd     - - -  "Blending ratio of load from external driver [0-1]"      - 
 typedef ^       MiscVarType    FlowFieldType   &FlowField   - - -  "Flow field data type"   - 
+typedef ^       MiscVarType    ModJacType       Jac         - - -  "Jacobian matrices and arrays corresponding to module variables"
 
 # Define constraint states here:
 typedef ^       ConstraintStateType	ReKi	blah    -       -       -       "Something"     -
@@ -76,6 +78,7 @@ typedef ^       OtherStateType	        ReKi	blah    -       -       -       "Som
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
+typedef  ^  ParameterType   ModVarsType &Vars          -       -      -     "Module Variables"
 typedef  ^  ParameterType   ExtLdDX_ParameterType  DX_p    -       -       -       "Data to send to external driver"
 typedef	^	ParameterType	IntKi	NumBlds      -       -       -       "Number of blades on the turbine" -
 typedef ^       ParameterType   IntKi   NumBldNds   {:}      -       -       "Number of blade nodes for each blade"  -

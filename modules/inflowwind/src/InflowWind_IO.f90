@@ -87,7 +87,7 @@ subroutine IfW_SteadyWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMs
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   ! Set parameters from inititialization input
+   ! Set parameters from initialization input
    UF%DataSize = 1
    UF%RefHeight = InitInp%RefHt
    UF%RefLength = 1.0_ReKi
@@ -185,7 +185,7 @@ subroutine IfW_SteadyFlowField_Init(FF, RefHt, HWindSpeed, PLExp, ErrStat, ErrMs
    ! Set flow-field type to uniform
    FF%FieldType = Uniform_FieldType
 
-   ! Set parameters from inititialization input
+   ! Set parameters from initialization input
    FF%Uniform%DataSize = 1
    FF%Uniform%RefHeight = RefHt
    FF%Uniform%RefLength = 1.0_ReKi
@@ -237,7 +237,7 @@ subroutine IfW_UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrM
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   ! Set parameters from inititialization input
+   ! Set parameters from initialization input
    UF%RefHeight = InitInp%RefHt
    UF%RefLength = InitInp%RefLength
 

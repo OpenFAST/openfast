@@ -5592,7 +5592,7 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
       return
    end if
 
-   ! Add pointers to vars to inititialization output
+   ! Add pointers to vars to initialization output
    InitOut%Vars => p%Vars
 
    ! Create rotor label

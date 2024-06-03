@@ -563,11 +563,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, BD
       CALL Init_ExtInfw( Init%InData_ExtInfw, p_FAST, AirDens, AD%Input(1), Init%OutData_AD, AD%y, ExtInfw, Init%OutData_ExtInfw, ErrStat2, ErrMsg2 )
       if (Failed()) return
 
-      ! TODO: Fix
       ! Add module to list of modules, return on error
-      ! CALL MV_AddModule(m_Glue%Modules, Module_ExtInfw, 'ExtInfw', 1, p_FAST%dt_module(Module_ExtInfw), p_FAST%DT, &
-      !                   Init%OutData_ExtInfw%Vars, ErrStat2, ErrMsg2)
-      ! if (Failed()) return
+      CALL MV_AddModule(m_Glue%Modules, Module_ExtInfw, 'ExtInfw', 1, p_FAST%dt_module(Module_ExtInfw), p_FAST%DT, &
+                        Init%OutData_ExtInfw%Vars, ErrStat2, ErrMsg2)
+      if (Failed()) return
 
       !bjj: fix me!!! to do
       Init%OutData_IfW%WindFileInfo%MWS = 0.0_ReKi
@@ -755,11 +754,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, BD
          CALL SetModuleSubstepTime(Module_ExtLd, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          if (Failed()) return
 
-         ! TODO: Fix
          ! Add module to list of modules, return on error
-         ! CALL MV_AddModule(m_Glue%Modules, Module_ExtLd, 'ExtLd', 1, p_FAST%dt_module(Module_ExtLd), p_FAST%DT, &
-         !                   Init%OutData_ExtLd%Vars, ErrStat2, ErrMsg2)
-         ! if (Failed()) return
+         CALL MV_AddModule(m_Glue%Modules, Module_ExtLd, 'ExtLd', 1, p_FAST%dt_module(Module_ExtLd), p_FAST%DT, &
+                           Init%OutData_ExtLd%Vars, ErrStat2, ErrMsg2)
+         if (Failed()) return
 
          AirDens = Init%OutData_ExtLd%AirDens
 

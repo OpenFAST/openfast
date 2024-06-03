@@ -414,7 +414,7 @@ subroutine Orca_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    integer(IntKi),                 intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                   intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-   character(*), parameter :: RoutineName = 'FEAM_InitVars'
+   character(*), parameter :: RoutineName = 'Orca_InitVars'
    INTEGER(IntKi)          :: ErrStat2
    CHARACTER(ErrMsgLen)    :: ErrMsg2
 
@@ -431,7 +431,7 @@ subroutine Orca_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
       return
    end if
 
-   ! Add pointers to vars to inititialization output
+   ! Add pointers to vars to initialization output
    InitOut%Vars => p%Vars
 
    !----------------------------------------------------------------------------

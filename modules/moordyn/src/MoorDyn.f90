@@ -2758,7 +2758,7 @@ CONTAINS
          return
       end if
 
-      ! Add pointers to vars to inititialization output
+      ! Add pointers to vars to initialization output
       InitOut%Vars => p%Vars
 
       !-------------------------------------------------------------------------
