@@ -903,14 +903,25 @@ void gen_unpack(std::ostream &w, const Module &mod, const DataType::Derived &ddt
 
         // w << indent << "! " << field.name << "";
 
-        // If the field is not derived, is allocatable, is not a pointer,
-        // use RegUnpackAlloc function and continue
+        // If the field is not derived and is allocatable
         if (field.data_type->tag != DataType::Tag::Derived && field.is_allocatable)
         {
             if (field.is_pointer)
             {
                 w << indent << "call RegUnpackPtr(RF, " << var << ")"
                   << "; if (RegCheckErr(RF, RoutineName)) return";
+
+                // If C code is generated, output code to initialize C object
+                if (gen_c_code)
+                {
+                    w << indent << "if (associated("<< var <<")) then";
+                    w << indent << "   " << var_c << "_Len = size(" << var << ")";
+                    w << indent << "   " << "if (" << var_c << "_Len > 0) " << var_c << " = c_loc(" << var << "(";
+                    for (int d = 1; d <= field.rank; d++)
+                        w << (d > 1 ? "," : "") << "LB(" << d << ")";
+                    w << "))";
+                    w << indent << "end if";
+                }
             }
             else
             {
@@ -973,17 +984,6 @@ void gen_unpack(std::ostream &w, const Module &mod, const DataType::Derived &ddt
         if (field.is_pointer)
         {
             w << indent << "RF%Pointers(PtrIdx) = c_loc(" << var << ")";
-        }
-
-        // bjj: this needs to be updated if we've got multiple dimension arrays
-        if (gen_c_code && field.is_pointer &&
-            (field.data_type->tag != DataType::Tag::Derived))
-        {
-            w << indent << var_c << "_Len = size(" << var << ")";
-            w << indent << "if (" << var_c << "_Len > 0) " << var_c << " = c_loc(" << var << "(";
-            for (int d = 1; d <= field.rank; d++)
-                w << (d > 1 ? "," : "") << "LB(" << d << ")";
-            w << "))";
         }
 
         // Call individual routines to unpack data from subtypes:

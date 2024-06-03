@@ -14,13 +14,13 @@
 include Registry_NWTC_Library.txt
 
 # ..... Constants .......................................................................................................
-param	WakeDynamics/WD      -               INTEGER         WakeDiamMod_RotDiam     - 1 -  "Wake diameter calculation model: rotor diameter" -
-param	^                    -               INTEGER         WakeDiamMod_Velocity    - 2 -  "Wake diameter calculation model: velocity-based" -
-param	^                    -               INTEGER         WakeDiamMod_MassFlux    - 3 -  "Wake diameter calculation model: mass-flux based" -
-param	^                    -               INTEGER         WakeDiamMod_MtmFlux     - 4 -  "Wake diameter calculation model: momentum-flux based" -
-param	^                    -               INTEGER         Mod_Wake_Polar          - 1 -  "Wake model" -
-param	^                    -               INTEGER         Mod_Wake_Curl           - 2 -  "Wake model" -
-param	^                    -               INTEGER         Mod_Wake_Cartesian      - 3 -  "Wake model" -
+param WakeDynamics/WD      -               INTEGER         WakeDiamMod_RotDiam     - 1 -  "Wake diameter calculation model: rotor diameter" -
+param ^                    -               INTEGER         WakeDiamMod_Velocity    - 2 -  "Wake diameter calculation model: velocity-based" -
+param ^                    -               INTEGER         WakeDiamMod_MassFlux    - 3 -  "Wake diameter calculation model: mass-flux based" -
+param ^                    -               INTEGER         WakeDiamMod_MtmFlux     - 4 -  "Wake diameter calculation model: momentum-flux based" -
+param ^                    -               INTEGER         Mod_Wake_Polar          - 1 -  "Wake model" -
+param ^                    -               INTEGER         Mod_Wake_Curl           - 2 -  "Wake model" -
+param ^                    -               INTEGER         Mod_Wake_Cartesian      - 3 -  "Wake model" -
 
 # ..... InputFile Data .......................................................................................................
 typedef  ^                 WD_InputFileType  ReKi            dr             - - -  "Radial increment of radial finite-difference grid [>0.0]" m
@@ -34,14 +34,14 @@ typedef  ^                 WD_InputFileType  ReKi            C_HWkDfl_x     - - 
 typedef  ^                 WD_InputFileType  ReKi            C_HWkDfl_xY    - - -  "Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error" 1/rad
 typedef  ^                 WD_InputFileType  ReKi            C_NearWake     - - -  "Calibrated parameter for the near-wake correction [>-1.0]" -
 typedef  ^                 WD_InputFileType  ReKi            k_vAmb         - - -  "Calibrated parameter for the influence of ambient turbulence in the eddy viscosity [>=0.0]" - 
-typedef  ^                 WD_InputFileType  ReKi            k_vShr         - - -  "Calibrated parameter for the influence of the shear layer in the eddy viscosity [>=0.0]" - 
+typedef  ^                 WD_InputFileType  ReKi            C_vAmb_FMin    - - -  "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the value in the minimum region [>=0.0 and <=1.0]" -
 typedef  ^                 WD_InputFileType  ReKi            C_vAmb_DMin    - - -  "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the minimum and exponential regions [>=0.0 ]" -
 typedef  ^                 WD_InputFileType  ReKi            C_vAmb_DMax    - - -  "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the exponential and maximum regions [> C_vAmb_DMin]" -
-typedef  ^                 WD_InputFileType  ReKi            C_vAmb_FMin    - - -  "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the value in the minimum region [>=0.0 and <=1.0]" -
 typedef  ^                 WD_InputFileType  ReKi            C_vAmb_Exp     - - -  "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the exponent in the exponential region [> 0.0]" -
+typedef  ^                 WD_InputFileType  ReKi            k_vShr         - - -  "Calibrated parameter for the influence of the shear layer in the eddy viscosity [>=0.0]" - 
+typedef  ^                 WD_InputFileType  ReKi            C_vShr_FMin    - - -  "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the value in the minimum region [>=0.0 and <=1.0]" -
 typedef  ^                 WD_InputFileType  ReKi            C_vShr_DMin    - - -  "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the minimum and exponential regions [>=0.0]" -
 typedef  ^                 WD_InputFileType  ReKi            C_vShr_DMax    - - -  "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the exponential and maximum regions [> C_vShr_DMin]" -
-typedef  ^                 WD_InputFileType  ReKi            C_vShr_FMin    - - -  "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the value in the minimum region [>=0.0 and <=1.0]" -
 typedef  ^                 WD_InputFileType  ReKi            C_vShr_Exp     - - -  "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region [> 0.0]" -
 typedef  ^                 WD_InputFileType  IntKi           Mod_WakeDiam   - - -  "Wake diameter calculation model {1: rotor diameter, 2: velocity-based, 3: mass-flux based, 4: momentum-flux based} [DEFAULT=1]" -
 typedef  ^                 WD_InputFileType  ReKi            C_WakeDiam     - - -  "Calibrated parameter for wake diameter calculation [>0.0 and <1.0] [unused for Mod_WakeDiam=1]" -
@@ -54,10 +54,19 @@ typedef  ^                 WD_InputFileType  IntKi           FilterInit     - - 
 typedef  ^                 WD_InputFileType  ReKi            k_vCurl        - - -  "Calibrated parameter for the eddy viscosity in curled-wake model [>=0.0]" - 
 typedef  ^                 WD_InputFileType  Logical         OutAllPlanes   - - -  "Output all planes" - 
 # wake added turbulence (WAT) inputs
-typedef  ^                 WD_InputFileType  LOGICAL         WAT            -  - - "Switch for turning on and off wake-added turbulence" -
-typedef  ^                 WD_InputFileType  ReKi            WAT_k_Def      -  - - "Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6]" -
-typedef  ^                 WD_InputFileType  ReKi            WAT_k_Grad     -  - - "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35]" -
-
+typedef  ^                 WD_InputFileType  Logical         WAT            -  - - "Switch for turning on and off wake-added turbulence" -
+#typedef  ^                 WD_InputFileType  ReKi            WAT_k_Def     {5} - - "Calibrated parameters for the influence of the maximum wake deficit on wake-added turbulence (set of 5 parameters: k_Def , FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=[0.6, 0.0, 0.0, 2.0, 1.0 ]]" -
+typedef  ^                 WD_InputFileType  ReKi            WAT_k_Def_k_c  -  - - "Calibrated parameter for the influence of the maximum wake deficit on wake-added turblence (-) [>=0] or DEFAULT [DEFAULT=0.6]" -
+typedef  ^                 WD_InputFileType  ReKi            WAT_k_Def_FMin - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the value in the minimum region [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.0]" -
+typedef  ^                 WD_InputFileType  ReKi            WAT_k_Def_DMin - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the transitional diameter fraction between the minimum and exponential regions [>=0.0] or DEFAULT [DEFAULT=0.0]" -
+typedef  ^                 WD_InputFileType  ReKi            WAT_k_Def_DMax - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the transitional diameter fraction between the exponential and maximum regions [> WAT_k_Def_DMin] or DEFAULT [DEFAULT=2.0]" -
+typedef  ^                 WD_InputFileType  ReKi            WAT_k_Def_Exp  - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the exponent in the exponential region [> 0.0] or DEFAULT [DEFAULT=1.0]" -
+#typedef  ^                 WD_InputFileType  ReKi            WAT_k_Grad    {5} - - ""Calibrated parameters for the influence of the radial velocity gradient of the wake deficit on wake-added turbulence (set of 5 parameters: k_Grad, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >=0.0] or DEFAULT [DEFAULT=[3.0, 0.0, 0.0, 12.0, 0.65]"" -
+typedef  ^                 WD_InputFileType  ReKi            WAT_k_Grad_k_c  -  - - "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit on wake-added turblence (-) [>=0] or DEFAULT [DEFAULT=3.0]" -
+typedef  ^                 WD_InputFileType  ReKi            WAT_k_Grad_FMin - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT radial velocity gradient of the wake deficit defining the value in the minimum region [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.0]" -
+typedef  ^                 WD_InputFileType  ReKi            WAT_k_Grad_DMin - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT radial velocity gradient of the wake deficit defining the transitional diameter fraction between the minimum and exponential regions [>=0.0] or DEFAULT [DEFAULT=0.0]" -
+typedef  ^                 WD_InputFileType  ReKi            WAT_k_Grad_DMax - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT radial velocity gradient of the wake deficit defining the transitional diameter fraction between the exponential and maximum regions [> WAT_k_Grad_DMin] or DEFAULT [DEFAULT=12.0]" -
+typedef  ^                 WD_InputFileType  ReKi            WAT_k_Grad_Exp  - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT radial velocity gradient of the wake deficit defining the exponent in the exponential region [> 0.0] or DEFAULT [DEFAULT=0.65]" -
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -154,16 +163,16 @@ typedef ^ ParameterType  ReKi             C_HWkDfl_OY    -  - -   "Calibrated pa
 typedef ^ ParameterType  ReKi             C_HWkDfl_x     -  - -   "Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance" -
 typedef ^ ParameterType  ReKi             C_HWkDfl_xY    -  - -   "Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error" 1/rad
 typedef ^ ParameterType  ReKi             C_NearWake     -  - -   "Calibrated parameter for near-wake correction" -
+typedef ^ ParameterType  ReKi             k_vAmb         -  - -   "Calibrated parameter for the influence of ambient turbulence in the eddy viscosity"      -
 typedef ^ ParameterType  ReKi             C_vAmb_DMin    -  - -   "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the minimum and exponential regions"      -
 typedef ^ ParameterType  ReKi             C_vAmb_DMax    -  - -   "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the exponential and maximum regions"      -
 typedef ^ ParameterType  ReKi             C_vAmb_FMin    -  - -   "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the functional value in the minimum region"      -
 typedef ^ ParameterType  ReKi             C_vAmb_Exp     -  - -   "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the exponent in the exponential region"      -
+typedef ^ ParameterType  ReKi             k_vShr         -  - -   "Calibrated parameter for the influence of the shear layer in the eddy viscosity"      -
 typedef ^ ParameterType  ReKi             C_vShr_DMin    -  - -   "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the minimum and exponential regions"      -
 typedef ^ ParameterType  ReKi             C_vShr_DMax    -  - -   "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the exponential and maximum regions"      -
 typedef ^ ParameterType  ReKi             C_vShr_FMin    -  - -   "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the functional value in the minimum region"      -
 typedef ^ ParameterType  ReKi             C_vShr_Exp     -  - -   "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region"      -
-typedef ^ ParameterType  ReKi             k_vAmb         -  - -   "Calibrated parameter for the influence of ambient turbulence in the eddy viscosity"      -
-typedef ^ ParameterType  ReKi             k_vShr         -  - -   "Calibrated parameter for the influence of the shear layer in the eddy viscosity"      -
 typedef ^ ParameterType  IntKi            Mod_WakeDiam   -  - -   "Wake diameter calculation model"      -
 typedef ^ ParameterType  ReKi             C_WakeDiam     -  - -   "Calibrated parameter for wake diameter calculation"      -
 typedef ^ ParameterType  IntKi            FilterInit     - - -    "Switch to filter the initial wake plane deficit and select the number of grid points for the filter {0: no filter, 1: filter of size 1} or DEFAULT [DEFAULT=0: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wwake is 2] (switch)"
@@ -173,9 +182,19 @@ typedef ^ ParameterType  CHARACTER(1024)  OutFileRoot    - - -    "The root name
 typedef ^ ParameterType  CHARACTER(1024)  OutFileVTKDir  - - -    "The parent directory for all VTK files written by WD" -
 typedef ^ ParameterType  IntKi            TurbNum        - 0 -    "Turbine ID number (start with 1; end with number of turbines)"      -
 # wake added turbulence (WAT) parameters
-typedef ^ ParameterType  LOGICAL          WAT            -  - -   "Switch for turning on and off wake-added turbulence" -
-typedef ^ ParameterType  ReKi             WAT_k_Def      -  - -   "Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6]" -
-typedef ^ ParameterType  ReKi             WAT_k_Grad     -  - -   "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35]" -
+typedef ^ ParameterType  Logical          WAT            -  - -   "Switch for turning on and off wake-added turbulence" -
+#typedef  ^ ParameterType  ReKi            WAT_k_Def     {5} - - "Calibrated parameters for the influence of the maximum wake deficit on wake-added turbulence (set of 5 parameters: k_Def , FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=[0.6, 0.0, 0.0, 2.0, 1.0 ]]" -
+typedef  ^ ParameterType  ReKi            WAT_k_Def_k_c  -  - - "Calibrated parameter for the influence of the maximum wake deficit on wake-added turblence (-) [>=0] or DEFAULT [DEFAULT=0.6]" -
+typedef  ^ ParameterType  ReKi            WAT_k_Def_FMin - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the value in the minimum region [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.0]" -
+typedef  ^ ParameterType  ReKi            WAT_k_Def_DMin - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the transitional diameter fraction between the minimum and exponential regions [>=0.0] or DEFAULT [DEFAULT=0.0]" -
+typedef  ^ ParameterType  ReKi            WAT_k_Def_DMax - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the transitional diameter fraction between the exponential and maximum regions [> WAT_k_Def_DMin] or DEFAULT [DEFAULT=2.0]" -
+typedef  ^ ParameterType  ReKi            WAT_k_Def_Exp  - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the exponent in the exponential region [> 0.0] or DEFAULT [DEFAULT=1.0]" -
+#typedef  ^ ParameterType  ReKi            WAT_k_Grad    {5} - - ""Calibrated parameters for the influence of the radial velocity gradient of the wake deficit on wake-added turbulence (set of 5 parameters: k_Grad, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >=0.0] or DEFAULT [DEFAULT=[3.0, 0.0, 0.0, 12.0, 0.65]"" -
+typedef  ^ ParameterType  ReKi            WAT_k_Grad_k_c  -  - - "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit on wake-added turblence (-) [>=0] or DEFAULT [DEFAULT=3.0]" -
+typedef  ^ ParameterType  ReKi            WAT_k_Grad_FMin - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT radial velocity gradient of the wake deficit defining the value in the minimum region [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.0]" -
+typedef  ^ ParameterType  ReKi            WAT_k_Grad_DMin - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT radial velocity gradient of the wake deficit defining the transitional diameter fraction between the minimum and exponential regions [>=0.0] or DEFAULT [DEFAULT=0.0]" -
+typedef  ^ ParameterType  ReKi            WAT_k_Grad_DMax - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT radial velocity gradient of the wake deficit defining the transitional diameter fraction between the exponential and maximum regions [> WAT_k_Grad_DMin] or DEFAULT [DEFAULT=12.0]" -
+typedef  ^ ParameterType  ReKi            WAT_k_Grad_Exp  - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT radial velocity gradient of the wake deficit defining the exponent in the exponential region [> 0.0] or DEFAULT [DEFAULT=0.65]" -
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 typedef      ^      InputType          ReKi       xhat_disk            {3}     -      -      "Orientation of rotor centerline, normal to disk"      -
@@ -203,5 +222,5 @@ typedef      ^      OutputType         ReKi       Vy_wake2             {:}{:}{:}
 typedef      ^      OutputType         ReKi       Vz_wake2             {:}{:}{:} -    -      "Transverse nominally vertical wake velocity deficit at wake planes, distributed across the plane"      m/s
 typedef      ^      OutputType         ReKi       D_wake               {:}     -      -      "Wake diameters at wake planes"     m
 typedef      ^      OutputType         ReKi       x_plane              {:}     -      -      "Downwind distance from rotor to each wake plane"      m
-typedef      ^      OutputType         ReKi       WAT_k_mt             {:}{:}{:}  -    -      "Scaling factor k_mt(iP,y,z) for wake-added turbulence"    -
+typedef      ^      OutputType         ReKi       WAT_k                {:}{:}{:}  -   -      "Scaling factor k_mt(iP,y,z) for wake-added turbulence"    -
 

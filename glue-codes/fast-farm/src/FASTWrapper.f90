@@ -54,8 +54,6 @@ CONTAINS
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.   
 SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
-!..................................................................................................................................
-
    TYPE(FWrap_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
    TYPE(FWrap_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
    TYPE(FWrap_ParameterType),       INTENT(  OUT)  :: p           !< Parameters
@@ -76,7 +74,6 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-      ! local variables
    TYPE(FAST_ExternInitType)                       :: ExternInitData 
    INTEGER(IntKi)                                  :: j,k,nb      
    
@@ -86,204 +83,181 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
    
       ! Initialize variables
-
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-
-      ! Initialize the NWTC Subroutine Library
-
-   !call NWTC_Init( )
    
       ! Display the module information
-
    if (InitInp%TurbNum == 1) call DispNVD( FWrap_Ver )
    InitOut%Ver = FWrap_Ver
 
-
       ! Define initial system states here:
-
    x%Dummy          = 0.0_ReKi
    xd%Dummy         = 0.0_ReKi
    z%Dummy          = 0.0_ReKi
    OtherState%Dummy = 0.0_ReKi
 
 
-      ! Define initial guess for the system inputs here:
+   !.................
+   ! Initialize an instance of FAST
+   !................
+   
+      !.... Lidar data (unused) ....
+   ExternInitData%Tmax = InitInp%TMax
 
    
-      !.................
-      ! Initialize an instance of FAST
-      !................
+      !.... supercontroller ....
+   if ( InitInp%UseSC ) then
+      ExternInitData%NumSC2Ctrl     = InitInp%NumSC2Ctrl     ! "number of controller inputs [from supercontroller]"
+      ExternInitData%NumCtrl2SC     = InitInp%NumCtrl2SC     ! "number of controller outputs [to supercontroller]"
+      ExternInitData%NumSC2CtrlGlob = InitInp%NumSC2CtrlGlob ! "number of global controller inputs [from supercontroller]"
+      call AllocAry(ExternInitData%fromSCGlob, InitInp%NumSC2CtrlGlob, 'ExternInitData%InitScOutputsGlob (global inputs to turbine controller from supercontroller)',       ErrStat2, ErrMsg2);   if (Failed()) return;
+      call AllocAry(ExternInitData%fromSC, InitInp%NumSC2Ctrl, ' ExternInitData%InitScOutputsTurbine (turbine-related inputs for turbine controller from supercontroller)', ErrStat2, ErrMsg2);   if (Failed()) return;
+      ExternInitData%fromSCGlob = InitInp%fromSCGlob
+      ExternInitData%fromSC =  InitInp%fromSC
+      call AllocAry(u%fromSCglob, InitInp%NumSC2CtrlGlob, 'u%fromSCglob (global inputs to turbine controller from supercontroller)', ErrStat2, ErrMsg2);   if (Failed()) return;
+      call AllocAry(u%fromSC, InitInp%NumSC2Ctrl, 'u%fromSC (turbine-related inputs for turbine controller from supercontroller)',   ErrStat2, ErrMsg2);   if (Failed()) return;
+   else
+      
+      ExternInitData%NumSC2Ctrl     = 0 ! "number of controller inputs [from supercontroller]"
+      ExternInitData%NumCtrl2SC     = 0 ! "number of controller outputs [to supercontroller]"
+      ExternInitData%NumSC2CtrlGlob = 0 ! "number of global controller inputs [from supercontroller]"
    
-         !.... Lidar data (unused) ....
-      ExternInitData%Tmax = InitInp%TMax
-
-      
-         !.... supercontroller ....
-      if ( InitInp%UseSC ) then
-         ExternInitData%NumSC2Ctrl     = InitInp%NumSC2Ctrl     ! "number of controller inputs [from supercontroller]"
-         ExternInitData%NumCtrl2SC     = InitInp%NumCtrl2SC     ! "number of controller outputs [to supercontroller]"
-         ExternInitData%NumSC2CtrlGlob = InitInp%NumSC2CtrlGlob ! "number of global controller inputs [from supercontroller]"
-         call AllocAry(ExternInitData%fromSCGlob, InitInp%NumSC2CtrlGlob, 'ExternInitData%InitScOutputsGlob (global inputs to turbine controller from supercontroller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call AllocAry(ExternInitData%fromSC, InitInp%NumSC2Ctrl, ' ExternInitData%InitScOutputsTurbine (turbine-related inputs for turbine controller from supercontroller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         ExternInitData%fromSCGlob = InitInp%fromSCGlob
-         ExternInitData%fromSC =  InitInp%fromSC
-         call AllocAry(u%fromSCglob, InitInp%NumSC2CtrlGlob, 'u%fromSCglob (global inputs to turbine controller from supercontroller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call AllocAry(u%fromSC, InitInp%NumSC2Ctrl, 'u%fromSC (turbine-related inputs for turbine controller from supercontroller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      else
+   end if
+      !.... multi-turbine options ....
+   ExternInitData%TurbIDforName = InitInp%TurbNum
+   ExternInitData%TurbinePos = InitInp%p_ref_Turbine
+   ExternInitData%WaveFieldMod = InitInp%WaveFieldMod
+   
+   ExternInitData%FarmIntegration = .true.
+   ExternInitData%RootName = InitInp%RootName
          
-         ExternInitData%NumSC2Ctrl     = 0 ! "number of controller inputs [from supercontroller]"
-         ExternInitData%NumCtrl2SC     = 0 ! "number of controller outputs [to supercontroller]"
-         ExternInitData%NumSC2CtrlGlob = 0 ! "number of global controller inputs [from supercontroller]"
-      
-      end if
-         !.... multi-turbine options ....
-      ExternInitData%TurbIDforName = InitInp%TurbNum
-      ExternInitData%TurbinePos = InitInp%p_ref_Turbine
-      ExternInitData%WaveFieldMod = InitInp%WaveFieldMod
-      
-      ExternInitData%FarmIntegration = .true.
-      ExternInitData%RootName = InitInp%RootName
-            
-         !.... 4D-wind data ....
-      ExternInitData%windGrid_n(1) = InitInp%nX_high
-      ExternInitData%windGrid_n(2) = InitInp%nY_high
-      ExternInitData%windGrid_n(3) = InitInp%nZ_high
-      ExternInitData%windGrid_n(4) = InitInp%n_high_low
-      
-      ExternInitData%windGrid_delta(1) = InitInp%dX_high
-      ExternInitData%windGrid_delta(2) = InitInp%dY_high
-      ExternInitData%windGrid_delta(3) = InitInp%dZ_high
-      ExternInitData%windGrid_delta(4) = InitInp%dt_high
-      
-      ExternInitData%windGrid_pZero = InitInp%p_ref_high - InitInp%p_ref_Turbine
-      ExternInitData%windGrid_data => InitInp%Vdist_High
-            
-      
-      CALL FAST_InitializeAll_T( t_initial, InitInp%TurbNum, m%Turbine, ErrStat2, ErrMsg2, InitInp%FASTInFile, ExternInitData ) 
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-         if (ErrStat >= AbortErrLev) then
-            call cleanup()
-            return
-         end if
+      !.... 4D-wind data ....
+   ExternInitData%windGrid_n(1) = InitInp%nX_high
+   ExternInitData%windGrid_n(2) = InitInp%nY_high
+   ExternInitData%windGrid_n(3) = InitInp%nZ_high
+   ExternInitData%windGrid_n(4) = InitInp%n_high_low
+   
+   ExternInitData%windGrid_delta(1) = InitInp%dX_high
+   ExternInitData%windGrid_delta(2) = InitInp%dY_high
+   ExternInitData%windGrid_delta(3) = InitInp%dZ_high
+   ExternInitData%windGrid_delta(4) = InitInp%dt_high
+   
+   ExternInitData%windGrid_pZero = InitInp%p_ref_high - InitInp%p_ref_Turbine
+   ExternInitData%windGrid_data => InitInp%Vdist_High
          
-      
-      !.................
-      ! Check that we've set up FAST properly:
-      !.................
-      if (m%Turbine%p_FAST%CompAero /= MODULE_AD) then
-         call SetErrStat(ErrID_Fatal,"AeroDyn (v15) must be used in each instance of FAST for FAST.Farm.",ErrStat,ErrMsg,RoutineName)
-         call cleanup()
-         return
-      end if
-      
-         ! move the misc var to the input variable...
-      if (m%Turbine%p_FAST%CompInflow /= MODULE_IfW) then
-         call SetErrStat(ErrID_Fatal,"InflowWind must be used in each instance of FAST for FAST.Farm.",ErrStat,ErrMsg,RoutineName)
-         call cleanup()
-         return
-      end if
-           
-      !.................
-      ! Define parameters here:
-      !.................
-
-      call FWrap_SetParameters(InitInp, p, m%Turbine%p_FAST%dt, Interval, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-         if (ErrStat >= AbortErrLev) then
-            call cleanup()
-            return
-         end if
-         
-      !.................
-      ! Set outputs (allocate arrays and set miscVar meshes for computing other outputs):
-      !.................
-         
-      call AllocAry(y%AzimAvg_Ct, p%nr, 'y%AzimAvg_Ct (azimuth-averaged ct)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call AllocAry(y%AzimAvg_Cq, p%nr, 'y%AzimAvg_Cq (azimuth-averaged cq)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      
-      if ( InitInp%UseSC ) then
-         call AllocAry(y%toSC, InitInp%NumCtrl2SC, 'y%toSC (turbine controller outputs to Super Controller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      end if
-      
-      nb = size(m%Turbine%AD%y%rotors(1)%BladeLoad)
-      Allocate( m%ADRotorDisk(nb), m%TempDisp(nb), m%TempLoads(nb), m%AD_L2L(nb), STAT=ErrStat2 )
-      if (ErrStat2 /= 0) then
-         call SetErrStat(ErrID_Fatal,"Error allocating space for ADRotorDisk meshes.",ErrStat,ErrMsg,RoutineName)
-         call cleanup()
-         return
-      end if
-      
-      do k=1,nb
-         
-         call meshCopy(  SrcMesh         = m%Turbine%AD%y%rotors(1)%BladeLoad(k) &
-                       , DestMesh        = m%TempDisp(k)         & 
-                       , CtrlCode        = MESH_COUSIN           &  ! Like a sibling, except using new memory for position/refOrientation and elements
-                       , Orientation     = .TRUE.                &  ! set automatically to identity
-                       , TranslationDisp = .TRUE.                &  ! set automatically to 0
-                       , ErrStat         = ErrStat2              &
-                       , ErrMess         = ErrMsg2               )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-       
-         call meshCopy(  SrcMesh         = m%TempDisp(k)         &
-                       , DestMesh        = m%TempLoads(k)        & 
-                       , CtrlCode        = MESH_SIBLING          &
-                       , Force           = .true.                &
-                       , Moment          = .true.                &
-                       , ErrStat         = ErrStat2              &
-                       , ErrMess         = ErrMsg2               )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-                        
-            
-         call MeshCreate ( BlankMesh         = m%ADRotorDisk(k) &
-                          ,IOS               = COMPONENT_OUTPUT &
-                          ,Nnodes            = p%nr             &
-                          ,ErrStat           = ErrStat2         &
-                          ,ErrMess           = ErrMsg2          &
-                          ,Force             = .true.           &
-                          ,Moment            = .true.           &
-                          ,TranslationDisp   = .true.           & ! only for loads transfer
-                          ,Orientation       = .true.           & ! only for loads transfer
-                         )
-               call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-
-            if (errStat >= AbortErrLev) exit
-            
-            ! set node initial position/orientation
-         ! shortcut for 
-         ! call MeshPositionNode(m%ADRotorDisk(k), j, [0,0,r(j)], errStat2, errMsg2)
-         m%ADRotorDisk(k)%Position(3,:) = p%r ! this will get overwritten later, but we check that we have no zero-length elements in MeshCommit()
-         m%ADRotorDisk(k)%TranslationDisp = 0.0_R8Ki ! this happens by default, anyway....
-         
-            ! create line2 elements
-         do j=1,p%nr-1
-            call MeshConstructElement( m%ADRotorDisk(k), ELEMENT_LINE2, errStat2, errMsg2, p1=j, p2=j+1 )
-               call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-         end do !j
-            
-         call MeshCommit(m%ADRotorDisk(k), errStat2, errMsg2 )
-            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-            if (errStat >= AbortErrLev) exit
-            
-         call MeshMapCreate(m%TempLoads(k), m%ADRotorDisk(k), m%AD_L2L(k), ErrStat2, ErrMsg2) ! this is going to transfer the motions as well as the loads, which is overkill
-            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-      end do
-      
-      !................
-      ! also need to set the WrOutput channels...
-      !................
-      
-      
+   
+   CALL FAST_InitializeAll_T( t_initial, InitInp%TurbNum, m%Turbine, ErrStat2, ErrMsg2, InitInp%FASTInFile, ExternInitData ) ;   if (Failed()) return;
+   
+   !.................
+   ! Check that we've set up FAST properly:
+   !.................
+   if (m%Turbine%p_FAST%CompAero /= MODULE_AD) then
+      call SetErrStat(ErrID_Fatal,"AeroDyn (v15) must be used in each instance of FAST for FAST.Farm.",ErrStat,ErrMsg,RoutineName)
       call cleanup()
+      return
+   end if
+   
+      ! move the misc var to the input variable...
+   if (m%Turbine%p_FAST%CompInflow /= MODULE_IfW) then
+      call SetErrStat(ErrID_Fatal,"InflowWind must be used in each instance of FAST for FAST.Farm.",ErrStat,ErrMsg,RoutineName)
+      call cleanup()
+      return
+   end if
+   
+   !.................
+   ! Define parameters here:
+   !.................
+
+   call FWrap_SetParameters(InitInp, p, m%Turbine%p_FAST%dt, Interval, ErrStat2, ErrMsg2);   if (Failed()) return;
+      
+   !.................
+   ! Set outputs (allocate arrays and set miscVar meshes for computing other outputs):
+   !.................
+      
+   call AllocAry(y%AzimAvg_Ct, p%nr, 'y%AzimAvg_Ct (azimuth-averaged ct)', ErrStat2, ErrMsg2);   if (Failed()) return;
+   call AllocAry(y%AzimAvg_Cq, p%nr, 'y%AzimAvg_Cq (azimuth-averaged cq)', ErrStat2, ErrMsg2);   if (Failed()) return;
+   
+   if ( InitInp%UseSC ) then
+      call AllocAry(y%toSC, InitInp%NumCtrl2SC, 'y%toSC (turbine controller outputs to Super Controller)', ErrStat2, ErrMsg2);   if (Failed()) return;
+   end if
+   
+   nb = size(m%Turbine%AD%y%rotors(1)%BladeLoad)
+   Allocate( m%ADRotorDisk(nb), m%TempDisp(nb), m%TempLoads(nb), m%AD_L2L(nb), STAT=ErrStat2 ); if (Failed0("ADRotorDisk meshes.")) return;
+   
+   do k=1,nb
+      
+      call meshCopy(  SrcMesh         = m%Turbine%AD%y%rotors(1)%BladeLoad(k) &
+                    , DestMesh        = m%TempDisp(k)         & 
+                    , CtrlCode        = MESH_COUSIN           &  ! Like a sibling, except using new memory for position/refOrientation and elements
+                    , Orientation     = .TRUE.                &  ! set automatically to identity
+                    , TranslationDisp = .TRUE.                &  ! set automatically to 0
+                    , ErrStat         = ErrStat2              &
+                    , ErrMess         = ErrMsg2               )
+         if (Failed()) return;
+    
+      call meshCopy(  SrcMesh         = m%TempDisp(k)         &
+                    , DestMesh        = m%TempLoads(k)        & 
+                    , CtrlCode        = MESH_SIBLING          &
+                    , Force           = .true.                &
+                    , Moment          = .true.                &
+                    , ErrStat         = ErrStat2              &
+                    , ErrMess         = ErrMsg2               )
+         if (Failed()) return;
+                     
+         
+      call MeshCreate ( BlankMesh         = m%ADRotorDisk(k) &
+                       ,IOS               = COMPONENT_OUTPUT &
+                       ,Nnodes            = p%nr             &
+                       ,ErrStat           = ErrStat2         &
+                       ,ErrMess           = ErrMsg2          &
+                       ,Force             = .true.           &
+                       ,Moment            = .true.           &
+                       ,TranslationDisp   = .true.           & ! only for loads transfer
+                       ,Orientation       = .true.           & ! only for loads transfer
+                      )
+         if (Failed()) return;
+         
+         ! set node initial position/orientation
+      ! shortcut for 
+      ! call MeshPositionNode(m%ADRotorDisk(k), j, [0,0,r(j)], errStat2, errMsg2)
+      m%ADRotorDisk(k)%Position(3,:) = p%r ! this will get overwritten later, but we check that we have no zero-length elements in MeshCommit()
+      m%ADRotorDisk(k)%TranslationDisp = 0.0_R8Ki ! this happens by default, anyway....
+      
+         ! create line2 elements
+      do j=1,p%nr-1
+         call MeshConstructElement( m%ADRotorDisk(k), ELEMENT_LINE2, errStat2, errMsg2, p1=j, p2=j+1 );   if (Failed()) return;
+      end do !j
+         
+      call MeshCommit(m%ADRotorDisk(k), errStat2, errMsg2 );   if (Failed()) return;
+         
+      call MeshMapCreate(m%TempLoads(k), m%ADRotorDisk(k), m%AD_L2L(k), ErrStat2, ErrMsg2);   if (Failed()) return; ! this is going to transfer the motions as well as the loads, which is overkill
+   end do
+   
+   
+   call cleanup()
       
 contains
    subroutine cleanup()
-   
       call FAST_DestroyExternInitType(ExternInitData,ErrStat2,ErrMsg2) ! this doesn't actually do anything unless we add allocatable data later
-      
    end subroutine cleanup
+   logical function Failed()
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+      Failed = errStat >= AbortErrLev
+      if (Failed) call cleanup()
+   end function Failed
 
+   ! check for failed where /= 0 is fatal
+   logical function Failed0(txt)
+      character(*), intent(in) :: txt
+      if (errStat /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate memory for "//trim(txt)
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+      endif
+      Failed0 = errStat >= AbortErrLev
+      if(Failed0) call cleanUp()
+   end function Failed0
 END SUBROUTINE FWrap_Init
 !----------------------------------------------------------------------------------------------------------------------------------
 ! this routine sets the parameters for the FAST Wrapper module. It does not set p%n_FAST_low because we need to initialize FAST first.
@@ -345,8 +319,6 @@ end subroutine FWrap_SetParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 SUBROUTINE FWrap_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
    TYPE(FWrap_InputType),           INTENT(INOUT)  :: u           !< System inputs
    TYPE(FWrap_ParameterType),       INTENT(INOUT)  :: p           !< Parameters
    TYPE(FWrap_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
@@ -358,60 +330,40 @@ SUBROUTINE FWrap_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-      ! local variables
    INTEGER(IntKi)                                  :: ErrStat2    ! local error status
    CHARACTER(ErrMsgLen)                            :: ErrMsg2     ! local error message
    CHARACTER(*), PARAMETER                         :: RoutineName = 'FWrap_End'
 
       ! Initialize ErrStat
-
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-
       !! Place any last minute operations or calculations here:
-
    CALL ExitThisProgram_T( m%Turbine, ErrID_None, .false. )   
 
-      !! Close files here (but because of checkpoint-restart capability, it is not recommended to have files open during the simulation):
-
-
       !! Destroy the input data:
-
-   call FWrap_DestroyInput( u, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
+   call FWrap_DestroyInput( u, ErrStat2, ErrMsg2 );              call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       !! Destroy the parameter data:
-
-   call FWrap_DestroyParam( p, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call FWrap_DestroyParam( p, ErrStat2, ErrMsg2 );              call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       !! Destroy the state data:
-
    call FWrap_DestroyContState(   x,          ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call FWrap_DestroyDiscState(   xd,         ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call FWrap_DestroyConstrState( z,          ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call FWrap_DestroyOtherState(  OtherState, ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-
       !! Destroy the output data:
-
-   call FWrap_DestroyOutput( y, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
+   call FWrap_DestroyOutput( y, ErrStat2, ErrMsg2 );             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
       !! Destroy the misc data:
-
-   call FWrap_DestroyMisc( m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
+   call FWrap_DestroyMisc( m, ErrStat2, ErrMsg2 );               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
 END SUBROUTINE FWrap_End
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine updates states and outputs to n+1 based on inputs and states at n (this has an inherent time-step delay on outputs).
 !! The routine uses subcycles because FAST typically has a smaller time step than FAST.Farm.
 SUBROUTINE FWrap_Increment( t, n, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
    REAL(DbKi),                       INTENT(IN   ) :: t               !< Current simulation time in seconds (no longer used, since inputs are set elsewhere)
    INTEGER(IntKi),                   INTENT(IN   ) :: n               !< Current step of the simulation: t = n*Interval
    TYPE(FWrap_InputType),            INTENT(INOUT) :: u               !< Inputs at t (not changed, but possibly copied)
@@ -469,13 +421,10 @@ SUBROUTINE FWrap_Increment( t, n, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
       
    !END IF
 
-
 END SUBROUTINE FWrap_Increment
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calculates outputs at n=0 based on inputs at n=0.
 SUBROUTINE FWrap_t0( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
    TYPE(FWrap_InputType),           INTENT(INOUT)  :: u           !< Inputs at t
    TYPE(FWrap_ParameterType),       INTENT(IN   )  :: p           !< Parameters
    TYPE(FWrap_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
@@ -493,22 +442,21 @@ SUBROUTINE FWrap_t0( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    CHARACTER(*), PARAMETER                         :: RoutineName = 'FWrap_t0'
 
       ! Initialize ErrStat
-
    ErrStat = ErrID_None
    ErrMsg  = ''
-
 
       ! set the inputs needed for FAST:
    call FWrap_SetInputs(u, m, 0.0_DbKi)
       
       ! compute the FAST t0 solution:
-   call FAST_Solution0_T(m%Turbine, ErrStat2, ErrMsg2 ) 
+   call FAST_Solution0_T(m%Turbine, ErrStat2, ErrMsg2 )
       call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) return;
       
       ! set the outputs for FAST.Farm:
    call FWrap_CalcOutput(p, u, y, m, ErrStat2, ErrMsg2)
       call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
+      if (ErrStat >= AbortErrLev) return;
    
 END SUBROUTINE FWrap_t0
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -549,7 +497,6 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
    integer, parameter                              :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
    
       ! Initialize ErrStat
-
    ErrStat = ErrID_None
    ErrMsg  = ''
 
@@ -706,7 +653,7 @@ SUBROUTINE FWrap_SetInputs(u, m, t)
    REAL(DbKi),                      INTENT(IN   )  :: t           !< current simulation time
 
    ! set the 4d-wind-inflow input array (a bit of a hack [simplification] so that we don't have large amounts of data copied in multiple data structures):
-   m%Turbine%IfW%p%FlowField%Grid4D%TimeStart = t
+      m%Turbine%IfW%p%FlowField%Grid4D%TimeStart = t
       
       ! do something with the inputs from the super-controller:
    if ( m%Turbine%p_FAST%UseSC )  then

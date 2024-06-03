@@ -516,7 +516,7 @@ time steps. Note that :math:`D^\text{Wake}` can be approximated as
 When **Wake_Mod=2,3**, for numerical stability, it is recommended to set the time step with a value that (approximately) satisfies the following guideline (see Equation 20 of the following `paper <https://doi.org/10.5194/wes-6-555-2021>`__):
 
    .. math::
-      \textbf{DT_Low}  \lessapprox \frac{\textbf{dr}}{2 V_\text{Hub}}
+      DT_Low  \lessapprox \frac{dr}{2 V_\text{Hub}}
 
 
 Spatial discretization convergence was assessed in the same manner as
@@ -821,7 +821,7 @@ parameters:
 When **Wake_Mod=2,3**, for numerical stability, it is recommended to set the spacing with a value that (approximately) satisfies the following guideline (see Equation 20 of the following `paper <https://doi.org/10.5194/wes-6-555-2021>`__):
 
    .. math::
-      \textbf{dr}  \ltrapprox \frac{D}{10}
+      \textbf{dr}  < \frac{D}{10}
 
 
 

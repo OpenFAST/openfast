@@ -63,7 +63,7 @@ CONTAINS
 !      INTEGER(4)                          :: K             ! Generic index
 !      INTEGER(IntKi)                      :: N
 
-      REAL(DbKi)                          :: Mtemp(6,6)   
+      REAL(DbKi)                          :: Mtemp(6,6) = 0.0_DbKi  ! temporary mass matrix
       
       ErrStat = ErrID_None
       ErrMsg = ""

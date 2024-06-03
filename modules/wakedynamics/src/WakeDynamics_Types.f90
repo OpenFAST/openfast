@@ -53,14 +53,14 @@ IMPLICIT NONE
     REAL(ReKi)  :: C_HWkDfl_xY = 0.0_ReKi      !< Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error [1/rad]
     REAL(ReKi)  :: C_NearWake = 0.0_ReKi      !< Calibrated parameter for the near-wake correction [>-1.0] [-]
     REAL(ReKi)  :: k_vAmb = 0.0_ReKi      !< Calibrated parameter for the influence of ambient turbulence in the eddy viscosity [>=0.0] [-]
-    REAL(ReKi)  :: k_vShr = 0.0_ReKi      !< Calibrated parameter for the influence of the shear layer in the eddy viscosity [>=0.0] [-]
+    REAL(ReKi)  :: C_vAmb_FMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the value in the minimum region [>=0.0 and <=1.0] [-]
     REAL(ReKi)  :: C_vAmb_DMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the minimum and exponential regions [>=0.0 ] [-]
     REAL(ReKi)  :: C_vAmb_DMax = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the exponential and maximum regions [> C_vAmb_DMin] [-]
-    REAL(ReKi)  :: C_vAmb_FMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the value in the minimum region [>=0.0 and <=1.0] [-]
     REAL(ReKi)  :: C_vAmb_Exp = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the exponent in the exponential region [> 0.0] [-]
+    REAL(ReKi)  :: k_vShr = 0.0_ReKi      !< Calibrated parameter for the influence of the shear layer in the eddy viscosity [>=0.0] [-]
+    REAL(ReKi)  :: C_vShr_FMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the shear layer defining the value in the minimum region [>=0.0 and <=1.0] [-]
     REAL(ReKi)  :: C_vShr_DMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the minimum and exponential regions [>=0.0] [-]
     REAL(ReKi)  :: C_vShr_DMax = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the exponential and maximum regions [> C_vShr_DMin] [-]
-    REAL(ReKi)  :: C_vShr_FMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the shear layer defining the value in the minimum region [>=0.0 and <=1.0] [-]
     REAL(ReKi)  :: C_vShr_Exp = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region [> 0.0] [-]
     INTEGER(IntKi)  :: Mod_WakeDiam = 0_IntKi      !< Wake diameter calculation model {1: rotor diameter, 2: velocity-based, 3: mass-flux based, 4: momentum-flux based} [DEFAULT=1] [-]
     REAL(ReKi)  :: C_WakeDiam = 0.0_ReKi      !< Calibrated parameter for wake diameter calculation [>0.0 and <1.0] [unused for Mod_WakeDiam=1] [-]
@@ -72,8 +72,16 @@ IMPLICIT NONE
     REAL(ReKi)  :: k_vCurl = 0.0_ReKi      !< Calibrated parameter for the eddy viscosity in curled-wake model [>=0.0] [-]
     LOGICAL  :: OutAllPlanes = .false.      !< Output all planes [-]
     LOGICAL  :: WAT = .false.      !< Switch for turning on and off wake-added turbulence [-]
-    REAL(ReKi)  :: WAT_k_Def = 0.0_ReKi      !< Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6] [-]
-    REAL(ReKi)  :: WAT_k_Grad = 0.0_ReKi      !< Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35] [-]
+    REAL(ReKi)  :: WAT_k_Def_k_c = 0.0_ReKi      !< Calibrated parameter for the influence of the maximum wake deficit on wake-added turblence (-) [>=0] or DEFAULT [DEFAULT=0.6] [-]
+    REAL(ReKi)  :: WAT_k_Def_FMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the value in the minimum region [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.0] [-]
+    REAL(ReKi)  :: WAT_k_Def_DMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the transitional diameter fraction between the minimum and exponential regions [>=0.0] or DEFAULT [DEFAULT=0.0] [-]
+    REAL(ReKi)  :: WAT_k_Def_DMax = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the transitional diameter fraction between the exponential and maximum regions [> WAT_k_Def_DMin] or DEFAULT [DEFAULT=2.0] [-]
+    REAL(ReKi)  :: WAT_k_Def_Exp = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the exponent in the exponential region [> 0.0] or DEFAULT [DEFAULT=1.0] [-]
+    REAL(ReKi)  :: WAT_k_Grad_k_c = 0.0_ReKi      !< Calibrated parameter for the influence of the radial velocity gradient of the wake deficit on wake-added turblence (-) [>=0] or DEFAULT [DEFAULT=3.0] [-]
+    REAL(ReKi)  :: WAT_k_Grad_FMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT radial velocity gradient of the wake deficit defining the value in the minimum region [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.0] [-]
+    REAL(ReKi)  :: WAT_k_Grad_DMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT radial velocity gradient of the wake deficit defining the transitional diameter fraction between the minimum and exponential regions [>=0.0] or DEFAULT [DEFAULT=0.0] [-]
+    REAL(ReKi)  :: WAT_k_Grad_DMax = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT radial velocity gradient of the wake deficit defining the transitional diameter fraction between the exponential and maximum regions [> WAT_k_Grad_DMin] or DEFAULT [DEFAULT=12.0] [-]
+    REAL(ReKi)  :: WAT_k_Grad_Exp = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT radial velocity gradient of the wake deficit defining the exponent in the exponential region [> 0.0] or DEFAULT [DEFAULT=0.65] [-]
   END TYPE WD_InputFileType
 ! =======================
 ! =========  WD_InitInputType  =======
@@ -175,16 +183,16 @@ IMPLICIT NONE
     REAL(ReKi)  :: C_HWkDfl_x = 0.0_ReKi      !< Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance [-]
     REAL(ReKi)  :: C_HWkDfl_xY = 0.0_ReKi      !< Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error [1/rad]
     REAL(ReKi)  :: C_NearWake = 0.0_ReKi      !< Calibrated parameter for near-wake correction [-]
+    REAL(ReKi)  :: k_vAmb = 0.0_ReKi      !< Calibrated parameter for the influence of ambient turbulence in the eddy viscosity [-]
     REAL(ReKi)  :: C_vAmb_DMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the minimum and exponential regions [-]
     REAL(ReKi)  :: C_vAmb_DMax = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the exponential and maximum regions [-]
     REAL(ReKi)  :: C_vAmb_FMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the functional value in the minimum region [-]
     REAL(ReKi)  :: C_vAmb_Exp = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the exponent in the exponential region [-]
+    REAL(ReKi)  :: k_vShr = 0.0_ReKi      !< Calibrated parameter for the influence of the shear layer in the eddy viscosity [-]
     REAL(ReKi)  :: C_vShr_DMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the minimum and exponential regions [-]
     REAL(ReKi)  :: C_vShr_DMax = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the exponential and maximum regions [-]
     REAL(ReKi)  :: C_vShr_FMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the shear layer defining the functional value in the minimum region [-]
     REAL(ReKi)  :: C_vShr_Exp = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region [-]
-    REAL(ReKi)  :: k_vAmb = 0.0_ReKi      !< Calibrated parameter for the influence of ambient turbulence in the eddy viscosity [-]
-    REAL(ReKi)  :: k_vShr = 0.0_ReKi      !< Calibrated parameter for the influence of the shear layer in the eddy viscosity [-]
     INTEGER(IntKi)  :: Mod_WakeDiam = 0_IntKi      !< Wake diameter calculation model [-]
     REAL(ReKi)  :: C_WakeDiam = 0.0_ReKi      !< Calibrated parameter for wake diameter calculation [-]
     INTEGER(IntKi)  :: FilterInit = 0_IntKi      !< Switch to filter the initial wake plane deficit and select the number of grid points for the filter {0: no filter, 1: filter of size 1} or DEFAULT [DEFAULT=0: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wwake is 2] (switch) [-]
@@ -194,8 +202,16 @@ IMPLICIT NONE
     CHARACTER(1024)  :: OutFileVTKDir      !< The parent directory for all VTK files written by WD [-]
     INTEGER(IntKi)  :: TurbNum = 0      !< Turbine ID number (start with 1; end with number of turbines) [-]
     LOGICAL  :: WAT = .false.      !< Switch for turning on and off wake-added turbulence [-]
-    REAL(ReKi)  :: WAT_k_Def = 0.0_ReKi      !< Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6] [-]
-    REAL(ReKi)  :: WAT_k_Grad = 0.0_ReKi      !< Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35] [-]
+    REAL(ReKi)  :: WAT_k_Def_k_c = 0.0_ReKi      !< Calibrated parameter for the influence of the maximum wake deficit on wake-added turblence (-) [>=0] or DEFAULT [DEFAULT=0.6] [-]
+    REAL(ReKi)  :: WAT_k_Def_FMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the value in the minimum region [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.0] [-]
+    REAL(ReKi)  :: WAT_k_Def_DMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the transitional diameter fraction between the minimum and exponential regions [>=0.0] or DEFAULT [DEFAULT=0.0] [-]
+    REAL(ReKi)  :: WAT_k_Def_DMax = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the transitional diameter fraction between the exponential and maximum regions [> WAT_k_Def_DMin] or DEFAULT [DEFAULT=2.0] [-]
+    REAL(ReKi)  :: WAT_k_Def_Exp = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the exponent in the exponential region [> 0.0] or DEFAULT [DEFAULT=1.0] [-]
+    REAL(ReKi)  :: WAT_k_Grad_k_c = 0.0_ReKi      !< Calibrated parameter for the influence of the radial velocity gradient of the wake deficit on wake-added turblence (-) [>=0] or DEFAULT [DEFAULT=3.0] [-]
+    REAL(ReKi)  :: WAT_k_Grad_FMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT radial velocity gradient of the wake deficit defining the value in the minimum region [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.0] [-]
+    REAL(ReKi)  :: WAT_k_Grad_DMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT radial velocity gradient of the wake deficit defining the transitional diameter fraction between the minimum and exponential regions [>=0.0] or DEFAULT [DEFAULT=0.0] [-]
+    REAL(ReKi)  :: WAT_k_Grad_DMax = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT radial velocity gradient of the wake deficit defining the transitional diameter fraction between the exponential and maximum regions [> WAT_k_Grad_DMin] or DEFAULT [DEFAULT=12.0] [-]
+    REAL(ReKi)  :: WAT_k_Grad_Exp = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT radial velocity gradient of the wake deficit defining the exponent in the exponential region [> 0.0] or DEFAULT [DEFAULT=0.65] [-]
   END TYPE WD_ParameterType
 ! =======================
 ! =========  WD_InputType  =======
@@ -225,7 +241,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Vz_wake2      !< Transverse nominally vertical wake velocity deficit at wake planes, distributed across the plane [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: D_wake      !< Wake diameters at wake planes [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: x_plane      !< Downwind distance from rotor to each wake plane [m]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WAT_k_mt      !< Scaling factor k_mt(iP,y,z) for wake-added turbulence [-]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WAT_k      !< Scaling factor k_mt(iP,y,z) for wake-added turbulence [-]
   END TYPE WD_OutputType
 ! =======================
 CONTAINS
@@ -250,14 +266,14 @@ subroutine WD_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ctrl
    DstInputFileTypeData%C_HWkDfl_xY = SrcInputFileTypeData%C_HWkDfl_xY
    DstInputFileTypeData%C_NearWake = SrcInputFileTypeData%C_NearWake
    DstInputFileTypeData%k_vAmb = SrcInputFileTypeData%k_vAmb
-   DstInputFileTypeData%k_vShr = SrcInputFileTypeData%k_vShr
+   DstInputFileTypeData%C_vAmb_FMin = SrcInputFileTypeData%C_vAmb_FMin
    DstInputFileTypeData%C_vAmb_DMin = SrcInputFileTypeData%C_vAmb_DMin
    DstInputFileTypeData%C_vAmb_DMax = SrcInputFileTypeData%C_vAmb_DMax
-   DstInputFileTypeData%C_vAmb_FMin = SrcInputFileTypeData%C_vAmb_FMin
    DstInputFileTypeData%C_vAmb_Exp = SrcInputFileTypeData%C_vAmb_Exp
+   DstInputFileTypeData%k_vShr = SrcInputFileTypeData%k_vShr
+   DstInputFileTypeData%C_vShr_FMin = SrcInputFileTypeData%C_vShr_FMin
    DstInputFileTypeData%C_vShr_DMin = SrcInputFileTypeData%C_vShr_DMin
    DstInputFileTypeData%C_vShr_DMax = SrcInputFileTypeData%C_vShr_DMax
-   DstInputFileTypeData%C_vShr_FMin = SrcInputFileTypeData%C_vShr_FMin
    DstInputFileTypeData%C_vShr_Exp = SrcInputFileTypeData%C_vShr_Exp
    DstInputFileTypeData%Mod_WakeDiam = SrcInputFileTypeData%Mod_WakeDiam
    DstInputFileTypeData%C_WakeDiam = SrcInputFileTypeData%C_WakeDiam
@@ -269,8 +285,16 @@ subroutine WD_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ctrl
    DstInputFileTypeData%k_vCurl = SrcInputFileTypeData%k_vCurl
    DstInputFileTypeData%OutAllPlanes = SrcInputFileTypeData%OutAllPlanes
    DstInputFileTypeData%WAT = SrcInputFileTypeData%WAT
-   DstInputFileTypeData%WAT_k_Def = SrcInputFileTypeData%WAT_k_Def
-   DstInputFileTypeData%WAT_k_Grad = SrcInputFileTypeData%WAT_k_Grad
+   DstInputFileTypeData%WAT_k_Def_k_c = SrcInputFileTypeData%WAT_k_Def_k_c
+   DstInputFileTypeData%WAT_k_Def_FMin = SrcInputFileTypeData%WAT_k_Def_FMin
+   DstInputFileTypeData%WAT_k_Def_DMin = SrcInputFileTypeData%WAT_k_Def_DMin
+   DstInputFileTypeData%WAT_k_Def_DMax = SrcInputFileTypeData%WAT_k_Def_DMax
+   DstInputFileTypeData%WAT_k_Def_Exp = SrcInputFileTypeData%WAT_k_Def_Exp
+   DstInputFileTypeData%WAT_k_Grad_k_c = SrcInputFileTypeData%WAT_k_Grad_k_c
+   DstInputFileTypeData%WAT_k_Grad_FMin = SrcInputFileTypeData%WAT_k_Grad_FMin
+   DstInputFileTypeData%WAT_k_Grad_DMin = SrcInputFileTypeData%WAT_k_Grad_DMin
+   DstInputFileTypeData%WAT_k_Grad_DMax = SrcInputFileTypeData%WAT_k_Grad_DMax
+   DstInputFileTypeData%WAT_k_Grad_Exp = SrcInputFileTypeData%WAT_k_Grad_Exp
 end subroutine
 
 subroutine WD_DestroyInputFileType(InputFileTypeData, ErrStat, ErrMsg)
@@ -298,14 +322,14 @@ subroutine WD_PackInputFileType(RF, Indata)
    call RegPack(RF, InData%C_HWkDfl_xY)
    call RegPack(RF, InData%C_NearWake)
    call RegPack(RF, InData%k_vAmb)
-   call RegPack(RF, InData%k_vShr)
+   call RegPack(RF, InData%C_vAmb_FMin)
    call RegPack(RF, InData%C_vAmb_DMin)
    call RegPack(RF, InData%C_vAmb_DMax)
-   call RegPack(RF, InData%C_vAmb_FMin)
    call RegPack(RF, InData%C_vAmb_Exp)
+   call RegPack(RF, InData%k_vShr)
+   call RegPack(RF, InData%C_vShr_FMin)
    call RegPack(RF, InData%C_vShr_DMin)
    call RegPack(RF, InData%C_vShr_DMax)
-   call RegPack(RF, InData%C_vShr_FMin)
    call RegPack(RF, InData%C_vShr_Exp)
    call RegPack(RF, InData%Mod_WakeDiam)
    call RegPack(RF, InData%C_WakeDiam)
@@ -317,8 +341,16 @@ subroutine WD_PackInputFileType(RF, Indata)
    call RegPack(RF, InData%k_vCurl)
    call RegPack(RF, InData%OutAllPlanes)
    call RegPack(RF, InData%WAT)
-   call RegPack(RF, InData%WAT_k_Def)
-   call RegPack(RF, InData%WAT_k_Grad)
+   call RegPack(RF, InData%WAT_k_Def_k_c)
+   call RegPack(RF, InData%WAT_k_Def_FMin)
+   call RegPack(RF, InData%WAT_k_Def_DMin)
+   call RegPack(RF, InData%WAT_k_Def_DMax)
+   call RegPack(RF, InData%WAT_k_Def_Exp)
+   call RegPack(RF, InData%WAT_k_Grad_k_c)
+   call RegPack(RF, InData%WAT_k_Grad_FMin)
+   call RegPack(RF, InData%WAT_k_Grad_DMin)
+   call RegPack(RF, InData%WAT_k_Grad_DMax)
+   call RegPack(RF, InData%WAT_k_Grad_Exp)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -338,14 +370,14 @@ subroutine WD_UnPackInputFileType(RF, OutData)
    call RegUnpack(RF, OutData%C_HWkDfl_xY); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_NearWake); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%k_vAmb); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%k_vShr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%C_vAmb_FMin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vAmb_DMin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vAmb_DMax); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%C_vAmb_FMin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vAmb_Exp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k_vShr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%C_vShr_FMin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vShr_DMin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vShr_DMax); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%C_vShr_FMin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vShr_Exp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Mod_WakeDiam); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_WakeDiam); if (RegCheckErr(RF, RoutineName)) return
@@ -357,8 +389,16 @@ subroutine WD_UnPackInputFileType(RF, OutData)
    call RegUnpack(RF, OutData%k_vCurl); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutAllPlanes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WAT); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%WAT_k_Def); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%WAT_k_Grad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Def_k_c); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Def_FMin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Def_DMin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Def_DMax); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Def_Exp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Grad_k_c); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Grad_FMin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Grad_DMin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Grad_DMax); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Grad_Exp); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
@@ -1381,16 +1421,16 @@ subroutine WD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%C_HWkDfl_x = SrcParamData%C_HWkDfl_x
    DstParamData%C_HWkDfl_xY = SrcParamData%C_HWkDfl_xY
    DstParamData%C_NearWake = SrcParamData%C_NearWake
+   DstParamData%k_vAmb = SrcParamData%k_vAmb
    DstParamData%C_vAmb_DMin = SrcParamData%C_vAmb_DMin
    DstParamData%C_vAmb_DMax = SrcParamData%C_vAmb_DMax
    DstParamData%C_vAmb_FMin = SrcParamData%C_vAmb_FMin
    DstParamData%C_vAmb_Exp = SrcParamData%C_vAmb_Exp
+   DstParamData%k_vShr = SrcParamData%k_vShr
    DstParamData%C_vShr_DMin = SrcParamData%C_vShr_DMin
    DstParamData%C_vShr_DMax = SrcParamData%C_vShr_DMax
    DstParamData%C_vShr_FMin = SrcParamData%C_vShr_FMin
    DstParamData%C_vShr_Exp = SrcParamData%C_vShr_Exp
-   DstParamData%k_vAmb = SrcParamData%k_vAmb
-   DstParamData%k_vShr = SrcParamData%k_vShr
    DstParamData%Mod_WakeDiam = SrcParamData%Mod_WakeDiam
    DstParamData%C_WakeDiam = SrcParamData%C_WakeDiam
    DstParamData%FilterInit = SrcParamData%FilterInit
@@ -1400,8 +1440,16 @@ subroutine WD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%OutFileVTKDir = SrcParamData%OutFileVTKDir
    DstParamData%TurbNum = SrcParamData%TurbNum
    DstParamData%WAT = SrcParamData%WAT
-   DstParamData%WAT_k_Def = SrcParamData%WAT_k_Def
-   DstParamData%WAT_k_Grad = SrcParamData%WAT_k_Grad
+   DstParamData%WAT_k_Def_k_c = SrcParamData%WAT_k_Def_k_c
+   DstParamData%WAT_k_Def_FMin = SrcParamData%WAT_k_Def_FMin
+   DstParamData%WAT_k_Def_DMin = SrcParamData%WAT_k_Def_DMin
+   DstParamData%WAT_k_Def_DMax = SrcParamData%WAT_k_Def_DMax
+   DstParamData%WAT_k_Def_Exp = SrcParamData%WAT_k_Def_Exp
+   DstParamData%WAT_k_Grad_k_c = SrcParamData%WAT_k_Grad_k_c
+   DstParamData%WAT_k_Grad_FMin = SrcParamData%WAT_k_Grad_FMin
+   DstParamData%WAT_k_Grad_DMin = SrcParamData%WAT_k_Grad_DMin
+   DstParamData%WAT_k_Grad_DMax = SrcParamData%WAT_k_Grad_DMax
+   DstParamData%WAT_k_Grad_Exp = SrcParamData%WAT_k_Grad_Exp
 end subroutine
 
 subroutine WD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -1446,16 +1494,16 @@ subroutine WD_PackParam(RF, Indata)
    call RegPack(RF, InData%C_HWkDfl_x)
    call RegPack(RF, InData%C_HWkDfl_xY)
    call RegPack(RF, InData%C_NearWake)
+   call RegPack(RF, InData%k_vAmb)
    call RegPack(RF, InData%C_vAmb_DMin)
    call RegPack(RF, InData%C_vAmb_DMax)
    call RegPack(RF, InData%C_vAmb_FMin)
    call RegPack(RF, InData%C_vAmb_Exp)
+   call RegPack(RF, InData%k_vShr)
    call RegPack(RF, InData%C_vShr_DMin)
    call RegPack(RF, InData%C_vShr_DMax)
    call RegPack(RF, InData%C_vShr_FMin)
    call RegPack(RF, InData%C_vShr_Exp)
-   call RegPack(RF, InData%k_vAmb)
-   call RegPack(RF, InData%k_vShr)
    call RegPack(RF, InData%Mod_WakeDiam)
    call RegPack(RF, InData%C_WakeDiam)
    call RegPack(RF, InData%FilterInit)
@@ -1465,8 +1513,16 @@ subroutine WD_PackParam(RF, Indata)
    call RegPack(RF, InData%OutFileVTKDir)
    call RegPack(RF, InData%TurbNum)
    call RegPack(RF, InData%WAT)
-   call RegPack(RF, InData%WAT_k_Def)
-   call RegPack(RF, InData%WAT_k_Grad)
+   call RegPack(RF, InData%WAT_k_Def_k_c)
+   call RegPack(RF, InData%WAT_k_Def_FMin)
+   call RegPack(RF, InData%WAT_k_Def_DMin)
+   call RegPack(RF, InData%WAT_k_Def_DMax)
+   call RegPack(RF, InData%WAT_k_Def_Exp)
+   call RegPack(RF, InData%WAT_k_Grad_k_c)
+   call RegPack(RF, InData%WAT_k_Grad_FMin)
+   call RegPack(RF, InData%WAT_k_Grad_DMin)
+   call RegPack(RF, InData%WAT_k_Grad_DMax)
+   call RegPack(RF, InData%WAT_k_Grad_Exp)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1497,16 +1553,16 @@ subroutine WD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%C_HWkDfl_x); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_HWkDfl_xY); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_NearWake); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k_vAmb); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vAmb_DMin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vAmb_DMax); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vAmb_FMin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vAmb_Exp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k_vShr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vShr_DMin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vShr_DMax); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vShr_FMin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_vShr_Exp); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%k_vAmb); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%k_vShr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Mod_WakeDiam); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_WakeDiam); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FilterInit); if (RegCheckErr(RF, RoutineName)) return
@@ -1516,8 +1572,16 @@ subroutine WD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%OutFileVTKDir); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TurbNum); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WAT); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%WAT_k_Def); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%WAT_k_Grad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Def_k_c); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Def_FMin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Def_DMin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Def_DMax); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Def_Exp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Grad_k_c); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Grad_FMin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Grad_DMin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Grad_DMax); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAT_k_Grad_Exp); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -1757,17 +1821,17 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       end if
       DstOutputData%x_plane = SrcOutputData%x_plane
    end if
-   if (allocated(SrcOutputData%WAT_k_mt)) then
-      LB(1:3) = lbound(SrcOutputData%WAT_k_mt, kind=B8Ki)
-      UB(1:3) = ubound(SrcOutputData%WAT_k_mt, kind=B8Ki)
-      if (.not. allocated(DstOutputData%WAT_k_mt)) then
-         allocate(DstOutputData%WAT_k_mt(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+   if (allocated(SrcOutputData%WAT_k)) then
+      LB(1:3) = lbound(SrcOutputData%WAT_k, kind=B8Ki)
+      UB(1:3) = ubound(SrcOutputData%WAT_k, kind=B8Ki)
+      if (.not. allocated(DstOutputData%WAT_k)) then
+         allocate(DstOutputData%WAT_k(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WAT_k_mt.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WAT_k.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstOutputData%WAT_k_mt = SrcOutputData%WAT_k_mt
+      DstOutputData%WAT_k = SrcOutputData%WAT_k
    end if
 end subroutine
 
@@ -1805,8 +1869,8 @@ subroutine WD_DestroyOutput(OutputData, ErrStat, ErrMsg)
    if (allocated(OutputData%x_plane)) then
       deallocate(OutputData%x_plane)
    end if
-   if (allocated(OutputData%WAT_k_mt)) then
-      deallocate(OutputData%WAT_k_mt)
+   if (allocated(OutputData%WAT_k)) then
+      deallocate(OutputData%WAT_k)
    end if
 end subroutine
 
@@ -1824,7 +1888,7 @@ subroutine WD_PackOutput(RF, Indata)
    call RegPackAlloc(RF, InData%Vz_wake2)
    call RegPackAlloc(RF, InData%D_wake)
    call RegPackAlloc(RF, InData%x_plane)
-   call RegPackAlloc(RF, InData%WAT_k_mt)
+   call RegPackAlloc(RF, InData%WAT_k)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1845,7 +1909,7 @@ subroutine WD_UnPackOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%Vz_wake2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%D_wake); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%x_plane); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%WAT_k_mt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WAT_k); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 function WD_InputMeshPointer(u, ML) result(Mesh)

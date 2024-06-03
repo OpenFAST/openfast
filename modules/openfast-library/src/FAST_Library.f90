@@ -955,7 +955,7 @@ subroutine FAST_ExtInfw_Restart(iTurb_c, CheckpointRootName_c, AbortErrLev_c, dt
 
 end subroutine FAST_ExtInfw_Restart
 !==================================================================================================================================
-subroutine FAST_ExtLoads_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, numblades_c, &
+subroutine FAST_ExtLoads_Restart(iTurb_c, CheckpointRootName_c, AbortErrLev_c, dt_c, numblades_c, &
      n_t_global_c, ExtLd_Input_from_FAST, ExtLd_Parameter_from_FAST, ExtLd_Output_to_FAST, &
      SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_ExtLoads_Restart')
    IMPLICIT NONE
@@ -963,7 +963,7 @@ subroutine FAST_ExtLoads_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_
 !DEC$ ATTRIBUTES DLLEXPORT :: FAST_ExtLoads_Restart
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_ExtLoads_Restart
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number
+   INTEGER(C_INT),         INTENT(IN   ) :: iTurb_c            ! Turbine number
    CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: CheckpointRootName_c(IntfStrLen)
    INTEGER(C_INT),         INTENT(  OUT) :: AbortErrLev_c
    INTEGER(C_INT),         INTENT(  OUT) :: numblades_c
@@ -985,7 +985,11 @@ subroutine FAST_ExtLoads_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_
    REAL(DbKi)                            :: t_initial_out
    INTEGER(IntKi)                        :: NumTurbines_out
    INTEGER(IntKi)                        :: CompLoadsType
+   integer(IntKi)                        :: iTurb       ! turbine number: Fortran indexing (starts at 1 for first turbine)
    CHARACTER(*),           PARAMETER     :: RoutineName = 'FAST_Restart'
+
+   ! transfer turbine index number from C to Fortran indexing (0 to 1 start)
+   iTurb = int(iTurb_c,IntKi) + 1
 
    CALL NWTC_Init()
       ! transfer the character array from C to a Fortran string:
