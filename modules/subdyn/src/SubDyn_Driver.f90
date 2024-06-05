@@ -490,20 +490,6 @@ CONTAINS
    ! --------------------------------------------------------------------------------
    ! --- Generic routines (also present in other modules, e.g. OLAF, AD Driver) 
    ! --------------------------------------------------------------------------------
-   function is_numeric(string, x)
-      implicit none
-      character(len=*), intent(in) :: string
-      real(reki), intent(out) :: x
-      logical :: is_numeric
-      integer :: e,n
-      character(len=12) :: fmt
-      x = 0.0_reki
-      n=len_trim(string)
-      write(fmt,'("(F",I0,".0)")') n
-      read(string,fmt,iostat=e) x
-      is_numeric = e == 0
-   end function is_numeric
-
    function is_int(string, x)
       implicit none
       character(len=*), intent(in) :: string

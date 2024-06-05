@@ -192,6 +192,14 @@ MODULE NWTC_IO
       MODULE PROCEDURE ReadR8AryFromStr
    END INTERFACE
 
+      !> \copydoc nwtc_io::readr4arywdefault
+   INTERFACE ReadAryWDefault
+      MODULE PROCEDURE ReadR4AryWDefault
+      MODULE PROCEDURE ReadR8AryWDefault
+!      MODULE PROCEDURE ReadR4AryWDefaultFromStr    ! Not coded yet
+!      MODULE PROCEDURE ReadR8AryWDefaultFromStr    ! Not coded yet
+   END INTERFACE
+
       !> \copydoc nwtc_io::readcarylines   
    INTERFACE ReadAryLines
       MODULE PROCEDURE ReadCAryLines
@@ -6129,6 +6137,138 @@ END SUBROUTINE CheckR8Var
    END IF
    RETURN
    END SUBROUTINE ReadR8AryFromStr
+
+!=======================================================================
+!> This routine reads a AryLen values separated by whitespace (or other Fortran record delimiters such as commas) 
+!!  into an array (either on same line or multiple lines), or sets default values.
+!! Use ReadAryWDefault (nwtc_io::readarywdefault) instead of directly calling a specific routine in the generic interface.   
+subroutine ReadR4AryWDefault ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, AryDefault, ErrStat, ErrMsg, UnEc )
+   ! This routine reads a AryLen values into a 4-byte real array separated by white space, or sets to default
+   integer,       intent(in   )           :: UnIn                 ! I/O unit for input file.
+   character(*),  intent(in   )           :: Fil                  ! Name of the input file.
+   integer,       intent(in   )           :: AryLen               ! Length of the array.
+   real(R4Ki),    intent(inout)           :: Ary(AryLen)          ! Real array being read.
+   character(*),  intent(in   )           :: AryName              ! Text string containing the variable name.
+   character(*),  intent(in   )           :: AryDescr             ! Text string describing the variable.
+   real(R4Ki),    intent(in   )           :: AryDefault(AryLen)   ! Default value for variable being read
+   integer,       intent(  out)           :: ErrStat              ! Error status
+   character(*),  intent(  out)           :: ErrMsg               ! Error message
+   integer,       intent(in   ), optional :: UnEc                 ! I/O unit for echo file. If present and > 0, write to UnEc
+
+   integer                                :: Ind                  ! Index into the string array.  Assumed to be one digit.
+   integer                                :: IOS                  ! I/O status returned from the read statement.
+   character(30)                          :: Word(AryLen)         ! String to hold the words on the line.
+   character(2048)                        :: Line                 ! The contents of a line returned from ReadLine() with comment removed.
+   integer                                :: LineLen              ! Length of line read in
+
+   call ReadLine( UnIn, CommChars, Line, LineLen, IOS )           ! Reads a line.  Returns what is before the first comment character.
+   call CheckIOS( IOS, Fil, trim(AryName), StrType, ErrStat, ErrMsg )   ! Assume `default` is most likely
+      if (ErrStat >= AbortErrLev) return
+
+   ! check for default
+   call GetWords(Line, Word(1), 1)
+   call Conv2UC( Word(1) )
+
+   if ( index(Word(1), "DEFAULT" ) /= 1 ) then  ! If it's not "default", read this variable; otherwise use the DEFAULT value
+
+      ! Values exist, so reread line into AryLen of words
+      call GetWords( Line, Word(AryLen), AryLen)
+
+      ! read the first AryLen numbers from the line
+      read (Line,*,iostat=IOS)  ( Ary(Ind), Ind=1,AryLen )
+
+      ! Check if there was an error
+      call CheckIOS ( IOS, Fil, trim( AryName ), NumType, ErrStat, ErrMsg )
+      if (ErrStat >= AbortErrLev) return
+      
+      do Ind=1,AryLen
+         call CheckRealVar( Ary(Ind), AryName, ErrStat, ErrMsg)
+            if (ErrStat >= AbortErrLev) return
+      end do
+
+      if ( present(UnEc) )  then
+         if ( UnEc > 0 ) then
+            write(UnEc, Ec_ReAryFrmt)  trim(AryName), AryDescr, Ary(1:min(AryLen,NWTC_MaxAryLen))
+         end if
+      end if
+
+   else
+      ! Set default
+      Ary = AryDefault
+      if ( present(UnEc) )  then
+         if ( UnEc > 0 ) then
+            write(UnEc, Ec_ReAryFrmt)  trim(AryName), trim(AryDescr)//' (set to default)', Ary(1:min(AryLen,NWTC_MaxAryLen))
+         endif
+      endif
+   endif
+
+   return
+end subroutine ReadR4AryWDefault
+!=======================================================================
+!> \copydoc nwtc_io::readr4arywdefault   
+subroutine ReadR8AryWDefault ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, AryDefault, ErrStat, ErrMsg, UnEc )
+   ! This routine reads a AryLen values into a 8-byte real array separated by white space, or sets to default
+   integer,       intent(in   )           :: UnIn                 ! I/O unit for input file.
+   character(*),  intent(in   )           :: Fil                  ! Name of the input file.
+   integer,       intent(in   )           :: AryLen               ! Length of the array.
+   real(R8Ki),    intent(inout)           :: Ary(AryLen)          ! Real array being read.
+   character(*),  intent(in   )           :: AryDescr             ! Text string describing the variable.
+   character(*),  intent(in   )           :: AryName              ! Text string containing the variable name.
+   real(R8Ki),    intent(in   )           :: AryDefault(AryLen)   ! Default value for variable being read
+   integer,       intent(  out)           :: ErrStat              ! Error status
+   character(*),  intent(  out)           :: ErrMsg               ! Error message
+   integer,       intent(in   ), optional :: UnEc                 ! I/O unit for echo file. If present and > 0, write to UnEc
+
+   integer                                :: Ind                  ! Index into the string array.  Assumed to be one digit.
+   integer                                :: IOS                  ! I/O status returned from the read statement.
+   character(30)                          :: Word(AryLen)         ! String to hold the words on the line.
+   character(2048)                        :: Line                 ! The contents of a line returned from ReadLine() with comment removed.
+   integer                                :: LineLen              ! Length of line read in
+
+   call ReadLine( UnIn, CommChars, Line, LineLen, IOS )           ! Reads a line.  Returns what is before the first comment character.
+   call CheckIOS( IOS, Fil, trim(AryName), StrType, ErrStat, ErrMsg )   ! Assume `default` is most likely
+      if (ErrStat >= AbortErrLev) return
+
+   ! check for default
+   call GetWords(Line, Word(1), 1)
+   call Conv2UC( Word(1) )
+
+   if ( index(Word(1), "DEFAULT" ) /= 1 ) then  ! If it's not "default", read this variable; otherwise use the DEFAULT value
+
+      ! Values exist, so reread line into AryLen of words
+      call GetWords( Line, Word(AryLen), AryLen)
+
+      ! read the first AryLen numbers from the line
+      read (Line,*,iostat=IOS)  ( Ary(Ind), Ind=1,AryLen )
+
+      ! Check if there was an error
+      call CheckIOS ( IOS, Fil, trim( AryName ), NumType, ErrStat, ErrMsg )
+      if (ErrStat >= AbortErrLev) return
+      
+      do Ind=1,AryLen
+         call CheckRealVar( Ary(Ind), AryName, ErrStat, ErrMsg)
+            if (ErrStat >= AbortErrLev) return
+      end do
+
+      if ( present(UnEc) )  then
+         if ( UnEc > 0 ) then
+            write(UnEc, Ec_ReAryFrmt)  trim(AryName), AryDescr, Ary(1:min(AryLen,NWTC_MaxAryLen))
+         end if
+      end if
+
+   else
+      ! Set default
+      Ary = AryDefault
+      if ( present(UnEc) )  then
+         if ( UnEc > 0 ) then
+            write(UnEc, Ec_ReAryFrmt)  trim(AryName), trim(AryDescr)//' (set to default)', Ary(1:min(AryLen,NWTC_MaxAryLen))
+         endif
+      endif
+   endif
+
+   return
+end subroutine ReadR8AryWDefault
+
 !=======================================================================
 !> \copydoc nwtc_io::readcarylines   
    SUBROUTINE ReadR4AryLines ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
