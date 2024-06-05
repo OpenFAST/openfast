@@ -1046,13 +1046,13 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    IF (WD_InitInp%C_vAmb_FMin <  0.0_Reki .or. WD_InitInp%C_vAmb_FMin > 1.0_Reki) CALL SetErrStat(ErrID_Fatal,'k_vAmb(2) (FMin) must be between 0 and 1 (inclusive).',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%C_vAmb_DMin <  0.0_Reki)                                        CALL SetErrStat(ErrID_Fatal,'k_vAmb(3) (DMin) must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%C_vAmb_DMax <= WD_InitInp%C_vAmb_DMin)                          CALL SetErrStat(ErrID_Fatal,'k_vAmb(4) (DMax) must be larger than DMin.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%C_vAmb_Exp  <= 0.0_Reki)                                        CALL SetErrStat(ErrID_Fatal,'k_vAmb(5) (e) must be positive.',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%C_vAmb_Exp  <  0.0_Reki)                                        CALL SetErrStat(ErrID_Fatal,'k_vAmb(5) (e) must be >=0.',ErrStat,ErrMsg,RoutineName)
 
    IF (WD_InitInp%k_vShr      <  0.0_Reki)                                        CALL SetErrStat(ErrID_Fatal,'k_vShr(1) (k_vShr) must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%C_vShr_FMin <  0.0_Reki .or. WD_InitInp%C_vShr_FMin > 1.0_ReKi) CALL SetErrStat(ErrID_Fatal,'k_vShr(2) (FMin) must be between 0 and 1 (inclusive).',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%C_vShr_DMin <  0.0_Reki)                                        CALL SetErrStat(ErrID_Fatal,'k_vShr(3) (DMin) must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%C_vShr_DMax <= WD_InitInp%C_vShr_DMin)                          CALL SetErrStat(ErrID_Fatal,'k_vShr(4) (DMax) must be larger than DMin.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%C_vShr_Exp  <= 0.0_Reki)                                        CALL SetErrStat(ErrID_Fatal,'k_vShr(5) (e) must be positive.',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%C_vShr_Exp  <  0.0_Reki)                                        CALL SetErrStat(ErrID_Fatal,'k_vShr(5) (e) must be >=0.',ErrStat,ErrMsg,RoutineName)
 
    IF (WD_InitInp%Mod_WakeDiam < WakeDiamMod_RotDiam .or. WD_InitInp%Mod_WakeDiam > WakeDiamMod_MtmFlux) THEN
       call SetErrStat(ErrID_Fatal,'Wake diameter calculation model, Mod_WakeDiam, must be 1 (rotor diameter), 2 (velocity-based), 3 (mass-flux based), 4 (momentum-flux based) or DEFAULT.',ErrStat,ErrMsg,RoutineName)
@@ -1085,13 +1085,13 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
       if (WD_InitInp%WAT_k_Def_FMin <  0.0_ReKi .or. WD_InitInp%WAT_k_Def_FMin > 1.0_ReKi) call SetErrStat(ErrID_Fatal,'WAT_k_Def(2) (f_min) must be >=0 and <=1.',ErrStat,ErrMsg,RoutineName)
       if (WD_InitInp%WAT_k_Def_DMin <  0.0_ReKi)                                           call SetErrStat(ErrID_Fatal,'WAT_k_Def(3) (D_min) must be >=0.',ErrStat,ErrMsg,RoutineName)
       if (WD_InitInp%WAT_k_Def_DMax <= WD_InitInp%WAT_k_Def_DMin)                          call SetErrStat(ErrID_Fatal,'WAT_k_Def(4) (D_max) must be greater than D_min.',ErrStat,ErrMsg,RoutineName)
-      if (WD_InitInp%WAT_k_Def_Exp  <  0.0_ReKi)                                           call SetErrStat(ErrID_Fatal,'WAT_k_Def(5) (e) must be >0.',ErrStat,ErrMsg,RoutineName)
+      if (WD_InitInp%WAT_k_Def_Exp  <  0.0_ReKi)                                           call SetErrStat(ErrID_Fatal,'WAT_k_Def(5) (e) must be >=0.',ErrStat,ErrMsg,RoutineName)
       ! Tests on k_Grad
       if (WD_InitInp%WAT_k_Grad_k_c  <= 0.0_ReKi)                                            call SetErrStat(ErrID_Fatal,'WAT_k_Grad(1) (k_def) must be >0.',ErrStat,ErrMsg,RoutineName)
       if (WD_InitInp%WAT_k_Grad_FMin <  0.0_ReKi .or. WD_InitInp%WAT_k_Grad_FMin > 1.0_ReKi) call SetErrStat(ErrID_Fatal,'WAT_k_Grad(2) (f_min) must be >=0 and <=1.',ErrStat,ErrMsg,RoutineName)
       if (WD_InitInp%WAT_k_Grad_DMin <  0.0_ReKi)                                            call SetErrStat(ErrID_Fatal,'WAT_k_Grad(3) (D_min) must be >=0.',ErrStat,ErrMsg,RoutineName)
       if (WD_InitInp%WAT_k_Grad_DMax <= WD_InitInp%WAT_k_Grad_DMin)                          call SetErrStat(ErrID_Fatal,'WAT_k_Grad(4) (D_max) must be greater than D_min.',ErrStat,ErrMsg,RoutineName)
-      if (WD_InitInp%WAT_k_Grad_Exp  <  0.0_ReKi)                                            call SetErrStat(ErrID_Fatal,'WAT_k_Grad(5) (e) must be >0.',ErrStat,ErrMsg,RoutineName)
+      if (WD_InitInp%WAT_k_Grad_Exp  <  0.0_ReKi)                                            call SetErrStat(ErrID_Fatal,'WAT_k_Grad(5) (e) must be >=0.',ErrStat,ErrMsg,RoutineName)
       ! summary table
       call WrScr('  Wake-Added Turbulence (WAT): coefficients:')
       call WrScr('                k_c      f_min    D_min    D_max    e')
