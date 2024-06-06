@@ -377,18 +377,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: TFinM_i = 0.0_ReKi      !< Moments at the reference point of the fin in the inertial system [-]
   END TYPE RotMiscVarType
 ! =======================
-! =========  AD_MiscVarType  =======
-  TYPE, PUBLIC :: AD_MiscVarType
-    TYPE(RotMiscVarType) , DIMENSION(:), ALLOCATABLE  :: rotors      !< MiscVars for each rotor [-]
-    TYPE(FVW_InputType) , DIMENSION(:), ALLOCATABLE  :: FVW_u      !< Inputs to the FVW module [-]
-    TYPE(FVW_OutputType)  :: FVW_y      !< Outputs from the FVW module [-]
-    TYPE(FVW_MiscVarType)  :: FVW      !< MiscVars from the FVW module [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindPos      !< XYZ coordinates to query for wind velocity/acceleration [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindVel      !< XYZ components of wind velocity [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindAcc      !< XYZ components of wind acceleration [-]
-    TYPE(AD_InflowType) , DIMENSION(:), ALLOCATABLE  :: Inflow      !< Inflow storage (size of u for history of inputs) [-]
-  END TYPE AD_MiscVarType
-! =======================
 ! =========  ElemInflowType  =======
   TYPE, PUBLIC :: ElemInflowType
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: InflowVel      !< U,V,W at nodes on element (note if we change the requirement that NumNodes is the same for each blade, this will need to change) [m/s]
@@ -410,6 +398,18 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: InflowWakeVel      !< U,V,W at wake points [m/s]
     TYPE(RotInflowType) , DIMENSION(:), ALLOCATABLE  :: RotInflow      !< Inflow on rotor [-]
   END TYPE AD_InflowType
+! =======================
+! =========  AD_MiscVarType  =======
+  TYPE, PUBLIC :: AD_MiscVarType
+    TYPE(RotMiscVarType) , DIMENSION(:), ALLOCATABLE  :: rotors      !< MiscVars for each rotor [-]
+    TYPE(FVW_InputType) , DIMENSION(:), ALLOCATABLE  :: FVW_u      !< Inputs to the FVW module [-]
+    TYPE(FVW_OutputType)  :: FVW_y      !< Outputs from the FVW module [-]
+    TYPE(FVW_MiscVarType)  :: FVW      !< MiscVars from the FVW module [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindPos      !< XYZ coordinates to query for wind velocity/acceleration [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindVel      !< XYZ components of wind velocity [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindAcc      !< XYZ components of wind acceleration [-]
+    TYPE(AD_InflowType) , DIMENSION(:), ALLOCATABLE  :: Inflow      !< Inflow storage (size of u for history of inputs) [-]
+  END TYPE AD_MiscVarType
 ! =======================
 ! =========  Jac_u_idxStarts  =======
   TYPE, PUBLIC :: Jac_u_idxStarts
