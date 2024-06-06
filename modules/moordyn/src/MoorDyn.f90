@@ -3140,14 +3140,14 @@ CONTAINS
          J = 0    ! mesh index
          DO l = 1,p%nCpldBodies(iTurb)
             J = J + 1
-            CALL Body_GetCoupledForce(m%BodyList(m%CpldBodyIs(l,iTurb)), F6net, m, p)
+            CALL Body_GetCoupledForce(t, m%BodyList(m%CpldBodyIs(l,iTurb)), F6net, m, p)
             y%CoupledLoads(iTurb)%Force( :,J) = F6net(1:3)
             y%CoupledLoads(iTurb)%Moment(:,J) = F6net(4:6)
          END DO
                
          DO l = 1,p%nCpldRods(iTurb)
             J = J + 1
-            CALL Rod_GetCoupledForce(m%RodList(m%CpldRodIs(l,iTurb)), F6net, m, p)
+            CALL Rod_GetCoupledForce(t, m%RodList(m%CpldRodIs(l,iTurb)), F6net, m, p)
             y%CoupledLoads(iTurb)%Force( :,J) = F6net(1:3)
             y%CoupledLoads(iTurb)%Moment(:,J) = F6net(4:6)
          END DO
