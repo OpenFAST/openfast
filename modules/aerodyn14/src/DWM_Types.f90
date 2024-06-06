@@ -377,14 +377,14 @@ subroutine DWM_Copyturbine_average_velocity_data(Srcturbine_average_velocity_dat
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'DWM_Copyturbine_average_velocity_data'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(Srcturbine_average_velocity_dataData%average_velocity_array_temp)) then
-      LB(1:1) = lbound(Srcturbine_average_velocity_dataData%average_velocity_array_temp, kind=B8Ki)
-      UB(1:1) = ubound(Srcturbine_average_velocity_dataData%average_velocity_array_temp, kind=B8Ki)
+      LB(1:1) = lbound(Srcturbine_average_velocity_dataData%average_velocity_array_temp)
+      UB(1:1) = ubound(Srcturbine_average_velocity_dataData%average_velocity_array_temp)
       if (.not. allocated(Dstturbine_average_velocity_dataData%average_velocity_array_temp)) then
          allocate(Dstturbine_average_velocity_dataData%average_velocity_array_temp(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -395,8 +395,8 @@ subroutine DWM_Copyturbine_average_velocity_data(Srcturbine_average_velocity_dat
       Dstturbine_average_velocity_dataData%average_velocity_array_temp = Srcturbine_average_velocity_dataData%average_velocity_array_temp
    end if
    if (allocated(Srcturbine_average_velocity_dataData%average_velocity_array)) then
-      LB(1:1) = lbound(Srcturbine_average_velocity_dataData%average_velocity_array, kind=B8Ki)
-      UB(1:1) = ubound(Srcturbine_average_velocity_dataData%average_velocity_array, kind=B8Ki)
+      LB(1:1) = lbound(Srcturbine_average_velocity_dataData%average_velocity_array)
+      UB(1:1) = ubound(Srcturbine_average_velocity_dataData%average_velocity_array)
       if (.not. allocated(Dstturbine_average_velocity_dataData%average_velocity_array)) then
          allocate(Dstturbine_average_velocity_dataData%average_velocity_array(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -407,8 +407,8 @@ subroutine DWM_Copyturbine_average_velocity_data(Srcturbine_average_velocity_dat
       Dstturbine_average_velocity_dataData%average_velocity_array = Srcturbine_average_velocity_dataData%average_velocity_array
    end if
    if (allocated(Srcturbine_average_velocity_dataData%swept_area)) then
-      LB(1:1) = lbound(Srcturbine_average_velocity_dataData%swept_area, kind=B8Ki)
-      UB(1:1) = ubound(Srcturbine_average_velocity_dataData%swept_area, kind=B8Ki)
+      LB(1:1) = lbound(Srcturbine_average_velocity_dataData%swept_area)
+      UB(1:1) = ubound(Srcturbine_average_velocity_dataData%swept_area)
       if (.not. allocated(Dstturbine_average_velocity_dataData%swept_area)) then
          allocate(Dstturbine_average_velocity_dataData%swept_area(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -420,8 +420,8 @@ subroutine DWM_Copyturbine_average_velocity_data(Srcturbine_average_velocity_dat
    end if
    Dstturbine_average_velocity_dataData%time_step_velocity = Srcturbine_average_velocity_dataData%time_step_velocity
    if (allocated(Srcturbine_average_velocity_dataData%time_step_velocity_array)) then
-      LB(1:1) = lbound(Srcturbine_average_velocity_dataData%time_step_velocity_array, kind=B8Ki)
-      UB(1:1) = ubound(Srcturbine_average_velocity_dataData%time_step_velocity_array, kind=B8Ki)
+      LB(1:1) = lbound(Srcturbine_average_velocity_dataData%time_step_velocity_array)
+      UB(1:1) = ubound(Srcturbine_average_velocity_dataData%time_step_velocity_array)
       if (.not. allocated(Dstturbine_average_velocity_dataData%time_step_velocity_array)) then
          allocate(Dstturbine_average_velocity_dataData%time_step_velocity_array(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -475,7 +475,7 @@ subroutine DWM_UnPackturbine_average_velocity_data(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(turbine_average_velocity_data), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackturbine_average_velocity_data'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -494,7 +494,7 @@ subroutine DWM_CopyWake_Deficit_Data(SrcWake_Deficit_DataData, DstWake_Deficit_D
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'DWM_CopyWake_Deficit_Data'
    ErrStat = ErrID_None
@@ -502,8 +502,8 @@ subroutine DWM_CopyWake_Deficit_Data(SrcWake_Deficit_DataData, DstWake_Deficit_D
    DstWake_Deficit_DataData%np_x = SrcWake_Deficit_DataData%np_x
    DstWake_Deficit_DataData%X_length = SrcWake_Deficit_DataData%X_length
    if (allocated(SrcWake_Deficit_DataData%Turb_Stress_DWM)) then
-      LB(1:2) = lbound(SrcWake_Deficit_DataData%Turb_Stress_DWM, kind=B8Ki)
-      UB(1:2) = ubound(SrcWake_Deficit_DataData%Turb_Stress_DWM, kind=B8Ki)
+      LB(1:2) = lbound(SrcWake_Deficit_DataData%Turb_Stress_DWM)
+      UB(1:2) = ubound(SrcWake_Deficit_DataData%Turb_Stress_DWM)
       if (.not. allocated(DstWake_Deficit_DataData%Turb_Stress_DWM)) then
          allocate(DstWake_Deficit_DataData%Turb_Stress_DWM(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -548,7 +548,7 @@ subroutine DWM_UnPackWake_Deficit_Data(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(DWM_Wake_Deficit_Data), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackWake_Deficit_Data'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -607,15 +607,15 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'DWM_Copyread_turbine_position_data'
    ErrStat = ErrID_None
    ErrMsg  = ''
    Dstread_turbine_position_dataData%SimulationOrder_index = Srcread_turbine_position_dataData%SimulationOrder_index
    if (allocated(Srcread_turbine_position_dataData%Turbine_sort_order)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%Turbine_sort_order, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%Turbine_sort_order, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%Turbine_sort_order)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%Turbine_sort_order)
       if (.not. allocated(Dstread_turbine_position_dataData%Turbine_sort_order)) then
          allocate(Dstread_turbine_position_dataData%Turbine_sort_order(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -627,8 +627,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
    end if
    Dstread_turbine_position_dataData%WT_index = Srcread_turbine_position_dataData%WT_index
    if (allocated(Srcread_turbine_position_dataData%TurbineInfluenceData)) then
-      LB(1:2) = lbound(Srcread_turbine_position_dataData%TurbineInfluenceData, kind=B8Ki)
-      UB(1:2) = ubound(Srcread_turbine_position_dataData%TurbineInfluenceData, kind=B8Ki)
+      LB(1:2) = lbound(Srcread_turbine_position_dataData%TurbineInfluenceData)
+      UB(1:2) = ubound(Srcread_turbine_position_dataData%TurbineInfluenceData)
       if (.not. allocated(Dstread_turbine_position_dataData%TurbineInfluenceData)) then
          allocate(Dstread_turbine_position_dataData%TurbineInfluenceData(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -639,8 +639,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%TurbineInfluenceData = Srcread_turbine_position_dataData%TurbineInfluenceData
    end if
    if (allocated(Srcread_turbine_position_dataData%upwind_turbine_index)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_index, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_turbine_index, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_index)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_turbine_index)
       if (.not. allocated(Dstread_turbine_position_dataData%upwind_turbine_index)) then
          allocate(Dstread_turbine_position_dataData%upwind_turbine_index(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -651,8 +651,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%upwind_turbine_index = Srcread_turbine_position_dataData%upwind_turbine_index
    end if
    if (allocated(Srcread_turbine_position_dataData%downwind_turbine_index)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_index, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_turbine_index, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_index)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_turbine_index)
       if (.not. allocated(Dstread_turbine_position_dataData%downwind_turbine_index)) then
          allocate(Dstread_turbine_position_dataData%downwind_turbine_index(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -665,8 +665,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
    Dstread_turbine_position_dataData%upwindturbine_number = Srcread_turbine_position_dataData%upwindturbine_number
    Dstread_turbine_position_dataData%downwindturbine_number = Srcread_turbine_position_dataData%downwindturbine_number
    if (allocated(Srcread_turbine_position_dataData%turbine_windorigin_length)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%turbine_windorigin_length, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%turbine_windorigin_length, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%turbine_windorigin_length)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%turbine_windorigin_length)
       if (.not. allocated(Dstread_turbine_position_dataData%turbine_windorigin_length)) then
          allocate(Dstread_turbine_position_dataData%turbine_windorigin_length(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -677,8 +677,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%turbine_windorigin_length = Srcread_turbine_position_dataData%turbine_windorigin_length
    end if
    if (allocated(Srcread_turbine_position_dataData%upwind_turbine_projected_distance)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_projected_distance, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_turbine_projected_distance, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_projected_distance)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_turbine_projected_distance)
       if (.not. allocated(Dstread_turbine_position_dataData%upwind_turbine_projected_distance)) then
          allocate(Dstread_turbine_position_dataData%upwind_turbine_projected_distance(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -689,8 +689,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%upwind_turbine_projected_distance = Srcread_turbine_position_dataData%upwind_turbine_projected_distance
    end if
    if (allocated(Srcread_turbine_position_dataData%downwind_turbine_projected_distance)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_projected_distance, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_turbine_projected_distance, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_projected_distance)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_turbine_projected_distance)
       if (.not. allocated(Dstread_turbine_position_dataData%downwind_turbine_projected_distance)) then
          allocate(Dstread_turbine_position_dataData%downwind_turbine_projected_distance(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -701,8 +701,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%downwind_turbine_projected_distance = Srcread_turbine_position_dataData%downwind_turbine_projected_distance
    end if
    if (allocated(Srcread_turbine_position_dataData%turbine_angle)) then
-      LB(1:2) = lbound(Srcread_turbine_position_dataData%turbine_angle, kind=B8Ki)
-      UB(1:2) = ubound(Srcread_turbine_position_dataData%turbine_angle, kind=B8Ki)
+      LB(1:2) = lbound(Srcread_turbine_position_dataData%turbine_angle)
+      UB(1:2) = ubound(Srcread_turbine_position_dataData%turbine_angle)
       if (.not. allocated(Dstread_turbine_position_dataData%turbine_angle)) then
          allocate(Dstread_turbine_position_dataData%turbine_angle(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -713,8 +713,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%turbine_angle = Srcread_turbine_position_dataData%turbine_angle
    end if
    if (allocated(Srcread_turbine_position_dataData%upwind_align_angle)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_align_angle, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_align_angle, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_align_angle)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_align_angle)
       if (.not. allocated(Dstread_turbine_position_dataData%upwind_align_angle)) then
          allocate(Dstread_turbine_position_dataData%upwind_align_angle(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -725,8 +725,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%upwind_align_angle = Srcread_turbine_position_dataData%upwind_align_angle
    end if
    if (allocated(Srcread_turbine_position_dataData%downwind_align_angle)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_align_angle, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_align_angle, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_align_angle)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_align_angle)
       if (.not. allocated(Dstread_turbine_position_dataData%downwind_align_angle)) then
          allocate(Dstread_turbine_position_dataData%downwind_align_angle(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -737,8 +737,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%downwind_align_angle = Srcread_turbine_position_dataData%downwind_align_angle
    end if
    if (allocated(Srcread_turbine_position_dataData%upwind_turbine_Xcoor)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_Xcoor, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_turbine_Xcoor, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_Xcoor)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_turbine_Xcoor)
       if (.not. allocated(Dstread_turbine_position_dataData%upwind_turbine_Xcoor)) then
          allocate(Dstread_turbine_position_dataData%upwind_turbine_Xcoor(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -749,8 +749,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%upwind_turbine_Xcoor = Srcread_turbine_position_dataData%upwind_turbine_Xcoor
    end if
    if (allocated(Srcread_turbine_position_dataData%upwind_turbine_Ycoor)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_Ycoor, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_turbine_Ycoor, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_Ycoor)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%upwind_turbine_Ycoor)
       if (.not. allocated(Dstread_turbine_position_dataData%upwind_turbine_Ycoor)) then
          allocate(Dstread_turbine_position_dataData%upwind_turbine_Ycoor(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -761,8 +761,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%upwind_turbine_Ycoor = Srcread_turbine_position_dataData%upwind_turbine_Ycoor
    end if
    if (allocated(Srcread_turbine_position_dataData%wind_farm_Xcoor)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%wind_farm_Xcoor, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%wind_farm_Xcoor, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%wind_farm_Xcoor)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%wind_farm_Xcoor)
       if (.not. allocated(Dstread_turbine_position_dataData%wind_farm_Xcoor)) then
          allocate(Dstread_turbine_position_dataData%wind_farm_Xcoor(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -773,8 +773,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%wind_farm_Xcoor = Srcread_turbine_position_dataData%wind_farm_Xcoor
    end if
    if (allocated(Srcread_turbine_position_dataData%wind_farm_Ycoor)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%wind_farm_Ycoor, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%wind_farm_Ycoor, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%wind_farm_Ycoor)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%wind_farm_Ycoor)
       if (.not. allocated(Dstread_turbine_position_dataData%wind_farm_Ycoor)) then
          allocate(Dstread_turbine_position_dataData%wind_farm_Ycoor(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -785,8 +785,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%wind_farm_Ycoor = Srcread_turbine_position_dataData%wind_farm_Ycoor
    end if
    if (allocated(Srcread_turbine_position_dataData%downwind_turbine_Xcoor)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_Xcoor, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_turbine_Xcoor, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_Xcoor)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_turbine_Xcoor)
       if (.not. allocated(Dstread_turbine_position_dataData%downwind_turbine_Xcoor)) then
          allocate(Dstread_turbine_position_dataData%downwind_turbine_Xcoor(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -797,8 +797,8 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
       Dstread_turbine_position_dataData%downwind_turbine_Xcoor = Srcread_turbine_position_dataData%downwind_turbine_Xcoor
    end if
    if (allocated(Srcread_turbine_position_dataData%downwind_turbine_Ycoor)) then
-      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_Ycoor, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_turbine_Ycoor, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_Ycoor)
+      UB(1:1) = ubound(Srcread_turbine_position_dataData%downwind_turbine_Ycoor)
       if (.not. allocated(Dstread_turbine_position_dataData%downwind_turbine_Ycoor)) then
          allocate(Dstread_turbine_position_dataData%downwind_turbine_Ycoor(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -899,7 +899,7 @@ subroutine DWM_UnPackread_turbine_position_data(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(read_turbine_position_data), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackread_turbine_position_data'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -931,14 +931,14 @@ subroutine DWM_CopyWeiMethod(SrcWeiMethodData, DstWeiMethodData, CtrlCode, ErrSt
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'DWM_CopyWeiMethod'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcWeiMethodData%sweptarea)) then
-      LB(1:1) = lbound(SrcWeiMethodData%sweptarea, kind=B8Ki)
-      UB(1:1) = ubound(SrcWeiMethodData%sweptarea, kind=B8Ki)
+      LB(1:1) = lbound(SrcWeiMethodData%sweptarea)
+      UB(1:1) = ubound(SrcWeiMethodData%sweptarea)
       if (.not. allocated(DstWeiMethodData%sweptarea)) then
          allocate(DstWeiMethodData%sweptarea(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -977,7 +977,7 @@ subroutine DWM_UnPackWeiMethod(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(WeiMethod), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackWeiMethod'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -991,14 +991,14 @@ subroutine DWM_CopyTIDownstream(SrcTIDownstreamData, DstTIDownstreamData, CtrlCo
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'DWM_CopyTIDownstream'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcTIDownstreamData%TI_downstream_matrix)) then
-      LB(1:2) = lbound(SrcTIDownstreamData%TI_downstream_matrix, kind=B8Ki)
-      UB(1:2) = ubound(SrcTIDownstreamData%TI_downstream_matrix, kind=B8Ki)
+      LB(1:2) = lbound(SrcTIDownstreamData%TI_downstream_matrix)
+      UB(1:2) = ubound(SrcTIDownstreamData%TI_downstream_matrix)
       if (.not. allocated(DstTIDownstreamData%TI_downstream_matrix)) then
          allocate(DstTIDownstreamData%TI_downstream_matrix(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1093,7 +1093,7 @@ subroutine DWM_UnPackTIDownstream(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(TIDownstream), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackTIDownstream'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1191,14 +1191,14 @@ subroutine DWM_CopyShinozuka(SrcShinozukaData, DstShinozukaData, CtrlCode, ErrSt
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'DWM_CopyShinozuka'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcShinozukaData%f_syn)) then
-      LB(1:1) = lbound(SrcShinozukaData%f_syn, kind=B8Ki)
-      UB(1:1) = ubound(SrcShinozukaData%f_syn, kind=B8Ki)
+      LB(1:1) = lbound(SrcShinozukaData%f_syn)
+      UB(1:1) = ubound(SrcShinozukaData%f_syn)
       if (.not. allocated(DstShinozukaData%f_syn)) then
          allocate(DstShinozukaData%f_syn(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1209,8 +1209,8 @@ subroutine DWM_CopyShinozuka(SrcShinozukaData, DstShinozukaData, CtrlCode, ErrSt
       DstShinozukaData%f_syn = SrcShinozukaData%f_syn
    end if
    if (allocated(SrcShinozukaData%t_syn)) then
-      LB(1:1) = lbound(SrcShinozukaData%t_syn, kind=B8Ki)
-      UB(1:1) = ubound(SrcShinozukaData%t_syn, kind=B8Ki)
+      LB(1:1) = lbound(SrcShinozukaData%t_syn)
+      UB(1:1) = ubound(SrcShinozukaData%t_syn)
       if (.not. allocated(DstShinozukaData%t_syn)) then
          allocate(DstShinozukaData%t_syn(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1221,8 +1221,8 @@ subroutine DWM_CopyShinozuka(SrcShinozukaData, DstShinozukaData, CtrlCode, ErrSt
       DstShinozukaData%t_syn = SrcShinozukaData%t_syn
    end if
    if (allocated(SrcShinozukaData%phi)) then
-      LB(1:1) = lbound(SrcShinozukaData%phi, kind=B8Ki)
-      UB(1:1) = ubound(SrcShinozukaData%phi, kind=B8Ki)
+      LB(1:1) = lbound(SrcShinozukaData%phi)
+      UB(1:1) = ubound(SrcShinozukaData%phi)
       if (.not. allocated(DstShinozukaData%phi)) then
          allocate(DstShinozukaData%phi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1233,8 +1233,8 @@ subroutine DWM_CopyShinozuka(SrcShinozukaData, DstShinozukaData, CtrlCode, ErrSt
       DstShinozukaData%phi = SrcShinozukaData%phi
    end if
    if (allocated(SrcShinozukaData%p_k)) then
-      LB(1:1) = lbound(SrcShinozukaData%p_k, kind=B8Ki)
-      UB(1:1) = ubound(SrcShinozukaData%p_k, kind=B8Ki)
+      LB(1:1) = lbound(SrcShinozukaData%p_k)
+      UB(1:1) = ubound(SrcShinozukaData%p_k)
       if (.not. allocated(DstShinozukaData%p_k)) then
          allocate(DstShinozukaData%p_k(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1245,8 +1245,8 @@ subroutine DWM_CopyShinozuka(SrcShinozukaData, DstShinozukaData, CtrlCode, ErrSt
       DstShinozukaData%p_k = SrcShinozukaData%p_k
    end if
    if (allocated(SrcShinozukaData%a_k)) then
-      LB(1:1) = lbound(SrcShinozukaData%a_k, kind=B8Ki)
-      UB(1:1) = ubound(SrcShinozukaData%a_k, kind=B8Ki)
+      LB(1:1) = lbound(SrcShinozukaData%a_k)
+      UB(1:1) = ubound(SrcShinozukaData%a_k)
       if (.not. allocated(DstShinozukaData%a_k)) then
          allocate(DstShinozukaData%a_k(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1315,7 +1315,7 @@ subroutine DWM_UnPackShinozuka(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Shinozuka), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackShinozuka'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1431,14 +1431,14 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(4), UB(4)
+   integer(B4Ki)                  :: LB(4), UB(4)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'DWM_Copyread_upwind_result'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(Srcread_upwind_resultData%upwind_U)) then
-      LB(1:2) = lbound(Srcread_upwind_resultData%upwind_U, kind=B8Ki)
-      UB(1:2) = ubound(Srcread_upwind_resultData%upwind_U, kind=B8Ki)
+      LB(1:2) = lbound(Srcread_upwind_resultData%upwind_U)
+      UB(1:2) = ubound(Srcread_upwind_resultData%upwind_U)
       if (.not. allocated(Dstread_upwind_resultData%upwind_U)) then
          allocate(Dstread_upwind_resultData%upwind_U(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1449,8 +1449,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%upwind_U = Srcread_upwind_resultData%upwind_U
    end if
    if (allocated(Srcread_upwind_resultData%upwind_wakecenter)) then
-      LB(1:4) = lbound(Srcread_upwind_resultData%upwind_wakecenter, kind=B8Ki)
-      UB(1:4) = ubound(Srcread_upwind_resultData%upwind_wakecenter, kind=B8Ki)
+      LB(1:4) = lbound(Srcread_upwind_resultData%upwind_wakecenter)
+      UB(1:4) = ubound(Srcread_upwind_resultData%upwind_wakecenter)
       if (.not. allocated(Dstread_upwind_resultData%upwind_wakecenter)) then
          allocate(Dstread_upwind_resultData%upwind_wakecenter(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1461,8 +1461,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%upwind_wakecenter = Srcread_upwind_resultData%upwind_wakecenter
    end if
    if (allocated(Srcread_upwind_resultData%upwind_meanU)) then
-      LB(1:1) = lbound(Srcread_upwind_resultData%upwind_meanU, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_upwind_resultData%upwind_meanU, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_upwind_resultData%upwind_meanU)
+      UB(1:1) = ubound(Srcread_upwind_resultData%upwind_meanU)
       if (.not. allocated(Dstread_upwind_resultData%upwind_meanU)) then
          allocate(Dstread_upwind_resultData%upwind_meanU(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1473,8 +1473,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%upwind_meanU = Srcread_upwind_resultData%upwind_meanU
    end if
    if (allocated(Srcread_upwind_resultData%upwind_TI)) then
-      LB(1:1) = lbound(Srcread_upwind_resultData%upwind_TI, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_upwind_resultData%upwind_TI, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_upwind_resultData%upwind_TI)
+      UB(1:1) = ubound(Srcread_upwind_resultData%upwind_TI)
       if (.not. allocated(Dstread_upwind_resultData%upwind_TI)) then
          allocate(Dstread_upwind_resultData%upwind_TI(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1485,8 +1485,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%upwind_TI = Srcread_upwind_resultData%upwind_TI
    end if
    if (allocated(Srcread_upwind_resultData%upwind_small_TI)) then
-      LB(1:1) = lbound(Srcread_upwind_resultData%upwind_small_TI, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_upwind_resultData%upwind_small_TI, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_upwind_resultData%upwind_small_TI)
+      UB(1:1) = ubound(Srcread_upwind_resultData%upwind_small_TI)
       if (.not. allocated(Dstread_upwind_resultData%upwind_small_TI)) then
          allocate(Dstread_upwind_resultData%upwind_small_TI(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1497,8 +1497,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%upwind_small_TI = Srcread_upwind_resultData%upwind_small_TI
    end if
    if (allocated(Srcread_upwind_resultData%upwind_smoothWake)) then
-      LB(1:2) = lbound(Srcread_upwind_resultData%upwind_smoothWake, kind=B8Ki)
-      UB(1:2) = ubound(Srcread_upwind_resultData%upwind_smoothWake, kind=B8Ki)
+      LB(1:2) = lbound(Srcread_upwind_resultData%upwind_smoothWake)
+      UB(1:2) = ubound(Srcread_upwind_resultData%upwind_smoothWake)
       if (.not. allocated(Dstread_upwind_resultData%upwind_smoothWake)) then
          allocate(Dstread_upwind_resultData%upwind_smoothWake(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1509,8 +1509,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%upwind_smoothWake = Srcread_upwind_resultData%upwind_smoothWake
    end if
    if (allocated(Srcread_upwind_resultData%velocity_aerodyn)) then
-      LB(1:1) = lbound(Srcread_upwind_resultData%velocity_aerodyn, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_upwind_resultData%velocity_aerodyn, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_upwind_resultData%velocity_aerodyn)
+      UB(1:1) = ubound(Srcread_upwind_resultData%velocity_aerodyn)
       if (.not. allocated(Dstread_upwind_resultData%velocity_aerodyn)) then
          allocate(Dstread_upwind_resultData%velocity_aerodyn(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1521,8 +1521,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%velocity_aerodyn = Srcread_upwind_resultData%velocity_aerodyn
    end if
    if (allocated(Srcread_upwind_resultData%TI_downstream)) then
-      LB(1:1) = lbound(Srcread_upwind_resultData%TI_downstream, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_upwind_resultData%TI_downstream, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_upwind_resultData%TI_downstream)
+      UB(1:1) = ubound(Srcread_upwind_resultData%TI_downstream)
       if (.not. allocated(Dstread_upwind_resultData%TI_downstream)) then
          allocate(Dstread_upwind_resultData%TI_downstream(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1533,8 +1533,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%TI_downstream = Srcread_upwind_resultData%TI_downstream
    end if
    if (allocated(Srcread_upwind_resultData%small_scale_TI_downstream)) then
-      LB(1:1) = lbound(Srcread_upwind_resultData%small_scale_TI_downstream, kind=B8Ki)
-      UB(1:1) = ubound(Srcread_upwind_resultData%small_scale_TI_downstream, kind=B8Ki)
+      LB(1:1) = lbound(Srcread_upwind_resultData%small_scale_TI_downstream)
+      UB(1:1) = ubound(Srcread_upwind_resultData%small_scale_TI_downstream)
       if (.not. allocated(Dstread_upwind_resultData%small_scale_TI_downstream)) then
          allocate(Dstread_upwind_resultData%small_scale_TI_downstream(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1545,8 +1545,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%small_scale_TI_downstream = Srcread_upwind_resultData%small_scale_TI_downstream
    end if
    if (allocated(Srcread_upwind_resultData%smoothed_velocity_array)) then
-      LB(1:2) = lbound(Srcread_upwind_resultData%smoothed_velocity_array, kind=B8Ki)
-      UB(1:2) = ubound(Srcread_upwind_resultData%smoothed_velocity_array, kind=B8Ki)
+      LB(1:2) = lbound(Srcread_upwind_resultData%smoothed_velocity_array)
+      UB(1:2) = ubound(Srcread_upwind_resultData%smoothed_velocity_array)
       if (.not. allocated(Dstread_upwind_resultData%smoothed_velocity_array)) then
          allocate(Dstread_upwind_resultData%smoothed_velocity_array(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1557,8 +1557,8 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
       Dstread_upwind_resultData%smoothed_velocity_array = Srcread_upwind_resultData%smoothed_velocity_array
    end if
    if (allocated(Srcread_upwind_resultData%vel_matrix)) then
-      LB(1:3) = lbound(Srcread_upwind_resultData%vel_matrix, kind=B8Ki)
-      UB(1:3) = ubound(Srcread_upwind_resultData%vel_matrix, kind=B8Ki)
+      LB(1:3) = lbound(Srcread_upwind_resultData%vel_matrix)
+      UB(1:3) = ubound(Srcread_upwind_resultData%vel_matrix)
       if (.not. allocated(Dstread_upwind_resultData%vel_matrix)) then
          allocate(Dstread_upwind_resultData%vel_matrix(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1635,7 +1635,7 @@ subroutine DWM_UnPackread_upwind_result(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(read_upwind_result), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackread_upwind_result'
-   integer(B8Ki)   :: LB(4), UB(4)
+   integer(B4Ki)   :: LB(4), UB(4)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1658,14 +1658,14 @@ subroutine DWM_Copywake_meandered_center(Srcwake_meandered_centerData, Dstwake_m
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'DWM_Copywake_meandered_center'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(Srcwake_meandered_centerData%wake_width)) then
-      LB(1:1) = lbound(Srcwake_meandered_centerData%wake_width, kind=B8Ki)
-      UB(1:1) = ubound(Srcwake_meandered_centerData%wake_width, kind=B8Ki)
+      LB(1:1) = lbound(Srcwake_meandered_centerData%wake_width)
+      UB(1:1) = ubound(Srcwake_meandered_centerData%wake_width)
       if (.not. allocated(Dstwake_meandered_centerData%wake_width)) then
          allocate(Dstwake_meandered_centerData%wake_width(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1702,7 +1702,7 @@ subroutine DWM_UnPackwake_meandered_center(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(wake_meandered_center), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackwake_meandered_center'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1759,15 +1759,15 @@ subroutine DWM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(3), UB(3)
+   integer(B4Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'DWM_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcParamData%velocityU)) then
-      LB(1:1) = lbound(SrcParamData%velocityU, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%velocityU, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%velocityU)
+      UB(1:1) = ubound(SrcParamData%velocityU)
       if (.not. allocated(DstParamData%velocityU)) then
          allocate(DstParamData%velocityU(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1778,8 +1778,8 @@ subroutine DWM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%velocityU = SrcParamData%velocityU
    end if
    if (allocated(SrcParamData%smoothed_wake)) then
-      LB(1:1) = lbound(SrcParamData%smoothed_wake, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%smoothed_wake, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%smoothed_wake)
+      UB(1:1) = ubound(SrcParamData%smoothed_wake)
       if (.not. allocated(DstParamData%smoothed_wake)) then
          allocate(DstParamData%smoothed_wake(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1790,8 +1790,8 @@ subroutine DWM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%smoothed_wake = SrcParamData%smoothed_wake
    end if
    if (allocated(SrcParamData%WakePosition)) then
-      LB(1:3) = lbound(SrcParamData%WakePosition, kind=B8Ki)
-      UB(1:3) = ubound(SrcParamData%WakePosition, kind=B8Ki)
+      LB(1:3) = lbound(SrcParamData%WakePosition)
+      UB(1:3) = ubound(SrcParamData%WakePosition)
       if (.not. allocated(DstParamData%WakePosition)) then
          allocate(DstParamData%WakePosition(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1821,8 +1821,8 @@ subroutine DWM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%air_density = SrcParamData%air_density
    DstParamData%RR = SrcParamData%RR
    if (allocated(SrcParamData%ElementRad)) then
-      LB(1:1) = lbound(SrcParamData%ElementRad, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%ElementRad, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%ElementRad)
+      UB(1:1) = ubound(SrcParamData%ElementRad)
       if (.not. allocated(DstParamData%ElementRad)) then
          allocate(DstParamData%ElementRad(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1908,7 +1908,7 @@ subroutine DWM_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(DWM_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackParam'
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1993,7 +1993,7 @@ subroutine DWM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'DWM_CopyMisc'
@@ -2009,8 +2009,8 @@ subroutine DWM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    DstMiscData%U_velocity = SrcMiscData%U_velocity
    DstMiscData%V_velocity = SrcMiscData%V_velocity
    if (allocated(SrcMiscData%Nforce)) then
-      LB(1:2) = lbound(SrcMiscData%Nforce, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%Nforce, kind=B8Ki)
+      LB(1:2) = lbound(SrcMiscData%Nforce)
+      UB(1:2) = ubound(SrcMiscData%Nforce)
       if (.not. allocated(DstMiscData%Nforce)) then
          allocate(DstMiscData%Nforce(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2021,8 +2021,8 @@ subroutine DWM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%Nforce = SrcMiscData%Nforce
    end if
    if (allocated(SrcMiscData%blade_dr)) then
-      LB(1:1) = lbound(SrcMiscData%blade_dr, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%blade_dr, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%blade_dr)
+      UB(1:1) = ubound(SrcMiscData%blade_dr)
       if (.not. allocated(DstMiscData%blade_dr)) then
          allocate(DstMiscData%blade_dr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2156,7 +2156,7 @@ subroutine DWM_UnPackMisc(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(DWM_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackMisc'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -2247,15 +2247,15 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(3), UB(3)
+   integer(B4Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'DWM_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOutputData%turbine_thrust_force)) then
-      LB(1:1) = lbound(SrcOutputData%turbine_thrust_force, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%turbine_thrust_force, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%turbine_thrust_force)
+      UB(1:1) = ubound(SrcOutputData%turbine_thrust_force)
       if (.not. allocated(DstOutputData%turbine_thrust_force)) then
          allocate(DstOutputData%turbine_thrust_force(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2266,8 +2266,8 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%turbine_thrust_force = SrcOutputData%turbine_thrust_force
    end if
    if (allocated(SrcOutputData%induction_factor)) then
-      LB(1:1) = lbound(SrcOutputData%induction_factor, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%induction_factor, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%induction_factor)
+      UB(1:1) = ubound(SrcOutputData%induction_factor)
       if (.not. allocated(DstOutputData%induction_factor)) then
          allocate(DstOutputData%induction_factor(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2278,8 +2278,8 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%induction_factor = SrcOutputData%induction_factor
    end if
    if (allocated(SrcOutputData%r_initial)) then
-      LB(1:1) = lbound(SrcOutputData%r_initial, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%r_initial, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%r_initial)
+      UB(1:1) = ubound(SrcOutputData%r_initial)
       if (.not. allocated(DstOutputData%r_initial)) then
          allocate(DstOutputData%r_initial(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2290,8 +2290,8 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%r_initial = SrcOutputData%r_initial
    end if
    if (allocated(SrcOutputData%U_initial)) then
-      LB(1:1) = lbound(SrcOutputData%U_initial, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%U_initial, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%U_initial)
+      UB(1:1) = ubound(SrcOutputData%U_initial)
       if (.not. allocated(DstOutputData%U_initial)) then
          allocate(DstOutputData%U_initial(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2302,8 +2302,8 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%U_initial = SrcOutputData%U_initial
    end if
    if (allocated(SrcOutputData%Mean_FFWS_array)) then
-      LB(1:1) = lbound(SrcOutputData%Mean_FFWS_array, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%Mean_FFWS_array, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%Mean_FFWS_array)
+      UB(1:1) = ubound(SrcOutputData%Mean_FFWS_array)
       if (.not. allocated(DstOutputData%Mean_FFWS_array)) then
          allocate(DstOutputData%Mean_FFWS_array(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2317,8 +2317,8 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
    DstOutputData%TI = SrcOutputData%TI
    DstOutputData%TI_downstream = SrcOutputData%TI_downstream
    if (allocated(SrcOutputData%wake_u)) then
-      LB(1:2) = lbound(SrcOutputData%wake_u, kind=B8Ki)
-      UB(1:2) = ubound(SrcOutputData%wake_u, kind=B8Ki)
+      LB(1:2) = lbound(SrcOutputData%wake_u)
+      UB(1:2) = ubound(SrcOutputData%wake_u)
       if (.not. allocated(DstOutputData%wake_u)) then
          allocate(DstOutputData%wake_u(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2329,8 +2329,8 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%wake_u = SrcOutputData%wake_u
    end if
    if (allocated(SrcOutputData%wake_position)) then
-      LB(1:3) = lbound(SrcOutputData%wake_position, kind=B8Ki)
-      UB(1:3) = ubound(SrcOutputData%wake_position, kind=B8Ki)
+      LB(1:3) = lbound(SrcOutputData%wake_position)
+      UB(1:3) = ubound(SrcOutputData%wake_position)
       if (.not. allocated(DstOutputData%wake_position)) then
          allocate(DstOutputData%wake_position(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2341,8 +2341,8 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%wake_position = SrcOutputData%wake_position
    end if
    if (allocated(SrcOutputData%smoothed_velocity_array)) then
-      LB(1:2) = lbound(SrcOutputData%smoothed_velocity_array, kind=B8Ki)
-      UB(1:2) = ubound(SrcOutputData%smoothed_velocity_array, kind=B8Ki)
+      LB(1:2) = lbound(SrcOutputData%smoothed_velocity_array)
+      UB(1:2) = ubound(SrcOutputData%smoothed_velocity_array)
       if (.not. allocated(DstOutputData%smoothed_velocity_array)) then
          allocate(DstOutputData%smoothed_velocity_array(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2428,7 +2428,7 @@ subroutine DWM_UnPackOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(DWM_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'DWM_UnPackOutput'
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return

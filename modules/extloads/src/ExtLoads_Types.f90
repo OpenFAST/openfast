@@ -144,15 +144,15 @@ subroutine ExtLd_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(4), UB(4)
+   integer(B4Ki)                  :: LB(4), UB(4)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'ExtLd_CopyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstInitInputData%NumBlades = SrcInitInputData%NumBlades
    if (allocated(SrcInitInputData%NumBldNodes)) then
-      LB(1:1) = lbound(SrcInitInputData%NumBldNodes, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%NumBldNodes, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%NumBldNodes)
+      UB(1:1) = ubound(SrcInitInputData%NumBldNodes)
       if (.not. allocated(DstInitInputData%NumBldNodes)) then
          allocate(DstInitInputData%NumBldNodes(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -169,8 +169,8 @@ subroutine ExtLd_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%NacellePos = SrcInitInputData%NacellePos
    DstInitInputData%NacelleOrient = SrcInitInputData%NacelleOrient
    if (allocated(SrcInitInputData%BldRootPos)) then
-      LB(1:2) = lbound(SrcInitInputData%BldRootPos, kind=B8Ki)
-      UB(1:2) = ubound(SrcInitInputData%BldRootPos, kind=B8Ki)
+      LB(1:2) = lbound(SrcInitInputData%BldRootPos)
+      UB(1:2) = ubound(SrcInitInputData%BldRootPos)
       if (.not. allocated(DstInitInputData%BldRootPos)) then
          allocate(DstInitInputData%BldRootPos(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -181,8 +181,8 @@ subroutine ExtLd_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       DstInitInputData%BldRootPos = SrcInitInputData%BldRootPos
    end if
    if (allocated(SrcInitInputData%BldRootOrient)) then
-      LB(1:3) = lbound(SrcInitInputData%BldRootOrient, kind=B8Ki)
-      UB(1:3) = ubound(SrcInitInputData%BldRootOrient, kind=B8Ki)
+      LB(1:3) = lbound(SrcInitInputData%BldRootOrient)
+      UB(1:3) = ubound(SrcInitInputData%BldRootOrient)
       if (.not. allocated(DstInitInputData%BldRootOrient)) then
          allocate(DstInitInputData%BldRootOrient(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -193,8 +193,8 @@ subroutine ExtLd_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       DstInitInputData%BldRootOrient = SrcInitInputData%BldRootOrient
    end if
    if (allocated(SrcInitInputData%BldPos)) then
-      LB(1:3) = lbound(SrcInitInputData%BldPos, kind=B8Ki)
-      UB(1:3) = ubound(SrcInitInputData%BldPos, kind=B8Ki)
+      LB(1:3) = lbound(SrcInitInputData%BldPos)
+      UB(1:3) = ubound(SrcInitInputData%BldPos)
       if (.not. allocated(DstInitInputData%BldPos)) then
          allocate(DstInitInputData%BldPos(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -205,8 +205,8 @@ subroutine ExtLd_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       DstInitInputData%BldPos = SrcInitInputData%BldPos
    end if
    if (allocated(SrcInitInputData%BldOrient)) then
-      LB(1:4) = lbound(SrcInitInputData%BldOrient, kind=B8Ki)
-      UB(1:4) = ubound(SrcInitInputData%BldOrient, kind=B8Ki)
+      LB(1:4) = lbound(SrcInitInputData%BldOrient)
+      UB(1:4) = ubound(SrcInitInputData%BldOrient)
       if (.not. allocated(DstInitInputData%BldOrient)) then
          allocate(DstInitInputData%BldOrient(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -217,8 +217,8 @@ subroutine ExtLd_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       DstInitInputData%BldOrient = SrcInitInputData%BldOrient
    end if
    if (allocated(SrcInitInputData%TwrPos)) then
-      LB(1:2) = lbound(SrcInitInputData%TwrPos, kind=B8Ki)
-      UB(1:2) = ubound(SrcInitInputData%TwrPos, kind=B8Ki)
+      LB(1:2) = lbound(SrcInitInputData%TwrPos)
+      UB(1:2) = ubound(SrcInitInputData%TwrPos)
       if (.not. allocated(DstInitInputData%TwrPos)) then
          allocate(DstInitInputData%TwrPos(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -229,8 +229,8 @@ subroutine ExtLd_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       DstInitInputData%TwrPos = SrcInitInputData%TwrPos
    end if
    if (allocated(SrcInitInputData%TwrOrient)) then
-      LB(1:3) = lbound(SrcInitInputData%TwrOrient, kind=B8Ki)
-      UB(1:3) = ubound(SrcInitInputData%TwrOrient, kind=B8Ki)
+      LB(1:3) = lbound(SrcInitInputData%TwrOrient)
+      UB(1:3) = ubound(SrcInitInputData%TwrOrient)
       if (.not. allocated(DstInitInputData%TwrOrient)) then
          allocate(DstInitInputData%TwrOrient(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -247,8 +247,8 @@ subroutine ExtLd_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%z_ref = SrcInitInputData%z_ref
    DstInitInputData%shear_exp = SrcInitInputData%shear_exp
    if (allocated(SrcInitInputData%BldChord)) then
-      LB(1:2) = lbound(SrcInitInputData%BldChord, kind=B8Ki)
-      UB(1:2) = ubound(SrcInitInputData%BldChord, kind=B8Ki)
+      LB(1:2) = lbound(SrcInitInputData%BldChord)
+      UB(1:2) = ubound(SrcInitInputData%BldChord)
       if (.not. allocated(DstInitInputData%BldChord)) then
          allocate(DstInitInputData%BldChord(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -259,8 +259,8 @@ subroutine ExtLd_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       DstInitInputData%BldChord = SrcInitInputData%BldChord
    end if
    if (allocated(SrcInitInputData%BldRloc)) then
-      LB(1:2) = lbound(SrcInitInputData%BldRloc, kind=B8Ki)
-      UB(1:2) = ubound(SrcInitInputData%BldRloc, kind=B8Ki)
+      LB(1:2) = lbound(SrcInitInputData%BldRloc)
+      UB(1:2) = ubound(SrcInitInputData%BldRloc)
       if (.not. allocated(DstInitInputData%BldRloc)) then
          allocate(DstInitInputData%BldRloc(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -271,8 +271,8 @@ subroutine ExtLd_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       DstInitInputData%BldRloc = SrcInitInputData%BldRloc
    end if
    if (allocated(SrcInitInputData%TwrDia)) then
-      LB(1:1) = lbound(SrcInitInputData%TwrDia, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%TwrDia, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%TwrDia)
+      UB(1:1) = ubound(SrcInitInputData%TwrDia)
       if (.not. allocated(DstInitInputData%TwrDia)) then
          allocate(DstInitInputData%TwrDia(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -283,8 +283,8 @@ subroutine ExtLd_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       DstInitInputData%TwrDia = SrcInitInputData%TwrDia
    end if
    if (allocated(SrcInitInputData%TwrHloc)) then
-      LB(1:1) = lbound(SrcInitInputData%TwrHloc, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%TwrHloc, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%TwrHloc)
+      UB(1:1) = ubound(SrcInitInputData%TwrHloc)
       if (.not. allocated(DstInitInputData%TwrHloc)) then
          allocate(DstInitInputData%TwrHloc(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -376,7 +376,7 @@ subroutine ExtLd_UnPackInitInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ExtLd_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtLd_UnPackInitInput'
-   integer(B8Ki)   :: LB(4), UB(4)
+   integer(B4Ki)   :: LB(4), UB(4)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -413,15 +413,15 @@ subroutine ExtLd_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtLd_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
       if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
          allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -432,8 +432,8 @@ subroutine ExtLd_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
       if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
          allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -494,7 +494,7 @@ subroutine ExtLd_UnPackInitOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ExtLd_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtLd_UnPackInitOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -606,7 +606,7 @@ subroutine ExtLd_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(0), UB(0)
+   integer(B4Ki)                  :: LB(0), UB(0)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtLd_CopyMisc'
@@ -667,7 +667,7 @@ subroutine ExtLd_UnPackMisc(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ExtLd_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtLd_UnPackMisc'
-   integer(B8Ki)   :: LB(0), UB(0)
+   integer(B4Ki)   :: LB(0), UB(0)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -777,7 +777,7 @@ subroutine ExtLd_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtLd_CopyParam'
@@ -788,8 +788,8 @@ subroutine ExtLd_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    if (ErrStat >= AbortErrLev) return
    DstParamData%NumBlds = SrcParamData%NumBlds
    if (allocated(SrcParamData%NumBldNds)) then
-      LB(1:1) = lbound(SrcParamData%NumBldNds, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%NumBldNds, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%NumBldNds)
+      UB(1:1) = ubound(SrcParamData%NumBldNds)
       if (.not. allocated(DstParamData%NumBldNds)) then
          allocate(DstParamData%NumBldNds(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -850,7 +850,7 @@ subroutine ExtLd_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ExtLd_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtLd_UnPackParam'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -874,8 +874,8 @@ subroutine ExtLd_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtLd_CopyInput'
@@ -895,8 +895,8 @@ subroutine ExtLd_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcInputData%BladeRootMotion)) then
-      LB(1:1) = lbound(SrcInputData%BladeRootMotion, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputData%BladeRootMotion, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputData%BladeRootMotion)
+      UB(1:1) = ubound(SrcInputData%BladeRootMotion)
       if (.not. allocated(DstInputData%BladeRootMotion)) then
          allocate(DstInputData%BladeRootMotion(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -911,8 +911,8 @@ subroutine ExtLd_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
       end do
    end if
    if (allocated(SrcInputData%BladeMotion)) then
-      LB(1:1) = lbound(SrcInputData%BladeMotion, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputData%BladeMotion, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputData%BladeMotion)
+      UB(1:1) = ubound(SrcInputData%BladeMotion)
       if (.not. allocated(DstInputData%BladeMotion)) then
          allocate(DstInputData%BladeMotion(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -932,8 +932,8 @@ subroutine ExtLd_DestroyInput(InputData, ErrStat, ErrMsg)
    type(ExtLd_InputType), intent(inout) :: InputData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtLd_DestroyInput'
@@ -948,8 +948,8 @@ subroutine ExtLd_DestroyInput(InputData, ErrStat, ErrMsg)
    call MeshDestroy( InputData%NacelleMotion, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InputData%BladeRootMotion)) then
-      LB(1:1) = lbound(InputData%BladeRootMotion, kind=B8Ki)
-      UB(1:1) = ubound(InputData%BladeRootMotion, kind=B8Ki)
+      LB(1:1) = lbound(InputData%BladeRootMotion)
+      UB(1:1) = ubound(InputData%BladeRootMotion)
       do i1 = LB(1), UB(1)
          call MeshDestroy( InputData%BladeRootMotion(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -957,8 +957,8 @@ subroutine ExtLd_DestroyInput(InputData, ErrStat, ErrMsg)
       deallocate(InputData%BladeRootMotion)
    end if
    if (allocated(InputData%BladeMotion)) then
-      LB(1:1) = lbound(InputData%BladeMotion, kind=B8Ki)
-      UB(1:1) = ubound(InputData%BladeMotion, kind=B8Ki)
+      LB(1:1) = lbound(InputData%BladeMotion)
+      UB(1:1) = ubound(InputData%BladeMotion)
       do i1 = LB(1), UB(1)
          call MeshDestroy( InputData%BladeMotion(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -971,8 +971,8 @@ subroutine ExtLd_PackInput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(ExtLd_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtLd_PackInput'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call ExtLdDX_PackInput(RF, InData%DX_u) 
    call RegPack(RF, InData%az)
@@ -981,18 +981,18 @@ subroutine ExtLd_PackInput(RF, Indata)
    call MeshPack(RF, InData%NacelleMotion) 
    call RegPack(RF, allocated(InData%BladeRootMotion))
    if (allocated(InData%BladeRootMotion)) then
-      call RegPackBounds(RF, 1, lbound(InData%BladeRootMotion, kind=B8Ki), ubound(InData%BladeRootMotion, kind=B8Ki))
-      LB(1:1) = lbound(InData%BladeRootMotion, kind=B8Ki)
-      UB(1:1) = ubound(InData%BladeRootMotion, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%BladeRootMotion), ubound(InData%BladeRootMotion))
+      LB(1:1) = lbound(InData%BladeRootMotion)
+      UB(1:1) = ubound(InData%BladeRootMotion)
       do i1 = LB(1), UB(1)
          call MeshPack(RF, InData%BladeRootMotion(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%BladeMotion))
    if (allocated(InData%BladeMotion)) then
-      call RegPackBounds(RF, 1, lbound(InData%BladeMotion, kind=B8Ki), ubound(InData%BladeMotion, kind=B8Ki))
-      LB(1:1) = lbound(InData%BladeMotion, kind=B8Ki)
-      UB(1:1) = ubound(InData%BladeMotion, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%BladeMotion), ubound(InData%BladeMotion))
+      LB(1:1) = lbound(InData%BladeMotion)
+      UB(1:1) = ubound(InData%BladeMotion)
       do i1 = LB(1), UB(1)
          call MeshPack(RF, InData%BladeMotion(i1)) 
       end do
@@ -1004,8 +1004,8 @@ subroutine ExtLd_UnPackInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ExtLd_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtLd_UnPackInput'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1048,8 +1048,8 @@ subroutine ExtLd_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtLd_CopyOutput'
@@ -1062,8 +1062,8 @@ subroutine ExtLd_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcOutputData%BladeLoad)) then
-      LB(1:1) = lbound(SrcOutputData%BladeLoad, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%BladeLoad, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%BladeLoad)
+      UB(1:1) = ubound(SrcOutputData%BladeLoad)
       if (.not. allocated(DstOutputData%BladeLoad)) then
          allocate(DstOutputData%BladeLoad(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1081,8 +1081,8 @@ subroutine ExtLd_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcOutputData%BladeLoadAD)) then
-      LB(1:1) = lbound(SrcOutputData%BladeLoadAD, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%BladeLoadAD, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%BladeLoadAD)
+      UB(1:1) = ubound(SrcOutputData%BladeLoadAD)
       if (.not. allocated(DstOutputData%BladeLoadAD)) then
          allocate(DstOutputData%BladeLoadAD(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1102,8 +1102,8 @@ subroutine ExtLd_DestroyOutput(OutputData, ErrStat, ErrMsg)
    type(ExtLd_OutputType), intent(inout) :: OutputData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtLd_DestroyOutput'
@@ -1114,8 +1114,8 @@ subroutine ExtLd_DestroyOutput(OutputData, ErrStat, ErrMsg)
    call MeshDestroy( OutputData%TowerLoad, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(OutputData%BladeLoad)) then
-      LB(1:1) = lbound(OutputData%BladeLoad, kind=B8Ki)
-      UB(1:1) = ubound(OutputData%BladeLoad, kind=B8Ki)
+      LB(1:1) = lbound(OutputData%BladeLoad)
+      UB(1:1) = ubound(OutputData%BladeLoad)
       do i1 = LB(1), UB(1)
          call MeshDestroy( OutputData%BladeLoad(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1125,8 +1125,8 @@ subroutine ExtLd_DestroyOutput(OutputData, ErrStat, ErrMsg)
    call MeshDestroy( OutputData%TowerLoadAD, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(OutputData%BladeLoadAD)) then
-      LB(1:1) = lbound(OutputData%BladeLoadAD, kind=B8Ki)
-      UB(1:1) = ubound(OutputData%BladeLoadAD, kind=B8Ki)
+      LB(1:1) = lbound(OutputData%BladeLoadAD)
+      UB(1:1) = ubound(OutputData%BladeLoadAD)
       do i1 = LB(1), UB(1)
          call MeshDestroy( OutputData%BladeLoadAD(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1139,16 +1139,16 @@ subroutine ExtLd_PackOutput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(ExtLd_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtLd_PackOutput'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call ExtLdDX_PackOutput(RF, InData%DX_y) 
    call MeshPack(RF, InData%TowerLoad) 
    call RegPack(RF, allocated(InData%BladeLoad))
    if (allocated(InData%BladeLoad)) then
-      call RegPackBounds(RF, 1, lbound(InData%BladeLoad, kind=B8Ki), ubound(InData%BladeLoad, kind=B8Ki))
-      LB(1:1) = lbound(InData%BladeLoad, kind=B8Ki)
-      UB(1:1) = ubound(InData%BladeLoad, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%BladeLoad), ubound(InData%BladeLoad))
+      LB(1:1) = lbound(InData%BladeLoad)
+      UB(1:1) = ubound(InData%BladeLoad)
       do i1 = LB(1), UB(1)
          call MeshPack(RF, InData%BladeLoad(i1)) 
       end do
@@ -1156,9 +1156,9 @@ subroutine ExtLd_PackOutput(RF, Indata)
    call MeshPack(RF, InData%TowerLoadAD) 
    call RegPack(RF, allocated(InData%BladeLoadAD))
    if (allocated(InData%BladeLoadAD)) then
-      call RegPackBounds(RF, 1, lbound(InData%BladeLoadAD, kind=B8Ki), ubound(InData%BladeLoadAD, kind=B8Ki))
-      LB(1:1) = lbound(InData%BladeLoadAD, kind=B8Ki)
-      UB(1:1) = ubound(InData%BladeLoadAD, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%BladeLoadAD), ubound(InData%BladeLoadAD))
+      LB(1:1) = lbound(InData%BladeLoadAD)
+      UB(1:1) = ubound(InData%BladeLoadAD)
       do i1 = LB(1), UB(1)
          call MeshPack(RF, InData%BladeLoadAD(i1)) 
       end do
@@ -1170,8 +1170,8 @@ subroutine ExtLd_UnPackOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ExtLd_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtLd_UnPackOutput'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1313,13 +1313,13 @@ SUBROUTINE ExtLd_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMs
    CALL MeshExtrapInterp1(u1%NacelleMotion, u2%NacelleMotion, tin, u_out%NacelleMotion, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    IF (ALLOCATED(u_out%BladeRootMotion) .AND. ALLOCATED(u1%BladeRootMotion)) THEN
-      DO i1 = LBOUND(u_out%BladeRootMotion,1, kind=B8Ki),UBOUND(u_out%BladeRootMotion,1, kind=B8Ki)
+      do i1 = lbound(u_out%BladeRootMotion,1),ubound(u_out%BladeRootMotion,1)
          CALL MeshExtrapInterp1(u1%BladeRootMotion(i1), u2%BladeRootMotion(i1), tin, u_out%BladeRootMotion(i1), tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
    END IF ! check if allocated
    IF (ALLOCATED(u_out%BladeMotion) .AND. ALLOCATED(u1%BladeMotion)) THEN
-      DO i1 = LBOUND(u_out%BladeMotion,1, kind=B8Ki),UBOUND(u_out%BladeMotion,1, kind=B8Ki)
+      do i1 = lbound(u_out%BladeMotion,1),ubound(u_out%BladeMotion,1)
          CALL MeshExtrapInterp1(u1%BladeMotion(i1), u2%BladeMotion(i1), tin, u_out%BladeMotion(i1), tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
@@ -1391,13 +1391,13 @@ SUBROUTINE ExtLd_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, E
    CALL MeshExtrapInterp2(u1%NacelleMotion, u2%NacelleMotion, u3%NacelleMotion, tin, u_out%NacelleMotion, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    IF (ALLOCATED(u_out%BladeRootMotion) .AND. ALLOCATED(u1%BladeRootMotion)) THEN
-      DO i1 = LBOUND(u_out%BladeRootMotion,1, kind=B8Ki),UBOUND(u_out%BladeRootMotion,1, kind=B8Ki)
+      do i1 = lbound(u_out%BladeRootMotion,1),ubound(u_out%BladeRootMotion,1)
          CALL MeshExtrapInterp2(u1%BladeRootMotion(i1), u2%BladeRootMotion(i1), u3%BladeRootMotion(i1), tin, u_out%BladeRootMotion(i1), tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
    END IF ! check if allocated
    IF (ALLOCATED(u_out%BladeMotion) .AND. ALLOCATED(u1%BladeMotion)) THEN
-      DO i1 = LBOUND(u_out%BladeMotion,1, kind=B8Ki),UBOUND(u_out%BladeMotion,1, kind=B8Ki)
+      do i1 = lbound(u_out%BladeMotion,1),ubound(u_out%BladeMotion,1)
          CALL MeshExtrapInterp2(u1%BladeMotion(i1), u2%BladeMotion(i1), u3%BladeMotion(i1), tin, u_out%BladeMotion(i1), tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
@@ -1506,7 +1506,7 @@ SUBROUTINE ExtLd_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrM
    CALL MeshExtrapInterp1(y1%TowerLoad, y2%TowerLoad, tin, y_out%TowerLoad, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    IF (ALLOCATED(y_out%BladeLoad) .AND. ALLOCATED(y1%BladeLoad)) THEN
-      DO i1 = LBOUND(y_out%BladeLoad,1, kind=B8Ki),UBOUND(y_out%BladeLoad,1, kind=B8Ki)
+      do i1 = lbound(y_out%BladeLoad,1),ubound(y_out%BladeLoad,1)
          CALL MeshExtrapInterp1(y1%BladeLoad(i1), y2%BladeLoad(i1), tin, y_out%BladeLoad(i1), tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
@@ -1514,7 +1514,7 @@ SUBROUTINE ExtLd_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrM
    CALL MeshExtrapInterp1(y1%TowerLoadAD, y2%TowerLoadAD, tin, y_out%TowerLoadAD, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    IF (ALLOCATED(y_out%BladeLoadAD) .AND. ALLOCATED(y1%BladeLoadAD)) THEN
-      DO i1 = LBOUND(y_out%BladeLoadAD,1, kind=B8Ki),UBOUND(y_out%BladeLoadAD,1, kind=B8Ki)
+      do i1 = lbound(y_out%BladeLoadAD,1),ubound(y_out%BladeLoadAD,1)
          CALL MeshExtrapInterp1(y1%BladeLoadAD(i1), y2%BladeLoadAD(i1), tin, y_out%BladeLoadAD(i1), tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
@@ -1581,7 +1581,7 @@ SUBROUTINE ExtLd_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, 
    CALL MeshExtrapInterp2(y1%TowerLoad, y2%TowerLoad, y3%TowerLoad, tin, y_out%TowerLoad, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    IF (ALLOCATED(y_out%BladeLoad) .AND. ALLOCATED(y1%BladeLoad)) THEN
-      DO i1 = LBOUND(y_out%BladeLoad,1, kind=B8Ki),UBOUND(y_out%BladeLoad,1, kind=B8Ki)
+      do i1 = lbound(y_out%BladeLoad,1),ubound(y_out%BladeLoad,1)
          CALL MeshExtrapInterp2(y1%BladeLoad(i1), y2%BladeLoad(i1), y3%BladeLoad(i1), tin, y_out%BladeLoad(i1), tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
@@ -1589,7 +1589,7 @@ SUBROUTINE ExtLd_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, 
    CALL MeshExtrapInterp2(y1%TowerLoadAD, y2%TowerLoadAD, y3%TowerLoadAD, tin, y_out%TowerLoadAD, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    IF (ALLOCATED(y_out%BladeLoadAD) .AND. ALLOCATED(y1%BladeLoadAD)) THEN
-      DO i1 = LBOUND(y_out%BladeLoadAD,1, kind=B8Ki),UBOUND(y_out%BladeLoadAD,1, kind=B8Ki)
+      do i1 = lbound(y_out%BladeLoadAD,1),ubound(y_out%BladeLoadAD,1)
          CALL MeshExtrapInterp2(y1%BladeLoadAD(i1), y2%BladeLoadAD(i1), y3%BladeLoadAD(i1), tin, y_out%BladeLoadAD(i1), tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO

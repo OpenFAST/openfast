@@ -273,7 +273,7 @@ contains
    subroutine RegPackBounds(RF, R, LB, UB)
       type(RegFile), intent(inout)  :: RF
       integer(B4Ki), intent(in)     :: R
-      integer(B8Ki), intent(in)     :: LB(:), UB(:)
+      integer(B4Ki), intent(in)     :: LB(:), UB(:)
 
       ! If has an error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -287,7 +287,7 @@ contains
    subroutine RegUnpackBounds(RF, R, LB, UB)
       type(RegFile), intent(inout)  :: RF
       integer(B4Ki), intent(in)     :: R
-      integer(B8Ki), intent(out)    :: LB(:), UB(:)
+      integer(B4Ki), intent(out)    :: LB(:), UB(:)
 
       ! If has an error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -377,7 +377,7 @@ def gen_pack_alloc(w, dt, decl, rank):
    w.write(f'\n')
    if rank > 0:
       w.write(f'\n      ! Write array bounds')
-      w.write(f'\n      call RegPackBounds(RF, {rank}, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))')
+      w.write(f'\n      call RegPackBounds(RF, {rank}, lbound(Data), ubound(Data))')
    w.write(f'\n')
    w.write(f'\n      ! Write data to file')
    w.write(f'\n      call RegPack(RF, Data)')
@@ -395,7 +395,7 @@ def gen_unpack_alloc(w, dt, decl, rank):
    w.write(f'\n      integer(IntKi)                       :: stat')
    w.write(f'\n      logical                              :: IsAllocated')
    if rank > 0:
-      w.write(f'\n      integer(B8Ki)                        :: LB({rank}), UB({rank})')
+      w.write(f'\n      integer(B4Ki)                        :: LB({rank}), UB({rank})')
    w.write(f'\n')
    w.write(f'\n      ! If error, return')
    w.write(f'\n      if (RF%ErrStat /= ErrID_None) return')
@@ -449,7 +449,7 @@ def gen_pack_ptr(w, dt, decl, rank):
    if rank > 0:
       w.write(f'\n')
       w.write(f'\n      ! Write array bounds')
-      w.write(f'\n      call RegPackBounds(RF, {rank}, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))')
+      w.write(f'\n      call RegPackBounds(RF, {rank}, lbound(Data), ubound(Data))')
    w.write(f'\n')
    w.write(f'\n      ! Write pointer info')
    w.write(f'\n      call RegPackPointer(RF, c_loc(Data), PtrInIndex)')
@@ -474,7 +474,7 @@ def gen_unpack_ptr(w, dt, decl, rank):
    w.write(f'\n      logical                               :: IsAssociated')
    w.write(f'\n      type(c_ptr)                           :: Ptr')
    if rank > 0:
-      w.write(f'\n      integer(B8Ki)                        :: LB({rank}), UB({rank})')
+      w.write(f'\n      integer(B4Ki)                        :: LB({rank}), UB({rank})')
    w.write(f'\n')
    w.write(f'\n      ! If error, return')
    w.write(f'\n      if (RF%ErrStat /= ErrID_None) return')

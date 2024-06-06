@@ -172,7 +172,7 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'IfW_FlowField_CopyUniformFieldType'
    ErrStat = ErrID_None
@@ -181,8 +181,8 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
    DstUniformFieldTypeData%RefLength = SrcUniformFieldTypeData%RefLength
    DstUniformFieldTypeData%DataSize = SrcUniformFieldTypeData%DataSize
    if (allocated(SrcUniformFieldTypeData%Time)) then
-      LB(1:1) = lbound(SrcUniformFieldTypeData%Time, kind=B8Ki)
-      UB(1:1) = ubound(SrcUniformFieldTypeData%Time, kind=B8Ki)
+      LB(1:1) = lbound(SrcUniformFieldTypeData%Time)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%Time)
       if (.not. allocated(DstUniformFieldTypeData%Time)) then
          allocate(DstUniformFieldTypeData%Time(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -193,8 +193,8 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
       DstUniformFieldTypeData%Time = SrcUniformFieldTypeData%Time
    end if
    if (allocated(SrcUniformFieldTypeData%VelH)) then
-      LB(1:1) = lbound(SrcUniformFieldTypeData%VelH, kind=B8Ki)
-      UB(1:1) = ubound(SrcUniformFieldTypeData%VelH, kind=B8Ki)
+      LB(1:1) = lbound(SrcUniformFieldTypeData%VelH)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%VelH)
       if (.not. allocated(DstUniformFieldTypeData%VelH)) then
          allocate(DstUniformFieldTypeData%VelH(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -205,8 +205,8 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
       DstUniformFieldTypeData%VelH = SrcUniformFieldTypeData%VelH
    end if
    if (allocated(SrcUniformFieldTypeData%VelHDot)) then
-      LB(1:1) = lbound(SrcUniformFieldTypeData%VelHDot, kind=B8Ki)
-      UB(1:1) = ubound(SrcUniformFieldTypeData%VelHDot, kind=B8Ki)
+      LB(1:1) = lbound(SrcUniformFieldTypeData%VelHDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%VelHDot)
       if (.not. allocated(DstUniformFieldTypeData%VelHDot)) then
          allocate(DstUniformFieldTypeData%VelHDot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -217,8 +217,8 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
       DstUniformFieldTypeData%VelHDot = SrcUniformFieldTypeData%VelHDot
    end if
    if (allocated(SrcUniformFieldTypeData%VelV)) then
-      LB(1:1) = lbound(SrcUniformFieldTypeData%VelV, kind=B8Ki)
-      UB(1:1) = ubound(SrcUniformFieldTypeData%VelV, kind=B8Ki)
+      LB(1:1) = lbound(SrcUniformFieldTypeData%VelV)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%VelV)
       if (.not. allocated(DstUniformFieldTypeData%VelV)) then
          allocate(DstUniformFieldTypeData%VelV(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -229,8 +229,8 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
       DstUniformFieldTypeData%VelV = SrcUniformFieldTypeData%VelV
    end if
    if (allocated(SrcUniformFieldTypeData%VelVDot)) then
-      LB(1:1) = lbound(SrcUniformFieldTypeData%VelVDot, kind=B8Ki)
-      UB(1:1) = ubound(SrcUniformFieldTypeData%VelVDot, kind=B8Ki)
+      LB(1:1) = lbound(SrcUniformFieldTypeData%VelVDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%VelVDot)
       if (.not. allocated(DstUniformFieldTypeData%VelVDot)) then
          allocate(DstUniformFieldTypeData%VelVDot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -241,8 +241,8 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
       DstUniformFieldTypeData%VelVDot = SrcUniformFieldTypeData%VelVDot
    end if
    if (allocated(SrcUniformFieldTypeData%VelGust)) then
-      LB(1:1) = lbound(SrcUniformFieldTypeData%VelGust, kind=B8Ki)
-      UB(1:1) = ubound(SrcUniformFieldTypeData%VelGust, kind=B8Ki)
+      LB(1:1) = lbound(SrcUniformFieldTypeData%VelGust)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%VelGust)
       if (.not. allocated(DstUniformFieldTypeData%VelGust)) then
          allocate(DstUniformFieldTypeData%VelGust(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -253,8 +253,8 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
       DstUniformFieldTypeData%VelGust = SrcUniformFieldTypeData%VelGust
    end if
    if (allocated(SrcUniformFieldTypeData%VelGustDot)) then
-      LB(1:1) = lbound(SrcUniformFieldTypeData%VelGustDot, kind=B8Ki)
-      UB(1:1) = ubound(SrcUniformFieldTypeData%VelGustDot, kind=B8Ki)
+      LB(1:1) = lbound(SrcUniformFieldTypeData%VelGustDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%VelGustDot)
       if (.not. allocated(DstUniformFieldTypeData%VelGustDot)) then
          allocate(DstUniformFieldTypeData%VelGustDot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -265,8 +265,8 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
       DstUniformFieldTypeData%VelGustDot = SrcUniformFieldTypeData%VelGustDot
    end if
    if (allocated(SrcUniformFieldTypeData%AngleH)) then
-      LB(1:1) = lbound(SrcUniformFieldTypeData%AngleH, kind=B8Ki)
-      UB(1:1) = ubound(SrcUniformFieldTypeData%AngleH, kind=B8Ki)
+      LB(1:1) = lbound(SrcUniformFieldTypeData%AngleH)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%AngleH)
       if (.not. allocated(DstUniformFieldTypeData%AngleH)) then
          allocate(DstUniformFieldTypeData%AngleH(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -277,8 +277,8 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
       DstUniformFieldTypeData%AngleH = SrcUniformFieldTypeData%AngleH
    end if
    if (allocated(SrcUniformFieldTypeData%AngleHDot)) then
-      LB(1:1) = lbound(SrcUniformFieldTypeData%AngleHDot, kind=B8Ki)
-      UB(1:1) = ubound(SrcUniformFieldTypeData%AngleHDot, kind=B8Ki)
+      LB(1:1) = lbound(SrcUniformFieldTypeData%AngleHDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%AngleHDot)
       if (.not. allocated(DstUniformFieldTypeData%AngleHDot)) then
          allocate(DstUniformFieldTypeData%AngleHDot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -289,8 +289,8 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
       DstUniformFieldTypeData%AngleHDot = SrcUniformFieldTypeData%AngleHDot
    end if
    if (allocated(SrcUniformFieldTypeData%AngleV)) then
-      LB(1:1) = lbound(SrcUniformFieldTypeData%AngleV, kind=B8Ki)
-      UB(1:1) = ubound(SrcUniformFieldTypeData%AngleV, kind=B8Ki)
+      LB(1:1) = lbound(SrcUniformFieldTypeData%AngleV)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%AngleV)
       if (.not. allocated(DstUniformFieldTypeData%AngleV)) then
          allocate(DstUniformFieldTypeData%AngleV(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -301,8 +301,8 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
       DstUniformFieldTypeData%AngleV = SrcUniformFieldTypeData%AngleV
    end if
    if (allocated(SrcUniformFieldTypeData%AngleVDot)) then
-      LB(1:1) = lbound(SrcUniformFieldTypeData%AngleVDot, kind=B8Ki)
-      UB(1:1) = ubound(SrcUniformFieldTypeData%AngleVDot, kind=B8Ki)
+      LB(1:1) = lbound(SrcUniformFieldTypeData%AngleVDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%AngleVDot)
       if (.not. allocated(DstUniformFieldTypeData%AngleVDot)) then
          allocate(DstUniformFieldTypeData%AngleVDot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -313,8 +313,8 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
       DstUniformFieldTypeData%AngleVDot = SrcUniformFieldTypeData%AngleVDot
    end if
    if (allocated(SrcUniformFieldTypeData%ShrH)) then
-      LB(1:1) = lbound(SrcUniformFieldTypeData%ShrH, kind=B8Ki)
-      UB(1:1) = ubound(SrcUniformFieldTypeData%ShrH, kind=B8Ki)
+      LB(1:1) = lbound(SrcUniformFieldTypeData%ShrH)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%ShrH)
       if (.not. allocated(DstUniformFieldTypeData%ShrH)) then
          allocate(DstUniformFieldTypeData%ShrH(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -325,8 +325,8 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
       DstUniformFieldTypeData%ShrH = SrcUniformFieldTypeData%ShrH
    end if
    if (allocated(SrcUniformFieldTypeData%ShrHDot)) then
-      LB(1:1) = lbound(SrcUniformFieldTypeData%ShrHDot, kind=B8Ki)
-      UB(1:1) = ubound(SrcUniformFieldTypeData%ShrHDot, kind=B8Ki)
+      LB(1:1) = lbound(SrcUniformFieldTypeData%ShrHDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%ShrHDot)
       if (.not. allocated(DstUniformFieldTypeData%ShrHDot)) then
          allocate(DstUniformFieldTypeData%ShrHDot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -337,8 +337,8 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
       DstUniformFieldTypeData%ShrHDot = SrcUniformFieldTypeData%ShrHDot
    end if
    if (allocated(SrcUniformFieldTypeData%ShrV)) then
-      LB(1:1) = lbound(SrcUniformFieldTypeData%ShrV, kind=B8Ki)
-      UB(1:1) = ubound(SrcUniformFieldTypeData%ShrV, kind=B8Ki)
+      LB(1:1) = lbound(SrcUniformFieldTypeData%ShrV)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%ShrV)
       if (.not. allocated(DstUniformFieldTypeData%ShrV)) then
          allocate(DstUniformFieldTypeData%ShrV(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -349,8 +349,8 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
       DstUniformFieldTypeData%ShrV = SrcUniformFieldTypeData%ShrV
    end if
    if (allocated(SrcUniformFieldTypeData%ShrVDot)) then
-      LB(1:1) = lbound(SrcUniformFieldTypeData%ShrVDot, kind=B8Ki)
-      UB(1:1) = ubound(SrcUniformFieldTypeData%ShrVDot, kind=B8Ki)
+      LB(1:1) = lbound(SrcUniformFieldTypeData%ShrVDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%ShrVDot)
       if (.not. allocated(DstUniformFieldTypeData%ShrVDot)) then
          allocate(DstUniformFieldTypeData%ShrVDot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -361,8 +361,8 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
       DstUniformFieldTypeData%ShrVDot = SrcUniformFieldTypeData%ShrVDot
    end if
    if (allocated(SrcUniformFieldTypeData%LinShrV)) then
-      LB(1:1) = lbound(SrcUniformFieldTypeData%LinShrV, kind=B8Ki)
-      UB(1:1) = ubound(SrcUniformFieldTypeData%LinShrV, kind=B8Ki)
+      LB(1:1) = lbound(SrcUniformFieldTypeData%LinShrV)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%LinShrV)
       if (.not. allocated(DstUniformFieldTypeData%LinShrV)) then
          allocate(DstUniformFieldTypeData%LinShrV(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -373,8 +373,8 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
       DstUniformFieldTypeData%LinShrV = SrcUniformFieldTypeData%LinShrV
    end if
    if (allocated(SrcUniformFieldTypeData%LinShrVDot)) then
-      LB(1:1) = lbound(SrcUniformFieldTypeData%LinShrVDot, kind=B8Ki)
-      UB(1:1) = ubound(SrcUniformFieldTypeData%LinShrVDot, kind=B8Ki)
+      LB(1:1) = lbound(SrcUniformFieldTypeData%LinShrVDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%LinShrVDot)
       if (.not. allocated(DstUniformFieldTypeData%LinShrVDot)) then
          allocate(DstUniformFieldTypeData%LinShrVDot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -478,7 +478,7 @@ subroutine IfW_FlowField_UnPackUniformFieldType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(UniformFieldType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'IfW_FlowField_UnPackUniformFieldType'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -605,7 +605,7 @@ subroutine IfW_FlowField_CopyGrid3DFieldType(SrcGrid3DFieldTypeData, DstGrid3DFi
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(4), UB(4)
+   integer(B4Ki)                  :: LB(4), UB(4)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'IfW_FlowField_CopyGrid3DFieldType'
    ErrStat = ErrID_None
@@ -618,8 +618,8 @@ subroutine IfW_FlowField_CopyGrid3DFieldType(SrcGrid3DFieldTypeData, DstGrid3DFi
    DstGrid3DFieldTypeData%RefHeight = SrcGrid3DFieldTypeData%RefHeight
    DstGrid3DFieldTypeData%RefLength = SrcGrid3DFieldTypeData%RefLength
    if (allocated(SrcGrid3DFieldTypeData%Vel)) then
-      LB(1:4) = lbound(SrcGrid3DFieldTypeData%Vel, kind=B8Ki)
-      UB(1:4) = ubound(SrcGrid3DFieldTypeData%Vel, kind=B8Ki)
+      LB(1:4) = lbound(SrcGrid3DFieldTypeData%Vel)
+      UB(1:4) = ubound(SrcGrid3DFieldTypeData%Vel)
       if (.not. allocated(DstGrid3DFieldTypeData%Vel)) then
          allocate(DstGrid3DFieldTypeData%Vel(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -630,8 +630,8 @@ subroutine IfW_FlowField_CopyGrid3DFieldType(SrcGrid3DFieldTypeData, DstGrid3DFi
       DstGrid3DFieldTypeData%Vel = SrcGrid3DFieldTypeData%Vel
    end if
    if (allocated(SrcGrid3DFieldTypeData%Acc)) then
-      LB(1:4) = lbound(SrcGrid3DFieldTypeData%Acc, kind=B8Ki)
-      UB(1:4) = ubound(SrcGrid3DFieldTypeData%Acc, kind=B8Ki)
+      LB(1:4) = lbound(SrcGrid3DFieldTypeData%Acc)
+      UB(1:4) = ubound(SrcGrid3DFieldTypeData%Acc)
       if (.not. allocated(DstGrid3DFieldTypeData%Acc)) then
          allocate(DstGrid3DFieldTypeData%Acc(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -642,8 +642,8 @@ subroutine IfW_FlowField_CopyGrid3DFieldType(SrcGrid3DFieldTypeData, DstGrid3DFi
       DstGrid3DFieldTypeData%Acc = SrcGrid3DFieldTypeData%Acc
    end if
    if (allocated(SrcGrid3DFieldTypeData%VelTower)) then
-      LB(1:3) = lbound(SrcGrid3DFieldTypeData%VelTower, kind=B8Ki)
-      UB(1:3) = ubound(SrcGrid3DFieldTypeData%VelTower, kind=B8Ki)
+      LB(1:3) = lbound(SrcGrid3DFieldTypeData%VelTower)
+      UB(1:3) = ubound(SrcGrid3DFieldTypeData%VelTower)
       if (.not. allocated(DstGrid3DFieldTypeData%VelTower)) then
          allocate(DstGrid3DFieldTypeData%VelTower(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -654,8 +654,8 @@ subroutine IfW_FlowField_CopyGrid3DFieldType(SrcGrid3DFieldTypeData, DstGrid3DFi
       DstGrid3DFieldTypeData%VelTower = SrcGrid3DFieldTypeData%VelTower
    end if
    if (allocated(SrcGrid3DFieldTypeData%AccTower)) then
-      LB(1:3) = lbound(SrcGrid3DFieldTypeData%AccTower, kind=B8Ki)
-      UB(1:3) = ubound(SrcGrid3DFieldTypeData%AccTower, kind=B8Ki)
+      LB(1:3) = lbound(SrcGrid3DFieldTypeData%AccTower)
+      UB(1:3) = ubound(SrcGrid3DFieldTypeData%AccTower)
       if (.not. allocated(DstGrid3DFieldTypeData%AccTower)) then
          allocate(DstGrid3DFieldTypeData%AccTower(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -666,8 +666,8 @@ subroutine IfW_FlowField_CopyGrid3DFieldType(SrcGrid3DFieldTypeData, DstGrid3DFi
       DstGrid3DFieldTypeData%AccTower = SrcGrid3DFieldTypeData%AccTower
    end if
    if (allocated(SrcGrid3DFieldTypeData%VelAvg)) then
-      LB(1:3) = lbound(SrcGrid3DFieldTypeData%VelAvg, kind=B8Ki)
-      UB(1:3) = ubound(SrcGrid3DFieldTypeData%VelAvg, kind=B8Ki)
+      LB(1:3) = lbound(SrcGrid3DFieldTypeData%VelAvg)
+      UB(1:3) = ubound(SrcGrid3DFieldTypeData%VelAvg)
       if (.not. allocated(DstGrid3DFieldTypeData%VelAvg)) then
          allocate(DstGrid3DFieldTypeData%VelAvg(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -678,8 +678,8 @@ subroutine IfW_FlowField_CopyGrid3DFieldType(SrcGrid3DFieldTypeData, DstGrid3DFi
       DstGrid3DFieldTypeData%VelAvg = SrcGrid3DFieldTypeData%VelAvg
    end if
    if (allocated(SrcGrid3DFieldTypeData%AccAvg)) then
-      LB(1:3) = lbound(SrcGrid3DFieldTypeData%AccAvg, kind=B8Ki)
-      UB(1:3) = ubound(SrcGrid3DFieldTypeData%AccAvg, kind=B8Ki)
+      LB(1:3) = lbound(SrcGrid3DFieldTypeData%AccAvg)
+      UB(1:3) = ubound(SrcGrid3DFieldTypeData%AccAvg)
       if (.not. allocated(DstGrid3DFieldTypeData%AccAvg)) then
          allocate(DstGrid3DFieldTypeData%AccAvg(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -787,7 +787,7 @@ subroutine IfW_FlowField_UnPackGrid3DFieldType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Grid3DFieldType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'IfW_FlowField_UnPackGrid3DFieldType'
-   integer(B8Ki)   :: LB(4), UB(4)
+   integer(B4Ki)   :: LB(4), UB(4)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -834,7 +834,7 @@ subroutine IfW_FlowField_CopyGrid4DFieldType(SrcGrid4DFieldTypeData, DstGrid4DFi
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(5), UB(5)
+   integer(B4Ki)                  :: LB(5), UB(5)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'IfW_FlowField_CopyGrid4DFieldType'
    ErrStat = ErrID_None
@@ -876,7 +876,7 @@ subroutine IfW_FlowField_UnPackGrid4DFieldType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Grid4DFieldType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'IfW_FlowField_UnPackGrid4DFieldType'
-   integer(B8Ki)   :: LB(5), UB(5)
+   integer(B4Ki)   :: LB(5), UB(5)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -896,14 +896,14 @@ subroutine IfW_FlowField_CopyPointsFieldType(SrcPointsFieldTypeData, DstPointsFi
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'IfW_FlowField_CopyPointsFieldType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcPointsFieldTypeData%Vel)) then
-      LB(1:2) = lbound(SrcPointsFieldTypeData%Vel, kind=B8Ki)
-      UB(1:2) = ubound(SrcPointsFieldTypeData%Vel, kind=B8Ki)
+      LB(1:2) = lbound(SrcPointsFieldTypeData%Vel)
+      UB(1:2) = ubound(SrcPointsFieldTypeData%Vel)
       if (.not. allocated(DstPointsFieldTypeData%Vel)) then
          allocate(DstPointsFieldTypeData%Vel(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -940,7 +940,7 @@ subroutine IfW_FlowField_UnPackPointsFieldType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(PointsFieldType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'IfW_FlowField_UnPackPointsFieldType'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return

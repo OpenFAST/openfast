@@ -259,7 +259,7 @@ subroutine UA_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'UA_CopyInitInput'
    ErrStat = ErrID_None
@@ -267,8 +267,8 @@ subroutine UA_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    DstInitInputData%dt = SrcInitInputData%dt
    DstInitInputData%OutRootName = SrcInitInputData%OutRootName
    if (allocated(SrcInitInputData%c)) then
-      LB(1:2) = lbound(SrcInitInputData%c, kind=B8Ki)
-      UB(1:2) = ubound(SrcInitInputData%c, kind=B8Ki)
+      LB(1:2) = lbound(SrcInitInputData%c)
+      UB(1:2) = ubound(SrcInitInputData%c)
       if (.not. allocated(DstInitInputData%c)) then
          allocate(DstInitInputData%c(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -287,8 +287,8 @@ subroutine UA_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    DstInitInputData%ShedEffect = SrcInitInputData%ShedEffect
    DstInitInputData%WrSum = SrcInitInputData%WrSum
    if (allocated(SrcInitInputData%UAOff_innerNode)) then
-      LB(1:1) = lbound(SrcInitInputData%UAOff_innerNode, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%UAOff_innerNode, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%UAOff_innerNode)
+      UB(1:1) = ubound(SrcInitInputData%UAOff_innerNode)
       if (.not. allocated(DstInitInputData%UAOff_innerNode)) then
          allocate(DstInitInputData%UAOff_innerNode(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -299,8 +299,8 @@ subroutine UA_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
       DstInitInputData%UAOff_innerNode = SrcInitInputData%UAOff_innerNode
    end if
    if (allocated(SrcInitInputData%UAOff_outerNode)) then
-      LB(1:1) = lbound(SrcInitInputData%UAOff_outerNode, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%UAOff_outerNode, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%UAOff_outerNode)
+      UB(1:1) = ubound(SrcInitInputData%UAOff_outerNode)
       if (.not. allocated(DstInitInputData%UAOff_outerNode)) then
          allocate(DstInitInputData%UAOff_outerNode(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -357,7 +357,7 @@ subroutine UA_UnPackInitInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(UA_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'UA_UnPackInitInput'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -383,7 +383,7 @@ subroutine UA_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'UA_CopyInitOutput'
@@ -393,8 +393,8 @@ subroutine UA_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
       if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
          allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -405,8 +405,8 @@ subroutine UA_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
       if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
          allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -452,7 +452,7 @@ subroutine UA_UnPackInitOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(UA_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'UA_UnPackInitOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -693,16 +693,16 @@ subroutine UA_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrSta
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'UA_CopyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcContStateData%element)) then
-      LB(1:2) = lbound(SrcContStateData%element, kind=B8Ki)
-      UB(1:2) = ubound(SrcContStateData%element, kind=B8Ki)
+      LB(1:2) = lbound(SrcContStateData%element)
+      UB(1:2) = ubound(SrcContStateData%element)
       if (.not. allocated(DstContStateData%element)) then
          allocate(DstContStateData%element(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -724,16 +724,16 @@ subroutine UA_DestroyContState(ContStateData, ErrStat, ErrMsg)
    type(UA_ContinuousStateType), intent(inout) :: ContStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'UA_DestroyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(ContStateData%element)) then
-      LB(1:2) = lbound(ContStateData%element, kind=B8Ki)
-      UB(1:2) = ubound(ContStateData%element, kind=B8Ki)
+      LB(1:2) = lbound(ContStateData%element)
+      UB(1:2) = ubound(ContStateData%element)
       do i2 = LB(2), UB(2)
          do i1 = LB(1), UB(1)
             call UA_DestroyElementContinuousStateType(ContStateData%element(i1,i2), ErrStat2, ErrMsg2)
@@ -748,14 +748,14 @@ subroutine UA_PackContState(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(UA_ContinuousStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'UA_PackContState'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, allocated(InData%element))
    if (allocated(InData%element)) then
-      call RegPackBounds(RF, 2, lbound(InData%element, kind=B8Ki), ubound(InData%element, kind=B8Ki))
-      LB(1:2) = lbound(InData%element, kind=B8Ki)
-      UB(1:2) = ubound(InData%element, kind=B8Ki)
+      call RegPackBounds(RF, 2, lbound(InData%element), ubound(InData%element))
+      LB(1:2) = lbound(InData%element)
+      UB(1:2) = ubound(InData%element)
       do i2 = LB(2), UB(2)
          do i1 = LB(1), UB(1)
             call UA_PackElementContinuousStateType(RF, InData%element(i1,i2)) 
@@ -769,8 +769,8 @@ subroutine UA_UnPackContState(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(UA_ContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'UA_UnPackContState'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -797,14 +797,14 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'UA_CopyDiscState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcDiscStateData%alpha_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%alpha_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%alpha_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%alpha_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%alpha_minus1)
       if (.not. allocated(DstDiscStateData%alpha_minus1)) then
          allocate(DstDiscStateData%alpha_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -815,8 +815,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%alpha_minus1 = SrcDiscStateData%alpha_minus1
    end if
    if (allocated(SrcDiscStateData%alpha_filt_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%alpha_filt_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%alpha_filt_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%alpha_filt_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%alpha_filt_minus1)
       if (.not. allocated(DstDiscStateData%alpha_filt_minus1)) then
          allocate(DstDiscStateData%alpha_filt_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -827,8 +827,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%alpha_filt_minus1 = SrcDiscStateData%alpha_filt_minus1
    end if
    if (allocated(SrcDiscStateData%alpha_dot)) then
-      LB(1:2) = lbound(SrcDiscStateData%alpha_dot, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%alpha_dot, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%alpha_dot)
+      UB(1:2) = ubound(SrcDiscStateData%alpha_dot)
       if (.not. allocated(DstDiscStateData%alpha_dot)) then
          allocate(DstDiscStateData%alpha_dot(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -839,8 +839,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%alpha_dot = SrcDiscStateData%alpha_dot
    end if
    if (allocated(SrcDiscStateData%alpha_dot_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%alpha_dot_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%alpha_dot_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%alpha_dot_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%alpha_dot_minus1)
       if (.not. allocated(DstDiscStateData%alpha_dot_minus1)) then
          allocate(DstDiscStateData%alpha_dot_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -851,8 +851,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%alpha_dot_minus1 = SrcDiscStateData%alpha_dot_minus1
    end if
    if (allocated(SrcDiscStateData%q_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%q_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%q_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%q_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%q_minus1)
       if (.not. allocated(DstDiscStateData%q_minus1)) then
          allocate(DstDiscStateData%q_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -863,8 +863,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%q_minus1 = SrcDiscStateData%q_minus1
    end if
    if (allocated(SrcDiscStateData%Kalpha_f_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%Kalpha_f_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%Kalpha_f_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%Kalpha_f_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%Kalpha_f_minus1)
       if (.not. allocated(DstDiscStateData%Kalpha_f_minus1)) then
          allocate(DstDiscStateData%Kalpha_f_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -875,8 +875,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Kalpha_f_minus1 = SrcDiscStateData%Kalpha_f_minus1
    end if
    if (allocated(SrcDiscStateData%Kq_f_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%Kq_f_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%Kq_f_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%Kq_f_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%Kq_f_minus1)
       if (.not. allocated(DstDiscStateData%Kq_f_minus1)) then
          allocate(DstDiscStateData%Kq_f_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -887,8 +887,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Kq_f_minus1 = SrcDiscStateData%Kq_f_minus1
    end if
    if (allocated(SrcDiscStateData%q_f_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%q_f_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%q_f_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%q_f_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%q_f_minus1)
       if (.not. allocated(DstDiscStateData%q_f_minus1)) then
          allocate(DstDiscStateData%q_f_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -899,8 +899,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%q_f_minus1 = SrcDiscStateData%q_f_minus1
    end if
    if (allocated(SrcDiscStateData%X1_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%X1_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%X1_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%X1_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%X1_minus1)
       if (.not. allocated(DstDiscStateData%X1_minus1)) then
          allocate(DstDiscStateData%X1_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -911,8 +911,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%X1_minus1 = SrcDiscStateData%X1_minus1
    end if
    if (allocated(SrcDiscStateData%X2_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%X2_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%X2_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%X2_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%X2_minus1)
       if (.not. allocated(DstDiscStateData%X2_minus1)) then
          allocate(DstDiscStateData%X2_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -923,8 +923,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%X2_minus1 = SrcDiscStateData%X2_minus1
    end if
    if (allocated(SrcDiscStateData%X3_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%X3_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%X3_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%X3_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%X3_minus1)
       if (.not. allocated(DstDiscStateData%X3_minus1)) then
          allocate(DstDiscStateData%X3_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -935,8 +935,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%X3_minus1 = SrcDiscStateData%X3_minus1
    end if
    if (allocated(SrcDiscStateData%X4_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%X4_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%X4_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%X4_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%X4_minus1)
       if (.not. allocated(DstDiscStateData%X4_minus1)) then
          allocate(DstDiscStateData%X4_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -947,8 +947,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%X4_minus1 = SrcDiscStateData%X4_minus1
    end if
    if (allocated(SrcDiscStateData%Kprime_alpha_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%Kprime_alpha_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%Kprime_alpha_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%Kprime_alpha_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%Kprime_alpha_minus1)
       if (.not. allocated(DstDiscStateData%Kprime_alpha_minus1)) then
          allocate(DstDiscStateData%Kprime_alpha_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -959,8 +959,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Kprime_alpha_minus1 = SrcDiscStateData%Kprime_alpha_minus1
    end if
    if (allocated(SrcDiscStateData%Kprime_q_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%Kprime_q_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%Kprime_q_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%Kprime_q_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%Kprime_q_minus1)
       if (.not. allocated(DstDiscStateData%Kprime_q_minus1)) then
          allocate(DstDiscStateData%Kprime_q_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -971,8 +971,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Kprime_q_minus1 = SrcDiscStateData%Kprime_q_minus1
    end if
    if (allocated(SrcDiscStateData%Kprimeprime_q_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%Kprimeprime_q_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%Kprimeprime_q_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%Kprimeprime_q_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%Kprimeprime_q_minus1)
       if (.not. allocated(DstDiscStateData%Kprimeprime_q_minus1)) then
          allocate(DstDiscStateData%Kprimeprime_q_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -983,8 +983,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Kprimeprime_q_minus1 = SrcDiscStateData%Kprimeprime_q_minus1
    end if
    if (allocated(SrcDiscStateData%K3prime_q_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%K3prime_q_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%K3prime_q_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%K3prime_q_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%K3prime_q_minus1)
       if (.not. allocated(DstDiscStateData%K3prime_q_minus1)) then
          allocate(DstDiscStateData%K3prime_q_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -995,8 +995,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%K3prime_q_minus1 = SrcDiscStateData%K3prime_q_minus1
    end if
    if (allocated(SrcDiscStateData%Dp_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%Dp_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%Dp_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%Dp_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%Dp_minus1)
       if (.not. allocated(DstDiscStateData%Dp_minus1)) then
          allocate(DstDiscStateData%Dp_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1007,8 +1007,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Dp_minus1 = SrcDiscStateData%Dp_minus1
    end if
    if (allocated(SrcDiscStateData%Cn_pot_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%Cn_pot_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%Cn_pot_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%Cn_pot_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%Cn_pot_minus1)
       if (.not. allocated(DstDiscStateData%Cn_pot_minus1)) then
          allocate(DstDiscStateData%Cn_pot_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1019,8 +1019,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Cn_pot_minus1 = SrcDiscStateData%Cn_pot_minus1
    end if
    if (allocated(SrcDiscStateData%fprimeprime_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%fprimeprime_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%fprimeprime_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%fprimeprime_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%fprimeprime_minus1)
       if (.not. allocated(DstDiscStateData%fprimeprime_minus1)) then
          allocate(DstDiscStateData%fprimeprime_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1031,8 +1031,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%fprimeprime_minus1 = SrcDiscStateData%fprimeprime_minus1
    end if
    if (allocated(SrcDiscStateData%fprimeprime_c_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%fprimeprime_c_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%fprimeprime_c_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%fprimeprime_c_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%fprimeprime_c_minus1)
       if (.not. allocated(DstDiscStateData%fprimeprime_c_minus1)) then
          allocate(DstDiscStateData%fprimeprime_c_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1043,8 +1043,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%fprimeprime_c_minus1 = SrcDiscStateData%fprimeprime_c_minus1
    end if
    if (allocated(SrcDiscStateData%fprimeprime_m_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%fprimeprime_m_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%fprimeprime_m_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%fprimeprime_m_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%fprimeprime_m_minus1)
       if (.not. allocated(DstDiscStateData%fprimeprime_m_minus1)) then
          allocate(DstDiscStateData%fprimeprime_m_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1055,8 +1055,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%fprimeprime_m_minus1 = SrcDiscStateData%fprimeprime_m_minus1
    end if
    if (allocated(SrcDiscStateData%Df_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%Df_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%Df_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%Df_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%Df_minus1)
       if (.not. allocated(DstDiscStateData%Df_minus1)) then
          allocate(DstDiscStateData%Df_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1067,8 +1067,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Df_minus1 = SrcDiscStateData%Df_minus1
    end if
    if (allocated(SrcDiscStateData%Df_c_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%Df_c_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%Df_c_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%Df_c_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%Df_c_minus1)
       if (.not. allocated(DstDiscStateData%Df_c_minus1)) then
          allocate(DstDiscStateData%Df_c_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1079,8 +1079,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Df_c_minus1 = SrcDiscStateData%Df_c_minus1
    end if
    if (allocated(SrcDiscStateData%Df_m_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%Df_m_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%Df_m_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%Df_m_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%Df_m_minus1)
       if (.not. allocated(DstDiscStateData%Df_m_minus1)) then
          allocate(DstDiscStateData%Df_m_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1091,8 +1091,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Df_m_minus1 = SrcDiscStateData%Df_m_minus1
    end if
    if (allocated(SrcDiscStateData%Dalphaf_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%Dalphaf_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%Dalphaf_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%Dalphaf_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%Dalphaf_minus1)
       if (.not. allocated(DstDiscStateData%Dalphaf_minus1)) then
          allocate(DstDiscStateData%Dalphaf_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1103,8 +1103,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Dalphaf_minus1 = SrcDiscStateData%Dalphaf_minus1
    end if
    if (allocated(SrcDiscStateData%alphaf_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%alphaf_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%alphaf_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%alphaf_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%alphaf_minus1)
       if (.not. allocated(DstDiscStateData%alphaf_minus1)) then
          allocate(DstDiscStateData%alphaf_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1115,8 +1115,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%alphaf_minus1 = SrcDiscStateData%alphaf_minus1
    end if
    if (allocated(SrcDiscStateData%fprime_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%fprime_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%fprime_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%fprime_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%fprime_minus1)
       if (.not. allocated(DstDiscStateData%fprime_minus1)) then
          allocate(DstDiscStateData%fprime_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1127,8 +1127,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%fprime_minus1 = SrcDiscStateData%fprime_minus1
    end if
    if (allocated(SrcDiscStateData%fprime_c_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%fprime_c_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%fprime_c_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%fprime_c_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%fprime_c_minus1)
       if (.not. allocated(DstDiscStateData%fprime_c_minus1)) then
          allocate(DstDiscStateData%fprime_c_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1139,8 +1139,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%fprime_c_minus1 = SrcDiscStateData%fprime_c_minus1
    end if
    if (allocated(SrcDiscStateData%fprime_m_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%fprime_m_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%fprime_m_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%fprime_m_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%fprime_m_minus1)
       if (.not. allocated(DstDiscStateData%fprime_m_minus1)) then
          allocate(DstDiscStateData%fprime_m_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1151,8 +1151,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%fprime_m_minus1 = SrcDiscStateData%fprime_m_minus1
    end if
    if (allocated(SrcDiscStateData%tau_V)) then
-      LB(1:2) = lbound(SrcDiscStateData%tau_V, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%tau_V, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%tau_V)
+      UB(1:2) = ubound(SrcDiscStateData%tau_V)
       if (.not. allocated(DstDiscStateData%tau_V)) then
          allocate(DstDiscStateData%tau_V(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1163,8 +1163,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%tau_V = SrcDiscStateData%tau_V
    end if
    if (allocated(SrcDiscStateData%tau_V_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%tau_V_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%tau_V_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%tau_V_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%tau_V_minus1)
       if (.not. allocated(DstDiscStateData%tau_V_minus1)) then
          allocate(DstDiscStateData%tau_V_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1175,8 +1175,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%tau_V_minus1 = SrcDiscStateData%tau_V_minus1
    end if
    if (allocated(SrcDiscStateData%Cn_v_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%Cn_v_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%Cn_v_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%Cn_v_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%Cn_v_minus1)
       if (.not. allocated(DstDiscStateData%Cn_v_minus1)) then
          allocate(DstDiscStateData%Cn_v_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1187,8 +1187,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Cn_v_minus1 = SrcDiscStateData%Cn_v_minus1
    end if
    if (allocated(SrcDiscStateData%C_V_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%C_V_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%C_V_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%C_V_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%C_V_minus1)
       if (.not. allocated(DstDiscStateData%C_V_minus1)) then
          allocate(DstDiscStateData%C_V_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1199,8 +1199,8 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%C_V_minus1 = SrcDiscStateData%C_V_minus1
    end if
    if (allocated(SrcDiscStateData%Cn_prime_minus1)) then
-      LB(1:2) = lbound(SrcDiscStateData%Cn_prime_minus1, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%Cn_prime_minus1, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%Cn_prime_minus1)
+      UB(1:2) = ubound(SrcDiscStateData%Cn_prime_minus1)
       if (.not. allocated(DstDiscStateData%Cn_prime_minus1)) then
          allocate(DstDiscStateData%Cn_prime_minus1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1369,7 +1369,7 @@ subroutine UA_UnPackDiscState(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(UA_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'UA_UnPackDiscState'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1453,16 +1453,16 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'UA_CopyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOtherStateData%FirstPass)) then
-      LB(1:2) = lbound(SrcOtherStateData%FirstPass, kind=B8Ki)
-      UB(1:2) = ubound(SrcOtherStateData%FirstPass, kind=B8Ki)
+      LB(1:2) = lbound(SrcOtherStateData%FirstPass)
+      UB(1:2) = ubound(SrcOtherStateData%FirstPass)
       if (.not. allocated(DstOtherStateData%FirstPass)) then
          allocate(DstOtherStateData%FirstPass(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1473,8 +1473,8 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
       DstOtherStateData%FirstPass = SrcOtherStateData%FirstPass
    end if
    if (allocated(SrcOtherStateData%sigma1)) then
-      LB(1:2) = lbound(SrcOtherStateData%sigma1, kind=B8Ki)
-      UB(1:2) = ubound(SrcOtherStateData%sigma1, kind=B8Ki)
+      LB(1:2) = lbound(SrcOtherStateData%sigma1)
+      UB(1:2) = ubound(SrcOtherStateData%sigma1)
       if (.not. allocated(DstOtherStateData%sigma1)) then
          allocate(DstOtherStateData%sigma1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1485,8 +1485,8 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
       DstOtherStateData%sigma1 = SrcOtherStateData%sigma1
    end if
    if (allocated(SrcOtherStateData%sigma1c)) then
-      LB(1:2) = lbound(SrcOtherStateData%sigma1c, kind=B8Ki)
-      UB(1:2) = ubound(SrcOtherStateData%sigma1c, kind=B8Ki)
+      LB(1:2) = lbound(SrcOtherStateData%sigma1c)
+      UB(1:2) = ubound(SrcOtherStateData%sigma1c)
       if (.not. allocated(DstOtherStateData%sigma1c)) then
          allocate(DstOtherStateData%sigma1c(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1497,8 +1497,8 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
       DstOtherStateData%sigma1c = SrcOtherStateData%sigma1c
    end if
    if (allocated(SrcOtherStateData%sigma1m)) then
-      LB(1:2) = lbound(SrcOtherStateData%sigma1m, kind=B8Ki)
-      UB(1:2) = ubound(SrcOtherStateData%sigma1m, kind=B8Ki)
+      LB(1:2) = lbound(SrcOtherStateData%sigma1m)
+      UB(1:2) = ubound(SrcOtherStateData%sigma1m)
       if (.not. allocated(DstOtherStateData%sigma1m)) then
          allocate(DstOtherStateData%sigma1m(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1509,8 +1509,8 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
       DstOtherStateData%sigma1m = SrcOtherStateData%sigma1m
    end if
    if (allocated(SrcOtherStateData%sigma3)) then
-      LB(1:2) = lbound(SrcOtherStateData%sigma3, kind=B8Ki)
-      UB(1:2) = ubound(SrcOtherStateData%sigma3, kind=B8Ki)
+      LB(1:2) = lbound(SrcOtherStateData%sigma3)
+      UB(1:2) = ubound(SrcOtherStateData%sigma3)
       if (.not. allocated(DstOtherStateData%sigma3)) then
          allocate(DstOtherStateData%sigma3(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1521,8 +1521,8 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
       DstOtherStateData%sigma3 = SrcOtherStateData%sigma3
    end if
    if (allocated(SrcOtherStateData%n)) then
-      LB(1:2) = lbound(SrcOtherStateData%n, kind=B8Ki)
-      UB(1:2) = ubound(SrcOtherStateData%n, kind=B8Ki)
+      LB(1:2) = lbound(SrcOtherStateData%n)
+      UB(1:2) = ubound(SrcOtherStateData%n)
       if (.not. allocated(DstOtherStateData%n)) then
          allocate(DstOtherStateData%n(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1532,23 +1532,23 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
       end if
       DstOtherStateData%n = SrcOtherStateData%n
    end if
-   LB(1:1) = lbound(SrcOtherStateData%xdot, kind=B8Ki)
-   UB(1:1) = ubound(SrcOtherStateData%xdot, kind=B8Ki)
+   LB(1:1) = lbound(SrcOtherStateData%xdot)
+   UB(1:1) = ubound(SrcOtherStateData%xdot)
    do i1 = LB(1), UB(1)
       call UA_CopyContState(SrcOtherStateData%xdot(i1), DstOtherStateData%xdot(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
-   LB(1:1) = lbound(SrcOtherStateData%xHistory, kind=B8Ki)
-   UB(1:1) = ubound(SrcOtherStateData%xHistory, kind=B8Ki)
+   LB(1:1) = lbound(SrcOtherStateData%xHistory)
+   UB(1:1) = ubound(SrcOtherStateData%xHistory)
    do i1 = LB(1), UB(1)
       call UA_CopyContState(SrcOtherStateData%xHistory(i1), DstOtherStateData%xHistory(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
    if (allocated(SrcOtherStateData%t_vortexBegin)) then
-      LB(1:2) = lbound(SrcOtherStateData%t_vortexBegin, kind=B8Ki)
-      UB(1:2) = ubound(SrcOtherStateData%t_vortexBegin, kind=B8Ki)
+      LB(1:2) = lbound(SrcOtherStateData%t_vortexBegin)
+      UB(1:2) = ubound(SrcOtherStateData%t_vortexBegin)
       if (.not. allocated(DstOtherStateData%t_vortexBegin)) then
          allocate(DstOtherStateData%t_vortexBegin(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1559,8 +1559,8 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
       DstOtherStateData%t_vortexBegin = SrcOtherStateData%t_vortexBegin
    end if
    if (allocated(SrcOtherStateData%SignOfOmega)) then
-      LB(1:2) = lbound(SrcOtherStateData%SignOfOmega, kind=B8Ki)
-      UB(1:2) = ubound(SrcOtherStateData%SignOfOmega, kind=B8Ki)
+      LB(1:2) = lbound(SrcOtherStateData%SignOfOmega)
+      UB(1:2) = ubound(SrcOtherStateData%SignOfOmega)
       if (.not. allocated(DstOtherStateData%SignOfOmega)) then
          allocate(DstOtherStateData%SignOfOmega(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1571,8 +1571,8 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
       DstOtherStateData%SignOfOmega = SrcOtherStateData%SignOfOmega
    end if
    if (allocated(SrcOtherStateData%PositivePressure)) then
-      LB(1:2) = lbound(SrcOtherStateData%PositivePressure, kind=B8Ki)
-      UB(1:2) = ubound(SrcOtherStateData%PositivePressure, kind=B8Ki)
+      LB(1:2) = lbound(SrcOtherStateData%PositivePressure)
+      UB(1:2) = ubound(SrcOtherStateData%PositivePressure)
       if (.not. allocated(DstOtherStateData%PositivePressure)) then
          allocate(DstOtherStateData%PositivePressure(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1583,8 +1583,8 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
       DstOtherStateData%PositivePressure = SrcOtherStateData%PositivePressure
    end if
    if (allocated(SrcOtherStateData%vortexOn)) then
-      LB(1:2) = lbound(SrcOtherStateData%vortexOn, kind=B8Ki)
-      UB(1:2) = ubound(SrcOtherStateData%vortexOn, kind=B8Ki)
+      LB(1:2) = lbound(SrcOtherStateData%vortexOn)
+      UB(1:2) = ubound(SrcOtherStateData%vortexOn)
       if (.not. allocated(DstOtherStateData%vortexOn)) then
          allocate(DstOtherStateData%vortexOn(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1595,8 +1595,8 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
       DstOtherStateData%vortexOn = SrcOtherStateData%vortexOn
    end if
    if (allocated(SrcOtherStateData%BelowThreshold)) then
-      LB(1:2) = lbound(SrcOtherStateData%BelowThreshold, kind=B8Ki)
-      UB(1:2) = ubound(SrcOtherStateData%BelowThreshold, kind=B8Ki)
+      LB(1:2) = lbound(SrcOtherStateData%BelowThreshold)
+      UB(1:2) = ubound(SrcOtherStateData%BelowThreshold)
       if (.not. allocated(DstOtherStateData%BelowThreshold)) then
          allocate(DstOtherStateData%BelowThreshold(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1607,8 +1607,8 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
       DstOtherStateData%BelowThreshold = SrcOtherStateData%BelowThreshold
    end if
    if (allocated(SrcOtherStateData%activeL)) then
-      LB(1:2) = lbound(SrcOtherStateData%activeL, kind=B8Ki)
-      UB(1:2) = ubound(SrcOtherStateData%activeL, kind=B8Ki)
+      LB(1:2) = lbound(SrcOtherStateData%activeL)
+      UB(1:2) = ubound(SrcOtherStateData%activeL)
       if (.not. allocated(DstOtherStateData%activeL)) then
          allocate(DstOtherStateData%activeL(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1619,8 +1619,8 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
       DstOtherStateData%activeL = SrcOtherStateData%activeL
    end if
    if (allocated(SrcOtherStateData%activeD)) then
-      LB(1:2) = lbound(SrcOtherStateData%activeD, kind=B8Ki)
-      UB(1:2) = ubound(SrcOtherStateData%activeD, kind=B8Ki)
+      LB(1:2) = lbound(SrcOtherStateData%activeD)
+      UB(1:2) = ubound(SrcOtherStateData%activeD)
       if (.not. allocated(DstOtherStateData%activeD)) then
          allocate(DstOtherStateData%activeD(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1636,8 +1636,8 @@ subroutine UA_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    type(UA_OtherStateType), intent(inout) :: OtherStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'UA_DestroyOtherState'
@@ -1661,14 +1661,14 @@ subroutine UA_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    if (allocated(OtherStateData%n)) then
       deallocate(OtherStateData%n)
    end if
-   LB(1:1) = lbound(OtherStateData%xdot, kind=B8Ki)
-   UB(1:1) = ubound(OtherStateData%xdot, kind=B8Ki)
+   LB(1:1) = lbound(OtherStateData%xdot)
+   UB(1:1) = ubound(OtherStateData%xdot)
    do i1 = LB(1), UB(1)
       call UA_DestroyContState(OtherStateData%xdot(i1), ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    end do
-   LB(1:1) = lbound(OtherStateData%xHistory, kind=B8Ki)
-   UB(1:1) = ubound(OtherStateData%xHistory, kind=B8Ki)
+   LB(1:1) = lbound(OtherStateData%xHistory)
+   UB(1:1) = ubound(OtherStateData%xHistory)
    do i1 = LB(1), UB(1)
       call UA_DestroyContState(OtherStateData%xHistory(i1), ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1700,8 +1700,8 @@ subroutine UA_PackOtherState(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(UA_OtherStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'UA_PackOtherState'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%FirstPass)
    call RegPackAlloc(RF, InData%sigma1)
@@ -1709,13 +1709,13 @@ subroutine UA_PackOtherState(RF, Indata)
    call RegPackAlloc(RF, InData%sigma1m)
    call RegPackAlloc(RF, InData%sigma3)
    call RegPackAlloc(RF, InData%n)
-   LB(1:1) = lbound(InData%xdot, kind=B8Ki)
-   UB(1:1) = ubound(InData%xdot, kind=B8Ki)
+   LB(1:1) = lbound(InData%xdot)
+   UB(1:1) = ubound(InData%xdot)
    do i1 = LB(1), UB(1)
       call UA_PackContState(RF, InData%xdot(i1)) 
    end do
-   LB(1:1) = lbound(InData%xHistory, kind=B8Ki)
-   UB(1:1) = ubound(InData%xHistory, kind=B8Ki)
+   LB(1:1) = lbound(InData%xHistory)
+   UB(1:1) = ubound(InData%xHistory)
    do i1 = LB(1), UB(1)
       call UA_PackContState(RF, InData%xHistory(i1)) 
    end do
@@ -1733,8 +1733,8 @@ subroutine UA_UnPackOtherState(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(UA_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'UA_UnPackOtherState'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1744,13 +1744,13 @@ subroutine UA_UnPackOtherState(RF, OutData)
    call RegUnpackAlloc(RF, OutData%sigma1m); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%sigma3); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%n); if (RegCheckErr(RF, RoutineName)) return
-   LB(1:1) = lbound(OutData%xdot, kind=B8Ki)
-   UB(1:1) = ubound(OutData%xdot, kind=B8Ki)
+   LB(1:1) = lbound(OutData%xdot)
+   UB(1:1) = ubound(OutData%xdot)
    do i1 = LB(1), UB(1)
       call UA_UnpackContState(RF, OutData%xdot(i1)) ! xdot 
    end do
-   LB(1:1) = lbound(OutData%xHistory, kind=B8Ki)
-   UB(1:1) = ubound(OutData%xHistory, kind=B8Ki)
+   LB(1:1) = lbound(OutData%xHistory)
+   UB(1:1) = ubound(OutData%xHistory)
    do i1 = LB(1), UB(1)
       call UA_UnpackContState(RF, OutData%xHistory(i1)) ! xHistory 
    end do
@@ -1769,7 +1769,7 @@ subroutine UA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'UA_CopyMisc'
    ErrStat = ErrID_None
@@ -1778,8 +1778,8 @@ subroutine UA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    DstMiscData%FirstWarn_UA = SrcMiscData%FirstWarn_UA
    DstMiscData%FirstWarn_UA_off = SrcMiscData%FirstWarn_UA_off
    if (allocated(SrcMiscData%TESF)) then
-      LB(1:2) = lbound(SrcMiscData%TESF, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%TESF, kind=B8Ki)
+      LB(1:2) = lbound(SrcMiscData%TESF)
+      UB(1:2) = ubound(SrcMiscData%TESF)
       if (.not. allocated(DstMiscData%TESF)) then
          allocate(DstMiscData%TESF(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1790,8 +1790,8 @@ subroutine UA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%TESF = SrcMiscData%TESF
    end if
    if (allocated(SrcMiscData%LESF)) then
-      LB(1:2) = lbound(SrcMiscData%LESF, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%LESF, kind=B8Ki)
+      LB(1:2) = lbound(SrcMiscData%LESF)
+      UB(1:2) = ubound(SrcMiscData%LESF)
       if (.not. allocated(DstMiscData%LESF)) then
          allocate(DstMiscData%LESF(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1802,8 +1802,8 @@ subroutine UA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%LESF = SrcMiscData%LESF
    end if
    if (allocated(SrcMiscData%VRTX)) then
-      LB(1:2) = lbound(SrcMiscData%VRTX, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%VRTX, kind=B8Ki)
+      LB(1:2) = lbound(SrcMiscData%VRTX)
+      UB(1:2) = ubound(SrcMiscData%VRTX)
       if (.not. allocated(DstMiscData%VRTX)) then
          allocate(DstMiscData%VRTX(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1814,8 +1814,8 @@ subroutine UA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%VRTX = SrcMiscData%VRTX
    end if
    if (allocated(SrcMiscData%T_Sh)) then
-      LB(1:2) = lbound(SrcMiscData%T_Sh, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%T_Sh, kind=B8Ki)
+      LB(1:2) = lbound(SrcMiscData%T_Sh)
+      UB(1:2) = ubound(SrcMiscData%T_Sh)
       if (.not. allocated(DstMiscData%T_Sh)) then
          allocate(DstMiscData%T_Sh(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1826,8 +1826,8 @@ subroutine UA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%T_Sh = SrcMiscData%T_Sh
    end if
    if (allocated(SrcMiscData%BEDSEP)) then
-      LB(1:2) = lbound(SrcMiscData%BEDSEP, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%BEDSEP, kind=B8Ki)
+      LB(1:2) = lbound(SrcMiscData%BEDSEP)
+      UB(1:2) = ubound(SrcMiscData%BEDSEP)
       if (.not. allocated(DstMiscData%BEDSEP)) then
          allocate(DstMiscData%BEDSEP(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1838,8 +1838,8 @@ subroutine UA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%BEDSEP = SrcMiscData%BEDSEP
    end if
    if (allocated(SrcMiscData%weight)) then
-      LB(1:2) = lbound(SrcMiscData%weight, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%weight, kind=B8Ki)
+      LB(1:2) = lbound(SrcMiscData%weight)
+      UB(1:2) = ubound(SrcMiscData%weight)
       if (.not. allocated(DstMiscData%weight)) then
          allocate(DstMiscData%weight(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1899,7 +1899,7 @@ subroutine UA_UnPackMisc(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(UA_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'UA_UnPackMisc'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1920,15 +1920,15 @@ subroutine UA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'UA_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstParamData%dt = SrcParamData%dt
    if (allocated(SrcParamData%c)) then
-      LB(1:2) = lbound(SrcParamData%c, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%c, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%c)
+      UB(1:2) = ubound(SrcParamData%c)
       if (.not. allocated(DstParamData%c)) then
          allocate(DstParamData%c(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1953,8 +1953,8 @@ subroutine UA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%ShedEffect = SrcParamData%ShedEffect
    DstParamData%lin_nx = SrcParamData%lin_nx
    if (allocated(SrcParamData%UA_off_forGood)) then
-      LB(1:2) = lbound(SrcParamData%UA_off_forGood, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%UA_off_forGood, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%UA_off_forGood)
+      UB(1:2) = ubound(SrcParamData%UA_off_forGood)
       if (.not. allocated(DstParamData%UA_off_forGood)) then
          allocate(DstParamData%UA_off_forGood(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1965,8 +1965,8 @@ subroutine UA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%UA_off_forGood = SrcParamData%UA_off_forGood
    end if
    if (allocated(SrcParamData%lin_xIndx)) then
-      LB(1:2) = lbound(SrcParamData%lin_xIndx, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%lin_xIndx, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%lin_xIndx)
+      UB(1:2) = ubound(SrcParamData%lin_xIndx)
       if (.not. allocated(DstParamData%lin_xIndx)) then
          allocate(DstParamData%lin_xIndx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2030,7 +2030,7 @@ subroutine UA_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(UA_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'UA_UnPackParam'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -2115,7 +2115,7 @@ subroutine UA_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'UA_CopyOutput'
    ErrStat = ErrID_None
@@ -2126,8 +2126,8 @@ subroutine UA_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
    DstOutputData%Cl = SrcOutputData%Cl
    DstOutputData%Cd = SrcOutputData%Cd
    if (allocated(SrcOutputData%WriteOutput)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutput, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%WriteOutput, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%WriteOutput)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput)
       if (.not. allocated(DstOutputData%WriteOutput)) then
          allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2169,7 +2169,7 @@ subroutine UA_UnPackOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(UA_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'UA_UnPackOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return

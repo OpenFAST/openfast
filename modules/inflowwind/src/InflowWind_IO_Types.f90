@@ -650,7 +650,7 @@ subroutine InflowWind_IO_CopyGrid4D_InitInputType(SrcGrid4D_InitInputTypeData, D
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(5), UB(5)
+   integer(B4Ki)                  :: LB(5), UB(5)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'InflowWind_IO_CopyGrid4D_InitInputType'
    ErrStat = ErrID_None
@@ -688,7 +688,7 @@ subroutine InflowWind_IO_UnPackGrid4D_InitInputType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Grid4D_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackGrid4D_InitInputType'
-   integer(B8Ki)   :: LB(5), UB(5)
+   integer(B4Ki)   :: LB(5), UB(5)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
