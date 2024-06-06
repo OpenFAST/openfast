@@ -3985,261 +3985,6 @@ subroutine AD_UnPackRotMiscVarType(RF, OutData)
    call RegUnpack(RF, OutData%TFinM_i); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine AD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
-   type(AD_MiscVarType), intent(inout) :: SrcMiscData
-   type(AD_MiscVarType), intent(inout) :: DstMiscData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1, i2
-   integer(B4Ki)                  :: LB(2), UB(2)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'AD_CopyMisc'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   if (allocated(SrcMiscData%rotors)) then
-      LB(1:1) = lbound(SrcMiscData%rotors)
-      UB(1:1) = ubound(SrcMiscData%rotors)
-      if (.not. allocated(DstMiscData%rotors)) then
-         allocate(DstMiscData%rotors(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%rotors.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call AD_CopyRotMiscVarType(SrcMiscData%rotors(i1), DstMiscData%rotors(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcMiscData%FVW_u)) then
-      LB(1:1) = lbound(SrcMiscData%FVW_u)
-      UB(1:1) = ubound(SrcMiscData%FVW_u)
-      if (.not. allocated(DstMiscData%FVW_u)) then
-         allocate(DstMiscData%FVW_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FVW_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call FVW_CopyInput(SrcMiscData%FVW_u(i1), DstMiscData%FVW_u(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   call FVW_CopyOutput(SrcMiscData%FVW_y, DstMiscData%FVW_y, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call FVW_CopyMisc(SrcMiscData%FVW, DstMiscData%FVW, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcMiscData%WindPos)) then
-      LB(1:2) = lbound(SrcMiscData%WindPos)
-      UB(1:2) = ubound(SrcMiscData%WindPos)
-      if (.not. allocated(DstMiscData%WindPos)) then
-         allocate(DstMiscData%WindPos(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WindPos.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%WindPos = SrcMiscData%WindPos
-   end if
-   if (allocated(SrcMiscData%WindVel)) then
-      LB(1:2) = lbound(SrcMiscData%WindVel)
-      UB(1:2) = ubound(SrcMiscData%WindVel)
-      if (.not. allocated(DstMiscData%WindVel)) then
-         allocate(DstMiscData%WindVel(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WindVel.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%WindVel = SrcMiscData%WindVel
-   end if
-   if (allocated(SrcMiscData%WindAcc)) then
-      LB(1:2) = lbound(SrcMiscData%WindAcc)
-      UB(1:2) = ubound(SrcMiscData%WindAcc)
-      if (.not. allocated(DstMiscData%WindAcc)) then
-         allocate(DstMiscData%WindAcc(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WindAcc.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%WindAcc = SrcMiscData%WindAcc
-   end if
-   if (allocated(SrcMiscData%Inflow)) then
-      LB(1:1) = lbound(SrcMiscData%Inflow)
-      UB(1:1) = ubound(SrcMiscData%Inflow)
-      if (.not. allocated(DstMiscData%Inflow)) then
-         allocate(DstMiscData%Inflow(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Inflow.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call AD_CopyInflowType(SrcMiscData%Inflow(i1), DstMiscData%Inflow(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-end subroutine
-
-subroutine AD_DestroyMisc(MiscData, ErrStat, ErrMsg)
-   type(AD_MiscVarType), intent(inout) :: MiscData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1, i2
-   integer(B4Ki)   :: LB(2), UB(2)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'AD_DestroyMisc'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   if (allocated(MiscData%rotors)) then
-      LB(1:1) = lbound(MiscData%rotors)
-      UB(1:1) = ubound(MiscData%rotors)
-      do i1 = LB(1), UB(1)
-         call AD_DestroyRotMiscVarType(MiscData%rotors(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(MiscData%rotors)
-   end if
-   if (allocated(MiscData%FVW_u)) then
-      LB(1:1) = lbound(MiscData%FVW_u)
-      UB(1:1) = ubound(MiscData%FVW_u)
-      do i1 = LB(1), UB(1)
-         call FVW_DestroyInput(MiscData%FVW_u(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(MiscData%FVW_u)
-   end if
-   call FVW_DestroyOutput(MiscData%FVW_y, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call FVW_DestroyMisc(MiscData%FVW, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(MiscData%WindPos)) then
-      deallocate(MiscData%WindPos)
-   end if
-   if (allocated(MiscData%WindVel)) then
-      deallocate(MiscData%WindVel)
-   end if
-   if (allocated(MiscData%WindAcc)) then
-      deallocate(MiscData%WindAcc)
-   end if
-   if (allocated(MiscData%Inflow)) then
-      LB(1:1) = lbound(MiscData%Inflow)
-      UB(1:1) = ubound(MiscData%Inflow)
-      do i1 = LB(1), UB(1)
-         call AD_DestroyInflowType(MiscData%Inflow(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(MiscData%Inflow)
-   end if
-end subroutine
-
-subroutine AD_PackMisc(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(AD_MiscVarType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'AD_PackMisc'
-   integer(B4Ki)   :: i1, i2
-   integer(B4Ki)   :: LB(2), UB(2)
-   if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, allocated(InData%rotors))
-   if (allocated(InData%rotors)) then
-      call RegPackBounds(RF, 1, lbound(InData%rotors), ubound(InData%rotors))
-      LB(1:1) = lbound(InData%rotors)
-      UB(1:1) = ubound(InData%rotors)
-      do i1 = LB(1), UB(1)
-         call AD_PackRotMiscVarType(RF, InData%rotors(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%FVW_u))
-   if (allocated(InData%FVW_u)) then
-      call RegPackBounds(RF, 1, lbound(InData%FVW_u), ubound(InData%FVW_u))
-      LB(1:1) = lbound(InData%FVW_u)
-      UB(1:1) = ubound(InData%FVW_u)
-      do i1 = LB(1), UB(1)
-         call FVW_PackInput(RF, InData%FVW_u(i1)) 
-      end do
-   end if
-   call FVW_PackOutput(RF, InData%FVW_y) 
-   call FVW_PackMisc(RF, InData%FVW) 
-   call RegPackAlloc(RF, InData%WindPos)
-   call RegPackAlloc(RF, InData%WindVel)
-   call RegPackAlloc(RF, InData%WindAcc)
-   call RegPack(RF, allocated(InData%Inflow))
-   if (allocated(InData%Inflow)) then
-      call RegPackBounds(RF, 1, lbound(InData%Inflow), ubound(InData%Inflow))
-      LB(1:1) = lbound(InData%Inflow)
-      UB(1:1) = ubound(InData%Inflow)
-      do i1 = LB(1), UB(1)
-         call AD_PackInflowType(RF, InData%Inflow(i1)) 
-      end do
-   end if
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine AD_UnPackMisc(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(AD_MiscVarType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'AD_UnPackMisc'
-   integer(B4Ki)   :: i1, i2
-   integer(B4Ki)   :: LB(2), UB(2)
-   integer(IntKi)  :: stat
-   logical         :: IsAllocAssoc
-   if (RF%ErrStat /= ErrID_None) return
-   if (allocated(OutData%rotors)) deallocate(OutData%rotors)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%rotors(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%rotors.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call AD_UnpackRotMiscVarType(RF, OutData%rotors(i1)) ! rotors 
-      end do
-   end if
-   if (allocated(OutData%FVW_u)) deallocate(OutData%FVW_u)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%FVW_u(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%FVW_u.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call FVW_UnpackInput(RF, OutData%FVW_u(i1)) ! FVW_u 
-      end do
-   end if
-   call FVW_UnpackOutput(RF, OutData%FVW_y) ! FVW_y 
-   call FVW_UnpackMisc(RF, OutData%FVW) ! FVW 
-   call RegUnpackAlloc(RF, OutData%WindPos); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%WindVel); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%WindAcc); if (RegCheckErr(RF, RoutineName)) return
-   if (allocated(OutData%Inflow)) deallocate(OutData%Inflow)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%Inflow(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Inflow.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call AD_UnpackInflowType(RF, OutData%Inflow(i1)) ! Inflow 
-      end do
-   end if
-end subroutine
-
 subroutine AD_CopyElemInflowType(SrcElemInflowTypeData, DstElemInflowTypeData, CtrlCode, ErrStat, ErrMsg)
    type(ElemInflowType), intent(in) :: SrcElemInflowTypeData
    type(ElemInflowType), intent(inout) :: DstElemInflowTypeData
@@ -4538,6 +4283,261 @@ subroutine AD_UnPackInflowType(RF, OutData)
       end if
       do i1 = LB(1), UB(1)
          call AD_UnpackRotInflowType(RF, OutData%RotInflow(i1)) ! RotInflow 
+      end do
+   end if
+end subroutine
+
+subroutine AD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
+   type(AD_MiscVarType), intent(inout) :: SrcMiscData
+   type(AD_MiscVarType), intent(inout) :: DstMiscData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)                  :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_CopyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(SrcMiscData%rotors)) then
+      LB(1:1) = lbound(SrcMiscData%rotors)
+      UB(1:1) = ubound(SrcMiscData%rotors)
+      if (.not. allocated(DstMiscData%rotors)) then
+         allocate(DstMiscData%rotors(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%rotors.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call AD_CopyRotMiscVarType(SrcMiscData%rotors(i1), DstMiscData%rotors(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcMiscData%FVW_u)) then
+      LB(1:1) = lbound(SrcMiscData%FVW_u)
+      UB(1:1) = ubound(SrcMiscData%FVW_u)
+      if (.not. allocated(DstMiscData%FVW_u)) then
+         allocate(DstMiscData%FVW_u(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FVW_u.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call FVW_CopyInput(SrcMiscData%FVW_u(i1), DstMiscData%FVW_u(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   call FVW_CopyOutput(SrcMiscData%FVW_y, DstMiscData%FVW_y, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call FVW_CopyMisc(SrcMiscData%FVW, DstMiscData%FVW, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcMiscData%WindPos)) then
+      LB(1:2) = lbound(SrcMiscData%WindPos)
+      UB(1:2) = ubound(SrcMiscData%WindPos)
+      if (.not. allocated(DstMiscData%WindPos)) then
+         allocate(DstMiscData%WindPos(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WindPos.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%WindPos = SrcMiscData%WindPos
+   end if
+   if (allocated(SrcMiscData%WindVel)) then
+      LB(1:2) = lbound(SrcMiscData%WindVel)
+      UB(1:2) = ubound(SrcMiscData%WindVel)
+      if (.not. allocated(DstMiscData%WindVel)) then
+         allocate(DstMiscData%WindVel(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WindVel.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%WindVel = SrcMiscData%WindVel
+   end if
+   if (allocated(SrcMiscData%WindAcc)) then
+      LB(1:2) = lbound(SrcMiscData%WindAcc)
+      UB(1:2) = ubound(SrcMiscData%WindAcc)
+      if (.not. allocated(DstMiscData%WindAcc)) then
+         allocate(DstMiscData%WindAcc(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WindAcc.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%WindAcc = SrcMiscData%WindAcc
+   end if
+   if (allocated(SrcMiscData%Inflow)) then
+      LB(1:1) = lbound(SrcMiscData%Inflow)
+      UB(1:1) = ubound(SrcMiscData%Inflow)
+      if (.not. allocated(DstMiscData%Inflow)) then
+         allocate(DstMiscData%Inflow(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Inflow.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call AD_CopyInflowType(SrcMiscData%Inflow(i1), DstMiscData%Inflow(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+end subroutine
+
+subroutine AD_DestroyMisc(MiscData, ErrStat, ErrMsg)
+   type(AD_MiscVarType), intent(inout) :: MiscData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_DestroyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(MiscData%rotors)) then
+      LB(1:1) = lbound(MiscData%rotors)
+      UB(1:1) = ubound(MiscData%rotors)
+      do i1 = LB(1), UB(1)
+         call AD_DestroyRotMiscVarType(MiscData%rotors(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%rotors)
+   end if
+   if (allocated(MiscData%FVW_u)) then
+      LB(1:1) = lbound(MiscData%FVW_u)
+      UB(1:1) = ubound(MiscData%FVW_u)
+      do i1 = LB(1), UB(1)
+         call FVW_DestroyInput(MiscData%FVW_u(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%FVW_u)
+   end if
+   call FVW_DestroyOutput(MiscData%FVW_y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FVW_DestroyMisc(MiscData%FVW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(MiscData%WindPos)) then
+      deallocate(MiscData%WindPos)
+   end if
+   if (allocated(MiscData%WindVel)) then
+      deallocate(MiscData%WindVel)
+   end if
+   if (allocated(MiscData%WindAcc)) then
+      deallocate(MiscData%WindAcc)
+   end if
+   if (allocated(MiscData%Inflow)) then
+      LB(1:1) = lbound(MiscData%Inflow)
+      UB(1:1) = ubound(MiscData%Inflow)
+      do i1 = LB(1), UB(1)
+         call AD_DestroyInflowType(MiscData%Inflow(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%Inflow)
+   end if
+end subroutine
+
+subroutine AD_PackMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(AD_MiscVarType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'AD_PackMisc'
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, allocated(InData%rotors))
+   if (allocated(InData%rotors)) then
+      call RegPackBounds(RF, 1, lbound(InData%rotors), ubound(InData%rotors))
+      LB(1:1) = lbound(InData%rotors)
+      UB(1:1) = ubound(InData%rotors)
+      do i1 = LB(1), UB(1)
+         call AD_PackRotMiscVarType(RF, InData%rotors(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%FVW_u))
+   if (allocated(InData%FVW_u)) then
+      call RegPackBounds(RF, 1, lbound(InData%FVW_u), ubound(InData%FVW_u))
+      LB(1:1) = lbound(InData%FVW_u)
+      UB(1:1) = ubound(InData%FVW_u)
+      do i1 = LB(1), UB(1)
+         call FVW_PackInput(RF, InData%FVW_u(i1)) 
+      end do
+   end if
+   call FVW_PackOutput(RF, InData%FVW_y) 
+   call FVW_PackMisc(RF, InData%FVW) 
+   call RegPackAlloc(RF, InData%WindPos)
+   call RegPackAlloc(RF, InData%WindVel)
+   call RegPackAlloc(RF, InData%WindAcc)
+   call RegPack(RF, allocated(InData%Inflow))
+   if (allocated(InData%Inflow)) then
+      call RegPackBounds(RF, 1, lbound(InData%Inflow), ubound(InData%Inflow))
+      LB(1:1) = lbound(InData%Inflow)
+      UB(1:1) = ubound(InData%Inflow)
+      do i1 = LB(1), UB(1)
+         call AD_PackInflowType(RF, InData%Inflow(i1)) 
+      end do
+   end if
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine AD_UnPackMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(AD_MiscVarType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'AD_UnPackMisc'
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   if (allocated(OutData%rotors)) deallocate(OutData%rotors)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%rotors(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%rotors.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call AD_UnpackRotMiscVarType(RF, OutData%rotors(i1)) ! rotors 
+      end do
+   end if
+   if (allocated(OutData%FVW_u)) deallocate(OutData%FVW_u)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%FVW_u(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%FVW_u.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call FVW_UnpackInput(RF, OutData%FVW_u(i1)) ! FVW_u 
+      end do
+   end if
+   call FVW_UnpackOutput(RF, OutData%FVW_y) ! FVW_y 
+   call FVW_UnpackMisc(RF, OutData%FVW) ! FVW 
+   call RegUnpackAlloc(RF, OutData%WindPos); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WindVel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WindAcc); if (RegCheckErr(RF, RoutineName)) return
+   if (allocated(OutData%Inflow)) deallocate(OutData%Inflow)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%Inflow(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Inflow.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call AD_UnpackInflowType(RF, OutData%Inflow(i1)) ! Inflow 
       end do
    end if
 end subroutine
