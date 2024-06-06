@@ -133,7 +133,7 @@ subroutine FWrap_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(5), UB(5)
+   integer(B4Ki)                  :: LB(5), UB(5)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'FWrap_CopyInitInput'
    ErrStat = ErrID_None
@@ -160,8 +160,8 @@ subroutine FWrap_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%NumCtrl2SC = SrcInitInputData%NumCtrl2SC
    DstInitInputData%UseSC = SrcInitInputData%UseSC
    if (allocated(SrcInitInputData%fromSCGlob)) then
-      LB(1:1) = lbound(SrcInitInputData%fromSCGlob, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%fromSCGlob, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%fromSCGlob)
+      UB(1:1) = ubound(SrcInitInputData%fromSCGlob)
       if (.not. allocated(DstInitInputData%fromSCGlob)) then
          allocate(DstInitInputData%fromSCGlob(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -172,8 +172,8 @@ subroutine FWrap_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       DstInitInputData%fromSCGlob = SrcInitInputData%fromSCGlob
    end if
    if (allocated(SrcInitInputData%fromSC)) then
-      LB(1:1) = lbound(SrcInitInputData%fromSC, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%fromSC, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%fromSC)
+      UB(1:1) = ubound(SrcInitInputData%fromSC)
       if (.not. allocated(DstInitInputData%fromSC)) then
          allocate(DstInitInputData%fromSC(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -239,7 +239,7 @@ subroutine FWrap_UnPackInitInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(FWrap_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FWrap_UnPackInitInput'
-   integer(B8Ki)   :: LB(5), UB(5)
+   integer(B4Ki)   :: LB(5), UB(5)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -478,8 +478,8 @@ subroutine FWrap_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FWrap_CopyMisc'
@@ -489,8 +489,8 @@ subroutine FWrap_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcMiscData%TempDisp)) then
-      LB(1:1) = lbound(SrcMiscData%TempDisp, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%TempDisp, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%TempDisp)
+      UB(1:1) = ubound(SrcMiscData%TempDisp)
       if (.not. allocated(DstMiscData%TempDisp)) then
          allocate(DstMiscData%TempDisp(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -505,8 +505,8 @@ subroutine FWrap_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcMiscData%TempLoads)) then
-      LB(1:1) = lbound(SrcMiscData%TempLoads, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%TempLoads, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%TempLoads)
+      UB(1:1) = ubound(SrcMiscData%TempLoads)
       if (.not. allocated(DstMiscData%TempLoads)) then
          allocate(DstMiscData%TempLoads(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -521,8 +521,8 @@ subroutine FWrap_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcMiscData%ADRotorDisk)) then
-      LB(1:1) = lbound(SrcMiscData%ADRotorDisk, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%ADRotorDisk, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%ADRotorDisk)
+      UB(1:1) = ubound(SrcMiscData%ADRotorDisk)
       if (.not. allocated(DstMiscData%ADRotorDisk)) then
          allocate(DstMiscData%ADRotorDisk(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -537,8 +537,8 @@ subroutine FWrap_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcMiscData%AD_L2L)) then
-      LB(1:1) = lbound(SrcMiscData%AD_L2L, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%AD_L2L, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%AD_L2L)
+      UB(1:1) = ubound(SrcMiscData%AD_L2L)
       if (.not. allocated(DstMiscData%AD_L2L)) then
          allocate(DstMiscData%AD_L2L(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -558,8 +558,8 @@ subroutine FWrap_DestroyMisc(MiscData, ErrStat, ErrMsg)
    type(FWrap_MiscVarType), intent(inout) :: MiscData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FWrap_DestroyMisc'
@@ -568,8 +568,8 @@ subroutine FWrap_DestroyMisc(MiscData, ErrStat, ErrMsg)
    call FAST_DestroyTurbineType(MiscData%Turbine, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%TempDisp)) then
-      LB(1:1) = lbound(MiscData%TempDisp, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%TempDisp, kind=B8Ki)
+      LB(1:1) = lbound(MiscData%TempDisp)
+      UB(1:1) = ubound(MiscData%TempDisp)
       do i1 = LB(1), UB(1)
          call MeshDestroy( MiscData%TempDisp(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -577,8 +577,8 @@ subroutine FWrap_DestroyMisc(MiscData, ErrStat, ErrMsg)
       deallocate(MiscData%TempDisp)
    end if
    if (allocated(MiscData%TempLoads)) then
-      LB(1:1) = lbound(MiscData%TempLoads, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%TempLoads, kind=B8Ki)
+      LB(1:1) = lbound(MiscData%TempLoads)
+      UB(1:1) = ubound(MiscData%TempLoads)
       do i1 = LB(1), UB(1)
          call MeshDestroy( MiscData%TempLoads(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -586,8 +586,8 @@ subroutine FWrap_DestroyMisc(MiscData, ErrStat, ErrMsg)
       deallocate(MiscData%TempLoads)
    end if
    if (allocated(MiscData%ADRotorDisk)) then
-      LB(1:1) = lbound(MiscData%ADRotorDisk, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%ADRotorDisk, kind=B8Ki)
+      LB(1:1) = lbound(MiscData%ADRotorDisk)
+      UB(1:1) = ubound(MiscData%ADRotorDisk)
       do i1 = LB(1), UB(1)
          call MeshDestroy( MiscData%ADRotorDisk(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -595,8 +595,8 @@ subroutine FWrap_DestroyMisc(MiscData, ErrStat, ErrMsg)
       deallocate(MiscData%ADRotorDisk)
    end if
    if (allocated(MiscData%AD_L2L)) then
-      LB(1:1) = lbound(MiscData%AD_L2L, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%AD_L2L, kind=B8Ki)
+      LB(1:1) = lbound(MiscData%AD_L2L)
+      UB(1:1) = ubound(MiscData%AD_L2L)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyMeshMapType(MiscData%AD_L2L(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -609,42 +609,42 @@ subroutine FWrap_PackMisc(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(FWrap_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FWrap_PackMisc'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call FAST_PackTurbineType(RF, InData%Turbine) 
    call RegPack(RF, allocated(InData%TempDisp))
    if (allocated(InData%TempDisp)) then
-      call RegPackBounds(RF, 1, lbound(InData%TempDisp, kind=B8Ki), ubound(InData%TempDisp, kind=B8Ki))
-      LB(1:1) = lbound(InData%TempDisp, kind=B8Ki)
-      UB(1:1) = ubound(InData%TempDisp, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%TempDisp), ubound(InData%TempDisp))
+      LB(1:1) = lbound(InData%TempDisp)
+      UB(1:1) = ubound(InData%TempDisp)
       do i1 = LB(1), UB(1)
          call MeshPack(RF, InData%TempDisp(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%TempLoads))
    if (allocated(InData%TempLoads)) then
-      call RegPackBounds(RF, 1, lbound(InData%TempLoads, kind=B8Ki), ubound(InData%TempLoads, kind=B8Ki))
-      LB(1:1) = lbound(InData%TempLoads, kind=B8Ki)
-      UB(1:1) = ubound(InData%TempLoads, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%TempLoads), ubound(InData%TempLoads))
+      LB(1:1) = lbound(InData%TempLoads)
+      UB(1:1) = ubound(InData%TempLoads)
       do i1 = LB(1), UB(1)
          call MeshPack(RF, InData%TempLoads(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%ADRotorDisk))
    if (allocated(InData%ADRotorDisk)) then
-      call RegPackBounds(RF, 1, lbound(InData%ADRotorDisk, kind=B8Ki), ubound(InData%ADRotorDisk, kind=B8Ki))
-      LB(1:1) = lbound(InData%ADRotorDisk, kind=B8Ki)
-      UB(1:1) = ubound(InData%ADRotorDisk, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%ADRotorDisk), ubound(InData%ADRotorDisk))
+      LB(1:1) = lbound(InData%ADRotorDisk)
+      UB(1:1) = ubound(InData%ADRotorDisk)
       do i1 = LB(1), UB(1)
          call MeshPack(RF, InData%ADRotorDisk(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%AD_L2L))
    if (allocated(InData%AD_L2L)) then
-      call RegPackBounds(RF, 1, lbound(InData%AD_L2L, kind=B8Ki), ubound(InData%AD_L2L, kind=B8Ki))
-      LB(1:1) = lbound(InData%AD_L2L, kind=B8Ki)
-      UB(1:1) = ubound(InData%AD_L2L, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%AD_L2L), ubound(InData%AD_L2L))
+      LB(1:1) = lbound(InData%AD_L2L)
+      UB(1:1) = ubound(InData%AD_L2L)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackMeshMapType(RF, InData%AD_L2L(i1)) 
       end do
@@ -656,8 +656,8 @@ subroutine FWrap_UnPackMisc(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(FWrap_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FWrap_UnPackMisc'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -722,15 +722,15 @@ subroutine FWrap_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'FWrap_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstParamData%nr = SrcParamData%nr
    if (allocated(SrcParamData%r)) then
-      LB(1:1) = lbound(SrcParamData%r, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%r, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%r)
+      UB(1:1) = ubound(SrcParamData%r)
       if (.not. allocated(DstParamData%r)) then
          allocate(DstParamData%r(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -772,7 +772,7 @@ subroutine FWrap_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(FWrap_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FWrap_UnPackParam'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -788,14 +788,14 @@ subroutine FWrap_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'FWrap_CopyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInputData%fromSCglob)) then
-      LB(1:1) = lbound(SrcInputData%fromSCglob, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputData%fromSCglob, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputData%fromSCglob)
+      UB(1:1) = ubound(SrcInputData%fromSCglob)
       if (.not. allocated(DstInputData%fromSCglob)) then
          allocate(DstInputData%fromSCglob(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -806,8 +806,8 @@ subroutine FWrap_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
       DstInputData%fromSCglob = SrcInputData%fromSCglob
    end if
    if (allocated(SrcInputData%fromSC)) then
-      LB(1:1) = lbound(SrcInputData%fromSC, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputData%fromSC, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputData%fromSC)
+      UB(1:1) = ubound(SrcInputData%fromSC)
       if (.not. allocated(DstInputData%fromSC)) then
          allocate(DstInputData%fromSC(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -848,7 +848,7 @@ subroutine FWrap_UnPackInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(FWrap_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FWrap_UnPackInput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -862,14 +862,14 @@ subroutine FWrap_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'FWrap_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOutputData%toSC)) then
-      LB(1:1) = lbound(SrcOutputData%toSC, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%toSC, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%toSC)
+      UB(1:1) = ubound(SrcOutputData%toSC)
       if (.not. allocated(DstOutputData%toSC)) then
          allocate(DstOutputData%toSC(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -887,8 +887,8 @@ subroutine FWrap_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
    DstOutputData%D_rotor = SrcOutputData%D_rotor
    DstOutputData%DiskAvg_Vx_Rel = SrcOutputData%DiskAvg_Vx_Rel
    if (allocated(SrcOutputData%AzimAvg_Ct)) then
-      LB(1:1) = lbound(SrcOutputData%AzimAvg_Ct, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%AzimAvg_Ct, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%AzimAvg_Ct)
+      UB(1:1) = ubound(SrcOutputData%AzimAvg_Ct)
       if (.not. allocated(DstOutputData%AzimAvg_Ct)) then
          allocate(DstOutputData%AzimAvg_Ct(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -899,8 +899,8 @@ subroutine FWrap_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
       DstOutputData%AzimAvg_Ct = SrcOutputData%AzimAvg_Ct
    end if
    if (allocated(SrcOutputData%AzimAvg_Cq)) then
-      LB(1:1) = lbound(SrcOutputData%AzimAvg_Cq, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%AzimAvg_Cq, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%AzimAvg_Cq)
+      UB(1:1) = ubound(SrcOutputData%AzimAvg_Cq)
       if (.not. allocated(DstOutputData%AzimAvg_Cq)) then
          allocate(DstOutputData%AzimAvg_Cq(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -952,7 +952,7 @@ subroutine FWrap_UnPackOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(FWrap_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FWrap_UnPackOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
