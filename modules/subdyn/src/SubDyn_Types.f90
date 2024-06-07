@@ -255,6 +255,7 @@ IMPLICIT NONE
     TYPE(ElemPropType) , DIMENSION(:), ALLOCATABLE  :: ElemProps      !< List of element properties [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: FG      !< Gravity force vector (with initial cable force T0), not reduced [N]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: DP0      !< Vector from TP to a Node at t=0, used for Floating Rigid Body motion [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: rPG      !< Vector from TP to rigid-body CoG in the Guyan (rigid-body) frame, used for Floating Rigid Body Motion [m]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NodeID2JointID      !< Store Joint ID for each NodeID since SubDyn re-label nodes (and add more nodes) [-]
     LOGICAL  :: reduced = .false.      !< True if system has been reduced to account for constraints [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: T_red      !< Transformation matrix performing the constraint reduction x = T. xtilde [-]
@@ -2579,6 +2580,18 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstParamData%DP0 = SrcParamData%DP0
    end if
+   if (allocated(SrcParamData%rPG)) then
+      LB(1:1) = lbound(SrcParamData%rPG, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%rPG, kind=B8Ki)
+      if (.not. allocated(DstParamData%rPG)) then
+         allocate(DstParamData%rPG(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%rPG.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%rPG = SrcParamData%rPG
+   end if
    if (allocated(SrcParamData%NodeID2JointID)) then
       LB(1:1) = lbound(SrcParamData%NodeID2JointID, kind=B8Ki)
       UB(1:1) = ubound(SrcParamData%NodeID2JointID, kind=B8Ki)
@@ -3333,6 +3346,9 @@ subroutine SD_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%DP0)) then
       deallocate(ParamData%DP0)
    end if
+   if (allocated(ParamData%rPG)) then
+      deallocate(ParamData%rPG)
+   end if
    if (allocated(ParamData%NodeID2JointID)) then
       deallocate(ParamData%NodeID2JointID)
    end if
@@ -3560,6 +3576,7 @@ subroutine SD_PackParam(RF, Indata)
    end if
    call RegPackAlloc(RF, InData%FG)
    call RegPackAlloc(RF, InData%DP0)
+   call RegPackAlloc(RF, InData%rPG)
    call RegPackAlloc(RF, InData%NodeID2JointID)
    call RegPack(RF, InData%reduced)
    call RegPackAlloc(RF, InData%T_red)
@@ -3735,6 +3752,7 @@ subroutine SD_UnPackParam(RF, OutData)
    end if
    call RegUnpackAlloc(RF, OutData%FG); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%DP0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%rPG); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%NodeID2JointID); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%reduced); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%T_red); if (RegCheckErr(RF, RoutineName)) return

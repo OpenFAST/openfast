@@ -192,6 +192,12 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    real(FEKi), dimension(:)  , allocatable :: Omega
    real(FEKi), dimension(:)  , allocatable :: Omega_Gy       ! Frequencies of Guyan modes
    logical, allocatable                    :: bDOF(:)        ! Mask for DOF to keep (True), or reduce (False)
+ 
+   REAL(ReKi)                              :: rOG(3)         ! Vector from origin to G
+   REAL(ReKi)                              :: M_O(6,6)       ! Rigid-body inertia matrix
+   REAL(FEKi),allocatable                  :: MBB(:,:)       ! Leader DOFs mass matrix
+   REAL(ReKi), dimension(:,:), allocatable :: TI2 ! For Equivalent mass matrix
+
    INTEGER(IntKi)       :: ErrStat2      ! Error status of the operation
    CHARACTER(ErrMsgLen) :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
    
@@ -347,6 +353,28 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! Construct the input mesh (u%LMesh, force on nodes) and output mesh (y%Y2Mesh, displacements)
    CALL CreateInputOutputMeshes( p%nNodes, Init%Nodes, u%LMesh, y%Y2Mesh, y%Y3Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
 
+   IF (p%Floating) THEN
+      ! Compute the vector from reference point P to rigid-body CoG for floating structures
+      ! Set TI2, transformation matrix from R DOFs to SubDyn Origin
+      CALL AllocAry( TI2,    p%nDOFR__ , 6,       'TI2',    ErrStat2, ErrMsg2 ); if(Failed()) return
+      CALL RigidTrnsf(Init, p, (/0._ReKi, 0._ReKi, 0._ReKi/), p%IDR__, p%nDOFR__, TI2, ErrStat2, ErrMsg2); if(Failed()) return
+      ! Compute Rigid body mass matrix (without Soil, and using both Interface and Reactions nodes as leader DOF)
+      if (p%nDOFR__/=p%nDOF__Rb) then
+         call SD_Guyan_RigidBodyMass(Init, p, MBB, ErrStat2, ErrMsg2); if(Failed()) return
+         M_O=matmul(TRANSPOSE(TI2),matmul(MBB,TI2)) !Equivalent mass matrix of the rigid body
+      else
+         M_O=matmul(TRANSPOSE(TI2),matmul(CBparams%MBB,TI2)) !Equivalent mass matrix of the rigid body
+      endif
+      deallocate(TI2)
+      ! Clean up for values that ought to be 0
+      M_O(1,2:4)= 0.0_ReKi; 
+      M_O(2,1  )= 0.0_ReKi; M_O(2,3  )= 0.0_ReKi; M_O(2,5  )= 0.0_ReKi;
+      M_O(3,1:2)= 0.0_ReKi; M_O(3,6  )= 0.0_ReKi
+      M_O(4,1  )= 0.0_ReKi; M_O(5,2  )= 0.0_ReKi; M_O(6,3  )= 0.0_ReKi;
+      CALL rigidBodyMassMatrixCOG(M_O, rOG);
+      p%rPG = rOG-InitInput%TP_RefPoint
+   END IF
+
    ! --- Eigen values of full system (for summary file output only)
    IF ( Init%SSSum .or. p%OutFEMModes>idOutputFormatNone) THEN 
       ! M and K are reduced matrices, but Boundary conditions are not applied, so
@@ -481,6 +509,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       REAL(ReKi)                   :: udotdot_TP(6)
       INTEGER(IntKi), pointer      :: DOFList(:)
       REAL(ReKi)                   :: DCM(3,3)
+      REAL(ReKi)                   :: MBB(6,6)
       REAL(ReKi)                   :: F_I(6*p%nNodes_I) !  !Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
       TYPE(SD_ContinuousStateType) :: dxdt        ! Continuous state derivatives at t- for output file qmdotdot purposes only
       ! Variables for Guyan rigid body motion
@@ -671,18 +700,28 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          Y1_CB = 0.0_ReKi
       endif
 
-      ! Contribution from U_TP, Udot_TP, Uddot_TP, Reaction/coupling force at TP 
-      Y1_Utp  = - (matmul(p%KBB, m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(p%MBB, m%udotdot_TP) )
+      ! Contribution from U_TP, Udot_TP, Uddot_TP, Reaction/coupling force at TP
+      if (p%GuyanLoadCorrection.and.p%Floating) then
+          ! Transform the body-frame Guyan mode (rigid-body) inertia matrix to global frame
+          MBB = matmul(RRb2g, matmul(p%MBB,transpose(RRb2g)))
+          Y1_Utp  = - (matmul(p%KBB, m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(MBB,m%udotdot_TP) )
+          ! Add back the nonlinear terms of the Guyan mode equation of motion
+          Y1_Utp(1:3) = Y1_Utp(1:3) - MBB(1,1)*cross_product(m%udot_TP(4:6),cross_product(m%udot_TP(4:6),matmul(Rb2g,p%rPG)))
+          Y1_Utp(4:6) = Y1_Utp(4:6) - cross_product(m%udot_TP(4:6),matmul(MBB(4:6,4:6),m%udot_TP(4:6)))
+      else
+          Y1_Utp  = - (matmul(p%KBB, m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(p%MBB,m%udotdot_TP) )
+      end if
+
       if (p%nDOFM>0) then
          !>>> Rotate All
          ! NOTE: this introduces some hysteresis
-         !if (p%Floating) then
-         !   udotdot_TP(1:3) = matmul(Rg2b, u%TPMesh%TranslationAcc( :,1))
-         !   udotdot_TP(4:6) = matmul(Rg2b, u%TPMesh%RotationAcc(:,1)    )
-         !   Y1_Utp  = Y1_Utp + matmul(RRb2g, matmul(p%MBmmB, udotdot_TP))  
-         !else
-         Y1_Utp  = Y1_Utp + matmul(p%MBmmB, m%udotdot_TP)  
-         !endif
+         if (p%Floating) then
+            udotdot_TP(1:3) = matmul(Rg2b, u%TPMesh%TranslationAcc( :,1))
+            udotdot_TP(4:6) = matmul(Rg2b, u%TPMesh%RotationAcc(:,1)    )
+            Y1_Utp  = Y1_Utp + matmul(RRb2g, matmul(p%MBmmB, udotdot_TP))
+         else
+            Y1_Utp  = Y1_Utp + matmul(p%MBmmB, m%udotdot_TP)
+         endif
       endif
 
       ! --- Special case for floating with extramoment, we use "rotated loads" m%F_L previously computed
