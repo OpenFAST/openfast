@@ -2009,8 +2009,13 @@ SUBROUTINE FAST_Init( p, m_FAST, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, 
    
       if (p%ZmqOn) then
          ! 1. We open the Broadcast socket (or, if already open, we connect to it)
-         call zmq_pub_init(p%ZmqOutAddress)
-         call zmq_req_init(p%ZmqInAddress)
+         if (p%ZmqOutNbr > 0) then 
+            call zmq_pub_init(p%ZmqOutAddress)
+         end if 
+         
+         if (p%ZmqInNbr > 0) then
+            call zmq_req_init(p%ZmqInAddress)
+         end if 
          ! 1. We open the REQ-REP socket (or, if already open, we connect to it)
          ! call zmq_pub_init(Turbine%p_FAST%ZmqInAddress)
          ! p%ZmqOutChannelsAry(1) = TurbID
@@ -3571,6 +3576,32 @@ END DO
          RETURN
       end if
 
+      ! Warn user that if ZmqIn requests wind speed, OF will treat it as steady across the rotor, compromising wake models
+      if ( any( p%ZmqInChannels == 'Wind1VelX' ) .or. any( p%ZmqInChannels == 'Wind1VelY' ) .or. any( p%ZmqInChannels == 'Wind1VelZ' ) ) then
+         call WrScr("Warning: ZMQ input requests wind speed. OpenFAST will treat it as steady across the rotor, compromising wake meandering. This warning will not be shown again.")
+      end if
+
+      ! Set ZMQ requests frequency
+      CALL ReadVar( UnIn, InputFile, Line, "ZmqInDT", "time step for in communication, FAST will keep it constant in between (sample & hold), default is same DT of simulation", ErrStat2, ErrMsg2, UnEc)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if ( ErrStat >= AbortErrLev ) then
+            call cleanup()
+            RETURN
+         end if
+         CALL Conv2UC( Line )
+         IF ( INDEX(Line, "DEFAULT" ) == 1 ) THEN
+            p%ZmqInDT = p%DT
+         ELSE
+            ! If it's not "default", read this variable; otherwise use the value in p%DT
+            READ( Line, *, IOSTAT=IOS) p%ZmqInDT
+            CALL CheckIOS ( IOS, InputFile, 'ZmqInDT', NumType, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if ( ErrStat >= AbortErrLev ) then
+               call cleanup()
+               RETURN
+            end if
+         end if
+
 
       ! -------------------------------------------   Broadcasting settings ----------------------------------------------------       
       CALL ReadVar( UnIn, InputFile, p%ZmqOutAddress, "ZmqOutAddress", "PUB-SUB localhost address ", ErrStat2, ErrMsg2, UnEc)
@@ -3613,6 +3644,27 @@ END DO
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN
+      end if
+
+      ! Set ZMQ broadcasting frequency
+      CALL ReadVar( UnIn, InputFile, Line, "ZmqOutDT", "time step for out communication, FAST will keep it constant in between (sample & hold), default is same DT of simulation", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN
+      end if
+      CALL Conv2UC( Line )
+      IF ( INDEX(Line, "DEFAULT" ) == 1 ) THEN
+         p%ZmqOutDT = p%DT
+      ELSE
+         ! If it's not "default", read this variable; otherwise use the value in p%DT
+         READ( Line, *, IOSTAT=IOS) p%ZmqOutDT
+         CALL CheckIOS ( IOS, InputFile, 'ZmqOutDT', NumType, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if ( ErrStat >= AbortErrLev ) then
+            call cleanup()
+            RETURN
+         end if
       end if
 
       CALL AllocAry(p%ZmqOutChannelsAry,  p%ZmqOutNbr + 2, "ZmqOutChannelsAry"  , Errstat2, ErrMsg2) 
@@ -5439,11 +5491,17 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
 
    ! Inserting here call to ZMQ to retrieve and override routines' outputs 
          
-   if (p_FAST%ZmqOn) then 
+   if ( (p_FAST%ZmqOn) .and. (p_FAST%ZmqInNbr > 0) ) then 
 
-      ZmqInChannelsAry = 0.0_DbKi
+      ! Check if there's need to communicate with the ZMQ socket (the values will be enforced for next time step) to update values 
 
-      call zmq_req(p_FAST%ZmqInAddress, p_FAST%ZmqInChannels, p_FAST%ZmqInNbr, ZmqInChannelsAry)
+      if (mod(t_global_next, p_FAST%ZmqInDT) == 0) then
+
+         ! TurbID = p_FAST%TurbID
+         ZmqInChannelsAry = 0.0_DbKi
+         call zmq_req(p_FAST%ZmqInAddress, p_FAST%ZmqInChannels, p_FAST%ZmqInNbr, ZmqInChannelsAry)
+
+      end if ! otherwise we'll keep the values from the previous time step
 
       If (ZmqInChannelsAry(1) == TurbID) then 
 
@@ -5639,11 +5697,18 @@ SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, y_A
       ZmqOutChannelsAry = 0.0_ReKi                                   !< Reset to zero all values prior to allocation and broadcasting
 
       ZmqOutChannelsAry(1) = TurbID
-      ZmqOutChannelsAry(2) = t 
-
-      do i = 1, p_FAST%ZmqOutNbr 
-         ZmqOutChannelsAry(2 + i) = OutputAry(p_FAST%ZmqOutChnlsIdx(i) - 1)
-      end do
+      ZmqOutChannelsAry(2) = t
+      
+      if (t == p_FAST%TMax) then 
+         ! If the simulation is finished, then broadcast zeros to signal EOF (as a float)
+         do i = 1, p_FAST%ZmqOutNbr 
+            ZmqOutChannelsAry(2 + i) = 0.0_ReKi
+         end do
+      else
+         do i = 1, p_FAST%ZmqOutNbr 
+            ZmqOutChannelsAry(2 + i) = OutputAry(p_FAST%ZmqOutChnlsIdx(i) - 1)
+         end do
+      end if
 
       call zmq_pub(ZmqOutChannelsAry, p_FAST%ZmqOutChannelsNames, p_FAST%ZmqOutNbr)
 

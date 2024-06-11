@@ -1,0 +1,32 @@
+NACA64 airfoil with an aspect ratio of 17.  Original -180 to 180deg Cl, Cd, and Cm versus AOA data taken from Appendix A of DOWEC document 10046_009.pdf (numerical values obtained from Koert Lindenburg of ECN).
+Cl and Cd values corrected for rotational stall delay and Cd values corrected using the Viterna method for 0 to 90deg AOA by Jason Jonkman using AirfoilPrep_v2p0.xls.
+   1        Number of airfoil tables in this file
+   0.0      Table ID parameter
+   9.00     Stall angle (deg)
+   0.0      No longer used, enter zero
+   0.0      No longer used, enter zero
+   0.0      No longer used, enter zero
+  -4.4320   Zero Cn angle of attack (deg)
+   6.0031   Cn slope for zero lift (dimensionless)
+   1.4073   Cn extrapolated to value at positive stall angle of attack
+  -0.7945   Cn at stall value for negative angle of attack
+  -1.00     Angle of attack for minimum CD (deg)
+   0.0052   Minimum CD value
+ -15.00   -1.105   0.0535  -0.0251
+ -12.00   -0.904   0.0134  -0.0707
+  -8.00   -0.478   0.0091  -0.0807
+  -4.00   -0.017   0.0072  -0.0869
+   0.00    0.442   0.0052  -0.1014
+   4.00    0.898   0.0054  -0.1199
+   8.00    1.257   0.0124  -0.1163
+  10.00    1.382   0.0150  -0.1149
+  12.00    1.434   0.0613  -0.1158
+  14.00    1.448   0.1065  -0.1112
+  16.00    1.448   0.1509  -0.1114
+  18.00    1.448   0.1947  -0.1080
+  20.00    1.428   0.2379  -0.1099
+  24.00    1.220   0.3204  -0.1393
+  30.00    0.926   0.4294  -0.1668
+  45.00    0.793   0.7573  -0.2344
+
+

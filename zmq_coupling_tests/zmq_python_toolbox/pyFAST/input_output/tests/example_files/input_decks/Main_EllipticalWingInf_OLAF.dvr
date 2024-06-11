@@ -1,0 +1,55 @@
+-----  AeroDyn MultiRotor Driver Input File  --------------------------------------
+Elliptical wing test case for OLAF free vortex wake
+-----  Input Configuration  ----------------------------------------------------
+False           Echo       - Echo input parameters to "<rootname>.ech"?
+       1000     TMax       - Total run time (s)
+        100     DT         - Simulation time step (s)
+"Elliptic_AD15_40.dat"        AeroFile   - Name of the AeroDyn input file
+----- Inflow Data  -----------------------------------------------------------
+          1      CompInflow  - Compute inflow wind velocities (switch) {0=Steady Wind; 1=InflowWind}
+"Elliptic_IW.dat"        InflowFile - Name of the InflowWind input file
+          0      HWindSpeed  - Horizontal wind speed   [used only when CompInflow=0 and NumCase=0] (m/s)
+          0      RefHt       - Reference height for horizontal wind speed [used only when CompInflow=0 and NumCase=0]     (m)
+          0      PLExp       - Power law exponent   [used only when CompInflow=0 and NumCase=0]                           (-)
+----- Turbine Data  -----------------------------------------------------------
+1               NumTurbines - Number of turbines
+====== Turbine 1 ================================================================
+     False      BasicHAWTFormat(1) - Flag to switch between basic or generic input format {True: next 7 lines are basic inputs, False: Base/Twr/Nac/Hub/Bld geometry and motion must follow}
+0,0,00          BaseOriginInit(1)      - x,y,z coordinates of base origin (m)
+0,0,0           BaseOrientationInit(1) - successive rotations (theta_x, theta_y, theta_z) defining initial orientation of the base frame from the global frame (e.g. roll, tilt, yaw) (deg)
+True            HasTower(1)            - True if turbine has a tower (flag)
+False           HAWTprojection(1)      - True if turbine is horizontal axis (for AeroDyn projections) (flag)
+0,0,0           TwrOrigin_t(1)         - Coordinate of tower base in base coordinates [used only when HasTower is True] (m)
+0,0,100         NacOrigin_t(1)         - x,y,z coordinates of nacelle origin (and tower top) from base, in base coordinates (m)
+0,0,0           HubOrigin_n(1)         - NOTE: Bar has 7m overhang, tilt of 6deg, and twr2shaft 3.09343 x,y,z coordinates of hub origin from nacelle origin, in nacelle coordinates (m)
+0,0,0           HubOrientation_n(1)    - successive rotations (theta_x, theta_y, theta_z) defining initial orientation of the hub frame from the nacelle frame (e.g. roll, tilt, yaw). The x axis needs to be aligned with the rotational speed. (deg)
+----- Turbine 1 Blades -----------------------------------------------------------------
+1               NumBlades(1)          - Number of blades for current rotor (-)
+0,0,0           BldOrigin_h(1_1)      - Orign of blade 1 wrt. hub origin in hub coordinates (m)
+-90,0,-90       BldOrientation_h(1_1) - successive rotations (theta_x, theta_y, theta_z) defining initial orientation of the blade frame from the hub frame such that the "z" is along span, "y" along trailing edge without pitch (azimuth, precone, pitch) (deg)
+0.0             BldHubRad_bl(1_1)     - z-offset in blade coordinates of blade 1 where radial input data start (m)
+----- Turbine 1 Base Motion -----------------------------------------------------------------
+0               BaseMotionType(1)      - Type of motion prescribed for this base {0: fixed, 1: Sinusoidal motion, 2: arbitrary motion} (flag)
+1               DegreeOfFreedom(1)     - {1:xt, 2:yt, 3:zt, 4:theta_xt, 5:theta_yt, 6:theta_zt} [used only when BaseMotionType=1] (flag)
+0               Amplitude(1)           - Amplitude of sinusoidal motion   [used only when BaseMotionType=1]
+0               Frequency(1)           - Frequency of sinusoidal motion   [used only when BaseMotionType=1]
+""              BaseMotionFileName(1)  - Filename containing rotor motion [used only when BaseMotionType=2]
+----- Turbine 1 Nacelle Motion -----------------------------------------------------------------
+0               NacMotionType(1)      - Type of motion prescribed for the nacelle {0: fixed yaw, 1: time varying yaw angle} (flag)
+0               NacYaw(1)             - Yaw angle (about z_t) of the nacelle [user only when NacMotionType=0] (deg)
+"NA"            NacMotionFileName(1)  - Filename containing yaw motion [used only when NacMotionType=1]
+----- Turbine 1 Rotor Motion -----------------------------------------------------------------
+0               RotMotionType(1)        - Type of motion prescribed for this rotor {0: constant rotation, 1: time varying rotation} (flag)
+0.              RotSpeed(1)             - Rotational speed of rotor in rotor coordinates [used only when RotorMotionType=0] (rpm)
+"NA"            RotMotionFileName(1)    - Filename containing rotor motion [used only when RotorMotionType=1]
+----- Turbine 1 Blade Pitch Motion -----------------------------------------------------------------
+0               BldMotionType(1)        - Type of pitch motion prescribed for the blades {0: fixed, 1: time varying pitch} (flag)
+0               BldPitch(1_1)           - Blade 1 pitch [used only when BlMotiontype=1] (deg)
+"NA"            BldMotionFileName(1_1)  - Filename containing blade pitch motion [used only when BlMotionType=1]
+-----  I/O Settings  -----------------------------------------------------------
+"ES15.8E2"  OutFmt        - Format used for text tabular output, excluding the time channel.  Resulting field should be 10 characters. (quoted string)
+2           OutFileFmt    - Format for tabular (time-marching) output file (switch) {1: text file [<RootName>.out], 2: binary file [<RootName>.outb], 3: both}
+0           WrVTK         - VTK visualization data output: (switch) {0=none; 1=animation}
+0.25        VTKHubRad     - HubRadius for VTK visualization (m)
+-0.1,-0.1,-0.1,0.2,0.2,0.2  VTKNacDim     - Nacelle Dimension for VTK visualization x0,y0,z0,Lx,Ly,Lz (m)
+

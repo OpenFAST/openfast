@@ -1,0 +1,21 @@
+BHawC channel reference file (sel):
++===================== (Name) =================== (Time stamp) ========= (Path) ==========================================================+
+Original BHAWC file    : NA.dat                    2001.01.01  00:00:00  C:\
+Channel reference file : NA.sel                    2001.01.01  00:00:00  C:\
+Result file            : NA.dat                    2001.01.01  00:00:00  C:\
++=========================================================================================================================================+
+Scans             	Channels                      	Time [sec]                	Coordinate convention: Siemens
+20              	11                       	0.190                  
+
+Channel            	Variable descriptions    	Labels                   	Units                    
+1                  	Time                     	Time                     	[s]                      
+2                  	Horizontal wind speed    	V_hor                    	[m/s]                    
+3                  	Wave elevation           	Wave elevation           	[m]                      
+4                  	Ff_x interface force     	Ff_x interface           	[kN]                     
+5                  	Ff_y interface force     	Ff_y interface           	[kN]                     
+6                  	Ff_z interface force     	Ff_z interface           	[kN]                     
+7                  	Mf_x interface moment    	Mf_x interface           	[kNm]                    
+8                  	Mf_y interface moment    	Mf_y interface           	[kNm]                    
+9                  	Mf_z interface moment    	Mf_z interface           	[kNm]                    
+10                 	Ff_xy interface force    	Ff_xy interface          	[kN]                     
+11                 	Mf_xy interface moment   	Mf_xy interface          	[kNm]                    

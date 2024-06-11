@@ -1,0 +1,29 @@
+# ----- Rotor performance tables for the OpenFAST_5MW wind turbine ----- 
+# ------------ Written on Oct-30-19 using the ROSCO toolbox ------------ 
+
+# Pitch angle vector - x axis (matrix columns) (deg)
+-1.0   -0.5   0.0   0.5   1.0
+# TSR vector - y axis (matrix rows) (-)
+3.0    3.5    4.0
+# Wind speed vector - z axis (m/s)
+11.4    
+
+# Power coefficient
+
+0.089542   0.094392   0.099145   0.103788   0.108307   
+0.141508   0.147502   0.153253   0.158739   0.163935   
+0.201243   0.207940   0.214159   0.219868   0.225035   
+
+
+#  Thrust coefficient
+
+0.230643   0.231358   0.231931   0.232351   0.232612   
+0.296203   0.296020   0.295605   0.294960   0.294088   
+0.365790   0.364336   0.362614   0.360628   0.358382   
+
+
+# Torque coefficient
+
+0.029876   0.031494   0.033080   0.034629   0.036137   
+0.040469   0.042184   0.043828   0.045397   0.046883   
+0.050359   0.052034   0.053591   0.055019   0.056312   

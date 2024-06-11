@@ -1,0 +1,27 @@
+-------  HydroDyn Driver file -------------------------------------------------
+Compatible with HydroDyn v3.00
+FALSE            Echo                - Echo the input file data (flag)
+---------------------- ENVIRONMENTAL CONDITIONS -------------------------------
+9.80665          Gravity             - Gravity (m/s^2)
+1025             WtrDens             - Water density (kg/m^3)
+220              WtrDpth             - Water depth (m)
+0                MSL2SWL             - Offset between still-water level and mean sea level (m) [positive upward]
+---------------------- HYDRODYN -----------------------------------------------
+"./HD_NoCa.dat" HDInputFile       - Primary HydroDyn input file name (quoted string)
+"./hd_driver_NoCa"         OutRootName       - The name which prefixes all HydroDyn generated files (quoted string)
+True               Linearize         - Flag to enable linearization
+1001               NSteps            - Number of time steps in the simulations (-)
+0.0125             TimeInterval      - TimeInterval for the simulation (sec)
+---------------------- PRP INPUTS (Platform Reference Point) ------------------
+1                PRPInputsMod        - Model for the PRP (principal reference point) inputs {0: all inputs are zero for every timestep, 1: steadystate inputs, 2: read inputs from a file (InputsFile)} (switch)
+16               PtfmRefzt           - Vertical distance from the ground level [onshore] or MSL [offshore] to the platform reference point (meters)
+"OpenFAST_DisplacementTimeseries.dat"               PRPInputsFile       - Filename for the PRP HydroDyn input InputsMod = 2 (quoted string)
+---------------------- PRP STEADY STATE INPUTS  -------------------------------
+0.0   0.0   0.0  0.0  0.0  0.0    uPRPInSteady         - PRP Steady-state displacements and rotations at the platform reference point (m, rads)
+0.0   0.0   0.0  0.0  0.0  0.0    uDotPRPInSteady      - PRP Steady-state translational and rotational velocities at the platform reference point (m/s, rads/s)
+0.0   0.0   0.0  0.0  0.0  0.0    uDotDotPRPInSteady   - PRP Steady-state translational and rotational accelerations at the platform reference point (m/s^2, rads/s^2)
+---------------------- Waves multipoint elevation output ----------------------                                                                                                                
+FALSE            WaveElevSeriesFlag     - T/F flag to calculate the wave elevation field (for movies)
+5.0   5.0        WaveElevDX WaveElevDY  - WaveElevSeries spacing -- WaveElevDX WaveElevDY
+3   3            WaveElevNX WaveElevNY  - WaveElevSeries points -- WaveElevNX WaveElevNY
+END of driver input file

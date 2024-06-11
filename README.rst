@@ -10,6 +10,21 @@ cJSON
 ZMQ
 ```
 
+Main changes in this PR
+----
+
+- Added ZMQ connection to OpenFAST
+- Modified input files to include ZMQ parameters
+- Added Python routines and tests to interface with OpenFAST (to be moved to `openfast-toolbox`?)
+
+Updates 
+---
+- Added end of simulation message to ZMQ, so that receiver can know when the simulation is over and 
+detach from the ZMQ connection (close the socket). Currently, EOF signals are zeros, to keep float format. (`line 5649`)
+- Added warning if user passes wind speed at runtime, as it will trigger Inflow Wind to use the steady model around the rotor disk (`line 3580`)
+- Added variables `ZmqInDT` and `ZmqOutDT` to the input file, to set the time step for the ZMQ connection (`line 3586` - `line 3641`)
+
+
 
 ========
 OpenFAST

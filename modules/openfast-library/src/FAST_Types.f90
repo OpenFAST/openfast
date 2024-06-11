@@ -205,9 +205,11 @@ IMPLICIT NONE
     CHARACTER(1024)  :: ZmqInAddress      !< address for ZMQ REQ-REP protocol [-]
     INTEGER(IntKi)  :: ZmqInNbr      !< number of ZMQ REQ-REP channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ZmqInChannels      !< address for ZMQ REQ-REP protocol [-]
+    REAL(ReKi)  :: ZmqInDT      !< time step for in communication, FAST will keep it constant in between (sample & hold), default is same DT of simulation [-]
     CHARACTER(1024)  :: ZmqOutAddress      !< address for ZMQ PUB-SUB protocol [-]
     INTEGER(IntKi)  :: ZmqOutNbr      !< number of ZMQ PUB-SUB channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ZmqOutChannels      !< variables to pass ZMQ PUB-SUB protocol [-]
+    REAL(ReKi)  :: ZmqOutDT      !< time step for out communication, FAST will keep it constant in between (sample & hold), default is same DT of simulation [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ZmqOutChnlsIdx      !< indexes of channels to be broadcasted [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ZmqOutChannelsNames      !< names for ZMQ PUB-SUB protocol [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ZmqOutChannelsAry      !< array to pass ZMQ PUB-SUB protocol [-]
@@ -2258,6 +2260,7 @@ IF (ALLOCATED(SrcParamData%ZmqInChannels)) THEN
   END IF
     DstParamData%ZmqInChannels = SrcParamData%ZmqInChannels
 ENDIF
+    DstParamData%ZmqInDT = SrcParamData%ZmqInDT
     DstParamData%ZmqOutAddress = SrcParamData%ZmqOutAddress
     DstParamData%ZmqOutNbr = SrcParamData%ZmqOutNbr
 IF (ALLOCATED(SrcParamData%ZmqOutChannels)) THEN
@@ -2272,6 +2275,7 @@ IF (ALLOCATED(SrcParamData%ZmqOutChannels)) THEN
   END IF
     DstParamData%ZmqOutChannels = SrcParamData%ZmqOutChannels
 ENDIF
+    DstParamData%ZmqOutDT = SrcParamData%ZmqOutDT
 IF (ALLOCATED(SrcParamData%ZmqOutChnlsIdx)) THEN
   i1_l = LBOUND(SrcParamData%ZmqOutChnlsIdx,1)
   i1_u = UBOUND(SrcParamData%ZmqOutChnlsIdx,1)
@@ -2519,6 +2523,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! ZmqInChannels upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%ZmqInChannels)*LEN(InData%ZmqInChannels)  ! ZmqInChannels
   END IF
+      Re_BufSz   = Re_BufSz   + 1  ! ZmqInDT
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%ZmqOutAddress)  ! ZmqOutAddress
       Int_BufSz  = Int_BufSz  + 1  ! ZmqOutNbr
   Int_BufSz   = Int_BufSz   + 1     ! ZmqOutChannels allocated yes/no
@@ -2526,6 +2531,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! ZmqOutChannels upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%ZmqOutChannels)*LEN(InData%ZmqOutChannels)  ! ZmqOutChannels
   END IF
+      Re_BufSz   = Re_BufSz   + 1  ! ZmqOutDT
   Int_BufSz   = Int_BufSz   + 1     ! ZmqOutChnlsIdx allocated yes/no
   IF ( ALLOCATED(InData%ZmqOutChnlsIdx) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! ZmqOutChnlsIdx upper/lower bounds for each dimension
@@ -2873,6 +2879,8 @@ ENDIF
         END DO ! I
       END DO
   END IF
+    ReKiBuf(Re_Xferred) = InData%ZmqInDT
+    Re_Xferred = Re_Xferred + 1
     DO I = 1, LEN(InData%ZmqOutAddress)
       IntKiBuf(Int_Xferred) = ICHAR(InData%ZmqOutAddress(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
@@ -2896,6 +2904,8 @@ ENDIF
         END DO ! I
       END DO
   END IF
+    ReKiBuf(Re_Xferred) = InData%ZmqOutDT
+    Re_Xferred = Re_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%ZmqOutChnlsIdx) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -3318,6 +3328,8 @@ ENDIF
         END DO ! I
       END DO
   END IF
+    OutData%ZmqInDT = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     DO I = 1, LEN(OutData%ZmqOutAddress)
       OutData%ZmqOutAddress(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
@@ -3344,6 +3356,8 @@ ENDIF
         END DO ! I
       END DO
   END IF
+    OutData%ZmqOutDT = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ZmqOutChnlsIdx not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE

@@ -1,0 +1,39 @@
+--------------------- MoorDyn Input File ------------------------------------
+Mooring system for OC4-DeepCwind Semi
+FALSE    Echo      - echo the input file data (flag)
+----------------------- LINE TYPES ------------------------------------------
+Name     Diam      MassDen       EA    BA/-zeta    EI    Cd      Ca     CdAx   CaAx
+(-)       (m)      (kg/m)        (N)    (N-s/-)    (-)   (-)     (-)    (-)    (-)
+main     0.0766    113.35     7.536E8     -1.0      0    2.0     0.8    0.4   0.25
+---------------------- POINTS --------------------------------                                           
+ID     Attachment   X          Y         Z      M      V       CdA   CA
+(-)    (-)         (m)        (m)       (m)    (kg)   (m^3)   (m^2)  (-)
+1      Fixed     418.8      725.383   -200.0     0      0       0     0
+2      Fixed    -837.6        0.0     -200.0     0      0       0     0
+3      Fixed     418.8     -725.383   -200.0     0      0       0     0
+4      Vessel     20.434     35.393    -14.0     0      0       0     0
+5      Vessel    -40.868      0.0      -14.0     0      0       0     0
+6      Vessel     20.434    -35.393    -14.0     0      0       0     0
+---------------------- LINES --------------------------------------                                           
+ID      LineType   AttachA   AttachB  UnstrLen  NumSegs   Outputs
+(-)       (-)       (-)       (-)         (m)      (-)         (-)   
+1         main       1         4        835.35      20          -
+2         main       2         5        835.35      20          -
+3         main       3         6        835.35      20          -
+---------------------- SOLVER OPTIONS ---------------------------------------
+0.001    dtM       - time step to use in mooring integration (s)
+3.0e6    kbot      - bottom stiffness (Pa/m)
+3.0e5    cbot      - bottom damping (Pa-s/m)
+2.0      dtIC      - time interval for analyzing convergence during IC gen (s)
+60.0     TmaxIC    - max time for ic gen (s)
+4.0      CdScaleIC - factor by which to scale drag coefficients during dynamic relaxation (-)
+0.01    threshIC  - threshold for IC convergence (-)
+------------------------ OUTPUTS --------------------------------------------
+FairTen1
+FairTen2
+FairTen3
+AnchTen1
+AnchTen2
+AnchTen3
+END
+------------------------- need this line --------------------------------------

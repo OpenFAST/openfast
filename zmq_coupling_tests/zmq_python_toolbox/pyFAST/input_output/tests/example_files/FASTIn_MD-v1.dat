@@ -1,0 +1,64 @@
+------------------- MoorDyn v1.01.* Input File ------------------------------------
+MoorDyn input template for spar mooring with chain bottom segment and bridle attachment
+FALSE    Echo      - echo the input file data (flag)
+---------------------- LINE DICTIONARY -----------------------------------------------------
+2        NTypes    - number of LineTypes
+LineType  Diam    MassDenInAir   EA        cIntDamp    Can     Cat    Cdn     Cdt 
+(-)       (m)       (kg/m)       (N)        (Pa-s)     (-)     (-)    (-)     (-)  
+chain     0.02       200        400.0e6      -0.8       1.0     0.0    1.6     0.05 
+synth     0.02       4.5        121.0e6      -0.8       1.0     0.0    1.6     0.05 
+---------------------- POINT PROPERTIES -----------------------------------------------------
+12       NConnects - number of connections including anchors and fairleads
+Node      Type      X        Y        Z        M      V      FX   FY   FZ   CdA   Ca 
+(-)       (-)      (m)      (m)      (m)      (kg)   (m^3)  (kN) (kN) (kN)  (m2)  () 
+1        Fixed     656      0.0     -600       0       0      0    0    0    0     0 
+2        Connect   590      0.0     -580       0       0      0    0    0    0     0   
+3        Connect    20      0.0     -40        0       0      0    0    0    0     0   
+4        Fixed    -328     568.112  -600       0       0      0    0    0    0     0   
+5        Connect  -295     510.9549 -580       0       0      0    0    0    0     0   
+6        Connect   -10     17.3205  -40        0       0      0    0    0    0     0   
+7        Fixed    -328    -568.1126 -600       0       0      0    0    0    0     0   
+8        Connect  -295    -510.9549 -580       0       0      0    0    0    0     0   
+9        Connect   -10    -17.3205  -40        0       0      0    0    0    0     0   
+10       Vessel    4.0    -6.928    -21        0       0      0    0    0    0     0  
+11       Vessel    4.0     6.928    -21        0       0      0    0    0    0     0  
+12       Vessel   -8.0     0.0      -21        0       0      0    0    0    0     0  
+---------------------- LINE PROPERTIES -----------------------------------------------------
+12        NLines    - number of line objects
+Line     LineType  UnstrLen  NumSegs   NodeAnch  NodeFair  Flags/Outputs
+(-)       (-)       (m)         (-)       (-)       (-)       (-)
+1        chain      80.0       10          1         2        -
+2        synth     560.0       20          2         3        -
+3        synth      30.0        3          3        10        -
+4        synth      30.0        3          3        11        -
+5        chain      80.0       10          4         5        -
+6        synth     560.0       20          5         6        -
+7        synth      30.0        3          6        11        -
+8        synth      30.0        3          6        12        -
+9        chain      80.0       10          7         8        -
+10       synth     560.0       20          8         9        -
+11       synth      30.0        3          9        12        -
+12       synth      30.0        3          9        10        -
+---------------------- SOLVER OPTIONS ----------------------------------------
+0.001    dtM       - time step to use in mooring integration (s)
+3e6    	 kbot      - bottom stiffness (Pa/m)
+3e5      cbot      - bottom damping (Pa-s/m)
+2     	 dtIC      - time interval for analyzing convergence during IC gen (s)
+600      TmaxIC    - max time for ic gen (s)
+10       CdScaleIC - factor by which to scale drag coefficients during dynamic relaxation (-)
+0.01     threshIC  - threshold for IC convergence (-)
+----------------------------OUTPUTS--------------------------------------------
+FairTen1
+FairTen2
+FairTen3
+FairTen4
+FairTen5
+FairTen6
+FairTen7
+FairTen8
+FairTen9
+FairTen10
+FairTen11
+FairTen12
+END
+--------------------- need this line ------------------

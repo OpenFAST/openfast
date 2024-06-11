@@ -1,0 +1,66 @@
+! ------------ AirfoilInfo v1.01.x 
+! TailPlate.dat. Lift and drag on d
+! Oct. 14, 2003, Foilchecked by Win
+! note that this file uses Marshall
+! ---------------------------------
+"DEFAULT"     InterpOrd         ! I
+          1   NonDimArea        ! T
+          0   NumCoords         ! T
+! ......... x-y coordinates are nex
+          1   NumTabs           ! N
+! ---------------------------------
+! data for table 1
+! ---------------------------------
+        0.3   Re                ! R
+          0   Ctrl              ! C
+True          InclUAdata        ! I
+!..................................
+      -4.23   alpha0            ! 0
+          4   alpha1            ! A
+         -4   alpha2            ! A
+          1   eta_e             ! R
+    2.71555   C_nalpha          ! S
+"Default"     T_f0              ! I
+"Default"     T_V0              ! I
+"Default"     T_p               ! B
+"Default"     T_VL              ! I
+"Default"     b1                ! C
+"Default"     b2                ! C
+"Default"     b5                ! C
+"Default"     A1                ! C
+"Default"     A2                ! C
+"Default"     A5                ! C
+          0   S1                ! C
+          0   S2                ! C
+          0   S3                ! C
+          0   S4                ! C
+     1.8588   Cn1               ! C
+       -0.8   Cn2               ! A
+"Default"     St_sh             ! S
+       0.01   Cd0               ! 2
+          0   Cm0               ! 2
+          0   k0                ! C
+          0   k1                ! C
+          0   k2                ! C
+          0   k3                ! C
+          0   k1_hat            ! C
+"Default"     x_cp_bar          ! C
+"Default"     UACutout          ! A
+"DEFAULT"     filtCutOff        ! C
+!..................................
+! Table of aerodynamics coefficient
+         11   NumAlf            ! N
+!    Alpha      Cl      Cd
+!    (deg)      (-)     (-)
+  -180.00     0.000   0.1820
+  -140.00     0.524   0.6353
+  -100.00     0.147   1.1954
+   -40.00    -0.524   0.6353
+     0.00     0.200   0.0100
+    16.00     0.861   0.2190
+    37.00     0.759   0.5800
+    70.00     0.407   1.1219
+   110.00    -0.285   1.1219
+   150.00    -0.431   0.4577
+   180.00     0.000   0.1820
+

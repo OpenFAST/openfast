@@ -1,0 +1,113 @@
+
+Linearized model: Predictions were generated on 16-Feb-2020 at 10:36:41 using OpenFAST, compiled as a 64-bit application using single precision at commit v2.2.0
+ linked with  NWTC Subroutine Library; ElastoDyn; InflowWind; AeroDyn; ServoDyn
+
+Description from the FAST input file: FAST          Certification - Test #24: NREL 5.0 MW Baseline Wind Turbine with OC3 Hywind Configuration, for use in offshore analysis
+
+Simulation information:
+   Simulation time:                   100.0000 s
+   Rotor Speed:                         1.2367 rad/s
+   Azimuth:                             5.8684 rad
+   Number of continuous states:         4
+   Number of discrete states:           0
+   Number of constraint states:         0
+   Number of inputs:                    9
+   Number of outputs:                  16
+   Jacobians included in this file?    No
+
+Order of continuous states:
+   Row/Column Operating Point                                    Rotating Frame? Description
+   ---------- ---------------                                    --------------- -----------
+          1    2.55136520E-01                                           F        ED 1st tower fore-aft bending mode DOF (internal DOF index = DOF_TFA1), m
+          2    4.29760981E+00                                           F        ED Variable speed generator DOF (internal DOF index = DOF_GeAz), rad
+          3   -2.58691749E-03                                           F        ED First time derivative of 1st tower fore-aft bending mode DOF (internal DOF index = DOF_TFA1), m/s
+          4    1.23670995E+00                                           F        ED First time derivative of Variable speed generator DOF (internal DOF index = DOF_GeAz), rad/s
+
+Order of continuous state derivatives:
+   Row/Column Operating Point                                    Rotating Frame? Description
+   ---------- ---------------                                    --------------- -----------
+          1   -2.58691749E-03                                           F        First time derivative of ED 1st tower fore-aft bending mode DOF (internal DOF index = DOF_TFA1), m/s
+          2    1.23670995E+00                                           F        First time derivative of ED Variable speed generator DOF (internal DOF index = DOF_GeAz), rad/s
+          3    7.78495288E-03                                           F        First time derivative of ED First time derivative of 1st tower fore-aft bending mode DOF (internal DOF index = DOF_TFA1), m/s/s
+          4    1.26017234E-03                                           F        First time derivative of ED First time derivative of Variable speed generator DOF (internal DOF index = DOF_GeAz), rad/s/s
+
+Order of inputs:
+     Column   Operating Point                                    Rotating Frame? Description
+   ---------- ---------------                                    --------------- -----------
+          1    1.10000000E+01                                           F        IfW Extended input: horizontal wind speed (steady/uniform wind), m/s
+          2    0.00000000E+00                                           F        IfW Extended input: vertical power-law shear exponent, -
+          3    0.00000000E+00                                           F        IfW Extended input: propagation direction, rad
+          4    0.00000000E+00                                           T        ED Blade 1 pitch command, rad
+          5    0.00000000E+00                                           T        ED Blade 2 pitch command, rad
+          6    0.00000000E+00                                           T        ED Blade 3 pitch command, rad
+          7    0.00000000E+00                                           F        ED Yaw moment, Nm
+          8    4.00176055E+04                                           F        ED Generator torque, Nm
+          9    0.00000000E+00                                           F        ED Extended input: collective blade-pitch command, rad
+
+Order of outputs:
+        Row   Operating Point                                    Rotating Frame? Description
+   ---------- ---------------                                    --------------- -----------
+          1    1.10000000E+01                                           F        IfW Wind1VelX, (m/s)
+          2    4.53171631E+03                                           F        SrvD GenPwr, (kW)
+          3    4.00176086E+01                                           F        SrvD GenTq, (kN-m)
+          4    0.00000000E+00                                           T        ED BldPitch1, (deg)
+          5    3.36234894E+02                                           F        ED Azimuth, (deg)
+          6    1.18097095E+01                                           F        ED RotSpeed, (rpm)
+          7    1.14554187E+03                                           F        ED GenSpeed, (rpm)
+          8    8.15625582E-03                                           F        ED NcIMUTAxs, (m/s^2)
+          9    2.55136520E-01                                           F        ED TTDspFA, (m)
+         10    7.93808105E+02                                           F        ED RotThrust, (kN)
+         11    3.88815332E+03                                           F        ED RotTorq, (kN-m)
+         12    5.02919570E+04                                           F        ED TwHt2MLyt, (kN-m)
+         13    1.09643970E+03                                           F        ED TwHt9MLyt, (kN-m)
+         14    5.43100000E+04                                           F        ED TwrBsMyt, (kN-m)
+         15    6.95476250E+05                                           F        AD RtAeroFxh, (N)
+         16    3.93677925E+06                                           F        AD RtAeroMxh, (N-m)
+
+
+Linearized state matrices:
+
+A: 4 x 4
+    0.00000000E+00  0.00000000E+00  1.00000000E+00  0.00000000E+00
+    0.00000000E+00  0.00000000E+00  0.00000000E+00  1.00000000E+00
+   -6.13652848E+00  1.32509753E-02 -2.98756205E-01  8.73515043E-01
+   -3.88082898E-04  3.91159454E-04 -2.36135194E-02 -9.77851546E-01
+B: 4 x 9
+    0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00
+    0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00
+    1.99553894E-01  3.28597213E-01 -9.15682982E-02 -3.45443359E+00 -1.80591336E+00 -5.41624614E-01  0.00000000E+00 -3.09139562E-14 -5.80197157E+00
+    2.25818620E-02 -1.37530787E-02 -5.03037741E-04 -7.09174141E-03 -1.15554268E-02 -1.70886734E-02  0.00000000E+00 -2.21955065E-06 -3.57358416E-02
+C: 16 x 4
+    0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00
+    0.00000000E+00  0.00000000E+00  0.00000000E+00  5.07346002E+04
+    0.00000000E+00  0.00000000E+00  0.00000000E+00  4.15657020E+02
+    0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00
+    0.00000000E+00  5.72957795E+01  0.00000000E+00  0.00000000E+00
+    0.00000000E+00  0.00000000E+00  0.00000000E+00  9.54928748E+00
+    0.00000000E+00  0.00000000E+00  0.00000000E+00  9.26281186E+02
+   -6.36353230E+00  1.37411451E-02 -3.09823239E-01  9.05827840E-01
+    1.00000001E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00
+    7.16950133E+02  1.53222954E+00 -5.34154179E+01  2.88367421E+02
+   -1.95867815E+00  1.96354273E+00 -1.18665061E+02  3.54045787E+04
+    1.97620314E+05 -6.84340334E+01  1.43820149E+03 -4.66454411E+01
+    1.19856824E+04  1.11838263E+02 -1.32426573E+03 -1.14351611E+03
+    2.13637823E+05 -8.47041889E+01  1.70992990E+03 -7.66658042E+01
+   -1.46114682E+03  3.05305838E+03 -8.73095334E+04  3.87338946E+05
+   -1.99298330E+04  1.08527538E+04 -1.03199703E+06 -2.41571175E+06
+D: 16 x 9
+    1.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00
+    0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00
+    0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00
+    0.00000000E+00  0.00000000E+00  0.00000000E+00  5.72957761E+01  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  5.72957761E+01
+    0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00
+    0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00
+    0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00
+    2.06935732E-01  3.40752619E-01 -9.49555784E-02 -3.58221899E+00 -1.87271725E+00 -5.61660042E-01  0.00000000E+00  0.00000000E+00 -6.01659628E+00
+    0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00
+    6.02344256E+01 -7.84014651E+01  8.59497387E+00 -4.05261763E+02 -6.48746347E+02 -7.48489314E+02  0.00000000E+00  0.00000000E+00 -1.80249742E+03
+    1.13480575E+02 -6.91275795E+01 -2.51913240E+00 -3.56047941E+01 -5.79261322E+01 -8.59326035E+01  0.00000000E+00  8.58457826E-02 -1.79463530E+02
+   -1.45943785E+02 -4.46807321E+03  9.62571260E+02  1.76449148E+04 -1.10162786E+03 -1.35180323E+04  0.00000000E+00  0.00000000E+00  3.02525464E+03
+   -1.79512833E+00  8.10381133E+03 -1.71501383E+03 -2.89545899E+04  4.65752417E+03  2.66851242E+04  0.00000000E+00  0.00000000E+00  2.38805846E+03
+   -1.85705869E+02 -5.56302377E+03  1.19914847E+03  2.20094465E+04 -1.32662356E+03 -1.67971452E+04  0.00000000E+00  0.00000000E+00  3.88567769E+03
+    8.28684992E+04 -4.10967716E+04 -1.84826351E+03 -7.97149811E+05 -8.53604761E+05 -8.09845319E+05  0.00000000E+00  0.00000000E+00 -2.46059989E+06
+    9.86885167E+05 -6.01020994E+05 -2.22716720E+04 -3.09984459E+05 -5.04840687E+05 -7.46798658E+05  0.00000000E+00  0.00000000E+00 -1.56162380E+06

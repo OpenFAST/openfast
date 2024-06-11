@@ -1,0 +1,8 @@
+! Deterministic Wind file 
+! Time	Wind	Wind	Vert.	Horiz.	Vert.	LinV	Gust
+!	Speed	Dir	Speed	Shear	Shear	Shear	Speed
+ 00.00	06.0	0.0	0.0	0.0	0.0	0.0	0.0
+ 20.05	06.0	0.0	0.0	0.0	0.0	0.0	0.0
+ 20.10	08.0	0.0	0.0	0.0	0.0	0.0	0.0
+ 40.05	08.0	0.0	0.0	0.0	0.0	0.0	0.0
+999.99	08.0	0.0	0.0	0.0	0.0	0.0	0.0

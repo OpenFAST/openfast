@@ -1,0 +1,96 @@
+------- SeaState Input File ----------------------------------------------------
+Updated HydroDyn input file for the TCF project. Full scale model to verify OpenFAST against OrcaFlex for the TetraSpar project.
+False	         Echo           - Echo the input file data (flag)
+---------------------- ENVIRONMENTAL CONDITIONS --------------------------------
+       default   WtrDens        - Water density (kg/m^3)
+       default   WtrDpth        - Water depth (meters)
+       default   MSL2SWL        - Offset between still-water level and mean sea level (meters) [positive upward; unused when WaveMod = 6; must be zero if PotMod=1 or 2]
+---------------------- SPATIAL DISCRETIZATION ---------------------------------------------------
+            30   X_HalfWidth    - Half-width of the domain in the X direction (m) [>0, NOTE: X[nX] = nX*dX, where nX = {-NX+1,-NX+2,…,NX-1} and dX = X_HalfWidth/(NX-1)]
+            30   Y_HalfWidth    - Half-width of the domain in the Y direction (m) [>0, NOTE: Y[nY] = nY*dY, where nY = {-NY+1,-NY+2,…,NY-1} and dY = Y_HalfWidth/(NY-1)]
+       default   Z_Depth        - Depth of the domain the Z direction (m) relative to SWL [0 < Z_Depth <= WtrDpth+MSL2SWL; "default": Z_Depth = WtrDpth+MSL2SWL; Z[nZ] = ( COS( nZ*dthetaZ ) – 1 )*Z_Depth, where nZ = {0,1,…NZ-1} and dthetaZ = pi/( 2*(NZ-1) )]
+             3   NX             - Number of nodes in half of the X-direction domain (-) [>=2]
+             3   NY             - Number of nodes in half of the Y-direction domain (-) [>=2]
+            40   NZ             - Number of nodes in the Z direction (-) [>=2]
+---------------------- WAVES ---------------------------------------------------
+             0   WaveMod        - Incident wave kinematics model {0: none=still water, 1: regular (periodic), 1P#: regular with user-specified phase, 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: White noise spectrum (irregular), 4: user-defined spectrum from routine UserWaveSpctrm (irregular), 5: Externally generated wave-elevation time series, 6: Externally generated full wave-kinematics time series [option 6 is invalid for PotMod/=0]} (switch)
+             0   WaveStMod      - Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching} (switch) [unused when WaveMod=0 or when PotMod/=0]
+         20000   WaveTMax       - Analysis time for incident wave calculations (sec) [unused when WaveMod=0; determines WaveDOmega=2Pi/WaveTMax in the IFFT]
+           0.2   WaveDT         - Time step for incident wave calculations     (sec) [unused when WaveMod=0; 0.1<=WaveDT<=1.0 recommended; determines WaveOmegaMax=Pi/WaveDT in the IFFT]
+          9.41   WaveHs         - Significant wave height of incident waves (meters) [used only when WaveMod=1, 2, or 3]
+          14.3   WaveTp         - Peak-spectral period of incident waves       (sec) [used only when WaveMod=1 or 2]
+"DEFAULT"        WavePkShp      - Peak-shape parameter of incident wave spectrum (-) or DEFAULT (string) [used only when WaveMod=2; use 1.0 for Pierson-Moskowitz]
+       0.15708   WvLowCOff      - Low  cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s) [unused when WaveMod=0, 1, or 6]
+        3.1416   WvHiCOff       - High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s) [unused when WaveMod=0, 1, or 6]
+             0   WaveDir        - Incident wave propagation heading direction                         (degrees) [unused when WaveMod=0 or 6]
+             0   WaveDirMod     - Directional spreading function {0: none, 1: COS2S}                  (-)       [only used when WaveMod=2,3, or 4]
+             1   WaveDirSpread  - Wave direction spreading coefficient ( > 0 )                        (-)       [only used when WaveMod=2,3, or 4 and WaveDirMod=1]
+             1   WaveNDir       - Number of wave directions                                           (-)       [only used when WaveMod=2,3, or 4 and WaveDirMod=1; odd number only]
+             0   WaveDirRange   - Range of wave directions (full range: WaveDir +/- 1/2*WaveDirRange) (degrees) [only used when WaveMod=2,3,or 4 and WaveDirMod=1]
+     123456789   WaveSeed(1)    - First  random seed of incident waves [-2147483648 to 2147483647]    (-)       [unused when WaveMod=0, 5, or 6]
+    1011121314   WaveSeed(2)    - Second random seed of incident waves [-2147483648 to 2147483647]    (-)       [unused when WaveMod=0, 5, or 6]
+FALSE            WaveNDAmp      - Flag for normally distributed amplitudes                            (flag)    [only used when WaveMod=2, 3, or 4]
+""               WvKinFile      - Root name of externally generated wave data file(s)        (quoted string)    [used only when WaveMod=5 or 6]
+---------------------- 2ND-ORDER WAVES ----------------------------------------- [unused with WaveMod=0 or 6]
+FALSE            WvDiffQTF      - Full difference-frequency 2nd-order wave kinematics (flag)
+FALSE            WvSumQTF       - Full summation-frequency  2nd-order wave kinematics (flag)
+             0   WvLowCOffD     - Low  frequency cutoff used in the difference-frequencies (rad/s) [Only used with a difference-frequency method]
+           0.1   WvHiCOffD      - High frequency cutoff used in the difference-frequencies (rad/s) [Only used with a difference-frequency method]
+             0   WvLowCOffS     - Low  frequency cutoff used in the summation-frequencies  (rad/s) [Only used with a summation-frequency  method]
+           0.1   WvHiCOffS      - High frequency cutoff used in the summation-frequencies  (rad/s) [Only used with a summation-frequency  method]
+---------------------- CONSTRAINED WAVES --------------------------------------- 
+             0   ConstWaveMod   - Constrained wave model: 0=none; 1=Constrained wave with specified crest elevation, alpha; 2=Constrained wave with guaranteed peak-to-trough crest height, HCrest (flag)
+             1   CrestHmax      - Crest height (2*alpha for ConstWaveMod=1 or HCrest for ConstWaveMod=2), must be larger than WaveHs (m) [unused when ConstWaveMod=0]
+            60   CrestTime      - Time at which the crest appears (s) [unused when ConstWaveMod=0]
+             0   CrestXi        - X-position of the crest (m) [unused when ConstWaveMod=0]
+             0   CrestYi        - Y-position of the crest (m) [unused when ConstWaveMod=0]
+---------------------- CURRENT ------------------------------------------------- [unused with WaveMod=6]
+             0   CurrMod        - Current profile model {0: none=no current, 1: standard, 2: user-defined from routine UserCurrent} (switch)
+             0   CurrSSV0       - Sub-surface current velocity at still water level  (m/s) [used only when CurrMod=1]
+"DEFAULT"        CurrSSDir      - Sub-surface current heading direction (degrees) or DEFAULT (string) [used only when CurrMod=1]
+             0   CurrNSRef      - Near-surface current reference depth            (meters) [used only when CurrMod=1]
+             0   CurrNSV0       - Near-surface current velocity at still water level (m/s) [used only when CurrMod=1]
+             0   CurrNSDir      - Near-surface current heading direction         (degrees) [used only when CurrMod=1]
+             0   CurrDIV        - Depth-independent current velocity                 (m/s) [used only when CurrMod=1]
+             0   CurrDIDir      - Depth-independent current heading direction    (degrees) [used only when CurrMod=1]
+---------------------- MacCamy-Fuchs diffraction model -------------------------
+             0   MCFD           - MacCamy-Fuchs member radius (ignored if radius <= 0) [must be 0 when WaveMod 0 or 6] 
+---------------------- OUTPUT --------------------------------------------------
+False            SeaStSum          - Output a summary file [flag]
+             2   OutSwtch       - Output requested channels to: [1=SeaState.out, 2=GlueCode.out, 3=both files]
+"ES11.4e2"       OutFmt         - Output format for numerical results (quoted string) [not checked for validity!]
+"A11"            OutSFmt        - Output format for header strings (quoted string) [not checked for validity!]
+             1   NWaveElev      - Number of points where the incident wave elevations can be computed (-)       [maximum of 9 output locations]
+             0   WaveElevxi     - List of xi-coordinates for points where the incident wave elevations can be output (meters) [NWaveElev points, separated by commas or white space; usused if NWaveElev = 0]
+             0   WaveElevyi     - List of yi-coordinates for points where the incident wave elevations can be output (meters) [NWaveElev points, separated by commas or white space; usused if NWaveElev = 0]
+             0   NWaveKin       - Number of points where the wave kinematics can be output (-)       [maximum of 9 output locations]
+     0,          WaveKinxi - List of xi-coordinates for points where the wave kinematics can be output (meters) [NWaveKin points, separated by commas or white space; usused if NWaveKin = 0]
+     0,          WaveKinyi - List of yi-coordinates for points where the wave kinematics can be output (meters) [NWaveKin points, separated by commas or white space; usused if NWaveKin = 0]
+     0,          WaveKinzi - List of zi-coordinates for points where the wave kinematics can be output (meters) [NWaveKin points, separated by commas or white space; usused if NWaveKin = 0]
+---------------------- OUTPUT CHANNELS -----------------------------------------
+"Wave1Elev"               - Wave elevation at the platform reference point (0,  0)
+"HydroFxi"                - Hydro force [N] in the X direction.
+"HydroFyi"                - Hydro force [N] in the Y direction.
+"HydroFzi"                - Hydro force [N] in the vertical direction (Z).
+"HydroMxi"                - Hydro moment [N] in the X direction.
+"HydroMyi"                - Hydro moment [N] in the Y direction.
+"HydroMzi"                - Hydro moment [N] in the vertical direction (Z).
+"PRPSurge"
+"PRPSway"
+"PRPHeave"
+"PRPRoll"
+"PRPPitch"
+"PRPYaw"
+"PRPTVxi"
+"PRPTVyi"
+"PRPTVzi"
+"PRPRVxi"
+"PRPRVyi"
+"PRPRVzi"
+"PRPTAxi"
+"PRPTAyi"
+"PRPTAzi"
+"PRPRAxi"
+"PRPRAyi"
+"PRPRAzi"
+END of output channels and end of file. (the word "END" must appear in the first 3 columns of this line)
