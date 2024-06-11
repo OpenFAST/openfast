@@ -7,7 +7,7 @@ False         Echo               - Echo the input to "<rootname>.AD.ech"?  (flag
           1   TwrPotent          - Type tower influence on wind based on potential flow around the tower (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
           0   TwrShadow          - Calculate tower influence on wind based on downstream tower shadow (switch) {0=none, 1=Powles model, 2=Eames model}
 False         TwrAero            - Calculate tower aerodynamic loads? (flag)
-False         CavitCheck         - Perform cavitation check? (flag) [AFAeroMod must be 1 when CavitCheck=true]
+False         CavitCheck         - Perform cavitation check? (flag) [UA_Mod must be 0 when CavitCheck=true]
 False         Buoyancy           - Include buoyancy effects? (flag)
 False         CompAA             - Flag to compute AeroAcoustics calculation [used only when WakeMod = 1 or 2]
 "unused"      AA_InputFile       - AeroAcoustics input file [used only when CompAA=true]
@@ -35,7 +35,7 @@ True          TIDrag             - Include the drag term in the tangential-induc
 --- Shear correction 
 False         SectAvg           - Use sector averaging (flag)
 1             SectAvgWeighting  - Weighting function for sector average  {1=Uniform, default=1}  within a sector centered on the blade (switch) [used only when SectAvg=True] 
-5             SectAvgNPoints    - Number of points per sectors (-) {default=5} [used only when SectAvg=True] 
+5             SectAvgNPoints    - Number of points per sectors (-) {default=5} [used only when SectAvg=True]
 -60           SectAvgPsiBwd     - Backward azimuth relative to blade where the sector starts (<=0) {default=-60} (deg) [used only when SectAvg=True]
  60           SectAvgPsiFwd     - Forward azimuth relative to blade where the sector ends (>=0) {default=60} (deg) [used only when SectAvg=True]
 --- Dynamic wake/inflow
@@ -46,9 +46,9 @@ False         SectAvg           - Use sector averaging (flag)
 ======  Unsteady Airfoil Aerodynamics Options  ====================================================
 True          AoA34              - Sample the angle of attack (AoA) at the 3/4 chord or the AC point {default=True} [always used]
           3   UA_Mod             - Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA), 2=B-L Gonzalez, 3=B-L Minnema/Pierce, 4=B-L HGM 4-states, 5=B-L HGM+vortex 5 states, 6=Oye, 7=Boeing-Vertol}
-True          FLookup            - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when AFAeroMod=2]
-          0   UAStartRad         - Starting radius for dynamic stall (fraction of rotor radius [0.0,1.0]) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
-          1   UAEndRad           - Ending radius for dynamic stall (fraction of rotor radius [0.0,1.0]) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
+True          FLookup            - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when UA_Mod>0]
+          0   UAStartRad         - Starting radius for dynamic stall (fraction of rotor radius [0.0,1.0]) [used only when UA_Mod>0; if line is missing UAStartRad=0]
+          1   UAEndRad           - Ending radius for dynamic stall (fraction of rotor radius [0.0,1.0]) [used only when UA_Mod>0; if line is missing UAEndRad=1]
 ======  Airfoil Information =========================================================================
           1   AFTabMod           - Interpolation method for multiple airfoil tables {1=1D interpolation on AoA (first table only); 2=2D interpolation on AoA and Re; 3=2D interpolation on AoA and UserProp} (-)
           1   InCol_Alfa         - The column in the airfoil tables that contains the angle of attack (-)
@@ -111,7 +111,7 @@ END of OutList section (the word "END" must appear in the first 3 columns of the
 ====== Outputs for all blade stations (same ending as above for B1N1.... =========================== [optional section]
           1   BldNd_BladesOut     - Number of blades to output all node information at.  Up to number of blades on turbine. (-)
 "All"         BldNd_BlOutNd       - Future feature will allow selecting a portion of the nodes to output.  Not implemented yet. (-)
-              OutList             - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
+              OutList_Nodal       - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
 "Fx, Fy"                   
 "Vx, Vy"                   
 "Vrel"                     
