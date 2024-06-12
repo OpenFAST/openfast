@@ -78,7 +78,6 @@ MODULE NWTC_Library
     USE NWTC_Str  ! String utils
     USE ModMesh
     USE ModReg
-    USE ModVar
     
 #ifndef NO_MESHMAPPING
     ! Note that ModMesh_Mapping also includes LAPACK routines
