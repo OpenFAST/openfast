@@ -9,6 +9,9 @@ from IPython.display import display, clear_output
 import time 
 import json  
 import matplotlib.pyplot as plt
+import gzip 
+import pickle 
+import os 
 
 class RFInteractor: 
     ""
@@ -19,7 +22,10 @@ class RFInteractor:
                  ZmqOutAddress: str = 'tcp://127.0.0.1:5556', 
                  ZmqInChannels: list = [None], 
                  live_plot: bool = True, 
-                 verbose: bool = False): 
+                 verbose: bool = False, 
+                 path_out: str = None, 
+                 save_comms_log: bool = False, 
+                 name: str = 'OFZMQSims'): 
         
         self.ZmqInAddress = ZmqInAddress
         self.ZmqOutAddress = ZmqOutAddress
@@ -29,6 +35,7 @@ class RFInteractor:
         self.allowable_requests = ['VelH', 'VelV', 'AngleH', 'AngleV', 'BlPitchCom1', 
                                    'BlPitchCom2', 'BlPitchCom3', 'GenTq', 'alpha']
         self.verbose = verbose
+        self.name = name
         
         # ------ Connect to Publisher
         if self.ZmqOutAddress is not None: 
@@ -46,6 +53,15 @@ class RFInteractor:
             
         print('ZMQ Real Time interactor for FAST initialized. \n PUB-SUB protocol: {} | REQ-REP protocol: {}'.format(self.ZmqOutAddress, 
                                                                                                                      self.ZmqInAddress))
+        
+        # ------ 
+        self.path_out = path_out
+        self.save_comms_log = save_comms_log
+        
+        if self.save_comms_log:
+            print('Communication log will be saved at: {} \n'.format(self.path_out))
+            os.makedirs(self.path_out, exist_ok=True)
+        
         pass 
     
     
@@ -125,6 +141,19 @@ class RFInteractor:
             # check if communication is still open
             if list(update_.values())[2:] == [0.0]*(self.data_length - 2):
                 break
+            
+        print('Subscription to FAST channel closed.')
+        self.subscriber.close()
+        self.pub_context.term()
+        
+        # saving only at the end to avoid performance issues. Data is available 
+        # real-time in self.sub_dict anyway
+        
+        if self.save_comms_log:
+            with gzip.open(self.path_out + '{}.pkl.gz'.format(self.name), 'wb') as f:
+                pickle.dump(self.sub_dict, f, protocol=pickle.HIGHEST_PROTOCOL)
+                
+        pass
                 
     def fast_rep(self, rep_dict):
         """

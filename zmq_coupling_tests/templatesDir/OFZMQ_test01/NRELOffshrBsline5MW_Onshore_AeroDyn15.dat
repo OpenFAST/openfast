@@ -85,7 +85,7 @@ TwrElev        TwrDiam        TwrCd          TwrTI          TwrCb !TwrTI used on
 8.7600000E+01  3.8700000E+00  1.0000000E+00  1.000000E-01   0.0
 ======  Outputs  ====================================================================================
 True          SumPrint            - Generate a summary file listing input options and interpolated properties to "<rootname>.AD.sum"?  (flag)
-          0   NBlOuts             - Number of blade node outputs [0 - 9] (-)
+          3   NBlOuts             - Number of blade node outputs [0 - 9] (-)
           1,          9,         19    BlOutNd             - Blade nodes whose values will be output  (-)
           0   NTwOuts             - Number of tower node outputs [0 - 9]  (-)
           1,          2,          6    TwOutNd             - Tower nodes whose values will be output  (-)

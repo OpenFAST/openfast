@@ -57,4 +57,9 @@ varcache
 
 # old repo for zmq pr
 /RealTimeFAST 
-/cJSON 
+/cJSON
+
+# simulation output files
+*.out
+*.outb
+*.pkl.gz

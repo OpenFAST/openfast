@@ -2497,7 +2497,13 @@ end do
       end do 
 
       if (minval(ZmqOutChnlsIdx) == 0) then 
-         call WrScr('Warning: one channel requested from ZMQ was not identified') ! CU = unit number for the output 
+         call WrScr('Warning: one channel requested from ZMQ was not identified') ! CU = unit number for the output
+         ! Find the missing channel and print it
+         do i = 1, SIZE(p_FAST%ZmqOutChannels)
+            if (ZmqOutChnlsIdx(i) == 0) then 
+               call WrScr('Channel not found: '//trim(p_FAST%ZmqOutChannels(i)))
+            end if 
+         end do 
       end if 
 
       ! Augmenting ZMQ output to handle wind turbine id and current time stamp
