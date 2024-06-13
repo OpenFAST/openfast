@@ -498,7 +498,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_IfW%Linearize        = p_FAST%Linearize
       Init%InData_IfW%InputFileName    = p_FAST%InflowFile
       Init%InData_IfW%RootName         = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_IfW))
-      Init%InData_IfW%UseInputFile     = .TRUE.
+      Init%InData_IfW%FilePassingMethod= 0_IntKi         ! IfW will read input file
       Init%InData_IfW%FixedWindFileRootName = .FALSE.
       Init%InData_IfW%OutputAccel      = p_FAST%MHK /= MHK_None
 

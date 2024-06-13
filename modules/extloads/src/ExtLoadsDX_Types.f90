@@ -297,11 +297,35 @@ subroutine ExtLdDX_UnPackInput(RF, OutData)
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackPtr(RF, OutData%twrDef); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%twrDef)) then
+      OutData%C_obj%twrDef_Len = size(OutData%twrDef)
+      if (OutData%C_obj%twrDef_Len > 0) OutData%C_obj%twrDef = c_loc(OutData%twrDef(LB(1)))
+   end if
    call RegUnpackPtr(RF, OutData%bldDef); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%bldDef)) then
+      OutData%C_obj%bldDef_Len = size(OutData%bldDef)
+      if (OutData%C_obj%bldDef_Len > 0) OutData%C_obj%bldDef = c_loc(OutData%bldDef(LB(1)))
+   end if
    call RegUnpackPtr(RF, OutData%hubDef); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%hubDef)) then
+      OutData%C_obj%hubDef_Len = size(OutData%hubDef)
+      if (OutData%C_obj%hubDef_Len > 0) OutData%C_obj%hubDef = c_loc(OutData%hubDef(LB(1)))
+   end if
    call RegUnpackPtr(RF, OutData%nacDef); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%nacDef)) then
+      OutData%C_obj%nacDef_Len = size(OutData%nacDef)
+      if (OutData%C_obj%nacDef_Len > 0) OutData%C_obj%nacDef = c_loc(OutData%nacDef(LB(1)))
+   end if
    call RegUnpackPtr(RF, OutData%bldRootDef); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%bldRootDef)) then
+      OutData%C_obj%bldRootDef_Len = size(OutData%bldRootDef)
+      if (OutData%C_obj%bldRootDef_Len > 0) OutData%C_obj%bldRootDef = c_loc(OutData%bldRootDef(LB(1)))
+   end if
    call RegUnpackPtr(RF, OutData%bldPitch); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%bldPitch)) then
+      OutData%C_obj%bldPitch_Len = size(OutData%bldPitch)
+      if (OutData%C_obj%bldPitch_Len > 0) OutData%C_obj%bldPitch = c_loc(OutData%bldPitch(LB(1)))
+   end if
 end subroutine
 
 SUBROUTINE ExtLdDX_C2Fary_CopyInput(InputData, ErrStat, ErrMsg, SkipPointers)
@@ -774,17 +798,65 @@ subroutine ExtLdDX_UnPackParam(RF, OutData)
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackPtr(RF, OutData%nBlades); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%nBlades)) then
+      OutData%C_obj%nBlades_Len = size(OutData%nBlades)
+      if (OutData%C_obj%nBlades_Len > 0) OutData%C_obj%nBlades = c_loc(OutData%nBlades(LB(1)))
+   end if
    call RegUnpackPtr(RF, OutData%nBladeNodes); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%nBladeNodes)) then
+      OutData%C_obj%nBladeNodes_Len = size(OutData%nBladeNodes)
+      if (OutData%C_obj%nBladeNodes_Len > 0) OutData%C_obj%nBladeNodes = c_loc(OutData%nBladeNodes(LB(1)))
+   end if
    call RegUnpackPtr(RF, OutData%nTowerNodes); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%nTowerNodes)) then
+      OutData%C_obj%nTowerNodes_Len = size(OutData%nTowerNodes)
+      if (OutData%C_obj%nTowerNodes_Len > 0) OutData%C_obj%nTowerNodes = c_loc(OutData%nTowerNodes(LB(1)))
+   end if
    call RegUnpackPtr(RF, OutData%twrRefPos); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%twrRefPos)) then
+      OutData%C_obj%twrRefPos_Len = size(OutData%twrRefPos)
+      if (OutData%C_obj%twrRefPos_Len > 0) OutData%C_obj%twrRefPos = c_loc(OutData%twrRefPos(LB(1)))
+   end if
    call RegUnpackPtr(RF, OutData%bldRefPos); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%bldRefPos)) then
+      OutData%C_obj%bldRefPos_Len = size(OutData%bldRefPos)
+      if (OutData%C_obj%bldRefPos_Len > 0) OutData%C_obj%bldRefPos = c_loc(OutData%bldRefPos(LB(1)))
+   end if
    call RegUnpackPtr(RF, OutData%hubRefPos); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%hubRefPos)) then
+      OutData%C_obj%hubRefPos_Len = size(OutData%hubRefPos)
+      if (OutData%C_obj%hubRefPos_Len > 0) OutData%C_obj%hubRefPos = c_loc(OutData%hubRefPos(LB(1)))
+   end if
    call RegUnpackPtr(RF, OutData%nacRefPos); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%nacRefPos)) then
+      OutData%C_obj%nacRefPos_Len = size(OutData%nacRefPos)
+      if (OutData%C_obj%nacRefPos_Len > 0) OutData%C_obj%nacRefPos = c_loc(OutData%nacRefPos(LB(1)))
+   end if
    call RegUnpackPtr(RF, OutData%bldRootRefPos); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%bldRootRefPos)) then
+      OutData%C_obj%bldRootRefPos_Len = size(OutData%bldRootRefPos)
+      if (OutData%C_obj%bldRootRefPos_Len > 0) OutData%C_obj%bldRootRefPos = c_loc(OutData%bldRootRefPos(LB(1)))
+   end if
    call RegUnpackPtr(RF, OutData%bldChord); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%bldChord)) then
+      OutData%C_obj%bldChord_Len = size(OutData%bldChord)
+      if (OutData%C_obj%bldChord_Len > 0) OutData%C_obj%bldChord = c_loc(OutData%bldChord(LB(1)))
+   end if
    call RegUnpackPtr(RF, OutData%bldRloc); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%bldRloc)) then
+      OutData%C_obj%bldRloc_Len = size(OutData%bldRloc)
+      if (OutData%C_obj%bldRloc_Len > 0) OutData%C_obj%bldRloc = c_loc(OutData%bldRloc(LB(1)))
+   end if
    call RegUnpackPtr(RF, OutData%twrDia); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%twrDia)) then
+      OutData%C_obj%twrDia_Len = size(OutData%twrDia)
+      if (OutData%C_obj%twrDia_Len > 0) OutData%C_obj%twrDia = c_loc(OutData%twrDia(LB(1)))
+   end if
    call RegUnpackPtr(RF, OutData%twrHloc); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%twrHloc)) then
+      OutData%C_obj%twrHloc_Len = size(OutData%twrHloc)
+      if (OutData%C_obj%twrHloc_Len > 0) OutData%C_obj%twrHloc = c_loc(OutData%twrHloc(LB(1)))
+   end if
 end subroutine
 
 SUBROUTINE ExtLdDX_C2Fary_CopyParam(ParamData, ErrStat, ErrMsg, SkipPointers)
@@ -1163,7 +1235,15 @@ subroutine ExtLdDX_UnPackOutput(RF, OutData)
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackPtr(RF, OutData%twrLd); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%twrLd)) then
+      OutData%C_obj%twrLd_Len = size(OutData%twrLd)
+      if (OutData%C_obj%twrLd_Len > 0) OutData%C_obj%twrLd = c_loc(OutData%twrLd(LB(1)))
+   end if
    call RegUnpackPtr(RF, OutData%bldLd); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%bldLd)) then
+      OutData%C_obj%bldLd_Len = size(OutData%bldLd)
+      if (OutData%C_obj%bldLd_Len > 0) OutData%C_obj%bldLd = c_loc(OutData%bldLd(LB(1)))
+   end if
 end subroutine
 
 SUBROUTINE ExtLdDX_C2Fary_CopyOutput(OutputData, ErrStat, ErrMsg, SkipPointers)
