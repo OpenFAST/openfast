@@ -498,7 +498,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_IfW%Linearize        = p_FAST%Linearize
       Init%InData_IfW%InputFileName    = p_FAST%InflowFile
       Init%InData_IfW%RootName         = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_IfW))
-      Init%InData_IfW%UseInputFile     = .TRUE.
+      Init%InData_IfW%FilePassingMethod= 0_IntKi         ! IfW will read input file
       Init%InData_IfW%FixedWindFileRootName = .FALSE.
       Init%InData_IfW%OutputAccel      = p_FAST%MHK /= MHK_None
 
@@ -10060,7 +10060,7 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
 END SUBROUTINE FAST_CreateCheckpoint_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that calls FAST_RestoreFromCheckpoint_T for an array of Turbine data structures.
-SUBROUTINE FAST_RestoreFromCheckpoint_Tary(t_initial, n_t_global, Turbine, CheckpointRoot, ErrStat, ErrMsg  )
+SUBROUTINE FAST_RestoreFromCheckpoint_Tary(t_initial, n_t_global, Turbine, CheckpointRoot, ErrStat, ErrMsg, silent )
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           !< initial time (for comparing with time from checkpoint file)
    INTEGER(IntKi),           INTENT(  OUT) :: n_t_global          !< loop counter
@@ -10068,6 +10068,7 @@ SUBROUTINE FAST_RestoreFromCheckpoint_Tary(t_initial, n_t_global, Turbine, Check
    CHARACTER(*),             INTENT(IN   ) :: CheckpointRoot      !< Rootname of checkpoint file
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
+   logical,        optional, intent(in   ) :: silent              !< optional to not write "#Restarting here" info
 
       ! local variables
    REAL(DbKi)                              :: t_initial_out
@@ -10090,7 +10091,11 @@ SUBROUTINE FAST_RestoreFromCheckpoint_Tary(t_initial, n_t_global, Turbine, Check
       ! Restore data from checkpoint file
    Unit = -1
    DO i_turb = 1,NumTurbines
-      CALL FAST_RestoreFromCheckpoint_T(t_initial_out, n_t_global, NumTurbines_out, Turbine(i_turb), CheckpointRoot, ErrStat2, ErrMsg2, Unit )
+      if (present(silent)) then
+         CALL FAST_RestoreFromCheckpoint_T(t_initial_out, n_t_global, NumTurbines_out, Turbine(i_turb), CheckpointRoot, ErrStat2, ErrMsg2, Unit, silent )
+      else
+         CALL FAST_RestoreFromCheckpoint_T(t_initial_out, n_t_global, NumTurbines_out, Turbine(i_turb), CheckpointRoot, ErrStat2, ErrMsg2, Unit )
+      endif
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          IF (t_initial_out /= t_initial) CALL SetErrStat(ErrID_Fatal, "invalid value of t_initial.", ErrStat, ErrMsg, RoutineName )
@@ -10105,7 +10110,7 @@ END SUBROUTINE FAST_RestoreFromCheckpoint_Tary
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is the inverse of FAST_CreateCheckpoint_T. It reads data from a checkpoint file and populates data structures for
 !! the turbine instance.
-SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, CheckpointRoot, ErrStat, ErrMsg, Unit )
+SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, CheckpointRoot, ErrStat, ErrMsg, Unit, silent )
    USE BladedInterface, ONLY: CallBladedDLL  ! Hack for Bladed-style DLL
    USE BladedInterface, ONLY: GH_DISCON_STATUS_RESTARTING
 
@@ -10117,6 +10122,7 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
    INTEGER(IntKi), OPTIONAL, INTENT(INOUT) :: Unit                !< unit number for output file
+   logical,        optional, intent(in   ) :: silent              !< optional to not write "#Restarting here" info
 
       ! local variables:
    type(RegFile)                           :: RF
@@ -10215,10 +10221,14 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
    ! deal with files that were open:
    IF (Turbine%p_FAST%WrTxtOutFile) THEN
       CALL OpenFunkFileAppend ( Turbine%y_FAST%UnOu, TRIM(Turbine%p_FAST%OutFileRoot)//'.out', ErrStat2, ErrMsg2)
-      IF ( ErrStat2 >= AbortErrLev ) RETURN
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL WrFileNR ( Turbine%y_FAST%UnOu, '#Restarting here')
-      WRITE(Turbine%y_FAST%UnOu, '()')
+      IF ( ErrStat2 >= AbortErrLev ) RETURN
+      if (present(silent)) then
+         if (.not. silent) then
+            CALL WrFileNR ( Turbine%y_FAST%UnOu, '#Restarting here')
+            WRITE(Turbine%y_FAST%UnOu, '()')
+         endif
+      endif
    END IF
 
    ! (ignoring for now; will have fort.x files if any were open [though I printed a warning about not outputting binary files earlier])
@@ -10259,7 +10269,7 @@ SUBROUTINE FAST_RestoreForVTKModeShape_Tary(t_initial, Turbine, InputFileName, E
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) return
 
-   CALL FAST_RestoreFromCheckpoint_Tary( t_initial, n_t_global, Turbine, trim(Turbine(1)%p_FAST%VTK_modes%CheckpointRoot), ErrStat2, ErrMsg2 )
+   CALL FAST_RestoreFromCheckpoint_Tary( t_initial, n_t_global, Turbine, trim(Turbine(1)%p_FAST%VTK_modes%CheckpointRoot), ErrStat2, ErrMsg2, silent=.true. )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 

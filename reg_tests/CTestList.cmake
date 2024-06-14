@@ -343,12 +343,13 @@ of_regression_py("EllipticalWing_OLAF_py"                    "openfast;fastlib;p
 of_regression_aeroacoustic("IEA_LB_RWT-AeroAcoustics"  "openfast;aerodyn15;aeroacoustics")
 
 # Linearized OpenFAST regression tests
-#of_regression_linear("Fake5MW_AeroLin_B1_UA4_DBEMT3"  "-highpass=0.05"  "openfast;linear;elastodyn;aerodyn")  #segfault currently -- fixed in next PR
-#of_regression_linear("Fake5MW_AeroLin_B3_UA6"         "-highpass=0.05"  "openfast;linear;elastodyn;aerodyn")  #segfault currently -- fixed in next PR
+of_regression_linear("Fake5MW_AeroLin_B1_UA4_DBEMT3"  "-highpass=0.05"  "openfast;linear;elastodyn;aerodyn")
+of_regression_linear("Fake5MW_AeroLin_B3_UA6"         "-highpass=0.05"  "openfast;linear;elastodyn;aerodyn")
 of_regression_linear("WP_Stationary_Linear"           ""                "openfast;linear;elastodyn")
 of_regression_linear("Ideal_Beam_Fixed_Free_Linear"   "-highpass=0.10"  "openfast;linear;beamdyn")
 of_regression_linear("Ideal_Beam_Free_Free_Linear"    "-highpass=0.10"  "openfast;linear;beamdyn")
 of_regression_linear("5MW_Land_Linear_Aero"           "-highpass=0.25"  "openfast;linear;elastodyn;servodyn;aerodyn")
+of_regression_linear("5MW_Land_Linear_Aero_CalcSteady" "-highpass=0.25"  "openfast;linear;elastodyn;servodyn;aerodyn")
 of_regression_linear("5MW_Land_BD_Linear"             ""                "openfast;linear;beamdyn;servodyn")
 of_regression_linear("5MW_Land_BD_Linear_Aero"        "-highpass=0.25"  "openfast;linear;beamdyn;servodyn;aerodyn")
 of_regression_linear("5MW_OC4Semi_Linear"             ""                "openfast;linear;hydrodyn;servodyn;map")
@@ -471,6 +472,7 @@ seast_regression("seastate_wavemod5"                         "seastate")   # pla
 
 # MoorDyn regression tests
 md_regression("md_5MW_OC4Semi"                                "moordyn")
+md_regression("md_lineFail"                                   "moordyn")
 py_md_regression("py_md_5MW_OC4Semi"                             "moordyn;python")
 # the following tests are excessively slow in double precision, so skip these in normal testing
 #md_regression("md_Node_Check_N20"                             "moordyn")

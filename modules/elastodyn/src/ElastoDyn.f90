@@ -3556,6 +3556,9 @@ SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
    p%PtfmRIner = InputFileData%PtfmRIner
    p%PtfmPIner = InputFileData%PtfmPIner
    p%PtfmYIner = InputFileData%PtfmYIner
+   p%PtfmXYIner = InputFileData%PtfmXYIner
+   p%PtfmYZIner = InputFileData%PtfmYZIner
+   p%PtfmXZIner = InputFileData%PtfmXZIner
    p%GBoxEff   = InputFileData%GBoxEff
    p%GBRatio   = InputFileData%GBRatio
    p%DTTorSpr  = InputFileData%DTTorSpr
@@ -8274,7 +8277,13 @@ DO K = 1,p%NumBl ! Loop through all blades
       RtHSdat%PMomXAll(:,p%DOFs%PYE(I)) = RtHSdat%PMomXAll(:,p%DOFs%PYE(I)  )        + RtHSdat%PMXHydro(p%DOFs%PYE(I),:) + TmpVec2 &
                                     - p%PtfmRIner*CoordSys%a1*DOT_PRODUCT( CoordSys%a1, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )   &
                                     - p%PtfmYIner*CoordSys%a2*DOT_PRODUCT( CoordSys%a2, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )   &
-                                    - p%PtfmPIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a3, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )
+                                    - p%PtfmPIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a3, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )   &
+                                    - p%PtfmXZIner*CoordSys%a1*DOT_PRODUCT( CoordSys%a2, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )   &
+                                    + p%PtfmXYIner*CoordSys%a1*DOT_PRODUCT( CoordSys%a3, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )   &
+                                    + p%PtfmYZIner*CoordSys%a2*DOT_PRODUCT( CoordSys%a3, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )   &
+                                    - p%PtfmXZIner*CoordSys%a2*DOT_PRODUCT( CoordSys%a1, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )   &
+                                    + p%PtfmXYIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a1, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )   &
+                                    + p%PtfmYZIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a2, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )
 
    ENDDO          ! I - All active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the platform center of mass (point Y)
 
@@ -8288,15 +8297,27 @@ DO K = 1,p%NumBl ! Loop through all blades
    TmpVec3 = CROSS_PRODUCT( RtHSdat%rZT0     , RtHSdat%FrcT0Trbt )                                                      ! The portion of MomXAllt associated with the FrcT0Trbt
    TmpVec  = p%PtfmRIner*CoordSys%a1*DOT_PRODUCT( CoordSys%a1, RtHSdat%AngVelEX  ) &      ! = ( Platform inertia dyadic ) dot ( angular velocity of platform in the inertia frame )
            + p%PtfmYIner*CoordSys%a2*DOT_PRODUCT( CoordSys%a2, RtHSdat%AngVelEX  ) &
-           + p%PtfmPIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a3, RtHSdat%AngVelEX  )
+           + p%PtfmPIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a3, RtHSdat%AngVelEX  ) &
+           + p%PtfmXZIner*CoordSys%a1*DOT_PRODUCT( CoordSys%a2, RtHSdat%AngVelEX  ) &
+           - p%PtfmXYIner*CoordSys%a1*DOT_PRODUCT( CoordSys%a3, RtHSdat%AngVelEX  ) &
+           - p%PtfmYZIner*CoordSys%a2*DOT_PRODUCT( CoordSys%a3, RtHSdat%AngVelEX  ) &
+           + p%PtfmXZIner*CoordSys%a2*DOT_PRODUCT( CoordSys%a1, RtHSdat%AngVelEX  ) &
+           - p%PtfmXYIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a1, RtHSdat%AngVelEX  ) &
+           - p%PtfmYZIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a2, RtHSdat%AngVelEX  )
+
    TmpVec4 = CROSS_PRODUCT( -RtHSdat%AngVelEX,   TmpVec  )                                                      ! = ( -angular velocity of platform in the inertia frame ) cross ( TmpVec )
 
    RtHSdat%FrcZAllt = RtHSdat%FrcT0Trbt + RtHSdat%FZHydrot + TmpVec1
    RtHSdat%MomXAllt = RtHSdat%MomX0Trbt + RtHSdat%MXHydrot + TmpVec2 + TmpVec3 + TmpVec4 &
                     - p%PtfmRIner*CoordSys%a1*DOT_PRODUCT( CoordSys%a1, RtHSdat%AngAccEXt ) &
                     - p%PtfmYIner*CoordSys%a2*DOT_PRODUCT( CoordSys%a2, RtHSdat%AngAccEXt ) &
-                    - p%PtfmPIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a3, RtHSdat%AngAccEXt )      
-   
+                    - p%PtfmPIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a3, RtHSdat%AngAccEXt ) &
+                    - p%PtfmXZIner*CoordSys%a1*DOT_PRODUCT( CoordSys%a2, RtHSdat%AngAccEXt ) &
+                    + p%PtfmXYIner*CoordSys%a1*DOT_PRODUCT( CoordSys%a3, RtHSdat%AngAccEXt ) &
+                    + p%PtfmYZIner*CoordSys%a2*DOT_PRODUCT( CoordSys%a3, RtHSdat%AngAccEXt ) &
+                    - p%PtfmXZIner*CoordSys%a2*DOT_PRODUCT( CoordSys%a1, RtHSdat%AngAccEXt ) &
+                    + p%PtfmXYIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a1, RtHSdat%AngAccEXt ) &
+                    + p%PtfmYZIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a2, RtHSdat%AngAccEXt )
    
 END SUBROUTINE CalculateForcesMoments
 !----------------------------------------------------------------------------------------------------------------------------------
