@@ -20,9 +20,9 @@ param	^ -                 IntKi               Map_MotionMesh          -  2  -   
 param	^ -                 IntKi               Map_Variable            -  3  -     "Individual variable mapping type"	-
 param	^ -                 IntKi               Map_Custom              -  4  -     "Custom mapping not used for linearization"	-
 
-typedef ^ MappingType      character(128)      Desc                    -  -  -     "Description of mapping (used to lookup non-mesh maps)" -
-typedef ^ ^                 IntKi               SrcModIdx               -  0  -     "Source module index in ModData array" -
-typedef ^ ^                 IntKi               DstModIdx               -  0  -     "Destination module index in ModData array" -
+typedef ^ MappingType       character(128)      Desc                    -  -  -     "Description of mapping (used to lookup non-mesh maps)" -
+typedef ^ ^                 IntKi               iModSrc               -  0  -     "Source module index in ModData array" -
+typedef ^ ^                 IntKi               iModDst               -  0  -     "Destination module index in ModData array" -
 typedef ^ ^                 IntKi               SrcModID                -  0  -     "Source module ID" -
 typedef ^ ^                 IntKi               DstModID                -  0  -     "Destination module ID" -
 typedef ^ ^                 IntKi               SrcIns                  -  0  -     "Source module Instance" -
@@ -71,7 +71,8 @@ typedef ^ ^                 IntKi               iVarDstDispOrientation  -  -  - 
 # Glue Linearization
 #----------------------------------------------------------------------------------------------------------------------------------
 
-typedef ^ Glue_LinType          R8Ki            x                       :  -  -     ""  -
+typedef ^ Glue_LinType          character(ChanLen) Abbr                 -  -  -     ""  -
+typedef ^ ^                     R8Ki            x                       :  -  -     ""  -
 typedef ^ ^                     R8Ki            dx                      :  -  -     ""  -
 typedef ^ ^                     R8Ki            xd                      :  -  -     ""  -
 typedef ^ ^                     R8Ki            z                       :  -  -     ""  -
@@ -83,10 +84,12 @@ typedef ^ ^                     R8Ki            x_pos                   :  -  - 
 typedef ^ ^                     R8Ki            x_neg                   :  -  -     ""  -
 typedef ^ ^                     R8Ki            y_pos                   :  -  -     ""  -
 typedef ^ ^                     R8Ki            y_neg                   :  -  -     ""  -
+typedef ^ ^                     R8Ki            J                       :: -  -     ""  -
 typedef ^ ^                     R8Ki            dYdx                    :: -  -     ""  -
 typedef ^ ^                     R8Ki            dXdx                    :: -  -     ""  -
 typedef ^ ^                     R8Ki            dYdu                    :: -  -     ""  -
 typedef ^ ^                     R8Ki            dXdu                    :: -  -     ""  -
+typedef ^ ^                     R8Ki            dXdy                    :: -  -     ""  -
 typedef ^ ^                     R8Ki            dUdu                    :: -  -     ""  -
 typedef ^ ^                     R8Ki            dUdy                    :: -  -     ""  -
 typedef ^ ^                     R8Ki            StateRotation           :: -  -     ""  -
@@ -95,36 +98,28 @@ typedef ^ ^                     R8Ki            StateRotation           :: -  - 
 # Module Data
 #----------------------------------------------------------------------------------------------------------------------------------
 
+typedef ^ VarXfrType            IntKi           iVar                    -  -  -     ""  -
+typedef ^ ^                     IntKi           NumVals                 -  -  -     ""  -
+typedef ^ ^                     IntKi           iSrc                    2  -  -     ""  -
+typedef ^ ^                     IntKi           iDst                    2  -  -     ""  -
+
+typedef ^ ModXfrType            VarXfrType      x                       :  -  -     ""  -
+typedef ^ ^                     VarXfrType      xd                      :  -  -     ""  -
+typedef ^ ^                     VarXfrType      z                       :  -  -     ""  -
+typedef ^ ^                     VarXfrType      u                       :  -  -     ""  -
+typedef ^ ^                     VarXfrType      y                       :  -  -     ""  -
+
 typedef ^ ModDataType           character(ChanLen) Abbr                 -  -  -     "Module name abbreviation"  -
 typedef ^ ^                     IntKi           ID                      -  0  -     "Module identification number"  -
-typedef ^ ^                     IntKi           Idx                     -  0  -     "Module index in array of modules"  -
+typedef ^ ^                     IntKi           iMod                    -  0  -     "Module index in array of modules"  -
 typedef ^ ^                     IntKi           Ins                     -  0  -     "Module instance number"  -
 typedef ^ ^                     R8Ki            DT                      -  0  -     "Module time step"  -
 typedef ^ ^                     IntKi           SubSteps                -  0  -     "Module number of substeps per solver time step"  -
 typedef ^ ^                     ModVarsType    *Vars                    -  -  -     "Pointer to module variables type"  -
+typedef ^ ^                     ModXfrType      Xfr                     :  -  -     "Variable index for combined modules"  -
 typedef ^ ^                     Glue_LinType    Lin                     -  -  -     "Module linearization data"  -
 typedef ^ ^                     IntKi           SrcMaps                 :  -  -     "Indices of mappings where module is the source"
 typedef ^ ^                     IntKi           DstMaps                 :  -  -     "Indices of mappings where module is the destination"
-
-#----------------------------------------------------------------------------------------------------------------------------------
-# Variable Indexing
-#----------------------------------------------------------------------------------------------------------------------------------
-
-typedef ^ VarIdxType            IntKi           ModVarStart             :  -  -     "Variable start index from module index"  -
-typedef ^ ^                     IntKi           ValLocGbl               :: -  -     "Variable local and global value indices"  -
-
-typedef ^ VarsIdxType           IntKi           FlagFilter              -  -  -     ""  -
-typedef ^ ^                     IntKi           Nx                      -  -  -     ""  -
-typedef ^ ^                     IntKi           Nxd                     -  -  -     ""  -
-typedef ^ ^                     IntKi           Nz                      -  -  -     ""  -
-typedef ^ ^                     IntKi           Nu                      -  -  -     ""  -
-typedef ^ ^                     IntKi           Ny                      -  -  -     ""  -
-typedef ^ ^                     VarIdxType      x                       -  -  -     ""  -
-typedef ^ ^                     VarIdxType      xd                      -  -  -     ""  -
-typedef ^ ^                     VarIdxType      z                       -  -  -     ""  -
-typedef ^ ^                     VarIdxType      u                       -  -  -     ""  -
-typedef ^ ^                     VarIdxType      y                       -  -  -     ""  -
-typedef ^ ^                     Glue_LinType    Lin                     -  -  -     "Linearization matrices"  -
 
 #----------------------------------------------------------------------------------------------------------------------------------
 # Glue Parameters
@@ -133,7 +128,6 @@ typedef ^ ^                     Glue_LinType    Lin                     -  -  - 
 typedef ^ Glue_LinParam         IntKi           NumTimes                -  -  -     "Number of times to linearize" -
 typedef ^ ^                     IntKi           InterpOrder             -  -  -     "Interpolation order" -
 typedef ^ ^                     logical         SaveOPs                 -  -  -     "flag to save operating points during linearization" -
-typedef ^ ^                     VarsIdxType     Idx                     -  -  -     "Variable index for linearization data" -
 typedef ^ ^                     IntKi           iMod                    :  -  -     "ModData index order for linearization" -
 
 typedef ^ Glue_ParameterType    Glue_LinParam   Lin                     -  -  -     "Linearization parameters"
@@ -181,8 +175,7 @@ typedef ^ ^                     R8Ki            xd                      :: -  - 
 typedef ^ ^                     R8Ki            z                       :: -  -     "linearization operating point constraint state" -
 typedef ^ ^                     R8Ki            OtherSt                 :: -  -     "linearization operating point other state" -
 
-typedef ^ Glue_OutputFileType   ModDataType     ModGlue                 -  -  -     "glue module data" -
-typedef ^ ^                     Glue_LinSave    Lin                     -  -  -     "Operating point data for linearization"
+typedef ^ Glue_OutputFileType   Glue_LinSave    Lin                     -  -  -     "Operating point data for linearization"
 
 #----------------------------------------------------------------------------------------------------------------------------------
 # Miscellaneous Data
@@ -202,14 +195,39 @@ typedef ^ ^                     R8Ki            y_interp                :  -  - 
 typedef ^ ^                     R8Ki            y_diff                  :  -  -     "difference between outputs from current and previous rotation" -
 typedef ^ ^                     R8Ki            y_ref                   :  -  -     "reference output values for error calculation" -
 
+typedef ^ AeroMapCase           ReKi            RotSpeed                -  -  -     "Rotor speed for this case of the steady-state solve [>0]" "rad/s"
+typedef ^ ^                     ReKi            TSR                     -  -  -     "TSR for this case of the steady-state solve [>0]" "-"
+typedef ^ ^                     ReKi            WindSpeed               -  -  -     "Windspeed for this case of the steady-state solve [>0]" "m/s"
+typedef ^ ^                     ReKi            Pitch                   -  -  -     "Pitch angle for this case of the steady-state solve" "rad"
+
+typedef ^ Glue_AeroMap          ModDataType     Mod                     -  -  -     "Module combining all active modules" -
+typedef ^ ^                     IntKi           iModOrder               :  -  -     "Index of module order for AeroMap modules" -
+typedef ^ ^                     IntKi           iModED                  -  -  -     "Index of ElastoDyn module" -
+typedef ^ ^                     IntKi           iModBD                  -  0  -     "Index of BeamDyn blade 1 module" -
+typedef ^ ^                     IntKi           iModAD                  -  -  -     "Index of AeroDyn module" -
+typedef ^ ^                     R8Ki            Jac11                   :: -  -     "Components of Jacobian matrix" -
+typedef ^ ^                     R8Ki            Jac12                   :: -  -     "Components of Jacobian matrix" -
+typedef ^ ^                     R8Ki            Jac21                   :: -  -     "Components of Jacobian matrix" -
+typedef ^ ^                     R8Ki            Jac22                   :: -  -     "Components of Jacobian matrix" -
+typedef ^ ^                     IntKi           JacPivot                :  -  -     "Jacobian matrix pivot array" -
+typedef ^ ^                     R8Ki            HubOrientation         ::: -  -     "Hub orientation matrix for each blade" -
+typedef ^ ^                     R8Ki            u1                      :  -  -     "" -
+typedef ^ ^                     R8Ki            u2                      :  -  -     "" -
+typedef ^ ^                     R8Ki            Residual                :  -  -     "" -
+typedef ^ ^                     R8Ki            SolveDelta              :  -  -     "" -
+typedef ^ ^                     AeroMapCase     Cases                   :  -  -     "cases to run for aero mapping" -
+typedef ^ ^                     IntKi           LinFileNum              -  1  -     "Linearization file number" -
+
 typedef ^ Glue_LinMisc          IntKi           TimeIndex               -  -  -     "" -
 typedef ^ ^                     IntKi           AzimuthIndex            -  -  -     "" -
 typedef ^ ^                     logical         IsConverged             -  -  -     "" -
 
-typedef ^ Glue_MiscVarType      ModDataType     Modules                 :  -  -     "module variable and value data" -
+typedef ^ Glue_MiscVarType      ModDataType     Modules                 :  -  -     "Module variable and value data" -
 typedef ^ ^                     MappingType     Mappings                :  -  -     "Module mapping" -
+typedef ^ ^                     ModDataType     ModGlue                 -  -  -     "Glue code module" -
 typedef ^ ^                     Glue_LinMisc    Lin                     -  -  -     "Linearization misc vars"
 typedef ^ ^                     Glue_CalcSteady CS                      -  -  -     "CalcSteady calculation data"
+typedef ^ ^                     Glue_AeroMap    AM                      -  -  -     "AeroMap data"
 typedef ^ ^                     R8Ki            q                       :: -  -     "" -
 typedef ^ ^                     R8Ki            qn                      :: -  -     "" -
 typedef ^ ^                     R8Ki            x                       :  -  -     "" -

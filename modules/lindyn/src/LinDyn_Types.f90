@@ -1555,5 +1555,39 @@ SUBROUTINE LD_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Err
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
    END IF ! check if allocated
 END SUBROUTINE
+
+function LD_InputMeshPointer(u, ML) result(Mesh)
+   type(LD_InputType), target, intent(in) :: u
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function LD_InputMeshName(ML) result(Name)
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
+
+function LD_OutputMeshPointer(y, ML) result(Mesh)
+   type(LD_OutputType), target, intent(in) :: y
+   type(MeshLocType), intent(in)      :: ML
+   type(MeshType), pointer            :: Mesh
+   nullify(Mesh)
+   select case (ML%Num)
+   end select
+end function
+
+function LD_OutputMeshName(ML) result(Name)
+   type(MeshLocType), intent(in)      :: ML
+   character(32)                      :: Name
+   Name = ""
+   select case (ML%Num)
+   end select
+end function
 END MODULE LinDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

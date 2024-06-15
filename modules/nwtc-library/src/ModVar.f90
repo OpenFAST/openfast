@@ -33,10 +33,10 @@ private
 public :: MV_InitVarsJac, MV_Pack, MV_Unpack
 public :: MV_ComputeCentralDiff, MV_Perturb, MV_ComputeDiff, MV_ExtrapInterp
 public :: MV_AddVar, MV_AddMeshVar
-public :: MV_HasFlags, MV_SetFlags, MV_UnsetFlags, MV_NumVars
+public :: MV_HasFlags, MV_SetFlags, MV_ClearFlags, MV_NumVars
 public :: LoadFields, MotionFields, TransFields, AngularFields
 public :: quat_to_dcm, dcm_to_quat, quat_inv, quat_to_rvec, rvec_to_quat, wm_to_quat, quat_to_wm, wm_inv
-public :: MV_FieldString, IdxStr
+public :: MV_FieldString, MV_IsLoad, IdxStr
 public :: DumpMatrix
 
 integer(IntKi), parameter :: &
@@ -967,6 +967,11 @@ function MV_NumVars(VarAry, FlagFilter) result(Num)
    end if
 end function
 
+pure logical function MV_IsLoad(Var)
+   type(ModVarType), intent(in)  :: Var
+   MV_IsLoad = Var%Field == FieldForce .or. Var%Field == FieldMoment
+end function
+
 !-------------------------------------------------------------------------------
 ! Flag Utilities
 !-------------------------------------------------------------------------------
@@ -984,7 +989,7 @@ subroutine MV_SetFlags(Var, Flags)
    Var%Flags = ior(Var%Flags, Flags)
 end subroutine
 
-subroutine MV_UnsetFlags(Var, Flags)
+subroutine MV_ClearFlags(Var, Flags)
    type(ModVarType), intent(inout)  :: Var
    integer(IntKi), intent(in)       :: Flags
    integer(IntKi)                   :: i

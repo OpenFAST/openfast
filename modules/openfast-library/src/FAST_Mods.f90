@@ -43,6 +43,7 @@ MODULE FAST_ModTypes
    ! input array indices
    INTEGER(IntKi), PARAMETER :: INPUT_TEMP              = 0
    INTEGER(IntKi), PARAMETER :: INPUT_CURR              = 1
+   INTEGER(IntKi), PARAMETER :: INPUT_PREV              = 2
    
    ! VTK visualization
    INTEGER(IntKi), PARAMETER :: VTK_Unknown             = -1         !< unknown option (will produce error)

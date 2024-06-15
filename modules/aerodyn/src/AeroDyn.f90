@@ -5579,7 +5579,7 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
    character(64)           :: NodeLabel
    character(1), parameter :: UVW(3) = ['U','V','W']
    real(R8Ki)              :: Perturb, PerturbTower, PerturbBlade(MaxBl)
-   integer(IntKi)          :: i, j, n, state
+   integer(IntKi)          :: i, j, n, state, Flags
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -5798,9 +5798,11 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
    call AllocAry(p%iVarBladeLoad, p%NumBlades, "iVarBladeLoad", ErrStat2, ErrMsg2); if (Failed()) return
    p%iVarBladeLoad = 0
    do j = 1, p%NumBlades
+      Flags = VF_Line
+      if (j == 1) Flags = ior(Flags, VF_AeroMap)
       call MV_AddMeshVar(p%Vars%y, "Blade "//Num2LStr(j), LoadFields, &
                          VarIdx=p%iVarBladeLoad(j), &
-                         Flags=ior(VF_AeroMap, VF_Line), &
+                         Flags=Flags, &
                          Mesh=y%BladeLoad(j))
    end do
 
@@ -6056,7 +6058,7 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
    end if
 
    ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
-   if (present(dXdu)) then
+   if (present(dXdu) .and. (p%Vars%Nx > 0)) then
 
       ! Allocate dXdu if not allocated
       if (.not. allocated(dXdu)) then

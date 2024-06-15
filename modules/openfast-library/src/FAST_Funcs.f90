@@ -441,11 +441,12 @@ contains
    end function
 end subroutine
 
-subroutine FAST_CalcOutput(ModData, Maps, ThisTime, ThisState, T, ErrStat, ErrMsg)
+subroutine FAST_CalcOutput(ModData, Maps, ThisTime, InputIndex, StateIndex, T, ErrStat, ErrMsg)
    type(ModDataType), intent(in)           :: ModData     !< Module data
    type(MappingType), intent(inout)        :: Maps(:)     !< Output->Input mappings
    real(DbKi), intent(in)                  :: ThisTime    !< Time
-   integer(IntKi), intent(in)              :: ThisState   !< State index
+   integer(IntKi), intent(in)              :: InputIndex  !< Input index
+   integer(IntKi), intent(in)              :: StateIndex  !< State index
    type(FAST_TurbineType), intent(inout)   :: T           !< Turbine type
    integer(IntKi), intent(out)             :: ErrStat
    character(*), intent(out)               :: ErrMsg
@@ -462,41 +463,41 @@ subroutine FAST_CalcOutput(ModData, Maps, ThisTime, ThisState, T, ErrStat, ErrMs
    select case (ModData%ID)
 
    case (Module_AD)
-      call AD_CalcOutput(ThisTime, T%AD%Input(1), T%AD%p, T%AD%x(ThisState), T%AD%xd(ThisState), T%AD%z(ThisState), &
-                         T%AD%OtherSt(ThisState), T%AD%y, T%AD%m, ErrStat2, ErrMsg2, T%y_FAST%WriteThisStep)
+      call AD_CalcOutput(ThisTime, T%AD%Input(InputIndex), T%AD%p, T%AD%x(StateIndex), T%AD%xd(StateIndex), T%AD%z(StateIndex), &
+                         T%AD%OtherSt(StateIndex), T%AD%y, T%AD%m, ErrStat2, ErrMsg2, T%y_FAST%WriteThisStep)
 
    case (Module_BD)
-      call BD_CalcOutput(ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, ThisState), &
-                         T%BD%xd(ModData%Ins, ThisState), T%BD%z(ModData%Ins, ThisState), T%BD%OtherSt(ModData%Ins, ThisState), &
+      call BD_CalcOutput(ThisTime, T%BD%Input(InputIndex, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, StateIndex), &
+                         T%BD%xd(ModData%Ins, StateIndex), T%BD%z(ModData%Ins, StateIndex), T%BD%OtherSt(ModData%Ins, StateIndex), &
                          T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2)
 
    case (Module_ED)
-      call ED_CalcOutput(ThisTime, T%ED%Input(1), T%ED%p, T%ED%x(ThisState), T%ED%xd(ThisState), &
-                         T%ED%z(ThisState), T%ED%OtherSt(ThisState), T%ED%y, T%ED%m, ErrStat2, ErrMsg2)
+      call ED_CalcOutput(ThisTime, T%ED%Input(InputIndex), T%ED%p, T%ED%x(StateIndex), T%ED%xd(StateIndex), &
+                         T%ED%z(StateIndex), T%ED%OtherSt(StateIndex), T%ED%y, T%ED%m, ErrStat2, ErrMsg2)
 !  case (Module_ExtPtfm)
 !  case (Module_FEAM)
    case (Module_HD)
-      call HydroDyn_CalcOutput(ThisTime, T%HD%Input(1), T%HD%p, T%HD%x(ThisState), T%HD%xd(ThisState), &
-                               T%HD%z(ThisState), T%HD%OtherSt(ThisState), T%HD%y, T%HD%m, ErrStat2, ErrMsg2)
+      call HydroDyn_CalcOutput(ThisTime, T%HD%Input(InputIndex), T%HD%p, T%HD%x(StateIndex), T%HD%xd(StateIndex), &
+                               T%HD%z(StateIndex), T%HD%OtherSt(StateIndex), T%HD%y, T%HD%m, ErrStat2, ErrMsg2)
 
 !  case (Module_IceD)
 !  case (Module_IceF)
    case (Module_IfW)
-      call InflowWind_CalcOutput(ThisTime, T%IfW%Input(1), T%IfW%p, T%IfW%x(ThisState), T%IfW%xd(ThisState), T%IfW%z(ThisState), &
-                                 T%IfW%OtherSt(ThisState), T%IfW%y, T%IfW%m, ErrStat2, ErrMsg2)
+      call InflowWind_CalcOutput(ThisTime, T%IfW%Input(InputIndex), T%IfW%p, T%IfW%x(StateIndex), T%IfW%xd(StateIndex), T%IfW%z(StateIndex), &
+                                 T%IfW%OtherSt(StateIndex), T%IfW%y, T%IfW%m, ErrStat2, ErrMsg2)
 
 !  case (Module_MAP)
 !  case (Module_MD)
 !  case (Module_OpFM)
 !  case (Module_Orca)
    case (Module_SD)
-      call SD_CalcOutput(ThisTime, T%SD%Input(1), T%SD%p, T%SD%x(ThisState), T%SD%xd(ThisState), T%SD%z(ThisState), &
-                         T%SD%OtherSt(ThisState), T%SD%y, T%SD%m, ErrStat2, ErrMsg2)
+      call SD_CalcOutput(ThisTime, T%SD%Input(InputIndex), T%SD%p, T%SD%x(StateIndex), T%SD%xd(StateIndex), T%SD%z(StateIndex), &
+                         T%SD%OtherSt(StateIndex), T%SD%y, T%SD%m, ErrStat2, ErrMsg2)
 
 !  case (Module_SeaSt)
    case (Module_SrvD)
-      call SrvD_CalcOutput(ThisTime, T%SrvD%Input(1), T%SrvD%p, T%SrvD%x(ThisState), T%SrvD%xd(ThisState), T%SrvD%z(ThisState), &
-                           T%SrvD%OtherSt(ThisState), T%SrvD%y, T%SrvD%m, ErrStat2, ErrMsg2)
+      call SrvD_CalcOutput(ThisTime, T%SrvD%Input(InputIndex), T%SrvD%p, T%SrvD%x(StateIndex), T%SrvD%xd(StateIndex), T%SrvD%z(StateIndex), &
+                           T%SrvD%OtherSt(StateIndex), T%SrvD%y, T%SrvD%m, ErrStat2, ErrMsg2)
 
    case default
       call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(ModData%ID)), ErrStat, ErrMsg, RoutineName)
@@ -512,11 +513,12 @@ subroutine FAST_CalcOutput(ModData, Maps, ThisTime, ThisState, T, ErrStat, ErrMs
 
 end subroutine
 
-subroutine FAST_GetOP(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg, FlagFilter, &
+subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, ErrMsg, FlagFilter, &
                       u_op, y_op, x_op, dx_op, xd_op, z_op)
    type(ModDataType), intent(in)                      :: ModData     !< Module data
    real(DbKi), intent(in)                             :: ThisTime    !< Time
-   integer(IntKi), intent(in)                         :: ThisState   !< State index
+   integer(IntKi), intent(in)                         :: InputIndex  !< Input index
+   integer(IntKi), intent(in)                         :: StateIndex  !< State index
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
@@ -540,19 +542,19 @@ subroutine FAST_GetOP(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg, FlagFilt
    select case (ModData%ID)
 
    case (Module_AD)
-      call AD_GetOP(ModData%Ins, ThisTime, T%AD%Input(1), T%AD%p, T%AD%x(ThisState), T%AD%xd(ThisState), T%AD%z(ThisState), &
-                    T%AD%OtherSt(ThisState), T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
+      call AD_GetOP(ModData%Ins, ThisTime, T%AD%Input(InputIndex), T%AD%p, T%AD%x(StateIndex), T%AD%xd(StateIndex), T%AD%z(StateIndex), &
+                    T%AD%OtherSt(StateIndex), T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
                     FlagFilter=FlagFilter, u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
 
    case (Module_BD)
-      call BD_GetOP(ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, ThisState), &
-                    T%BD%xd(ModData%Ins, ThisState), T%BD%z(ModData%Ins, ThisState), T%BD%OtherSt(ModData%Ins, ThisState), &
+      call BD_GetOP(ThisTime, T%BD%Input(InputIndex, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, StateIndex), &
+                    T%BD%xd(ModData%Ins, StateIndex), T%BD%z(ModData%Ins, StateIndex), T%BD%OtherSt(ModData%Ins, StateIndex), &
                     T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
                     FlagFilter=FlagFilter, u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
 
    case (Module_ED)
-      call ED_GetOP(ThisTime, T%ED%Input(1), T%ED%p, T%ED%x(ThisState), T%ED%xd(ThisState), &
-                    T%ED%z(ThisState), T%ED%OtherSt(ThisState), T%ED%y, T%ED%m, ErrStat2, ErrMsg2, &
+      call ED_GetOP(ThisTime, T%ED%Input(InputIndex), T%ED%p, T%ED%x(StateIndex), T%ED%xd(StateIndex), &
+                    T%ED%z(StateIndex), T%ED%OtherSt(StateIndex), T%ED%y, T%ED%m, ErrStat2, ErrMsg2, &
                     FlagFilter=FlagFilter, u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
 
 !  case (Module_ExtPtfm)
@@ -560,42 +562,42 @@ subroutine FAST_GetOP(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg, FlagFilt
 !  case (Module_FEAM)
 
    case (Module_HD)
-      call HD_GetOP(ThisTime, T%HD%Input(1), T%HD%p, T%HD%x(ThisState), T%HD%xd(ThisState), &
-                    T%HD%z(ThisState), T%HD%OtherSt(ThisState), T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
+      call HD_GetOP(ThisTime, T%HD%Input(InputIndex), T%HD%p, T%HD%x(StateIndex), T%HD%xd(StateIndex), &
+                    T%HD%z(StateIndex), T%HD%OtherSt(StateIndex), T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
                     u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
 
 !  case (Module_IceD)
 !  case (Module_IceF)
    case (Module_IfW)
-      call InflowWind_GetOP(ThisTime, T%IfW%Input(1), T%IfW%p, T%IfW%x(ThisState), T%IfW%xd(ThisState), T%IfW%z(ThisState), &
-                            T%IfW%OtherSt(ThisState), T%IfW%y, T%IfW%m, ErrStat2, ErrMsg2, &
+      call InflowWind_GetOP(ThisTime, T%IfW%Input(InputIndex), T%IfW%p, T%IfW%x(StateIndex), T%IfW%xd(StateIndex), T%IfW%z(StateIndex), &
+                            T%IfW%OtherSt(StateIndex), T%IfW%y, T%IfW%m, ErrStat2, ErrMsg2, &
                             u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
 
    case (Module_MAP)
-      call MAP_GetOP(ThisTime, T%MAP%Input(1), T%MAP%p, T%MAP%x(ThisState), T%MAP%xd(ThisState), T%MAP%z(ThisState), &
+      call MAP_GetOP(ThisTime, T%MAP%Input(InputIndex), T%MAP%p, T%MAP%x(StateIndex), T%MAP%xd(StateIndex), T%MAP%z(StateIndex), &
                      T%MAP%OtherSt, T%MAP%y, ErrStat2, ErrMsg2, &
                      u_op=u_op, y_op=y_op) !, x_op=x_op, dx_op=dx_op) MAP doesn't have states
 
    case (Module_MD)
-      call MD_GetOP(ThisTime, T%MD%Input(1), T%MD%p, T%MD%x(ThisState), T%MD%xd(ThisState), T%MD%z(ThisState), &
-                    T%MD%OtherSt(ThisState), T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
+      call MD_GetOP(ThisTime, T%MD%Input(InputIndex), T%MD%p, T%MD%x(StateIndex), T%MD%xd(StateIndex), T%MD%z(StateIndex), &
+                    T%MD%OtherSt(StateIndex), T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
                     FlagFilter=FlagFilter, u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
 
 !  case (Module_OpFM)
 !  case (Module_Orca)
    case (Module_SD)
-      call SD_GetOP(ThisTime, T%SD%Input(1), T%SD%p, T%SD%x(ThisState), T%SD%xd(ThisState), T%SD%z(ThisState), &
-                    T%SD%OtherSt(ThisState), T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
+      call SD_GetOP(ThisTime, T%SD%Input(InputIndex), T%SD%p, T%SD%x(StateIndex), T%SD%xd(StateIndex), T%SD%z(StateIndex), &
+                    T%SD%OtherSt(StateIndex), T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
                     u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
 
    case (Module_SeaSt)
-      call SeaSt_GetOP(ThisTime, T%SeaSt%Input(1), T%SeaSt%p, T%SeaSt%x(ThisState), T%SeaSt%xd(ThisState), T%SeaSt%z(ThisState), &
-                       T%SeaSt%OtherSt(ThisState), T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
+      call SeaSt_GetOP(ThisTime, T%SeaSt%Input(InputIndex), T%SeaSt%p, T%SeaSt%x(StateIndex), T%SeaSt%xd(StateIndex), T%SeaSt%z(StateIndex), &
+                       T%SeaSt%OtherSt(StateIndex), T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
                        u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
 
    case (Module_SrvD)
-      call SrvD_GetOP(ThisTime, T%SrvD%Input(1), T%SrvD%p, T%SrvD%x(ThisState), T%SrvD%xd(ThisState), T%SrvD%z(ThisState), &
-                      T%SrvD%OtherSt(ThisState), T%SrvD%y, T%SrvD%m, ErrStat2, ErrMsg2, &
+      call SrvD_GetOP(ThisTime, T%SrvD%Input(InputIndex), T%SrvD%p, T%SrvD%x(StateIndex), T%SrvD%xd(StateIndex), T%SrvD%z(StateIndex), &
+                      T%SrvD%OtherSt(StateIndex), T%SrvD%y, T%SrvD%m, ErrStat2, ErrMsg2, &
                       u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
 
    case default

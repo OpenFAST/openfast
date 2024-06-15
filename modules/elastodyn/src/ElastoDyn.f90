@@ -2081,7 +2081,9 @@ END IF
    ENDDO             ! I - All active (enabled) DOFs
 
    m%QD2T = dxdt%QDT
-      
+
+   ! If computing AeroMaps, put accelerations where velocities would be located
+   if (p%CompAeroMaps) dxdt%QT = dxdt%QDT
    
       ! Let's calculate the sign (+/-1) of the low-speed shaft torque for this time step and store it in SgnPrvLSTQ.
       !  This will be used during the next call to RtHS (bjj: currently violates framework, but DOE wants a hack for HSS brake).
@@ -11412,8 +11414,12 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
          p%Vars%x(i)%Perturb = max(p%Vars%x(i)%Perturb, MinPerturb)
 
          ! Update from position to velocity
-         if (p%Vars%x(i)%Field == FieldTransDisp) Field = FieldTransVel
-         if (p%Vars%x(i)%Field == FieldAngularDisp) Field = FieldAngularVel
+         select case (p%Vars%x(i)%Field)
+         case (FieldTransDisp)
+            Field = FieldTransVel
+         case (FieldAngularDisp)
+            Field = FieldAngularVel
+         end select
          
          ! Add variable (only active variables are in x)
          call MV_AddVar(p%Vars%x, p%Vars%x(i)%Name, Field, &
@@ -11423,8 +11429,8 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
                         Perturb=p%Vars%x(i)%Perturb, &
                         LinNames=['First time derivative of '//trim(p%Vars%x(i)%LinNames(1))//'/s'])
 
-         ! Remove aero map flag from newly created variable
-         call MV_UnsetFlags(p%Vars%x(j), VF_AeroMap)
+         ! Remove aero map flag from velocity variable
+         call MV_ClearFlags(p%Vars%x(j), VF_AeroMap)
 
       end do
    end if
@@ -11537,7 +11543,7 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
          if (i == 1) then
             do j = p%iVarBladeMotion(i), size(p%Vars%y)
                select case (p%Vars%y(j)%Field)
-               case (FieldTransDisp, FieldAngularDisp, FieldTransVel, FieldAngularVel)
+               case (FieldTransDisp, FieldOrientation, FieldTransVel, FieldAngularVel)
                   call MV_SetFlags(p%Vars%y(j), VF_AeroMap)
                end select
             end do

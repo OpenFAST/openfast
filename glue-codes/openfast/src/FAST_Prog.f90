@@ -32,7 +32,7 @@ PROGRAM FAST
 
 
 USE FAST_Subs   ! all of the ModuleName and ModuleName_types modules are inherited from FAST_Subs
-! USE FAST_AeroMap, ONLY : FAST_RunSteadyStateDriver
+USE FAST_AeroMap, ONLY : FAST_RunSteadyStateDriver
 
 IMPLICIT  NONE
    
@@ -80,7 +80,7 @@ INTEGER(IntKi)                        :: Restart_step                           
    ELSE IF ( TRIM(FlagArg) == 'STEADYSTATE' ) THEN ! Do steady-state analysis, not time-marching -- this works for only 1 turbine (i.e., NumTurbines==1)!
 
       ! this runs the steady-state solver driver and ENDS the program:
-      ! CALL FAST_RunSteadyStateDriver( Turbine(1) )
+      CALL FAST_RunSteadyStateDriver( Turbine(1) )
    
    ELSEIF ( LEN( TRIM(FlagArg) ) > 0 ) THEN ! Any other flag, end normally
       CALL NormStop()

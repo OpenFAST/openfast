@@ -76,13 +76,15 @@ param       ^       -           IntKi           VC_Option1          -   2   -   
 param       ^       -           IntKi           VC_Option2          -   3   -   ""  -
 
 typedef     ^       ModVarType  character(VarNameLen)   Name        -   -   -   ""  -
+typedef     ^       ^           IntKi           iMod                -   0   -   "Module index"  -
+typedef     ^       ^           IntKi           iVar                -   0   -   "Variable index"  -
 typedef     ^       ^           IntKi           Field               -   0   -   ""  -
 typedef     ^       ^           IntKi           Nodes               -   1   -   ""  -
 typedef     ^       ^           IntKi           Num                 -   1   -   ""  -
 typedef     ^       ^           IntKi           Flags               -   0   -   ""  -
 typedef     ^       ^           IntKi           DerivOrder          -   0   -   ""  -
-typedef     ^       ^           IntKi           iLoc                2   -   -   "indices in local arrays"  -
-typedef     ^       ^           IntKi           iUsr                2   -   -   "first user defined index for variable, can be used a lower/upper bounds"  -
+typedef     ^       ^           IntKi           iLoc                2   0   -   "indices in local arrays"  -
+typedef     ^       ^           IntKi           iUsr                2   0   -   "first user defined index for variable, can be used a lower/upper bounds"  -
 typedef     ^       ^           IntKi           jUsr                -   0   -   "second user defined index for variable"  -
 typedef     ^       ^           IntKi           MeshID              -   0   -   "Mesh identification number"  -
 typedef     ^       ^           R8Ki            Perturb             -   0   -   "perturbation amount for linearization"  -

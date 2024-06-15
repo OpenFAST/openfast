@@ -116,13 +116,15 @@ IMPLICIT NONE
 ! =========  ModVarType  =======
   TYPE, PUBLIC :: ModVarType
     character(VarNameLen)  :: Name      !<  [-]
+    INTEGER(IntKi)  :: iMod = 0      !< Module index [-]
+    INTEGER(IntKi)  :: iVar = 0      !< Variable index [-]
     INTEGER(IntKi)  :: Field = 0      !<  [-]
     INTEGER(IntKi)  :: Nodes = 1      !<  [-]
     INTEGER(IntKi)  :: Num = 1      !<  [-]
     INTEGER(IntKi)  :: Flags = 0      !<  [-]
     INTEGER(IntKi)  :: DerivOrder = 0      !<  [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iLoc = 0_IntKi      !< indices in local arrays [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iUsr = 0_IntKi      !< first user defined index for variable, can be used a lower/upper bounds [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: iLoc = 0      !< indices in local arrays [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: iUsr = 0      !< first user defined index for variable, can be used a lower/upper bounds [-]
     INTEGER(IntKi)  :: jUsr = 0      !< second user defined index for variable [-]
     INTEGER(IntKi)  :: MeshID = 0      !< Mesh identification number [-]
     REAL(R8Ki)  :: Perturb = 0      !< perturbation amount for linearization [-]
@@ -599,6 +601,8 @@ subroutine NWTC_Library_CopyModVarType(SrcModVarTypeData, DstModVarTypeData, Ctr
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstModVarTypeData%Name = SrcModVarTypeData%Name
+   DstModVarTypeData%iMod = SrcModVarTypeData%iMod
+   DstModVarTypeData%iVar = SrcModVarTypeData%iVar
    DstModVarTypeData%Field = SrcModVarTypeData%Field
    DstModVarTypeData%Nodes = SrcModVarTypeData%Nodes
    DstModVarTypeData%Num = SrcModVarTypeData%Num
@@ -641,6 +645,8 @@ subroutine NWTC_Library_PackModVarType(RF, Indata)
    character(*), parameter         :: RoutineName = 'NWTC_Library_PackModVarType'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%Name)
+   call RegPack(RF, InData%iMod)
+   call RegPack(RF, InData%iVar)
    call RegPack(RF, InData%Field)
    call RegPack(RF, InData%Nodes)
    call RegPack(RF, InData%Num)
@@ -664,6 +670,8 @@ subroutine NWTC_Library_UnPackModVarType(RF, OutData)
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%Name); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVar); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Field); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Nodes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Num); if (RegCheckErr(RF, RoutineName)) return
