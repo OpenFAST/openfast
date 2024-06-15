@@ -61,7 +61,7 @@ matlab_add_mex(
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Funcs.f90
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_ModGlue.f90
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Mapping.f90
-    ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Idx.f90
+    ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_ModData.f90
   LINK_TO 
     ${MEX_LIBS}
     ${MEX_LIBS} # DO NOT REMOVE (needed to ensure no unresolved symbols)
