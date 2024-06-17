@@ -523,7 +523,7 @@ file with name ``<OutFileRoot>.AD.sum``. ``<OutFileRoot>`` is either
 specified in the I/O SETTINGS section of the driver input file when
 running AeroDyn standalone, or by the OpenFAST program when running a
 coupled simulation. See :numref:`sec:ad_SumFile` for summary file details.
-If ``AFAeroMod=2``, the unsteady aero module will also generate a file
+If ``UAMod>0``, the unsteady aero module will also generate a file
 called ``<OutFileRoot>.UA.sum`` that will list all of the UA parameters
 used in the airfoil tables. This allows the user to check what values
 are being used in case the code has computed the parameters
