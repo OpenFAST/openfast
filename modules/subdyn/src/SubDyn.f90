@@ -722,48 +722,47 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          endif
       endif
 
-      ! --- Special case for floating with extramoment, we use "rotated loads" m%F_L previously computed
-      !if (p%GuyanLoadCorrection.and.p%Floating) then
-      !   ! Contributions from external forces
-      !   Y1_Guy_R =   matmul( F_I, p%TI )     ! = - [-T_I.^T] F_R  = [T_I.^T] F_R =~ F_R T_I (~: FORTRAN convention)
-      !   Y1_Guy_R =   matmul(RRb2g, Y1_Guy_R)
-      !   Y1_Guy_L = - matmul(p%D1_142, m%F_L) ! = - (- T_I^T . Phi_Rb^T) F_L, non-rotated loads
-      !   Y1_Guy_L =   matmul(RRb2g, Y1_Guy_L)
-      !   Y1_CB_L  = - matmul(p%D1_141, m%F_L) ! = -      (M_Bm . Phi_m^T) "F_L", where "F_L"=Rg2b F_L are rotated loads
-      !   Y1_CB_L  =   matmul(RRb2g, Y1_CB_L)  ! = - Rb2g (M_Bm . Phi_m^T) Rg2b F_L
-      !endif
-
-      !if (.not.(p%GuyanLoadCorrection.and.p%Floating)) then
-      !   ! Compute "non-rotated" external force on internal (F_L) and interface nodes (F_I)
-      !   call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection), RotateLoads=.False.); if(Failed()) return
-      !   call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
-      !   ! Contributions from external forces
-      !   Y1_Guy_R =   matmul( F_I, p%TI )     ! = - [-T_I.^T] F_R  = [T_I.^T] F_R =~ F_R T_I (~: FORTRAN convention)
-      !   Y1_Guy_L = - matmul(p%D1_142, m%F_L) ! = - (- T_I^T . Phi_Rb^T) F_L, non-rotated loads
-      !   Y1_CB_L  = - matmul(p%D1_141, m%F_L) ! = - (M_Bm . Phi_m^T) F_L, non-rotated loads
-      !endif
-
-      ! --- Special case for floating with extramoment, we use "rotated loads" m%F_L previously computed
       if (p%GuyanLoadCorrection.and.p%Floating) then
-         Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! = -      (M_Bm . Phi_m^T) "F_L", where "F_L"=Rg2b F_L are rotated loads
-         Y1_CB_L = matmul(RRb2g, Y1_CB_L)      ! = - Rb2g (M_Bm . Phi_m^T) Rg2b F_L
+         ! --- Special case for floating with extra moment, we use "rotated loads" m%F_L previously computed
+         ! Contributions from external forces - Note: T_I is in the rotated frame
+         Y1_Guy_R =   matmul( F_I, p%TI )     ! = - [-T_I.^T] F_R  = [T_I.^T] F_R =~ F_R T_I (~: FORTRAN convention)
+         Y1_Guy_R =   matmul(RRb2g, Y1_Guy_R)
+         Y1_Guy_L = - matmul(p%D1_142, m%F_L) ! = - (- T_I^T . Phi_Rb^T) F_L, rotated loads
+         Y1_Guy_L =   matmul(RRb2g, Y1_Guy_L)
+         Y1_CB_L  = - matmul(p%D1_141, m%F_L) ! = -      (M_Bm . Phi_m^T) "F_L", where "F_L"=Rg2b F_L are rotated loads
+         Y1_CB_L  =   matmul(RRb2g, Y1_CB_L)  ! = - Rb2g (M_Bm . Phi_m^T) Rg2b F_L
+      else ! .not.(p%GuyanLoadCorrection.and.p%Floating)
+         ! Compute "non-rotated" external force on internal (F_L) and interface nodes (F_I)
+         call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection), RotateLoads=.False.); if(Failed()) return
+         call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
+         ! Contributions from external forces
+         Y1_Guy_R =   matmul( F_I, p%TI )     ! = - [-T_I.^T] F_R  = [T_I.^T] F_R =~ F_R T_I (~: FORTRAN convention)
+         Y1_Guy_L = - matmul(p%D1_142, m%F_L) ! = - (- T_I^T . Phi_Rb^T) F_L, non-rotated loads
+         Y1_CB_L  = - matmul(p%D1_141, m%F_L) ! = - (M_Bm . Phi_m^T) F_L, non-rotated loads
       endif
 
-      ! Compute "non-rotated" external force on internal (F_L) and interface nodes (F_I)
-      call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection), RotateLoads=.False.); if(Failed()) return
-      call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
-
-      ! Contributions from external forces
-      Y1_Guy_R =   matmul( F_I, p%TI )     ! = - [-T_I.^T] F_R  = [T_I.^T] F_R =~ F_R T_I (~: FORTRAN convention)
-      Y1_Guy_L = - matmul(p%D1_142, m%F_L) ! = - (- T_I^T . Phi_Rb^T) F_L, non-rotated loads
-
-      if (.not.(p%GuyanLoadCorrection.and.p%Floating)) then
-         Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! = - (M_Bm . Phi_m^T) F_L, non-rotated loads
-      endif
-
+      ! Old implementation below
+      ! ! --- Special case for floating with extramoment, we use "rotated loads" m%F_L previously computed
+      ! if (p%GuyanLoadCorrection.and.p%Floating) then
+      !    Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! = -      (M_Bm . Phi_m^T) "F_L", where "F_L"=Rg2b F_L are rotated loads
+      !    Y1_CB_L = matmul(RRb2g, Y1_CB_L)      ! = - Rb2g (M_Bm . Phi_m^T) Rg2b F_L
+      ! endif
+      ! 
+      ! ! Compute "non-rotated" external force on internal (F_L) and interface nodes (F_I)
+      ! call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection), RotateLoads=.False.); if(Failed()) return
+      ! call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
+      !
+      ! ! Contributions from external forces
+      ! Y1_Guy_R =   matmul( F_I, p%TI )     ! = - [-T_I.^T] F_R  = [T_I.^T] F_R =~ F_R T_I (~: FORTRAN convention)
+      ! Y1_Guy_L = - matmul(p%D1_142, m%F_L) ! = - (- T_I^T . Phi_Rb^T) F_L, non-rotated loads
+      !
+      ! if (.not.(p%GuyanLoadCorrection.and.p%Floating)) then
+      !    Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! = - (M_Bm . Phi_m^T) F_L, non-rotated loads
+      ! endif
 
       ! Total contribution
       Y1 = Y1_CB + Y1_Utp + Y1_CB_L+ Y1_Guy_L + Y1_Guy_R 
+
       ! KEEP ME
       !if ( p%nDOFM > 0) then
       !   Y1 = -(   matmul(p%C1_11, x%qm)   + matmul(p%C1_12,x%qmdot)                                    &
