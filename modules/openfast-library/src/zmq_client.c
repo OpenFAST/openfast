@@ -408,11 +408,11 @@ float *zmq_req_rep(const char *socket_address, const char *request) {
         token = strtok(NULL, delim);
     }
 
-    printf("Received float array:");
-    for (int i = 0; i < count; ++i) {
-        printf(" %.4f", float_array[i]);
-    }
-    printf("\n");
+    // printf("Received float array:");
+    // for (int i = 0; i < count; ++i) {
+    //     printf(" %.4f", float_array[i]);
+    // }
+    // printf("\n");
 
     return float_array;
 }

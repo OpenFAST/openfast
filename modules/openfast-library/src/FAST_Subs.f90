@@ -121,7 +121,7 @@ response_ptr = zmq_req_rep(socket_address, concatreq)
 call c_f_pointer(response_ptr, float_array, [request_size])
 
 ! Print the received C string (for debugging purposes)
-print *, "Received measurements: ", float_array
+! print *, "Received measurements: ", float_array
 
 do i= 1, request_size
    values_array(i) = float_array(i)
@@ -2503,7 +2503,8 @@ end do
             if (ZmqOutChnlsIdx(i) == 0) then 
                call WrScr('Channel not found: '//trim(p_FAST%ZmqOutChannels(i)))
             end if 
-         end do 
+         end do
+          
       end if 
 
       ! Augmenting ZMQ output to handle wind turbine id and current time stamp
@@ -2511,7 +2512,9 @@ end do
       ZmqOutChannelsNames(2) = 'Time'
 
       do i = 1,p_FAST%ZmqOutNbr
-         ZmqOutChannelsNames(2 + i) = trim(y_FAST%ChannelNames(ZmqOutChnlsIdx(i))) ! Up to here everything OK! 
+         ZmqOutChannelsNames(2 + i) = trim(y_FAST%ChannelNames(ZmqOutChnlsIdx(i))) ! Up to here everything OK!
+         ! add the units to the channel names and remove the initial space if any
+         ZmqOutChannelsNames(2 + i) = trim(ZmqOutChannelsNames(2 + i))//': '//trim(y_FAST%ChannelUnits(ZmqOutChnlsIdx(i))) 
       end do
 
    end if 
@@ -5497,17 +5500,19 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
 
    ! Inserting here call to ZMQ to retrieve and override routines' outputs 
          
-   if ( (p_FAST%ZmqOn) .and. (p_FAST%ZmqInNbr > 0) ) then 
+   if ( (p_FAST%ZmqOn) .and. (p_FAST%ZmqInNbr > 0)) then 
 
       ! Check if there's need to communicate with the ZMQ socket (the values will be enforced for next time step) to update values 
 
-      if (mod(t_global_next, p_FAST%ZmqInDT) == 0) then
+      if (mod(p_FAST%ZmqOutDT, t_global_next) == 0) then 
 
          ! TurbID = p_FAST%TurbID
          ZmqInChannelsAry = 0.0_DbKi
          call zmq_req(p_FAST%ZmqInAddress, p_FAST%ZmqInChannels, p_FAST%ZmqInNbr, ZmqInChannelsAry)
 
       end if ! otherwise we'll keep the values from the previous time step
+
+      ! call zmq_req(p_FAST%ZmqInAddress, p_FAST%ZmqInChannels, p_FAST%ZmqInNbr, ZmqInChannelsAry)
 
       If (ZmqInChannelsAry(1) == TurbID) then 
 
@@ -5696,7 +5701,7 @@ SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, y_A
    ! ! End of simulation time step. Broadcast results to ZMQ (assuming that we broadcast at every time step, to be modified later)
    ! ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    
-   if (p_FAST%ZmqOn) then 
+   if ((p_FAST%ZmqOn) .and. (p_FAST%ZmqOutNbr > 0) .and. (mod(t, p_FAST%ZmqOutDT) == 0)) then 
 
       CALL AllocAry( ZmqOutChannelsAry, p_FAST%ZmqOutNbr + 2, 'ZmqOutChannelsAry', ErrStat, ErrMsg )
       

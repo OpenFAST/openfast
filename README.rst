@@ -24,6 +24,7 @@ detach from the ZMQ connection (close the socket). Currently, EOF signals are ze
 - Added warning if user passes wind speed at runtime, as it will trigger Inflow Wind to use the steady model around the rotor disk (`line 3580`)
 - Added variables `ZmqInDT` and `ZmqOutDT` to the input file, to set the time step for the ZMQ connection (`line 3586` - `line 3641`)
 - Added variable check in input: if Zmq does not recognize one requested output, it will display it (not stopping the simulation) (`line 2500` - `line 2506`)
+- Added units to the ZMQ output variables (`line 2517`)
 
 
 ========

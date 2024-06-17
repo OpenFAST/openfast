@@ -155,12 +155,15 @@ class RFInteractor:
                 
         pass
                 
-    def fast_rep(self, rep_dict):
+    def fast_rep(self, rep_dict, verbose: bool = False):
         """
         
         """
         req_ = self.requester.recv_string()
-        print(req_)
+        
+        if verbose:
+            print('Request received: {}'.format(req_))
+            
         requests = req_.split(";") 
         
         response = ';'.join(map(str, rep_dict.values())) + ';'
