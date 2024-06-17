@@ -206,6 +206,7 @@ typedef  ^  ParameterType  IntKi           Elems  {:}{:}    -  -  "Element nodes
 typedef  ^  ParameterType  ElemPropType    ElemProps   {:}   - -  "List of element properties"
 typedef  ^  ParameterType  R8Ki            FG         {:}    - -  "Gravity force vector (with initial cable force T0), not reduced"  N
 typedef  ^  ParameterType  ReKi            DP0        {:}{:} - -  "Vector from TP to a Node at t=0, used for Floating Rigid Body motion"  m
+typedef  ^  ParameterType  ReKi            rPG        {:}    - -  "Vector from TP to rigid-body CoG in the Guyan (rigid-body) frame, used for Floating Rigid Body Motion"  m
 typedef  ^  ParameterType  IntKi           NodeID2JointID {:} - - "Store Joint ID for each NodeID since SubDyn re-label nodes (and add more nodes)"  "-"
 # --- Parameters - Constraints reduction
 typedef  ^  ParameterType  Logical reduced           -      -  -  "True if system has been reduced to account for constraints"  "-"
