@@ -50,6 +50,10 @@ class RFInteractor:
             self.req_context = zmq.Context()
             self.requester = self.req_context.socket(zmq.REP)
             self.requester.bind(self.ZmqInAddress)
+            self.poller = zmq.Poller()
+            self.poller.register(self.requester, zmq.POLLIN)
+            self.cont_req_off = 0
+            self.cont_req_threshold = 20
             
         print('ZMQ Real Time interactor for FAST initialized. \n PUB-SUB protocol: {} | REQ-REP protocol: {}'.format(self.ZmqOutAddress, 
                                                                                                                      self.ZmqInAddress))
@@ -63,8 +67,8 @@ class RFInteractor:
             os.makedirs(self.path_out, exist_ok=True)
         
         pass 
-    
-    
+   
+
     @staticmethod
     def _update_dict(update_, dict_):
         for key, value in update_.items():
@@ -159,15 +163,30 @@ class RFInteractor:
         """
         
         """
-        req_ = self.requester.recv_string()
-        
-        if verbose:
-            print('Request received: {}'.format(req_))
+
+        socks = dict(self.poller.poll(1000))
+        if self.requester in socks and socks[self.requester] == zmq.POLLIN:
+            req_ = self.requester.recv_string()
+
+            requests = req_.split(";")
+            response = ';'.join(map(str, rep_dict.values())) + ';'
+
+            response = response = ';'.join(map(str, rep_dict.values())) + ';'
+
+            # Send the response
+            self.requester.send_string(response)
             
-        requests = req_.split(";") 
-        
-        response = ';'.join(map(str, rep_dict.values())) + ';'
-        self.requester.send_string(response)
+            if verbose:
+                print(f'Response sent: {response}')
+        else:
+            if verbose:
+                print('No request received, waiting...')
+            self.cont_req_off += 1
+            
+        if self.cont_req_off > self.cont_req_threshold:
+            print('Requester closed due to inactivity.')
+            self.requester.close()
+            self.req_context.term()
         pass 
     
         

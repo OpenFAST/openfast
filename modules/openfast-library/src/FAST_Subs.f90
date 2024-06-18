@@ -3562,7 +3562,7 @@ END DO
 
       p%ZmqInAddress = trim(p%ZmqInAddress) // c_null_char
 
-      ! check valid address to be put here  
+      ! TODO: Adding one slot in the In array for the TurbID message tag
       
       CALL ReadVar( UnIn, InputFile, p%ZmqInNbr, "ZmqInNbr", "Number of parameters to be requested ", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3586,7 +3586,7 @@ END DO
       end if
 
       ! Warn user that if ZmqIn requests wind speed, OF will treat it as steady across the rotor, compromising wake models
-      if ( any( p%ZmqInChannels == 'Wind1VelX' ) .or. any( p%ZmqInChannels == 'Wind1VelY' ) .or. any( p%ZmqInChannels == 'Wind1VelZ' ) ) then
+      if ( any( p%ZmqInChannels == 'VelH' ) .or. any( p%ZmqInChannels == 'VelV' ) .or. any( p%ZmqInChannels == 'AngleV' ) .or.any(p%ZmqInChannels == 'AngleH')) then
          call WrScr("Warning: ZMQ input requests wind speed. OpenFAST will treat it as steady across the rotor, compromising wake meandering. This warning will not be shown again.")
       end if
 
@@ -3611,6 +3611,12 @@ END DO
             end if
          end if
 
+      CALL AllocAry(p%ZmqInChannelsAry, p%ZmqInNbr + 1, "ZmqInChannelsAry", Errstat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN
+      end if
 
       ! -------------------------------------------   Broadcasting settings ----------------------------------------------------       
       CALL ReadVar( UnIn, InputFile, p%ZmqOutAddress, "ZmqOutAddress", "PUB-SUB localhost address ", ErrStat2, ErrMsg2, UnEc)
@@ -5137,13 +5143,13 @@ SUBROUTINE FAST_Solution_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg )
    CALL FAST_Solution(t_initial, n_t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                   Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, Turbine%SC_DX, &
                   Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
-                  Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, Turbine%p_FAST%ZmqOutChannelsAry, Turbine%TurbID, ErrStat, ErrMsg )
+                  Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, Turbine%p_FAST%ZmqInChannelsAry, Turbine%p_FAST%ZmqOutChannelsAry, Turbine%TurbID, ErrStat, ErrMsg )
 
 END SUBROUTINE FAST_Solution_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine takes data from n_t_global and gets values at n_t_global + 1
 SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, SC_DX, HD, SD, ExtPtfm, &
-                         MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ZmqOutChannelsAry, TurbID, ErrStat, ErrMsg )
+                         MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ZmqInChannelsAry, ZmqOutChannelsAry, TurbID, ErrStat, ErrMsg )
 
    use iso_c_binding
    !use zmq_req
@@ -5197,7 +5203,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_Solution'
    ! -----------------------------------------------------------------------------
    REAL(DbKi), allocatable, intent(inout)           :: ZmqOutChannelsAry(:)
-   REAL(DbKi)                                       :: ZmqInChannelsAry(p_FAST%ZmqInNbr)
+   REAL(DbKi), allocatable, intent(inout)           :: ZmqInChannelsAry(:)
    character(len=1024)                              :: tmp_str 
    ! -----------------------------------------------------------------------------
 
@@ -5501,52 +5507,63 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    ! Inserting here call to ZMQ to retrieve and override routines' outputs 
          
    if ( (p_FAST%ZmqOn) .and. (p_FAST%ZmqInNbr > 0)) then 
-
+      ! print *, 'Zmq Channels: ', p_FAST%ZmqInChannels
       ! Check if there's need to communicate with the ZMQ socket (the values will be enforced for next time step) to update values 
 
-      if (mod(p_FAST%ZmqOutDT, t_global_next) == 0) then 
+      !if (mod(p_FAST%ZmqOutDT, t_global_next) == 0) then 
 
-         ! TurbID = p_FAST%TurbID
+      ! TurbID = p_FAST%TurbID
+      print *, 'ZmqInArray: ', ZmqInChannelsAry
+
+      if (mod(t_global_next, p_FAST%ZmqInDT) == 0) then
          ZmqInChannelsAry = 0.0_DbKi
          call zmq_req(p_FAST%ZmqInAddress, p_FAST%ZmqInChannels, p_FAST%ZmqInNbr, ZmqInChannelsAry)
+      end if
 
-      end if ! otherwise we'll keep the values from the previous time step
+      print *, 'Zmq In Comm happened: ', mod(t_global_next, p_FAST%ZmqInDT) == 0
+      print *, 'ZmqInArray (after comm): ', ZmqInChannelsAry
+      
+      ! Forcing turbine ID agreement in this first version
+      ! ZmqInChannelsAry(1) = TurbID
+
+      ! print *, 'ZmqInChannelsAry: ', ZmqInChannelsAry
+      ! end if ! otherwise we'll keep the values from the previous time step
 
       ! call zmq_req(p_FAST%ZmqInAddress, p_FAST%ZmqInChannels, p_FAST%ZmqInNbr, ZmqInChannelsAry)
 
-      If (ZmqInChannelsAry(1) == TurbID) then 
+      ! If (ZmqInChannelsAry(1) == TurbID) then 
+      ! print *, 'ZmqInChannelsAry: ', ZmqInChannelsAry
+      do i = 1, p_FAST%ZmqInNbr
+         tmp_str = trim(p_FAST%ZmqInChannels(i)) 
 
-         do i = 1, p_FAST%ZmqInNbr
-            tmp_str = trim(p_FAST%ZmqInChannels(i)) 
-
-            select case (tmp_str) ! Be careful with dependencies 
-               case('VelH')
-                  IfW%p%FlowField%Uniform%VelH = ZmqInChannelsAry(i)
-               case('VelV')
-                  IfW%p%FlowField%Uniform%VelV = ZmqInChannelsAry(i)
-               case('VelGust')
-                  IfW%p%FlowField%Uniform%VelGust = ZmqInChannelsAry(i)
-               case('AngleV')
-                  IfW%p%FlowField%Uniform%AngleV = ZmqInChannelsAry(i)
-               case('AngleH')
-                  IfW%p%FlowField%Uniform%AngleH = ZmqInChannelsAry(i)
-               case('BldPitchCom1')
-                  SrvD%y%BlPitchCom(1) = ZmqInChannelsAry(i)
-               case('BldPitchCom2')
-                  SrvD%y%BlPitchCom(2) = ZmqInChannelsAry(i)
-               case('BldPitchCom3')
-                  SrvD%y%BlPitchCom(3) = ZmqInChannelsAry(i)
-               case('YawMom') 
-                  SrvD%y%YawMom = ZmqInChannelsAry(i)
-               case('GenTrq')
-                  SrvD%y%GenTrq  = ZmqInChannelsAry(i)
-               case('HSSBrFrac')
-                  SrvD%y%hssbrtrqc  = ZmqInChannelsAry(i)
-            end select 
-            
-         end do 
+         select case (tmp_str) ! Be careful with dependencies 
+            case('VelH')
+               IfW%p%FlowField%Uniform%VelH = ZmqInChannelsAry(i)
+            case('VelV')
+               IfW%p%FlowField%Uniform%VelV = ZmqInChannelsAry(i)
+            case('VelGust')
+               IfW%p%FlowField%Uniform%VelGust = ZmqInChannelsAry(i)
+            case('AngleV')
+               IfW%p%FlowField%Uniform%AngleV = ZmqInChannelsAry(i)
+            case('AngleH')
+               IfW%p%FlowField%Uniform%AngleH = ZmqInChannelsAry(i)
+            case('BldPitchCom1')
+               SrvD%y%BlPitchCom(1) = ZmqInChannelsAry(i)
+            case('BldPitchCom2')
+               SrvD%y%BlPitchCom(2) = ZmqInChannelsAry(i)
+            case('BldPitchCom3')
+               SrvD%y%BlPitchCom(3) = ZmqInChannelsAry(i)
+            case('YawMom') 
+               SrvD%y%YawMom = ZmqInChannelsAry(i)
+            case('GenTrq')
+               SrvD%y%GenTrq  = ZmqInChannelsAry(i)
+            case('HSSBrFrac')
+               SrvD%y%hssbrtrqc  = ZmqInChannelsAry(i)
+         end select 
+         
+      end do 
       
-      end if 
+      ! end if 
    
    end if 
    !----------------------------------------------------------------------------------------

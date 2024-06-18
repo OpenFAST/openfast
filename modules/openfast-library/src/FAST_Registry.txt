@@ -197,7 +197,8 @@ typedef  ^  FAST_ParameterType  IntKi    LinInterpOrder     -  -  -  "Interpolat
 typedef	^	FAST_ParameterType	LOGICAL	            ZmqOn	                -	.false.	    -	"zmq activation flag"     -  
 typedef	^	FAST_ParameterType	CHARACTER(1024)	    ZmqInAddress            -	-	        -	"address for ZMQ REQ-REP protocol" - 
 typedef	^	FAST_ParameterType	IntKi	            ZmqInNbr                -	-	        -	"number of ZMQ REQ-REP channels" - 
-typedef	^	FAST_ParameterType	CHARACTER(ChanLen)	ZmqInChannels           {:}	-	        -	"address for ZMQ REQ-REP protocol" - 
+typedef	^	FAST_ParameterType	CHARACTER(ChanLen)	ZmqInChannels           {:}	-	        -	"address for ZMQ REQ-REP protocol" -
+typedef	^	FAST_ParameterType	ReKi	            ZmqInChannelsAry       {:}	-	        -	"array to pass ZMQ PUB-SUB protocol" -  
 typedef ^   FAST_ParameterType  ReKi                ZmqInDT                 -   -           -   "time step for in communication, FAST will keep it constant in between (sample & hold), default is same DT of simulation"
 typedef	^	FAST_ParameterType	CHARACTER(1024)	    ZmqOutAddress           -	-	        -	"address for ZMQ PUB-SUB protocol" - 
 typedef	^	FAST_ParameterType	IntKi	            ZmqOutNbr               -	-	        -	"number of ZMQ PUB-SUB channels" - 

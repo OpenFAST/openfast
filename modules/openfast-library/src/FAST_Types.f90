@@ -205,6 +205,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: ZmqInAddress      !< address for ZMQ REQ-REP protocol [-]
     INTEGER(IntKi)  :: ZmqInNbr      !< number of ZMQ REQ-REP channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ZmqInChannels      !< address for ZMQ REQ-REP protocol [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ZmqInChannelsAry      !< array to pass ZMQ PUB-SUB protocol [-]
     REAL(ReKi)  :: ZmqInDT      !< time step for in communication, FAST will keep it constant in between (sample & hold), default is same DT of simulation [-]
     CHARACTER(1024)  :: ZmqOutAddress      !< address for ZMQ PUB-SUB protocol [-]
     INTEGER(IntKi)  :: ZmqOutNbr      !< number of ZMQ PUB-SUB channels [-]
@@ -2260,6 +2261,18 @@ IF (ALLOCATED(SrcParamData%ZmqInChannels)) THEN
   END IF
     DstParamData%ZmqInChannels = SrcParamData%ZmqInChannels
 ENDIF
+IF (ALLOCATED(SrcParamData%ZmqInChannelsAry)) THEN
+  i1_l = LBOUND(SrcParamData%ZmqInChannelsAry,1)
+  i1_u = UBOUND(SrcParamData%ZmqInChannelsAry,1)
+  IF (.NOT. ALLOCATED(DstParamData%ZmqInChannelsAry)) THEN 
+    ALLOCATE(DstParamData%ZmqInChannelsAry(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%ZmqInChannelsAry.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%ZmqInChannelsAry = SrcParamData%ZmqInChannelsAry
+ENDIF
     DstParamData%ZmqInDT = SrcParamData%ZmqInDT
     DstParamData%ZmqOutAddress = SrcParamData%ZmqOutAddress
     DstParamData%ZmqOutNbr = SrcParamData%ZmqOutNbr
@@ -2341,6 +2354,9 @@ ENDIF
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(ParamData%ZmqInChannels)) THEN
   DEALLOCATE(ParamData%ZmqInChannels)
+ENDIF
+IF (ALLOCATED(ParamData%ZmqInChannelsAry)) THEN
+  DEALLOCATE(ParamData%ZmqInChannelsAry)
 ENDIF
 IF (ALLOCATED(ParamData%ZmqOutChannels)) THEN
   DEALLOCATE(ParamData%ZmqOutChannels)
@@ -2522,6 +2538,11 @@ ENDIF
   IF ( ALLOCATED(InData%ZmqInChannels) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! ZmqInChannels upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%ZmqInChannels)*LEN(InData%ZmqInChannels)  ! ZmqInChannels
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! ZmqInChannelsAry allocated yes/no
+  IF ( ALLOCATED(InData%ZmqInChannelsAry) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! ZmqInChannelsAry upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%ZmqInChannelsAry)  ! ZmqInChannelsAry
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! ZmqInDT
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%ZmqOutAddress)  ! ZmqOutAddress
@@ -2877,6 +2898,21 @@ ENDIF
           IntKiBuf(Int_Xferred) = ICHAR(InData%ZmqInChannels(i1)(I:I), IntKi)
           Int_Xferred = Int_Xferred + 1
         END DO ! I
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%ZmqInChannelsAry) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ZmqInChannelsAry,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ZmqInChannelsAry,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%ZmqInChannelsAry,1), UBOUND(InData%ZmqInChannelsAry,1)
+        ReKiBuf(Re_Xferred) = InData%ZmqInChannelsAry(i1)
+        Re_Xferred = Re_Xferred + 1
       END DO
   END IF
     ReKiBuf(Re_Xferred) = InData%ZmqInDT
@@ -3326,6 +3362,24 @@ ENDIF
           OutData%ZmqInChannels(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
           Int_Xferred = Int_Xferred + 1
         END DO ! I
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ZmqInChannelsAry not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ZmqInChannelsAry)) DEALLOCATE(OutData%ZmqInChannelsAry)
+    ALLOCATE(OutData%ZmqInChannelsAry(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ZmqInChannelsAry.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%ZmqInChannelsAry,1), UBOUND(OutData%ZmqInChannelsAry,1)
+        OutData%ZmqInChannelsAry(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
       END DO
   END IF
     OutData%ZmqInDT = ReKiBuf(Re_Xferred)

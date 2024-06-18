@@ -3,8 +3,8 @@ NREL 5.0 MW offshore baseline aerodynamic input properties.
 ======  General Options  ============================================================================
 False         Echo               - Echo the input to "<rootname>.AD.ech"?  (flag)
 "default"     DTAero             - Time interval for aerodynamic calculations {or "default"} (s)
-          1   WakeMod            - Type of wake/induction model (switch) {0=none, 1=BEMT, 2=DBEMT, 3=OLAF}  [WakeMod cannot be 2 or 3 when linearizing]
-          2   AFAeroMod          - Type of blade airfoil aerodynamics model (switch) {1=steady model, 2=Beddoes-Leishman unsteady model} [AFAeroMod must be 1 when linearizing]
+          0   WakeMod            - Type of wake/induction model (switch) {0=none, 1=BEMT, 2=DBEMT, 3=OLAF}  [WakeMod cannot be 2 or 3 when linearizing]
+          1   AFAeroMod          - Type of blade airfoil aerodynamics model (switch) {1=steady model, 2=Beddoes-Leishman unsteady model} [AFAeroMod must be 1 when linearizing]
           1   TwrPotent          - Type tower influence on wind based on potential flow around the tower (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
           0   TwrShadow          - Calculate tower influence on wind based on downstream tower shadow? (flag)
 True          TwrAero            - Calculate tower aerodynamic loads? (flag)
