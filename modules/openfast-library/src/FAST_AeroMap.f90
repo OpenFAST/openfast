@@ -36,7 +36,7 @@ integer(IntKi), parameter  :: AeroMapModIDs(*) = [Module_ED, Module_BD, Module_A
 real(DbKi), parameter      :: SS_t_global = 0.0_DbKi
 real(DbKi), parameter      :: UJacSclFact_x = 1.0d3
 
-logical, parameter         :: output_debugging = .true.
+logical, parameter         :: output_debugging = .false.
 
 contains
 
@@ -228,12 +228,10 @@ subroutine FAST_AeroMapDriver(m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
    call AllocAry(m%AM%Mod%Lin%dUdy, m%AM%Mod%Vars%Nu, m%AM%Mod%Vars%Ny, "dUdy", ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Allocate operating point arrays
-   if (output_debugging) then
-      call AllocAry(m%AM%Mod%Lin%x, m%AM%Mod%Vars%Nx, 'x', ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(m%AM%Mod%Lin%dx, m%AM%Mod%Vars%Nx, 'dx', ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(m%AM%Mod%Lin%u, m%AM%Mod%Vars%Nu, 'u', ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(m%AM%Mod%Lin%y, m%AM%Mod%Vars%Ny, 'y', ErrStat2, ErrMsg2); if (Failed()) return
-   end if
+   call AllocAry(m%AM%Mod%Lin%x, m%AM%Mod%Vars%Nx, 'x', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%AM%Mod%Lin%u, m%AM%Mod%Vars%Nu, 'u', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%AM%Mod%Lin%dx, m%AM%Mod%Vars%Nx, 'dx', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%AM%Mod%Lin%y, m%AM%Mod%Vars%Ny, 'y', ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Allocate arrays to store inputs
    call AllocAry(m%AM%u1, m%AM%Mod%Vars%Nu, 'u1', ErrStat2, ErrMsg2); if (Failed()) return
@@ -241,6 +239,16 @@ subroutine FAST_AeroMapDriver(m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
 
    ! Move hub orientation matrices to AeroMap structure
    call move_alloc(T%MeshMapData%HubOrient, m%AM%HubOrientation)
+
+   !----------------------------------------------------------------------------
+   ! AeroMap structure initialization
+   !----------------------------------------------------------------------------
+
+   ! Jacobian scaling factor
+   m%AM%JacScale = real(p_FAST%UJacSclFact, R8Ki)
+
+   ! Set tolerance so the error doesn't need to be divided by size of array later
+   m%AM%SolveTolerance = p_FAST%tolerSquared*JacSize**2
 
    ! Allocate cases
    allocate (m%AM%Cases(p_FAST%NumSSCases), stat=ErrStat2)
@@ -279,7 +287,7 @@ subroutine FAST_AeroMapDriver(m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
       end if
 
       ! Call steady-state solve for this pitch and rotor speed
-      call SolveSteadyState(m, m%AM%Cases(n_case), p_FAST, y_FAST, m_FAST, T%MeshMapData, T, ErrStat2, ErrMsg2)
+      call SS_Solve(m, m%AM%Cases(n_case), p_FAST, y_FAST, m_FAST, T, ErrStat2, ErrMsg2)
 
       ! we didn't converge; let's try a different operating point and see if that helps:
       if (ErrStat2 >= ErrID_Severe) then
@@ -296,11 +304,11 @@ subroutine FAST_AeroMapDriver(m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
          call WrScr('Retrying case '//trim(Num2LStr(n_case))//', first trying to get a better initial guess. Average error is '// &
                     trim(Num2LStr(y_FAST%DriverWriteOutput(SS_Indx_Err)))//'.')
 
-         ! call SolveSteadyState(m, CaseDataTmp, p_FAST, y_FAST, m_FAST, T%ED, T%BD, T%AD, T%MeshMapData, T, ErrStat2, ErrMsg2)
+         call SS_Solve(m, CaseDataTmp, p_FAST, y_FAST, m_FAST, T, ErrStat2, ErrMsg2)
 
          ! if that worked, try the real case again:
          if (ErrStat2 < AbortErrLev) then
-            ! call SolveSteadyState(m, m%AM%Cases(n_case), p_FAST, y_FAST, m_FAST, T%ED, T%BD, T%AD, T%MeshMapData, T, ErrStat2, ErrMsg2)
+            ! call SS_Solve(m, m%AM%Cases(n_case), p_FAST, y_FAST, m_FAST, T%ED, T%BD, T%AD, T%MeshMapData, T, ErrStat2, ErrMsg2)
             call WrOver(BlankLine)
          end if
 
@@ -349,34 +357,33 @@ end subroutine
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine performs the Input-Output solve for the steady-state solver.
 !! Note that this has been customized for the physics in the problems and is not a general solution.
-subroutine SolveSteadyState(m, caseData, p_FAST, y_FAST, m_FAST, MeshMapData, T, ErrStat, ErrMsg)
+subroutine SS_Solve(m, caseData, p_FAST, y_FAST, m_FAST, T, ErrStat, ErrMsg)
    type(Glue_MiscVarType), intent(inout)     :: m              !< Miscellaneous variables
    type(AeroMapCase), intent(in)             :: caseData       !< tsr, windSpeed, pitch, and rotor speed for this case
    type(FAST_ParameterType), intent(in)      :: p_FAST         !< Glue-code simulation parameters
    type(FAST_OutputFileType), intent(inout)  :: y_FAST         !< Glue-code output file values
    type(FAST_MiscVarType), intent(inout)     :: m_FAST         !< Miscellaneous variables
    type(FAST_TurbineType), intent(inout)     :: T              !< Turbine type
-   type(FAST_ModuleMapType), intent(inout)   :: MeshMapData    !< data for mapping meshes between modules
    integer(IntKi), intent(out)               :: ErrStat        !< Error status of the operation
    character(*), intent(out)                 :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
-   character(*), parameter :: RoutineName = 'SolveSteadyState'
+   character(*), parameter :: RoutineName = 'SS_Solve'
    integer(IntKi)          :: ErrStat2                  ! temporary Error status of the operation
    character(ErrMsgLen)    :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
 
    !bjj: store these so that we don't reallocate every time?
    real(R8Ki)                                        :: err
    real(R8Ki)                                        :: err_prev
+   real(R8Ki), allocatable                           :: u(:)
    real(R8Ki), parameter                             :: reduction_factor = 0.1_R8Ki
 
    integer(IntKi)                                    :: nb                        ! loop counter (blade number)
    integer(IntKi)                                    :: MaxIter                   ! maximum number of iterations
    integer(IntKi)                                    :: K                         ! Input-output-solve iteration counter
    integer(IntKi)                                    :: i, j
+   integer(IntKi)                                    :: iModOrder(3), iMod
 
    logical                                           :: GetWriteOutput            ! flag to determine if we need WriteOutputs from this call to CalcOutput
-
-   ! Note: p_FAST%UJacSclFact is a scaling factor that gets us similar magnitudes between loads and accelerations...
 
    !bjj: note, that this routine may have a problem if there is remapping done
 
@@ -421,7 +428,7 @@ subroutine SolveSteadyState(m, caseData, p_FAST, y_FAST, m_FAST, MeshMapData, T,
       GetWriteOutput = K > 0
 
       !-----------------------------------------
-      ! Caclulate ElastoDyn / BeamDyn output
+      ! Calculate ElastoDyn / BeamDyn output
       !-----------------------------------------
 
       ! If BeamDyn is active
@@ -453,7 +460,7 @@ subroutine SolveSteadyState(m, caseData, p_FAST, y_FAST, m_FAST, MeshMapData, T,
          call SS_AD_InputSolve_OtherBlades(m, INPUT_CURR, T)
 
          ! set up x-u vector, using local initial guesses
-         call SS_GetInputs(m, m%AM%u1, p_FAST%UJacSclFact, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2)
+         call SS_GetInputs(m, m%AM%u1, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2)
 
       end if
 
@@ -495,7 +502,7 @@ subroutine SolveSteadyState(m, caseData, p_FAST, y_FAST, m_FAST, MeshMapData, T,
       end if
 
       !-------------------------------------------------------------------------
-      ! Solve for delta u: Jac*u_delta = - Fn_U_Resid
+      ! Solve for delta u: J*SolveDelta = -Residual
       !  using the LAPACK routine
       !-------------------------------------------------------------------------
 
@@ -522,7 +529,7 @@ subroutine SolveSteadyState(m, caseData, p_FAST, y_FAST, m_FAST, MeshMapData, T,
       y_FAST%DriverWriteOutput(SS_Indx_Err) = sqrt(err)/size(m%AM%Mod%Lin%J, 1)
 
       ! If error is below tolerance
-      if (err <= p_FAST%TolerSquared) then
+      if (err <= m%AM%SolveTolerance) then
          if (K == 0) then ! the error will be incorrect in this instance, but the outputs will be better
             MaxIter = K
          else
@@ -540,32 +547,98 @@ subroutine SolveSteadyState(m, caseData, p_FAST, y_FAST, m_FAST, MeshMapData, T,
       ! If current error is greater than previous error (solution diverging),
       ! reduce delta (take a smaller step)
       if (err > err_prev) then
-         m%AM%SolveDelta = m%AM%SolveDelta*reduction_factor 
+         m%AM%SolveDelta = m%AM%SolveDelta*reduction_factor
          err_prev = err_prev*reduction_factor
       end if
 
-      ! ! call Add_SteadyState_delta(p_FAST, y_FAST, u_delta, AD, ED, BD, MeshMapData)
+      ! Set module order
+      iModOrder = [m%AM%iModED, m%AM%iModBD, m%AM%iModAD]
 
-      ! !u = u + u_delta
-      ! call SS_GetInputs(m, T, p_FAST%UJacSclFact, INPUT_CURR, STATE_CURR, ErrStat2, ErrMsg2)
+      ! Update states and inputs in module
+      do i = 1, size(iModOrder)
+         iMod = iModOrder(i)
+         if (iMod == 0) cycle
+         call FAST_GetOP(m%Modules(iMod), SS_t_global, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2, &
+                         u_op=m%Modules(iMod)%Lin%u, x_op=m%Modules(iMod)%Lin%x)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         call ModD_PackAry(m%AM%Mod%Xfr(iMod)%x, m%Modules(iMod)%Lin%x, m%AM%Mod%Lin%x)
+         call ModD_PackAry(m%AM%Mod%Xfr(iMod)%u, m%Modules(iMod)%Lin%u, m%AM%Mod%Lin%u)
+      end do
 
-      ! K = K + 1
-      ! y_FAST%DriverWriteOutput(SS_Indx_Iter) = k
+      ! Remove conditioning from solution vector
+      call PostconditionSolveDelta(m%AM%SolveDelta(m%AM%Mod%Vars%Nx + 1:), m%AM%JacScale)
+
+      ! Add change in continuous states to current states
+      call MV_AddDelta(m%AM%Mod%Vars%x, m%AM%SolveDelta(:m%AM%Mod%Vars%Nx), m%AM%Mod%Lin%x)
+
+      ! Add change in inputs to current inputs
+      call MV_AddDelta(m%AM%Mod%Vars%u, m%AM%SolveDelta(m%AM%Mod%Vars%Nx + 1:), m%AM%Mod%Lin%u)
+
+      ! Update states and inputs in module
+      do i = 1, size(iModOrder)
+         iMod = iModOrder(i)
+         if (iMod == 0) cycle
+         call ModD_UnpackAry(m%AM%Mod%Xfr(iMod)%x, m%Modules(iMod)%Lin%x, m%AM%Mod%Lin%x)
+         call ModD_UnpackAry(m%AM%Mod%Xfr(iMod)%u, m%Modules(iMod)%Lin%u, m%AM%Mod%Lin%u)
+
+         select case (m%Modules(iMod)%ID)
+         case (Module_ED)
+            ! Copy blade1 flap and edge states to other blades
+            do j = 2, T%ED%p%NumBl
+               associate (Var1 => m%Modules(iMod)%Vars%x(T%ED%p%iVarBladeFlap1(1)), &
+                          VarN => m%Modules(iMod)%Vars%x(T%ED%p%iVarBladeFlap1(j)))
+                  m%Modules(iMod)%Lin%x(VarN%iLoc(1):VarN%iLoc(2)) = m%Modules(iMod)%Lin%x(Var1%iLoc(1):Var1%iLoc(2))
+               end associate
+               associate (Var1 => m%Modules(iMod)%Vars%x(T%ED%p%iVarBladeEdge1(1)), &
+                          VarN => m%Modules(iMod)%Vars%x(T%ED%p%iVarBladeEdge1(j)))
+                  m%Modules(iMod)%Lin%x(VarN%iLoc(1):VarN%iLoc(2)) = m%Modules(iMod)%Lin%x(Var1%iLoc(1):Var1%iLoc(2))
+               end associate
+               associate (Var1 => m%Modules(iMod)%Vars%x(T%ED%p%iVarBladeFlap2(1)), &
+                          VarN => m%Modules(iMod)%Vars%x(T%ED%p%iVarBladeFlap2(j)))
+                  m%Modules(iMod)%Lin%x(VarN%iLoc(1):VarN%iLoc(2)) = m%Modules(iMod)%Lin%x(Var1%iLoc(1):Var1%iLoc(2))
+               end associate
+            end do
+         case (Module_BD)
+            ! TODO: Copy B1 states to other blades
+         end select
+
+         ! Populate values in module
+         call FAST_SetOP(m%Modules(iMod), SS_t_global, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2, &
+                         u_op=m%Modules(iMod)%Lin%u, x_op=m%Modules(iMod)%Lin%x)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+
+      ! Transfer results from blade 1 to other blades
+      if (m%AM%iModBD > 0) then
+         ! BeamDyn
+         call SS_BD_InputSolve_OtherBlades(m, INPUT_CURR, T)
+      else
+         ! ElastoDyn
+         call SS_ED_InputSolve_OtherBlades(m, INPUT_CURR, T)
+      end if
+      call SS_AD_InputSolve_OtherBlades(m, INPUT_CURR, T)
+
+      ! u = u + u_delta
+      call SS_GetInputs(m, m%AM%u1, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2)
+
+      K = K + 1
+      y_FAST%DriverWriteOutput(SS_Indx_Iter) = k
 
    end do ! K
 
-   ! if (p_FAST%CompElast == Module_BD) then
-   !    ! this doesn't actually get the correct hub point load from BD, but we'll get some outputs:
-   !    call ED_CalcOutput(SS_t_global, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt(STATE_CURR), ED%y, ED%m, ErrStat2, ErrMsg2)
-   !    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   ! end if
+   !TODO
+   if (p_FAST%CompElast == Module_BD) then
+      ! this doesn't actually get the correct hub point load from BD, but we'll get some outputs:
+      ! call ED_CalcOutput(SS_t_global, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt(STATE_CURR), ED%y, ED%m, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end if
 
    call ResetInputsAndStates()
 
 contains
    subroutine ResetInputsAndStates()
 
-      if (err > p_FAST%TolerSquared) then
+      if (err > m%AM%SolveTolerance) then
 
          call SetErrStat(ErrID_Severe, 'Steady-state solver did not converge.', ErrStat, ErrMsg, RoutineName)
 
@@ -582,14 +655,26 @@ contains
                end do
             end if
 
-            call SS_GetInputs(m, m%AM%u1, p_FAST%UJacSclFact, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2)     ! find the values we have been modifying (in u... continuous states and inputs)
-            ! call Add_SteadyState_delta(p_FAST, y_FAST, -u, AD, ED, BD, MeshMapData) ! and reset them to 0 (by adding -u)
+            call SS_GetInputs(m, m%AM%u1, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2)     ! find the values we have been modifying (in u... continuous states and inputs)
+            ! call Add_SteadyState_delta(p_FAST, y_FAST, -u, AD, ED, BD) ! and reset them to 0 (by adding -u)
 
          end if
       end if
    end subroutine ResetInputsAndStates
 
-end subroutine SolveSteadyState
+   subroutine PostconditionSolveDelta(Delta, JacScale)
+      real(R8Ki), intent(inout)  :: Delta(:)
+      real(R8Ki), intent(in)     :: JacScale
+      do i = 1, size(m%AM%Mod%Vars%u)
+         associate (Var => m%AM%Mod%Vars%u(i))
+         if (MV_IsLoad(Var)) then
+            Delta(Var%iLoc(1):Var%iLoc(2)) = Delta(Var%iLoc(1):Var%iLoc(2))*JacScale
+         end if
+         end associate
+      end do
+   end subroutine
+
+end subroutine SS_Solve
 
 subroutine SS_BuildJacobian(m, caseData, p_FAST, y_FAST, m_FAST, T, ErrStat, ErrMsg)
    type(Glue_MiscVarType), intent(inout)     :: m              !< Miscellaneous variables
@@ -605,9 +690,10 @@ subroutine SS_BuildJacobian(m, caseData, p_FAST, y_FAST, m_FAST, T, ErrStat, Err
    integer(IntKi)            :: ErrStat2
    character(ErrMsgLen)      :: ErrMSg2
    character(1024)           :: LinRootName
-   integer(IntKi)            :: i, j, k, c, r, iRow(2), iCol(2)
+   integer(IntKi)            :: i, j, k, c, r, iRow(2), iCol(2), iLoc(2)
    integer(IntKi)            :: nx        ! Number of states
    integer(IntKi)            :: Un
+   logical                   :: RowIsLoad, ColIsLoad
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -650,12 +736,12 @@ subroutine SS_BuildJacobian(m, caseData, p_FAST, y_FAST, m_FAST, T, ErrStat, Err
       associate (ModData => m%Modules(m%AM%iModOrder(i)), iMod => m%AM%iModOrder(i))
 
          ! Calculate dYdu and dXdu
-         call FAST_JacobianPInput(ModData, SS_t_global, STATE_CURR, T, ErrStat, ErrMsg, &
+         call FAST_JacobianPInput(ModData, SS_t_global, STATE_CURR, T, ErrStat2, ErrMsg2, &
                                   FlagFilter=VF_AeroMap, dYdu=ModData%Lin%dYdu, dXdu=ModData%Lin%dXdu)
          if (Failed()) return
 
          ! Calculate dYdx and dXdx
-         call FAST_JacobianPContState(ModData, SS_t_global, STATE_CURR, T, ErrStat, ErrMsg, &
+         call FAST_JacobianPContState(ModData, SS_t_global, STATE_CURR, T, ErrStat2, ErrMsg2, &
                                       FlagFilter=VF_AeroMap, dYdx=ModData%Lin%dYdx, dXdx=ModData%Lin%dXdx)
          if (Failed()) return
 
@@ -664,7 +750,7 @@ subroutine SS_BuildJacobian(m, caseData, p_FAST, y_FAST, m_FAST, T, ErrStat, Err
 
             ! Calculate operating point values
             call FAST_GetOP(ModData, SS_t_global, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2, &
-                            u_op=ModData%Lin%u, y_op=ModData%Lin%y, x_op=ModData%Lin%x, dx_op=ModData%Lin%dx)
+                            FlagFilter=VF_AeroMap, u_op=ModData%Lin%u, y_op=ModData%Lin%y, x_op=ModData%Lin%x, dx_op=ModData%Lin%dx)
             if (Failed()) return
 
             ! Write linearization matrices
@@ -682,7 +768,7 @@ subroutine SS_BuildJacobian(m, caseData, p_FAST, y_FAST, m_FAST, T, ErrStat, Err
          ! If this module is BeamDyn, calculate dxdotdy
          if (ModData%ID == Module_BD) then
 
-            ! TODO: implement beamdyn
+            ! TODO: implement BeamDyn
             ! NOTE that this implies that the FEA nodes (states) are the same as the output nodes!!!! (note that we have overlapping nodes at the element end points)
             ! r = 1
             ! do i = 2, BD%p(k)%node_total ! the first node isn't technically a state
@@ -758,42 +844,40 @@ subroutine SS_BuildJacobian(m, caseData, p_FAST, y_FAST, m_FAST, T, ErrStat, Err
    ! Condition Jacobian matrix
    !----------------------------------------------------------------------------
 
-   ! Loop through inputs
-   do c = 1, size(m%AM%Mod%Vars%u)
+   ! Note: m%AM%JacScale is a scaling factor that gets similar magnitudes between loads and accelerations...
 
-      iCol = m%AM%Mod%Vars%u(c)%iLoc + nx
+   associate (J => m%AM%Mod%Lin%J)
 
-      ! If column is a load
-      if (MV_IsLoad(m%AM%Mod%Vars%u(c))) then
+      ! Loop through inputs
+      do r = 1, size(m%AM%Mod%Vars%u)
+         iLoc = m%AM%Mod%Vars%u(r)%iLoc + nx
+         if (MV_IsLoad(m%AM%Mod%Vars%u(r))) then
+            ! Column is motion (state), row is load
+            J(iLoc(1):iLoc(2), 1:nx) = J(iLoc(1):iLoc(2), 1:nx)/m%AM%JacScale
+            ! Row is motion (state), column is load
+            J(1:nx, iLoc(1):iLoc(2)) = J(1:nx, iLoc(1):iLoc(2))*m%AM%JacScale
+         end if
+      end do
 
-         ! Column is a load, state rows are not loads
-         m%AM%Mod%Lin%J(1:nx, iCol(1):iCol(2)) = &
-            m%AM%Mod%Lin%J(1:nx, iCol(1):iCol(2))*p_FAST%UJacSclFact
+      ! Loop through input vars as columns
+      do c = 1, size(m%AM%Mod%Vars%u)
+         iCol = m%AM%Mod%Vars%u(c)%iLoc + nx
+         ColIsLoad = MV_IsLoad(m%AM%Mod%Vars%u(c))
 
-         ! Loop through rows
+         ! Loop through input vars as rows
          do r = 1, size(m%AM%Mod%Vars%u)
-            ! If column is load, but row is a motion
-            if (.not. MV_IsLoad(m%AM%Mod%Vars%u(r))) then
-               iRow = m%AM%Mod%Vars%u(r)%iLoc + nx
-               m%AM%Mod%Lin%J(iRow(1):iRow(2), iCol(1):iCol(2)) = &
-                  m%AM%Mod%Lin%J(iRow(1):iRow(2), iCol(1):iCol(2))*p_FAST%UJacSclFact
+            iRow = m%AM%Mod%Vars%u(r)%iLoc + nx
+            RowIsLoad = MV_IsLoad(m%AM%Mod%Vars%u(r))
+
+            if ((.not. RowIsLoad) .and. ColIsLoad) then ! Row is a motion, Col is a load
+               J(iRow(1):iRow(2), iCol(1):iCol(2)) = J(iRow(1):iRow(2), iCol(1):iCol(2))*m%AM%JacScale
+            else if (RowIsLoad .and. (.not. ColIsLoad)) then ! Row is a load, Col is a motion
+               J(iRow(1):iRow(2), iCol(1):iCol(2)) = J(iRow(1):iRow(2), iCol(1):iCol(2))/m%AM%JacScale
             end if
          end do
+      end do
 
-      else
-
-         ! Loop through rows
-         do r = 1, size(m%AM%Mod%Vars%u)
-            ! Column is a motion, but row is a load
-            if (MV_IsLoad(m%AM%Mod%Vars%u(r))) then
-               iRow = m%AM%Mod%Vars%u(r)%iLoc + nx
-               m%AM%Mod%Lin%J(iRow(1):iRow(2), iCol(1):iCol(2)) = &
-                  m%AM%Mod%Lin%J(iRow(1):iRow(2), iCol(1):iCol(2))/p_FAST%UJacSclFact
-            end if
-         end do
-
-      end if
-   end do
+   end associate
 
    !----------------------------------------------------------------------------
    ! Factor Jacobian matrix
@@ -840,22 +924,15 @@ subroutine SS_BuildResidual(caseData, m, T, ErrStat, ErrMsg)
 
    !note: prescribed inputs are already set in both InputIndex=1 and InputIndex=2 so we can ignore them here
    ! Use current inputs to calculate CCSD in STATE_PRED
-   call SteadyStateCCSD(m, caseData, InputIndex, T, ErrStat2, ErrMsg2)
+   call SS_CalcContStateDeriv(m, caseData, INPUT_CURR, m%AM%Residual, T, ErrStat2, ErrMsg2)
    call SetErrStat(Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
-   ! Store state accelerations in residual
-   if (m%AM%iModBD > 0) then
-      call ModD_PackAry(m%AM%Mod%Xfr(m%AM%iModBD)%x, m%Modules(m%AM%iModBD)%Lin%dx, m%AM%Residual)
-   else if (m%AM%iModED > 0) then
-      call ModD_PackAry(m%AM%Mod%Xfr(m%AM%iModED)%x, m%Modules(m%AM%iModED)%Lin%dx, m%AM%Residual)
-   end if
 
    ! note that we don't need to calculate the inputs on more than p_FAST%NumBl_Lin blades because we are only using them to compute the SS_GetInputs
    call SteadyStateCalculatedInputs(m, InputIndex, T, ErrStat2, ErrMsg2) ! calculate new inputs and store in InputIndex=2
    call SetErrStat(Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    ! Pack the output "residual vector" with these state derivatives and new inputs:
-   call SS_GetInputs(m, m%AM%u2, T%p_FAST%UJacSclFact, InputIndex, StateIndex, T, ErrStat2, ErrMsg2)
+   call SS_GetInputs(m, m%AM%u2, InputIndex, StateIndex, T, ErrStat2, ErrMsg2)
 
    ! Store difference in inputs
    m%AM%Residual(m%AM%Mod%Vars%Nx + 1:) = m%AM%u1 - m%AM%u2
@@ -978,13 +1055,14 @@ subroutine SS_AD_InputSolve_OtherBlades(m, InputIndex, T)
    end associate
 end subroutine SS_AD_InputSolve_OtherBlades
 
-subroutine SteadyStateCCSD(m, caseData, InputIndex, T, ErrStat, ErrMsg)
-   type(Glue_MiscVarType), intent(INOUT)     :: m                   !< Miscellaneous variables
-   type(AeroMapCase), intent(IN)             :: caseData            !< tsr, windSpeed, pitch, and rotor speed for this case
-   integer(IntKi), intent(IN)                :: InputIndex          !< Index into input array
-   type(FAST_TurbineType), intent(INOUT)     :: T                   !< Turbine type
-   integer(IntKi), intent(OUT)               :: ErrStat             !< Error status
-   character(*), intent(OUT)                 :: ErrMsg              !< Error message
+subroutine SS_CalcContStateDeriv(m, caseData, InputIndex, Residual, T, ErrStat, ErrMsg)
+   type(Glue_MiscVarType), intent(inout)     :: m                   !< Miscellaneous variables
+   type(AeroMapCase), intent(in)             :: caseData            !< tsr, windSpeed, pitch, and rotor speed for this case
+   integer(IntKi), intent(in)                :: InputIndex          !< Index into input array
+   real(R8Ki), intent(inout)                 :: Residual(:)         !< Residual vector
+   type(FAST_TurbineType), intent(inout)     :: T                   !< Turbine type
+   integer(IntKi), intent(out)               :: ErrStat             !< Error status
+   character(*), intent(out)                 :: ErrMsg              !< Error message
 
    character(*), parameter                   :: RoutineName = 'SteadyStateCCSD'
    integer(IntKi)                            :: ErrStat2            ! temporary Error status of the operation
@@ -1003,13 +1081,20 @@ subroutine SteadyStateCCSD(m, caseData, InputIndex, T, ErrStat, ErrMsg)
 
    case (Module_ED) ! ElastoDyn
 
-      call FAST_GetOP(m%Modules(m%AM%iModED), SS_t_global, InputIndex, STATE_CURR, T, ErrStat2, ErrMsg2, dx_op=m%Modules(m%AM%iModED)%Lin%dx)
+      call FAST_GetOP(m%Modules(m%AM%iModED), SS_t_global, InputIndex, STATE_CURR, T, ErrStat2, ErrMsg2, &
+                      FlagFilter=VF_AeroMap, dx_op=m%Modules(m%AM%iModED)%Lin%dx)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+      call ModD_PackAry(m%AM%Mod%Xfr(m%AM%iModED)%x, m%Modules(m%AM%iModED)%Lin%dx, Residual)
 
    case (Module_BD) ! BeamDyn
 
       ! Set hub rotation speed
-      Omega_Hub = [caseData%RotSpeed, 0.0_R8Ki, 0.0_R8Ki]
+      Omega_Hub = [real(caseData%RotSpeed, R8Ki), 0.0_R8Ki, 0.0_R8Ki]
+
+      call FAST_GetOP(m%Modules(m%AM%iModBD), SS_t_global, InputIndex, STATE_CURR, T, ErrStat2, ErrMsg2, &
+                      FlagFilter=VF_AeroMap, dx_op=m%Modules(m%AM%iModBD)%Lin%dx)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! TODO: Make this work for BeamDyn
       ! do K = 1, T%p_FAST%nBeams
@@ -1032,9 +1117,11 @@ subroutine SteadyStateCCSD(m, caseData, InputIndex, T, ErrStat, ErrMsg)
 
       ! end do
 
+      call ModD_PackAry(m%AM%Mod%Xfr(m%AM%iModBD)%x, m%Modules(m%AM%iModBD)%Lin%dx, Residual)
+
    end select
 
-end subroutine SteadyStateCCSD
+end subroutine SS_CalcContStateDeriv
 
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine SteadyStateCalculatedInputs(m, InputIndex, T, ErrStat, ErrMsg)
@@ -1064,180 +1151,38 @@ subroutine SteadyStateCalculatedInputs(m, InputIndex, T, ErrStat, ErrMsg)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    end if
 
-end subroutine SteadyStateCalculatedInputs
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine adds u_delta to the corresponding mesh field and scales it as appropriate
-! subroutine Add_SteadyState_delta(p_FAST, y_FAST, u_delta, AD, ED, BD, MeshMapData)
-!    !..................................................................................................................................
-!    type(FAST_ParameterType), intent(IN) :: p_FAST           !< Glue-code simulation parameters
-!    type(FAST_OutputFileType), intent(IN) :: y_FAST           !< Output variables for the glue code
-!    real(R8Ki), intent(IN) :: u_delta(:)       !< The delta amount to add to the appropriate mesh fields
-!    type(ElastoDyn_Data), intent(INOUT) :: ED               !< ElastoDyn data
-!    type(BeamDyn_Data), intent(INOUT) :: BD               !< BeamDyn data
-!    type(AeroDyn_Data), intent(INOUT) :: AD               !< AeroDyn data
-!    type(FAST_ModuleMapType), intent(IN) :: MeshMapData      !< data for mapping meshes between modules
-
-!    ! local variables
-!    integer                                             :: n
-!    integer                                             :: fieldIndx
-!    integer                                             :: node
-!    integer                                             :: indx, indx_last
-!    integer                                             :: i, j, k
-!    integer                                             :: nx, nStates
-
-!    real(R8Ki)                                          :: orientation(3, 3)
-!    real(R8Ki)                                          :: rotation(3, 3)
-
-!    integer(IntKi)                                      :: ErrStat2
-!    character(ErrMsgLen)                                :: ErrMsg2
-
-!    nx = y_FAST%Lin%Glue%SizeLin(LIN_ContSTATE_COL)
-
-!    ! structural code states:
-!    if (p_FAST%CompElast == Module_ED) then
-!       nStates = nx
-
-!       do j = 1, nStates
-
-!          do k = 1, ED%p%NActvDOF_Stride ! transfer these states to the other blades (this means that the original states MUST be set the same for all blades!!!)
-!             indx = ED%p%DOFs%PS((j - 1)*ED%p%NActvDOF_Stride + k)
-
-!             ED%x(STATE_CURR)%QT(indx) = ED%x(STATE_CURR)%QT(indx) + u_delta(j)
-!             ED%x(STATE_CURR)%QDT(indx) = 0.0_R8Ki !ED%x( STATE_CURR)%QDT(indx)  + u_delta(j+nStates)
-!          end do
-
-!       end do
-
-!    elseif (p_FAST%CompElast == Module_BD) then
-!       nStates = nx/2
-
-!       ! see BD's Perturb_x function:
-
-!       do k = 1, p_FAST%nBeams
-!          indx = 1
-!          do i = 2, BD%p(k)%node_total
-!             indx_last = indx + BD%p(k)%dof_node - 1
-!             BD%x(k, STATE_CURR)%dqdt(:, i) = BD%x(k, STATE_CURR)%dqdt(:, i) + u_delta(nStates + indx:indx_last + nStates)
-!             BD%x(k, STATE_CURR)%q(1:3, i) = BD%x(k, STATE_CURR)%q(1:3, i) + u_delta(indx:indx + 2)
-
-!             ! w-m parameters
-!             call BD_CrvMatrixR(BD%x(k, STATE_CURR)%q(4:6, i), rotation) ! returns the rotation matrix (transpose of DCM) that was stored in the state as a w-m parameter
-!             orientation = transpose(rotation)
-
-!             call PerturbOrientationMatrix(Orientation, Perturbations=u_delta(indx + 3:indx_last))
-
-!             rotation = transpose(orientation)
-!             call BD_CrvExtractCrv(rotation, BD%x(k, STATE_CURR)%q(4:6, i), ErrStat2, ErrMsg2) ! return the w-m parameters of the new orientation
-
-!             indx = indx_last + 1
-!          end do
-!       end do
-!    end if !CompElast
-
-!    ! inputs:
-!    ! we are at u_delta(nx+1 : end)
-!    n = nx + 1
-!    if (p_FAST%CompElast == Module_ED) then
-
-!       do K = 1, p_FAST%NumBl_Lin !we don't need all blades here: SIZE(ED%Input(1)%BladePtLoads,1) ! Loop through all blades
-
-!          do node = 1, ED%Input(1)%BladePtLoads(k)%NNodes
-!             do fieldIndx = 1, 3
-!                ED%Input(1)%BladePtLoads(k)%Force(fieldIndx, node) = ED%Input(1)%BladePtLoads(k)%Force(fieldIndx, node) + u_delta(n)*p_FAST%UJacSclFact
-!                n = n + 1
-!             end do
-!          end do
-
-!          do node = 1, ED%Input(1)%BladePtLoads(k)%NNodes
-!             do fieldIndx = 1, 3
-!                ED%Input(1)%BladePtLoads(k)%Moment(fieldIndx, node) = ED%Input(1)%BladePtLoads(k)%Moment(fieldIndx, node) + u_delta(n)*p_FAST%UJacSclFact
-!                n = n + 1
-!             end do
-!          end do
-
-!       end do
-
-!       call SS_ED_InputSolve_OtherBlades(p_FAST, ED%Input(1), MeshMapData)
-
-!    elseif (p_FAST%CompElast == Module_BD) then
-
-!       do K = 1, p_FAST%NumBl_Lin !we don't need all blades here: p_FAST%nBeams ! Loop through all blades
-
-!          do node = 1, BD%Input(1, k)%DistrLoad%NNodes
-!             do fieldIndx = 1, 3
-!                BD%Input(1, k)%DistrLoad%Force(fieldIndx, node) = BD%Input(1, k)%DistrLoad%Force(fieldIndx, node) + u_delta(n)*p_FAST%UJacSclFact
-!                n = n + 1
-!             end do
-!          end do
-
-!          do node = 1, BD%Input(1, k)%DistrLoad%NNodes
-!             do fieldIndx = 1, 3
-!                BD%Input(1, k)%DistrLoad%Moment(fieldIndx, node) = BD%Input(1, k)%DistrLoad%Moment(fieldIndx, node) + u_delta(n)*p_FAST%UJacSclFact
-!                n = n + 1
-!             end do
-!          end do
-
-!       end do
-
-!       call SS_BD_InputSolve_OtherBlades(p_FAST, BD, MeshMapData, 1) ! 1 is for the input index (i.e., Input(1,Blades2-end)
-
-!    end if !CompElast
-
-!    ! AeroDyn
-!    do k = 1, p_FAST%NumBl_Lin !we don't need all blades here: SIZE(AD%Input(1)%BladeMotion)
-!       do node = 1, AD%Input(1)%rotors(1)%BladeMotion(k)%NNodes
-!          do fieldIndx = 1, 3
-!             AD%Input(1)%rotors(1)%BladeMotion(k)%TranslationDisp(fieldIndx, node) = AD%Input(1)%rotors(1)%BladeMotion(k)%TranslationDisp(fieldIndx, node) + u_delta(n)
-!             n = n + 1
-!          end do
-!       end do
-
-!       do node = 1, AD%Input(1)%rotors(1)%BladeMotion(k)%NNodes
-!          call PerturbOrientationMatrix(AD%Input(1)%rotors(1)%BladeMotion(k)%Orientation(:, :, node), Perturbations=u_delta(n:n + 2))
-!          n = n + 3
-!       end do
-
-!       do node = 1, AD%Input(1)%rotors(1)%BladeMotion(k)%NNodes
-!          AD%Input(1)%rotors(1)%BladeMotion(k)%TranslationVel(:, node) = AD%Input(1)%rotors(1)%BladeMotion(k)%TranslationVel(:, node) + u_delta(n:n + 2)
-
-!          n = n + 3
-!       end do
-
-!    end do
-
-!    ! now update the inputs on other blades:
-!    call SS_AD_InputSolve_OtherBlades(p_FAST, AD%Input(1), MeshMapData) ! transfer results from blade 1 to other blades
-
-! end subroutine Add_SteadyState_delta
+end subroutine
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine basically packs the relevant parts of the modules' inputs and states for use in the steady-state solver.
-subroutine SS_GetInputs(m, u_vec, ScaleFactor, InputIndex, StateIndex, T, ErrStat, ErrMsg)
+subroutine SS_GetInputs(m, u_vec, InputIndex, StateIndex, T, ErrStat, ErrMsg)
    type(Glue_MiscVarType), intent(inout)  :: m           !< Glue-code simulation parameters
    real(R8Ki), intent(inout)              :: u_vec(:)    !< Array of input packed values
-   real(R8Ki), intent(in)                 :: ScaleFactor !< Jacobian scaling factor
    integer(IntKi), intent(in)             :: InputIndex  !< Input array index
    integer(IntKi), intent(in)             :: StateIndex  !< State array index
    type(FAST_TurbineType), intent(inout)  :: T           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat     !< Error status of the operation
    character(*), intent(out)              :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-   character(*), parameter :: RoutineName = 'SolveSteadyState'
+   character(*), parameter :: RoutineName = 'SS_Solve'
    integer(IntKi)          :: ErrStat2                  ! temporary Error status of the operation
    character(ErrMsgLen)    :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
-   integer(IntKi)          :: i, j, k, ieMod, ieGbl
-   integer(IntKi)          :: iMod(3), iVarMod(2), iVarGbl(2)
+   integer(IntKi)          :: i, j, k, ieSrc, ieDst, iMod
+   integer(IntKi)          :: iModOrder(3), iSrc(2), iDst(2)
 
-   iMod = [m%AM%iModED, m%AM%iModBD, m%AM%iModAD]
+   iModOrder = [m%AM%iModED, m%AM%iModBD, m%AM%iModAD]
 
    ! Loop through modules
-   do i = 1, size(iMod)
+   do i = 1, size(iModOrder)
+      iMod = iModOrder(i)
 
       ! Skip inactive modules
-      if (iMod(i) == 0) cycle
+      if (iMod == 0) cycle
 
-      associate (ModData => m%Modules(iMod(i)))
+      ! If no inputs for this module, cycle
+      if (.not. allocated(m%AM%Mod%Xfr(iMod)%u)) cycle
+
+      associate (ModData => m%Modules(iMod), uXfr => m%AM%Mod%Xfr(iMod)%u)
 
          ! Get states and outputs
          call FAST_GetOP(ModData, SS_t_global, InputIndex, StateIndex, T, ErrStat2, ErrMsg2, &
@@ -1245,35 +1190,30 @@ subroutine SS_GetInputs(m, u_vec, ScaleFactor, InputIndex, StateIndex, T, ErrSta
          if (Failed()) return
 
          ! Transfer selected input data from module to RHS based on Idx
-         if (allocated(ModData%Lin%u)) then
-            do j = 1, size(ModData%Vars%u)
+         do j = 1, size(uXfr)
 
-               ! Get module and global variable indices from Idx, skip if not used
-               if (.not. ModD_GetValLoc(m%AM%Mod%Xfr(iMod(i))%u, j, iVarMod, iVarGbl)) cycle
+            ! Convert or store values based on field type
+            select case (ModData%Vars%u(uXfr(j)%iVar)%Field)
 
-               ! Convert or store based on field type
-               select case (ModData%Vars%u(j)%Field)
+            case (FieldForce, FieldMoment)
+               ! If field is a force or moment, scale by scale factor
+               u_vec(uXfr(j)%iDst(1):uXfr(j)%iDst(2)) = ModData%Lin%u(uXfr(j)%iSrc(1):uXfr(j)%iSrc(2))/m%AM%JacScale
 
-               case (FieldForce, FieldMoment)
-                  ! If field is a force or moment, scale by scale factor
-                  u_vec(iVarGbl(1):iVarGbl(2)) = ModData%Lin%u(iVarMod(1):iVarMod(2))/ScaleFactor
+            case (FieldOrientation)
+               ! Convert orientations to rotation vectors
+               ieSrc = uXfr(j)%iSrc(1)
+               ieDst = uXfr(j)%iDst(1)
+               do k = 1, ModData%Vars%u(j)%Nodes
+                  u_vec(ieDst:ieDst + 2) = quat_to_rvec(ModData%Lin%u(ieSrc:ieSrc + 2))
+                  ieSrc = ieSrc + 3
+                  ieDst = ieDst + 3
+               end do
 
-               case (FieldOrientation)
-                  ! Convert orientations to rotation vectors
-                  ieMod = iVarMod(1)
-                  ieGbl = iVarGbl(1)
-                  do k = 1, ModData%Vars%u(j)%Nodes
-                     u_vec(ieGbl:ieGbl + 2) = -quat_to_rvec(ModData%Lin%u(ieMod:ieMod + 2))
-                     ieMod = ieMod + 3
-                     ieGbl = ieGbl + 3
-                  end do
+            case default
+               u_vec(uXfr(j)%iDst(1):uXfr(j)%iDst(2)) = ModData%Lin%u(uXfr(j)%iSrc(1):uXfr(j)%iSrc(2))
+            end select
 
-               case default
-                  u_vec(iVarGbl(1):iVarGbl(2)) = ModData%Lin%u(iVarMod(1):iVarMod(2))
-               end select
-
-            end do
-         end if
+         end do
 
       end associate
 

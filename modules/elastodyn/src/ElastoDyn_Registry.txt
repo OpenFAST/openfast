@@ -764,6 +764,10 @@ typedef	^	ParameterType	Integer	NumBl_Lin	-	-	-	"number of blades in the jacobia
 typedef	^	ParameterType	Integer	NActvVelDOF_Lin	-	-	-	"number of velocity states in the jacobian"	-
 typedef	^	ParameterType	Integer	NActvDOF_Lin	-	-	-	"number of active DOFs to use in the jacobian"	-
 typedef	^	ParameterType	Integer	NActvDOF_Stride	-	-	-	"stride for active DOFs to use in the jacobian"	-
+# State variable indices
+typedef	^	ParameterType	IntKi	iVarBladeFlap1	{:}	-	-	"Indices of BladeFlap1 variable"	-
+typedef	^	ParameterType	IntKi	iVarBladeEdge1	{:}	-	-	"Indices of BladeEdge1 variable"	-
+typedef	^	ParameterType	IntKi	iVarBladeFlap2	{:}	-	-	"Indices of BladeFlap2 variable"	-
 # Input variable indices
 typedef	^	ParameterType	IntKi	iVarBladePtLoads	{:}	-	-	"Indices of blade point loads mesh variable"	-
 typedef	^	ParameterType	IntKi	iVarPlatformPtMesh	-	-	-	"Index of platform point loads mesh variable"	-

@@ -6787,47 +6787,37 @@ contains
 end subroutine RotGetOP
 
 !> AD_SetOP populates the data structures from the operating point arrays. (Extended inputs are not used)
-subroutine AD_SetOP(iRotor, u, p, x, xd, z, y, ErrStat, ErrMsg, u_op, y_op, x_op, xd_op, z_op)
+subroutine AD_SetOP(iRotor, u, p, x, xd, z, ErrStat, ErrMsg, u_op, x_op, xd_op, z_op)
    INTEGER(IntKi),                       INTENT(IN   )           :: iRotor     !< Rotor index
    TYPE(AD_InputType),                   INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(AD_ParameterType),               INTENT(IN   )           :: p          !< Parameters
    TYPE(AD_ContinuousStateType),         INTENT(INOUT)           :: x          !< Continuous states at operating point
    TYPE(AD_DiscreteStateType),           INTENT(INOUT)           :: xd         !< Discrete states at operating point
    TYPE(AD_ConstraintStateType),         INTENT(INOUT)           :: z          !< Constraint states at operating point
-   TYPE(AD_OutputType),                  INTENT(INOUT)           :: y          !< Output at operating point
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(IN   )           :: u_op(:)    !< values of linearized inputs
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(IN   )           :: y_op(:)    !< values of linearized outputs
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(IN   )           :: x_op(:)    !< values of linearized continuous states
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(IN   )           :: xd_op(:)   !< values of linearized discrete states
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(IN   )           :: z_op(:)    !< values of linearized constraint states
 
-   if (iRotor < 1 .or. iRotor > size(p%rotors)) then
-      ErrStat = ErrID_Fatal
-      ErrMsg = "AD_SetOP: Invalid rotor index: "//trim(Num2LStr(iRotor))//", must be between 1 and "//Num2LStr(size(p%rotors))
-      return
-   end if
-
-   call RotSetOP(u%rotors(iRotor), p%rotors(iRotor), x%rotors(iRotor), xd%rotors(iRotor), z%rotors(iRotor), y%rotors(iRotor), ErrStat, ErrMsg, u_op, y_op, x_op, xd_op, z_op)
+   call RotSetOP(u%rotors(iRotor), p%rotors(iRotor), x%rotors(iRotor), xd%rotors(iRotor), z%rotors(iRotor), ErrStat, ErrMsg, u_op, x_op, xd_op, z_op)
 
 end subroutine 
 
 !> RotSetOP populates the data structures from the operating point arrays. (Extended inputs are not used)
-subroutine RotSetOP(u, p, x, xd, z, y, ErrStat, ErrMsg, u_op, x_op, xd_op, z_op, y_op)
+subroutine RotSetOP(u, p, x, xd, z, ErrStat, ErrMsg, u_op, x_op, xd_op, z_op)
    type(RotInputType),                 intent(inout)     :: u           !< Inputs at operating point (may change to inout if a mesh copy is required)
    type(RotParameterType),             intent(in   )     :: p           !< Parameters
    type(RotContinuousStateType),       intent(inout)     :: x           !< Continuous states at operating point
    type(RotDiscreteStateType),         intent(inout)     :: xd          !< Discrete states at operating point
    type(RotConstraintStateType),       intent(inout)     :: z           !< Constraint states at operating point
-   type(RotOutputType),                intent(inout)     :: y           !< Output at operating point
    integer(IntKi),                     intent(  out)     :: ErrStat     !< Error status of the operation
    character(*),                       intent(  out)     :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    real(R8Ki), allocatable, optional,  intent(in   )     :: u_op(:)     !< values of linearized inputs
    real(R8Ki), allocatable, optional,  intent(in   )     :: x_op(:)     !< values of linearized continuous states
    real(R8Ki), allocatable, optional,  intent(in   )     :: xd_op(:)    !< values of linearized discrete states
    real(R8Ki), allocatable, optional,  intent(in   )     :: z_op(:)     !< values of linearized constraint states
-   real(R8Ki), allocatable, optional,  intent(in   )     :: y_op(:)     !< values of linearized outputs
 
    character(*), parameter          :: RoutineName = 'AD_SetOP'
    integer(IntKi)                   :: ErrStat2
@@ -6837,7 +6827,6 @@ subroutine RotSetOP(u, p, x, xd, z, y, ErrStat, ErrMsg, u_op, x_op, xd_op, z_op,
    ErrMsg  = ''
 
    if (present(u_op)) call AD_UnpackInputOP(p, u_op, u)
-   if (present(y_op)) call AD_UnpackOutputOP(p, y_op, y)
    if (present(x_op)) call AD_UnpackContStateOP(p, x_op, x)
    if (present(xd_op)) call AD_UnpackDiscStateOP(p, xd_op, xd)
    if (present(z_op)) call AD_UnpackConstrStateOP(p, z_op, z)

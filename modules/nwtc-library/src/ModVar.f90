@@ -31,7 +31,7 @@ implicit none
 
 private
 public :: MV_InitVarsJac, MV_Pack, MV_Unpack
-public :: MV_ComputeCentralDiff, MV_Perturb, MV_ComputeDiff, MV_ExtrapInterp
+public :: MV_ComputeCentralDiff, MV_Perturb, MV_ComputeDiff, MV_ExtrapInterp, MV_AddDelta
 public :: MV_AddVar, MV_AddMeshVar
 public :: MV_HasFlags, MV_SetFlags, MV_ClearFlags, MV_NumVars
 public :: LoadFields, MotionFields, TransFields, AngularFields
@@ -309,7 +309,7 @@ end subroutine
 ! Functions for packing and unpacking data by variable
 !-------------------------------------------------------------------------------
 
-subroutine MV_PackMatrix(RowVarAry, ColVarAry, FlagFilter, M, SubM)
+subroutine MV_PackMatrix(RowVarAry, ColVarAry, M, SubM, FlagFilter)
    type(ModVarType), intent(in)  :: RowVarAry(:), ColVarAry(:)
    real(R8Ki), intent(in)        :: M(:, :)
    real(R8Ki), intent(inout)     :: SubM(:, :)
@@ -319,9 +319,9 @@ subroutine MV_PackMatrix(RowVarAry, ColVarAry, FlagFilter, M, SubM)
    col = 1
    row = 1
    do i = 1, size(ColVarAry)
-      if (iand(ColVarAry(i)%Flags, FlagFilter) == 0) cycle
+      if (.not. MV_HasFlags(ColVarAry(i), FlagFilter)) cycle
       do j = 1, size(RowVarAry)
-         if (iand(RowVarAry(j)%Flags, FlagFilter) == 0) cycle
+         if (.not. MV_HasFlags(RowVarAry(j), FlagFilter)) cycle
          associate (rVar => RowVarAry(i), cVar => ColVarAry(i))
             SubM(row:row + rVar%Num - 1, col:col + cVar%Num - 1) = M(rVar%iLoc(1):rVar%iLoc(2), cVar%iLoc(1):cVar%iLoc(2))
          end associate
@@ -822,6 +822,43 @@ subroutine MV_ExtrapInterp(VarAry, y, tin, y_out, tin_out, ErrStat, ErrMsg)
 
 end subroutine
 
+subroutine MV_AddDelta(VarAry, DeltaAry, DataAry)
+   type(ModVarType), intent(in)  :: VarAry(:)      ! Array of variables
+   real(R8Ki), intent(in)        :: DeltaAry(:)    ! Array of delta values
+   real(R8Ki), intent(inout)     :: DataAry(:)     ! Array to be modified
+   integer(IntKi)                :: i, j, k
+   real(R8Ki)                    :: quat_base(3), quat_delta(3)
+
+   ! Loop through variables
+   do i = 1, size(VarAry)
+      associate (iLoc => VarAry(i)%iLoc)
+         select case (VarAry(i)%Field)
+         case (FieldOrientation)
+
+            ! Starting index into arrays
+            k = iLoc(1)
+
+            ! Loop through nodes
+            do j = 1, VarAry(i)%Nodes
+
+               ! Quaternions from negative and positive perturbations
+               quat_base = DataAry(k:k + 2)
+               quat_delta = rvec_to_quat(DeltaAry(k:k + 2))
+
+               ! Calculate composition of base quaternion and delta quaternion
+               DataAry(k:k + 2) = quat_compose(quat_base, quat_delta)
+
+               ! Increment starting index
+               k = k + 3
+            end do
+
+         case default
+            DataAry(iLoc(1):iLoc(2)) = DataAry(iLoc(1):iLoc(2)) + DeltaAry(iLoc(1):iLoc(2))
+         end select
+      end associate
+   end do
+end subroutine
+
 !-------------------------------------------------------------------------------
 ! Functions for adding Variables
 !-------------------------------------------------------------------------------
@@ -976,12 +1013,15 @@ end function
 ! Flag Utilities
 !-------------------------------------------------------------------------------
 
+!> MV_HasFlags returns true if Flags is VF_None or if variable contains all
+!> flags in Flags.
 pure logical function MV_HasFlags(Var, Flags)
    type(ModVarType), intent(in)  :: Var
    integer(IntKi), intent(in)    :: Flags
    MV_HasFlags = iand(Var%Flags, Flags) == Flags
 end function
 
+!> MV_SetFlags adds the given flags to the variable.
 subroutine MV_SetFlags(Var, Flags)
    type(ModVarType), intent(inout)  :: Var
    integer(IntKi), intent(in)       :: Flags
@@ -989,6 +1029,7 @@ subroutine MV_SetFlags(Var, Flags)
    Var%Flags = ior(Var%Flags, Flags)
 end subroutine
 
+!> MV_ClearFlags removes the given flags from the variable.
 subroutine MV_ClearFlags(Var, Flags)
    type(ModVarType), intent(inout)  :: Var
    integer(IntKi), intent(in)       :: Flags
@@ -1251,17 +1292,23 @@ pure function quat_to_rvec(q) result(rvec)
    else
       qr = sqrt(1.0_R8Ki - m*m)        ! Scalar part
       theta = 2.0_R8Ki*atan2(m, qr)  ! Angle
-      rvec = theta*q/m
+      rvec = -theta*q/m             ! Negative sign doesn't make sense, but needed for quaternions
    end if
 end function
 
 pure function rvec_to_quat(rvec) result(q)
    real(R8Ki), intent(in)  :: rvec(3)
-   real(R8Ki)              :: theta, q0, q(3)
+   real(R8Ki)              :: theta, half_theta, q0, q(3)
    theta = sqrt(dot_product(rvec, rvec))
-   q0 = cos(theta/2.0_R8Ki)
-   q = rvec/theta*sin(theta/2.0_R8Ki)
-   q = quat_canonical(q0, q)
+   if (theta < epsilon(theta)) then
+      ! Angle is zero, quaternion is identity
+      q = 0.0_R8Ki
+   else
+      half_theta = theta/2.0_R8Ki
+      q0 = cos(half_theta)
+      q = rvec/theta*sin(half_theta)
+      q = -quat_canonical(q0, q) ! Negative sign doesn't make sense, but needed for quaternions
+   end if
 end function
 
 pure function wm_to_quat(c) result(q)

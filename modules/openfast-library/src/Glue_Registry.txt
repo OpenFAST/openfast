@@ -210,6 +210,8 @@ typedef ^ ^                     R8Ki            Jac12                   :: -  - 
 typedef ^ ^                     R8Ki            Jac21                   :: -  -     "Components of Jacobian matrix" -
 typedef ^ ^                     R8Ki            Jac22                   :: -  -     "Components of Jacobian matrix" -
 typedef ^ ^                     IntKi           JacPivot                :  -  -     "Jacobian matrix pivot array" -
+typedef ^ ^                     R8Ki            JacScale                -  -  -     "Jacobian scaling factor for loads" -
+typedef ^ ^                     R8Ki            SolveTolerance          -  -  -     "Allowable solution tolerance" -
 typedef ^ ^                     R8Ki            HubOrientation         ::: -  -     "Hub orientation matrix for each blade" -
 typedef ^ ^                     R8Ki            u1                      :  -  -     "" -
 typedef ^ ^                     R8Ki            u2                      :  -  -     "" -

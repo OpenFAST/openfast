@@ -63,8 +63,9 @@ MODULE ElastoDyn
                                                !   states (z)
 
    PUBLIC :: ED_GetOP                          ! Routine to pack the operating point values (for linearization) into arrays
+   PUBLIC :: ED_SetOP                          ! Routine to unpack the operating point values from arrays
 
-   PUBLIC :: ED_PackContStateOP, ED_UnpackStateOP
+   PUBLIC :: ED_PackContStateOP, ED_UnpackContStateOP
    PUBLIC :: ED_PackInputOP, ED_UnpackInputOP
    PUBLIC :: ED_PackOutputOP
 
@@ -10878,13 +10879,13 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-            call ED_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
+            call ED_UnpackContStateOP(p, m%Jac%x_perturb, m%x_perturb)
             call ED_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
             call ED_PackOutputOP(p, m%y_lin, m%Jac%y_pos, IsFullLin)
 
             ! Calculate negative perturbation
             call MV_Perturb(p%Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-            call ED_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
+            call ED_UnpackContStateOP(p, m%Jac%x_perturb, m%x_perturb)
             call ED_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
             call ED_PackOutputOP(p, m%y_lin, m%Jac%y_neg, IsFullLin)
 
@@ -10917,13 +10918,13 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-            call ED_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
+            call ED_UnpackContStateOP(p, m%Jac%x_perturb, m%x_perturb)
             call ED_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
             call ED_PackContStateOP(p, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(p%Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-            call ED_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
+            call ED_UnpackContStateOP(p, m%Jac%x_perturb, m%x_perturb)
             call ED_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
             call ED_PackContStateOP(p, m%dxdt_lin, m%Jac%x_neg)
 
@@ -11213,6 +11214,26 @@ contains
       Failed = ErrStat >= AbortErrLev
    end function
 END SUBROUTINE ED_GetOP
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> ED_SetOP sets input and state values from an array. Inverse of ED_GetOP
+subroutine ED_SetOP(u, p, x, xd, z, u_op, x_op, xd_op, z_op)
+   TYPE(ED_InputType),                   INTENT(INOUT)   :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(ED_ParameterType),               INTENT(IN   )   :: p          !< Parameters
+   TYPE(ED_ContinuousStateType),         INTENT(INOUT)   :: x          !< Continuous states at operating point
+   TYPE(ED_DiscreteStateType),           INTENT(INOUT)   :: xd         !< Discrete states at operating point
+   TYPE(ED_ConstraintStateType),         INTENT(INOUT)   :: z          !< Constraint states at operating point
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)   :: u_op(:)    !< values of linearized inputs
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)   :: x_op(:)    !< values of linearized continuous states
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)   :: xd_op(:)   !< values of linearized discrete states
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)   :: z_op(:)    !< values of linearized constraint states
+
+   if (present(u_op)) call ED_UnpackInputOP(p, u_op, u)
+   if (present(x_op)) call ED_UnpackContStateOP(p, x_op, x)
+   ! if (present(xd_op)) call ED_UnpackDiscStateOP(p, xd, xd_op)
+   ! if (present(z_op)) call ED_UnpackDiscStateOP(p, z, z_op)
+
+END subroutine
 !----------------------------------------------------------------------------------------------------------------------------------
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -11370,10 +11391,12 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
                   LinNames=['Hub teetering DOF (internal DOF index = DOF_Teet), rad'], &
                   Active=InputFileData%TeetDOF)
 
+   call AllocAry(p%iVarBladeFlap1, p%NumBl, 'iVarBladeFlap1', ErrStat2, ErrMsg2); if (Failed()) return
    do i = 1, p%NumBl
       Flags = ior(VF_RotFrame, VF_DerivOrder2)
       if (i == 1) Flags = ior(Flags, VF_AeroMap)
       call MV_AddVar(p%Vars%x, 'Blade'//trim(Num2LStr(i))//'Flap1', FieldTransDisp, &
+                     VarIdx=p%iVarBladeFlap1(i), &
                      Flags=Flags, &
                      iUsr=DOF_BF(i,1), &
                      Perturb=0.20_R8Ki * D2R_D * p%BldFlexL, &
@@ -11382,10 +11405,12 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
                      Active=InputFileData%FlapDOF1)
    end do
 
+   call AllocAry(p%iVarBladeEdge1, p%NumBl, 'iVarBladeEdge1', ErrStat2, ErrMsg2); if (Failed()) return
    do i = 1, p%NumBl
       Flags = ior(VF_RotFrame, VF_DerivOrder2)
       if (i == 1) Flags = ior(Flags, VF_AeroMap)
       call MV_AddVar(p%Vars%x, 'Blade'//trim(Num2LStr(i))//'Edge1', FieldTransDisp, &
+                     VarIdx=p%iVarBladeEdge1(i), &
                      Flags=Flags, &
                      iUsr=DOF_BE(i,1), &
                      Perturb=0.20_R8Ki * D2R_D * p%BldFlexL, &
@@ -11394,10 +11419,12 @@ subroutine ED_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat
                      Active=InputFileData%EdgeDOF)
    end do
 
+   call AllocAry(p%iVarBladeFlap2, p%NumBl, 'iVarBladeFlap2', ErrStat2, ErrMsg2); if (Failed()) return
    do i = 1, p%NumBl
       Flags = ior(VF_RotFrame, VF_DerivOrder2)
       if (i == 1) Flags = ior(Flags, VF_AeroMap)
       call MV_AddVar(p%Vars%x, 'Blade'//trim(Num2LStr(i))//'Flap2', FieldTransDisp, &
+                     VarIdx=p%iVarBladeFlap2(i), &
                      Flags=Flags, &
                      iUsr=DOF_BF(i,2), &
                      Perturb=0.02_R8Ki * D2R_D * p%BldFlexL, &
@@ -11675,7 +11702,7 @@ subroutine ED_PackContStateOP(p, x, ary)
    end do
 end subroutine
 
-subroutine ED_UnpackStateOP(p, ary, x)
+subroutine ED_UnpackContStateOP(p, ary, x)
    type(ED_ParameterType), intent(in)           :: p
    real(R8Ki), intent(in)                       :: ary(:)
    type(ED_ContinuousStateType), intent(inout)  :: x

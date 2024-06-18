@@ -30,7 +30,7 @@ implicit none
 private
 public :: ModD_AddModule
 public :: ModD_GetValLoc, GetModuleOrder
-public :: ModD_PackAry, ModD_PackMatrix, ModD_CombineModules
+public :: ModD_PackAry, ModD_UnpackAry, ModD_PackMatrix, ModD_CombineModules
 
 contains
 
@@ -303,14 +303,25 @@ logical function ModD_GetValLoc(VarXfrAry, iVar, iSrc, iDst) result(Active)
    Active = .false.
 end function
 
-subroutine ModD_PackAry(VarXfrAry, SrcAry, DstAry)
+subroutine ModD_PackAry(VarXfrAry, ModAry, GblAry)
    type(VarXfrType), intent(in)     :: VarXfrAry(:)
-   real(R8Ki), intent(in)           :: SrcAry(:)
-   real(R8Ki), intent(inout)        :: DstAry(:)
+   real(R8Ki), intent(in)           :: ModAry(:)
+   real(R8Ki), intent(inout)        :: GblAry(:)
    integer(IntKi)                   :: i
    do i = 1, size(VarXfrAry)
-      DstAry(VarXfrAry(i)%iDst(1):VarXfrAry(i)%iDst(2)) = &
-         SrcAry(VarXfrAry(i)%iSrc(1):VarXfrAry(i)%iSrc(2))
+      GblAry(VarXfrAry(i)%iDst(1):VarXfrAry(i)%iDst(2)) = &
+         ModAry(VarXfrAry(i)%iSrc(1):VarXfrAry(i)%iSrc(2))
+   end do
+end subroutine
+
+subroutine ModD_UnpackAry(VarXfrAry, ModAry, GblAry)
+   type(VarXfrType), intent(in)     :: VarXfrAry(:)
+   real(R8Ki), intent(inout)        :: ModAry(:)
+   real(R8Ki), intent(in)           :: GblAry(:)
+   integer(IntKi)                   :: i
+   do i = 1, size(VarXfrAry)
+      ModAry(VarXfrAry(i)%iSrc(1):VarXfrAry(i)%iSrc(2)) = &
+         GblAry(VarXfrAry(i)%iDst(1):VarXfrAry(i)%iDst(2))
    end do
 end subroutine
 

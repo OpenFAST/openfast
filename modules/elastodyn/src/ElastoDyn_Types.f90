@@ -779,6 +779,9 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NActvVelDOF_Lin = 0_IntKi      !< number of velocity states in the jacobian [-]
     INTEGER(IntKi)  :: NActvDOF_Lin = 0_IntKi      !< number of active DOFs to use in the jacobian [-]
     INTEGER(IntKi)  :: NActvDOF_Stride = 0_IntKi      !< stride for active DOFs to use in the jacobian [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladeFlap1      !< Indices of BladeFlap1 variable [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladeEdge1      !< Indices of BladeEdge1 variable [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladeFlap2      !< Indices of BladeFlap2 variable [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladePtLoads      !< Indices of blade point loads mesh variable [-]
     INTEGER(IntKi)  :: iVarPlatformPtMesh = 0_IntKi      !< Index of platform point loads mesh variable [-]
     INTEGER(IntKi)  :: iVarTowerPtLoads = 0_IntKi      !< Index of tower point loads mesh variable [-]
@@ -5760,6 +5763,42 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%NActvVelDOF_Lin = SrcParamData%NActvVelDOF_Lin
    DstParamData%NActvDOF_Lin = SrcParamData%NActvDOF_Lin
    DstParamData%NActvDOF_Stride = SrcParamData%NActvDOF_Stride
+   if (allocated(SrcParamData%iVarBladeFlap1)) then
+      LB(1:1) = lbound(SrcParamData%iVarBladeFlap1, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%iVarBladeFlap1, kind=B8Ki)
+      if (.not. allocated(DstParamData%iVarBladeFlap1)) then
+         allocate(DstParamData%iVarBladeFlap1(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iVarBladeFlap1.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%iVarBladeFlap1 = SrcParamData%iVarBladeFlap1
+   end if
+   if (allocated(SrcParamData%iVarBladeEdge1)) then
+      LB(1:1) = lbound(SrcParamData%iVarBladeEdge1, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%iVarBladeEdge1, kind=B8Ki)
+      if (.not. allocated(DstParamData%iVarBladeEdge1)) then
+         allocate(DstParamData%iVarBladeEdge1(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iVarBladeEdge1.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%iVarBladeEdge1 = SrcParamData%iVarBladeEdge1
+   end if
+   if (allocated(SrcParamData%iVarBladeFlap2)) then
+      LB(1:1) = lbound(SrcParamData%iVarBladeFlap2, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%iVarBladeFlap2, kind=B8Ki)
+      if (.not. allocated(DstParamData%iVarBladeFlap2)) then
+         allocate(DstParamData%iVarBladeFlap2(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iVarBladeFlap2.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%iVarBladeFlap2 = SrcParamData%iVarBladeFlap2
+   end if
    if (allocated(SrcParamData%iVarBladePtLoads)) then
       LB(1:1) = lbound(SrcParamData%iVarBladePtLoads, kind=B8Ki)
       UB(1:1) = ubound(SrcParamData%iVarBladePtLoads, kind=B8Ki)
@@ -6020,6 +6059,15 @@ subroutine ED_DestroyParam(ParamData, ErrStat, ErrMsg)
    end if
    if (allocated(ParamData%dx)) then
       deallocate(ParamData%dx)
+   end if
+   if (allocated(ParamData%iVarBladeFlap1)) then
+      deallocate(ParamData%iVarBladeFlap1)
+   end if
+   if (allocated(ParamData%iVarBladeEdge1)) then
+      deallocate(ParamData%iVarBladeEdge1)
+   end if
+   if (allocated(ParamData%iVarBladeFlap2)) then
+      deallocate(ParamData%iVarBladeFlap2)
    end if
    if (allocated(ParamData%iVarBladePtLoads)) then
       deallocate(ParamData%iVarBladePtLoads)
@@ -6291,6 +6339,9 @@ subroutine ED_PackParam(RF, Indata)
    call RegPack(RF, InData%NActvVelDOF_Lin)
    call RegPack(RF, InData%NActvDOF_Lin)
    call RegPack(RF, InData%NActvDOF_Stride)
+   call RegPackAlloc(RF, InData%iVarBladeFlap1)
+   call RegPackAlloc(RF, InData%iVarBladeEdge1)
+   call RegPackAlloc(RF, InData%iVarBladeFlap2)
    call RegPackAlloc(RF, InData%iVarBladePtLoads)
    call RegPack(RF, InData%iVarPlatformPtMesh)
    call RegPack(RF, InData%iVarTowerPtLoads)
@@ -6596,6 +6647,9 @@ subroutine ED_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NActvVelDOF_Lin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NActvDOF_Lin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NActvDOF_Stride); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iVarBladeFlap1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iVarBladeEdge1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iVarBladeFlap2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%iVarBladePtLoads); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarPlatformPtMesh); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVarTowerPtLoads); if (RegCheckErr(RF, RoutineName)) return

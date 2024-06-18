@@ -242,6 +242,8 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Jac21      !< Components of Jacobian matrix [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Jac22      !< Components of Jacobian matrix [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: JacPivot      !< Jacobian matrix pivot array [-]
+    REAL(R8Ki)  :: JacScale = 0.0_R8Ki      !< Jacobian scaling factor for loads [-]
+    REAL(R8Ki)  :: SolveTolerance = 0.0_R8Ki      !< Allowable solution tolerance [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: HubOrientation      !< Hub orientation matrix for each blade [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: u1      !<  [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: u2      !<  [-]
@@ -2282,6 +2284,8 @@ subroutine Glue_CopyAeroMap(SrcAeroMapData, DstAeroMapData, CtrlCode, ErrStat, E
       end if
       DstAeroMapData%JacPivot = SrcAeroMapData%JacPivot
    end if
+   DstAeroMapData%JacScale = SrcAeroMapData%JacScale
+   DstAeroMapData%SolveTolerance = SrcAeroMapData%SolveTolerance
    if (allocated(SrcAeroMapData%HubOrientation)) then
       LB(1:3) = lbound(SrcAeroMapData%HubOrientation, kind=B8Ki)
       UB(1:3) = ubound(SrcAeroMapData%HubOrientation, kind=B8Ki)
@@ -2435,6 +2439,8 @@ subroutine Glue_PackAeroMap(RF, Indata)
    call RegPackAlloc(RF, InData%Jac21)
    call RegPackAlloc(RF, InData%Jac22)
    call RegPackAlloc(RF, InData%JacPivot)
+   call RegPack(RF, InData%JacScale)
+   call RegPack(RF, InData%SolveTolerance)
    call RegPackAlloc(RF, InData%HubOrientation)
    call RegPackAlloc(RF, InData%u1)
    call RegPackAlloc(RF, InData%u2)
@@ -2472,6 +2478,8 @@ subroutine Glue_UnPackAeroMap(RF, OutData)
    call RegUnpackAlloc(RF, OutData%Jac21); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Jac22); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%JacPivot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%JacScale); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SolveTolerance); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%HubOrientation); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%u1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%u2); if (RegCheckErr(RF, RoutineName)) return
