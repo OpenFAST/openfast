@@ -381,7 +381,7 @@ subroutine SS_Solve(m, caseData, p_FAST, y_FAST, m_FAST, T, ErrStat, ErrMsg)
    integer(IntKi)                                    :: MaxIter                   ! maximum number of iterations
    integer(IntKi)                                    :: K                         ! Input-output-solve iteration counter
    integer(IntKi)                                    :: i, j
-   integer(IntKi)                                    :: iModOrder(3), iMod
+   integer(IntKi)                                    :: nx                        ! Number of state variables in Jacobian
 
    logical                                           :: GetWriteOutput            ! flag to determine if we need WriteOutputs from this call to CalcOutput
 
@@ -393,6 +393,8 @@ subroutine SS_Solve(m, caseData, p_FAST, y_FAST, m_FAST, T, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
    ! Some record keeping stuff:
    !----------------------------------------------------------------------------
+
+   nx = m%AM%Mod%Vars%Nx
 
    ! Set the rotor speed in ElastoDyn
    T%ED%x(STATE_CURR)%QDT(p_FAST%GearBox_Index) = caseData%RotSpeed
@@ -460,7 +462,7 @@ subroutine SS_Solve(m, caseData, p_FAST, y_FAST, m_FAST, T, ErrStat, ErrMsg)
          call SS_AD_InputSolve_OtherBlades(m, INPUT_CURR, T)
 
          ! set up x-u vector, using local initial guesses
-         call SS_GetInputs(m, m%AM%u1, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2)
+         call SS_GetInputs(m, m%AM%u1, INPUT_CURR, T, ErrStat2, ErrMsg2)
 
       end if
 
@@ -528,6 +530,9 @@ subroutine SS_Solve(m, caseData, p_FAST, y_FAST, m_FAST, T, ErrStat, ErrMsg)
       ! Store normalized error in output
       y_FAST%DriverWriteOutput(SS_Indx_Err) = sqrt(err)/size(m%AM%Mod%Lin%J, 1)
 
+      ! Remove conditioning from solution vector
+      call PostconditionInputDelta(m%AM%SolveDelta(nx + 1:), m%AM%JacScale)
+
       ! If error is below tolerance
       if (err <= m%AM%SolveTolerance) then
          if (K == 0) then ! the error will be incorrect in this instance, but the outputs will be better
@@ -551,76 +556,11 @@ subroutine SS_Solve(m, caseData, p_FAST, y_FAST, m_FAST, T, ErrStat, ErrMsg)
          err_prev = err_prev*reduction_factor
       end if
 
-      ! Set module order
-      iModOrder = [m%AM%iModED, m%AM%iModBD, m%AM%iModAD]
+      ! Update states and inputs based on solution
+      call SS_UpdateInputsStates(m, m%AM%SolveDelta, T, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-      ! Update states and inputs in module
-      do i = 1, size(iModOrder)
-         iMod = iModOrder(i)
-         if (iMod == 0) cycle
-         call FAST_GetOP(m%Modules(iMod), SS_t_global, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2, &
-                         u_op=m%Modules(iMod)%Lin%u, x_op=m%Modules(iMod)%Lin%x)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         call ModD_PackAry(m%AM%Mod%Xfr(iMod)%x, m%Modules(iMod)%Lin%x, m%AM%Mod%Lin%x)
-         call ModD_PackAry(m%AM%Mod%Xfr(iMod)%u, m%Modules(iMod)%Lin%u, m%AM%Mod%Lin%u)
-      end do
-
-      ! Remove conditioning from solution vector
-      call PostconditionSolveDelta(m%AM%SolveDelta(m%AM%Mod%Vars%Nx + 1:), m%AM%JacScale)
-
-      ! Add change in continuous states to current states
-      call MV_AddDelta(m%AM%Mod%Vars%x, m%AM%SolveDelta(:m%AM%Mod%Vars%Nx), m%AM%Mod%Lin%x)
-
-      ! Add change in inputs to current inputs
-      call MV_AddDelta(m%AM%Mod%Vars%u, m%AM%SolveDelta(m%AM%Mod%Vars%Nx + 1:), m%AM%Mod%Lin%u)
-
-      ! Update states and inputs in module
-      do i = 1, size(iModOrder)
-         iMod = iModOrder(i)
-         if (iMod == 0) cycle
-         call ModD_UnpackAry(m%AM%Mod%Xfr(iMod)%x, m%Modules(iMod)%Lin%x, m%AM%Mod%Lin%x)
-         call ModD_UnpackAry(m%AM%Mod%Xfr(iMod)%u, m%Modules(iMod)%Lin%u, m%AM%Mod%Lin%u)
-
-         select case (m%Modules(iMod)%ID)
-         case (Module_ED)
-            ! Copy blade1 flap and edge states to other blades
-            do j = 2, T%ED%p%NumBl
-               associate (Var1 => m%Modules(iMod)%Vars%x(T%ED%p%iVarBladeFlap1(1)), &
-                          VarN => m%Modules(iMod)%Vars%x(T%ED%p%iVarBladeFlap1(j)))
-                  m%Modules(iMod)%Lin%x(VarN%iLoc(1):VarN%iLoc(2)) = m%Modules(iMod)%Lin%x(Var1%iLoc(1):Var1%iLoc(2))
-               end associate
-               associate (Var1 => m%Modules(iMod)%Vars%x(T%ED%p%iVarBladeEdge1(1)), &
-                          VarN => m%Modules(iMod)%Vars%x(T%ED%p%iVarBladeEdge1(j)))
-                  m%Modules(iMod)%Lin%x(VarN%iLoc(1):VarN%iLoc(2)) = m%Modules(iMod)%Lin%x(Var1%iLoc(1):Var1%iLoc(2))
-               end associate
-               associate (Var1 => m%Modules(iMod)%Vars%x(T%ED%p%iVarBladeFlap2(1)), &
-                          VarN => m%Modules(iMod)%Vars%x(T%ED%p%iVarBladeFlap2(j)))
-                  m%Modules(iMod)%Lin%x(VarN%iLoc(1):VarN%iLoc(2)) = m%Modules(iMod)%Lin%x(Var1%iLoc(1):Var1%iLoc(2))
-               end associate
-            end do
-         case (Module_BD)
-            ! TODO: Copy B1 states to other blades
-         end select
-
-         ! Populate values in module
-         call FAST_SetOP(m%Modules(iMod), SS_t_global, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2, &
-                         u_op=m%Modules(iMod)%Lin%u, x_op=m%Modules(iMod)%Lin%x)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-
-      ! Transfer results from blade 1 to other blades
-      if (m%AM%iModBD > 0) then
-         ! BeamDyn
-         call SS_BD_InputSolve_OtherBlades(m, INPUT_CURR, T)
-      else
-         ! ElastoDyn
-         call SS_ED_InputSolve_OtherBlades(m, INPUT_CURR, T)
-      end if
-      call SS_AD_InputSolve_OtherBlades(m, INPUT_CURR, T)
-
-      ! u = u + u_delta
-      call SS_GetInputs(m, m%AM%u1, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2)
-
+      ! Increment iteration counter and set it in write output
       K = K + 1
       y_FAST%DriverWriteOutput(SS_Indx_Iter) = k
 
@@ -642,9 +582,9 @@ contains
 
          call SetErrStat(ErrID_Severe, 'Steady-state solver did not converge.', ErrStat, ErrMsg, RoutineName)
 
+         ! if we didn't get close on the solution, we should reset the states and inputs because they very well could
+         ! lead to numerical issues on the next iteration. Here, set the initial values to 0:
          if (err > 100.0) then
-            ! if we didn't get close on the solution, we should reset the states and inputs because they very well could
-            ! lead to numerical issues on the next iteration. Here, set the initial values to 0:
 
             ! because loads occasionally get very large when it fails, manually set these to zero (otherwise
             ! roundoff can lead to non-zero values with the method below, which is most useful for states)
@@ -655,26 +595,109 @@ contains
                end do
             end if
 
-            call SS_GetInputs(m, m%AM%u1, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2)     ! find the values we have been modifying (in u... continuous states and inputs)
-            ! call Add_SteadyState_delta(p_FAST, y_FAST, -u, AD, ED, BD) ! and reset them to 0 (by adding -u)
+            ! Find the values we have been modifying (in u... continuous states and inputs)
+            call SS_GetStates(m, m%AM%SolveDelta(:nx), STATE_CURR, T, ErrStat2, ErrMsg2)
+            call SS_GetInputs(m, m%AM%SolveDelta(nx + 1:), INPUT_CURR, T, ErrStat2, ErrMsg2)
 
+            ! Reset them to 0 (by adding -u)
+            m%AM%SolveDelta = -m%AM%SolveDelta
+            call SS_UpdateInputsStates(m, m%AM%SolveDelta, T, ErrStat2, ErrMsg2)
          end if
       end if
+
    end subroutine ResetInputsAndStates
 
-   subroutine PostconditionSolveDelta(Delta, JacScale)
-      real(R8Ki), intent(inout)  :: Delta(:)
+   subroutine PostconditionInputDelta(u_delta, JacScale)
+      real(R8Ki), intent(inout)  :: u_delta(:)
       real(R8Ki), intent(in)     :: JacScale
       do i = 1, size(m%AM%Mod%Vars%u)
          associate (Var => m%AM%Mod%Vars%u(i))
          if (MV_IsLoad(Var)) then
-            Delta(Var%iLoc(1):Var%iLoc(2)) = Delta(Var%iLoc(1):Var%iLoc(2))*JacScale
+            u_delta(Var%iLoc(1):Var%iLoc(2)) = u_delta(Var%iLoc(1):Var%iLoc(2))*JacScale
          end if
          end associate
       end do
    end subroutine
 
 end subroutine SS_Solve
+
+subroutine SS_UpdateInputsStates(m, delta, T, ErrStat, ErrMsg)
+   type(Glue_MiscVarType), intent(inout)     :: m           !< Miscellaneous variables
+   type(FAST_TurbineType), intent(inout)     :: T           !< Turbine type
+   real(R8Ki), intent(in)                    :: delta(:)    !< Change in state and input arrays
+   integer(IntKi), intent(out)               :: ErrStat     !< Error status of the operation
+   character(*), intent(out)                 :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter :: RoutineName = 'SS_UpdateInputsStates'
+   integer(IntKi)          :: ErrStat2                  ! temporary Error status of the operation
+   character(ErrMsgLen)    :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
+   integer(IntKi)          :: i, j
+   integer(IntKi)          :: iModOrder(3), iMod
+
+   ! Set module order
+   iModOrder = [m%AM%iModED, m%AM%iModBD, m%AM%iModAD]
+
+   ! Update states and inputs in module
+   do i = 1, size(iModOrder)
+      iMod = iModOrder(i)
+      if (iMod == 0) cycle
+      call FAST_GetOP(m%Modules(iMod), SS_t_global, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2, &
+                      u_op=m%Modules(iMod)%Lin%u, x_op=m%Modules(iMod)%Lin%x)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call ModD_PackAry(m%AM%Mod%Xfr(iMod)%x, m%Modules(iMod)%Lin%x, m%AM%Mod%Lin%x)
+   end do      ! Remove conditioning from solution vector
+
+   ! Add change in inputs to current inputs
+   call MV_AddDelta(m%AM%Mod%Vars%u, delta(m%AM%Mod%Vars%Nx + 1:), m%AM%u1)
+
+   ! Add change in continuous states to current states
+   call MV_AddDelta(m%AM%Mod%Vars%x, delta(:m%AM%Mod%Vars%Nx), m%AM%Mod%Lin%x)
+
+   ! Update states and inputs in module
+   do i = 1, size(iModOrder)
+      iMod = iModOrder(i)
+      if (iMod == 0) cycle
+      call ModD_UnpackAry(m%AM%Mod%Xfr(iMod)%x, m%Modules(iMod)%Lin%x, m%AM%Mod%Lin%x)
+      call ModD_UnpackAry(m%AM%Mod%Xfr(iMod)%u, m%Modules(iMod)%Lin%u, m%AM%u1)
+
+      select case (m%Modules(iMod)%ID)
+      case (Module_ED)
+         ! Copy blade1 flap and edge states to other blades
+         do j = 2, T%ED%p%NumBl
+            associate (Var1 => m%Modules(iMod)%Vars%x(T%ED%p%iVarBladeFlap1(1)), &
+                       VarN => m%Modules(iMod)%Vars%x(T%ED%p%iVarBladeFlap1(j)))
+               m%Modules(iMod)%Lin%x(VarN%iLoc(1):VarN%iLoc(2)) = m%Modules(iMod)%Lin%x(Var1%iLoc(1):Var1%iLoc(2))
+            end associate
+            associate (Var1 => m%Modules(iMod)%Vars%x(T%ED%p%iVarBladeEdge1(1)), &
+                       VarN => m%Modules(iMod)%Vars%x(T%ED%p%iVarBladeEdge1(j)))
+               m%Modules(iMod)%Lin%x(VarN%iLoc(1):VarN%iLoc(2)) = m%Modules(iMod)%Lin%x(Var1%iLoc(1):Var1%iLoc(2))
+            end associate
+            associate (Var1 => m%Modules(iMod)%Vars%x(T%ED%p%iVarBladeFlap2(1)), &
+                       VarN => m%Modules(iMod)%Vars%x(T%ED%p%iVarBladeFlap2(j)))
+               m%Modules(iMod)%Lin%x(VarN%iLoc(1):VarN%iLoc(2)) = m%Modules(iMod)%Lin%x(Var1%iLoc(1):Var1%iLoc(2))
+            end associate
+         end do
+      case (Module_BD)
+         ! TODO: Copy B1 states to other blades
+      end select
+
+      ! Populate values in module
+      call FAST_SetOP(m%Modules(iMod), SS_t_global, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2, &
+                      u_op=m%Modules(iMod)%Lin%u, x_op=m%Modules(iMod)%Lin%x)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+
+   ! Transfer results from blade 1 to other blades
+   if (m%AM%iModBD > 0) then
+      ! BeamDyn
+      call SS_BD_InputSolve_OtherBlades(m, INPUT_CURR, T)
+   else
+      ! ElastoDyn
+      call SS_ED_InputSolve_OtherBlades(m, INPUT_CURR, T)
+   end if
+   call SS_AD_InputSolve_OtherBlades(m, INPUT_CURR, T)
+
+end subroutine
 
 subroutine SS_BuildJacobian(m, caseData, p_FAST, y_FAST, m_FAST, T, ErrStat, ErrMsg)
    type(Glue_MiscVarType), intent(inout)     :: m              !< Miscellaneous variables
@@ -932,12 +955,28 @@ subroutine SS_BuildResidual(caseData, m, T, ErrStat, ErrMsg)
    call SetErrStat(Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    ! Pack the output "residual vector" with these state derivatives and new inputs:
-   call SS_GetInputs(m, m%AM%u2, InputIndex, StateIndex, T, ErrStat2, ErrMsg2)
+   call SS_GetInputs(m, m%AM%u2, InputIndex, T, ErrStat2, ErrMsg2)
 
    ! Store difference in inputs
-   m%AM%Residual(m%AM%Mod%Vars%Nx + 1:) = m%AM%u1 - m%AM%u2
+   call MV_ComputeDiff(m%AM%Mod%Vars%u, m%AM%u1, m%AM%u2, m%AM%Residual(m%AM%Mod%Vars%Nx + 1:))
+   ! m%AM%Residual(m%AM%Mod%Vars%Nx + 1:) = m%AM%u1 - m%AM%u2
 
-end subroutine SS_BuildResidual
+   ! Condition residual for solve
+   call PreconditionInputResidual(m%AM%Residual(m%AM%Mod%Vars%Nx + 1:), m%AM%JacScale)
+
+contains
+   subroutine PreconditionInputResidual(u_residual, JacScale)
+      real(R8Ki), intent(inout)  :: u_residual(:)
+      real(R8Ki), intent(in)     :: JacScale
+      do i = 1, size(m%AM%Mod%Vars%u)
+         associate (Var => m%AM%Mod%Vars%u(i))
+         if (MV_IsLoad(Var)) then
+            u_residual(Var%iLoc(1):Var%iLoc(2)) = u_residual(Var%iLoc(1):Var%iLoc(2))/JacScale
+         end if
+         end associate
+      end do
+   end subroutine
+end subroutine
 
 !-------------------------------------------------------------------------------
 
@@ -1055,16 +1094,16 @@ subroutine SS_AD_InputSolve_OtherBlades(m, InputIndex, T)
    end associate
 end subroutine SS_AD_InputSolve_OtherBlades
 
-subroutine SS_CalcContStateDeriv(m, caseData, InputIndex, Residual, T, ErrStat, ErrMsg)
+subroutine SS_CalcContStateDeriv(m, caseData, InputIndex, dx_vec, T, ErrStat, ErrMsg)
    type(Glue_MiscVarType), intent(inout)     :: m                   !< Miscellaneous variables
    type(AeroMapCase), intent(in)             :: caseData            !< tsr, windSpeed, pitch, and rotor speed for this case
    integer(IntKi), intent(in)                :: InputIndex          !< Index into input array
-   real(R8Ki), intent(inout)                 :: Residual(:)         !< Residual vector
+   real(R8Ki), intent(inout)                 :: dx_vec(:)           !< continuous state derivative vector
    type(FAST_TurbineType), intent(inout)     :: T                   !< Turbine type
    integer(IntKi), intent(out)               :: ErrStat             !< Error status
    character(*), intent(out)                 :: ErrMsg              !< Error message
 
-   character(*), parameter                   :: RoutineName = 'SteadyStateCCSD'
+   character(*), parameter                   :: RoutineName = 'SS_CalcContStateDeriv'
    integer(IntKi)                            :: ErrStat2            ! temporary Error status of the operation
    character(ErrMsgLen)                      :: ErrMsg2             ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                            :: i, k
@@ -1085,7 +1124,7 @@ subroutine SS_CalcContStateDeriv(m, caseData, InputIndex, Residual, T, ErrStat, 
                       FlagFilter=VF_AeroMap, dx_op=m%Modules(m%AM%iModED)%Lin%dx)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-      call ModD_PackAry(m%AM%Mod%Xfr(m%AM%iModED)%x, m%Modules(m%AM%iModED)%Lin%dx, Residual)
+      call ModD_PackAry(m%AM%Mod%Xfr(m%AM%iModED)%x, m%Modules(m%AM%iModED)%Lin%dx, dx_vec)
 
    case (Module_BD) ! BeamDyn
 
@@ -1095,6 +1134,8 @@ subroutine SS_CalcContStateDeriv(m, caseData, InputIndex, Residual, T, ErrStat, 
       call FAST_GetOP(m%Modules(m%AM%iModBD), SS_t_global, InputIndex, STATE_CURR, T, ErrStat2, ErrMsg2, &
                       FlagFilter=VF_AeroMap, dx_op=m%Modules(m%AM%iModBD)%Lin%dx)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+      call ModD_PackAry(m%AM%Mod%Xfr(m%AM%iModED)%x, m%Modules(m%AM%iModED)%Lin%dx, dx_vec)
 
       ! TODO: Make this work for BeamDyn
       ! do K = 1, T%p_FAST%nBeams
@@ -1116,8 +1157,6 @@ subroutine SS_CalcContStateDeriv(m, caseData, InputIndex, Residual, T, ErrStat, 
       !    end do
 
       ! end do
-
-      call ModD_PackAry(m%AM%Mod%Xfr(m%AM%iModBD)%x, m%Modules(m%AM%iModBD)%Lin%dx, Residual)
 
    end select
 
@@ -1155,20 +1194,18 @@ end subroutine
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine basically packs the relevant parts of the modules' inputs and states for use in the steady-state solver.
-subroutine SS_GetInputs(m, u_vec, InputIndex, StateIndex, T, ErrStat, ErrMsg)
+subroutine SS_GetInputs(m, u_vec, InputIndex, T, ErrStat, ErrMsg)
    type(Glue_MiscVarType), intent(inout)  :: m           !< Glue-code simulation parameters
    real(R8Ki), intent(inout)              :: u_vec(:)    !< Array of input packed values
    integer(IntKi), intent(in)             :: InputIndex  !< Input array index
-   integer(IntKi), intent(in)             :: StateIndex  !< State array index
    type(FAST_TurbineType), intent(inout)  :: T           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat     !< Error status of the operation
    character(*), intent(out)              :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-   character(*), parameter :: RoutineName = 'SS_Solve'
+   character(*), parameter :: RoutineName = 'SS_GetInputs'
    integer(IntKi)          :: ErrStat2                  ! temporary Error status of the operation
    character(ErrMsgLen)    :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
-   integer(IntKi)          :: i, j, k, ieSrc, ieDst, iMod
-   integer(IntKi)          :: iModOrder(3), iSrc(2), iDst(2)
+   integer(IntKi)          :: i, iMod, iModOrder(3)
 
    iModOrder = [m%AM%iModED, m%AM%iModBD, m%AM%iModAD]
 
@@ -1182,38 +1219,14 @@ subroutine SS_GetInputs(m, u_vec, InputIndex, StateIndex, T, ErrStat, ErrMsg)
       ! If no inputs for this module, cycle
       if (.not. allocated(m%AM%Mod%Xfr(iMod)%u)) cycle
 
-      associate (ModData => m%Modules(iMod), uXfr => m%AM%Mod%Xfr(iMod)%u)
+      associate (ModData => m%Modules(iMod))
 
          ! Get states and outputs
-         call FAST_GetOP(ModData, SS_t_global, InputIndex, StateIndex, T, ErrStat2, ErrMsg2, &
-                         u_op=ModData%Lin%u)
+         call FAST_GetOP(ModData, SS_t_global, InputIndex, STATE_CURR, T, ErrStat2, ErrMsg2, u_op=ModData%Lin%u)
          if (Failed()) return
 
-         ! Transfer selected input data from module to RHS based on Idx
-         do j = 1, size(uXfr)
-
-            ! Convert or store values based on field type
-            select case (ModData%Vars%u(uXfr(j)%iVar)%Field)
-
-            case (FieldForce, FieldMoment)
-               ! If field is a force or moment, scale by scale factor
-               u_vec(uXfr(j)%iDst(1):uXfr(j)%iDst(2)) = ModData%Lin%u(uXfr(j)%iSrc(1):uXfr(j)%iSrc(2))/m%AM%JacScale
-
-            case (FieldOrientation)
-               ! Convert orientations to rotation vectors
-               ieSrc = uXfr(j)%iSrc(1)
-               ieDst = uXfr(j)%iDst(1)
-               do k = 1, ModData%Vars%u(j)%Nodes
-                  u_vec(ieDst:ieDst + 2) = quat_to_rvec(ModData%Lin%u(ieSrc:ieSrc + 2))
-                  ieSrc = ieSrc + 3
-                  ieDst = ieDst + 3
-               end do
-
-            case default
-               u_vec(uXfr(j)%iDst(1):uXfr(j)%iDst(2)) = ModData%Lin%u(uXfr(j)%iSrc(1):uXfr(j)%iSrc(2))
-            end select
-
-         end do
+         ! Pack data into vector
+         call ModD_PackAry(m%AM%Mod%Xfr(iMod)%u, ModData%Lin%u, u_vec)
 
       end associate
 
@@ -1224,7 +1237,55 @@ contains
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       Failed = ErrStat >= AbortErrLev
    end function
-end subroutine SS_GetInputs
+end subroutine
+
+subroutine SS_GetStates(m, x_vec, StateIndex, T, ErrStat, ErrMsg)
+   type(Glue_MiscVarType), intent(inout)  :: m           !< Glue-code simulation parameters
+   real(R8Ki), intent(inout)              :: x_vec(:)    !< Array of input packed values
+   integer(IntKi), intent(in)             :: StateIndex  !< State array index
+   type(FAST_TurbineType), intent(inout)  :: T           !< Turbine type
+   integer(IntKi), intent(out)            :: ErrStat     !< Error status of the operation
+   character(*), intent(out)              :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter :: RoutineName = 'SS_GetStates'
+   integer(IntKi)          :: ErrStat2                  ! temporary Error status of the operation
+   character(ErrMsgLen)    :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
+   integer(IntKi)          :: i, j, k
+   integer(IntKi)          :: iModOrder(3), iMod
+
+   iModOrder = [m%AM%iModED, m%AM%iModBD, m%AM%iModAD]
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   ! Loop through modules
+   do i = 1, size(iModOrder)
+      iMod = iModOrder(i)
+
+      ! Skip inactive modules
+      if (iMod == 0) cycle
+
+      ! If no inputs for this module, cycle
+      if (.not. allocated(m%AM%Mod%Xfr(iMod)%x)) cycle
+
+      associate (ModData => m%Modules(iMod))
+
+         ! Get states and outputs
+         call FAST_GetOP(ModData, SS_t_global, INPUT_CURR, StateIndex, T, ErrStat2, ErrMsg2, x_op=ModData%Lin%x)
+         if (Failed()) return
+
+         ! Pack data into vector
+         call ModD_PackAry(m%AM%Mod%Xfr(iMod)%x, ModData%Lin%x, x_vec)
+
+      end associate
+   end do
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
+end subroutine
 
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine SetPrescribedInputs(caseData, p_FAST, y_FAST, m_FAST, ED, BD, AD)
