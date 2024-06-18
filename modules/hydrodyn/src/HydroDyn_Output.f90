@@ -845,8 +845,9 @@ SUBROUTINE HDOut_MapOutputs( p, y, m_WAMIT, m_WAMIT2, F_Add, F_Waves, F_Hydro, P
    ! Initialize all unused channels to zero (in case they don't get set, but are still requested)
    AllOuts  = 0.0_ReKi
 
-   rotdisp = GetRotAngs ( PtfmRefY, PRPMesh%Orientation(:,:,1), ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HDOut_MapOutputs' )
+   ! rotdisp = GetRotAngs ( PtfmRefY, PRPMesh%Orientation(:,:,1), ErrStat2, ErrMsg2 )
+   !    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HDOut_MapOutputs' )
+   rotdisp = EulerExtractZYX(PRPMesh%Orientation(:,:,1))
    AllOuts(PRPMotions)  = reshape((/real(PRPMesh%TranslationDisp(:,1),ReKi),rotdisp(:)/),(/6/))
    AllOuts(PRPVel)      = reshape((/PRPMesh%TranslationVel(:,1),PRPMesh%RotationVel(:,1)/),(/6/))
    AllOuts(PRPAcc)      = reshape((/PRPMesh%TranslationAcc(:,1),PRPMesh%RotationAcc(:,1)/),(/6/))
