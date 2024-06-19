@@ -807,11 +807,16 @@ SUBROUTINE SetHDInputs_Constant(u_HD, mappingData, drvrData, ErrStat, ErrMsg)
          ! Translation - No transformation needed
       u_HD%PRPMesh%TranslationVel(:,1)    = drvrData%uDotPRPInSteady(1:3)
       u_HD%PRPMesh%TranslationAcc(:,1)    = drvrData%uDotDotPRPInSteady(1:3)
-         ! Rotation - Transform back to i-frame
-      call hiFrameTransform(h2i,drvrData%PtfmRefY,REAL(drvrData%uDotPRPInSteady(4:6),ReKi),u_HD%PRPMesh%RotationVel(:,1),ErrStat2,ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      call hiFrameTransform(h2i,drvrData%PtfmRefY,REAL(drvrData%uDotDotPRPInSteady(4:6),ReKi),u_HD%PRPMesh%RotationAcc(:,1),ErrStat2,ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         ! Rotation - Compute angular velocity and acceleration from the rotation angles and time derivatives
+      call EulerDerivativeToAngVelAcc(drvrData%uPRPInSteady(4:6),&
+                                 REAL(drvrData%uDotPRPInSteady(4:6),ReKi),&
+                                 REAL(drvrData%uDotDotPRPInSteady(4:6),ReKi),&
+                                 u_HD%PRPMesh%RotationVel(:,1),&
+                                 u_HD%PRPMesh%RotationAcc(:,1))
+      ! call hiFrameTransform(h2i,drvrData%PtfmRefY,REAL(drvrData%uDotPRPInSteady(4:6),ReKi),u_HD%PRPMesh%RotationVel(:,1),ErrStat2,ErrMsg2)
+      !    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      ! call hiFrameTransform(h2i,drvrData%PtfmRefY,REAL(drvrData%uDotDotPRPInSteady(4:6),ReKi),u_HD%PRPMesh%RotationAcc(:,1),ErrStat2,ErrMsg2)
+      !    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       u_HD%PtfmRefY                       = drvrData%PtfmRefY      
       CALL PRP_TransferToMotionInputs(u_HD, mappingData, ErrStat2, ErrMsg2 )
@@ -831,11 +836,11 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
    INTEGER,                         INTENT(   OUT ) :: ErrStat                ! returns a non-zero value when an error occurs  
    CHARACTER(*),                    INTENT(   OUT ) :: ErrMsg                 ! Error message if ErrStat /= ErrID_None
    
-   REAL(ReKi)                                       :: tmp(3)
+   REAL(ReKi)                                       :: tmp(3),tmp2(3)
 
    integer(IntKi)                                   :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                             :: errMsg2       ! temporary error message 
-   character(*), parameter                          :: RoutineName = 'SetHDInputs_Constant'
+   character(*), parameter                          :: RoutineName = 'SetHDInputs'
    real(R8Ki)                                       :: yInterp(size(drvrData%PRPin,2))
    integer(intKi)                                   :: indxHigh, indxMid, indxLow
    integer(intKi)                                   :: i
@@ -861,11 +866,16 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
       ! Translation - No transformation needed
       u_HD%PRPMesh%TranslationVel(:,1)    = yInterp( 7: 9)
       u_HD%PRPMesh%TranslationAcc(:,1)    = yInterp(13:15)
-      ! Rotation - Transform back to i-frame
-      call hiFrameTransform(h2i,drvrData%PtfmRefY,REAL(yInterp(10:12),ReKi),u_HD%PRPMesh%RotationVel(:,1),ErrStat2,ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      call hiFrameTransform(h2i,drvrData%PtfmRefY,REAL(yInterp(16:18),ReKi),u_HD%PRPMesh%RotationAcc(:,1),ErrStat2,ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      ! Rotation - Compute angular velocity and acceleration from the rotation angles and time derivatives
+      call EulerDerivativeToAngVelAcc(yInterp(4:6),&
+                                 REAL(yInterp(10:12),ReKi),&
+                                 REAL(yInterp(16:18),ReKi),&
+                                 u_HD%PRPMesh%RotationVel(:,1),&
+                                 u_HD%PRPMesh%RotationAcc(:,1))
+      ! call hiFrameTransform(h2i,drvrData%PtfmRefY,REAL(yInterp(10:12),ReKi),u_HD%PRPMesh%RotationVel(:,1),ErrStat2,ErrMsg2)
+      !    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      ! call hiFrameTransform(h2i,drvrData%PtfmRefY,REAL(yInterp(16:18),ReKi),u_HD%PRPMesh%RotationAcc(:,1),ErrStat2,ErrMsg2)
+      !    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
       u_HD%PtfmRefY                       = drvrData%PtfmRefY      
       CALL PRP_TransferToMotionInputs(u_HD, mappingData, ErrStat2, ErrMsg2 )
@@ -952,23 +962,37 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
          u_HD%WAMITMesh%RotationAcc(   :,I) = (drvrData%PRPin(indxHigh, 6*I+4:6*I+6) - 2*drvrData%PRPin(indxMid, 6*I+4:6*I+6) + drvrData%PRPin(indxLow, 6*I+4:6*I+6))/(drvrData%TimeInterval**2)
       END DO
            
-      ! Rotation - Transform back to i-frame
-      call hiFrameTransform(h2i,drvrData%PtfmRefY,u_HD%PRPMesh%RotationVel(:,1),tmp,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      ! Rotation - Compute angular velocity and acceleration from the rotation angles and time derivatives
+      call EulerDerivativeToAngVelAcc(drvrData%PRPin(n,4:6),&
+                              u_HD%PRPMesh%RotationVel(:,1),&
+                              u_HD%PRPMesh%RotationAcc(:,1),&
+                              tmp,tmp2)
       u_HD%PRPMesh%RotationVel(:,1) = tmp
+      u_HD%PRPMesh%RotationAcc(:,1) = tmp2
 
-      call hiFrameTransform(h2i,drvrData%PtfmRefY,u_HD%PRPMesh%RotationAcc(:,1),tmp,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      u_HD%PRPMesh%RotationAcc(:,1) = tmp
+      ! call hiFrameTransform(h2i,drvrData%PtfmRefY,u_HD%PRPMesh%RotationVel(:,1),tmp,ErrStat2,ErrMsg2)
+      ! call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      ! u_HD%PRPMesh%RotationVel(:,1) = tmp
+
+      ! call hiFrameTransform(h2i,drvrData%PtfmRefY,u_HD%PRPMesh%RotationAcc(:,1),tmp,ErrStat2,ErrMsg2)
+      ! call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      ! u_HD%PRPMesh%RotationAcc(:,1) = tmp
 
       DO I=1,drvrData%NBody
-         call hiFrameTransform(h2i,drvrData%PtfmRefY,u_HD%WAMITMesh%RotationVel(:,I),tmp,ErrStat2,ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         call EulerDerivativeToAngVelAcc(drvrData%PRPin(n,(6*I+4):(6*I+6)),&
+                                           u_HD%WAMITMesh%RotationVel(:,I),&
+                                           u_HD%WAMITMesh%RotationAcc(:,I),&
+                                           tmp,tmp2)
          u_HD%WAMITMesh%RotationVel(:,I) = tmp
+         u_HD%WAMITMesh%RotationAcc(:,I) = tmp2
 
-         call hiFrameTransform(h2i,drvrData%PtfmRefY,u_HD%WAMITMesh%RotationAcc(:,I),tmp,ErrStat2,ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         u_HD%WAMITMesh%RotationAcc(:,I) = tmp
+         ! call hiFrameTransform(h2i,drvrData%PtfmRefY,u_HD%WAMITMesh%RotationVel(:,I),tmp,ErrStat2,ErrMsg2)
+         ! call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         ! u_HD%WAMITMesh%RotationVel(:,I) = tmp
+
+         ! call hiFrameTransform(h2i,drvrData%PtfmRefY,u_HD%WAMITMesh%RotationAcc(:,I),tmp,ErrStat2,ErrMsg2)
+         ! call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         ! u_HD%WAMITMesh%RotationAcc(:,I) = tmp
       END DO
             
       u_HD%PtfmRefY                       = drvrData%PtfmRefY
@@ -1363,6 +1387,39 @@ SUBROUTINE GetPRPHdg(time, n, mappingData, drvrData, ErrStat, ErrMsg)
    END IF
       
 END SUBROUTINE
+
+SUBROUTINE EulerDerivativeToAngVelAcc(u,udot,uddot,AngVel,AngAcc)
+   REAL(DbKi),                     INTENT( IN    ) :: u(3)       ! Tait-Bryan angles following the ZYX convention
+   REAL(ReKi),                     INTENT( IN    ) :: udot(3)    ! First time derivatives of the Tait-Bryan angles
+   REAL(ReKi),                     INTENT( IN    ) :: uddot(3)   ! Second time derivatives of the Tait-Bryan angles
+   REAL(ReKi),                     INTENT(   OUT ) :: AngVel(3)  ! Angular velocity in the earth-fixed frame of reference
+   REAL(ReKi),                     INTENT(   OUT ) :: AngAcc(3)  ! Angular acceleration in the earth-fixed frame of reference
+   REAL(DbKi)                                      :: R, P, Y
+   REAL(DbKi)                                      :: cR, sR, cP, sP, cY, sY
+   REAL(DbKi)                                      :: A(3,3)
+   REAL(ReKi)                                      :: Rdot, Pdot, Ydot
+
+   R  = u(1)
+   P  = u(2)
+   Y  = u(3)
+   Rdot = udot(1)
+   Pdot = udot(2)
+   Ydot = udot(3)
+   cR = cos(R)
+   sR = sin(R)
+   cP = cos(P)
+   sP = sin(P)
+   cY = cos(Y)
+   sY = sin(Y)
+   A(1,:) = (/cP*cY,      -sY, 0.0_DbKi/)
+   A(2,:) = (/cP*sY,       cY, 0.0_DbKi/)
+   A(3,:) = (/  -sP, 0.0_DbKi, 1.0_DbKi/)
+   AngVel    = matmul(A,udot)   
+   AngAcc(1) = -Rdot*(Pdot*sP*cY+Ydot*cP*sY)-Pdot*Ydot*cY
+   AngAcc(2) = -Rdot*(Pdot*sP*sY-Ydot*cP*cY)-Pdot*Ydot*sY
+   AngAcc(3) = -Rdot*Pdot*cP
+   AngAcc    = AngAcc + matmul(A,uddot)
+END SUBROUTINE EulerDerivativeToAngVelAcc
 
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE HydroDynDriverSubs
