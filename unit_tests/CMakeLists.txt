@@ -26,11 +26,6 @@ include(CTest)
 if(NOT ${Python_Interpreter_FOUND})
   message(FATAL_ERROR "CMake did not find a Python interpreter. Python is required for unit tests." )
 endif()
-if (${Python_VERSION} VERSION_GREATER_EQUAL "3.12.0")
-  message(FATAL_ERROR "Unit testing with pfunit not currently possible with Python 3.12 or greater." )
-endif()
-
-
 
 ### pfunit
 include(ExternalProject)
