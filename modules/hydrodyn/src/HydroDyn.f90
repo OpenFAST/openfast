@@ -1179,7 +1179,8 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       REAL(ReKi)                           :: q(6*p%NBody), qdot(6*p%NBody), qdotsq(6*p%NBody), qdotdot(6*p%NBody)
       REAL(ReKi)                           :: rotdisp(3)                              ! small angle rotational displacements
       integer(IntKi)                       :: iBody, indxStart, indxEnd  ! Counters
-      
+      REAL(ReKi), ALLOCATABLE              :: RRg2b(:,:), RRb2g(:,:)
+
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
@@ -1206,6 +1207,10 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
 
 
       if ( p%PotMod == 1 ) then
+         ! Transformation matrices between global and PRP frame
+         ALLOCATE(RRb2g(6*p%NBody,6*p%NBody),STAT=ErrStat2)
+         ALLOCATE(RRg2b(6*p%NBody,6*p%NBody),STAT=ErrStat2)
+         RRg2b(:,:) = 0.0_ReKi
          do iBody = 1, p%NBody
                ! Determine the rotational angles from the direction-cosine matrix
             ! rotdisp = GetRotAngs ( u%PtfmRefY, u%WAMITMesh%Orientation(:,:,iBody), ErrStat2, ErrMsg2 )
@@ -1215,14 +1220,22 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
             indxEnd   = indxStart+5
             q      (indxStart:indxEnd)   = reshape((/real(u%WAMITMesh%TranslationDisp(:,iBody),ReKi),rotdisp(:)/),(/6/))
             qdot   (indxStart:indxEnd)   = reshape((/u%WAMITMesh%TranslationVel(:,iBody),u%WAMITMesh%RotationVel(:,iBody)/),(/6/))
-            qdotsq (indxStart:indxEnd)   = abs(qdot(indxStart:indxEnd))*qdot(indxStart:indxEnd)
             qdotdot(indxStart:indxEnd)   = reshape((/u%WAMITMesh%TranslationAcc(:,iBody),u%WAMITMesh%RotationAcc(:,iBody)/),(/6/))
+            RRg2b(indxStart:(indxStart+2),indxStart:(indxStart+2)) = u%WAMITMesh%Orientation(:,:,iBody)
+            RRg2b((indxEnd-2):indxEnd,(indxEnd-2):indxEnd)         = u%WAMITMesh%Orientation(:,:,iBody)
+            ! qdotsq is only used to compute the quadratic damping load, so convert to body frame here
+            qdotsq (indxStart:indxEnd)   = matmul(RRg2b(indxStart:indxEnd,indxStart:indxEnd),qdot(indxStart:indxEnd))
+            qdotsq (indxStart:indxEnd)   = abs( qdotsq (indxStart:indxEnd) ) * qdotsq (indxStart:indxEnd)
          end do
+         RRb2g = transpose(RRg2b)
+
    !FIXME: Error handling appears to be broken here.
          if ( p%NBodyMod == 1 ) then
               
                   ! Compute the load contirbution from user-supplied added stiffness and damping        
-               m%F_PtfmAdd = p%AddF0(:,1) - matmul(p%AddCLin(:,:,1), q) - matmul(p%AddBLin(:,:,1), qdot) - matmul(p%AddBQuad(:,:,1), qdotsq)
+               m%F_PtfmAdd = p%AddF0(:,1) - matmul(p%AddCLin(:,:,1), q) &
+                           - matmul( matmul(RRb2g,p%AddBLin(:,:,1) ), matmul(RRg2b,qdot) ) &
+                           - matmul( matmul(RRb2g,p%AddBQuad(:,:,1)), qdotsq) ! Note: qdotsq is already in body frame, see above
             do iBody = 1, p%NBody
                indxStart = (iBody-1)*6+1
                indxEnd   = indxStart+5
@@ -1236,7 +1249,10 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
                indxStart = (iBody-1)*6+1
                indxEnd   = indxStart+5
   
-               m%F_PtfmAdd(indxStart:indxEnd) = p%AddF0(:,iBody) - matmul(p%AddCLin(:,:,iBody), q(indxStart:indxEnd)) - matmul(p%AddBLin(:,:,iBody), qdot(indxStart:indxEnd)) - matmul(p%AddBQuad(:,:,iBody), qdotsq(indxStart:indxEnd))
+               m%F_PtfmAdd(indxStart:indxEnd) = p%AddF0(:,iBody) - matmul(p%AddCLin(:,:,iBody), q(indxStart:indxEnd)) &
+                                              - matmul( matmul(RRb2g(indxStart:indxEnd,indxStart:indxEnd),p%AddBLin(:,:,iBody)), &
+                                                        matmul(RRg2b(indxStart:indxEnd,indxStart:indxEnd),qdot(indxStart:indxEnd)) ) &
+                                              - matmul( matmul(RRb2g(indxStart:indxEnd,indxStart:indxEnd),p%AddBQuad(:,:,iBody)), qdotsq(indxStart:indxEnd))
       
                   ! Attach to the output point mesh
                y%WAMITMesh%Force (:,iBody) = m%F_PtfmAdd(indxStart:indxStart+2)
@@ -1370,6 +1386,9 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       
       m%LastOutTime   = Time
       
+      IF (ALLOCATED(RRb2g)) DEALLOCATE(RRb2g)
+      IF (ALLOCATED(RRg2b)) DEALLOCATE(RRg2b)
+
 END SUBROUTINE HydroDyn_CalcOutput
 
 
