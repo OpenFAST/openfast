@@ -57,7 +57,7 @@ CONTAINS
       INTEGER,       INTENT(   INOUT )   :: ErrStat       ! returns a non-zero value when an error occurs
       CHARACTER(*),  INTENT(   INOUT )   :: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
-      INTEGER(4)                         :: I, J, K       ! Generic index
+      INTEGER(4)                         :: I, J          ! Generic index
       INTEGER(IntKi)                     :: N
       REAL(DbKi)                         :: temp
 
@@ -213,25 +213,6 @@ CONTAINS
          RETURN
       END IF
       
-      
-      if (p%writeLog > 1) then
-         write(p%UnLog, '(A)') "  - Line"//trim(num2lstr(Line%IdNum))
-         write(p%UnLog, '(A)') "    ID: "//trim(num2lstr(Line%IdNum))
-         write(p%UnLog, '(A)') "    UnstrLen: "//trim(num2lstr(Line%UnstrLen))
-         write(p%UnLog, '(A)') "    N   : "//trim(num2lstr(Line%N   ))
-         write(p%UnLog, '(A)') "    d   : "//trim(num2lstr(Line%d   ))
-         write(p%UnLog, '(A)') "    rho : "//trim(num2lstr(Line%rho ))
-         write(p%UnLog, '(A)') "    E   : "//trim(num2lstr(Line%EA  ))
-         write(p%UnLog, '(A)') "    EI  : "//trim(num2lstr(Line%EI  ))
-         !write(p%UnLog, '(A)') "    BAin: "//trim(num2lstr(Line%BAin))
-         write(p%UnLog, '(A)') "    Can : "//trim(num2lstr(Line%Can ))
-         write(p%UnLog, '(A)') "    Cat : "//trim(num2lstr(Line%Cat ))
-         write(p%UnLog, '(A)') "    Cdn : "//trim(num2lstr(Line%Cdn ))
-         write(p%UnLog, '(A)') "    Cdt : "//trim(num2lstr(Line%Cdt ))
-         !write(p%UnLog, '(A)') "    ww_l: " << ( (rho - env->rho_w)*(pi/4.*d*d) )*9.81 << endl;	
-      end if
-    
-      
       ! need to add cleanup sub <<<
 
 
@@ -376,12 +357,8 @@ CONTAINS
                Line%r(2,J) = Line%r(2,0) + (Line%r(2,N) - Line%r(2,0))*REAL(J, DbKi)/REAL(N, DbKi)
                Line%r(3,J) = Line%r(3,0) + (Line%r(3,N) - Line%r(3,0))*REAL(J, DbKi)/REAL(N, DbKi)
                
-             !          print*, Line%r(:,J)
              ENDDO
             
-             !          print*,"FYI line end A and B node coords are"
-             !          print*, Line%r(:,0)
-             !          print*, Line%r(:,N)
          ENDIF
 
       ENDIF
@@ -1483,7 +1460,7 @@ CONTAINS
       ! check for NaNs
       DO J = 1, 6*(N-1)
          IF (Is_NaN(Xd(J))) THEN
-            print *, "NaN detected at time ", Line%time, " in Line ", Line%IdNum, " in MoorDyn."
+            Call WrScr( "NaN detected at time "//trim(num2lstr(Line%time))//" in Line "//trim(num2lstr(Line%IdNum))//" in MoorDyn.")
             IF (wordy > 1) THEN
                print *, "state derivatives:"
                print *, Xd
@@ -1542,7 +1519,7 @@ CONTAINS
       Real(DbKi),       INTENT(IN   )  :: t              ! instantaneous time
       INTEGER(IntKi),   INTENT(IN   )  :: topOfLine      ! 0 for end A (Node 0), 1 for end B (node N)
 
-      Integer(IntKi)                   :: I,J      
+      Integer(IntKi)                   :: J      
       INTEGER(IntKi)                   :: inode
       
       IF (topOfLine==1) THEN
@@ -1582,8 +1559,8 @@ CONTAINS
       REAL(DbKi),       INTENT(  OUT)  :: M_out(3,3)     ! mass matrix of end node
       INTEGER(IntKi),   INTENT(IN   )  :: topOfLine      ! 0 for end A (Node 0), 1 for end B (node N)
       
-      Integer(IntKi)                   :: I,J
-      INTEGER(IntKi)                   :: inode
+      Integer(IntKi)                   :: J
+!      INTEGER(IntKi)                   :: inode
       
       IF (topOfLine==1) THEN           ! end B of line
          Fnet_out   = Line%Fnet(:, Line%N)

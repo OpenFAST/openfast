@@ -209,6 +209,13 @@ MODULE NWTC_Num
       MODULE PROCEDURE InterpStpReal8
    END INTERFACE
 
+      !> \copydoc nwtc_num::interpstpmat4
+   INTERFACE InterpStpMat
+      MODULE PROCEDURE InterpStpMat4
+      MODULE PROCEDURE InterpStpMat8
+   END INTERFACE
+   
+   
       !> \copydoc nwtc_num::interparrayr4
    INTERFACE InterpArray
       MODULE PROCEDURE InterpArrayR4
@@ -3184,11 +3191,11 @@ END FUNCTION FindValidChannelIndx
 !! especially useful when the calling routines save the value from the last time this routine was called
 !! for a given case where XVal does not change much from call to call. 
 !! It returns the first or last Y() row value if XVal is outside the limits of XAry().
-   SUBROUTINE InterpStpMat( XVal, XAry, Y, Ind, AryLen, yInterp )
+   SUBROUTINE InterpStpMat4( XVal, XAry, Y, Ind, AryLen, yInterp )
 
       ! Function declaration.
 
-   REAL(ReKi), intent(out)      :: yInterp(:)                                      !< The interpolated value(s) of Y(dim=2) at XVal
+   REAL(R4Ki), intent(out)      :: yInterp(:)                                      !< The interpolated value(s) of Y(dim=2) at XVal
 
 
       ! Argument declarations.
@@ -3196,9 +3203,9 @@ END FUNCTION FindValidChannelIndx
    INTEGER, INTENT(IN)          :: AryLen                                          !< Length of the arrays.
    INTEGER, INTENT(INOUT)       :: Ind                                             !< Initial and final index into the arrays.
 
-   REAL(ReKi), INTENT(IN)       :: XAry    (AryLen)                                !< Array of X values to be interpolated.
-   REAL(ReKi), INTENT(IN)       :: XVal                                            !< X value to be interpolated.
-   REAL(ReKi), INTENT(IN)       :: Y       (:,:)                                   !< Matrix of Y values to be interpolated; First dimension is AryLen.
+   REAL(R4Ki), INTENT(IN)       :: XAry    (AryLen)                                !< Array of X values to be interpolated.
+   REAL(R4Ki), INTENT(IN)       :: XVal                                            !< X value to be interpolated.
+   REAL(R4Ki), INTENT(IN)       :: Y       (:,:)                                   !< Matrix of Y values to be interpolated; First dimension is AryLen.
 
 
 
@@ -3240,7 +3247,108 @@ END FUNCTION FindValidChannelIndx
 
 
    RETURN
-   END SUBROUTINE InterpStpMat
+   END SUBROUTINE InterpStpMat4
+!=======================================================================
+!> This funtion returns a y-value array that corresponds to an input x-value by interpolating into the arrays.
+!! It uses the passed index as the starting point and does a stepwise interpolation from there. This is
+!! especially useful when the calling routines save the value from the last time this routine was called
+!! for a given case where XVal does not change much from call to call. 
+!! It returns the first or last Y() row value if XVal is outside the limits of XAry().
+   SUBROUTINE InterpStpMat8( XVal, XAry, Y, Ind, AryLen, yInterp )
+
+      ! Function declaration.
+
+   REAL(R8Ki), intent(out)      :: yInterp(:)                                      !< The interpolated value(s) of Y(dim=2) at XVal
+
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)          :: AryLen                                          !< Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: Ind                                             !< Initial and final index into the arrays.
+
+   REAL(R8Ki), INTENT(IN)       :: XAry    (AryLen)                                !< Array of X values to be interpolated.
+   REAL(R8Ki), INTENT(IN)       :: XVal                                            !< X value to be interpolated.
+   REAL(R8Ki), INTENT(IN)       :: Y       (:,:)                                   !< Matrix of Y values to be interpolated; First dimension is AryLen.
+
+
+
+      ! Let's check the limits first.
+
+   IF ( XVal <= XAry(1) )  THEN
+      yInterp = Y(1,:)
+      Ind     = 1
+      RETURN
+   ELSE IF ( XVal >= XAry(AryLen) )  THEN
+      yInterp = Y(AryLen,:)
+      Ind     = MAX(AryLen - 1, 1)
+      RETURN
+   END IF
+
+
+     ! Let's interpolate!
+
+   Ind = MAX( MIN( Ind, AryLen-1 ), 1 )
+
+   DO
+
+      IF ( XVal < XAry(Ind) )  THEN
+
+         Ind = Ind - 1
+
+      ELSE IF ( XVal >= XAry(Ind+1) )  THEN
+
+         Ind = Ind + 1
+
+      ELSE
+
+         yInterp = ( Y(Ind+1,:) - Y(Ind,:) )*( XVal - XAry(Ind) )/( XAry(Ind+1) - XAry(Ind) ) + Y(Ind,:)
+         RETURN
+
+      END IF
+
+   END DO
+
+
+   RETURN
+   END SUBROUTINE InterpStpMat8
+!=======================================================================
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Perform linear interpolation of an array, where first column is assumed to be ascending time values
+!! Similar to InterpStpMat, I think (to check), interpTimeValues=InterpStpMat( array(:,1), time, array(:,1:), iLast, AryLen, values )
+!! First value is used for times before, and last value is used for time beyond
+   subroutine interpTimeValue(array, time, iLast, values)
+      real(ReKi), dimension(:,:), intent(in)    :: array  !< Values, shape nt x nc, where array(:,1) is the time vector
+      real(DbKi),                 intent(in)    :: time   !< Time where values are to be interpolated
+      integer(IntKi),             intent(inout) :: iLast  !< previous index used (to speed up interpolation) 
+      real(ReKi), dimension(:),   intent(out)   :: values !< vector of values, shape nc, at given `time`
+      integer :: i, nMax
+      real(ReKi) :: alpha
+      nMax = size(array, 1)
+      iLast = max( min(iLast, nMax), 1) ! Clip iLast between 1 and nMax
+      !call InterpStpMat( array(:,1), time, array(:,1:), iLast, AryLen, values )
+      if (array(iLast,1) > time) then 
+         values = array(iLast,2:)
+      elseif (iLast == nMax) then 
+         values = array(iLast,2:)
+      else
+         ! Look for index
+         do i = iLast, nMax
+            if (array(i,1)<=time) then
+               iLast=i
+            else
+               exit
+            endif
+         enddo
+         if (iLast==nMax) then
+            values = array(iLast,2:)
+         else
+            ! Linear interpolation
+            alpha = (array(iLast+1,1)-time)/(array(iLast+1,1)-array(iLast,1))
+            values = array(iLast,2:)*alpha + array(iLast+1,2:)*(1-alpha)
+         endif
+      endif
+   end subroutine interpTimeValue
+
 !=======================================================================   
 !< This routine linearly interpolates Dataset. It is
 !! set for a 2-d interpolation on x and y of the input point.
@@ -4876,7 +4984,7 @@ end function Rad2M180to180Deg
    RETURN
    END FUNCTION RegCubicSplineInterpM ! ( X, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
 !=======================================================================
-!> This routine is used to integrate funciton f over the interval [a, b]. This routine
+!> This routine is used to integrate function f over the interval [a, b]. This routine
 !! is useful for sufficiently smooth (e.g., analytic) integrands, integrated over
 !! intervals which contain no singularities, and where the endpoints are also nonsingular.
 !!

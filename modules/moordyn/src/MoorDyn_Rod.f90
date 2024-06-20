@@ -61,7 +61,7 @@ CONTAINS
       CHARACTER(*),  INTENT(   INOUT )   :: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
       INTEGER(4)                         :: i             ! Generic index
-      INTEGER(4)                         :: K             ! Generic index
+!      INTEGER(4)                         :: K             ! Generic index
       INTEGER(IntKi)                     :: N
       
       Real(DbKi)                         :: phi, beta, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta   ! various orientation things
@@ -151,24 +151,6 @@ CONTAINS
             
       IF (wordy > 0) print *, "Set up Rod ",Rod%IdNum, ", type ", Rod%typeNum
 
-
-      if (p%writeLog > 1) then
-         write(p%UnLog, '(A)') "  - Rod "//trim(num2lstr(Rod%IdNum))
-         write(p%UnLog, '(A)') "    ID: "//trim(num2lstr(Rod%IdNum))
-         write(p%UnLog, '(A)') "    UnstrLen: "//trim(num2lstr(Rod%UnstrLen))
-         write(p%UnLog, '(A)') "    N   : "//trim(num2lstr(Rod%N   ))
-         write(p%UnLog, '(A)') "    d   : "//trim(num2lstr(Rod%d   ))
-         write(p%UnLog, '(A)') "    rho : "//trim(num2lstr(Rod%rho ))
-         write(p%UnLog, '(A)') "    Can  : "//trim(num2lstr(Rod%Can ))
-         write(p%UnLog, '(A)') "    Cat  : "//trim(num2lstr(Rod%Cat ))         
-         write(p%UnLog, '(A)') "    CaEnd: "//trim(num2lstr(Rod%CaEnd ))
-         write(p%UnLog, '(A)') "    Cdn  : "//trim(num2lstr(Rod%Cdn ))
-         write(p%UnLog, '(A)') "    Cdt  : "//trim(num2lstr(Rod%Cdt ))
-         write(p%UnLog, '(A)') "    CdEnd: "//trim(num2lstr(Rod%CdEnd ))
-         !write(p%UnLog, '(A)') "    ww_l: " << ( (rho - env->rho_w)*(pi/4.*d*d) )*9.81 << endl;	
-      end if
-
-
       ! need to add cleanup sub <<<
 
 
@@ -199,9 +181,9 @@ CONTAINS
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m          ! passing along all mooring objects
       
 
-      INTEGER(IntKi)                        :: l           ! index of segments or nodes along line
-      REAL(DbKi)                            :: rRef(3)     ! reference position of mesh node
-      REAL(DbKi)                            :: OrMat(3,3)  ! DCM for body orientation based on r6_in
+!      INTEGER(IntKi)                        :: l           ! index of segments or nodes along line
+!      REAL(DbKi)                            :: rRef(3)     ! reference position of mesh node
+!      REAL(DbKi)                            :: OrMat(3,3)  ! DCM for body orientation based on r6_in
    
       IF (wordy > 0) print *, "initializing Rod ", Rod%idNum
 
@@ -250,7 +232,7 @@ CONTAINS
       Real(DbKi),       INTENT(IN   )  :: t              ! instantaneous time
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m         ! passing along all mooring objects
 
-      INTEGER(IntKi)                   :: l
+!      INTEGER(IntKi)                   :: l
 
       Rod%time = t    ! store current time
 
@@ -277,7 +259,7 @@ CONTAINS
          ! handled, along with passing kinematics to dependent lines, by separate call to setState
       
       else
-         print *, "Error: Rod_SetKinematics called for a free Rod in MoorDyn."  ! <<<
+         Call WrScr("Error: Rod_SetKinematics called for a free Rod in MoorDyn. Rod number"//trim(num2lstr(Rod%IdNum)))  ! <<<
       end if
 
    
@@ -298,7 +280,7 @@ CONTAINS
       Real(DbKi),            INTENT(IN   )  :: t          ! instantaneous time
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m          ! passing along all mooring objects
 
-      INTEGER(IntKi)                        :: J          ! index
+!      INTEGER(IntKi)                        :: J          ! index
    
 
       ! for a free Rod, there are 12 states:
@@ -342,7 +324,7 @@ CONTAINS
          CALL Rod_SetDependentKin(Rod, t, m, .FALSE.)
       
       else
-         print *, "Error: Rod::setState called for a non-free rod type in MoorDyn"   ! <<<
+         Call WrScr("Error: Rod::setState called for a non-free rod type in MoorDyn")   ! <<<
       end if
 
       ! update Rod direction unit vector (simply equal to last three entries of r6)
@@ -363,13 +345,13 @@ CONTAINS
       LOGICAL,               INTENT(IN   )  :: initial        ! true if this is the call during initialization (in which case avoid calling any Lines yet)
 
       INTEGER(IntKi)                        :: l              ! index of segments or nodes along line
-      INTEGER(IntKi)                        :: J              ! index
+!      INTEGER(IntKi)                        :: J              ! index
       INTEGER(IntKi)                        :: N              ! number of segments
    
-      REAL(DbKi)                            :: qEnd(3)        ! unit vector of attached line end segment, following same direction convention as Rod's q vector
+!      REAL(DbKi)                            :: qEnd(3)        ! unit vector of attached line end segment, following same direction convention as Rod's q vector
       REAL(DbKi)                            :: q_EI_dl(3)        ! <<<< add description
-      REAL(DbKi)                            :: EIend          ! bending stiffness of attached line end segment
-      REAL(DbKi)                            :: dlEnd          ! stretched length of attached line end segment
+!      REAL(DbKi)                            :: EIend          ! bending stiffness of attached line end segment
+!      REAL(DbKi)                            :: dlEnd          ! stretched length of attached line end segment
       REAL(DbKi)                            :: qMomentSum(3)  ! summation of qEnd*EI/dl_stretched (with correct sign) for each attached line
          
 
@@ -454,7 +436,7 @@ CONTAINS
       
       Real(DbKi)                            :: acc(6)           ! 6DOF acceleration vector about reference point
       
-      Real(DbKi)                            :: Mcpl(3)          ! moment in response to end A acceleration due to inertial coupling
+!      Real(DbKi)                            :: Mcpl(3)          ! moment in response to end A acceleration due to inertial coupling
       
       Real(DbKi)                            :: y_temp (6)       ! temporary vector for LU decomposition
       Real(DbKi)                            :: LU_temp(6,6)     ! temporary matrix for LU decomposition
@@ -491,8 +473,7 @@ CONTAINS
       ELSE                            ! pinned rod, 6 states (rotational only)
       
          ! account for moment in response to end A acceleration due to inertial coupling (off-diagonal sub-matrix terms)
-         !Fnet(4:6) = Fnet(4:6) - MATMUL(M_out(4:6,1:3), Rod%a6(1:3))  ! <<<check that it's the right submatrix <<<
-         Fnet(4:6) = Fnet(4:6) - MATMUL(M_out(1:3,4:6), Rod%a6(1:3))  ! <<< THIS order is stable. Weird. <<<
+         Fnet(4:6) = Fnet(4:6) - MATMUL(M_out(4:6,1:3), Rod%a6(1:3))  
          ! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the above line seems to be causing the stability problems for USFLOWT! <<<<
          
          ! solve for accelerations in [M]{a}={f} using LU decomposition
@@ -565,7 +546,7 @@ CONTAINS
       Real(DbKi)                 :: m_i, v_i     ! 
       Real(DbKi)                 :: zeta         ! wave elevation above/below a given node
       !Real(DbKi)                 :: h0           ! distance along rod centerline from end A to the waterplane     
-      Real(DbKi)                 :: deltaL       ! submerged length of a given segment
+!      Real(DbKi)                 :: deltaL       ! submerged length of a given segment
       Real(DbKi)                 :: Lsum         ! cumulative length along rod axis from bottom
       Real(DbKi)                 :: dL           ! length attributed to node
       Real(DbKi)                 :: VOF          ! fraction of volume associated with node that is submerged
@@ -1015,18 +996,29 @@ CONTAINS
       ! add inertial loads as appropriate (written out in a redundant way just for clarity, and to support load separation in future)
       ! fixed coupled rod
       if (Rod%typeNum == -2) then                          
-      
-         F6_iner  = -MATMUL(Rod%M6net, Rod%a6)    ! inertial loads      
-         Fnet_out = Rod%F6net + F6_iner           ! add inertial loads
-      
+
+         if (p%inertialF == 1) then      ! include inertial components  
+            F6_iner  = -MATMUL(Rod%M6net, Rod%a6)    ! inertial loads 
+         else 
+            F6_iner = 0.0
+         endif     
+         Rod%F6net = Rod%F6net + F6_iner           ! add inertial loads  
+         Fnet_out = Rod%F6net
       ! pinned coupled rod      
-      else if (Rod%typeNum == -1) then                     
-         ! inertial loads ... from input translational ... and solved rotational ... acceleration
-         F6_iner(4:6)  = -MATMUL(Rod%M6net(1:3,1:3), Rod%a6(1:3)) - MATMUL(Rod%M6net(1:3,4:6), Rod%a6(4:6))
-         Fnet_out(1:3) = Rod%F6net(1:3) + F6_iner(4:6)     ! add translational inertial loads
-         Fnet_out(4:6) = 0.0_DbKi
+      else if (Rod%typeNum == -1) then   
+                     
+         if (p%inertialF == 1) then      ! include inertial components 
+            ! inertial loads ... from input translational ... and solved rotational ... acceleration
+            F6_iner(1:3)  = -MATMUL(Rod%M6net(1:3,1:3), Rod%a6(1:3)) - MATMUL(Rod%M6net(1:3,4:6), Rod%a6(4:6))
+         else
+            F6_iner(1:3) = 0.0
+         endif
+         
+         Rod%F6net(1:3) = Rod%F6net(1:3) + F6_iner(1:3)     ! add translational inertial loads
+         Rod%F6net(4:6) = 0.0_DbKi
+         Fnet_out = Rod%F6net
       else
-         print *, "ERROR, Rod_GetCoupledForce called for wrong (non-coupled) rod type!"
+         Call WrScr("ERROR, Rod_GetCoupledForce called for wrong (non-coupled) rod type!")
       end if
    
    END SUBROUTINE Rod_GetCoupledForce
@@ -1089,7 +1081,7 @@ CONTAINS
             Rod%AttachedB(Rod%nAttachedB) = lineID
             Rod%TopB(Rod%nAttachedB) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
          ELSE
-            Print*, "too many lines connected to Rod ", Rod%IdNum, " in MoorDyn!"
+            call WrScr("too many lines connected to Rod "//trim(num2lstr(Rod%IdNum))//" in MoorDyn!")
          END IF
 
       else              ! attaching to end A
@@ -1101,7 +1093,7 @@ CONTAINS
             Rod%AttachedA(Rod%nAttachedA) = lineID
             Rod%TopA(Rod%nAttachedA) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
          ELSE
-            Print*, "too many lines connected to Rod ", Rod%IdNum, " in MoorDyn!"
+            call WrScr("too many lines connected to Rod "//trim(num2lstr(Rod%IdNum))//" in MoorDyn!")
          END IF
          
       end if
@@ -1121,6 +1113,7 @@ CONTAINS
       REAL(DbKi),       INTENT(INOUT)    :: rdEnd(3)
       
       Integer(IntKi)    :: l,m,J
+      Integer(IntKi)    :: foundA, foundB = 0
       
       if (endB==1) then   ! attaching to end B
          
@@ -1130,7 +1123,7 @@ CONTAINS
             
                TopOfLine = Rod%TopB(l);                ! record which end of the line was attached
                
-               DO m = l,Rod%nAttachedB-1 
+               DO m = l,Rod%nAttachedB 
                
                   Rod%AttachedB(m) = Rod%AttachedB(m+1)  ! move subsequent line links forward one spot in the list to eliminate this line link
                   Rod%TopB(     m) =      Rod%TopB(m+1) 
@@ -1143,17 +1136,19 @@ CONTAINS
                      rdEnd(J) = Rod%rd(J,Rod%N)
                   END DO
                   
-                  print*, "Detached line ", lineID, " from Rod ", Rod%IdNum, " end B"
+                  CALL WrScr( "Detached line "//trim(num2lstr(lineID))//" from Rod "//trim(num2lstr(Rod%IdNum))//" end B")
                   
                   EXIT
                END DO
-               
-               IF (l == Rod%nAttachedB) THEN   ! detect if line not found
-                  print *, "Error: failed to find line to remove during RemoveLine call to Rod ", Rod%IdNum, ". Line ", lineID
-               END IF
+
+               foundB = 1
+
             END IF
          END DO
-         
+         IF (foundB == 0) THEN   ! detect if line not found
+            CALL WrScr("Error: failed to find line to remove during RemoveLine call to Rod "//trim(num2lstr(Rod%IdNum))//" end B. Line "//trim(num2lstr(lineID)))
+         END IF
+
       else              ! attaching to end A
               
         DO l = 1,Rod%nAttachedA    ! look through attached lines
@@ -1162,7 +1157,7 @@ CONTAINS
             
                TopOfLine = Rod%TopA(l);                ! record which end of the line was attached
                
-               DO m = l,Rod%nAttachedA-1 
+               DO m = l,Rod%nAttachedA 
                
                   Rod%AttachedA(m) = Rod%AttachedA(m+1)  ! move subsequent line links forward one spot in the list to eliminate this line link
                   Rod%TopA(     m) =      Rod%TopA(m+1) 
@@ -1175,16 +1170,19 @@ CONTAINS
                      rdEnd(J) = Rod%rd(J,0)
                   END DO
                   
-                  print*, "Detached line ", lineID, " from Rod ", Rod%IdNum, " end A"
+                  CALL WrScr( "Detached line "//trim(num2lstr(lineID))//" from Rod "//trim(num2lstr(Rod%IdNum))//" end A")
                   
                   EXIT
                END DO
-               
-               IF (l == Rod%nAttachedA) THEN   ! detect if line not found
-                  print *, "Error: failed to find line to remove during RemoveLine call to Rod ", Rod%IdNum, ". Line ", lineID
-               END IF
+
+               foundA = 1
+
             END IF
          END DO
+         
+         IF (foundA == 0) THEN   ! detect if line not found
+            CALL WrScr("Error: failed to find line to remove during RemoveLine call to Rod "//trim(num2lstr(Rod%IdNum))//" end A. Line "//trim(num2lstr(lineID)))
+         END IF
       
       end if
       

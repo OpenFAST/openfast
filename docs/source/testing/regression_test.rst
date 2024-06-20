@@ -40,6 +40,7 @@ configuration as described in the following sections.
 
 In both modes of execution a directory is created in the build directory
 called ``reg_tests`` where all of the input files for the test cases are copied
+(but not overwritten) 
 and all of the locally generated outputs are stored. Ultimately, both CTest and
 the manual execution program call a series of Python scripts and libraries in
 ``reg_tests`` and ``reg_tests/lib``. One such script is ``lib/pass_fail.py``
@@ -63,12 +64,14 @@ reported as failed. The failure criteria is outlined below.
 
 Dependencies
 ------------
-The following packages are required for regression testing:
+The following packages are required for regression testing (see also the
+``requirements.txt`` file in the root directory for the python modules):
 
-- Python 3.7+
-- Numpy
 - CMake and CTest (Optional)
-- Bokeh 2.4+ (Optional)
+- Python >=3.7,<=3.11
+- numpy
+- vtk
+- bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3 (Optional)
 
 .. _python_driver:
 

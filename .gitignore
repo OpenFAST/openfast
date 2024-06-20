@@ -42,6 +42,8 @@ vs-build/
 .atom
 .fortls
 .devcontainer
+.idea
+
 # backup files
 *.asv
 ~$*.xlsx

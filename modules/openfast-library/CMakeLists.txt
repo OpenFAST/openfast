@@ -37,17 +37,20 @@ elseif (${_compiler_id} MATCHES "^INTEL" AND ${_build_type} STREQUAL "RELEASE" A
   set_source_files_properties(src/FAST_Types.f90 PROPERTIES COMPILE_FLAGS "-O2")
 endif()
 
-add_library(openfast_prelib src/FAST_Types.f90)
+add_library(openfast_prelib STATIC
+  src/FAST_Types.f90
+)
 target_link_libraries(openfast_prelib 
   nwtclibs
   versioninfolib
   aerodyn14lib
   aerodynlib
+  extloadslib
   beamdynlib
   elastodynlib
   extptfm_mckflib
   feamlib
-  foamtypeslib
+  extinflowtypeslib
   hydrodynlib
   icedynlib
   icefloelib
@@ -56,16 +59,24 @@ target_link_libraries(openfast_prelib
   moordynlib
   orcaflexlib
   sctypeslib
+  seastlib
   servodynlib
   subdynlib
 )
 
-add_library(openfast_postlib
+add_library(openfast_postlib STATIC
   src/FAST_Lin.f90
   src/FAST_Mods.f90
   src/FAST_Subs.f90
   src/FAST_Solver.f90
+  src/FAST_SS_Subs.f90
+  src/FAST_SS_Solver.f90
   src/zmq_client.c
+)
+
+target_link_libraries(openfast_postlib openfast_prelib extinflowlib scfastlib)
+target_include_directories(openfast_postlib PUBLIC 
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>  
 )
 
 # Specify the include directories for ZeroMQ and cJSON
@@ -83,7 +94,7 @@ link_directories(
 
 target_link_libraries(openfast_postlib
   openfast_prelib
-  foamfastlib
+  # foamfastlib
   scfastlib
   /opt/homebrew/Cellar/zeromq/4.3.5_1/lib/libzmq.dylib
   /opt/homebrew/Cellar/cjson/1.7.18/lib/libcjson.dylib
@@ -96,7 +107,9 @@ add_library(openfastlib_static INTERFACE)
 target_link_libraries(openfastlib_static INTERFACE openfast_postlib)
 
 # OpenFAST Library shared (Python, openfast_cpp, openfastcpplib)
-add_library(openfastlib SHARED src/FAST_Library.f90)
+add_library(openfastlib SHARED 
+  src/FAST_Library.f90
+)
 target_link_libraries(openfastlib openfast_postlib)
 if(APPLE OR UNIX)
   target_compile_definitions(openfastlib PRIVATE IMPLICIT_DLLEXPORT)

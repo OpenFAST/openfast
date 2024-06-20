@@ -53,7 +53,7 @@ typedef     ^                   InitOutputType       ReKi                AirDens
 #
 
 # ..... Primary Input file data ...................................................................................................
-typedef     ^                   AA_InputFile         DbKi                DT_AA            -     -     -     "Time interval for aerodynamic calculations {or "default"}"     s
+typedef     ^                   AA_InputFile         DbKi                DT_AA            -     -     -     "Time interval for aerodynamic calculations {or \"default\"}"     s
 typedef     ^                   AA_InputFile         IntKi               IBLUNT           -     -     -     "FLAG TO COMPUTE BLUNTNESS NOISE"     -
 typedef     ^                   AA_InputFile         IntKi               ILAM             -     -     -     "FLAG TO COMPUTE LBL NOISE {1=steady model, 2=Beddoes-Leishman unsteady model}"     -
 typedef     ^                   AA_InputFile         IntKi               ITIP             -     -     -     "FLAG TO COMPUTE TIP NOISE {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"     -

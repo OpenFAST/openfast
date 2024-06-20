@@ -14,20 +14,16 @@
 # limitations under the License.
 #
 
-set(REGISTRY_SOURCES
-  src/data.c
-  src/gen_c_types.c
-  src/gen_module_files.c
-  src/misc.c
-  src/my_strtok.c
-  src/reg_parse.c
-  src/registry.c
-  src/sym.c
-  src/symtab_gen.c
-  src/type.c
-  )
-
-add_executable(openfast_registry ${REGISTRY_SOURCES})
+add_executable(openfast_registry
+  src/main.cpp
+  src/registry_gen_fortran.cpp
+  src/registry_gen_c.cpp
+  src/registry_parse.cpp
+  src/registry.cpp
+  src/registry.hpp
+  src/templates.hpp
+)
+target_compile_features(openfast_registry PRIVATE cxx_std_14)
 
 set_target_properties(openfast_registry PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/modules/openfast-registry

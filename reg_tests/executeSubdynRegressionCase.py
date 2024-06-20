@@ -69,7 +69,7 @@ verbose = args.verbose
 rtl.validateExeOrExit(executable)
 rtl.validateDirOrExit(sourceDirectory)
 if not os.path.isdir(buildDirectory):
-    os.makedirs(buildDirectory)
+    os.makedirs(buildDirectory, exist_ok=True)
 
 ### Build the filesystem navigation variables for running the test case
 regtests = os.path.join(sourceDirectory, "reg_tests")
@@ -91,7 +91,7 @@ if not os.path.isdir(inputsDirectory):
 # create the local output directory and initialize it with input files (overwrite if exists)
 rtl.copyTree(inputsDirectory, testBuildDirectory, renameExtDict={'.out':'_ref.out'}, includeExt=['.dvr','.dat','.out','.csv'])
 
-    
+
 ### Run SubDyn on the test case
 if not noExec:
     caseInputFile = os.path.join(testBuildDirectory, caseName+".dvr")

@@ -41,12 +41,6 @@ typedef   ^           ^                Logical            VisMeshes      -   .FA
 #typedef   ^       ^                    DbKi         zetaGrid               {:}{:}    -  -   "water surface elevations time series at each grid point"            -
 #typedef   ^       ^                    DbKi         PDynGrid               {:}{:}    -  -   "water dynamic pressure time series at each grid point"            -
 
-typedef   ^       ^                    ReKi         WaveVel                          {:}{:}{:}  -        -         ""    -
-typedef   ^       ^                    ReKi         WaveAcc                          {:}{:}{:}  -        -         ""    -
-typedef   ^       ^                    ReKi         WavePDyn                         {:}{:}     -        -         ""    -
-typedef   ^       ^                    ReKi         WaveElev                         {:}{:}     -        -         ""    -
-typedef   ^       ^                    DbKi         WaveTime                         {:}        -        -         "Should this be double precision?"    -
-
 # nvm # Farm-level simulation inputs - these are passed by FAST.Farm - the arrays are populated from the individual turbine-level MoorDyn instances
 # nvm typedef   ^       ^                    MeshType     FarmCoupledKinematics  {:}    -    -   "array of input kinematics meshes from each of the turbine-level MoorDyn instances"  "[m, m/s]"
 # nvm typedef   ^       ^                    IntKi        FarmNCpldBodies        {:}    -    -   ""             ""
@@ -93,7 +87,7 @@ typedef  ^            ^                DbKi               CaEnd          -      
 
 # this is the Body type, which holds data for each body object
 typedef  ^            MD_Body          IntKi              IdNum          -       -  -   "integer identifier of this Point"
-typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  0=free, 1=fixed, -1=vessel"
+typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  0=free, 1=fixed, -1=coupled, 2=coupledpinned"
 typedef  ^            ^                IntKi              AttachedC      {30}    -  -   "list of IdNums of points attached to this body"
 typedef  ^            ^                IntKi              AttachedR      {30}    -  -   "list of IdNums of rods attached to this body"
 typedef  ^            ^                IntKi              nAttachedC     -       0  -   "number of attached points"
@@ -122,7 +116,7 @@ typedef  ^            ^                DbKi               rCG            {3}    
 # this is the Point type, which holds data for each point object
 typedef  ^            MD_Point       IntKi              IdNum          -       -  -   "integer identifier of this point"
 typedef  ^            ^                CHARACTER(10)      type           -       -  -   "type of point: fix, vessel, point"
-typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  1=fixed, -1=vessel, 0=free"
+typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  1=fixed, -1=coupled, 0=free"
 typedef  ^            ^                IntKi              Attached       {10}    -  -   "list of IdNums of lines attached to this point node"
 typedef  ^            ^                IntKi              Top            {10}    -  -   "list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A)"
 typedef  ^            ^                IntKi              nAttached      -       0  -   "number of attached lines"
@@ -148,7 +142,7 @@ typedef  ^            ^                DbKi               M              {3}{3} 
 typedef  ^            MD_Rod           IntKi              IdNum         -        -  -   "integer identifier of this Line"
 typedef  ^            ^                CHARACTER(10)      type          -        -  -   "type of Rod.  should match one of RodProp names"
 typedef  ^            ^                IntKi              PropsIdNum    -        -  -   "the IdNum of the associated rod properties"     -
-typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  0=fixed, 1=vessel, 2=point"
+typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  0=free, 1=pinned, 2=fixed, -1=coupledpinned, -2=coupled"
 typedef  ^            ^                IntKi              AttachedA      {10}    -  -   "list of IdNums of lines attached to end A"
 typedef  ^            ^                IntKi              AttachedB      {10}    -  -   "list of IdNums of lines attached to end B"
 typedef  ^            ^                IntKi              TopA           {10}    -  -   "list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A)"
@@ -271,9 +265,16 @@ typedef  ^            ^                DbKi               EndMomentB   {3}      
 typedef  ^            ^                IntKi              LineUnOut     -        -  -   "unit number of line output file"
 typedef  ^            ^                DbKi               LineWrOutput {:}       -  -   "one row of output data for this line"
 
-# this is the Fail type, which holds data for possible line failure descriptors  TO BE FILLED IN LATER
-typedef  ^            MD_Fail          IntKi              IdNum         -        -  -   "integer identifier of this failure"
-
+# this is the Fail type, which holds data for possible line failure descriptors 
+typedef  ^            MD_Fail          IntKi              IdNum           -        -  -   "integer identifier of this failure" "-"
+typedef  ^            ^                IntKi              attachID        -        -  -   "ID of connection or Rod the lines are attached to" "-"
+typedef  ^            ^                IntKi              isRod           -        -  -   "1 Rod end A, 2 Rod end B, 0 if point" "-"
+typedef  ^            ^                IntKi              lineIDs         {30}     -  -   "array of one or more lines to detach (starting from 1...)" "-"
+typedef  ^            ^                IntKi              lineTops        {30}     -  -   "an array that will be FILLED IN to return which end of each line was disconnected ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)" "-"
+typedef  ^            ^                IntKi              nLinesToDetach  -        -  -   "how many lines to dettach" "-"
+typedef  ^            ^                DbKi               failTime        -        -  -   "time of failure" "s"
+typedef  ^            ^                DbKi               failTen         -        -  -   "tension threshold of failure" "N"
+typedef  ^            ^                IntKi              failStatus      -        -  -   "0 not failed yet, 1 failed, 2 invalid" "-"
 
 # this is the MDOutParmType - a less literal alternative of the NWTC OutParmType for MoorDyn (to avoid huge lists of possible output channel permutations)
 typedef  ^            MD_OutParmType   CHARACTER(10)      Name          -        -  -   "name of output channel"
@@ -339,6 +340,7 @@ typedef   ^       ^                    IntKi               RodStateIsN      {:} 
 typedef   ^       ^                    IntKi               BodyStateIs1     {:}  -  -   "starting index of each body's states in state vector"                 ""
 typedef   ^       ^                    IntKi               BodyStateIsN     {:}  -  -   "ending index of each body's states in state vector"                 ""
 typedef   ^       ^                    IntKi               Nx                -   -  -   "number of states and size of state vector"                 ""
+typedef   ^       ^                    IntKi               Nxtra             -   -  -   "number of states and size of state vector including points for potential line failures"                 ""
 typedef   ^       ^                    IntKi               WaveTi            -   -  -   "current interpolation index for wave time series data"                 ""
 typedef   ^       ^           MD_ContinuousStateType       xTemp             -   -  -   "contains temporary state vector used in integration (put here so it's only allocated once)"
 typedef   ^       ^           MD_ContinuousStateType       xdTemp            -   -  -   "contains temporary state derivative vector used in integration (put here so it's only allocated once)"
@@ -396,6 +398,7 @@ typedef   ^       ^                    DbKi                mu_kT          -     
 typedef   ^       ^                    DbKi                mu_kA          -     -    -   "axial kinetic friction coefficient" "(-)"
 typedef   ^       ^                    DbKi                mc             -     -    -   "ratio of the static friction coefficient to the kinetic friction coefficient" "(-)"
 typedef   ^       ^                    DbKi                cv             -     -    -   "saturated damping coefficient" "(-)"
+typedef   ^       ^                    IntKi        inertialF            -           0  -   "Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 1 if yes, 0 if no" - 
 # --- parameters for wave and current ---
 typedef   ^       ^                    IntKi        nxWave             -            -  -   "number of x wave grid points"            -
 typedef   ^       ^                    IntKi        nyWave             -            -  -   "number of y wave grid points"            -

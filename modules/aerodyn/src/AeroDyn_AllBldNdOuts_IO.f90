@@ -264,7 +264,7 @@ END SUBROUTINE AllBldNdOuts_InitOut
 !! NOTE: the equations here came from the output section of AeroDyn_IO.f90.  If anything changes in there, it needs to be reflected
 !!       here.
 
-SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx, iRot, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotInflow, Indx, iRot, ErrStat, ErrMsg )
    TYPE(RotParameterType),       INTENT(IN   )  :: p                                 ! The rotor parameters
    TYPE(AD_ParameterType),target,INTENT(IN   )  :: p_AD                              ! The module parameters
    TYPE(RotInputType), target,   INTENT(IN   )  :: u                                 ! inputs
@@ -273,6 +273,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
    TYPE(RotContinuousStateType), INTENT(IN   )  :: x                                 ! rotor Continuous states
    TYPE(RotOutputType),          INTENT(INOUT)  :: y                                 ! outputs (updates y%WriteOutput)
    TYPE(RotOtherStateType),      INTENT(IN   )  :: OtherState                        ! other states
+   TYPE(RotInflowType),          INTENT(IN   )  :: RotInflow                         ! other states%RotInflow(iRot)
    INTEGER,                      INTENT(IN   )  :: Indx                              ! index into m%BEMT_u(Indx) array; 1=t and 2=t+dt (but not checked here)
    INTEGER,                      INTENT(IN   )  :: iRot                              ! Rotor index, needed for OLAF
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat                           ! The error status code
@@ -301,7 +302,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
    nNd = p%NumBlNds
    R_li => m%R_li                     ! inertial to local-polar
    R_wi => m%orientationAnnulus       ! inertial to without-sweep-pitch-twist or orientation annulus (TODO: deprecate me)
-   W2B => p_AD%FVW%Bld2Wings(iRot, :) ! From Wing index to blade index
+   if (p_AD%Wake_Mod == WakeMod_FVW) W2B => p_AD%FVW%Bld2Wings(iRot, :) ! From Wing index to blade index
 
          ! Initialize some things
       ErrMsg = ''
@@ -335,26 +336,26 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE (0            ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = 0.0_ReKi; iOut = iOut + 1; enddo;enddo
 
          ! ***** Undisturbed wind velocity in inertial, polar, local and airfoil systems*****
-         CASE( BldNd_VUndxi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = u%InflowOnBlade(1,iNd,iB); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndyi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = u%InflowOnBlade(2,iNd,iB); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndzi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = u%InflowOnBlade(3,iNd,iB); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndxi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = RotInflow%Blade(iB)%InflowVel(1,iNd); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndyi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = RotInflow%Blade(iB)%InflowVel(2,iNd); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndzi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = RotInflow%Blade(iB)%InflowVel(3,iNd); iOut = iOut + 1; enddo;enddo
 
-         CASE( BldNd_VUndxp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), R_pi(1,:,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndyp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), R_pi(2,:,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndzp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), R_pi(3,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndxp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Blade(iB)%InflowVel(:,iNd), R_pi(1,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndyp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Blade(iB)%InflowVel(:,iNd), R_pi(2,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndzp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Blade(iB)%InflowVel(:,iNd), R_pi(3,:,iB) ); iOut = iOut + 1; enddo;enddo
          
-         CASE( BldNd_VUndxl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), R_li(1,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndyl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), R_li(2,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndzl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), R_li(3,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndxl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Blade(iB)%InflowVel(:,iNd), R_li(1,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndyl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Blade(iB)%InflowVel(:,iNd), R_li(2,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndzl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Blade(iB)%InflowVel(:,iNd), R_li(3,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
 
-         CASE( BldNd_VUndxa ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), u%BladeMotion(iB)%Orientation(1,:,iNd) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndya ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), u%BladeMotion(iB)%Orientation(2,:,iNd) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndza ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), u%BladeMotion(iB)%Orientation(3,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndxa ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Blade(iB)%InflowVel(:,iNd), u%BladeMotion(iB)%Orientation(1,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndya ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Blade(iB)%InflowVel(:,iNd), u%BladeMotion(iB)%Orientation(2,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndza ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Blade(iB)%InflowVel(:,iNd), u%BladeMotion(iB)%Orientation(3,:,iNd) ); iOut = iOut + 1; enddo;enddo
 
          ! TODO: deprecate this
-         CASE( BldNd_VUndx  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), R_wi(1,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndy  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), R_wi(2,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_VUndz  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), R_wi(3,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndx  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Blade(iB)%InflowVel(:,iNd), R_wi(1,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndy  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Blade(iB)%InflowVel(:,iNd), R_wi(2,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndz  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( RotInflow%Blade(iB)%InflowVel(:,iNd), R_wi(3,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
 
 
          ! ***** Disturbed wind velocity in inertial, polar, local and airfoil systems*****
@@ -406,7 +407,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          ! Axial and tangential induced wind velocity
          ! TODO use m%Vind_i and R_wi
          CASE ( BldNd_Vindx ) 
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                do iB=1,nB
                   do iNd=1,nNd
                      y%WriteOutput(iOut)  = - m%BEMT_u(Indx)%Vx(iNd,iB) * m%BEMT_y%axInduction( iNd,iB)
@@ -424,7 +425,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             endif
                      
          CASE ( BldNd_Vindy )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd 
                      y%WriteOutput(iOut)  = m%BEMT_u(Indx)%Vy(iNd,iB) * m%BEMT_y%tanInduction(iNd,iB)
@@ -461,7 +462,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          ! TODO: Vrel, DynP, Re, Ma - should be unified across lifting-line implementations. Vrel should be computed based on velocities in (a)-system
             ! Relative wind speed
          CASE ( BldNd_VRel )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd
                      y%WriteOutput(iOut)  = m%BEMT_y%Vrel(iNd,iB)
@@ -480,7 +481,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          
             ! Dynamic pressure
          CASE ( BldNd_DynP )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                 DO iB=1,nB
                    DO iNd=1,nNd
                       y%WriteOutput(iOut)  = 0.5 * p%airDens * m%BEMT_y%Vrel(iNd,iB)**2
@@ -499,7 +500,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
 
             ! Reynolds number (in millions)
          CASE ( BldNd_Re )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd
                      y%WriteOutput(iOut)  = p%BEMT%chord(iNd,iB) * m%BEMT_y%Vrel(iNd,iB) / p%KinVisc / 1.0E6
@@ -518,7 +519,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
 
             ! Mach number
          CASE ( BldNd_M )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd
                      y%WriteOutput(iOut)  = m%BEMT_y%Vrel(iNd,iB) / p%SpdSound
@@ -538,7 +539,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
 
             ! Axial and tangential induction factors
          CASE ( BldNd_AxInd )         
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd
                      y%WriteOutput(iOut)  = m%BEMT_y%axInduction(iNd,iB)
@@ -556,7 +557,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             endif
 
          CASE ( BldNd_TnInd )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd                   
                      y%WriteOutput(iOut)  = m%BEMT_y%tanInduction(iNd,iB)
@@ -575,7 +576,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          
             ! Quasi-steady Axial and tangential induction factors
          CASE ( BldNd_AxInd_qs )         
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd
                      y%WriteOutput(iOut)  = m%BEMT_y%axInduction_qs(iNd,iB)
@@ -593,7 +594,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             endif
 
          CASE ( BldNd_TnInd_qs )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd                   
                      y%WriteOutput(iOut)  = m%BEMT_y%tanInduction_qs(iNd,iB)
@@ -610,10 +611,10 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
                END DO
             endif
 
-                  
+
             ! AoA, pitch+twist angle, inflow angle, and curvature angle
          CASE ( BldNd_Alpha )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd                   
                      ! TODO Change this
@@ -632,7 +633,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             endif
 
          CASE ( BldNd_Theta )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd                   
                      y%WriteOutput(iOut)  = m%BEMT_u(Indx)%theta(iNd,iB)*R2D
@@ -650,7 +651,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             endif
          
          CASE ( BldNd_Phi )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd                   
                      y%WriteOutput(iOut)  = m%BEMT_y%phi(iNd,iB)*R2D                                            
@@ -668,7 +669,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             endif
          
          CASE ( BldNd_Curve )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd                   
                      y%WriteOutput(iOut)  = m%Curve(iNd,iB)*R2D                                            
@@ -687,7 +688,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             endif
 
          CASE ( BldNd_Toe )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd                   
                      y%WriteOutput(iOut)  = m%BEMT_u(Indx)%toeAngle(iNd,iB)*R2D
@@ -708,7 +709,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          ! Unsteady lift force, drag force, pitching moment coefficients
          ! TODO this should be somehow unified across lifting-line implementations 
          CASE ( BldNd_Cl )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd                   
                      y%WriteOutput(iOut)  = m%BEMT_y%Cl(iNd,iB)
@@ -726,7 +727,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             endif
          
          CASE ( BldNd_Cd )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd                   
                      y%WriteOutput(iOut)  = m%BEMT_y%Cd(iNd,iB)
@@ -744,7 +745,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             endif
 
          CASE ( BldNd_Cm )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd                   
                      y%WriteOutput(iOut)  = m%BEMT_y%Cm(iNd,iB)
@@ -764,7 +765,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             ! Normal force (to plane), tangential force (to plane) coefficients
             ! TODO deprecate
          CASE ( BldNd_Cx )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd                   
                      y%WriteOutput(iOut)  = m%BEMT_y%Cx(iNd,iB)
@@ -782,7 +783,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             endif
 
          CASE ( BldNd_Cy )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd                   
                      y%WriteOutput(iOut)  = m%BEMT_y%Cy(iNd,iB)
@@ -801,7 +802,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
 
             ! Normal force (to chord), and tangential force (to chord) coefficients
          CASE ( BldNd_Cn )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd   
                      ct=cos(m%BEMT_u(Indx)%theta(iNd,iB))
@@ -823,7 +824,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             endif
 
          CASE ( BldNd_Ct )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd   
                      ct=cos(m%BEMT_u(Indx)%theta(iNd,iB))
@@ -847,7 +848,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
 
                ! Lift force, drag force, pitching moment
          CASE ( BldNd_Fl )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd   
                      cp=cos(m%BEMT_y%phi(iNd,iB))
@@ -869,7 +870,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             endif
 
          CASE ( BldNd_Fd )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd   
                      cp=cos(m%BEMT_y%phi(iNd,iB))
@@ -900,7 +901,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             ! Normal force (to chord), and tangential force (to chord) per unit length
          !CASE( BldNd_Fn ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( y%BladeLoad(iB)%Force (:, iNd), u%BladeMotion(iB)%Orientation(1,:,iNd)); iOut = iOut + 1; enddo;enddo 
          CASE ( BldNd_Fn )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd   
                      ct=cos(m%BEMT_u(Indx)%theta(iNd,iB))
@@ -923,7 +924,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          
          !CASE( BldNd_Ft ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = -dot_product( y%BladeLoad(iB)%Force (:, iNd), u%BladeMotion(iB)%Orientation(2,:,iNd)); iOut = iOut + 1; enddo;enddo 
          CASE ( BldNd_Ft )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd   
                      ct=cos(m%BEMT_u(Indx)%theta(iNd,iB))
@@ -992,7 +993,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          
          ! TODO: remove me, Vx, Vy can be computed from other outputs (and they are in legacy coordinate system)
          CASE ( BldNd_Vx )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd
                      y%WriteOutput(iOut)  = m%BEMT_u(Indx)%Vx(iNd,iB)
@@ -1010,7 +1011,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             endif
 
          CASE ( BldNd_Vy )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd
                      y%WriteOutput(iOut)  = m%BEMT_u(Indx)%Vy(iNd,iB)
@@ -1028,7 +1029,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             endif
                      
          CASE ( BldNd_GeomPhi )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                if (allocated(OtherState%BEMT%ValidPhi)) then
                   DO iB=1,nB
                      DO iNd=1,nNd 
@@ -1059,7 +1060,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             endif
 
          CASE ( BldNd_chi )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,nNd
                      y%WriteOutput(iOut)  = m%BEMT_y%chi(iNd,iB)*R2D
@@ -1078,7 +1079,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
 
          CASE ( BldNd_UA_Flag )
             IF (p_AD%UA_Flag) THEN
-               if (p_AD%WakeMod /= WakeMod_FVW) then
+               if (p_AD%Wake_Mod /= WakeMod_FVW) then
                   DO iB=1,nB
                      DO iNd=1,u%BladeMotion(iB)%NNodes
                         y%WriteOutput(iOut) = m%BEMT%UA%weight(iNd, iB)
@@ -1119,7 +1120,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
                         compIndx = 5
                      END SELECT
             
-                     !if (p_AD%WakeMod /= WakeMod_FVW) then
+                     !if (p_AD%Wake_Mod /= WakeMod_FVW) then
                         DO iB=1,nB
                            DO iNd=1,u%BladeMotion(iB)%NNodes
                               y%WriteOutput(iOut) = x%BEMT%UA%element(iNd, iB)%x(compIndx)
@@ -1148,7 +1149,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             
             ! CpMin
          CASE ( BldNd_CpMin )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,u%BladeMotion(iB)%NNodes
                      y%WriteOutput(iOut) = m%BEMT_y%Cpmin(iNd,iB)
@@ -1171,7 +1172,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
 
             ! circulation on blade
          CASE ( BldNd_Gam )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,u%BladeMotion(iB)%NNodes
                      y%WriteOutput(iOut) = 0.5_ReKi * p%BEMT%chord(iNd,iB) * m%BEMT_y%Vrel(iNd,iB) * m%BEMT_y%Cl(iNd,iB) ! "Gam" [m^2/s]
@@ -1194,7 +1195,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          ! TODO this should be provided by all lifting-line codes
          ! Cl_Static
          CASE ( BldNd_Cl_qs )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,u%BladeMotion(iB)%NNodes
 !NOT available in BEMT/DBEMT yet
@@ -1214,7 +1215,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
 
             ! Cd_Static
          CASE ( BldNd_Cd_qs )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,u%BladeMotion(iB)%NNodes
 !NOT available in BEMT/DBEMT yet
@@ -1234,7 +1235,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
 
             ! Cm_Static
          CASE ( BldNd_Cm_qs )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+            if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   DO iNd=1,u%BladeMotion(iB)%NNodes
 !NOT available in BEMT/DBEMT yet
@@ -1531,7 +1532,7 @@ SUBROUTINE BldNdOuts_SetOutParam(BldNd_OutList, p, p_AD, ErrStat, ErrMsg )
    end if
 
       ! The following are valid only for BEMT/DBEMT
-   if (p_AD%WakeMod /= WakeMod_FVW) then
+   if (p_AD%Wake_Mod /= WakeMod_FVW) then
       InvalidOutput( BldNd_Cl_qs ) = .true.
       InvalidOutput( BldNd_Cd_qs ) = .true.
       InvalidOutput( BldNd_Cm_qs ) = .true.
@@ -1544,7 +1545,7 @@ SUBROUTINE BldNdOuts_SetOutParam(BldNd_OutList, p, p_AD, ErrStat, ErrMsg )
    endif
 
    ! The following are valid only for BEMT/DBEMT
-   if (p_AD%WakeMod /= WakeMod_BEMT) then
+   if (p_AD%Wake_Mod /= WakeMod_BEMT) then
       InvalidOutput( BldNd_BEM_F_qs  ) = .true.
       InvalidOutput( BldNd_BEM_k_qs  ) = .true.
       InvalidOutput( BldNd_BEM_kp_qs ) = .true.
@@ -1553,7 +1554,7 @@ SUBROUTINE BldNdOuts_SetOutParam(BldNd_OutList, p, p_AD, ErrStat, ErrMsg )
 
 
    ! it's going to be very difficult to get the FVW states without rewriting a bunch of code
-   if (.not. p_AD%UA_Flag .or. p_AD%WakeMod == WakeMod_FVW) then ! also invalid if AFAeroMod is not 4,5,6
+   if (.not. p_AD%UA_Flag .or. p_AD%Wake_Mod == WakeMod_FVW) then ! also invalid if AFAeroMod is not 4,5,6
       InvalidOutput( BldNd_UA_x1 ) = .true.
       InvalidOutput( BldNd_UA_x2 ) = .true.
       InvalidOutput( BldNd_UA_x3 ) = .true.

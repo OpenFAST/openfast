@@ -19,12 +19,12 @@ if (GENERATE_TYPES)
   generate_f90_types(src/SC_DataEx_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/SCDataEx_Types.f90 -ccode -noextrap)
 endif()
 
-add_library(sctypeslib
+add_library(sctypeslib STATIC
   src/SCDataEx_Types.f90
 )
 target_link_libraries(sctypeslib nwtclibs)
 
-add_library(scfastlib
+add_library(scfastlib STATIC
   src/SC_DataEx.f90
   src/SuperController_Types.f90
   src/SuperController.f90

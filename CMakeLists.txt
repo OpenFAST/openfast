@@ -110,7 +110,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/set_rpath.cmake)
 # OpenMP
 #-------------------------------------------------------------------------------
 
-if (OPENMP OR BUILD_FASTFARM OR BUILD_OPENFAST_CPP_API)
+if (OPENMP)
   FIND_PACKAGE(OpenMP REQUIRED)
   if (OpenMP_Fortran_FOUND)
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
@@ -187,12 +187,14 @@ set(OPENFAST_MODULES
   nwtc-library
   version
   inflowwind
+  extloads
   aerodyn
   aerodyn14
   servodyn
   elastodyn
   beamdyn
   subdyn
+  seastate
   hydrodyn
   orcaflex-interface
   extptfm
@@ -202,10 +204,11 @@ set(OPENFAST_MODULES
   icefloe
   wakedynamics
   awae
+  lindyn
   map
   turbsim
   supercontroller
-  openfoam
+  externalinflow
   openfast-library
 )
 

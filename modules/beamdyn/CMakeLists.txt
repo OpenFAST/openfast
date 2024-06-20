@@ -18,7 +18,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/Registry_BeamDyn.txt ${CMAKE_CURRENT_LIST_DIR}/src/BeamDyn_Types.f90)
 endif()
 
-add_library(beamdynlib 
+add_library(beamdynlib STATIC
   src/BeamDyn.f90
   src/BeamDyn_IO.f90
   src/BeamDyn_BldNdOuts_IO.f90
