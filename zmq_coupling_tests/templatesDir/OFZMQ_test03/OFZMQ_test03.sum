@@ -1,7 +1,7 @@
 
 FAST Summary File
 
-Predictions were generated on 18-Jun-2024 at 10:34:17 using OpenFAST, compiled as a 64-bit application using double precision at commit v3.5.2-9-g84c3aa89-dirty
+Predictions were generated on 20-Jun-2024 at 15:17:42 using OpenFAST, compiled as a 64-bit application using double precision at commit v3.5.2-10-g45b95ade-dirty
   compiled with
     NWTC Subroutine Library
     ElastoDyn
@@ -101,3 +101,6 @@ Number of correction iterations:  0
       54  RtTSR                 (-)                   AeroDyn
       55  GenTq                 (kN-m)                ServoDyn
       56  GenPwr                (kW)                  ServoDyn
+      57  BlPitchC1             (deg)                 ServoDyn
+      58  BlPitchC2             (deg)                 ServoDyn
+      59  BlPitchC3             (deg)                 ServoDyn

@@ -53,7 +53,7 @@ class RFInteractor:
             self.poller = zmq.Poller()
             self.poller.register(self.requester, zmq.POLLIN)
             self.cont_req_off = 0
-            self.cont_req_threshold = 20
+            self.cont_req_threshold = 10
             
         print('ZMQ Real Time interactor for FAST initialized. \n PUB-SUB protocol: {} | REQ-REP protocol: {}'.format(self.ZmqOutAddress, 
                                                                                                                      self.ZmqInAddress))
@@ -187,7 +187,10 @@ class RFInteractor:
             print('Requester closed due to inactivity.')
             self.requester.close()
             self.req_context.term()
-        pass 
+
+            return True  
+        
+        return False
     
         
         

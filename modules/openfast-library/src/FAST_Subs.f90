@@ -189,7 +189,7 @@ subroutine zmq_pub_init(req_address)
    character(*)                               :: req_address
    integer(c_int)                             :: response_ptr_pub_init 
 
-   print *, "Atempting connection from Fortran at ", req_address
+   print *, "OpenFAST is attempting to publish at: ", trim(req_address)
 
    response_ptr_pub_init = zmq_init_pub(trim(req_address))
 
@@ -203,12 +203,55 @@ subroutine zmq_req_init(reqrep_address)
    character(*)                               :: reqrep_address
    integer(c_int)                             :: response_ptr_req_init 
 
-   print *, "Atempting connection from Fortran at ", reqrep_address
+   print *, "OpenFAST is receiving from: ", trim(reqrep_address)
 
    response_ptr_req_init = zmq_init_req(trim(reqrep_address))
 
 end subroutine zmq_req_init
 ! ----------------------------------------------
+module global_data
+   implicit none
+   integer, parameter :: dp = kind(1.0d0) 
+   real(dp), allocatable :: array_to_be_preserved(:)
+   logical :: is_array_init = .false.
+contains
+   subroutine initialize_array(size)
+       integer, intent(in) :: size
+       if (.not. is_array_init) then
+           allocate(array_to_be_preserved(size))
+           array_to_be_preserved = 0._dp
+           is_array_init = .true.
+       end if
+   end subroutine initialize_array
+
+   subroutine update_array(array, size)
+       real(dp), intent(in), dimension(size) :: array
+       integer, intent(in) :: size
+       integer :: i
+
+       if (.not. is_array_init) then
+           print *, "Array not initialized"
+           return
+       end if
+
+       do i = 1, size
+           array_to_be_preserved(i) = array(i)
+       end do
+   end subroutine update_array
+
+   subroutine get_current_array(current_array)
+       real(dp), allocatable, intent(out) :: current_array(:)
+       if (.not. is_array_init) then
+           print *, "Array not initialized"
+           return
+       end if
+
+       allocate(current_array(size(array_to_be_preserved)))
+       current_array = array_to_be_preserved
+   end subroutine get_current_array
+end module global_data
+! ----------------------------------------------
+
 MODULE FAST_Subs
 
    USE FAST_Solver
@@ -3610,8 +3653,9 @@ END DO
                RETURN
             end if
          end if
-
-      CALL AllocAry(p%ZmqInChannelsAry, p%ZmqInNbr + 1, "ZmqInChannelsAry", Errstat2, ErrMsg2)
+      
+      ! TO-DO: add slots for TurbID and time
+      CALL AllocAry(p%ZmqInChannelsAry, p%ZmqInNbr, "ZmqInChannelsAry", Errstat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -5149,9 +5193,10 @@ END SUBROUTINE FAST_Solution_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine takes data from n_t_global and gets values at n_t_global + 1
 SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, SC_DX, HD, SD, ExtPtfm, &
-                         MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ZmqInChannelsAry, ZmqOutChannelsAry, TurbID, ErrStat, ErrMsg )
+                         MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData,ZmqInChannelsAry, ZmqOutChannelsAry, TurbID, ErrStat, ErrMsg )
 
    use iso_c_binding
+   use global_data
    !use zmq_req
                       
    REAL(DbKi),               INTENT(IN   ) :: t_initial           !< initial time
@@ -5202,9 +5247,13 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_Solution'
    ! -----------------------------------------------------------------------------
+   ! if (p_FAST%ZmqOn) then 
+
    REAL(DbKi), allocatable, intent(inout)           :: ZmqOutChannelsAry(:)
-   REAL(DbKi), allocatable, intent(inout)           :: ZmqInChannelsAry(:)
    character(len=1024)                              :: tmp_str 
+   REAL(DbKi), allocatable, intent(inout)           :: ZmqInChannelsAry(:)
+   call initialize_array(p_FAST%ZmqInNbr)
+   ! end if 
    ! -----------------------------------------------------------------------------
 
    ErrStat  = ErrID_None
@@ -5507,32 +5556,15 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    ! Inserting here call to ZMQ to retrieve and override routines' outputs 
          
    if ( (p_FAST%ZmqOn) .and. (p_FAST%ZmqInNbr > 0)) then 
-      ! print *, 'Zmq Channels: ', p_FAST%ZmqInChannels
-      ! Check if there's need to communicate with the ZMQ socket (the values will be enforced for next time step) to update values 
-
-      !if (mod(p_FAST%ZmqOutDT, t_global_next) == 0) then 
-
-      ! TurbID = p_FAST%TurbID
-      print *, 'ZmqInArray: ', ZmqInChannelsAry
 
       if (mod(t_global_next, p_FAST%ZmqInDT) == 0) then
          ZmqInChannelsAry = 0.0_DbKi
          call zmq_req(p_FAST%ZmqInAddress, p_FAST%ZmqInChannels, p_FAST%ZmqInNbr, ZmqInChannelsAry)
+         call update_array(ZmqInChannelsAry, p_FAST%ZmqInNbr)
       end if
 
-      print *, 'Zmq In Comm happened: ', mod(t_global_next, p_FAST%ZmqInDT) == 0
-      print *, 'ZmqInArray (after comm): ', ZmqInChannelsAry
-      
-      ! Forcing turbine ID agreement in this first version
-      ! ZmqInChannelsAry(1) = TurbID
+      call get_current_array(ZmqInChannelsAry)
 
-      ! print *, 'ZmqInChannelsAry: ', ZmqInChannelsAry
-      ! end if ! otherwise we'll keep the values from the previous time step
-
-      ! call zmq_req(p_FAST%ZmqInAddress, p_FAST%ZmqInChannels, p_FAST%ZmqInNbr, ZmqInChannelsAry)
-
-      ! If (ZmqInChannelsAry(1) == TurbID) then 
-      ! print *, 'ZmqInChannelsAry: ', ZmqInChannelsAry
       do i = 1, p_FAST%ZmqInNbr
          tmp_str = trim(p_FAST%ZmqInChannels(i)) 
 
@@ -5562,8 +5594,6 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
          end select 
          
       end do 
-      
-      ! end if 
    
    end if 
    !----------------------------------------------------------------------------------------
