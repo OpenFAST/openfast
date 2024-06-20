@@ -989,17 +989,21 @@ endif
 IF (Check(.not.(any(idSIM_Valid==p%SttcSolve)), 'Invalid value entered for SttcSolve')) return
 
 ! GuyanLoadCorrection  - For legacy, allowing this line to be a comment
-CALL ReadVar (UnIn, SDInputFile, Dummy_Str, 'GuyanLoadCorrection', 'Add extra lever arm contribution to interface loads', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
-if (is_logical(Dummy_Str, Dummy_Bool)) then ! the parameter was present
-   p%GuyanLoadCorrection=Dummy_Bool
-   ! We still need to read the comment on the next line 
-   CALL ReadCom  ( UnIn, SDInputFile, ' FEA and CRAIG-BAMPTON PARAMETERS ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-else ! we have a actually read a comment line, we do nothing. 
-   call LegacyWarning('ExtraMom line missing from input file. Assuming no extra moment.')
-   p%GuyanLoadCorrection=.False.  ! For Legacy, GuyanLoadCorrection is False
-endif
+! CALL ReadVar (UnIn, SDInputFile, Dummy_Str, 'GuyanLoadCorrection', 'Add extra lever arm contribution to interface loads', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
+! if (is_logical(Dummy_Str, Dummy_Bool)) then ! the parameter was present
+!    p%GuyanLoadCorrection=Dummy_Bool
+!    ! We still need to read the comment on the next line 
+!    CALL ReadCom  ( UnIn, SDInputFile, ' FEA and CRAIG-BAMPTON PARAMETERS ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+! else ! we have a actually read a comment line, we do nothing. 
+!    call LegacyWarning('ExtraMom line missing from input file. Assuming no extra moment.')
+!    p%GuyanLoadCorrection=.False.  ! For Legacy, GuyanLoadCorrection is False
+! endif
+
+! GuyanLoadCorrection will always be set to true. The corresponding user input is commented out above.
+p%GuyanLoadCorrection=.True.
 
 !-------------------- FEA and CRAIG-BAMPTON PARAMETERS---------------------------
+CALL ReadCom  ( UnIn, SDInputFile, ' FEA and CRAIG-BAMPTON PARAMETERS ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadIVar ( UnIn, SDInputFile, Init%FEMMod, 'FEMMod', 'FEM analysis mode'             ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return ! 0= Euler-Bernoulli(E-B); 1=Tapered E-B; 2= Timoshenko; 3= tapered Timoshenko
 CALL ReadIVar ( UnIn, SDInputFile, Init%NDiv  , 'NDiv'  , 'Number of divisions per member',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadLVar ( UnIn, SDInputFile, Init%CBMod , 'CBMod' , 'C-B mod flag'                  ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
