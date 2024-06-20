@@ -510,7 +510,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       REAL(ReKi)                   :: udotdot_TP(6)
       INTEGER(IntKi), pointer      :: DOFList(:)
       REAL(ReKi)                   :: DCM(3,3)
-      REAL(ReKi)                   :: MBB(6,6)
+      REAL(ReKi)                   :: MBB(6,6), CBB(6,6)   ! Guyan mode inertia and damping matrices transformed to earth-fixed frame of reference
       REAL(ReKi)                   :: F_I(6*p%nNodes_I) !  !Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
       TYPE(SD_ContinuousStateType) :: dxdt        ! Continuous state derivatives at t- for output file qmdotdot purposes only
       ! Variables for Guyan rigid body motion
@@ -699,10 +699,11 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
       ! Contribution from U_TP, Udot_TP, Uddot_TP, Reaction/coupling force at TP
       if (p%GuyanLoadCorrection.and.p%Floating) then
-          ! Transform the body-frame Guyan mode (rigid-body) inertia matrix to global frame
+          ! Transform the body-frame Guyan mode (rigid-body) inertia and damping matrix to global frame
           MBB = matmul(RRb2g, matmul(p%MBB,transpose(RRb2g)))
+          CBB = matmul(RRb2g, matmul(p%CBB,transpose(RRb2g)))
           ! Y1_Utp  = - (matmul(p%KBB, m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(MBB,m%udotdot_TP) )
-          Y1_Utp  = - ( matmul(p%CBB, m%udot_TP) + matmul(MBB,m%udotdot_TP) )
+          Y1_Utp  = - ( matmul(CBB,m%udot_TP) + matmul(MBB,m%udotdot_TP) )
           ! Add back the nonlinear terms of the Guyan mode equation of motion
           Y1_Utp(1:3) = Y1_Utp(1:3) - MBB(1,1)*cross_product(m%udot_TP(4:6),cross_product(m%udot_TP(4:6),matmul(Rb2g,p%rPG)))
           Y1_Utp(4:6) = Y1_Utp(4:6) - cross_product(m%udot_TP(4:6),matmul(MBB(4:6,4:6),m%udot_TP(4:6)))
