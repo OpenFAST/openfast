@@ -1966,14 +1966,17 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
             ErrMsg2  = 'Pitch angle of a potential-flow body violated the small angle assumption. The solution might be inaccurate.'
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END IF
-
+         IF ( ABS( WrapToPi(rotDisp(3)-u%PtfmRefY) ) > LrgAngle ) THEN
+            ErrStat2 = ErrID_Severe
+            ErrMsg2  = 'Yaw angle of a potential-flow body relative to the reference yaw position (PtfmRefY) violated the small angle assumption. The solution might be inaccurate. Consider using PtfmYMod=1 and adjust PtfmYCutoff in ElastoDyn.'
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         END IF
 
          indxStart = (iBody-1)*6+1
          indxEnd   = indxStart+5
 
-         ! Displacement with Tait-Bryan angles folloing the Z-Y-X convention
+         ! Displacement with Tait-Bryan angles following the Z-Y-X convention
          q(indxStart:indxEnd) = reshape((/real(u%Mesh%TranslationDisp(:,iBody),ReKi),rotdisp(:)/),(/6/))
-
 
          ! Get velocity and acceleration in the heading frame
          call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%TranslationVel(:,iBody), tmpVec6(1:3), ErrStat2, ErrMsg2)
