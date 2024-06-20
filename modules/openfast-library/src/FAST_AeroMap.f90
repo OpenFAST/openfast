@@ -400,7 +400,7 @@ subroutine SS_Solve(m, caseData, p_FAST, y_FAST, m_FAST, T, ErrStat, ErrMsg)
    T%ED%x(STATE_CURR)%QDT(p_FAST%GearBox_Index) = caseData%RotSpeed
 
    ! Update module inputs
-   call SetPrescribedInputs(caseData, p_FAST, y_FAST, m_FAST, T%ED, T%BD, T%AD)
+   call SS_SetPrescribedInputs(caseData, p_FAST, y_FAST, m_FAST, T%ED, T%BD, T%AD)
    do i = 1, size(m%AM%iModOrder)
       associate (ModData => m%Modules(m%AM%iModOrder(i)))
          call FAST_CopyInput(ModData, T, INPUT_CURR, INPUT_PREV, MESH_NEWCOPY, ErrStat2, ErrMsg2)
@@ -926,7 +926,6 @@ contains
 
 end subroutine SS_BuildJacobian
 
-!----------------------------------------------------------------------------------------------------------------------------------
 subroutine SS_BuildResidual(caseData, m, T, ErrStat, ErrMsg)
    type(AeroMapCase), intent(IN)             :: caseData    !< tsr, windSpeed, pitch, and rotor speed for this case
    type(Glue_MiscVarType), intent(INOUT)     :: m           !< Miscellaneous variables
@@ -951,15 +950,11 @@ subroutine SS_BuildResidual(caseData, m, T, ErrStat, ErrMsg)
    call SetErrStat(Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    ! note that we don't need to calculate the inputs on more than p_FAST%NumBl_Lin blades because we are only using them to compute the SS_GetInputs
-   call SteadyStateCalculatedInputs(m, InputIndex, T, ErrStat2, ErrMsg2) ! calculate new inputs and store in InputIndex=2
+   call SS_GetCalculatedInputs(m, InputIndex, T, ErrStat2, ErrMsg2) ! calculate new inputs and store in InputIndex=2
    call SetErrStat(Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-   ! Pack the output "residual vector" with these state derivatives and new inputs:
-   call SS_GetInputs(m, m%AM%u2, InputIndex, T, ErrStat2, ErrMsg2)
-
-   ! Store difference in inputs
+   ! Calculate difference between prescribed and calculated inputs
    call MV_ComputeDiff(m%AM%Mod%Vars%u, m%AM%u1, m%AM%u2, m%AM%Residual(m%AM%Mod%Vars%Nx + 1:))
-   ! m%AM%Residual(m%AM%Mod%Vars%Nx + 1:) = m%AM%u1 - m%AM%u2
 
    ! Condition residual for solve
    call PreconditionInputResidual(m%AM%Residual(m%AM%Mod%Vars%Nx + 1:), m%AM%JacScale)
@@ -997,7 +992,7 @@ subroutine SS_BD_InputSolve(m, InputIndex, T, ErrStat, ErrMsg)
 
    call FAST_InputSolve(m%Modules(m%AM%iModBD), m%Modules, m%Mappings, InputIndex, T, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-end subroutine SS_BD_InputSolve
+end subroutine
 
 !> SS_BD_InputSolve_OtherBlades sets the blade-load ElastoDyn inputs from blade 1 to the other blades.
 subroutine SS_BD_InputSolve_OtherBlades(m, InputIndex, T)
@@ -1007,11 +1002,11 @@ subroutine SS_BD_InputSolve_OtherBlades(m, InputIndex, T)
    integer(IntKi)                            :: j, k
    do k = 2, T%p_FAST%nBeams
       do j = 1, T%BD%Input(InputIndex, k)%DistrLoad%NNodes
-         T%BD%Input(InputIndex, k)%DistrLoad%Force(:, j) = MATMUL(T%BD%Input(InputIndex, 1)%DistrLoad%Force(:, j), m%AM%HubOrientation(:, :, k))
-         T%BD%Input(InputIndex, k)%DistrLoad%Moment(:, j) = MATMUL(T%BD%Input(InputIndex, 1)%DistrLoad%Moment(:, j), m%AM%HubOrientation(:, :, k))
+         T%BD%Input(InputIndex, k)%DistrLoad%Force(:, j) = matmul(T%BD%Input(InputIndex, 1)%DistrLoad%Force(:, j), m%AM%HubOrientation(:, :, k))
+         T%BD%Input(InputIndex, k)%DistrLoad%Moment(:, j) = matmul(T%BD%Input(InputIndex, 1)%DistrLoad%Moment(:, j), m%AM%HubOrientation(:, :, k))
       end do
    end do
-end subroutine SS_BD_InputSolve_OtherBlades
+end subroutine
 
 !> This routine sets the blade load inputs required for ED.
 subroutine SS_ED_InputSolve(m, InputIndex, T, ErrStat, ErrMsg)
@@ -1030,25 +1025,23 @@ subroutine SS_ED_InputSolve(m, InputIndex, T, ErrStat, ErrMsg)
 
    call FAST_InputSolve(m%Modules(m%AM%iModED), m%Modules, m%Mappings, InputIndex, T, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-end subroutine SS_ED_InputSolve
+end subroutine
 
 !> SS_ED_InputSolve_OtherBlades sets the blade-load ElastoDyn inputs from blade 1 to the other blades.
 subroutine SS_ED_InputSolve_OtherBlades(m, InputIndex, T)
    type(Glue_MiscVarType), intent(INOUT)     :: m           !< Miscellaneous variables
    integer(IntKi), intent(in)                :: InputIndex  !< Input index to transfer
    type(FAST_TurbineType), intent(INOUT)     :: T           !< Turbine type
-
    integer(IntKi)                            :: j, k
-
    associate (BladePtLoads => T%ED%Input(InputIndex)%BladePtLoads)
       do k = 2, size(BladePtLoads, 1)
          do j = 1, BladePtLoads(k)%NNodes
-            BladePtLoads(k)%Force(:, j) = MATMUL(BladePtLoads(1)%Force(:, j), m%AM%HubOrientation(:, :, k))
-            BladePtLoads(k)%Moment(:, j) = MATMUL(BladePtLoads(1)%Moment(:, j), m%AM%HubOrientation(:, :, k))
+            BladePtLoads(k)%Force(:, j) = matmul(BladePtLoads(1)%Force(:, j), m%AM%HubOrientation(:, :, k))
+            BladePtLoads(k)%Moment(:, j) = matmul(BladePtLoads(1)%Moment(:, j), m%AM%HubOrientation(:, :, k))
          end do
       end do
    end associate
-end subroutine SS_ED_InputSolve_OtherBlades
+end subroutine
 
 !> SS_AD_InputSolve sets the blade-motion AeroDyn inputs for Blade 1.
 subroutine SS_AD_InputSolve(m, InputIndex, T, ErrStat, ErrMsg)
@@ -1073,26 +1066,24 @@ subroutine SS_AD_InputSolve(m, InputIndex, T, ErrStat, ErrMsg)
    T%AD%Input(InputIndex)%rotors(1)%BladeMotion(1)%RotationVel = 0.0_ReKi
    T%AD%Input(InputIndex)%rotors(1)%BladeMotion(1)%TranslationAcc = 0.0_ReKi
 
-end subroutine SS_AD_InputSolve
+end subroutine
 
 !> SS_AD_InputSolve_OtherBlades sets the blade-motion AeroDyn inputs.
 subroutine SS_AD_InputSolve_OtherBlades(m, InputIndex, T)
    type(Glue_MiscVarType), intent(INOUT)     :: m           !< Miscellaneous variables
    integer(IntKi), intent(in)                :: InputIndex  !< Input index to transfer
    type(FAST_TurbineType), intent(INOUT)     :: T           !< Turbine type
-
    integer(IntKi)                            :: j, k
-
    associate (BladeMotion => T%AD%Input(InputIndex)%rotors(1)%BladeMotion)
       do k = 2, size(BladeMotion, 1)
          do j = 1, BladeMotion(k)%NNodes
-            BladeMotion(k)%TranslationDisp(:, j) = MATMUL(BladeMotion(1)%TranslationDisp(:, j), m%AM%HubOrientation(:, :, k))
-            BladeMotion(k)%Orientation(:, :, j) = MATMUL(BladeMotion(1)%Orientation(:, :, j), m%AM%HubOrientation(:, :, k))
-            BladeMotion(k)%TranslationVel(:, j) = MATMUL(BladeMotion(1)%TranslationVel(:, j), m%AM%HubOrientation(:, :, k))
+            BladeMotion(k)%TranslationDisp(:, j) = matmul(BladeMotion(1)%TranslationDisp(:, j), m%AM%HubOrientation(:, :, k))
+            BladeMotion(k)%Orientation(:, :, j) = matmul(BladeMotion(1)%Orientation(:, :, j), m%AM%HubOrientation(:, :, k))
+            BladeMotion(k)%TranslationVel(:, j) = matmul(BladeMotion(1)%TranslationVel(:, j), m%AM%HubOrientation(:, :, k))
          end do
       end do
    end associate
-end subroutine SS_AD_InputSolve_OtherBlades
+end subroutine
 
 subroutine SS_CalcContStateDeriv(m, caseData, InputIndex, dx_vec, T, ErrStat, ErrMsg)
    type(Glue_MiscVarType), intent(inout)     :: m                   !< Miscellaneous variables
@@ -1160,83 +1151,6 @@ subroutine SS_CalcContStateDeriv(m, caseData, InputIndex, dx_vec, T, ErrStat, Er
 
    end select
 
-end subroutine SS_CalcContStateDeriv
-
-!----------------------------------------------------------------------------------------------------------------------------------
-subroutine SteadyStateCalculatedInputs(m, InputIndex, T, ErrStat, ErrMsg)
-   type(Glue_MiscVarType), intent(INOUT)     :: m                   !< Miscellaneous variables
-   integer(IntKi), intent(IN)                :: InputIndex          !< Index into input array
-   type(FAST_TurbineType), intent(INOUT)     :: T                   !< Turbine type
-   integer(IntKi), intent(OUT)               :: ErrStat             !< Error status
-   character(*), intent(OUT)                 :: ErrMsg              !< Error message
-
-   character(*), parameter                   :: RoutineName = 'SteadyStateCalculatedInputs'
-   integer(IntKi)                            :: ErrStat2            ! temporary Error status of the operation
-   character(ErrMsgLen)                      :: ErrMsg2             ! temporary Error message if ErrStat /= ErrID_None
-
-   ErrStat = ErrID_None
-   ErrMsg = ""
-
-   ! Transfer motions to AeroDyn first
-   call SS_AD_InputSolve(m, InputIndex, T, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
-   ! Transfer loads to structural solver next
-   if (m%AM%iModBD > 0) then
-      call SS_BD_InputSolve(m, InputIndex, T, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   else if (m%AM%iModED > 0) then
-      call SS_ED_InputSolve(m, InputIndex, T, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   end if
-
-end subroutine
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine basically packs the relevant parts of the modules' inputs and states for use in the steady-state solver.
-subroutine SS_GetInputs(m, u_vec, InputIndex, T, ErrStat, ErrMsg)
-   type(Glue_MiscVarType), intent(inout)  :: m           !< Glue-code simulation parameters
-   real(R8Ki), intent(inout)              :: u_vec(:)    !< Array of input packed values
-   integer(IntKi), intent(in)             :: InputIndex  !< Input array index
-   type(FAST_TurbineType), intent(inout)  :: T           !< Turbine type
-   integer(IntKi), intent(out)            :: ErrStat     !< Error status of the operation
-   character(*), intent(out)              :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-   character(*), parameter :: RoutineName = 'SS_GetInputs'
-   integer(IntKi)          :: ErrStat2                  ! temporary Error status of the operation
-   character(ErrMsgLen)    :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
-   integer(IntKi)          :: i, iMod, iModOrder(3)
-
-   iModOrder = [m%AM%iModED, m%AM%iModBD, m%AM%iModAD]
-
-   ! Loop through modules
-   do i = 1, size(iModOrder)
-      iMod = iModOrder(i)
-
-      ! Skip inactive modules
-      if (iMod == 0) cycle
-
-      ! If no inputs for this module, cycle
-      if (.not. allocated(m%AM%Mod%Xfr(iMod)%u)) cycle
-
-      associate (ModData => m%Modules(iMod))
-
-         ! Get states and outputs
-         call FAST_GetOP(ModData, SS_t_global, InputIndex, STATE_CURR, T, ErrStat2, ErrMsg2, u_op=ModData%Lin%u)
-         if (Failed()) return
-
-         ! Pack data into vector
-         call ModD_PackAry(m%AM%Mod%Xfr(iMod)%u, ModData%Lin%u, u_vec)
-
-      end associate
-
-   end do
-
-contains
-   logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      Failed = ErrStat >= AbortErrLev
-   end function
 end subroutine
 
 subroutine SS_GetStates(m, x_vec, StateIndex, T, ErrStat, ErrMsg)
@@ -1287,8 +1201,85 @@ contains
    end function
 end subroutine
 
-!----------------------------------------------------------------------------------------------------------------------------------
-subroutine SetPrescribedInputs(caseData, p_FAST, y_FAST, m_FAST, ED, BD, AD)
+!> SS_GetInputs packs the relevant parts of the modules' inputs for use in the steady-state solver.
+subroutine SS_GetInputs(m, u_vec, InputIndex, T, ErrStat, ErrMsg)
+   type(Glue_MiscVarType), intent(inout)  :: m           !< Glue-code simulation parameters
+   real(R8Ki), intent(inout)              :: u_vec(:)    !< Array of input packed values
+   integer(IntKi), intent(in)             :: InputIndex  !< Input array index
+   type(FAST_TurbineType), intent(inout)  :: T           !< Turbine type
+   integer(IntKi), intent(out)            :: ErrStat     !< Error status of the operation
+   character(*), intent(out)              :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter :: RoutineName = 'SS_GetInputs'
+   integer(IntKi)          :: ErrStat2                  ! temporary Error status of the operation
+   character(ErrMsgLen)    :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
+   integer(IntKi)          :: i, iMod, iModOrder(3)
+
+   iModOrder = [m%AM%iModED, m%AM%iModBD, m%AM%iModAD]
+
+   ! Loop through modules
+   do i = 1, size(iModOrder)
+      iMod = iModOrder(i)
+
+      ! Skip inactive modules
+      if (iMod == 0) cycle
+
+      ! If no inputs for this module, cycle
+      if (.not. allocated(m%AM%Mod%Xfr(iMod)%u)) cycle
+
+      associate (ModData => m%Modules(iMod))
+
+         ! Get states and outputs
+         call FAST_GetOP(ModData, SS_t_global, InputIndex, STATE_CURR, T, ErrStat2, ErrMsg2, u_op=ModData%Lin%u)
+         if (Failed()) return
+
+         ! Pack data into vector
+         call ModD_PackAry(m%AM%Mod%Xfr(iMod)%u, ModData%Lin%u, u_vec)
+
+      end associate
+
+   end do
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
+end subroutine
+
+subroutine SS_GetCalculatedInputs(m, InputIndex, T, ErrStat, ErrMsg)
+   type(Glue_MiscVarType), intent(inout)  :: m                   !< Miscellaneous variables
+   integer(IntKi), intent(in)             :: InputIndex          !< Index into input array
+   type(FAST_TurbineType), intent(inout)  :: T                   !< Turbine type
+   integer(IntKi), intent(out)            :: ErrStat             !< Error status
+   character(*), intent(out)              :: ErrMsg              !< Error message
+
+   character(*), parameter                :: RoutineName = 'SS_GetCalculatedInputs'
+   integer(IntKi)                         :: ErrStat2            ! temporary Error status of the operation
+   character(ErrMsgLen)                   :: ErrMsg2             ! temporary Error message if ErrStat /= ErrID_None
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   ! Transfer motions to AeroDyn first
+   call SS_AD_InputSolve(m, InputIndex, T, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   ! Transfer loads to structural solver next
+   if (m%AM%iModBD > 0) then
+      call SS_BD_InputSolve(m, InputIndex, T, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   else if (m%AM%iModED > 0) then
+      call SS_ED_InputSolve(m, InputIndex, T, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end if
+
+   ! Pack the transferred inputs into the vector
+   call SS_GetInputs(m, m%AM%u2, InputIndex, T, ErrStat2, ErrMsg2)
+
+end subroutine
+
+subroutine SS_SetPrescribedInputs(caseData, p_FAST, y_FAST, m_FAST, ED, BD, AD)
    type(AeroMapCase), intent(in)             :: caseData            !< tsr, windSpeed, pitch, and rotor speed for this case
    type(FAST_ParameterType), intent(in)      :: p_FAST              !< Parameters for the glue code
    type(FAST_OutputFileType), intent(inout)  :: y_FAST              !< Output variables for the glue code
@@ -1368,6 +1359,6 @@ subroutine SetPrescribedInputs(caseData, p_FAST, y_FAST, m_FAST, ED, BD, AD)
 
    AD%Input(1)%rotors(1)%UserProp = 0.0_ReKi
 
-end subroutine SetPrescribedInputs
+end subroutine
 
 end module

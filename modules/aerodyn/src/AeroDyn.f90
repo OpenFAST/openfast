@@ -545,16 +545,6 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    end do
    
       !............................................................................................
-      ! Initialize Jacobian:
-      !............................................................................................
-   ! if (InitInp%Linearize .or. InitInp%CompAeroMaps) then
-   !    do iR = 1, nRotors
-   !       call Init_Jacobian(InputFileData%rotors(iR), p%rotors(iR), p, u%rotors(iR), y%rotors(iR), m%rotors(iR), InitOut%rotors(iR), errStat2, errMsg2)
-   !       if (Failed()) return;
-   !    enddo
-   ! end if
-   
-      !............................................................................................
       ! Print the summary file if requested:
       !............................................................................................
    if (InputFileData%SumPrint) then
