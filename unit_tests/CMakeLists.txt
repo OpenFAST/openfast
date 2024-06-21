@@ -75,7 +75,7 @@ add_test(NAME nwtc_library_utest COMMAND nwtc_library_utest)
 # Version Info Unit Tests
 add_executable(versioninfo_utest 
   ${PROJECT_SOURCE_DIR}/modules/version/tests/versioninfo_utest.F90
-  ${PROJECT_SOURCE_DIR}/modules/version/tests/versioninfo_test_tools.F90
+  ${PROJECT_SOURCE_DIR}/modules/version/tests/VersionInfo_test_tools.F90
   ${PROJECT_SOURCE_DIR}/modules/version/tests/test_VersionInfo_CheckArgs.F90
 )
 target_link_libraries(versioninfo_utest versioninfolib testdrivelib)
