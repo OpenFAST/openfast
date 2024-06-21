@@ -50,7 +50,6 @@ subroutine test_BD_diffmtc_2node(error)
     integer(IntKi)             :: ErrStat
     character                  :: ErrMsg
     character(1024)            :: testname
-    real(BDKi)                 :: tolerance
 
    ! --------------------------------------------------------------------------
    testname = "2-node element: evaluate shape/shapederivative at nodes"
@@ -122,7 +121,6 @@ subroutine test_BD_diffmtc_5node(error)
     integer(IntKi)             :: ErrStat
     character                  :: ErrMsg
     character(1024)            :: testname
-    real(BDKi)                 :: tolerance
 
    ! --------------------------------------------------------------------------
    testname = "5-node element: evaluate shape/shapederivative at nodes and at three non-node locations"

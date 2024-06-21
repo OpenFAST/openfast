@@ -54,35 +54,35 @@ subroutine test_BD_QuadraturePointData_5node(error)
    !
    ! For 5 nodes (p=4), nodes located at {-1., -0.654654, 0., 0.654654, 1.}
 
+   type(BD_ParameterType)       :: p
+   type(BD_ContinuousStateType) :: x     !< Continuous states at t
+   type(BD_MiscVarType)         :: m     !< misc/optimization variables
 
-type(BD_ParameterType)       :: p
-type(BD_ContinuousStateType) :: x     !< Continuous states at t
-type(BD_MiscVarType)         :: m     !< misc/optimization variables
+   integer(IntKi)             :: idx_qp, idx_node, i, j
+   integer(IntKi)             :: nodes_per_elem
+   integer(IntKi)             :: elem_total
+   integer(IntKi)             :: nelem
+   integer(IntKi)             :: nqp
 
-integer(IntKi)             :: idx_qp, idx_node, i, j
-integer(IntKi)             :: nodes_per_elem
-integer(IntKi)             :: elem_total
-integer(IntKi)             :: nelem
-integer(IntKi)             :: nqp
+   real(BDKi), allocatable    :: gll_nodes(:)
+   real(BDKi), allocatable    :: baseline_uu0(:, :, :)
+   real(BDKi), allocatable    :: baseline_rrN0(:, :, :)
+   real(BDKi), allocatable    :: baseline_E10(:, :, :)
 
-real(BDKi), allocatable    :: gll_nodes(:)
-real(BDKi), allocatable    :: baseline_uu0(:, :, :)
-real(BDKi), allocatable    :: baseline_rrN0(:, :, :)
-real(BDKi), allocatable    :: baseline_E10(:, :, :)
+   real(BDKi), allocatable    :: baseline_uuu(:, :, :)
+   real(BDKi), allocatable    :: baseline_uup(:, :, :)
+   real(BDKi), allocatable    :: baseline_E1(:, :, :)
 
-real(BDKi), allocatable    :: baseline_uuu(:, :, :)
-real(BDKi), allocatable    :: baseline_uup(:, :, :)
-real(BDKi), allocatable    :: baseline_E1(:, :, :)
+   real(BDKi), allocatable    :: baseline_kappa(:, :, :)
+   real(BDKi), allocatable    :: baseline_Nrrr(:, :, :)
+   real(BDKi), allocatable    :: baseline_RR0(:, :, :, :)
 
-real(BDKi), allocatable    :: baseline_kappa(:, :, :)
-real(BDKi), allocatable    :: baseline_Nrrr(:, :, :)
-real(BDKi), allocatable    :: baseline_RR0(:, :, :, :)
+   real(BDKi), allocatable    :: baseline_Stif(:, :, :, :)
 
-real(BDKi), allocatable    :: baseline_Stif(:, :, :, :)
-
-integer(IntKi)             :: ErrStat
-character                  :: ErrMsg
-character(1024)            :: testname
+   integer(IntKi)             :: ErrStat
+   character                  :: ErrMsg
+   character(1024)            :: testname
+   real(BDKi), parameter      :: tolerance = 1e-13
 
    ! --------------------------------------------------------------------------
    testname = "5 node, 1 element, 1 qp, curved:"

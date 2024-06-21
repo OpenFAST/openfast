@@ -151,7 +151,6 @@ subroutine test_BD_CrvCompose(error)
    ! other test settings
    integer                    :: flag
    character(1024)            :: testname
-   real(BDKi)                 :: tolerance
 
    ! set the rotation axes for all tests
    n1 = [1, 0, 0] ! x axis

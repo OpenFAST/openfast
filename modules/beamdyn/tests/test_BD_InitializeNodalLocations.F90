@@ -44,6 +44,7 @@ subroutine test_BD_InitializeNodalLocations_np5_p6(error)
    integer(IntKi)             :: ErrStat
    character                  :: ErrMsg
    character(1024)            :: testname
+   real(BDKi), parameter      :: tolerance = 1e-13
 
    ! --------------------------------------------------------------------------
    testname = "test_InitializeNodalLocations_1m_kp5_p6"

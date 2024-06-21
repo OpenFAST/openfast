@@ -142,9 +142,7 @@ subroutine test_BD_GaussPointWeight(error)
    integer(IntKi)             :: ErrStat
    character                  :: ErrMsg
    character(1024)            :: testname
-   real(BDKi)                 :: tolerance
-
-   tolerance = 1e-10
+   real(BDKi), parameter      :: tolerance = 1e-10
 
    ! the baseline solutions for this unit test can be calculated using the Gauss-Lobatto quadrature
    ! the Python Numpy package provides this functionality with numpy.polynomial.legendre.leggauss.
@@ -252,9 +250,7 @@ subroutine test_BD_InitShpDerJaco_5node(error)
     integer(IntKi)             :: ErrStat
     character                  :: ErrMsg
     character(1024)            :: testname
-    real(BDKi)                 :: tolerance
-    
-    tolerance = 1e-13
+    real(BDKi), parameter      :: tolerance = 1e-13
     
     ! --------------------------------------------------------------------------
     testname = "5 node, 1 element, curved:"
