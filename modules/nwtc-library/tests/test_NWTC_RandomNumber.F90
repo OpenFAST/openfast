@@ -1,57 +1,70 @@
 module test_NWTC_RandomNumber
 
-    use pFUnit_mod
-    use NWTC_RandomNumber
-    use nwtc_library_test_tools
-    
-    implicit none
+use testdrive, only: new_unittest, unittest_type, error_type, check
+use NWTC_RandomNumber
+use nwtc_library_test_tools
 
-    character(1024), parameter :: dumpfile="randnumber.temp"
+implicit none
+
+character(1024), parameter :: dumpfile = "randnumber.temp"
+
+private
+public :: test_NWTC_RandomNumber_suite
 
 contains
-    
-@test
-subroutine test_RANLUX()
 
-    type(NWTC_RandomNumber_ParameterType)  :: p              ! Paramters for random number generation
-    integer(IntKi)               :: error_status
-    character(ErrMsgLen)         :: error_message
+!> Collect all exported unit tests
+subroutine test_NWTC_RandomNumber_suite(testsuite)
+   type(unittest_type), allocatable, intent(out) :: testsuite(:)
+   testsuite = [ &
+               new_unittest("test_RANLUX", test_RANLUX), &
+               new_unittest("test_INTRINSIC", test_INTRINSIC) &
+               ]
+end subroutine
 
-    real(ReKi)                   :: random_numbers(2)  ! Uniformly distributed random numbers
+subroutine test_RANLUX(error)
+   type(error_type), allocatable, intent(out) :: error
 
-    p%pRNG = pRNG_RANLUX
-    p%RandSeed(1) = 1
+   type(NWTC_RandomNumber_ParameterType)  :: p              ! Paramters for random number generation
+   integer(IntKi)               :: error_status
+   character(ErrMsgLen)         :: error_message
 
-    call RandNum_Init(p, error_status, error_message)
-    @assertEqual( 0, error_status )
+   real(ReKi)                   :: random_numbers(2)  ! Uniformly distributed random numbers
 
-    call UniformRandomNumbers(p%pRNG, random_numbers)
-    @assertEqual( (/ 0.94589489698410034, 0.47347849607467651 /), random_numbers )
+   p%pRNG = pRNG_RANLUX
+   p%RandSeed(1) = 1
+
+   call RandNum_Init(p, error_status, error_message)
+   call check(error, error_status, ErrID_None)
+
+   call UniformRandomNumbers(p%pRNG, random_numbers)
+   call check(error, 0.94589489698410034_ReKi, random_numbers(1))
+   call check(error,  0.47347849607467651_ReKi, random_numbers(2))
 
 end subroutine
 
-@test
-subroutine test_INTRINSIC()
+subroutine test_INTRINSIC(error)
+   type(error_type), allocatable, intent(out) :: error
 
-    type(NWTC_RandomNumber_ParameterType)  :: p              ! Paramters for random number generation
-    integer(IntKi)               :: error_status
-    character(ErrMsgLen)         :: error_message
+   type(NWTC_RandomNumber_ParameterType)  :: p              ! Paramters for random number generation
+   integer(IntKi)               :: error_status
+   character(ErrMsgLen)         :: error_message
 
-    integer                      :: expected_seed_count
-    real(ReKi)                   :: random_numbers(2)  ! Uniformly distributed random numbers
+   integer                      :: expected_seed_count
+   real(ReKi)                   :: random_numbers(2)  ! Uniformly distributed random numbers
 
-    p%pRNG = pRNG_INTRINSIC
-    p%RandSeed(1) = 1
-    p%RandSeed(2) = 2
+   p%pRNG = pRNG_INTRINSIC
+   p%RandSeed(1) = 1
+   p%RandSeed(2) = 2
 
-    call hide_terminal_output()
-    call RandNum_Init(p, error_status, error_message)
-    call show_terminal_output()
-    @assertEqual( 0, error_status )
+   call hide_terminal_output()
+   call RandNum_Init(p, error_status, error_message)
+   call show_terminal_output()
+   call check(error, error_status, ErrID_None)
 
-    ! We cant use this test since it will fail for various machine/compiler combinations
-    ! call UniformRandomNumbers(p%pRNG, random_numbers)
-    ! @assertEqual( (/ 0.80377975339288821, 0.47469797199574959 /), random_numbers )
+   ! We cant use this test since it will fail for various machine/compiler combinations
+   ! call UniformRandomNumbers(p%pRNG, random_numbers)
+   ! call check(error,  (/ 0.80377975339288821, 0.47469797199574959 /), random_numbers )
 end subroutine
 
 end module
