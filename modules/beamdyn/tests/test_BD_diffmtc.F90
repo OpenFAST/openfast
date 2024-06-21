@@ -94,8 +94,8 @@ subroutine test_BD_diffmtc_2node(error)
    baseline_shapederivative(1, :) = [-0.5, -0.5]
    baseline_shapederivative(2, :) = [0.5, 0.5]
 
-   call check_array(error, baseline_shape, test_shape, testname, tolerance)
-   call check_array(error, baseline_shapederivative, test_shapederivative, testname, tolerance)
+   call check_array(error, baseline_shape, test_shape, testname, tolerance); if (allocated(error)) return
+   call check_array(error, baseline_shapederivative, test_shapederivative, testname, tolerance); if (allocated(error)) return
 
    deallocate (test_shape)
    deallocate (test_shapederivative)
@@ -158,8 +158,8 @@ subroutine test_BD_diffmtc_5node(error)
    baseline_shapederivative(4, :) = [1.410164177942427, -0.7637626158259736, 1.336584577695454, 0., -6.756502488724241, -0.31499114481315, 1.696653707031257, 1.805690647068303]
    baseline_shapederivative(5, :) = [-0.5, 0.2590097469690172, -0.375, 1.240990253030983, 5., 0.1129999999999999, -0.42025, -0.03099999999999978]
 
-   call check_array(error, baseline_shape, test_shape, testname, tolerance)
-   call check_array(error, baseline_shapederivative, test_shapederivative, testname, tolerance)
+   call check_array(error, baseline_shape, test_shape, testname, tolerance); if (allocated(error)) return
+   call check_array(error, baseline_shapederivative, test_shapederivative, testname, tolerance); if (allocated(error)) return
 
    deallocate (test_shape)
    deallocate (test_shapederivative)

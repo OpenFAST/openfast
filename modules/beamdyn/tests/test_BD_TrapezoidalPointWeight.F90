@@ -59,8 +59,8 @@ subroutine test_BD_TrapezoidalPointWeight_2station(error)
 
    call BD_TrapezoidalPointWeight(p, station_eta, station_total)
 
-   call check_array(error, baseline_QPtN, p%QPtN, testname, thr=tolerance)
-   call check_array(error, baseline_QPtW, p%QPtWeight, testname, thr=tolerance)
+   call check_array(error, baseline_QPtN, p%QPtN, testname, thr=tolerance); if (allocated(error)) return
+   call check_array(error, baseline_QPtW, p%QPtWeight, testname, thr=tolerance); if (allocated(error)) return
 
    deallocate (station_eta)
    deallocate (baseline_QPtN)
@@ -112,8 +112,8 @@ subroutine test_BD_TrapezoidalPointWeight_3station(error)
 
    call BD_TrapezoidalPointWeight(p, station_eta, station_total)
 
-   call check_array(error, baseline_QPtN, p%QPtN, testname, thr=tolerance)
-   call check_array(error, baseline_QPtW, p%QPtWeight, testname, thr=tolerance)
+   call check_array(error, baseline_QPtN, p%QPtN, testname, thr=tolerance); if (allocated(error)) return
+   call check_array(error, baseline_QPtW, p%QPtWeight, testname, thr=tolerance); if (allocated(error)) return
 
    deallocate (station_eta)
    deallocate (baseline_QPtN)

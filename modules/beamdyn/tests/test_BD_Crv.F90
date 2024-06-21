@@ -45,7 +45,7 @@ subroutine test_BD_CheckRotMat(error)
    testname = "known valid rotation matrix: pi about x-axis:"
    testR = calcRotationMatrix(angle, n)
    call BD_CheckRotMat(testR, ErrStat, ErrMsg)
-   call check(error, 0, ErrStat, testname)
+   call check(error, 0, ErrStat, testname); if (allocated(error)) return
 
    ! --------------------------------------------------------------------------
    testname = "known invalid rotation matrix: halve the angle of the diagonal elements:"
@@ -53,7 +53,7 @@ subroutine test_BD_CheckRotMat(error)
    testR(:, 2) = [testR(1, 2), cos(real(Pi / 2, BDKi)), testR(3, 2)]
    testR(:, 3) = [testR(1, 2), testR(2, 2), cos(real(Pi / 2, BDKi))]
    call BD_CheckRotMat(testR, ErrStat, ErrMsg)
-   call check(error, 4, ErrStat, testname)
+   call check(error, 4, ErrStat, testname); if (allocated(error)) return
 
 end subroutine
 
@@ -82,8 +82,8 @@ subroutine test_BD_ComputeIniNodalCrv(error)
 
    call BD_ComputeIniNodalCrv(n, angle, test_wmparams, ErrStat, ErrMsg)
 
-   call check(error, ErrID_None, ErrStat, testname)
-   call check_array(error, baseline_wmparams, test_wmparams, testname, tolerance)
+   call check(error, ErrID_None, ErrStat, testname); if (allocated(error)) return
+   call check_array(error, baseline_wmparams, test_wmparams, testname, tolerance); if (allocated(error)) return
 
    ! --------------------------------------------------------------------------
    testname = "Tangent at 45 degree w.r.t. y-axis and 0 degree twist:"
@@ -96,8 +96,8 @@ subroutine test_BD_ComputeIniNodalCrv(error)
 
    call BD_ComputeIniNodalCrv(n, angle, test_wmparams, ErrStat, ErrMsg)
 
-   call check(error, ErrID_None, ErrStat, testname)
-   call check_array(error, baseline_wmparams, test_wmparams, testname, tolerance)
+   call check(error, ErrID_None, ErrStat, testname); if (allocated(error)) return
+   call check_array(error, baseline_wmparams, test_wmparams, testname, tolerance); if (allocated(error)) return
 
    ! --------------------------------------------------------------------------
    testname = "Tangent at -45 degree w.r.t. x-axis and 0 degree twist:"
@@ -110,8 +110,8 @@ subroutine test_BD_ComputeIniNodalCrv(error)
 
    call BD_ComputeIniNodalCrv(n, angle, test_wmparams, ErrStat, ErrMsg)
 
-   call check(error, ErrID_None, ErrStat, testname)
-   call check_array(error, baseline_wmparams, test_wmparams, testname, tolerance)
+   call check(error, ErrID_None, ErrStat, testname); if (allocated(error)) return
+   call check_array(error, baseline_wmparams, test_wmparams, testname, tolerance); if (allocated(error)) return
 
    ! --------------------------------------------------------------------------
    testname = "Tangent along z-axis with 45 degree twist:"
@@ -124,8 +124,8 @@ subroutine test_BD_ComputeIniNodalCrv(error)
 
    call BD_ComputeIniNodalCrv(n, angle, test_wmparams, ErrStat, ErrMsg)
 
-   call check(error, ErrID_None, ErrStat, testname)
-   call check_array(error, baseline_wmparams, test_wmparams, testname, tolerance)
+   call check(error, ErrID_None, ErrStat, testname); if (allocated(error)) return
+   call check_array(error, baseline_wmparams, test_wmparams, testname, tolerance); if (allocated(error)) return
 
 end subroutine
 
@@ -170,7 +170,7 @@ subroutine test_BD_CrvCompose(error)
    call BD_CrvCompose(composedparams, 4 * tan(angle1 / 4) * n1, 4 * tan(angle2 / 4) * n2, flag)
    call BD_CrvMatrixR(composedparams, testrotation)
 
-   call check_array(error, baselinerotation, testrotation, testname, tolerance)
+   call check_array(error, baselinerotation, testrotation, testname, tolerance); if (allocated(error)) return
 
    ! --------------------------------------------------------------------------
    testname = "delta2 > 0, no transpose of input rotations (flag = 0):"
@@ -185,7 +185,7 @@ subroutine test_BD_CrvCompose(error)
    call BD_CrvCompose(composedparams, 4 * tan(angle1 / 4) * n1, 4 * tan(angle2 / 4) * n2, flag)
    call BD_CrvMatrixR(composedparams, testrotation)
 
-   call check_array(error, baselinerotation, testrotation, testname, tolerance)
+   call check_array(error, baselinerotation, testrotation, testname, tolerance); if (allocated(error)) return
 
    ! --------------------------------------------------------------------------
    testname = "delta2 < 0, no transpose of input rotations (flag = 0):"
@@ -200,7 +200,7 @@ subroutine test_BD_CrvCompose(error)
    call BD_CrvCompose(composedparams, 4 * tan(angle1 / 4) * n1, 4 * tan(angle2 / 4) * n2, flag)
    call BD_CrvMatrixR(composedparams, testrotation)
 
-   call check_array(error, baselinerotation, testrotation, testname, tolerance)
+   call check_array(error, baselinerotation, testrotation, testname, tolerance); if (allocated(error)) return
 
    ! --------------------------------------------------------------------------
    testname = "delta2 > 0, transpose of first rotation (flag = 1):"
@@ -215,7 +215,7 @@ subroutine test_BD_CrvCompose(error)
    call BD_CrvCompose(composedparams, 4 * tan(angle1 / 4) * n1, 4 * tan(angle2 / 4) * n2, flag)
    call BD_CrvMatrixR(composedparams, testrotation)
 
-   call check_array(error, baselinerotation, testrotation, testname, tolerance)
+   call check_array(error, baselinerotation, testrotation, testname, tolerance); if (allocated(error)) return
 
    ! --------------------------------------------------------------------------
    testname = "delta2 > 0, transpose of second rotation (flag = 2):"
@@ -230,7 +230,7 @@ subroutine test_BD_CrvCompose(error)
    call BD_CrvCompose(composedparams, 4 * tan(angle1 / 4) * n1, 4 * tan(angle2 / 4) * n2, flag)
    call BD_CrvMatrixR(composedparams, testrotation)
 
-   call check_array(error, baselinerotation, testrotation, testname, tolerance)
+   call check_array(error, baselinerotation, testrotation, testname, tolerance); if (allocated(error)) return
 
    ! --------------------------------------------------------------------------
    testname = "delta2 > 0, transpose of both rotations (flag = 3):"
@@ -245,7 +245,7 @@ subroutine test_BD_CrvCompose(error)
    call BD_CrvCompose(composedparams, 4 * tan(angle1 / 4) * n1, 4 * tan(angle2 / 4) * n2, flag)
    call BD_CrvMatrixR(composedparams, testrotation)
 
-   call check_array(error, baselinerotation, testrotation, testname, tolerance)
+   call check_array(error, baselinerotation, testrotation, testname, tolerance); if (allocated(error)) return
 
 end subroutine
 
@@ -277,8 +277,8 @@ subroutine test_BD_CrvExtractCrv(error)
    r = RonXAxis(angle)
    call BD_CrvExtractCrv(r, test_wmparams, ErrStat, ErrMsg)
 
-   call check(error, ErrID_None, ErrStat, testname)
-   call check_array(error, baseline_wmparams, test_wmparams, testname, tolerance)
+   call check(error, ErrID_None, ErrStat, testname); if (allocated(error)) return
+   call check_array(error, baseline_wmparams, test_wmparams, testname, tolerance); if (allocated(error)) return
 
    ! --------------------------------------------------------------------------
    testname = "0 rotation:"
@@ -290,8 +290,8 @@ subroutine test_BD_CrvExtractCrv(error)
    r = RonXAxis(angle)
    call BD_CrvExtractCrv(r, test_wmparams, ErrStat, ErrMsg)
 
-   call check(error, ErrID_None, ErrStat, testname)
-   call check_array(error, baseline_wmparams, test_wmparams, testname, tolerance)
+   call check(error, ErrID_None, ErrStat, testname); if (allocated(error)) return
+   call check_array(error, baseline_wmparams, test_wmparams, testname, tolerance); if (allocated(error)) return
 
    ! --------------------------------------------------------------------------
    testname = "small rotation with baseline WM parameters calculated:"
@@ -303,8 +303,8 @@ subroutine test_BD_CrvExtractCrv(error)
    r = RonXAxis(angle)
    call BD_CrvExtractCrv(r, test_wmparams, ErrStat, ErrMsg)
 
-   call check(error, ErrID_None, ErrStat, testname)
-   call check_array(error, baseline_wmparams, test_wmparams, testname, tolerance)
+   call check(error, ErrID_None, ErrStat, testname); if (allocated(error)) return
+   call check_array(error, baseline_wmparams, test_wmparams, testname, tolerance); if (allocated(error)) return
 
 end subroutine
 
@@ -341,7 +341,7 @@ subroutine test_BD_CrvMatrixH(error)
 
    call BD_CrvMatrixH(wmparams, testH)
 
-   call check_array(error, baselineH*1.1, testH, testname, tolerance)
+   call check_array(error, baselineH, testH, testname, tolerance); if (allocated(error)) return
 
    ! --------------------------------------------------------------------------
    testname = "0 rotation:"
@@ -354,7 +354,7 @@ subroutine test_BD_CrvMatrixH(error)
 
    call BD_CrvMatrixH(wmparams, testH)
 
-   call check_array(error, baselineH, testH, testname, tolerance)
+   call check_array(error, baselineH, testH, testname, tolerance); if (allocated(error)) return
 
    ! --------------------------------------------------------------------------
    testname = "small rotation with baseline WM parameters calculated:"
@@ -367,7 +367,7 @@ subroutine test_BD_CrvMatrixH(error)
 
    call BD_CrvMatrixH(wmparams, testH)
 
-   call check_array(error, baselineH, testH, testname, tolerance)
+   call check_array(error, baselineH, testH, testname, tolerance); if (allocated(error)) return
 
 contains
    function H(c)
@@ -416,7 +416,7 @@ subroutine test_BD_CrvMatrixR(error)
    wmparams = [4.0, 0.0, 0.0]
    call BD_CrvMatrixR(wmparams, testR)
 
-   call check_array(error, baselineR, testR, testname, tolerance)
+   call check_array(error, baselineR, testR, testname, tolerance); if (allocated(error)) return
 
    ! --------------------------------------------------------------------------
    testname = "0 rotation:"
@@ -428,7 +428,7 @@ subroutine test_BD_CrvMatrixR(error)
    wmparams = [0.0, 0.0, 0.0]
    call BD_CrvMatrixR(wmparams, testR)
 
-   call check_array(error, baselineR, testR, testname, tolerance)
+   call check_array(error, baselineR, testR, testname, tolerance); if (allocated(error)) return
 
    ! --------------------------------------------------------------------------
    testname = "small rotation with baseline WM parameters calculated:"
@@ -440,7 +440,7 @@ subroutine test_BD_CrvMatrixR(error)
    wmparams = 4 * tan(angle / 4) * n
    call BD_CrvMatrixR(wmparams, testR)
 
-   call check_array(error, baselineR, testR, testname, tolerance)
+   call check_array(error, baselineR, testR, testname, tolerance); if (allocated(error)) return
 
 end subroutine
 
@@ -459,7 +459,7 @@ subroutine test_BD_ExtractRelativeRotation(error)
    otherstate = simpleOtherState()
    parametertype = simpleParameterType(1, 16, 16, 0, 0)
    call ExtractRelativeRotation(identity(), parametertype, otherstate, rr, ErrStat, ErrMsg)
-   call check_array(error, rr, [0.0_BDKi, 0.0_BDKi, 0.0_BDKi], testname, tolerance)
+   call check_array(error, rr, [0.0_BDKi, 0.0_BDKi, 0.0_BDKi], testname, tolerance); if (allocated(error)) return
 end subroutine
 
 end module

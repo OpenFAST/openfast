@@ -50,7 +50,7 @@ subroutine test_BD_GenerateGLL(error)
       call AllocAry(gll_nodes, p, "GLL points array", ErrStat, ErrMsg)
       call BD_GenerateGLL(p, gll_nodes, ErrStat, ErrMsg)
       
-      call check_array(error, baseline, gll_nodes, testname, tolerance)
+      call check_array(error, baseline, gll_nodes, testname, tolerance); if (allocated(error)) return
       
       deallocate(baseline)
       deallocate(gll_nodes)
@@ -64,7 +64,7 @@ subroutine test_BD_GenerateGLL(error)
       call AllocAry(gll_nodes, p, "GLL points array", ErrStat, ErrMsg)
       call BD_GenerateGLL(p, gll_nodes, ErrStat, ErrMsg)
       
-      call check_array(error, baseline, gll_nodes, testname, tolerance)
+      call check_array(error, baseline, gll_nodes, testname, tolerance); if (allocated(error)) return
       
       deallocate(baseline)
       deallocate(gll_nodes)
@@ -79,7 +79,7 @@ subroutine test_BD_GenerateGLL(error)
       call AllocAry(gll_nodes, p, "GLL points array", ErrStat, ErrMsg)
       call BD_GenerateGLL(p, gll_nodes, ErrStat, ErrMsg)
       
-      call check_array(error, baseline, gll_nodes, testname, tolerance)
+      call check_array(error, baseline, gll_nodes, testname, tolerance); if (allocated(error)) return
       
       deallocate(baseline)
       deallocate(gll_nodes)
@@ -119,7 +119,7 @@ subroutine test_BD_GenerateGLL(error)
       call AllocAry(gll_nodes, p, "GLL points array", ErrStat, ErrMsg)
       call BD_GenerateGLL(p, gll_nodes, ErrStat, ErrMsg)
       
-      call check_array(error, baseline, gll_nodes, testname, tolerance)
+      call check_array(error, baseline, gll_nodes, testname, tolerance); if (allocated(error)) return
       
       deallocate(baseline)
       deallocate(gll_nodes)
@@ -165,7 +165,7 @@ subroutine test_BD_GaussPointWeight(error)
    call AllocAry(weights, p, "GLL weights", ErrStat, ErrMsg)
    call BD_GaussPointWeight(p, locations, weights, ErrStat, ErrMsg)
 
-   call check(error, 4, ErrStat, testname)
+   call check(error, 4, ErrStat, testname); if (allocated(error)) return
 
    deallocate (baselinelocations)
    deallocate (baselineweights)
@@ -184,8 +184,8 @@ subroutine test_BD_GaussPointWeight(error)
    call AllocAry(weights, p, "GLL weights", ErrStat, ErrMsg)
    call BD_GaussPointWeight(p, locations, weights, ErrStat, ErrMsg)
 
-   call check_array(error, baselinelocations, locations, testname, tolerance)
-   call check_array(error, baselineweights, weights, testname, tolerance)
+   call check_array(error, baselinelocations, locations, testname, tolerance); if (allocated(error)) return
+   call check_array(error, baselineweights, weights, testname, tolerance); if (allocated(error)) return
 
    deallocate (baselinelocations)
    deallocate (baselineweights)
@@ -204,8 +204,8 @@ subroutine test_BD_GaussPointWeight(error)
    call AllocAry(weights, p, "GLL weights", ErrStat, ErrMsg)
    call BD_GaussPointWeight(p, locations, weights, ErrStat, ErrMsg)
 
-   call check_array(error, baselinelocations, locations, testname, tolerance)
-   call check_array(error, baselineweights, weights, testname, tolerance)
+   call check_array(error, baselinelocations, locations, testname, tolerance); if (allocated(error)) return
+   call check_array(error, baselineweights, weights, testname, tolerance); if (allocated(error)) return
 
    deallocate (baselinelocations)
    deallocate (baselineweights)
@@ -224,8 +224,8 @@ subroutine test_BD_GaussPointWeight(error)
    call AllocAry(weights, p, "GLL weights", ErrStat, ErrMsg)
    call BD_GaussPointWeight(p, locations, weights, ErrStat, ErrMsg)
 
-   call check_array(error, baselinelocations, locations, testname, tolerance)
-   call check_array(error, baselineweights, weights, testname, tolerance)
+   call check_array(error, baselinelocations, locations, testname, tolerance); if (allocated(error)) return
+   call check_array(error, baselineweights, weights, testname, tolerance); if (allocated(error)) return
 
    deallocate (baselinelocations)
    deallocate (baselineweights)
@@ -305,8 +305,8 @@ subroutine test_BD_InitShpDerJaco_5node(error)
     ! Using BD_GaussPointWeight; hoping it's tested! 
     call BD_GaussPointWeight(p%nqp, p%QPtN, p%QPtWeight, ErrStat, ErrMsg)
 
-    call check_array(error, baseline_QPtN,      p%QPtN     , testname, tolerance)
-    call check_array(error, baseline_QPtWeight, p%QPtWeight, testname, tolerance)
+    call check_array(error, baseline_QPtN,      p%QPtN     , testname, tolerance); if (allocated(error)) return
+    call check_array(error, baseline_QPtWeight, p%QPtWeight, testname, tolerance); if (allocated(error)) return
 
     ! Allocate memory for GLL node positions in 1D parametric space
     call AllocAry(gll_nodes, p%nodes_per_elem, "GLL points array", ErrStat, ErrMsg)
@@ -316,11 +316,11 @@ subroutine test_BD_InitShpDerJaco_5node(error)
     call BD_InitShpDerJaco(gll_nodes, p)
     
     ! check the baseline shape functions and their derivatives
-    call check_array(error, baseline_Shp   , p%Shp   , testname, tolerance)
-    call check_array(error, baseline_ShpDer, p%ShpDer, testname, tolerance)
+    call check_array(error, baseline_Shp   , p%Shp   , testname, tolerance); if (allocated(error)) return
+    call check_array(error, baseline_ShpDer, p%ShpDer, testname, tolerance); if (allocated(error)) return
 
     ! check the baseline jacobian
-            call check_array(error, baseline_jacobian, p%jacobian, testname, tolerance)
+            call check_array(error, baseline_jacobian, p%jacobian, testname, tolerance); if (allocated(error)) return
 
 
     ! Test and assemble variables N*N^T*wt*Jacobian and dN*dN^T*wt/Jacobian
@@ -337,8 +337,8 @@ subroutine test_BD_InitShpDerJaco_5node(error)
             end do
         end do
     end do
-    call check_array(error, baseline_QPtw_Shp_Shp_Jac, p%QPtw_Shp_Shp_Jac, testname, tolerance)
-    call check_array(error, baseline_QPtw_ShpDer_ShpDer_Jac, p%QPtw_ShpDer_ShpDer_Jac, testname, tolerance)
+    call check_array(error, baseline_QPtw_Shp_Shp_Jac, p%QPtw_Shp_Shp_Jac, testname, tolerance); if (allocated(error)) return
+    call check_array(error, baseline_QPtw_ShpDer_ShpDer_Jac, p%QPtw_ShpDer_ShpDer_Jac, testname, tolerance); if (allocated(error)) return
 
     ! Test and assemble variable N*dN^T*wt*Jacobian
     do idx_qp = 1, p%nqp
@@ -348,7 +348,7 @@ subroutine test_BD_InitShpDerJaco_5node(error)
             end do
         end do
     end do
-    call check_array(error, baseline_QPtw_Shp_ShpDer, p%QPtw_Shp_ShpDer, testname, tolerance)
+    call check_array(error, baseline_QPtw_Shp_ShpDer, p%QPtw_Shp_ShpDer, testname, tolerance); if (allocated(error)) return
 
     ! Test and assemble variable N*wt*Jacobian
     do nelem = 1, p%elem_total
@@ -358,7 +358,7 @@ subroutine test_BD_InitShpDerJaco_5node(error)
             end do
         end do
     end do
-    call check_array(error, baseline_QPtw_Shp_Jac, p%QPtw_Shp_Jac, testname, tolerance)
+    call check_array(error, baseline_QPtw_Shp_Jac, p%QPtw_Shp_Jac, testname, tolerance); if (allocated(error)) return
 
     ! Test and assemble variable dN*wt.
     do i = 1, p%nodes_per_elem
@@ -366,7 +366,7 @@ subroutine test_BD_InitShpDerJaco_5node(error)
             baseline_QPtw_ShpDer(idx_qp,i) = baseline_ShpDer(i,idx_qp)*baseline_QPtWeight(idx_qp)
         end do
     end do
-    call check_array(error, baseline_QPtw_ShpDer, p%QPtw_ShpDer, testname, tolerance)
+    call check_array(error, baseline_QPtw_ShpDer, p%QPtw_ShpDer, testname, tolerance); if (allocated(error)) return
 
     call BD_DestroyParam(p, ErrStat, ErrMsg)
 

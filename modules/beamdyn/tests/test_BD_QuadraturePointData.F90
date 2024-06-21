@@ -155,18 +155,18 @@ subroutine test_BD_QuadraturePointData_5node(error)
    call BD_QuadraturePointDataAt0(p)
 
    testname = "5 node, 1 element, 1 qp, curved: BD_DisplacementQPAt0: rrN0"
-   call check_array(error, baseline_rrN0(:, :, 1), p%rrN0(:, :, 1), testname, tolerance)
+   call check_array(error, baseline_rrN0(:, :, 1), p%rrN0(:, :, 1), testname, tolerance); if (allocated(error)) return
 
    ! Test uu0; only one quadrature point for now
    testname = "5 node, 1 element, 1 qp, curved: BD_DisplacementQPAt0: uu0"
    do idx_qp = 1, p%nqp
-      call check_array(error, baseline_uu0(:, idx_qp, 1), p%uu0(:, idx_qp, 1), testname, tolerance)
+      call check_array(error, baseline_uu0(:, idx_qp, 1), p%uu0(:, idx_qp, 1), testname, tolerance); if (allocated(error)) return
    end do
 
    ! Test E10; only one quadrature point for now
    testname = "5 node, 1 element, 1 qp, curved: BD_DisplacementQPAt0: E10"
    do idx_qp = 1, p%nqp
-      call check_array(error, baseline_E10(:, idx_qp, 1), p%E10(:, idx_qp, 1), testname, tolerance)
+      call check_array(error, baseline_E10(:, idx_qp, 1), p%E10(:, idx_qp, 1), testname, tolerance); if (allocated(error)) return
    end do
 
    ! Now test "displacement" components at quadrature points by testing the three subroutine calls
@@ -201,11 +201,11 @@ subroutine test_BD_QuadraturePointData_5node(error)
 
    do idx_qp = 1, p%nqp
       testname = "5 node, 1 element, 1 qp, curved: BD_DisplacementQP: uuu"
-      call check_array(error, baseline_uuu(1:3, idx_qp, 1), m%qp%uuu(1:3, idx_qp, 1), testname, tolerance)
+      call check_array(error, baseline_uuu(1:3, idx_qp, 1), m%qp%uuu(1:3, idx_qp, 1), testname, tolerance); if (allocated(error)) return
       testname = "5 node, 1 element, 1 qp, curved: BD_DisplacementQP: uup"
-      call check_array(error, baseline_uup(1:3, idx_qp, 1), m%qp%uup(1:3, idx_qp, 1), testname, tolerance)
+      call check_array(error, baseline_uup(1:3, idx_qp, 1), m%qp%uup(1:3, idx_qp, 1), testname, tolerance); if (allocated(error)) return
       testname = "5 node, 1 element, 1 qp, curved: BD_DisplacementQP: E1"
-      call check_array(error, baseline_E1(1:3, idx_qp, 1), m%qp%E1(1:3, idx_qp, 1), testname, tolerance)
+      call check_array(error, baseline_E1(1:3, idx_qp, 1), m%qp%E1(1:3, idx_qp, 1), testname, tolerance); if (allocated(error)) return
    end do
 
    ! because x%q(4:6,1)=(0.,0.,0.) we don't have to rotate xq to get Nrrrr
@@ -225,16 +225,16 @@ subroutine test_BD_QuadraturePointData_5node(error)
 
    testname = "5 node, 1 element, 1 qp, curved: BD_RotationalInterpQP: m%Nrrr(1:3)"
    do idx_node = 1, nodes_per_elem
-      call check_array(error, baseline_Nrrr(1:3, idx_node, 1), m%Nrrr(1:3, idx_node, 1), testname, tolerance)
+      call check_array(error, baseline_Nrrr(1:3, idx_node, 1), m%Nrrr(1:3, idx_node, 1), testname, tolerance); if (allocated(error)) return
    end do
 
    do idx_qp = 1, p%nqp
       testname = "5 node, 1 element, 1 qp, curved: BD_RotationalInterpQP: m%qp%uuu(4:6)"
-      call check_array(error, baseline_uuu(4:6, idx_qp, 1), m%qp%uuu(4:6, idx_qp, 1), testname, tolerance)
+      call check_array(error, baseline_uuu(4:6, idx_qp, 1), m%qp%uuu(4:6, idx_qp, 1), testname, tolerance); if (allocated(error)) return
       testname = "5 node, 1 element, 1 qp, curved: BD_RotationalInterpQP: m%qp%kappa"
-      call check_array(error, baseline_kappa(1:3, idx_qp, 1), m%qp%kappa(1:3, idx_qp, 1), testname, tolerance)
+      call check_array(error, baseline_kappa(1:3, idx_qp, 1), m%qp%kappa(1:3, idx_qp, 1), testname, tolerance); if (allocated(error)) return
       testname = "5 node, 1 element, 1 qp, curved: BD_RotationalInterpQP: m%qp%RR0"
-      call check_array(error, baseline_RR0(1:3, 1:3, idx_qp, 1), m%qp%RR0(1:3, 1:3, idx_qp, 1), testname, tolerance)
+      call check_array(error, baseline_RR0(1:3, 1:3, idx_qp, 1), m%qp%RR0(1:3, 1:3, idx_qp, 1), testname, tolerance); if (allocated(error)) return
    end do
 
    idx_qp = 1
@@ -256,7 +256,7 @@ subroutine test_BD_QuadraturePointData_5node(error)
 
    do idx_qp = 1, p%nqp
       testname = "5 node, 1 element, 1 qp, curved: BD_StifAtDeformedQP: m%qp%Stif"
-      call check_array(error, baseline_Stif(1:6, 1:6, idx_qp, 1), m%qp%Stif(1:6, 1:6, idx_qp, 1), testname, 10.0_DbKi * tolerance)
+      call check_array(error, baseline_Stif(1:6, 1:6, idx_qp, 1), m%qp%Stif(1:6, 1:6, idx_qp, 1), testname, 10.0_DbKi * tolerance); if (allocated(error)) return
    end do
 
    call BD_DestroyParam(p, ErrStat, ErrMsg)

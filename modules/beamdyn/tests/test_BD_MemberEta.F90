@@ -78,8 +78,8 @@ subroutine test_BD_MemberEta_5node(error)
 
    call BD_MemberEta(member_total, baseline_QPtW, baseline_jac, test_member_eta, test_total_length)
 
-   call check(error, baseline_total_length, test_total_length, testname, thr=tolerance)
-   call check_array(error, baseline_member_eta, test_member_eta, testname, tolerance)
+   call check(error, baseline_total_length, test_total_length, testname, thr=tolerance); if (allocated(error)) return
+   call check_array(error, baseline_member_eta, test_member_eta, testname, tolerance); if (allocated(error)) return
 
    deallocate (baseline_Jac)
    deallocate (baseline_QPtW)

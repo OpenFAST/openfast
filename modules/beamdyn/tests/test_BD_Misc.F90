@@ -48,8 +48,8 @@ subroutine test_BD_DistrLoadCopy(error)
 
    do j = 1, parametertype%elem_total
       do i = 1, parametertype%nqp
-         call check_array(error, real([9 * (j - 1) + 3 * (i - 1) + 1, 9 * (j - 1) + 3 * (i - 1) + 2, 9 * (j - 1) + 3 * (i - 1) + 3], R8Ki), miscvartype%DistrLoad_QP(1:3, i, j))
-         call check_array(error, real([-9 * (j - 1) - 3 * (i - 1) - 1, -9 * (j - 1) - 3 * (i - 1) - 2, -9 * (j - 1) - 3 * (i - 1) - 3], R8Ki), miscvartype%DistrLoad_QP(4:6, i, j))
+         call check_array(error, real([9 * (j - 1) + 3 * (i - 1) + 1, 9 * (j - 1) + 3 * (i - 1) + 2, 9 * (j - 1) + 3 * (i - 1) + 3], R8Ki), miscvartype%DistrLoad_QP(1:3, i, j)); if (allocated(error)) return
+         call check_array(error, real([-9 * (j - 1) - 3 * (i - 1) - 1, -9 * (j - 1) - 3 * (i - 1) - 2, -9 * (j - 1) - 3 * (i - 1) - 3], R8Ki), miscvartype%DistrLoad_QP(4:6, i, j)); if (allocated(error)) return
       end do
    end do
 
@@ -128,24 +128,24 @@ subroutine test_BD_InputGlobalLocal(error)
    call BD_InputGlobalLocal(parametertype, otherstate, inputtype)
 
    ! test the values
-   call check_array(error, vectorAfterRotation, real(inputtype%RootMotion%TranslationDisp(:, 1), BDKi), testname, tolerance)
-   call check_array(error, vectorAfterRotation, real(inputtype%RootMotion%TranslationVel(:, 1), BDKi), testname, tolerance)
-   call check_array(error, vectorAfterRotation, real(inputtype%RootMotion%RotationVel(:, 1), BDKi), testname, tolerance)
-   call check_array(error, vectorAfterRotation, real(inputtype%RootMotion%TranslationAcc(:, 1), BDKi), testname, tolerance)
-   call check_array(error, vectorAfterRotation, real(inputtype%RootMotion%RotationAcc(:, 1), BDKi), testname, tolerance)
+   call check_array(error, vectorAfterRotation, real(inputtype%RootMotion%TranslationDisp(:, 1), BDKi), testname, tolerance); if (allocated(error)) return
+   call check_array(error, vectorAfterRotation, real(inputtype%RootMotion%TranslationVel(:, 1), BDKi), testname, tolerance); if (allocated(error)) return
+   call check_array(error, vectorAfterRotation, real(inputtype%RootMotion%RotationVel(:, 1), BDKi), testname, tolerance); if (allocated(error)) return
+   call check_array(error, vectorAfterRotation, real(inputtype%RootMotion%TranslationAcc(:, 1), BDKi), testname, tolerance); if (allocated(error)) return
+   call check_array(error, vectorAfterRotation, real(inputtype%RootMotion%RotationAcc(:, 1), BDKi), testname, tolerance); if (allocated(error)) return
 
    do i = 1, parametertype%node_total
-      call check_array(error, vectorAfterRotation, real(inputtype%PointLoad%Force(1:3, i), BDKi), testname, tolerance)
-      call check_array(error, vectorAfterRotation, real(inputtype%PointLoad%Moment(1:3, i), BDKi), testname, tolerance)
+      call check_array(error, vectorAfterRotation, real(inputtype%PointLoad%Force(1:3, i), BDKi), testname, tolerance); if (allocated(error)) return
+      call check_array(error, vectorAfterRotation, real(inputtype%PointLoad%Moment(1:3, i), BDKi), testname, tolerance); if (allocated(error)) return
    end do
 
    inputtype%DistrLoad%Nnodes = totalnodes
    do i = 1, inputtype%DistrLoad%Nnodes
-      call check_array(error, vectorAfterRotation, real(inputtype%DistrLoad%Force(1:3, i), BDKi), testname, tolerance)
-      call check_array(error, vectorAfterRotation, real(inputtype%DistrLoad%Moment(1:3, i), BDKi), testname, tolerance)
+      call check_array(error, vectorAfterRotation, real(inputtype%DistrLoad%Force(1:3, i), BDKi), testname, tolerance); if (allocated(error)) return
+      call check_array(error, vectorAfterRotation, real(inputtype%DistrLoad%Moment(1:3, i), BDKi), testname, tolerance); if (allocated(error)) return
    end do
 
-   call check_array(error, transpose(otherstate%GlbRot), inputtype%RootMotion%Orientation(:, :, 1), testname, tolerance)
+   call check_array(error, transpose(otherstate%GlbRot), inputtype%RootMotion%Orientation(:, :, 1), testname, tolerance); if (allocated(error)) return
 
 end subroutine
 
@@ -175,7 +175,7 @@ subroutine test_BD_GravityForce(error)
    call BD_GravityForce(1, parametertype, miscvartype, gravity)
 
    ! test the values
-   call check_array(error, baseline, miscvartype%qp%Fg(:, 1, 1), testname, tolerance)
+   call check_array(error, baseline, miscvartype%qp%Fg(:, 1, 1), testname, tolerance); if (allocated(error)) return
 
    call BD_DestroyParam(parametertype, ErrStat, ErrMsg)
 
@@ -209,8 +209,8 @@ subroutine test_BD_QPData_mEta_rho(error)
 
    do j = 1, parametertype%elem_total
       do i = 1, parametertype%nqp
-         call check_array(error, baselineRho, miscvartype%qp%rho(:, :, i, j), testname, tolerance)
-         call check_array(error, baselineRR0mEta, miscvartype%qp%RR0mEta(:, i, j), testname, tolerance)
+         call check_array(error, baselineRho, miscvartype%qp%rho(:, :, i, j), testname, tolerance); if (allocated(error)) return
+         call check_array(error, baselineRR0mEta, miscvartype%qp%RR0mEta(:, i, j), testname, tolerance); if (allocated(error)) return
       end do
    end do
    call BD_DestroyParam(parametertype, ErrStat, ErrMsg)

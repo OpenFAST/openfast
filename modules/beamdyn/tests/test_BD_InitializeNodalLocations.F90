@@ -122,14 +122,7 @@ subroutine test_BD_InitializeNodalLocations_np5_p6(error)
    !  write(*,*) i, baseline_uuN0(4,i,1), baseline_uuN0(5,i,1), baseline_uuN0(6,i,1), p%uuN0(4,i,1), p%uuN0(5,i,1), p%uuN0(6,i,1)
    !enddo
 
-   call check_array(error, baseline_uuN0, p%uuN0, testname, tolerance)
-
-   deallocate (kp_member)
-   deallocate (kp_coordinate)
-   deallocate (gll)
-   deallocate (baseline_uuN0)
-   deallocate (baseline_tangent)
-   deallocate (baseline_twist)
+   call check_array(error, baseline_uuN0, p%uuN0, testname, tolerance); if (allocated(error)) return
 
    call BD_DestroyParam(p, ErrStat, ErrMsg)
 
