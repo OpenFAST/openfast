@@ -73,13 +73,14 @@ false         VTK_fields      - Write mesh fields to VTK data files? (flag) {tru
          15   VTK_fps         - Frame rate for VTK output (frames per second){will use closest integer multiple of DT} [used only if WrVTK=2 or WrVTK=3]
 ---------------------- ZMQ Communication ---------------------------------------
 True             ZmqOn         - ZMQ communication (flag)
-"tcp://127.0.0.1:5555"      ZmqInAddress  - REQ-REP localhost address 
-3             ZmqInNbr      - Number of parameters to be requested 
-"VelH"
-"VelV"
-"BldPitchCom1"      ZmqInChannels - Channels to be requested at communication time
-0.5   ZmqInDT       - time step for in communication, FAST will keep it constant in between (sample & hold), default is same DT of simulation
+"https://127.0.1:5555"      ZmqInAddress  - REQ-REP localhost address 
+0             ZmqInNbr      - Number of parameters to be requested 
+none      ZmqInChannels - Channels to be requested at communication time
+default   ZmqInDT       - time step for in communication, FAST will keep it constant in between (sample & hold), default is same DT of simulation
 "tcp://127.0.0.1:5557"      ZmqOutAddress - PUB-SUB localhost address 
-0             ZmqOutNbr     - Number of channels to be broadcasted  
-none   ZmqOutChannels - Channels to be broadcasterd at communication time  
+4             ZmqOutNbr     - Number of channels to be broadcasted  
+"Wind1VelX"    
+"Azimuth"
+"GenTq"
+"GenPwr"   ZmqOutChannels - Channels to be broadcasterd at communication time  
 default     ZmqOutDT      - time step for out communication, FAST will keep it constant in between (sample & hold)

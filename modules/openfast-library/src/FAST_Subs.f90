@@ -189,7 +189,7 @@ subroutine zmq_pub_init(req_address)
    character(*)                               :: req_address
    integer(c_int)                             :: response_ptr_pub_init 
 
-   print *, "OpenFAST is attempting to publish at: ", trim(req_address)
+   print *, "OpenFAST is publish at: ", trim(req_address)
 
    response_ptr_pub_init = zmq_init_pub(trim(req_address))
 
@@ -2878,7 +2878,7 @@ end do
       do i = 1,p_FAST%ZmqOutNbr
          ZmqOutChannelsNames(2 + i) = trim(y_FAST%ChannelNames(ZmqOutChnlsIdx(i))) ! Up to here everything OK!
          ! add the units to the channel names and remove the initial space if any
-         ZmqOutChannelsNames(2 + i) = trim(ZmqOutChannelsNames(2 + i))//': '//trim(y_FAST%ChannelUnits(ZmqOutChnlsIdx(i))) 
+         ZmqOutChannelsNames(2 + i) = trim(ZmqOutChannelsNames(2 + i))//'_'//trim(y_FAST%ChannelUnits(ZmqOutChnlsIdx(i))) 
       end do
 
    end if 
@@ -4035,6 +4035,8 @@ END DO
          call cleanup()
          RETURN
       end if
+
+      print *, "Number of channels to be broadcasted: ", p%ZmqOutNbr
 
       ! Read channel names to be broadcasted 
       
@@ -8426,7 +8428,7 @@ SUBROUTINE FAST_AdvanceToNextTimeStep(t_initial, n_t_global, p_FAST, y_FAST, m_F
          
    if ( (p_FAST%ZmqOn) .and. (p_FAST%ZmqInNbr > 0)) then 
 
-      if (mod(t_global_next, p_FAST%ZmqInDT) == 0) then
+      if ( (mod(t_global_next, p_FAST%ZmqInDT) == 0) .or. (n_t_global == 0) ) then
          ZmqInChannelsAry = 0.0_DbKi
          call zmq_req(p_FAST%ZmqInAddress, p_FAST%ZmqInChannels, p_FAST%ZmqInNbr, ZmqInChannelsAry)
          call update_array(ZmqInChannelsAry, p_FAST%ZmqInNbr)
@@ -8608,22 +8610,32 @@ SUBROUTINE WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14,
 
    CHARACTER(*), PARAMETER                 :: RoutineName = 'WriteOutputToFile'
    INTEGER(IntKi),           INTENT(INOUT) :: TurbID              !< Added TurbID for ZMQ communication
+   ! ---- ZMQ Definitions ----- 
+   LOGICAL                           :: StopZmq               !< Flag to send data to ZMQ
+   ! LOGICAL                           :: NeedWriteOutput            !< Flag to write output to file
    ! ---------------------------------------------------------------------------------------------------------------------------------
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-      ! Write time-series channel data
-
   !y_FAST%WriteThisStep = NeedWriteOutput(n_t_global, t_global, p_FAST)
    IF ( y_FAST%WriteThisStep )  THEN
+
+      ! Here we assume that ZMQ comm can happen only at time step >= WriteThisStep
+      if ( t_global >= p_FAST%TMax - p_FAST%DT ) then
+         StopZmq = .true.! (mod(t_global, p_FAST%ZmqOutDT) < 1E-3)
+      else
+         StopZmq = .false.
+      end if
 
          ! Generate glue-code output file
          CALL WrOutputLine( t_global, p_FAST, y_FAST, IfW%y%WriteOutput, ExtInfw%y%WriteOutput, ED%y%WriteOutput, &
                AD%y, SrvD%y%WriteOutput, SeaSt%y%WriteOutput, HD%y%WriteOutput, SD%y%WriteOutput, ExtPtfm%y%WriteOutput, MAPp%y%WriteOutput, &
-               FEAM%y%WriteOutput, MD%y%WriteOutput, Orca%y%WriteOutput, IceF%y%WriteOutput, IceD%y, BD%y, p_FAST%ZmqOutChannelsAry, TurbID, ErrStat, ErrMsg )
+               FEAM%y%WriteOutput, MD%y%WriteOutput, Orca%y%WriteOutput, IceF%y%WriteOutput, IceD%y, BD%y, p_FAST%ZmqOutChannelsAry, TurbID, &
+                StopZmq, ErrStat, ErrMsg )
 
    ENDIF
+
 
       ! Write visualization data (and also note that we're ignoring any errors that occur doing so)
    IF ( p_FAST%WrVTK == VTK_Animate ) THEN
@@ -8633,11 +8645,13 @@ SUBROUTINE WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14,
    END IF
 
 
+
+
 END SUBROUTINE WriteOutputToFile
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes the module output to the primary output file(s).
 SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, ExtInfwOutput, EDOutput, y_AD, SrvDOutput, SeaStOutput, HDOutput, SDOutput, ExtPtfmOutput,&
-                        MAPOutput, FEAMOutput, MDOutput, OrcaOutput, IceFOutput, y_IceD, y_BD, ZmqOutChannelsAry, TurbID, ErrStat, ErrMsg)
+                        MAPOutput, FEAMOutput, MDOutput, OrcaOutput, IceFOutput, y_IceD, y_BD, ZmqOutChannelsAry, TurbID, StopZmq, ErrStat, ErrMsg)
 
    IMPLICIT                        NONE
 
@@ -8675,8 +8689,9 @@ SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, ExtInfwOutput, EDOutput, 
    REAL(ReKi)                       :: OutputAry(SIZE(y_FAST%ChannelNames)-1)
    INTEGER(IntKi)                   :: i                                         ! loop variable
    INTEGER(IntKi)                   :: TurbID                                    !< Wind turbine ID, used for broadcasting
-   ! ---- ZMQ Definitions ----- 
+   ! ! ---- ZMQ Definitions ----- 
    REAL(ReKi), ALLOCATABLE           :: ZmqOutChannelsAry(:)
+   LOGICAL                           :: StopZmq                               !< Flag to send data to ZMQ
 
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -8688,16 +8703,16 @@ SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, ExtInfwOutput, EDOutput, 
    ! ! End of simulation time step. Broadcast results to ZMQ (assuming that we broadcast at every time step, to be modified later)
    ! ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    
-   if ((p_FAST%ZmqOn) .and. (p_FAST%ZmqOutNbr > 0) .and. (mod(t, p_FAST%ZmqOutDT) == 0)) then 
+   if ((p_FAST%ZmqOn) .and. (p_FAST%ZmqOutNbr > 0)) then
 
-      CALL AllocAry( ZmqOutChannelsAry, p_FAST%ZmqOutNbr + 2, 'ZmqOutChannelsAry', ErrStat, ErrMsg )
+      ! CALL AllocAry( ZmqOutChannelsAry, p_FAST%ZmqOutNbr + 2, 'ZmqOutChannelsAry', ErrStat, ErrMsg )
       
       ZmqOutChannelsAry = 0.0_ReKi                                   !< Reset to zero all values prior to allocation and broadcasting
 
       ZmqOutChannelsAry(1) = TurbID
       ZmqOutChannelsAry(2) = t
       
-      if (t == p_FAST%TMax) then 
+      if (StopZmq) then 
          ! If the simulation is finished, then broadcast zeros to signal EOF (as a float)
          do i = 1, p_FAST%ZmqOutNbr 
             ZmqOutChannelsAry(2 + i) = 0.0_ReKi
@@ -8708,8 +8723,11 @@ SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, ExtInfwOutput, EDOutput, 
          end do
       end if
 
+      ! print *, 'Broadcasting to ZMQ, time: ', t, ' TurbID: ', TurbID, ' Output: ', ZmqOutChannelsAry
+
       call zmq_pub(ZmqOutChannelsAry, p_FAST%ZmqOutChannelsNames, p_FAST%ZmqOutNbr)
 
+      ! deallocate(ZmqOutChannelsAry) ! to be cleaned
    end if 
 
    IF (p_FAST%WrTxtOutFile) THEN

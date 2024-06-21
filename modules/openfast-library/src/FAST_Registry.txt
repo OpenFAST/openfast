@@ -237,7 +237,7 @@ typedef ^   FAST_ParameterType  ReKi                ZmqInDT                 -   
 typedef	^	FAST_ParameterType	CHARACTER(1024)	    ZmqOutAddress           -	-	        -	"address for ZMQ PUB-SUB protocol" - 
 typedef	^	FAST_ParameterType	IntKi	            ZmqOutNbr               -	-	        -	"number of ZMQ PUB-SUB channels" - 
 typedef	^	FAST_ParameterType	CHARACTER(ChanLen)	ZmqOutChannels          {:}	-	        -	"variables to pass ZMQ PUB-SUB protocol" - 
-typedef ^   FAST_ParameterType  ReKi                ZmqOutDT                -   -           -   "time step for out communication, FAST will keep it constant in between (sample & hold), default is same DT of simulation"
+typedef ^   FAST_ParameterType  DbKi                ZmqOutDT                -   -           -   "time step for out communication, FAST will keep it constant in between (sample & hold), default is same DT of simulation"
 typedef ^   FAST_ParameterType	IntKi           	ZmqOutChnlsIdx          {:}	-	        -	"indexes of channels to be broadcasted" - 
 typedef	^	FAST_ParameterType	CHARACTER(ChanLen)	ZmqOutChannelsNames     {:}	-	        -	"names for ZMQ PUB-SUB protocol" -  
 typedef	^	FAST_ParameterType	ReKi	            ZmqOutChannelsAry       {:}	-	        -	"array to pass ZMQ PUB-SUB protocol" - 

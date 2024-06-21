@@ -1,5 +1,5 @@
 ------- OpenFAST EXAMPLE INPUT FILE -------------------------------------------
-FAST Certification Test #22: NREL 5.0 MW Baseline Wind Turbine with ITI Barge Configuration, for use in offshore analysis
+FAST - ZMQ communication, test 4: simultaneous REQ-REP-PUB-SUB protocol 
 ---------------------- SIMULATION CONTROL --------------------------------------
 True         Echo            - Echo input data to <RootName>.ech (flag)
 "FATAL"       AbortLevel      - Error level when simulation should abort (string) {"WARNING", "SEVERE", "FATAL"}
@@ -80,6 +80,9 @@ True             ZmqOn         - ZMQ communication (flag)
 "BldPitchCom1"      ZmqInChannels - Channels to be requested at communication time
 0.5   ZmqInDT       - time step for in communication, FAST will keep it constant in between (sample & hold), default is same DT of simulation
 "tcp://127.0.0.1:5557"      ZmqOutAddress - PUB-SUB localhost address 
-0             ZmqOutNbr     - Number of channels to be broadcasted  
-none   ZmqOutChannels - Channels to be broadcasterd at communication time  
+4             ZmqOutNbr     - Number of channels to be broadcasted  
+"Wind1VelX"    
+"Azimuth"
+"GenTq"
+"GenPwr"   ZmqOutChannels - Channels to be broadcasterd at communication time  
 default     ZmqOutDT      - time step for out communication, FAST will keep it constant in between (sample & hold)

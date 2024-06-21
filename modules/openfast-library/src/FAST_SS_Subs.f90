@@ -175,6 +175,7 @@ SUBROUTINE FAST_SteadyState(p_FAST, y_FAST, m_FAST, ED, BD, AD, MeshMapData, Tur
    INTEGER(IntKi), INTENT(INOUT)                          :: TurbID
    
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_SteadyState'
+   LOGICAL                                :: NeedSendZmq = .false. ! de activating it for now in ss subs
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -246,7 +247,7 @@ SUBROUTINE FAST_SteadyState(p_FAST, y_FAST, m_FAST, ED, BD, AD, MeshMapData, Tur
       CALL WrOutputLine( n_global, p_FAST, y_FAST, UnusedAry, UnusedAry, ED%y%WriteOutput, &
             AD%y, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, &
             UnusedAry, UnusedAry, UnusedAry, UnusedAry, y_IceD, BD%y, &
-            p_FAST%ZmqOutChannelsAry, TurbID, ErrStat2, ErrMsg2 )
+            p_FAST%ZmqOutChannelsAry, TurbID, NeedSendZmq, ErrStat2, ErrMsg2 )
 
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) then

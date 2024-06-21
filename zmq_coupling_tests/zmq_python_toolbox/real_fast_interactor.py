@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import gzip 
 import pickle 
 import os 
+import threading
 
 class RFInteractor: 
     ""
@@ -43,17 +44,34 @@ class RFInteractor:
             self.subscriber = self.pub_context.socket(zmq.SUB)
             self.subscriber.bind(self.ZmqOutAddress)
             self.subscriber.setsockopt_string(zmq.SUBSCRIBE, "") # for now subscribe to all
-
+            # self.running = True
+            self.subscriber_thread = None 
+            self.running_event = threading.Event()
+            self.lock = threading.Lock()
             self.sub_dict = {}
         
         if self.ZmqInAddress is not None: 
             self.req_context = zmq.Context()
             self.requester = self.req_context.socket(zmq.REP)
             self.requester.bind(self.ZmqInAddress)
-            self.poller = zmq.Poller()
-            self.poller.register(self.requester, zmq.POLLIN)
+            # self.poller = zmq.Poller()
+            # self.poller.register(self.requester, zmq.POLLIN)
             self.cont_req_off = 0
             self.cont_req_threshold = 10
+            
+        if self.ZmqInAddress is not None and self.ZmqOutAddress is not None:
+            self.poller = zmq.Poller()
+            self.poller.register(self.requester, zmq.POLLIN)
+            self.poller.register(self.subscriber, zmq.POLLIN)
+            
+            self.shared_dict = SharedData()
+        elif self.ZmqInAddress is not None and self.ZmqOutAddress is None:
+            self.poller = zmq.Poller()
+            self.poller.register(self.requester, zmq.POLLIN)
+        else:
+            pass 
+        
+        self.running = True
             
         print('ZMQ Real Time interactor for FAST initialized. \n PUB-SUB protocol: {} | REQ-REP protocol: {}'.format(self.ZmqOutAddress, 
                                                                                                                      self.ZmqInAddress))
@@ -79,6 +97,10 @@ class RFInteractor:
                 dict_[key].append(value)
                 
         return dict_
+    
+    def get_shared_dict(self):
+        with self.lock:
+            return self.sub_dict
     
     def update_plot(self):
         if not self.fig:
@@ -117,38 +139,43 @@ class RFInteractor:
         return plt.show()
 
 
+    def fast_sub(self, N_plots_update = 100, plot: bool = True, shared: bool = False):
+        """
 
-    
-    def fast_sub(self, N_plots_update = 100, plot: bool = True):
         """
-        Dummy function for the subscription to the FAST channel
-        TODO: Need to split acquisition and plotting, maybe multiprocessing, to avoid messages loss
-        """
-        count = 0
-        
-        while True: 
+
+        while True:
             update_ = self.subscriber.recv_json()
-                        
+            print(update_)
             if self.verbose:
                 print(update_)
 
-            self.sub_dict = self._update_dict(update_, self.sub_dict)
+            if not shared:
+                self.sub_dict = self._update_dict(update_, self.sub_dict)
+            else:
+                self.shared_dict.update_dict(update_)
             
             if count == 0: 
                 self.data_length = len(self.sub_dict)
 
             count += 1
-            if count % N_plots_update == 0 and plot:
+            if count % N_plots_update == 0 and plot and not shared:
                 self.update_plot()
                 # time.sleep(1)
                 
             # check if communication is still open
             if list(update_.values())[2:] == [0.0]*(self.data_length - 2):
                 break
+        # except Exception as e:
+        #     print('{}'.format(e))
+        #     self.running_event.set()
             
         print('Subscription to FAST channel closed.')
         self.subscriber.close()
         self.pub_context.term()
+        
+        if shared:
+            self.running_event.set()
         
         # saving only at the end to avoid performance issues. Data is available 
         # real-time in self.sub_dict anyway
@@ -183,15 +210,102 @@ class RFInteractor:
                 print('No request received, waiting...')
             self.cont_req_off += 1
             
+            
         if self.cont_req_off > self.cont_req_threshold:
             print('Requester closed due to inactivity.')
             self.requester.close()
             self.req_context.term()
+            self.running_event.set()
 
             return True  
         
         return False
     
+    def zmq_full_communication(self, rep_dict, verbose: bool = False):
+        """
+        Full communication between the subscriber and the requester
+        """
+        count = 0
+        socks = dict(self.poller.poll(1000))
+        if self.requester in socks and socks[self.requester] == zmq.POLLIN:
+            req_ = self.requester.recv_string()
+
+            requests = req_.split(";")
+            response = ';'.join(map(str, rep_dict.values())) + ';'
+
+            response = response = ';'.join(map(str, rep_dict.values())) + ';'
+
+            # Send the response
+            self.requester.send_string(response)
+            
+            if verbose:
+                print(f'Response sent: {response}')
+                
+        elif self.subscriber in socks and socks[self.subscriber] == zmq.POLLIN:
+            update_ = self.subscriber.recv_json()
+            if self.verbose:
+                print(update_)
+
+            self.sub_dict = self._update_dict(update_, self.sub_dict)
+            
+            if count == 0: 
+                self.data_length = len(self.sub_dict)
+
+            count += 1
+            # if count % N_plots_update == 0 and plot and not shared:
+            #     self.update_plot()
+            #     # time.sleep(1)
+                
+            # check if communication is still open
+            if list(update_.values())[2:] == [0.0]*(self.data_length - 2):
+                self.cont_req_off += 1
+        else:
+            if verbose:
+                print('No request received, waiting...')
+            self.cont_req_off += 1
+            
+        if self.cont_req_off > self.cont_req_threshold:
+            print('Requester closed due to inactivity.')
+            self.requester.close()
+            self.req_context.term()
+            self.running_event.set()
+
+            return True
+        
+        return False
+    
+
+
+class SharedData: 
+    """
+    Shared data class for multiprocessing
+    """
+    def __init__(self):
+        self.shared_dict = {}
+        self.lock = threading.Lock()
+        
+    def update_dict(self, update_):
+        with self.lock:
+            for key, value in update_.items():
+                if key not in self.shared_dict:
+                    self.shared_dict[key] = []  
+                    self.shared_dict[key].append(value)
+                else: 
+                    self.shared_dict[key].append(value)
+
+        return self.shared_dict
+    
+    def get_shared_dict(self):
+        with self.lock:
+            return self.shared_dict
+        
+    def clear_dict(self):
+        with self.lock:
+            self.shared_dict = {}
+            
+        return self.shared_dict
+    
+
         
         
         

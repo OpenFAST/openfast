@@ -242,7 +242,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: ZmqOutAddress      !< address for ZMQ PUB-SUB protocol [-]
     INTEGER(IntKi)  :: ZmqOutNbr = 0_IntKi      !< number of ZMQ PUB-SUB channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ZmqOutChannels      !< variables to pass ZMQ PUB-SUB protocol [-]
-    REAL(ReKi)  :: ZmqOutDT = 0.0_ReKi      !< time step for out communication, FAST will keep it constant in between (sample & hold), default is same DT of simulation [-]
+    REAL(DbKi)  :: ZmqOutDT = 0.0_R8Ki      !< time step for out communication, FAST will keep it constant in between (sample & hold), default is same DT of simulation [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ZmqOutChnlsIdx      !< indexes of channels to be broadcasted [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ZmqOutChannelsNames      !< names for ZMQ PUB-SUB protocol [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ZmqOutChannelsAry      !< array to pass ZMQ PUB-SUB protocol [-]
