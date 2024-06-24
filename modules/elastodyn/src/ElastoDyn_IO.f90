@@ -3416,6 +3416,30 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
          RETURN
       END IF
 
+      ! PtfmXYIner - Platform xy inertia about the platform CM (kg m^2):
+   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmXYIner, "PtfmXYIner", "Platform xy inertia about the platform CM (kg m^2)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+
+      ! PtfmYZIner - Platform yz inertia about the platform CM (kg m^2):
+   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmYZIner, "PtfmYZIner", "Platform yz inertia about the platform CM (kg m^2)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+
+      ! PtfmXZIner - Platform xz inertia about the platform CM (kg m^2):
+   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmXZIner, "PtfmXZIner", "Platform xz inertia about the platform CM (kg m^2)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+
    !---------------------- BLADE ---------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Blade', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
