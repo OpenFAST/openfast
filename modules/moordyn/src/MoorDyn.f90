@@ -1613,13 +1613,13 @@ CONTAINS
                            end if
                         else
                            CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Int2LStr(TempIDnums(J)))//' already is assigned to control channel '//TRIM(Int2LStr(m%LineList( TempIDnums(J) )%CtrlChan))//' so cannot also be assigned to channel '//TRIM(Int2LStr(Itemp)), ErrStat, ErrMsg, RoutineName )
-                           CALL CleanUp()	
+                           CALL CleanUp()
                            return
                         end if                     
                      else
                         CALL SetErrStat( ErrID_Fatal, ' Line ID '//TRIM(Int2LStr(TempIDnums(J)))//' of CtrlChan '//TRIM(Int2LStr(Itemp))//' is out of range', ErrStat, ErrMsg, RoutineName )
-                        CALL CleanUp()	
-                        return						   
+                        CALL CleanUp()
+                        return
                      end if
                   
                   END DO

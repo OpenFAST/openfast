@@ -597,7 +597,7 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
 
    ErrStat = ErrID_None
    ErrMsg  = ''
-   UnEcho  = -1
+
    InputFileData%DTAero = Default_DT  ! the glue code's suggested DT for the module (may be overwritten in ReadPrimaryFile())
    calcCrvAngle = .false.             ! initialize in case of early return
 
@@ -710,7 +710,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       ! Allocate array for holding the list of node outputs
-   CALL AllocAry( InputFileData%BldNd_OutList, BldNd_MaxOutPts, "BldNd_Outlist", ErrStat2, ErrMsg2 )
+   CALL AllocAry( InputFileData%BldNd_OutList, 2*BldNd_MaxOutPts, "BldNd_Outlist", ErrStat2, ErrMsg2 ) ! allow users to enter twice the number of unique outputs
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    numBladesTot=sum(NumBlades)
@@ -924,10 +924,10 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    call ParseVar( FileInfo_In, CurLine, "UAMod", UAMod_Old, ErrStat2, ErrMsg2, UnEc )
    UAModProvided = legacyInputPresent('UAMod', CurLine, ErrStat2, ErrMsg2, 'UA_Mod=0 (AFAeroMod=1), UA_Mod>1 (AFAeroMod=2 and UA_Mod=UAMod')
    ! UA_Mod - Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA),  2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} 
-   call ParseVar( FileInfo_In, CurLine, "UA_Mod", InputFileData%UA_Mod, ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, "UA_Mod", InputFileData%UA_Init%UAMod, ErrStat2, ErrMsg2, UnEc )
    if (newInputMissing('UA_Mod', CurLine, errStat2, errMsg2)) then
       ! We'll deal with it when we deal with AFAeroMod
-      InputFileData%UA_Mod = UAMod_Old
+      InputFileData%UA_Init%UAMod = UAMod_Old
       if (.not. UAModProvided) then
          call LegacyAbort('Need to provide either UA_Mod or UAMod in the input file'); return
       endif
@@ -939,12 +939,12 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
 
 
       ! FLookup - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when AFAeroMod=2]
-   call ParseVar( FileInfo_In, CurLine, "FLookup", InputFileData%FLookup, ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, "FLookup", InputFileData%UA_Init%FLookup, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
 
       ! IntegrationMethod - Switch to indicate which integration method UA uses (1=RK4, 2=AB4, 3=ABM4, 4=BDF2) (switch):
-   call ParseVar( FileInfo_In, CurLine, "IntegrationMethod", InputFileData%IntegrationMethod, ErrStat2, ErrMsg2, UnEc )
-      if (ErrStat2>= AbortErrLev) InputFileData%IntegrationMethod = UA_Method_ABM4
+   call ParseVar( FileInfo_In, CurLine, "IntegrationMethod", InputFileData%UA_Init%IntegrationMethod, ErrStat2, ErrMsg2, UnEc )
+      if (ErrStat2>= AbortErrLev) InputFileData%UA_Init%IntegrationMethod = UA_Method_ABM4
    
       ! UAStartRad - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2]:
    call ParseVar( FileInfo_In, CurLine, "UAStartRad", InputFileData%UAStartRad, ErrStat2, ErrMsg2, UnEc )
@@ -1145,14 +1145,14 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    if (AFAeroModProvided) then
       if (AFAeroMod_Old==1) then
          call WrScr('> AFAeroMod=1      -> Setting UA_Mod=0')
-         InputFileData%UA_Mod = UA_None
+         InputFileData%UA_Init%UAMod = UA_None
          if (AoA34_Missing) then
             call WrScr('> Setting AoA34 to False as the input is Missing and UA is turned off (legacy behavior).')
             InputFileData%AoA34=.false.
          endif
       else if (AFAeroMod_Old==2) then
          call WrScr('> AFAeroMod=2      -> Not changing DBEMT_Mod')
-         if (InputFileData%UA_Mod==0) then
+         if (InputFileData%UA_Init%UAMod==0) then
             call LegacyAbort('Cannot set UA_Mod=0 with legacy option AFAeroMod=2 (inconsistent behavior).'); return
          else if (AoA34_Missing) then
             call WrScr('> Setting AoA34 to True as the input is Missing and UA is turned on (legacy behavior).')
@@ -1239,8 +1239,17 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    enddo
 
 
+   !---------------------- END OF FILE -----------------------------------------
+   
+   ! copy data from AD input file to UA input file info:
+   InputFileData%UA_Init%a_s        = InputFileData%SpdSound
+   InputFileData%UA_Init%WrSum      = InputFileData%SumPrint
+   InputFileData%UA_Init%UA_OUTS    = 0
+   InputFileData%UA_Init%d_34_to_ac = 0.5_ReKi
 
    RETURN
+
+
 CONTAINS
    !-------------------------------------------------------------------------------------------------
    logical function Failed()
@@ -1342,7 +1351,7 @@ CONTAINS
       write (tmpStr,'(A20,L1)') 'SkewMomCorr:'       , InputFileData%SkewMomCorr;      call WrScr(trim(tmpStr))
       write (tmpStr,'(A20,I0)') 'SkewRedistr_Mod:'   , InputFileData%SkewRedistr_Mod;  call WrScr(trim(tmpStr))
       write (tmpStr,'(A20,L1)') 'AoA34:    '         , InputFileData%AoA34;            call WrScr(trim(tmpStr))
-      write (tmpStr,'(A20,I0)') 'UA_Mod:   '         , InputFileData%UA_Mod;           call WrScr(trim(tmpStr))
+      write (tmpStr,'(A20,I0)') 'UA_Mod:   '         , InputFileData%UA_Init%UAMod;    call WrScr(trim(tmpStr))
       call WrScr('-------------- Old AeroDyn inputs:')
       write (tmpStr,'(A20,I0)') 'WakeMod:  ',  WakeMod_Old;      call WrScr(trim(tmpStr))
       write (tmpStr,'(A20,I0)') 'SkewMod:  ',  SkewMod_Old;      call WrScr(trim(tmpStr))
@@ -1377,11 +1386,11 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, c
    INTEGER( IntKi )                          :: UnIn                                            ! Unit number for reading file
    INTEGER(IntKi)                            :: ErrStat2 , IOS                                  ! Temporary Error status
    CHARACTER(ErrMsgLen)                      :: ErrMsg2                                         ! Temporary Err msg
-   CHARACTER(*),        PARAMETER            :: RoutineName = 'ReadBladeInputs'
    INTEGER,         PARAMETER                :: MaxCols = 10
    CHARACTER(NWTC_SizeOfNumWord*(MaxCols+1)) :: Line
    INTEGER(IntKi)                            :: Indx(MaxCols)
 
+   CHARACTER(*), PARAMETER                   :: RoutineName = 'ReadBladeInputs'
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1523,7 +1532,7 @@ CONTAINS
       IF (UnIn > 0) CLOSE(UnIn)
 
    END SUBROUTINE Cleanup
-
+   !...............................................................................................................................
 END SUBROUTINE ReadBladeInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ConvertLineToCols(Line, i, Indx, BladeKInputFileData, ErrStat, ErrMsg)
@@ -1923,7 +1932,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, NumBlades, BladeInputFileD
    WRITE (UnSu,'(A)') '======================== Unsteady Airfoil Aerodynamics Options  ====================================='
    
    ! UAMod
-   select case (InputFileData%UA_Mod)
+   select case (InputFileData%UA_Init%UAMod)
       case (UA_None)
          Msg = 'none (quasi-steady airfoil aerodynamics)'
       case (UA_Baseline)
@@ -1943,18 +1952,18 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, NumBlades, BladeInputFileD
       case (UA_BV)
          Msg = 'Boeing-Vertol dynamic stall model (e.g. used in CACTUS)'
       case default
-         Msg = 'unknown'      
+         Msg = 'unknown'
    end select
-   WRITE (UnSu,Ec_IntFrmt) InputFileData%UA_Mod, 'UA_Mod', 'Unsteady Aero Model: '//TRIM(Msg)
+   WRITE (UnSu,Ec_IntFrmt) InputFileData%UA_Init%UAMod, 'UA_Mod', 'Unsteady Aero Model: '//TRIM(Msg)
 
 
    ! FLookup
-   if (InputFileData%FLookup) then
+   if (InputFileData%UA_Init%FLookup) then
       Msg = 'Yes'
    else
       Msg = 'No, use best-fit exponential equations instead'
    end if   
-   WRITE (UnSu,Ec_LgFrmt) InputFileData%FLookup, 'FLookup', "Use a lookup for f'? "//TRIM(Msg)      
+   WRITE (UnSu,Ec_LgFrmt) InputFileData%UA_Init%FLookup, 'FLookup', "Use a lookup for f'? "//TRIM(Msg)      
 
       
    

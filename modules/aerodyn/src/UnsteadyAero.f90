@@ -62,6 +62,8 @@ private
    real(ReKi), parameter         :: Gonzalez_factor = 0.2_ReKi     ! this factor, proposed by Gonzalez (for "all" models) is used to modify Cc to account for negative values seen at f=0 (see Eqn 1.40)
    real(ReKi), parameter, public :: UA_u_min = 0.01_ReKi           ! m/s; used to provide a minimum value so UA equations don't blow up (this should be much lower than range where UA is turned off)
    real(ReKi), parameter         :: K1pos=1.0_ReKi, K1neg=0.5_ReKi ! K1 coefficients for BV model
+   real(ReKi), parameter         :: MaxTuOmega = 1.5_ReKi          ! adding a little safety factor for UA models
+
 
    INTEGER(IntKi), PARAMETER, public        :: UA_Method_RK4  = 1
    INTEGER(IntKi), PARAMETER, public        :: UA_Method_AB4  = 2
@@ -1467,8 +1469,7 @@ subroutine UA_ValidateInput(InitInp, ErrStat, ErrMsg)
    type(UA_InitInputType),       intent(in   )  :: InitInp     ! Input data for initialization routine
    integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-   integer, parameter :: UA_VALID(7) = (/UA_None, UA_Gonzalez, UA_MinnemaPierce, UA_HGM ,UA_HGMV, UA_Oye, UA_BV/)
-  !integer, parameter :: UA_VALID(8) = (/UA_None, UA_Gonzalez, UA_MinnemaPierce, UA_HGM, UA_HGMV, UA_Oye, UA_BV, UA_HGMV360/)
+   integer, parameter :: UA_VALID(8) = (/UA_None, UA_Gonzalez, UA_MinnemaPierce, UA_HGM, UA_HGMV, UA_Oye, UA_BV, UA_HGMV360/)
 
    character(*), parameter                      :: RoutineName = 'UA_ValidateInput'
    
@@ -1477,8 +1478,7 @@ subroutine UA_ValidateInput(InitInp, ErrStat, ErrMsg)
 
    if (.not.(any(InitInp%UAMod==UA_VALID))) call SetErrStat( ErrID_Fatal, &
       "In this version, UAMod must be 0 (None), 2 (Gonzalez's variant), 3 (Minnema/Pierce variant), 4 (continuous HGM model), 5 (HGM with vortex), &
-      &6 (Oye), or 7 (Boeing-Vertol)", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
-!     &6 (Oye), 7 (Boeing-Vertol), or 8 (HGM-360)", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
+      &6 (Oye), 7 (Boeing-Vertol), or 8 (HGM-360)", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
       
    if (.not. InitInp%FLookUp ) call SetErrStat( ErrID_Fatal, 'FLookUp must be TRUE for this version.', ErrStat, ErrMsg, RoutineName )
    
@@ -1571,7 +1571,7 @@ subroutine UA_ValidateAFI(UAMod, FLookup, AFInfo, ErrStat, ErrMsg)
                end if
             end if ! Not UA_HGM
 
-            if (UAMod == UA_HGM .or. UAMod == UA_HGMV .or. UAMod == UA_OYE .or. (UAMod == UA_HGMV360 .and. AFInfo%Table(j)%UA_BL%UACutout < TwoPi) ) then
+            if ( AFInfo%Table(j)%UA_BL%UACutout < Pi .and. (UAMod == UA_HGM .or. UAMod == UA_HGMV .or. UAMod == UA_OYE .or. UAMod == UA_HGMV360) ) then
                cl_fs = InterpStp( AFInfo%Table(j)%UA_BL%UACutout, AFInfo%Table(j)%alpha, AFInfo%Table(j)%Coefs(:,AFInfo%ColUAf), indx, AFInfo%Table(j)%NumAlf )
                if (.not. EqualRealNos( cl_fs, 0.0_ReKi ) ) then
                   call SetErrStat(ErrID_Severe, 'UA cutout parameter should be at a value where the separation function is 0 in "'//trim(AFInfo%FileName)//'".'// &
@@ -2395,16 +2395,12 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
          ! these are angles that should not get too large, so I am fixing them here (should turn off UA if this exceeds reasonable numbers)
-      if (abs(x%element(i,j)%x(1)) > TwoPi .or. abs(x%element(i,j)%x(2)) > TwoPi) then
+      if (abs(x%element(i,j)%x(1)) > 3*TwoPi_R8 .or. abs(x%element(i,j)%x(2)) > 3*TwoPi_R8) then
          if (m%FirstWarn_UA) then
-            call SetErrStat(ErrID_Severe, "Divergent states in UA HGM model", ErrStat, ErrMsg, RoutineName )
+            call SetErrStat(ErrID_Warn, "Divergent states in UA HGM model", ErrStat, ErrMsg, RoutineName )
             m%FirstWarn_UA = .false.
          end if
-         
-         call Mpi2pi(x%element(i,j)%x(1))
-         call Mpi2pi(x%element(i,j)%x(2))
       end if
-      
       
       if (p%UAMod == UA_HGMV) then
 
@@ -2645,6 +2641,7 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
    type(AFI_UA_BL_Type)                         :: BL_p        ! potentially interpolated UA parameters
    type(AFI_OutputType)                         :: AFI_AlphaE  ! interpolated values at alphaE
    type(AFI_OutputType)                         :: AFI_AlphaF  ! interpolated values at alphaF
+   type(AFI_OutputType)                         :: AFI_Alpha   ! interpolated values at u%alpha
    character(ErrMsgLen)                         :: errMsg2
    integer(IntKi)                               :: errStat2
    character(*), parameter                      :: RoutineName = 'UA_CalcContStateDeriv'
@@ -2656,6 +2653,7 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
    real(ReKi)                                   :: cRate ! slope of the piecewise linear region of fully attached polar
    real(R8Ki)                                   :: x4
    real(ReKi)                                   :: alpha_34
+   real(ReKi)                                   :: TuOmega
    real(R8Ki), parameter                        :: U_dot = 0.0_R8Ki ! at some point we may add this term
    TYPE(UA_InputType)                           :: u        ! Inputs at t
    real(R8Ki)                                   :: CnC_dot, One_Plus_Sqrt_x4, cv_dot, CnC
@@ -2706,10 +2704,12 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
       ! Constraining x4 between 0 and 1 increases numerical stability (should be done elsewhere, but we'll double check here in case there were perturbations on the state value)
    x4 = max( min( x%x(4), 1.0_R8Ki ), 0.0_R8Ki )
    
-   call AddOrSub2Pi(real(x%x(1),ReKi), alpha_34) ! make sure we use the same alpha_34 for both x1 and x2 equations.
    if (p%ShedEffect) then
-       dxdt%x(1) = -1.0_R8Ki / Tu * (BL_p%b1 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(1) + BL_p%b1 * BL_p%A1 / Tu * alpha_34           ! Eq. 8 [40]
-       dxdt%x(2) = -1.0_R8Ki / Tu * (BL_p%b2 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(2) + BL_p%b2 * BL_p%A2 / Tu * alpha_34           ! Eq. 9 [40]
+      if (.NOT. EqualRealNos(BL_p%A1,0.0_ReKi)) call AddOrSub2Pi(real(x%x(1)/BL_p%A1,ReKi), alpha_34) ! beause U_dot == 0, dx%x1 is A1*b1/Tu*(alpha_34 - x1/A1), we want the angle difference to be calculated correctly
+      dxdt%x(1) = -1.0_R8Ki / Tu * (BL_p%b1 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(1) + BL_p%b1 * BL_p%A1 / Tu * alpha_34           ! Eq. 8 [40]
+      
+      if (.NOT. EqualRealNos(BL_p%A2,0.0_ReKi)) call AddOrSub2Pi(real(x%x(2)/BL_p%A2,ReKi), alpha_34) ! beause U_dot == 0, dx%x2 is A2*b2/Tu*(alpha_34 - x2/A2), we want the angle difference to be calculated correctly
+      dxdt%x(2) = -1.0_R8Ki / Tu * (BL_p%b2 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(2) + BL_p%b2 * BL_p%A2 / Tu * alpha_34           ! Eq. 9 [40]
    else
        dxdt%x(1) = 0.0_R8Ki
        dxdt%x(2) = 0.0_R8Ki
@@ -2722,17 +2722,6 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
       dxdt%x(4) = -1.0_R8Ki / BL_p%T_f0                                 *    x4  +         1.0_ReKi / BL_p%T_f0 * AFI_AlphaF%f_st  ! Eq. 11 [40]
       dxdt%x(5) = 0.0_R8Ki
 
-   elseif (p%UAMod == UA_HGMV360) then
-   
-      call AFI_ComputeAirfoilCoefs( alphaE, u%Re, u%UserProp, AFInfo, AFI_AlphaE, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat >= AbortErrLev) return
-         
-      Clp = AFI_AlphaE%fullyAttached + pi * Tu* u%omega
-      dxdt%x(3) = ( Clp             - x%x(3) ) / BL_p%T_p
-      dxdt%x(4) = ( AFI_AlphaF%f_st - x4     ) / BL_p%T_f0
-      dxdt%x(5) = 0.0_R8Ki
-      
    elseif (p%UAMod == UA_OYE) then
       dxdt%x(4) = -1.0_R8Ki / BL_p%T_f0                                 *    x4  +         1.0_ReKi / BL_p%T_f0 * AFI_AlphaF%f_st
       dxdt%x(1) = 0.0_R8Ki
@@ -2740,41 +2729,47 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
       dxdt%x(3) = 0.0_R8Ki
       dxdt%x(5) = 0.0_R8Ki
 
-   elseif (p%UAMod == UA_HGMV) then
+   elseif (p%UAMod == UA_HGMV .OR. p%UAMod == UA_HGMV360) then
 
       call AFI_ComputeAirfoilCoefs( alphaE, u%Re, u%UserProp, AFInfo, AFI_AlphaE, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) return
 
-      Clp = AFI_AlphaE%FullyAttached + pi * Tu * u%omega                                       ! Eq. 13 (this is really Cnp)
-      dxdt%x(3) = -1.0_R8Ki / BL_p%T_p                                  * x%x(3) +         1.0_ReKi / BL_p%T_p  * Clp
-         
-      dxdt%x(4) = -1.0_R8Ki / BL_p%T_f0                                 *    x4  +         1.0_ReKi / BL_p%T_f0 * AFI_AlphaF%f_st
+      TuOmega = Tu * u%omega
+      TuOmega = MIN( MAX(TuOmega, -MaxTuOmega), MaxTuOmega)
+
+      Clp = AFI_AlphaE%FullyAttached + pi * TuOmega                                        ! Eq. 13 (this is really Cnp)
+      dxdt%x(3) = ( Clp             - x%x(3) ) / BL_p%T_p
+      dxdt%x(4) = ( AFI_AlphaF%f_st - x4     ) / BL_p%T_f0
       
-      if (OtherState%VortexOn(i,j)) then
-         call MPi2Pi(alphaE)
-         
-         One_Plus_Sqrt_x4 =1.0_R8Ki + sqrt(x4)
-         
-         if (alphaE < BL_p%alphaBreakLower .or. alphaE > BL_p%alphaBreakUpper) then
-            cRate = ( BL_p%CnBreakUpper - BL_p%CnBreakLower ) / ( BL_p%alphaBreakUpper - TwoPi - BL_p%alphaBreakLower )
-         elseif (alphaE < BL_p%alphaLower) then
-            cRate = ( BL_p%CnBreakLower - BL_p%c_alphaLower ) / ( BL_p%alphaBreakLower - BL_p%alphaLower )
-         elseif(alphaE < BL_p%alphaUpper) then
-            cRate = ( BL_p%c_alphaLower - BL_p%c_alphaUpper ) / ( BL_p%alphaLower - BL_p%alphaUpper )
-         else
-            cRate = ( BL_p%c_alphaUpper - BL_p%CnBreakUpper ) / ( BL_p%alphaUpper - BL_p%alphaBreakUpper )
-         end if
-         CnC_dot = cRate * u%omega * (1.0_R8Ki - BL_p%A1 - BL_p%A2) + dxdt%x(1) + dxdt%x(2)
-         cv_dot = CnC_dot*(1.0_R8Ki - 0.25_R8Ki*(One_Plus_Sqrt_x4)**2)
-      
-         CnC    = AFI_AlphaE%FullyAttached
-         cv_dot = cv_dot - CnC*0.25_R8Ki*One_Plus_Sqrt_x4/sqrt(max(0.0001_R8Ki,x4))*dxdt%x(4)
+      if (p%UAMod == UA_HGMV360) then
+         dxdt%x(5) = 0.0_R8Ki
       else
-         cv_dot = 0.0_R8Ki
-      end if
+         if (OtherState%VortexOn(i,j)) then
+            call MPi2Pi(alphaE)
+         
+            One_Plus_Sqrt_x4 =1.0_R8Ki + sqrt(x4)
+         
+            if (alphaE < BL_p%alphaBreakLower .or. alphaE > BL_p%alphaBreakUpper) then
+               cRate = ( BL_p%CnBreakUpper - BL_p%CnBreakLower ) / ( BL_p%alphaBreakUpper - TwoPi - BL_p%alphaBreakLower )
+            elseif (alphaE < BL_p%alphaLower) then
+               cRate = ( BL_p%CnBreakLower - BL_p%c_alphaLower ) / ( BL_p%alphaBreakLower - BL_p%alphaLower )
+            elseif(alphaE < BL_p%alphaUpper) then
+               cRate = ( BL_p%c_alphaLower - BL_p%c_alphaUpper ) / ( BL_p%alphaLower - BL_p%alphaUpper )
+            else
+               cRate = ( BL_p%c_alphaUpper - BL_p%CnBreakUpper ) / ( BL_p%alphaUpper - BL_p%alphaBreakUpper )
+            end if
+            CnC_dot = cRate * u%omega * (1.0_R8Ki - BL_p%A1 - BL_p%A2) + dxdt%x(1) + dxdt%x(2)
+            cv_dot = CnC_dot*(1.0_R8Ki - 0.25_R8Ki*(One_Plus_Sqrt_x4)**2)
       
-      dxdt%x(5) = cv_dot - x%x(5)/(BL_p%T_V0 * Tu)
+            CnC    = AFI_AlphaE%FullyAttached
+            cv_dot = cv_dot - CnC*0.25_R8Ki*One_Plus_Sqrt_x4/sqrt(max(0.0001_R8Ki,x4))*dxdt%x(4)
+         else
+            cv_dot = 0.0_R8Ki
+         end if
+      
+         dxdt%x(5) = cv_dot - x%x(5)/(BL_p%T_V0 * Tu)
+      end if
    else
       call WrScr('>>> UA_CalcContStateDeriv logic error: should never happen.')
       call SetErrStat(ErrID_FATAL,"Programming error.",ErrStat,ErrMsg,RoutineName)
@@ -2802,16 +2797,16 @@ SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
    if (present(alpha_34)) then
       alpha_34 = Get_Alpha34(u%v_ac, u%omega, p%d_34_to_ac*p%c(i,j))
       
-      call AddOrSub2Pi( real(x%x(1) + x%x(2),ReKi), alpha_34 ) ! Ensure that alpha_34 is well behaved during +/-180 deg wrap
-    
       if (present(alphaE)) then
          ! Variables derived from states
          if (p%UAMod == UA_OYE .or. .not. p%ShedEffect) then
             alphaE  = alpha_34
          else
+            !call AddOrSub2Pi( real(x%x(1) + x%x(2),ReKi), alpha_34 ) ! Ensure that alpha_34 is well behaved during +/-180 deg wrap
+            call MPi2Pi(alpha_34) ! let's not make alphaE too large?
+            
             alphaE  = alpha_34*(1.0_ReKi - BL_p%A1 - BL_p%A2) + x%x(1) + x%x(2)    ! Eq. 12
          endif
-         !call MPi2Pi(alphaE)
          
       end if
    end if
@@ -2829,7 +2824,6 @@ FUNCTION Get_alphaF(p, u, x, BL_p, alpha_34, alphaE_in) RESULT(alphaF)
    REAL(ReKi)                                          :: alphaF        ! function result
    
    REAL(ReKi)                                          :: alphaE ! value that can be changed (+/- 2pi)
-   REAL(ReKi)                                          :: x3     ! value that can be changed (+/- 2pi)
    REAL(ReKi)                                          :: alpha_(2), c_(2)
    REAL(ReKi)                                          :: alphaN_(4), cN_(4)
    integer(IntKi)                                      :: Indx
@@ -2849,6 +2843,7 @@ FUNCTION Get_alphaF(p, u, x, BL_p, alpha_34, alphaE_in) RESULT(alphaF)
    elseif (p%UAMod==UA_HGMV360 .or. p%UAMod == UA_HGMV) then
       call MPi2Pi(alphaE)
       
+      ! this is for the wrap-around in the first two cases in the if statement below
       Indx = 1
       alpha_ = (/  BL_p%alphaBreakUpper,  BL_p%alphaBreakLower+TwoPi  /)
       c_     = (/  BL_p%CnBreakUpper,     BL_p%CnBreakLower           /)
@@ -3469,8 +3464,10 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
    real(ReKi)                                   :: gammaL
    real(ReKi)                                   :: gammaD
    real(ReKi)                                   :: TransA
+   real(ReKi)                                   :: TuOmega
 
    type(AFI_OutputType)                         :: AFI_interp
+   type(AFI_OutputType)                         :: AFI_interpE
    type(AFI_OutputType)                         :: AFI_interpF
    
    
@@ -3478,9 +3475,10 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
    ErrMsg    = ""
    
    Cm_alpha_nc = 0.0_ReKi
+   Tu = 0.0_ReKi ! initialize for output file
 
-   AFI_interp%Cm = 0.0_ReKi ! value will be output if not computed below
-   alpha_prime_f = 0.0_ReKi ! value will be output if not computed below
+!   AFI_interpE%Cm = 0.0_ReKi ! value will be output if not computed below; this is set in the type definition
+   alpha_prime_f  = 0.0_ReKi ! value will be output if not computed below
    
       ! make sure that u%u is not zero (this previously turned off UA for the entire simulation. 
       ! Now, we keep it on, but we don't want the math to blow up when we divide by u%u)
@@ -3542,7 +3540,7 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
       alpha_34 = u%alpha ! NOTE: no omega for UA<UA_HGM
       cl_fs    = AFI_interp%FullySeparate
       cl_fa    = AFI_interp%FullyAttached
-      fs_aE    = AFI_interp%f_st
+      fs_aE    = AFI_interp%f_st ! Note this isn't really f_st(alphaE), but we're initializing for the output file of non-HGM-based models
 
       x_in%x = 0.0_R8Ki
 
@@ -3571,22 +3569,28 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
          if (ErrStat >= AbortErrLev) return
       
       call Get_HGM_constants(i, j, p, u, x_in, BL_p, Tu, alpha_34, alphaE) ! compute Tu, alpha_34, and alphaE
+      TuOmega = Tu * u%omega
+      TuOmega = MIN( MAX(TuOmega, -MaxTuOmega), MaxTuOmega)
       
-      call AFI_ComputeAirfoilCoefs( alphaE,   u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2 )
+      call AFI_ComputeAirfoilCoefs( alphaE,   u%Re, u%UserProp, AFInfo, AFI_interpE, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         
+      call AFI_ComputeAirfoilCoefs( u%alpha,   u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
        ! Constraining x4 between 0 and 1 increases numerical stability (should be done elsewhere, but we'll double check here in case there were perturbations on the state value)
       x4 = max( min( x_in%x(4), 1.0_R8Ki ), 0.0_R8Ki )
 
          ! calculate values for output:
-      cl_fs = AFI_interp%FullySeparate
-      cl_fa = AFI_interp%FullyAttached
-      fs_aE = AFI_interp%f_st
+      cl_fs = AFI_interpE%FullySeparate
+      cl_fa = AFI_interpE%FullyAttached
+      fs_aE = AFI_interpE%f_st
 
       if (p%UAMod == UA_OYE) then
          ! calculate fully attached value:
          call AddOrSub2Pi(BL_p%alpha0, alphaE)
          cl_fa = (alphaE - BL_p%alpha0) * BL_p%c_lalpha ! Cl fully attached
+         
          y%Cl = x4 * cl_fa  + (1.0_ReKi - x4) * cl_fs   ! TODO consider adding simple corrections + pi * Tu * u%omega
          y%Cd = AFI_interp%Cd                           ! TODO consider adding simple corrections 
          if (AFInfo%ColCm == 0) then ! we don't have a cm column, so make everything 0
@@ -3599,13 +3603,13 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
       
       elseif (p%UAMod == UA_HGMV360) then
       
-         y%Cn = AFI_interp%FullyAttached * x4 + AFI_interp%FullySeparate * (1.0_ReKi - x4) + pi * Tu * u%omega
-         y%Cc = AFI_interp%Cl * SinAlpha - AFI_interp%Cd * CosAlpha ! static Cc value at u%alpha
+         y%Cn = x4 * AFI_interpE%FullyAttached  + (1.0_ReKi - x4) * AFI_interpE%FullySeparate  + pi * TuOmega
+
+         y%Cc = AFI_interpE%Cl * SinAlpha - AFI_interpE%Cd * CosAlpha ! static Cc value at u%alpha
 
          y%Cl = y%Cn * CosAlpha + y%Cc * SinAlpha;
 
          alphaF = Get_alphaF(p, u, x_in, BL_p, alpha_34, alphaE)
-         
          call AFI_ComputeAirfoilCoefs( alphaF,   u%Re, u%UserProp, AFInfo, AFI_interpF, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
@@ -3615,7 +3619,7 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
             y%Cm          = 0.0_ReKi
          else
             ! NOTE: EAM may want the term with u%omega zeroed out (THIS DOES NOT MATCH EAM's implementation)
-            y%Cm = AFI_interp%Cm + y%Cl * delta_c_mf_primeprime - piBy2 * Tu * u%omega                            ! Eq. 80
+            y%Cm = AFI_interpE%Cm + y%Cl * delta_c_mf_primeprime - piBy2 * TuOmega                               ! Eq. 80
          end if
 
       elseif (p%UAMod == UA_HGM) then
@@ -3627,16 +3631,16 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
       
    ! bjj: do we need to check that u%alpha is between -pi and + pi?
          cl_circ = x4 * cl_fa  + (1.0_ReKi - x4) * AFI_interp%FullySeparate                                       ! Eq. 19 [40]
-         y%Cl = cl_circ  + pi * Tu * u%omega                                                                      ! Eq. 16 [40]
+         y%Cl = cl_circ  + pi * TuOmega                                                                           ! Eq. 16 [40]
 
-         call AddOrSub2Pi(u%alpha, alphaE)
-         cd_tors = cl_circ * Tu  * u%omega
+         cd_tors = cl_circ * TuOmega
+         call AddOrSub2Pi(alpha_34, alphaE)
          y%Cd = AFI_interp%Cd + (alpha_34 - alphaE) * cl_circ + (AFI_interp%Cd - BL_p%Cd0) * delta_c_df_primeprime  + cd_tors  ! Eq. 17 [40]
       
          if (AFInfo%ColCm == 0) then ! we don't have a cm column, so make everything 0
             y%Cm          = 0.0_ReKi
          else
-            y%Cm = AFI_interp%Cm + y%Cl * delta_c_mf_primeprime - piBy2 * Tu * u%omega                            ! Eq. 18 [40]
+            y%Cm = AFI_interp%Cm + y%Cl * delta_c_mf_primeprime - piBy2 * TuOmega                                ! Eq. 18 [40]
          end if
 
          y%Cn = y%Cl*CosAlpha + y%Cd*SinAlpha
@@ -3647,28 +3651,25 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
          ! limit x5?:
          x5 = x_in%x(5)
             
-         cn_circ = x4 * AFI_interp%FullyAttached  + (1.0_ReKi - x4) * AFI_interp%FullySeparate + x5
-         y%Cn = cn_circ  + pi * Tu * u%omega
-         y%Cc = AFI_interp%Cl*sin(alphaE) - AFI_interp%Cd*cos(alphaE) ! static value at alphaE
+         cn_circ = x4 * AFI_interpE%FullyAttached  + (1.0_ReKi - x4) * AFI_interpE%FullySeparate + x5
+         y%Cn = cn_circ  + pi * TuOmega
+
+         y%Cc = AFI_interpE%Cl*sin(alphaE) - AFI_interpE%Cd*cos(alphaE) ! static value at alphaE
          
          y%Cl = y%Cn*CosAlpha + y%Cc*SinAlpha
 
-         ! for cm:
-         tau_vl = t - OtherState%t_vortexBegin(i,j)
-         tau_vl = tau_vl / Tu ! make this non-dimensional (to compare with T_VL)
-         tV_ratio = min(1.5_ReKi, tau_vl/BL_p%T_VL)
-            
-         delta_c_df_primeprime = 0.5_ReKi * (sqrt(fs_aE) - sqrt(x4)) - 0.25_ReKi * (fs_aE - x4)                   ! Eq. 20 [40]
-         
+         delta_c_df_primeprime = 0.5_ReKi * (sqrt(fs_aE) - sqrt(x4)) - 0.25_ReKi * (fs_aE - x4)                     ! Eq. 20 [40]
          call AddOrSub2Pi(u%alpha, alphaE)
-         y%Cd = AFI_interp%Cd + (u%alpha - alphaE) * y%Cn + (AFI_interp%Cd - BL_p%Cd0) * delta_c_df_primeprime    ! Eq. 79 [41]
-         
+         y%Cd = AFI_interpE%Cd + (u%alpha - alphaE) * y%Cn + (AFI_interpE%Cd - BL_p%Cd0) * delta_c_df_primeprime    ! Eq. 79 [41]
          
          if (AFInfo%ColCm == 0) then ! we don't have a cm column, so make everything 0
             y%Cm          = 0.0_ReKi
          else
-!            alphaF = x_in%x(3) / BL_p%c_lalpha + BL_p%alpha0
-            y%Cm = AFI_interp%Cm + cn_circ * delta_c_mf_primeprime - 0.0_ReKi * piBy2 * Tu * u%omega - 0.25_ReKi*(1.0_ReKi - cos(pi * tV_ratio ))*x5
+            tau_vl = t - OtherState%t_vortexBegin(i,j)
+            tau_vl = tau_vl / Tu ! make this non-dimensional (to compare with T_VL)
+            tV_ratio = min(1.5_ReKi, tau_vl/BL_p%T_VL)
+            
+            y%Cm = AFI_interpE%Cm + cn_circ * delta_c_mf_primeprime - 0.0_ReKi * piBy2 * TuOmega - 0.25_ReKi*(1.0_ReKi - cos(pi * tV_ratio ))*x5
          end if
 
       else

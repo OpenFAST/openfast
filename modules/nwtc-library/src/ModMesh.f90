@@ -3349,8 +3349,8 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
    END SUBROUTINE MeshExtrapInterp2
 
 !...............................................................................................................................
-!> High level function to easily create a point mesh with one node and one element
-   SUBROUTINE CreatePointMesh(mesh, posInit, orientInit, errStat, errMsg, hasMotion, hasLoads, hasAcc)
+!> High level function to easily create an input point mesh with one node and one element
+   SUBROUTINE CreateInputPointMesh(mesh, posInit, orientInit, errStat, errMsg, hasMotion, hasLoads, hasAcc)
       type(MeshType),               intent(inout) :: mesh             !< Mesh to be created
       real(ReKi),                   intent(in   ) :: PosInit(3)       !< Xi,Yi,Zi, coordinates of node
       real(R8Ki),                   intent(in   ) :: orientInit(3,3)  !< Orientation (direction cosine matrix) of node; identity by default
@@ -3405,7 +3405,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
          mesh%RotationAcc      = 0.0_ReKi
       endif
 
-   END SUBROUTINE CreatePointMesh
+   END SUBROUTINE CreateInputPointMesh
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE ModMesh
 

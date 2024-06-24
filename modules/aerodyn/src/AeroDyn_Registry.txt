@@ -34,6 +34,7 @@ param    ^              -  IntKi    TwrShadow_Eames         -  2  -  "Eames towe
 
 param    ^              -  IntKi    TwrAero_none            -  0  -  "no tower aero"                            -
 param    ^              -  IntKi    TwrAero_noVIV           -  1  -  "Tower aero model without VIV"                  -
+param    ^              -  IntKi    TwrAero_VIV             -  2  -  "Tower aero model with VIV"                   -
 
 param    ^              -  IntKi    SA_Wgt_Uniform          -  1  -  "Sector average weighting - Uniform"                            -
 #param    ^              -  IntKi    SA_Wgt_Impulse          -  1  -  "Sector average weighting - Impulse"                            -
@@ -211,9 +212,7 @@ typedef	^	     ^      	ReKi   	SA_PsiBwd	-	-60	-	"Sector Average - Backard Azimu
 typedef	^	     ^      	ReKi   	SA_PsiFwd	-	 60	-	"Sector Average - Forward Azimuth (>0)"	deg
 typedef	^	     ^      	IntKi  	SA_nPerSec	-	  5	-	"Sector average - Number of points per sectors (-) [used only when SectAvg=True]" -
 typedef	^	     ^      	LOGICAL	AoA34	-	-	-	"Sample the angle of attack (AoA) at the 3/4 chord or the AC point {default=True} [always used]"	-
-typedef	^	     ^      	IntKi	UA_Mod	-	-	-	"Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA),  2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)}" -
-typedef	^	AD_InputFile	LOGICAL	FLookup	-	-	-	"Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAeroMod=2]"	flag
-typedef	^	AD_InputFile	IntKi	IntegrationMethod	-	3	-	"Unsteady Aero model integration method switch (switch) {1=RK4, 2=AB4, 3=ABM4, 4=BDF2} [used only when AFAeroMod=2 and UAMod=4,5,6]"	-
+typedef	^	AD_InputFile	UA_InitInputType	UA_Init	-	-	-	"InitInput data for UA model"	-
 typedef	^	AD_InputFile	ReKi	InCol_Alfa	-	-	-	"The column in the airfoil tables that contains the angle of attack"	-
 typedef	^	AD_InputFile	ReKi	InCol_Cl	-	-	-	"The column in the airfoil tables that contains the lift coefficient"	-
 typedef	^	AD_InputFile	ReKi	InCol_Cd	-	-	-	"The column in the airfoil tables that contains the drag coefficient"	-
@@ -343,7 +342,7 @@ typedef	^	RotMiscVarType	ReKi	TFinSTV_i 	3	-	-	"Structural velocity at the refer
 typedef	^	RotMiscVarType	ReKi	TFinF_i 	3	-	-	"Forces at the reference point of the fin in the inertial system"
 typedef	^	RotMiscVarType	ReKi	TFinM_i 	3	-	-	"Moments at the reference point of the fin in the inertial system"
 
-typedef	^	MiscVarType	RotMiscVarType	rotors	{:} -	-	"MiscVars for each rotor"	-
+typedef	^	MiscVarType	RotMiscVarType	rotors	{:}	-	-	"MiscVars for each rotor"	-
 typedef	^	MiscVarType	FVW_InputType	FVW_u	:	-	-	"Inputs to the FVW module"	-
 typedef	^	MiscVarType	FVW_OutputType	FVW_y	-	-	-	"Outputs from the FVW module"	-
 typedef	^	MiscVarType	FVW_MiscVarType	FVW	-	-	-	"MiscVars from the FVW module"	-
