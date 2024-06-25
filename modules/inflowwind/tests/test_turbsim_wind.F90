@@ -1,34 +1,44 @@
 module test_turbsim_wind
 
-    use pFUnit_mod
-    use ifw_test_tools
-    use InflowWind_Subs
-    use InflowWind_Types
+use testdrive, only: new_unittest, unittest_type, error_type, check
+use ifw_test_tools
+use InflowWind_Subs
+use InflowWind_Types
 
-    implicit none
+implicit none
+private
+public :: test_turbsim_wind_suite
 
 contains
 
-    @test
-    subroutine test_steady_wind_input_single_height()
+!> Collect all exported unit tests
+subroutine test_turbsim_wind_suite(testsuite)
+   type(unittest_type), allocatable, intent(out) :: testsuite(:)
+   testsuite = [ &
+               new_unittest("test_turbsim_wind_parse", test_turbsim_wind_parse) &
+               ]
+end subroutine
 
-        TYPE(FileInfoType)              :: InFileInfo
-        TYPE(InflowWind_InputFile)      :: InputFileData
-        CHARACTER(1024)                 :: PriPath 
-        INTEGER(IntKi)                  :: TmpErrStat
-        CHARACTER(ErrMsgLen)            :: TmpErrMsg
+subroutine test_turbsim_wind_parse(error)
+   type(error_type), allocatable, intent(out) :: error
 
-        CHARACTER(16)                   :: expected
+   type(FileInfoType)              :: InFileInfo
+   type(InflowWind_InputFile)      :: InputFileData
+   character(1024)                 :: PriPath
+   integer(IntKi)                  :: TmpErrStat
+   character(ErrMsgLen)            :: TmpErrMsg
 
-        expected = "Wind/08ms.wnd"
-        PriPath = ""
+   character(16)                   :: expected
 
-        InFileInfo = getInputFileData()
-        CALL InflowWind_ParseInputFileInfo(InputFileData , InFileInfo, PriPath, "inputFile.inp", "test.ech", .false., -1, TmpErrStat, TmpErrMsg)
+   expected = "Wind/08ms.wnd"
+   PriPath = ""
 
-        @assertEqual(0, TmpErrStat, message='Error message: '//trim(TmpErrMsg)//NewLine//'ErrStat: ')
-        @assertEqual(trim(expected), InputFileData%TSFF_FileName)
+   InFileInfo = getInputFileData()
+   call InflowWind_ParseInputFileInfo(InputFileData, InFileInfo, PriPath, "inputFile.inp", "test.ech", .false., -1, TmpErrStat, TmpErrMsg)
 
-    end subroutine
+   call check(error, 0, TmpErrStat, message='Error message: '//trim(TmpErrMsg)//NewLine//'ErrStat: '); if (allocated(error)) return
+   call check(error, trim(expected), InputFileData%TSFF_FileName); if (allocated(error)) return
+
+end subroutine
 
 end module
