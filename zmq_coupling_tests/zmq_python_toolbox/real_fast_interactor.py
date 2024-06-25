@@ -143,7 +143,7 @@ class RFInteractor:
         """
 
         """
-
+        count = 0
         while True:
             update_ = self.subscriber.recv_json()
             print(update_)
@@ -273,6 +273,60 @@ class RFInteractor:
             return True
         
         return False
+    
+    def zmq_read_publisher(self):
+        update_ = self.subscriber.recv_json()
+        
+        with self.lock:
+            self.sub_dict = self._update_dict(update_, self.sub_dict)
+            
+        data_length = len(self.sub_dict)
+        
+        if list(update_.values())[2:] == [0.0]*(data_length - 2):
+            print('Subscription to FAST channel closed.')
+            self.subscriber.close()
+            self.pub_context.term()
+            return self.sub_dict, True
+        
+        return self.sub_dict, False
+    
+    def zmq_read_requester(self, verbose: bool = False):
+        
+        socks = dict(self.poller.poll(2000))
+        if self.requester in socks and socks[self.requester] == zmq.POLLIN:
+            req_ = self.requester.recv_string()
+            return req_
+        else:
+            self.cont_req_off += 1
+            
+            if verbose:
+                print('No request received, waiting...')
+                
+        return None
+    
+    def zmq_send_reply(self, rep_dict):
+        response = ';'.join(map(str, rep_dict.values())) + ';'
+        self.requester.send_string(response)
+        return response
+    
+    def communication_check(self, verbose: bool = False):
+        """
+        Check if communication is still open
+        """
+        
+        socks = dict(self.poller.poll(2000))
+        # check if there are still communications open
+        if len(socks) == 0:
+            return True
+        else:
+            return False
+        
+            
+            
+        
+        
+            
+        
     
 
 

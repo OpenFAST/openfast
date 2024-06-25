@@ -13,9 +13,18 @@ ZMQ
 Main changes in this PR
 ----
 
-- Added ZMQ connection to OpenFAST
+- Added ZMQ connection capabilities to OpenFAST:
+   - PUB-SUB connection to receive solved variables from OpenFAST at runtime (all `y_FAST` is available)
+   - REQ-REP to interact with OpenFAST at runtime (eg. pitch control, wind speed, etc).
 - Modified input files to include ZMQ parameters
 - Added Python routines and tests to interface with OpenFAST (to be moved to `openfast-toolbox`?)
+
+The folder `zmq_python_toolbox` contains the Python routines to interact with OpenFAST via ZMQ. 
+
+- `ex01` shows how to subscribe to a PUB-SUB socket from OpenFAST and how to receive the data.
+- `ex02` shows how to interact with OpenFAST via REQ-REP sockets.
+- `ex03` shows how to interact with OpenFAST using both sockets at the same time.
+
 
 Updates 
 ---
