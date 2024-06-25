@@ -56,3 +56,12 @@ vs-build/
 #Simulink cache files
 varcache
 *.slxc
+
+# old repo for zmq pr
+/RealTimeFAST 
+/cJSON
+
+# simulation output files
+*.out
+*.outb
+*.pkl.gz

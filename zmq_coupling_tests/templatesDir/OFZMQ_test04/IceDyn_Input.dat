@@ -1,0 +1,74 @@
+------------------ IceDyn v1.01.x Input File -----------------------------------
+Freshwater Ice of Great Lakes input properties.
+---------------------- STRUCTURE PROPERTIES ------------------------------------
+ 1       NumLegs     - number of support-structure legs in contact with ice
+ 0       LegPosX     - array of size NumLegs: global X position of legs 1-NumLegs (m)
+ 0       LegPosY     - array of size NumLegs: global Y position of legs 1-NumLegs (m)
+ 6       StWidth     - array of size NumLegs: Width of the structure in contact with the ice, or diameter for cylindrical structures (m)
+---------------------- ICE MODELS ----------------------------------------------
+ 6       IceModel    - Number that represents different ice models. {1: quasi-static load; 2:dynamic ice-structure interaction; 3: random ice load; 4: non-simultaneous ice failure; 5: sloping structure 6: large ice floe impact}
+ 1       IceSubModel - Number that represents different ice sub models.
+---------------------- ICE PROPERTIES -General ---------------------------------
+0.1      IceVel      - Velocity of ice sheet movement (m/s)
+0.8      IceThks     - Thickness of the ice sheet (m)
+1000     WtDen       - Mass density of water (kg/m3)
+900      IceDen      - Mass density of ice (kg/m3)
+0.0      InitLoc     - Ice sheet initial location (m)
+0.0      InitTm      - Ice load starting time (s)
+2        Seed1       - Random seed 1
+5        Seed2       - Random seed 2
+---------------------- ICE PROPERTIES - Ice Model 1, SubModel 1------------------
+2.7      Ikm         - Indentation factor
+3.5e6    Ag          - Constant depends only on ice crystal type, used in calculating uniaxial stress (MPa-3s-1)
+65000    Qg          - Activation Energy (Jmol^-1)
+8.314    Rg          - Universal gas constant (Jmol-1K-1)
+269      Tice        - Ice temperature (K)
+---------------------- ICE PROPERTIES -Ice Model 1, SubModel 2-------------------
+0.3      Poisson     - Poisson's ratio of ice
+90.0     WgAngle     - Wedge Angel, degree. Default 90 Degrees.
+9.5      EIce        - Young's modulus of ice (GPa)
+---------------------- ICE PROPERTIES -Ice Model 1, SubModel 3-------------------
+5        SigNm       - Nominal ice stress (MPa)
+---------------------- ICE PROPERTIES -Ice Model 2, SubModel 1,2-----------------
+1.0      Pitch       - Distance between sequential ice teeth (m)
+5.0      IceStr2     - Ice failure stress (MPa)
+1.0      Delmax2     - Ice tooth maximum elastic deformation (m)
+---------------------- ICE PROPERTIES -Ice Model 3, SubModel 1,2-----------------
+0.5      ThkMean     - Mean value of ice thickness (m)
+0.04     ThkVar      - Variance of ice thickness (m^2)
+0.001    VelMean     - Mean value of ice velocity (m/s)
+1e-6     VelVar      - Variance of ice velocity (m^2/s^2)
+15       TeMean      - Mean value of ice loading event duration (s)
+---------------------- ICE PROPERTIES -Ice Model 3, SubModel 2,3-----------------
+5        StrMean     - Mean value of ice strength (MPa)
+1        StrVar      - Variance of ice strength (MPa)
+---------------------- ICE PROPERTIES -Ice Model 3, SubModel 3-------------------
+0.1      DelMean     - Mean value of maximum ice tooth tip displacement (m)
+0.01     DelVar      - Variance of maximum ice tooth tip displacement (m^2)
+0.2      PMean       - Mean value of the distance between sequential ice teeth (m)
+0.01     PVar        - Variance of the distance between sequential ice teeth (m^2)
+---------------------- ICE PROPERTIES -Ice Model 4 ------------------------------
+0        PrflMean    - Mean value of ice contact face position (m)
+0.02     PrflSig     - Standard deviation of ice contact face position (m)
+10       ZoneNo1     - Number of failure zones along contact width
+1        ZoneNo2     - Number of failure zones along contact height/thickness
+0.27     ZonePitch   - Distance between sequential ice teeth (m)
+5.0      IceStr      - Ice failure stress within each failure region (MPa)
+0.027    Delmax      - Ice teeth maximum elastic deformatIon (m)
+---------------------- ICE PROPERTIES -Ice Model 5, Submodel 1,2 -----------------
+55.0     ConeAgl     - Slope angle of the cone (degree)
+8.0      ConeDwl     - Cone waterline diameter (m)
+1.0      ConeDtp     - Cone top diameter (m)
+0.3      RdupThk     - Ride-up ice thickness (m)
+0.3      mu          - Friction coefficient between structure and ice (-)
+0.7      FlxStr      - Flexural strength of ice (MPa)
+0.1      StrLim      - Limit strain for ice fracture failure (-)
+1e-2     StrRtLim    - Limit strain rate for ice brittle behavior (s^-1)
+---------------------- ICE PROPERTIES -Ice Model 6 -------------------------------
+800      FloeLth     - Ice floe length (m)
+800      FloeWth     - Ice floe width (m)
+5.0      CPrAr       - Ice crushing strength pressure-area relation constant
+-0.5     dPrAr       - Ice crushing strength pressure-area relation order
+9        Fdr         - Constant external driving force (MN)
+140      Kic         - Fracture toughness of ice (kNm^(-3/2))
+3.3      FspN        - Non-dimensional splitting load

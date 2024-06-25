@@ -233,6 +233,19 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WS_TSR      !< List of WindSpeed or TSRs (depending on WindSpeedOrTSR setting) for aeromap generation [(m/s or -)]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Pitch      !< List of pitch angles for aeromap generation [(rad)]
     INTEGER(IntKi)  :: GearBox_index = 0_IntKi      !< Index to gearbox rotation in state array (for steady-state calculations) [-]
+    LOGICAL  :: ZmqOn = .false.      !< zmq activation flag [-]
+    CHARACTER(1024)  :: ZmqInAddress      !< address for ZMQ REQ-REP protocol [-]
+    INTEGER(IntKi)  :: ZmqInNbr = 0_IntKi      !< number of ZMQ REQ-REP channels [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ZmqInChannels      !< address for ZMQ REQ-REP protocol [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ZmqInChannelsAry      !< array to pass ZMQ PUB-SUB protocol [-]
+    REAL(ReKi)  :: ZmqInDT = 0.0_ReKi      !< time step for in communication, FAST will keep it constant in between (sample & hold), default is same DT of simulation [-]
+    CHARACTER(1024)  :: ZmqOutAddress      !< address for ZMQ PUB-SUB protocol [-]
+    INTEGER(IntKi)  :: ZmqOutNbr = 0_IntKi      !< number of ZMQ PUB-SUB channels [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ZmqOutChannels      !< variables to pass ZMQ PUB-SUB protocol [-]
+    REAL(DbKi)  :: ZmqOutDT = 0.0_R8Ki      !< time step for out communication, FAST will keep it constant in between (sample & hold), default is same DT of simulation [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ZmqOutChnlsIdx      !< indexes of channels to be broadcasted [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ZmqOutChannelsNames      !< names for ZMQ PUB-SUB protocol [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ZmqOutChannelsAry      !< array to pass ZMQ PUB-SUB protocol [-]
   END TYPE FAST_ParameterType
 ! =======================
 ! =========  FAST_LinStateSave  =======
@@ -1524,6 +1537,85 @@ subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%Pitch = SrcParamData%Pitch
    end if
    DstParamData%GearBox_index = SrcParamData%GearBox_index
+   DstParamData%ZmqOn = SrcParamData%ZmqOn
+   DstParamData%ZmqInAddress = SrcParamData%ZmqInAddress
+   DstParamData%ZmqInNbr = SrcParamData%ZmqInNbr
+   if (allocated(SrcParamData%ZmqInChannels)) then
+      LB(1:1) = lbound(SrcParamData%ZmqInChannels, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%ZmqInChannels, kind=B8Ki)
+      if (.not. allocated(DstParamData%ZmqInChannels)) then
+         allocate(DstParamData%ZmqInChannels(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%ZmqInChannels.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%ZmqInChannels = SrcParamData%ZmqInChannels
+   end if
+   if (allocated(SrcParamData%ZmqInChannelsAry)) then
+      LB(1:1) = lbound(SrcParamData%ZmqInChannelsAry, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%ZmqInChannelsAry, kind=B8Ki)
+      if (.not. allocated(DstParamData%ZmqInChannelsAry)) then
+         allocate(DstParamData%ZmqInChannelsAry(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%ZmqInChannelsAry.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%ZmqInChannelsAry = SrcParamData%ZmqInChannelsAry
+   end if
+   DstParamData%ZmqInDT = SrcParamData%ZmqInDT
+   DstParamData%ZmqOutAddress = SrcParamData%ZmqOutAddress
+   DstParamData%ZmqOutNbr = SrcParamData%ZmqOutNbr
+   if (allocated(SrcParamData%ZmqOutChannels)) then
+      LB(1:1) = lbound(SrcParamData%ZmqOutChannels, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%ZmqOutChannels, kind=B8Ki)
+      if (.not. allocated(DstParamData%ZmqOutChannels)) then
+         allocate(DstParamData%ZmqOutChannels(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%ZmqOutChannels.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%ZmqOutChannels = SrcParamData%ZmqOutChannels
+   end if
+   DstParamData%ZmqOutDT = SrcParamData%ZmqOutDT
+   if (allocated(SrcParamData%ZmqOutChnlsIdx)) then
+      LB(1:1) = lbound(SrcParamData%ZmqOutChnlsIdx, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%ZmqOutChnlsIdx, kind=B8Ki)
+      if (.not. allocated(DstParamData%ZmqOutChnlsIdx)) then
+         allocate(DstParamData%ZmqOutChnlsIdx(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%ZmqOutChnlsIdx.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%ZmqOutChnlsIdx = SrcParamData%ZmqOutChnlsIdx
+   end if
+   if (allocated(SrcParamData%ZmqOutChannelsNames)) then
+      LB(1:1) = lbound(SrcParamData%ZmqOutChannelsNames, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%ZmqOutChannelsNames, kind=B8Ki)
+      if (.not. allocated(DstParamData%ZmqOutChannelsNames)) then
+         allocate(DstParamData%ZmqOutChannelsNames(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%ZmqOutChannelsNames.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%ZmqOutChannelsNames = SrcParamData%ZmqOutChannelsNames
+   end if
+   if (allocated(SrcParamData%ZmqOutChannelsAry)) then
+      LB(1:1) = lbound(SrcParamData%ZmqOutChannelsAry, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%ZmqOutChannelsAry, kind=B8Ki)
+      if (.not. allocated(DstParamData%ZmqOutChannelsAry)) then
+         allocate(DstParamData%ZmqOutChannelsAry(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%ZmqOutChannelsAry.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%ZmqOutChannelsAry = SrcParamData%ZmqOutChannelsAry
+   end if
 end subroutine
 
 subroutine FAST_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -1547,6 +1639,24 @@ subroutine FAST_DestroyParam(ParamData, ErrStat, ErrMsg)
    end if
    if (allocated(ParamData%Pitch)) then
       deallocate(ParamData%Pitch)
+   end if
+   if (allocated(ParamData%ZmqInChannels)) then
+      deallocate(ParamData%ZmqInChannels)
+   end if
+   if (allocated(ParamData%ZmqInChannelsAry)) then
+      deallocate(ParamData%ZmqInChannelsAry)
+   end if
+   if (allocated(ParamData%ZmqOutChannels)) then
+      deallocate(ParamData%ZmqOutChannels)
+   end if
+   if (allocated(ParamData%ZmqOutChnlsIdx)) then
+      deallocate(ParamData%ZmqOutChnlsIdx)
+   end if
+   if (allocated(ParamData%ZmqOutChannelsNames)) then
+      deallocate(ParamData%ZmqOutChannelsNames)
+   end if
+   if (allocated(ParamData%ZmqOutChannelsAry)) then
+      deallocate(ParamData%ZmqOutChannelsAry)
    end if
 end subroutine
 
@@ -1659,6 +1769,19 @@ subroutine FAST_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%WS_TSR)
    call RegPackAlloc(RF, InData%Pitch)
    call RegPack(RF, InData%GearBox_index)
+   call RegPack(RF, InData%ZmqOn)
+   call RegPack(RF, InData%ZmqInAddress)
+   call RegPack(RF, InData%ZmqInNbr)
+   call RegPackAlloc(RF, InData%ZmqInChannels)
+   call RegPackAlloc(RF, InData%ZmqInChannelsAry)
+   call RegPack(RF, InData%ZmqInDT)
+   call RegPack(RF, InData%ZmqOutAddress)
+   call RegPack(RF, InData%ZmqOutNbr)
+   call RegPackAlloc(RF, InData%ZmqOutChannels)
+   call RegPack(RF, InData%ZmqOutDT)
+   call RegPackAlloc(RF, InData%ZmqOutChnlsIdx)
+   call RegPackAlloc(RF, InData%ZmqOutChannelsNames)
+   call RegPackAlloc(RF, InData%ZmqOutChannelsAry)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1774,6 +1897,19 @@ subroutine FAST_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WS_TSR); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Pitch); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%GearBox_index); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ZmqOn); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ZmqInAddress); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ZmqInNbr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ZmqInChannels); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ZmqInChannelsAry); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ZmqInDT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ZmqOutAddress); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ZmqOutNbr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ZmqOutChannels); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ZmqOutDT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ZmqOutChnlsIdx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ZmqOutChannelsNames); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ZmqOutChannelsAry); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlCode, ErrStat, ErrMsg)

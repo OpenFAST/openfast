@@ -1,3 +1,42 @@
+OpenFAST ZMQ PR
+========
+OpenFAST with ZMQ for interfacing with other applications, developed at NREL during my research stay (2023-11 - 2024 - 01).
+
+
+Requirements
+----
+```
+cJSON
+ZMQ
+```
+
+Main changes in this PR
+----
+
+- Added ZMQ connection capabilities to OpenFAST:
+   - PUB-SUB connection to receive solved variables from OpenFAST at runtime (all `y_FAST` is available)
+   - REQ-REP to interact with OpenFAST at runtime (eg. pitch control, wind speed, etc).
+- Modified input files to include ZMQ parameters
+- Added Python routines and tests to interface with OpenFAST (to be moved to `openfast-toolbox`?)
+
+The folder `zmq_python_toolbox` contains the Python routines to interact with OpenFAST via ZMQ. 
+
+- `ex01` shows how to subscribe to a PUB-SUB socket from OpenFAST and how to receive the data.
+- `ex02` shows how to interact with OpenFAST via REQ-REP sockets.
+- `ex03` shows how to interact with OpenFAST using both sockets at the same time.
+
+
+Updates 
+---------
+- Added end of simulation message to ZMQ, so that receiver can know when the simulation is over and 
+detach from the ZMQ connection (close the socket). Currently, EOF signals are zeros, to keep float format. (`line 5649`)
+- Added warning if user passes wind speed at runtime, as it will trigger Inflow Wind to use the steady model around the rotor disk (`line 3580`)
+- Added variables `ZmqInDT` and `ZmqOutDT` to the input file, to set the time step for the ZMQ connection (`line 3586` - `line 3641`)
+- Added variable check in input: if Zmq does not recognize one requested output, it will display it (not stopping the simulation) (`line 2500` - `line 2506`)
+- Added units to the ZMQ output variables (`line 2517`)
+
+
+========
 OpenFAST
 ========
 

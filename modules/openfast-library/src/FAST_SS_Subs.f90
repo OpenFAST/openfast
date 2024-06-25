@@ -140,12 +140,12 @@ SUBROUTINE FAST_SteadyState_T( Turbine, ErrStat, ErrMsg )
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
    
       CALL FAST_SteadyState( Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
-                  Turbine%ED, Turbine%BD, Turbine%AD, Turbine%MeshMapData, ErrStat, ErrMsg )
+                  Turbine%ED, Turbine%BD, Turbine%AD, Turbine%MeshMapData, Turbine%TurbID, ErrStat, ErrMsg )
                   
 END SUBROUTINE FAST_SteadyState_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine takes data from n_t_global and gets values at n_t_global + 1
-SUBROUTINE FAST_SteadyState(p_FAST, y_FAST, m_FAST, ED, BD, AD, MeshMapData, ErrStat, ErrMsg )
+SUBROUTINE FAST_SteadyState(p_FAST, y_FAST, m_FAST, ED, BD, AD, MeshMapData, TurbID, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              !< Output variables for the glue code
@@ -172,9 +172,11 @@ SUBROUTINE FAST_SteadyState(p_FAST, y_FAST, m_FAST, ED, BD, AD, MeshMapData, Err
    CHARACTER(ErrMsgLen)                    :: ErrMSg2
    TYPE(IceD_OutputType),    ALLOCATABLE   :: y_IceD (:)         !< IceDyn outputs (WriteOutput values are subset)
    CHARACTER(MaxWrScrLen), PARAMETER       :: BlankLine = " "
+   INTEGER(IntKi), INTENT(INOUT)                          :: TurbID
    
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_SteadyState'
-   
+   LOGICAL                                :: NeedSendZmq = .false. ! de activating it for now in ss subs
+
    ErrStat = ErrID_None
    ErrMsg = ""
    
@@ -244,7 +246,8 @@ SUBROUTINE FAST_SteadyState(p_FAST, y_FAST, m_FAST, ED, BD, AD, MeshMapData, Err
       
       CALL WrOutputLine( n_global, p_FAST, y_FAST, UnusedAry, UnusedAry, ED%y%WriteOutput, &
             AD%y, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, &
-            UnusedAry, UnusedAry, UnusedAry, UnusedAry, y_IceD, BD%y, ErrStat2, ErrMsg2 )
+            UnusedAry, UnusedAry, UnusedAry, UnusedAry, y_IceD, BD%y, &
+            p_FAST%ZmqOutChannelsAry, TurbID, NeedSendZmq, ErrStat2, ErrMsg2 )
 
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) then
