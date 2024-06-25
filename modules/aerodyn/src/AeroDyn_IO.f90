@@ -698,6 +698,9 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    SkewMod_Old    = -1
    FrozenWake_Old = .False.
 
+   InputFileData%UA_Init%UA_OUTS    = 0
+   InputFileData%UA_Init%d_34_to_ac = 0.5_ReKi
+   
 
    ! Initialization
    ErrStat  =  ErrId_None
@@ -803,6 +806,8 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       ! SpdSound - Speed of sound {or default} (m/s)
    call ParseVarWDefault( FileInfo_In, CurLine, "SpdSound", InputFileData%SpdSound, InitInp%defSpdSound, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
+      InputFileData%UA_Init%a_s        = InputFileData%SpdSound
+
       ! Patm - Atmospheric pressure {or default} (Pa) [used only when CavitCheck=True]
    call ParseVarWDefault( FileInfo_In, CurLine, "Patm", InputFileData%Patm, InitInp%defPatm, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
@@ -1086,6 +1091,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       ! SumPrint - Generate a summary file listing input options and interpolated properties to "<rootname>.AD.sum"?  (flag)
    call ParseVar( FileInfo_In, CurLine, "SumPrint", InputFileData%SumPrint, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
+   InputFileData%UA_Init%WrSum      = InputFileData%SumPrint
 
       ! NBlOuts - Number of blade node outputs [0 - 9] (-)
    call ParseVar( FileInfo_In, CurLine, "NBlOuts", InputFileData%NBlOuts, ErrStat2, ErrMsg2, UnEc )
@@ -1174,6 +1180,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       endif
    endif
 
+   
    !======  Nodal Outputs  ==============================================================================
       ! In case there is something ill-formed in the additional nodal outputs section, we will simply ignore it.
       ! Expecting at least 5 more lines in the input file for this section
@@ -1208,7 +1215,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
 
    !====== Print new and old inputs =====================================================================
    if (wakeModProvided .or. frozenWakeProvided .or. skewModProvided .or. AFAeroModProvided .or. UAModProvided) then
-   call printNewOldInputs()
+      call printNewOldInputs()
    endif
 
    !====== Advanced Options =============================================================================
@@ -1241,11 +1248,6 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
 
    !---------------------- END OF FILE -----------------------------------------
    
-   ! copy data from AD input file to UA input file info:
-   InputFileData%UA_Init%a_s        = InputFileData%SpdSound
-   InputFileData%UA_Init%WrSum      = InputFileData%SumPrint
-   InputFileData%UA_Init%UA_OUTS    = 0
-   InputFileData%UA_Init%d_34_to_ac = 0.5_ReKi
 
    RETURN
 
