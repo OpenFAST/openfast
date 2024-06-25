@@ -3363,7 +3363,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       
       integer(IntKi)                              :: errStat2         ! local status of error message
       character(ErrMsgLen)                        :: errMsg2          ! local error message if ErrStat /= ErrID_None
-      character(*), parameter                     :: RoutineName = 'CreatePointMesh'
+      character(*), parameter                     :: RoutineName = 'CreateInputPointMesh'
       
       errStat = ErrID_None
       errMsg  = ''
