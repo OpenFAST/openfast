@@ -27,7 +27,7 @@ The folder `zmq_python_toolbox` contains the Python routines to interact with Op
 
 
 Updates 
----
+---------
 - Added end of simulation message to ZMQ, so that receiver can know when the simulation is over and 
 detach from the ZMQ connection (close the socket). Currently, EOF signals are zeros, to keep float format. (`line 5649`)
 - Added warning if user passes wind speed at runtime, as it will trigger Inflow Wind to use the steady model around the rotor disk (`line 3580`)

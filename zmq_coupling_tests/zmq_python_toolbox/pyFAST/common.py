@@ -1,3 +1,0 @@
-
-class PYFASTException(Exception):
-    pass

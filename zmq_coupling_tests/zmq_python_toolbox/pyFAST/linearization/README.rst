@@ -1,3 +1,0 @@
-
-More details coming soon!
--------------------------
