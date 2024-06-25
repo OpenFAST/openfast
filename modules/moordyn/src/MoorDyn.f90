@@ -461,7 +461,7 @@ CONTAINS
                      read (OptValue,*) p%cv
                   else if ( OptString == 'INERTIALF')  then
                      read (OptValue,*) p%inertialF
-                  else if ( OptString == 'INTERTIALF_RAMPT') then
+                  else if ( OptString == 'INERTIALF_RAMPT') then
                      read (OptValue,*) p%inertialF_rampT
                   else
                      CALL SetErrStat( ErrID_Warn, 'Unable to interpret input '//trim(OptString)//' in OPTIONS section.', ErrStat, ErrMsg, RoutineName )
