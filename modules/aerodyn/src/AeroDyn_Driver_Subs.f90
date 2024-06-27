@@ -358,7 +358,7 @@ subroutine Dvr_EndCase(dvr, ADI, initialized, errStat, errMsg)
             else
                sWT = ''
             endif
-            call WrBinFAST(trim(dvr%out%Root)//trim(sWT)//'.outb', FileFmtID_ChanLen_In, 'AeroDynDriver', dvr%out%WriteOutputHdr, dvr%out%WriteOutputUnt, (/0.0_DbKi, dvr%dt/), dvr%out%storage(:,:,iWT), errStat2, errMsg2)
+            call WrBinFAST(trim(dvr%out%Root)//trim(sWT)//'.outb', FileFmtID_ChanLen_In, GetVersion(version), dvr%out%WriteOutputHdr, dvr%out%WriteOutputUnt, (/0.0_DbKi, dvr%dt/), dvr%out%storage(:,:,iWT), errStat2, errMsg2)
             call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
          enddo
       endif
@@ -1452,7 +1452,7 @@ subroutine Dvr_InitializeOutputs(nWT, out, numSteps, errStat, errMsg)
             end if
             call OpenFOutFile ( out%unOutFile(iWT), trim(out%Root)//trim(sWT)//'.out', errStat, errMsg )
             if ( errStat >= AbortErrLev ) return
-            write (out%unOutFile(iWT),'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim( TRIM(GetVersion(version)) )
+            write (out%unOutFile(iWT),'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim( GetVersion(version) )
             write (out%unOutFile(iWT),'(1X,A)') trim(GetNVD(out%AD_ver))
             write (out%unOutFile(iWT),'()' )    !print a blank line
             write (out%unOutFile(iWT),'()' )    !print a blank line
