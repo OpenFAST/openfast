@@ -523,7 +523,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       real(ReKi), dimension(3) ::  aP   ! Rigid-body acceleration of node
       real(R8Ki), dimension(3,3) :: Rg2b ! Rotation matrix global 2 body coordinates
       real(R8Ki), dimension(3,3) :: Rb2g ! Rotation matrix body 2 global coordinates
-      real(R8Ki), dimension(6,6) :: RRb2g ! Rotation matrix global 2 body coordinates, acts on a 6-vector
+      real(R8Ki), dimension(6,6) :: RRb2g ! Rotation matrix body 2 global coordinates, acts on a 6-vector
       INTEGER(IntKi)               :: ErrStat2    ! Error status of the operation (occurs after initial error)
       CHARACTER(ErrMsgLen)         :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
       ! Initialize ErrStat
@@ -531,14 +531,20 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ErrMsg  = ""
 
       ! --- Convert inputs to FEM DOFs and convenient 6-vector storage
-      ! Compute the roll, pitch, and yaw angles given the input direction cosine matrix < Not used
-      rotations    = EulerExtractZYX(u%TPMesh%Orientation(:,:,1))
+      ! Compute the roll, pitch, and yaw angles given the input direction cosine matrix
+      IF ( p%Floating ) THEN
+         ! Only needed for outputs when floating
+         rotations  = EulerExtractZYX(u%TPMesh%Orientation(:,:,1))
+      ELSE
+         ! Need to be small angles due to the Guyan stiffness terms
+         rotations  = GetSmllRotAngs(u%TPMesh%Orientation(:,:,1), ErrStat2, ErrMsg2); if(Failed()) return
+      END IF
       m%u_TP       = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
       m%udot_TP    = (/u%TPMesh%TranslationVel( :,1), u%TPMesh%RotationVel(:,1)/)
       m%udotdot_TP = (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/)
       Rg2b(1:3,1:3) = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
       Rb2g(1:3,1:3) = transpose(u%TPMesh%Orientation(:,:,1))
-      RRb2g(:,:) = 0.0_ReKi
+      RRb2g(:,:) = 0.0_R8Ki
       RRb2g(1:3,1:3) = Rb2g
       RRb2g(4:6,4:6) = Rb2g
 
@@ -808,8 +814,8 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             CALL SD_DestroyContState( dxdt, ErrStat2, ErrMsg2); if(Failed()) return
          END IF
          ! 6-vectors (making sure they are up to date for outputs
-         m%udot_TP    = (/u%TPMesh%TranslationVel( :,1),u%TPMesh%RotationVel(:,1)/) 
-         m%udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
+         m%udot_TP    = (/u%TPMesh%TranslationVel(:,1),u%TPMesh%RotationVel(:,1)/)
+         m%udotdot_TP = (/u%TPMesh%TranslationAcc(:,1),u%TPMesh%RotationAcc(:,1)/)
           
          ! Write the previous output data into the output file           
          IF ( ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) .AND. ( t > m%LastOutTime ) ) THEN
