@@ -1226,10 +1226,12 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
 
    CALL AllocAry( Init%K, p%nDOF, p%nDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%M, p%nDOF, p%nDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
-   CALL AllocAry( p%FG,   p%nDOF,          'p%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+   CALL AllocAry( p%FG,   p%nDOF,          'p%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector with line pretension
+   CALL AllocAry( p%FC,   p%nDOF,          'p%FC'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! line pretension only
    Init%K  = 0.0_FEKi
    Init%M  = 0.0_FEKi
    p%FG    = 0.0_FEKi
+   p%FC    = 0.0_FEKi
 
    ! loop over all elements, compute element matrices and assemble into global matrices
    DO i = 1, Init%NElem
@@ -1240,7 +1242,8 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
 
       ! --- Assembly in global unconstrained system
       IDOF = p%ElemsDOF(1:12, i)
-      p%FG     ( IDOF )  = p%FG( IDOF )   + FGe(1:12)+ FCe(1:12) ! Note: gravity and pretension cable forces
+      p%FC     ( IDOF )  = p%FC( IDOF ) + FCe(1:12)             ! Note: Pretension cable forces only
+      p%FG     ( IDOF )  = p%FG( IDOF ) + FGe(1:12) + FCe(1:12) ! Note: gravity and pretension cable forces
       Init%K(IDOF, IDOF) = Init%K( IDOF, IDOF) + Ke(1:12,1:12)
       Init%M(IDOF, IDOF) = Init%M( IDOF, IDOF) + Me(1:12,1:12)
    ENDDO

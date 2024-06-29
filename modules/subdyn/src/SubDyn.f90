@@ -243,7 +243,8 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
    !bjj added this ugly check (mostly for checking SubDyn driver). not sure if anyone would want to play with different values of gravity so I don't return an error.
    IF (Init%g < 0.0_ReKi ) CALL ProgWarn( ' SubDyn calculations use gravity assuming it is input as a positive number; the input value is negative.' ) 
-   
+   p%g = Init%g
+
    ! Establish the GLUECODE requested/suggested time step.  This may be overridden by SubDyn based on the SDdeltaT parameter of the SubDyn input file.
    Init%DT  = Interval
    IF ( LEN_TRIM(Init%RootName) == 0 ) THEN
@@ -702,6 +703,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       else
          Y1_CB = 0.0_ReKi
       endif
+      ! print *, 'Y1_CB: ', Y1_CB
 
       ! Contribution from U_TP, Udot_TP, Uddot_TP, Reaction/coupling force at TP
       if (p%GuyanLoadCorrection.and.p%Floating) then
@@ -2879,6 +2881,7 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
 
    CALL AllocAry( Misc%Fext,      p%nDOF     , 'm%Fext    ', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
    CALL AllocAry( Misc%Fext_red,  p%nDOF_red , 'm%Fext_red', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
+   CALL AllocAry( Misc%FG,        p%nDOF     , 'm%FG      ', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
    
 END SUBROUTINE AllocMiscVars
 
@@ -3255,6 +3258,7 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
    real(ReKi)                    :: rotations(3)
    real(ReKi)                    :: du(3), Moment(3), Force(3) 
    real(ReKi)                    :: u_TP(6)
+   real(FEKi)                    :: FGe(12) ! element gravity force vector
    ! Variables for Guyan Rigid motion
    real(ReKi), dimension(3) ::  rIP  ! Vector from TP to rotated Node
    real(ReKi), dimension(3) ::  rIP0 ! Vector from TP to Node (undeflected)
@@ -3322,15 +3326,33 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
    endif
 
    ! --- Build vector of external moment
+   ! For floating structure with potentially large Guyan (rigid-body) rotation, nodal self-weight needs to be recomputed based on the current rigid-body orientation
+   m%FG = 0.0_R8Ki
+   if ( RotateLoads ) then
+      Rb2g = transpose(Rg2b) ! Body (Guyan) to global
+      do i = 1, size(p%ElemProps)
+         ! --- Element Fg in the earth-fixed frame
+         CALL ElemG(p%ElemProps(i)%Area, p%ElemProps(i)%Length, p%ElemProps(i)%Rho, matmul(Rb2g,p%ElemProps(i)%DirCos), FGe, p%g)
+         ! --- Element Fg in the Guyan rigid-body frame
+         FGe( 1: 3) = matmul(Rg2b,FGe( 1: 3)) ! Node 1 force
+         FGe( 4: 6) = matmul(Rg2b,FGe( 4: 6)) ! Node 1 moment
+         FGe( 7: 9) = matmul(Rg2b,FGe( 7: 9)) ! Node 2 force
+         FGe(10:12) = matmul(Rg2b,FGe(10:12)) ! Node 2 moment
+         ! --- Assembly in global unconstrained system
+         IDOF = p%ElemsDOF(1:12,i)
+         m%FG( IDOF ) = m%FG( IDOF ) + FGe(1:12)
+      end do
+   end if
+
    do iNode = 1,p%nNodes
       Force(1:3)  = m%Fext(p%NodesDOF(iNode)%List(1:3) ) ! Controllable cable + External Forces on LMesh
       Moment(1:3) = m%Fext(p%NodesDOF(iNode)%List(4:6) ) ! Controllable cable 
       ! Moment ext + gravity
       if (RotateLoads) then
          ! In body coordinates
-         Moment(1:3) = matmul(Rg2b, Moment(1:3)+ u%LMesh%Moment(1:3,iNode) + p%FG(p%NodesDOF(iNode)%List(4:6)))
+         Moment(1:3) = matmul(Rg2b, Moment(1:3)+ u%LMesh%Moment(1:3,iNode) ) + m%FG(p%NodesDOF(iNode)%List(4:6)) + p%FC(p%NodesDOF(iNode)%List(4:6)) ! Use updated m%FG instead with cable pretension p%FC
       else
-         Moment(1:3) =              Moment(1:3)+ u%LMesh%Moment(1:3,iNode) + p%FG(p%NodesDOF(iNode)%List(4:6))
+         Moment(1:3) =              Moment(1:3)+ u%LMesh%Moment(1:3,iNode)   + p%FG(p%NodesDOF(iNode)%List(4:6)) ! p%FG contains both precomputed self-weight and cable pretension
       endif
 
       ! Extra moment dm = Delta u x (fe + fg)

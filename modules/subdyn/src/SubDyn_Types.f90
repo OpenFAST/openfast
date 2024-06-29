@@ -135,7 +135,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: RootName      !< SubDyn rootname [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TP_RefPoint = 0.0_ReKi      !< global position of transition piece reference point (could also be defined in SubDyn itself) [-]
     REAL(ReKi)  :: SubRotateZ = 0.0_ReKi      !< Rotation angle in degrees about global Z [-]
-    REAL(ReKi)  :: g = 0.0_ReKi      !< Gravity acceleration [-]
+    REAL(ReKi)  :: g = 0.0_ReKi      !< Gravity acceleration [m/s^2]
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step from Glue Code [seconds]
     INTEGER(IntKi)  :: NJoints = 0_IntKi      !< Number of joints of the sub structure [-]
     INTEGER(IntKi)  :: NPropSetsX = 0_IntKi      !< Number of extended property sets [-]
@@ -240,12 +240,14 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Decimat = 0_IntKi      !< Current output decimation counter [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Fext      !< External loads on unconstrained DOFs [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Fext_red      !< External loads on constrained DOFs, Fext_red= T^t Fext [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: FG      !< Gravity force vector (without initial cable force T0) based on the instantaneous platform orientation, not reduced (floating only) [N]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: UL_SIM      !< UL for SIM = PhiL qL0- PhiM qm0, size nL [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: UL_0m      !< Intermediate UL term for SIM = PhiM qm0, size nL [-]
   END TYPE SD_MiscVarType
 ! =======================
 ! =========  SD_ParameterType  =======
   TYPE, PUBLIC :: SD_ParameterType
+    REAL(ReKi)  :: g = 0.0_ReKi      !< Gravity acceleration [m/s^2]
     REAL(DbKi)  :: SDDeltaT = 0.0_R8Ki      !< Time step (for integration of continuous states) [seconds]
     INTEGER(IntKi)  :: IntMethod = 0_IntKi      !< Integration Method (1/2/3)Length of y2 array [-]
     INTEGER(IntKi)  :: nDOF = 0_IntKi      !< Total degree of freedom [-]
@@ -253,6 +255,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Nmembers = 0_IntKi      !< Number of members of the sub structure [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Elems      !< Element nodes connections [-]
     TYPE(ElemPropType) , DIMENSION(:), ALLOCATABLE  :: ElemProps      !< List of element properties [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: FC      !< Initial cable force T0, not reduced [N]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: FG      !< Gravity force vector (with initial cable force T0), not reduced [N]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: DP0      !< Vector from TP to a Node at t=0, used for Floating Rigid Body motion [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: rPG      !< Vector from TP to rigid-body CoG in the Guyan (rigid-body) frame, used for Floating Rigid Body Motion [m]
@@ -2327,6 +2330,18 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%Fext_red = SrcMiscData%Fext_red
    end if
+   if (allocated(SrcMiscData%FG)) then
+      LB(1:1) = lbound(SrcMiscData%FG, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%FG, kind=B8Ki)
+      if (.not. allocated(DstMiscData%FG)) then
+         allocate(DstMiscData%FG(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FG.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%FG = SrcMiscData%FG
+   end if
    if (allocated(SrcMiscData%UL_SIM)) then
       LB(1:1) = lbound(SrcMiscData%UL_SIM, kind=B8Ki)
       UB(1:1) = ubound(SrcMiscData%UL_SIM, kind=B8Ki)
@@ -2426,6 +2441,9 @@ subroutine SD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%Fext_red)) then
       deallocate(MiscData%Fext_red)
    end if
+   if (allocated(MiscData%FG)) then
+      deallocate(MiscData%FG)
+   end if
    if (allocated(MiscData%UL_SIM)) then
       deallocate(MiscData%UL_SIM)
    end if
@@ -2466,6 +2484,7 @@ subroutine SD_PackMisc(RF, Indata)
    call RegPack(RF, InData%Decimat)
    call RegPackAlloc(RF, InData%Fext)
    call RegPackAlloc(RF, InData%Fext_red)
+   call RegPackAlloc(RF, InData%FG)
    call RegPackAlloc(RF, InData%UL_SIM)
    call RegPackAlloc(RF, InData%UL_0m)
    if (RegCheckErr(RF, RoutineName)) return
@@ -2506,6 +2525,7 @@ subroutine SD_UnPackMisc(RF, OutData)
    call RegUnpack(RF, OutData%Decimat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Fext); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Fext_red); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%FG); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%UL_SIM); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%UL_0m); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -2523,6 +2543,7 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SD_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   DstParamData%g = SrcParamData%g
    DstParamData%SDDeltaT = SrcParamData%SDDeltaT
    DstParamData%IntMethod = SrcParamData%IntMethod
    DstParamData%nDOF = SrcParamData%nDOF
@@ -2555,6 +2576,18 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
+   end if
+   if (allocated(SrcParamData%FC)) then
+      LB(1:1) = lbound(SrcParamData%FC, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%FC, kind=B8Ki)
+      if (.not. allocated(DstParamData%FC)) then
+         allocate(DstParamData%FC(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%FC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%FC = SrcParamData%FC
    end if
    if (allocated(SrcParamData%FG)) then
       LB(1:1) = lbound(SrcParamData%FG, kind=B8Ki)
@@ -3340,6 +3373,9 @@ subroutine SD_DestroyParam(ParamData, ErrStat, ErrMsg)
       end do
       deallocate(ParamData%ElemProps)
    end if
+   if (allocated(ParamData%FC)) then
+      deallocate(ParamData%FC)
+   end if
    if (allocated(ParamData%FG)) then
       deallocate(ParamData%FG)
    end if
@@ -3559,6 +3595,7 @@ subroutine SD_PackParam(RF, Indata)
    integer(B8Ki)   :: i1, i2
    integer(B8Ki)   :: LB(2), UB(2)
    if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%g)
    call RegPack(RF, InData%SDDeltaT)
    call RegPack(RF, InData%IntMethod)
    call RegPack(RF, InData%nDOF)
@@ -3574,6 +3611,7 @@ subroutine SD_PackParam(RF, Indata)
          call SD_PackElemPropType(RF, InData%ElemProps(i1)) 
       end do
    end if
+   call RegPackAlloc(RF, InData%FC)
    call RegPackAlloc(RF, InData%FG)
    call RegPackAlloc(RF, InData%DP0)
    call RegPackAlloc(RF, InData%rPG)
@@ -3731,6 +3769,7 @@ subroutine SD_UnPackParam(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%g); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SDDeltaT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%IntMethod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nDOF); if (RegCheckErr(RF, RoutineName)) return
@@ -3750,6 +3789,7 @@ subroutine SD_UnPackParam(RF, OutData)
          call SD_UnpackElemPropType(RF, OutData%ElemProps(i1)) ! ElemProps 
       end do
    end if
+   call RegUnpackAlloc(RF, OutData%FC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%FG); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%DP0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%rPG); if (RegCheckErr(RF, RoutineName)) return

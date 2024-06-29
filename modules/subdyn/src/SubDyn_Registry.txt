@@ -95,7 +95,7 @@ typedef  ^  ^               LOGICAL                CableCChanRqst  {:}  .FALSE. 
 typedef  ^  SD_InitType   CHARACTER(1024)    RootName - - -           "SubDyn rootname" 
 typedef  ^  SD_InitType   ReKi               TP_RefPoint  {3}  - -    "global position of transition piece reference point (could also be defined in SubDyn itself)" 
 typedef  ^  SD_InitType   ReKi               SubRotateZ - - -         "Rotation angle in degrees about global Z" 
-typedef  ^  SD_InitType   ReKi               g - - -                  "Gravity acceleration" 
+typedef  ^  SD_InitType   ReKi               g - - -                  "Gravity acceleration" m/s^2
 typedef  ^  SD_InitType   DbKi               DT - - -                 "Time step from Glue Code" seconds
 typedef  ^  SD_InitType   INTEGER            NJoints - - -            "Number of joints of the sub structure" 
 typedef  ^  SD_InitType   INTEGER            NPropSetsX - - -         "Number of extended property sets" 
@@ -189,6 +189,7 @@ typedef  ^    MiscVarType    DbKi           LastOutTime -  -  -    "The time of 
 typedef  ^    MiscVarType    IntKi          Decimat     -  -  -    "Current output decimation counter"  "-"
 typedef  ^    MiscVarType    ReKi           Fext      {:} -  -     "External loads on unconstrained DOFs"  "-"
 typedef  ^    MiscVarType    ReKi           Fext_red  {:} -  -     "External loads on constrained DOFs, Fext_red= T^t Fext"  "-"
+typedef  ^    MiscVarType    R8Ki           FG        {:} -  -     "Gravity force vector (without initial cable force T0) based on the instantaneous platform orientation, not reduced (floating only)"  N
 # SIM
 typedef  ^    MiscVarType    ReKi           UL_SIM        {:}  -  -  "UL for SIM = PhiL qL0- PhiM qm0, size nL" 
 typedef  ^    MiscVarType    ReKi           UL_0m         {:}  -  -  "Intermediate UL term for SIM = PhiM qm0, size nL" 
@@ -196,6 +197,7 @@ typedef  ^    MiscVarType    ReKi           UL_0m         {:}  -  -  "Intermedia
 
 # ============================== Parameters ============================================================================================================================================
 # --- Parameters - Algo
+typedef  ^  ParameterType   ReKi           g             -  -  -  "Gravity acceleration"  m/s^2
 typedef  ^  ParameterType   DbKi           SDDeltaT      -  -  -  "Time step (for integration of continuous states)"  seconds
 typedef  ^  ParameterType   IntKi          IntMethod     -  -  -  "Integration Method (1/2/3)Length of y2 array"
 # --- Parameters - FEM
@@ -204,6 +206,7 @@ typedef  ^  ParameterType  INTEGER         nDOF_red      -  -  -  "Total degree 
 typedef  ^  ParameterType  IntKi           Nmembers      -  -  -  "Number of members of the sub structure"
 typedef  ^  ParameterType  IntKi           Elems  {:}{:}    -  -  "Element nodes connections"
 typedef  ^  ParameterType  ElemPropType    ElemProps   {:}   - -  "List of element properties"
+typedef  ^  ParameterType  R8Ki            FC         {:}    - -  "Initial cable force T0, not reduced"  N
 typedef  ^  ParameterType  R8Ki            FG         {:}    - -  "Gravity force vector (with initial cable force T0), not reduced"  N
 typedef  ^  ParameterType  ReKi            DP0        {:}{:} - -  "Vector from TP to a Node at t=0, used for Floating Rigid Body motion"  m
 typedef  ^  ParameterType  ReKi            rPG        {:}    - -  "Vector from TP to rigid-body CoG in the Guyan (rigid-body) frame, used for Floating Rigid Body Motion"  m
