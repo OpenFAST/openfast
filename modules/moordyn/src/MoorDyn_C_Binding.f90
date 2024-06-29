@@ -624,7 +624,8 @@ SUBROUTINE SetMotionLoadsInterfaceMeshes(ErrStat,ErrMsg)
    ! initial position and orientation of node
    InitPos  = tmpPositions(1:3,1)
    theta    = REAL(tmpPositions(4:6,1),DbKi)    ! convert ReKi to DbKi to avoid roundoff
-   CALL SmllRotTrans( 'InputRotation', theta(1), theta(2), theta(3), Orient, 'Orient', ErrStat, ErrMsg )
+   ! CALL SmllRotTrans( 'InputRotation', theta(1), theta(2), theta(3), Orient, 'Orient', ErrStat, ErrMsg )
+   Orient = EulerConstructZYX((/theta(1), theta(2), theta(3)/))
    CALL MeshPositionNode(  MD_MotionMesh            , &
                            1                        , &
                            InitPos                  , &  ! position
@@ -685,7 +686,8 @@ SUBROUTINE Set_MotionMesh(ErrStat, ErrMsg)
    CHARACTER(ErrMsgLen),      INTENT(  OUT)  :: ErrMsg
    ! Set mesh corresponding to input motions
    theta = REAL(tmpPositions(4:6,1),DbKi)    ! convert ReKi to DbKi to avoid roundoff
-   CALL SmllRotTrans( 'InputRotation', theta(1), theta(2), theta(3), Orient, 'Orient', ErrStat, ErrMsg )
+   ! CALL SmllRotTrans( 'InputRotation', theta(1), theta(2), theta(3), Orient, 'Orient', ErrStat, ErrMsg )
+   Orient = EulerConstructZYX((/theta(1), theta(2), theta(3)/))
    MD_MotionMesh%TranslationDisp(1:3,1) = tmpPositions(1:3,1) - MD_MotionMesh%Position(1:3,1)  ! relative displacement only
    MD_MotionMesh%Orientation(1:3,1:3,1) = Orient
    MD_MotionMesh%TranslationVel( 1:3,1) = tmpVelocities(1:3,1)

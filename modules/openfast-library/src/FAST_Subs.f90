@@ -948,6 +948,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          Init%InData_HD%WaveField => Init%OutData_SeaSt%WaveField
       ! end if
       
+      Init%InData_HD%PtfmYMod = Init%OutData_ED%PtfmYMod
+      Init%InData_HD%PtfmRefY = Init%OutData_ED%PtfmRefY 
+
 
       CALL HydroDyn_Init( Init%InData_HD, HD%Input(1), HD%p,  HD%x(STATE_CURR), HD%xd(STATE_CURR), HD%z(STATE_CURR), &
                           HD%OtherSt(STATE_CURR), HD%y, HD%m, p_FAST%dt_module( MODULE_HD ), Init%OutData_HD, ErrStat2, ErrMsg2 )
