@@ -4696,20 +4696,26 @@ END SUBROUTINE CheckR8Var
       ! Local declarations:
 
    INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
+   CHARACTER(ErrMsgLen)         :: CommentInt                                      ! internal comment, if not returned from this subroutine
 
 
-
-
-   READ (UnIn,'(A)',IOSTAT=IOS)  Comment
+   IF (PRESENT(Comment)) THEN
+      READ (UnIn,'(A)',IOSTAT=IOS)  Comment
+   ELSE
+      READ (UnIn,'(A)',IOSTAT=IOS)  CommentInt
+   END IF
 
    CALL CheckIOS ( IOS, Fil, ComName, StrType, ErrStat, ErrMsg )
-
-
    IF (ErrStat >= AbortErrLev) RETURN
 
    IF ( PRESENT(UnEc) )  THEN
-      IF ( UnEc > 0 ) &
-         WRITE (UnEc,'(A)')  TRIM(Comment)
+      IF ( UnEc > 0 ) THEN
+         IF (PRESENT(Comment)) THEN
+            WRITE (UnEc,'(A)')  TRIM(Comment)
+         ELSE
+            WRITE (UnEc,'(A)')  TRIM(CommentInt)
+         END IF
+      END IF
    END IF
 
 

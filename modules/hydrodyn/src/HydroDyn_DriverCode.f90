@@ -242,10 +242,10 @@ PROGRAM HydroDynDriver
       ! --- Creating useful EDRPtMesh
 
       call Eye(dcm, ErrStat, ErrMsg );            CALL CheckError()
-      call CreatePointMesh(mappingData%EDRPt_Loads,     (/0.0_ReKi, 0.0_ReKi, drvrData%PtfmRefzt/), dcm, HasMotion=.false., HasLoads=.true.,  ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
-      call CreatePointMesh(mappingData%EDRPt_Motion,    (/0.0_ReKi, 0.0_ReKi, drvrData%PtfmRefzt/), dcm, HasMotion=.true.,  HasLoads=.false., ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
-      call CreatePointMesh(mappingData%ZZZPtMeshMotion, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi          /), dcm, HasMotion=.true.,  HasLoads=.false., ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
-      call CreatePointMesh(mappingData%ZZZPtMeshLoads , (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi          /), dcm, HasMotion=.false., HasLoads=.true.,  ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
+      call CreateInputPointMesh(mappingData%EDRPt_Loads,     (/0.0_ReKi, 0.0_ReKi, drvrData%PtfmRefzt/), dcm, HasMotion=.false., HasLoads=.true.,  ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
+      call CreateInputPointMesh(mappingData%EDRPt_Motion,    (/0.0_ReKi, 0.0_ReKi, drvrData%PtfmRefzt/), dcm, HasMotion=.true.,  HasLoads=.false., ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
+      call CreateInputPointMesh(mappingData%ZZZPtMeshMotion, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi          /), dcm, HasMotion=.true.,  HasLoads=.false., ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
+      call CreateInputPointMesh(mappingData%ZZZPtMeshLoads , (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi          /), dcm, HasMotion=.false., HasLoads=.true.,  ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
 
       CALL MeshMapCreate( u(1)%PRPMesh,             mappingData%EDRPt_Motion,   mappingData%HD_Ref_2_ED_Ref,       ErrStat, ErrMsg );    CALL CheckError()
       CALL MeshMapCreate( mappingData%EDRPt_Motion, u(1)%PRPMesh,               mappingData%ED_Ref_2_HD_Ref,       ErrStat, ErrMsg );    CALL CheckError()

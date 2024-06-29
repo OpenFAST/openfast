@@ -120,11 +120,12 @@ SUBROUTINE Calc_WriteOutput( p, p_AD, u, RotInflow, x, m, m_AD, y, OtherState, x
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   tmpHubFB  = 0.0_ReKi
-   tmpHubMB  = 0.0_ReKi
 
    ! Compute max radius and rotor speed
-   if (p_AD%Wake_Mod /= WakeMod_FVW) then
+   if (p%NumBlades == 0) then
+      rmax  = 0.0_ReKi
+      omega = 0.0_ReKi
+   elseif (p_AD%Wake_Mod /= WakeMod_FVW) then
       rmax = 0.0_ReKi
       do k=1,p%NumBlades
          do j=1,p%NumBlNds
@@ -147,8 +148,6 @@ SUBROUTINE Calc_WriteOutput( p, p_AD, u, RotInflow, x, m, m_AD, y, OtherState, x
    else
       call Calc_WriteOutput_FVW()
    endif
-
-
 
       ! set these for debugging
 !   m%AllOuts( Debug1 ) = 0.0_ReKi !TwoNorm( m%BEMT%u_SkewWake(1)%v_qsw )
@@ -175,8 +174,12 @@ CONTAINS
          m%AllOuts( TwNM(   beta) ) = m%W_Twr(j) / p%SpdSound               ! Mach number
          m%AllOuts( TwNFdx( beta) ) = m%X_Twr(j)         
          m%AllOuts( TwNFdy( beta) ) = m%Y_Twr(j)         
+      end do ! out nodes
       
-         if ( p%Buoyancy ) then
+      if ( p%Buoyancy ) then
+         do beta=1,p%NTwOuts
+            j = p%TwOutNd(beta)
+            
             tmp = matmul( u%TowerMotion%Orientation(:,:,j) , m%TwrBuoyLoad%Force(:,j) )
             m%AllOuts( TwNFbx(beta) ) = tmp(1)
             m%AllOuts( TwNFby(beta) ) = tmp(2)
@@ -186,10 +189,9 @@ CONTAINS
             m%AllOuts( TwNMbx(beta) ) = tmp(1)
             m%AllOuts( TwNMby(beta) ) = tmp(2)
             m%AllOuts( TwNMbz(beta) ) = tmp(3)
-         end if
-   
-      end do ! out nodes
-   
+         end do
+      end if
+      
          ! hub outputs
       if ( p%Buoyancy ) then
          tmpHubFB = matmul( u%HubMotion%Orientation(:,:,1) , m%HubFB )
@@ -201,6 +203,9 @@ CONTAINS
          m%AllOuts( HbMbx ) = tmpHubMB(1)
          m%AllOuts( HbMby ) = tmpHubMB(2)
          m%AllOuts( HbMbz ) = tmpHubMB(3)
+      else
+         tmpHubFB = 0.0_ReKi ! initialize for integration later
+         tmpHubMB = 0.0_ReKi ! initialize for integration later
       end if
    
          ! nacelle outputs
@@ -241,7 +246,14 @@ CONTAINS
             m%AllOuts( BNSigCr(   beta,k) ) = m%SigmaCavitCrit(j,k)
             m%AllOuts( BNSgCav(   beta,k) ) = m%SigmaCavit(j,k)
 
-            if ( p%Buoyancy ) then
+         end do ! nodes
+      end do ! blades
+
+      if ( p%Buoyancy ) then
+         do k=1,min(p%numBlades,AD_MaxBl_Out)    ! limit this
+            do beta=1,p%NBlOuts
+               j=p%BlOutNd(beta)
+
                tmp = matmul( u%BladeMotion(k)%Orientation(:,:,j), m%BladeBuoyLoad(k)%Force(:,j) )
                m%AllOuts( BNFbn(beta,k) ) = tmp(1)
                m%AllOuts( BNFbt(beta,k) ) = tmp(2)
@@ -251,13 +263,10 @@ CONTAINS
                m%AllOuts( BNMbn(beta,k) ) = tmp(1)
                m%AllOuts( BNMbt(beta,k) ) = tmp(2)
                m%AllOuts( BNMbs(beta,k) ) = tmp(3)
-            end if
-
-         end do ! nodes
-      end do ! blades
-   
-
-
+            end do ! nodes
+         end do ! blades
+      end if
+      
       ! blade node tower clearance (requires tower influence calculation):
       if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow /= TwrShadow_none) then
          do k=1,min(p%numBlades,AD_MaxBl_Out)
@@ -344,15 +353,14 @@ CONTAINS
       end do  ! k=blades
    
          ! rotor outputs
-      if ( EqualRealNos( real(m%V_dot_x,SiKi), 0.0_SiKi ) ) then
-         m%AllOuts( RtTSR )    = 0.0_ReKi
+      if ( abs( m%V_dot_x ) < 0.04_ReKi .or. p%NumBlades == 0 ) then ! < 0.018 is close to "v_dot_x**3 not equal to 0" (cubed because of Cp denominator)
          m%AllOuts( RtAeroCp ) = 0.0_ReKi
          m%AllOuts( RtAeroCq ) = 0.0_ReKi
          m%AllOuts( RtAeroCt ) = 0.0_ReKi
       else
-         m%AllOuts( RtTSR )    = omega * rmax / m%V_dot_x
-
          denom = 0.5*p%AirDens*m%AllOuts( RtArea )*m%V_dot_x**2
+         !denom = 0.5 * p%AirDens * (pi * rmax**2) * m%V_dot_x**2
+      
          m%AllOuts( RtAeroCp ) = m%AllOuts( RtAeroPwr ) / (denom * m%V_dot_x)
          m%AllOuts( RtAeroCq ) = m%AllOuts( RtAeroMxh ) / (denom * rmax )
          m%AllOuts( RtAeroCt ) = m%AllOuts( RtAeroFxh ) /  denom
@@ -458,11 +466,15 @@ CONTAINS
    
 
       ! rotor outputs:
-   
-      m%AllOuts( RtSkew   ) = m%BEMT_u(indx)%chi0*R2D
-!     m%AllOuts( RtTSR    ) = m%BEMT_u(indx)%TSR
-      m%AllOuts( DBEMTau1 ) = OtherState%BEMT%DBEMT%tau1
-
+      if (p%NumBlades > 0) then
+         m%AllOuts( RtSkew   ) = m%BEMT_u(indx)%chi0*R2D
+         m%AllOuts( RtTSR    ) = m%BEMT_u(indx)%TSR
+         m%AllOuts( DBEMTau1 ) = OtherState%BEMT%DBEMT%tau1
+      else
+         m%AllOuts( RtSkew   ) = 0.0_ReKi
+         m%AllOuts( RtTSR    ) = 0.0_ReKi
+         m%AllOuts( DBEMTau1 ) = 0.0_ReKi
+      end if
       
    end subroutine Calc_WriteOutput_BEMT
 
@@ -538,13 +550,19 @@ CONTAINS
 !     m%AllOuts( RtArea  ) = pi*rmax**2     ! TODO vertical axis
       m%AllOuts( RtSkew  ) = Calc_Chi0(m%V_diskAvg, m%V_dot_x) * R2D 
 
-!      m%AllOuts( DBEMTau1 ) = 0.0_ReKi ! not valid with FVW
+      if ( EqualRealNos( REAL(m%V_dot_x, SiKi), 0.0_SiKi ) ) then
+        m%AllOuts( RtTSR )    = 0.0_ReKi
+      else
+        m%AllOuts( RtTSR )    = omega * rmax / m%V_dot_x
+      end if
+      m%AllOuts( DBEMTau1 ) = 0.0_ReKi ! not valid with FVW
 
    end subroutine Calc_WriteOutput_FVW
 
+   
 END SUBROUTINE Calc_WriteOutput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot, NumBlades, AeroProjMod, UnEcho, ErrStat, ErrMsg )
+SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot, NumBlades, AeroProjMod, UnEcho, calcCrvAngle, ErrStat, ErrMsg )
 ! This subroutine reads the input file and stores all the data in the AD_InputFile structure.
 ! It does not perform data validation.
 !..................................................................................................................................
@@ -558,8 +576,9 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
    TYPE(AD_InputFile),      INTENT(INOUT) :: InputFileData   ! Data stored in the module's input file
    INTEGER(IntKi),          INTENT(INOUT) :: UnEcho          ! Unit number for the echo file
 
-   INTEGER(IntKi),          INTENT(IN)    :: NumBlades(:)    ! Number of blades per rotor 
+   INTEGER(IntKi),          INTENT(IN)    :: NumBlades(:)    ! Number of blades for this model per rotor
    INTEGER(IntKi),          INTENT(IN)    :: AeroProjMod(:)  ! AeroProjMod per rotor
+   LOGICAL,                 INTENT(INOUT) :: calcCrvAngle(:) ! Whether this blade definition should calculate BlCrvAng (each blades and each rotor)
    INTEGER(IntKi),          INTENT(OUT)   :: ErrStat         ! The error status code
    CHARACTER(*),            INTENT(OUT)   :: ErrMsg          ! The error message, if an error occurred
 
@@ -578,8 +597,9 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
 
    ErrStat = ErrID_None
    ErrMsg  = ''
-   InputFileData%DTAero = Default_DT  ! the glue code's suggested DT for the module (may be overwritten in ReadPrimaryFile())
 
+   InputFileData%DTAero = Default_DT  ! the glue code's suggested DT for the module (may be overwritten in ReadPrimaryFile())
+   calcCrvAngle = .false.             ! initialize in case of early return
 
       ! get the blade input-file data
    iBld=1
@@ -594,7 +614,7 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
          
    !FIXME: add options for passing the blade files.  This routine will need restructuring to handle that.
       DO I=1,NumBlades(iR)
-         CALL ReadBladeInputs ( InputFileData%ADBlFile(iBld), InputFileData%rotors(iR)%BladeProps(I), AeroProjMod(iR), UnEcho, ErrStat2, ErrMsg2 )
+         CALL ReadBladeInputs ( InputFileData%ADBlFile(iBld), InputFileData%rotors(iR)%BladeProps(I), AeroProjMod(iR), UnEcho, calcCrvAngle(iBld), ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName//TRIM(':Blade')//TRIM(Num2LStr(I)))
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL Cleanup()
@@ -635,6 +655,8 @@ END SUBROUTINE ReadInputFiles
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine parses the input file data stored in FileInfo_In and places it in the InputFileData structure for validating.
 SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlades, interval, FileInfo_In, InputFileData, UnEc, ErrStat, ErrMsg )
+
+   use UnsteadyAero, only : UA_Method_ABM4
    implicit    none
 
       ! Passed variables
@@ -659,6 +681,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    character(ErrMsgLen)                            :: ErrMsg_NoAllBldNdOuts
    integer(IntKi)                                  :: CurLine           !< current entry in FileInfo_In%Lines array
    real(ReKi)                                      :: TmpRe5(5)         !< temporary 8 number array for reading values in
+   logical                                         :: TwrAeroLogical    !< convert TwrAero from logical (input file) to integer (new)
    character(1024)                                 :: sDummy            !< temporary string
    character(1024)                                 :: tmpOutStr         !< temporary string for writing to screen
    logical :: wakeModProvided, frozenWakeProvided, skewModProvided, AFAeroModProvided, UAModProvided, isLegalComment, firstWarn !< Temporary for legacy purposes
@@ -675,6 +698,9 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    SkewMod_Old    = -1
    FrozenWake_Old = .False.
 
+   InputFileData%UA_Init%UA_OUTS    = 0
+   InputFileData%UA_Init%d_34_to_ac = 0.5_ReKi
+   
 
    ! Initialization
    ErrStat  =  ErrId_None
@@ -687,7 +713,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       ! Allocate array for holding the list of node outputs
-   CALL AllocAry( InputFileData%BldNd_OutList, BldNd_MaxOutPts, "BldNd_Outlist", ErrStat2, ErrMsg2 )
+   CALL AllocAry( InputFileData%BldNd_OutList, 2*BldNd_MaxOutPts, "BldNd_Outlist", ErrStat2, ErrMsg2 ) ! allow users to enter twice the number of unique outputs
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    numBladesTot=sum(NumBlades)
@@ -743,8 +769,14 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    call ParseVar( FileInfo_In, CurLine, "TwrShadow", InputFileData%TwrShadow, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
       ! TwrAero - Calculate tower aerodynamic loads? (flag)
-   call ParseVar( FileInfo_In, CurLine, "TwrAero", InputFileData%TwrAero, ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, "TwrAero", TwrAeroLogical, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
+      if (TwrAeroLogical) then
+         InputFileData%TwrAero = TwrAero_NoVIV
+      else
+         InputFileData%TwrAero = TwrAero_None
+      end if
+      
    ! FrozenWake - Assume frozen wake during linearization? (flag) [used only when WakeMod=1 and when linearizing]
    call ParseVar( FileInfo_In, CurLine, "FrozenWake", FrozenWake_Old, ErrStat2, ErrMsg2, UnEc )
    frozenWakeProvided = legacyInputPresent('FrozenWake', Curline, ErrStat2, ErrMsg2, 'DBEMTMod=-1 (FrozenWake=True) or DBEMTMod>-1 (FrozenWake=False)')
@@ -774,6 +806,8 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       ! SpdSound - Speed of sound {or default} (m/s)
    call ParseVarWDefault( FileInfo_In, CurLine, "SpdSound", InputFileData%SpdSound, InitInp%defSpdSound, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
+      InputFileData%UA_Init%a_s        = InputFileData%SpdSound
+
       ! Patm - Atmospheric pressure {or default} (Pa) [used only when CavitCheck=True]
    call ParseVarWDefault( FileInfo_In, CurLine, "Patm", InputFileData%Patm, InitInp%defPatm, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
@@ -895,10 +929,10 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    call ParseVar( FileInfo_In, CurLine, "UAMod", UAMod_Old, ErrStat2, ErrMsg2, UnEc )
    UAModProvided = legacyInputPresent('UAMod', CurLine, ErrStat2, ErrMsg2, 'UA_Mod=0 (AFAeroMod=1), UA_Mod>1 (AFAeroMod=2 and UA_Mod=UAMod')
    ! UA_Mod - Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA),  2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} 
-   call ParseVar( FileInfo_In, CurLine, "UA_Mod", InputFileData%UA_Mod, ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, "UA_Mod", InputFileData%UA_Init%UAMod, ErrStat2, ErrMsg2, UnEc )
    if (newInputMissing('UA_Mod', CurLine, errStat2, errMsg2)) then
       ! We'll deal with it when we deal with AFAeroMod
-      InputFileData%UA_Mod = UAMod_Old
+      InputFileData%UA_Init%UAMod = UAMod_Old
       if (.not. UAModProvided) then
          call LegacyAbort('Need to provide either UA_Mod or UAMod in the input file'); return
       endif
@@ -910,8 +944,13 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
 
 
       ! FLookup - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when AFAeroMod=2]
-   call ParseVar( FileInfo_In, CurLine, "FLookup", InputFileData%FLookup, ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, "FLookup", InputFileData%UA_Init%FLookup, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
+
+      ! IntegrationMethod - Switch to indicate which integration method UA uses (1=RK4, 2=AB4, 3=ABM4, 4=BDF2) (switch):
+   call ParseVar( FileInfo_In, CurLine, "IntegrationMethod", InputFileData%UA_Init%IntegrationMethod, ErrStat2, ErrMsg2, UnEc )
+      if (ErrStat2>= AbortErrLev) InputFileData%UA_Init%IntegrationMethod = UA_Method_ABM4
+   
       ! UAStartRad - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2]:
    call ParseVar( FileInfo_In, CurLine, "UAStartRad", InputFileData%UAStartRad, ErrStat2, ErrMsg2, UnEc )
       if (ErrStat2>= AbortErrLev) InputFileData%UAStartRad = 0.0_ReKi
@@ -1052,6 +1091,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       ! SumPrint - Generate a summary file listing input options and interpolated properties to "<rootname>.AD.sum"?  (flag)
    call ParseVar( FileInfo_In, CurLine, "SumPrint", InputFileData%SumPrint, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
+   InputFileData%UA_Init%WrSum      = InputFileData%SumPrint
 
       ! NBlOuts - Number of blade node outputs [0 - 9] (-)
    call ParseVar( FileInfo_In, CurLine, "NBlOuts", InputFileData%NBlOuts, ErrStat2, ErrMsg2, UnEc )
@@ -1111,14 +1151,14 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    if (AFAeroModProvided) then
       if (AFAeroMod_Old==1) then
          call WrScr('> AFAeroMod=1      -> Setting UA_Mod=0')
-         InputFileData%UA_Mod = UA_None
+         InputFileData%UA_Init%UAMod = UA_None
          if (AoA34_Missing) then
             call WrScr('> Setting AoA34 to False as the input is Missing and UA is turned off (legacy behavior).')
             InputFileData%AoA34=.false.
          endif
       else if (AFAeroMod_Old==2) then
          call WrScr('> AFAeroMod=2      -> Not changing DBEMT_Mod')
-         if (InputFileData%UA_Mod==0) then
+         if (InputFileData%UA_Init%UAMod==0) then
             call LegacyAbort('Cannot set UA_Mod=0 with legacy option AFAeroMod=2 (inconsistent behavior).'); return
          else if (AoA34_Missing) then
             call WrScr('> Setting AoA34 to True as the input is Missing and UA is turned on (legacy behavior).')
@@ -1140,6 +1180,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       endif
    endif
 
+   
    !======  Nodal Outputs  ==============================================================================
       ! In case there is something ill-formed in the additional nodal outputs section, we will simply ignore it.
       ! Expecting at least 5 more lines in the input file for this section
@@ -1157,8 +1198,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       !        Will likely require reading this line in as a string (BldNd_BladesOut_Str) and parsing it
    call ParseVar( FileInfo_In, CurLine, "BldNd_BladesOut", InputFileData%BldNd_BladesOut, ErrStat2, ErrMsg2, UnEc )
       if (FailedNodal()) return
-      ! BldNd_BlOutNd - Future feature will allow selecting a portion of the nodes to output.  Not implemented yet. (-)
-      ! TODO: Parse this string into an array of nodes to output at (one idea is to set an array of boolean to T/F for which nodes to output).  At present, we ignore it entirely.
+      ! BldNd_BlOutNd - Allow selecting a portion of the nodes to output. (-)
    call ParseVar( FileInfo_In, CurLine, "BldNd_BlOutNd", InputFileData%BldNd_BlOutNd_Str, ErrStat2, ErrMsg2, UnEc )
       if (FailedNodal()) return
       ! OutList - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
@@ -1175,7 +1215,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
 
    !====== Print new and old inputs =====================================================================
    if (wakeModProvided .or. frozenWakeProvided .or. skewModProvided .or. AFAeroModProvided .or. UAModProvided) then
-   call printNewOldInputs()
+      call printNewOldInputs()
    endif
 
    !====== Advanced Options =============================================================================
@@ -1206,8 +1246,12 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    enddo
 
 
+   !---------------------- END OF FILE -----------------------------------------
+   
 
    RETURN
+
+
 CONTAINS
    !-------------------------------------------------------------------------------------------------
    logical function Failed()
@@ -1309,7 +1353,7 @@ CONTAINS
       write (tmpStr,'(A20,L1)') 'SkewMomCorr:'       , InputFileData%SkewMomCorr;      call WrScr(trim(tmpStr))
       write (tmpStr,'(A20,I0)') 'SkewRedistr_Mod:'   , InputFileData%SkewRedistr_Mod;  call WrScr(trim(tmpStr))
       write (tmpStr,'(A20,L1)') 'AoA34:    '         , InputFileData%AoA34;            call WrScr(trim(tmpStr))
-      write (tmpStr,'(A20,I0)') 'UA_Mod:   '         , InputFileData%UA_Mod;           call WrScr(trim(tmpStr))
+      write (tmpStr,'(A20,I0)') 'UA_Mod:   '         , InputFileData%UA_Init%UAMod;    call WrScr(trim(tmpStr))
       call WrScr('-------------- Old AeroDyn inputs:')
       write (tmpStr,'(A20,I0)') 'WakeMod:  ',  WakeMod_Old;      call WrScr(trim(tmpStr))
       write (tmpStr,'(A20,I0)') 'SkewMod:  ',  SkewMod_Old;      call WrScr(trim(tmpStr))
@@ -1321,7 +1365,7 @@ CONTAINS
 
 END SUBROUTINE ParsePrimaryFileInfo
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, ErrStat, ErrMsg )
+SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, calcCrvAngle, ErrStat, ErrMsg )
 ! This routine reads a blade input file.
 !..................................................................................................................................
 
@@ -1332,6 +1376,7 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, E
    CHARACTER(*),             INTENT(IN)     :: ADBlFile                            ! Name of the blade input file data
    INTEGER(IntKi),           INTENT(IN)     :: AeroProjMod                         ! AeroProjMod
    INTEGER(IntKi),           INTENT(IN)     :: UnEc                                ! I/O unit for echo file. If present and > 0, write to UnEc
+   LOGICAL,                  INTENT(INOUT)  :: calcCrvAngle                        ! Whether this blade definition should calculate BlCrvAng
 
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             ! Error status
    CHARACTER(*),             INTENT(OUT)    :: ErrMsg                              ! Error message
@@ -1339,15 +1384,15 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, E
 
       ! Local variables:
 
-   INTEGER(IntKi)               :: I                                               ! A generic DO index.
-   INTEGER( IntKi )             :: UnIn                                            ! Unit number for reading file
-   INTEGER(IntKi)               :: ErrStat2 , IOS                                  ! Temporary Error status
-   CHARACTER(ErrMsgLen)         :: ErrMsg2                                         ! Temporary Err msg
-   CHARACTER(*), PARAMETER      :: RoutineName = 'ReadBladeInputs'
-   CHARACTER(len=1024)          :: Line
-   CHARACTER(len=50)            :: HeaderCols(10)                                  ! Header columns in file
-   LOGICAL                      :: hasBuoyancy                                     ! Does file contain Buoyancy columns
+   INTEGER(IntKi)                            :: I                                               ! A generic DO index.
+   INTEGER( IntKi )                          :: UnIn                                            ! Unit number for reading file
+   INTEGER(IntKi)                            :: ErrStat2 , IOS                                  ! Temporary Error status
+   CHARACTER(ErrMsgLen)                      :: ErrMsg2                                         ! Temporary Err msg
+   INTEGER,         PARAMETER                :: MaxCols = 10
+   CHARACTER(NWTC_SizeOfNumWord*(MaxCols+1)) :: Line
+   INTEGER(IntKi)                            :: Indx(MaxCols)
 
+   CHARACTER(*), PARAMETER                   :: RoutineName = 'ReadBladeInputs'
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1388,16 +1433,6 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, E
 
    CALL ReadCom ( UnIn, ADBlFile, 'Table header: names', ErrStat2, ErrMsg2, UnEc, Comment=Line )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   ! Check if 10 columns are present
-   READ (Line,*, IOSTAT=ErrStat2) ( HeaderCols(I), I=1,10 )
-   hasBuoyancy = .true.
-   IF ( ErrStat2 < 0 )  THEN ! end of line reached
-      hasBuoyancy = .false.
-      !call WrScr('Blade input file is missing buoyancy columns.')
-   ELSE IF ( ErrStat2 > 0 )  THEN
-      CALL SetErrStat(ErrID_Fatal, 'Unexpected error while trying to infer column headers in blade file.', ErrStat, ErrMsg, RoutineName)
-   endif
-
 
    CALL ReadCom ( UnIn, ADBlFile, 'Table header: units', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1430,61 +1465,60 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, E
    CALL AllocAry( BladeKInputFileData%BlCenBt, BladeKInputFileData%NumBlNds, 'BlCenBt', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   IF (.not. hasBuoyancy) THEN
-      BladeKInputFileData%BlCb    = 0.0_ReKi
-      BladeKInputFileData%BlCenBn = 0.0_ReKi
-      BladeKInputFileData%BlCenBt = 0.0_ReKi
-   ENDIF
-      
       ! Return on error if we didn't allocate space for the next inputs
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL Cleanup()
       RETURN
    END IF
-            
+   
+   ! Initialize in case these columns are missing (e.g., no buoyancy, or cant angle)
+   BladeKInputFileData%BlCrvAng = 0.0_ReKi
+   BladeKInputFileData%BlCb     = 0.0_ReKi
+   BladeKInputFileData%BlCenBn  = 0.0_ReKi
+   BladeKInputFileData%BlCenBt  = 0.0_ReKi
+   
+   
+   ! figure out what columns are specified in this file and in what order:
+   CALL GetInputColumnIndex(Line, Indx, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+
+
    DO I=1,BladeKInputFileData%NumBlNds
-      IF (hasBuoyancy) THEN
-         READ( UnIn, *, IOStat=IOS ) BladeKInputFileData%BlSpn(I), BladeKInputFileData%BlCrvAC(I), BladeKInputFileData%BlSwpAC(I), &
-                                     BladeKInputFileData%BlCrvAng(I), BladeKInputFileData%BlTwist(I), BladeKInputFileData%BlChord(I), &
-                                     BladeKInputFileData%BlAFID(I), BladeKInputFileData%BlCb(I), BladeKInputFileData%BlCenBn(I), BladeKInputFileData%BlCenBt(I) 
-      ELSE
-         READ( UnIn, *, IOStat=IOS ) BladeKInputFileData%BlSpn(I), BladeKInputFileData%BlCrvAC(I), BladeKInputFileData%BlSwpAC(I), &
-                                     BladeKInputFileData%BlCrvAng(I), BladeKInputFileData%BlTwist(I), BladeKInputFileData%BlChord(I), &
-                                     BladeKInputFileData%BlAFID(I)
-      ENDIF
-         CALL CheckIOS( IOS, ADBlFile, 'Blade properties row '//TRIM(Num2LStr(I)), NumType, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               ! Return on error if we couldn't read this line
-            IF ( ErrStat >= AbortErrLev ) THEN
-               CALL Cleanup()
-               RETURN
-            END IF
+      CALL ReadCom( UnIn, ADBlFile, 'Blade properties row '//TRIM(Num2LStr(I)), ErrStat2, ErrMsg2, UnEc, Comment=Line ) ! this will get echoed as a comment instead of a table
+      ! Return on error if we couldn't read this line
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
          
-         IF (UnEc > 0) THEN
-            WRITE( UnEc, "(6(F9.4,1x),I9,4(F9.4,1x))", IOStat=IOS) BladeKInputFileData%BlSpn(I), BladeKInputFileData%BlCrvAC(I), BladeKInputFileData%BlSwpAC(I), &
-                                  BladeKInputFileData%BlCrvAng(I), BladeKInputFileData%BlTwist(I), BladeKInputFileData%BlChord(I), &
-                                  BladeKInputFileData%BlAFID(I), BladeKInputFileData%BlCb(I), BladeKInputFileData%BlCenBn(I), BladeKInputFileData%BlCenBt(I)
-         END IF         
+      CALL ConvertLineToCols(Line, i, Indx, BladeKInputFileData, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
    END DO
 
-
-   if (all(BladeKInputFileData%BlCrvAC.eq.0.0_ReKi)) then
-        BladeKInputFileData%BlCrvAng = 0.0_ReKi
-   else
-      if (AeroProjMod==APM_BEM_NoSweepPitchTwist .or. AeroProjMod==APM_LiftingLine) then
-         !call WrScr('>>> ReadBladeInputs: Not computing cant angle (BlCrvAng), AeroProjMod='//trim(num2lstr(AeroProjMod)))
-      else if (AeroProjMod==APM_BEM_Polar) then
-         call WrScr('>>> ReadBladeInputs: Computing cant angle (BlCrvAng), AeroProjMod='//trim(num2lstr(AeroProjMod)))
-         call calcCantAngle(BladeKInputFileData%BlCrvAC,BladeKInputFileData%BlSpn,3, size(BladeKInputFileData%BlSpn),BladeKInputFileData%BlCrvAng) 
-      else
-         call SetErrStat(ErrID_Fatal, 'Unsupported AeroProjMod='//trim(num2lstr(AeroProjMod)), ErrStat, ErrMsg, RoutineName)
-         call Cleanup()
-         return
-      endif
-   endif
-   BladeKInputFileData%BlCrvAng = BladeKInputFileData%BlCrvAng*D2R
    BladeKInputFileData%BlTwist  = BladeKInputFileData%BlTwist*D2R
-                  
+   BladeKInputFileData%BlCrvAng = BladeKInputFileData%BlCrvAng*D2R
+   
+   ! note, we will compute BlCrvAng later for APM_BEM_Polar or in the case the BlCrvAng column is missing from the file
+   calcCrvAngle = AeroProjMod==APM_BEM_Polar .or. Indx(4) < 1
+   
+   if (Indx(4) > 0 .and. calcCrvAngle) then
+      CALL SetErrStat(ErrID_Warn,'BlCrvAng will be calculated and overwrite the values specified in blade file "'//trim(ADBlFile)//'".', ErrStat, ErrMsg, RoutineName)
+   end if
+   
+   !bjj: do we still need this???
+   if (all(BladeKInputFileData%BlCrvAC.eq.0.0_ReKi)) then
+      BladeKInputFileData%BlCrvAng = 0.0_ReKi
+   endif
+   
    !  -------------- END OF FILE --------------------------------------------
 
    CALL Cleanup()
@@ -1500,8 +1534,130 @@ CONTAINS
       IF (UnIn > 0) CLOSE(UnIn)
 
    END SUBROUTINE Cleanup
+   !...............................................................................................................................
+END SUBROUTINE ReadBladeInputs
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE ConvertLineToCols(Line, i, Indx, BladeKInputFileData, ErrStat, ErrMsg)
+   CHARACTER(*),             INTENT(IN   )   :: Line                                ! text containing line we are reading/parsing
+   INTEGER(IntKi),           INTENT(IN   )   :: i                                   ! row of input table we are reading
+   INTEGER(IntKi),           INTENT(IN   )   :: Indx(:)                             ! order of table columns, determined from headers in subroutine GetInputColumnIndex()
+   TYPE(AD_BladePropsType),  INTENT(INOUT)   :: BladeKInputFileData                 ! Data for Blade K stored in the module's input file
+   INTEGER(IntKi),           INTENT(  OUT)   :: ErrStat
+   CHARACTER(*),             INTENT(  OUT)   :: ErrMsg
+      
+   INTEGER(IntKi)                            :: NumCols                             ! number of columns in the file
+   CHARACTER(NWTC_SizeOfNumWord)             :: Words(size(Indx))
+   INTEGER                                   :: IOS(size(Indx))
+   INTEGER                                   :: c                                   ! column index
+   CHARACTER(*), PARAMETER                   :: RoutineName = 'ConvertLineToCols'
 
-END SUBROUTINE ReadBladeInputs      
+      
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+!   CALL GetWords ( Line, Words, size(Indx), NumCols )
+   !IF (MAXVAL(Indx) > NumCols) THEN
+   !   CALL SetErrStat(ErrID_Fatal, "Required column is not available in the table on row "//trim(num2lstr(i))//".", ErrStat, ErrMsg, RoutineName)
+   !   RETURN
+   !END IF
+   
+   ! Read "words" as character strings:
+   NumCols = MAXVAL(Indx)
+   READ(Line, *, IOStat=IOS(1)) Words(1:NumCols)
+      
+   IOS = 0 ! initialize in case we don't read all of the columns
+      
+   ! Note: See order of variable AvailableChanNames in subroutine GetInputColumnIndex() for these variables indices
+   ! Also, we have checked that Indx is non zero and less than MaxCols for each of the required words
+   c=Indx( 1); READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlSpn(I)
+   c=Indx( 2); READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCrvAC(I)
+   c=Indx( 3); READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlSwpAC(I)
+   c=Indx( 5); READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlTwist(I)
+   c=Indx( 6); READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlChord(I)
+   c=Indx( 7); READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlAFID(I)
+
+   c=Indx(4)
+   IF (c > 0) THEN
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCrvAng(I)
+   END IF
+
+   c=Indx(8)
+   IF (c > 0) THEN
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCb(I)
+   END IF
+
+   c=Indx(9)
+   IF (c > 0) THEN
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCenBn(I)
+   END IF
+
+   c=Indx(10)
+   IF (c > 0) THEN
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCenBt(I)
+   END IF
+
+   IF (ANY(IOS /= 0)) THEN
+      CALL SetErrStat(ErrID_Fatal, "Unable to read numeric data from all columns in the table on row "//trim(num2lstr(i))//".", ErrStat, ErrMsg, RoutineName)
+      RETURN
+   END IF
+      
+END SUBROUTINE ConvertLineToCols
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE GetInputColumnIndex(HeaderLine, Indx, ErrStat, ErrMsg)
+   
+   CHARACTER(*),   INTENT(IN   )    :: HeaderLine
+   INTEGER(IntKi), INTENT(INOUT)    :: Indx(:)
+   INTEGER(IntKi), INTENT(  OUT)    :: ErrStat
+   CHARACTER(*),   INTENT(  OUT)    :: ErrMsg
+      
+      
+   CHARACTER(8),   PARAMETER        :: AvailableChanNames(10) = (/'BLSPN   ', 'BLCRVAC ','BLSWPAC ','BLCRVANG','BLTWIST ','BLCHORD ', 'BLAFID  ', 'BLCB    ', 'BLCENBN ','BLCENBT ' /) ! in upper case only
+   LOGICAL,        PARAMETER        :: RequiredChanNames( 10) = (/.true.    , .true.    ,.true.    ,.false.   ,.true.    ,.true.    , .true.    , .false.   , .false.   ,.false.    /)
+   CHARACTER(ChanLen)               :: Words(SIZE(AvailableChanNames))
+   INTEGER(IntKi)                   :: i  ! loop counter
+   INTEGER(IntKi)                   :: j  ! loop counter
+   INTEGER(IntKi)                   :: FirstCheck
+   INTEGER(IntKi)                   :: NumFound
+            
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+      
+   CALL GetWords ( HeaderLine, Words, SIZE(AvailableChanNames), NumFound )
+      
+   DO j = 1,NumFound
+      CALL Conv2UC ( Words(j) )
+      
+      ! stop reading any more headers if this word starts with a comment character (indicating that the columns aren't in the table)
+      IF ( INDEX( CommChars, Words(j)(1:1) ) > 0 ) THEN
+         NumFound = j - 1
+         EXIT
+      END IF
+   END DO
+      
+   Indx = -1 ! initialize all values to be "not found"
+      
+   FirstCheck = 1
+   DO i = 1,SIZE(Indx)
+      DO j = FirstCheck,NumFound
+         IF ( TRIM(AvailableChanNames(i)) == TRIM(Words(j)) ) THEN
+            Indx(I) = j
+            IF (j == FirstCheck + 1) FirstCheck = FirstCheck + 1 ! attempt to make this loop a little faster without assuming anything about the order of the words found
+            CYCLE
+         END IF
+      END DO
+   END DO
+      
+   ! check that the required columns are in the file:
+   DO i = 1,SIZE(Indx)
+      IF (Indx(i) < 1 .and. RequiredChanNames(i)) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg = TRIM(AvailableChanNames(i))//" , a required input, was not found in the blade input file."
+         RETURN
+      END IF
+   END DO
+      
+END SUBROUTINE GetInputColumnIndex
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Read Tail Fin inputs
 SUBROUTINE ReadTailFinInputs(FileName, TFData, UnEc, ErrStat, ErrMsg)
@@ -1572,7 +1728,7 @@ contains
    
 END SUBROUTINE ReadTailFinInputs
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
+SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, NumBlades, BladeInputFileData, ErrStat, ErrMsg )
 ! This routine generates the summary file, which contains a summary of input file options.
    use YAML, only: yaml_write_var
       ! passed variables
@@ -1581,6 +1737,9 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
    TYPE(AD_ParameterType),    INTENT(IN)  :: p_AD                                 ! Parameters
    TYPE(AD_InputType),        INTENT(IN)  :: u                                    ! inputs 
    TYPE(AD_OutputType),       INTENT(IN)  :: y                                    ! outputs
+   INTEGER(IntKi),            INTENT(IN)  :: NumBlades                            ! Number of blades for this rotor
+   TYPE(AD_BladePropsType),   INTENT(IN)  :: BladeInputFileData(:)                ! Data for Bladex stored in the module's input file
+   
    INTEGER(IntKi),            INTENT(OUT) :: ErrStat
    CHARACTER(*),              INTENT(OUT) :: ErrMsg
 
@@ -1588,6 +1747,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       ! Local variables.
 
    INTEGER(IntKi)               :: I                                               ! Index for the nodes.
+   INTEGER(IntKi)               :: K                                               ! Index for the blades
    INTEGER(IntKi)               :: UnSu                                            ! I/O unit number for the summary output file
 
    CHARACTER(*), PARAMETER      :: FmtDat    = '(A,T41,1(:,F13.3))'                ! Format for outputting mass and modal data.
@@ -1645,20 +1805,25 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       case (TwrShadow_Eames)
          Msg = 'Eames tower shadow model with TI values from the table' 
       case (TwrShadow_none)
-         Msg = 'none'      
-      case default      
-         Msg = 'unknown'      
+         Msg = 'none'
+      case default
+         Msg = 'unknown'
    end select
    WRITE (UnSu,Ec_IntFrmt) p%TwrShadow, 'TwrShadow', 'Type of tower influence on wind based on downstream tower shadow: '//TRIM(Msg)
-    
+   
    
    ! TwrAero
-   if (p%TwrAero) then
-      Msg = 'Yes'
-   else
-      Msg = 'No'
-   end if   
-   WRITE (UnSu,Ec_LgFrmt) p%TwrAero, 'TwrAero', 'Calculate tower aerodynamic loads? '//TRIM(Msg)
+   select case (p%TwrAero)
+      case (TwrAero_none)
+         Msg = "none"
+      case (TwrAero_NoVIV)
+         Msg = "Tower aero calculated without VIV"
+!      case (TwrAero_VIV)
+!         Msg = "Tower aero calculated with VIV"
+      case default
+         Msg = 'unknown'
+   end select
+   WRITE (UnSu,Ec_LgFrmt) p%TwrAero, 'TwrAero', 'Tower aerodynamic loads: '//TRIM(Msg)
 
       ! CavitCheck
    if (p%CavitCheck) then
@@ -1769,7 +1934,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
    WRITE (UnSu,'(A)') '======================== Unsteady Airfoil Aerodynamics Options  ====================================='
    
    ! UAMod
-   select case (InputFileData%UA_Mod)
+   select case (InputFileData%UA_Init%UAMod)
       case (UA_None)
          Msg = 'none (quasi-steady airfoil aerodynamics)'
       case (UA_Baseline)
@@ -1789,18 +1954,18 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       case (UA_BV)
          Msg = 'Boeing-Vertol dynamic stall model (e.g. used in CACTUS)'
       case default
-         Msg = 'unknown'      
+         Msg = 'unknown'
    end select
-   WRITE (UnSu,Ec_IntFrmt) InputFileData%UA_Mod, 'UA_Mod', 'Unsteady Aero Model: '//TRIM(Msg)
+   WRITE (UnSu,Ec_IntFrmt) InputFileData%UA_Init%UAMod, 'UA_Mod', 'Unsteady Aero Model: '//TRIM(Msg)
 
 
    ! FLookup
-   if (InputFileData%FLookup) then
+   if (InputFileData%UA_Init%FLookup) then
       Msg = 'Yes'
    else
       Msg = 'No, use best-fit exponential equations instead'
    end if   
-   WRITE (UnSu,Ec_LgFrmt) InputFileData%FLookup, 'FLookup', "Use a lookup for f'? "//TRIM(Msg)      
+   WRITE (UnSu,Ec_LgFrmt) InputFileData%UA_Init%FLookup, 'FLookup', "Use a lookup for f'? "//TRIM(Msg)      
 
       
    
@@ -1856,6 +2021,23 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
    call yaml_write_var ( UnSu , 'Total blade volume (m^3)' , p%VolBl  , 'F7.3' , ErrStat , ErrMsg ) ! Buoyancy volume of all blades
    call yaml_write_var ( UnSu , 'Tower volume (m^3)' , p%VolTwr , 'F13.3' , ErrStat , ErrMsg ) ! Buoyancy volume of the tower
 
+   WRITE (UnSu,'(/,/,A)') '======  Blade definitions  =========================================================================='
+   
+   DO k=1,NumBlades
+      WRITE (UnSu,'(15x,A)')
+      WRITE (UnSu,'(3x,A,I2,A)') '-----  Blade ', k, ' -----------------------------------------------------------------------------------------------------------'
+      WRITE (UnSu,'(6(1x,A20))') 'BlSpn',   'BlCrvAC', 'BlSwpAC','BlCrvAng','BlTwist', 'BlChord'
+      WRITE (UnSu,'(6(1x,A20))') '(m)',     '(m)',     '(m)',    '(deg)',   '(deg)',   '(m)'
+      WRITE (UnSu,'(6(1x,A20))') '--------','--------','-------','--------','--------','--------'
+      DO I=1,size(BladeInputFileData(K)%BlSpn)
+         WRITE( UnSu, '(3( 1X,F20.6), 2( 1X,F20.4 ), 1( 1X,F20.6))') &
+                               BladeInputFileData(K)%BlSpn(I),        BladeInputFileData(K)%BlCrvAC(I),      BladeInputFileData(K)%BlSwpAC(I), &
+                               BladeInputFileData(K)%BlCrvAng(I)*R2D, BladeInputFileData(K)%BlTwist(I)*R2D,  BladeInputFileData(K)%BlChord(I)
+      END DO
+   END DO
+   
+   
+   
    CLOSE(UnSu)
 
 RETURN
@@ -1979,7 +2161,7 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
       
    END DO
    
-   DO I = p%NumBlades+1,size(BAzimuth,1)  ! Invalid blades
+   DO I = p%NumBlades+1,size(BAzimuth,1)  ! Invalid blades (Note: size(BAzimuth) should be AD_MaxBl_Out)
       
       InvalidOutput( BAzimuth( i) ) = .true.
       InvalidOutput( BPitch(   i) ) = .true.
@@ -2144,6 +2326,7 @@ END SUBROUTINE SetOutParam
 !----------------------------------------------------------------------------------------------------------------------------------
 !End of code generated by Matlab script
 !**********************************************************************************************************************************
+
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets up the information needed for plotting VTK surfaces.
@@ -2401,254 +2584,78 @@ SUBROUTINE AD_SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode
 END SUBROUTINE AD_SetVTKDefaultBladeParams
 
 
-subroutine calcCantAngle(f, xi,stencilSize,n,cantAngle)
-! This subroutine calculates implicit cant angle based on the blade reference line that includes prebend.
-    implicit none
-    integer(IntKi), intent(in)  :: stencilSize, n 
-    integer(IntKi)              :: i, j
-    integer(IntKi)              :: info
-    real(ReKi),  intent(in)     :: f(n), xi(n)
-    real(ReKi)                  :: cx(stencilSize), cf(stencilSize), xiIn(stencilSize)
-    real(ReKi)                  :: fIn(stencilSize), cPrime(n), fPrime(n)
-    real(ReKi), intent(inout)   :: cantAngle(n)
-    
-    do i = 1,size(xi)
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Set the cant angle from the mid-chord reference line
+!! SETCANTANGLE() will update the BlCrvAng based upon the projection of
+!! the mid-chord reference line onto the X-Z plane.
+!!
+!! NOTE: this assumes that the cant and toe angles are zero and only the
+!! local twist and chord length contirbute to the mid-chord location; in
+!! the future an iterative approach could be taken to include the cant
+!! angle influence on the mid-code node locations
+subroutine setCantAngle( BladeKInputFileData )
+! Note: we have already checked that BladeKInputFileData%NumBlNds > 2 and that zMidChord is in increasing order (not constant)
+   TYPE(AD_BladePropsType),   INTENT(INOUT)  :: BladeKInputFileData
+
+   REAL(ReKi)                                :: dx(          BladeKInputFileData%NumBlNds)
+   REAL(ReKi)                                :: xMidChord(   BladeKInputFileData%NumBlNds)
+   REAL(ReKi)                                :: zMidChord(   BladeKInputFileData%NumBlNds)
+   REAL(ReKi)                                :: prebendSlope(BladeKInputFileData%NumBlNds)
+   INTEGER                                   :: NumBlNds
+   INTEGER                                   :: ii          ! loop counter
+   
+   NumBlNds = BladeKInputFileData%NumBlNds
+   
+   ! Compute mid-chord location in global system
+   dx = 0.25_ReKi * BladeKInputFileData%BlChord * sin( BladeKInputFileData%BlTwist )  ! note element-by-element multiplication (not matrix multiply here); twist is in radians
+            
+   xMidChord = BladeKInputFileData%BlCrvAC + dx
+   zMidChord = BladeKInputFileData%BlSpn
+
+   
+   ! Compute prebend slope relative to z-span
+
+   ! Root node
+   prebendSlope(1) = dfdxOfLagrangeInterpolant( zMidChord(1),               &
+                                                zMidChord(1), xMidChord(1), &
+                                                zMidChord(2), xMidChord(2), &
+                                                zMidChord(3), xMidChord(3) )
+
+   ! Internal nodes
+   do ii = 2, NumBlNds - 1
+         prebendSlope(ii) = dfdxOfLagrangeInterpolant( zMidChord(ii),                     &
+                                                       zMidChord(ii-1), xMidChord(ii-1),  &
+                                                       zMidChord(ii),   xMidChord(ii),    &
+                                                       zMidChord(ii+1), xMidChord(ii+1) )
+   end do
+
+   ! Tip node
+   prebendSlope(NumBlNds) = dfdxOfLagrangeInterpolant( zMidChord(NumBlNds),                          &
+                                                       zMidChord(NumBlNds-2), xMidChord(NumBlNds-2), &
+                                                       zMidChord(NumBlNds-1), xMidChord(NumBlNds-1), &
+                                                       zMidChord(NumBlNds),   xMidChord(NumBlNds) )
+
+   ! Convert slope to cant angle
+   BladeKInputFileData%BlCrvAng = atan2( prebendSlope, 1.0_ReKi ) ! return value in radians
         
-        if (i.eq.1) then
-            fIn = f(1:stencilSize)
-            xiIn = xi(1:stencilSize)
-        elseif (i.eq.size(xi)) then
-            fIn = f(size(xi)-stencilSize +1:size(xi))
-            xiIn = xi(size(xi)-stencilSize+1:size(xi))
-        else
-            fIn = f(i-1:i+1)
-            xiIn = xi(i-1:i+1)
-        endif
-        call differ_stencil ( xi(i), 1, 2, xiIn, cx, info )
-        !call differ_stencil ( xi(i), 1, 2, fIn, cf, info )
-        if (info /= 0) then 
-           call WrScr('Cant Calc failed at i='//trim(Num2LStr(i)))
-        else
-           cPrime(i) = 0.0
-           fPrime(i) = 0.0
-           do j = 1,size(cx)
-               cPrime(i) = cPrime(i) + cx(j)*xiIn(j)
-               fPrime(i) = fPrime(i) + cx(j)*fIn(j)            
-           end do
-           cantAngle(i) = atan2(fPrime(i),cPrime(i))*180_ReKi/pi
-        endif
-    end do
-    
-end subroutine calcCantAngle
+end subroutine setCantAngle
+!----------------------------------------------------------------------------------------------------------------------------------
+!> df/dx approximation from Lagrange interpolating polynomial
+!! See Eqn 5 at https://mathworld.wolfram.com/LagrangeInterpolatingPolynomial.html
+REAL(ReKi) function dfdxOfLagrangeInterpolant(x, x1, f1, x2, f2, x3, f3) RESULT(dfdx)
 
+   REAL(ReKi) , INTENT(IN)       :: x
+   REAL(ReKi) , INTENT(IN)       :: x1
+   REAL(ReKi) , INTENT(IN)       :: x2
+   REAL(ReKi) , INTENT(IN)       :: x3
+   REAL(ReKi) , INTENT(IN)       :: f1
+   REAL(ReKi) , INTENT(IN)       :: f2
+   REAL(ReKi) , INTENT(IN)       :: f3
 
+   dfdx = f1 * (2*x-x2-x3)/((x1-x2)*(x1-x3)) &
+        + f2 * (2*x-x1-x3)/((x2-x1)*(x2-x3)) &
+        + f3 * (2*x-x1-x2)/((x3-x1)*(x3-x2));
 
-subroutine differ_stencil ( x0, o, p, x, c, info )
-
-!*****************************************************************************80
-!
-!! DIFFER_STENCIL computes finite difference coefficients.
-!
-!  Discussion:
-!
-!    We determine coefficients C to approximate the derivative at X0
-!    of order O and precision P, using finite differences, so that 
-!
-!      d^o f(x)/dx^o (x0) = sum ( 0 <= i <= o+p-1 ) c(i) f(x(i)) 
-!        + O(h^(p))
-!
-!    where H is the maximum spacing between X0 and any X(I).
-!
-!  Licensing:
-!
-!    This code is distributed under the GNU LGPL license.
-!
-!  Modified:
-!
-!    10 November 2013
-!
-!  Author:
-!
-!    John Burkardt
-!
-!  Parameters:
-!
-!    Input, real ( kind = 8 ) X0, the point where the derivative is to 
-!    be approximated.
-!
-!    Input, integer ( kind = 4 ) O, the order of the derivative to be 
-!    approximated.  1 <= O.
-!
-!    Input, integer ( kind = 4 ) P, the order of the error, as a power of H.
-!
-!    Input, real ( kind = 8 ) X(O+P), the evaluation points.
-!
-!    Output, real ( kind = 8 ) C(O+P), the coefficients.
-!
-  implicit none
-
-  integer(IntKi), intent(in)   :: o
-  integer(IntKi), intent(in)   :: p
-
-  real(ReKi)                   :: b(o+p)
-  real(ReKi), intent(out)      :: c(o+p)
-  real(ReKi)                   :: dx(o+p)
-  integer(IntKi)               :: i
-  integer(IntKi), intent(out)  :: info
-  integer(IntKi)               :: job
-  integer(IntKi)               :: n
-  real(R8Ki)                   :: r8_factorial
-  real(ReKi), intent(in)       :: x(o+p)
-  real(ReKi), intent(in)       :: x0
-
-  n = o + p
-
-  dx(1:n) = x(1:n) - x0
-
-  b(1:o+p) = 0.0D+00
-  b(o+1) = 1.0D+00
-
-  job = 0
-  call r8vm_sl ( n, dx, b, c, job, info )
-
-  if ( info /= 0 ) then
-    call WrScr('DIFFER_STENCIL: Vandermonde linear system is singular.')
-    return
-  end if
-    r8_factorial = 1.0D+00
-  do i = 1,o
-    r8_factorial = r8_factorial*i
-  end do
-  c(1:n) = c(1:n) * r8_factorial
-
-  return
-  
-end subroutine differ_stencil
-
-subroutine r8vm_sl ( n, a, b, x, job, info )
-
-!*****************************************************************************80
-!
-!! R8VM_SL solves an R8VM linear system.
-!
-!  Discussion:
-!
-!    The R8VM storage format is used for an M by N Vandermonde matrix.
-!    An M by N Vandermonde matrix is defined by the values in its second
-!    row, which will be written here as X(1:N).  The matrix has a first 
-!    row of 1's, a second row equal to X(1:N), a third row whose entries
-!    are the squares of the X values, up to the M-th row whose entries
-!    are the (M-1)th powers of the X values.  The matrix can be stored
-!    compactly by listing just the values X(1:N).
-!
-!    Vandermonde systems are very close to singularity.  The singularity
-!    gets worse as N increases, and as any pair of values defining
-!    the matrix get close.  Even a system as small as N = 10 will
-!    involve the 9th power of the defining values.
-!
-!  Licensing:
-!
-!    This code is distributed under the GNU LGPL license. 
-!
-!  Modified:
-!
-!    29 September 2003
-!
-!  Author:
-!
-!    John Burkardt.
-!
-!  Reference:
-!
-!    Gene Golub, Charles Van Loan,
-!    Matrix Computations,
-!    Third Edition,
-!    Johns Hopkins, 1996.
-!
-!  Parameters:
-!
-!    Input, integer ( kind = 4 ) N, the number of rows and columns of 
-!    the matrix.
-!
-!    Input, real ( kind = 8 ) A(N), the R8VM matrix.
-!
-!    Input, real ( kind = 8 ) B(N), the right hand side.
-!
-!    Output, real ( kind = 8 ) X(N), the solution of the linear system.
-!
-!    Input, integer ( kind = 4 ) JOB, specifies the system to solve.
-!    0, solve A * x = b.
-!    nonzero, solve A' * x = b.
-!
-!    Output, integer ( kind = 4 ) INFO.
-!    0, no error.
-!    nonzero, at least two of the values in A are equal.
-!
-  implicit none
-
-  integer (IntKi ), intent(in) :: n
-
-  real(ReKi),     intent(in)   :: a(n)
-  real(ReKi),     intent(in)   :: b(n)
-  integer(IntKi)               :: i
-  integer(IntKi), intent(out)  :: info
-  integer(IntKi)               :: j
-  integer(IntKi), intent(in)   :: job
-  real(ReKi),     intent(out)  :: x(n)
-!
-!  Check for explicit singularity.
-!
-  info = 0
-
-  do j = 1, n - 1
-    do i = j + 1, n
-      if ( a(i) == a(j) ) then
-        info = 1
-        return
-      end if
-    end do
-  end do
-
-  x(1:n) = b(1:n)
-
-  if ( job == 0 ) then
-
-    do j = 1, n - 1
-      do i = n, j + 1, -1
-        x(i) = x(i) - a(j) * x(i-1)
-      end do
-    end do
-
-    do j = n - 1, 1, -1
-
-      do i = j + 1, n
-        x(i) = x(i) / ( a(i) - a(i-j) )
-      end do
-
-      do i = j, n - 1
-        x(i) = x(i) - x(i+1)
-      end do
-
-    end do
-
-  else
-
-    do j = 1, n - 1
-      do i = n, j + 1, -1
-        x(i) = ( x(i) - x(i-1) ) / ( a(i) - a(i-j) )
-      end do
-    end do
-
-    do j = n - 1, 1, -1
-      do i = j, n - 1
-        x(i) = x(i) - x(i+1) * a(j)
-      end do
-    end do
-
-  end if
-
-  return
-end subroutine r8vm_sl
-
+end function dfdxOfLagrangeInterpolant
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE AeroDyn_IO

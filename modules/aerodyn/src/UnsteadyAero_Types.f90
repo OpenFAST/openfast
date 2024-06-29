@@ -34,14 +34,6 @@ MODULE UnsteadyAero_Types
 USE AirfoilInfo_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_None = 0      ! UAMod = 0 [Quasi-steady ] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Baseline = 1      ! UAMod = 1 [Baseline model (Original)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Gonzalez = 2      ! UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_MinnemaPierce = 3      ! [Minnema/Pierce variant (changes in Cc and Cm)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGM = 4      ! [continuous variant of HGM (Hansen) model] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGMV = 5      ! [continuous variant of HGM (Hansen) model with vortex modifications] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Oye = 6      ! Stieg Oye dynamic stall model [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_BV = 7      ! Boeing-Vertol dynamic stall model (e.g. used in CACTUS) [-]
 ! =========  UA_InitInputType  =======
   TYPE, PUBLIC :: UA_InitInputType
     REAL(DbKi)  :: dt = 0.0_R8Ki      !< time step [s]
@@ -58,6 +50,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: UAOff_innerNode      !< Last node on each blade where UA should be turned off based on span location from blade root (0 if always on) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: UAOff_outerNode      !< First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on) [-]
     INTEGER(IntKi)  :: UA_OUTS = 0      !< Store write outputs 0=None, 1=WriteOutpus, 2=WriteToFile [-]
+    INTEGER(IntKi)  :: integrationMethod = 3      !< method to integrate states (default is 4=BDF2) [-]
   END TYPE UA_InitInputType
 ! =======================
 ! =========  UA_InitOutputType  =======
@@ -124,7 +117,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  UA_ElementContinuousStateType  =======
   TYPE, PUBLIC :: UA_ElementContinuousStateType
-    REAL(R8Ki) , DIMENSION(1:5)  :: x = 0.0_R8Ki      !< continuous states when UA_Mod=4 (x1 and x2:Downwash memory terms; x3:Clp', Lift coefficient with a time lag to the attached lift coeff; x4: f'' , Final separation point function) [{rad, rad, - -}]
+    REAL(R8Ki) , DIMENSION(1:7)  :: x = 0.0_R8Ki      !< continuous states when UA_Mod=4 (x1 and x2:Downwash memory terms; x3:Clp', Lift coefficient with a time lag to the attached lift coeff; x4: f'' , Final separation point function) [{rad, rad, - -}]
   END TYPE UA_ElementContinuousStateType
 ! =======================
 ! =========  UA_ContinuousStateType  =======
@@ -137,7 +130,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_minus1      !< angle of attack, previous time step [rad]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_filt_minus1      !< filtered angle of attack, previous time step [rad]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_dot      !< Rate of change of angle of attack (filtered); BV model [rad/s]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_dot_minus1      !< Rate of change of angle of attack (filtered); BV modeldata [rad/s]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_dot_minus1      !< Rate of change of angle of attack (filtered); BV model [rad/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: q_minus1      !< non-dimensional pitching rate, previous time step [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Kalpha_f_minus1      !< filtered pitching rate, previous time step [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Kq_f_minus1      !< filtered pitching acceleration, previous time step [-]
@@ -203,7 +196,7 @@ IMPLICIT NONE
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: LESF      !< logical flag indicating if leading edge separation is possible [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: VRTX      !< logical flag indicating if a vortex is being processed [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: T_Sh      !< shedding frequency [-]
-    LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: BEDSEP      !< logical flag indicating if this is undergoing separated flow (for compison with AD14) [-]
+    LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: BEDSEP      !< logical flag indicating if this is undergoing separated flow [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: weight      !< value between 0 and 1 indicating if UA is on (1) or off (0) or somewhere in between [-]
   END TYPE UA_MiscVarType
 ! =======================
@@ -227,8 +220,9 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: lin_nx = 0      !< Number of continuous states for linearization [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: UA_off_forGood      !< logical flag indicating if UA is off for good [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: lin_xIndx      !< array to indicate which state to perturb for UA [-]
-    REAL(R8Ki) , DIMENSION(1:5)  :: dx = 0.0_R8Ki      !< array to indicate size of state perturbations [-]
+    REAL(R8Ki) , DIMENSION(1:7)  :: dx = 0.0_R8Ki      !< array to indicate size of state perturbations (x array) [-]
     INTEGER(IntKi)  :: UA_OUTS = 0      !< Store write outputs 0=None, 1=WriteOutpus, 2=WriteToFile [-]
+    INTEGER(IntKi)  :: integrationMethod = 3      !< method to integrate states [-]
   END TYPE UA_ParameterType
 ! =======================
 ! =========  UA_InputType  =======
@@ -311,6 +305,7 @@ subroutine UA_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
       DstInitInputData%UAOff_outerNode = SrcInitInputData%UAOff_outerNode
    end if
    DstInitInputData%UA_OUTS = SrcInitInputData%UA_OUTS
+   DstInitInputData%integrationMethod = SrcInitInputData%integrationMethod
 end subroutine
 
 subroutine UA_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -350,6 +345,7 @@ subroutine UA_PackInitInput(RF, Indata)
    call RegPackAlloc(RF, InData%UAOff_innerNode)
    call RegPackAlloc(RF, InData%UAOff_outerNode)
    call RegPack(RF, InData%UA_OUTS)
+   call RegPack(RF, InData%integrationMethod)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -375,6 +371,7 @@ subroutine UA_UnPackInitInput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%UAOff_innerNode); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%UAOff_outerNode); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UA_OUTS); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%integrationMethod); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine UA_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -1978,6 +1975,7 @@ subroutine UA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    end if
    DstParamData%dx = SrcParamData%dx
    DstParamData%UA_OUTS = SrcParamData%UA_OUTS
+   DstParamData%integrationMethod = SrcParamData%integrationMethod
 end subroutine
 
 subroutine UA_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -2023,6 +2021,7 @@ subroutine UA_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%lin_xIndx)
    call RegPack(RF, InData%dx)
    call RegPack(RF, InData%UA_OUTS)
+   call RegPack(RF, InData%integrationMethod)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2054,6 +2053,7 @@ subroutine UA_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%lin_xIndx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%dx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UA_OUTS); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%integrationMethod); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine UA_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)

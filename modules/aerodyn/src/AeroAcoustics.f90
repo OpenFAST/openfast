@@ -55,7 +55,7 @@ subroutine AA_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    type(AA_OutputType),          intent(  out) :: y             !< Initial system outputs (outputs are not calculated;
                                                                 !!   only the output mesh is initialized)
    type(AA_MiscVarType),         intent(  out) :: m             !< Initial misc/optimization variables
-   real(DbKi),                   intent(inout) :: interval      !< Coupling interval in seconds: the rate that
+   real(DbKi),                   intent(in   ) :: interval      !< Coupling interval in seconds: the rate that
                                                                 !!   (1) AA_UpdateStates() is called in loose coupling &
                                                                 !!   (2) AA_UpdateDiscState() is called in tight coupling.
                                                                 !!   Input is the suggested time from the glue code;
