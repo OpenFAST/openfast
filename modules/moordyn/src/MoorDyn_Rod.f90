@@ -981,8 +981,8 @@ CONTAINS
 
    ! calculate the aggregate 3/6DOF rigid-body loads of a coupled rod including inertial loads
    !--------------------------------------------------------------
-   SUBROUTINE Rod_GetCoupledForce(Rod, Fnet_out, m, p)
-
+   SUBROUTINE Rod_GetCoupledForce(t, Rod, Fnet_out, m, p)
+      real(R8Ki),            intent(in   )  :: t           ! time -- for ramping inertial forces
       Type(MD_Rod),          INTENT(INOUT)  :: Rod         ! the Rod object
       Real(DbKi),            INTENT(  OUT)  :: Fnet_out(6) ! force and moment vector
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
@@ -999,6 +999,9 @@ CONTAINS
 
          if (p%inertialF == 1) then      ! include inertial components  
             F6_iner  = -MATMUL(Rod%M6net, Rod%a6)    ! inertial loads 
+         elseif (p%inertialF == 2) then  ! ramped inertial components
+            F6_iner  = -MATMUL(Rod%M6net, Rod%a6)
+            if (t < p%inertialF_rampT) F6_iner  = F6_iner * real( t/p%inertialF_rampT, ReKi)
          else 
             F6_iner = 0.0
          endif     
@@ -1010,6 +1013,9 @@ CONTAINS
          if (p%inertialF == 1) then      ! include inertial components 
             ! inertial loads ... from input translational ... and solved rotational ... acceleration
             F6_iner(1:3)  = -MATMUL(Rod%M6net(1:3,1:3), Rod%a6(1:3)) - MATMUL(Rod%M6net(1:3,4:6), Rod%a6(4:6))
+         elseif (p%inertialF == 2) then  ! ramped inertial components
+            F6_iner(1:3)  = -MATMUL(Rod%M6net(1:3,1:3), Rod%a6(1:3)) - MATMUL(Rod%M6net(1:3,4:6), Rod%a6(4:6))
+            if (t < p%inertialF_rampT) F6_iner  = F6_iner * real( t/p%inertialF_rampT, ReKi)
          else
             F6_iner(1:3) = 0.0
          endif
