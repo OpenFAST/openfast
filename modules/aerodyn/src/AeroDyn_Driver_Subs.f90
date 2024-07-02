@@ -358,7 +358,7 @@ subroutine Dvr_EndCase(dvr, ADI, initialized, errStat, errMsg)
             else
                sWT = ''
             endif
-            call WrBinFAST(trim(dvr%out%Root)//trim(sWT)//'.outb', FileFmtID_ChanLen_In, 'AeroDynDriver', dvr%out%WriteOutputHdr, dvr%out%WriteOutputUnt, (/0.0_DbKi, dvr%dt/), dvr%out%storage(:,:,iWT), errStat2, errMsg2)
+            call WrBinFAST(trim(dvr%out%Root)//trim(sWT)//'.outb', FileFmtID_ChanLen_In, GetVersion(version), dvr%out%WriteOutputHdr, dvr%out%WriteOutputUnt, (/0.0_DbKi, dvr%dt/), dvr%out%storage(:,:,iWT), errStat2, errMsg2)
             call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
          enddo
       endif
@@ -516,7 +516,8 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
       enddo
 
       call ADI_Init(InitInp, ADI%u(1), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, dt, InitOut, errStat, errMsg)
-
+      dvr%out%AD_ver = InitOut%Ver
+      
       ! Set output headers
       if (iCase==1) then
          call concatOutputHeaders(dvr%out%WriteOutputHdr, dvr%out%WriteOutputUnt, InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
@@ -548,7 +549,7 @@ contains
       if (errStat /= 0) then
          ErrStat2 = ErrID_Fatal
          ErrMsg2  = "Could not allocate "//trim(txt)
-         call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Dvr_InitCase')
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_ADI_ForDriver')
       endif
       Failed0 = errStat >= AbortErrLev
       if(Failed0) call cleanUp()
@@ -1451,7 +1452,7 @@ subroutine Dvr_InitializeOutputs(nWT, out, numSteps, errStat, errMsg)
             end if
             call OpenFOutFile ( out%unOutFile(iWT), trim(out%Root)//trim(sWT)//'.out', errStat, errMsg )
             if ( errStat >= AbortErrLev ) return
-            write (out%unOutFile(iWT),'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim( version%Name )
+            write (out%unOutFile(iWT),'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim( GetVersion(version) )
             write (out%unOutFile(iWT),'(1X,A)') trim(GetNVD(out%AD_ver))
             write (out%unOutFile(iWT),'()' )    !print a blank line
             write (out%unOutFile(iWT),'()' )    !print a blank line
@@ -1667,8 +1668,8 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, yADI, errStat, errMsg)
          out%outLine(1:nDV)         = dvr%wt(iWT)%WriteOutput(1:nDV)  ! Driver Write Outputs
          ! out%outLine(11)            = dvr%WT(iWT)%hub%azimuth       ! azimuth already stored a nt-1
 
-         out%outLine(nDV+1:nDV+nAD) = yADI%AD%rotors(iWT)%WriteOutput     ! AeroDyn WriteOutputs
-         out%outLine(nDV+nAD+1:)    = yADI%IW_WriteOutput                 ! InflowWind WriteOutputs
+         out%outLine(nDV+1:nDV+nIW) = yADI%IW_WriteOutput                 ! InflowWind WriteOutputs
+         out%outLine(nDV+nIW+1:)    = yADI%AD%rotors(iWT)%WriteOutput     ! AeroDyn WriteOutputs
 
          if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtAscii) then
             ! ASCII
@@ -1681,7 +1682,7 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, yADI, errStat, errMsg)
          endif
          if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtBinary) then
             ! Store for binary
-            out%storage(1:nDV+nAD+nIW, nt, iWT) = out%outLine(1:nDV+nAD+nIW)
+            out%storage(1:nDV+nIW+nAD, nt, iWT) = out%outLine(1:nDV+nIW+nAD)
          endif
       endif
    enddo
