@@ -340,7 +340,7 @@ SUBROUTINE SDOut_MapOutputs(u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
             AllOuts(MNTDss (:,iiNode,iMemberOutput))       = m%U_full(DOFList(1:3))
             ! Displacement- Rotational - need direction cosine matrix to tranform rotations  - In Local reference Element Ref Sys <- Need to rethink this for large platform rotation
             !     "MαNβRDxe, MαNβRDye, MαNβRDze"
-            AllOuts(MNRDe (:,iiNode,iMemberOutput))        = matmul(DIRCOS,m%U_full(DOFList(4:6))) !local ref
+            AllOuts(MNRDe (:,iiNode,iMemberOutput))        = matmul(DIRCOS,m%U_full_elast(DOFList(4:6))) ! Element elastic rotation only in Guyan frame for floating. Full motion for fixed-bottom.
             ! Accelerations- I need to get the direction cosine matrix to tranform displacement and rotations
             !     "MαNβTAxe, MαNβTAye, MαNβTAze"
             !     "MαNβRAxe, MαNβRAye, MαNβRAze"
