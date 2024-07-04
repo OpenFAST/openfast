@@ -1879,6 +1879,10 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       INTEGER(IntKi)                       :: ErrStat2                                ! Temporary error status for calls
       CHARACTER(*),    PARAMETER           :: RoutineName = 'WAMIT_Init'
 
+      LOGICAL,    SAVE                     :: FrstWarn_LrgR = .TRUE.
+      LOGICAL,    SAVE                     :: FrstWarn_LrgP = .TRUE.
+      LOGICAL,    SAVE                     :: FrstWarn_LrgY = .TRUE.
+
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
@@ -1956,20 +1960,23 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          ! rotdisp   = GetRotAngs ( u%PtfmRefY, u%Mesh%Orientation(:,:,iBody), ErrStat, ErrMsg )
          ! rotdisp(3) = rotdisp(3) - u%PtfmRefY ! Remove the large yaw offset
          rotdisp    = EulerExtractZYX ( u%Mesh%Orientation(:,:,iBody) )
-         IF ( ABS(rotdisp(1)) > LrgAngle ) THEN
+         IF ( (ABS(rotdisp(1)) > LrgAngle) .AND. FrstWarn_LrgR ) THEN
             ErrStat2 = ErrID_Severe
-            ErrMsg2  = 'Roll angle of a potential-flow body violated the small angle assumption. The solution might be inaccurate.'
+            ErrMsg2  = 'Roll angle of a potential-flow body violated the small angle assumption. The solution might be inaccurate. Simulation continuing, but future warnings will be suppressed.'
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            FrstWarn_LrgR = .FALSE.
          END IF
-         IF ( ABS(rotdisp(2)) > LrgAngle ) THEN
+         IF ( (ABS(rotdisp(2)) > LrgAngle) .AND. FrstWarn_LrgP ) THEN
             ErrStat2 = ErrID_Severe
-            ErrMsg2  = 'Pitch angle of a potential-flow body violated the small angle assumption. The solution might be inaccurate.'
+            ErrMsg2  = 'Pitch angle of a potential-flow body violated the small angle assumption. The solution might be inaccurate. Simulation continuing, but future warnings will be suppressed.'
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            FrstWarn_LrgP = .FALSE.
          END IF
-         IF ( ABS( WrapToPi(rotDisp(3)-u%PtfmRefY) ) > LrgAngle ) THEN
+         IF ( (ABS( WrapToPi(rotDisp(3)-u%PtfmRefY) ) > LrgAngle) .AND. FrstWarn_LrgY ) THEN
             ErrStat2 = ErrID_Severe
-            ErrMsg2  = 'Yaw angle of a potential-flow body relative to the reference yaw position (PtfmRefY) violated the small angle assumption. The solution might be inaccurate. Consider using PtfmYMod=1 and adjust PtfmYCutoff in ElastoDyn.'
+            ErrMsg2  = 'Yaw angle of a potential-flow body relative to the reference yaw position (PtfmRefY) violated the small angle assumption. The solution might be inaccurate. Consider using PtfmYMod=1 and adjust PtfmYCutoff in ElastoDyn. Simulation continuing, but future warnings will be suppressed.'
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            FrstWarn_LrgY = .FALSE.
          END IF
 
          indxStart = (iBody-1)*6+1
