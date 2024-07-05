@@ -11,7 +11,7 @@ tables where the number of rows is specified.
 
 Units
 ~~~~~
-SeaState uses the SI system (kg, m, s, N).
+SeaState uses the SI system (kg, m, s).
 
 .. _sea-driver-input:
 
@@ -54,17 +54,17 @@ Note that in previous versions of OpenFAST, the potential-flow wave excitation a
 
 Currently, the SeaState wave grid is always centered at the global origin and symmetric about the *XZ*-plane and *YZ*-plane.
 
-**X_HalfWidth** sets (in m) the half width of the wave grid in the global *X*-direction, such that the wave grid covers the region of −**X_HalfWidth** ≤ *X* ≤ +**X_HalfWidth**. **X_HalfWidth** must be greater than zero.
+**X_HalfWidth** sets (in m) the half width of the wave grid in the global *X*-direction, such that the wave grid covers the region of −\ **X_HalfWidth** ≤ *X* ≤ +\ **X_HalfWidth**. **X_HalfWidth** must be greater than zero.
 
-**Y_HalfWidth** sets (in m) the half width of the wave grid in the global *Y*-direction, such that the wave grid covers the region of −**Y_HalfWidth** ≤ *Y* ≤ +**Y_HalfWidth**. **Y_HalfWidth** must be greater than zero.
+**Y_HalfWidth** sets (in m) the half width of the wave grid in the global *Y*-direction, such that the wave grid covers the region of −\ **Y_HalfWidth** ≤ *Y* ≤ +\ **Y_HalfWidth**. **Y_HalfWidth** must be greater than zero.
 
-**Z_Depth** sets the depth (in m) of the wave grid, such that the wave grid covers the region of (**MSL2SWL** − **Z_Depth**) ≤ *Z* ≤ **MSL2SWL**. **Z_Depth** must be greater than zero and less than or equal to **MSL2SWL** + **WtrDpth**. Setting **Z_Depth** to DEFAULT will automatically set its value to **MSL2SWL** + **WtrDpth**.
+**Z_Depth** sets the depth (in m) of the wave grid, such that the wave grid covers the region of (\ **MSL2SWL** − **Z_Depth**\ ) ≤ *Z* ≤ **MSL2SWL**\ . **Z_Depth** must be greater than zero and less than or equal to **MSL2SWL** + **WtrDpth**\ . Setting **Z_Depth** to DEFAULT will automatically set its value to **MSL2SWL** + **WtrDpth**\ .
 
-**NX** sets the number of uniformly distributed grid points in the *X*-direction over half of the domain, including a point at the origin. Therefore, the total number of grid points in the *X*-direction is equal to 2**NX**−1. **NX** must be greater than or equal to 2.
+**NX** sets the number of uniformly distributed grid points in the *X*-direction over half of the domain, including a point at the origin. Therefore, the total number of grid points in the *X*-direction is equal to 2\ **NX**\ −1. **NX** must be greater than or equal to 2.
 
-**NY** sets the number of uniformly distributed grid points in the *Y*-direction over half of the domain, including a point at the origin. Therefore, the total number of grid points in the *Y*-direction is equal to 2**NY**−1. **NY** must be greater than or equal to 2.
+**NY** sets the number of uniformly distributed grid points in the *Y*-direction over half of the domain, including a point at the origin. Therefore, the total number of grid points in the *Y*-direction is equal to 2\ **NY**\ −1. **NY** must be greater than or equal to 2.
 
-**NZ** sets the number of grid points in the vertical *Z*-direction from *Z* = (**MSL2SWL** − **Z_Depth**) to *Z* = **MSL2SWL**. The distribution of grid points in the *Z*-direction is not uniform. It instead follows a cosine distribution: *Z*[*n*] = **Z_Depth** ( COS( n d*θ* ) – 1 ), where *n* = 0,1,…,**NZ**-1 and d*θ* = π/(2(**NZ**-1)). This distribution places more grid points near the free surface. **NZ** must be greater than or equal to 2.
+**NZ** sets the number of grid points in the vertical *Z*-direction from *Z* = (\ **MSL2SWL** − **Z_Depth**\ ) to *Z* = **MSL2SWL**\ . The distribution of grid points in the *Z*-direction is not uniform. It instead follows a cosine distribution: *Z*\ [\ *n*\ ] = **Z_Depth**\ (cos(\ *n*\ ·d\ *θ*\ )–1), where *n* = 0,1,…,\ **NZ**\ -1 and d\ *θ* = *π*\ /(2(\ **NZ**\ -1)). This distribution places more grid points near the free surface. **NZ** must be greater than or equal to 2.
 
 When setting up the wave grid, it is necessary to make sure the wave grid is large enough in all three directions, so that no part of the structure defined in HydroDyn moves out of the wave grid during the simulation. At the same time, the grid should also be fine enough to resolve the shortest wave of interest.
 
@@ -141,7 +141,7 @@ time series).
 **WaveTMax** sets the length of the incident wave kinematics time
 series, but it also determines the frequency step used in the inverse
 FFT, from which the internal wave time series are derived (*Δω* =
-2\ *π*/**WaveTMax**). When **WaveMod**=7 (user-defined wave frequency 
+2\ *π*/**WaveTMax**). When **WaveMod** = 7 (user-defined wave frequency 
 components), all frequency components specified by the user must be integer 
 multiples of *Δω* with the lowest allowed frequency being equal to *Δω*. 
 If **WaveTMax** is less than the total simulation
@@ -149,7 +149,7 @@ time, SeaState implements repeating wave kinematics that have a period
 of **WaveTMax**; **WaveTMax** must not be less than the total simulation
 time when **WaveMod** = 5. **WaveDT** determines the time step for the
 wave kinematics time series, but it also determines the maximum
-frequency in the inverse FFT (*ω\ max* = *π*/**WaveDT**). When **WaveMod**=7,
+frequency in the inverse FFT (*ω*\ :sub:`max` = *π*/**WaveDT**). When **WaveMod** = 7,
 **WaveDT** is not used, and the appropriate time step is determined internally 
 based on the user-defined frequency components. When modeling
 irregular sea states, we recommend that **WaveTMax** be set to at least
@@ -257,15 +257,15 @@ Seven files with extensions *.Vxi*, *.Vyi*, *.Vzi*, *.Axi*, *.Ayi*,
 *.Azi*, and *.DynP* correspond to the *X*, *Y*, and *Z* velocities (in
 m/s) and accelerations (in m/s\ :sup:`2`) in the global inertial-frame
 coordinate system and the dynamic pressure (in Pa) time series. Each of
-these files must have exactly **WaveTMax**/**DT** rows and *N*
+these files must have exactly **WaveTMax**/**WaveDT** rows and *N*
 whitepace-separated columns, where *N* is the total number of SeaState 
 wave grid points (corresponding exactly to those written to the
 SeaState summary file). The nodes are ordered by incrementing the *X*-position first, 
 followed by incrementing the *Y*-position, and finally incrementing the *Z*-position. 
-The first node is located at (-**X_HalfWidth**,-**Y_HalfWidth**,**MSL2SWL**-**ZDpth**).
+The first node is located at (-**X_HalfWidth**,-**Y_HalfWidth**,\ **MSL2SWL**-**Z_Dpth**).
 Time is absent from the files but is assumed to go from zero to **WaveTMax** 
 in steps of **WaveDT**. The eighth file, with extension *.Elev*, contains the 
-wave-elevation time series (in m). This file must have exactly **WaveTMax**/**DT** rows and 
+wave-elevation time series (in m). This file must have exactly **WaveTMax**/**WaveDT** rows and 
 as many whitepace-separated columns as there are grid nodes in a horizontal 
 plane. The nodes are ordered by incrementing the *X*-position first followed by incrementing the 
 *Y*-position. The first node is located at (-**X_HalfWidth**,-**Y_HalfWidth**). 
@@ -292,21 +292,13 @@ separated by whitespaces. Header lines (identified as those not beginning
 with a number) are ignored. A valid input file must meet the following 
 requirements:
 
-* All frequency entries must be integer multiples of the frequency step,
-*Δω* = 2π/**WaveTMax**. A relative tolerance of 10\:sup:`-3` is enforced 
-to allow for some truncation errors in the input frequencies. Users should make 
-sure the input frequencies and **WaveTMax** contain enough significant digits 
-to meet this requirement. The lowest allowed wave angular frequency is *Δω*.
+* All frequency entries must be integer multiples of the frequency step, *Δω* = 2π/**WaveTMax**. A relative tolerance of 10\ :sup:`-3` is enforced to allow for some truncation errors in the input frequencies. Users should make sure the input frequencies and **WaveTMax** contain enough significant digits to meet this requirement. The lowest allowed wave angular frequency is *Δω*.
 
-* If a frequency component has zero wave height, it can be omitted from the 
-input file.
+* If a frequency component has zero wave height, it can be omitted from the input file.
 
-* The frequency components listed in the input file need not be in any 
-particular order.
+* The frequency components listed in the input file need not be in any particular order.
 
-* For each frequency, there can only be one entry. It is not allowed, 
-for example, to have two wave components with different headings but the 
-same frequency.
+* For each frequency, there can only be one entry. It is not allowed, for example, to have two wave components with different headings but the same frequency.
 
 The wave components specified are assumed to be of first order and long-crested, 
 but are not checked for physical correctness. When second-order terms are 
@@ -364,7 +356,7 @@ second-order potential-flow loads in HydroDyn, a setting of **WvLowCOffD** = 0 i
 advised to avoid eliminating the mean-drift term (second-order wave
 kinematics do not have a nonzero mean). **WvHiCOffD** need not be set
 higher than the peak-spectral frequency of the first-order wave spectrum
-(*ω\ p* = 2\ *π*/**WaveTp**) to minimize computational expense.
+(*ω*\ :sub:`p` = 2\ *π*/**WaveTp**) to minimize computational expense.
 
 Likewise, **WvLowCOffS** and **WvHiCOffS** control the lower and upper
 cut-off frequencies (in rad/s) of the second-order sum-frequency terms;
@@ -373,7 +365,7 @@ cut-off frequencies, respectively. The cut-offs apply directly to the
 physical sum frequencies, not the two individual first-order frequency
 components leading to the sum frequencies. **WvLowCOffS** need not be set lower
 than the peak-spectral frequency of the first-order wave spectrum
-(*ω\ p* = 2\ *π*/**WaveTp**) to minimize computational expense. Setting
+(*ω*\ :sub:`p` = 2\ *π*/**WaveTp**) to minimize computational expense. Setting
 a proper upper cut-off frequency (**WvHiCOffS**) also minimizes
 computational expense and is important to (1) ensure convergence of the
 second-order summations, (2) avoid unphysical "bumps" in the wave
@@ -416,6 +408,11 @@ of reference.
 
 Constrained wave is only compatible with **WaveMod** = 2 (JONSWAP wave spectrum). 
 If **WaveMod** is set to other values, this section of the input file will be ignored.
+
+In the absence of second-order wave components, the crest elevation or crest height will 
+match the user input **CrestHmax** exactly. If second-order wave components are included 
+by setting either **WvDiffQTF** or **WvSumQTF** to TRUE, the resulting crest elevation or 
+crest height can deviate from **CrestHmax**.
 
 Current
 -------
