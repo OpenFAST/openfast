@@ -56,7 +56,8 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: WaveVel2S      !< Instantaneous 2nd-order sum        frequency correction for the velocity         of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKinGrid points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.) [(m/s)]
   END TYPE Waves2_InitOutputType
 ! =======================
-CONTAINS
+
+contains
 
 subroutine Waves2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(Waves2_InitInputType), intent(in) :: SrcInitInputData

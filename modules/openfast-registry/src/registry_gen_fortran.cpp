@@ -292,7 +292,40 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
         w << "! =======================\n";
     }
 
-    w << "CONTAINS\n";
+    int field_num = 0;
+    std::vector<std::array<std::string, 2>> field_params({
+        {"ContinuousState", "x"},
+        {"ConstraintState", "z"},
+        {"Input", "u"},
+        {"Output", "y"},
+    });
+
+    for (const auto &tmp : field_params)
+    {
+        auto type_name = mod.nickname + "_" + tmp[0] + "Type";
+        if (tolower(mod.name).compare("aerodyn") == 0)
+        {
+            type_name = std::string("Rot") + tmp[0] + "Type";
+        }
+        auto it = mod.data_types.find(type_name);
+        if (it == mod.data_types.end())
+            continue;
+
+        // Get mesh names in derived type or subtypes and add parameters for identifying the mesh
+        std::string prefix = mod.nickname + "_" + tmp[1];
+        auto &ddt = it->second->derived;
+        std::vector<Field> fields;
+        ddt.get_field_names_paths(prefix, mod.nickname, 0, fields);
+        auto param_type = this->find_data_type("integer");
+        for (const auto &field : fields)
+        {
+            ++field_num;
+            // w << "   type(DatDesc), public, parameter :: " << std::setw(32) << std::left << field.name << " = DatDesc(" << field_num << ", " << field.rank << ", \"" << field.desc << "\")\n";
+            w << "   integer(IntKi), public, parameter :: " << std::setw(32) << std::left << field.name << " = " << std::setw(3) << std::right << field_num << " ! " << field.desc << "\n";
+        }
+    }
+
+    w << "\ncontains\n";
 
     // Generate subroutines for this module
     this->gen_fortran_subs(w, mod);
@@ -346,10 +379,18 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
             gen_ExtrapInterp(w, mod, "InflowType", "DbKi", 1);
     }
 
-    // Loop through input and output types if in module
-    for (const auto &is_input : std::vector<bool>{true, false})
+    // Subroutines to generate mesh pointer functions
+    for (const auto &tmp : std::vector<std::array<std::string, 2>>{
+             {"Input", "u"},
+             {"Output", "y"},
+         })
     {
-        auto it = mod.data_types.find(mod.nickname + (is_input ? "_InputType" : "_OutputType"));
+        auto type_name = mod.nickname + "_" + tmp[0] + "Type";
+        if (tolower(mod.name).compare("aerodyn") == 0)
+        {
+            type_name = std::string("Rot") + tmp[0] + "Type";
+        }
+        auto it = mod.data_types.find(type_name);
         if (it == mod.data_types.end())
         {
             continue;
@@ -357,17 +398,16 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
         auto &ddt = it->second->derived;
 
         // Get mesh names in derived type or subtypes and add parameters for identifying the mesh
-        std::string u_or_y = is_input ? "u" : "y";
         std::vector<std::string> mesh_names, mesh_paths;
-        ddt.get_mesh_names_paths(mod.nickname + "_" + u_or_y, u_or_y, 0, mesh_names, mesh_paths);
-        std::string routine_name = mod.nickname + (is_input ? "_Input" : "_Output") + "MeshPointer";
+        ddt.get_mesh_names_paths(mod.nickname + "_" + tmp[1], tmp[1], 0, mesh_names, mesh_paths);
+        std::string routine_name = mod.nickname + "_" + tmp[0] + "MeshPointer";
         std::string indent("\n");
 
         // Mesh pointer routine
-        w << indent << "function " << routine_name << "(" << u_or_y << ", ML) result(Mesh)";
+        w << indent << "function " << routine_name << "(" << tmp[1] << ", ML) result(Mesh)";
         indent += "   ";
-        w << indent << "type(" << ddt.type_fortran << "), target, intent(in) :: " << u_or_y;
-        w << indent << "type(MeshLocType), intent(in)      :: ML";
+        w << indent << "type(" << ddt.type_fortran << "), target, intent(in) :: " << tmp[1];
+        w << indent << "type(DatLoc), intent(in)      :: ML";
         w << indent << "type(MeshType), pointer            :: Mesh";
         w << indent << "nullify(Mesh)";
         w << indent << "select case (ML%Num)";
@@ -383,22 +423,23 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
 
         // Mesh name routine
         indent = "\n";
-        routine_name = mod.nickname + (is_input ? "_Input" : "_Output") + "MeshName";
+        routine_name = mod.nickname + "_" + tmp[0] + "MeshName";
         w << indent << "function " << routine_name << "(ML) result(Name)";
         indent += "   ";
-        w << indent << "type(MeshLocType), intent(in)      :: ML";
+        w << indent << "type(DatLoc), intent(in)      :: ML";
         w << indent << "character(32)                      :: Name";
         w << indent << "Name = \"\"";
         w << indent << "select case (ML%Num)";
         for (int i = 0; i < mesh_paths.size(); ++i)
         {
             std::string new_path(mesh_paths[i]);
-            for (int j = 1; j < 5; ++j){
-                auto ind_str = "ML%i"+std::to_string(j);
+            for (int j = 1; j < 5; ++j)
+            {
+                auto ind_str = "ML%i" + std::to_string(j);
                 auto ind = new_path.find(ind_str);
                 if (ind != std::string::npos)
                 {
-                    new_path = new_path.substr(0, ind) + "\"//trim(Num2LStr(" + ind_str + "))//\"" + new_path.substr(ind+5);
+                    new_path = new_path.substr(0, ind) + "\"//trim(Num2LStr(" + ind_str + "))//\"" + new_path.substr(ind + 5);
                 }
             }
             w << indent << "case (" << mesh_names[i] << ")";
@@ -407,6 +448,107 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
         w << indent << "end select";
         indent.erase(indent.size() - 3);
         w << indent << "end function";
+        w << indent;
+    }
+
+    // Subroutines to pack and unpack variable type data
+    for (const auto &tmp : std::vector<std::array<std::string, 3>>{
+             {"ContinuousState", "x", "ContState"},
+             {"ConstraintState", "z", "ConstrState"},
+             {"Input", "u", "Input"},
+             {"Output", "y", "Output"},
+         })
+    {
+        auto type_name = mod.nickname + "_" + tmp[0] + "Type";
+        if (tolower(mod.name).compare("aerodyn") == 0)
+        {
+            type_name = std::string("Rot") + tmp[0] + "Type";
+        }
+        auto it = mod.data_types.find(type_name);
+        if (it == mod.data_types.end())
+            continue;
+        auto &ddt = it->second->derived;
+        auto &abbr = tmp[1];
+
+        // Get mesh names in derived type or subtypes and add parameters for identifying the mesh
+        std::vector<Field> fields;
+        ddt.get_field_names_paths(mod.nickname + "_" + abbr, abbr, 0, fields);
+
+        // Array packing routine
+        std::string routine_name = mod.nickname + "_Pack" + tmp[2] + "Ary";
+        std::string indent("\n");
+        std::string var_str = std::string("Vars%") + abbr;
+        w << indent << "subroutine " << routine_name << "(Vars, " << abbr << ", ValAry)";
+        indent += "   ";
+        w << indent << "type(" << ddt.type_fortran << "), intent(in) :: " << abbr;
+        w << indent << "type(ModVarsType), intent(in)   :: Vars";
+        w << indent << "real(R8Ki), intent(inout)       :: ValAry(:)";
+        w << indent << "integer(IntKi)                  :: i";
+        w << indent << "do i = 1, size(" << var_str << ")";
+        indent += "   ";
+        w << indent << "associate (Var => " << var_str << "(i), DL => " << var_str << "(i)%DL)";
+        indent += "   ";
+        w << indent << "select case (Var%DL%Num)";
+        for (const auto &field : fields)
+        {
+            w << indent << "case (" << field.name << ")";
+            std::string comment = "Scalar";
+            auto field_path = field.desc;
+            if ((field.data_type->tag == DataType::Tag::Derived))
+            {
+                comment = "Mesh";
+            }
+            else if (field.rank > 0)
+            {
+                comment = std::string("Rank ") + std::to_string(field.rank) + " Array";
+            }
+            w << indent << "    call MV_Pack2(Var, " << field_path << ", ValAry)  ! " << comment;
+        }
+        w << indent << "end select";
+        indent.erase(indent.size() - 3);
+        w << indent << "end associate";
+        indent.erase(indent.size() - 3);
+        w << indent << "end do";
+        indent.erase(indent.size() - 3);
+        w << indent << "end subroutine";
+        w << indent;
+
+        // Array unpacking routine
+        routine_name = mod.nickname + "_Unpack" + tmp[2] + "Ary";
+        indent = "\n";
+        w << indent << "subroutine " << routine_name << "(Vars, ValAry, "<< abbr <<")";
+        indent += "   ";
+        w << indent << "type(ModVarsType), intent(in)   :: Vars";
+        w << indent << "real(R8Ki), intent(in)          :: ValAry(:)";
+        w << indent << "type(" << ddt.type_fortran << "), intent(inout) :: " << abbr;
+        w << indent << "integer(IntKi)                  :: i";
+        w << indent << "do i = 1, size(" << var_str << ")";
+        indent += "   ";
+        w << indent << "associate (Var => " << var_str << "(i), DL => " << var_str << "(i)%DL)";
+        indent += "   ";
+        w << indent << "select case (Var%DL%Num)";
+        for (const auto &field : fields)
+        {
+            w << indent << "case (" << field.name << ")";
+            std::string comment = "Scalar";
+            auto field_path = field.desc;
+            if ((field.data_type->tag == DataType::Tag::Derived))
+            {
+                comment = "Mesh";
+            }
+            else if (field.rank > 0)
+            {
+                comment = std::string("Rank ") + std::to_string(field.rank) + " Array";
+            }
+            w << indent << "    call MV_Unpack2(Var, ValAry, " << field_path << ")  ! " << comment;
+        }
+        w << indent << "end select";
+        indent.erase(indent.size() - 3);
+        w << indent << "end associate";
+        indent.erase(indent.size() - 3);
+        w << indent << "end do";
+        indent.erase(indent.size() - 3);
+        w << indent << "end subroutine";
         w << indent;
     }
 }
@@ -914,7 +1056,7 @@ void gen_unpack(std::ostream &w, const Module &mod, const DataType::Derived &ddt
                 // If C code is generated, output code to initialize C object
                 if (gen_c_code)
                 {
-                    w << indent << "if (associated("<< var <<")) then";
+                    w << indent << "if (associated(" << var << ")) then";
                     w << indent << "   " << var_c << "_Len = size(" << var << ")";
                     w << indent << "   " << "if (" << var_c << "_Len > 0) " << var_c << " = c_loc(" << var << "(";
                     for (int d = 1; d <= field.rank; d++)

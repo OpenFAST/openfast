@@ -82,9 +82,6 @@ typedef struct MAP_ConstraintStateType {
 
 typedef struct MAP_ParameterType {
 	void *object;
-	int iVarPtFairDisplacement;
-	int iVarPtFairleadLoad;
-	int iVarWriteOutput;
 	double g;
 	double depth;
 	double rho_sea;

@@ -34,15 +34,6 @@ MODULE ServoDyn_Types
 USE StrucCtrl_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SrvD_u_PtfmMotionMesh            = 1      ! Mesh number for SrvD SrvD_u_PtfmMotionMesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SrvD_u_BStCMotionMesh            = 2      ! Mesh number for SrvD SrvD_u_BStCMotionMesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SrvD_u_NStCMotionMesh            = 3      ! Mesh number for SrvD SrvD_u_NStCMotionMesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SrvD_u_TStCMotionMesh            = 4      ! Mesh number for SrvD SrvD_u_TStCMotionMesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SrvD_u_SStCMotionMesh            = 5      ! Mesh number for SrvD SrvD_u_SStCMotionMesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SrvD_y_BStCLoadMesh              = 6      ! Mesh number for SrvD SrvD_y_BStCLoadMesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SrvD_y_NStCLoadMesh              = 7      ! Mesh number for SrvD SrvD_y_NStCLoadMesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SrvD_y_TStCLoadMesh              = 8      ! Mesh number for SrvD SrvD_y_TStCLoadMesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SrvD_y_SStCLoadMesh              = 9      ! Mesh number for SrvD SrvD_y_SStCLoadMesh mesh [-]
 ! =========  SrvD_InitInputType  =======
   TYPE, PUBLIC :: SrvD_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
@@ -488,18 +479,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: PulseSpacing = 0.0_ReKi      !< Distance between range gates [m]
     REAL(ReKi)  :: URefLid = 0.0_ReKi      !< Reference average wind speed for the lidar [m/s]
     TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
-    INTEGER(IntKi)  :: iVarYaw = 0_IntKi      !< Yaw Variable Index [-]
-    INTEGER(IntKi)  :: iVarYawRate = 0_IntKi      !< YawRate Variable Index [-]
-    INTEGER(IntKi)  :: iVarHSS_Spd = 0_IntKi      !< HSS_Spd Variable Index [-]
-    INTEGER(IntKi)  :: iVarBlPitchCom = 0_IntKi      !< BlPitchCom Variable Index [-]
-    INTEGER(IntKi)  :: iVarYawMom = 0_IntKi      !< YawMom Variable Index [-]
-    INTEGER(IntKi)  :: iVarGenTrq = 0_IntKi      !< GenTrq Variable Index [-]
-    INTEGER(IntKi)  :: iVarElecPwr = 0_IntKi      !< ElecPwr Variable Index [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: iVarBStCLoadMesh      !< BStCLoadMesh Variable Index [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarNStCLoadMesh      !< NStCLoadMesh Variable Index [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarTStCLoadMesh      !< TStCLoadMesh Variable Index [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarSStCLoadMesh      !< SStCLoadMesh Variable Index [-]
-    INTEGER(IntKi)  :: iVarWriteOutput = 0_IntKi      !< WriteOutput Variable Index [-]
   END TYPE SrvD_ParameterType
 ! =======================
 ! =========  SrvD_InputType  =======
@@ -605,7 +584,85 @@ IMPLICIT NONE
     TYPE(SrvD_OutputType)  :: y_lin      !< Output for output in Jacobian routines [-]
   END TYPE SrvD_MiscVarType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: SrvD_x_DummyContState            =   1 ! SrvD%DummyContState
+   integer(IntKi), public, parameter :: SrvD_x_BStC_StC_x                =   2 ! SrvD%BStC(DL%i1)%StC_x
+   integer(IntKi), public, parameter :: SrvD_x_NStC_StC_x                =   3 ! SrvD%NStC(DL%i1)%StC_x
+   integer(IntKi), public, parameter :: SrvD_x_TStC_StC_x                =   4 ! SrvD%TStC(DL%i1)%StC_x
+   integer(IntKi), public, parameter :: SrvD_x_SStC_StC_x                =   5 ! SrvD%SStC(DL%i1)%StC_x
+   integer(IntKi), public, parameter :: SrvD_z_DummyConstrState          =   6 ! SrvD%DummyConstrState
+   integer(IntKi), public, parameter :: SrvD_z_BStC_DummyConstrState     =   7 ! SrvD%BStC(DL%i1)%DummyConstrState
+   integer(IntKi), public, parameter :: SrvD_z_NStC_DummyConstrState     =   8 ! SrvD%NStC(DL%i1)%DummyConstrState
+   integer(IntKi), public, parameter :: SrvD_z_TStC_DummyConstrState     =   9 ! SrvD%TStC(DL%i1)%DummyConstrState
+   integer(IntKi), public, parameter :: SrvD_z_SStC_DummyConstrState     =  10 ! SrvD%SStC(DL%i1)%DummyConstrState
+   integer(IntKi), public, parameter :: SrvD_u_BlPitch                   =  11 ! SrvD%BlPitch
+   integer(IntKi), public, parameter :: SrvD_u_Yaw                       =  12 ! SrvD%Yaw
+   integer(IntKi), public, parameter :: SrvD_u_YawRate                   =  13 ! SrvD%YawRate
+   integer(IntKi), public, parameter :: SrvD_u_LSS_Spd                   =  14 ! SrvD%LSS_Spd
+   integer(IntKi), public, parameter :: SrvD_u_HSS_Spd                   =  15 ! SrvD%HSS_Spd
+   integer(IntKi), public, parameter :: SrvD_u_RotSpeed                  =  16 ! SrvD%RotSpeed
+   integer(IntKi), public, parameter :: SrvD_u_ExternalYawPosCom         =  17 ! SrvD%ExternalYawPosCom
+   integer(IntKi), public, parameter :: SrvD_u_ExternalYawRateCom        =  18 ! SrvD%ExternalYawRateCom
+   integer(IntKi), public, parameter :: SrvD_u_ExternalBlPitchCom        =  19 ! SrvD%ExternalBlPitchCom
+   integer(IntKi), public, parameter :: SrvD_u_ExternalGenTrq            =  20 ! SrvD%ExternalGenTrq
+   integer(IntKi), public, parameter :: SrvD_u_ExternalElecPwr           =  21 ! SrvD%ExternalElecPwr
+   integer(IntKi), public, parameter :: SrvD_u_ExternalHSSBrFrac         =  22 ! SrvD%ExternalHSSBrFrac
+   integer(IntKi), public, parameter :: SrvD_u_ExternalBlAirfoilCom      =  23 ! SrvD%ExternalBlAirfoilCom
+   integer(IntKi), public, parameter :: SrvD_u_ExternalCableDeltaL       =  24 ! SrvD%ExternalCableDeltaL
+   integer(IntKi), public, parameter :: SrvD_u_ExternalCableDeltaLdot    =  25 ! SrvD%ExternalCableDeltaLdot
+   integer(IntKi), public, parameter :: SrvD_u_TwrAccel                  =  26 ! SrvD%TwrAccel
+   integer(IntKi), public, parameter :: SrvD_u_YawErr                    =  27 ! SrvD%YawErr
+   integer(IntKi), public, parameter :: SrvD_u_WindDir                   =  28 ! SrvD%WindDir
+   integer(IntKi), public, parameter :: SrvD_u_RootMyc                   =  29 ! SrvD%RootMyc
+   integer(IntKi), public, parameter :: SrvD_u_YawBrTAxp                 =  30 ! SrvD%YawBrTAxp
+   integer(IntKi), public, parameter :: SrvD_u_YawBrTAyp                 =  31 ! SrvD%YawBrTAyp
+   integer(IntKi), public, parameter :: SrvD_u_LSSTipPxa                 =  32 ! SrvD%LSSTipPxa
+   integer(IntKi), public, parameter :: SrvD_u_RootMxc                   =  33 ! SrvD%RootMxc
+   integer(IntKi), public, parameter :: SrvD_u_LSSTipMxa                 =  34 ! SrvD%LSSTipMxa
+   integer(IntKi), public, parameter :: SrvD_u_LSSTipMya                 =  35 ! SrvD%LSSTipMya
+   integer(IntKi), public, parameter :: SrvD_u_LSSTipMza                 =  36 ! SrvD%LSSTipMza
+   integer(IntKi), public, parameter :: SrvD_u_LSSTipMys                 =  37 ! SrvD%LSSTipMys
+   integer(IntKi), public, parameter :: SrvD_u_LSSTipMzs                 =  38 ! SrvD%LSSTipMzs
+   integer(IntKi), public, parameter :: SrvD_u_YawBrMyn                  =  39 ! SrvD%YawBrMyn
+   integer(IntKi), public, parameter :: SrvD_u_YawBrMzn                  =  40 ! SrvD%YawBrMzn
+   integer(IntKi), public, parameter :: SrvD_u_NcIMURAxs                 =  41 ! SrvD%NcIMURAxs
+   integer(IntKi), public, parameter :: SrvD_u_NcIMURAys                 =  42 ! SrvD%NcIMURAys
+   integer(IntKi), public, parameter :: SrvD_u_NcIMURAzs                 =  43 ! SrvD%NcIMURAzs
+   integer(IntKi), public, parameter :: SrvD_u_RotPwr                    =  44 ! SrvD%RotPwr
+   integer(IntKi), public, parameter :: SrvD_u_HorWindV                  =  45 ! SrvD%HorWindV
+   integer(IntKi), public, parameter :: SrvD_u_YawAngle                  =  46 ! SrvD%YawAngle
+   integer(IntKi), public, parameter :: SrvD_u_LSShftFxa                 =  47 ! SrvD%LSShftFxa
+   integer(IntKi), public, parameter :: SrvD_u_LSShftFys                 =  48 ! SrvD%LSShftFys
+   integer(IntKi), public, parameter :: SrvD_u_LSShftFzs                 =  49 ! SrvD%LSShftFzs
+   integer(IntKi), public, parameter :: SrvD_u_fromSC                    =  50 ! SrvD%fromSC
+   integer(IntKi), public, parameter :: SrvD_u_fromSCglob                =  51 ! SrvD%fromSCglob
+   integer(IntKi), public, parameter :: SrvD_u_Lidar                     =  52 ! SrvD%Lidar
+   integer(IntKi), public, parameter :: SrvD_u_PtfmMotionMesh            =  53 ! SrvD%PtfmMotionMesh
+   integer(IntKi), public, parameter :: SrvD_u_BStCMotionMesh            =  54 ! SrvD%BStCMotionMesh(DL%i1, DL%i2)
+   integer(IntKi), public, parameter :: SrvD_u_NStCMotionMesh            =  55 ! SrvD%NStCMotionMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_u_TStCMotionMesh            =  56 ! SrvD%TStCMotionMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_u_SStCMotionMesh            =  57 ! SrvD%SStCMotionMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_u_LidSpeed                  =  58 ! SrvD%LidSpeed
+   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsX             =  59 ! SrvD%MsrPositionsX
+   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsY             =  60 ! SrvD%MsrPositionsY
+   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsZ             =  61 ! SrvD%MsrPositionsZ
+   integer(IntKi), public, parameter :: SrvD_y_WriteOutput               =  62 ! SrvD%WriteOutput
+   integer(IntKi), public, parameter :: SrvD_y_BlPitchCom                =  63 ! SrvD%BlPitchCom
+   integer(IntKi), public, parameter :: SrvD_y_BlAirfoilCom              =  64 ! SrvD%BlAirfoilCom
+   integer(IntKi), public, parameter :: SrvD_y_YawMom                    =  65 ! SrvD%YawMom
+   integer(IntKi), public, parameter :: SrvD_y_GenTrq                    =  66 ! SrvD%GenTrq
+   integer(IntKi), public, parameter :: SrvD_y_HSSBrTrqC                 =  67 ! SrvD%HSSBrTrqC
+   integer(IntKi), public, parameter :: SrvD_y_ElecPwr                   =  68 ! SrvD%ElecPwr
+   integer(IntKi), public, parameter :: SrvD_y_TBDrCon                   =  69 ! SrvD%TBDrCon
+   integer(IntKi), public, parameter :: SrvD_y_Lidar                     =  70 ! SrvD%Lidar
+   integer(IntKi), public, parameter :: SrvD_y_CableDeltaL               =  71 ! SrvD%CableDeltaL
+   integer(IntKi), public, parameter :: SrvD_y_CableDeltaLdot            =  72 ! SrvD%CableDeltaLdot
+   integer(IntKi), public, parameter :: SrvD_y_BStCLoadMesh              =  73 ! SrvD%BStCLoadMesh(DL%i1, DL%i2)
+   integer(IntKi), public, parameter :: SrvD_y_NStCLoadMesh              =  74 ! SrvD%NStCLoadMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_y_TStCLoadMesh              =  75 ! SrvD%TStCLoadMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_y_SStCLoadMesh              =  76 ! SrvD%SStCLoadMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_y_toSC                      =  77 ! SrvD%toSC
+
+contains
 
 subroutine SrvD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(SrvD_InitInputType), intent(in) :: SrcInitInputData
@@ -4316,62 +4373,6 @@ subroutine SrvD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end if
-   DstParamData%iVarYaw = SrcParamData%iVarYaw
-   DstParamData%iVarYawRate = SrcParamData%iVarYawRate
-   DstParamData%iVarHSS_Spd = SrcParamData%iVarHSS_Spd
-   DstParamData%iVarBlPitchCom = SrcParamData%iVarBlPitchCom
-   DstParamData%iVarYawMom = SrcParamData%iVarYawMom
-   DstParamData%iVarGenTrq = SrcParamData%iVarGenTrq
-   DstParamData%iVarElecPwr = SrcParamData%iVarElecPwr
-   if (allocated(SrcParamData%iVarBStCLoadMesh)) then
-      LB(1:2) = lbound(SrcParamData%iVarBStCLoadMesh, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%iVarBStCLoadMesh, kind=B8Ki)
-      if (.not. allocated(DstParamData%iVarBStCLoadMesh)) then
-         allocate(DstParamData%iVarBStCLoadMesh(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iVarBStCLoadMesh.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%iVarBStCLoadMesh = SrcParamData%iVarBStCLoadMesh
-   end if
-   if (allocated(SrcParamData%iVarNStCLoadMesh)) then
-      LB(1:1) = lbound(SrcParamData%iVarNStCLoadMesh, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%iVarNStCLoadMesh, kind=B8Ki)
-      if (.not. allocated(DstParamData%iVarNStCLoadMesh)) then
-         allocate(DstParamData%iVarNStCLoadMesh(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iVarNStCLoadMesh.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%iVarNStCLoadMesh = SrcParamData%iVarNStCLoadMesh
-   end if
-   if (allocated(SrcParamData%iVarTStCLoadMesh)) then
-      LB(1:1) = lbound(SrcParamData%iVarTStCLoadMesh, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%iVarTStCLoadMesh, kind=B8Ki)
-      if (.not. allocated(DstParamData%iVarTStCLoadMesh)) then
-         allocate(DstParamData%iVarTStCLoadMesh(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iVarTStCLoadMesh.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%iVarTStCLoadMesh = SrcParamData%iVarTStCLoadMesh
-   end if
-   if (allocated(SrcParamData%iVarSStCLoadMesh)) then
-      LB(1:1) = lbound(SrcParamData%iVarSStCLoadMesh, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%iVarSStCLoadMesh, kind=B8Ki)
-      if (.not. allocated(DstParamData%iVarSStCLoadMesh)) then
-         allocate(DstParamData%iVarSStCLoadMesh(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iVarSStCLoadMesh.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%iVarSStCLoadMesh = SrcParamData%iVarSStCLoadMesh
-   end if
-   DstParamData%iVarWriteOutput = SrcParamData%iVarWriteOutput
 end subroutine
 
 subroutine SrvD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -4503,18 +4504,6 @@ subroutine SrvD_DestroyParam(ParamData, ErrStat, ErrMsg)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       deallocate(ParamData%Vars)
       ParamData%Vars => null()
-   end if
-   if (allocated(ParamData%iVarBStCLoadMesh)) then
-      deallocate(ParamData%iVarBStCLoadMesh)
-   end if
-   if (allocated(ParamData%iVarNStCLoadMesh)) then
-      deallocate(ParamData%iVarNStCLoadMesh)
-   end if
-   if (allocated(ParamData%iVarTStCLoadMesh)) then
-      deallocate(ParamData%iVarTStCLoadMesh)
-   end if
-   if (allocated(ParamData%iVarSStCLoadMesh)) then
-      deallocate(ParamData%iVarSStCLoadMesh)
    end if
 end subroutine
 
@@ -4697,18 +4686,6 @@ subroutine SrvD_PackParam(RF, Indata)
          call NWTC_Library_PackModVarsType(RF, InData%Vars) 
       end if
    end if
-   call RegPack(RF, InData%iVarYaw)
-   call RegPack(RF, InData%iVarYawRate)
-   call RegPack(RF, InData%iVarHSS_Spd)
-   call RegPack(RF, InData%iVarBlPitchCom)
-   call RegPack(RF, InData%iVarYawMom)
-   call RegPack(RF, InData%iVarGenTrq)
-   call RegPack(RF, InData%iVarElecPwr)
-   call RegPackAlloc(RF, InData%iVarBStCLoadMesh)
-   call RegPackAlloc(RF, InData%iVarNStCLoadMesh)
-   call RegPackAlloc(RF, InData%iVarTStCLoadMesh)
-   call RegPackAlloc(RF, InData%iVarSStCLoadMesh)
-   call RegPack(RF, InData%iVarWriteOutput)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -4925,18 +4902,6 @@ subroutine SrvD_UnPackParam(RF, OutData)
    else
       OutData%Vars => null()
    end if
-   call RegUnpack(RF, OutData%iVarYaw); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarYawRate); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarHSS_Spd); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarBlPitchCom); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarYawMom); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarGenTrq); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarElecPwr); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iVarBStCLoadMesh); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iVarNStCLoadMesh); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iVarTStCLoadMesh); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iVarSStCLoadMesh); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarWriteOutput); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine SrvD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -7251,7 +7216,7 @@ END SUBROUTINE
 
 function SrvD_InputMeshPointer(u, ML) result(Mesh)
    type(SrvD_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -7269,7 +7234,7 @@ function SrvD_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function SrvD_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -7288,7 +7253,7 @@ end function
 
 function SrvD_OutputMeshPointer(y, ML) result(Mesh)
    type(SrvD_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -7304,7 +7269,7 @@ function SrvD_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function SrvD_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -7318,5 +7283,417 @@ function SrvD_OutputMeshName(ML) result(Name)
        Name = "y%SStCLoadMesh("//trim(Num2LStr(ML%i1))//")"
    end select
 end function
+
+subroutine SrvD_PackContStateAry(Vars, x, ValAry)
+   type(SrvD_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (SrvD_x_DummyContState)
+             call MV_Pack2(Var, x%DummyContState, ValAry)  ! Scalar
+         case (SrvD_x_BStC_StC_x)
+             call MV_Pack2(Var, x%BStC(DL%i1)%StC_x, ValAry)  ! Rank 2 Array
+         case (SrvD_x_NStC_StC_x)
+             call MV_Pack2(Var, x%NStC(DL%i1)%StC_x, ValAry)  ! Rank 2 Array
+         case (SrvD_x_TStC_StC_x)
+             call MV_Pack2(Var, x%TStC(DL%i1)%StC_x, ValAry)  ! Rank 2 Array
+         case (SrvD_x_SStC_StC_x)
+             call MV_Pack2(Var, x%SStC(DL%i1)%StC_x, ValAry)  ! Rank 2 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SrvD_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SrvD_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (SrvD_x_DummyContState)
+             call MV_Unpack2(Var, ValAry, x%DummyContState)  ! Scalar
+         case (SrvD_x_BStC_StC_x)
+             call MV_Unpack2(Var, ValAry, x%BStC(DL%i1)%StC_x)  ! Rank 2 Array
+         case (SrvD_x_NStC_StC_x)
+             call MV_Unpack2(Var, ValAry, x%NStC(DL%i1)%StC_x)  ! Rank 2 Array
+         case (SrvD_x_TStC_StC_x)
+             call MV_Unpack2(Var, ValAry, x%TStC(DL%i1)%StC_x)  ! Rank 2 Array
+         case (SrvD_x_SStC_StC_x)
+             call MV_Unpack2(Var, ValAry, x%SStC(DL%i1)%StC_x)  ! Rank 2 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SrvD_PackConstrStateAry(Vars, z, ValAry)
+   type(SrvD_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (SrvD_z_DummyConstrState)
+             call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
+         case (SrvD_z_BStC_DummyConstrState)
+             call MV_Pack2(Var, z%BStC(DL%i1)%DummyConstrState, ValAry)  ! Scalar
+         case (SrvD_z_NStC_DummyConstrState)
+             call MV_Pack2(Var, z%NStC(DL%i1)%DummyConstrState, ValAry)  ! Scalar
+         case (SrvD_z_TStC_DummyConstrState)
+             call MV_Pack2(Var, z%TStC(DL%i1)%DummyConstrState, ValAry)  ! Scalar
+         case (SrvD_z_SStC_DummyConstrState)
+             call MV_Pack2(Var, z%SStC(DL%i1)%DummyConstrState, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SrvD_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SrvD_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (SrvD_z_DummyConstrState)
+             call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
+         case (SrvD_z_BStC_DummyConstrState)
+             call MV_Unpack2(Var, ValAry, z%BStC(DL%i1)%DummyConstrState)  ! Scalar
+         case (SrvD_z_NStC_DummyConstrState)
+             call MV_Unpack2(Var, ValAry, z%NStC(DL%i1)%DummyConstrState)  ! Scalar
+         case (SrvD_z_TStC_DummyConstrState)
+             call MV_Unpack2(Var, ValAry, z%TStC(DL%i1)%DummyConstrState)  ! Scalar
+         case (SrvD_z_SStC_DummyConstrState)
+             call MV_Unpack2(Var, ValAry, z%SStC(DL%i1)%DummyConstrState)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SrvD_PackInputAry(Vars, u, ValAry)
+   type(SrvD_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (SrvD_u_BlPitch)
+             call MV_Pack2(Var, u%BlPitch, ValAry)  ! Rank 1 Array
+         case (SrvD_u_Yaw)
+             call MV_Pack2(Var, u%Yaw, ValAry)  ! Scalar
+         case (SrvD_u_YawRate)
+             call MV_Pack2(Var, u%YawRate, ValAry)  ! Scalar
+         case (SrvD_u_LSS_Spd)
+             call MV_Pack2(Var, u%LSS_Spd, ValAry)  ! Scalar
+         case (SrvD_u_HSS_Spd)
+             call MV_Pack2(Var, u%HSS_Spd, ValAry)  ! Scalar
+         case (SrvD_u_RotSpeed)
+             call MV_Pack2(Var, u%RotSpeed, ValAry)  ! Scalar
+         case (SrvD_u_ExternalYawPosCom)
+             call MV_Pack2(Var, u%ExternalYawPosCom, ValAry)  ! Scalar
+         case (SrvD_u_ExternalYawRateCom)
+             call MV_Pack2(Var, u%ExternalYawRateCom, ValAry)  ! Scalar
+         case (SrvD_u_ExternalBlPitchCom)
+             call MV_Pack2(Var, u%ExternalBlPitchCom, ValAry)  ! Rank 1 Array
+         case (SrvD_u_ExternalGenTrq)
+             call MV_Pack2(Var, u%ExternalGenTrq, ValAry)  ! Scalar
+         case (SrvD_u_ExternalElecPwr)
+             call MV_Pack2(Var, u%ExternalElecPwr, ValAry)  ! Scalar
+         case (SrvD_u_ExternalHSSBrFrac)
+             call MV_Pack2(Var, u%ExternalHSSBrFrac, ValAry)  ! Scalar
+         case (SrvD_u_ExternalBlAirfoilCom)
+             call MV_Pack2(Var, u%ExternalBlAirfoilCom, ValAry)  ! Rank 1 Array
+         case (SrvD_u_ExternalCableDeltaL)
+             call MV_Pack2(Var, u%ExternalCableDeltaL, ValAry)  ! Rank 1 Array
+         case (SrvD_u_ExternalCableDeltaLdot)
+             call MV_Pack2(Var, u%ExternalCableDeltaLdot, ValAry)  ! Rank 1 Array
+         case (SrvD_u_TwrAccel)
+             call MV_Pack2(Var, u%TwrAccel, ValAry)  ! Scalar
+         case (SrvD_u_YawErr)
+             call MV_Pack2(Var, u%YawErr, ValAry)  ! Scalar
+         case (SrvD_u_WindDir)
+             call MV_Pack2(Var, u%WindDir, ValAry)  ! Scalar
+         case (SrvD_u_RootMyc)
+             call MV_Pack2(Var, u%RootMyc, ValAry)  ! Rank 1 Array
+         case (SrvD_u_YawBrTAxp)
+             call MV_Pack2(Var, u%YawBrTAxp, ValAry)  ! Scalar
+         case (SrvD_u_YawBrTAyp)
+             call MV_Pack2(Var, u%YawBrTAyp, ValAry)  ! Scalar
+         case (SrvD_u_LSSTipPxa)
+             call MV_Pack2(Var, u%LSSTipPxa, ValAry)  ! Scalar
+         case (SrvD_u_RootMxc)
+             call MV_Pack2(Var, u%RootMxc, ValAry)  ! Rank 1 Array
+         case (SrvD_u_LSSTipMxa)
+             call MV_Pack2(Var, u%LSSTipMxa, ValAry)  ! Scalar
+         case (SrvD_u_LSSTipMya)
+             call MV_Pack2(Var, u%LSSTipMya, ValAry)  ! Scalar
+         case (SrvD_u_LSSTipMza)
+             call MV_Pack2(Var, u%LSSTipMza, ValAry)  ! Scalar
+         case (SrvD_u_LSSTipMys)
+             call MV_Pack2(Var, u%LSSTipMys, ValAry)  ! Scalar
+         case (SrvD_u_LSSTipMzs)
+             call MV_Pack2(Var, u%LSSTipMzs, ValAry)  ! Scalar
+         case (SrvD_u_YawBrMyn)
+             call MV_Pack2(Var, u%YawBrMyn, ValAry)  ! Scalar
+         case (SrvD_u_YawBrMzn)
+             call MV_Pack2(Var, u%YawBrMzn, ValAry)  ! Scalar
+         case (SrvD_u_NcIMURAxs)
+             call MV_Pack2(Var, u%NcIMURAxs, ValAry)  ! Scalar
+         case (SrvD_u_NcIMURAys)
+             call MV_Pack2(Var, u%NcIMURAys, ValAry)  ! Scalar
+         case (SrvD_u_NcIMURAzs)
+             call MV_Pack2(Var, u%NcIMURAzs, ValAry)  ! Scalar
+         case (SrvD_u_RotPwr)
+             call MV_Pack2(Var, u%RotPwr, ValAry)  ! Scalar
+         case (SrvD_u_HorWindV)
+             call MV_Pack2(Var, u%HorWindV, ValAry)  ! Scalar
+         case (SrvD_u_YawAngle)
+             call MV_Pack2(Var, u%YawAngle, ValAry)  ! Scalar
+         case (SrvD_u_LSShftFxa)
+             call MV_Pack2(Var, u%LSShftFxa, ValAry)  ! Scalar
+         case (SrvD_u_LSShftFys)
+             call MV_Pack2(Var, u%LSShftFys, ValAry)  ! Scalar
+         case (SrvD_u_LSShftFzs)
+             call MV_Pack2(Var, u%LSShftFzs, ValAry)  ! Scalar
+         case (SrvD_u_fromSC)
+             call MV_Pack2(Var, u%fromSC, ValAry)  ! Rank 1 Array
+         case (SrvD_u_fromSCglob)
+             call MV_Pack2(Var, u%fromSCglob, ValAry)  ! Rank 1 Array
+         case (SrvD_u_Lidar)
+             call MV_Pack2(Var, u%Lidar, ValAry)  ! Rank 1 Array
+         case (SrvD_u_PtfmMotionMesh)
+             call MV_Pack2(Var, u%PtfmMotionMesh, ValAry)  ! Mesh
+         case (SrvD_u_BStCMotionMesh)
+             call MV_Pack2(Var, u%BStCMotionMesh(DL%i1, DL%i2), ValAry)  ! Mesh
+         case (SrvD_u_NStCMotionMesh)
+             call MV_Pack2(Var, u%NStCMotionMesh(DL%i1), ValAry)  ! Mesh
+         case (SrvD_u_TStCMotionMesh)
+             call MV_Pack2(Var, u%TStCMotionMesh(DL%i1), ValAry)  ! Mesh
+         case (SrvD_u_SStCMotionMesh)
+             call MV_Pack2(Var, u%SStCMotionMesh(DL%i1), ValAry)  ! Mesh
+         case (SrvD_u_LidSpeed)
+             call MV_Pack2(Var, u%LidSpeed, ValAry)  ! Rank 1 Array
+         case (SrvD_u_MsrPositionsX)
+             call MV_Pack2(Var, u%MsrPositionsX, ValAry)  ! Rank 1 Array
+         case (SrvD_u_MsrPositionsY)
+             call MV_Pack2(Var, u%MsrPositionsY, ValAry)  ! Rank 1 Array
+         case (SrvD_u_MsrPositionsZ)
+             call MV_Pack2(Var, u%MsrPositionsZ, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SrvD_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SrvD_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (SrvD_u_BlPitch)
+             call MV_Unpack2(Var, ValAry, u%BlPitch)  ! Rank 1 Array
+         case (SrvD_u_Yaw)
+             call MV_Unpack2(Var, ValAry, u%Yaw)  ! Scalar
+         case (SrvD_u_YawRate)
+             call MV_Unpack2(Var, ValAry, u%YawRate)  ! Scalar
+         case (SrvD_u_LSS_Spd)
+             call MV_Unpack2(Var, ValAry, u%LSS_Spd)  ! Scalar
+         case (SrvD_u_HSS_Spd)
+             call MV_Unpack2(Var, ValAry, u%HSS_Spd)  ! Scalar
+         case (SrvD_u_RotSpeed)
+             call MV_Unpack2(Var, ValAry, u%RotSpeed)  ! Scalar
+         case (SrvD_u_ExternalYawPosCom)
+             call MV_Unpack2(Var, ValAry, u%ExternalYawPosCom)  ! Scalar
+         case (SrvD_u_ExternalYawRateCom)
+             call MV_Unpack2(Var, ValAry, u%ExternalYawRateCom)  ! Scalar
+         case (SrvD_u_ExternalBlPitchCom)
+             call MV_Unpack2(Var, ValAry, u%ExternalBlPitchCom)  ! Rank 1 Array
+         case (SrvD_u_ExternalGenTrq)
+             call MV_Unpack2(Var, ValAry, u%ExternalGenTrq)  ! Scalar
+         case (SrvD_u_ExternalElecPwr)
+             call MV_Unpack2(Var, ValAry, u%ExternalElecPwr)  ! Scalar
+         case (SrvD_u_ExternalHSSBrFrac)
+             call MV_Unpack2(Var, ValAry, u%ExternalHSSBrFrac)  ! Scalar
+         case (SrvD_u_ExternalBlAirfoilCom)
+             call MV_Unpack2(Var, ValAry, u%ExternalBlAirfoilCom)  ! Rank 1 Array
+         case (SrvD_u_ExternalCableDeltaL)
+             call MV_Unpack2(Var, ValAry, u%ExternalCableDeltaL)  ! Rank 1 Array
+         case (SrvD_u_ExternalCableDeltaLdot)
+             call MV_Unpack2(Var, ValAry, u%ExternalCableDeltaLdot)  ! Rank 1 Array
+         case (SrvD_u_TwrAccel)
+             call MV_Unpack2(Var, ValAry, u%TwrAccel)  ! Scalar
+         case (SrvD_u_YawErr)
+             call MV_Unpack2(Var, ValAry, u%YawErr)  ! Scalar
+         case (SrvD_u_WindDir)
+             call MV_Unpack2(Var, ValAry, u%WindDir)  ! Scalar
+         case (SrvD_u_RootMyc)
+             call MV_Unpack2(Var, ValAry, u%RootMyc)  ! Rank 1 Array
+         case (SrvD_u_YawBrTAxp)
+             call MV_Unpack2(Var, ValAry, u%YawBrTAxp)  ! Scalar
+         case (SrvD_u_YawBrTAyp)
+             call MV_Unpack2(Var, ValAry, u%YawBrTAyp)  ! Scalar
+         case (SrvD_u_LSSTipPxa)
+             call MV_Unpack2(Var, ValAry, u%LSSTipPxa)  ! Scalar
+         case (SrvD_u_RootMxc)
+             call MV_Unpack2(Var, ValAry, u%RootMxc)  ! Rank 1 Array
+         case (SrvD_u_LSSTipMxa)
+             call MV_Unpack2(Var, ValAry, u%LSSTipMxa)  ! Scalar
+         case (SrvD_u_LSSTipMya)
+             call MV_Unpack2(Var, ValAry, u%LSSTipMya)  ! Scalar
+         case (SrvD_u_LSSTipMza)
+             call MV_Unpack2(Var, ValAry, u%LSSTipMza)  ! Scalar
+         case (SrvD_u_LSSTipMys)
+             call MV_Unpack2(Var, ValAry, u%LSSTipMys)  ! Scalar
+         case (SrvD_u_LSSTipMzs)
+             call MV_Unpack2(Var, ValAry, u%LSSTipMzs)  ! Scalar
+         case (SrvD_u_YawBrMyn)
+             call MV_Unpack2(Var, ValAry, u%YawBrMyn)  ! Scalar
+         case (SrvD_u_YawBrMzn)
+             call MV_Unpack2(Var, ValAry, u%YawBrMzn)  ! Scalar
+         case (SrvD_u_NcIMURAxs)
+             call MV_Unpack2(Var, ValAry, u%NcIMURAxs)  ! Scalar
+         case (SrvD_u_NcIMURAys)
+             call MV_Unpack2(Var, ValAry, u%NcIMURAys)  ! Scalar
+         case (SrvD_u_NcIMURAzs)
+             call MV_Unpack2(Var, ValAry, u%NcIMURAzs)  ! Scalar
+         case (SrvD_u_RotPwr)
+             call MV_Unpack2(Var, ValAry, u%RotPwr)  ! Scalar
+         case (SrvD_u_HorWindV)
+             call MV_Unpack2(Var, ValAry, u%HorWindV)  ! Scalar
+         case (SrvD_u_YawAngle)
+             call MV_Unpack2(Var, ValAry, u%YawAngle)  ! Scalar
+         case (SrvD_u_LSShftFxa)
+             call MV_Unpack2(Var, ValAry, u%LSShftFxa)  ! Scalar
+         case (SrvD_u_LSShftFys)
+             call MV_Unpack2(Var, ValAry, u%LSShftFys)  ! Scalar
+         case (SrvD_u_LSShftFzs)
+             call MV_Unpack2(Var, ValAry, u%LSShftFzs)  ! Scalar
+         case (SrvD_u_fromSC)
+             call MV_Unpack2(Var, ValAry, u%fromSC)  ! Rank 1 Array
+         case (SrvD_u_fromSCglob)
+             call MV_Unpack2(Var, ValAry, u%fromSCglob)  ! Rank 1 Array
+         case (SrvD_u_Lidar)
+             call MV_Unpack2(Var, ValAry, u%Lidar)  ! Rank 1 Array
+         case (SrvD_u_PtfmMotionMesh)
+             call MV_Unpack2(Var, ValAry, u%PtfmMotionMesh)  ! Mesh
+         case (SrvD_u_BStCMotionMesh)
+             call MV_Unpack2(Var, ValAry, u%BStCMotionMesh(DL%i1, DL%i2))  ! Mesh
+         case (SrvD_u_NStCMotionMesh)
+             call MV_Unpack2(Var, ValAry, u%NStCMotionMesh(DL%i1))  ! Mesh
+         case (SrvD_u_TStCMotionMesh)
+             call MV_Unpack2(Var, ValAry, u%TStCMotionMesh(DL%i1))  ! Mesh
+         case (SrvD_u_SStCMotionMesh)
+             call MV_Unpack2(Var, ValAry, u%SStCMotionMesh(DL%i1))  ! Mesh
+         case (SrvD_u_LidSpeed)
+             call MV_Unpack2(Var, ValAry, u%LidSpeed)  ! Rank 1 Array
+         case (SrvD_u_MsrPositionsX)
+             call MV_Unpack2(Var, ValAry, u%MsrPositionsX)  ! Rank 1 Array
+         case (SrvD_u_MsrPositionsY)
+             call MV_Unpack2(Var, ValAry, u%MsrPositionsY)  ! Rank 1 Array
+         case (SrvD_u_MsrPositionsZ)
+             call MV_Unpack2(Var, ValAry, u%MsrPositionsZ)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SrvD_PackOutputAry(Vars, y, ValAry)
+   type(SrvD_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (SrvD_y_WriteOutput)
+             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+         case (SrvD_y_BlPitchCom)
+             call MV_Pack2(Var, y%BlPitchCom, ValAry)  ! Rank 1 Array
+         case (SrvD_y_BlAirfoilCom)
+             call MV_Pack2(Var, y%BlAirfoilCom, ValAry)  ! Rank 1 Array
+         case (SrvD_y_YawMom)
+             call MV_Pack2(Var, y%YawMom, ValAry)  ! Scalar
+         case (SrvD_y_GenTrq)
+             call MV_Pack2(Var, y%GenTrq, ValAry)  ! Scalar
+         case (SrvD_y_HSSBrTrqC)
+             call MV_Pack2(Var, y%HSSBrTrqC, ValAry)  ! Scalar
+         case (SrvD_y_ElecPwr)
+             call MV_Pack2(Var, y%ElecPwr, ValAry)  ! Scalar
+         case (SrvD_y_TBDrCon)
+             call MV_Pack2(Var, y%TBDrCon, ValAry)  ! Rank 1 Array
+         case (SrvD_y_Lidar)
+             call MV_Pack2(Var, y%Lidar, ValAry)  ! Rank 1 Array
+         case (SrvD_y_CableDeltaL)
+             call MV_Pack2(Var, y%CableDeltaL, ValAry)  ! Rank 1 Array
+         case (SrvD_y_CableDeltaLdot)
+             call MV_Pack2(Var, y%CableDeltaLdot, ValAry)  ! Rank 1 Array
+         case (SrvD_y_BStCLoadMesh)
+             call MV_Pack2(Var, y%BStCLoadMesh(DL%i1, DL%i2), ValAry)  ! Mesh
+         case (SrvD_y_NStCLoadMesh)
+             call MV_Pack2(Var, y%NStCLoadMesh(DL%i1), ValAry)  ! Mesh
+         case (SrvD_y_TStCLoadMesh)
+             call MV_Pack2(Var, y%TStCLoadMesh(DL%i1), ValAry)  ! Mesh
+         case (SrvD_y_SStCLoadMesh)
+             call MV_Pack2(Var, y%SStCLoadMesh(DL%i1), ValAry)  ! Mesh
+         case (SrvD_y_toSC)
+             call MV_Pack2(Var, y%toSC, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SrvD_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SrvD_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (SrvD_y_WriteOutput)
+             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+         case (SrvD_y_BlPitchCom)
+             call MV_Unpack2(Var, ValAry, y%BlPitchCom)  ! Rank 1 Array
+         case (SrvD_y_BlAirfoilCom)
+             call MV_Unpack2(Var, ValAry, y%BlAirfoilCom)  ! Rank 1 Array
+         case (SrvD_y_YawMom)
+             call MV_Unpack2(Var, ValAry, y%YawMom)  ! Scalar
+         case (SrvD_y_GenTrq)
+             call MV_Unpack2(Var, ValAry, y%GenTrq)  ! Scalar
+         case (SrvD_y_HSSBrTrqC)
+             call MV_Unpack2(Var, ValAry, y%HSSBrTrqC)  ! Scalar
+         case (SrvD_y_ElecPwr)
+             call MV_Unpack2(Var, ValAry, y%ElecPwr)  ! Scalar
+         case (SrvD_y_TBDrCon)
+             call MV_Unpack2(Var, ValAry, y%TBDrCon)  ! Rank 1 Array
+         case (SrvD_y_Lidar)
+             call MV_Unpack2(Var, ValAry, y%Lidar)  ! Rank 1 Array
+         case (SrvD_y_CableDeltaL)
+             call MV_Unpack2(Var, ValAry, y%CableDeltaL)  ! Rank 1 Array
+         case (SrvD_y_CableDeltaLdot)
+             call MV_Unpack2(Var, ValAry, y%CableDeltaLdot)  ! Rank 1 Array
+         case (SrvD_y_BStCLoadMesh)
+             call MV_Unpack2(Var, ValAry, y%BStCLoadMesh(DL%i1, DL%i2))  ! Mesh
+         case (SrvD_y_NStCLoadMesh)
+             call MV_Unpack2(Var, ValAry, y%NStCLoadMesh(DL%i1))  ! Mesh
+         case (SrvD_y_TStCLoadMesh)
+             call MV_Unpack2(Var, ValAry, y%TStCLoadMesh(DL%i1))  ! Mesh
+         case (SrvD_y_SStCLoadMesh)
+             call MV_Unpack2(Var, ValAry, y%SStCLoadMesh(DL%i1))  ! Mesh
+         case (SrvD_y_toSC)
+             call MV_Unpack2(Var, ValAry, y%toSC)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE ServoDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

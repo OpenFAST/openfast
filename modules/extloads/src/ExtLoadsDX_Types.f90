@@ -117,7 +117,16 @@ IMPLICIT NONE
     REAL(KIND=C_DOUBLE) , DIMENSION(:), POINTER  :: bldLd => NULL()      !< Loads on all blades - Externally supplied [-]
   END TYPE ExtLdDX_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: ExtLdDX_u_twrDef                 =   1 ! ExtLdDX%twrDef
+   integer(IntKi), public, parameter :: ExtLdDX_u_bldDef                 =   2 ! ExtLdDX%bldDef
+   integer(IntKi), public, parameter :: ExtLdDX_u_hubDef                 =   3 ! ExtLdDX%hubDef
+   integer(IntKi), public, parameter :: ExtLdDX_u_nacDef                 =   4 ! ExtLdDX%nacDef
+   integer(IntKi), public, parameter :: ExtLdDX_u_bldRootDef             =   5 ! ExtLdDX%bldRootDef
+   integer(IntKi), public, parameter :: ExtLdDX_u_bldPitch               =   6 ! ExtLdDX%bldPitch
+   integer(IntKi), public, parameter :: ExtLdDX_y_twrLd                  =   7 ! ExtLdDX%twrLd
+   integer(IntKi), public, parameter :: ExtLdDX_y_bldLd                  =   8 ! ExtLdDX%bldLd
+
+contains
 
 subroutine ExtLdDX_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
    type(ExtLdDX_InputType), intent(in) :: SrcInputData
@@ -1684,7 +1693,7 @@ END SUBROUTINE
 
 function ExtLdDX_InputMeshPointer(u, ML) result(Mesh)
    type(ExtLdDX_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1692,7 +1701,7 @@ function ExtLdDX_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function ExtLdDX_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -1701,7 +1710,7 @@ end function
 
 function ExtLdDX_OutputMeshPointer(y, ML) result(Mesh)
    type(ExtLdDX_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1709,11 +1718,95 @@ function ExtLdDX_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function ExtLdDX_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
    end select
 end function
+
+subroutine ExtLdDX_PackInputAry(Vars, u, ValAry)
+   type(ExtLdDX_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (ExtLdDX_u_twrDef)
+             call MV_Pack2(Var, u%twrDef, ValAry)  ! Rank 1 Array
+         case (ExtLdDX_u_bldDef)
+             call MV_Pack2(Var, u%bldDef, ValAry)  ! Rank 1 Array
+         case (ExtLdDX_u_hubDef)
+             call MV_Pack2(Var, u%hubDef, ValAry)  ! Rank 1 Array
+         case (ExtLdDX_u_nacDef)
+             call MV_Pack2(Var, u%nacDef, ValAry)  ! Rank 1 Array
+         case (ExtLdDX_u_bldRootDef)
+             call MV_Pack2(Var, u%bldRootDef, ValAry)  ! Rank 1 Array
+         case (ExtLdDX_u_bldPitch)
+             call MV_Pack2(Var, u%bldPitch, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ExtLdDX_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ExtLdDX_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (ExtLdDX_u_twrDef)
+             call MV_Unpack2(Var, ValAry, u%twrDef)  ! Rank 1 Array
+         case (ExtLdDX_u_bldDef)
+             call MV_Unpack2(Var, ValAry, u%bldDef)  ! Rank 1 Array
+         case (ExtLdDX_u_hubDef)
+             call MV_Unpack2(Var, ValAry, u%hubDef)  ! Rank 1 Array
+         case (ExtLdDX_u_nacDef)
+             call MV_Unpack2(Var, ValAry, u%nacDef)  ! Rank 1 Array
+         case (ExtLdDX_u_bldRootDef)
+             call MV_Unpack2(Var, ValAry, u%bldRootDef)  ! Rank 1 Array
+         case (ExtLdDX_u_bldPitch)
+             call MV_Unpack2(Var, ValAry, u%bldPitch)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ExtLdDX_PackOutputAry(Vars, y, ValAry)
+   type(ExtLdDX_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (ExtLdDX_y_twrLd)
+             call MV_Pack2(Var, y%twrLd, ValAry)  ! Rank 1 Array
+         case (ExtLdDX_y_bldLd)
+             call MV_Pack2(Var, y%bldLd, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ExtLdDX_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ExtLdDX_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (ExtLdDX_y_twrLd)
+             call MV_Unpack2(Var, ValAry, y%twrLd)  ! Rank 1 Array
+         case (ExtLdDX_y_bldLd)
+             call MV_Unpack2(Var, ValAry, y%bldLd)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE ExtLoadsDX_Types
 !ENDOFREGISTRYGENERATEDFILE

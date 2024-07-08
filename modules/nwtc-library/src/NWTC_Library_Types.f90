@@ -113,19 +113,30 @@ IMPLICIT NONE
     CHARACTER(6)  :: RNG_type 
   END TYPE NWTC_RandomNumber_ParameterType
 ! =======================
+! =========  DatLoc  =======
+  TYPE, PUBLIC :: DatLoc
+    INTEGER(IntKi)  :: Num = 0      !< Mesh number in module [-]
+    INTEGER(IntKi)  :: i1 = 0      !< Index 1 [-]
+    INTEGER(IntKi)  :: i2 = 0      !< Index 2 [-]
+    INTEGER(IntKi)  :: i3 = 0      !< Index 3 [-]
+  END TYPE DatLoc
+! =======================
 ! =========  ModVarType  =======
   TYPE, PUBLIC :: ModVarType
     character(VarNameLen)  :: Name      !<  [-]
     INTEGER(IntKi)  :: iMod = 0      !< Module index [-]
     INTEGER(IntKi)  :: iVar = 0      !< Variable index [-]
+    TYPE(DatLoc)  :: DL      !< data location [-]
     INTEGER(IntKi)  :: Field = 0      !<  [-]
     INTEGER(IntKi)  :: Nodes = 1      !<  [-]
     INTEGER(IntKi)  :: Num = 1      !<  [-]
     INTEGER(IntKi)  :: Flags = 0      !<  [-]
     INTEGER(IntKi)  :: DerivOrder = 0      !<  [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iLoc = 0      !< indices in local arrays [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iUsr = 0      !< first user defined index for variable, can be used a lower/upper bounds [-]
-    INTEGER(IntKi)  :: jUsr = 0      !< second user defined index for variable [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: iAry = 0      !< first user defined index for variable [-]
+    INTEGER(IntKi)  :: jAry = 0      !< second user defined index for variable [-]
+    INTEGER(IntKi)  :: kAry = 0      !< third user defined index for variable [-]
+    INTEGER(IntKi)  :: mAry = 0      !< third user defined index for variable [-]
     INTEGER(IntKi)  :: MeshID = 0      !< Mesh identification number [-]
     REAL(R8Ki)  :: Perturb = 0      !< perturbation amount for linearization [-]
     character(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames      !<  [-]
@@ -134,12 +145,10 @@ IMPLICIT NONE
 ! =========  ModVarsType  =======
   TYPE, PUBLIC :: ModVarsType
     INTEGER(IntKi)  :: Nx = 0      !< Number of x values [-]
-    INTEGER(IntKi)  :: Nxd = 0      !< Number of xd values [-]
     INTEGER(IntKi)  :: Nz = 0      !< Number of z values [-]
     INTEGER(IntKi)  :: Nu = 0      !< Number of u values [-]
     INTEGER(IntKi)  :: Ny = 0      !< Number of y values [-]
     TYPE(ModVarType) , DIMENSION(:), ALLOCATABLE  :: x      !< Module state variable array [-]
-    TYPE(ModVarType) , DIMENSION(:), ALLOCATABLE  :: xd      !< Module state variable array [-]
     TYPE(ModVarType) , DIMENSION(:), ALLOCATABLE  :: z      !< Module state variable array [-]
     TYPE(ModVarType) , DIMENSION(:), ALLOCATABLE  :: u      !< Module input variable array [-]
     TYPE(ModVarType) , DIMENSION(:), ALLOCATABLE  :: y      !< Module output variable array [-]
@@ -149,7 +158,6 @@ IMPLICIT NONE
   TYPE, PUBLIC :: ModJacType
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: x      !<  [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !<  [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: xd      !<  [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: z      !<  [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: u      !<  [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: y      !<  [-]
@@ -161,15 +169,24 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: y_neg      !<  [-]
   END TYPE ModJacType
 ! =======================
-! =========  MeshLocType  =======
-  TYPE, PUBLIC :: MeshLocType
-    INTEGER(IntKi)  :: Num = 0      !< Mesh number in module [-]
-    INTEGER(IntKi)  :: i1 = 0      !< Mesh index 1 [-]
-    INTEGER(IntKi)  :: i2 = 0      !< Mesh index 2 [-]
-    INTEGER(IntKi)  :: i3 = 0      !< Mesh index 3 [-]
-  END TYPE MeshLocType
+! =========  VarXfrType  =======
+  TYPE, PUBLIC :: VarXfrType
+    INTEGER(IntKi)  :: iVar = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: NumVals = 0_IntKi      !<  [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: iSrc = 0_IntKi      !<  [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: iDst = 0_IntKi      !<  [-]
+  END TYPE VarXfrType
 ! =======================
-CONTAINS
+! =========  ModXfrType  =======
+  TYPE, PUBLIC :: ModXfrType
+    TYPE(VarXfrType) , DIMENSION(:), ALLOCATABLE  :: x      !<  [-]
+    TYPE(VarXfrType) , DIMENSION(:), ALLOCATABLE  :: z      !<  [-]
+    TYPE(VarXfrType) , DIMENSION(:), ALLOCATABLE  :: u      !<  [-]
+    TYPE(VarXfrType) , DIMENSION(:), ALLOCATABLE  :: y      !<  [-]
+  END TYPE ModXfrType
+! =======================
+
+contains
 
 subroutine NWTC_Library_CopyProgDesc(SrcProgDescData, DstProgDescData, CtrlCode, ErrStat, ErrMsg)
    type(ProgDesc), intent(in) :: SrcProgDescData
@@ -589,6 +606,53 @@ subroutine NWTC_Library_UnPackNWTC_RandomNumber_ParameterType(RF, OutData)
    call RegUnpack(RF, OutData%RNG_type); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
+subroutine NWTC_Library_CopyDatLoc(SrcDatLocData, DstDatLocData, CtrlCode, ErrStat, ErrMsg)
+   type(DatLoc), intent(in) :: SrcDatLocData
+   type(DatLoc), intent(inout) :: DstDatLocData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'NWTC_Library_CopyDatLoc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstDatLocData%Num = SrcDatLocData%Num
+   DstDatLocData%i1 = SrcDatLocData%i1
+   DstDatLocData%i2 = SrcDatLocData%i2
+   DstDatLocData%i3 = SrcDatLocData%i3
+end subroutine
+
+subroutine NWTC_Library_DestroyDatLoc(DatLocData, ErrStat, ErrMsg)
+   type(DatLoc), intent(inout) :: DatLocData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyDatLoc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
+
+subroutine NWTC_Library_PackDatLoc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(DatLoc), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'NWTC_Library_PackDatLoc'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%Num)
+   call RegPack(RF, InData%i1)
+   call RegPack(RF, InData%i2)
+   call RegPack(RF, InData%i3)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine NWTC_Library_UnPackDatLoc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(DatLoc), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackDatLoc'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%Num); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%i1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%i2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%i3); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
 subroutine NWTC_Library_CopyModVarType(SrcModVarTypeData, DstModVarTypeData, CtrlCode, ErrStat, ErrMsg)
    type(ModVarType), intent(in) :: SrcModVarTypeData
    type(ModVarType), intent(inout) :: DstModVarTypeData
@@ -597,20 +661,26 @@ subroutine NWTC_Library_CopyModVarType(SrcModVarTypeData, DstModVarTypeData, Ctr
    character(*),    intent(  out) :: ErrMsg
    integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'NWTC_Library_CopyModVarType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstModVarTypeData%Name = SrcModVarTypeData%Name
    DstModVarTypeData%iMod = SrcModVarTypeData%iMod
    DstModVarTypeData%iVar = SrcModVarTypeData%iVar
+   call NWTC_Library_CopyDatLoc(SrcModVarTypeData%DL, DstModVarTypeData%DL, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    DstModVarTypeData%Field = SrcModVarTypeData%Field
    DstModVarTypeData%Nodes = SrcModVarTypeData%Nodes
    DstModVarTypeData%Num = SrcModVarTypeData%Num
    DstModVarTypeData%Flags = SrcModVarTypeData%Flags
    DstModVarTypeData%DerivOrder = SrcModVarTypeData%DerivOrder
    DstModVarTypeData%iLoc = SrcModVarTypeData%iLoc
-   DstModVarTypeData%iUsr = SrcModVarTypeData%iUsr
-   DstModVarTypeData%jUsr = SrcModVarTypeData%jUsr
+   DstModVarTypeData%iAry = SrcModVarTypeData%iAry
+   DstModVarTypeData%jAry = SrcModVarTypeData%jAry
+   DstModVarTypeData%kAry = SrcModVarTypeData%kAry
+   DstModVarTypeData%mAry = SrcModVarTypeData%mAry
    DstModVarTypeData%MeshID = SrcModVarTypeData%MeshID
    DstModVarTypeData%Perturb = SrcModVarTypeData%Perturb
    if (allocated(SrcModVarTypeData%LinNames)) then
@@ -631,9 +701,13 @@ subroutine NWTC_Library_DestroyModVarType(ModVarTypeData, ErrStat, ErrMsg)
    type(ModVarType), intent(inout) :: ModVarTypeData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyModVarType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyDatLoc(ModVarTypeData%DL, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ModVarTypeData%LinNames)) then
       deallocate(ModVarTypeData%LinNames)
    end if
@@ -647,14 +721,17 @@ subroutine NWTC_Library_PackModVarType(RF, Indata)
    call RegPack(RF, InData%Name)
    call RegPack(RF, InData%iMod)
    call RegPack(RF, InData%iVar)
+   call NWTC_Library_PackDatLoc(RF, InData%DL) 
    call RegPack(RF, InData%Field)
    call RegPack(RF, InData%Nodes)
    call RegPack(RF, InData%Num)
    call RegPack(RF, InData%Flags)
    call RegPack(RF, InData%DerivOrder)
    call RegPack(RF, InData%iLoc)
-   call RegPack(RF, InData%iUsr)
-   call RegPack(RF, InData%jUsr)
+   call RegPack(RF, InData%iAry)
+   call RegPack(RF, InData%jAry)
+   call RegPack(RF, InData%kAry)
+   call RegPack(RF, InData%mAry)
    call RegPack(RF, InData%MeshID)
    call RegPack(RF, InData%Perturb)
    call RegPackAlloc(RF, InData%LinNames)
@@ -672,14 +749,17 @@ subroutine NWTC_Library_UnPackModVarType(RF, OutData)
    call RegUnpack(RF, OutData%Name); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iVar); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackDatLoc(RF, OutData%DL) ! DL 
    call RegUnpack(RF, OutData%Field); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Nodes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Num); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Flags); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DerivOrder); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iLoc); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iUsr); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%jUsr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iAry); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%jAry); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%kAry); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%mAry); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MeshID); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Perturb); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LinNames); if (RegCheckErr(RF, RoutineName)) return
@@ -699,7 +779,6 @@ subroutine NWTC_Library_CopyModVarsType(SrcModVarsTypeData, DstModVarsTypeData, 
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstModVarsTypeData%Nx = SrcModVarsTypeData%Nx
-   DstModVarsTypeData%Nxd = SrcModVarsTypeData%Nxd
    DstModVarsTypeData%Nz = SrcModVarsTypeData%Nz
    DstModVarsTypeData%Nu = SrcModVarsTypeData%Nu
    DstModVarsTypeData%Ny = SrcModVarsTypeData%Ny
@@ -715,22 +794,6 @@ subroutine NWTC_Library_CopyModVarsType(SrcModVarsTypeData, DstModVarsTypeData, 
       end if
       do i1 = LB(1), UB(1)
          call NWTC_Library_CopyModVarType(SrcModVarsTypeData%x(i1), DstModVarsTypeData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcModVarsTypeData%xd)) then
-      LB(1:1) = lbound(SrcModVarsTypeData%xd, kind=B8Ki)
-      UB(1:1) = ubound(SrcModVarsTypeData%xd, kind=B8Ki)
-      if (.not. allocated(DstModVarsTypeData%xd)) then
-         allocate(DstModVarsTypeData%xd(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModVarsTypeData%xd.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyModVarType(SrcModVarsTypeData%xd(i1), DstModVarsTypeData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
@@ -805,15 +868,6 @@ subroutine NWTC_Library_DestroyModVarsType(ModVarsTypeData, ErrStat, ErrMsg)
       end do
       deallocate(ModVarsTypeData%x)
    end if
-   if (allocated(ModVarsTypeData%xd)) then
-      LB(1:1) = lbound(ModVarsTypeData%xd, kind=B8Ki)
-      UB(1:1) = ubound(ModVarsTypeData%xd, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyModVarType(ModVarsTypeData%xd(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModVarsTypeData%xd)
-   end if
    if (allocated(ModVarsTypeData%z)) then
       LB(1:1) = lbound(ModVarsTypeData%z, kind=B8Ki)
       UB(1:1) = ubound(ModVarsTypeData%z, kind=B8Ki)
@@ -851,7 +905,6 @@ subroutine NWTC_Library_PackModVarsType(RF, Indata)
    integer(B8Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%Nx)
-   call RegPack(RF, InData%Nxd)
    call RegPack(RF, InData%Nz)
    call RegPack(RF, InData%Nu)
    call RegPack(RF, InData%Ny)
@@ -862,15 +915,6 @@ subroutine NWTC_Library_PackModVarsType(RF, Indata)
       UB(1:1) = ubound(InData%x, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackModVarType(RF, InData%x(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%xd))
-   if (allocated(InData%xd)) then
-      call RegPackBounds(RF, 1, lbound(InData%xd, kind=B8Ki), ubound(InData%xd, kind=B8Ki))
-      LB(1:1) = lbound(InData%xd, kind=B8Ki)
-      UB(1:1) = ubound(InData%xd, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackModVarType(RF, InData%xd(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%z))
@@ -913,7 +957,6 @@ subroutine NWTC_Library_UnPackModVarsType(RF, OutData)
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%Nx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Nxd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Nz); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Nu); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Ny); if (RegCheckErr(RF, RoutineName)) return
@@ -928,19 +971,6 @@ subroutine NWTC_Library_UnPackModVarsType(RF, OutData)
       end if
       do i1 = LB(1), UB(1)
          call NWTC_Library_UnpackModVarType(RF, OutData%x(i1)) ! x 
-      end do
-   end if
-   if (allocated(OutData%xd)) deallocate(OutData%xd)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%xd(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%xd.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackModVarType(RF, OutData%xd(i1)) ! xd 
       end do
    end if
    if (allocated(OutData%z)) deallocate(OutData%z)
@@ -1018,18 +1048,6 @@ subroutine NWTC_Library_CopyModJacType(SrcModJacTypeData, DstModJacTypeData, Ctr
          end if
       end if
       DstModJacTypeData%dx = SrcModJacTypeData%dx
-   end if
-   if (allocated(SrcModJacTypeData%xd)) then
-      LB(1:1) = lbound(SrcModJacTypeData%xd, kind=B8Ki)
-      UB(1:1) = ubound(SrcModJacTypeData%xd, kind=B8Ki)
-      if (.not. allocated(DstModJacTypeData%xd)) then
-         allocate(DstModJacTypeData%xd(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModJacTypeData%xd.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstModJacTypeData%xd = SrcModJacTypeData%xd
    end if
    if (allocated(SrcModJacTypeData%z)) then
       LB(1:1) = lbound(SrcModJacTypeData%z, kind=B8Ki)
@@ -1154,9 +1172,6 @@ subroutine NWTC_Library_DestroyModJacType(ModJacTypeData, ErrStat, ErrMsg)
    if (allocated(ModJacTypeData%dx)) then
       deallocate(ModJacTypeData%dx)
    end if
-   if (allocated(ModJacTypeData%xd)) then
-      deallocate(ModJacTypeData%xd)
-   end if
    if (allocated(ModJacTypeData%z)) then
       deallocate(ModJacTypeData%z)
    end if
@@ -1193,7 +1208,6 @@ subroutine NWTC_Library_PackModJacType(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%x)
    call RegPackAlloc(RF, InData%dx)
-   call RegPackAlloc(RF, InData%xd)
    call RegPackAlloc(RF, InData%z)
    call RegPackAlloc(RF, InData%u)
    call RegPackAlloc(RF, InData%y)
@@ -1216,7 +1230,6 @@ subroutine NWTC_Library_UnPackModJacType(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%x); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%dx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%xd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%z); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%y); if (RegCheckErr(RF, RoutineName)) return
@@ -1228,51 +1241,288 @@ subroutine NWTC_Library_UnPackModJacType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%y_neg); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine NWTC_Library_CopyMeshLocType(SrcMeshLocTypeData, DstMeshLocTypeData, CtrlCode, ErrStat, ErrMsg)
-   type(MeshLocType), intent(in) :: SrcMeshLocTypeData
-   type(MeshLocType), intent(inout) :: DstMeshLocTypeData
+subroutine NWTC_Library_CopyVarXfrType(SrcVarXfrTypeData, DstVarXfrTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(VarXfrType), intent(in) :: SrcVarXfrTypeData
+   type(VarXfrType), intent(inout) :: DstVarXfrTypeData
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'NWTC_Library_CopyMeshLocType'
+   character(*), parameter        :: RoutineName = 'NWTC_Library_CopyVarXfrType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   DstMeshLocTypeData%Num = SrcMeshLocTypeData%Num
-   DstMeshLocTypeData%i1 = SrcMeshLocTypeData%i1
-   DstMeshLocTypeData%i2 = SrcMeshLocTypeData%i2
-   DstMeshLocTypeData%i3 = SrcMeshLocTypeData%i3
+   DstVarXfrTypeData%iVar = SrcVarXfrTypeData%iVar
+   DstVarXfrTypeData%NumVals = SrcVarXfrTypeData%NumVals
+   DstVarXfrTypeData%iSrc = SrcVarXfrTypeData%iSrc
+   DstVarXfrTypeData%iDst = SrcVarXfrTypeData%iDst
 end subroutine
 
-subroutine NWTC_Library_DestroyMeshLocType(MeshLocTypeData, ErrStat, ErrMsg)
-   type(MeshLocType), intent(inout) :: MeshLocTypeData
+subroutine NWTC_Library_DestroyVarXfrType(VarXfrTypeData, ErrStat, ErrMsg)
+   type(VarXfrType), intent(inout) :: VarXfrTypeData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyMeshLocType'
+   character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyVarXfrType'
    ErrStat = ErrID_None
    ErrMsg  = ''
 end subroutine
 
-subroutine NWTC_Library_PackMeshLocType(RF, Indata)
+subroutine NWTC_Library_PackVarXfrType(RF, Indata)
    type(RegFile), intent(inout) :: RF
-   type(MeshLocType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'NWTC_Library_PackMeshLocType'
+   type(VarXfrType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'NWTC_Library_PackVarXfrType'
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, InData%Num)
-   call RegPack(RF, InData%i1)
-   call RegPack(RF, InData%i2)
-   call RegPack(RF, InData%i3)
+   call RegPack(RF, InData%iVar)
+   call RegPack(RF, InData%NumVals)
+   call RegPack(RF, InData%iSrc)
+   call RegPack(RF, InData%iDst)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine NWTC_Library_UnPackMeshLocType(RF, OutData)
+subroutine NWTC_Library_UnPackVarXfrType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
-   type(MeshLocType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackMeshLocType'
+   type(VarXfrType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackVarXfrType'
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpack(RF, OutData%Num); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%i1); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%i2); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%i3); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVar); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumVals); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iSrc); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iDst); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine NWTC_Library_CopyModXfrType(SrcModXfrTypeData, DstModXfrTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(ModXfrType), intent(in) :: SrcModXfrTypeData
+   type(ModXfrType), intent(inout) :: DstModXfrTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B8Ki)   :: i1
+   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'NWTC_Library_CopyModXfrType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(SrcModXfrTypeData%x)) then
+      LB(1:1) = lbound(SrcModXfrTypeData%x, kind=B8Ki)
+      UB(1:1) = ubound(SrcModXfrTypeData%x, kind=B8Ki)
+      if (.not. allocated(DstModXfrTypeData%x)) then
+         allocate(DstModXfrTypeData%x(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModXfrTypeData%x.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_CopyVarXfrType(SrcModXfrTypeData%x(i1), DstModXfrTypeData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcModXfrTypeData%z)) then
+      LB(1:1) = lbound(SrcModXfrTypeData%z, kind=B8Ki)
+      UB(1:1) = ubound(SrcModXfrTypeData%z, kind=B8Ki)
+      if (.not. allocated(DstModXfrTypeData%z)) then
+         allocate(DstModXfrTypeData%z(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModXfrTypeData%z.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_CopyVarXfrType(SrcModXfrTypeData%z(i1), DstModXfrTypeData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcModXfrTypeData%u)) then
+      LB(1:1) = lbound(SrcModXfrTypeData%u, kind=B8Ki)
+      UB(1:1) = ubound(SrcModXfrTypeData%u, kind=B8Ki)
+      if (.not. allocated(DstModXfrTypeData%u)) then
+         allocate(DstModXfrTypeData%u(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModXfrTypeData%u.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_CopyVarXfrType(SrcModXfrTypeData%u(i1), DstModXfrTypeData%u(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcModXfrTypeData%y)) then
+      LB(1:1) = lbound(SrcModXfrTypeData%y, kind=B8Ki)
+      UB(1:1) = ubound(SrcModXfrTypeData%y, kind=B8Ki)
+      if (.not. allocated(DstModXfrTypeData%y)) then
+         allocate(DstModXfrTypeData%y(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModXfrTypeData%y.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_CopyVarXfrType(SrcModXfrTypeData%y(i1), DstModXfrTypeData%y(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+end subroutine
+
+subroutine NWTC_Library_DestroyModXfrType(ModXfrTypeData, ErrStat, ErrMsg)
+   type(ModXfrType), intent(inout) :: ModXfrTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyModXfrType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(ModXfrTypeData%x)) then
+      LB(1:1) = lbound(ModXfrTypeData%x, kind=B8Ki)
+      UB(1:1) = ubound(ModXfrTypeData%x, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_DestroyVarXfrType(ModXfrTypeData%x(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ModXfrTypeData%x)
+   end if
+   if (allocated(ModXfrTypeData%z)) then
+      LB(1:1) = lbound(ModXfrTypeData%z, kind=B8Ki)
+      UB(1:1) = ubound(ModXfrTypeData%z, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_DestroyVarXfrType(ModXfrTypeData%z(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ModXfrTypeData%z)
+   end if
+   if (allocated(ModXfrTypeData%u)) then
+      LB(1:1) = lbound(ModXfrTypeData%u, kind=B8Ki)
+      UB(1:1) = ubound(ModXfrTypeData%u, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_DestroyVarXfrType(ModXfrTypeData%u(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ModXfrTypeData%u)
+   end if
+   if (allocated(ModXfrTypeData%y)) then
+      LB(1:1) = lbound(ModXfrTypeData%y, kind=B8Ki)
+      UB(1:1) = ubound(ModXfrTypeData%y, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_DestroyVarXfrType(ModXfrTypeData%y(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ModXfrTypeData%y)
+   end if
+end subroutine
+
+subroutine NWTC_Library_PackModXfrType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(ModXfrType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'NWTC_Library_PackModXfrType'
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, allocated(InData%x))
+   if (allocated(InData%x)) then
+      call RegPackBounds(RF, 1, lbound(InData%x, kind=B8Ki), ubound(InData%x, kind=B8Ki))
+      LB(1:1) = lbound(InData%x, kind=B8Ki)
+      UB(1:1) = ubound(InData%x, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_PackVarXfrType(RF, InData%x(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%z))
+   if (allocated(InData%z)) then
+      call RegPackBounds(RF, 1, lbound(InData%z, kind=B8Ki), ubound(InData%z, kind=B8Ki))
+      LB(1:1) = lbound(InData%z, kind=B8Ki)
+      UB(1:1) = ubound(InData%z, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_PackVarXfrType(RF, InData%z(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%u))
+   if (allocated(InData%u)) then
+      call RegPackBounds(RF, 1, lbound(InData%u, kind=B8Ki), ubound(InData%u, kind=B8Ki))
+      LB(1:1) = lbound(InData%u, kind=B8Ki)
+      UB(1:1) = ubound(InData%u, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_PackVarXfrType(RF, InData%u(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%y))
+   if (allocated(InData%y)) then
+      call RegPackBounds(RF, 1, lbound(InData%y, kind=B8Ki), ubound(InData%y, kind=B8Ki))
+      LB(1:1) = lbound(InData%y, kind=B8Ki)
+      UB(1:1) = ubound(InData%y, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_PackVarXfrType(RF, InData%y(i1)) 
+      end do
+   end if
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine NWTC_Library_UnPackModXfrType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(ModXfrType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackModXfrType'
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   if (allocated(OutData%x)) deallocate(OutData%x)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%x(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%x.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_UnpackVarXfrType(RF, OutData%x(i1)) ! x 
+      end do
+   end if
+   if (allocated(OutData%z)) deallocate(OutData%z)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%z(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%z.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_UnpackVarXfrType(RF, OutData%z(i1)) ! z 
+      end do
+   end if
+   if (allocated(OutData%u)) deallocate(OutData%u)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%u(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%u.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_UnpackVarXfrType(RF, OutData%u(i1)) ! u 
+      end do
+   end if
+   if (allocated(OutData%y)) deallocate(OutData%y)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%y(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%y.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_UnpackVarXfrType(RF, OutData%y(i1)) ! y 
+      end do
+   end if
 end subroutine
 END MODULE NWTC_Library_Types
 !ENDOFREGISTRYGENERATEDFILE

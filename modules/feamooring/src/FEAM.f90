@@ -381,7 +381,7 @@ subroutine FEAM_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
     !---------------------------------------------------------------------------
 
     call MV_AddMeshVar(p%Vars%u, "PtFairleadDisplacement", [FieldTransDisp], &
-                       VarIdx=p%iVarPtFairleadDisplacement, &
+                       DatLoc(FEAM_u_PtFairleadDisplacement), &
                        Mesh=u%PtFairleadDisplacement)                      
 
     !---------------------------------------------------------------------------
@@ -389,7 +389,7 @@ subroutine FEAM_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
     !---------------------------------------------------------------------------
  
     call MV_AddMeshVar(p%Vars%y, 'PtFairleadLoad', [FieldForce], &
-                       VarIdx=p%iVarPtFairleadLoad, &
+                       DatLoc(FEAM_y_PtFairleadLoad), &
                        Mesh=y%PtFairleadLoad)
  
     !---------------------------------------------------------------------------

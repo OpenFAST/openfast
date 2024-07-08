@@ -33,8 +33,6 @@ MODULE ExtPtfm_MCKF_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ExtPtfm_u_PtfmMesh               = 1      ! Mesh number for ExtPtfm ExtPtfm_u_PtfmMesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ExtPtfm_y_PtfmMesh               = 2      ! Mesh number for ExtPtfm ExtPtfm_y_PtfmMesh mesh [-]
 ! =========  ExtPtfm_InitInputType  =======
   TYPE, PUBLIC :: ExtPtfm_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file; remove if there is no file [-]
@@ -156,7 +154,14 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Example of data to be written to an output file [s,-]
   END TYPE ExtPtfm_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: ExtPtfm_x_qm                     =   1 ! ExtPtfm%qm
+   integer(IntKi), public, parameter :: ExtPtfm_x_qmdot                  =   2 ! ExtPtfm%qmdot
+   integer(IntKi), public, parameter :: ExtPtfm_z_DummyConstrState       =   3 ! ExtPtfm%DummyConstrState
+   integer(IntKi), public, parameter :: ExtPtfm_u_PtfmMesh               =   4 ! ExtPtfm%PtfmMesh
+   integer(IntKi), public, parameter :: ExtPtfm_y_PtfmMesh               =   5 ! ExtPtfm%PtfmMesh
+   integer(IntKi), public, parameter :: ExtPtfm_y_WriteOutput            =   6 ! ExtPtfm%WriteOutput
+
+contains
 
 subroutine ExtPtfm_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(ExtPtfm_InitInputType), intent(in) :: SrcInitInputData
@@ -1863,7 +1868,7 @@ END SUBROUTINE
 
 function ExtPtfm_InputMeshPointer(u, ML) result(Mesh)
    type(ExtPtfm_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1873,7 +1878,7 @@ function ExtPtfm_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function ExtPtfm_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -1884,7 +1889,7 @@ end function
 
 function ExtPtfm_OutputMeshPointer(y, ML) result(Mesh)
    type(ExtPtfm_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1894,7 +1899,7 @@ function ExtPtfm_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function ExtPtfm_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -1902,5 +1907,133 @@ function ExtPtfm_OutputMeshName(ML) result(Name)
        Name = "y%PtfmMesh"
    end select
 end function
+
+subroutine ExtPtfm_PackContStateAry(Vars, x, ValAry)
+   type(ExtPtfm_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (ExtPtfm_x_qm)
+             call MV_Pack2(Var, x%qm, ValAry)  ! Rank 1 Array
+         case (ExtPtfm_x_qmdot)
+             call MV_Pack2(Var, x%qmdot, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ExtPtfm_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ExtPtfm_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (ExtPtfm_x_qm)
+             call MV_Unpack2(Var, ValAry, x%qm)  ! Rank 1 Array
+         case (ExtPtfm_x_qmdot)
+             call MV_Unpack2(Var, ValAry, x%qmdot)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ExtPtfm_PackConstrStateAry(Vars, z, ValAry)
+   type(ExtPtfm_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (ExtPtfm_z_DummyConstrState)
+             call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ExtPtfm_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ExtPtfm_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (ExtPtfm_z_DummyConstrState)
+             call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ExtPtfm_PackInputAry(Vars, u, ValAry)
+   type(ExtPtfm_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (ExtPtfm_u_PtfmMesh)
+             call MV_Pack2(Var, u%PtfmMesh, ValAry)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ExtPtfm_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ExtPtfm_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (ExtPtfm_u_PtfmMesh)
+             call MV_Unpack2(Var, ValAry, u%PtfmMesh)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ExtPtfm_PackOutputAry(Vars, y, ValAry)
+   type(ExtPtfm_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (ExtPtfm_y_PtfmMesh)
+             call MV_Pack2(Var, y%PtfmMesh, ValAry)  ! Mesh
+         case (ExtPtfm_y_WriteOutput)
+             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ExtPtfm_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ExtPtfm_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (ExtPtfm_y_PtfmMesh)
+             call MV_Unpack2(Var, ValAry, y%PtfmMesh)  ! Mesh
+         case (ExtPtfm_y_WriteOutput)
+             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE ExtPtfm_MCKF_Types
 !ENDOFREGISTRYGENERATEDFILE

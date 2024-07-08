@@ -35,7 +35,6 @@ USE SeaSt_WaveField_Types
 USE NWTC_Library
 IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxWAMIT2Outputs                 = 6      !  [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WAMIT2_y_Mesh                    = 1      ! Mesh number for WAMIT2 WAMIT2_y_Mesh mesh [-]
 ! =========  WAMIT2_InitInputType  =======
   TYPE, PUBLIC :: WAMIT2_InitInputType
     LOGICAL  :: HasWAMIT = .false.      !< .TRUE. if using WAMIT model, .FALSE. otherwise [-]
@@ -85,7 +84,9 @@ IMPLICIT NONE
     TYPE(MeshType)  :: Mesh      !< Loads at the platform reference point in the inertial frame [-]
   END TYPE WAMIT2_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: WAMIT2_y_Mesh                    =   1 ! WAMIT2%Mesh
+
+contains
 
 subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(WAMIT2_InitInputType), intent(in) :: SrcInitInputData
@@ -635,7 +636,7 @@ END SUBROUTINE
 
 function WAMIT2_OutputMeshPointer(y, ML) result(Mesh)
    type(WAMIT2_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -645,7 +646,7 @@ function WAMIT2_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function WAMIT2_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -653,5 +654,35 @@ function WAMIT2_OutputMeshName(ML) result(Name)
        Name = "y%Mesh"
    end select
 end function
+
+subroutine WAMIT2_PackOutputAry(Vars, y, ValAry)
+   type(WAMIT2_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (WAMIT2_y_Mesh)
+             call MV_Pack2(Var, y%Mesh, ValAry)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine WAMIT2_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(WAMIT2_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (WAMIT2_y_Mesh)
+             call MV_Unpack2(Var, ValAry, y%Mesh)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE WAMIT2_Types
 !ENDOFREGISTRYGENERATEDFILE

@@ -33,8 +33,6 @@ MODULE OrcaFlexInterface_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Orca_u_PtfmMesh                  = 1      ! Mesh number for Orca Orca_u_PtfmMesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Orca_y_PtfmMesh                  = 2      ! Mesh number for Orca Orca_y_PtfmMesh mesh [-]
 ! =========  Orca_InitInputType  =======
   TYPE, PUBLIC :: Orca_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file; remove if there is no file [-]
@@ -113,7 +111,13 @@ IMPLICIT NONE
     REAL(ReKi)  :: DummyConstrState = 0.0_ReKi      !< Dummy placeholder [-]
   END TYPE Orca_ConstraintStateType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: Orca_x_Dummy                     =   1 ! Orca%Dummy
+   integer(IntKi), public, parameter :: Orca_z_DummyConstrState          =   2 ! Orca%DummyConstrState
+   integer(IntKi), public, parameter :: Orca_u_PtfmMesh                  =   3 ! Orca%PtfmMesh
+   integer(IntKi), public, parameter :: Orca_y_PtfmMesh                  =   4 ! Orca%PtfmMesh
+   integer(IntKi), public, parameter :: Orca_y_WriteOutput               =   5 ! Orca%WriteOutput
+
+contains
 
 subroutine Orca_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(Orca_InitInputType), intent(in) :: SrcInitInputData
@@ -1156,7 +1160,7 @@ END SUBROUTINE
 
 function Orca_InputMeshPointer(u, ML) result(Mesh)
    type(Orca_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1166,7 +1170,7 @@ function Orca_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function Orca_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -1177,7 +1181,7 @@ end function
 
 function Orca_OutputMeshPointer(y, ML) result(Mesh)
    type(Orca_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1187,7 +1191,7 @@ function Orca_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function Orca_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -1195,5 +1199,129 @@ function Orca_OutputMeshName(ML) result(Name)
        Name = "y%PtfmMesh"
    end select
 end function
+
+subroutine Orca_PackContStateAry(Vars, x, ValAry)
+   type(Orca_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (Orca_x_Dummy)
+             call MV_Pack2(Var, x%Dummy, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine Orca_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(Orca_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (Orca_x_Dummy)
+             call MV_Unpack2(Var, ValAry, x%Dummy)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine Orca_PackConstrStateAry(Vars, z, ValAry)
+   type(Orca_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (Orca_z_DummyConstrState)
+             call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine Orca_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(Orca_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (Orca_z_DummyConstrState)
+             call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine Orca_PackInputAry(Vars, u, ValAry)
+   type(Orca_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (Orca_u_PtfmMesh)
+             call MV_Pack2(Var, u%PtfmMesh, ValAry)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine Orca_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(Orca_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (Orca_u_PtfmMesh)
+             call MV_Unpack2(Var, ValAry, u%PtfmMesh)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine Orca_PackOutputAry(Vars, y, ValAry)
+   type(Orca_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (Orca_y_PtfmMesh)
+             call MV_Pack2(Var, y%PtfmMesh, ValAry)  ! Mesh
+         case (Orca_y_WriteOutput)
+             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine Orca_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(Orca_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (Orca_y_PtfmMesh)
+             call MV_Unpack2(Var, ValAry, y%PtfmMesh)  ! Mesh
+         case (Orca_y_WriteOutput)
+             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE OrcaFlexInterface_Types
 !ENDOFREGISTRYGENERATEDFILE

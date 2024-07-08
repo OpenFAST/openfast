@@ -37,6 +37,8 @@ USE Waves2_Types
 USE SeaSt_WaveField_Types
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SeaSt_u_WaveElev0                = -1      ! WaveElev0 Extended input DatLoc number [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SeaSt_y_WaveElev0                = -2      ! WaveElev0 Extended output DatLoc number [-]
 ! =========  SeaSt_InputFile  =======
   TYPE, PUBLIC :: SeaSt_InputFile
     LOGICAL  :: EchoFlag = .false.      !< Echo the input file [-]
@@ -140,9 +142,6 @@ IMPLICIT NONE
 ! =========  SeaSt_ParameterType  =======
   TYPE, PUBLIC :: SeaSt_ParameterType
     TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
-    INTEGER(IntKi)  :: iVarWaveElev0U = 0_IntKi      !< Index of WaveElev0 input variable [-]
-    INTEGER(IntKi)  :: iVarWaveElev0Y = 0_IntKi      !< Index of WaveElev0 output variable [-]
-    INTEGER(IntKi)  :: iVarWriteOutput = 0_IntKi      !< Index of WriteOutput variable [-]
     REAL(DbKi)  :: WaveDT = 0.0_R8Ki      !< Wave DT [sec]
     INTEGER(IntKi)  :: NGridPts = 0_IntKi      !< Number of data points in the wave kinematics grid [-]
     INTEGER(IntKi) , DIMENSION(1:3)  :: NGrid = 0_IntKi      !< Number of grid entries in x, y, and z [-]
@@ -186,7 +185,12 @@ IMPLICIT NONE
     TYPE(SeaSt_OutputType)  :: y_lin      !< Output type for linearization perturbation [-]
   END TYPE SeaSt_MiscVarType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: SeaSt_x_UnusedStates             =   1 ! SeaSt%UnusedStates
+   integer(IntKi), public, parameter :: SeaSt_z_UnusedStates             =   2 ! SeaSt%UnusedStates
+   integer(IntKi), public, parameter :: SeaSt_u_DummyInput               =   3 ! SeaSt%DummyInput
+   integer(IntKi), public, parameter :: SeaSt_y_WriteOutput              =   4 ! SeaSt%WriteOutput
+
+contains
 
 subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg)
    type(SeaSt_InputFile), intent(in) :: SrcInputFileData
@@ -919,9 +923,6 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end if
-   DstParamData%iVarWaveElev0U = SrcParamData%iVarWaveElev0U
-   DstParamData%iVarWaveElev0Y = SrcParamData%iVarWaveElev0Y
-   DstParamData%iVarWriteOutput = SrcParamData%iVarWriteOutput
    DstParamData%WaveDT = SrcParamData%WaveDT
    DstParamData%NGridPts = SrcParamData%NGridPts
    DstParamData%NGrid = SrcParamData%NGrid
@@ -1089,9 +1090,6 @@ subroutine SeaSt_PackParam(RF, Indata)
          call NWTC_Library_PackModVarsType(RF, InData%Vars) 
       end if
    end if
-   call RegPack(RF, InData%iVarWaveElev0U)
-   call RegPack(RF, InData%iVarWaveElev0Y)
-   call RegPack(RF, InData%iVarWriteOutput)
    call RegPack(RF, InData%WaveDT)
    call RegPack(RF, InData%NGridPts)
    call RegPack(RF, InData%NGrid)
@@ -1158,9 +1156,6 @@ subroutine SeaSt_UnPackParam(RF, OutData)
    else
       OutData%Vars => null()
    end if
-   call RegUnpack(RF, OutData%iVarWaveElev0U); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarWaveElev0Y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarWriteOutput); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveDT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NGridPts); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NGrid); if (RegCheckErr(RF, RoutineName)) return
@@ -1385,7 +1380,7 @@ end subroutine
 
 function SeaSt_InputMeshPointer(u, ML) result(Mesh)
    type(SeaSt_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1393,7 +1388,7 @@ function SeaSt_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function SeaSt_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -1402,7 +1397,7 @@ end function
 
 function SeaSt_OutputMeshPointer(y, ML) result(Mesh)
    type(SeaSt_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1410,11 +1405,131 @@ function SeaSt_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function SeaSt_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
    end select
 end function
+
+subroutine SeaSt_PackContStateAry(Vars, x, ValAry)
+   type(SeaSt_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (SeaSt_x_UnusedStates)
+             call MV_Pack2(Var, x%UnusedStates, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SeaSt_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SeaSt_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (SeaSt_x_UnusedStates)
+             call MV_Unpack2(Var, ValAry, x%UnusedStates)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SeaSt_PackConstrStateAry(Vars, z, ValAry)
+   type(SeaSt_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (SeaSt_z_UnusedStates)
+             call MV_Pack2(Var, z%UnusedStates, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SeaSt_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SeaSt_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (SeaSt_z_UnusedStates)
+             call MV_Unpack2(Var, ValAry, z%UnusedStates)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SeaSt_PackInputAry(Vars, u, ValAry)
+   type(SeaSt_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (SeaSt_u_DummyInput)
+             call MV_Pack2(Var, u%DummyInput, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SeaSt_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SeaSt_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (SeaSt_u_DummyInput)
+             call MV_Unpack2(Var, ValAry, u%DummyInput)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SeaSt_PackOutputAry(Vars, y, ValAry)
+   type(SeaSt_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (SeaSt_y_WriteOutput)
+             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SeaSt_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SeaSt_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (SeaSt_y_WriteOutput)
+             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE SeaState_Types
 !ENDOFREGISTRYGENERATEDFILE

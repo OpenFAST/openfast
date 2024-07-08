@@ -897,7 +897,8 @@ IMPLICIT NONE
     TYPE(ExtPtfm_Data)  :: ExtPtfm      !< Data for the ExtPtfm (external platform loading) module [-]
   END TYPE FAST_TurbineType
 ! =======================
-CONTAINS
+
+contains
 
 subroutine FAST_CopyVTK_BLSurfaceType(SrcVTK_BLSurfaceTypeData, DstVTK_BLSurfaceTypeData, CtrlCode, ErrStat, ErrMsg)
    type(FAST_VTK_BLSurfaceType), intent(in) :: SrcVTK_BLSurfaceTypeData

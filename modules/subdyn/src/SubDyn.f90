@@ -48,8 +48,6 @@ Module SubDyn
    PUBLIC :: SD_JacobianPConstrState ! 
    PUBLIC :: SD_GetOP                ! 
    PUBLIC :: SD_ProgDesc
-   PUBLIC :: SD_PackStateOP, SD_PackInputOP, SD_PackOutputOP
-   PUBLIC :: SD_UnpackStateOP, SD_UnpackInputOP
    
 CONTAINS
 
@@ -450,11 +448,15 @@ subroutine SD_InitVars(Init, u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    ! Continuous State Variables
    !----------------------------------------------------------------------------
 
-   call MV_AddVar(p%Vars%x, "Modes", FieldScalar, p%nDOFM, jUsr=1, DerivOrder=0, &
+   call MV_AddVar(p%Vars%x, "Modes", FieldScalar, DatLoc(SD_x_qm), &
+                  Num=p%nDOFM, &
+                  DerivOrder=0, &
                   Perturb=2.0_ReKi*D2R_D, &
                   LinNames=[('Craig-Bampton mode '//trim(num2lstr(i))//' amplitude, -', i=1, p%nDOFM)])
 
-   call MV_AddVar(p%Vars%x, "Modes", FieldScalar, p%nDOFM, jUsr=2, DerivOrder=1, &
+   call MV_AddVar(p%Vars%x, "Modes", FieldScalar, DatLoc(SD_x_qmdot), &
+                  Num=p%nDOFM, &
+                  DerivOrder=0, &
                   Perturb=2.0_ReKi*D2R_D, &
                   LinNames=[('First time derivative of Craig-Bampton mode '//trim(num2lstr(i))//' amplitude, -/s', i=1, p%nDOFM)])
 
@@ -467,16 +469,17 @@ subroutine SD_InitVars(Init, u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    dz = maxval(Init%Nodes(:,4))- minval(Init%Nodes(:,4))
    maxDim = max(dx, dy, dz)
 
-   call MV_AddMeshVar(p%Vars%u, "TPMesh", MotionFields, Mesh=u%TPMesh, &
-                      VarIdx=p%iVarTPMesh, &
+   call MV_AddMeshVar(p%Vars%u, "TPMesh", MotionFields, DatLoc(SD_u_TPMesh), &
+                      Mesh=u%TPMesh, &
                       Perturbs=[2.0_R8Ki*D2R_D, &  ! TranslationDisp
                                 2.0_R8Ki*D2R_D, &  ! Orientation
                                 2.0_R8Ki*D2R_D, &  ! TranslationVel
                                 2.0_R8Ki*D2R_D, &  ! RotationVel
                                 2.0_R8Ki*D2R_D, &  ! TranslationAcc
                                 2.0_R8Ki*D2R_D])   ! RotationAcc
-   call MV_AddMeshVar(p%Vars%u, "LMesh", LoadFields, Mesh=u%LMesh, &
-                      VarIdx=p%iVarLMesh, &
+
+   call MV_AddMeshVar(p%Vars%u, "LMesh", LoadFields, DatLoc(SD_u_LMesh), &
+                      Mesh=u%LMesh, &
                       Perturbs=[170*maxDim**2, 14*maxDim**3]) ! Force, Moment
    
    !----------------------------------------------------------------------------
@@ -484,20 +487,14 @@ subroutine SD_InitVars(Init, u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    ! Mesh variables
-   call MV_AddMeshVar(p%Vars%y, 'Y1Mesh', LoadFields, &
-                      VarIdx=p%iVarY1Mesh, &
-                      Mesh=y%Y1Mesh)
-   call MV_AddMeshVar(p%Vars%y, 'Y2Mesh', MotionFields, &
-                      VarIdx=p%iVarY2Mesh, &
-                      Mesh=y%Y2Mesh)
-   call MV_AddMeshVar(p%Vars%y, 'Y3Mesh', MotionFields, &
-                      VarIdx=p%iVarY3Mesh, &
-                      Mesh=y%Y3Mesh)
+   call MV_AddMeshVar(p%Vars%y, 'Y1Mesh', LoadFields, DatLoc(SD_y_Y1Mesh), Mesh=y%Y1Mesh)
+   call MV_AddMeshVar(p%Vars%y, 'Y2Mesh', MotionFields, DatLoc(SD_y_Y2Mesh), Mesh=y%Y2Mesh)
+   call MV_AddMeshVar(p%Vars%y, 'Y3Mesh', MotionFields, DatLoc(SD_y_Y3Mesh), Mesh=y%Y3Mesh)
 
    ! Output variables
-   call MV_AddVar(p%Vars%y, "WriteOutput", FieldScalar, Num=p%NumOuts, &
+   call MV_AddVar(p%Vars%y, "WriteOutput", FieldScalar, DatLoc(SD_y_WriteOutput), &
+                  Num=p%NumOuts, &
                   Flags=VF_WriteOut, &
-                  VarIdx=p%iVarWriteOutput, &
                   LinNames=[(WriteOutputLinName(i), i = 1, p%numOuts)])
 
    !----------------------------------------------------------------------------
@@ -527,16 +524,16 @@ subroutine SD_PackStateOP(p, x, op)
    type(SD_ContinuousStateType), intent(in)  :: x
    real(R8Ki), intent(out)                   :: op(:)
    integer(IntKi)                            :: i
-   do i = 1, size(p%Vars%x)
-      associate(Var => p%Vars%x(i))
-         select case(Var%jUsr)
-         case (1)
-            op(Var%iLoc(1):Var%iLoc(2)) = x%qm
-         case (2)
-            op(Var%iLoc(1):Var%iLoc(2)) = x%qmdot
-         end select
-      end associate
-   end do
+   ! do i = 1, size(p%Vars%x)
+   !    associate(Var => p%Vars%x(i))
+   !       select case(Var%jUsr)
+   !       case (1)
+   !          op(Var%iLoc(1):Var%iLoc(2)) = x%qm
+   !       case (2)
+   !          op(Var%iLoc(1):Var%iLoc(2)) = x%qmdot
+   !       end select
+   !    end associate
+   ! end do
 end subroutine
 
 subroutine SD_UnpackStateOP(p, op, x)
@@ -544,32 +541,32 @@ subroutine SD_UnpackStateOP(p, op, x)
    real(R8Ki), intent(in)                       :: op(:)
    type(SD_ContinuousStateType), intent(inout)  :: x
    integer(IntKi)                               :: i
-   do i = 1, size(p%Vars%x)
-      associate(Var => p%Vars%x(i))
-         select case(Var%jUsr)
-         case (1)
-            x%qm = op(Var%iLoc(1):Var%iLoc(2))
-         case (2)
-            x%qmdot = op(Var%iLoc(1):Var%iLoc(2))
-         end select
-      end associate
-   end do
+   ! do i = 1, size(p%Vars%x)
+   !    associate(Var => p%Vars%x(i))
+   !       select case(Var%jUsr)
+   !       case (1)
+   !          x%qm = op(Var%iLoc(1):Var%iLoc(2))
+   !       case (2)
+   !          x%qmdot = op(Var%iLoc(1):Var%iLoc(2))
+   !       end select
+   !    end associate
+   ! end do
 end subroutine
 
 subroutine SD_PackInputOP(p, u, op)
    type(SD_ParameterType), intent(in)  :: p
    type(SD_InputType), intent(in)      :: u
    real(R8Ki), intent(out)             :: op(:)
-   call MV_Pack(p%Vars%u, p%iVarTPMesh, u%TPMesh, op)
-   call MV_Pack(p%Vars%u, p%iVarLMesh, u%LMesh, op)
+   ! call MV_Pack(p%Vars%u, p%iVarTPMesh, u%TPMesh, op)
+   ! call MV_Pack(p%Vars%u, p%iVarLMesh, u%LMesh, op)
 end subroutine
 
 subroutine SD_UnpackInputOP(p, op, u)
    type(SD_ParameterType), intent(in)  :: p
    real(R8Ki), intent(in)              :: op(:)
    type(SD_InputType), intent(inout)   :: u
-   call MV_Unpack(p%Vars%u, p%iVarTPMesh, op, u%TPMesh)
-   call MV_Unpack(p%Vars%u, p%iVarLMesh, op, u%LMesh)
+   ! call MV_Unpack(p%Vars%u, p%iVarTPMesh, op, u%TPMesh)
+   ! call MV_Unpack(p%Vars%u, p%iVarLMesh, op, u%LMesh)
 end subroutine
 
 subroutine SD_PackOutputOP(p, y, op, PackWriteOutput)
@@ -577,20 +574,20 @@ subroutine SD_PackOutputOP(p, y, op, PackWriteOutput)
    type(SD_OutputType), intent(in)     :: y
    real(R8Ki), intent(out)             :: op(:)
    logical, intent(in)                 :: PackWriteOutput
-   call MV_Pack(p%Vars%y, p%iVarY1Mesh, y%Y1Mesh, op)
-   call MV_Pack(p%Vars%y, p%iVarY2Mesh, y%Y2Mesh, op)
-   call MV_Pack(p%Vars%y, p%iVarY3Mesh, y%Y3Mesh, op)
-   if (PackWriteOutput) call MV_Pack(p%Vars%y, p%iVarWriteOutput, y%WriteOutput, op)
+   ! call MV_Pack(p%Vars%y, p%iVarY1Mesh, y%Y1Mesh, op)
+   ! call MV_Pack(p%Vars%y, p%iVarY2Mesh, y%Y2Mesh, op)
+   ! call MV_Pack(p%Vars%y, p%iVarY3Mesh, y%Y3Mesh, op)
+   ! if (PackWriteOutput) call MV_Pack(p%Vars%y, p%iVarWriteOutput, y%WriteOutput, op)
 end subroutine
 
 subroutine SD_UnpackOutputOP(p, op, y)
    type(SD_ParameterType), intent(in)  :: p
    real(R8Ki), intent(in)              :: op(:)
    type(SD_OutputType), intent(out)    :: y
-   call MV_Unpack(p%Vars%y, p%iVarY1Mesh, op, y%Y1Mesh)
-   call MV_Unpack(p%Vars%y, p%iVarY2Mesh, op, y%Y2Mesh)
-   call MV_Unpack(p%Vars%y, p%iVarY3Mesh, op, y%Y3Mesh)
-   call MV_Unpack(p%Vars%y, p%iVarWriteOutput, op, y%WriteOutput)
+   ! call MV_Unpack(p%Vars%y, p%iVarY1Mesh, op, y%Y1Mesh)
+   ! call MV_Unpack(p%Vars%y, p%iVarY2Mesh, op, y%Y2Mesh)
+   ! call MV_Unpack(p%Vars%y, p%iVarY3Mesh, op, y%Y3Mesh)
+   ! call MV_Unpack(p%Vars%y, p%iVarWriteOutput, op, y%WriteOutput)
 end subroutine
 
 !----------------------------------------------------------------------------------------------------------------------------------

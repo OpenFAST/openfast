@@ -101,7 +101,13 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< output Data [kN]
   END TYPE SS_Exc_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: SS_Exc_x_x                       =   1 ! SS_Exc%x
+   integer(IntKi), public, parameter :: SS_Exc_z_DummyConstrState        =   2 ! SS_Exc%DummyConstrState
+   integer(IntKi), public, parameter :: SS_Exc_u_PtfmPos                 =   3 ! SS_Exc%PtfmPos
+   integer(IntKi), public, parameter :: SS_Exc_y_y                       =   4 ! SS_Exc%y
+   integer(IntKi), public, parameter :: SS_Exc_y_WriteOutput             =   5 ! SS_Exc%WriteOutput
+
+contains
 
 subroutine SS_Exc_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(SS_Exc_InitInputType), intent(in) :: SrcInitInputData
@@ -1154,7 +1160,7 @@ END SUBROUTINE
 
 function SS_Exc_InputMeshPointer(u, ML) result(Mesh)
    type(SS_Exc_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1162,7 +1168,7 @@ function SS_Exc_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function SS_Exc_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -1171,7 +1177,7 @@ end function
 
 function SS_Exc_OutputMeshPointer(y, ML) result(Mesh)
    type(SS_Exc_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1179,11 +1185,135 @@ function SS_Exc_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function SS_Exc_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
    end select
 end function
+
+subroutine SS_Exc_PackContStateAry(Vars, x, ValAry)
+   type(SS_Exc_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (SS_Exc_x_x)
+             call MV_Pack2(Var, x%x, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SS_Exc_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SS_Exc_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (SS_Exc_x_x)
+             call MV_Unpack2(Var, ValAry, x%x)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SS_Exc_PackConstrStateAry(Vars, z, ValAry)
+   type(SS_Exc_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (SS_Exc_z_DummyConstrState)
+             call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SS_Exc_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SS_Exc_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (SS_Exc_z_DummyConstrState)
+             call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SS_Exc_PackInputAry(Vars, u, ValAry)
+   type(SS_Exc_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (SS_Exc_u_PtfmPos)
+             call MV_Pack2(Var, u%PtfmPos, ValAry)  ! Rank 2 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SS_Exc_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SS_Exc_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (SS_Exc_u_PtfmPos)
+             call MV_Unpack2(Var, ValAry, u%PtfmPos)  ! Rank 2 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SS_Exc_PackOutputAry(Vars, y, ValAry)
+   type(SS_Exc_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (SS_Exc_y_y)
+             call MV_Pack2(Var, y%y, ValAry)  ! Rank 1 Array
+         case (SS_Exc_y_WriteOutput)
+             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SS_Exc_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SS_Exc_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (SS_Exc_y_y)
+             call MV_Unpack2(Var, ValAry, y%y)  ! Rank 1 Array
+         case (SS_Exc_y_WriteOutput)
+             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE SS_Excitation_Types
 !ENDOFREGISTRYGENERATEDFILE

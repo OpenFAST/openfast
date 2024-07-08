@@ -118,7 +118,17 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: vind      !< The filtered induced velocity, [1,i,j] is the axial induced velocity (-Vx*a) at node i on blade j and [2,i,j] is the tangential induced velocity (Vy*a') at node i on blade j [m/s]
   END TYPE DBEMT_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: DBEMT_x_element_vind             =   1 ! DBEMT%element(DL%i1, DL%i2)%vind
+   integer(IntKi), public, parameter :: DBEMT_x_element_vind_1           =   2 ! DBEMT%element(DL%i1, DL%i2)%vind_1
+   integer(IntKi), public, parameter :: DBEMT_z_DummyState               =   3 ! DBEMT%DummyState
+   integer(IntKi), public, parameter :: DBEMT_u_AxInd_disk               =   4 ! DBEMT%AxInd_disk
+   integer(IntKi), public, parameter :: DBEMT_u_Un_disk                  =   5 ! DBEMT%Un_disk
+   integer(IntKi), public, parameter :: DBEMT_u_R_disk                   =   6 ! DBEMT%R_disk
+   integer(IntKi), public, parameter :: DBEMT_u_element_vind_s           =   7 ! DBEMT%element(DL%i1, DL%i2)%vind_s
+   integer(IntKi), public, parameter :: DBEMT_u_element_spanRatio        =   8 ! DBEMT%element(DL%i1, DL%i2)%spanRatio
+   integer(IntKi), public, parameter :: DBEMT_y_vind                     =   9 ! DBEMT%vind
+
+contains
 
 subroutine DBEMT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(DBEMT_InitInputType), intent(in) :: SrcInitInputData
@@ -1417,7 +1427,7 @@ END SUBROUTINE
 
 function DBEMT_InputMeshPointer(u, ML) result(Mesh)
    type(DBEMT_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1425,7 +1435,7 @@ function DBEMT_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function DBEMT_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -1434,7 +1444,7 @@ end function
 
 function DBEMT_OutputMeshPointer(y, ML) result(Mesh)
    type(DBEMT_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1442,11 +1452,151 @@ function DBEMT_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function DBEMT_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
    end select
 end function
+
+subroutine DBEMT_PackContStateAry(Vars, x, ValAry)
+   type(DBEMT_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (DBEMT_x_element_vind)
+             call MV_Pack2(Var, x%element(DL%i1, DL%i2)%vind, ValAry)  ! Rank 1 Array
+         case (DBEMT_x_element_vind_1)
+             call MV_Pack2(Var, x%element(DL%i1, DL%i2)%vind_1, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine DBEMT_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(DBEMT_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (DBEMT_x_element_vind)
+             call MV_Unpack2(Var, ValAry, x%element(DL%i1, DL%i2)%vind)  ! Rank 1 Array
+         case (DBEMT_x_element_vind_1)
+             call MV_Unpack2(Var, ValAry, x%element(DL%i1, DL%i2)%vind_1)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine DBEMT_PackConstrStateAry(Vars, z, ValAry)
+   type(DBEMT_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (DBEMT_z_DummyState)
+             call MV_Pack2(Var, z%DummyState, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine DBEMT_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(DBEMT_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (DBEMT_z_DummyState)
+             call MV_Unpack2(Var, ValAry, z%DummyState)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine DBEMT_PackInputAry(Vars, u, ValAry)
+   type(DBEMT_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (DBEMT_u_AxInd_disk)
+             call MV_Pack2(Var, u%AxInd_disk, ValAry)  ! Scalar
+         case (DBEMT_u_Un_disk)
+             call MV_Pack2(Var, u%Un_disk, ValAry)  ! Scalar
+         case (DBEMT_u_R_disk)
+             call MV_Pack2(Var, u%R_disk, ValAry)  ! Scalar
+         case (DBEMT_u_element_vind_s)
+             call MV_Pack2(Var, u%element(DL%i1, DL%i2)%vind_s, ValAry)  ! Rank 1 Array
+         case (DBEMT_u_element_spanRatio)
+             call MV_Pack2(Var, u%element(DL%i1, DL%i2)%spanRatio, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine DBEMT_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(DBEMT_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (DBEMT_u_AxInd_disk)
+             call MV_Unpack2(Var, ValAry, u%AxInd_disk)  ! Scalar
+         case (DBEMT_u_Un_disk)
+             call MV_Unpack2(Var, ValAry, u%Un_disk)  ! Scalar
+         case (DBEMT_u_R_disk)
+             call MV_Unpack2(Var, ValAry, u%R_disk)  ! Scalar
+         case (DBEMT_u_element_vind_s)
+             call MV_Unpack2(Var, ValAry, u%element(DL%i1, DL%i2)%vind_s)  ! Rank 1 Array
+         case (DBEMT_u_element_spanRatio)
+             call MV_Unpack2(Var, ValAry, u%element(DL%i1, DL%i2)%spanRatio)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine DBEMT_PackOutputAry(Vars, y, ValAry)
+   type(DBEMT_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (DBEMT_y_vind)
+             call MV_Pack2(Var, y%vind, ValAry)  ! Rank 3 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine DBEMT_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(DBEMT_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (DBEMT_y_vind)
+             call MV_Unpack2(Var, ValAry, y%vind)  ! Rank 3 Array
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE DBEMT_Types
 !ENDOFREGISTRYGENERATEDFILE

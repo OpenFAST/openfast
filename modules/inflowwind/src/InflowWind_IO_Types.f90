@@ -140,7 +140,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumWindPoints = 0_IntKi      !< Number of points where wind components will be provided [-]
   END TYPE Points_InitInputType
 ! =======================
-CONTAINS
+
+contains
 
 subroutine InflowWind_IO_CopyWindFileDat(SrcWindFileDatData, DstWindFileDatData, CtrlCode, ErrStat, ErrMsg)
    type(WindFileDat), intent(in) :: SrcWindFileDatData

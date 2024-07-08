@@ -33,12 +33,6 @@ MODULE MoorDyn_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_u_CoupledKinematics           = 1      ! Mesh number for MD MD_u_CoupledKinematics mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_y_CoupledLoads                = 2      ! Mesh number for MD MD_y_CoupledLoads mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_y_VisLinesMesh                = 3      ! Mesh number for MD MD_y_VisLinesMesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_y_VisRodsMesh                 = 4      ! Mesh number for MD MD_y_VisRodsMesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_y_VisBodiesMesh               = 5      ! Mesh number for MD MD_y_VisBodiesMesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_y_VisAnchsMesh                = 6      ! Mesh number for MD MD_y_VisAnchsMesh mesh [-]
 ! =========  MD_InputFileType  =======
   TYPE, PUBLIC :: MD_InputFileType
     REAL(DbKi)  :: DTIC = 0.5      !< convergence check time step for IC generation [[s]]
@@ -361,11 +355,6 @@ IMPLICIT NONE
 ! =========  MD_ParameterType  =======
   TYPE, PUBLIC :: MD_ParameterType
     TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables []
-    INTEGER(IntKi)  :: iVarWriteOutput = 0      !< Variable index of WriteOutput []
-    INTEGER(IntKi)  :: iVarCoupledLoads = 0      !< Variable index of CoupledLoads Mesh []
-    INTEGER(IntKi)  :: iVarCoupledKinematics = 0      !< Variable index of CoupledKinematics Mesh []
-    INTEGER(IntKi)  :: iVarDeltaL = 0      !< Variable index of DeltaL []
-    INTEGER(IntKi)  :: iVarDeltaLdot = 0      !< Variable index of DeltaLdot []
     INTEGER(IntKi)  :: nLineTypes = 0      !< number of line types []
     INTEGER(IntKi)  :: nRodTypes = 0      !< number of rod types []
     INTEGER(IntKi)  :: nPoints = 0      !< number of Point objects []
@@ -501,7 +490,19 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BathGrid_npoints      !< number of grid points to describe the bathymetry grid [-]
   END TYPE MD_MiscVarType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: MD_x_states                      =   1 ! MD%states
+   integer(IntKi), public, parameter :: MD_z_dummy                       =   2 ! MD%dummy
+   integer(IntKi), public, parameter :: MD_u_CoupledKinematics           =   3 ! MD%CoupledKinematics(DL%i1)
+   integer(IntKi), public, parameter :: MD_u_DeltaL                      =   4 ! MD%DeltaL
+   integer(IntKi), public, parameter :: MD_u_DeltaLdot                   =   5 ! MD%DeltaLdot
+   integer(IntKi), public, parameter :: MD_y_CoupledLoads                =   6 ! MD%CoupledLoads(DL%i1)
+   integer(IntKi), public, parameter :: MD_y_WriteOutput                 =   7 ! MD%WriteOutput
+   integer(IntKi), public, parameter :: MD_y_VisLinesMesh                =   8 ! MD%VisLinesMesh(DL%i1)
+   integer(IntKi), public, parameter :: MD_y_VisRodsMesh                 =   9 ! MD%VisRodsMesh(DL%i1)
+   integer(IntKi), public, parameter :: MD_y_VisBodiesMesh               =  10 ! MD%VisBodiesMesh(DL%i1)
+   integer(IntKi), public, parameter :: MD_y_VisAnchsMesh                =  11 ! MD%VisAnchsMesh(DL%i1)
+
+contains
 
 subroutine MD_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, CtrlCode, ErrStat, ErrMsg)
    type(MD_InputFileType), intent(in) :: SrcInputFileTypeData
@@ -2825,11 +2826,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end if
-   DstParamData%iVarWriteOutput = SrcParamData%iVarWriteOutput
-   DstParamData%iVarCoupledLoads = SrcParamData%iVarCoupledLoads
-   DstParamData%iVarCoupledKinematics = SrcParamData%iVarCoupledKinematics
-   DstParamData%iVarDeltaL = SrcParamData%iVarDeltaL
-   DstParamData%iVarDeltaLdot = SrcParamData%iVarDeltaLdot
    DstParamData%nLineTypes = SrcParamData%nLineTypes
    DstParamData%nRodTypes = SrcParamData%nRodTypes
    DstParamData%nPoints = SrcParamData%nPoints
@@ -3294,11 +3290,6 @@ subroutine MD_PackParam(RF, Indata)
          call NWTC_Library_PackModVarsType(RF, InData%Vars) 
       end if
    end if
-   call RegPack(RF, InData%iVarWriteOutput)
-   call RegPack(RF, InData%iVarCoupledLoads)
-   call RegPack(RF, InData%iVarCoupledKinematics)
-   call RegPack(RF, InData%iVarDeltaL)
-   call RegPack(RF, InData%iVarDeltaLdot)
    call RegPack(RF, InData%nLineTypes)
    call RegPack(RF, InData%nRodTypes)
    call RegPack(RF, InData%nPoints)
@@ -3419,11 +3410,6 @@ subroutine MD_UnPackParam(RF, OutData)
    else
       OutData%Vars => null()
    end if
-   call RegUnpack(RF, OutData%iVarWriteOutput); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarCoupledLoads); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarCoupledKinematics); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarDeltaL); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarDeltaLdot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nLineTypes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nRodTypes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nPoints); if (RegCheckErr(RF, RoutineName)) return
@@ -5132,7 +5118,7 @@ END SUBROUTINE
 
 function MD_InputMeshPointer(u, ML) result(Mesh)
    type(MD_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -5142,7 +5128,7 @@ function MD_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function MD_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -5153,7 +5139,7 @@ end function
 
 function MD_OutputMeshPointer(y, ML) result(Mesh)
    type(MD_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -5171,7 +5157,7 @@ function MD_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function MD_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -5187,5 +5173,153 @@ function MD_OutputMeshName(ML) result(Name)
        Name = "y%VisAnchsMesh("//trim(Num2LStr(ML%i1))//")"
    end select
 end function
+
+subroutine MD_PackContStateAry(Vars, x, ValAry)
+   type(MD_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (MD_x_states)
+             call MV_Pack2(Var, x%states, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine MD_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(MD_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (MD_x_states)
+             call MV_Unpack2(Var, ValAry, x%states)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine MD_PackConstrStateAry(Vars, z, ValAry)
+   type(MD_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (MD_z_dummy)
+             call MV_Pack2(Var, z%dummy, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine MD_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(MD_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (MD_z_dummy)
+             call MV_Unpack2(Var, ValAry, z%dummy)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine MD_PackInputAry(Vars, u, ValAry)
+   type(MD_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (MD_u_CoupledKinematics)
+             call MV_Pack2(Var, u%CoupledKinematics(DL%i1), ValAry)  ! Mesh
+         case (MD_u_DeltaL)
+             call MV_Pack2(Var, u%DeltaL, ValAry)  ! Rank 1 Array
+         case (MD_u_DeltaLdot)
+             call MV_Pack2(Var, u%DeltaLdot, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine MD_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(MD_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (MD_u_CoupledKinematics)
+             call MV_Unpack2(Var, ValAry, u%CoupledKinematics(DL%i1))  ! Mesh
+         case (MD_u_DeltaL)
+             call MV_Unpack2(Var, ValAry, u%DeltaL)  ! Rank 1 Array
+         case (MD_u_DeltaLdot)
+             call MV_Unpack2(Var, ValAry, u%DeltaLdot)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine MD_PackOutputAry(Vars, y, ValAry)
+   type(MD_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (MD_y_CoupledLoads)
+             call MV_Pack2(Var, y%CoupledLoads(DL%i1), ValAry)  ! Mesh
+         case (MD_y_WriteOutput)
+             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+         case (MD_y_VisLinesMesh)
+             call MV_Pack2(Var, y%VisLinesMesh(DL%i1), ValAry)  ! Mesh
+         case (MD_y_VisRodsMesh)
+             call MV_Pack2(Var, y%VisRodsMesh(DL%i1), ValAry)  ! Mesh
+         case (MD_y_VisBodiesMesh)
+             call MV_Pack2(Var, y%VisBodiesMesh(DL%i1), ValAry)  ! Mesh
+         case (MD_y_VisAnchsMesh)
+             call MV_Pack2(Var, y%VisAnchsMesh(DL%i1), ValAry)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine MD_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(MD_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (MD_y_CoupledLoads)
+             call MV_Unpack2(Var, ValAry, y%CoupledLoads(DL%i1))  ! Mesh
+         case (MD_y_WriteOutput)
+             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+         case (MD_y_VisLinesMesh)
+             call MV_Unpack2(Var, ValAry, y%VisLinesMesh(DL%i1))  ! Mesh
+         case (MD_y_VisRodsMesh)
+             call MV_Unpack2(Var, ValAry, y%VisRodsMesh(DL%i1))  ! Mesh
+         case (MD_y_VisBodiesMesh)
+             call MV_Unpack2(Var, ValAry, y%VisBodiesMesh(DL%i1))  ! Mesh
+         case (MD_y_VisAnchsMesh)
+             call MV_Unpack2(Var, ValAry, y%VisAnchsMesh(DL%i1))  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE MoorDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

@@ -105,7 +105,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
   END TYPE SeaSt_WaveFieldType
 ! =======================
-CONTAINS
+
+contains
 
 subroutine SeaSt_WaveField_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    type(SeaSt_WaveField_ParameterType), intent(in) :: SrcParamData

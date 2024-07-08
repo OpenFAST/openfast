@@ -33,11 +33,6 @@ MODULE SubDyn_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SD_u_TPMesh                      = 1      ! Mesh number for SD SD_u_TPMesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SD_u_LMesh                       = 2      ! Mesh number for SD SD_u_LMesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SD_y_Y1Mesh                      = 3      ! Mesh number for SD SD_y_Y1Mesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SD_y_Y2Mesh                      = 4      ! Mesh number for SD SD_y_Y2Mesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SD_y_Y3Mesh                      = 5      ! Mesh number for SD SD_y_Y3Mesh mesh [-]
 ! =========  IList  =======
   TYPE, PUBLIC :: IList
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: List      !< List of integers [-]
@@ -378,7 +373,18 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: UL_0m      !< Intermediate UL term for SIM = PhiM qm0, size nL [-]
   END TYPE SD_MiscVarType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: SD_x_qm                          =   1 ! SD%qm
+   integer(IntKi), public, parameter :: SD_x_qmdot                       =   2 ! SD%qmdot
+   integer(IntKi), public, parameter :: SD_z_DummyConstrState            =   3 ! SD%DummyConstrState
+   integer(IntKi), public, parameter :: SD_u_TPMesh                      =   4 ! SD%TPMesh
+   integer(IntKi), public, parameter :: SD_u_LMesh                       =   5 ! SD%LMesh
+   integer(IntKi), public, parameter :: SD_u_CableDeltaL                 =   6 ! SD%CableDeltaL
+   integer(IntKi), public, parameter :: SD_y_Y1Mesh                      =   7 ! SD%Y1Mesh
+   integer(IntKi), public, parameter :: SD_y_Y2Mesh                      =   8 ! SD%Y2Mesh
+   integer(IntKi), public, parameter :: SD_y_Y3Mesh                      =   9 ! SD%Y3Mesh
+   integer(IntKi), public, parameter :: SD_y_WriteOutput                 =  10 ! SD%WriteOutput
+
+contains
 
 subroutine SD_CopyIList(SrcIListData, DstIListData, CtrlCode, ErrStat, ErrMsg)
    type(IList), intent(in) :: SrcIListData
@@ -4502,7 +4508,7 @@ END SUBROUTINE
 
 function SD_InputMeshPointer(u, ML) result(Mesh)
    type(SD_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -4514,7 +4520,7 @@ function SD_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function SD_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -4527,7 +4533,7 @@ end function
 
 function SD_OutputMeshPointer(y, ML) result(Mesh)
    type(SD_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -4541,7 +4547,7 @@ function SD_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function SD_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -4553,5 +4559,149 @@ function SD_OutputMeshName(ML) result(Name)
        Name = "y%Y3Mesh"
    end select
 end function
+
+subroutine SD_PackContStateAry(Vars, x, ValAry)
+   type(SD_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (SD_x_qm)
+             call MV_Pack2(Var, x%qm, ValAry)  ! Rank 1 Array
+         case (SD_x_qmdot)
+             call MV_Pack2(Var, x%qmdot, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SD_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SD_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (SD_x_qm)
+             call MV_Unpack2(Var, ValAry, x%qm)  ! Rank 1 Array
+         case (SD_x_qmdot)
+             call MV_Unpack2(Var, ValAry, x%qmdot)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SD_PackConstrStateAry(Vars, z, ValAry)
+   type(SD_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (SD_z_DummyConstrState)
+             call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SD_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SD_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (SD_z_DummyConstrState)
+             call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SD_PackInputAry(Vars, u, ValAry)
+   type(SD_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (SD_u_TPMesh)
+             call MV_Pack2(Var, u%TPMesh, ValAry)  ! Mesh
+         case (SD_u_LMesh)
+             call MV_Pack2(Var, u%LMesh, ValAry)  ! Mesh
+         case (SD_u_CableDeltaL)
+             call MV_Pack2(Var, u%CableDeltaL, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SD_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SD_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (SD_u_TPMesh)
+             call MV_Unpack2(Var, ValAry, u%TPMesh)  ! Mesh
+         case (SD_u_LMesh)
+             call MV_Unpack2(Var, ValAry, u%LMesh)  ! Mesh
+         case (SD_u_CableDeltaL)
+             call MV_Unpack2(Var, ValAry, u%CableDeltaL)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SD_PackOutputAry(Vars, y, ValAry)
+   type(SD_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (SD_y_Y1Mesh)
+             call MV_Pack2(Var, y%Y1Mesh, ValAry)  ! Mesh
+         case (SD_y_Y2Mesh)
+             call MV_Pack2(Var, y%Y2Mesh, ValAry)  ! Mesh
+         case (SD_y_Y3Mesh)
+             call MV_Pack2(Var, y%Y3Mesh, ValAry)  ! Mesh
+         case (SD_y_WriteOutput)
+             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SD_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SD_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (SD_y_Y1Mesh)
+             call MV_Unpack2(Var, ValAry, y%Y1Mesh)  ! Mesh
+         case (SD_y_Y2Mesh)
+             call MV_Unpack2(Var, ValAry, y%Y2Mesh)  ! Mesh
+         case (SD_y_Y3Mesh)
+             call MV_Unpack2(Var, ValAry, y%Y3Mesh)  ! Mesh
+         case (SD_y_WriteOutput)
+             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE SubDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

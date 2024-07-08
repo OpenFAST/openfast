@@ -39,12 +39,6 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_MESH_FE                       = 1      ! Constant for creating y%BldMotion at the FE (GLL) nodes [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_MESH_QP                       = 2      ! Constant for creating y%BldMotion at the quadrature nodes [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_MESH_STATIONS                 = 3      ! Constant for creating y%BldMotion at the blade property input stations [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_u_RootMotion                  = 1      ! Mesh number for BD BD_u_RootMotion mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_u_PointLoad                   = 2      ! Mesh number for BD BD_u_PointLoad mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_u_DistrLoad                   = 3      ! Mesh number for BD BD_u_DistrLoad mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_u_HubMotion                   = 4      ! Mesh number for BD BD_u_HubMotion mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_y_ReactionForce               = 5      ! Mesh number for BD BD_y_ReactionForce mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_y_BldMotion                   = 6      ! Mesh number for BD BD_y_BldMotion mesh [-]
 ! =========  BD_InitInputType  =======
   TYPE, PUBLIC :: BD_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file; remove if there is no file [-]
@@ -166,12 +160,6 @@ IMPLICIT NONE
 ! =========  BD_ParameterType  =======
   TYPE, PUBLIC :: BD_ParameterType
     TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
-    INTEGER(IntKi)  :: iVarRootMotion = 0_IntKi      !< Root motion variable index [-]
-    INTEGER(IntKi)  :: iVarPointLoad = 0_IntKi      !< Point load variable index [-]
-    INTEGER(IntKi)  :: iVarDistrLoad = 0_IntKi      !< Distributed load variable index [-]
-    INTEGER(IntKi)  :: iVarReactionForce = 0_IntKi      !< Reaction force variable index [-]
-    INTEGER(IntKi)  :: iVarBldMotion = 0_IntKi      !< Blade motion variable index [-]
-    INTEGER(IntKi)  :: iVarWriteOutput = 0_IntKi      !< Write output variable index [-]
     REAL(DbKi)  :: dt = 0.0_R8Ki      !< module dt [s]
     REAL(DbKi) , DIMENSION(1:9)  :: coef = 0.0_R8Ki      !< GA2 Coefficient [-]
     REAL(DbKi)  :: rhoinf = 0.0_R8Ki      !< Numerical Damping Coefficient for GA2 [-]
@@ -345,7 +333,20 @@ IMPLICIT NONE
     TYPE(BD_OutputType)  :: y_lin      !<  [-]
   END TYPE BD_MiscVarType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: BD_x_q                           =   1 ! BD%q
+   integer(IntKi), public, parameter :: BD_x_dqdt                        =   2 ! BD%dqdt
+   integer(IntKi), public, parameter :: BD_z_DummyConstrState            =   3 ! BD%DummyConstrState
+   integer(IntKi), public, parameter :: BD_u_RootMotion                  =   4 ! BD%RootMotion
+   integer(IntKi), public, parameter :: BD_u_PointLoad                   =   5 ! BD%PointLoad
+   integer(IntKi), public, parameter :: BD_u_DistrLoad                   =   6 ! BD%DistrLoad
+   integer(IntKi), public, parameter :: BD_u_HubMotion                   =   7 ! BD%HubMotion
+   integer(IntKi), public, parameter :: BD_y_ReactionForce               =   8 ! BD%ReactionForce
+   integer(IntKi), public, parameter :: BD_y_BldMotion                   =   9 ! BD%BldMotion
+   integer(IntKi), public, parameter :: BD_y_RootMxr                     =  10 ! BD%RootMxr
+   integer(IntKi), public, parameter :: BD_y_RootMyr                     =  11 ! BD%RootMyr
+   integer(IntKi), public, parameter :: BD_y_WriteOutput                 =  12 ! BD%WriteOutput
+
+contains
 
 subroutine BD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(BD_InitInputType), intent(in) :: SrcInitInputData
@@ -1340,12 +1341,6 @@ subroutine BD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end if
-   DstParamData%iVarRootMotion = SrcParamData%iVarRootMotion
-   DstParamData%iVarPointLoad = SrcParamData%iVarPointLoad
-   DstParamData%iVarDistrLoad = SrcParamData%iVarDistrLoad
-   DstParamData%iVarReactionForce = SrcParamData%iVarReactionForce
-   DstParamData%iVarBldMotion = SrcParamData%iVarBldMotion
-   DstParamData%iVarWriteOutput = SrcParamData%iVarWriteOutput
    DstParamData%dt = SrcParamData%dt
    DstParamData%coef = SrcParamData%coef
    DstParamData%rhoinf = SrcParamData%rhoinf
@@ -1842,12 +1837,6 @@ subroutine BD_PackParam(RF, Indata)
          call NWTC_Library_PackModVarsType(RF, InData%Vars) 
       end if
    end if
-   call RegPack(RF, InData%iVarRootMotion)
-   call RegPack(RF, InData%iVarPointLoad)
-   call RegPack(RF, InData%iVarDistrLoad)
-   call RegPack(RF, InData%iVarReactionForce)
-   call RegPack(RF, InData%iVarBldMotion)
-   call RegPack(RF, InData%iVarWriteOutput)
    call RegPack(RF, InData%dt)
    call RegPack(RF, InData%coef)
    call RegPack(RF, InData%rhoinf)
@@ -1968,12 +1957,6 @@ subroutine BD_UnPackParam(RF, OutData)
    else
       OutData%Vars => null()
    end if
-   call RegUnpack(RF, OutData%iVarRootMotion); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarPointLoad); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarDistrLoad); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarReactionForce); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarBldMotion); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarWriteOutput); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%dt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%coef); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%rhoinf); if (RegCheckErr(RF, RoutineName)) return
@@ -3770,7 +3753,7 @@ END SUBROUTINE
 
 function BD_InputMeshPointer(u, ML) result(Mesh)
    type(BD_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -3786,7 +3769,7 @@ function BD_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function BD_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -3803,7 +3786,7 @@ end function
 
 function BD_OutputMeshPointer(y, ML) result(Mesh)
    type(BD_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -3815,7 +3798,7 @@ function BD_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function BD_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -3825,5 +3808,157 @@ function BD_OutputMeshName(ML) result(Name)
        Name = "y%BldMotion"
    end select
 end function
+
+subroutine BD_PackContStateAry(Vars, x, ValAry)
+   type(BD_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (BD_x_q)
+             call MV_Pack2(Var, x%q, ValAry)  ! Rank 2 Array
+         case (BD_x_dqdt)
+             call MV_Pack2(Var, x%dqdt, ValAry)  ! Rank 2 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine BD_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(BD_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (BD_x_q)
+             call MV_Unpack2(Var, ValAry, x%q)  ! Rank 2 Array
+         case (BD_x_dqdt)
+             call MV_Unpack2(Var, ValAry, x%dqdt)  ! Rank 2 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine BD_PackConstrStateAry(Vars, z, ValAry)
+   type(BD_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (BD_z_DummyConstrState)
+             call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine BD_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(BD_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (BD_z_DummyConstrState)
+             call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine BD_PackInputAry(Vars, u, ValAry)
+   type(BD_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (BD_u_RootMotion)
+             call MV_Pack2(Var, u%RootMotion, ValAry)  ! Mesh
+         case (BD_u_PointLoad)
+             call MV_Pack2(Var, u%PointLoad, ValAry)  ! Mesh
+         case (BD_u_DistrLoad)
+             call MV_Pack2(Var, u%DistrLoad, ValAry)  ! Mesh
+         case (BD_u_HubMotion)
+             call MV_Pack2(Var, u%HubMotion, ValAry)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine BD_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(BD_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (BD_u_RootMotion)
+             call MV_Unpack2(Var, ValAry, u%RootMotion)  ! Mesh
+         case (BD_u_PointLoad)
+             call MV_Unpack2(Var, ValAry, u%PointLoad)  ! Mesh
+         case (BD_u_DistrLoad)
+             call MV_Unpack2(Var, ValAry, u%DistrLoad)  ! Mesh
+         case (BD_u_HubMotion)
+             call MV_Unpack2(Var, ValAry, u%HubMotion)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine BD_PackOutputAry(Vars, y, ValAry)
+   type(BD_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (BD_y_ReactionForce)
+             call MV_Pack2(Var, y%ReactionForce, ValAry)  ! Mesh
+         case (BD_y_BldMotion)
+             call MV_Pack2(Var, y%BldMotion, ValAry)  ! Mesh
+         case (BD_y_RootMxr)
+             call MV_Pack2(Var, y%RootMxr, ValAry)  ! Scalar
+         case (BD_y_RootMyr)
+             call MV_Pack2(Var, y%RootMyr, ValAry)  ! Scalar
+         case (BD_y_WriteOutput)
+             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine BD_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(BD_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (BD_y_ReactionForce)
+             call MV_Unpack2(Var, ValAry, y%ReactionForce)  ! Mesh
+         case (BD_y_BldMotion)
+             call MV_Unpack2(Var, ValAry, y%BldMotion)  ! Mesh
+         case (BD_y_RootMxr)
+             call MV_Unpack2(Var, ValAry, y%RootMxr)  ! Scalar
+         case (BD_y_RootMyr)
+             call MV_Unpack2(Var, ValAry, y%RootMyr)  ! Scalar
+         case (BD_y_WriteOutput)
+             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE BeamDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

@@ -18,6 +18,9 @@ usefrom   Current.txt
 usefrom   Waves.txt
 usefrom   Waves2.txt
 usefrom   SeaSt_WaveField.txt
+
+param     SeaState/SeaSt      -                 IntKi                    SeaSt_u_WaveElev0  -      -1       -   "WaveElev0 Extended input DatLoc number" -
+param       ^                 -                 IntKi                    SeaSt_y_WaveElev0  -      -2       -   "WaveElev0 Extended output DatLoc number" -
 #
 #
 typedef   SeaState/SeaSt     SeaSt_InputFile    LOGICAL                  EchoFlag          -        -        -  "Echo the input file"   
@@ -122,9 +125,6 @@ typedef   ^                            OtherStateType                R8Ki    Unu
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
 typedef   ^                  ParameterType          ModVarsType             &Vars              -       -      -  "Module Variables"
-typedef   ^                  ^                      IntKi                    iVarWaveElev0U    -       -      -  "Index of WaveElev0 input variable"        -
-typedef   ^                  ^                      IntKi                    iVarWaveElev0Y    -       -      -  "Index of WaveElev0 output variable"        -
-typedef   ^                  ^                      IntKi                    iVarWriteOutput   -       -      -  "Index of WriteOutput variable"        -
 typedef   ^                  ^                      DbKi                     WaveDT            -       -      -  "Wave DT" sec
 typedef   ^                  ^                      INTEGER                  NGridPts          -       -      -  "Number of data points in the wave kinematics grid"        -
 typedef   ^                  ^                      INTEGER                  NGrid             3       -      -  "Number of grid entries in x, y, and z"

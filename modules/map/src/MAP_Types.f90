@@ -33,8 +33,6 @@ MODULE MAP_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MAP_u_PtFairDisplacement         = 1      ! Mesh number for MAP MAP_u_PtFairDisplacement mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MAP_y_ptFairleadLoad             = 2      ! Mesh number for MAP MAP_y_ptFairleadLoad mesh [-]
 ! =========  MAP_InitInputType_C  =======
   TYPE, BIND(C) :: MAP_InitInputType_C
    TYPE(C_PTR) :: object = C_NULL_PTR
@@ -187,9 +185,6 @@ IMPLICIT NONE
 ! =========  MAP_ParameterType_C  =======
   TYPE, BIND(C) :: MAP_ParameterType_C
    TYPE(C_PTR) :: object = C_NULL_PTR
-    INTEGER(KIND=C_INT) :: iVarPtFairDisplacement 
-    INTEGER(KIND=C_INT) :: iVarPtFairleadLoad 
-    INTEGER(KIND=C_INT) :: iVarWriteOutput 
     REAL(KIND=C_DOUBLE) :: g 
     REAL(KIND=C_DOUBLE) :: depth 
     REAL(KIND=C_DOUBLE) :: rho_sea 
@@ -199,9 +194,6 @@ IMPLICIT NONE
   TYPE, PUBLIC :: MAP_ParameterType
     TYPE( MAP_ParameterType_C ) :: C_obj
     TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
-    INTEGER(IntKi)  :: iVarPtFairDisplacement = 0_IntKi      !< Variable index for fairlead displacement mesh [-]
-    INTEGER(IntKi)  :: iVarPtFairleadLoad = 0_IntKi      !< Variable index for fairlead loads mesh [-]
-    INTEGER(IntKi)  :: iVarWriteOutput = 0_IntKi      !< Variable index for write outputs [-]
     REAL(R8Ki)  :: g = 0.0_R8Ki      !< gravitational constant [[kg/m^2]]
     REAL(R8Ki)  :: depth = 0.0_R8Ki      !< distance to seabed [[m]]
     REAL(R8Ki)  :: rho_sea = 0.0_R8Ki      !< density of seawater [[m]]
@@ -264,7 +256,24 @@ IMPLICIT NONE
     TYPE(MAP_ConstraintStateType)  :: z_lin      !< Temporary variables for Jacobian calculations [-]
   END TYPE MAP_MiscVarType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: MAP_x_dummy                      =   1 ! MAP%dummy
+   integer(IntKi), public, parameter :: MAP_z_H                          =   2 ! MAP%H
+   integer(IntKi), public, parameter :: MAP_z_V                          =   3 ! MAP%V
+   integer(IntKi), public, parameter :: MAP_z_x                          =   4 ! MAP%x
+   integer(IntKi), public, parameter :: MAP_z_y                          =   5 ! MAP%y
+   integer(IntKi), public, parameter :: MAP_z_z                          =   6 ! MAP%z
+   integer(IntKi), public, parameter :: MAP_u_x                          =   7 ! MAP%x
+   integer(IntKi), public, parameter :: MAP_u_y                          =   8 ! MAP%y
+   integer(IntKi), public, parameter :: MAP_u_z                          =   9 ! MAP%z
+   integer(IntKi), public, parameter :: MAP_u_PtFairDisplacement         =  10 ! MAP%PtFairDisplacement
+   integer(IntKi), public, parameter :: MAP_y_Fx                         =  11 ! MAP%Fx
+   integer(IntKi), public, parameter :: MAP_y_Fy                         =  12 ! MAP%Fy
+   integer(IntKi), public, parameter :: MAP_y_Fz                         =  13 ! MAP%Fz
+   integer(IntKi), public, parameter :: MAP_y_WriteOutput                =  14 ! MAP%WriteOutput
+   integer(IntKi), public, parameter :: MAP_y_wrtOutput                  =  15 ! MAP%wrtOutput
+   integer(IntKi), public, parameter :: MAP_y_ptFairleadLoad             =  16 ! MAP%ptFairleadLoad
+
+contains
 
 subroutine MAP_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(MAP_InitInputType), intent(in) :: SrcInitInputData
@@ -1936,12 +1945,6 @@ subroutine MAP_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end if
-   DstParamData%iVarPtFairDisplacement = SrcParamData%iVarPtFairDisplacement
-   DstParamData%C_obj%iVarPtFairDisplacement = SrcParamData%C_obj%iVarPtFairDisplacement
-   DstParamData%iVarPtFairleadLoad = SrcParamData%iVarPtFairleadLoad
-   DstParamData%C_obj%iVarPtFairleadLoad = SrcParamData%C_obj%iVarPtFairleadLoad
-   DstParamData%iVarWriteOutput = SrcParamData%iVarWriteOutput
-   DstParamData%C_obj%iVarWriteOutput = SrcParamData%C_obj%iVarWriteOutput
    DstParamData%g = SrcParamData%g
    DstParamData%C_obj%g = SrcParamData%C_obj%g
    DstParamData%depth = SrcParamData%depth
@@ -1990,9 +1993,6 @@ subroutine MAP_PackParam(RF, Indata)
          call NWTC_Library_PackModVarsType(RF, InData%Vars) 
       end if
    end if
-   call RegPack(RF, InData%iVarPtFairDisplacement)
-   call RegPack(RF, InData%iVarPtFairleadLoad)
-   call RegPack(RF, InData%iVarWriteOutput)
    call RegPack(RF, InData%g)
    call RegPack(RF, InData%depth)
    call RegPack(RF, InData%rho_sea)
@@ -2031,12 +2031,6 @@ subroutine MAP_UnPackParam(RF, OutData)
    else
       OutData%Vars => null()
    end if
-   call RegUnpack(RF, OutData%iVarPtFairDisplacement); if (RegCheckErr(RF, RoutineName)) return
-   OutData%C_obj%iVarPtFairDisplacement = OutData%iVarPtFairDisplacement
-   call RegUnpack(RF, OutData%iVarPtFairleadLoad); if (RegCheckErr(RF, RoutineName)) return
-   OutData%C_obj%iVarPtFairleadLoad = OutData%iVarPtFairleadLoad
-   call RegUnpack(RF, OutData%iVarWriteOutput); if (RegCheckErr(RF, RoutineName)) return
-   OutData%C_obj%iVarWriteOutput = OutData%iVarWriteOutput
    call RegUnpack(RF, OutData%g); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%g = OutData%g
    call RegUnpack(RF, OutData%depth); if (RegCheckErr(RF, RoutineName)) return
@@ -2066,9 +2060,6 @@ SUBROUTINE MAP_C2Fary_CopyParam(ParamData, ErrStat, ErrMsg, SkipPointers)
    ELSE
       SkipPointers_local = .false.
    END IF
-   ParamData%iVarPtFairDisplacement = ParamData%C_obj%iVarPtFairDisplacement
-   ParamData%iVarPtFairleadLoad = ParamData%C_obj%iVarPtFairleadLoad
-   ParamData%iVarWriteOutput = ParamData%C_obj%iVarWriteOutput
    ParamData%g = ParamData%C_obj%g
    ParamData%depth = ParamData%C_obj%depth
    ParamData%rho_sea = ParamData%C_obj%rho_sea
@@ -2091,9 +2082,6 @@ SUBROUTINE MAP_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
    ELSE
       SkipPointers_local = .false.
    END IF
-   ParamData%C_obj%iVarPtFairDisplacement = ParamData%iVarPtFairDisplacement
-   ParamData%C_obj%iVarPtFairleadLoad = ParamData%iVarPtFairleadLoad
-   ParamData%C_obj%iVarWriteOutput = ParamData%iVarWriteOutput
    ParamData%C_obj%g = ParamData%g
    ParamData%C_obj%depth = ParamData%depth
    ParamData%C_obj%rho_sea = ParamData%rho_sea
@@ -3104,7 +3092,7 @@ END SUBROUTINE
 
 function MAP_InputMeshPointer(u, ML) result(Mesh)
    type(MAP_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -3114,7 +3102,7 @@ function MAP_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function MAP_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -3125,7 +3113,7 @@ end function
 
 function MAP_OutputMeshPointer(y, ML) result(Mesh)
    type(MAP_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -3135,7 +3123,7 @@ function MAP_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function MAP_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -3143,5 +3131,173 @@ function MAP_OutputMeshName(ML) result(Name)
        Name = "y%ptFairleadLoad"
    end select
 end function
+
+subroutine MAP_PackContStateAry(Vars, x, ValAry)
+   type(MAP_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (MAP_x_dummy)
+             call MV_Pack2(Var, x%dummy, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine MAP_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(MAP_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (MAP_x_dummy)
+             call MV_Unpack2(Var, ValAry, x%dummy)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine MAP_PackConstrStateAry(Vars, z, ValAry)
+   type(MAP_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (MAP_z_H)
+             call MV_Pack2(Var, z%H, ValAry)  ! Rank 1 Array
+         case (MAP_z_V)
+             call MV_Pack2(Var, z%V, ValAry)  ! Rank 1 Array
+         case (MAP_z_x)
+             call MV_Pack2(Var, z%x, ValAry)  ! Rank 1 Array
+         case (MAP_z_y)
+             call MV_Pack2(Var, z%y, ValAry)  ! Rank 1 Array
+         case (MAP_z_z)
+             call MV_Pack2(Var, z%z, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine MAP_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(MAP_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (MAP_z_H)
+             call MV_Unpack2(Var, ValAry, z%H)  ! Rank 1 Array
+         case (MAP_z_V)
+             call MV_Unpack2(Var, ValAry, z%V)  ! Rank 1 Array
+         case (MAP_z_x)
+             call MV_Unpack2(Var, ValAry, z%x)  ! Rank 1 Array
+         case (MAP_z_y)
+             call MV_Unpack2(Var, ValAry, z%y)  ! Rank 1 Array
+         case (MAP_z_z)
+             call MV_Unpack2(Var, ValAry, z%z)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine MAP_PackInputAry(Vars, u, ValAry)
+   type(MAP_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (MAP_u_x)
+             call MV_Pack2(Var, u%x, ValAry)  ! Rank 1 Array
+         case (MAP_u_y)
+             call MV_Pack2(Var, u%y, ValAry)  ! Rank 1 Array
+         case (MAP_u_z)
+             call MV_Pack2(Var, u%z, ValAry)  ! Rank 1 Array
+         case (MAP_u_PtFairDisplacement)
+             call MV_Pack2(Var, u%PtFairDisplacement, ValAry)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine MAP_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(MAP_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (MAP_u_x)
+             call MV_Unpack2(Var, ValAry, u%x)  ! Rank 1 Array
+         case (MAP_u_y)
+             call MV_Unpack2(Var, ValAry, u%y)  ! Rank 1 Array
+         case (MAP_u_z)
+             call MV_Unpack2(Var, ValAry, u%z)  ! Rank 1 Array
+         case (MAP_u_PtFairDisplacement)
+             call MV_Unpack2(Var, ValAry, u%PtFairDisplacement)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine MAP_PackOutputAry(Vars, y, ValAry)
+   type(MAP_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (MAP_y_Fx)
+             call MV_Pack2(Var, y%Fx, ValAry)  ! Rank 1 Array
+         case (MAP_y_Fy)
+             call MV_Pack2(Var, y%Fy, ValAry)  ! Rank 1 Array
+         case (MAP_y_Fz)
+             call MV_Pack2(Var, y%Fz, ValAry)  ! Rank 1 Array
+         case (MAP_y_WriteOutput)
+             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+         case (MAP_y_wrtOutput)
+             call MV_Pack2(Var, y%wrtOutput, ValAry)  ! Rank 1 Array
+         case (MAP_y_ptFairleadLoad)
+             call MV_Pack2(Var, y%ptFairleadLoad, ValAry)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine MAP_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(MAP_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (MAP_y_Fx)
+             call MV_Unpack2(Var, ValAry, y%Fx)  ! Rank 1 Array
+         case (MAP_y_Fy)
+             call MV_Unpack2(Var, ValAry, y%Fy)  ! Rank 1 Array
+         case (MAP_y_Fz)
+             call MV_Unpack2(Var, ValAry, y%Fz)  ! Rank 1 Array
+         case (MAP_y_WriteOutput)
+             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+         case (MAP_y_wrtOutput)
+             call MV_Unpack2(Var, ValAry, y%wrtOutput)  ! Rank 1 Array
+         case (MAP_y_ptFairleadLoad)
+             call MV_Unpack2(Var, ValAry, y%ptFairleadLoad)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE MAP_Types
 !ENDOFREGISTRYGENERATEDFILE

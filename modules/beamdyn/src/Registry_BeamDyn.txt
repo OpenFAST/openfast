@@ -166,12 +166,6 @@ typedef   ^        ^             ^           mEta       :::    - - "Center of ma
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 
 typedef   ^        ParameterType ModVarsType   &Vars             -         - -  "Module Variables"
-typedef   ^        ParameterType IntKi          iVarRootMotion   -         - -  "Root motion variable index"
-typedef   ^        ParameterType IntKi          iVarPointLoad    -         - -  "Point load variable index"
-typedef   ^        ParameterType IntKi          iVarDistrLoad    -         - -  "Distributed load variable index"
-typedef   ^        ParameterType IntKi          iVarReactionForce  -       - -  "Reaction force variable index"
-typedef   ^        ParameterType IntKi          iVarBldMotion    -         - -  "Blade motion variable index"
-typedef   ^        ParameterType IntKi          iVarWriteOutput  -         - -  "Write output variable index"
 typedef   ^        ParameterType DbKi           dt               -         - -  "module dt" s
 typedef   ^        ParameterType DbKi           coef             {9}       - -  "GA2 Coefficient" -
 typedef   ^        ParameterType DbKi           rhoinf           -         - -  "Numerical Damping Coefficient for GA2"

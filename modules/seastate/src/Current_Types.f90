@@ -58,7 +58,8 @@ IMPLICIT NONE
     REAL(SiKi)  :: PCurrVyiPz0 = 0.0_R4Ki      !<  [-]
   END TYPE Current_InitOutputType
 ! =======================
-CONTAINS
+
+contains
 
 subroutine Current_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(Current_InitInputType), intent(in) :: SrcInitInputData

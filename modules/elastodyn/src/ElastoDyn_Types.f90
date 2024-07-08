@@ -34,23 +34,7 @@ MODULE ElastoDyn_Types
 USE NWTC_Library
 IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_NMX                           = 4      ! Used in updating predictor-corrector values (size of state history) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_u_BladePtLoads                = 1      ! Mesh number for ED ED_u_BladePtLoads mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_u_PlatformPtMesh              = 2      ! Mesh number for ED ED_u_PlatformPtMesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_u_TowerPtLoads                = 3      ! Mesh number for ED ED_u_TowerPtLoads mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_u_HubPtLoad                   = 4      ! Mesh number for ED ED_u_HubPtLoad mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_u_NacelleLoads                = 5      ! Mesh number for ED ED_u_NacelleLoads mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_u_TFinCMLoads                 = 6      ! Mesh number for ED ED_u_TFinCMLoads mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_BladeLn2Mesh                = 7      ! Mesh number for ED ED_y_BladeLn2Mesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_PlatformPtMesh              = 8      ! Mesh number for ED ED_y_PlatformPtMesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_TowerLn2Mesh                = 9      ! Mesh number for ED ED_y_TowerLn2Mesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_HubPtMotion14               = 10      ! Mesh number for ED ED_y_HubPtMotion14 mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_HubPtMotion                 = 11      ! Mesh number for ED ED_y_HubPtMotion mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_BladeRootMotion14           = 12      ! Mesh number for ED ED_y_BladeRootMotion14 mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_BladeRootMotion             = 13      ! Mesh number for ED ED_y_BladeRootMotion mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_RotorFurlMotion14           = 14      ! Mesh number for ED ED_y_RotorFurlMotion14 mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_NacelleMotion               = 15      ! Mesh number for ED ED_y_NacelleMotion mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_TowerBaseMotion14           = 16      ! Mesh number for ED ED_y_TowerBaseMotion14 mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_y_TFinCMMotion                = 17      ! Mesh number for ED ED_y_TFinCMMotion mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ED_u_BlPitchComC                 = -1      ! DatLoc number for collective blade pitch extended input [-]
 ! =========  ED_InitInputType  =======
   TYPE, PUBLIC :: ED_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
@@ -779,30 +763,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NActvVelDOF_Lin = 0_IntKi      !< number of velocity states in the jacobian [-]
     INTEGER(IntKi)  :: NActvDOF_Lin = 0_IntKi      !< number of active DOFs to use in the jacobian [-]
     INTEGER(IntKi)  :: NActvDOF_Stride = 0_IntKi      !< stride for active DOFs to use in the jacobian [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladeFlap1      !< Indices of BladeFlap1 variable [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladeEdge1      !< Indices of BladeEdge1 variable [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladeFlap2      !< Indices of BladeFlap2 variable [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladePtLoads      !< Indices of blade point loads mesh variable [-]
-    INTEGER(IntKi)  :: iVarPlatformPtMesh = 0_IntKi      !< Index of platform point loads mesh variable [-]
-    INTEGER(IntKi)  :: iVarTowerPtLoads = 0_IntKi      !< Index of tower point loads mesh variable [-]
-    INTEGER(IntKi)  :: iVarHubPtLoad = 0_IntKi      !< Index of hub point load mesh variable [-]
-    INTEGER(IntKi)  :: iVarNacelleLoads = 0_IntKi      !< Index of nacelle loads mesh variable [-]
-    INTEGER(IntKi)  :: iVarTFinCMLoads = 0_IntKi      !< Index of tail fin CM loads mesh variable [-]
-    INTEGER(IntKi)  :: iVarBlPitchCom = 0_IntKi      !< Index of blade pitch command variable [-]
-    INTEGER(IntKi)  :: iVarYawMom = 0_IntKi      !< Index of yaw moment variable [-]
-    INTEGER(IntKi)  :: iVarGenTrq = 0_IntKi      !< Index of generator torque variable [-]
-    INTEGER(IntKi)  :: iVarBlPitchComC = 0_IntKi      !< Index of blade pitch command C variable [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladeMotion      !< Indices of blade motion mesh variable [-]
-    INTEGER(IntKi)  :: iVarPlatformMotion = 0_IntKi      !< Index of variable [-]
-    INTEGER(IntKi)  :: iVarTowerMotion = 0_IntKi      !< Index of variable [-]
-    INTEGER(IntKi)  :: iVarHubMotion = 0_IntKi      !< Index of variable [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladeRootMotion      !< Indices of variable [-]
-    INTEGER(IntKi)  :: iVarNacelleMotion = 0_IntKi      !< Index of variable [-]
-    INTEGER(IntKi)  :: iVarTFinCMMotion = 0_IntKi      !< Index of variable [-]
-    INTEGER(IntKi)  :: iVarYaw = 0_IntKi      !< Index of variable [-]
-    INTEGER(IntKi)  :: iVarYawRate = 0_IntKi      !< Index of variable [-]
-    INTEGER(IntKi)  :: iVarHSS_Spd = 0_IntKi      !< Index of variable [-]
-    INTEGER(IntKi)  :: iVarWriteOut = 0_IntKi      !< Index of variable [-]
   END TYPE ED_ParameterType
 ! =======================
 ! =========  ED_InputType  =======
@@ -886,7 +846,62 @@ IMPLICIT NONE
     TYPE(ED_OutputType)  :: y_lin      !<  [-]
   END TYPE ED_MiscVarType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: ED_x_QT                          =   1 ! ED%QT
+   integer(IntKi), public, parameter :: ED_x_QDT                         =   2 ! ED%QDT
+   integer(IntKi), public, parameter :: ED_z_DummyConstrState            =   3 ! ED%DummyConstrState
+   integer(IntKi), public, parameter :: ED_u_BladePtLoads                =   4 ! ED%BladePtLoads(DL%i1)
+   integer(IntKi), public, parameter :: ED_u_PlatformPtMesh              =   5 ! ED%PlatformPtMesh
+   integer(IntKi), public, parameter :: ED_u_TowerPtLoads                =   6 ! ED%TowerPtLoads
+   integer(IntKi), public, parameter :: ED_u_HubPtLoad                   =   7 ! ED%HubPtLoad
+   integer(IntKi), public, parameter :: ED_u_NacelleLoads                =   8 ! ED%NacelleLoads
+   integer(IntKi), public, parameter :: ED_u_TFinCMLoads                 =   9 ! ED%TFinCMLoads
+   integer(IntKi), public, parameter :: ED_u_TwrAddedMass                =  10 ! ED%TwrAddedMass
+   integer(IntKi), public, parameter :: ED_u_PtfmAddedMass               =  11 ! ED%PtfmAddedMass
+   integer(IntKi), public, parameter :: ED_u_BlPitchCom                  =  12 ! ED%BlPitchCom
+   integer(IntKi), public, parameter :: ED_u_YawMom                      =  13 ! ED%YawMom
+   integer(IntKi), public, parameter :: ED_u_GenTrq                      =  14 ! ED%GenTrq
+   integer(IntKi), public, parameter :: ED_u_HSSBrTrqC                   =  15 ! ED%HSSBrTrqC
+   integer(IntKi), public, parameter :: ED_y_BladeLn2Mesh                =  16 ! ED%BladeLn2Mesh(DL%i1)
+   integer(IntKi), public, parameter :: ED_y_PlatformPtMesh              =  17 ! ED%PlatformPtMesh
+   integer(IntKi), public, parameter :: ED_y_TowerLn2Mesh                =  18 ! ED%TowerLn2Mesh
+   integer(IntKi), public, parameter :: ED_y_HubPtMotion14               =  19 ! ED%HubPtMotion14
+   integer(IntKi), public, parameter :: ED_y_HubPtMotion                 =  20 ! ED%HubPtMotion
+   integer(IntKi), public, parameter :: ED_y_BladeRootMotion14           =  21 ! ED%BladeRootMotion14
+   integer(IntKi), public, parameter :: ED_y_BladeRootMotion             =  22 ! ED%BladeRootMotion(DL%i1)
+   integer(IntKi), public, parameter :: ED_y_RotorFurlMotion14           =  23 ! ED%RotorFurlMotion14
+   integer(IntKi), public, parameter :: ED_y_NacelleMotion               =  24 ! ED%NacelleMotion
+   integer(IntKi), public, parameter :: ED_y_TowerBaseMotion14           =  25 ! ED%TowerBaseMotion14
+   integer(IntKi), public, parameter :: ED_y_TFinCMMotion                =  26 ! ED%TFinCMMotion
+   integer(IntKi), public, parameter :: ED_y_WriteOutput                 =  27 ! ED%WriteOutput
+   integer(IntKi), public, parameter :: ED_y_BlPitch                     =  28 ! ED%BlPitch
+   integer(IntKi), public, parameter :: ED_y_Yaw                         =  29 ! ED%Yaw
+   integer(IntKi), public, parameter :: ED_y_YawRate                     =  30 ! ED%YawRate
+   integer(IntKi), public, parameter :: ED_y_LSS_Spd                     =  31 ! ED%LSS_Spd
+   integer(IntKi), public, parameter :: ED_y_HSS_Spd                     =  32 ! ED%HSS_Spd
+   integer(IntKi), public, parameter :: ED_y_RotSpeed                    =  33 ! ED%RotSpeed
+   integer(IntKi), public, parameter :: ED_y_TwrAccel                    =  34 ! ED%TwrAccel
+   integer(IntKi), public, parameter :: ED_y_YawAngle                    =  35 ! ED%YawAngle
+   integer(IntKi), public, parameter :: ED_y_RootMyc                     =  36 ! ED%RootMyc
+   integer(IntKi), public, parameter :: ED_y_YawBrTAxp                   =  37 ! ED%YawBrTAxp
+   integer(IntKi), public, parameter :: ED_y_YawBrTAyp                   =  38 ! ED%YawBrTAyp
+   integer(IntKi), public, parameter :: ED_y_LSSTipPxa                   =  39 ! ED%LSSTipPxa
+   integer(IntKi), public, parameter :: ED_y_RootMxc                     =  40 ! ED%RootMxc
+   integer(IntKi), public, parameter :: ED_y_LSSTipMxa                   =  41 ! ED%LSSTipMxa
+   integer(IntKi), public, parameter :: ED_y_LSSTipMya                   =  42 ! ED%LSSTipMya
+   integer(IntKi), public, parameter :: ED_y_LSSTipMza                   =  43 ! ED%LSSTipMza
+   integer(IntKi), public, parameter :: ED_y_LSSTipMys                   =  44 ! ED%LSSTipMys
+   integer(IntKi), public, parameter :: ED_y_LSSTipMzs                   =  45 ! ED%LSSTipMzs
+   integer(IntKi), public, parameter :: ED_y_YawBrMyn                    =  46 ! ED%YawBrMyn
+   integer(IntKi), public, parameter :: ED_y_YawBrMzn                    =  47 ! ED%YawBrMzn
+   integer(IntKi), public, parameter :: ED_y_NcIMURAxs                   =  48 ! ED%NcIMURAxs
+   integer(IntKi), public, parameter :: ED_y_NcIMURAys                   =  49 ! ED%NcIMURAys
+   integer(IntKi), public, parameter :: ED_y_NcIMURAzs                   =  50 ! ED%NcIMURAzs
+   integer(IntKi), public, parameter :: ED_y_RotPwr                      =  51 ! ED%RotPwr
+   integer(IntKi), public, parameter :: ED_y_LSShftFxa                   =  52 ! ED%LSShftFxa
+   integer(IntKi), public, parameter :: ED_y_LSShftFys                   =  53 ! ED%LSShftFys
+   integer(IntKi), public, parameter :: ED_y_LSShftFzs                   =  54 ! ED%LSShftFzs
+
+contains
 
 subroutine ED_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(ED_InitInputType), intent(in) :: SrcInitInputData
@@ -5763,96 +5778,6 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%NActvVelDOF_Lin = SrcParamData%NActvVelDOF_Lin
    DstParamData%NActvDOF_Lin = SrcParamData%NActvDOF_Lin
    DstParamData%NActvDOF_Stride = SrcParamData%NActvDOF_Stride
-   if (allocated(SrcParamData%iVarBladeFlap1)) then
-      LB(1:1) = lbound(SrcParamData%iVarBladeFlap1, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%iVarBladeFlap1, kind=B8Ki)
-      if (.not. allocated(DstParamData%iVarBladeFlap1)) then
-         allocate(DstParamData%iVarBladeFlap1(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iVarBladeFlap1.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%iVarBladeFlap1 = SrcParamData%iVarBladeFlap1
-   end if
-   if (allocated(SrcParamData%iVarBladeEdge1)) then
-      LB(1:1) = lbound(SrcParamData%iVarBladeEdge1, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%iVarBladeEdge1, kind=B8Ki)
-      if (.not. allocated(DstParamData%iVarBladeEdge1)) then
-         allocate(DstParamData%iVarBladeEdge1(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iVarBladeEdge1.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%iVarBladeEdge1 = SrcParamData%iVarBladeEdge1
-   end if
-   if (allocated(SrcParamData%iVarBladeFlap2)) then
-      LB(1:1) = lbound(SrcParamData%iVarBladeFlap2, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%iVarBladeFlap2, kind=B8Ki)
-      if (.not. allocated(DstParamData%iVarBladeFlap2)) then
-         allocate(DstParamData%iVarBladeFlap2(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iVarBladeFlap2.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%iVarBladeFlap2 = SrcParamData%iVarBladeFlap2
-   end if
-   if (allocated(SrcParamData%iVarBladePtLoads)) then
-      LB(1:1) = lbound(SrcParamData%iVarBladePtLoads, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%iVarBladePtLoads, kind=B8Ki)
-      if (.not. allocated(DstParamData%iVarBladePtLoads)) then
-         allocate(DstParamData%iVarBladePtLoads(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iVarBladePtLoads.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%iVarBladePtLoads = SrcParamData%iVarBladePtLoads
-   end if
-   DstParamData%iVarPlatformPtMesh = SrcParamData%iVarPlatformPtMesh
-   DstParamData%iVarTowerPtLoads = SrcParamData%iVarTowerPtLoads
-   DstParamData%iVarHubPtLoad = SrcParamData%iVarHubPtLoad
-   DstParamData%iVarNacelleLoads = SrcParamData%iVarNacelleLoads
-   DstParamData%iVarTFinCMLoads = SrcParamData%iVarTFinCMLoads
-   DstParamData%iVarBlPitchCom = SrcParamData%iVarBlPitchCom
-   DstParamData%iVarYawMom = SrcParamData%iVarYawMom
-   DstParamData%iVarGenTrq = SrcParamData%iVarGenTrq
-   DstParamData%iVarBlPitchComC = SrcParamData%iVarBlPitchComC
-   if (allocated(SrcParamData%iVarBladeMotion)) then
-      LB(1:1) = lbound(SrcParamData%iVarBladeMotion, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%iVarBladeMotion, kind=B8Ki)
-      if (.not. allocated(DstParamData%iVarBladeMotion)) then
-         allocate(DstParamData%iVarBladeMotion(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iVarBladeMotion.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%iVarBladeMotion = SrcParamData%iVarBladeMotion
-   end if
-   DstParamData%iVarPlatformMotion = SrcParamData%iVarPlatformMotion
-   DstParamData%iVarTowerMotion = SrcParamData%iVarTowerMotion
-   DstParamData%iVarHubMotion = SrcParamData%iVarHubMotion
-   if (allocated(SrcParamData%iVarBladeRootMotion)) then
-      LB(1:1) = lbound(SrcParamData%iVarBladeRootMotion, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%iVarBladeRootMotion, kind=B8Ki)
-      if (.not. allocated(DstParamData%iVarBladeRootMotion)) then
-         allocate(DstParamData%iVarBladeRootMotion(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iVarBladeRootMotion.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%iVarBladeRootMotion = SrcParamData%iVarBladeRootMotion
-   end if
-   DstParamData%iVarNacelleMotion = SrcParamData%iVarNacelleMotion
-   DstParamData%iVarTFinCMMotion = SrcParamData%iVarTFinCMMotion
-   DstParamData%iVarYaw = SrcParamData%iVarYaw
-   DstParamData%iVarYawRate = SrcParamData%iVarYawRate
-   DstParamData%iVarHSS_Spd = SrcParamData%iVarHSS_Spd
-   DstParamData%iVarWriteOut = SrcParamData%iVarWriteOut
 end subroutine
 
 subroutine ED_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -6059,24 +5984,6 @@ subroutine ED_DestroyParam(ParamData, ErrStat, ErrMsg)
    end if
    if (allocated(ParamData%dx)) then
       deallocate(ParamData%dx)
-   end if
-   if (allocated(ParamData%iVarBladeFlap1)) then
-      deallocate(ParamData%iVarBladeFlap1)
-   end if
-   if (allocated(ParamData%iVarBladeEdge1)) then
-      deallocate(ParamData%iVarBladeEdge1)
-   end if
-   if (allocated(ParamData%iVarBladeFlap2)) then
-      deallocate(ParamData%iVarBladeFlap2)
-   end if
-   if (allocated(ParamData%iVarBladePtLoads)) then
-      deallocate(ParamData%iVarBladePtLoads)
-   end if
-   if (allocated(ParamData%iVarBladeMotion)) then
-      deallocate(ParamData%iVarBladeMotion)
-   end if
-   if (allocated(ParamData%iVarBladeRootMotion)) then
-      deallocate(ParamData%iVarBladeRootMotion)
    end if
 end subroutine
 
@@ -6339,30 +6246,6 @@ subroutine ED_PackParam(RF, Indata)
    call RegPack(RF, InData%NActvVelDOF_Lin)
    call RegPack(RF, InData%NActvDOF_Lin)
    call RegPack(RF, InData%NActvDOF_Stride)
-   call RegPackAlloc(RF, InData%iVarBladeFlap1)
-   call RegPackAlloc(RF, InData%iVarBladeEdge1)
-   call RegPackAlloc(RF, InData%iVarBladeFlap2)
-   call RegPackAlloc(RF, InData%iVarBladePtLoads)
-   call RegPack(RF, InData%iVarPlatformPtMesh)
-   call RegPack(RF, InData%iVarTowerPtLoads)
-   call RegPack(RF, InData%iVarHubPtLoad)
-   call RegPack(RF, InData%iVarNacelleLoads)
-   call RegPack(RF, InData%iVarTFinCMLoads)
-   call RegPack(RF, InData%iVarBlPitchCom)
-   call RegPack(RF, InData%iVarYawMom)
-   call RegPack(RF, InData%iVarGenTrq)
-   call RegPack(RF, InData%iVarBlPitchComC)
-   call RegPackAlloc(RF, InData%iVarBladeMotion)
-   call RegPack(RF, InData%iVarPlatformMotion)
-   call RegPack(RF, InData%iVarTowerMotion)
-   call RegPack(RF, InData%iVarHubMotion)
-   call RegPackAlloc(RF, InData%iVarBladeRootMotion)
-   call RegPack(RF, InData%iVarNacelleMotion)
-   call RegPack(RF, InData%iVarTFinCMMotion)
-   call RegPack(RF, InData%iVarYaw)
-   call RegPack(RF, InData%iVarYawRate)
-   call RegPack(RF, InData%iVarHSS_Spd)
-   call RegPack(RF, InData%iVarWriteOut)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -6647,30 +6530,6 @@ subroutine ED_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NActvVelDOF_Lin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NActvDOF_Lin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NActvDOF_Stride); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iVarBladeFlap1); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iVarBladeEdge1); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iVarBladeFlap2); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iVarBladePtLoads); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarPlatformPtMesh); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarTowerPtLoads); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarHubPtLoad); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarNacelleLoads); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarTFinCMLoads); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarBlPitchCom); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarYawMom); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarGenTrq); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarBlPitchComC); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iVarBladeMotion); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarPlatformMotion); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarTowerMotion); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarHubMotion); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iVarBladeRootMotion); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarNacelleMotion); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarTFinCMMotion); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarYaw); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarYawRate); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarHSS_Spd); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarWriteOut); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ED_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -7911,7 +7770,7 @@ END SUBROUTINE
 
 function ED_InputMeshPointer(u, ML) result(Mesh)
    type(ED_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -7931,7 +7790,7 @@ function ED_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function ED_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -7952,7 +7811,7 @@ end function
 
 function ED_OutputMeshPointer(y, ML) result(Mesh)
    type(ED_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -7982,7 +7841,7 @@ function ED_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function ED_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -8010,5 +7869,325 @@ function ED_OutputMeshName(ML) result(Name)
        Name = "y%TFinCMMotion"
    end select
 end function
+
+subroutine ED_PackContStateAry(Vars, x, ValAry)
+   type(ED_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (ED_x_QT)
+             call MV_Pack2(Var, x%QT, ValAry)  ! Rank 1 Array
+         case (ED_x_QDT)
+             call MV_Pack2(Var, x%QDT, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ED_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ED_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (ED_x_QT)
+             call MV_Unpack2(Var, ValAry, x%QT)  ! Rank 1 Array
+         case (ED_x_QDT)
+             call MV_Unpack2(Var, ValAry, x%QDT)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ED_PackConstrStateAry(Vars, z, ValAry)
+   type(ED_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (ED_z_DummyConstrState)
+             call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ED_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ED_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (ED_z_DummyConstrState)
+             call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ED_PackInputAry(Vars, u, ValAry)
+   type(ED_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (ED_u_BladePtLoads)
+             call MV_Pack2(Var, u%BladePtLoads(DL%i1), ValAry)  ! Mesh
+         case (ED_u_PlatformPtMesh)
+             call MV_Pack2(Var, u%PlatformPtMesh, ValAry)  ! Mesh
+         case (ED_u_TowerPtLoads)
+             call MV_Pack2(Var, u%TowerPtLoads, ValAry)  ! Mesh
+         case (ED_u_HubPtLoad)
+             call MV_Pack2(Var, u%HubPtLoad, ValAry)  ! Mesh
+         case (ED_u_NacelleLoads)
+             call MV_Pack2(Var, u%NacelleLoads, ValAry)  ! Mesh
+         case (ED_u_TFinCMLoads)
+             call MV_Pack2(Var, u%TFinCMLoads, ValAry)  ! Mesh
+         case (ED_u_TwrAddedMass)
+             call MV_Pack2(Var, u%TwrAddedMass, ValAry)  ! Rank 3 Array
+         case (ED_u_PtfmAddedMass)
+             call MV_Pack2(Var, u%PtfmAddedMass, ValAry)  ! Rank 2 Array
+         case (ED_u_BlPitchCom)
+             call MV_Pack2(Var, u%BlPitchCom, ValAry)  ! Rank 1 Array
+         case (ED_u_YawMom)
+             call MV_Pack2(Var, u%YawMom, ValAry)  ! Scalar
+         case (ED_u_GenTrq)
+             call MV_Pack2(Var, u%GenTrq, ValAry)  ! Scalar
+         case (ED_u_HSSBrTrqC)
+             call MV_Pack2(Var, u%HSSBrTrqC, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ED_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ED_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (ED_u_BladePtLoads)
+             call MV_Unpack2(Var, ValAry, u%BladePtLoads(DL%i1))  ! Mesh
+         case (ED_u_PlatformPtMesh)
+             call MV_Unpack2(Var, ValAry, u%PlatformPtMesh)  ! Mesh
+         case (ED_u_TowerPtLoads)
+             call MV_Unpack2(Var, ValAry, u%TowerPtLoads)  ! Mesh
+         case (ED_u_HubPtLoad)
+             call MV_Unpack2(Var, ValAry, u%HubPtLoad)  ! Mesh
+         case (ED_u_NacelleLoads)
+             call MV_Unpack2(Var, ValAry, u%NacelleLoads)  ! Mesh
+         case (ED_u_TFinCMLoads)
+             call MV_Unpack2(Var, ValAry, u%TFinCMLoads)  ! Mesh
+         case (ED_u_TwrAddedMass)
+             call MV_Unpack2(Var, ValAry, u%TwrAddedMass)  ! Rank 3 Array
+         case (ED_u_PtfmAddedMass)
+             call MV_Unpack2(Var, ValAry, u%PtfmAddedMass)  ! Rank 2 Array
+         case (ED_u_BlPitchCom)
+             call MV_Unpack2(Var, ValAry, u%BlPitchCom)  ! Rank 1 Array
+         case (ED_u_YawMom)
+             call MV_Unpack2(Var, ValAry, u%YawMom)  ! Scalar
+         case (ED_u_GenTrq)
+             call MV_Unpack2(Var, ValAry, u%GenTrq)  ! Scalar
+         case (ED_u_HSSBrTrqC)
+             call MV_Unpack2(Var, ValAry, u%HSSBrTrqC)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ED_PackOutputAry(Vars, y, ValAry)
+   type(ED_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (ED_y_BladeLn2Mesh)
+             call MV_Pack2(Var, y%BladeLn2Mesh(DL%i1), ValAry)  ! Mesh
+         case (ED_y_PlatformPtMesh)
+             call MV_Pack2(Var, y%PlatformPtMesh, ValAry)  ! Mesh
+         case (ED_y_TowerLn2Mesh)
+             call MV_Pack2(Var, y%TowerLn2Mesh, ValAry)  ! Mesh
+         case (ED_y_HubPtMotion14)
+             call MV_Pack2(Var, y%HubPtMotion14, ValAry)  ! Mesh
+         case (ED_y_HubPtMotion)
+             call MV_Pack2(Var, y%HubPtMotion, ValAry)  ! Mesh
+         case (ED_y_BladeRootMotion14)
+             call MV_Pack2(Var, y%BladeRootMotion14, ValAry)  ! Mesh
+         case (ED_y_BladeRootMotion)
+             call MV_Pack2(Var, y%BladeRootMotion(DL%i1), ValAry)  ! Mesh
+         case (ED_y_RotorFurlMotion14)
+             call MV_Pack2(Var, y%RotorFurlMotion14, ValAry)  ! Mesh
+         case (ED_y_NacelleMotion)
+             call MV_Pack2(Var, y%NacelleMotion, ValAry)  ! Mesh
+         case (ED_y_TowerBaseMotion14)
+             call MV_Pack2(Var, y%TowerBaseMotion14, ValAry)  ! Mesh
+         case (ED_y_TFinCMMotion)
+             call MV_Pack2(Var, y%TFinCMMotion, ValAry)  ! Mesh
+         case (ED_y_WriteOutput)
+             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+         case (ED_y_BlPitch)
+             call MV_Pack2(Var, y%BlPitch, ValAry)  ! Rank 1 Array
+         case (ED_y_Yaw)
+             call MV_Pack2(Var, y%Yaw, ValAry)  ! Scalar
+         case (ED_y_YawRate)
+             call MV_Pack2(Var, y%YawRate, ValAry)  ! Scalar
+         case (ED_y_LSS_Spd)
+             call MV_Pack2(Var, y%LSS_Spd, ValAry)  ! Scalar
+         case (ED_y_HSS_Spd)
+             call MV_Pack2(Var, y%HSS_Spd, ValAry)  ! Scalar
+         case (ED_y_RotSpeed)
+             call MV_Pack2(Var, y%RotSpeed, ValAry)  ! Scalar
+         case (ED_y_TwrAccel)
+             call MV_Pack2(Var, y%TwrAccel, ValAry)  ! Scalar
+         case (ED_y_YawAngle)
+             call MV_Pack2(Var, y%YawAngle, ValAry)  ! Scalar
+         case (ED_y_RootMyc)
+             call MV_Pack2(Var, y%RootMyc, ValAry)  ! Rank 1 Array
+         case (ED_y_YawBrTAxp)
+             call MV_Pack2(Var, y%YawBrTAxp, ValAry)  ! Scalar
+         case (ED_y_YawBrTAyp)
+             call MV_Pack2(Var, y%YawBrTAyp, ValAry)  ! Scalar
+         case (ED_y_LSSTipPxa)
+             call MV_Pack2(Var, y%LSSTipPxa, ValAry)  ! Scalar
+         case (ED_y_RootMxc)
+             call MV_Pack2(Var, y%RootMxc, ValAry)  ! Rank 1 Array
+         case (ED_y_LSSTipMxa)
+             call MV_Pack2(Var, y%LSSTipMxa, ValAry)  ! Scalar
+         case (ED_y_LSSTipMya)
+             call MV_Pack2(Var, y%LSSTipMya, ValAry)  ! Scalar
+         case (ED_y_LSSTipMza)
+             call MV_Pack2(Var, y%LSSTipMza, ValAry)  ! Scalar
+         case (ED_y_LSSTipMys)
+             call MV_Pack2(Var, y%LSSTipMys, ValAry)  ! Scalar
+         case (ED_y_LSSTipMzs)
+             call MV_Pack2(Var, y%LSSTipMzs, ValAry)  ! Scalar
+         case (ED_y_YawBrMyn)
+             call MV_Pack2(Var, y%YawBrMyn, ValAry)  ! Scalar
+         case (ED_y_YawBrMzn)
+             call MV_Pack2(Var, y%YawBrMzn, ValAry)  ! Scalar
+         case (ED_y_NcIMURAxs)
+             call MV_Pack2(Var, y%NcIMURAxs, ValAry)  ! Scalar
+         case (ED_y_NcIMURAys)
+             call MV_Pack2(Var, y%NcIMURAys, ValAry)  ! Scalar
+         case (ED_y_NcIMURAzs)
+             call MV_Pack2(Var, y%NcIMURAzs, ValAry)  ! Scalar
+         case (ED_y_RotPwr)
+             call MV_Pack2(Var, y%RotPwr, ValAry)  ! Scalar
+         case (ED_y_LSShftFxa)
+             call MV_Pack2(Var, y%LSShftFxa, ValAry)  ! Scalar
+         case (ED_y_LSShftFys)
+             call MV_Pack2(Var, y%LSShftFys, ValAry)  ! Scalar
+         case (ED_y_LSShftFzs)
+             call MV_Pack2(Var, y%LSShftFzs, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ED_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ED_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (ED_y_BladeLn2Mesh)
+             call MV_Unpack2(Var, ValAry, y%BladeLn2Mesh(DL%i1))  ! Mesh
+         case (ED_y_PlatformPtMesh)
+             call MV_Unpack2(Var, ValAry, y%PlatformPtMesh)  ! Mesh
+         case (ED_y_TowerLn2Mesh)
+             call MV_Unpack2(Var, ValAry, y%TowerLn2Mesh)  ! Mesh
+         case (ED_y_HubPtMotion14)
+             call MV_Unpack2(Var, ValAry, y%HubPtMotion14)  ! Mesh
+         case (ED_y_HubPtMotion)
+             call MV_Unpack2(Var, ValAry, y%HubPtMotion)  ! Mesh
+         case (ED_y_BladeRootMotion14)
+             call MV_Unpack2(Var, ValAry, y%BladeRootMotion14)  ! Mesh
+         case (ED_y_BladeRootMotion)
+             call MV_Unpack2(Var, ValAry, y%BladeRootMotion(DL%i1))  ! Mesh
+         case (ED_y_RotorFurlMotion14)
+             call MV_Unpack2(Var, ValAry, y%RotorFurlMotion14)  ! Mesh
+         case (ED_y_NacelleMotion)
+             call MV_Unpack2(Var, ValAry, y%NacelleMotion)  ! Mesh
+         case (ED_y_TowerBaseMotion14)
+             call MV_Unpack2(Var, ValAry, y%TowerBaseMotion14)  ! Mesh
+         case (ED_y_TFinCMMotion)
+             call MV_Unpack2(Var, ValAry, y%TFinCMMotion)  ! Mesh
+         case (ED_y_WriteOutput)
+             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+         case (ED_y_BlPitch)
+             call MV_Unpack2(Var, ValAry, y%BlPitch)  ! Rank 1 Array
+         case (ED_y_Yaw)
+             call MV_Unpack2(Var, ValAry, y%Yaw)  ! Scalar
+         case (ED_y_YawRate)
+             call MV_Unpack2(Var, ValAry, y%YawRate)  ! Scalar
+         case (ED_y_LSS_Spd)
+             call MV_Unpack2(Var, ValAry, y%LSS_Spd)  ! Scalar
+         case (ED_y_HSS_Spd)
+             call MV_Unpack2(Var, ValAry, y%HSS_Spd)  ! Scalar
+         case (ED_y_RotSpeed)
+             call MV_Unpack2(Var, ValAry, y%RotSpeed)  ! Scalar
+         case (ED_y_TwrAccel)
+             call MV_Unpack2(Var, ValAry, y%TwrAccel)  ! Scalar
+         case (ED_y_YawAngle)
+             call MV_Unpack2(Var, ValAry, y%YawAngle)  ! Scalar
+         case (ED_y_RootMyc)
+             call MV_Unpack2(Var, ValAry, y%RootMyc)  ! Rank 1 Array
+         case (ED_y_YawBrTAxp)
+             call MV_Unpack2(Var, ValAry, y%YawBrTAxp)  ! Scalar
+         case (ED_y_YawBrTAyp)
+             call MV_Unpack2(Var, ValAry, y%YawBrTAyp)  ! Scalar
+         case (ED_y_LSSTipPxa)
+             call MV_Unpack2(Var, ValAry, y%LSSTipPxa)  ! Scalar
+         case (ED_y_RootMxc)
+             call MV_Unpack2(Var, ValAry, y%RootMxc)  ! Rank 1 Array
+         case (ED_y_LSSTipMxa)
+             call MV_Unpack2(Var, ValAry, y%LSSTipMxa)  ! Scalar
+         case (ED_y_LSSTipMya)
+             call MV_Unpack2(Var, ValAry, y%LSSTipMya)  ! Scalar
+         case (ED_y_LSSTipMza)
+             call MV_Unpack2(Var, ValAry, y%LSSTipMza)  ! Scalar
+         case (ED_y_LSSTipMys)
+             call MV_Unpack2(Var, ValAry, y%LSSTipMys)  ! Scalar
+         case (ED_y_LSSTipMzs)
+             call MV_Unpack2(Var, ValAry, y%LSSTipMzs)  ! Scalar
+         case (ED_y_YawBrMyn)
+             call MV_Unpack2(Var, ValAry, y%YawBrMyn)  ! Scalar
+         case (ED_y_YawBrMzn)
+             call MV_Unpack2(Var, ValAry, y%YawBrMzn)  ! Scalar
+         case (ED_y_NcIMURAxs)
+             call MV_Unpack2(Var, ValAry, y%NcIMURAxs)  ! Scalar
+         case (ED_y_NcIMURAys)
+             call MV_Unpack2(Var, ValAry, y%NcIMURAys)  ! Scalar
+         case (ED_y_NcIMURAzs)
+             call MV_Unpack2(Var, ValAry, y%NcIMURAzs)  ! Scalar
+         case (ED_y_RotPwr)
+             call MV_Unpack2(Var, ValAry, y%RotPwr)  ! Scalar
+         case (ED_y_LSShftFxa)
+             call MV_Unpack2(Var, ValAry, y%LSShftFxa)  ! Scalar
+         case (ED_y_LSShftFys)
+             call MV_Unpack2(Var, ValAry, y%LSShftFys)  ! Scalar
+         case (ED_y_LSShftFzs)
+             call MV_Unpack2(Var, ValAry, y%LSShftFzs)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE ElastoDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

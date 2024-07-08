@@ -442,16 +442,14 @@ subroutine Orca_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    ! Input variables
    !----------------------------------------------------------------------------
 
-   call MV_AddMeshVar(p%Vars%u, "PtfmMesh", MotionFields, &
-                      VarIdx=p%iVarPtfmMeshU, &
+   call MV_AddMeshVar(p%Vars%u, "PtfmMesh", MotionFields, DatLoc(Orca_u_PtfmMesh), &
                       Mesh=u%PtfmMesh)                      
 
    !----------------------------------------------------------------------------
    ! Output variables
    !----------------------------------------------------------------------------
 
-   call MV_AddMeshVar(p%Vars%y, 'PtfmMesh', LoadFields, &
-                      VarIdx=p%iVarPtfmMeshY, &
+   call MV_AddMeshVar(p%Vars%y, 'PtfmMesh', LoadFields, DatLoc(Orca_y_PtfmMesh), &
                       Mesh=y%PtfmMesh)
 
    !----------------------------------------------------------------------------

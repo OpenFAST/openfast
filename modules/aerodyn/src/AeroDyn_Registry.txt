@@ -48,6 +48,9 @@ param    ^              -  IntKi    APM_LiftingLine           - 3 -  "Use the bl
 # if more than AD_MaxBl_Out blades are used in the simulation, not all channels will have output information for the "extra" blades.
 # Also, the AD input file will require more lines for the additional blades.
 param    ^              -  IntKi    AD_MaxBl_Out            -  3  -  "Maximum number of blades for information output (or linearization)" -
+param    ^              -  IntKi    AD_u_HWindSpeed         - -1  -  "DatLoc number for HWindSpeed extended input" -
+param    ^              -  IntKi    AD_u_PLExp              - -2  -  "DatLoc number for PLExp extended input" -
+param    ^              -  IntKi    AD_u_PropagationDir     - -3  -  "DatLoc number for PropagationDir extended input" -
 
 # Tail Fin parameters 
 typedef  ^  TFinParameterType   IntKi   TFinMod    -    -   0 "Tail fin aerodynamics model {0=none, 1=polar-based, 2=USB-based}" (switch)
@@ -294,24 +297,6 @@ typedef	^	AD_InflowType	RotInflowType	RotInflow	{:}	-	-	"Inflow on rotor"	-
 
 # Parameters for each rotor
 typedef	^	RotParameterType	ModVarsType	&Vars	-	-	-	"Module Variables"
-typedef	^	RotParameterType	IntKi	iVarDBEMT	-	0	-	""	-
-typedef	^	RotParameterType	IntKi	iVarUA	-	0	-	""	-
-typedef	^	RotParameterType	IntKi	iVarNacelleMotion	-	0	-	""	-
-typedef	^	RotParameterType	IntKi	iVarHubMotion	-	0	-	""	-
-typedef	^	RotParameterType	IntKi	iVarTFinMotion	-	0	-	""	-
-typedef	^	RotParameterType	IntKi	iVarTowerMotion	-	0	-	""	-
-typedef	^	RotParameterType	IntKi	iVarBladeRootMotion	{:}	-	-	""	-
-typedef	^	RotParameterType	IntKi	iVarBladeMotion	{:}	-	-	""	-
-typedef	^	RotParameterType	IntKi	iVarUserProp	{:}	-	-	""	-
-typedef	^	RotParameterType	IntKi	iVarHWindSpeed	-	-	-	""	-
-typedef	^	RotParameterType	IntKi	iVarPLexp	-	-	-	""	-
-typedef	^	RotParameterType	IntKi	iVarPropagationDir	-	-	-	""	-
-typedef	^	RotParameterType	IntKi	iVarNacelleLoad	-	0	-	""	-
-typedef	^	RotParameterType	IntKi	iVarHubLoad	-	0	-	""	-
-typedef	^	RotParameterType	IntKi	iVarTFinLoad	-	0	-	""	-
-typedef	^	RotParameterType	IntKi	iVarTowerLoad	-	0	-	""	-
-typedef	^	RotParameterType	IntKi	iVarBladeLoad	{:}	-	-	""	-
-typedef	^	RotParameterType	IntKi	iVarWriteOutput	-	0	-	""	-
 typedef	^	RotParameterType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"	-
 typedef	^	RotParameterType	IntKi	NumBlNds	-	-	-	"Number of nodes on each blade"	-
 typedef	^	RotParameterType	IntKi	NumTwrNds	-	-	-	"Number of nodes on the tower"	-

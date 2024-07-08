@@ -71,9 +71,6 @@ typedef        ^        ^                   R8Ki             z                 {
 
 ## ============================== Parameters ============================================================================================================================================
 typedef         ^        ParameterType       ModVarsType     &Vars               -         -                   -            "Module Variables"
-typedef         ^        ^                   IntKi        iVarPtFairDisplacement -         -                   -            "Variable index for fairlead displacement mesh"
-typedef         ^        ^                   IntKi            iVarPtFairleadLoad -         -                   -            "Variable index for fairlead loads mesh"
-typedef         ^        ^                   IntKi            iVarWriteOutput    -         -                   -            "Variable index for write outputs"
 typedef         ^        ^                   R8Ki             g                  -         -                   -            "gravitational constant"                          "[kg/m^2]"
 typedef         ^        ^                   R8Ki             depth              -         -                   -            "distance to seabed"                              "[m]"
 typedef         ^        ^                   R8Ki             rho_sea            -         -                   -            "density of seawater"                             "[m]"

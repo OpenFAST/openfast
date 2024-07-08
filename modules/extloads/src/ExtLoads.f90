@@ -240,27 +240,27 @@ subroutine ExtLd_InitVars(u, p, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    ! Input variables
    !----------------------------------------------------------------------------
 
-   call MV_AddMeshVar(p%Vars%u, "TowerMotion", MotionFields, Mesh=u%TowerMotion) 
-   call MV_AddMeshVar(p%Vars%u, "HubMotion", MotionFields, Mesh=u%HubMotion) 
-   call MV_AddMeshVar(p%Vars%u, "NacelleMotion", MotionFields, Mesh=u%NacelleMotion)
+   call MV_AddMeshVar(p%Vars%u, "TowerMotion", MotionFields, DatLoc(ExtLd_u_TowerMotion), Mesh=u%TowerMotion) 
+   call MV_AddMeshVar(p%Vars%u, "HubMotion", MotionFields, DatLoc(ExtLd_u_HubMotion), Mesh=u%HubMotion) 
+   call MV_AddMeshVar(p%Vars%u, "NacelleMotion", MotionFields, DatLoc(ExtLd_u_NacelleMotion), Mesh=u%NacelleMotion)
    do i = 1, size(u%BladeRootMotion)
-      call MV_AddMeshVar(p%Vars%u, "BladeRootMotion"//IdxStr(i), MotionFields, Mesh=u%BladeRootMotion(i)) 
+      call MV_AddMeshVar(p%Vars%u, "BladeRootMotion"//IdxStr(i), MotionFields, DatLoc(ExtLd_u_BladeRootMotion, i), Mesh=u%BladeRootMotion(i)) 
    end do
    do i = 1, size(u%BladeRootMotion)
-      call MV_AddMeshVar(p%Vars%u, "BladeMotion"//IdxStr(i), MotionFields, Mesh=u%BladeMotion(i)) 
+      call MV_AddMeshVar(p%Vars%u, "BladeMotion"//IdxStr(i), MotionFields, DatLoc(ExtLd_u_BladeMotion, i), Mesh=u%BladeMotion(i)) 
    end do
 
    !----------------------------------------------------------------------------
    ! Output variables
    !----------------------------------------------------------------------------
 
-   call MV_AddMeshVar(p%Vars%y, 'TowerLoad', LoadFields, Mesh=y%TowerLoad)
+   call MV_AddMeshVar(p%Vars%y, 'TowerLoad', LoadFields, DatLoc(ExtLd_y_TowerLoad), Mesh=y%TowerLoad)
    do i = 1, size(y%BladeLoad)
-      call MV_AddMeshVar(p%Vars%y, 'BladeLoad'//IdxStr(i), LoadFields, Mesh=y%BladeLoad(i))
+      call MV_AddMeshVar(p%Vars%y, 'BladeLoad'//IdxStr(i), LoadFields, DatLoc(ExtLd_y_BladeLoad, i), Mesh=y%BladeLoad(i))
    end do
-   call MV_AddMeshVar(p%Vars%y, 'TowerLoadAD', LoadFields, Mesh=y%TowerLoadAD)
+   call MV_AddMeshVar(p%Vars%y, 'TowerLoadAD', LoadFields, DatLoc(ExtLd_y_TowerLoadAD), Mesh=y%TowerLoadAD)
    do i = 1, size(y%BladeLoadAD)
-      call MV_AddMeshVar(p%Vars%y, 'BladeLoadAD'//IdxStr(i), LoadFields, Mesh=y%BladeLoadAD(i))
+      call MV_AddMeshVar(p%Vars%y, 'BladeLoadAD'//IdxStr(i), LoadFields, DatLoc(ExtLd_y_BladeLoadAD, i), Mesh=y%BladeLoadAD(i))
    end do
 
    !----------------------------------------------------------------------------

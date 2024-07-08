@@ -676,7 +676,8 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
    do i = 1, p%NumBStC
       do j = 1, p%NumBl
          Desc = 'Blade '//trim(Num2LStr(i))//' StC '//Num2LStr(j)
-         call MV_AddVar(p%Vars%x, Desc, FieldScalar, Num=6, &
+         call MV_AddVar(p%Vars%x, Desc, FieldScalar, DatLoc(SrvD_x_BStC_StC_x), &
+                        Num=6, &
                         Flags=VF_DerivOrder2+VF_RotFrame, &
                         LinNames=[(trim(Desc)//StCLabels(k), k = 1, 6)], &
                         Perturb=xPerturb)
@@ -686,7 +687,8 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
    ! Nacelle Structural Controller
    do j = 1, p%NumNStC
       Desc = 'Nacelle StC '//Num2LStr(j)
-      call MV_AddVar(p%Vars%x, Desc, FieldScalar, Num=6, &
+      call MV_AddVar(p%Vars%x, Desc, FieldScalar, DatLoc(SrvD_x_NStC_StC_x), &
+                     Num=6, &
                      Flags=VF_DerivOrder2, &
                      LinNames=[(trim(Desc)//StCLabels(k), k = 1, 6)], &
                      Perturb=xPerturb)
@@ -695,7 +697,8 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
    ! Tower Structural Controller
    do j = 1, p%NumTStC
       Desc = 'Tower StC '//Num2LStr(j)
-      call MV_AddVar(p%Vars%x, Desc, FieldScalar, Num=6, &
+      call MV_AddVar(p%Vars%x, Desc, FieldScalar, DatLoc(SrvD_x_TStC_StC_x), &
+                     Num=6, &
                      Flags=VF_DerivOrder2, &
                      LinNames=[(trim(Desc)//StCLabels(k), k = 1, 6)], &
                      Perturb=xPerturb)
@@ -704,7 +707,8 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
    ! Substructure Structural Controller
    do j = 1, p%NumSStC
       Desc = 'Substructure StC '//Num2LStr(j)
-      call MV_AddVar(p%Vars%x, Desc, FieldScalar, Num=6, &
+      call MV_AddVar(p%Vars%x, Desc, FieldScalar, DatLoc(SrvD_x_SStC_StC_x), &
+                     Num=6, &
                      Flags=VF_DerivOrder2, &
                      LinNames=[(trim(Desc)//StCLabels(k), k = 1, 6)], &
                      Perturb=xPerturb)
@@ -718,16 +722,17 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
    uPerturbAng = 0.2_R8Ki * Pi_R8 / 180.0_R8Ki
    uPerturbs = [uPerturbTrans, uPerturbAng, uPerturbTrans, uPerturbAng, uPerturbTrans, uPerturbAng]
 
-   call MV_AddVar(p%Vars%u, "Yaw", FieldScalar, Flags=VF_2PI, VarIdx=p%iVarYaw, LinNames=['Yaw, rad'])
+   call MV_AddVar(p%Vars%u, "Yaw", FieldScalar, DatLoc(SrvD_u_Yaw), Flags=VF_2PI, LinNames=['Yaw, rad'])
 
-   call MV_AddVar(p%Vars%u, "YawRate", FieldScalar, VarIdx=p%iVarYawRate, LinNames=['YawRate, rad/s'])
+   call MV_AddVar(p%Vars%u, "YawRate", FieldScalar, DatLoc(SrvD_u_YawRate), LinNames=['YawRate, rad/s'])
 
-   call MV_AddVar(p%Vars%u, "HSS_Spd", FieldScalar, VarIdx=p%iVarHSS_Spd, LinNames=['HSS_Spd, rad/s'])
+   call MV_AddVar(p%Vars%u, "HSS_Spd", FieldScalar, DatLoc(SrvD_u_HSS_Spd), LinNames=['HSS_Spd, rad/s'])
 
    ! Structural controllers
    do j = 1, p%NumBStC
       do i = 1, p%NumBl
          call MV_AddMeshVar(p%Vars%u, 'Blade '//trim(Num2LStr(i))//' StC '//Num2LStr(j), MotionFields, &
+                              DatLoc(SrvD_u_BStCMotionMesh, i, j), &
                               Mesh=u%BStCMotionMesh(i, j), &
                               Perturbs=uPerturbs)
       end do
@@ -735,18 +740,21 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
 
    do j = 1, p%NumNStC
       call MV_AddMeshVar(p%Vars%u, 'Nacelle StC '//Num2LStr(j), MotionFields, &
+                           DatLoc(SrvD_u_NStCMotionMesh, j), &
                            Mesh=u%NStCMotionMesh(j), &
                            Perturbs=uPerturbs)
    enddo
 
    do j = 1, p%NumTStC
       call MV_AddMeshVar(p%Vars%u, 'Tower StC '//Num2LStr(j), MotionFields, &
+                           DatLoc(SrvD_u_TStCMotionMesh, j), &
                            Mesh=u%TStCMotionMesh(j), &
                            Perturbs=uPerturbs)
    enddo
 
    do j = 1, p%NumSStC
       call MV_AddMeshVar(p%Vars%u, 'Substructure StC '//Num2LStr(j), MotionFields, &
+                           DatLoc(SrvD_u_SStCMotionMesh, j), &
                            Mesh=u%SStCMotionMesh(j), &
                            Perturbs=uPerturbs)
    enddo
@@ -756,75 +764,63 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
    !----------------------------------------------------------------------------
 
    call MV_AddVar(p%Vars%y, "BlPitchCom", FieldScalar, &
-                  VarIdx=p%iVarBlPitchCom, &
+                  DatLoc(SrvD_y_BlPitchCom), &
                   Flags=VF_RotFrame + VF_2PI, &
                   Num=size(y%BlPitchCom), &
                   LinNames=[('BlPitchCom('//trim(Num2LStr(i))//'), rad', i = 1, size(y%BlPitchCom))])
 
    call MV_AddVar(p%Vars%y, "YawMom", FieldScalar, &
-                  VarIdx=p%iVarYawMom, &
+                  DatLoc(SrvD_y_YawMom), &
                   LinNames=['YawMom, Nm'])
 
    call MV_AddVar(p%Vars%y, "GenTrq", FieldScalar, &
-                  VarIdx=p%iVarGenTrq, &
+                  DatLoc(SrvD_y_GenTrq), &
                   LinNames=['GenTrq, Nm'])
 
    call MV_AddVar(p%Vars%y, "ElecPwr", FieldScalar, &
-                  VarIdx=p%iVarElecPwr, &
+                  DatLoc(SrvD_y_ElecPwr), &
                   LinNames=['ElecPwr, W'])
 
    ! Structural controllers
    if (p%NumBStC > 0) then
-      call AllocAry(p%iVarBStCLoadMesh, p%NumBl,  p%NumBStC, "iVarBStCLoadMesh", ErrStat2, ErrMsg2); if (Failed()) return;
       do j = 1, p%NumBStC
          do i = 1, p%NumBl
             call MV_AddMeshVar(p%Vars%y, 'Blade '//trim(Num2LStr(i))//' StC '//Num2LStr(j), LoadFields, &
-                               VarIdx=p%iVarBStCLoadMesh(i,j), &
+                               DatLoc(SrvD_y_BStCLoadMesh, i, j), &
                                Mesh=y%BStCLoadMesh(i,j))
          end do
       end do
    end if
 
    if (p%NumNStC > 0) then
-      call AllocAry(p%iVarNStCLoadMesh, p%NumNStC, "iVarNStCLoadMesh", ErrStat2, ErrMsg2); if (Failed()) return;
-      p%iVarNStCLoadMesh = 0
       do j = 1, p%NumNStC
          call MV_AddMeshVar(p%Vars%y, 'Nacelle StC '//Num2LStr(j), LoadFields, &
-                            VarIdx=p%iVarNStCLoadMesh(j), &
+                            DatLoc(SrvD_y_NStCLoadMesh, j), &
                             Mesh=y%NStCLoadMesh(j))
       enddo
    end if
 
    if (p%NumTStC > 0) then
-      call AllocAry(p%iVarTStCLoadMesh, p%NumTStC, "iVarTStCLoadMesh", ErrStat2, ErrMsg2); if (Failed()) return;
-      p%iVarTStCLoadMesh = 0
       do j = 1, p%NumTStC
          call MV_AddMeshVar(p%Vars%y, 'Tower StC '//Num2LStr(j), LoadFields, &
-                            VarIdx=p%iVarTStCLoadMesh(j), &
+                            DatLoc(SrvD_y_TStCLoadMesh, j), &
                             Mesh=y%TStCLoadMesh(j))
       enddo
    end if
 
    if (p%NumSStC > 0) then
-      call AllocAry(p%iVarSStCLoadMesh, p%NumSStC, "iVarSStCLoadMesh", ErrStat2, ErrMsg2); if (Failed()) return;
-      p%iVarSStCLoadMesh = 0
       do j = 1, p%NumSStC
          call MV_AddMeshVar(p%Vars%y, 'Substructure StC '//Num2LStr(j), LoadFields, &
-                            VarIdx=p%iVarSStCLoadMesh(j), &
+                            DatLoc(SrvD_y_SStCLoadMesh, j), &
                             Mesh=y%SStCLoadMesh(j))
       enddo
    end if
 
    ! Write Outputs
-   if (p%NumOuts > 0) then
-      p%iVarWriteOutput = size(p%Vars%y) + 1
-   else
-      p%iVarWriteOutput = 0
-   end if
    do i = 1, p%NumOuts
       call MV_AddVar(p%Vars%y, p%OutParam(i)%Name, FieldScalar, &
+                     DatLoc(SrvD_y_WriteOutput), iAry=i, &
                      Flags=VF_WriteOut + OutParamFlags(p%OutParam(i)%Indx), &
-                     iUsr=i, &
                      LinNames=[trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units], &
                      Active=(p%OutParam(i)%Indx > 0))
    end do
@@ -4546,46 +4542,46 @@ CONTAINS
    subroutine Get_u_op()
       integer(IntKi)    :: i, j, iVar
 
-      if (.not. allocated(u_op)) then
-         call AllocAry( u_op, p%Vars%Nu, 'u_op', ErrStat2, ErrMsg2 ); if (Failed()) return
-      end if
+      ! if (.not. allocated(u_op)) then
+      !    call AllocAry( u_op, p%Vars%Nu, 'u_op', ErrStat2, ErrMsg2 ); if (Failed()) return
+      ! end if
 
-      call MV_Pack(p%Vars%u, p%iVarYaw, u%Yaw, u_op)
-      call MV_Pack(p%Vars%u, p%iVarYawRate, u%YawRate, u_op)
-      call MV_Pack(p%Vars%u, p%iVarHSS_Spd, u%HSS_Spd, u_op)
+      ! call MV_Pack(p%Vars%u, p%iVarYaw, u%Yaw, u_op)
+      ! call MV_Pack(p%Vars%u, p%iVarYawRate, u%YawRate, u_op)
+      ! call MV_Pack(p%Vars%u, p%iVarHSS_Spd, u%HSS_Spd, u_op)
 
-      !---------------------
-      ! StC related inputs
-      !---------------------
+      ! !---------------------
+      ! ! StC related inputs
+      ! !---------------------
 
-      ! TODO: add variable indices for these meshes instead of manually counting
-      iVar = p%iVarHSS_Spd + 1
+      ! ! TODO: add variable indices for these meshes instead of manually counting
+      ! iVar = p%iVarHSS_Spd + 1
 
-      ! Blade
-      do j = 1, p%NumBStC
-         do i = 1, p%NumBl
-            call MV_Pack(p%Vars%u, iVar, u%BStCMotionMesh(i,j), u_op)
-            iVar = iVar + 6
-         enddo
-      enddo
+      ! ! Blade
+      ! do j = 1, p%NumBStC
+      !    do i = 1, p%NumBl
+      !       call MV_Pack(p%Vars%u, iVar, u%BStCMotionMesh(i,j), u_op)
+      !       iVar = iVar + 6
+      !    enddo
+      ! enddo
       
-      ! Nacelle
-      do j = 1, p%NumNStC
-         call MV_Pack(p%Vars%u, iVar, u%NStCMotionMesh(j), u_op)
-         iVar = iVar + 6
-      enddo
+      ! ! Nacelle
+      ! do j = 1, p%NumNStC
+      !    call MV_Pack(p%Vars%u, iVar, u%NStCMotionMesh(j), u_op)
+      !    iVar = iVar + 6
+      ! enddo
       
-      ! Tower
-      do j = 1, p%NumTStC
-         call MV_Pack(p%Vars%u, iVar, u%TStCMotionMesh(j), u_op)
-         iVar = iVar + 6
-      enddo
+      ! ! Tower
+      ! do j = 1, p%NumTStC
+      !    call MV_Pack(p%Vars%u, iVar, u%TStCMotionMesh(j), u_op)
+      !    iVar = iVar + 6
+      ! enddo
       
-      ! Sub-structure
-      do j = 1, p%NumSStC
-         call MV_Pack(p%Vars%u, iVar, u%SStCMotionMesh(j), u_op)
-         iVar = iVar + 6
-      enddo
+      ! ! Sub-structure
+      ! do j = 1, p%NumSStC
+      !    call MV_Pack(p%Vars%u, iVar, u%SStCMotionMesh(j), u_op)
+      !    iVar = iVar + 6
+      ! enddo
 
    end subroutine Get_u_op
 
@@ -4593,145 +4589,145 @@ CONTAINS
    subroutine Get_y_op()
       integer(IntKi)    :: i,j,index_next
 
-      if (.not. allocated(y_op)) then
-         CALL AllocAry(y_op, p%Vars%ny, 'y_op', ErrStat2, ErrMsg2); if (Failed()) return
-      end if
+      ! if (.not. allocated(y_op)) then
+      !    CALL AllocAry(y_op, p%Vars%ny, 'y_op', ErrStat2, ErrMsg2); if (Failed()) return
+      ! end if
 
-      call MV_Pack(p%Vars%y, p%iVarBlPitchCom, y%BlPitchCom, y_op)
-      call MV_Pack(p%Vars%y, p%iVarYawMom, y%YawMom, y_op)
-      call MV_Pack(p%Vars%y, p%iVarGenTrq, y%GenTrq, y_op)
-      call MV_Pack(p%Vars%y, p%iVarElecPwr, y%ElecPwr, y_op)
+      ! call MV_Pack(p%Vars%y, p%iVarBlPitchCom, y%BlPitchCom, y_op)
+      ! call MV_Pack(p%Vars%y, p%iVarYawMom, y%YawMom, y_op)
+      ! call MV_Pack(p%Vars%y, p%iVarGenTrq, y%GenTrq, y_op)
+      ! call MV_Pack(p%Vars%y, p%iVarElecPwr, y%ElecPwr, y_op)
 
-      ! StC related outputs
-      do j = 1, p%NumBStC     ! Blade
-         do i = 1, p%NumBl
-            call MV_Pack(p%Vars%y, p%iVarBStCLoadMesh(i,j), y%BStCLoadMesh(i,j), y_op)
-         enddo
-      enddo
-      do j = 1, p%NumNStC     ! Nacelle
-         call MV_Pack(p%Vars%y, p%iVarNStCLoadMesh(j), y%NStCLoadMesh(j), y_op)
-      enddo
-      do j = 1, p%NumTStC     ! Tower
-         call MV_Pack(p%Vars%y, p%iVarTStCLoadMesh(j), y%TStCLoadMesh(j), y_op)
-      enddo
-      do j = 1, p%NumSStC     ! Sub-structure
-         call MV_Pack(p%Vars%y, p%iVarSStCLoadMesh(j), y%SStCLoadMesh(j), y_op)
-      enddo
+      ! ! StC related outputs
+      ! do j = 1, p%NumBStC     ! Blade
+      !    do i = 1, p%NumBl
+      !       call MV_Pack(p%Vars%y, p%iVarBStCLoadMesh(i,j), y%BStCLoadMesh(i,j), y_op)
+      !    enddo
+      ! enddo
+      ! do j = 1, p%NumNStC     ! Nacelle
+      !    call MV_Pack(p%Vars%y, p%iVarNStCLoadMesh(j), y%NStCLoadMesh(j), y_op)
+      ! enddo
+      ! do j = 1, p%NumTStC     ! Tower
+      !    call MV_Pack(p%Vars%y, p%iVarTStCLoadMesh(j), y%TStCLoadMesh(j), y_op)
+      ! enddo
+      ! do j = 1, p%NumSStC     ! Sub-structure
+      !    call MV_Pack(p%Vars%y, p%iVarSStCLoadMesh(j), y%SStCLoadMesh(j), y_op)
+      ! enddo
 
-      ! y%outputs
-      if (p%iVarWriteOutput > 0) then
-         do i = p%iVarWriteOutput, size(p%Vars%y)
-            call MV_Pack(p%Vars%y, i, y%WriteOutput(p%Vars%y(i)%iUsr(1)), y_op)
-         end do
-      end if
+      ! ! y%outputs
+      ! if (p%iVarWriteOutput > 0) then
+      !    do i = p%iVarWriteOutput, size(p%Vars%y)
+      !       call MV_Pack(p%Vars%y, i, y%WriteOutput(p%Vars%y(i)%iUsr(1)), y_op)
+      !    end do
+      ! end if
    end subroutine Get_y_op
 
    !> Get the operating point continuous states and pack
    subroutine Get_x_op()
       integer(IntKi)    :: i,j,k,idx
 
-      if (.not. allocated(x_op)) then
-         CALL AllocAry( x_op, p%Jac_nx, 'x_op', ErrStat2, ErrMsg2 )
-         if (Failed())  return;
-      end if
-      idx = 0
-      do j=1,p%NumBStC     ! Blade StC -- displacement and velocity state
-         do k=1,p%NumBl
-            x_op(idx+1) = x%BStC(j)%StC_x(1,k)    !  x     --> x%BStC(j)%StC_x(1,k)
-            x_op(idx+2) = x%BStC(j)%StC_x(3,k)    !  y     --> x%BStC(j)%StC_x(3,k)
-            x_op(idx+3) = x%BStC(j)%StC_x(5,k)    !  z     --> x%BStC(j)%StC_x(5,k)
-            x_op(idx+4) = x%BStC(j)%StC_x(2,k)    !  dx/dt --> x%BStC(j)%StC_x(2,k)
-            x_op(idx+5) = x%BStC(j)%StC_x(4,k)    !  dy/dt --> x%BStC(j)%StC_x(4,k)
-            x_op(idx+6) = x%BStC(j)%StC_x(6,k)    !  dz/dt --> x%BStC(j)%StC_x(6,k)
-            idx = idx + 6
-         enddo
-      enddo
-      do j=1,p%NumNStC     ! Nacelle StC -- displacement and velocity state
-         x_op(idx+1) = x%NStC(j)%StC_x(1,1)       !  x     --> x%NStC(j)%StC_x(1,1)
-         x_op(idx+2) = x%NStC(j)%StC_x(3,1)       !  y     --> x%NStC(j)%StC_x(3,1)
-         x_op(idx+3) = x%NStC(j)%StC_x(5,1)       !  z     --> x%NStC(j)%StC_x(5,1)
-         x_op(idx+4) = x%NStC(j)%StC_x(2,1)       !  dx/dt --> x%NStC(j)%StC_x(2,1)
-         x_op(idx+5) = x%NStC(j)%StC_x(4,1)       !  dy/dt --> x%NStC(j)%StC_x(4,1)
-         x_op(idx+6) = x%NStC(j)%StC_x(6,1)       !  dz/dt --> x%NStC(j)%StC_x(6,1)
-         idx = idx + 6
-      enddo
-      do j=1,p%NumTStC     ! Tower StC -- displacement and velocity state
-         x_op(idx+1) = x%TStC(j)%StC_x(1,1)       !  x     --> x%TStC(j)%StC_x(1,1)
-         x_op(idx+2) = x%TStC(j)%StC_x(3,1)       !  y     --> x%TStC(j)%StC_x(3,1)
-         x_op(idx+3) = x%TStC(j)%StC_x(5,1)       !  z     --> x%TStC(j)%StC_x(5,1)
-         x_op(idx+4) = x%TStC(j)%StC_x(2,1)       !  dx/dt --> x%TStC(j)%StC_x(2,1)
-         x_op(idx+5) = x%TStC(j)%StC_x(4,1)       !  dy/dt --> x%TStC(j)%StC_x(4,1)
-         x_op(idx+6) = x%TStC(j)%StC_x(6,1)       !  dz/dt --> x%TStC(j)%StC_x(6,1)
-         idx = idx + 6
-      enddo
-      do j=1,p%NumSStC     ! Substructure StC -- displacement and velocity state
-         x_op(idx+1) = x%SStC(j)%StC_x(1,1)       !  x     --> x%SStC(j)%StC_x(1,1)
-         x_op(idx+2) = x%SStC(j)%StC_x(3,1)       !  y     --> x%SStC(j)%StC_x(3,1)
-         x_op(idx+3) = x%SStC(j)%StC_x(5,1)       !  z     --> x%SStC(j)%StC_x(5,1)
-         x_op(idx+4) = x%SStC(j)%StC_x(2,1)       !  dx/dt --> x%SStC(j)%StC_x(2,1)
-         x_op(idx+5) = x%SStC(j)%StC_x(4,1)       !  dy/dt --> x%SStC(j)%StC_x(4,1)
-         x_op(idx+6) = x%SStC(j)%StC_x(6,1)       !  dz/dt --> x%SStC(j)%StC_x(6,1)
-         idx = idx + 6
-      enddo
+      ! if (.not. allocated(x_op)) then
+      !    CALL AllocAry( x_op, p%Jac_nx, 'x_op', ErrStat2, ErrMsg2 )
+      !    if (Failed())  return;
+      ! end if
+      ! idx = 0
+      ! do j=1,p%NumBStC     ! Blade StC -- displacement and velocity state
+      !    do k=1,p%NumBl
+      !       x_op(idx+1) = x%BStC(j)%StC_x(1,k)    !  x     --> x%BStC(j)%StC_x(1,k)
+      !       x_op(idx+2) = x%BStC(j)%StC_x(3,k)    !  y     --> x%BStC(j)%StC_x(3,k)
+      !       x_op(idx+3) = x%BStC(j)%StC_x(5,k)    !  z     --> x%BStC(j)%StC_x(5,k)
+      !       x_op(idx+4) = x%BStC(j)%StC_x(2,k)    !  dx/dt --> x%BStC(j)%StC_x(2,k)
+      !       x_op(idx+5) = x%BStC(j)%StC_x(4,k)    !  dy/dt --> x%BStC(j)%StC_x(4,k)
+      !       x_op(idx+6) = x%BStC(j)%StC_x(6,k)    !  dz/dt --> x%BStC(j)%StC_x(6,k)
+      !       idx = idx + 6
+      !    enddo
+      ! enddo
+      ! do j=1,p%NumNStC     ! Nacelle StC -- displacement and velocity state
+      !    x_op(idx+1) = x%NStC(j)%StC_x(1,1)       !  x     --> x%NStC(j)%StC_x(1,1)
+      !    x_op(idx+2) = x%NStC(j)%StC_x(3,1)       !  y     --> x%NStC(j)%StC_x(3,1)
+      !    x_op(idx+3) = x%NStC(j)%StC_x(5,1)       !  z     --> x%NStC(j)%StC_x(5,1)
+      !    x_op(idx+4) = x%NStC(j)%StC_x(2,1)       !  dx/dt --> x%NStC(j)%StC_x(2,1)
+      !    x_op(idx+5) = x%NStC(j)%StC_x(4,1)       !  dy/dt --> x%NStC(j)%StC_x(4,1)
+      !    x_op(idx+6) = x%NStC(j)%StC_x(6,1)       !  dz/dt --> x%NStC(j)%StC_x(6,1)
+      !    idx = idx + 6
+      ! enddo
+      ! do j=1,p%NumTStC     ! Tower StC -- displacement and velocity state
+      !    x_op(idx+1) = x%TStC(j)%StC_x(1,1)       !  x     --> x%TStC(j)%StC_x(1,1)
+      !    x_op(idx+2) = x%TStC(j)%StC_x(3,1)       !  y     --> x%TStC(j)%StC_x(3,1)
+      !    x_op(idx+3) = x%TStC(j)%StC_x(5,1)       !  z     --> x%TStC(j)%StC_x(5,1)
+      !    x_op(idx+4) = x%TStC(j)%StC_x(2,1)       !  dx/dt --> x%TStC(j)%StC_x(2,1)
+      !    x_op(idx+5) = x%TStC(j)%StC_x(4,1)       !  dy/dt --> x%TStC(j)%StC_x(4,1)
+      !    x_op(idx+6) = x%TStC(j)%StC_x(6,1)       !  dz/dt --> x%TStC(j)%StC_x(6,1)
+      !    idx = idx + 6
+      ! enddo
+      ! do j=1,p%NumSStC     ! Substructure StC -- displacement and velocity state
+      !    x_op(idx+1) = x%SStC(j)%StC_x(1,1)       !  x     --> x%SStC(j)%StC_x(1,1)
+      !    x_op(idx+2) = x%SStC(j)%StC_x(3,1)       !  y     --> x%SStC(j)%StC_x(3,1)
+      !    x_op(idx+3) = x%SStC(j)%StC_x(5,1)       !  z     --> x%SStC(j)%StC_x(5,1)
+      !    x_op(idx+4) = x%SStC(j)%StC_x(2,1)       !  dx/dt --> x%SStC(j)%StC_x(2,1)
+      !    x_op(idx+5) = x%SStC(j)%StC_x(4,1)       !  dy/dt --> x%SStC(j)%StC_x(4,1)
+      !    x_op(idx+6) = x%SStC(j)%StC_x(6,1)       !  dz/dt --> x%SStC(j)%StC_x(6,1)
+      !    idx = idx + 6
+      ! enddo
    end subroutine Get_x_op
 
    !> Get the operating point continuous states derivatives and pack
-   !!    rather than copy the logic in CalcContStateDeriv for the StCs, we'll just
-   !!    call it directly
+   !    rather than copy the logic in CalcContStateDeriv for the StCs, we'll just
+   !    call it directly
    subroutine Get_dx_op()
       integer(IntKi)                   :: i,j,k,idx
       type(SrvD_ContinuousStateType)   :: dx          !< derivative of continuous states at operating point
 
-      if (.not. allocated(dx_op)) then
-         CALL AllocAry( dx_op, p%Jac_nx, 'dx_op', ErrStat2, ErrMsg2 )
-         if (Failed())  return;
-      end if
-      call SrvD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dx, ErrStat2, ErrMsg2 )
-      if (Failed()) then
-         call SrvD_DestroyContState( dx, ErrStat2, ErrMsg2)
-         return
-      end if
-      idx = 0
-      do j=1,p%NumBStC     ! Blade StC -- displacement and velocity state
-         do k=1,p%NumBl
-            dx_op(idx+1) = dx%BStC(j)%StC_x(1,k)   !  x     --> dx%BStC(j)%StC_x(1,k)
-            dx_op(idx+2) = dx%BStC(j)%StC_x(3,k)   !  y     --> dx%BStC(j)%StC_x(3,k)
-            dx_op(idx+3) = dx%BStC(j)%StC_x(5,k)   !  z     --> dx%BStC(j)%StC_x(5,k)
-            dx_op(idx+4) = dx%BStC(j)%StC_x(2,k)   !  dx/dt --> dx%BStC(j)%StC_x(2,k)
-            dx_op(idx+5) = dx%BStC(j)%StC_x(4,k)   !  dy/dt --> dx%BStC(j)%StC_x(4,k)
-            dx_op(idx+6) = dx%BStC(j)%StC_x(6,k)   !  dz/dt --> dx%BStC(j)%StC_x(6,k)
-            idx = idx + 6
-         enddo
-      enddo
-      do j=1,p%NumNStC     ! Nacelle StC -- displacement and velocity state
-         dx_op(idx+1) = dx%NStC(j)%StC_x(1,1)      !  x     --> dx%NStC(j)%StC_x(1,1)
-         dx_op(idx+2) = dx%NStC(j)%StC_x(3,1)      !  y     --> dx%NStC(j)%StC_x(3,1)
-         dx_op(idx+3) = dx%NStC(j)%StC_x(5,1)      !  z     --> dx%NStC(j)%StC_x(5,1)
-         dx_op(idx+4) = dx%NStC(j)%StC_x(2,1)      !  dx/dt --> dx%NStC(j)%StC_x(2,1)
-         dx_op(idx+5) = dx%NStC(j)%StC_x(4,1)      !  dy/dt --> dx%NStC(j)%StC_x(4,1)
-         dx_op(idx+6) = dx%NStC(j)%StC_x(6,1)      !  dz/dt --> dx%NStC(j)%StC_x(6,1)
-         idx = idx + 6
-      enddo
-      do j=1,p%NumTStC     ! Tower StC -- displacement and velocity state
-         dx_op(idx+1) = dx%TStC(j)%StC_x(1,1)      !  x     --> dx%TStC(j)%StC_x(1,1)
-         dx_op(idx+2) = dx%TStC(j)%StC_x(3,1)      !  y     --> dx%TStC(j)%StC_x(3,1)
-         dx_op(idx+3) = dx%TStC(j)%StC_x(5,1)      !  z     --> dx%TStC(j)%StC_x(5,1)
-         dx_op(idx+4) = dx%TStC(j)%StC_x(2,1)      !  dx/dt --> dx%TStC(j)%StC_x(2,1)
-         dx_op(idx+5) = dx%TStC(j)%StC_x(4,1)      !  dy/dt --> dx%TStC(j)%StC_x(4,1)
-         dx_op(idx+6) = dx%TStC(j)%StC_x(6,1)      !  dz/dt --> dx%TStC(j)%StC_x(6,1)
-         idx = idx + 6
-      enddo
-      do j=1,p%NumSStC     ! Substructure StC -- displacement and velocity state
-         dx_op(idx+1) = dx%SStC(j)%StC_x(1,1)      !  x     --> dx%SStC(j)%StC_x(1,1)
-         dx_op(idx+2) = dx%SStC(j)%StC_x(3,1)      !  y     --> dx%SStC(j)%StC_x(3,1)
-         dx_op(idx+3) = dx%SStC(j)%StC_x(5,1)      !  z     --> dx%SStC(j)%StC_x(5,1)
-         dx_op(idx+4) = dx%SStC(j)%StC_x(2,1)      !  dx/dt --> dx%SStC(j)%StC_x(2,1)
-         dx_op(idx+5) = dx%SStC(j)%StC_x(4,1)      !  dy/dt --> dx%SStC(j)%StC_x(4,1)
-         dx_op(idx+6) = dx%SStC(j)%StC_x(6,1)      !  dz/dt --> dx%SStC(j)%StC_x(6,1)
-         idx = idx + 6
-      enddo
-      ! clean up
-      call SrvD_DestroyContState( dx, ErrStat2, ErrMsg2)
+      ! if (.not. allocated(dx_op)) then
+      !    CALL AllocAry( dx_op, p%Jac_nx, 'dx_op', ErrStat2, ErrMsg2 )
+      !    if (Failed())  return;
+      ! end if
+      ! call SrvD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dx, ErrStat2, ErrMsg2 )
+      ! if (Failed()) then
+      !    call SrvD_DestroyContState( dx, ErrStat2, ErrMsg2)
+      !    return
+      ! end if
+      ! idx = 0
+      ! do j=1,p%NumBStC     ! Blade StC -- displacement and velocity state
+      !    do k=1,p%NumBl
+      !       dx_op(idx+1) = dx%BStC(j)%StC_x(1,k)   !  x     --> dx%BStC(j)%StC_x(1,k)
+      !       dx_op(idx+2) = dx%BStC(j)%StC_x(3,k)   !  y     --> dx%BStC(j)%StC_x(3,k)
+      !       dx_op(idx+3) = dx%BStC(j)%StC_x(5,k)   !  z     --> dx%BStC(j)%StC_x(5,k)
+      !       dx_op(idx+4) = dx%BStC(j)%StC_x(2,k)   !  dx/dt --> dx%BStC(j)%StC_x(2,k)
+      !       dx_op(idx+5) = dx%BStC(j)%StC_x(4,k)   !  dy/dt --> dx%BStC(j)%StC_x(4,k)
+      !       dx_op(idx+6) = dx%BStC(j)%StC_x(6,k)   !  dz/dt --> dx%BStC(j)%StC_x(6,k)
+      !       idx = idx + 6
+      !    enddo
+      ! enddo
+      ! do j=1,p%NumNStC     ! Nacelle StC -- displacement and velocity state
+      !    dx_op(idx+1) = dx%NStC(j)%StC_x(1,1)      !  x     --> dx%NStC(j)%StC_x(1,1)
+      !    dx_op(idx+2) = dx%NStC(j)%StC_x(3,1)      !  y     --> dx%NStC(j)%StC_x(3,1)
+      !    dx_op(idx+3) = dx%NStC(j)%StC_x(5,1)      !  z     --> dx%NStC(j)%StC_x(5,1)
+      !    dx_op(idx+4) = dx%NStC(j)%StC_x(2,1)      !  dx/dt --> dx%NStC(j)%StC_x(2,1)
+      !    dx_op(idx+5) = dx%NStC(j)%StC_x(4,1)      !  dy/dt --> dx%NStC(j)%StC_x(4,1)
+      !    dx_op(idx+6) = dx%NStC(j)%StC_x(6,1)      !  dz/dt --> dx%NStC(j)%StC_x(6,1)
+      !    idx = idx + 6
+      ! enddo
+      ! do j=1,p%NumTStC     ! Tower StC -- displacement and velocity state
+      !    dx_op(idx+1) = dx%TStC(j)%StC_x(1,1)      !  x     --> dx%TStC(j)%StC_x(1,1)
+      !    dx_op(idx+2) = dx%TStC(j)%StC_x(3,1)      !  y     --> dx%TStC(j)%StC_x(3,1)
+      !    dx_op(idx+3) = dx%TStC(j)%StC_x(5,1)      !  z     --> dx%TStC(j)%StC_x(5,1)
+      !    dx_op(idx+4) = dx%TStC(j)%StC_x(2,1)      !  dx/dt --> dx%TStC(j)%StC_x(2,1)
+      !    dx_op(idx+5) = dx%TStC(j)%StC_x(4,1)      !  dy/dt --> dx%TStC(j)%StC_x(4,1)
+      !    dx_op(idx+6) = dx%TStC(j)%StC_x(6,1)      !  dz/dt --> dx%TStC(j)%StC_x(6,1)
+      !    idx = idx + 6
+      ! enddo
+      ! do j=1,p%NumSStC     ! Substructure StC -- displacement and velocity state
+      !    dx_op(idx+1) = dx%SStC(j)%StC_x(1,1)      !  x     --> dx%SStC(j)%StC_x(1,1)
+      !    dx_op(idx+2) = dx%SStC(j)%StC_x(3,1)      !  y     --> dx%SStC(j)%StC_x(3,1)
+      !    dx_op(idx+3) = dx%SStC(j)%StC_x(5,1)      !  z     --> dx%SStC(j)%StC_x(5,1)
+      !    dx_op(idx+4) = dx%SStC(j)%StC_x(2,1)      !  dx/dt --> dx%SStC(j)%StC_x(2,1)
+      !    dx_op(idx+5) = dx%SStC(j)%StC_x(4,1)      !  dy/dt --> dx%SStC(j)%StC_x(4,1)
+      !    dx_op(idx+6) = dx%SStC(j)%StC_x(6,1)      !  dz/dt --> dx%SStC(j)%StC_x(6,1)
+      !    idx = idx + 6
+      ! enddo
+      ! ! clean up
+      ! call SrvD_DestroyContState( dx, ErrStat2, ErrMsg2)
    end subroutine Get_dx_op
 
 END SUBROUTINE SrvD_GetOP

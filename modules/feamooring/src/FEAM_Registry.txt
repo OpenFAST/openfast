@@ -150,8 +150,6 @@ typedef  ^                ^                     IntKi    LastIndWave       -    
 typedef  FEAMooring/FEAM  ParameterType  DbKi             DT          -           -  -   "Time step for continuous state integration & discrete state update"  seconds
 typedef  ^                ^              ReKi             GRAV       {3}          -  -   "Gravity" -
 typedef  ^                ^              ModVarsType     &Vars        -           -  -   "Module Variables"
-typedef  ^                ^              IntKi            iVarPtFairleadDisplacement -  -  -  "Index for PtFairleadDisplacement"
-typedef  ^                ^              IntKi            iVarPtFairleadLoad         -  -  -  "Index for PtFairleadLoad"
 # parameters from Mooring
 typedef  ^                ^              ReKi             Eps        -           -  -   "Tolerance for static iteration"
 typedef  ^                ^              ReKi             Gravity   -           -  -   "Gravity"

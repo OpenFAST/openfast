@@ -33,10 +33,6 @@ MODULE FEAMooring_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: FEAM_u_HydroForceLineMesh        = 1      ! Mesh number for FEAM FEAM_u_HydroForceLineMesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: FEAM_u_PtFairleadDisplacement    = 2      ! Mesh number for FEAM FEAM_u_PtFairleadDisplacement mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: FEAM_y_PtFairleadLoad            = 3      ! Mesh number for FEAM FEAM_y_PtFairleadLoad mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: FEAM_y_LineMeshPosition          = 4      ! Mesh number for FEAM FEAM_y_LineMeshPosition mesh [-]
 ! =========  FEAM_InputFile  =======
   TYPE, PUBLIC :: FEAM_InputFile
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Communication interval for mooring dynamics [s]
@@ -165,8 +161,6 @@ IMPLICIT NONE
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [seconds]
     REAL(ReKi) , DIMENSION(1:3)  :: GRAV = 0.0_ReKi      !< Gravity [-]
     TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
-    INTEGER(IntKi)  :: iVarPtFairleadDisplacement = 0_IntKi      !< Index for PtFairleadDisplacement [-]
-    INTEGER(IntKi)  :: iVarPtFairleadLoad = 0_IntKi      !< Index for PtFairleadLoad [-]
     REAL(ReKi)  :: Eps = 0.0_ReKi      !< Tolerance for static iteration [-]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravity [-]
     REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density [-]
@@ -232,7 +226,17 @@ IMPLICIT NONE
     TYPE(MeshType)  :: LineMeshPosition      !< Meshed output data [-]
   END TYPE FEAM_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: FEAM_x_GLU                       =   1 ! FEAM%GLU
+   integer(IntKi), public, parameter :: FEAM_x_GLDU                      =   2 ! FEAM%GLDU
+   integer(IntKi), public, parameter :: FEAM_z_TSN                       =   3 ! FEAM%TSN
+   integer(IntKi), public, parameter :: FEAM_z_TZER                      =   4 ! FEAM%TZER
+   integer(IntKi), public, parameter :: FEAM_u_HydroForceLineMesh        =   5 ! FEAM%HydroForceLineMesh
+   integer(IntKi), public, parameter :: FEAM_u_PtFairleadDisplacement    =   6 ! FEAM%PtFairleadDisplacement
+   integer(IntKi), public, parameter :: FEAM_y_WriteOutput               =   7 ! FEAM%WriteOutput
+   integer(IntKi), public, parameter :: FEAM_y_PtFairleadLoad            =   8 ! FEAM%PtFairleadLoad
+   integer(IntKi), public, parameter :: FEAM_y_LineMeshPosition          =   9 ! FEAM%LineMeshPosition
+
+contains
 
 subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg)
    type(FEAM_InputFile), intent(in) :: SrcInputFileData
@@ -1543,8 +1547,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end if
-   DstParamData%iVarPtFairleadDisplacement = SrcParamData%iVarPtFairleadDisplacement
-   DstParamData%iVarPtFairleadLoad = SrcParamData%iVarPtFairleadLoad
    DstParamData%Eps = SrcParamData%Eps
    DstParamData%Gravity = SrcParamData%Gravity
    DstParamData%WtrDens = SrcParamData%WtrDens
@@ -1895,8 +1897,6 @@ subroutine FEAM_PackParam(RF, Indata)
          call NWTC_Library_PackModVarsType(RF, InData%Vars) 
       end if
    end if
-   call RegPack(RF, InData%iVarPtFairleadDisplacement)
-   call RegPack(RF, InData%iVarPtFairleadLoad)
    call RegPack(RF, InData%Eps)
    call RegPack(RF, InData%Gravity)
    call RegPack(RF, InData%WtrDens)
@@ -1989,8 +1989,6 @@ subroutine FEAM_UnPackParam(RF, OutData)
    else
       OutData%Vars => null()
    end if
-   call RegUnpack(RF, OutData%iVarPtFairleadDisplacement); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarPtFairleadLoad); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Eps); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WtrDens); if (RegCheckErr(RF, RoutineName)) return
@@ -2514,7 +2512,7 @@ END SUBROUTINE
 
 function FEAM_InputMeshPointer(u, ML) result(Mesh)
    type(FEAM_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -2526,7 +2524,7 @@ function FEAM_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function FEAM_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -2539,7 +2537,7 @@ end function
 
 function FEAM_OutputMeshPointer(y, ML) result(Mesh)
    type(FEAM_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -2551,7 +2549,7 @@ function FEAM_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function FEAM_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -2561,5 +2559,145 @@ function FEAM_OutputMeshName(ML) result(Name)
        Name = "y%LineMeshPosition"
    end select
 end function
+
+subroutine FEAM_PackContStateAry(Vars, x, ValAry)
+   type(FEAM_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (FEAM_x_GLU)
+             call MV_Pack2(Var, x%GLU, ValAry)  ! Rank 2 Array
+         case (FEAM_x_GLDU)
+             call MV_Pack2(Var, x%GLDU, ValAry)  ! Rank 2 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine FEAM_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(FEAM_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (FEAM_x_GLU)
+             call MV_Unpack2(Var, ValAry, x%GLU)  ! Rank 2 Array
+         case (FEAM_x_GLDU)
+             call MV_Unpack2(Var, ValAry, x%GLDU)  ! Rank 2 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine FEAM_PackConstrStateAry(Vars, z, ValAry)
+   type(FEAM_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (FEAM_z_TSN)
+             call MV_Pack2(Var, z%TSN, ValAry)  ! Rank 1 Array
+         case (FEAM_z_TZER)
+             call MV_Pack2(Var, z%TZER, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine FEAM_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(FEAM_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (FEAM_z_TSN)
+             call MV_Unpack2(Var, ValAry, z%TSN)  ! Rank 1 Array
+         case (FEAM_z_TZER)
+             call MV_Unpack2(Var, ValAry, z%TZER)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine FEAM_PackInputAry(Vars, u, ValAry)
+   type(FEAM_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (FEAM_u_HydroForceLineMesh)
+             call MV_Pack2(Var, u%HydroForceLineMesh, ValAry)  ! Mesh
+         case (FEAM_u_PtFairleadDisplacement)
+             call MV_Pack2(Var, u%PtFairleadDisplacement, ValAry)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine FEAM_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(FEAM_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (FEAM_u_HydroForceLineMesh)
+             call MV_Unpack2(Var, ValAry, u%HydroForceLineMesh)  ! Mesh
+         case (FEAM_u_PtFairleadDisplacement)
+             call MV_Unpack2(Var, ValAry, u%PtFairleadDisplacement)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine FEAM_PackOutputAry(Vars, y, ValAry)
+   type(FEAM_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (FEAM_y_WriteOutput)
+             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+         case (FEAM_y_PtFairleadLoad)
+             call MV_Pack2(Var, y%PtFairleadLoad, ValAry)  ! Mesh
+         case (FEAM_y_LineMeshPosition)
+             call MV_Pack2(Var, y%LineMeshPosition, ValAry)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine FEAM_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(FEAM_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (FEAM_y_WriteOutput)
+             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+         case (FEAM_y_PtFairleadLoad)
+             call MV_Unpack2(Var, ValAry, y%PtFairleadLoad)  ! Mesh
+         case (FEAM_y_LineMeshPosition)
+             call MV_Unpack2(Var, ValAry, y%LineMeshPosition)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE FEAMooring_Types
 !ENDOFREGISTRYGENERATEDFILE

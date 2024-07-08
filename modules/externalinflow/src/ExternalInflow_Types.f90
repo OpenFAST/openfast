@@ -207,7 +207,29 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Data to be written to an output file: see WriteOutputHdr for names of each variable [see WriteOutputUnt]
   END TYPE ExtInfw_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: ExtInfw_u_pxVel                  =   1 ! ExtInfw%pxVel
+   integer(IntKi), public, parameter :: ExtInfw_u_pyVel                  =   2 ! ExtInfw%pyVel
+   integer(IntKi), public, parameter :: ExtInfw_u_pzVel                  =   3 ! ExtInfw%pzVel
+   integer(IntKi), public, parameter :: ExtInfw_u_pxForce                =   4 ! ExtInfw%pxForce
+   integer(IntKi), public, parameter :: ExtInfw_u_pyForce                =   5 ! ExtInfw%pyForce
+   integer(IntKi), public, parameter :: ExtInfw_u_pzForce                =   6 ! ExtInfw%pzForce
+   integer(IntKi), public, parameter :: ExtInfw_u_xdotForce              =   7 ! ExtInfw%xdotForce
+   integer(IntKi), public, parameter :: ExtInfw_u_ydotForce              =   8 ! ExtInfw%ydotForce
+   integer(IntKi), public, parameter :: ExtInfw_u_zdotForce              =   9 ! ExtInfw%zdotForce
+   integer(IntKi), public, parameter :: ExtInfw_u_pOrientation           =  10 ! ExtInfw%pOrientation
+   integer(IntKi), public, parameter :: ExtInfw_u_fx                     =  11 ! ExtInfw%fx
+   integer(IntKi), public, parameter :: ExtInfw_u_fy                     =  12 ! ExtInfw%fy
+   integer(IntKi), public, parameter :: ExtInfw_u_fz                     =  13 ! ExtInfw%fz
+   integer(IntKi), public, parameter :: ExtInfw_u_momentx                =  14 ! ExtInfw%momentx
+   integer(IntKi), public, parameter :: ExtInfw_u_momenty                =  15 ! ExtInfw%momenty
+   integer(IntKi), public, parameter :: ExtInfw_u_momentz                =  16 ! ExtInfw%momentz
+   integer(IntKi), public, parameter :: ExtInfw_u_forceNodesChord        =  17 ! ExtInfw%forceNodesChord
+   integer(IntKi), public, parameter :: ExtInfw_y_u                      =  18 ! ExtInfw%u
+   integer(IntKi), public, parameter :: ExtInfw_y_v                      =  19 ! ExtInfw%v
+   integer(IntKi), public, parameter :: ExtInfw_y_w                      =  20 ! ExtInfw%w
+   integer(IntKi), public, parameter :: ExtInfw_y_WriteOutput            =  21 ! ExtInfw%WriteOutput
+
+contains
 
 subroutine ExtInfw_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(ExtInfw_InitInputType), intent(in) :: SrcInitInputData
@@ -2814,7 +2836,7 @@ END SUBROUTINE
 
 function ExtInfw_InputMeshPointer(u, ML) result(Mesh)
    type(ExtInfw_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -2822,7 +2844,7 @@ function ExtInfw_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function ExtInfw_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -2831,7 +2853,7 @@ end function
 
 function ExtInfw_OutputMeshPointer(y, ML) result(Mesh)
    type(ExtInfw_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -2839,11 +2861,147 @@ function ExtInfw_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function ExtInfw_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
    end select
 end function
+
+subroutine ExtInfw_PackInputAry(Vars, u, ValAry)
+   type(ExtInfw_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (ExtInfw_u_pxVel)
+             call MV_Pack2(Var, u%pxVel, ValAry)  ! Rank 1 Array
+         case (ExtInfw_u_pyVel)
+             call MV_Pack2(Var, u%pyVel, ValAry)  ! Rank 1 Array
+         case (ExtInfw_u_pzVel)
+             call MV_Pack2(Var, u%pzVel, ValAry)  ! Rank 1 Array
+         case (ExtInfw_u_pxForce)
+             call MV_Pack2(Var, u%pxForce, ValAry)  ! Rank 1 Array
+         case (ExtInfw_u_pyForce)
+             call MV_Pack2(Var, u%pyForce, ValAry)  ! Rank 1 Array
+         case (ExtInfw_u_pzForce)
+             call MV_Pack2(Var, u%pzForce, ValAry)  ! Rank 1 Array
+         case (ExtInfw_u_xdotForce)
+             call MV_Pack2(Var, u%xdotForce, ValAry)  ! Rank 1 Array
+         case (ExtInfw_u_ydotForce)
+             call MV_Pack2(Var, u%ydotForce, ValAry)  ! Rank 1 Array
+         case (ExtInfw_u_zdotForce)
+             call MV_Pack2(Var, u%zdotForce, ValAry)  ! Rank 1 Array
+         case (ExtInfw_u_pOrientation)
+             call MV_Pack2(Var, u%pOrientation, ValAry)  ! Rank 1 Array
+         case (ExtInfw_u_fx)
+             call MV_Pack2(Var, u%fx, ValAry)  ! Rank 1 Array
+         case (ExtInfw_u_fy)
+             call MV_Pack2(Var, u%fy, ValAry)  ! Rank 1 Array
+         case (ExtInfw_u_fz)
+             call MV_Pack2(Var, u%fz, ValAry)  ! Rank 1 Array
+         case (ExtInfw_u_momentx)
+             call MV_Pack2(Var, u%momentx, ValAry)  ! Rank 1 Array
+         case (ExtInfw_u_momenty)
+             call MV_Pack2(Var, u%momenty, ValAry)  ! Rank 1 Array
+         case (ExtInfw_u_momentz)
+             call MV_Pack2(Var, u%momentz, ValAry)  ! Rank 1 Array
+         case (ExtInfw_u_forceNodesChord)
+             call MV_Pack2(Var, u%forceNodesChord, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ExtInfw_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ExtInfw_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (ExtInfw_u_pxVel)
+             call MV_Unpack2(Var, ValAry, u%pxVel)  ! Rank 1 Array
+         case (ExtInfw_u_pyVel)
+             call MV_Unpack2(Var, ValAry, u%pyVel)  ! Rank 1 Array
+         case (ExtInfw_u_pzVel)
+             call MV_Unpack2(Var, ValAry, u%pzVel)  ! Rank 1 Array
+         case (ExtInfw_u_pxForce)
+             call MV_Unpack2(Var, ValAry, u%pxForce)  ! Rank 1 Array
+         case (ExtInfw_u_pyForce)
+             call MV_Unpack2(Var, ValAry, u%pyForce)  ! Rank 1 Array
+         case (ExtInfw_u_pzForce)
+             call MV_Unpack2(Var, ValAry, u%pzForce)  ! Rank 1 Array
+         case (ExtInfw_u_xdotForce)
+             call MV_Unpack2(Var, ValAry, u%xdotForce)  ! Rank 1 Array
+         case (ExtInfw_u_ydotForce)
+             call MV_Unpack2(Var, ValAry, u%ydotForce)  ! Rank 1 Array
+         case (ExtInfw_u_zdotForce)
+             call MV_Unpack2(Var, ValAry, u%zdotForce)  ! Rank 1 Array
+         case (ExtInfw_u_pOrientation)
+             call MV_Unpack2(Var, ValAry, u%pOrientation)  ! Rank 1 Array
+         case (ExtInfw_u_fx)
+             call MV_Unpack2(Var, ValAry, u%fx)  ! Rank 1 Array
+         case (ExtInfw_u_fy)
+             call MV_Unpack2(Var, ValAry, u%fy)  ! Rank 1 Array
+         case (ExtInfw_u_fz)
+             call MV_Unpack2(Var, ValAry, u%fz)  ! Rank 1 Array
+         case (ExtInfw_u_momentx)
+             call MV_Unpack2(Var, ValAry, u%momentx)  ! Rank 1 Array
+         case (ExtInfw_u_momenty)
+             call MV_Unpack2(Var, ValAry, u%momenty)  ! Rank 1 Array
+         case (ExtInfw_u_momentz)
+             call MV_Unpack2(Var, ValAry, u%momentz)  ! Rank 1 Array
+         case (ExtInfw_u_forceNodesChord)
+             call MV_Unpack2(Var, ValAry, u%forceNodesChord)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ExtInfw_PackOutputAry(Vars, y, ValAry)
+   type(ExtInfw_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (ExtInfw_y_u)
+             call MV_Pack2(Var, y%u, ValAry)  ! Rank 1 Array
+         case (ExtInfw_y_v)
+             call MV_Pack2(Var, y%v, ValAry)  ! Rank 1 Array
+         case (ExtInfw_y_w)
+             call MV_Pack2(Var, y%w, ValAry)  ! Rank 1 Array
+         case (ExtInfw_y_WriteOutput)
+             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine ExtInfw_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ExtInfw_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (ExtInfw_y_u)
+             call MV_Unpack2(Var, ValAry, y%u)  ! Rank 1 Array
+         case (ExtInfw_y_v)
+             call MV_Unpack2(Var, ValAry, y%v)  ! Rank 1 Array
+         case (ExtInfw_y_w)
+             call MV_Unpack2(Var, ValAry, y%w)  ! Rank 1 Array
+         case (ExtInfw_y_WriteOutput)
+             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE ExternalInflow_Types
 !ENDOFREGISTRYGENERATEDFILE

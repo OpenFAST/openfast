@@ -5546,8 +5546,8 @@ SUBROUTINE TwrInfl_NearestPoint(p, u, RotInflow, BladeNodePosition, r_TowerBlade
 END SUBROUTINE TwrInfl_NearestPoint
 !----------------------------------------------------------------------------------------------------------------------------------
 
-subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileData, Linearize, CompAeroMaps, ErrStat, ErrMsg)
-   integer(IntKi),               intent(in)     :: Rotnum         !< Rotor number
+subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData, Linearize, CompAeroMaps, ErrStat, ErrMsg)
+   integer(IntKi),               intent(in)     :: iR         !< Rotor number
    type(RotInputType),           intent(inout)  :: u              !< An initial guess for the input; input mesh must be defined
    type(RotParameterType),       intent(inout)  :: p              !< Parameters
    type(RotContinuousStateType), intent(inout)  :: x              !< States
@@ -5586,7 +5586,7 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
    InitOut%Vars => p%Vars
 
    ! Create rotor label
-   RotorLabel = 'R'//trim(Num2LStr(RotNum))
+   RotorLabel = 'R'//trim(Num2LStr(iR))
 
    !----------------------------------------------------------------------------
    ! Perturbation values
@@ -5612,10 +5612,10 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
 
    ! DBEMT
    if (p%BEMT%DBEMT%lin_nx/2 > 0) then
-      p%iVarDBEMT = size(p%Vars%x) + 1
       do j = 1, p%NumBlades
          call MV_AddVar(p%Vars%x, "DBEMT%Element", FieldScalar, &
-                        Num=p%NumBlNds*2, &
+                        DatLoc(AD_x_BEMT_DBEMT_element_vind), &
+                        Num=2*p%NumBlNds, &
                         Flags=ior(VF_DerivOrder2, VF_RotFrame), &
                         Perturb=Perturb, &
                         LinNames=[([DBEMTLinName(j, i, "axial", .false.), &
@@ -5623,42 +5623,35 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
       end do
       do j = 1, p%NumBlades
          call MV_AddVar(p%Vars%x, "DBEMT%Element", FieldScalar, &
-                        Num=p%NumBlNds*2, &
+                        DatLoc(AD_x_BEMT_DBEMT_element_vind_1), &
+                        Num=2*p%NumBlNds, &
                         Flags=ior(VF_DerivOrder2, VF_RotFrame), &
                         Perturb=Perturb, &
                         LinNames=[([DBEMTLinName(j, i, "axial", .true.), &
                                     DBEMTLinName(j, i, "tangential", .true.)], i = 1, p%NumBlNds)])
       end do
-   else
-      p%iVarDBEMT = 0
    end if
 
    ! Unsteady Aero
-   if (p%BEMT%UA%lin_nx == 0) then
-      p%iVarUA = 0
-   else
-      p%iVarUA = size(p%Vars%x) + 1
-
-      ! Loop through UA elements
-      do n = 1, p%BEMT%UA%lin_nx
-         
-         i     = p%BEMT%UA%lin_xIndx(n,1)
-         j     = p%BEMT%UA%lin_xIndx(n,2)
-         state = p%BEMT%UA%lin_xIndx(n,3)
-
-         select case (state)
-         case (1, 2)    ! x1 and x2 are radians
-            NodeLabel = 'x'//trim(Num2Lstr(state))//' blade '//trim(Num2Lstr(j))//', node '//trim(Num2Lstr(i))//', rad'
-         case (3, 4, 5) ! x3, x4 (and x5) are units of cl or cn
-            NodeLabel = 'x'//trim(Num2Lstr(state))//' blade '//trim(Num2Lstr(j))//', node '//trim(Num2Lstr(i))//', -'
-         end select
+   do n = 1, p%BEMT%UA%lin_nx
       
-         call MV_AddVar(p%Vars%x, NodeLabel, FieldScalar, &
-                        Flags=ior(VF_DerivOrder1, VF_RotFrame), &
-                        Perturb=p%BEMT%UA%dx(state), &
-                        LinNames=[NodeLabel])
-      end do
-   end if
+      i     = p%BEMT%UA%lin_xIndx(n,1)
+      j     = p%BEMT%UA%lin_xIndx(n,2)
+      state = p%BEMT%UA%lin_xIndx(n,3)
+
+      select case (state)
+      case (1, 2)    ! x1 and x2 are radians
+         NodeLabel = 'x'//trim(Num2Lstr(state))//' blade '//trim(Num2Lstr(j))//', node '//trim(Num2Lstr(i))//', rad'
+      case (3, 4, 5) ! x3, x4 (and x5) are units of cl or cn
+         NodeLabel = 'x'//trim(Num2Lstr(state))//' blade '//trim(Num2Lstr(j))//', node '//trim(Num2Lstr(i))//', -'
+      end select
+   
+      call MV_AddVar(p%Vars%x, NodeLabel, FieldScalar, &
+                     DatLoc(AD_x_BEMT_UA_element_x, i, j), iAry=state, &
+                     Flags=ior(VF_DerivOrder1, VF_RotFrame), &
+                     Perturb=p%BEMT%UA%dx(state), &
+                     LinNames=[NodeLabel])
+   end do
 
    ! BEMT states
    if (p%BEMT%lin_nx>0) then
@@ -5671,91 +5664,73 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
    !----------------------------------------------------------------------------
 
    ! Add Nacelle motion
-   call MV_AddMeshVar(p%Vars%u, "Nacelle", &
-                      VarIdx=p%iVarNacelleMotion, &
+   call MV_AddMeshVar(p%Vars%u, "Nacelle", [FieldTransDisp, FieldOrientation], &
+                      DatLoc(AD_u_NacelleMotion), &
                       Mesh=u%NacelleMotion, &
-                      Fields=[FieldTransDisp, FieldOrientation], &
                       Perturbs=[PerturbBlade(1), Perturb])
 
    ! Add hub motion
-   call MV_AddMeshVar(p%Vars%u, "Hub", &
-                      VarIdx=p%iVarHubMotion, &
+   call MV_AddMeshVar(p%Vars%u, "Hub", [FieldTransDisp, FieldOrientation, FieldAngularVel], &
+                      DatLoc(AD_u_HubMotion), &
                       Mesh=u%HubMotion, &
-                      Fields=[FieldTransDisp, FieldOrientation, FieldAngularVel], &
                       Perturbs=[PerturbBlade(1), Perturb, Perturb])
 
    ! Add tail fin motion
-   call MV_AddMeshVar(p%Vars%u, "TFin", &
-                      VarIdx=p%iVarTFinMotion, &
+   call MV_AddMeshVar(p%Vars%u, "TFin", [FieldTransDisp, FieldOrientation, FieldTransVel], &
+                      DatLoc(AD_u_TFinMotion), &
                       Mesh=u%TFinMotion, &
-                      Fields=[FieldTransDisp, FieldOrientation, FieldTransVel], &
                       Perturbs=[Perturb, Perturb, Perturb])
 
    ! Add tower motion
-   call MV_AddMeshVar(p%Vars%u, "Tower", &
-                      VarIdx=p%iVarTowerMotion, &
+   call MV_AddMeshVar(p%Vars%u, "Tower", [FieldTransDisp, FieldOrientation, FieldTransVel, FieldTransAcc], &
+                      DatLoc(AD_u_TowerMotion), &
                       Mesh=u%TowerMotion, &
-                      Fields=[FieldTransDisp, FieldOrientation, FieldTransVel, FieldTransAcc], &
                       Perturbs=[PerturbTower, Perturb, PerturbTower, PerturbTower])
 
    ! Add blade root motion
-   call AllocAry(p%iVarBladeRootMotion, p%NumBlades, "iVarBladeRootMotion", ErrStat2, ErrMsg2); if (Failed()) return
-   p%iVarBladeRootMotion = 0
    do j = 1, p%NumBlades
-      call MV_AddMeshVar(p%Vars%u, "Blade root "//Num2LStr(j), &
-                         VarIdx=p%iVarBladeRootMotion(j), &
+      call MV_AddMeshVar(p%Vars%u, "Blade root "//Num2LStr(j), [FieldOrientation], &
+                         DatLoc(AD_u_BladeRootMotion, j), &
                          Mesh=u%BladeRootMotion(j), &
-                         Fields=[FieldOrientation], &
                          Perturbs=[Perturb])
    end do
 
    ! Add blade motion
-   call AllocAry(p%iVarBladeMotion, p%NumBlades, "iVarBladeMotion", ErrStat2, ErrMsg2); if (Failed()) return
-   p%iVarBladeMotion = 0
    do j = 1, p%NumBlades
-      call MV_AddMeshVar(p%Vars%u, "Blade "//Num2LStr(j), &
-                         VarIdx=p%iVarBladeMotion(j), &
+      Flags = VF_None
+      if (j == 1) Flags = VF_AeroMap
+      call MV_AddMeshVar(p%Vars%u, "Blade "//Num2LStr(j), [FieldTransDisp, FieldOrientation, FieldTransVel], &
+                         DatLoc(AD_u_BladeMotion, j), &
+                         Flags=Flags, &
                          Mesh=u%BladeMotion(j), &
-                         Fields=[FieldTransDisp, FieldOrientation, FieldTransVel, FieldAngularVel, FieldTransAcc, FieldAngularAcc], &
-                         Perturbs=[PerturbBlade(j), Perturb, PerturbBlade(j), Perturb, PerturbBlade(j), Perturb]) 
-      ! Set AeroMap flag on subset of fields for first blade
-      if (j == 1) then
-         do i = p%iVarBladeMotion(j), size(p%Vars%u)
-            select case (p%Vars%u(i)%Field)
-            case (FieldTransDisp, FieldOrientation, FieldTransVel)
-               call MV_SetFlags(p%Vars%u(i), VF_AeroMap)
-            end select
-         end do
-      end if
+                         Perturbs=[PerturbBlade(j), Perturb, PerturbBlade(j)]) 
+      call MV_AddMeshVar(p%Vars%u, "Blade "//Num2LStr(j), [FieldAngularVel, FieldTransAcc, FieldAngularAcc], &
+                         DatLoc(AD_u_BladeMotion, j), &
+                         Mesh=u%BladeMotion(j), &
+                         Perturbs=[Perturb, PerturbBlade(j), Perturb]) 
    end do
 
    ! Add user props
-   call AllocAry(p%iVarUserProp, p%NumBlades, "iVarUserProp", ErrStat2, ErrMsg2); if (Failed()) return
-   p%iVarUserProp = 0
    do j = 1, p%NumBlades
-      call MV_AddVar(p%Vars%u, "UserProp Blade"//IdxStr(j), FieldScalar, &
-                     VarIdx=p%iVarUserProp(j), &
-                     Flags=ior(VF_Linearize, VF_RotFrame), &
+      call MV_AddVar(p%Vars%u, "UserProp Blade"//IdxStr(j), FieldScalar, DatLoc(AD_u_UserProp), jAry=j, &
+                     Flags=VF_Linearize + VF_RotFrame, &
                      Num=p%NumBlNds, &
                      Perturb=Perturb, &
                      LinNames=[('User property on blade '//trim(Num2LStr(j))//', node '//trim(Num2LStr(i))//', -', i = 1, p%NumBlNds)])
    end do
 
    ! Extended inputs
-   call MV_AddVar(p%Vars%u, "HWindSpeed", FieldScalar, &
-                  VarIdx=p%iVarHWindSpeed, &
+   call MV_AddVar(p%Vars%u, "HWindSpeed", FieldScalar, DatLoc(AD_u_HWindSpeed), &
                   Flags=VF_ExtLin + VF_Linearize, &
                   Perturb=Perturb, &
                   LinNames=['Extended input: horizontal wind speed (steady/uniform wind), m/s'])
 
-   call MV_AddVar(p%Vars%u, "PLExp", FieldScalar, &
-                  VarIdx=p%iVarPLexp, &
+   call MV_AddVar(p%Vars%u, "PLExp", FieldScalar, DatLoc(AD_u_PLexp), &
                   Flags=VF_ExtLin + VF_Linearize, &
                   Perturb=Perturb, &
                   LinNames=['Extended input: vertical power-law shear exponent, -'])
 
-   call MV_AddVar(p%Vars%u, "PropagationDir", FieldScalar, &
-                  VarIdx=p%iVarPropagationDir, &
+   call MV_AddVar(p%Vars%u, "PropagationDir", FieldScalar, DatLoc(AD_u_PropagationDir), &
                   Flags=VF_ExtLin + VF_Linearize, &
                   Perturb=Perturb, &
                   LinNames=['Extended input: propagation direction, rad'])
@@ -5765,52 +5740,43 @@ subroutine AD_InitVars(RotNum, u, p, x, z, OtherState, y, m, InitOut, InputFileD
    !----------------------------------------------------------------------------
 
    ! Add nacelle load
-   call MV_AddMeshVar(p%Vars%y, "Nacelle", LoadFields, &
-                      VarIdx=p%iVarNacelleLoad, &
+   call MV_AddMeshVar(p%Vars%y, "Nacelle", LoadFields, DatLoc(AD_y_NacelleLoad), &
                       Mesh=y%NacelleLoad)
 
    ! Add hub load
-   call MV_AddMeshVar(p%Vars%y, "Hub", LoadFields, &
-                      VarIdx=p%iVarHubLoad, &
+   call MV_AddMeshVar(p%Vars%y, "Hub", LoadFields, DatLoc(AD_y_HubLoad), &
                       Mesh=y%HubLoad)
 
    ! Add tail fin load
-   call MV_AddMeshVar(p%Vars%y, "TFin", LoadFields, &
-                      VarIdx=p%iVarTFinLoad, &
+   call MV_AddMeshVar(p%Vars%y, "TFin", LoadFields, DatLoc(AD_y_TFinLoad), &
                       Mesh=y%TFinLoad)
 
    ! Add tower load
-   call MV_AddMeshVar(p%Vars%y, "Tower", LoadFields, &
-                      VarIdx=p%iVarTowerLoad, &
+   call MV_AddMeshVar(p%Vars%y, "Tower", LoadFields, DatLoc(AD_y_TowerLoad), &
                       Mesh=y%TowerLoad)
 
    ! Loop through blades, add blade loads
-   call AllocAry(p%iVarBladeLoad, p%NumBlades, "iVarBladeLoad", ErrStat2, ErrMsg2); if (Failed()) return
-   p%iVarBladeLoad = 0
    do j = 1, p%NumBlades
       Flags = VF_Line
       if (j == 1) Flags = ior(Flags, VF_AeroMap)
-      call MV_AddMeshVar(p%Vars%y, "Blade "//Num2LStr(j), LoadFields, &
-                         VarIdx=p%iVarBladeLoad(j), &
+      call MV_AddMeshVar(p%Vars%y, "Blade "//Num2LStr(j), LoadFields, DatLoc(AD_y_BladeLoad, j), &
                          Flags=Flags, &
                          Mesh=y%BladeLoad(j))
    end do
 
-   p%iVarWriteOutput = size(p%Vars%y) + 1
-
    ! Rotor outputs
    do j = 1, p%NumOuts
       call MV_AddVar(p%Vars%y, InitOut%WriteOutputHdr(j), FieldScalar, &
+                     DatLoc(AD_y_WriteOutput), iAry=j, &
                      Flags=VF_WriteOut + OutParamFlags(p%OutParam(j)%Indx), &
-                     iUsr=j, &
                      LinNames=[trim(InitOut%WriteOutputHdr(j))//', '//trim(InitOut%WriteOutputUnt(j))])
    end do    
    
    ! Blade node outputs
    do j = p%NumOuts + 1, p%NumOuts + p%BldNd_TotNumOuts
       call MV_AddVar(p%Vars%y, InitOut%WriteOutputHdr(j), FieldScalar, &
+                     DatLoc(AD_y_WriteOutput), iAry=j, &
                      Flags=VF_WriteOut + VF_RotFrame, &
-                     iUsr=j, &
                      LinNames=[trim(InitOut%WriteOutputHdr(j))//', '//trim(InitOut%WriteOutputUnt(j))])
    end do
 
@@ -5866,7 +5832,7 @@ end subroutine
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and dZ/du are returned.
-SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu, FlagFilter)
+SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, Vars, dYdu, dXdu, dXddu, dZdu)
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -5880,11 +5846,12 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   type(ModVarsType), TARGET, OPTIONAL,  INTENT(IN   )           :: Vars       !< Module variables for packing arrays
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with
-   INTEGER(IntKi),          OPTIONAL,    INTENT(IN   )           :: FlagFilter  !< Variable index number
+
 
    integer(IntKi), parameter :: iR =1 ! Rotor index
    integer(intKi)  :: StartNode
@@ -5898,14 +5865,14 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
    call AD_CalcWind_Rotor(t, u%rotors(iR), p%FlowField, p%rotors(iR), m%Inflow(1)%RotInflow(iR), StartNode, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
-   call Rot_JacobianPInput( t, u%rotors(iR), m%Inflow(1)%RotInflow(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu, FlagFilter)
+   call Rot_JacobianPInput( t, u%rotors(iR), m%Inflow(1)%RotInflow(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat, ErrMsg, Vars, dYdu, dXdu, dXddu, dZdu)
 
 END SUBROUTINE AD_JacobianPInput
 
 
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and dZ/du are returned.
-SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu, FlagFilter )
+SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg, Vars, dYdu, dXdu, dXddu, dZdu)
 !..................................................................................................................................
    use IfW_FlowField, only: FlowFieldType, UniformField_InterpLinear
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -5923,35 +5890,58 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
    INTEGER,                              INTENT(IN   )           :: iRot       !< Rotor index, needed for OLAF
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   type(ModVarsType), TARGET, OPTIONAL,  INTENT(IN   )           :: Vars       !< Module variables for packing arrays
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with respect to the inputs (u) [intent in to avoid deallocation]
-   INTEGER(IntKi),          OPTIONAL,    INTENT(IN   )           :: FlagFilter  !< Variable index number
 
    character(*), parameter       :: RoutineName = 'AD_JacobianPInput'
    integer, parameter            :: indx = 1      ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
    integer(intKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
-   TYPE(RotOtherStateType)       :: OtherState_copy
-   logical                       :: IsFullLin
-   integer(IntKi)                :: FlagFilterLoc
-   INTEGER(IntKi)                :: i, j, col, StartNode
+   type(RotOtherStateType)       :: OtherState_copy
+   integer(IntKi)                :: i, j, col, StartNode
+   integer(IntKi)                :: iVarHWindSpeed, iVarPLexp, iVarPropagationDir
    type(UniformField_Interp)     :: UF_op
    type(FlowFieldType),target    :: FF_perturb
    type(FlowFieldType),pointer   :: FF_ptr            ! need a pointer in the CalcWind_Rotor routine
    type(RotInflowType)           :: RotInflow_perturb !< Rotor inflow, perturbed by FlowField extended inputs
+   type(ModVarsType), pointer    :: VarsL
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   ! Set full linearization flag and local filter flag
-   if (present(FlagFilter)) then
-      IsFullLin = FlagFilter == VF_None
-      FlagFilterLoc = FlagFilter
+   ! If vars were provided use them, otherwise use module variables
+   if (present(Vars)) then
+      VarsL => Vars
    else
-      IsFullLin = .true.
-      FlagFilterLoc = VF_None
+      VarsL => p%Vars
+   end if
+
+   ! Find indices for extended input variables
+   iVarHWindSpeed = 0
+   iVarPLexp = 0
+   iVarPropagationDir = 0
+   do i = 1, size(VarsL%u)
+      select case(VarsL%u(i)%DL%Num)
+      case (AD_u_HWindSpeed)
+         iVarHWindSpeed = i
+      case (AD_u_PLexp)
+         iVarPLexp = i
+      case (AD_u_PropagationDir)
+         iVarPropagationDir = i
+      end select
+   end do
+
+   ! If flow field will need to be perturbed (HWindSpeed, PLexp, or PropagationDir variables)
+   if (iVarHWindSpeed > 0 .or. iVarPLexp > 0 .or. iVarPropagationDir > 0) then
+      ! Copy the flow field (Uniform type, which as minimal data)
+      call IfW_FlowField_CopyFlowFieldType(p_AD%FlowField, FF_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+      FF_ptr => FF_perturb
+   else
+      ! Otherwise, associate flowfield pointer to flowfield in parameters since it won't be modified
+      FF_ptr => p_AD%FlowField
    end if
 
    ! Get OP values here (i.e., set inputs for BEMT):
@@ -5978,115 +5968,98 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
    
    ! Copy inputs and pack them for perturbation
    call AD_CopyRotInputType(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-   call AD_PackInputOP(p, u, m%Jac%u)
+   call AD_PackInputAry(VarsL, u, m%Jac%u)
 
    ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
    if (present(dYdu)) then
       
       ! Allocate dYdu if not allocated
       if (.not. allocated(dYdu)) then
-         call AllocAry(dYdu, p%Vars%Ny, p%Vars%Nu, 'dYdu', ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(dYdu, VarsL%Ny, VarsL%Nu, 'dYdu', ErrStat2, ErrMsg2); if (Failed()) return
       end if
 
       ! Copy rotor inflow type for perturbation
       call AD_CopyRotInflowType(RotInflow, RotInflow_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
-
-      ! If performing full linearization
-      if (IsFullLin) then
-         ! Copy the flow field so it can be perturbed
-         ! In full linearization, flow field will be Uniform type, which as minimal data
-         call IfW_FlowField_CopyFlowFieldType(p_AD%FlowField, FF_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
-         FF_ptr => FF_perturb
-      else
-         ! Associate flowfield pointer to flowfield in parameters
-         FF_ptr => p_AD%FlowField
-      end if
    
       ! Loop through input variables
-      do i = 1, size(p%Vars%u)
-
-         ! If variable flag not in flag filter, skip
-         if (.not. MV_HasFlags(p%Vars%u(i), FlagFilterLoc)) cycle
+      do i = 1, size(VarsL%u)
 
          ! Loop through number of linearization perturbations in variable
-         do j = 1, p%Vars%u(i)%Num
+         do j = 1, VarsL%u(i)%Num
             
             ! Calculate positive perturbation
             call AD_CopyRotConstraintStateType(z, m%z_lin, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
             call AD_CopyRotOtherStateType(m%OtherState_init, m%OtherState_jac, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-            call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call AD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
-            if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(i, p_AD%FlowField, 1, FF_ptr)
+            call MV_Perturb(VarsL%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
+            call AD_UnpackInputAry(VarsL, m%Jac%u_perturb, m%u_perturb)
+            if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(VarsL%u(i), p_AD%FlowField, 1, FF_ptr)
             StartNode = 1
             call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
             call SetInputs(t, p, p_AD, m%u_perturb, RotInflow_perturb, m, indx, ErrStat2, ErrMsg2); if (Failed()) return
             call UpdatePhi(m%BEMT_u(indx), p%BEMT, m%z_lin%BEMT%phi, p_AD%AFI, m%BEMT, m%OtherState_jac%BEMT%ValidPhi, ErrStat2, ErrMsg2); if (Failed()) return
             call RotCalcOutput(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, m%z_lin, m%OtherState_jac, m%y_lin, m, m_AD, iRot, ErrStat2, ErrMsg2); if (Failed()) return
-            call AD_PackOutputOP(p, m%y_lin, m%Jac%y_pos, IsFullLin)
+            call AD_PackOutputAry(VarsL, m%y_lin, m%Jac%y_pos)
          
             ! Calculate negative perturbation
             call AD_CopyRotConstraintStateType(z, m%z_lin, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
             call AD_CopyRotOtherStateType(m%OtherState_init, m%OtherState_jac, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-            call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call AD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
-            if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(i, p_AD%FlowField, -1, FF_ptr)
+            call MV_Perturb(VarsL%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
+            call AD_UnpackInputAry(VarsL, m%Jac%u_perturb, m%u_perturb)
+            if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(VarsL%u(i), p_AD%FlowField, -1, FF_ptr)
             StartNode = 1
             call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
             call SetInputs(t, p, p_AD, m%u_perturb, RotInflow_perturb, m, indx, ErrStat2, ErrMsg2); if (Failed()) return
             call UpdatePhi(m%BEMT_u(indx), p%BEMT, m%z_lin%BEMT%phi, p_AD%AFI, m%BEMT, m%OtherState_jac%BEMT%ValidPhi, ErrStat2, ErrMsg2); if (Failed()) return
             call RotCalcOutput(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, m%z_lin, m%OtherState_jac, m%y_lin, m, m_AD, iRot, ErrStat2, ErrMsg2); if (Failed()) return
-            call AD_PackOutputOP(p, m%y_lin, m%Jac%y_neg, IsFullLin)
+            call AD_PackOutputAry(VarsL, m%y_lin, m%Jac%y_neg)
 
             ! Calculate column index
-            col = p%Vars%u(i)%iLoc(1) + j - 1
+            col = VarsL%u(i)%iLoc(1) + j - 1
             
             ! Get partial derivative via central difference and store in full linearization array
-            call MV_ComputeCentralDiff(p%Vars%y, p%Vars%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,col))
+            call MV_ComputeCentralDiff(VarsL%y, VarsL%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,col))
          end do
 
       end do
    end if
 
    ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
-   if (present(dXdu) .and. (p%Vars%Nx > 0)) then
+   if (present(dXdu) .and. (VarsL%Nx > 0)) then
 
       ! Allocate dXdu if not allocated
       if (.not. allocated(dXdu)) then
-         call AllocAry(dXdu, p%Vars%Nx, p%Vars%Nu, 'dXdu', ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(dXdu, VarsL%Nx, VarsL%Nu, 'dXdu', ErrStat2, ErrMsg2); if (Failed()) return
       end if
 
       ! Loop through input variables
-      do i = 1, size(p%Vars%u)
-
-         ! If variable flag not in flag filter, skip
-         if (.not. MV_HasFlags(p%Vars%u(i), FlagFilterLoc)) cycle
+      do i = 1, size(VarsL%u)
 
          ! Loop through number of linearization perturbations in variable
-         do j = 1, p%Vars%u(i)%Num
+         do j = 1, VarsL%u(i)%Num
 
             ! Calculate positive perturbation
-            call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call AD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
-            if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(i, p_AD%FlowField, 1, FF_ptr)
+            call MV_Perturb(VarsL%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
+            call AD_UnpackInputAry(VarsL, m%Jac%u_perturb, m%u_perturb)
+            if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(VarsL%u(i), p_AD%FlowField, 1, FF_ptr)
             StartNode = 1
             call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
             call RotCalcContStateDeriv(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2) ; if (Failed()) return
-            call AD_PackContStateOP(p, m%dxdt_lin, m%Jac%x_pos)
+            call AD_PackContStateAry(VarsL, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation
-            call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call AD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
-            if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(i, p_AD%FlowField, -1, FF_ptr)
+            call MV_Perturb(VarsL%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
+            call AD_UnpackInputAry(VarsL, m%Jac%u_perturb, m%u_perturb)
+            if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(VarsL%u(i), p_AD%FlowField, -1, FF_ptr)
             StartNode = 1
             call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
             call RotCalcContStateDeriv(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2) ; if (Failed()) return
-            call AD_PackContStateOP(p, m%dxdt_lin, m%Jac%x_neg)
+            call AD_PackContStateAry(VarsL, m%dxdt_lin, m%Jac%x_neg)
 
             ! Calculate column index
-            col = p%Vars%u(i)%iLoc(1) + j - 1
+            col = VarsL%u(i)%iLoc(1) + j - 1
 
             ! Get partial derivative via central difference and store in full linearization array
-            dXdu(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * p%Vars%u(i)%Perturb)
+            dXdu(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * VarsL%u(i)%Perturb)
          end do
       end do
          
@@ -6102,27 +6075,30 @@ SUBROUTINE Rot_JacobianPInput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y
    
    call cleanup()
 contains
-   subroutine PerturbFlowField(iVar, BaseFF, PerturbSign, PerturbFF)
-      integer(IntKi), intent(in)          :: iVar
+   subroutine PerturbFlowField(Var, BaseFF, PerturbSign, PerturbFF)
+      type(ModVarType), intent(in)        :: Var
       type(FlowFieldType), intent(in)     :: BaseFF
       integer(IntKi), intent(in)          :: PerturbSign
       type(FlowFieldType), intent(inout)  :: PerturbFF
       PerturbFF%Uniform%VelH = BaseFF%Uniform%VelH
       PerturbFF%Uniform%ShrV = BaseFF%Uniform%ShrV
       PerturbFF%PropagationDir = BaseFF%PropagationDir
-      if (iVar == p%iVarHWindSpeed) then
-         PerturbFF%Uniform%VelH = BaseFF%Uniform%VelH + p%Vars%u(iVar)%Perturb*PerturbSign
-      else if (iVar == p%iVarPLexp) then
-         PerturbFF%Uniform%ShrV = BaseFF%Uniform%ShrV + p%Vars%u(iVar)%Perturb*PerturbSign
-      else if (iVar == p%iVarPropagationDir) then
-         PerturbFF%PropagationDir = BaseFF%PropagationDir + p%Vars%u(iVar)%Perturb*PerturbSign
-      end if
+      select case (Var%DL%Num)
+      case (AD_u_HWindSpeed) 
+         PerturbFF%Uniform%VelH = BaseFF%Uniform%VelH + Var%Perturb*PerturbSign
+      case (AD_u_PLexp) 
+         PerturbFF%Uniform%ShrV = BaseFF%Uniform%ShrV + Var%Perturb*PerturbSign
+      case (AD_u_PropagationDir) 
+         PerturbFF%PropagationDir = BaseFF%PropagationDir + Var%Perturb*PerturbSign
+      end select
    end subroutine
+   
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       Failed = ErrStat >= AbortErrLev
       if (Failed) call cleanup()
    end function
+
    subroutine cleanup()
       m%BEMT%UseFrozenWake = .false.
    end subroutine cleanup
@@ -6130,7 +6106,7 @@ end subroutine Rot_JacobianPInput
 
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
-SUBROUTINE AD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx, FlagFilter )
+SUBROUTINE AD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, Vars, dYdx, dXdx, dXddx, dZdx)
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -6147,6 +6123,7 @@ SUBROUTINE AD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   type(ModVarsType), TARGET, OPTIONAL,  INTENT(IN   )           :: Vars       !< Module variables for packing arrays
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions
                                                                                !!   (Y) with respect to the continuous
                                                                                !!   states (x) [intent in to avoid deallocation]
@@ -6159,7 +6136,6 @@ SUBROUTINE AD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state
                                                                                !!   functions (Z) with respect to
                                                                                !!   the continuous states (x) [intent in to avoid deallocation]
-   INTEGER, OPTIONAL,                    INTENT(IN   )           :: FlagFilter
    integer(IntKi), parameter :: iR = 1 ! Rotor index
    integer(IntKi)             :: StartNode
 
@@ -6172,14 +6148,14 @@ SUBROUTINE AD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    StartNode = 1
    call AD_CalcWind_Rotor(t, u%rotors(iR), p%FlowField, p%rotors(iR), m%Inflow(1)%RotInflow(iR), StartNode, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
-   call RotJacobianPContState(t, u%rotors(iR), m%Inflow(1)%RotInflow(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx, FlagFilter)
+   call RotJacobianPContState(t, u%rotors(iR), m%Inflow(1)%RotInflow(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat, ErrMsg, Vars, dYdx, dXdx, dXddx, dZdx)
 
 END SUBROUTINE AD_JacobianPContState
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
-SUBROUTINE RotJacobianPContState( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx, FlagFilter )
+SUBROUTINE RotJacobianPContState(t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg, Vars, dYdx, dXdx, dXddx, dZdx)
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -6200,31 +6176,27 @@ SUBROUTINE RotJacobianPContState( t, u, RotInflow, p, p_AD, x, xd, z, OtherState
    INTEGER,                              INTENT(IN   )           :: iRot       !< Rotor index, needed for OLAF
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   type(ModVarsType), TARGET, OPTIONAL,  INTENT(IN   )           :: Vars       !< Module variables for packing arrays
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions (Y) with respect to the continuous states (x) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdx(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the continuous states (x) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddx(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the continuous states (x) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state functions (Z) with respect to the continuous states (x) [intent in to avoid deallocation]
-   INTEGER(IntKi),          OPTIONAL,    INTENT(IN   )           :: FlagFilter  !< Skip vars that don't include these flags
    
    character(*), parameter       :: RoutineName = 'AD_JacobianPContState'
    integer(intKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
    integer, parameter            :: indx = 1      ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
-   logical                       :: IsFullLin
-   integer(IntKi)                :: FlagFilterLoc
    integer(IntKi)                :: i, j, col
-   
-   ! Initialize ErrStat
+   type(ModVarsType), pointer    :: VarsL
+
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   ! Set full linearization flag and local filter flag
-   if (present(FlagFilter)) then
-      IsFullLin = FlagFilter == VF_None
-      FlagFilterLoc = FlagFilter
+   ! If vars were provided use them, otherwise use module variables
+   if (present(Vars)) then
+      VarsL => Vars
    else
-      IsFullLin = .true.
-      FlagFilterLoc = VF_None
+      VarsL => p%Vars
    end if
 
    ! Get OP values here (i.e., set inputs for BEMT):
@@ -6250,42 +6222,39 @@ SUBROUTINE RotJacobianPContState( t, u, RotInflow, p, p_AD, x, xd, z, OtherState
 
    ! Copy and pack states for perturbation
    call AD_CopyRotContinuousStateType(m%x_init, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-   call AD_PackContStateOP(p, m%x_init, m%Jac%x)
+   call AD_PackContStateAry(VarsL, m%x_init, m%Jac%x)
    
    ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
    if (present(dYdx)) then
 
       ! Allocate dYdx if not allocated
       if (.not. allocated(dYdx)) then
-         call AllocAry(dYdx, p%Vars%Ny, p%Vars%Nx, 'dYdx', ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(dYdx, VarsL%Ny, VarsL%Nx, 'dYdx', ErrStat2, ErrMsg2); if (Failed()) return
       end if
       
       ! Loop through state variables
-      do i = 1, size(p%Vars%x)
-
-         ! If variable flag not in flag filter, skip
-         if (.not. MV_HasFlags(p%Vars%x(i), FlagFilterLoc)) cycle
+      do i = 1, size(VarsL%x)
 
          ! Loop through number of linearization perturbations in variable
-         do j = 1, p%Vars%x(i)%Num
+         do j = 1, VarsL%x(i)%Num
 
             ! Calculate positive perturbation
-            call MV_Perturb(p%Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-            call AD_UnpackContStateOP(p, m%Jac%x_perturb, m%x_perturb)
+            call MV_Perturb(VarsL%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
+            call AD_UnpackContStateAry(VarsL, m%Jac%x_perturb, m%x_perturb)
             call RotCalcOutput(t, u, RotInflow, p, p_AD, m%x_perturb, xd, z, m%OtherState_init, m%y_lin, m, m_AD, iRot, ErrStat2, ErrMsg2) ; if (Failed()) return
-            call AD_PackOutputOP(p, m%y_lin, m%Jac%y_pos, IsFullLin)
+            call AD_PackOutputAry(VarsL, m%y_lin, m%Jac%y_pos)
 
             ! Calculate negative perturbation
-            call MV_Perturb(p%Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-            call AD_UnpackContStateOP(p, m%Jac%x_perturb, m%x_perturb)
+            call MV_Perturb(VarsL%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
+            call AD_UnpackContStateAry(VarsL, m%Jac%x_perturb, m%x_perturb)
             call RotCalcOutput(t, u, RotInflow, p, p_AD, m%x_perturb, xd, z, m%OtherState_init, m%y_lin, m, m_AD, iRot, ErrStat2, ErrMsg2) ; if (Failed()) return
-            call AD_PackOutputOP(p, m%y_lin, m%Jac%y_neg, IsFullLin)
+            call AD_PackOutputAry(VarsL, m%y_lin, m%Jac%y_neg)
 
             ! Calculate column index
-            col = p%Vars%x(i)%iLoc(1) + j - 1
+            col = VarsL%x(i)%iLoc(1) + j - 1
 
             ! Get partial derivative via central difference and store in full linearization array
-            call MV_ComputeCentralDiff(p%Vars%y, p%Vars%x(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdx(:,col))
+            call MV_ComputeCentralDiff(VarsL%y, VarsL%x(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdx(:,col))
          end do
       end do
             
@@ -6296,35 +6265,32 @@ SUBROUTINE RotJacobianPContState( t, u, RotInflow, p, p_AD, x, xd, z, OtherState
 
       ! Allocate dXdx if not allocated
       if (.not. allocated(dXdx)) then
-         call AllocAry(dXdx, p%Vars%Nx, p%Vars%Nx, 'dXdx', ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(dXdx, VarsL%Nx, VarsL%Nx, 'dXdx', ErrStat2, ErrMsg2); if (Failed()) return
       end if
 
       ! Loop through state variables
-      do i = 1, size(p%Vars%x)
-
-         ! If variable flag not in flag filter, skip
-         if (.not. MV_HasFlags(p%Vars%x(i), FlagFilterLoc)) cycle
+      do i = 1, size(VarsL%x)
 
          ! Loop through number of linearization perturbations in variable
-         do j = 1, p%Vars%x(i)%Num
+         do j = 1, VarsL%x(i)%Num
 
             ! Calculate positive perturbation
-            call MV_Perturb(p%Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-            call AD_UnpackContStateOP(p, m%Jac%x_perturb, m%x_perturb)
+            call MV_Perturb(VarsL%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
+            call AD_UnpackContStateAry(VarsL, m%Jac%x_perturb, m%x_perturb)
             call RotCalcContStateDeriv(t, u, RotInflow, p, p_AD, m%x_perturb, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call AD_PackContStateOP(p, m%dxdt_lin, m%Jac%x_pos)
+            call AD_PackContStateAry(VarsL, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation
-            call MV_Perturb(p%Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-            call AD_UnpackContStateOP(p, m%Jac%x_perturb, m%x_perturb)
+            call MV_Perturb(VarsL%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
+            call AD_UnpackContStateAry(VarsL, m%Jac%x_perturb, m%x_perturb)
             call RotCalcContStateDeriv(t, u, RotInflow, p, p_AD, m%x_perturb, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call AD_PackContStateOP(p, m%dxdt_lin, m%Jac%x_neg)
+            call AD_PackContStateAry(VarsL, m%dxdt_lin, m%Jac%x_neg)
 
             ! Calculate column index
-            col = p%Vars%x(i)%iLoc(1) + j - 1
+            col = VarsL%x(i)%iLoc(1) + j - 1
 
             ! Get partial derivative via central difference and store in full linearization array
-            dXdx(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * p%Vars%x(i)%Perturb)
+            dXdx(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * VarsL%x(i)%Perturb)
          end do
       end do
 
@@ -6627,7 +6593,7 @@ END SUBROUTINE RotJacobianPConstrState
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE AD_GetOP(iRotor, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, FlagFilter )
+SUBROUTINE AD_GetOP(iRotor, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, Vars)
    INTEGER(IntKi),                       INTENT(IN   )           :: iRotor     !< Rotor index
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(AD_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
@@ -6646,7 +6612,7 @@ SUBROUTINE AD_GetOP(iRotor, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
-   INTEGER(IntKi),          OPTIONAL,    INTENT(IN   )           :: FlagFilter  !< Skip vars that don't include these flags
+   type(ModVarsType), target, optional,  intent(in   )           :: Vars       !< Module variables for packing arrays
    
    integer(IntKi) :: StartNode
 
@@ -6661,13 +6627,13 @@ SUBROUTINE AD_GetOP(iRotor, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    if (ErrStat >= AbortErrLev) return
    call RotGetOP(t, u%rotors(iRotor), m%Inflow(1)%RotInflow(iRotor), p%rotors(iRotor), p, x%rotors(iRotor), &
                  xd%rotors(iRotor), z%rotors(iRotor), OtherState%rotors(iRotor), y%rotors(iRotor), m%rotors(iRotor), &
-                 ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, FlagFilter)
+                 ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, Vars)
 
 END SUBROUTINE AD_GetOP
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE RotGetOP(t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, FlagFilter)
+SUBROUTINE RotGetOP(t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, Vars)
    use IfW_FlowField, only: FlowFieldType, Uniform_FieldType, UniformField_InterpLinear
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(RotInputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
@@ -6688,42 +6654,44 @@ SUBROUTINE RotGetOP(t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, ErrSta
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
-   INTEGER(IntKi),          OPTIONAL,    INTENT(IN   )           :: FlagFilter  !< Skip vars that don't include these flags
+   type(ModVarsType), target, optional,  intent(in   )           :: Vars       !< Module variables for packing arrays
 
    CHARACTER(*), PARAMETER          :: RoutineName = 'AD_GetOP'
    INTEGER(IntKi)                   :: ErrStat2
    CHARACTER(ErrMsgLen)             :: ErrMsg2
-   logical                          :: IsFullLin
-   integer(IntKi)                   :: FlagFilterLoc
-   INTEGER(IntKi)                   :: ind, i, j, k, n
+   INTEGER(IntKi)                   :: i
    type(UniformField_Interp)        :: UF_op
+   type(ModVarsType), pointer       :: VarsL
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   ! Set full linearization flag and local filter flag
-   if (present(FlagFilter)) then
-      IsFullLin = FlagFilter == VF_None
-      FlagFilterLoc = FlagFilter
+   if (present(Vars)) then
+      VarsL => Vars
    else
-      IsFullLin = .true.
-      FlagFilterLoc = VF_None
+      VarsL => p%Vars
    end if
 
    ! Inputs
    if (present(u_op)) then
       if (.not. allocated(u_op)) then   
-         call AllocAry(u_op, p%Vars%Nu, 'u_op', ErrStat2, ErrMsg2); if (Failed()) return      
+         call AllocAry(u_op, VarsL%Nu, 'u_op', ErrStat2, ErrMsg2); if (Failed()) return      
       end if
-
-      call AD_PackInputOP(p, u, u_op)
+      call AD_PackInputAry(VarsL, u, u_op)
 
       if (associated(p_AD%FlowField)) then
          if (p_AD%FlowField%FieldType == Uniform_FieldType) then
             UF_op = UniformField_InterpLinear(p_AD%FlowField%Uniform, t)
-            call MV_Pack(p%Vars%u, p%iVarHWindSpeed, UF_op%VelH, u_op)
-            call MV_Pack(p%Vars%u, p%iVarPLexp, UF_op%ShrV, u_op)
-            call MV_Pack(p%Vars%u, p%iVarPropagationDir, UF_op%AngleH + p_AD%FlowField%PropagationDir, u_op)
+            do i = 1, size(VarsL%u)
+               select case (VarsL%u(i)%DL%Num)
+               case (AD_u_HWindSpeed)
+                  call MV_Pack2(VarsL%u(i), UF_op%VelH, u_op)
+               case (AD_u_PLexp)
+                  call MV_Pack2(VarsL%u(i), UF_op%ShrV, u_op)
+               case (AD_u_PropagationDir)
+                  call MV_Pack2(VarsL%u(i), UF_op%AngleH + p_AD%FlowField%PropagationDir, u_op)
+               end select
+            end do
          end if
       end if
    end if
@@ -6731,29 +6699,26 @@ SUBROUTINE RotGetOP(t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, ErrSta
    ! Outputs
    if (present(y_op)) then
       if (.not. allocated(y_op)) then   
-         call AllocAry(y_op, p%Vars%Ny, 'y_op', ErrStat2, ErrMsg2); if (Failed()) return      
+         call AllocAry(y_op, VarsL%Ny, 'y_op', ErrStat2, ErrMsg2); if (Failed()) return      
       end if
-
-      call AD_PackOutputOP(p, y, y_op, IsFullLin)
+      call AD_PackOutputAry(VarsL, y, y_op)
    end if
 
    ! Continuous States
    if (present(x_op)) then
       if (.not. allocated(x_op)) then   
-         call AllocAry(x_op, p%Vars%Nx, 'x_op', ErrStat2, ErrMsg2); if (Failed()) return      
+         call AllocAry(x_op, VarsL%Nx, 'x_op', ErrStat2, ErrMsg2); if (Failed()) return      
       end if
-
-      call AD_PackContStateOP(p, x, x_op)
+      call AD_PackContStateAry(VarsL, x, x_op)
    end if
 
    ! Continous State Derivatives
    if (present(dx_op)) then
       if (.not. allocated(dx_op)) then   
-         call AllocAry(dx_op, p%Vars%Nx, 'dx_op', ErrStat2, ErrMsg2); if (Failed()) return      
+         call AllocAry(dx_op, VarsL%Nx, 'dx_op', ErrStat2, ErrMsg2); if (Failed()) return      
       end if
-
       call RotCalcContStateDeriv(t, u, RotInflow, p, p_AD, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); If (Failed()) return
-      call AD_PackContStateOP(p, m%dxdt_lin, dx_op)
+      call AD_PackContStateAry(VarsL, m%dxdt_lin, dx_op)
    end if
 
    ! Discrete States
@@ -6765,8 +6730,7 @@ SUBROUTINE RotGetOP(t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, ErrSta
       if (.not. allocated(z_op)) then
          call AllocAry(z_op, p%NumBlades*p%NumBlNds, 'z_op', ErrStat2, ErrMsg2); if (Failed()) return
       end if
-
-      call AD_PackConstrStateOP(p, z, z_op)    
+      call AD_PackConstrStateAry(VarsL, z, z_op)    
    end if
 
 contains
@@ -6777,55 +6741,55 @@ contains
 end subroutine RotGetOP
 
 !> AD_SetOP populates the data structures from the operating point arrays. (Extended inputs are not used)
-subroutine AD_SetOP(iRotor, u, p, x, xd, z, ErrStat, ErrMsg, u_op, x_op, xd_op, z_op)
-   INTEGER(IntKi),                       INTENT(IN   )           :: iRotor     !< Rotor index
-   TYPE(AD_InputType),                   INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(AD_ParameterType),               INTENT(IN   )           :: p          !< Parameters
-   TYPE(AD_ContinuousStateType),         INTENT(INOUT)           :: x          !< Continuous states at operating point
-   TYPE(AD_DiscreteStateType),           INTENT(INOUT)           :: xd         !< Discrete states at operating point
-   TYPE(AD_ConstraintStateType),         INTENT(INOUT)           :: z          !< Constraint states at operating point
-   INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
-   CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(IN   )           :: u_op(:)    !< values of linearized inputs
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(IN   )           :: x_op(:)    !< values of linearized continuous states
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(IN   )           :: xd_op(:)   !< values of linearized discrete states
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(IN   )           :: z_op(:)    !< values of linearized constraint states
+subroutine AD_SetOP(iRotor, u, p, x, z, ErrStat, ErrMsg, Vars, u_op, x_op, z_op)
+   INTEGER(IntKi),                     INTENT(IN   )  :: iRotor     !< Rotor index
+   TYPE(AD_InputType),                 INTENT(INOUT)  :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(AD_ParameterType),             INTENT(IN   )  :: p          !< Parameters
+   TYPE(AD_ContinuousStateType),       INTENT(INOUT)  :: x          !< Continuous states at operating point
+   TYPE(AD_ConstraintStateType),       INTENT(INOUT)  :: z          !< Constraint states at operating point
+   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   type(ModVarsType), target, optional, intent(in  )  :: Vars       !< Module variables for packing arrays
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(IN   )  :: u_op(:)    !< values of linearized inputs
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(IN   )  :: x_op(:)    !< values of linearized continuous states
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(IN   )  :: z_op(:)    !< values of linearized constraint states
 
-   call RotSetOP(u%rotors(iRotor), p%rotors(iRotor), x%rotors(iRotor), xd%rotors(iRotor), z%rotors(iRotor), ErrStat, ErrMsg, u_op, x_op, xd_op, z_op)
+   call RotSetOP(u%rotors(iRotor), p%rotors(iRotor), x%rotors(iRotor), z%rotors(iRotor), ErrStat, ErrMsg, &
+                 u_op, x_op, z_op, Vars)
 
 end subroutine 
 
 !> RotSetOP populates the data structures from the operating point arrays. (Extended inputs are not used)
-subroutine RotSetOP(u, p, x, xd, z, ErrStat, ErrMsg, u_op, x_op, xd_op, z_op)
-   type(RotInputType),                 intent(inout)     :: u           !< Inputs at operating point (may change to inout if a mesh copy is required)
-   type(RotParameterType),             intent(in   )     :: p           !< Parameters
-   type(RotContinuousStateType),       intent(inout)     :: x           !< Continuous states at operating point
-   type(RotDiscreteStateType),         intent(inout)     :: xd          !< Discrete states at operating point
-   type(RotConstraintStateType),       intent(inout)     :: z           !< Constraint states at operating point
-   integer(IntKi),                     intent(  out)     :: ErrStat     !< Error status of the operation
-   character(*),                       intent(  out)     :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-   real(R8Ki), allocatable, optional,  intent(in   )     :: u_op(:)     !< values of linearized inputs
-   real(R8Ki), allocatable, optional,  intent(in   )     :: x_op(:)     !< values of linearized continuous states
-   real(R8Ki), allocatable, optional,  intent(in   )     :: xd_op(:)    !< values of linearized discrete states
-   real(R8Ki), allocatable, optional,  intent(in   )     :: z_op(:)     !< values of linearized constraint states
+subroutine RotSetOP(u, p, x, z, ErrStat, ErrMsg, u_op, x_op, z_op, Vars)
+   type(RotInputType),                 intent(inout)  :: u           !< Inputs at operating point (may change to inout if a mesh copy is required)
+   type(RotParameterType),             intent(in   )  :: p           !< Parameters
+   type(RotContinuousStateType),       intent(inout)  :: x           !< Continuous states at operating point
+   type(RotConstraintStateType),       intent(inout)  :: z           !< Constraint states at operating point
+   integer(IntKi),                     intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                       intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   real(R8Ki), allocatable, optional,  intent(in   )  :: u_op(:)     !< values of linearized inputs
+   real(R8Ki), allocatable, optional,  intent(in   )  :: x_op(:)     !< values of linearized continuous states
+   real(R8Ki), allocatable, optional,  intent(in   )  :: z_op(:)     !< values of linearized constraint states
+   type(ModVarsType), target, optional, intent(in  )  :: Vars        !< Module variables for packing arrays
 
    character(*), parameter          :: RoutineName = 'AD_SetOP'
    integer(IntKi)                   :: ErrStat2
    character(ErrMsgLen)             :: ErrMsg2
+   type(ModVarsType), pointer       :: VarsL
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   if (present(u_op)) call AD_UnpackInputOP(p, u_op, u)
-   if (present(x_op)) call AD_UnpackContStateOP(p, x_op, x)
-   if (present(xd_op)) call AD_UnpackDiscStateOP(p, xd_op, xd)
-   if (present(z_op)) call AD_UnpackConstrStateOP(p, z_op, z)
+   if (present(Vars)) then
+      VarsL => Vars
+   else
+      VarsL => p%Vars
+   end if
 
-contains
-   logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      Failed = ErrStat >= AbortErrLev
-   end function
+   if (present(u_op)) call AD_UnpackInputAry(VarsL, u_op, u)
+   if (present(x_op)) call AD_UnpackContStateAry(VarsL, x_op, x)
+   if (present(z_op)) call AD_UnpackConstrStateAry(VarsL, z_op, z)
+
 end subroutine
 
 
@@ -6868,195 +6832,195 @@ SUBROUTINE Compute_dY(p, p_AD, y_p, y_m, delta_p, delta_m, dY)
    
 END SUBROUTINE Compute_dY
 
-subroutine AD_PackContStateOP(p, x, op)
-   type(RotParameterType), intent(in)        :: p
-   type(RotContinuousStateType), intent(in)  :: x
-   real(R8Ki), intent(out)                   :: op(:)
-   integer(IntKi)                            :: i, j, k, n, ind
-   ind = 1
-   if (p%BEMT%DBEMT%lin_nx > 0) then
-      do j = 1,p%NumBlades    ! size(x%BEMT%DBEMT%element,2)
-         do i = 1,p%NumBlNds  ! size(x%BEMT%DBEMT%element,1)
-            do k = 1, size(x%BEMT%DBEMT%element(i,j)%vind)
-               op(ind) = x%BEMT%DBEMT%element(i,j)%vind(k)
-               ind = ind + 1
-            end do
-         end do
-      end do
-      do j = 1, p%NumBlades   ! size(x%BEMT%DBEMT%element,2)
-         do i = 1, p%NumBlNds ! size(x%BEMT%DBEMT%element,1)
-            do k = 1, size(x%BEMT%DBEMT%element(i,j)%vind_1)
-               op(ind) = x%BEMT%DBEMT%element(i,j)%vind_1(k)
-               ind = ind + 1
-            end do
-         end do
-      end do
-   end if
+! subroutine AD_PackContStateOP(p, x, op)
+!    type(RotParameterType), intent(in)        :: p
+!    type(RotContinuousStateType), intent(in)  :: x
+!    real(R8Ki), intent(out)                   :: op(:)
+!    integer(IntKi)                            :: i, j, k, n, ind
+!    ind = 1
+!    if (p%BEMT%DBEMT%lin_nx > 0) then
+!       do j = 1,p%NumBlades    ! size(x%BEMT%DBEMT%element,2)
+!          do i = 1,p%NumBlNds  ! size(x%BEMT%DBEMT%element,1)
+!             do k = 1, size(x%BEMT%DBEMT%element(i,j)%vind)
+!                op(ind) = x%BEMT%DBEMT%element(i,j)%vind(k)
+!                ind = ind + 1
+!             end do
+!          end do
+!       end do
+!       do j = 1, p%NumBlades   ! size(x%BEMT%DBEMT%element,2)
+!          do i = 1, p%NumBlNds ! size(x%BEMT%DBEMT%element,1)
+!             do k = 1, size(x%BEMT%DBEMT%element(i,j)%vind_1)
+!                op(ind) = x%BEMT%DBEMT%element(i,j)%vind_1(k)
+!                ind = ind + 1
+!             end do
+!          end do
+!       end do
+!    end if
 
-   do n = 1, p%BEMT%UA%lin_nx
-      i = p%BEMT%UA%lin_xIndx(n,1)
-      j = p%BEMT%UA%lin_xIndx(n,2)
-      k = p%BEMT%UA%lin_xIndx(n,3)
-      op(ind) = x%BEMT%UA%element(i,j)%x(k)
-      ind = ind + 1
-   end do
-end subroutine
+!    do n = 1, p%BEMT%UA%lin_nx
+!       i = p%BEMT%UA%lin_xIndx(n,1)
+!       j = p%BEMT%UA%lin_xIndx(n,2)
+!       k = p%BEMT%UA%lin_xIndx(n,3)
+!       op(ind) = x%BEMT%UA%element(i,j)%x(k)
+!       ind = ind + 1
+!    end do
+! end subroutine
 
-subroutine AD_UnpackContStateOP(p, op, x)
-   type(RotParameterType), intent(in)           :: p
-   real(R8Ki), intent(in)                       :: op(:)
-   type(RotContinuousStateType), intent(inout)  :: x
-   integer(IntKi)                               :: i, j, k, n, ind
-   ind = 1
+! subroutine AD_UnpackContStateOP(p, op, x)
+!    type(RotParameterType), intent(in)           :: p
+!    real(R8Ki), intent(in)                       :: op(:)
+!    type(RotContinuousStateType), intent(inout)  :: x
+!    integer(IntKi)                               :: i, j, k, n, ind
+!    ind = 1
 
-   if (p%BEMT%DBEMT%lin_nx > 0) then
-      do j = 1,p%NumBlades    ! size(x%BEMT%DBEMT%element,2)
-         do i = 1,p%NumBlNds ! size(x%BEMT%DBEMT%element,1)
-            do k = 1, size(x%BEMT%DBEMT%element(i,j)%vind)
-               x%BEMT%DBEMT%element(i,j)%vind(k) = op(ind)
-               ind = ind + 1
-            end do
-         end do
-      end do
-      do j = 1, p%NumBlades   ! size(x%BEMT%DBEMT%element,2)
-         do i = 1, p%NumBlNds ! size(x%BEMT%DBEMT%element,1)
-            do k = 1, size(x%BEMT%DBEMT%element(i,j)%vind_1)
-               x%BEMT%DBEMT%element(i,j)%vind_1(k) = op(ind)
-               ind = ind + 1
-            end do
-         end do
-      end do
-   end if
+!    if (p%BEMT%DBEMT%lin_nx > 0) then
+!       do j = 1,p%NumBlades    ! size(x%BEMT%DBEMT%element,2)
+!          do i = 1,p%NumBlNds ! size(x%BEMT%DBEMT%element,1)
+!             do k = 1, size(x%BEMT%DBEMT%element(i,j)%vind)
+!                x%BEMT%DBEMT%element(i,j)%vind(k) = op(ind)
+!                ind = ind + 1
+!             end do
+!          end do
+!       end do
+!       do j = 1, p%NumBlades   ! size(x%BEMT%DBEMT%element,2)
+!          do i = 1, p%NumBlNds ! size(x%BEMT%DBEMT%element,1)
+!             do k = 1, size(x%BEMT%DBEMT%element(i,j)%vind_1)
+!                x%BEMT%DBEMT%element(i,j)%vind_1(k) = op(ind)
+!                ind = ind + 1
+!             end do
+!          end do
+!       end do
+!    end if
 
-   do n = 1, p%BEMT%UA%lin_nx
-      i = p%BEMT%UA%lin_xIndx(n,1)
-      j = p%BEMT%UA%lin_xIndx(n,2)
-      k = p%BEMT%UA%lin_xIndx(n,3)
-      x%BEMT%UA%element(i,j)%x(k) = op(ind)
-      ind = ind + 1
-   end do
-end subroutine
+!    do n = 1, p%BEMT%UA%lin_nx
+!       i = p%BEMT%UA%lin_xIndx(n,1)
+!       j = p%BEMT%UA%lin_xIndx(n,2)
+!       k = p%BEMT%UA%lin_xIndx(n,3)
+!       x%BEMT%UA%element(i,j)%x(k) = op(ind)
+!       ind = ind + 1
+!    end do
+! end subroutine
 
-subroutine AD_PackDiscStateOP(p, xd, op)
-   type(RotParameterType), intent(in)        :: p
-   type(RotDiscreteStateType), intent(in)    :: xd
-   real(R8Ki), intent(out)                   :: op(:)
-   integer(IntKi)                            :: i, j, k
-end subroutine
+! subroutine AD_PackDiscStateOP(p, xd, op)
+!    type(RotParameterType), intent(in)        :: p
+!    type(RotDiscreteStateType), intent(in)    :: xd
+!    real(R8Ki), intent(out)                   :: op(:)
+!    integer(IntKi)                            :: i, j, k
+! end subroutine
 
-subroutine AD_UnpackDiscStateOP(p, op, xd)
-   type(RotParameterType), intent(in)           :: p
-   real(R8Ki), intent(in)                       :: op(:)
-   type(RotDiscreteStateType), intent(inout)    :: xd
-   integer(IntKi)                               :: i, j, k
-end subroutine
+! subroutine AD_UnpackDiscStateOP(p, op, xd)
+!    type(RotParameterType), intent(in)           :: p
+!    real(R8Ki), intent(in)                       :: op(:)
+!    type(RotDiscreteStateType), intent(inout)    :: xd
+!    integer(IntKi)                               :: i, j, k
+! end subroutine
 
-subroutine AD_PackConstrStateOP(p, z, op)
-   type(RotParameterType), intent(in)        :: p
-   type(RotConstraintStateType), intent(in)  :: z
-   real(R8Ki), intent(out)                   :: op(:)
-   integer(IntKi)                            :: i, k, ind
-   ind = 1
-   do k = 1, p%NumBlades ! size(z%BEMT%Phi,2)
-      do i = 1, p%NumBlNds ! size(z%BEMT%Phi,1)
-         op(ind) = z%BEMT%phi(i,k)
-         ind = ind + 1
-      end do
-   end do
-end subroutine
+! subroutine AD_PackConstrStateOP(p, z, op)
+!    type(RotParameterType), intent(in)        :: p
+!    type(RotConstraintStateType), intent(in)  :: z
+!    real(R8Ki), intent(out)                   :: op(:)
+!    integer(IntKi)                            :: i, k, ind
+!    ind = 1
+!    do k = 1, p%NumBlades ! size(z%BEMT%Phi,2)
+!       do i = 1, p%NumBlNds ! size(z%BEMT%Phi,1)
+!          op(ind) = z%BEMT%phi(i,k)
+!          ind = ind + 1
+!       end do
+!    end do
+! end subroutine
 
-subroutine AD_UnpackConstrStateOP(p, op, z)
-   type(RotParameterType), intent(in)           :: p
-   real(R8Ki), intent(in)                       :: op(:)
-   type(RotConstraintStateType), intent(inout)  :: z
-   integer(IntKi)                               :: i, k, ind
-   ind = 1
-   do k = 1, p%NumBlades ! size(z%BEMT%Phi,2)
-      do i = 1, p%NumBlNds ! size(z%BEMT%Phi,1)
-         z%BEMT%phi(i,k) = op(ind)
-         ind = ind + 1
-      end do
-   end do
-end subroutine
+! subroutine AD_UnpackConstrStateOP(p, op, z)
+!    type(RotParameterType), intent(in)           :: p
+!    real(R8Ki), intent(in)                       :: op(:)
+!    type(RotConstraintStateType), intent(inout)  :: z
+!    integer(IntKi)                               :: i, k, ind
+!    ind = 1
+!    do k = 1, p%NumBlades ! size(z%BEMT%Phi,2)
+!       do i = 1, p%NumBlNds ! size(z%BEMT%Phi,1)
+!          z%BEMT%phi(i,k) = op(ind)
+!          ind = ind + 1
+!       end do
+!    end do
+! end subroutine
 
-subroutine AD_PackInputOP(p, u, op)
-   type(RotParameterType), intent(in)  :: p
-   type(RotInputType), intent(in)      :: u
-   real(R8Ki), intent(out)             :: op(:)
-   integer(IntKi)                      :: k
-   call MV_Pack(p%Vars%u, p%iVarNacelleMotion, u%NacelleMotion,  op)
-   call MV_Pack(p%Vars%u, p%iVarHubMotion, u%HubMotion,  op)
-   call MV_Pack(p%Vars%u, p%iVarTFinMotion, u%TFinMotion,  op)
-   call MV_Pack(p%Vars%u, p%iVarTowerMotion, u%TowerMotion,  op)
-   do k = 1, p%NumBlades
-      call MV_Pack(p%Vars%u, p%iVarBladeRootMotion(k), u%BladeRootMotion(k),  op)
-   end do
-   do k = 1, p%NumBlades
-      call MV_Pack(p%Vars%u, p%iVarBladeMotion(k), u%BladeMotion(k),  op)
-   end do
-   do k = 1, p%NumBlades
-      call MV_Pack(p%Vars%u, p%iVarUserProp(k), u%UserProp(:,k),  op)
-   end do
-   call MV_Pack(p%Vars%u, p%iVarHWindSpeed, 0.0_R8Ki, op)
-   call MV_Pack(p%Vars%u, p%iVarPLexp, 0.0_R8Ki, op)
-   call MV_Pack(p%Vars%u, p%iVarPropagationDir, 0.0_R8Ki, op)
-end subroutine
+! subroutine AD_PackInputOP(p, u, op)
+!    type(RotParameterType), intent(in)  :: p
+!    type(RotInputType), intent(in)      :: u
+!    real(R8Ki), intent(out)             :: op(:)
+!    integer(IntKi)                      :: k
+!    call MV_Pack(p%Vars%u, p%iVarNacelleMotion, u%NacelleMotion,  op)
+!    call MV_Pack(p%Vars%u, p%iVarHubMotion, u%HubMotion,  op)
+!    call MV_Pack(p%Vars%u, p%iVarTFinMotion, u%TFinMotion,  op)
+!    call MV_Pack(p%Vars%u, p%iVarTowerMotion, u%TowerMotion,  op)
+!    do k = 1, p%NumBlades
+!       call MV_Pack(p%Vars%u, p%iVarBladeRootMotion(k), u%BladeRootMotion(k),  op)
+!    end do
+!    do k = 1, p%NumBlades
+!       call MV_Pack(p%Vars%u, p%iVarBladeMotion(k), u%BladeMotion(k),  op)
+!    end do
+!    do k = 1, p%NumBlades
+!       call MV_Pack(p%Vars%u, p%iVarUserProp(k), u%UserProp(:,k),  op)
+!    end do
+!    call MV_Pack(p%Vars%u, p%iVarHWindSpeed, 0.0_R8Ki, op)
+!    call MV_Pack(p%Vars%u, p%iVarPLexp, 0.0_R8Ki, op)
+!    call MV_Pack(p%Vars%u, p%iVarPropagationDir, 0.0_R8Ki, op)
+! end subroutine
 
-subroutine AD_UnpackInputOP(p, op, u)
-   type(RotParameterType), intent(in)  :: p
-   real(R8Ki), intent(in)              :: op(:)
-   type(RotInputType), intent(inout)   :: u
-   integer(IntKi)                      :: k
-   call MV_Unpack(p%Vars%u, p%iVarNacelleMotion, op, u%NacelleMotion)
-   call MV_Unpack(p%Vars%u, p%iVarHubMotion, op, u%HubMotion)
-   call MV_Unpack(p%Vars%u, p%iVarTFinMotion, op, u%TFinMotion)
-   call MV_Unpack(p%Vars%u, p%iVarTowerMotion, op, u%TowerMotion)
-   do k = 1, p%NumBlades
-      call MV_Unpack(p%Vars%u, p%iVarBladeRootMotion(k), op, u%BladeRootMotion(k))
-   end do
-   do k = 1, p%NumBlades
-      call MV_Unpack(p%Vars%u, p%iVarBladeMotion(k), op, u%BladeMotion(k))
-   end do
-   do k = 1, p%NumBlades
-      call MV_Unpack(p%Vars%u, p%iVarUserProp(k), op, u%UserProp(:,k))
-   end do
-end subroutine
+! subroutine AD_UnpackInputOP(p, op, u)
+!    type(RotParameterType), intent(in)  :: p
+!    real(R8Ki), intent(in)              :: op(:)
+!    type(RotInputType), intent(inout)   :: u
+!    integer(IntKi)                      :: k
+!    call MV_Unpack(p%Vars%u, p%iVarNacelleMotion, op, u%NacelleMotion)
+!    call MV_Unpack(p%Vars%u, p%iVarHubMotion, op, u%HubMotion)
+!    call MV_Unpack(p%Vars%u, p%iVarTFinMotion, op, u%TFinMotion)
+!    call MV_Unpack(p%Vars%u, p%iVarTowerMotion, op, u%TowerMotion)
+!    do k = 1, p%NumBlades
+!       call MV_Unpack(p%Vars%u, p%iVarBladeRootMotion(k), op, u%BladeRootMotion(k))
+!    end do
+!    do k = 1, p%NumBlades
+!       call MV_Unpack(p%Vars%u, p%iVarBladeMotion(k), op, u%BladeMotion(k))
+!    end do
+!    do k = 1, p%NumBlades
+!       call MV_Unpack(p%Vars%u, p%iVarUserProp(k), op, u%UserProp(:,k))
+!    end do
+! end subroutine
 
-subroutine AD_PackOutputOP(p, y, op, PackWriteOutput)
-   type(RotParameterType), intent(in)  :: p
-   type(RotOutputType), intent(in)     :: y
-   real(R8Ki), intent(out)             :: op(:)
-   logical, intent(in)                 :: PackWriteOutput
-   integer(IntKi)                      :: k
-   call MV_Pack(p%Vars%y, p%iVarNacelleLoad, y%NacelleLoad, op)
-   call MV_Pack(p%Vars%y, p%iVarHubLoad, y%HubLoad, op)
-   call MV_Pack(p%Vars%y, p%iVarTFinLoad, y%TFinLoad, op)
-   call MV_Pack(p%Vars%y, p%iVarTowerLoad, y%TowerLoad, op)
-   do k = 1, p%NumBlades
-      call MV_Pack(p%Vars%y, p%iVarBladeLoad(k), y%BladeLoad(k), op)
-   end do
-   if (PackWriteOutput) then
-      do k = p%iVarWriteOutput, size(p%Vars%y)
-         call MV_Pack(p%Vars%y, k, y%WriteOutput(p%Vars%y(k)%iUsr(1)), op)
-      end do
-   end if
-end subroutine
+! subroutine AD_PackOutputOP(p, y, op, PackWriteOutput)
+!    type(RotParameterType), intent(in)  :: p
+!    type(RotOutputType), intent(in)     :: y
+!    real(R8Ki), intent(out)             :: op(:)
+!    logical, intent(in)                 :: PackWriteOutput
+!    integer(IntKi)                      :: k
+!    call MV_Pack(p%Vars%y, p%iVarNacelleLoad, y%NacelleLoad, op)
+!    call MV_Pack(p%Vars%y, p%iVarHubLoad, y%HubLoad, op)
+!    call MV_Pack(p%Vars%y, p%iVarTFinLoad, y%TFinLoad, op)
+!    call MV_Pack(p%Vars%y, p%iVarTowerLoad, y%TowerLoad, op)
+!    do k = 1, p%NumBlades
+!       call MV_Pack(p%Vars%y, p%iVarBladeLoad(k), y%BladeLoad(k), op)
+!    end do
+!    if (PackWriteOutput) then
+!       do k = p%iVarWriteOutput, size(p%Vars%y)
+!          call MV_Pack(p%Vars%y, k, y%WriteOutput(p%Vars%y(k)%iUsr(1)), op)
+!       end do
+!    end if
+! end subroutine
 
-subroutine AD_UnpackOutputOP(p, op, y)
-   type(RotParameterType), intent(in)  :: p
-   real(R8Ki), intent(in)              :: op(:)
-   type(RotOutputType), intent(out)    :: y
-   integer(IntKi)                      :: k
-   call MV_Unpack(p%Vars%y, p%iVarNacelleLoad, op, y%NacelleLoad)
-   call MV_Unpack(p%Vars%y, p%iVarHubLoad, op, y%HubLoad)
-   call MV_Unpack(p%Vars%y, p%iVarTFinLoad, op, y%TFinLoad)
-   call MV_Unpack(p%Vars%y, p%iVarTowerLoad, op, y%TowerLoad)
-   do k = 1, p%NumBlades
-      call MV_Unpack(p%Vars%y, p%iVarBladeLoad(k), op, y%BladeLoad(k))
-   end do
-   do k = p%iVarWriteOutput, size(p%Vars%y)
-      call MV_Unpack(p%Vars%y, k, op, y%WriteOutput(p%Vars%y(k)%iUsr(1)))
-   end do
-end subroutine
+! subroutine AD_UnpackOutputOP(p, op, y)
+!    type(RotParameterType), intent(in)  :: p
+!    real(R8Ki), intent(in)              :: op(:)
+!    type(RotOutputType), intent(out)    :: y
+!    integer(IntKi)                      :: k
+!    call MV_Unpack(p%Vars%y, p%iVarNacelleLoad, op, y%NacelleLoad)
+!    call MV_Unpack(p%Vars%y, p%iVarHubLoad, op, y%HubLoad)
+!    call MV_Unpack(p%Vars%y, p%iVarTFinLoad, op, y%TFinLoad)
+!    call MV_Unpack(p%Vars%y, p%iVarTowerLoad, op, y%TowerLoad)
+!    do k = 1, p%NumBlades
+!       call MV_Unpack(p%Vars%y, p%iVarBladeLoad(k), op, y%BladeLoad(k))
+!    end do
+!    do k = p%iVarWriteOutput, size(p%Vars%y)
+!       call MV_Unpack(p%Vars%y, k, op, y%WriteOutput(p%Vars%y(k)%iUsr(1)))
+!    end do
+! end subroutine
 
 END MODULE AeroDyn

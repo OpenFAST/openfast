@@ -277,7 +277,26 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutputNode      !< Data to be written to an output file: see WriteOutputHdr for names of each variable [see WriteOutputUnt]
   END TYPE AA_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: AA_x_DummyContState              =   1 ! AA%DummyContState
+   integer(IntKi), public, parameter :: AA_z_DummyConstrState            =   2 ! AA%DummyConstrState
+   integer(IntKi), public, parameter :: AA_u_RotGtoL                     =   3 ! AA%RotGtoL
+   integer(IntKi), public, parameter :: AA_u_AeroCent_G                  =   4 ! AA%AeroCent_G
+   integer(IntKi), public, parameter :: AA_u_Vrel                        =   5 ! AA%Vrel
+   integer(IntKi), public, parameter :: AA_u_AoANoise                    =   6 ! AA%AoANoise
+   integer(IntKi), public, parameter :: AA_u_Inflow                      =   7 ! AA%Inflow
+   integer(IntKi), public, parameter :: AA_y_SumSpecNoise                =   8 ! AA%SumSpecNoise
+   integer(IntKi), public, parameter :: AA_y_SumSpecNoiseSep             =   9 ! AA%SumSpecNoiseSep
+   integer(IntKi), public, parameter :: AA_y_OASPL                       =  10 ! AA%OASPL
+   integer(IntKi), public, parameter :: AA_y_OASPL_Mech                  =  11 ! AA%OASPL_Mech
+   integer(IntKi), public, parameter :: AA_y_DirectiviOutput             =  12 ! AA%DirectiviOutput
+   integer(IntKi), public, parameter :: AA_y_OutLECoords                 =  13 ! AA%OutLECoords
+   integer(IntKi), public, parameter :: AA_y_PtotalFreq                  =  14 ! AA%PtotalFreq
+   integer(IntKi), public, parameter :: AA_y_WriteOutputForPE            =  15 ! AA%WriteOutputForPE
+   integer(IntKi), public, parameter :: AA_y_WriteOutput                 =  16 ! AA%WriteOutput
+   integer(IntKi), public, parameter :: AA_y_WriteOutputSep              =  17 ! AA%WriteOutputSep
+   integer(IntKi), public, parameter :: AA_y_WriteOutputNode             =  18 ! AA%WriteOutputNode
+
+contains
 
 subroutine AA_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, CtrlCode, ErrStat, ErrMsg)
    type(AA_BladePropsType), intent(in) :: SrcBladePropsTypeData
@@ -2992,7 +3011,7 @@ end subroutine
 
 function AA_InputMeshPointer(u, ML) result(Mesh)
    type(AA_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -3000,7 +3019,7 @@ function AA_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function AA_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -3009,7 +3028,7 @@ end function
 
 function AA_OutputMeshPointer(y, ML) result(Mesh)
    type(AA_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -3017,11 +3036,187 @@ function AA_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function AA_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
    end select
 end function
+
+subroutine AA_PackContStateAry(Vars, x, ValAry)
+   type(AA_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (AA_x_DummyContState)
+             call MV_Pack2(Var, x%DummyContState, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine AA_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(AA_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (AA_x_DummyContState)
+             call MV_Unpack2(Var, ValAry, x%DummyContState)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine AA_PackConstrStateAry(Vars, z, ValAry)
+   type(AA_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (AA_z_DummyConstrState)
+             call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine AA_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(AA_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (AA_z_DummyConstrState)
+             call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine AA_PackInputAry(Vars, u, ValAry)
+   type(AA_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (AA_u_RotGtoL)
+             call MV_Pack2(Var, u%RotGtoL, ValAry)  ! Rank 4 Array
+         case (AA_u_AeroCent_G)
+             call MV_Pack2(Var, u%AeroCent_G, ValAry)  ! Rank 3 Array
+         case (AA_u_Vrel)
+             call MV_Pack2(Var, u%Vrel, ValAry)  ! Rank 2 Array
+         case (AA_u_AoANoise)
+             call MV_Pack2(Var, u%AoANoise, ValAry)  ! Rank 2 Array
+         case (AA_u_Inflow)
+             call MV_Pack2(Var, u%Inflow, ValAry)  ! Rank 3 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine AA_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(AA_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (AA_u_RotGtoL)
+             call MV_Unpack2(Var, ValAry, u%RotGtoL)  ! Rank 4 Array
+         case (AA_u_AeroCent_G)
+             call MV_Unpack2(Var, ValAry, u%AeroCent_G)  ! Rank 3 Array
+         case (AA_u_Vrel)
+             call MV_Unpack2(Var, ValAry, u%Vrel)  ! Rank 2 Array
+         case (AA_u_AoANoise)
+             call MV_Unpack2(Var, ValAry, u%AoANoise)  ! Rank 2 Array
+         case (AA_u_Inflow)
+             call MV_Unpack2(Var, ValAry, u%Inflow)  ! Rank 3 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine AA_PackOutputAry(Vars, y, ValAry)
+   type(AA_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (AA_y_SumSpecNoise)
+             call MV_Pack2(Var, y%SumSpecNoise, ValAry)  ! Rank 3 Array
+         case (AA_y_SumSpecNoiseSep)
+             call MV_Pack2(Var, y%SumSpecNoiseSep, ValAry)  ! Rank 3 Array
+         case (AA_y_OASPL)
+             call MV_Pack2(Var, y%OASPL, ValAry)  ! Rank 3 Array
+         case (AA_y_OASPL_Mech)
+             call MV_Pack2(Var, y%OASPL_Mech, ValAry)  ! Rank 4 Array
+         case (AA_y_DirectiviOutput)
+             call MV_Pack2(Var, y%DirectiviOutput, ValAry)  ! Rank 1 Array
+         case (AA_y_OutLECoords)
+             call MV_Pack2(Var, y%OutLECoords, ValAry)  ! Rank 4 Array
+         case (AA_y_PtotalFreq)
+             call MV_Pack2(Var, y%PtotalFreq, ValAry)  ! Rank 2 Array
+         case (AA_y_WriteOutputForPE)
+             call MV_Pack2(Var, y%WriteOutputForPE, ValAry)  ! Rank 1 Array
+         case (AA_y_WriteOutput)
+             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+         case (AA_y_WriteOutputSep)
+             call MV_Pack2(Var, y%WriteOutputSep, ValAry)  ! Rank 1 Array
+         case (AA_y_WriteOutputNode)
+             call MV_Pack2(Var, y%WriteOutputNode, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine AA_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(AA_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (AA_y_SumSpecNoise)
+             call MV_Unpack2(Var, ValAry, y%SumSpecNoise)  ! Rank 3 Array
+         case (AA_y_SumSpecNoiseSep)
+             call MV_Unpack2(Var, ValAry, y%SumSpecNoiseSep)  ! Rank 3 Array
+         case (AA_y_OASPL)
+             call MV_Unpack2(Var, ValAry, y%OASPL)  ! Rank 3 Array
+         case (AA_y_OASPL_Mech)
+             call MV_Unpack2(Var, ValAry, y%OASPL_Mech)  ! Rank 4 Array
+         case (AA_y_DirectiviOutput)
+             call MV_Unpack2(Var, ValAry, y%DirectiviOutput)  ! Rank 1 Array
+         case (AA_y_OutLECoords)
+             call MV_Unpack2(Var, ValAry, y%OutLECoords)  ! Rank 4 Array
+         case (AA_y_PtotalFreq)
+             call MV_Unpack2(Var, ValAry, y%PtotalFreq)  ! Rank 2 Array
+         case (AA_y_WriteOutputForPE)
+             call MV_Unpack2(Var, ValAry, y%WriteOutputForPE)  ! Rank 1 Array
+         case (AA_y_WriteOutput)
+             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+         case (AA_y_WriteOutputSep)
+             call MV_Unpack2(Var, ValAry, y%WriteOutputSep)  ! Rank 1 Array
+         case (AA_y_WriteOutputNode)
+             call MV_Unpack2(Var, ValAry, y%WriteOutputNode)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE AeroAcoustics_Types
 !ENDOFREGISTRYGENERATEDFILE

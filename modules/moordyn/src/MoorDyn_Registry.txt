@@ -318,11 +318,6 @@ typedef   ^       OtherStateType       SiKi                dummy             -  
 
 ## ============================== Parameters ============================================================================================================================================
 typedef   ^       ParameterType        ModVarsType        &Vars           -     -    -   "Module Variables"                           ""
-typedef   ^       ^                    IntKi               iVarWriteOutput -    0    -   "Variable index of WriteOutput"              ""
-typedef   ^       ^                    IntKi               iVarCoupledLoads -    0    -   "Variable index of CoupledLoads Mesh"              ""
-typedef   ^       ^                    IntKi               iVarCoupledKinematics -    0    -   "Variable index of CoupledKinematics Mesh"              ""
-typedef   ^       ^                    IntKi               iVarDeltaL     -     0    -   "Variable index of DeltaL"                   ""
-typedef   ^       ^                    IntKi               iVarDeltaLdot  -     0    -   "Variable index of DeltaLdot"                ""
 typedef   ^       ^                    IntKi               nLineTypes     -     0    -   "number of line types"                       ""
 typedef   ^       ^                    IntKi               nRodTypes      -     0    -   "number of rod types"                        ""
 typedef   ^       ^                    IntKi               nPoints      -     0    -   "number of Point objects"               ""

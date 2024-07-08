@@ -120,12 +120,6 @@ subroutine ModD_CombineModules(ModAry, iModOrder, FlagFilter, Linearize, ModOut,
          if (FailedAlloc("ModOut%Xfr(iMod)%x")) return
          xNum = xNum + NumVars
 
-         ! Discrete state
-         call CountVariablesFiltered(ModData%Vars%xd, NumVars)
-         allocate (ModOut%Xfr(iMod)%xd(NumVars), stat=ErrStat2)
-         if (FailedAlloc("ModOut%Xfr(iMod)%xd")) return
-         xdNum = xdNum + NumVars
-
          ! Constraint state
          call CountVariablesFiltered(ModData%Vars%z, NumVars)
          allocate (ModOut%Xfr(iMod)%z(NumVars), stat=ErrStat2)
@@ -149,7 +143,6 @@ subroutine ModD_CombineModules(ModAry, iModOrder, FlagFilter, Linearize, ModOut,
 
    ! Allocate arrays for to hold combined variables
    allocate (ModOut%Vars%x(xNum), stat=ErrStat2); if (FailedAlloc("ModOut%Vars%x")) return
-   allocate (ModOut%Vars%xd(xdNum), stat=ErrStat2); if (FailedAlloc("ModOut%Vars%xd")) return
    allocate (ModOut%Vars%z(zNum), stat=ErrStat2); if (FailedAlloc("ModOut%Vars%z")) return
    allocate (ModOut%Vars%u(uNum), stat=ErrStat2); if (FailedAlloc("ModOut%Vars%u")) return
    allocate (ModOut%Vars%y(yNum), stat=ErrStat2); if (FailedAlloc("ModOut%Vars%y")) return
@@ -159,7 +152,6 @@ subroutine ModD_CombineModules(ModAry, iModOrder, FlagFilter, Linearize, ModOut,
 
    ! Initialize number of values in each group variable group
    ModOut%Vars%Nx = 0
-   ModOut%Vars%Nxd = 0
    ModOut%Vars%Nz = 0
    ModOut%Vars%Nu = 0
    ModOut%Vars%Ny = 0
@@ -180,7 +172,6 @@ subroutine ModD_CombineModules(ModAry, iModOrder, FlagFilter, Linearize, ModOut,
          end if
 
          if (size(ModData%Vars%x) > 0) call AddVariables(ModData%Vars%x, ModOut%Vars%x, ModOut%Xfr(iMod)%x, ix, ModOut%Vars%Nx)       ! Continuous state
-         if (size(ModData%Vars%xd) > 0) call AddVariables(ModData%Vars%xd, ModOut%Vars%xd, ModOut%Xfr(iMod)%xd, ixd, ModOut%Vars%Nxd)  ! Discrete state
          if (size(ModData%Vars%z) > 0) call AddVariables(ModData%Vars%z, ModOut%Vars%z, ModOut%Xfr(iMod)%z, iz, ModOut%Vars%Nz)       ! Constraint state
          if (size(ModData%Vars%u) > 0) call AddVariables(ModData%Vars%u, ModOut%Vars%u, ModOut%Xfr(iMod)%u, iu, ModOut%Vars%Nu)       ! Input
          if (size(ModData%Vars%y) > 0) call AddVariables(ModData%Vars%y, ModOut%Vars%y, ModOut%Xfr(iMod)%y, iy, ModOut%Vars%Ny)       ! Output
@@ -203,8 +194,8 @@ contains
       ! Loop through variables in original module
       do k = 1, size(VarAryIn)
 
-         ! If filter flag is not none and variable doesn't have flag, cycle
-         if (.not. MV_HasFlags(VarAryIn(k), FlagFilter) .and. FlagFilter /= VF_None) cycle
+         ! If variable doesn't have flag, cycle
+         if (.not. MV_HasFlags(VarAryIn(k), FlagFilter)) cycle
 
          associate (Var => VarAryOut(iVar))
 
@@ -414,7 +405,6 @@ subroutine ModD_AddModule(Mods, ModID, ModAbbr, Instance, ModDT, SolverDT, Vars,
 
    ! Set module index in each variable
    ModData%Vars%x%iMod = iMod
-   ModData%Vars%xd%iMod = iMod
    ModData%Vars%z%iMod = iMod
    ModData%Vars%u%iMod = iMod
    ModData%Vars%y%iMod = iMod

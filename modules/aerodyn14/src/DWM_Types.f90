@@ -325,7 +325,57 @@ IMPLICIT NONE
     TYPE(InflowWind_InitOutputType)  :: IfW 
   END TYPE DWM_InitOutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: DWM_x_dummy                      =   1 ! DWM%dummy
+   integer(IntKi), public, parameter :: DWM_x_IfW_DummyContState         =   2 ! DWM%IfW%DummyContState
+   integer(IntKi), public, parameter :: DWM_z_dummy                      =   3 ! DWM%dummy
+   integer(IntKi), public, parameter :: DWM_z_IfW_DummyConstrState       =   4 ! DWM%IfW%DummyConstrState
+   integer(IntKi), public, parameter :: DWM_u_Upwind_result_upwind_U     =   5 ! DWM%Upwind_result%upwind_U
+   integer(IntKi), public, parameter :: DWM_u_Upwind_result_upwind_wakecenter =   6 ! DWM%Upwind_result%upwind_wakecenter
+   integer(IntKi), public, parameter :: DWM_u_Upwind_result_upwind_meanU =   7 ! DWM%Upwind_result%upwind_meanU
+   integer(IntKi), public, parameter :: DWM_u_Upwind_result_upwind_TI    =   8 ! DWM%Upwind_result%upwind_TI
+   integer(IntKi), public, parameter :: DWM_u_Upwind_result_upwind_small_TI =   9 ! DWM%Upwind_result%upwind_small_TI
+   integer(IntKi), public, parameter :: DWM_u_Upwind_result_upwind_smoothWake =  10 ! DWM%Upwind_result%upwind_smoothWake
+   integer(IntKi), public, parameter :: DWM_u_Upwind_result_velocity_aerodyn =  11 ! DWM%Upwind_result%velocity_aerodyn
+   integer(IntKi), public, parameter :: DWM_u_Upwind_result_TI_downstream =  12 ! DWM%Upwind_result%TI_downstream
+   integer(IntKi), public, parameter :: DWM_u_Upwind_result_small_scale_TI_downstream =  13 ! DWM%Upwind_result%small_scale_TI_downstream
+   integer(IntKi), public, parameter :: DWM_u_Upwind_result_smoothed_velocity_array =  14 ! DWM%Upwind_result%smoothed_velocity_array
+   integer(IntKi), public, parameter :: DWM_u_Upwind_result_vel_matrix   =  15 ! DWM%Upwind_result%vel_matrix
+   integer(IntKi), public, parameter :: DWM_u_IfW_PositionXYZ            =  16 ! DWM%IfW%PositionXYZ
+   integer(IntKi), public, parameter :: DWM_u_IfW_lidar_PulseLidEl       =  17 ! DWM%IfW%lidar%PulseLidEl
+   integer(IntKi), public, parameter :: DWM_u_IfW_lidar_PulseLidAz       =  18 ! DWM%IfW%lidar%PulseLidAz
+   integer(IntKi), public, parameter :: DWM_u_IfW_lidar_HubDisplacementX =  19 ! DWM%IfW%lidar%HubDisplacementX
+   integer(IntKi), public, parameter :: DWM_u_IfW_lidar_HubDisplacementY =  20 ! DWM%IfW%lidar%HubDisplacementY
+   integer(IntKi), public, parameter :: DWM_u_IfW_lidar_HubDisplacementZ =  21 ! DWM%IfW%lidar%HubDisplacementZ
+   integer(IntKi), public, parameter :: DWM_u_IfW_HubPosition            =  22 ! DWM%IfW%HubPosition
+   integer(IntKi), public, parameter :: DWM_u_IfW_HubOrientation         =  23 ! DWM%IfW%HubOrientation
+   integer(IntKi), public, parameter :: DWM_y_turbine_thrust_force       =  24 ! DWM%turbine_thrust_force
+   integer(IntKi), public, parameter :: DWM_y_induction_factor           =  25 ! DWM%induction_factor
+   integer(IntKi), public, parameter :: DWM_y_r_initial                  =  26 ! DWM%r_initial
+   integer(IntKi), public, parameter :: DWM_y_U_initial                  =  27 ! DWM%U_initial
+   integer(IntKi), public, parameter :: DWM_y_Mean_FFWS_array            =  28 ! DWM%Mean_FFWS_array
+   integer(IntKi), public, parameter :: DWM_y_Mean_FFWS                  =  29 ! DWM%Mean_FFWS
+   integer(IntKi), public, parameter :: DWM_y_TI                         =  30 ! DWM%TI
+   integer(IntKi), public, parameter :: DWM_y_TI_downstream              =  31 ! DWM%TI_downstream
+   integer(IntKi), public, parameter :: DWM_y_wake_u                     =  32 ! DWM%wake_u
+   integer(IntKi), public, parameter :: DWM_y_wake_position              =  33 ! DWM%wake_position
+   integer(IntKi), public, parameter :: DWM_y_smoothed_velocity_array    =  34 ! DWM%smoothed_velocity_array
+   integer(IntKi), public, parameter :: DWM_y_AtmUscale                  =  35 ! DWM%AtmUscale
+   integer(IntKi), public, parameter :: DWM_y_du_dz_ABL                  =  36 ! DWM%du_dz_ABL
+   integer(IntKi), public, parameter :: DWM_y_total_SDgenpwr             =  37 ! DWM%total_SDgenpwr
+   integer(IntKi), public, parameter :: DWM_y_mean_SDgenpwr              =  38 ! DWM%mean_SDgenpwr
+   integer(IntKi), public, parameter :: DWM_y_avg_ct                     =  39 ! DWM%avg_ct
+   integer(IntKi), public, parameter :: DWM_y_IfW_VelocityUVW            =  40 ! DWM%IfW%VelocityUVW
+   integer(IntKi), public, parameter :: DWM_y_IfW_AccelUVW               =  41 ! DWM%IfW%AccelUVW
+   integer(IntKi), public, parameter :: DWM_y_IfW_WriteOutput            =  42 ! DWM%IfW%WriteOutput
+   integer(IntKi), public, parameter :: DWM_y_IfW_DiskVel                =  43 ! DWM%IfW%DiskVel
+   integer(IntKi), public, parameter :: DWM_y_IfW_HubVel                 =  44 ! DWM%IfW%HubVel
+   integer(IntKi), public, parameter :: DWM_y_IfW_lidar_LidSpeed         =  45 ! DWM%IfW%lidar%LidSpeed
+   integer(IntKi), public, parameter :: DWM_y_IfW_lidar_WtTrunc          =  46 ! DWM%IfW%lidar%WtTrunc
+   integer(IntKi), public, parameter :: DWM_y_IfW_lidar_MsrPositionsX    =  47 ! DWM%IfW%lidar%MsrPositionsX
+   integer(IntKi), public, parameter :: DWM_y_IfW_lidar_MsrPositionsY    =  48 ! DWM%IfW%lidar%MsrPositionsY
+   integer(IntKi), public, parameter :: DWM_y_IfW_lidar_MsrPositionsZ    =  49 ! DWM%IfW%lidar%MsrPositionsZ
+
+contains
 
 subroutine DWM_CopyCVSD(SrcCVSDData, DstCVSDData, CtrlCode, ErrStat, ErrMsg)
    type(CVSD), intent(in) :: SrcCVSDData
@@ -3168,7 +3218,7 @@ END SUBROUTINE
 
 function DWM_InputMeshPointer(u, ML) result(Mesh)
    type(DWM_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -3176,7 +3226,7 @@ function DWM_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function DWM_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -3185,7 +3235,7 @@ end function
 
 function DWM_OutputMeshPointer(y, ML) result(Mesh)
    type(DWM_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -3193,11 +3243,311 @@ function DWM_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function DWM_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
    end select
 end function
+
+subroutine DWM_PackContStateAry(Vars, x, ValAry)
+   type(DWM_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (DWM_x_dummy)
+             call MV_Pack2(Var, x%dummy, ValAry)  ! Scalar
+         case (DWM_x_IfW_DummyContState)
+             call MV_Pack2(Var, x%IfW%DummyContState, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine DWM_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(DWM_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (DWM_x_dummy)
+             call MV_Unpack2(Var, ValAry, x%dummy)  ! Scalar
+         case (DWM_x_IfW_DummyContState)
+             call MV_Unpack2(Var, ValAry, x%IfW%DummyContState)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine DWM_PackConstrStateAry(Vars, z, ValAry)
+   type(DWM_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (DWM_z_dummy)
+             call MV_Pack2(Var, z%dummy, ValAry)  ! Scalar
+         case (DWM_z_IfW_DummyConstrState)
+             call MV_Pack2(Var, z%IfW%DummyConstrState, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine DWM_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(DWM_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (DWM_z_dummy)
+             call MV_Unpack2(Var, ValAry, z%dummy)  ! Scalar
+         case (DWM_z_IfW_DummyConstrState)
+             call MV_Unpack2(Var, ValAry, z%IfW%DummyConstrState)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine DWM_PackInputAry(Vars, u, ValAry)
+   type(DWM_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (DWM_u_Upwind_result_upwind_U)
+             call MV_Pack2(Var, u%Upwind_result%upwind_U, ValAry)  ! Rank 2 Array
+         case (DWM_u_Upwind_result_upwind_wakecenter)
+             call MV_Pack2(Var, u%Upwind_result%upwind_wakecenter, ValAry)  ! Rank 4 Array
+         case (DWM_u_Upwind_result_upwind_meanU)
+             call MV_Pack2(Var, u%Upwind_result%upwind_meanU, ValAry)  ! Rank 1 Array
+         case (DWM_u_Upwind_result_upwind_TI)
+             call MV_Pack2(Var, u%Upwind_result%upwind_TI, ValAry)  ! Rank 1 Array
+         case (DWM_u_Upwind_result_upwind_small_TI)
+             call MV_Pack2(Var, u%Upwind_result%upwind_small_TI, ValAry)  ! Rank 1 Array
+         case (DWM_u_Upwind_result_upwind_smoothWake)
+             call MV_Pack2(Var, u%Upwind_result%upwind_smoothWake, ValAry)  ! Rank 2 Array
+         case (DWM_u_Upwind_result_velocity_aerodyn)
+             call MV_Pack2(Var, u%Upwind_result%velocity_aerodyn, ValAry)  ! Rank 1 Array
+         case (DWM_u_Upwind_result_TI_downstream)
+             call MV_Pack2(Var, u%Upwind_result%TI_downstream, ValAry)  ! Rank 1 Array
+         case (DWM_u_Upwind_result_small_scale_TI_downstream)
+             call MV_Pack2(Var, u%Upwind_result%small_scale_TI_downstream, ValAry)  ! Rank 1 Array
+         case (DWM_u_Upwind_result_smoothed_velocity_array)
+             call MV_Pack2(Var, u%Upwind_result%smoothed_velocity_array, ValAry)  ! Rank 2 Array
+         case (DWM_u_Upwind_result_vel_matrix)
+             call MV_Pack2(Var, u%Upwind_result%vel_matrix, ValAry)  ! Rank 3 Array
+         case (DWM_u_IfW_PositionXYZ)
+             call MV_Pack2(Var, u%IfW%PositionXYZ, ValAry)  ! Rank 2 Array
+         case (DWM_u_IfW_lidar_PulseLidEl)
+             call MV_Pack2(Var, u%IfW%lidar%PulseLidEl, ValAry)  ! Scalar
+         case (DWM_u_IfW_lidar_PulseLidAz)
+             call MV_Pack2(Var, u%IfW%lidar%PulseLidAz, ValAry)  ! Scalar
+         case (DWM_u_IfW_lidar_HubDisplacementX)
+             call MV_Pack2(Var, u%IfW%lidar%HubDisplacementX, ValAry)  ! Scalar
+         case (DWM_u_IfW_lidar_HubDisplacementY)
+             call MV_Pack2(Var, u%IfW%lidar%HubDisplacementY, ValAry)  ! Scalar
+         case (DWM_u_IfW_lidar_HubDisplacementZ)
+             call MV_Pack2(Var, u%IfW%lidar%HubDisplacementZ, ValAry)  ! Scalar
+         case (DWM_u_IfW_HubPosition)
+             call MV_Pack2(Var, u%IfW%HubPosition, ValAry)  ! Rank 1 Array
+         case (DWM_u_IfW_HubOrientation)
+             call MV_Pack2(Var, u%IfW%HubOrientation, ValAry)  ! Rank 2 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine DWM_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(DWM_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (DWM_u_Upwind_result_upwind_U)
+             call MV_Unpack2(Var, ValAry, u%Upwind_result%upwind_U)  ! Rank 2 Array
+         case (DWM_u_Upwind_result_upwind_wakecenter)
+             call MV_Unpack2(Var, ValAry, u%Upwind_result%upwind_wakecenter)  ! Rank 4 Array
+         case (DWM_u_Upwind_result_upwind_meanU)
+             call MV_Unpack2(Var, ValAry, u%Upwind_result%upwind_meanU)  ! Rank 1 Array
+         case (DWM_u_Upwind_result_upwind_TI)
+             call MV_Unpack2(Var, ValAry, u%Upwind_result%upwind_TI)  ! Rank 1 Array
+         case (DWM_u_Upwind_result_upwind_small_TI)
+             call MV_Unpack2(Var, ValAry, u%Upwind_result%upwind_small_TI)  ! Rank 1 Array
+         case (DWM_u_Upwind_result_upwind_smoothWake)
+             call MV_Unpack2(Var, ValAry, u%Upwind_result%upwind_smoothWake)  ! Rank 2 Array
+         case (DWM_u_Upwind_result_velocity_aerodyn)
+             call MV_Unpack2(Var, ValAry, u%Upwind_result%velocity_aerodyn)  ! Rank 1 Array
+         case (DWM_u_Upwind_result_TI_downstream)
+             call MV_Unpack2(Var, ValAry, u%Upwind_result%TI_downstream)  ! Rank 1 Array
+         case (DWM_u_Upwind_result_small_scale_TI_downstream)
+             call MV_Unpack2(Var, ValAry, u%Upwind_result%small_scale_TI_downstream)  ! Rank 1 Array
+         case (DWM_u_Upwind_result_smoothed_velocity_array)
+             call MV_Unpack2(Var, ValAry, u%Upwind_result%smoothed_velocity_array)  ! Rank 2 Array
+         case (DWM_u_Upwind_result_vel_matrix)
+             call MV_Unpack2(Var, ValAry, u%Upwind_result%vel_matrix)  ! Rank 3 Array
+         case (DWM_u_IfW_PositionXYZ)
+             call MV_Unpack2(Var, ValAry, u%IfW%PositionXYZ)  ! Rank 2 Array
+         case (DWM_u_IfW_lidar_PulseLidEl)
+             call MV_Unpack2(Var, ValAry, u%IfW%lidar%PulseLidEl)  ! Scalar
+         case (DWM_u_IfW_lidar_PulseLidAz)
+             call MV_Unpack2(Var, ValAry, u%IfW%lidar%PulseLidAz)  ! Scalar
+         case (DWM_u_IfW_lidar_HubDisplacementX)
+             call MV_Unpack2(Var, ValAry, u%IfW%lidar%HubDisplacementX)  ! Scalar
+         case (DWM_u_IfW_lidar_HubDisplacementY)
+             call MV_Unpack2(Var, ValAry, u%IfW%lidar%HubDisplacementY)  ! Scalar
+         case (DWM_u_IfW_lidar_HubDisplacementZ)
+             call MV_Unpack2(Var, ValAry, u%IfW%lidar%HubDisplacementZ)  ! Scalar
+         case (DWM_u_IfW_HubPosition)
+             call MV_Unpack2(Var, ValAry, u%IfW%HubPosition)  ! Rank 1 Array
+         case (DWM_u_IfW_HubOrientation)
+             call MV_Unpack2(Var, ValAry, u%IfW%HubOrientation)  ! Rank 2 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine DWM_PackOutputAry(Vars, y, ValAry)
+   type(DWM_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (DWM_y_turbine_thrust_force)
+             call MV_Pack2(Var, y%turbine_thrust_force, ValAry)  ! Rank 1 Array
+         case (DWM_y_induction_factor)
+             call MV_Pack2(Var, y%induction_factor, ValAry)  ! Rank 1 Array
+         case (DWM_y_r_initial)
+             call MV_Pack2(Var, y%r_initial, ValAry)  ! Rank 1 Array
+         case (DWM_y_U_initial)
+             call MV_Pack2(Var, y%U_initial, ValAry)  ! Rank 1 Array
+         case (DWM_y_Mean_FFWS_array)
+             call MV_Pack2(Var, y%Mean_FFWS_array, ValAry)  ! Rank 1 Array
+         case (DWM_y_Mean_FFWS)
+             call MV_Pack2(Var, y%Mean_FFWS, ValAry)  ! Scalar
+         case (DWM_y_TI)
+             call MV_Pack2(Var, y%TI, ValAry)  ! Scalar
+         case (DWM_y_TI_downstream)
+             call MV_Pack2(Var, y%TI_downstream, ValAry)  ! Scalar
+         case (DWM_y_wake_u)
+             call MV_Pack2(Var, y%wake_u, ValAry)  ! Rank 2 Array
+         case (DWM_y_wake_position)
+             call MV_Pack2(Var, y%wake_position, ValAry)  ! Rank 3 Array
+         case (DWM_y_smoothed_velocity_array)
+             call MV_Pack2(Var, y%smoothed_velocity_array, ValAry)  ! Rank 2 Array
+         case (DWM_y_AtmUscale)
+             call MV_Pack2(Var, y%AtmUscale, ValAry)  ! Scalar
+         case (DWM_y_du_dz_ABL)
+             call MV_Pack2(Var, y%du_dz_ABL, ValAry)  ! Scalar
+         case (DWM_y_total_SDgenpwr)
+             call MV_Pack2(Var, y%total_SDgenpwr, ValAry)  ! Scalar
+         case (DWM_y_mean_SDgenpwr)
+             call MV_Pack2(Var, y%mean_SDgenpwr, ValAry)  ! Scalar
+         case (DWM_y_avg_ct)
+             call MV_Pack2(Var, y%avg_ct, ValAry)  ! Scalar
+         case (DWM_y_IfW_VelocityUVW)
+             call MV_Pack2(Var, y%IfW%VelocityUVW, ValAry)  ! Rank 2 Array
+         case (DWM_y_IfW_AccelUVW)
+             call MV_Pack2(Var, y%IfW%AccelUVW, ValAry)  ! Rank 2 Array
+         case (DWM_y_IfW_WriteOutput)
+             call MV_Pack2(Var, y%IfW%WriteOutput, ValAry)  ! Rank 1 Array
+         case (DWM_y_IfW_DiskVel)
+             call MV_Pack2(Var, y%IfW%DiskVel, ValAry)  ! Rank 1 Array
+         case (DWM_y_IfW_HubVel)
+             call MV_Pack2(Var, y%IfW%HubVel, ValAry)  ! Rank 1 Array
+         case (DWM_y_IfW_lidar_LidSpeed)
+             call MV_Pack2(Var, y%IfW%lidar%LidSpeed, ValAry)  ! Rank 1 Array
+         case (DWM_y_IfW_lidar_WtTrunc)
+             call MV_Pack2(Var, y%IfW%lidar%WtTrunc, ValAry)  ! Rank 1 Array
+         case (DWM_y_IfW_lidar_MsrPositionsX)
+             call MV_Pack2(Var, y%IfW%lidar%MsrPositionsX, ValAry)  ! Rank 1 Array
+         case (DWM_y_IfW_lidar_MsrPositionsY)
+             call MV_Pack2(Var, y%IfW%lidar%MsrPositionsY, ValAry)  ! Rank 1 Array
+         case (DWM_y_IfW_lidar_MsrPositionsZ)
+             call MV_Pack2(Var, y%IfW%lidar%MsrPositionsZ, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine DWM_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(DWM_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (DWM_y_turbine_thrust_force)
+             call MV_Unpack2(Var, ValAry, y%turbine_thrust_force)  ! Rank 1 Array
+         case (DWM_y_induction_factor)
+             call MV_Unpack2(Var, ValAry, y%induction_factor)  ! Rank 1 Array
+         case (DWM_y_r_initial)
+             call MV_Unpack2(Var, ValAry, y%r_initial)  ! Rank 1 Array
+         case (DWM_y_U_initial)
+             call MV_Unpack2(Var, ValAry, y%U_initial)  ! Rank 1 Array
+         case (DWM_y_Mean_FFWS_array)
+             call MV_Unpack2(Var, ValAry, y%Mean_FFWS_array)  ! Rank 1 Array
+         case (DWM_y_Mean_FFWS)
+             call MV_Unpack2(Var, ValAry, y%Mean_FFWS)  ! Scalar
+         case (DWM_y_TI)
+             call MV_Unpack2(Var, ValAry, y%TI)  ! Scalar
+         case (DWM_y_TI_downstream)
+             call MV_Unpack2(Var, ValAry, y%TI_downstream)  ! Scalar
+         case (DWM_y_wake_u)
+             call MV_Unpack2(Var, ValAry, y%wake_u)  ! Rank 2 Array
+         case (DWM_y_wake_position)
+             call MV_Unpack2(Var, ValAry, y%wake_position)  ! Rank 3 Array
+         case (DWM_y_smoothed_velocity_array)
+             call MV_Unpack2(Var, ValAry, y%smoothed_velocity_array)  ! Rank 2 Array
+         case (DWM_y_AtmUscale)
+             call MV_Unpack2(Var, ValAry, y%AtmUscale)  ! Scalar
+         case (DWM_y_du_dz_ABL)
+             call MV_Unpack2(Var, ValAry, y%du_dz_ABL)  ! Scalar
+         case (DWM_y_total_SDgenpwr)
+             call MV_Unpack2(Var, ValAry, y%total_SDgenpwr)  ! Scalar
+         case (DWM_y_mean_SDgenpwr)
+             call MV_Unpack2(Var, ValAry, y%mean_SDgenpwr)  ! Scalar
+         case (DWM_y_avg_ct)
+             call MV_Unpack2(Var, ValAry, y%avg_ct)  ! Scalar
+         case (DWM_y_IfW_VelocityUVW)
+             call MV_Unpack2(Var, ValAry, y%IfW%VelocityUVW)  ! Rank 2 Array
+         case (DWM_y_IfW_AccelUVW)
+             call MV_Unpack2(Var, ValAry, y%IfW%AccelUVW)  ! Rank 2 Array
+         case (DWM_y_IfW_WriteOutput)
+             call MV_Unpack2(Var, ValAry, y%IfW%WriteOutput)  ! Rank 1 Array
+         case (DWM_y_IfW_DiskVel)
+             call MV_Unpack2(Var, ValAry, y%IfW%DiskVel)  ! Rank 1 Array
+         case (DWM_y_IfW_HubVel)
+             call MV_Unpack2(Var, ValAry, y%IfW%HubVel)  ! Rank 1 Array
+         case (DWM_y_IfW_lidar_LidSpeed)
+             call MV_Unpack2(Var, ValAry, y%IfW%lidar%LidSpeed)  ! Rank 1 Array
+         case (DWM_y_IfW_lidar_WtTrunc)
+             call MV_Unpack2(Var, ValAry, y%IfW%lidar%WtTrunc)  ! Rank 1 Array
+         case (DWM_y_IfW_lidar_MsrPositionsX)
+             call MV_Unpack2(Var, ValAry, y%IfW%lidar%MsrPositionsX)  ! Rank 1 Array
+         case (DWM_y_IfW_lidar_MsrPositionsY)
+             call MV_Unpack2(Var, ValAry, y%IfW%lidar%MsrPositionsY)  ! Rank 1 Array
+         case (DWM_y_IfW_lidar_MsrPositionsZ)
+             call MV_Unpack2(Var, ValAry, y%IfW%lidar%MsrPositionsZ)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE DWM_Types
 !ENDOFREGISTRYGENERATEDFILE

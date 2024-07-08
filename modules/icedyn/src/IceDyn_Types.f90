@@ -33,8 +33,6 @@ MODULE IceDyn_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: IceD_u_PointMesh                 = 1      ! Mesh number for IceD IceD_u_PointMesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: IceD_y_PointMesh                 = 2      ! Mesh number for IceD IceD_y_PointMesh mesh [-]
 ! =========  IceD_InputFile  =======
   TYPE, PUBLIC :: IceD_InputFile
     INTEGER(IntKi)  :: IceModel = 0_IntKi      !< The current ice model number [-]
@@ -226,7 +224,14 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Data to be written to an output file: see WriteOutputHdr for names of each variable [see WriteOutputUnt]
   END TYPE IceD_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: IceD_x_q                         =   1 ! IceD%q
+   integer(IntKi), public, parameter :: IceD_x_dqdt                      =   2 ! IceD%dqdt
+   integer(IntKi), public, parameter :: IceD_z_DummyConstrState          =   3 ! IceD%DummyConstrState
+   integer(IntKi), public, parameter :: IceD_u_PointMesh                 =   4 ! IceD%PointMesh
+   integer(IntKi), public, parameter :: IceD_y_PointMesh                 =   5 ! IceD%PointMesh
+   integer(IntKi), public, parameter :: IceD_y_WriteOutput               =   6 ! IceD%WriteOutput
+
+contains
 
 subroutine IceD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg)
    type(IceD_InputFile), intent(in) :: SrcInputFileData
@@ -1744,7 +1749,7 @@ END SUBROUTINE
 
 function IceD_InputMeshPointer(u, ML) result(Mesh)
    type(IceD_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1754,7 +1759,7 @@ function IceD_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function IceD_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -1765,7 +1770,7 @@ end function
 
 function IceD_OutputMeshPointer(y, ML) result(Mesh)
    type(IceD_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1775,7 +1780,7 @@ function IceD_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function IceD_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -1783,5 +1788,133 @@ function IceD_OutputMeshName(ML) result(Name)
        Name = "y%PointMesh"
    end select
 end function
+
+subroutine IceD_PackContStateAry(Vars, x, ValAry)
+   type(IceD_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (IceD_x_q)
+             call MV_Pack2(Var, x%q, ValAry)  ! Scalar
+         case (IceD_x_dqdt)
+             call MV_Pack2(Var, x%dqdt, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine IceD_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(IceD_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (IceD_x_q)
+             call MV_Unpack2(Var, ValAry, x%q)  ! Scalar
+         case (IceD_x_dqdt)
+             call MV_Unpack2(Var, ValAry, x%dqdt)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine IceD_PackConstrStateAry(Vars, z, ValAry)
+   type(IceD_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (IceD_z_DummyConstrState)
+             call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine IceD_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(IceD_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (IceD_z_DummyConstrState)
+             call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine IceD_PackInputAry(Vars, u, ValAry)
+   type(IceD_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (IceD_u_PointMesh)
+             call MV_Pack2(Var, u%PointMesh, ValAry)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine IceD_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(IceD_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (IceD_u_PointMesh)
+             call MV_Unpack2(Var, ValAry, u%PointMesh)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine IceD_PackOutputAry(Vars, y, ValAry)
+   type(IceD_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (IceD_y_PointMesh)
+             call MV_Pack2(Var, y%PointMesh, ValAry)  ! Mesh
+         case (IceD_y_WriteOutput)
+             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine IceD_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(IceD_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (IceD_y_PointMesh)
+             call MV_Unpack2(Var, ValAry, y%PointMesh)  ! Mesh
+         case (IceD_y_WriteOutput)
+             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE IceDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

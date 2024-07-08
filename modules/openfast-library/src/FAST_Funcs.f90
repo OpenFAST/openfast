@@ -314,9 +314,9 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
                  os_BD => T%BD%OtherSt(ModData%Ins, STATE_PRED))
 
          ! Transfer tight coupling states to module
-         call BD_PackContStateQuatOP(p_BD, x_BD, m_BD%Jac%x)
+         ! call BD_PackContStateQuatOP(p_BD, x_BD, m_BD%Jac%x)
          ! call XferGblToLoc1D(ModData%ixs, x_TC, m_BD%Jac%x)
-         call BD_UnpackContStateQuatOP(p_BD, m_BD%Jac%x, x_BD)
+         ! call BD_UnpackContStateQuatOP(p_BD, m_BD%Jac%x, x_BD)
 
          ! TODO: Fix state reset
          ! Set BD accelerations and algorithmic accelerations from q matrix
@@ -332,8 +332,8 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
          ! end do
 
          ! Update the global reference
-         call BD_UpdateGlobalRef(u_BD, p_BD, x_BD, os_BD, ErrStat, ErrMsg)
-         if (Failed()) return
+         ! call BD_UpdateGlobalRef(u_BD, p_BD, x_BD, os_BD, ErrStat, ErrMsg)
+         ! if (Failed()) return
 
          ! Update q matrix accelerations and algorithmic accelerations from BD
          ! do j = 1, size(p_BD%Vars%x)
@@ -348,7 +348,7 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
          ! end do
 
          ! Transfer updated states to solver
-         call BD_PackContStateQuatOP(p_BD, x_BD, m_BD%Jac%x)
+         ! call BD_PackContStateQuatOP(p_BD, x_BD, m_BD%Jac%x)
          ! call XferLocToGbl1D(ModData%ixs, m_BD%Jac%x, x_TC)
       end associate
 
@@ -358,16 +358,14 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
                  u_ED => T%ED%Input(1), x_ED => T%ED%x(STATE_PRED))
 
          ! Transfer tight coupling states to module
-         call ED_PackContStateOP(p_ED, x_ED, m_ED%Jac%x)
-         ! call XferGblToLoc1D(ModData%ixs, x_TC, m_ED%Jac%x)
-         call ED_UnpackContStateOP(p_ED, m_ED%Jac%x, x_ED)
+         ! call ED_PackContStateOP(p_ED, x_ED, m_ED%Jac%x)
+         ! call ED_UnpackContStateOP(p_ED, m_ED%Jac%x, x_ED)
 
          ! Update the azimuth angle
-         call ED_UpdateAzimuth(p_ED, x_ED, T%p_FAST%DT)
+         ! call ED_UpdateAzimuth(p_ED, x_ED, T%p_FAST%DT)
 
          ! Transfer updated states to solver
-         call ED_PackContStateOP(p_ED, x_ED, m_ED%Jac%x)
-         ! call XferLocToGbl1D(ModData%ixs, m_ED%Jac%x, x_TC)
+         ! call ED_PackContStateOP(p_ED, x_ED, m_ED%Jac%x)
 
       end associate
 
@@ -521,8 +519,8 @@ subroutine FAST_CalcOutput(ModData, Maps, ThisTime, InputIndex, StateIndex, T, E
 
 end subroutine
 
-subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, ErrMsg, FlagFilter, &
-                      u_op, y_op, x_op, dx_op, xd_op, z_op)
+subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
+                      Vars, u_op, y_op, x_op, dx_op, xd_op, z_op)
    type(ModDataType), intent(in)                      :: ModData     !< Module data
    real(DbKi), intent(in)                             :: ThisTime    !< Time
    integer(IntKi), intent(in)                         :: InputIndex  !< Input index
@@ -530,7 +528,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
-   integer(IntKi), optional, intent(in)               :: FlagFilter  !< Flag to filter variable calculations
+   type(ModVarsType), optional, intent(in)            :: Vars        !< Variables
    real(R8Ki), allocatable, optional, intent(inout)   :: u_op(:)     !< values of linearized inputs
    real(R8Ki), allocatable, optional, intent(inout)   :: y_op(:)     !< values of linearized outputs
    real(R8Ki), allocatable, optional, intent(inout)   :: x_op(:)     !< values of linearized continuous states
@@ -552,18 +550,18 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
    case (Module_AD)
       call AD_GetOP(ModData%Ins, ThisTime, T%AD%Input(InputIndex), T%AD%p, T%AD%x(StateIndex), T%AD%xd(StateIndex), T%AD%z(StateIndex), &
                     T%AD%OtherSt(StateIndex), T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
-                    FlagFilter=FlagFilter, u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+                    Vars=Vars, u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
 
    case (Module_BD)
       call BD_GetOP(ThisTime, T%BD%Input(InputIndex, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, StateIndex), &
                     T%BD%xd(ModData%Ins, StateIndex), T%BD%z(ModData%Ins, StateIndex), T%BD%OtherSt(ModData%Ins, StateIndex), &
                     T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
-                    FlagFilter=FlagFilter, u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+                    u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
 
    case (Module_ED)
       call ED_GetOP(ThisTime, T%ED%Input(InputIndex), T%ED%p, T%ED%x(StateIndex), T%ED%xd(StateIndex), &
                     T%ED%z(StateIndex), T%ED%OtherSt(StateIndex), T%ED%y, T%ED%m, ErrStat2, ErrMsg2, &
-                    FlagFilter=FlagFilter, u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+                    u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
 
 !  case (Module_ExtPtfm)
 
@@ -589,7 +587,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
    case (Module_MD)
       call MD_GetOP(ThisTime, T%MD%Input(InputIndex), T%MD%p, T%MD%x(StateIndex), T%MD%xd(StateIndex), T%MD%z(StateIndex), &
                     T%MD%OtherSt(StateIndex), T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
-                    FlagFilter=FlagFilter, u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+                    u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
 
 !  case (Module_OpFM)
 !  case (Module_Orca)
@@ -716,15 +714,16 @@ subroutine FAST_SetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
 
 end subroutine
 
-subroutine FAST_JacobianPInput(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg, FlagFilter, dYdu, dXdu)
+subroutine FAST_JacobianPInput(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg, Vars, dYdu, dXdu)
    type(ModDataType), intent(in)                      :: ModData     !< Module data
    real(DbKi), intent(in)                             :: ThisTime    !< Time
    integer(IntKi), intent(in)                         :: ThisState   !< State
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
-   integer(IntKi), optional, intent(in)               :: FlagFilter  !< Variable index number
-   real(R8Ki), allocatable, optional, intent(inout)   :: dYdu(:, :), dXdu(:, :)
+   type(ModVarsType), optional, intent(in)            :: Vars        !< Variables
+   real(R8Ki), allocatable, optional, intent(inout)   :: dYdu(:, :)
+   real(R8Ki), allocatable, optional, intent(inout)   :: dXdu(:, :)
 
    character(*), parameter    :: RoutineName = 'FAST_JacobianPInput'
    integer(IntKi)             :: ErrStat2
@@ -739,17 +738,19 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg,
    case (Module_AD)
       call AD_JacobianPInput(ThisTime, T%AD%Input(1), T%AD%p, T%AD%x(ThisState), T%AD%xd(ThisState), &
                              T%AD%z(ThisState), T%AD%OtherSt(ThisState), T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
-                             FlagFilter=FlagFilter, dYdu=dYdu, dXdu=dXdu)
+                             Vars=Vars, dYdu=dYdu, dXdu=dXdu)
 
    case (Module_BD)
-      call BD_JacobianPInput(ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, ThisState), T%BD%xd(ModData%Ins, ThisState), &
-                             T%BD%z(ModData%Ins, ThisState), T%BD%OtherSt(ModData%Ins, ThisState), T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
-                             FlagFilter=FlagFilter, dYdu=dYdu, dXdu=dXdu)
+      call BD_JacobianPInput(ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), &
+                             T%BD%x(ModData%Ins, ThisState), T%BD%xd(ModData%Ins, ThisState), &
+                             T%BD%z(ModData%Ins, ThisState), T%BD%OtherSt(ModData%Ins, ThisState), &
+                             T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
+                             Vars=Vars, dYdu=dYdu, dXdu=dXdu)
 
    case (Module_ED)
       call ED_JacobianPInput(ThisTime, T%ED%Input(1), T%ED%p, T%ED%x(ThisState), T%ED%xd(ThisState), &
                              T%ED%z(ThisState), T%ED%OtherSt(ThisState), T%ED%y, T%ED%m, ErrStat2, ErrMsg2, &
-                             FlagFilter=FlagFilter, dYdu=dYdu, dXdu=dXdu)
+                             Vars=Vars, dYdu=dYdu, dXdu=dXdu)
 
 !  case (Module_ExtPtfm)
 
@@ -776,7 +777,7 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg,
    case (Module_SD)
       call SD_JacobianPInput(ThisTime, T%SD%Input(1), T%SD%p, T%SD%x(ThisState), T%SD%xd(ThisState), &
                              T%SD%z(ThisState), T%SD%OtherSt(ThisState), T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
-                             FlagFilter=FlagFilter, dYdu=dYdu, dXdu=dXdu)
+                             dYdu=dYdu, dXdu=dXdu)
 
    case (Module_SeaSt)
       call SeaSt_JacobianPInput(ThisTime, T%SeaSt%Input(1), T%SeaSt%p, T%SeaSt%x(ThisState), T%SeaSt%xd(ThisState), &
@@ -797,15 +798,16 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg,
 
 end subroutine
 
-subroutine FAST_JacobianPContState(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg, FlagFilter, dYdx, dXdx, StateRotation)
+subroutine FAST_JacobianPContState(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg, Vars, dYdx, dXdx, StateRotation)
    type(ModDataType), intent(in)                      :: ModData     !< Module data
    real(DbKi), intent(in)                             :: ThisTime    !< Time
    integer(IntKi), intent(in)                         :: ThisState   !< State
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
-   integer(IntKi), optional                           :: FlagFilter
-   real(R8Ki), allocatable, optional, intent(inout)   :: dYdx(:, :), dXdx(:, :)
+   type(ModVarsType), optional, intent(in)            :: Vars        !< Variables
+   real(R8Ki), allocatable, optional, intent(inout)   :: dYdx(:, :)
+   real(R8Ki), allocatable, optional, intent(inout)   :: dXdx(:, :)
    real(R8Ki), allocatable, optional, intent(inout)   :: StateRotation(:, :)
 
    character(*), parameter    :: RoutineName = 'FAST_JacobianPContState'
@@ -823,21 +825,21 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, ThisState, T, ErrStat, Err
                                  T%AD%x(ThisState), T%AD%xd(ThisState), &
                                  T%AD%z(ThisState), T%AD%OtherSt(ThisState), &
                                  T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
-                                 FlagFilter=FlagFilter, dYdx=dYdx, dXdx=dXdx)
+                                 Vars=Vars, dYdx=dYdx, dXdx=dXdx)
 
    case (Module_BD)
       call BD_JacobianPContState(ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), &
                                  T%BD%x(ModData%Ins, ThisState), T%BD%xd(ModData%Ins, ThisState), &
                                  T%BD%z(ModData%Ins, ThisState), T%BD%OtherSt(ModData%Ins, ThisState), &
                                  T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
-                                 FlagFilter=FlagFilter, dYdx=dYdx, dXdx=dXdx, StateRotation=StateRotation)
+                                 Vars=Vars, dYdx=dYdx, dXdx=dXdx, StateRotation=StateRotation)
 
    case (Module_ED)
       call ED_JacobianPContState(ThisTime, T%ED%Input(1), T%ED%p, &
                                  T%ED%x(ThisState), T%ED%xd(ThisState), &
                                  T%ED%z(ThisState), T%ED%OtherSt(ThisState), &
                                  T%ED%y, T%ED%m, ErrStat2, ErrMsg2, &
-                                 FlagFilter=FlagFilter, dYdx=dYdx, dXdx=dXdx)
+                                 Vars=Vars, dYdx=dYdx, dXdx=dXdx)
 
 !  case (Module_ExtPtfm)
 
@@ -846,7 +848,7 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, ThisState, T, ErrStat, Err
                                  T%HD%x(ThisState), T%HD%xd(ThisState), &
                                  T%HD%z(ThisState), T%HD%OtherSt(ThisState), &
                                  T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
-                                 FlagFilter=FlagFilter, dYdx=dYdx, dXdx=dXdx)
+                                 dYdx=dYdx, dXdx=dXdx)
 
    case (Module_IfW)
       call InflowWind_JacobianPContState(ThisTime, T%IfW%Input(1), T%IfW%p, &
@@ -872,7 +874,7 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, ThisState, T, ErrStat, Err
                                  T%SD%x(ThisState), T%SD%xd(ThisState), &
                                  T%SD%z(ThisState), T%SD%OtherSt(ThisState), &
                                  T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
-                                 FlagFilter=FlagFilter, dYdx=dYdx, dXdx=dXdx)
+                                 dYdx=dYdx, dXdx=dXdx)
 
    case (Module_SeaSt)
       call SeaSt_JacobianPContState(ThisTime, T%SeaSt%Input(1), T%SeaSt%p, &

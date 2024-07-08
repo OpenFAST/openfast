@@ -33,10 +33,10 @@ typedef ^ ^                 IntKi               iVarSrc                 -  0  - 
 typedef ^ ^                 IntKi               iVarDst                 -  0  -     "Destination variable index" -
 typedef ^ ^                 IntKi               SrcDispMeshID           -  0  -     "Source displacement mesh identifier" -
 typedef ^ ^                 IntKi               DstDispMeshID           -  0  -     "Destination displacement mesh identifier" -
-typedef ^ ^                 MeshLocType         SrcMeshLoc              -  -  -     "Source mesh locator (number and indices)" -
-typedef ^ ^                 MeshLocType         DstMeshLoc              -  -  -     "Destination mesh locator (number and indices)" -
-typedef ^ ^                 MeshLocType         SrcDispMeshLoc          -  -  -     "Source displacement mesh locator (number and indices)" -
-typedef ^ ^                 MeshLocType         DstDispMeshLoc          -  -  -     "Destination displacement mesh locator (number and indices)" -
+typedef ^ ^                 DatLoc              SrcMeshLoc              -  -  -     "Source mesh locator (number and indices)" -
+typedef ^ ^                 DatLoc              DstMeshLoc              -  -  -     "Destination mesh locator (number and indices)" -
+typedef ^ ^                 DatLoc              SrcDispMeshLoc          -  -  -     "Source displacement mesh locator (number and indices)" -
+typedef ^ ^                 DatLoc              DstDispMeshLoc          -  -  -     "Destination displacement mesh locator (number and indices)" -
 typedef ^ ^                 IntKi               MapType                 -  0  -     "Integer denoting mapping type (1=Load Mesh, 2=Motion Mesh, 3=Non-Mesh)" -
 typedef ^ ^                 IntKi               XfrType                 -  0  -     "Integer denoting transfer type (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L)" -
 typedef ^ ^                 IntKi               XfrTypeAux              -  0  -     "Integer denoting transfer type (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L)" -
@@ -97,17 +97,6 @@ typedef ^ ^                     R8Ki            StateRotation           :: -  - 
 #----------------------------------------------------------------------------------------------------------------------------------
 # Module Data
 #----------------------------------------------------------------------------------------------------------------------------------
-
-typedef ^ VarXfrType            IntKi           iVar                    -  -  -     ""  -
-typedef ^ ^                     IntKi           NumVals                 -  -  -     ""  -
-typedef ^ ^                     IntKi           iSrc                    2  -  -     ""  -
-typedef ^ ^                     IntKi           iDst                    2  -  -     ""  -
-
-typedef ^ ModXfrType            VarXfrType      x                       :  -  -     ""  -
-typedef ^ ^                     VarXfrType      xd                      :  -  -     ""  -
-typedef ^ ^                     VarXfrType      z                       :  -  -     ""  -
-typedef ^ ^                     VarXfrType      u                       :  -  -     ""  -
-typedef ^ ^                     VarXfrType      y                       :  -  -     ""  -
 
 typedef ^ ModDataType           character(ChanLen) Abbr                 -  -  -     "Module name abbreviation"  -
 typedef ^ ^                     IntKi           ID                      -  0  -     "Module identification number"  -

@@ -178,7 +178,6 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
       ! Allocate linearization arrays
       call AllocAry(m%ModGlue%Lin%x, m%ModGlue%Vars%Nx, "x", ErrStat2, ErrMsg2); if (Failed()) return
       call AllocAry(m%ModGlue%Lin%dx, m%ModGlue%Vars%Nx, "dx", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(m%ModGlue%Lin%xd, m%ModGlue%Vars%Nxd, "xd", ErrStat2, ErrMsg2); if (Failed()) return
       call AllocAry(m%ModGlue%Lin%z, m%ModGlue%Vars%Nz, "z", ErrStat2, ErrMsg2); if (Failed()) return
       call AllocAry(m%ModGlue%Lin%u, m%ModGlue%Vars%Nu, "u", ErrStat2, ErrMsg2); if (Failed()) return
       call AllocAry(m%ModGlue%Lin%y, m%ModGlue%Vars%Ny, "y", ErrStat2, ErrMsg2); if (Failed()) return
@@ -193,7 +192,6 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
 
       ! Initialize arrays to store operating point states and input
       call AllocAry(y%Lin%x, m%ModGlue%Vars%Nx, p%Lin%NumTimes, "Lin%x", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(y%Lin%xd, m%ModGlue%Vars%Nxd, p%Lin%NumTimes, "Lin%xd", ErrStat2, ErrMsg2); if (Failed()) return
       call AllocAry(y%Lin%z, m%ModGlue%Vars%Nz, p%Lin%NumTimes, "Lin%z", ErrStat2, ErrMsg2); if (Failed()) return
       call AllocAry(y%Lin%u, m%ModGlue%Vars%Nu, p%Lin%NumTimes, "Lin%u", ErrStat2, ErrMsg2); if (Failed()) return
 
@@ -507,7 +505,7 @@ subroutine ModGlue_Linearize_OP(Turbine, p, m, y, p_FAST, m_FAST, y_FAST, t_glob
    integer(IntKi)                            :: ErrStat2
    character(ErrMsgLen)                      :: ErrMsg2
    integer(IntKi)                            :: i, j, k
-   integer(IntKi)                            :: ix, ixd, iz, iu, iy
+   integer(IntKi)                            :: ix, iz, iu, iy
    integer(IntKi)                            :: Un
    integer(IntKi)                            :: StateLinIndex, InputLinIndex
    character(200)                            :: SimStr
@@ -552,7 +550,6 @@ subroutine ModGlue_Linearize_OP(Turbine, p, m, y, p_FAST, m_FAST, y_FAST, t_glob
 
    ! Initialize the index numbers
    ix = 1
-   ixd = 1
    iz = 1
    iu = 1
    iy = 1
@@ -588,7 +585,6 @@ subroutine ModGlue_Linearize_OP(Turbine, p, m, y, p_FAST, m_FAST, y_FAST, t_glob
          ! Copy module linearization arrays into glue linearization arrays
          if ((size(m%ModGlue%Lin%x) > 0) .and. allocated(ModData%Lin%x)) m%ModGlue%Lin%x(ix:ix + ModData%Vars%Nx - 1) = ModData%Lin%x
          if ((size(m%ModGlue%Lin%dx) > 0) .and. allocated(ModData%Lin%dx)) m%ModGlue%Lin%dx(ix:ix + ModData%Vars%Nx - 1) = ModData%Lin%dx
-         if ((size(m%ModGlue%Lin%xd) > 0) .and. allocated(ModData%Lin%xd)) m%ModGlue%Lin%xd(ixd:ixd + ModData%Vars%Nxd - 1) = ModData%Lin%xd
          if ((size(m%ModGlue%Lin%z) > 0) .and. allocated(ModData%Lin%z)) m%ModGlue%Lin%z(iz:iz + ModData%Vars%Nz - 1) = ModData%Lin%z
          if ((size(m%ModGlue%Lin%u) > 0) .and. allocated(ModData%Lin%u)) m%ModGlue%Lin%u(iu:iu + ModData%Vars%Nu - 1) = ModData%Lin%u
          if ((size(m%ModGlue%Lin%y) > 0) .and. allocated(ModData%Lin%y)) m%ModGlue%Lin%y(iy:iy + ModData%Vars%Ny - 1) = ModData%Lin%y
@@ -601,7 +597,6 @@ subroutine ModGlue_Linearize_OP(Turbine, p, m, y, p_FAST, m_FAST, y_FAST, t_glob
 
          ! Increment starting index for next module
          ix = ix + ModData%Vars%Nx
-         ixd = ixd + ModData%Vars%Nxd
          iz = iz + ModData%Vars%Nz
          iu = iu + ModData%Vars%Nu
          iy = iy + ModData%Vars%Ny
@@ -623,7 +618,6 @@ subroutine ModGlue_Linearize_OP(Turbine, p, m, y, p_FAST, m_FAST, y_FAST, t_glob
 
          ! Copy arrays into linearization operating points
          if (size(m%ModGlue%Lin%x) > 0) y%Lin%x(:, m%Lin%TimeIndex) = m%ModGlue%Lin%x
-         if (size(m%ModGlue%Lin%xd) > 0) y%Lin%xd(:, m%Lin%TimeIndex) = m%ModGlue%Lin%xd
          if (size(m%ModGlue%Lin%z) > 0) y%Lin%z(:, m%Lin%TimeIndex) = m%ModGlue%Lin%z
          if (size(m%ModGlue%Lin%u) > 0) y%Lin%u(:, m%Lin%TimeIndex) = m%ModGlue%Lin%u
 
@@ -979,7 +973,7 @@ subroutine CalcWriteLinearMatrices(ModData, p_FAST, y_FAST, t_global, Un, LinRoo
 
    ! Calculate number of values in variable after applying filter
    Nx = MV_NumVars(ModData%Vars%x, FilterFlag)
-   Nxd = MV_NumVars(ModData%Vars%xd, FilterFlag)
+   Nxd = 0
    Nz = MV_NumVars(ModData%Vars%z, FilterFlag)
    Nu = MV_NumVars(ModData%Vars%u, FilterFlag)
    Ny = MV_NumVars(ModData%Vars%y, FilterFlag)
@@ -1023,11 +1017,6 @@ subroutine CalcWriteLinearMatrices(ModData, p_FAST, y_FAST, t_global, Un, LinRoo
 
       write (Un, '(A)') 'Order of continuous state derivatives:'
       call WrLinFile_txt_Table(ModData%Vars%x, FilterFlag, p_FAST, Un, "Row/Column", ModData%Lin%dx, IsDeriv=.true.)
-   end if
-
-   if (Nxd > 0) then
-      write (Un, '(A)') 'Order of discrete states:'
-      call WrLinFile_txt_Table(ModData%Vars%xd, FilterFlag, p_FAST, Un, "Row/Column", ModData%Lin%xd)
    end if
 
    if (Nz > 0) then

@@ -28,6 +28,13 @@ param    ^                       -                 IntKi             Highest_Win
 
 param    ^                       -                 IntKi             IfW_NumPtsAvg        -     144    -     "Number of points averaged for rotor-average wind speed"                                           -
 
+param    ^                       -                 IntKi             InflowWind_u_HWindSpeed     -   -1   -  "DatLoc number for HWindSpeed extended input" -
+param    ^                       -                 IntKi             InflowWind_u_PLExp          -   -2   -  "DatLoc number for PLExp extended input" -
+param    ^                       -                 IntKi             InflowWind_u_PropagationDir -   -3   -  "DatLoc number for PropagationDir extended input" -
+param    ^                       -                 IntKi             InflowWind_y_HWindSpeed     -   -1   -  "DatLoc number for HWindSpeed extended output" -
+param    ^                       -                 IntKi             InflowWind_y_PLExp          -   -2   -  "DatLoc number for PLExp extended output" -
+param    ^                       -                 IntKi             InflowWind_y_PropagationDir -   -3   -  "DatLoc number for PropagationDir extended output" -
+
 #########################
 # ..... Input file data ...........................................................................................................
 # This is data defined in the Input File for this module (or could otherwise be passed in)
@@ -121,13 +128,6 @@ typedef	 ^                       ^                 ModVarsType           *Vars  
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef  ^                    ParameterType        ModVarsType      &Vars              -     -     -     "Module Variables"
-typedef  ^                       ^                 IntKi             iVarHWindSpeed    -     -     -     "Horizontal wind speed variable index" -
-typedef  ^                       ^                 IntKi             iVarPLExp         -     -     -     "Vertical power-law shear exponent variable index" -
-typedef  ^                       ^                 IntKi             iVarPropagationDir -    -     -     "Propagation direction variable index" -
-typedef  ^                       ^                 IntKi             iVarHWindSpeedY    -     -     -     "Horizontal wind speed variable index" -
-typedef  ^                       ^                 IntKi             iVarPLExpY         -     -     -     "Vertical power-law shear exponent variable index" -
-typedef  ^                       ^                 IntKi             iVarPropagationDirY -    -     -     "Propagation direction variable index" -
-typedef  ^                       ^                 IntKi             iVarWriteOutput   -     -     -     "Write output variable index" -
 typedef  ^                       ^                 CHARACTER(1024)   RootFileName      -     -     -     "Root of the InflowWind input   filename"                -
 typedef  ^                       ^                 DbKi              DT                -     -     -     "Time step for cont. state integration & disc. state update"   seconds
 typedef  ^                       ^                 ReKi              WindViXYZprime    ::    -     -     "List of XYZ coordinates for velocity measurements, translated to the wind coordinate system (prime coordinates).  This equals MATMUL( RotToWind, ParamData%WindViXYZ )"  meters

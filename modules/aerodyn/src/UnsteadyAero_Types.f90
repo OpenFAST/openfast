@@ -251,7 +251,22 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< outputs to be written to a file [-]
   END TYPE UA_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: UA_x_element_x                   =   1 ! UA%element(DL%i1, DL%i2)%x
+   integer(IntKi), public, parameter :: UA_z_DummyConstraintState        =   2 ! UA%DummyConstraintState
+   integer(IntKi), public, parameter :: UA_u_U                           =   3 ! UA%U
+   integer(IntKi), public, parameter :: UA_u_alpha                       =   4 ! UA%alpha
+   integer(IntKi), public, parameter :: UA_u_Re                          =   5 ! UA%Re
+   integer(IntKi), public, parameter :: UA_u_UserProp                    =   6 ! UA%UserProp
+   integer(IntKi), public, parameter :: UA_u_v_ac                        =   7 ! UA%v_ac
+   integer(IntKi), public, parameter :: UA_u_omega                       =   8 ! UA%omega
+   integer(IntKi), public, parameter :: UA_y_Cn                          =   9 ! UA%Cn
+   integer(IntKi), public, parameter :: UA_y_Cc                          =  10 ! UA%Cc
+   integer(IntKi), public, parameter :: UA_y_Cm                          =  11 ! UA%Cm
+   integer(IntKi), public, parameter :: UA_y_Cl                          =  12 ! UA%Cl
+   integer(IntKi), public, parameter :: UA_y_Cd                          =  13 ! UA%Cd
+   integer(IntKi), public, parameter :: UA_y_WriteOutput                 =  14 ! UA%WriteOutput
+
+contains
 
 subroutine UA_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(UA_InitInputType), intent(in) :: SrcInitInputData
@@ -2523,7 +2538,7 @@ END SUBROUTINE
 
 function UA_InputMeshPointer(u, ML) result(Mesh)
    type(UA_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -2531,7 +2546,7 @@ function UA_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function UA_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -2540,7 +2555,7 @@ end function
 
 function UA_OutputMeshPointer(y, ML) result(Mesh)
    type(UA_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -2548,11 +2563,171 @@ function UA_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function UA_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
    end select
 end function
+
+subroutine UA_PackContStateAry(Vars, x, ValAry)
+   type(UA_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (UA_x_element_x)
+             call MV_Pack2(Var, x%element(DL%i1, DL%i2)%x, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine UA_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(UA_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (UA_x_element_x)
+             call MV_Unpack2(Var, ValAry, x%element(DL%i1, DL%i2)%x)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine UA_PackConstrStateAry(Vars, z, ValAry)
+   type(UA_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (UA_z_DummyConstraintState)
+             call MV_Pack2(Var, z%DummyConstraintState, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine UA_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(UA_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (UA_z_DummyConstraintState)
+             call MV_Unpack2(Var, ValAry, z%DummyConstraintState)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine UA_PackInputAry(Vars, u, ValAry)
+   type(UA_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (UA_u_U)
+             call MV_Pack2(Var, u%U, ValAry)  ! Scalar
+         case (UA_u_alpha)
+             call MV_Pack2(Var, u%alpha, ValAry)  ! Scalar
+         case (UA_u_Re)
+             call MV_Pack2(Var, u%Re, ValAry)  ! Scalar
+         case (UA_u_UserProp)
+             call MV_Pack2(Var, u%UserProp, ValAry)  ! Scalar
+         case (UA_u_v_ac)
+             call MV_Pack2(Var, u%v_ac, ValAry)  ! Rank 1 Array
+         case (UA_u_omega)
+             call MV_Pack2(Var, u%omega, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine UA_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(UA_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (UA_u_U)
+             call MV_Unpack2(Var, ValAry, u%U)  ! Scalar
+         case (UA_u_alpha)
+             call MV_Unpack2(Var, ValAry, u%alpha)  ! Scalar
+         case (UA_u_Re)
+             call MV_Unpack2(Var, ValAry, u%Re)  ! Scalar
+         case (UA_u_UserProp)
+             call MV_Unpack2(Var, ValAry, u%UserProp)  ! Scalar
+         case (UA_u_v_ac)
+             call MV_Unpack2(Var, ValAry, u%v_ac)  ! Rank 1 Array
+         case (UA_u_omega)
+             call MV_Unpack2(Var, ValAry, u%omega)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine UA_PackOutputAry(Vars, y, ValAry)
+   type(UA_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (UA_y_Cn)
+             call MV_Pack2(Var, y%Cn, ValAry)  ! Scalar
+         case (UA_y_Cc)
+             call MV_Pack2(Var, y%Cc, ValAry)  ! Scalar
+         case (UA_y_Cm)
+             call MV_Pack2(Var, y%Cm, ValAry)  ! Scalar
+         case (UA_y_Cl)
+             call MV_Pack2(Var, y%Cl, ValAry)  ! Scalar
+         case (UA_y_Cd)
+             call MV_Pack2(Var, y%Cd, ValAry)  ! Scalar
+         case (UA_y_WriteOutput)
+             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine UA_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(UA_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (UA_y_Cn)
+             call MV_Unpack2(Var, ValAry, y%Cn)  ! Scalar
+         case (UA_y_Cc)
+             call MV_Unpack2(Var, ValAry, y%Cc)  ! Scalar
+         case (UA_y_Cm)
+             call MV_Unpack2(Var, ValAry, y%Cm)  ! Scalar
+         case (UA_y_Cl)
+             call MV_Unpack2(Var, ValAry, y%Cl)  ! Scalar
+         case (UA_y_Cd)
+             call MV_Unpack2(Var, ValAry, y%Cd)  ! Scalar
+         case (UA_y_WriteOutput)
+             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE UnsteadyAero_Types
 !ENDOFREGISTRYGENERATEDFILE

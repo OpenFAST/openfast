@@ -25,6 +25,11 @@ usefrom   SeaSt_WaveField.txt
 param     HydroDyn/HydroDyn            unused                        INTEGER                  MaxHDOutputs                    -          510        -         "The maximum number of output channels supported by this module"    -
 param     HydroDyn/HydroDyn            unused                        INTEGER                  MaxUserOutputs                  -         5150        -         " Total possible number of output channels:  SS_Excitation = 7 + SS_Radiation = 7 + Morison= 4626 + HydroDyn=510   =  5150" -
 
+param     ^                            ^                             IntKi                    HydroDyn_u_WaveElev0            -         -1          -         "WaveElev0 Extended input DatLoc number" -
+param     ^                            ^                             IntKi                    HydroDyn_u_HWindSpeed           -         -1          -         "HWindSpeed extended input DatLoc number" -
+param     ^                            ^                             IntKi                    HydroDyn_u_PLexp                -         -1          -         "PLexp extended input DatLoc number" -
+param     ^                            ^                             IntKi                    HydroDyn_u_PropagationDir       -         -1          -         "PropagationDir extended input DatLoc number" -
+
 #########################
 # ..... Input file data ...........................................................................................................
 # This is data defined in the Input File for this module (or could otherwise be passed in)
@@ -124,16 +129,6 @@ typedef   ^                            ^                             Morison_Oth
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
 typedef   ^                            ParameterType                 ModVarsType             &Vars                            -          -          -         "Module Variables" -
-typedef   ^                            ^                             IntKi                    iVarMorisonMotionMesh           -          0          -         "Morison Motion Mesh variable index"
-typedef   ^                            ^                             IntKi                    iVarWAMITMotionMesh             -          0          -         "WAMIT Motion Mesh variable index"
-typedef   ^                            ^                             IntKi                    iVarPRPMotionMesh               -          0          -         "PRP Motion Mesh variable index"
-typedef   ^                            ^                             IntKi                    iVarWaveElev0                   -          0          -         "Wave Elevation variable index"
-typedef   ^                            ^                             IntKi                    iVarHWindSpeed                  -          0          -         "Horizontal wind speed variable index"
-typedef   ^                            ^                             IntKi                    iVarPLexp                       -          0          -         "Wind shear exponent variable index"
-typedef   ^                            ^                             IntKi                    iVarPropagationDir              -          0          -         "Wind propagation direction variable index"
-typedef   ^                            ^                             IntKi                    iVarMorisonLoadMesh             -          0          -         "Morison Load Mesh variable index"
-typedef   ^                            ^                             IntKi                    iVarWAMITLoadMesh               -          0          -         "WAMIT Load Mesh variable index"
-typedef   ^                            ^                             IntKi                    iVarWriteOut                    -          0          -         "Write Output variable index"
 typedef   ^                            ^                             INTEGER                  nWAMITObj                       -          -          -         "number of WAMIT input files and matrices.  If NBodyMod = 1 then nPotFiles will be 1 even if NBody > 1" -
 typedef   ^                            ^                             INTEGER                  vecMultiplier                   -          -          -         "multiplier for the WAMIT vectors and matrices.  If NBodyMod=1 then this = NBody, else 1" -
 typedef   ^                            ^                             WAMIT_ParameterType      WAMIT                           {:}        -          -         "Parameter data for the WAMIT module"  -

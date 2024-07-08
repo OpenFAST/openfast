@@ -36,8 +36,6 @@ USE SS_Radiation_Types
 USE SS_Excitation_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WAMIT_u_Mesh                     = 1      ! Mesh number for WAMIT WAMIT_u_Mesh mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WAMIT_y_Mesh                     = 2      ! Mesh number for WAMIT WAMIT_y_Mesh mesh [-]
 ! =========  WAMIT_InitInputType  =======
   TYPE, PUBLIC :: WAMIT_InitInputType
     INTEGER(IntKi)  :: NBody = 0_IntKi      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
@@ -141,7 +139,16 @@ IMPLICIT NONE
     TYPE(MeshType)  :: Mesh      !< Loads at the WAMIT reference point in the inertial frame [-]
   END TYPE WAMIT_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: WAMIT_x_SS_Rdtn_x                =   1 ! WAMIT%SS_Rdtn%x
+   integer(IntKi), public, parameter :: WAMIT_x_SS_Exctn_x               =   2 ! WAMIT%SS_Exctn%x
+   integer(IntKi), public, parameter :: WAMIT_x_Conv_Rdtn_DummyContState =   3 ! WAMIT%Conv_Rdtn%DummyContState
+   integer(IntKi), public, parameter :: WAMIT_z_Conv_Rdtn_DummyConstrState =   4 ! WAMIT%Conv_Rdtn%DummyConstrState
+   integer(IntKi), public, parameter :: WAMIT_z_SS_Rdtn_DummyConstrState =   5 ! WAMIT%SS_Rdtn%DummyConstrState
+   integer(IntKi), public, parameter :: WAMIT_z_SS_Exctn_DummyConstrState =   6 ! WAMIT%SS_Exctn%DummyConstrState
+   integer(IntKi), public, parameter :: WAMIT_u_Mesh                     =   7 ! WAMIT%Mesh
+   integer(IntKi), public, parameter :: WAMIT_y_Mesh                     =   8 ! WAMIT%Mesh
+
+contains
 
 subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(WAMIT_InitInputType), intent(in) :: SrcInitInputData
@@ -1429,7 +1436,7 @@ END SUBROUTINE
 
 function WAMIT_InputMeshPointer(u, ML) result(Mesh)
    type(WAMIT_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1439,7 +1446,7 @@ function WAMIT_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function WAMIT_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -1450,7 +1457,7 @@ end function
 
 function WAMIT_OutputMeshPointer(y, ML) result(Mesh)
    type(WAMIT_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1460,7 +1467,7 @@ function WAMIT_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function WAMIT_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -1468,5 +1475,141 @@ function WAMIT_OutputMeshName(ML) result(Name)
        Name = "y%Mesh"
    end select
 end function
+
+subroutine WAMIT_PackContStateAry(Vars, x, ValAry)
+   type(WAMIT_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (WAMIT_x_SS_Rdtn_x)
+             call MV_Pack2(Var, x%SS_Rdtn%x, ValAry)  ! Rank 1 Array
+         case (WAMIT_x_SS_Exctn_x)
+             call MV_Pack2(Var, x%SS_Exctn%x, ValAry)  ! Rank 1 Array
+         case (WAMIT_x_Conv_Rdtn_DummyContState)
+             call MV_Pack2(Var, x%Conv_Rdtn%DummyContState, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine WAMIT_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(WAMIT_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (WAMIT_x_SS_Rdtn_x)
+             call MV_Unpack2(Var, ValAry, x%SS_Rdtn%x)  ! Rank 1 Array
+         case (WAMIT_x_SS_Exctn_x)
+             call MV_Unpack2(Var, ValAry, x%SS_Exctn%x)  ! Rank 1 Array
+         case (WAMIT_x_Conv_Rdtn_DummyContState)
+             call MV_Unpack2(Var, ValAry, x%Conv_Rdtn%DummyContState)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine WAMIT_PackConstrStateAry(Vars, z, ValAry)
+   type(WAMIT_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (WAMIT_z_Conv_Rdtn_DummyConstrState)
+             call MV_Pack2(Var, z%Conv_Rdtn%DummyConstrState, ValAry)  ! Scalar
+         case (WAMIT_z_SS_Rdtn_DummyConstrState)
+             call MV_Pack2(Var, z%SS_Rdtn%DummyConstrState, ValAry)  ! Scalar
+         case (WAMIT_z_SS_Exctn_DummyConstrState)
+             call MV_Pack2(Var, z%SS_Exctn%DummyConstrState, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine WAMIT_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(WAMIT_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (WAMIT_z_Conv_Rdtn_DummyConstrState)
+             call MV_Unpack2(Var, ValAry, z%Conv_Rdtn%DummyConstrState)  ! Scalar
+         case (WAMIT_z_SS_Rdtn_DummyConstrState)
+             call MV_Unpack2(Var, ValAry, z%SS_Rdtn%DummyConstrState)  ! Scalar
+         case (WAMIT_z_SS_Exctn_DummyConstrState)
+             call MV_Unpack2(Var, ValAry, z%SS_Exctn%DummyConstrState)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine WAMIT_PackInputAry(Vars, u, ValAry)
+   type(WAMIT_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (WAMIT_u_Mesh)
+             call MV_Pack2(Var, u%Mesh, ValAry)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine WAMIT_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(WAMIT_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (WAMIT_u_Mesh)
+             call MV_Unpack2(Var, ValAry, u%Mesh)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine WAMIT_PackOutputAry(Vars, y, ValAry)
+   type(WAMIT_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (WAMIT_y_Mesh)
+             call MV_Pack2(Var, y%Mesh, ValAry)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine WAMIT_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(WAMIT_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (WAMIT_y_Mesh)
+             call MV_Unpack2(Var, ValAry, y%Mesh)  ! Mesh
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE WAMIT_Types
 !ENDOFREGISTRYGENERATEDFILE

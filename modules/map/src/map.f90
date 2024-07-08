@@ -751,7 +751,7 @@ IF (ErrStat >= AbortErrLev) RETURN
       !-------------------------------------------------------------------------
 
       call MV_AddMeshVar(p%Vars%u, "PtFairDisplacement", [FieldTransDisp], &
-                         VarIdx=p%iVarPtFairDisplacement, &
+                         DatLoc(MAP_u_PtFairDisplacement), &
                          Mesh=u%PtFairDisplacement, &
                          Perturbs=[0.2_R8Ki*D2R * max(p%depth,1.0_R8Ki)])
 
@@ -760,12 +760,12 @@ IF (ErrStat >= AbortErrLev) RETURN
       !-------------------------------------------------------------------------
 
       call MV_AddMeshVar(p%Vars%y, "FairleadLoads", [FieldForce], &
-                         VarIdx=p%iVarPtFairleadLoad, &
+                         DatLoc(MAP_y_PtFairleadLoad), &
                          Mesh=y%ptFairleadLoad)
 
       ! Write outputs
       call MV_AddVar(p%Vars%y, "WriteOutput", FieldScalar, &
-                     VarIdx=p%iVarWriteOutput, &
+                     DatLoc(MAP_y_WriteOutput), &
                      Flags=VF_WriteOut, &
                      Num=p%numOuts,&
                      LinNames=[(WriteOutputLinName(i), i = 1, p%numOuts)])
@@ -1380,14 +1380,14 @@ subroutine MAP_PackInputValues(p, u, Ary)
    type(MAP_ParameterType), intent(in) :: p
    type(MAP_InputType), intent(in)     :: u
    real(R8Ki), intent(out)             :: Ary(:)
-   call MV_Pack(p%Vars%u, p%iVarPtFairDisplacement, u%PtFairDisplacement, Ary)
+   ! call MV_Pack(p%Vars%u, p%iVarPtFairDisplacement, u%PtFairDisplacement, Ary)
 end subroutine
 
 subroutine MAP_UnpackInputValues(p, Ary, u)
    type(MAP_ParameterType), intent(in) :: p
    real(R8Ki), intent(in)              :: Ary(:)
    type(MAP_InputType), intent(inout)  :: u
-   call MV_Unpack(p%Vars%u, p%iVarPtFairDisplacement, Ary, u%PtFairDisplacement)
+   ! call MV_Unpack(p%Vars%u, p%iVarPtFairDisplacement, Ary, u%PtFairDisplacement)
 end subroutine
 
 subroutine MAP_PackOutputValues(p, y, Ary, PackWriteOutput)
@@ -1395,8 +1395,8 @@ subroutine MAP_PackOutputValues(p, y, Ary, PackWriteOutput)
    type(MAP_OutputType), intent(in)    :: y
    real(R8Ki), intent(out)             :: Ary(:)
    logical, intent(in)                 :: PackWriteOutput
-   call MV_Pack(p%Vars%y, p%iVarPtFairleadLoad, y%ptFairleadLoad, Ary)
-   if (PackWriteOutput) call MV_Pack(p%Vars%y, p%iVarWriteOutput, y%WriteOutput, Ary)
+   ! call MV_Pack(p%Vars%y, p%iVarPtFairleadLoad, y%ptFairleadLoad, Ary)
+   ! if (PackWriteOutput) call MV_Pack(p%Vars%y, p%iVarWriteOutput, y%WriteOutput, Ary)
 end subroutine
 
  !==========================================================================================================

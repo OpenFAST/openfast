@@ -58,17 +58,9 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: APM_BEM_Polar                    = 2      ! Use staggered polar grid for momentum balance in each annulus [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: APM_LiftingLine                  = 3      ! Use the blade lifting line (i.e. the structural) orientation (currently for OLAF with VAWT) [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_MaxBl_Out                     = 3      ! Maximum number of blades for information output (or linearization) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_u_rotors_NacelleMotion        = 1      ! Mesh number for AD AD_u_rotors_NacelleMotion mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_u_rotors_TowerMotion          = 2      ! Mesh number for AD AD_u_rotors_TowerMotion mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_u_rotors_HubMotion            = 3      ! Mesh number for AD AD_u_rotors_HubMotion mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_u_rotors_BladeRootMotion      = 4      ! Mesh number for AD AD_u_rotors_BladeRootMotion mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_u_rotors_BladeMotion          = 5      ! Mesh number for AD AD_u_rotors_BladeMotion mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_u_rotors_TFinMotion           = 6      ! Mesh number for AD AD_u_rotors_TFinMotion mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_y_rotors_NacelleLoad          = 7      ! Mesh number for AD AD_y_rotors_NacelleLoad mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_y_rotors_HubLoad              = 8      ! Mesh number for AD AD_y_rotors_HubLoad mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_y_rotors_TowerLoad            = 9      ! Mesh number for AD AD_y_rotors_TowerLoad mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_y_rotors_BladeLoad            = 10      ! Mesh number for AD AD_y_rotors_BladeLoad mesh [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_y_rotors_TFinLoad             = 11      ! Mesh number for AD AD_y_rotors_TFinLoad mesh [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_u_HWindSpeed                  = -1      ! DatLoc number for HWindSpeed extended input [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_u_PLExp                       = -2      ! DatLoc number for PLExp extended input [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_u_PropagationDir              = -3      ! DatLoc number for PropagationDir extended input [-]
 ! =========  TFinParameterType  =======
   TYPE, PUBLIC :: TFinParameterType
     INTEGER(IntKi)  :: TFinMod = 0_IntKi      !< Tail fin aerodynamics model {0=none, 1=polar-based, 2=USB-based} [(switch)]
@@ -350,24 +342,6 @@ IMPLICIT NONE
 ! =========  RotParameterType  =======
   TYPE, PUBLIC :: RotParameterType
     TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
-    INTEGER(IntKi)  :: iVarDBEMT = 0      !<  [-]
-    INTEGER(IntKi)  :: iVarUA = 0      !<  [-]
-    INTEGER(IntKi)  :: iVarNacelleMotion = 0      !<  [-]
-    INTEGER(IntKi)  :: iVarHubMotion = 0      !<  [-]
-    INTEGER(IntKi)  :: iVarTFinMotion = 0      !<  [-]
-    INTEGER(IntKi)  :: iVarTowerMotion = 0      !<  [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladeRootMotion      !<  [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladeMotion      !<  [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarUserProp      !<  [-]
-    INTEGER(IntKi)  :: iVarHWindSpeed = 0_IntKi      !<  [-]
-    INTEGER(IntKi)  :: iVarPLexp = 0_IntKi      !<  [-]
-    INTEGER(IntKi)  :: iVarPropagationDir = 0_IntKi      !<  [-]
-    INTEGER(IntKi)  :: iVarNacelleLoad = 0      !<  [-]
-    INTEGER(IntKi)  :: iVarHubLoad = 0      !<  [-]
-    INTEGER(IntKi)  :: iVarTFinLoad = 0      !<  [-]
-    INTEGER(IntKi)  :: iVarTowerLoad = 0      !<  [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iVarBladeLoad      !<  [-]
-    INTEGER(IntKi)  :: iVarWriteOutput = 0      !<  [-]
     INTEGER(IntKi)  :: NumBlades = 0_IntKi      !< Number of blades on the turbine [-]
     INTEGER(IntKi)  :: NumBlNds = 0_IntKi      !< Number of nodes on each blade [-]
     INTEGER(IntKi)  :: NumTwrNds = 0_IntKi      !< Number of nodes on the tower [-]
@@ -568,7 +542,28 @@ IMPLICIT NONE
     TYPE(AD_InflowType) , DIMENSION(:), ALLOCATABLE  :: Inflow      !< Inflow storage (size of u for history of inputs) [-]
   END TYPE AD_MiscVarType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: AD_x_BEMT_UA_element_x           =   1 ! AD%BEMT%UA%element(DL%i1, DL%i2)%x
+   integer(IntKi), public, parameter :: AD_x_BEMT_DBEMT_element_vind     =   2 ! AD%BEMT%DBEMT%element(DL%i1, DL%i2)%vind
+   integer(IntKi), public, parameter :: AD_x_BEMT_DBEMT_element_vind_1   =   3 ! AD%BEMT%DBEMT%element(DL%i1, DL%i2)%vind_1
+   integer(IntKi), public, parameter :: AD_x_BEMT_V_w                    =   4 ! AD%BEMT%V_w
+   integer(IntKi), public, parameter :: AD_x_AA_DummyContState           =   5 ! AD%AA%DummyContState
+   integer(IntKi), public, parameter :: AD_z_BEMT_phi                    =   6 ! AD%BEMT%phi
+   integer(IntKi), public, parameter :: AD_z_AA_DummyConstrState         =   7 ! AD%AA%DummyConstrState
+   integer(IntKi), public, parameter :: AD_u_NacelleMotion               =   8 ! AD%NacelleMotion
+   integer(IntKi), public, parameter :: AD_u_TowerMotion                 =   9 ! AD%TowerMotion
+   integer(IntKi), public, parameter :: AD_u_HubMotion                   =  10 ! AD%HubMotion
+   integer(IntKi), public, parameter :: AD_u_BladeRootMotion             =  11 ! AD%BladeRootMotion(DL%i1)
+   integer(IntKi), public, parameter :: AD_u_BladeMotion                 =  12 ! AD%BladeMotion(DL%i1)
+   integer(IntKi), public, parameter :: AD_u_TFinMotion                  =  13 ! AD%TFinMotion
+   integer(IntKi), public, parameter :: AD_u_UserProp                    =  14 ! AD%UserProp
+   integer(IntKi), public, parameter :: AD_y_NacelleLoad                 =  15 ! AD%NacelleLoad
+   integer(IntKi), public, parameter :: AD_y_HubLoad                     =  16 ! AD%HubLoad
+   integer(IntKi), public, parameter :: AD_y_TowerLoad                   =  17 ! AD%TowerLoad
+   integer(IntKi), public, parameter :: AD_y_BladeLoad                   =  18 ! AD%BladeLoad(DL%i1)
+   integer(IntKi), public, parameter :: AD_y_TFinLoad                    =  19 ! AD%TFinLoad
+   integer(IntKi), public, parameter :: AD_y_WriteOutput                 =  20 ! AD%WriteOutput
+
+contains
 
 subroutine AD_CopyTFinParameterType(SrcTFinParameterTypeData, DstTFinParameterTypeData, CtrlCode, ErrStat, ErrMsg)
    type(TFinParameterType), intent(in) :: SrcTFinParameterTypeData
@@ -3417,68 +3412,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end if
-   DstRotParameterTypeData%iVarDBEMT = SrcRotParameterTypeData%iVarDBEMT
-   DstRotParameterTypeData%iVarUA = SrcRotParameterTypeData%iVarUA
-   DstRotParameterTypeData%iVarNacelleMotion = SrcRotParameterTypeData%iVarNacelleMotion
-   DstRotParameterTypeData%iVarHubMotion = SrcRotParameterTypeData%iVarHubMotion
-   DstRotParameterTypeData%iVarTFinMotion = SrcRotParameterTypeData%iVarTFinMotion
-   DstRotParameterTypeData%iVarTowerMotion = SrcRotParameterTypeData%iVarTowerMotion
-   if (allocated(SrcRotParameterTypeData%iVarBladeRootMotion)) then
-      LB(1:1) = lbound(SrcRotParameterTypeData%iVarBladeRootMotion, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotParameterTypeData%iVarBladeRootMotion, kind=B8Ki)
-      if (.not. allocated(DstRotParameterTypeData%iVarBladeRootMotion)) then
-         allocate(DstRotParameterTypeData%iVarBladeRootMotion(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%iVarBladeRootMotion.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotParameterTypeData%iVarBladeRootMotion = SrcRotParameterTypeData%iVarBladeRootMotion
-   end if
-   if (allocated(SrcRotParameterTypeData%iVarBladeMotion)) then
-      LB(1:1) = lbound(SrcRotParameterTypeData%iVarBladeMotion, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotParameterTypeData%iVarBladeMotion, kind=B8Ki)
-      if (.not. allocated(DstRotParameterTypeData%iVarBladeMotion)) then
-         allocate(DstRotParameterTypeData%iVarBladeMotion(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%iVarBladeMotion.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotParameterTypeData%iVarBladeMotion = SrcRotParameterTypeData%iVarBladeMotion
-   end if
-   if (allocated(SrcRotParameterTypeData%iVarUserProp)) then
-      LB(1:1) = lbound(SrcRotParameterTypeData%iVarUserProp, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotParameterTypeData%iVarUserProp, kind=B8Ki)
-      if (.not. allocated(DstRotParameterTypeData%iVarUserProp)) then
-         allocate(DstRotParameterTypeData%iVarUserProp(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%iVarUserProp.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotParameterTypeData%iVarUserProp = SrcRotParameterTypeData%iVarUserProp
-   end if
-   DstRotParameterTypeData%iVarHWindSpeed = SrcRotParameterTypeData%iVarHWindSpeed
-   DstRotParameterTypeData%iVarPLexp = SrcRotParameterTypeData%iVarPLexp
-   DstRotParameterTypeData%iVarPropagationDir = SrcRotParameterTypeData%iVarPropagationDir
-   DstRotParameterTypeData%iVarNacelleLoad = SrcRotParameterTypeData%iVarNacelleLoad
-   DstRotParameterTypeData%iVarHubLoad = SrcRotParameterTypeData%iVarHubLoad
-   DstRotParameterTypeData%iVarTFinLoad = SrcRotParameterTypeData%iVarTFinLoad
-   DstRotParameterTypeData%iVarTowerLoad = SrcRotParameterTypeData%iVarTowerLoad
-   if (allocated(SrcRotParameterTypeData%iVarBladeLoad)) then
-      LB(1:1) = lbound(SrcRotParameterTypeData%iVarBladeLoad, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotParameterTypeData%iVarBladeLoad, kind=B8Ki)
-      if (.not. allocated(DstRotParameterTypeData%iVarBladeLoad)) then
-         allocate(DstRotParameterTypeData%iVarBladeLoad(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%iVarBladeLoad.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotParameterTypeData%iVarBladeLoad = SrcRotParameterTypeData%iVarBladeLoad
-   end if
-   DstRotParameterTypeData%iVarWriteOutput = SrcRotParameterTypeData%iVarWriteOutput
    DstRotParameterTypeData%NumBlades = SrcRotParameterTypeData%NumBlades
    DstRotParameterTypeData%NumBlNds = SrcRotParameterTypeData%NumBlNds
    DstRotParameterTypeData%NumTwrNds = SrcRotParameterTypeData%NumTwrNds
@@ -3795,18 +3728,6 @@ subroutine AD_DestroyRotParameterType(RotParameterTypeData, ErrStat, ErrMsg)
       deallocate(RotParameterTypeData%Vars)
       RotParameterTypeData%Vars => null()
    end if
-   if (allocated(RotParameterTypeData%iVarBladeRootMotion)) then
-      deallocate(RotParameterTypeData%iVarBladeRootMotion)
-   end if
-   if (allocated(RotParameterTypeData%iVarBladeMotion)) then
-      deallocate(RotParameterTypeData%iVarBladeMotion)
-   end if
-   if (allocated(RotParameterTypeData%iVarUserProp)) then
-      deallocate(RotParameterTypeData%iVarUserProp)
-   end if
-   if (allocated(RotParameterTypeData%iVarBladeLoad)) then
-      deallocate(RotParameterTypeData%iVarBladeLoad)
-   end if
    if (allocated(RotParameterTypeData%TwrDiam)) then
       deallocate(RotParameterTypeData%TwrDiam)
    end if
@@ -3902,24 +3823,6 @@ subroutine AD_PackRotParameterType(RF, Indata)
          call NWTC_Library_PackModVarsType(RF, InData%Vars) 
       end if
    end if
-   call RegPack(RF, InData%iVarDBEMT)
-   call RegPack(RF, InData%iVarUA)
-   call RegPack(RF, InData%iVarNacelleMotion)
-   call RegPack(RF, InData%iVarHubMotion)
-   call RegPack(RF, InData%iVarTFinMotion)
-   call RegPack(RF, InData%iVarTowerMotion)
-   call RegPackAlloc(RF, InData%iVarBladeRootMotion)
-   call RegPackAlloc(RF, InData%iVarBladeMotion)
-   call RegPackAlloc(RF, InData%iVarUserProp)
-   call RegPack(RF, InData%iVarHWindSpeed)
-   call RegPack(RF, InData%iVarPLexp)
-   call RegPack(RF, InData%iVarPropagationDir)
-   call RegPack(RF, InData%iVarNacelleLoad)
-   call RegPack(RF, InData%iVarHubLoad)
-   call RegPack(RF, InData%iVarTFinLoad)
-   call RegPack(RF, InData%iVarTowerLoad)
-   call RegPackAlloc(RF, InData%iVarBladeLoad)
-   call RegPack(RF, InData%iVarWriteOutput)
    call RegPack(RF, InData%NumBlades)
    call RegPack(RF, InData%NumBlNds)
    call RegPack(RF, InData%NumTwrNds)
@@ -4031,24 +3934,6 @@ subroutine AD_UnPackRotParameterType(RF, OutData)
    else
       OutData%Vars => null()
    end if
-   call RegUnpack(RF, OutData%iVarDBEMT); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarUA); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarNacelleMotion); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarHubMotion); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarTFinMotion); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarTowerMotion); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iVarBladeRootMotion); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iVarBladeMotion); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iVarUserProp); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarHWindSpeed); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarPLexp); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarPropagationDir); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarNacelleLoad); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarHubLoad); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarTFinLoad); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarTowerLoad); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iVarBladeLoad); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarWriteOutput); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumBlades); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumBlNds); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumTwrNds); if (RegCheckErr(RF, RoutineName)) return
@@ -6830,81 +6715,265 @@ SUBROUTINE AD_InflowType_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat,
 END SUBROUTINE
 
 function AD_InputMeshPointer(u, ML) result(Mesh)
-   type(AD_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(RotInputType), target, intent(in) :: u
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
-   case (AD_u_rotors_NacelleMotion)
-       Mesh => u%rotors(ML%i1)%NacelleMotion
-   case (AD_u_rotors_TowerMotion)
-       Mesh => u%rotors(ML%i1)%TowerMotion
-   case (AD_u_rotors_HubMotion)
-       Mesh => u%rotors(ML%i1)%HubMotion
-   case (AD_u_rotors_BladeRootMotion)
-       Mesh => u%rotors(ML%i1)%BladeRootMotion(ML%i2)
-   case (AD_u_rotors_BladeMotion)
-       Mesh => u%rotors(ML%i1)%BladeMotion(ML%i2)
-   case (AD_u_rotors_TFinMotion)
-       Mesh => u%rotors(ML%i1)%TFinMotion
+   case (AD_u_NacelleMotion)
+       Mesh => u%NacelleMotion
+   case (AD_u_TowerMotion)
+       Mesh => u%TowerMotion
+   case (AD_u_HubMotion)
+       Mesh => u%HubMotion
+   case (AD_u_BladeRootMotion)
+       Mesh => u%BladeRootMotion(ML%i1)
+   case (AD_u_BladeMotion)
+       Mesh => u%BladeMotion(ML%i1)
+   case (AD_u_TFinMotion)
+       Mesh => u%TFinMotion
    end select
 end function
 
 function AD_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
-   case (AD_u_rotors_NacelleMotion)
-       Name = "u%rotors("//trim(Num2LStr(ML%i1))//")%NacelleMotion"
-   case (AD_u_rotors_TowerMotion)
-       Name = "u%rotors("//trim(Num2LStr(ML%i1))//")%TowerMotion"
-   case (AD_u_rotors_HubMotion)
-       Name = "u%rotors("//trim(Num2LStr(ML%i1))//")%HubMotion"
-   case (AD_u_rotors_BladeRootMotion)
-       Name = "u%rotors("//trim(Num2LStr(ML%i1))//")%BladeRootMotion("//trim(Num2LStr(ML%i2))//")"
-   case (AD_u_rotors_BladeMotion)
-       Name = "u%rotors("//trim(Num2LStr(ML%i1))//")%BladeMotion("//trim(Num2LStr(ML%i2))//")"
-   case (AD_u_rotors_TFinMotion)
-       Name = "u%rotors("//trim(Num2LStr(ML%i1))//")%TFinMotion"
+   case (AD_u_NacelleMotion)
+       Name = "u%NacelleMotion"
+   case (AD_u_TowerMotion)
+       Name = "u%TowerMotion"
+   case (AD_u_HubMotion)
+       Name = "u%HubMotion"
+   case (AD_u_BladeRootMotion)
+       Name = "u%BladeRootMotion("//trim(Num2LStr(ML%i1))//")"
+   case (AD_u_BladeMotion)
+       Name = "u%BladeMotion("//trim(Num2LStr(ML%i1))//")"
+   case (AD_u_TFinMotion)
+       Name = "u%TFinMotion"
    end select
 end function
 
 function AD_OutputMeshPointer(y, ML) result(Mesh)
-   type(AD_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(RotOutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
-   case (AD_y_rotors_NacelleLoad)
-       Mesh => y%rotors(ML%i1)%NacelleLoad
-   case (AD_y_rotors_HubLoad)
-       Mesh => y%rotors(ML%i1)%HubLoad
-   case (AD_y_rotors_TowerLoad)
-       Mesh => y%rotors(ML%i1)%TowerLoad
-   case (AD_y_rotors_BladeLoad)
-       Mesh => y%rotors(ML%i1)%BladeLoad(ML%i2)
-   case (AD_y_rotors_TFinLoad)
-       Mesh => y%rotors(ML%i1)%TFinLoad
+   case (AD_y_NacelleLoad)
+       Mesh => y%NacelleLoad
+   case (AD_y_HubLoad)
+       Mesh => y%HubLoad
+   case (AD_y_TowerLoad)
+       Mesh => y%TowerLoad
+   case (AD_y_BladeLoad)
+       Mesh => y%BladeLoad(ML%i1)
+   case (AD_y_TFinLoad)
+       Mesh => y%TFinLoad
    end select
 end function
 
 function AD_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
-   case (AD_y_rotors_NacelleLoad)
-       Name = "y%rotors("//trim(Num2LStr(ML%i1))//")%NacelleLoad"
-   case (AD_y_rotors_HubLoad)
-       Name = "y%rotors("//trim(Num2LStr(ML%i1))//")%HubLoad"
-   case (AD_y_rotors_TowerLoad)
-       Name = "y%rotors("//trim(Num2LStr(ML%i1))//")%TowerLoad"
-   case (AD_y_rotors_BladeLoad)
-       Name = "y%rotors("//trim(Num2LStr(ML%i1))//")%BladeLoad("//trim(Num2LStr(ML%i2))//")"
-   case (AD_y_rotors_TFinLoad)
-       Name = "y%rotors("//trim(Num2LStr(ML%i1))//")%TFinLoad"
+   case (AD_y_NacelleLoad)
+       Name = "y%NacelleLoad"
+   case (AD_y_HubLoad)
+       Name = "y%HubLoad"
+   case (AD_y_TowerLoad)
+       Name = "y%TowerLoad"
+   case (AD_y_BladeLoad)
+       Name = "y%BladeLoad("//trim(Num2LStr(ML%i1))//")"
+   case (AD_y_TFinLoad)
+       Name = "y%TFinLoad"
    end select
 end function
+
+subroutine AD_PackContStateAry(Vars, x, ValAry)
+   type(RotContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (AD_x_BEMT_UA_element_x)
+             call MV_Pack2(Var, x%BEMT%UA%element(DL%i1, DL%i2)%x, ValAry)  ! Rank 1 Array
+         case (AD_x_BEMT_DBEMT_element_vind)
+             call MV_Pack2(Var, x%BEMT%DBEMT%element(DL%i1, DL%i2)%vind, ValAry)  ! Rank 1 Array
+         case (AD_x_BEMT_DBEMT_element_vind_1)
+             call MV_Pack2(Var, x%BEMT%DBEMT%element(DL%i1, DL%i2)%vind_1, ValAry)  ! Rank 1 Array
+         case (AD_x_BEMT_V_w)
+             call MV_Pack2(Var, x%BEMT%V_w, ValAry)  ! Rank 1 Array
+         case (AD_x_AA_DummyContState)
+             call MV_Pack2(Var, x%AA%DummyContState, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine AD_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(RotContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (Var%DL%Num)
+         case (AD_x_BEMT_UA_element_x)
+             call MV_Unpack2(Var, ValAry, x%BEMT%UA%element(DL%i1, DL%i2)%x)  ! Rank 1 Array
+         case (AD_x_BEMT_DBEMT_element_vind)
+             call MV_Unpack2(Var, ValAry, x%BEMT%DBEMT%element(DL%i1, DL%i2)%vind)  ! Rank 1 Array
+         case (AD_x_BEMT_DBEMT_element_vind_1)
+             call MV_Unpack2(Var, ValAry, x%BEMT%DBEMT%element(DL%i1, DL%i2)%vind_1)  ! Rank 1 Array
+         case (AD_x_BEMT_V_w)
+             call MV_Unpack2(Var, ValAry, x%BEMT%V_w)  ! Rank 1 Array
+         case (AD_x_AA_DummyContState)
+             call MV_Unpack2(Var, ValAry, x%AA%DummyContState)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine AD_PackConstrStateAry(Vars, z, ValAry)
+   type(RotConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (AD_z_BEMT_phi)
+             call MV_Pack2(Var, z%BEMT%phi, ValAry)  ! Rank 2 Array
+         case (AD_z_AA_DummyConstrState)
+             call MV_Pack2(Var, z%AA%DummyConstrState, ValAry)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine AD_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(RotConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (Var%DL%Num)
+         case (AD_z_BEMT_phi)
+             call MV_Unpack2(Var, ValAry, z%BEMT%phi)  ! Rank 2 Array
+         case (AD_z_AA_DummyConstrState)
+             call MV_Unpack2(Var, ValAry, z%AA%DummyConstrState)  ! Scalar
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine AD_PackInputAry(Vars, u, ValAry)
+   type(RotInputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (AD_u_NacelleMotion)
+             call MV_Pack2(Var, u%NacelleMotion, ValAry)  ! Mesh
+         case (AD_u_TowerMotion)
+             call MV_Pack2(Var, u%TowerMotion, ValAry)  ! Mesh
+         case (AD_u_HubMotion)
+             call MV_Pack2(Var, u%HubMotion, ValAry)  ! Mesh
+         case (AD_u_BladeRootMotion)
+             call MV_Pack2(Var, u%BladeRootMotion(DL%i1), ValAry)  ! Mesh
+         case (AD_u_BladeMotion)
+             call MV_Pack2(Var, u%BladeMotion(DL%i1), ValAry)  ! Mesh
+         case (AD_u_TFinMotion)
+             call MV_Pack2(Var, u%TFinMotion, ValAry)  ! Mesh
+         case (AD_u_UserProp)
+             call MV_Pack2(Var, u%UserProp, ValAry)  ! Rank 2 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine AD_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(RotInputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (Var%DL%Num)
+         case (AD_u_NacelleMotion)
+             call MV_Unpack2(Var, ValAry, u%NacelleMotion)  ! Mesh
+         case (AD_u_TowerMotion)
+             call MV_Unpack2(Var, ValAry, u%TowerMotion)  ! Mesh
+         case (AD_u_HubMotion)
+             call MV_Unpack2(Var, ValAry, u%HubMotion)  ! Mesh
+         case (AD_u_BladeRootMotion)
+             call MV_Unpack2(Var, ValAry, u%BladeRootMotion(DL%i1))  ! Mesh
+         case (AD_u_BladeMotion)
+             call MV_Unpack2(Var, ValAry, u%BladeMotion(DL%i1))  ! Mesh
+         case (AD_u_TFinMotion)
+             call MV_Unpack2(Var, ValAry, u%TFinMotion)  ! Mesh
+         case (AD_u_UserProp)
+             call MV_Unpack2(Var, ValAry, u%UserProp)  ! Rank 2 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine AD_PackOutputAry(Vars, y, ValAry)
+   type(RotOutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (AD_y_NacelleLoad)
+             call MV_Pack2(Var, y%NacelleLoad, ValAry)  ! Mesh
+         case (AD_y_HubLoad)
+             call MV_Pack2(Var, y%HubLoad, ValAry)  ! Mesh
+         case (AD_y_TowerLoad)
+             call MV_Pack2(Var, y%TowerLoad, ValAry)  ! Mesh
+         case (AD_y_BladeLoad)
+             call MV_Pack2(Var, y%BladeLoad(DL%i1), ValAry)  ! Mesh
+         case (AD_y_TFinLoad)
+             call MV_Pack2(Var, y%TFinLoad, ValAry)  ! Mesh
+         case (AD_y_WriteOutput)
+             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine AD_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(RotOutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (Var%DL%Num)
+         case (AD_y_NacelleLoad)
+             call MV_Unpack2(Var, ValAry, y%NacelleLoad)  ! Mesh
+         case (AD_y_HubLoad)
+             call MV_Unpack2(Var, ValAry, y%HubLoad)  ! Mesh
+         case (AD_y_TowerLoad)
+             call MV_Unpack2(Var, ValAry, y%TowerLoad)  ! Mesh
+         case (AD_y_BladeLoad)
+             call MV_Unpack2(Var, ValAry, y%BladeLoad(DL%i1))  ! Mesh
+         case (AD_y_TFinLoad)
+             call MV_Unpack2(Var, ValAry, y%TFinLoad)  ! Mesh
+         case (AD_y_WriteOutput)
+             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+         end select
+      end associate
+   end do
+end subroutine
 END MODULE AeroDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

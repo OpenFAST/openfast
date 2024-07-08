@@ -492,8 +492,7 @@ subroutine SeaSt_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrS
    !----------------------------------------------------------------------------
 
    ! Extended input
-   call MV_AddVar(p%Vars%u, "WaveElev0", FieldScalar, &
-                  VarIdx=p%iVarWaveElev0U, &
+   call MV_AddVar(p%Vars%u, "WaveElev0", FieldScalar, DatLoc(SeaSt_u_WaveElev0), &
                   Flags=VF_ExtLin, &
                   Perturb=0.02_R8Ki * Pi / 180.0_R8Ki * max(1.0_R8Ki, p%WaveField%WtrDpth), &
                   LinNames=['Extended input: wave elevation at platform ref point, m'])
@@ -503,16 +502,13 @@ subroutine SeaSt_InitVars(u, p, x, y, m, InitOut, InputFileData, Linearize, ErrS
    !----------------------------------------------------------------------------
 
    ! Extended output
-   call MV_AddVar(p%Vars%y, "WaveElev0", FieldScalar, &
-                  VarIdx=p%iVarWaveElev0Y, &
+   call MV_AddVar(p%Vars%y, "WaveElev0", FieldScalar, DatLoc(SeaSt_y_WaveElev0), &
                   Flags=VF_ExtLin, &
                   LinNames=['Extended output: wave elevation at platform ref point, m'])
 
-
    ! Output variables
-   call MV_AddVar(p%Vars%y, "WriteOutput", FieldScalar, Num=p%NumOuts, &
+   call MV_AddVar(p%Vars%y, "WriteOutput", FieldScalar, DatLoc(SeaSt_y_WriteOutput), Num=p%NumOuts, &
                   Flags=VF_WriteOut, &
-                  VarIdx=p%iVarWriteOutput, &
                   LinNames=[(WriteOutputLinName(i), i = 1, p%numOuts)])
 
    !----------------------------------------------------------------------------
@@ -842,10 +838,11 @@ subroutine SeaSt_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, E
    real(R8Ki), allocatable, optional,  intent(inout)  :: dXddu(:,:) !< Partial derivatives of discrete state
    real(R8Ki), allocatable, optional,  intent(inout)  :: dZdu(:,:)  !< Partial derivatives of constraint state
 
+   character(*), parameter :: RoutineName = 'SeaSt_JacobianPInput'
    integer(IntKi)          :: idx_dY,idx_du,i
    integer(IntKi)          :: ErrStat2
    character(ErrMsgLen)    :: ErrMsg2
-   character(*), parameter :: RoutineName = 'SeaSt_JacobianPInput'
+   integer(IntKi)          :: iVar_u_WaveElev0, iVar_y_WaveElev0
 
    ! Initialize ErrStat
    ErrStat = ErrID_None
@@ -861,11 +858,15 @@ subroutine SeaSt_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, E
       ! Initialize Jacobian to zero
       dYdu = 0.0_R8Ki
 
+      iVar_u_WaveElev0 = MV_FindVarDatLoc(p%Vars%u, SeaSt_u_WaveElev0)
+      iVar_y_WaveElev0 = MV_FindVarDatLoc(p%Vars%y, SeaSt_y_WaveElev0)
+
       ! Extended input to extended output (direct pass-through)
-      dYdu(p%Vars%y(p%iVarWaveElev0Y)%iLoc(1), p%Vars%u(p%iVarWaveElev0U)%iLoc(1)) = 1.0_R8Ki
+      if (iVar_u_WaveElev0 > 0 .and. iVar_y_WaveElev0 > 0) then
+         dYdu(p%Vars%y(iVar_y_WaveElev0)%iLoc(1), p%Vars%u(iVar_u_WaveElev0)%iLoc(1)) = 1.0_R8Ki
+      end if
       
       ! It isn't possible to determine the relationship between the extended input and the WrOuts.  So we leave them all zero.
-
    endif
 
    ! No states or constraints, so deallocate any such matrices
@@ -1048,7 +1049,9 @@ subroutine SeaSt_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_
       end if
 
       ! no regular inputs, only extended input
-      u_op(p%Vars%u(p%iVarWaveElev0U)%iLoc(1)) = 0.0_ReKi    ! WaveElev0 is zero to be consistent with linearization requirements
+
+      ! WaveElev0 is zero to be consistent with linearization requirements
+      call MV_Pack2(p%Vars%u(1), 0.0_R8Ki, u_op)
 
       ! NOTE: if more extended inputs are added, place them here
    end if
@@ -1058,11 +1061,10 @@ subroutine SeaSt_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_
          call AllocAry(y_op, p%Vars%Ny, 'y_op', ErrStat2, ErrMsg2)
          if (Failed()) return
       end if
-
-      ! no regular outputs, only extended output and WrOuts
-      y_op(p%Vars%y(p%iVarWaveElev0Y)%iLoc(1)) = 0.0_ReKi    ! WaveElev0 is zero to be consistent with linearization requirements
       
-      call MV_Pack(p%Vars%y, p%iVarWriteOutput, y%WriteOutput, y_op)
+      ! WaveElev0 is zero to be consistent with linearization requirements
+      call MV_Pack2(p%Vars%y(1), 0.0_R8Ki, y_op)   
+      call MV_Pack2(p%Vars%y(2), y%WriteOutput, y_op)
 
    end if
 

@@ -14,7 +14,7 @@ include	Registry_NWTC_Library.txt
 
 # ElastoDyn Constants
 param	ElastoDyn/ED	-	IntKi	ED_NMX	-	4	-	"Used in updating predictor-corrector values (size of state history)"	-
-
+param	^           	-	IntKi	ED_u_BlPitchComC	-	-1	-	"DatLoc number for collective blade pitch extended input"	-
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -764,33 +764,6 @@ typedef	^	ParameterType	Integer	NumBl_Lin	-	-	-	"number of blades in the jacobia
 typedef	^	ParameterType	Integer	NActvVelDOF_Lin	-	-	-	"number of velocity states in the jacobian"	-
 typedef	^	ParameterType	Integer	NActvDOF_Lin	-	-	-	"number of active DOFs to use in the jacobian"	-
 typedef	^	ParameterType	Integer	NActvDOF_Stride	-	-	-	"stride for active DOFs to use in the jacobian"	-
-# State variable indices
-typedef	^	ParameterType	IntKi	iVarBladeFlap1	{:}	-	-	"Indices of BladeFlap1 variable"	-
-typedef	^	ParameterType	IntKi	iVarBladeEdge1	{:}	-	-	"Indices of BladeEdge1 variable"	-
-typedef	^	ParameterType	IntKi	iVarBladeFlap2	{:}	-	-	"Indices of BladeFlap2 variable"	-
-# Input variable indices
-typedef	^	ParameterType	IntKi	iVarBladePtLoads	{:}	-	-	"Indices of blade point loads mesh variable"	-
-typedef	^	ParameterType	IntKi	iVarPlatformPtMesh	-	-	-	"Index of platform point loads mesh variable"	-
-typedef	^	ParameterType	IntKi	iVarTowerPtLoads	-	-	-	"Index of tower point loads mesh variable"	-
-typedef	^	ParameterType	IntKi	iVarHubPtLoad	-	-	-	"Index of hub point load mesh variable"	-
-typedef	^	ParameterType	IntKi	iVarNacelleLoads	-	-	-	"Index of nacelle loads mesh variable"	-
-typedef	^	ParameterType	IntKi	iVarTFinCMLoads	-	-	-	"Index of tail fin CM loads mesh variable"	-
-typedef	^	ParameterType	IntKi	iVarBlPitchCom	-	-	-	"Index of blade pitch command variable"	-
-typedef	^	ParameterType	IntKi	iVarYawMom	-	-	-	"Index of yaw moment variable"	-
-typedef	^	ParameterType	IntKi	iVarGenTrq	-	-	-	"Index of generator torque variable"	-
-typedef	^	ParameterType	IntKi	iVarBlPitchComC	-	-	-	"Index of blade pitch command C variable"	-
-# Output variable indices
-typedef	^	ParameterType	IntKi	iVarBladeMotion	{:}	-	-	"Indices of blade motion mesh variable"	-
-typedef	^	ParameterType	IntKi	iVarPlatformMotion	-	-	-	"Index of variable"	-
-typedef	^	ParameterType	IntKi	iVarTowerMotion	-	-	-	"Index of variable"	-
-typedef	^	ParameterType	IntKi	iVarHubMotion	-	-	-	"Index of variable"	-
-typedef	^	ParameterType	IntKi	iVarBladeRootMotion	{:}	-	-	"Indices of variable"	-
-typedef	^	ParameterType	IntKi	iVarNacelleMotion	-	-	-	"Index of variable"	-
-typedef	^	ParameterType	IntKi	iVarTFinCMMotion	-	-	-	"Index of variable"	-
-typedef	^	ParameterType	IntKi	iVarYaw	-	-	-	"Index of variable"	-
-typedef	^	ParameterType	IntKi	iVarYawRate	-	-	-	"Index of variable"	-
-typedef	^	ParameterType	IntKi	iVarHSS_Spd	-	-	-	"Index of variable"	-
-typedef	^	ParameterType	IntKi	iVarWriteOut	-	-	-	"Index of variable"	-
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:

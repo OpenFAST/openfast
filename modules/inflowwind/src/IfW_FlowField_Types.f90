@@ -164,7 +164,8 @@ IMPLICIT NONE
     TYPE(UserFieldType)  :: User      !< User Field Wind Data [-]
   END TYPE FlowFieldType
 ! =======================
-CONTAINS
+
+contains
 
 subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUniformFieldTypeData, CtrlCode, ErrStat, ErrMsg)
    type(UniformFieldType), intent(in) :: SrcUniformFieldTypeData

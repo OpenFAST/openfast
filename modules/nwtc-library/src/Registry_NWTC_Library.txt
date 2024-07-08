@@ -75,35 +75,40 @@ param       ^       -           IntKi           VC_Tight            -   1   -   
 param       ^       -           IntKi           VC_Option1          -   2   -   ""  -
 param       ^       -           IntKi           VC_Option2          -   3   -   ""  -
 
+typedef     ^       DatLoc      IntKi           Num                 -   0   -   "Mesh number in module"
+typedef     ^       ^           IntKi           i1                  -   0   -   "Index 1"
+typedef     ^       ^           IntKi           i2                  -   0   -   "Index 2"
+typedef     ^       ^           IntKi           i3                  -   0   -   "Index 3"
+
 typedef     ^       ModVarType  character(VarNameLen)   Name        -   -   -   ""  -
 typedef     ^       ^           IntKi           iMod                -   0   -   "Module index"  -
 typedef     ^       ^           IntKi           iVar                -   0   -   "Variable index"  -
+typedef     ^       ^           DatLoc          DL                  -   -   -   "data location"  -
 typedef     ^       ^           IntKi           Field               -   0   -   ""  -
 typedef     ^       ^           IntKi           Nodes               -   1   -   ""  -
 typedef     ^       ^           IntKi           Num                 -   1   -   ""  -
 typedef     ^       ^           IntKi           Flags               -   0   -   ""  -
 typedef     ^       ^           IntKi           DerivOrder          -   0   -   ""  -
 typedef     ^       ^           IntKi           iLoc                2   0   -   "indices in local arrays"  -
-typedef     ^       ^           IntKi           iUsr                2   0   -   "first user defined index for variable, can be used a lower/upper bounds"  -
-typedef     ^       ^           IntKi           jUsr                -   0   -   "second user defined index for variable"  -
+typedef     ^       ^           IntKi           iAry                2   0   -   "first user defined index for variable"  -
+typedef     ^       ^           IntKi           jAry                -   0   -   "second user defined index for variable"  -
+typedef     ^       ^           IntKi           kAry                -   0   -   "third user defined index for variable"  -
+typedef     ^       ^           IntKi           mAry                -   0   -   "third user defined index for variable"  -
 typedef     ^       ^           IntKi           MeshID              -   0   -   "Mesh identification number"  -
 typedef     ^       ^           R8Ki            Perturb             -   0   -   "perturbation amount for linearization"  -
 typedef     ^       ^           character(LinChanLen)   LinNames    :   -   -   ""  -
 
 typedef     ^       ModVarsType IntKi           Nx                  -   0   -   "Number of x values"
-typedef     ^       ^           IntKi           Nxd                 -   0   -   "Number of xd values"
 typedef     ^       ^           IntKi           Nz                  -   0   -   "Number of z values"
 typedef     ^       ^           IntKi           Nu                  -   0   -   "Number of u values"
 typedef     ^       ^           IntKi           Ny                  -   0   -   "Number of y values"
 typedef     ^       ^           ModVarType      x                   :   -   -   "Module state variable array"  -
-typedef     ^       ^           ModVarType      xd                  :   -   -   "Module state variable array"  -
 typedef     ^       ^           ModVarType      z                   :   -   -   "Module state variable array"  -
 typedef     ^       ^           ModVarType      u                   :   -   -   "Module input variable array"  -
 typedef     ^       ^           ModVarType      y                   :   -   -   "Module output variable array"  -
 
 typedef     ^       ModJacType  R8Ki            x                   :   -   -   ""  -
 typedef     ^       ^           R8Ki            dx                  :   -   -   ""  -
-typedef     ^       ^           R8Ki            xd                  :   -   -   ""  -
 typedef     ^       ^           R8Ki            z                   :   -   -   ""  -
 typedef     ^       ^           R8Ki            u                   :   -   -   ""  -
 typedef     ^       ^           R8Ki            y                   :   -   -   ""  -
@@ -114,10 +119,16 @@ typedef     ^       ^           R8Ki            x_neg               :   -   -   
 typedef     ^       ^           R8Ki            y_pos               :   -   -   ""  -
 typedef     ^       ^           R8Ki            y_neg               :   -   -   ""  -
 
-typedef     ^       MeshLocType IntKi           Num                 -   0   -   "Mesh number in module"
-typedef     ^       ^           IntKi           i1                  -   0   -   "Mesh index 1"
-typedef     ^       ^           IntKi           i2                  -   0   -   "Mesh index 2"
-typedef     ^       ^           IntKi           i3                  -   0   -   "Mesh index 3"
+typedef     ^       VarXfrType  IntKi           iVar                -   -   -   ""  -
+typedef     ^       ^           IntKi           NumVals             -   -   -   ""  -
+typedef     ^       ^           IntKi           iSrc                2   -   -   ""  -
+typedef     ^       ^           IntKi           iDst                2   -   -   ""  -
+
+typedef     ^       ModXfrType  VarXfrType      x                   :   -   -   ""  -
+typedef     ^       ^           VarXfrType      z                   :   -   -   ""  -
+typedef     ^       ^           VarXfrType      u                   :   -   -   ""  -
+typedef     ^       ^           VarXfrType      y                   :   -   -   ""  -
+
 
 # This file defines types that may be  used from the NWTC_Library
 # include this into a component registry file if you wish to use these types
