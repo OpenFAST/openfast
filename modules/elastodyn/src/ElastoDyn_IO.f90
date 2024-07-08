@@ -1711,313 +1711,166 @@ END SUBROUTINE ReadBladeInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine reads a blade input file.
 SUBROUTINE ReadBladeFile ( BldFile, BladeKInputFileData, UnEc, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      ! Passed variables:
-
    TYPE(BladeInputData),     INTENT(INOUT)  :: BladeKInputFileData                 !< Data for Blade K stored in the module's input file
    CHARACTER(*),             INTENT(IN)     :: BldFile                             !< Name of the blade input file data
    INTEGER(IntKi),           INTENT(IN)     :: UnEc                                !< I/O unit for echo file. If present and > 0, write to UnEc
-
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             !< Error status
    CHARACTER(*),             INTENT(OUT)    :: ErrMsg                              !< Error message
 
-
-      ! Local variables:
-
+   ! Local variables:
+   integer(IntKi)               :: CurLine                                         !< current line in the input file
+   character(1024)              :: TmpComment                                      !< temporary comment line
+   TYPE(FileInfoType)           :: InFileInfo                                      !< The derived type for holding the full input file for parsing
    REAL(ReKi)                   :: AdjBlMs                                         ! Factor to adjust blade mass density.
    REAL(ReKi)                   :: AdjEdSt                                         ! Factor to adjust edge stiffness.
    REAL(ReKi)                   :: AdjFlSt                                         ! Factor to adjust flap stiffness.
-
-   REAL(ReKi)                   :: TmpRAry(17)                                     ! Temporary variable to read table from file (up to 17 columns)
-
-   INTEGER(IntKi)               :: I                                               ! A generic DO index.
+   REAL(ReKi)                   :: TmpRAry(6)                                      ! Temporary variable to read table from file (up to 6 columns)
+   INTEGER(IntKi)               :: i                                               ! A generic DO index.
    INTEGER( IntKi )             :: UnIn                                            ! Unit number for reading file
-   INTEGER( IntKi )             :: NInputCols                                      ! Number of columns to be read from the file
    INTEGER(IntKi)               :: ErrStat2                                        ! Temporary Error status
    CHARACTER(ErrMsgLen)         :: ErrMsg2                                         ! Temporary Err msg
    CHARACTER(*), PARAMETER      :: RoutineName='ReadBladeFile'
 
    ErrStat = ErrID_None
    ErrMsg = ""
-   
-   UnIn = -1
-   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
 
+   ! read the input file   
+   call ProcessComFile( BldFile, InFileInfo, ErrStat2, ErrMsg2 );   if (Failed()) return;
 
-      ! Open the input file for blade K.
-
-   CALL OpenFInpFile ( UnIn, BldFile, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-      
-
+   ! Parse the input file
+   CurLine = 1    ! Start at first line
    !  -------------- HEADER -------------------------------------------------------
-
-      ! Skip the header.
-
-   CALL ReadCom ( UnIn, BldFile, 'unused blade file header line 1', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-   CALL ReadCom ( UnIn, BldFile, 'unused blade file header line 2', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
+   call ParseCom( InFileInfo, CurLine, TmpComment, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;
+   call ParseCom( InFileInfo, CurLine, TmpComment, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;
 
    !  -------------- BLADE PARAMETERS ---------------------------------------------
+   call ParseCom( InFileInfo, CurLine, TmpComment, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;
 
-      ! Skip the comment line.
+   ! NBlInpSt - Number of blade input stations.
+   call ParseVar( InFileInfo, CurLine, 'NBlInpSt', BladeKInputFileData%NBlInpSt, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;
 
-   CALL ReadCom ( UnIn, BldFile, 'blade parameters', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      ! NBlInpSt - Number of blade input stations.
-
-   CALL ReadVar ( UnIn, BldFile, BladeKInputFileData%NBlInpSt, 'NBlInpSt', 'Number of blade input stations', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! .......... Allocate the arrays based on this NBlInpSt input ..........
+   ! .......... Allocate the arrays based on this NBlInpSt input ..........
    CALL Alloc_BladeInputProperties( BladeKInputFileData, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
 
+   ! BldFlDmp - Blade structural damping ratios in flapwise direction. Don't check name
+   do i=1,size(BladeKInputFileData%BldFlDmp)
+      call ParseVar( InFileInfo, CurLine, '', BladeKInputFileData%BldFlDmp(i), ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;
+   enddo
 
-
-      ! BldFlDmp - Blade structural damping ratios in flapwise direction.
-
-   CALL ReadAryLines( UnIn, BldFile, BladeKInputFileData%BldFlDmp, SIZE(BladeKInputFileData%BldFlDmp), 'BldFlDmp', &
-                                       'Blade structural damping ratios in flapwise direction', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-
-      ! BldEdDmp - Blade structural damping ratios in edgewise direction.
-
-   CALL ReadAryLines( UnIn, BldFile, BladeKInputFileData%BldEdDmp, SIZE(BladeKInputFileData%BldEdDmp), 'BldEdDmp', &
-                                       'Blade structural damping ratios in edgewise direction', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
+   ! BldEdDmp - Blade structural damping ratios in edgewise direction. Don't check name
+   do i=1,size(BladeKInputFileData%BldEdDmp)
+      call ParseVar( InFileInfo, CurLine, '', BladeKInputFileData%BldEdDmp(i),  ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;
+   enddo
 
    !  -------------- BLADE ADJUSTMENT FACTORS -------------------------------------
+   call ParseCom( InFileInfo, CurLine, TmpComment, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;
 
+   ! FlStTunr(1) - Blade flapwise modal stiffness tuners. Don't check name
+   do i=1,size(BladeKInputFileData%FlStTunr)
+      call ParseVar( InFileInfo, CurLine, '', BladeKInputFileData%FlStTunr(i), ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;
+   enddo
 
-      ! Skip the comment line.
+   ! AdjBlMs - Factor to adjust blade mass density.
+   call ParseVar( InFileInfo, CurLine, 'AdjBlMs', AdjBlMs, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;
 
-   CALL ReadCom ( UnIn, BldFile, 'blade adjustment factors', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
+   ! AdjFlSt - Factor to adjust blade flap stiffness.
+   call ParseVar( InFileInfo, CurLine, 'AdjFlSt', AdjFlSt, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;
 
+   ! AdjEdSt - Factor to adjust blade edge stiffness.
+   call ParseVar( InFileInfo, CurLine, 'AdjEdSt', AdjEdSt, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;
 
-      ! FlStTunr(1) - Blade flapwise modal stiffness tuners.
-
-   CALL ReadAryLines ( UnIn, BldFile, BladeKInputFileData%FlStTunr, SIZE(BladeKInputFileData%FlStTunr), 'FlStTunr', &
-                                                  'Blade flapwise modal stiffness tuners', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-
-      ! AdjBlMs - Factor to adjust blade mass density.
-
-   CALL ReadVar ( UnIn, BldFile, AdjBlMs, 'AdjBlMs', 'Factor to adjust blade mass density', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! AdjFlSt - Factor to adjust blade flap stiffness.
-
-   CALL ReadVar ( UnIn, BldFile, AdjFlSt, 'AdjFlSt', 'Factor to adjust blade flap stiffness', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! AdjEdSt - Factor to adjust blade edge stiffness.
-
-   CALL ReadVar ( UnIn, BldFile, AdjEdSt, 'AdjEdSt', 'Factor to adjust blade edge stiffness', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-         ! Check the locally-defined adjustment factors: AdjBlMs, AdjFlSt, AdjEdSt
-
-      IF ( AdjBlMs <= 0.0_ReKi ) THEN
-         CALL SetErrStat( ErrID_Warn, 'AdjBlMs must be greater than zero.', ErrStat, ErrMsg, RoutineName )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-      END IF
-
-      IF ( AdjFlSt <= 0.0_ReKi ) THEN
-         CALL SetErrStat( ErrID_Warn, 'AdjFlSt must be greater than zero.', ErrStat, ErrMsg, RoutineName )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-      END IF
-
-      IF ( AdjEdSt <= 0.0_ReKi ) THEN
-         CALL SetErrStat( ErrID_Warn, 'AdjEdSt must be greater than zero.', ErrStat, ErrMsg, RoutineName )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-      END IF
+   call CheckAdjVars()     ! Warnings only, so don't need to return
 
 
    !  -------------- DISTRIBUTED BLADE PROPERTIES ---------------------------------
+   ! Skip the comment lines.
+   call ParseCom( InFileInfo, CurLine, TmpComment, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;   ! Separator
+   call ParseCom( InFileInfo, CurLine, TmpComment, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;   ! Col Names
+   call ParseCom( InFileInfo, CurLine, TmpComment, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;   ! Col Units
 
+   ! The table may contain 6 columns if it includes PitchAxis (older format), otherwise it should only contain 5 columns
+   ! Attempt to read 6 columns:
+   call ParseAry( InFileInfo, CurLine, 'Blade input station table', TmpRAry, 6, ErrStat2, ErrMsg2)   ! Don't write to echo
 
-      ! Skip the comment lines.
-
-   CALL ReadCom ( UnIn, BldFile, 'distributed blade parameters'     , ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   CALL ReadCom ( UnIn, BldFile, 'distributed-blade-parameter names', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   CALL ReadCom ( UnIn, BldFile, 'distributed-blade-parameter units', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! Read the table.
-
-   NInputCols = 6
-
-
-   DO I=1,BladeKInputFileData%NBlInpSt
-
-      CALL ReadAry( UnIn, BldFile, TmpRAry, NInputCols, 'Line'//TRIM(Num2LStr(I)), 'Blade input station table', &
-                    ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-
-      BladeKInputFileData%BlFract( I) = TmpRAry(1)
-      BladeKInputFileData%PitchAx( I) = TmpRAry(2)
-      BladeKInputFileData%StrcTwst(I) = TmpRAry(3)*D2R      ! Input in degrees; converted to radians here
-      BladeKInputFileData%BMassDen(I) = TmpRAry(4)*AdjBlMs  ! Apply the correction factors to the elemental data.
-      BladeKInputFileData%FlpStff( I) = TmpRAry(5)*AdjFlSt  ! Apply the correction factors to the elemental data.
-      BladeKInputFileData%EdgStff( I) = TmpRAry(6)*AdjEdSt  ! Apply the correction factors to the elemental data.
-
-   ENDDO ! I
-
-
+!FIXME: remove the deprecated format at some point in the future!!!
+   ! 6 Columns -- deprecated format
+   if (ErrStat2 == ErrID_None) then    ! contains PitchAxis input
+      CurLine = CurLine - 1   ! Backup one line to read entire table
+      call ParseTable6Col(ErrStat2, ErrMsg2); if (Failed()) return;
+   else                                ! no PitchAxis input
+      CurLine = CurLine - 1   ! Backup one line to read entire table
+      call ParseTable5Col(ErrStat2, ErrMsg2); if (Failed()) return;
+   endif
 
    !  -------------- BLADE MODE SHAPES --------------------------------------------
+   ! NOTE: there is no coefficient for mode 0, so starts at BldFl1Sh(2), hence using (i+1)
+   ! NOTE: it might be really annoying to make sure variable name is correct in the input file.  In that case, set the variable name to '' so it is ignored.
+   call ParseCom( InFileInfo, CurLine, TmpComment, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;
 
+   ! BldFl1Sh - Blade-flap mode-1 shape coefficients. Don't check name
+   do i=1,size(BladeKInputFileData%BldFl1Sh)
+      call ParseVar( InFileInfo, CurLine, '', BladeKInputFileData%BldFl1Sh(i), ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;
+   enddo
 
-      ! Skip the comment line.
+   ! BldFl2Sh - Blade-flap mode-2 shape coefficients. Don't check name
+   do i=1,size(BladeKInputFileData%BldFl2Sh)
+      call ParseVar( InFileInfo, CurLine, '', BladeKInputFileData%BldFl2Sh(i), ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;
+   enddo
 
-   CALL ReadCom ( UnIn, BldFile, 'blade mode shapes', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! BldFl1Sh - Blade-flap mode-1 shape coefficients.
-   CALL ReadAryLines ( UnIn, BldFile, BladeKInputFileData%BldFl1Sh, SIZE(BladeKInputFileData%BldFl1Sh), 'BldFl1Sh', &
-                           'Blade-flap mode-1 shape coefficients', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! BldFl2Sh - Blade-flap mode-2 shape coefficients.
-
-   CALL ReadAryLines ( UnIn, BldFile, BladeKInputFileData%BldFl2Sh, SIZE(BladeKInputFileData%BldFl2Sh), 'BldFl2Sh', &
-                    'Blade-flap mode-2 shape coefficients', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! BldEdgSh - Blade-edge mode shape coefficients.
-
-   CALL ReadAryLines ( UnIn, BldFile, BladeKInputFileData%BldEdgSh, SIZE(BladeKInputFileData%BldEdgSh), 'BldEdgSh', &
-                     'Blade-edge mode shape coefficients', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
+   ! BldEdgSh - Blade-edge mode shape coefficients. Don't check name
+   do i=1,size(BladeKInputFileData%BldEdgSh)
+      call ParseVar( InFileInfo, CurLine, '', BladeKInputFileData%BldEdgSh(i), ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;
+   enddo
 
 
    !  -------------- END OF FILE --------------------------------------------
-
-      ! Close the blade file.
-
-   call Cleanup()
-
    ! Verify that everything was read and stored correctly
    call PrintBladeFileContents()
 
-   RETURN
-
 
 CONTAINS
-
-   SUBROUTINE Cleanup()
-      IF (UnIn > 0) CLOSE( UnIn )
-   END SUBROUTINE Cleanup
-   
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
+   subroutine CheckAdjVars()
+      IF ( AdjBlMs <= 0.0_ReKi ) call SetErrStat( ErrID_Warn, 'AdjBlMs must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+      IF ( AdjFlSt <= 0.0_ReKi ) call SetErrStat( ErrID_Warn, 'AdjFlSt must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+      IF ( AdjEdSt <= 0.0_ReKi ) call SetErrStat( ErrID_Warn, 'AdjEdSt must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+   end subroutine
+   subroutine ParseTable5Col(ErrStat3, ErrMsg3)
+      integer(IntKi),       intent(out) :: ErrStat3
+      character(ErrMsgLen), intent(out) :: ErrMsg3
+      integer(IntKi),       parameter   :: NInputCols = 5
+      do I=1,BladeKInputFileData%NBlInpSt
+         call ParseAry( InFileInfo, CurLine, 'Blade input station table', TmpRAry, NInputCols, ErrStat3, ErrMsg3, UnEc)
+         if (ErrStat3 >= AbortErrLev) return;
+         BladeKInputFileData%BlFract( I) = TmpRAry(1)
+         BladeKInputFileData%StrcTwst(I) = TmpRAry(2)*D2R      ! Input in degrees; converted to radians here
+         BladeKInputFileData%BMassDen(I) = TmpRAry(3)*AdjBlMs  ! Apply the correction factors to the elemental data.
+         BladeKInputFileData%FlpStff( I) = TmpRAry(4)*AdjFlSt  ! Apply the correction factors to the elemental data.
+         BladeKInputFileData%EdgStff( I) = TmpRAry(5)*AdjEdSt  ! Apply the correction factors to the elemental data.
+      enddo
+   end subroutine
+   subroutine ParseTable6Col(ErrStat3, ErrMsg3)
+      integer(IntKi),       intent(out) :: ErrStat3
+      character(ErrMsgLen), intent(out) :: ErrMsg3
+      integer(IntKi),       parameter   :: NInputCols = 6
+      do I=1,BladeKInputFileData%NBlInpSt
+         call ParseAry( InFileInfo, CurLine, 'Blade input station table', TmpRAry, NInputCols, ErrStat3, ErrMsg3, UnEc)
+         if (ErrStat3 >= AbortErrLev) return;
+         BladeKInputFileData%BlFract( I) = TmpRAry(1)
+         BladeKInputFileData%PitchAx( I) = TmpRAry(2)
+         BladeKInputFileData%StrcTwst(I) = TmpRAry(3)*D2R      ! Input in degrees; converted to radians here
+         BladeKInputFileData%BMassDen(I) = TmpRAry(4)*AdjBlMs  ! Apply the correction factors to the elemental data.
+         BladeKInputFileData%FlpStff( I) = TmpRAry(5)*AdjFlSt  ! Apply the correction factors to the elemental data.
+         BladeKInputFileData%EdgStff( I) = TmpRAry(6)*AdjEdSt  ! Apply the correction factors to the elemental data.
+      enddo
+      ! Set warning that this is a depricated format (grab filename corresponding to the main blade file in case the table is separate)
+      ErrStat3 = ErrID_Warn
+      ErrMsg3  = "The ElastoDyn Blade file, "//trim(InFileInfo%FileList(1))//   &
+                 ", DISTRIBUTED BLADE PROPERTIES table contains the PitchAxis column.  This column is unused and will be removed in future releases"
+   end subroutine
    !> write out the blade file contents to screen (use in debugging only)
    subroutine PrintBladeFileContents()
       integer(IntKi) :: j
@@ -2056,7 +1909,6 @@ CONTAINS
       enddo
       call WrScr('========================================================')
    end subroutine
-
 END SUBROUTINE ReadBladeFile
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine reads the furling file input and converts units as appropriate.
