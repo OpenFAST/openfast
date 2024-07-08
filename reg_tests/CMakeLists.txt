@@ -18,7 +18,7 @@
 # -- OpenFAST Testing
 # -----------------------------------------------------------
 
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.15)
 project(OpenFAST_RegressionTest Fortran)
 
 include(CTest)
@@ -161,6 +161,11 @@ add_custom_command(
   DEPENDS DISCON
   COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${ff_dest}/DISCON_WT3.dll"
 )
+add_custom_command(
+  OUTPUT "${ff_dest}/DISCON_WT4.dll"
+  DEPENDS DISCON
+  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${ff_dest}/DISCON_WT4.dll"
+)
 
 add_custom_target(
   regression_test_controllers
@@ -174,6 +179,7 @@ add_custom_target(
     "${ff_dest}/DISCON_WT1.dll"
     "${ff_dest}/DISCON_WT2.dll"
     "${ff_dest}/DISCON_WT3.dll"
+    "${ff_dest}/DISCON_WT4.dll"
 )
 
 add_custom_target(

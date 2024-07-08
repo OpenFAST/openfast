@@ -29,6 +29,7 @@ MODULE NWTC_Library
          !     NWTC_Library.f90
          !     NWTC_Library_Types.f90
          !     NWTC_Num.f90
+         !     NWTC_Str.f90
          !     ModMesh.f90
          !     ModMesh_Types.f90
          !
@@ -51,6 +52,7 @@ MODULE NWTC_Library
          !     NWTC_Library_Types.f90
          !     NWTC_IO.f90
          !     NWTC_Num.f90
+         !     NWTC_Str.f90
          !     ModMesh_Types.f90
          !     ModMesh.f90
          !     ModMesh_Mapping.f90  (remove if compiling with -DNO_MESHMAPPING)
@@ -73,7 +75,9 @@ MODULE NWTC_Library
 
     USE NWTC_Library_Types
     USE NWTC_Num  ! technically we don't need to specify this if we have ModMesh (because ModMesh USEs NWTC_Num)
+    USE NWTC_Str  ! String utils
     USE ModMesh
+    USE ModReg
     
 #ifndef NO_MESHMAPPING
     ! Note that ModMesh_Mapping also includes LAPACK routines
@@ -81,6 +85,11 @@ MODULE NWTC_Library
 #endif
 
     IMPLICIT  NONE
+    
+    INTEGER, PARAMETER ::MHK_None = 0
+    INTEGER, PARAMETER ::MHK_FixedBottom = 1
+    INTEGER, PARAMETER ::MHK_Floating = 2
+
 
     CONTAINS
 

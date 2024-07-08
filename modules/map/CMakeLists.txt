@@ -33,7 +33,7 @@ endif()
 file(GLOB MAP_CLIB_SOURCES src/*.c src/*.cc src/*/*.c src/*/*.cc)
 file(GLOB MAP_C_HEADERS src/*.h src/*/*.h)
 
-add_library(maplib 
+add_library(maplib STATIC
   src/map.f90
   src/MAP_Types.f90
   src/MAP_Fortran_Types.f90

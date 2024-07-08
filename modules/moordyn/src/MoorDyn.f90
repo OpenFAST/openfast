@@ -34,7 +34,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v2.0.0', '2022-12-08' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v2.2.2', '2024-01-16' )
 
    INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
@@ -76,6 +76,9 @@ CONTAINS
   !    CHARACTER(1024)                              :: priPath        ! The path to the primary MoorDyn input file
       REAL(DbKi)                                   :: t              ! instantaneous time, to be used during IC generation
       INTEGER(IntKi)                               :: l              ! index
+      INTEGER(IntKi)                               :: il              ! index
+      INTEGER(IntKi)                               :: iil              ! index
+      INTEGER(IntKi)                               :: Success        ! flag for checking whether line is attached to failure point
       INTEGER(IntKi)                               :: I              ! Current line number of input file 
       INTEGER(IntKi)                               :: J              ! index
       INTEGER(IntKi)                               :: K              ! index
@@ -163,7 +166,7 @@ CONTAINS
       InitOut%Ver = MD_ProgDesc
 
       CALL WrScr('   This is MoorDyn v2, with significant input file changes from v1.')
-      CALL WrScr('   Copyright: (C) 2022 National Renewable Energy Laboratory, (C) 2019 Matt Hall')
+      CALL DispCopyrightLicense( MD_ProgDesc%Name, 'Copyright (C) 2019 Matt Hall' )
 
 
       !---------------------------------------------------------------------------------------------
@@ -193,33 +196,32 @@ CONTAINS
       p%mu_kA                = 0.0_DbKi
       p%mc                   = 1.0_DbKi
       p%cv                   = 200.0_DbKi
+      p%VisMeshes            = InitInp%VisMeshes   ! Visualization meshes requested by glue code
       DepthValue = ""  ! Start off as empty string, to only be filled if MD setting is specified (otherwise InitInp%WtrDepth is used)
                        ! DepthValue and InitInp%WtrDepth are processed later by setupBathymetry.
       WaterKinValue = ""
       
       m%PtfmInit = InitInp%PtfmInit(:,1)   ! is this copying necssary in case this is an individual instance in FAST.Farm?
 
-
-
       ! Check if this MoorDyn instance is being run from FAST.Farm (indicated by FarmSize > 0)
       if (InitInp%FarmSize > 0) then
          CALL WrScr('   >>> MoorDyn is running in array mode <<< ')
          ! could make sure the size of this is right: SIZE(InitInp%FarmCoupledKinematics)  
          p%nTurbines = InitInp%FarmSize
-      else    ! FarmSize==0 indicates normal, FAST module mode
+      else ! FarmSize==0 indicates normal, FAST module mode
          p%nTurbines = 1  ! if a regular FAST module mode, we treat it like a nTurbine=1 farm case
       END IF
 
       ! allocate some parameter arrays that are for each turbine (size 1 if regular OpenFAST use)
       allocate( p%nCpldBodies(     p%nTurbines)) 
       allocate( p%nCpldRods  (     p%nTurbines)) 
-      allocate( p%nCpldCons  (     p%nTurbines)) 
+      allocate( p%nCpldPoints  (     p%nTurbines)) 
       allocate( p%TurbineRefPos(3, p%nTurbines))
       
       ! initialize the arrays (to zero, except for passed in farm turbine reference positions)
       p%nCpldBodies = 0
       p%nCpldRods   = 0
-      p%nCpldCons   = 0
+      p%nCpldPoints   = 0
       
       if (InitInp%FarmSize > 0) then
          p%TurbineRefPos = InitInp%TurbineRefPos  ! copy over turbine reference positions for later use
@@ -243,29 +245,29 @@ CONTAINS
 
       ! -----------------------------------------------------------------
       ! Read the primary MoorDyn input file, or copy from passed input
-   if (InitInp%UsePrimaryInputFile) then
-      ! Read the entire input file, minus any comment lines, into the FileInfo_In
-      ! data structure in memory for further processing.
-      call ProcessComFile( InitInp%FileName, FileInfo_In, ErrStat2, ErrMsg2 )
-      CALL GetPath( InitInp%FileName, p%PriPath )    ! Input files will be relative to the path where the primary input file is located.
-   else
-      call NWTC_Library_CopyFileInfoType( InitInp%PassedPrimaryInputData, FileInfo_In, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-      p%PriPath = ""
-   endif
-   if (Failed()) return;
+      if (InitInp%UsePrimaryInputFile) then
+         ! Read the entire input file, minus any comment lines, into the FileInfo_In
+         ! data structure in memory for further processing.
+         call ProcessComFile( InitInp%FileName, FileInfo_In, ErrStat2, ErrMsg2 )
+         CALL GetPath( InitInp%FileName, p%PriPath )    ! Input files will be relative to the path where the primary input file is located.
+      else
+         call NWTC_Library_CopyFileInfoType( InitInp%PassedPrimaryInputData, FileInfo_In, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         p%PriPath = ""
+      endif
+      if (Failed()) return;
 
-   ! For diagnostic purposes, the following can be used to display the contents
-   ! of the FileInfo_In data structure.
-   !call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
+      ! For diagnostic purposes, the following can be used to display the contents
+      ! of the FileInfo_In data structure.
+      !call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
 
       !  Parse the FileInfo_In structure of data from the inputfile into the InitInp%InputFile structure
-!   CALL ParsePrimaryFileInfo_BuildModel( PriPath, InitInp, FileInfo_In, InputFileDat, p, m, UnEc, ErrStat2, ErrMsg2 )
-!   if (Failed()) return;
+      !   CALL ParsePrimaryFileInfo_BuildModel( PriPath, InitInp, FileInfo_In, InputFileDat, p, m, UnEc, ErrStat2, ErrMsg2 )
+      !   if (Failed()) return;
 
 
 
 
-!NOTE: This could be split into a separate routine for easier to read code
+      !NOTE: This could be split into a separate routine for easier to read code
       !-------------------------------------------------------------------------------------------------
       ! Parsing of input file from the FileInfo_In data structure
       !     -  FileInfo_Type is essentially a string array with some metadata.
@@ -345,7 +347,7 @@ CONTAINS
                ! find how many elements of this type there are
                Line = NextLine(i)
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
-                  p%nConnects = p%nConnects + 1
+                  p%nPoints = p%nPoints + 1
                   Line = NextLine(i)
                END DO
 
@@ -361,7 +363,7 @@ CONTAINS
                   Line = NextLine(i)
                END DO
 
-            else if (INDEX(Line, "CONTROL") > 0) then ! if failure conditions header
+            else if (INDEX(Line, "CONTROL") > 0) then ! if control conditions header
 
                IF (wordy > 1) print *, "   Reading control channels: ";
                
@@ -423,6 +425,7 @@ CONTAINS
                         END IF
                         write(p%UnLog,'(A)', IOSTAT=ErrStat2) "MoorDyn v2 log file with output level "//TRIM(Num2LStr(p%writeLog))
                         write(p%UnLog,'(A)', IOSTAT=ErrStat2) "Note: options above the writeLog line in the input file will not be recorded."
+                        write(p%UnLog,'(A)', IOSTAT=ErrStat2) " Input File Summary:"
                      end if
                   else if ( OptString == 'DTM') THEN
                      read (OptValue,*) p%dtM0 
@@ -456,14 +459,36 @@ CONTAINS
                      read (OptValue,*) p%mc
                   else if ( OptString == 'CV')  then
                      read (OptValue,*) p%cv
+                  else if ( OptString == 'INERTIALF')  then
+                     read (OptValue,*) p%inertialF
                   else
                      CALL SetErrStat( ErrID_Warn, 'Unable to interpret input '//trim(OptString)//' in OPTIONS section.', ErrStat, ErrMsg, RoutineName )
                   end if
 
                   nOpts = nOpts + 1
                   Line = NextLine(i)
+
                END DO
                
+               if (p%writeLog > 1) then
+                  write(p%UnLog, '(A)'        ) "  - Options List:"
+                  write(p%UnLog, '(A17,f12.4)') "   dtm      : ", p%dtM0 
+                  write(p%UnLog, '(A17,f12.4)') "   g        : ", p%g
+                  write(p%UnLog, '(A17,f12.4)') "   rhoW     : ", p%rhoW
+                  write(p%UnLog, '(A17,A)'    ) "   Depth    : ", DepthValue    ! water depth input read in as a string to be processed by setupBathymetry
+                  write(p%UnLog, '(A17,f12.4)') "   kBot     : ", p%kBot
+                  write(p%UnLog, '(A17,f12.4)') "   cBot     : ", p%cBot
+                  write(p%UnLog, '(A17,f12.4)') "   dtIC     : ", InputFileDat%dtIC
+                  write(p%UnLog, '(A17,f12.4)') "   TMaxIC   : ", InputFileDat%TMaxIC
+                  write(p%UnLog, '(A17,f12.4)') "   CdScaleIC: ", InputFileDat%CdScaleIC
+                  write(p%UnLog, '(A17,f12.4)') "   threshIC : ", InputFileDat%threshIC
+                  write(p%UnLog, '(A17,A)'    ) "   WaterKin : ", WaterKinValue
+                  write(p%UnLog, '(A17,f12.4)') "   dtOut    : ", p%dtOut
+                  write(p%UnLog, '(A17,f12.4)') "   mu_kT    : ", p%mu_kT
+                  write(p%UnLog, '(A17,f12.4)') "   mu_kA    : ", p%mu_kA
+                  write(p%UnLog, '(A17,f12.4)') "   mc       : ", p%mc
+                  write(p%UnLog, '(A17,f12.4)') "   cv       : ", p%cv
+               end if
 
             else if (INDEX(Line, "OUTPUT") > 0) then ! if output header
 
@@ -482,13 +507,13 @@ CONTAINS
      
       end do
 
-      p%nConnectsExtra = p%nConnects + 2*p%nLines    ! set maximum number of connections, accounting for possible detachment of each line end and a connection for that
+      p%nPointsExtra = p%nPoints + 2*p%nLines    ! set maximum number of points, accounting for possible detachment of each line end and a point for that
 
       IF (wordy > 0) print *, "  Identified ", p%nLineTypes  , "LineTypes in input file."
       IF (wordy > 0) print *, "  Identified ", p%nRodTypes   , "RodTypes in input file."
       IF (wordy > 0) print *, "  Identified ", p%nBodies     , "Bodies in input file."
       IF (wordy > 0) print *, "  Identified ", p%nRods       , "Rods in input file."
-      IF (wordy > 0) print *, "  Identified ", p%nConnects   , "Connections in input file."
+      IF (wordy > 0) print *, "  Identified ", p%nPoints   , "Points in input file."
       IF (wordy > 0) print *, "  Identified ", p%nLines      , "Lines in input file."
       IF (wordy > 0) print *, "  Identified ", nOpts         , "Options in input file."
 
@@ -534,7 +559,7 @@ CONTAINS
                
       ALLOCATE(m%BodyList(    p%nBodies   ), STAT = ErrStat2 ); if(AllocateFailed("BodyList"    )) return
       ALLOCATE(m%RodList(     p%nRods     ), STAT = ErrStat2 ); if(AllocateFailed("RodList"     )) return
-      ALLOCATE(m%ConnectList( p%nConnects ), STAT = ErrStat2 ); if(AllocateFailed("ConnectList" )) return
+      ALLOCATE(m%PointList( p%nPointsExtra), STAT = ErrStat2 ); if(AllocateFailed("PointList"   )) return
       ALLOCATE(m%LineList(    p%nLines    ), STAT = ErrStat2 ); if(AllocateFailed("LineList"    )) return
       
       ALLOCATE(m%FailList(    p%nFails    ), STAT = ErrStat2 ); if(AllocateFailed("FailList"    )) return
@@ -543,16 +568,16 @@ CONTAINS
       ! Allocate associated index arrays (note: some are allocated larger than will be used, for simplicity)
       ALLOCATE(m%BodyStateIs1(p%nBodies ), m%BodyStateIsN(p%nBodies ), STAT=ErrStat2); if(AllocateFailed("BodyStateIs1/N")) return
       ALLOCATE(m%RodStateIs1(p%nRods    ), m%RodStateIsN(p%nRods    ), STAT=ErrStat2); if(AllocateFailed("RodStateIs1/N" )) return
-      ALLOCATE(m%ConStateIs1(p%nConnects), m%ConStateIsN(p%nConnects), STAT=ErrStat2); if(AllocateFailed("ConStateIs1/N" )) return
+      ALLOCATE(m%PointStateIs1(p%nPointsExtra), m%PointStateIsN(p%nPointsExtra), STAT=ErrStat2); if(AllocateFailed("PointStateIs1/N" )) return
       ALLOCATE(m%LineStateIs1(p%nLines)  , m%LineStateIsN(p%nLines)  , STAT=ErrStat2); if(AllocateFailed("LineStateIs1/N")) return
 
       ALLOCATE(m%FreeBodyIs(   p%nBodies ),  STAT=ErrStat2); if(AllocateFailed("FreeBodyIs")) return
       ALLOCATE(m%FreeRodIs(    p%nRods   ),  STAT=ErrStat2); if(AllocateFailed("FreeRodIs")) return
-      ALLOCATE(m%FreeConIs(   p%nConnects),  STAT=ErrStat2); if(AllocateFailed("FreeConnectIs")) return
+      ALLOCATE(m%FreePointIs(p%nPointsExtra),  STAT=ErrStat2); if(AllocateFailed("FreePointIs")) return
 
       ALLOCATE(m%CpldBodyIs(p%nBodies , p%nTurbines), STAT=ErrStat2); if(AllocateFailed("CpldBodyIs")) return
       ALLOCATE(m%CpldRodIs( p%nRods   , p%nTurbines), STAT=ErrStat2); if(AllocateFailed("CpldRodIs")) return
-      ALLOCATE(m%CpldConIs(p%nConnects, p%nTurbines), STAT=ErrStat2); if(AllocateFailed("CpldConnectIs")) return
+      ALLOCATE(m%CpldPointIs(p%nPointsExtra, p%nTurbines), STAT=ErrStat2); if(AllocateFailed("CpldPointIs")) return
 
 
       ! ---------------------- now go through again and process file contents --------------------
@@ -582,8 +607,8 @@ CONTAINS
                Line = NextLine(i)
                Line = NextLine(i)
                
-                ! process each line
-                DO l = 1,p%nLineTypes
+               ! process each line
+               DO l = 1,p%nLineTypes
                    
                    !read into a line
                    Line = NextLine(i)
@@ -635,6 +660,9 @@ CONTAINS
                       read(tempStrings(2), *) m%LineTypeList(l)%BA_D 
                    else if (m%LineTypeList(l)%ElasticMod == 2) then  ! case where there is no dynamic damping for viscoelastic model (will it work)?
                       CALL WrScr("Warning, viscoelastic model being used with zero damping on the dynamic stiffness.")
+                      if (p%writeLog > 0) then
+                        write(p%UnLog,'(A)') "Warning, viscoelastic model being used with zero damping on the dynamic stiffness."
+                     end if
                    end if
                    ! get the regular/static coefficient or relation in all cases (can be from a lookup table?)
                    CALL getCoefficientOrCurve(tempStrings(1), m%LineTypeList(l)%BA,     &
@@ -652,16 +680,16 @@ CONTAINS
                    m%LineTypeList(l)%IdNum = l  
                    
                   ! write lineType information to log file
-                  if (p%writeLog > 1) then
-                      write(p%UnLog, '(A12,A20)'  ) " LineType"//trim(num2lstr(l))//":"
-                      write(p%UnLog, '(A12,A20)'  ) " name: ", m%LineTypeList(l)%name
-                      write(p%UnLog, '(A12,f12.4)') " d   : ", m%LineTypeList(l)%d  
-                      write(p%UnLog, '(A12,f12.4)') " w   : ", m%LineTypeList(l)%w  
-                      write(p%UnLog, '(A12,f12.4)') " Cdn : ", m%LineTypeList(l)%Cdn
-                      write(p%UnLog, '(A12,f12.4)') " Can : ", m%LineTypeList(l)%Can
-                      write(p%UnLog, '(A12,f12.4)') " Cdt : ", m%LineTypeList(l)%Cdt
-                      write(p%UnLog, '(A12,f12.4)') " Cat : ", m%LineTypeList(l)%Cat
-                  end if
+                   if (p%writeLog > 1) then
+                     write(p%UnLog, '(A)'        ) "  - LineType"//trim(num2lstr(l))//":"
+                     write(p%UnLog, '(A12,A)'    ) " name: ", trim(m%LineTypeList(l)%name)
+                     write(p%UnLog, '(A12,f12.4)') " d   : ", m%LineTypeList(l)%d  
+                     write(p%UnLog, '(A12,f12.4)') " w   : ", m%LineTypeList(l)%w  
+                     write(p%UnLog, '(A12,f12.4)') " Cdn : ", m%LineTypeList(l)%Cdn
+                     write(p%UnLog, '(A12,f12.4)') " Can : ", m%LineTypeList(l)%Can
+                     write(p%UnLog, '(A12,f12.4)') " Cdt : ", m%LineTypeList(l)%Cdt
+                     write(p%UnLog, '(A12,f12.4)') " Cat : ", m%LineTypeList(l)%Cat
+                   end if
 
                   IF ( ErrStat2 /= ErrID_None ) THEN
                      CALL SetErrStat( ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -706,16 +734,16 @@ CONTAINS
                    ! specify IdNum of rod type for error checking
                    m%RodTypeList(l)%IdNum = l  
                    
-                  ! write lineType information to log file
+                  ! write rodType information to log file
                   if (p%writeLog > 1) then
-                      write(p%UnLog, '(A12,A20)'  ) " RodType"//trim(num2lstr(l))//":"
-                      write(p%UnLog, '(A12,A20)'  ) " name: ", m%RodTypeList(l)%name
-                      write(p%UnLog, '(A12,f12.4)') " d   : ", m%RodTypeList(l)%d  
-                      write(p%UnLog, '(A12,f12.4)') " w   : ", m%RodTypeList(l)%w  
-                      write(p%UnLog, '(A12,f12.4)') " Cdn : ", m%RodTypeList(l)%Cdn
-                      write(p%UnLog, '(A12,f12.4)') " Can : ", m%RodTypeList(l)%Can
-                      write(p%UnLog, '(A12,f12.4)') " Cdt : ", m%RodTypeList(l)%CdEnd
-                      write(p%UnLog, '(A12,f12.4)') " Cat : ", m%RodTypeList(l)%CaEnd
+                      write(p%UnLog, '(A)'        ) "  - RodType"//trim(num2lstr(l))//":"
+                      write(p%UnLog, '(A14,A)'    ) " name: ", trim(m%RodTypeList(l)%name)
+                      write(p%UnLog, '(A14,f12.4)') " d   : ", m%RodTypeList(l)%d  
+                      write(p%UnLog, '(A14,f12.4)') " w   : ", m%RodTypeList(l)%w  
+                      write(p%UnLog, '(A14,f12.4)') " Cdn : ", m%RodTypeList(l)%Cdn
+                      write(p%UnLog, '(A14,f12.4)') " Can : ", m%RodTypeList(l)%Can
+                      write(p%UnLog, '(A14,f12.4)') " CdEnd : ", m%RodTypeList(l)%CdEnd
+                      write(p%UnLog, '(A14,f12.4)') " CaEnd : ", m%RodTypeList(l)%CaEnd
                   end if
 
                    IF ( ErrStat2 /= ErrID_None ) THEN
@@ -767,7 +795,7 @@ CONTAINS
                   else
                      CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' CG entry (col 10) must have 1 or 3 numbers.' , ErrStat, ErrMsg, RoutineName )
                   end if
-                  ! process mements of inertia
+                  ! process moments of inertia
                   CALL SplitByBars(tempString3, N, tempStrings)
                   if (N == 1) then                                   ! if only one entry, use it for all directions
                      READ(tempString3, *) m%BodyList(l)%BodyI(1)
@@ -786,10 +814,30 @@ CONTAINS
                      READ(tempString4, *) m%BodyList(l)%BodyCdA(1)
                      m%BodyList(l)%BodyCdA(2) = m%BodyList(l)%BodyCdA(1)
                      m%BodyList(l)%BodyCdA(3) = m%BodyList(l)%BodyCdA(1)
+                     m%BodyList(l)%BodyCdA(4) = m%BodyList(l)%BodyCdA(1)
+                     m%BodyList(l)%BodyCdA(5) = m%BodyList(l)%BodyCdA(1)
+                     m%BodyList(l)%BodyCdA(6) = m%BodyList(l)%BodyCdA(1)
+                  else if (N ==2) then 
+                     READ(tempStrings(1), *) m%BodyList(l)%BodyCdA(1)
+                     READ(tempStrings(4), *) m%BodyList(l)%BodyCdA(4)
+                     m%BodyList(l)%BodyCdA(2) = m%BodyList(l)%BodyCdA(1)
+                     m%BodyList(l)%BodyCdA(3) = m%BodyList(l)%BodyCdA(1)
+                     m%BodyList(l)%BodyCdA(5) = m%BodyList(l)%BodyCdA(4)
+                     m%BodyList(l)%BodyCdA(6) = m%BodyList(l)%BodyCdA(4)
                   else if (N==3) then                                ! all three coordinates provided
                      READ(tempStrings(1), *) m%BodyList(l)%BodyCdA(1)
                      READ(tempStrings(2), *) m%BodyList(l)%BodyCdA(2)
                      READ(tempStrings(3), *) m%BodyList(l)%BodyCdA(3)
+                     READ(tempStrings(1), *) m%BodyList(l)%BodyCdA(4)
+                     READ(tempStrings(2), *) m%BodyList(l)%BodyCdA(5)
+                     READ(tempStrings(3), *) m%BodyList(l)%BodyCdA(6)
+                  else if (N==6) then
+                     READ(tempStrings(1), *) m%BodyList(l)%BodyCdA(1)
+                     READ(tempStrings(2), *) m%BodyList(l)%BodyCdA(2)
+                     READ(tempStrings(3), *) m%BodyList(l)%BodyCdA(3)
+                     READ(tempStrings(4), *) m%BodyList(l)%BodyCdA(4)
+                     READ(tempStrings(5), *) m%BodyList(l)%BodyCdA(5)
+                     READ(tempStrings(6), *) m%BodyList(l)%BodyCdA(6)
                   else
                      CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' CdA entry (col 13) must have 1 or 3 numbers.' , ErrStat, ErrMsg, RoutineName )
                   end if
@@ -812,6 +860,10 @@ CONTAINS
                      CALL WrScr('   Unable to parse Body '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file.')  ! Specific screen output because errors likely
                      CALL WrScr('   Ensure row has all 13 columns needed in MDv2 input file (13th Dec 2021).')  
                         CALL SetErrStat( ErrID_Fatal, 'Failed to read bodies.' , ErrStat, ErrMsg, RoutineName )
+                     if (p%writeLog > 0) then
+                        write(p%UnLog,'(A)') '   Unable to parse Body '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file.'
+                        write(p%UnLog,'(A)') '   Ensure row has all 13 columns needed in MDv2 input file (13th Dec 2021).'
+                     end if
                      CALL CleanUp()
                      RETURN
                   END IF
@@ -824,6 +876,7 @@ CONTAINS
                   if ((let1 == "ANCHOR") .or. (let1 == "FIXED") .or. (let1 == "FIX")) then   ! if a fixed body (this would just be used if someone wanted to temporarly fix a body that things were attached to)
                   
                      m%BodyList(l)%typeNum = 1
+                     m%BodyList(l)%r6 = tempArray     ! set initial body position and orientation
                      
                   else if ((let1 == "COUPLED") .or. (let1 == "VESSEL") .or. (let1 == "CPLD") .or. (let1 == "VES")) then    ! if a coupled body
                      
@@ -832,8 +885,44 @@ CONTAINS
                      m%CpldBodyIs(p%nCpldBodies(1),1) = l
 
                      ! body initial position due to coupling will be adjusted later
+
+                  else if ((let1 == "VESSELPINNED") .or. (let1 == "VESPIN") .or. (let1 == "COUPLEDPINNED") .or. (let1 == "CPLDPIN")) then  ! if a pinned coupled body, add to list and add 
+                     m%BodyList(l)%typeNum = 2
                      
-                  ! TODO: add option for body coupling to different turbines in FAST.Farm  <<<
+                     p%nCpldBodies(1)=p%nCpldBodies(1)+1  ! add
+                     p%nFreeBodies   =p%nFreeBodies+1     ! add this pinned body to the free list because it is half free
+                     
+                     m%BodyStateIs1(p%nFreeBodies) = Nx+1
+                     m%BodyStateIsN(p%nFreeBodies) = Nx+6
+                     Nx = Nx + 6                                               ! add 6 state variables for each pinned body
+                     
+                     m%CpldBodyIs(p%nCpldBodies(1),1) = l
+                     m%FreeBodyIs(p%nFreeBodies) = l
+                   
+                     
+                  else if ((let1 == "TURBINE") .or. (let1 == "T")) then  ! turbine-coupled in FAST.Farm case
+                  
+                     if (len_trim(num1) > 0) then                     
+                        READ(num1, *) J   ! convert to int, representing turbine index
+                        
+                        if ((J <= p%nTurbines) .and. (J > 0)) then
+                           
+                           m%BodyList(l)%typeNum = -1          ! set as coupled type 
+                           p%nCpldBodies(J)=p%nCpldBodies(J)+1  ! increment counter for the appropriate turbine                           
+                           m%CpldBodyIs(p%nCpldBodies(J),J) = l      
+                           CALL WrScr(' added Body '//TRIM(int2lstr(l))//' for turbine '//trim(int2lstr(J)))
+                           if (p%writeLog > 0) then
+                              write(p%UnLog,'(A)') ' Added Body '//TRIM(int2lstr(l))//' for turbine '//trim(int2lstr(J))
+                           end if
+                           
+                        else
+                           CALL SetErrStat( ErrID_Fatal,  "Turbine ID out of bounds for Body "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
+                           return
+                        end if   
+                     else
+                        CALL SetErrStat( ErrID_Fatal,  "No number provided for Body "//trim(Num2LStr(l))//" Turbine attachment.", ErrStat, ErrMsg, RoutineName )   
+                            return
+                     end if
                      
                   else if (let1 == "FREE") then    ! if a free body
                      m%BodyList(l)%typeNum = 0
@@ -872,6 +961,19 @@ CONTAINS
                      CALL CleanUp()
                      RETURN
                   END IF
+
+                  ! write body information to log file
+                  if (p%writeLog > 1) then
+                     write(p%UnLog, '(A)'        ) "  - Body"//trim(num2lstr(l))//":"
+                     write(p%UnLog, '(A14,I2)'   ) " id    : ", m%BodyList(l)%IdNum
+                     write(p%UnLog, '(A14,A)'    ) " attach: ", trim(tempString1)
+                     write(p%UnLog, '(A14,f12.4)') " v     : ", m%BodyList(l)%bodyV 
+                     write(p%UnLog, '(A14,f12.4)') " m     : ", m%BodyList(l)%bodyM
+                     write(p%UnLog, '(A14,A)'    ) " I     : ", trim(num2lstr(m%BodyList(l)%BodyI(1)))//", "//trim(num2lstr(m%BodyList(l)%BodyI(2)))//", "//trim(num2lstr(m%BodyList(l)%BodyI(3)))
+                     write(p%UnLog, '(A14,A)'    ) " rCG   : ", trim(num2lstr(m%BodyList(l)%rCG(1)))//", "//trim(num2lstr(m%BodyList(l)%rCG(2)))//", "//trim(num2lstr(m%BodyList(l)%rCG(3)))
+                     write(p%UnLog, '(A14,A)'    ) " CdA   : ", trim(num2lstr(m%BodyList(l)%BodyCdA(1)))//", "//trim(num2lstr(m%BodyList(l)%BodyCdA(2)))//", "//trim(num2lstr(m%BodyList(l)%BodyCdA(3)))//", "//trim(num2lstr(m%BodyList(l)%BodyCdA(4)))//", "//trim(num2lstr(m%BodyList(l)%BodyCdA(5)))//", "//trim(num2lstr(m%BodyList(l)%BodyCdA(6)))
+                     write(p%UnLog, '(A14,A)'    ) " Ca    : ", trim(num2lstr(m%BodyList(l)%BodyCa(1)))//", "//trim(num2lstr(m%BodyList(l)%BodyCa(2)))//", "//trim(num2lstr(m%BodyList(l)%BodyCa(3)))//", "//trim(num2lstr(m%BodyList(l)%BodyCa(4)))//", "//trim(num2lstr(m%BodyList(l)%BodyCa(5)))//", "//trim(num2lstr(m%BodyList(l)%BodyCa(6)))
+                 end if
                   
                   IF (wordy > 1) print *, "Set up body ", l, " of type ",  m%BodyList(l)%typeNum
 
@@ -930,8 +1032,8 @@ CONTAINS
                      CALL Body_AddRod(m%GroundBody, l, tempArray)   ! add rod l to Ground body
                            
 
-                     else if ((let1 == "PINNED") .or. (let1 == "PIN")) then
-                        m%RodList(l)%typeNum = 1
+                  else if ((let1 == "PINNED") .or. (let1 == "PIN")) then
+                     m%RodList(l)%typeNum = 1
                      CALL Body_AddRod(m%GroundBody, l, tempArray)   ! add rod l to Ground body
                      
                      p%nFreeRods=p%nFreeRods+1  ! add this pinned rod to the free list because it is half free
@@ -1001,12 +1103,33 @@ CONTAINS
                      m%CpldRodIs(p%nCpldRods(1),1) = l
                      m%FreeRodIs(p%nFreeRods) = l
                    
-                  ! TODO: add option for body coupling to different turbines in FAST.Farm <<<
+                  else if ((let1 == "TURBINE") .or. (let1 == "T")) then  ! turbine-coupled in FAST.Farm case
+                  
+                     if (len_trim(num1) > 0) then                     
+                        READ(num1, *) J   ! convert to int, representing turbine index
+                        
+                        if ((J <= p%nTurbines) .and. (J > 0)) then
+                           m%RodList(l)%typeNum = -2          ! set as coupled type 
+                           p%nCpldRods(J)=p%nCpldRods(J)+1     ! increment counter for the appropriate turbine
+                           m%CpldRodIs(p%nCpldRods(J),J) = l   
+                           CALL WrScr(' added Rod '//TRIM(int2lstr(l))//' for turbine '//trim(int2lstr(J)))
+                           if (p%writeLog > 0) then
+                              write(p%UnLog,'(A)') ' Added Rod '//TRIM(int2lstr(l))//' for turbine '//trim(int2lstr(J))
+                           end if
+                           
+                        else
+                           CALL SetErrStat( ErrID_Fatal,  "Turbine ID out of bounds for Rod "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
+                           return
+                        end if   
+                     else
+                        CALL SetErrStat( ErrID_Fatal,  "No number provided for Rod "//trim(Num2LStr(l))//" Turbine attachment.", ErrStat, ErrMsg, RoutineName )   
+                            return
+                     end if
                    
-                  else if ((let1 == "CONNECT") .or. (let1 == "CON") .or. (let1 == "FREE")) then
+                  else if ((let1 == "ROD") .or. (let1 == "R") .or. (let1 == "FREE")) then
                      m%RodList(l)%typeNum = 0
                      
-                     p%nFreeRods=p%nFreeRods+1  ! add this pinned rod to the free list because it is half free
+                     p%nFreeRods=p%nFreeRods+1 
                      
                      m%RodStateIs1(p%nFreeRods) = Nx+1
                      m%RodStateIsN(p%nFreeRods) = Nx+12
@@ -1048,6 +1171,14 @@ CONTAINS
                   ! specify IdNum of line for error checking
                   m%RodList(l)%IdNum = l  
 
+                  if (p%writeLog > 1) then
+                     write(p%UnLog, '(A)'        ) "  - Rod"//trim(num2lstr(m%RodList(l)%IdNum))//":"
+                     write(p%UnLog, '(A15,I2)'   ) "   ID     : ", m%RodList(l)%IdNum
+                     write(p%UnLog, '(A15,A)'    ) "   Type   : ", trim(m%RodTypeList(m%RodList(l)%PropsIdNum)%name)
+                     write(p%UnLog, '(A15,A)'    ) "   Attach : ", trim(tempString2)
+                     write(p%UnLog, '(A15,I2)'   ) "   NumSegs: ", m%RodList(l)%N
+                  end if
+
                   ! check for sequential IdNums
                   IF ( m%RodList(l)%IdNum .NE. l ) THEN
                      CALL SetErrStat( ErrID_Fatal, 'Line numbers must be sequential starting from 1.', ErrStat, ErrMsg, RoutineName )
@@ -1081,7 +1212,7 @@ CONTAINS
                Line = NextLine(i)
                
                ! process each point
-               DO l = 1,p%nConnects
+               DO l = 1,p%nPoints
                   
                   !read into a line
                   Line = NextLine(i)
@@ -1095,14 +1226,17 @@ CONTAINS
                   
                   ! parse out entries: PointID Attachment  X  Y  Z  M  V  CdA Ca 
                   IF (ErrStat2 == 0) THEN
-                     READ(Line,*,IOSTAT=ErrStat2) m%ConnectList(l)%IdNum, tempString1, tempArray(1), &
-                        tempArray(2), tempString4, m%ConnectList(l)%conM, &
-                        m%ConnectList(l)%conV, m%ConnectList(l)%conCdA, m%ConnectList(l)%conCa
+                     READ(Line,*,IOSTAT=ErrStat2) m%PointList(l)%IdNum, tempString1, tempArray(1), &
+                        tempArray(2), tempString4, m%PointList(l)%pointM, &
+                        m%PointList(l)%pointV, m%PointList(l)%pointCdA, m%PointList(l)%pointCa
                                           
                      CALL Conv2UC(tempString4) ! convert to uppercase so that matching is not case-sensitive
                      
                      if ((INDEX(tempString4, "SEABED") > 0 ) .or. (INDEX(tempString4, "GROUND") > 0 ) .or. (INDEX(tempString4, "FLOOR") > 0 )) then  ! if keyword used
                         CALL WrScr('Point '//trim(Num2LStr(l))//' depth set to be on the seabed; finding z location based on depth/bathymetry')      ! interpret the anchor depth value as a 'seabed' input
+                        if (p%writeLog > 0) then
+                           write(p%UnLog,'(A)') 'Point '//trim(Num2LStr(l))//' depth set to be on the seabed; finding z location based on depth/bathymetry'
+                        end if
                         CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, tempArray(1), tempArray(2), depth, nvec)         ! meaning the anchor should be at the depth of the local bathymetry
                         tempArray(3) = -depth
                      else                                                       ! if the anchor depth input isn't one of the supported keywords, 
@@ -1111,9 +1245,9 @@ CONTAINS
                      end if
                         
                      ! not used
-                     m%ConnectList(l)%conFX = 0.0_DbKi 
-                     m%ConnectList(l)%conFY = 0.0_DbKi
-                     m%ConnectList(l)%conFZ = 0.0_DbKi
+                     m%PointList(l)%pointFX = 0.0_DbKi 
+                     m%PointList(l)%pointFY = 0.0_DbKi
+                     m%PointList(l)%pointFZ = 0.0_DbKi
                         
                   END IF
                   
@@ -1121,59 +1255,63 @@ CONTAINS
                   IF ( ErrStat2 /= 0 ) THEN
                      CALL WrScr('   Unable to parse Point '//trim(Num2LStr(l))//' row in input file.')  ! Specific screen output because errors likely
                      CALL WrScr('   Ensure row has all 9 columns, including CdA and Ca.')           ! to be caused by non-updated input file formats.
-                        CALL SetErrStat( ErrID_Fatal, 'Failed to read connects.' , ErrStat, ErrMsg, RoutineName ) ! would be nice to specify which line <<<<<<<<<
+                        CALL SetErrStat( ErrID_Fatal, 'Failed to read points.' , ErrStat, ErrMsg, RoutineName ) ! would be nice to specify which line <<<<<<<<<
+                        if (p%writeLog > 0) then
+                           write(p%UnLog,'(A)') '   Unable to parse Point '//trim(Num2LStr(l))//' row in input file.'
+                           write(p%UnLog,'(A)') '   Ensure row has all 9 columns, including CdA and Ca.'
+                        end if
                      CALL CleanUp()
                      RETURN
                   END IF
                   
-                  m%ConnectList(l)%r = tempArray(1:3)   ! set initial, or reference, node position (for coupled or child objects, this will be the local reference location about the parent)
+                  m%PointList(l)%r = tempArray(1:3)   ! set initial, or reference, node position (for coupled or child objects, this will be the local reference location about the parent)
 
-                  !----------- process connection type -----------------
+                  !----------- process point type -----------------
 
                   call DecomposeString(tempString1, let1, num1, let2, num2, let3)
                   
                      if ((let1 == "ANCHOR") .or. (let1 == "FIXED") .or. (let1 == "FIX")) then
-                         m%ConnectList(l)%typeNum = 1
+                         m%PointList(l)%typeNum = 1
                      
-                     !m%ConnectList(l)%r = tempArray(1:3)   ! set initial node position
+                     !m%PointList(l)%r = tempArray(1:3)   ! set initial node position
                      
-                     CALL Body_AddConnect(m%GroundBody, l, tempArray(1:3))   ! add connection l to Ground body                     
+                     CALL Body_AddPoint(m%GroundBody, l, tempArray(1:3))   ! add point l to Ground body                     
 
                      else if (let1 == "BODY") then ! attached to a body
                      if (len_trim(num1) > 0) then                     
                         READ(num1, *) J   ! convert to int, representing parent body index
                         
                         if ((J <= p%nBodies) .and. (J > 0)) then
-                           m%ConnectList(l)%typeNum = 1    
+                           m%PointList(l)%typeNum = 1    
 
-                           CALL Body_AddConnect(m%BodyList(J), l, tempArray(1:3))   ! add connection l to Ground body
+                           CALL Body_AddPoint(m%BodyList(J), l, tempArray(1:3))   ! add point l to Ground body
                            
                         else
-                           CALL SetErrStat( ErrID_Fatal,  "Body ID out of bounds for Connection "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
+                           CALL SetErrStat( ErrID_Fatal,  "Body ID out of bounds for Point "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
                            return
                         end if                     
                      else
-                        CALL SetErrStat( ErrID_Fatal,  "No number provided for Connection "//trim(Num2LStr(l))//" Body attachment.", ErrStat, ErrMsg, RoutineName )   
+                        CALL SetErrStat( ErrID_Fatal,  "No number provided for Point "//trim(Num2LStr(l))//" Body attachment.", ErrStat, ErrMsg, RoutineName )   
                             return
                      end if
                   
                   else if ((let1 == "VESSEL") .or. (let1 == "VES") .or. (let1 == "COUPLED") .or. (let1 == "CPLD")) then    ! if a fairlead, add to list and add 
-                     m%ConnectList(l)%typeNum = -1
-                     p%nCpldCons(1)=p%nCpldCons(1)+1                       
-                     m%CpldConIs(p%nCpldCons(1),1) = l
+                     m%PointList(l)%typeNum = -1
+                     p%nCpldPoints(1)=p%nCpldPoints(1)+1                       
+                     m%CpldPointIs(p%nCpldPoints(1),1) = l
                  
-                  else if ((let1 == "CONNECT") .or. (let1 == "CON") .or. (let1 == "FREE")) then
-                     m%ConnectList(l)%typeNum = 0
+                  else if ((let1 == "POINT") .or. (let1 == "P") .or. (let1 == "FREE")) then
+                     m%PointList(l)%typeNum = 0
                      
-                     p%nFreeCons=p%nFreeCons+1             ! add this pinned rod to the free list because it is half free
+                     p%nFreePoints=p%nFreePoints+1             ! add this pinned rod to the free list because it is half free
                      
-                     m%ConStateIs1(p%nFreeCons) = Nx+1
-                     m%ConStateIsN(p%nFreeCons) = Nx+6
-                     Nx = Nx + 6                           ! add 12 state variables for free Connection
+                     m%PointStateIs1(p%nFreePoints) = Nx+1
+                     m%PointStateIsN(p%nFreePoints) = Nx+6
+                     Nx = Nx + 6                           ! add 12 state variables for free Point
                      
-                     m%FreeConIs(p%nFreeCons) = l
+                     m%FreePointIs(p%nFreePoints) = l
                      
-                     !m%ConnectList(l)%r = tempArray(1:3)   ! set initial node position
+                     !m%PointList(l)%r = tempArray(1:3)   ! set initial node position
                      
                   else if ((let1 == "TURBINE") .or. (let1 == "T")) then  ! turbine-coupled in FAST.Farm case
                   
@@ -1182,50 +1320,63 @@ CONTAINS
                         
                         if ((J <= p%nTurbines) .and. (J > 0)) then
                            
-                           m%ConnectList(l)%TypeNum = -1            ! set as coupled type   
-                           p%nCpldCons(J) = p%nCpldCons(J) + 1      ! increment counter for the appropriate turbine                   
-                           m%CpldConIs(p%nCpldCons(J),J) = l
-                           CALL WrScr(' added connection '//TRIM(int2lstr(l))//' as fairlead for turbine '//trim(int2lstr(J)))
+                           m%PointList(l)%TypeNum = -1            ! set as coupled type   
+                           p%nCpldPoints(J) = p%nCpldPoints(J) + 1      ! increment counter for the appropriate turbine                   
+                           m%CpldPointIs(p%nCpldPoints(J),J) = l
+                           CALL WrScr(' added point '//TRIM(int2lstr(l))//' as fairlead for turbine '//trim(int2lstr(J)))
+                           if (p%writeLog > 0) then
+                              write(p%UnLog,'(A)') ' added point '//TRIM(int2lstr(l))//' as fairlead for turbine '//trim(int2lstr(J))
+                           end if
                            
                            
                         else
-                           CALL SetErrStat( ErrID_Fatal,  "Turbine ID out of bounds for Connection "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
+                           CALL SetErrStat( ErrID_Fatal,  "Turbine ID out of bounds for Point "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
                            return
                         end if   
                      else
-                        CALL SetErrStat( ErrID_Fatal,  "No number provided for Connection "//trim(Num2LStr(l))//" Turbine attachment.", ErrStat, ErrMsg, RoutineName )   
+                        CALL SetErrStat( ErrID_Fatal,  "No number provided for Point "//trim(Num2LStr(l))//" Turbine attachment.", ErrStat, ErrMsg, RoutineName )   
                             return
                      end if
                   
                   else 
-                     CALL SetErrStat( ErrID_Fatal,  "Unidentified Type/BodyID for Connection "//trim(Num2LStr(l))//": "//trim(tempString1), ErrStat, ErrMsg, RoutineName )
+                     CALL SetErrStat( ErrID_Fatal,  "Unidentified Type/BodyID for Point "//trim(Num2LStr(l))//": "//trim(tempString1), ErrStat, ErrMsg, RoutineName )
                      return
                   end if
                   
                   ! set initial velocity to zero
-                  m%ConnectList(l)%rd(1) = 0.0_DbKi
-                  m%ConnectList(l)%rd(2) = 0.0_DbKi
-                  m%ConnectList(l)%rd(3) = 0.0_DbKi
+                  m%PointList(l)%rd(1) = 0.0_DbKi
+                  m%PointList(l)%rd(2) = 0.0_DbKi
+                  m%PointList(l)%rd(3) = 0.0_DbKi
                            
                   !also set number of attached lines to zero initially
-                  m%ConnectList(l)%nAttached = 0
+                  m%PointList(l)%nAttached = 0
 
+                  ! write body information to log file
+                  if (p%writeLog > 1) then
+                     write(p%UnLog, '(A)'        ) "  - Point"//trim(num2lstr(l))//":"
+                     write(p%UnLog, '(A12,I2)'   ) " id  : ", m%PointList(l)%IdNum
+                     write(p%UnLog, '(A12,I2)'   ) " type: ", m%PointList(l)%typeNum
+                     write(p%UnLog, '(A12,f12.4)') " v   : ", m%PointList(l)%pointV 
+                     write(p%UnLog, '(A12,f12.4)') " m   : ", m%PointList(l)%pointM
+                     write(p%UnLog, '(A12,f12.4)') " CdA : ", m%PointList(l)%pointCdA
+                     write(p%UnLog, '(A12,f12.4)') " Ca  : ", m%PointList(l)%pointCa
+                 end if
 
                   ! check for sequential IdNums
-                  IF ( m%ConnectList(l)%IdNum .NE. l ) THEN
-                     CALL SetErrStat( ErrID_Fatal, 'Connection numbers must be sequential starting from 1.', ErrStat, ErrMsg, RoutineName )
+                  IF ( m%PointList(l)%IdNum .NE. l ) THEN
+                     CALL SetErrStat( ErrID_Fatal, 'Point numbers must be sequential starting from 1.', ErrStat, ErrMsg, RoutineName )
                      CALL CleanUp()
                      RETURN
                   END IF
                   
 
                   IF ( ErrStat2 /= 0 ) THEN
-                     CALL SetErrStat( ErrID_Fatal, 'Failed to read data for Connection '//trim(Num2LStr(l)), ErrStat, ErrMsg, RoutineName )
+                     CALL SetErrStat( ErrID_Fatal, 'Failed to read data for Point '//trim(Num2LStr(l)), ErrStat, ErrMsg, RoutineName )
                      CALL CleanUp()
                      RETURN
                   END IF
                   
-                  IF (wordy > 0) print *, "Set up Point ", l, " of type ",  m%ConnectList(l)%typeNum
+                  IF (wordy > 0) print *, "Set up Point ", l, " of type ",  m%PointList(l)%typeNum
 
                END DO   ! l = 1,p%nRods
 
@@ -1305,17 +1456,17 @@ CONTAINS
                             return
                         end if
                      else
-                        CALL SetErrStat( ErrID_Fatal,  "Error: rod connection ID out of bounds for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
+                        CALL SetErrStat( ErrID_Fatal,  " Rod ID out of bounds for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
                         return
                      end if
                   
-                     ! if J starts with a "C" or "Con" or goes straight ot the number then it's attached to a Connection
-                  else if ((len_trim(let1)==0) .or. (let1 == "C") .or. (let1 == "CON")) then 
+                     ! if J starts with a "P" or "Point" or goes straight ot the number then it's attached to a Point
+                  else if ((len_trim(let1)==0) .or. (let1 == "P") .or. (let1 == "POINT")) then 
 
-                     if ((J <= p%nConnects) .and. (J > 0)) then                  
-                        CALL Connect_AddLine(m%ConnectList(J), l, 0)   ! add line l (end A, denoted by 0) to connection J
+                     if ((J <= p%nPoints) .and. (J > 0)) then                  
+                        CALL Point_AddLine(m%PointList(J), l, 0)   ! add line l (end A, denoted by 0) to point J
                      else
-                        CALL SetErrStat( ErrID_Fatal,  "Error: connection out of bounds for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
+                        CALL SetErrStat( ErrID_Fatal,  "Error: point out of bounds for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
                         return
                      end if
                         
@@ -1346,17 +1497,17 @@ CONTAINS
                             return
                         end if
                      else
-                        CALL SetErrStat( ErrID_Fatal,  "Error: rod connection ID out of bounds for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
+                        CALL SetErrStat( ErrID_Fatal,  " Rod ID out of bounds for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
                         return
                      end if
 
-                  ! if J starts with a "C" or "Con" or goes straight ot the number then it's attached to a Connection
-                  else if ((len_trim(let1)==0) .or. (let1 == "C") .or. (let1 == "CON")) then 
+                  ! if J starts with a "P" or "Point" or goes straight ot the number then it's attached to a Point
+                  else if ((len_trim(let1)==0) .or. (let1 == "P") .or. (let1 == "POINT")) then 
 
-                     if ((J <= p%nConnects) .and. (J > 0)) then                  
-                        CALL Connect_AddLine(m%ConnectList(J), l, 1)   ! add line l (end B, denoted by 1) to connection J
+                     if ((J <= p%nPoints) .and. (J > 0)) then                  
+                        CALL Point_AddLine(m%PointList(J), l, 1)   ! add line l (end B, denoted by 1) to point J
                      else
-                        CALL SetErrStat( ErrID_Fatal,  "Error: connection out of bounds for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
+                        CALL SetErrStat( ErrID_Fatal,  "Error: point out of bounds for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
                         return
                      end if
                         
@@ -1388,6 +1539,15 @@ CONTAINS
                   ! specify IdNum of line for error checking
                   m%LineList(l)%IdNum = l  
 
+                  if (p%writeLog > 1) then
+                     write(p%UnLog, '(A)'        ) "  - Line"//trim(num2lstr(m%LineList(l)%IdNum))//":"
+                     write(p%UnLog, '(A15,I2)'   ) "   ID     : ", m%LineList(l)%IdNum
+                     write(p%UnLog, '(A15,A)'    ) "   Type   : ", trim(m%LineTypeList(m%LineList(l)%PropsIdNum)%name)
+                     write(p%UnLog, '(A15,f12.4)') "   Len    : ", m%LineList(l)%UnstrLen
+                     write(p%UnLog, '(A15,A)'    ) "   Node A : ", " "//tempString2 
+                     write(p%UnLog, '(A15,A)'    ) "   Node B : ", " "//tempString3
+                     write(p%UnLog, '(A15,I2)'   ) "   NumSegs: ", m%LineList(l)%N
+                  end if
 
                   ! check for sequential IdNums
                   IF ( m%LineList(l)%IdNum .NE. l ) THEN
@@ -1432,6 +1592,13 @@ CONTAINS
                   
                   ! count commas to determine how many line IDs specified for this channel
                   N = count(transfer(Line, 'a', len(Line)) == ",") + 1   ! number of line IDs given
+
+                  ! check for correct number of columns in current line (CountWords splits by comma and space, so 2 columns means number of line ID's plus one more for the control channel)
+                  IF ( CountWords( Line ) /= N+1 ) THEN 
+                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse controls '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 2 columns.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
                   
                   ! parse out entries:        CtrlChan, LineIdNums
                   read(Line, *) Itemp, TempIDnums(1:N)                                   ! parse out each line ID
@@ -1441,11 +1608,18 @@ CONTAINS
                         if (m%LineList( TempIDnums(J) )%CtrlChan == 0) then      ! ensure line doesn't already have a CtrlChan assigned 
                            m%LineList( TempIDnums(J) )%CtrlChan = Itemp
                            CALL WrScr('Assigned Line '//TRIM(Int2LStr(TempIDnums(J)))//' to control channel '//TRIM(Int2LStr(Itemp)))
+                           if (p%writeLog > 0) then
+                              write(p%UnLog,'(A)') 'Assigned Line '//TRIM(Int2LStr(TempIDnums(J)))//' to control channel '//TRIM(Int2LStr(Itemp))
+                           end if
                         else
-                           CALL WrScr('Error: Line '//TRIM(Int2LStr(TempIDnums(J)))//' already is assigned to control channel '//TRIM(Int2LStr(m%LineList( TempIDnums(J) )%CtrlChan))//' so cannot also be assigned to channel '//TRIM(Int2LStr(Itemp)))
+                           CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Int2LStr(TempIDnums(J)))//' already is assigned to control channel '//TRIM(Int2LStr(m%LineList( TempIDnums(J) )%CtrlChan))//' so cannot also be assigned to channel '//TRIM(Int2LStr(Itemp)), ErrStat, ErrMsg, RoutineName )
+                           CALL CleanUp()	
+                           return
                         end if                     
                      else
-                        CALL WrScr('Error: Line ID '//TRIM(Int2LStr(TempIDnums(J)))//' of CtrlChan '//TRIM(Int2LStr(Itemp))//' is out of range')
+                        CALL SetErrStat( ErrID_Fatal, ' Line ID '//TRIM(Int2LStr(TempIDnums(J)))//' of CtrlChan '//TRIM(Int2LStr(Itemp))//' is out of range', ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()	
+                        return						   
                      end if
                   
                   END DO
@@ -1455,9 +1629,14 @@ CONTAINS
 
             !-------------------------------------------------------------------------------------------
             else if (INDEX(Line, "FAILURE") > 0) then ! if failure conditions header
-
-               CALL WrScr("   Warning: Failure capabilities are not yet implemented in MoorDyn.")
                
+               IF (wordy > 0) then 
+                  CALL WrScr("   Reading failure inputs")
+               endif
+
+               ! TODO: allocate fail list size (we need to do this before though right?)
+
+
                ! skip following two lines (label line and unit line)
                Line = NextLine(i)
                Line = NextLine(i)
@@ -1467,13 +1646,169 @@ CONTAINS
                   
                   !read into a line
                   Line = NextLine(i)
+
+                  ! count commas to determine how many line IDs specified for this channel
+                  N = count(transfer(Line, 'a', len(Line)) == ",") + 1   ! number of line IDs given
+                  ! check for correct number of columns in current line (CountWords splits by comma and space, so 2 columns means number of line ID's plus 4 more for the other 4 channels)
                   
-                  ! TODO: Failure capabilities still need to be completed
-                  READ(Line,*,IOSTAT=ErrStat2) m%LineList(l)%IdNum, tempString1, m%LineList(l)%UnstrLen, &
-                       m%LineList(l)%N, tempString2, tempString3, LineOutString
-                  
-               END DO
-               
+                  IF ( CountWords( Line ) /= N+4 ) THEN 
+                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse line failure '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 5 columns.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+                 
+                  ! parse out entries: FailID  Point  Lines   FailTime  FailTen
+                  IF (ErrStat2 == 0) THEN                     
+
+                     READ(Line,*,IOSTAT=ErrStat2) m%FailList(l)%IdNum, TempString1, TempIDnums(1:N), m%FailList(l)%failTime, m%FailList(l)%failTen
+
+                     ! check for duplicate failure ID's
+                     ! check for sequential IdNums
+                     IF ( m%FailList(l)%IdNum .NE. l ) THEN
+                        CALL SetErrStat( ErrID_Fatal, 'Failure ID numbers must be sequential starting from 1.', ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
+                     END IF
+                     
+                     CALL Conv2UC(TempString1) ! convert to uppercase so that matching is not case-sensitive
+                     
+							call DecomposeString(TempString1, let1, num1, let2, num2, let3) ! divided failPoint into letters and numbers
+							
+							if (len_trim(num1)<1) then
+                        CALL SetErrStat( ErrID_Fatal,  "Error: no point number provided for line failure "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
+                        CALL CleanUp()
+                        return
+                     end if
+							
+                     READ(num1, *) m%FailList(l)%attachID   ! convert to int
+								
+							! if id starts with an "R" or "Rod"
+							if ((let1 == "R")  .OR. (let1 == "ROD")) then
+								if ((m%FailList(l)%attachID <= p%nRods)  .AND. (m%FailList(l)%attachID > 0)) then
+									if (let2 == "A") then
+										m%FailList(l)%isRod = 1
+									else if (let2 == "B") then
+										m%FailList(l)%isRod = 2
+									else
+									   CALL SetErrStat( ErrID_Fatal, ' Unable to parse line failure '//trim(Num2LStr(l))//'. Rod end must be A or B.', ErrStat, ErrMsg, RoutineName )
+                              CALL CleanUp()	
+                              return								
+                           endif
+								else
+									CALL SetErrStat( ErrID_Fatal, ' Unable to parse line failure '//trim(Num2LStr(l))//'. Rod number out of bounds.', ErrStat, ErrMsg, RoutineName )
+                           CALL CleanUp()	
+                           return						
+                        endif
+									
+							endif
+
+                     if ((len_trim(let1)<1)  .OR. (let1 == "P")  .OR. (let1 == "POINT")) then
+								if ((m%FailList(l)%attachID <= p%nPoints)  .AND. (m%FailList(l)%attachID > 0)) then
+									m%FailList(l)%isRod = 0
+								else
+									CALL SetErrStat( ErrID_Fatal, ' Unable to parse line failure '//trim(Num2LStr(l))//'. Point number out of bounds.', ErrStat, ErrMsg, RoutineName )
+                           CALL CleanUp()	
+                           return						
+                        endif
+									
+                     endif
+							
+							! get lines 
+                     m%FailList(l)%nLinesToDetach = N 
+                     
+                     DO il = 1, m%FailList(l)%nLinesToDetach
+                        if (TempIDnums(il) <= p%nLines) then      ! ensure line ID is in range
+                           m%FailList(l)%lineIDs(il) = TempIDnums(il)
+                        else
+									CALL SetErrStat( ErrID_Fatal, ' Unable to parse line failure '//trim(Num2LStr(l))//'. Line number '//TRIM(Int2LStr(TempIDnums(il)))//' out of bounds.', ErrStat, ErrMsg, RoutineName )
+                           CALL CleanUp()	
+                           return						   
+                        endif 
+
+                        ! check whether line is attached to fail point at fairlead or anchor and assing line tops
+                        if (m%FailList(l)%isRod == 0) then ! point
+
+                           Success = 0
+                           DO iil = 1, m%PointList(m%FailList(l)%attachID)%nAttached ! find index of line 
+                              if (m%PointList(m%FailList(l)%attachID)%Attached(iil) == m%FailList(l)%lineIDs(il)) then
+                                 m%FailList(l)%lineTops(il) = m%PointList(m%FailList(l)%attachID)%Top(iil)
+                                 Success = 1
+                                 exit
+                              endif
+                           ENDDO
+
+                           if (Success == 0) then
+                              CALL SetErrStat( ErrID_Fatal, " Line "//trim(num2lstr(m%FailList(l)%lineIDs(il)))//" not attached to point "//trim(num2lstr(m%FailList(l)%attachID))//" for failure "//trim(num2lstr(m%FailList(l)%IdNum)), ErrStat, ErrMsg, RoutineName )
+                              CALL CleanUp()	
+                              return	
+                           endif  
+
+                        elseif (m%FailList(l)%isRod == 1) then ! Rod end A
+
+                           Success = 0
+                           DO iil = 1, m%RodList(m%FailList(l)%attachID)%nAttachedA ! find index of line 
+                              if (m%RodList(m%FailList(l)%attachID)%AttachedA(iil) == m%FailList(l)%lineIDs(il)) then
+                                 m%FailList(l)%lineTops(il) = m%RodList(m%FailList(l)%attachID)%TopA(iil)
+                                 Success = 1
+                                 exit
+                              endif
+                           ENDDO
+
+                           if (Success == 0) then 
+                              CALL SetErrStat( ErrID_Fatal, " Line "//trim(num2lstr(m%FailList(l)%lineIDs(il)))//" not attached to R"//trim(num2lstr(m%FailList(l)%attachID))//"A for failure "//trim(num2lstr(m%FailList(l)%IdNum)), ErrStat, ErrMsg, RoutineName )
+                              CALL CleanUp()	
+                              return	
+                           endif  
+
+                        elseif (m%FailList(l)%isRod == 2) then ! Rod end B
+
+                           Success = 0
+                           DO iil = 1, m%RodList(m%FailList(l)%attachID)%nAttachedB ! find index of line 
+                              if (m%RodList(m%FailList(l)%attachID)%AttachedB(iil) == m%FailList(l)%lineIDs(il)) then
+                                 m%FailList(l)%lineTops(il) = m%RodList(m%FailList(l)%attachID)%TopB(iil)
+                                 Success = 1
+                                 exit
+                              endif
+                           ENDDO
+
+                           if (Success == 0) then 
+                              CALL SetErrStat( ErrID_Fatal, " Line "//trim(num2lstr(m%FailList(l)%lineIDs(il)))//" not attached to R"//trim(num2lstr(m%FailList(l)%attachID))//"B for failure "//trim(num2lstr(m%FailList(l)%IdNum)), ErrStat, ErrMsg, RoutineName )
+                              CALL CleanUp()	
+                              return	
+                           endif  
+
+                        else
+                           CALL SetErrStat( ErrID_Fatal, " isRod out of range for failure "//trim(num2lstr(m%FailList(l)%IdNum)), ErrStat, ErrMsg, RoutineName )
+                           CALL CleanUp()	
+                           return	
+                        endif
+                     ENDDO  
+
+                     ! cant have both time and tension conditions, time is prioritized
+							if ((m%FailList(l)%failTime > 0) .AND. (m%FailList(l)%failTen > 0)) then 
+                        CALL SetErrStat( ErrID_Info, ' MoorDyn failure condition checks time before tension. If time reached before tension, failure '//trim(Num2LStr(m%FailList(l)%IdNum))//' will trigger.', ErrStat, ErrMsg, RoutineName )
+                     endif
+
+                     if ((m%PointList(m%FailList(l)%attachID)%typeNum == 0) .AND. (m%PointList(m%FailList(l)%attachID)%nAttached == m%FailList(l)%nLinesToDetach)) then 
+
+                        ! if X lines called to fail from a free point with only X lines attached
+                        Call SetErrStat(ErrID_Warn, trim(num2lstr(m%FailList(l)%nLinesToDetach))//" lines called to fail from a free point with only "//trim(num2lstr(m%FailList(l)%nLinesToDetach))//" lines attached. Failure "//trim(num2lstr(l))//" ignored.", ErrStat, ErrMsg, RoutineName )
+                        m%FailList(l)%failStatus = 2
+
+                     elseif ((m%FailList(l)%failTime == 0) .AND. (m%FailList(l)%failTen == 0)) then 
+
+                        CALL SetErrStat( ErrID_Warn, ' MoorDyn failure condition must have non-zero time or tension. Failure condition '//trim(Num2LStr(m%FailList(l)%IdNum))//' ignored.', ErrStat, ErrMsg, RoutineName )
+                        m%FailList(l)%failStatus = 2
+
+                     else
+
+							   m%FailList(l)%failStatus = 0; ! initialize as unfailed
+
+                     endif
+
+						endif
+					enddo 
+
                
             !-------------------------------------------------------------------------------------------
             else if (INDEX(Line, "OUTPUT") > 0) then ! if output header
@@ -1532,7 +1867,12 @@ CONTAINS
                   CALL CheckError( ErrStat2, ErrMsg2 )
                   IF (ErrStat >= AbortErrLev) RETURN
 
-
+               if (p%writeLog > 1) then
+                  write(p%UnLog, '(A)'        ) "  - Outputs List:"
+                  DO J = 1, p%NumOuts
+                     write(p%UnLog, '(A)'     ) "      "//OutList(J)
+                  END DO
+               end if
             !-------------------------------------------------------------------------------------------
             else  ! otherwise ignore this line that isn't a recognized header line and read the next line
                Line = NextLine(i)
@@ -1563,35 +1903,38 @@ CONTAINS
 
 
       !-------------------------------------------------------------------------------------------------
-      !          Connect mooring system together and make necessary allocations
+      !          Point mooring system together and make necessary allocations
       !-------------------------------------------------------------------------------------------------
 
       CALL WrNr('   Created mooring system: ' )
 
-!     p%NAnchs = 0   ! this is the number of "fixed" type Connections. <<<<<<<<<<<<<<
+!     p%NAnchs = 0   ! this is the number of "fixed" type Points. <<<<<<<<<<<<<<
 
-      CALL WrScr(trim(Num2LStr(p%nLines))//' lines, '//trim(Num2LStr(p%NConnects))//' points, '//trim(Num2LStr(p%nRods))//' rods, '//trim(Num2LStr(p%nBodies))//' bodies.')
-
+      CALL WrScr(trim(Num2LStr(p%nLines))//' lines, '//trim(Num2LStr(p%NPoints))//' points, '//trim(Num2LStr(p%nRods))//' rods, '//trim(Num2LStr(p%nBodies))//' bodies.')
+      if (p%writeLog > 0) then
+         write(p%UnLog, '(A)') NewLine
+         write(p%UnLog, '(A)')  '   Created mooring system: '//trim(Num2LStr(p%nLines))//' lines, '//trim(Num2LStr(p%NPoints))//' points, '//trim(Num2LStr(p%nRods))//' rods, '//trim(Num2LStr(p%nBodies))//' bodies.'
+      end if
 
 
 
  !     ! now go back through and record the fairlead Id numbers (this >>>WAS<<< all the "connecting" that's required) <<<<
  !     J = 1  ! counter for fairlead number
- !     K = 1  ! counter for connect number
- !     DO I = 1,p%NConnects
- !        IF (m%ConnectList(I)%typeNum == 1) THEN
- !          m%CpldConIs(J) = I             ! if a vessel connection, add ID to list
+ !     K = 1  ! counter for point number
+ !     DO I = 1,p%NPoints
+ !        IF (m%PointList(I)%typeNum == 1) THEN
+ !          m%CpldPointIs(J) = I             ! if a vessel point, add ID to list
  !          J = J + 1
- !        ELSE IF (m%ConnectList(I)%typeNum == 2) THEN
- !          m%FreeConIs(K) = I             ! if a connect connection, add ID to list
+ !        ELSE IF (m%PointList(I)%typeNum == 2) THEN
+ !          m%FreePointIs(K) = I             ! if a point, add ID to list
  !          K = K + 1
  !        END IF
  !     END DO
 
    IF (wordy > 1) print *, "nLineTypes     = ",p%nLineTypes    
    IF (wordy > 1) print *, "nRodTypes      = ",p%nRodTypes     
-   IF (wordy > 1) print *, "nConnects      = ",p%nConnects     
-   IF (wordy > 1) print *, "nConnectsExtra = ",p%nConnectsExtra
+   IF (wordy > 1) print *, "nPoints      = ",p%nPoints     
+   IF (wordy > 1) print *, "nPointsExtra = ",p%nPointsExtra
    IF (wordy > 1) print *, "nBodies        = ",p%nBodies       
    IF (wordy > 1) print *, "nRods          = ",p%nRods         
    IF (wordy > 1) print *, "nLines         = ",p%nLines        
@@ -1599,20 +1942,20 @@ CONTAINS
    IF (wordy > 1) print *, "nFails         = ",p%nFails        
    IF (wordy > 1) print *, "nFreeBodies    = ",p%nFreeBodies   
    IF (wordy > 1) print *, "nFreeRods      = ",p%nFreeRods     
-   IF (wordy > 1) print *, "nFreeCons      = ",p%nFreeCons     
+   IF (wordy > 1) print *, "nFreePoints      = ",p%nFreePoints     
    IF (wordy > 1) print *, "nCpldBodies    = ",p%nCpldBodies   
    IF (wordy > 1) print *, "nCpldRods      = ",p%nCpldRods     
-   IF (wordy > 1) print *, "nCpldCons      = ",p%nCpldCons     
+   IF (wordy > 1) print *, "nCpldPoints      = ",p%nCpldPoints     
    IF (wordy > 1) print *, "NConns         = ",p%NConns        
    IF (wordy > 1) print *, "NAnchs         = ",p%NAnchs              
       
-   IF (wordy > 2) print *, "FreeConIs are ", m%FreeConIs
-   IF (wordy > 2) print *, "CpldConIs are ", m%CpldConIs
+   IF (wordy > 2) print *, "FreePointIs are ", m%FreePointIs
+   IF (wordy > 2) print *, "CpldPointIs are ", m%CpldPointIs
 
 
    ! write system description to log file
    if (p%writeLog > 1) then
-      write(p%UnLog, '(A)') "----- MoorDyn Model Summary (to be written) -----"
+      write(p%UnLog, '(A)') "----- MoorDyn Model Summary (unfinished) -----"
    end if
 
 
@@ -1625,10 +1968,10 @@ CONTAINS
 
       
 
- !    ! allocate list of starting and ending state vector indices for each free connection
- !    ALLOCATE ( m%ConStateIs1(p%nFreeCons), m%ConStateIsN(p%nFreeCons), STAT = ErrStat )
+ !    ! allocate list of starting and ending state vector indices for each free point
+ !    ALLOCATE ( m%PointStateIs1(p%nFreePoints), m%PointStateIsN(p%nFreePoints), STAT = ErrStat )
  !    IF ( ErrStat /= ErrID_None ) THEN
- !      CALL CheckError(ErrID_Fatal, ' Error allocating ConStateIs array.')
+ !      CALL CheckError(ErrID_Fatal, ' Error allocating PointStateIs array.')
  !      RETURN
  !    END IF
  !    
@@ -1647,13 +1990,13 @@ CONTAINS
  !    ! Free Bodies...
  !    ! Free Rods...
  !    
- !    ! Free Connections...
- !    DO l = 1, p%nFreeCons
+ !    ! Free Points...
+ !    DO l = 1, p%nFreePoints
  !       J = J + 1            ! assign start index
- !       m%ConStateIs1(l) = J
+ !       m%PointStateIs1(l) = J
  !       
  !       J = J + 5            ! assign end index (5 entries further, since nodes have 2*3 states)
- !       m%ConStateIsN(l) = J
+ !       m%PointStateIsN(l) = J
  !    END DO
  !    
  !    ! Lines
@@ -1674,13 +2017,14 @@ CONTAINS
       !                               prepare state vector etc.
       !------------------------------------------------------------------------------------
 
-      ! the number of states is Nx
+      ! the number of states is Nx and Nxtra includes additional states for potential line failures
       m%Nx = Nx
+      m%Nxtra = m%Nx + 6*2*p%nLines
       
-      IF (wordy > 0) print *, "allocating state vectors to size ", Nx
+      IF (wordy > 0) print *, "allocating state vectors to size ", m%Nxtra
 
       ! allocate state vector and temporary state vectors based on size just calculated
-      ALLOCATE ( x%states(m%Nx), m%xTemp%states(m%Nx), m%xdTemp%states(m%Nx), STAT = ErrStat2 )
+      ALLOCATE ( x%states(m%Nxtra), m%xTemp%states(m%Nxtra), m%xdTemp%states(m%Nxtra), STAT = ErrStat2 )
       IF ( ErrStat2 /= ErrID_None ) THEN
         ErrMsg  = ' Error allocating state vectors.'
         !CALL CleanUp()
@@ -1702,11 +2046,11 @@ CONTAINS
     ! m%GroundBody%OrMat = EulerConstruct( m%GroundBody%r6(4:6) ) ! make sure it's OrMat is set up  <<< need to check this approach
       
    !   ! first set/update the kinematics of all the fixed things (>>>> eventually do this by using a ground body <<<<)
-   !   ! only doing connections so far
-   !   DO J = 1,p%nConnects 
-   !      if (m%ConnectList(J)%typeNum == 1) then
+   !   ! only doing points so far
+   !   DO J = 1,p%nPoints 
+   !      if (m%PointList(J)%typeNum == 1) then
    !         ! set the attached line endpoint positions:
-   !         CALL Connect_SetKinematics(m%ConnectList(J), m%ConnectList(J)%r, (/0.0_DbKi,0.0_DbKi,0.0_DbKi/), 0.0_DbKi, m%LineList) 
+   !         CALL Point_SetKinematics(m%PointList(J), m%PointList(J)%r, (/0.0_DbKi,0.0_DbKi,0.0_DbKi/), 0.0_DbKi, m%LineList) 
    !      end if
    !   END DO 
       
@@ -1717,12 +2061,14 @@ CONTAINS
       
       ALLOCATE ( u%CoupledKinematics(p%nTurbines), STAT = ErrStat2 )
       IF ( ErrStat2 /= ErrID_None ) THEN
-        CALL CheckError(ErrID_Fatal, ' Error allocating CoupledKinematics input array.')
+         ErrMsg2 = ' Error allocating CoupledKinematics input array.'
+        CALL CheckError(ErrID_Fatal, ErrMsg2)
         RETURN
       END IF
       ALLOCATE ( y%CoupledLoads(p%nTurbines), STAT = ErrStat2 )
       IF ( ErrStat2 /= ErrID_None ) THEN
-        CALL CheckError(ErrID_Fatal, ' Error allocating CoupledLoads output array.')
+         ErrMsg2 = ' Error allocating CoupledLoads output array.'
+        CALL CheckError(ErrID_Fatal, ErrMsg2)
         RETURN
       END IF
       
@@ -1735,7 +2081,7 @@ CONTAINS
          IF (ErrStat >= AbortErrLev) RETURN
          
          ! count number of coupling nodes needed for the mesh of this turbine
-         K = p%nCpldBodies(iTurb) + p%nCpldRods(iTurb) + p%nCpldCons(iTurb)
+         K = p%nCpldBodies(iTurb) + p%nCpldRods(iTurb) + p%nCpldPoints(iTurb)
          if (K == 0) K = 1         ! Always have at least one node (it will be a dummy node if no fairleads are attached)
 
          ! create input mesh for fairlead kinematics
@@ -1749,30 +2095,35 @@ CONTAINS
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
       
-         ! note: in MoorDyn-F v2, the points in the mesh correspond in order to all the coupled bodies, then rods, then connections
-         ! >>> make sure all coupled objects have been offset correctly by the PtfmInit values, including if it's a farm situation -- below or where the objects are first created <<<<
+         ! Note: in MoorDyn-F v2, the points in the mesh correspond in order to
+         ! all the coupled bodies, then rods, then points. The below code makes
+         ! sure all coupled objects have been offset correctly by the PtfmInit
+         ! values (initial platform pose), including if using FAST.Farm.
          
+         ! rRef and OrMatRef or the position and orientation matrix of the
+         ! coupled object relative to the platform, based on the input file.
+         ! They are used to set the "reference" pose of each coupled mesh
+         ! entry before the intial offsets from PtfmInit are applied.
          
          J = 0 ! this is the counter through the mesh points for each turbine
          
          DO l = 1,p%nCpldBodies(iTurb)
             J = J + 1
          
-            rRef = m%BodyList(m%CpldBodyIs(l,iTurb))%r6              ! for now set reference position as per input file <<< 
-            !OrMatRef = 
-            
-            CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef(1:3), ErrStat2, ErrMsg2) ! defaults to identity orientation matrix
-            !TODO: >>> should also maybe set reference orientation (which might make part of a couple lines down redundant) <<<
-            
-            ! calculate initial point relative position, adjusted due to initial platform translations
-            u%CoupledKinematics(iTurb)%TranslationDisp(:,J) = InitInp%PtfmInit(1:3,iTurb) - rRef(1:3)
-            
-            OrMat2 = MATMUL(OrMat, TRANSPOSE( EulerConstruct( rRef(4:6))))  ! combine the Body's relative orientation with the turbine's initial orientation
-            u%CoupledKinematics(iTurb)%Orientation(:,:,J) = OrMat2          ! set the result as the current orientation of the body <<<
+            rRef = m%BodyList(m%CpldBodyIs(l,iTurb))%r6  ! set reference position as per input file
+            OrMatRef = ( m%RodList(m%CpldBodyIs(l,iTurb))%OrMat )  ! set reference orientation as per input file
+            CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef(1:3), ErrStat2, ErrMsg2, OrMatRef)
 
-            ! set absolute initial positions in MoorDyn
+            ! set absolute initial positions in MoorDyn 
+            OrMat2 = MATMUL(OrMat, OrMatRef)  ! combine the Body's relative orientation with the turbine's initial orientation
+            u%CoupledKinematics(iTurb)%Orientation(:,:,J) = OrMat2  ! set the result as the current orientation of the body
+
+            ! calculate initial body relative position, adjusted due to initial platform translations
+            u%CoupledKinematics(iTurb)%TranslationDisp(1,J) = InitInp%PtfmInit(1,iTurb) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3) - rRef(1)
+            u%CoupledKinematics(iTurb)%TranslationDisp(2,J) = InitInp%PtfmInit(2,iTurb) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
+            u%CoupledKinematics(iTurb)%TranslationDisp(3,J) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
             m%BodyList(m%CpldBodyIs(l,iTurb))%r6(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
-            m%BodyList(m%CpldBodyIs(l,iTurb))%r6(4:6) = EulerExtract(MATMUL(OrMat, TRANSPOSE( EulerConstruct( rRef(4:6)))))     ! apply rotation from PtfmInit onto input file's body orientation to get its true initial orientation
+            m%BodyList(m%CpldBodyIs(l,iTurb))%r6(4:6) = EulerExtract(OrMat2)     ! apply rotation from PtfmInit onto input file's body orientation to get its true initial orientation
 
             CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)      ! set node as point element
             
@@ -1785,49 +2136,46 @@ CONTAINS
             J = J + 1
             
             rRef = m%RodList(m%CpldRodIs(l,iTurb))%r6          ! for now set reference position as per input file <<< 
-            OrMatRef = TRANSPOSE( m%RodList(m%CpldRodIs(l,iTurb))%OrMat )  ! for now set reference orientation as per input file <<< 
+
+            ! set absolute initial positions in MoorDyn
+            OrMatRef = ( m%RodList(m%CpldRodIs(l,iTurb))%OrMat )  ! set reference orientation as per input file
             CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef(1:3), ErrStat2, ErrMsg2, OrMatRef)  ! assign the reference position and orientation
+            OrMat2 = MATMUL(OrMat, OrMatRef)  ! combine the Rod's relative orientation with the turbine's initial orientation
+            u%CoupledKinematics(iTurb)%Orientation(:,:,J) = OrMat2          ! set the result as the current orientation of the rod <<<
             
-            ! calculate initial point relative position, adjusted due to initial platform rotations and translations  <<< could convert to array math
+            ! calculate initial rod relative position, adjusted due to initial platform rotations and translations  <<< could convert to array math
             u%CoupledKinematics(iTurb)%TranslationDisp(1,J) = InitInp%PtfmInit(1,iTurb) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3) - rRef(1)
             u%CoupledKinematics(iTurb)%TranslationDisp(2,J) = InitInp%PtfmInit(2,iTurb) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
             u%CoupledKinematics(iTurb)%TranslationDisp(3,J) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
-            
-            OrMat2 = MATMUL(OrMat, TRANSPOSE( EulerConstruct( rRef(4:6))))  ! combine the Rod's relative orientation with the turbine's initial orientation
-            u%CoupledKinematics(iTurb)%Orientation(:,:,J) = OrMat2          ! set the result as the current orientation of the rod <<<
-            
-            ! set absolute initial positions in MoorDyn
             m%RodList(m%CpldRodIs(l,iTurb))%r6(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
-            m%RodList(m%CpldRodIs(l,iTurb))%r6(4:6) = EulerExtract(MATMUL(OrMat, OrMatRef))     ! apply rotation from PtfmInit onto input file's rod orientation to get its true initial orientation
+            m%RodList(m%CpldRodIs(l,iTurb))%r6(4:6) = MATMUL(OrMat2 , (/0.0, 0.0, 1.0/) )     ! apply rotation from PtfmInit onto input file's rod orientation to get its true initial orientation
             
             ! >>> still need to set Rod initial orientations accounting for PtfmInit rotation <<<
-            
+
             CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)
             
             ! lastly, do this to set the attached line endpoint positions:
             CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l,iTurb)), REAL(rRef,R8Ki), m%zeros6, m%zeros6, 0.0_DbKi, m)
          END DO 
 
-         DO l = 1,p%nCpldCons(iTurb)   ! keeping this one simple for now, positioning at whatever is specified by glue code <<<
+         DO l = 1,p%nCpldPoints(iTurb)   ! keeping this one simple for now, positioning at whatever is specified by glue code <<<
             J = J + 1
             
             ! set reference position as per input file  <<< what about turbine positions in array?
-            rRef(1:3) = m%ConnectList(m%CpldConIs(l,iTurb))%r                           
+            rRef(1:3) = m%PointList(m%CpldPointIs(l,iTurb))%r                           
+
+            ! set absolute initial positions in MoorDyn
             CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef(1:3), ErrStat2, ErrMsg2)  
-            
             ! calculate initial point relative position, adjusted due to initial platform rotations and translations  <<< could convert to array math
             u%CoupledKinematics(iTurb)%TranslationDisp(1,J) = InitInp%PtfmInit(1,iTurb) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3) - rRef(1)
             u%CoupledKinematics(iTurb)%TranslationDisp(2,J) = InitInp%PtfmInit(2,iTurb) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
-            u%CoupledKinematics(iTurb)%TranslationDisp(3,J) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
-                 
-            ! set absolute initial positions in MoorDyn
-            m%ConnectList(m%CpldConIs(l,iTurb))%r = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
-            
+            u%CoupledKinematics(iTurb)%TranslationDisp(3,J) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)   
+            m%PointList(m%CpldPointIs(l,iTurb))%r = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
             CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)
 
             ! lastly, do this to set the attached line endpoint positions:
             rRefDub = rRef(1:3)
-            CALL Connect_SetKinematics(m%ConnectList(m%CpldConIs(l,iTurb)), rRefDub, m%zeros6(1:3), m%zeros6(1:3), 0.0_DbKi, m)
+            CALL Point_SetKinematics(m%PointList(m%CpldPointIs(l,iTurb)), rRefDub, m%zeros6(1:3), m%zeros6(1:3), 0.0_DbKi, m)
          END DO 
 
          CALL CheckError( ErrStat2, ErrMsg2 )
@@ -1938,9 +2286,16 @@ CONTAINS
       ! >>> maybe this should be skipped <<<<
 
       
-       ! Go through Bodys and write the coordinates to the state vector
+       ! Go through free Bodys (including pinned) and write the coordinates to the state vector
       DO l = 1,p%nFreeBodies
          CALL Body_Initialize(m%BodyList(m%FreeBodyIs(l)), x%states(m%BodyStateIs1(l) : m%BodyStateIsN(l)), m)
+      END DO
+      
+      ! Set up points, lines, and rods attached to a fixed body
+      DO l = 1,p%nBodies
+         IF (m%BodyList(l)%typeNum == 1) THEN
+            CALL Body_InitializeUnfree(m%BodyList(l), m)
+         ENDIF
       END DO
       
       ! Go through independent (including pinned) Rods and write the coordinates to the state vector
@@ -1948,9 +2303,9 @@ CONTAINS
          CALL Rod_Initialize(m%RodList(m%FreeRodIs(l)), x%states(m%RodStateIs1(l):m%RodStateIsN(l)), m)
       END DO
 
-      ! Go through independent connections (Connects) and write the coordinates to the state vector and set positions of attached line ends
-      DO l = 1, p%nFreeCons
-         CALL Connect_Initialize(m%ConnectList(m%FreeConIs(l)), x%states(m%ConStateIs1(l) : m%conStateIsN(l)), m)
+      ! Go through independent points (Points) and write the coordinates to the state vector and set positions of attached line ends
+      DO l = 1, p%nFreePoints
+         CALL Point_Initialize(m%PointList(m%FreePointIs(l)), x%states(m%PointStateIs1(l) : m%pointStateIsN(l)), m)
       END DO
 
 
@@ -1959,17 +2314,16 @@ CONTAINS
 
          N = m%LineList(l)%N ! for convenience
 
-   !      ! set end node positions and velocities from connect objects
-   !      m%LineList(l)%r(:,N) = m%ConnectList(m%LineList(l)%FairConnect)%r
-   !      m%LineList(l)%r(:,0) = m%ConnectList(m%LineList(l)%AnchConnect)%r
+   !      ! set end node positions and velocities from point objects
+   !      m%LineList(l)%r(:,N) = m%PointList(m%LineList(l)%FairPoint)%r
+   !      m%LineList(l)%r(:,0) = m%PointList(m%LineList(l)%AnchPoint)%r
    !      m%LineList(l)%rd(:,N) = (/ 0.0, 0.0, 0.0 /)  ! set anchor end velocities to zero
    !      m%LineList(l)%rd(:,0) = (/ 0.0, 0.0, 0.0 /)  ! set fairlead end velocities to zero
 
          ! set initial line internal node positions using quasi-static model or straight-line interpolation from anchor to fairlead
-         CALL Line_Initialize( m%LineList(l), m%LineTypeList(m%LineList(l)%PropsIdNum), p%rhoW ,  ErrStat2, ErrMsg2)
+         CALL Line_Initialize( m%LineList(l), m%LineTypeList(m%LineList(l)%PropsIdNum), p,  ErrStat2, ErrMsg2)
             CALL CheckError( ErrStat2, ErrMsg2 )
             IF (ErrStat >= AbortErrLev) RETURN
-            !IF (ErrStat >= ErrId_Warn) CALL WrScr("   Note: Catenary pre-solver was unsuccessful for one or more lines so started with linear node spacing instead.")  ! make this statement more accurate
 
          IF (wordy > 2) print *, "Line ", l, " with NumSegs =", N
          IF (wordy > 2) print *, "its states range from index ", m%LineStateIs1(l), " to ", m%LineStateIsN(l)
@@ -2025,7 +2379,7 @@ CONTAINS
       !        if log file, compute and write some object properties
       ! -------------------------------------------------------------------
       if (p%writeLog > 1) then
-      
+         write(p%UnLog, '(A)'  ) "Values after intialization before dynamic relaxation"
          write(p%UnLog, '(A)'  ) "  Bodies:"         
          DO l = 1,p%nBodies
             write(p%UnLog, '(A)'  )         "    Body"//trim(num2lstr(l))//":"            
@@ -2035,21 +2389,21 @@ CONTAINS
          write(p%UnLog, '(A)'  ) "  Rods:"
          DO l = 1,p%nRods
             write(p%UnLog, '(A)'  )         "    Rod"//trim(num2lstr(l))//":"  
-            ! m%RodList(l) 
+            write(p%UnLog, '(A12, f12.4)')  "      mass: ", m%RodList(l)%M6net(1,1)
+            write(p%UnLog, '(A17, A)')  "      direction: ", trim(num2lstr(m%RodList(l)%q(1)))//", "//trim(num2lstr(m%RodList(l)%q(2)))//", "//trim(num2lstr(m%RodList(l)%q(3)))
          END DO
          
          write(p%UnLog, '(A)'  ) "  Points:"
-         DO l = 1,p%nFreeCons
+         DO l = 1,p%nFreePoints
             write(p%UnLog, '(A)'  )         "    Point"//trim(num2lstr(l))//":"  
-            ! m%ConnectList(l)
+            write(p%UnLog, '(A12, f12.4)')  "      mass: ", m%PointList(l)%M
          END DO
          
          write(p%UnLog, '(A)'  ) "  Lines:"
          DO l = 1,p%nLines
             write(p%UnLog, '(A)'  )         "    Line"//trim(num2lstr(l))//":"  
-            ! m%LineList(l)
          END DO
-      
+         write(p%UnLog, '(A)') "--------- End of Model Summary --------- "//NewLine
       end if
 
 
@@ -2061,11 +2415,28 @@ CONTAINS
       if (InputFileDat%TMaxIC > 0.0_DbKi) then
 
          CALL WrScr("   Finalizing initial conditions using dynamic relaxation."//NewLine)  ! newline because next line writes over itself
+         if (p%writeLog > 0) then
+            write(p%UnLog,'(A)') "Finalizing initial conditions using dynamic relaxation."//NewLine
+         end if
 
          ! boost drag coefficient of each line type  <<<<<<<< does this actually do anything or do lines hold these coefficients???
-         DO I = 1, p%nLineTypes
-            m%LineTypeList(I)%Cdn = m%LineTypeList(I)%Cdn * InputFileDat%CdScaleIC
-            m%LineTypeList(I)%Cdt = m%LineTypeList(I)%Cdt * InputFileDat%CdScaleIC   ! <<<<< need to update this to apply to all objects' drag
+         DO I = 1, p%nLines
+            m%LineList(I)%Cdn = m%LineList(I)%Cdn * InputFileDat%CdScaleIC
+            m%LineList(I)%Cdt = m%LineList(I)%Cdt * InputFileDat%CdScaleIC 
+         END DO
+
+         DO I = 1, p%nBodies
+            m%BodyList(I)%bodyCdA = m%BodyList(I)%bodyCdA * InputFileDat%CdScaleIC 
+         END Do
+
+         DO I =1, p%nRods
+            m%RodList(I)%Cdn = m%RodList(I)%Cdn * InputFileDat%CdScaleIC
+            m%RodList(I)%Cdt = m%RodList(I)%Cdt * InputFileDat%CdScaleIC
+            m%RodList(I)%CdEnd = m%RodList(I)%CdEnd * InputFileDat%CdScaleIC
+         END Do
+
+         DO I = 1, p%nPoints
+            m%PointList(I)%pointCdA = m%PointList(I)%pointCdA * InputFileDat%CdScaleIC
          END DO
 
          ! allocate array holding 10 latest fairlead tensions
@@ -2082,6 +2453,8 @@ CONTAINS
             END DO
          END DO
 
+         ! dtIC set to fraction of input so convergence is over dtIC
+         InputFileDat%dtIC = InputFileDat%dtIC / 10
 
          ! round dt to integer number of time steps  
          NdtM = ceiling(InputFileDat%dtIC/p%dtM0)            ! get number of mooring time steps to do based on desired time step size
@@ -2113,6 +2486,10 @@ CONTAINS
                
                IF (ErrStat == ErrID_Fatal) THEN
                   CALL WrScr("NaN detected at time "//TRIM(Num2LStr(t))//" during MoorDyn's dynamic relaxation process.")
+                  if (p%writeLog > 0) then
+                     write(p%UnLog,'(A)') "NaN detected at time "//TRIM(Num2LStr(t))//" during MoorDyn's dynamic relaxation process."//NewLine
+                  end if
+         
                   IF (wordy > 1) THEN
                      print *, "Here is the state vector: "
                      print *, x%states
@@ -2153,8 +2530,8 @@ CONTAINS
                ! check for non-convergence
                
                DO l = 1, p%nLines   
-                  DO K = 1,9
-                     IF ( abs( FairTensIC(l,K)/FairTensIC(l,K+1) - 1.0 ) > InputFileDat%threshIC ) THEN
+                  DO K = 2,10
+                     IF ( abs( FairTensIC(l,1)/FairTensIC(l,K) - 1.0 ) > InputFileDat%threshIC ) THEN
                         Converged = 0
                         EXIT
                      END IF
@@ -2165,12 +2542,30 @@ CONTAINS
 
                IF (Converged == 1)  THEN  ! if we made it with all cases satisfying the threshold
                   CALL WrScr('   Fairlead tensions converged to '//trim(Num2LStr(100.0*InputFileDat%threshIC))//'% after '//trim(Num2LStr(t))//' seconds.')
+                  if (p%writeLog > 0) then
+                     write(p%UnLog,'(A)') ''
+                     write(p%UnLog,'(A)') '   Fairlead tensions converged to '//trim(Num2LStr(100.0*InputFileDat%threshIC))//'% after '//trim(Num2LStr(t))//' seconds.'//NewLine
+                  end if
+                  DO l = 1, p%nLines 
+                      CALL WrScr('   Fairlead tension: '//trim(Num2LStr(FairTensIC(l,1))))
+                      CALL WrScr('   Fairlead forces: '//trim(Num2LStr(m%LineList(l)%Fnet(1, m%LineList(l)%N)))//', '//trim(Num2LStr(m%LineList(l)%Fnet(2, m%LineList(l)%N)))//', '//trim(Num2LStr(m%LineList(l)%Fnet(3, m%LineList(l)%N))))
+                      if (p%writeLog > 0) then
+                        write(p%UnLog,'(A)') '   Fairlead tension: '//trim(Num2LStr(FairTensIC(l,1)))
+                        write(p%UnLog,'(A)') '   Fairlead forces: '//trim(Num2LStr(m%LineList(l)%Fnet(1, m%LineList(l)%N)))//', '//trim(Num2LStr(m%LineList(l)%Fnet(2, m%LineList(l)%N)))//', '//trim(Num2LStr(m%LineList(l)%Fnet(3, m%LineList(l)%N)))
+                      end if
+                  ENDDO
                   EXIT  ! break out of the time stepping loop
                END IF
             END IF
 
             IF (I == ceiling(InputFileDat%TMaxIC/InputFileDat%dtIC) ) THEN
+               CALL WrScr('') ! serves as line break from write over command in previous printed line
                CALL WrScr('   Fairlead tensions did not converge within TMaxIC='//trim(Num2LStr(InputFileDat%TMaxIC))//' seconds.')
+               if (p%writeLog > 0) then
+                  write(p%UnLog,'(A)') ''
+                  write(p%UnLog,'(A)') '   Fairlead tensions did not converge within TMaxIC='//trim(Num2LStr(InputFileDat%TMaxIC))//' seconds.'
+               end if
+
                !ErrStat = ErrID_Warn
                !ErrMsg = '  MD_Init: ran dynamic convergence to TMaxIC without convergence'
             END IF
@@ -2182,9 +2577,23 @@ CONTAINS
          CALL MD_DestroyInput( u_array(1), ErrStat2, ErrMsg2 )
 
          ! UNboost drag coefficient of each line type   <<<
-         DO I = 1, p%nLineTypes
-            m%LineTypeList(I)%Cdn = m%LineTypeList(I)%Cdn / InputFileDat%CdScaleIC
-            m%LineTypeList(I)%Cdt = m%LineTypeList(I)%Cdt / InputFileDat%CdScaleIC
+         DO I = 1, p%nLines
+            m%LineList(I)%Cdn = m%LineList(I)%Cdn / InputFileDat%CdScaleIC
+            m%LineList(I)%Cdt = m%LineList(I)%Cdt / InputFileDat%CdScaleIC 
+         END DO
+
+         DO I = 1, p%nBodies
+            m%BodyList(I)%bodyCdA = m%BodyList(I)%bodyCdA / InputFileDat%CdScaleIC 
+         END Do
+
+         DO I =1, p%nRods
+            m%RodList(I)%Cdn = m%RodList(I)%Cdn / InputFileDat%CdScaleIC
+            m%RodList(I)%Cdt = m%RodList(I)%Cdt / InputFileDat%CdScaleIC
+            m%RodList(I)%CdEnd = m%RodList(I)%CdEnd / InputFileDat%CdScaleIC
+         END Do
+
+         DO I = 1, p%nPoints
+            m%PointList(I)%pointCdA = m%PointList(I)%pointCdA / InputFileDat%CdScaleIC
          END DO
 
       end if ! InputFileDat%TMaxIC > 0
@@ -2201,10 +2610,31 @@ CONTAINS
       endif
       
       CALL WrScr('   MoorDyn initialization completed.')
+      if (p%writeLog > 0) then
+         write(p%UnLog, '(A)') NewLine//"MoorDyn initialization completed."//NewLine
+         if (ErrStat /= ErrID_None) then
+            write(p%UnLog, '(A34)') "Initalization Errors and Warnings:"
+            write(p%UnLog, '(A)'  ) ErrMsg
+         end if
+         write(p%UnLog, '(A)') NewLine
+      end if
       
       m%LastOutTime = -1.0_DbKi    ! set to nonzero to ensure that output happens at the start of simulation at t=0
       
       ! TODO: add feature for automatic water depth increase based on max anchor depth!
+
+
+      !--------------------------------------------------
+      ! initialize line visualization meshes if needed
+      if (p%VisMeshes) then
+         if (p%NLines > 0) then
+            call VisLinesMesh_Init(p,m,y,ErrStat2,ErrMsg2); if(Failed()) return
+         endif
+         if (p%NRods > 0) then
+            call VisRodsMesh_Init(p,m,y,ErrStat2,ErrMsg2); if(Failed()) return
+         endif
+      endif
+
 
    CONTAINS
 
@@ -2232,7 +2662,7 @@ CONTAINS
 
             ! Passed arguments
          INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
-         CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
+         CHARACTER(*),   INTENT(INOUT) :: Msg         ! The error message (ErrMsg)
 
          INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
          CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
@@ -2245,16 +2675,18 @@ CONTAINS
             ErrMsg = TRIM(ErrMsg)//' MD_Init:'//TRIM(Msg)
             ErrStat = MAX(ErrStat, ErrID)
 
+            Msg = "" ! Reset the error message now that it has been logged into ErrMsg
+
             ! Clean up if we're going to return on error: close files, deallocate local arrays
 
 
             IF ( ErrStat >= AbortErrLev ) THEN                
-               IF (ALLOCATED(m%CpldConIs        ))  DEALLOCATE(m%CpldConIs       )
-               IF (ALLOCATED(m%FreeConIs       ))  DEALLOCATE(m%FreeConIs       )
+               IF (ALLOCATED(m%CpldPointIs      ))  DEALLOCATE(m%CpldPointIs      )
+               IF (ALLOCATED(m%FreePointIs      ))  DEALLOCATE(m%FreePointIs      )
                IF (ALLOCATED(m%LineStateIs1     ))  DEALLOCATE(m%LineStateIs1     )
                IF (ALLOCATED(m%LineStateIsN     ))  DEALLOCATE(m%LineStateIsN     )
-               IF (ALLOCATED(m%ConStateIs1      ))  DEALLOCATE(m%ConStateIs1     )
-               IF (ALLOCATED(m%ConStateIsN      ))  DEALLOCATE(m%ConStateIsN     )
+               IF (ALLOCATED(m%PointStateIs1    ))  DEALLOCATE(m%PointStateIs1    )
+               IF (ALLOCATED(m%PointStateIsN    ))  DEALLOCATE(m%PointStateIsN    )
                IF (ALLOCATED(x%states           ))  DEALLOCATE(x%states           )
                IF (ALLOCATED(FairTensIC         ))  DEALLOCATE(FairTensIC         )
 
@@ -2267,7 +2699,6 @@ CONTAINS
       SUBROUTINE CleanUp()
         ! ErrStat = ErrID_Fatal  
         call MD_DestroyInputFileType( InputFileDat, ErrStat2, ErrMsg2 )    ! Ignore any error messages from this
-        IF (p%UnLog > 0_IntKi) CLOSE( p%UnLog )       ! Remove this when the log file is kept open during the full simulation
       END SUBROUTINE
 
       !> If for some reason the file is truncated, it is possible to get into an infinite loop
@@ -2297,7 +2728,7 @@ CONTAINS
       INTEGER(IntKi)                  , INTENT(IN   ) :: n
       TYPE(MD_InputType)              , INTENT(INOUT) :: u(:)       ! INTENT(INOUT) ! had to change this to INOUT
       REAL(DbKi)                      , INTENT(IN   ) :: t_array(:)
-      TYPE(MD_ParameterType)          , INTENT(IN   ) :: p          ! INTENT(IN   )
+      TYPE(MD_ParameterType)          , INTENT(INOUT) :: p          ! INTENT(IN   )
       TYPE(MD_ContinuousStateType)    , INTENT(INOUT) :: x          ! INTENT(INOUT)
       TYPE(MD_DiscreteStateType)      , INTENT(INOUT) :: xd         ! INTENT(INOUT)
       TYPE(MD_ConstraintStateType)    , INTENT(INOUT) :: z          ! INTENT(INOUT)
@@ -2319,6 +2750,8 @@ CONTAINS
       INTEGER(IntKi)                                  :: NdtM        ! number of time steps to integrate through with RK2
       INTEGER(IntKi)                                  :: I
       INTEGER(IntKi)                                  :: J
+      INTEGER(IntKi)                                  :: l, li, lii, il            ! index
+      INTEGER(IntKi)                                  :: tension      ! tension at line attachment to failure point
 
       nTime = size(u) ! the number of times of input data provided? <<<<<<< not used
 
@@ -2337,10 +2770,10 @@ CONTAINS
 !
 !
 !      ! go through fairleads and apply motions from driver
-!      DO I = 1, p%nCpldCons
+!      DO I = 1, p%nCpldPoints
 !         DO J = 1,3
-!            m%ConnectList(m%CpldConIs(I))%r(J)  = u_interp%PtFairleadDisplacement%Position(J,I) + u_interp%PtFairleadDisplacement%TranslationDisp(J,I)
-!            m%ConnectList(m%CpldConIs(I))%rd(J) = u_interp%PtFairleadDisplacement%TranslationVel(J,I)  ! is this right? <<<
+!            m%PointList(m%CpldPointIs(I))%r(J)  = u_interp%PtFairleadDisplacement%Position(J,I) + u_interp%PtFairleadDisplacement%TranslationDisp(J,I)
+!            m%PointList(m%CpldPointIs(I))%rd(J) = u_interp%PtFairleadDisplacement%TranslationVel(J,I)  ! is this right? <<<
 !         END DO
 !      END DO
 !
@@ -2373,19 +2806,15 @@ CONTAINS
             IF (Is_NaN(x%states(J))) THEN
                ErrStat = ErrID_Fatal
                ErrMsg = ' NaN state detected.'
+               IF (wordy > 1) THEN
+                  print *, ". Here is the state vector: "
+                  print *, x%states
+               END IF
+               CALL CheckError(ErrStat, ErrMsg)
                EXIT
             END IF
          END DO
          
-         IF (ErrStat == ErrID_Fatal) THEN
-            CALL WrScr("NaN detected at time "//TRIM(Num2LStr(t2))//" in MoorDyn.")
-            IF (wordy > 1) THEN
-               print *, ". Here is the state vector: "
-               print *, x%states
-            END IF
-            EXIT
-         END IF
-      
       END DO  ! I  time steps
 
 
@@ -2395,6 +2824,7 @@ CONTAINS
       CALL MD_DestroyInput(u_interp, ErrStat, ErrMsg)
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error destroying dxdt or x2.'
+         CALL CheckError(ErrStat, ErrMsg)
       END IF
       !   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_UpdateStates')
 
@@ -2404,20 +2834,181 @@ CONTAINS
          IF (Is_NaN(x%states(J))) THEN
             ErrStat = ErrID_Fatal
             ErrMsg = ' NaN state detected.'
+            IF (wordy > 1) THEN
+               print *, ". Here is the state vector: "
+               print *, x%states
+            END IF
+            CALL CheckError(ErrStat, ErrMsg)
             EXIT
          END IF
       END DO
-      
-      IF (ErrStat == ErrID_Fatal) THEN
-         CALL WrScr("NaN detected at time "//TRIM(Num2LStr(t2))//" in MoorDyn.")
-         IF (wordy > 1) THEN
-            print *, ". Here is the state vector: "
-            print *, x%states
-         END IF
-      END IF
+
+      ! do we want to check failures here (at the coupling step level? Or at the dtM level?)
+      ! --------------- check for line failures (detachments!) ----------------
+		DO l= 1,p%nFails 
+
+			if (m%FailList(l)%failStatus == 0) then
+
+				if ((t >= m%FailList(l)%failTime) .AND. (m%FailList(l)%failTime .NE. 0.0)) then  
+               
+               ! step 1: check for time-triggered failures
+               
+               CALL WrScr("Failure number "//trim(Num2LStr(l))//" triggered by t = "//trim(Num2LStr(t)))
+               if (p%writeLog > 0) then
+                  write(p%UnLog,'(A)') "Failure number "//trim(Num2LStr(l))//" triggered by t = "//trim(Num2LStr(t))
+               end if
+
+					m%FailList(l)%failStatus = 1; ! set status to failed so it's not checked again
+               CALL DetachLines(m%FailList(l)%attachID, m%FailList(l)%isRod, m%FailList(l)%lineIDs, m%FailList(l)%lineTops, m%FailList(l)%nLinesToDetach, t)
+               
+            elseif (m%FailList(l)%failTen .NE. 0.0) then
+
+               ! step 2: check for tension-triggered failures (this will require specifying max tension things)
+
+               DO il = 1,m%FailList(l)%nLinesToDetach ! for each line in the failure, check the tension at the attachment
+
+                  ! check line ID is right
+                  if (m%FailList(l)%lineIDs(il) .NE. m%LineList(m%FailList(l)%lineIDs(il))%IdNum) then
+                     CALL CheckError(ErrID_Fatal, " Line ID's dont match for failure "//trim(num2lstr(m%FailList(l)%IdNum)))
+                  endif
+
+                  ! if fairlead else anchor
+                  if (m%FailList(l)%lineTops(il) == 1) then
+                     tension = Line_GetNodeTen(m%LineList(m%FailList(l)%lineIDs(il)), m%LineList(m%FailList(l)%lineIDs(il))%N)
+                  else
+                     tension = Line_GetNodeTen(m%LineList(m%FailList(l)%lineIDs(il)), 0)
+                  endif
+                  
+                  if (tension >= m%FailList(l)%failTen) then
+                     CALL WrScr("Failure number "//trim(Num2LStr(l))//" triggered by line "//trim(num2lstr(m%FailList(l)%lineIDs(il)))//" tension = "//trim(Num2LStr(tension))//" at time = "//trim(Num2LStr(t)))
+                     if (p%writeLog > 0) then
+                        write(p%UnLog,'(A)') "Failure number "//trim(Num2LStr(l))//" triggered by line "//trim(num2lstr(m%FailList(l)%lineIDs(il)))//" tension = "//trim(Num2LStr(tension))//" at time = "//trim(Num2LStr(t))
+                     end if
+
+                     m%FailList(l)%failStatus = 1; ! set status to failed so it's not checked again
+                     CALL DetachLines(m%FailList(l)%attachID, m%FailList(l)%isRod, m%FailList(l)%lineIDs, m%FailList(l)%lineTops, m%FailList(l)%nLinesToDetach, t)
+                     exit ! dont need to check the other lines becasue failure already detected
+
+                  endif
+
+               ENDDO ! il = 1,m%FailList(l)%nLinesToDetach
+               
+            endif ! end checking time and tension thresholds non-zero
+
+            if (m%FailList(l)%failStatus == 1) then
+
+               ! if a failure is triggered, remove all lines from that failure from all other failures
+               DO li = 1, p%nFails
+                  if (m%FailList(li)%IdNum .NE. m%FailList(l)%IdNum) then ! if not this failure
+                     if ((m%FailList(l)%attachID == m%FailList(li)%attachID) .AND. (m%FailList(l)%isRod == m%FailList(li)%isRod)) then ! if failures are for the same point
+
+                        DO il = 1, m%FailList(l)%nLinesToDetach ! loop through lines of this failure
+                           DO lii = 1, m%FailList(li)%nLinesToDetach ! loop through lines of the other failure
+
+                              if (m%FailList(l)%lineIDs(il) == m%FailList(li)%lineIDs(lii)) then ! if this failure's line IDs are found in any of the other failure's line IDs
+
+                                 m%FailList(li)%nLinesToDetach = m%FailList(li)%nLinesToDetach - 1 ! reduce the size of nLinesToDetach of the other failure 
+                                 m%FailList(li)%lineIDs(lii) = m%FailList(li)%lineIDs(lii+1) ! move subsequent line ID's forward one spot in the list to eliminate this line ID
+                                 CALL CheckError(ErrID_Warn, " Line "//trim(num2lstr(m%FailList(l)%lineIDs(il)))//" removed from Failure "//trim(num2lstr(li))//" becasue it already failed by Failure "//trim(num2lstr(l)))
+                              
+                              endif
+
+                           ENDDO
+                        ENDDO
+
+                        if (m%FailList(li)%nLinesToDetach == 0) then
+                           ! invalid failure
+                           m%FailList(li)%failStatus = 2
+                           CALL CheckError (ErrID_Warn, " Failure "//trim(num2lstr(li))//" is a duplicate of Failure "//trim(num2lstr(l))//" and will be ignored.")
+                        endif
+
+                     endif
+                  endif
+               ENDDO !li = 1, p%nFails
+            endif ! m%FailList(l)%failStatus == 1
+
+         endif	 ! m%FailList(l)%failStatus == 0
+
+      ENDDO ! l= 0,nFails
 
    CONTAINS
 
+      SUBROUTINE DetachLines (attachID, isRod, lineIDs, lineTops, nLinesToDetach, time)
+         INTEGER(IntKi), INTENT(IN) :: attachID
+         INTEGER(IntKi), INTENT(IN) :: isRod
+         INTEGER(IntKi), INTENT(IN   ) :: lineIDs(:)
+         INTEGER(IntKi), INTENT(  OUT) :: lineTops(:)
+         INTEGER(IntKi), INTENT(IN) :: nLinesToDetach
+         REAL(DbKi), INTENT(IN   ) :: time
+         INTEGER(IntKi) :: k        ! index
+         REAL(DbKi) :: dummyPointState(6) = 0.0_DbKi  ! dummy state array to hold kinematics of old attachment point (format in terms of part of point state vector: r[J]  = X[3 + J]; rd[J] = X[J]; )
+
+         ! add point to list of free ones and add states for it
+         p%nPoints = p%nPoints + 1  ! add 1 to the number of points (this is now the number of the new point)
+         p%nFreePoints=p%nFreePoints+1          
+         m%FreePointIs(p%nFreePoints) = p%nPoints 
+         m%PointStateIs1(p%nFreePoints) = m%Nx+1 ! assign start index of this point's states
+         m%PointStateIsN(p%nFreePoints) = m%Nx+6  
+         m%Nx = m%Nx + 6                             ! add 6 state variables for each point
+      
+         ! note: for the DetachLines subroutine, p%nPoints == m%FreePointIs(p%nFreePoints) and can be used interchangeably for indexing. p%nPoints is used to make things easier to read
+
+         ! check to make sure we haven't gone beyond the extra size allotted to the state arrays or the points list <<<< really should throw an error here
+         if (p%nPoints > p%nPointsExtra) then
+            CALL CheckError(ErrID_Fatal, " DetachLines: p%nPoints > p%nPointsExtra")
+         endif
+         if (m%Nx > m%Nxtra) then
+            CALL CheckError(ErrID_Fatal, " DetachLines: nX > m%Nx")
+         endif
+         
+         ! create new massless point for detached end(s) of line(s)
+         m%PointList(p%nPoints)%IdNum = p%nPoints
+         m%PointList(p%nPoints)%r = 0.0_DbKi ! will be set by Point_SetState
+         m%PointList(p%nPoints)%rd = 0.0_DbKi ! will be set by Point_SetState
+         m%PointList(p%nPoints)%pointM = 0.0_DbKi
+         m%PointList(p%nPoints)%pointV = 0.0_DbKi
+         m%PointList(p%nPoints)%pointCa = 0.0_DbKi
+         m%PointList(p%nPoints)%pointCda = 0.0_DbKi
+         m%PointList(p%nPoints)%typeNum = 0_IntKi ! free point
+         ! not used
+         m%PointList(p%nPoints)%pointFX = 0.0_DbKi 
+         m%PointList(p%nPoints)%pointFY = 0.0_DbKi
+         m%PointList(p%nPoints)%pointFZ = 0.0_DbKi
+         CALL Point_Initialize(m%PointList(p%nPoints), x%states(m%PointStateIs1(p%nFreePoints) : m%pointStateIsN(p%nFreePoints)), m)
+
+         ! detach lines from old Rod or Point, and get kinematics of the old attachment point
+
+         DO k=1,nLinesToDetach
+
+            if (isRod==1) then ! end A
+               CALL Rod_RemoveLine(m%RodList(attachID), lineIDs(k), lineTops(k), 0, dummyPointState(4:6), dummyPointState(1:3))
+            elseif (isRod==2) then ! end B
+               CALL Rod_RemoveLine(m%RodList(attachID), lineIDs(k), lineTops(k), 1, dummyPointState(4:6), dummyPointState(1:3))
+            elseif (isRod==0) then
+               CALL Point_RemoveLine(m%PointList(attachID), lineIDs(k), lineTops(k), dummyPointState(4:6), dummyPointState(1:3))
+            else
+               CALL CheckError(ErrID_Fatal, " DetachLines: Failure doesn't have a valid isRod value of 0, 1, or 2.")
+            endif
+            
+         ENDDO
+         
+         ! attach lines to new point
+         DO k=1,nLinesToDetach ! for each relevant line 
+            CALL Point_AddLine(m%PointList(p%nPoints), lineIDs(k), lineTops(k))
+         ENDDO
+         
+         ! update point kinematics to match old line attachment point kinematics and set positions of attached line ends
+         CALL Point_SetState(m%PointList(p%nPoints),dummyPointState, time, m)
+         
+         ! now make the state vector up to date!
+         DO k=1,6 
+            x%states(m%PointStateIs1(p%nFreePoints)+(k-1)) = dummyPointState(k)
+         ENDDO
+
+         IF (wordy > 0) print *, "Set up new Point ", p%nPoints, " of type ",  m%PointList(p%nPoints)%typeNum
+
+      END SUBROUTINE DetachLines
+      
       SUBROUTINE CheckError(ErrId, Msg)
         ! This subroutine sets the error message and level and cleans up if the error is >= AbortErrLev
 
@@ -2431,11 +3022,16 @@ CONTAINS
             ErrMsg = TRIM(ErrMsg)//' MD_UpdateStates:'//TRIM(Msg)      ! add current error message
             ErrStat = MAX(ErrStat, ErrID)
 
-            CALL WrScr( ErrMsg )  ! do this always or only if warning level?
+            ! if (ErrStat <= ErrID_Warn) then
+            !    CALL WrScr( ErrMsg )  ! do this always or only if warning level?
+            ! endif
 
             IF( ErrStat > ErrID_Warn ) THEN
+               if (p%writeLog > 0) then
+                  write(p%UnLog,'(A)') ErrMsg
+               end if
        !         CALL MD_DestroyInput( u_interp, ErrStat, ErrMsg )
-                RETURN
+               RETURN
             END IF
          END IF
 
@@ -2477,10 +3073,10 @@ CONTAINS
       ! below updated to make sure outputs are current (based on provided x and u)  - similar to what's in UpdateStates
 
     !  ! go through fairleads and apply motions from driver
-    !  DO I = 1, p%nCpldCons
+    !  DO I = 1, p%nCpldPoints
     !     DO J = 1,3
-    !        m%ConnectList(m%CpldConIs(I))%r(J)  = u%CoupledKinematics%Position(J,I) + u%CoupledKinematics%TranslationDisp(J,I)
-    !        m%ConnectList(m%CpldConIs(I))%rd(J) = u%CoupledKinematics%TranslationVel(J,I)  ! is this right? <<<
+    !        m%PointList(m%CpldPointIs(I))%r(J)  = u%CoupledKinematics%Position(J,I) + u%CoupledKinematics%TranslationDisp(J,I)
+    !        m%PointList(m%CpldPointIs(I))%rd(J) = u%CoupledKinematics%TranslationVel(J,I)  ! is this right? <<<
     !     END DO
     !  END DO
       
@@ -2507,11 +3103,11 @@ CONTAINS
     !       END DO
     !    END DO
     !    ! Point reference point coordinates
-    !    DO I = 1, p%nConnects
+    !    DO I = 1, p%nPoints
     !       J = J + 1
-    !       m%ConnectList(I)%U    = u%U(:,J)
-    !       m%ConnectList(I)%Ud   = u%Ud(:,J)
-    !       m%ConnectList(I)%zeta = u%zeta(J)
+    !       m%PointList(I)%U    = u%U(:,J)
+    !       m%PointList(I)%Ud   = u%Ud(:,J)
+    !       m%PointList(I)%zeta = u%zeta(J)
     !    END DO      
     !    ! Line internal node coordinates
     !    DO I = 1, p%nLines
@@ -2530,10 +3126,10 @@ CONTAINS
       ! call CalcContStateDeriv in order to run model and calculate dynamics with provided x and u
       CALL MD_CalcContStateDeriv( t, u, p, x, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg )
 
-    !  ! assign net force on fairlead Connects to the fairlead force output mesh
-    !  DO i = 1, p%nCpldCons
+    !  ! assign net force on fairlead Points to the fairlead force output mesh
+    !  DO i = 1, p%nCpldPoints
     !     DO J=1,3
-    !        y%PtFairleadLoad%Force(J,I) = m%ConnectList(m%CpldConIs(I))%Fnet(J)
+    !        y%PtFairleadLoad%Force(J,I) = m%PointList(m%CpldPointIs(I))%Fnet(J)
     !     END DO
     !  END DO
       
@@ -2556,9 +3152,9 @@ CONTAINS
             y%CoupledLoads(iTurb)%Moment(:,J) = F6net(4:6)
          END DO
          
-         DO l = 1,p%nCpldCons(iTurb)
+         DO l = 1,p%nCpldPoints(iTurb)
             J = J + 1
-            CALL Connect_GetCoupledForce(m%ConnectList(m%CpldConIs(l,iTurb)), F6net(1:3), m, p)
+            CALL Point_GetCoupledForce(m%PointList(m%CpldPointIs(l,iTurb)), F6net(1:3), m, p)
             y%CoupledLoads(iTurb)%Force(:,J) = F6net(1:3)
          END DO
          
@@ -2580,9 +3176,9 @@ CONTAINS
    !     END DO
    !  END DO
    !  ! Point reference point coordinates
-   !  DO I = 1, p%nConnects
+   !  DO I = 1, p%nPoints
    !     J = J + 1
-   !     y%rAll(:,J) = m%ConnectList(I)%r
+   !     y%rAll(:,J) = m%PointList(I)%r
    !  END DO      
    !  ! Line internal node coordinates
    !  DO I = 1, p%nLines
@@ -2605,6 +3201,20 @@ CONTAINS
   !    IF ( ErrStat >= AbortErrLev ) RETURN
 
 
+      !--------------------------------------------------
+      ! update line visualization meshes if needed
+      if (p%VisMeshes) then
+         if (p%NLines > 0) then
+            call VisLinesMesh_Update(p,m,y,ErrStat2,ErrMsg2)
+            call CheckError(ErrStat2, ErrMsg2)
+            if ( ErrStat >= AbortErrLev ) return
+         endif
+         if (p%NRods > 0) then
+            call VisRodsMesh_Update(p,m,y,ErrStat2,ErrMsg2)
+            call CheckError(ErrStat2, ErrMsg2)
+            if ( ErrStat >= AbortErrLev ) return
+         endif
+      endif
 
    CONTAINS
 
@@ -2622,6 +3232,9 @@ CONTAINS
             ErrStat = MAX(ErrStat, ErrID)
 
             CALL WrScr( ErrMsg )  ! do this always or only if warning level? <<<<<<<<<<<<<<<<<<<<<< probably should remove all instances
+            if (p%writeLog > 0) then
+               write(p%UnLog,'(A)') ErrMsg
+            end if
 
       !      IF( ErrStat > ErrID_Warn ) THEN
       !          CALL MD_DestroyContState( dxdt, ErrStat2, ErrMsg2)
@@ -2657,8 +3270,8 @@ CONTAINS
       INTEGER(IntKi)                                     :: J       ! index
       INTEGER(IntKi)                                     :: K       ! index
       INTEGER(IntKi)                                     :: iTurb   ! index
-!      INTEGER(IntKi)                                     :: Istart  ! start index of line/connect in state vector
-!      INTEGER(IntKi)                                     :: Iend    ! end index of line/connect in state vector
+!      INTEGER(IntKi)                                     :: Istart  ! start index of line/point in state vector
+!      INTEGER(IntKi)                                     :: Iend    ! end index of line/point in state vector
 
 !      REAL(DbKi)                                         :: temp(3) ! temporary for passing kinematics
       
@@ -2684,21 +3297,21 @@ CONTAINS
          IF ( ErrStat >= AbortErrLev ) RETURN
       END IF
 
-      ! clear connection force and mass values <M<<<<<<<<<<<<<<<<<<<<<<<
-      DO L = 1, p%NConnects
+      ! clear point force and mass values <M<<<<<<<<<<<<<<<<<<<<<<<
+      DO L = 1, p%NPoints
         DO J = 1,3
-          m%ConnectList(L)%Fnet(J) = 0.0_DbKi
-          m%ConnectList(L)%Fnet(J) = 0.0_DbKi
+          m%PointList(L)%Fnet(J) = 0.0_DbKi
+          m%PointList(L)%Fnet(J) = 0.0_DbKi
           DO K = 1,3
-            m%ConnectList(L)%M   (K,J) = 0.0_DbKi
-            m%ConnectList(L)%M   (K,J) = 0.0_DbKi
+            m%PointList(L)%M   (K,J) = 0.0_DbKi
+            m%PointList(L)%M   (K,J) = 0.0_DbKi
           END DO
         END DO
       END DO
 
 
       ! call ground body to update all the fixed things...
-      !GroundBody->updateFairlead( t );                  <<<< manually set anchored connection stuff for now here
+      !GroundBody->updateFairlead( t );                  <<<< manually set anchored point stuff for now here
       r6_in = 0.0_DbKi
       v6_in = 0.0_DbKi
       CALL Body_SetKinematics(m%GroundBody, r6_in, v6_in, m%zeros6, t, m)
@@ -2741,13 +3354,13 @@ CONTAINS
          END DO
          
          ! any coupled points (type -1)
-         DO l = 1, p%nCpldCons(iTurb)
+         DO l = 1, p%nCpldPoints(iTurb)
             J = J + 1
             
             r_in  = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
             rd_in = u%CoupledKinematics(iTurb)%TranslationVel(:,J)
             a_in(1:3) = u%CoupledKinematics(iTurb)%TranslationAcc(:,J)
-            CALL Connect_SetKinematics(m%ConnectList(m%CpldConIs(l,iTurb)), r_in, rd_in, a_in, t, m)
+            CALL Point_SetKinematics(m%PointList(m%CpldPointIs(l,iTurb)), r_in, rd_in, a_in, t, m)
             
             !print "(f8.5, f12.6, f12.6, f8.4, f8.4, f8.4, f8.4)", t, r_in(1), r_in(3), rd_in(1), rd_in(3), a_in(1), a_in(3)
             
@@ -2774,6 +3387,9 @@ CONTAINS
                 ErrStat = ErrID_Fatal
                 ErrMsg  = ' Active tension command will make a segment longer than the limit of twice its original length.'
                 call WrScr(trim(Num2LStr(u%DeltaL(m%LineList(L)%CtrlChan)))//" is an increase of more than "//trim(Num2LStr(m%LineList(L)%UnstrLen / m%LineList(L)%N)))
+                if (p%writeLog > 0) then
+                  write(p%UnLog,'(A)') trim(Num2LStr(u%DeltaL(m%LineList(L)%CtrlChan)))//" is an increase of more than "//trim(Num2LStr(m%LineList(L)%UnstrLen / m%LineList(L)%N))
+                end if
                 IF (wordy > 0) print *, u%DeltaL
                 IF (wordy > 0) print*, m%LineList(L)%CtrlChan
                 RETURN
@@ -2782,6 +3398,9 @@ CONTAINS
              ErrStat = ErrID_Fatal
                 ErrMsg  = ' Active tension command will make a segment shorter than the limit of half its original length.'
                 call WrScr(trim(Num2LStr(u%DeltaL(m%LineList(L)%CtrlChan)))//" is a reduction of more than half of "//trim(Num2LStr(m%LineList(L)%UnstrLen / m%LineList(L)%N)))
+                if (p%writeLog > 0) then
+                  write(p%UnLog,'(A)') trim(Num2LStr(u%DeltaL(m%LineList(L)%CtrlChan)))//" is a reduction of more than half of "//trim(Num2LStr(m%LineList(L)%UnstrLen / m%LineList(L)%N))
+                end if
                 IF (wordy > 0) print *, u%DeltaL
                 IF (wordy > 0) print*, m%LineList(L)%CtrlChan
                 RETURN
@@ -2816,11 +3435,11 @@ CONTAINS
    !        END DO
    !     END DO
    !     ! Point reference point coordinates
-   !     DO I = 1, p%nConnects
+   !     DO I = 1, p%nPoints
    !        J = J + 1
-   !        m%ConnectList(I)%U    = u%U(:,J)
-   !        m%ConnectList(I)%Ud   = u%Ud(:,J)
-   !        m%ConnectList(I)%zeta = u%zeta(J)
+   !        m%PointList(I)%U    = u%U(:,J)
+   !        m%PointList(I)%Ud   = u%Ud(:,J)
+   !        m%PointList(I)%zeta = u%zeta(J)
    !     END DO      
    !     ! Line internal node coordinates
    !     DO I = 1, p%nLines
@@ -2837,7 +3456,7 @@ CONTAINS
       
       ! independent or semi-independent things with their own states...
       
-      ! give Bodies latest state variables (kinematics will also be assigned to dependent connections and rods, and thus line ends)
+      ! give Bodies latest state variables (kinematics will also be assigned to dependent points and rods, and thus line ends)
       DO l = 1,p%nFreeBodies
          CALL Body_SetState(m%BodyList(m%FreeBodyIs(l)), x%states(m%BodyStateIs1(l):m%BodyStateIsN(l)), t, m)
       END DO
@@ -2847,11 +3466,11 @@ CONTAINS
          CALL Rod_SetState(m%RodList(m%FreeRodIs(l)), x%states(m%RodStateIs1(l):m%RodStateIsN(l)), t, m)
       END DO
       
-      ! give Connects (independent connections) latest state variable values (kinematics will also be assigned to attached line ends)
-      DO l = 1,p%nFreeCons
-  !       Print *, "calling SetState for free connection, con#", m%FreeConIs(l), " with state range: ", m%ConStateIs1(l), "-", m%ConStateIsN(l)
+      ! give Points (independent points) latest state variable values (kinematics will also be assigned to attached line ends)
+      DO l = 1,p%nFreePoints
+  !       Print *, "calling SetState for free point, point#", m%FreePointIs(l), " with state range: ", m%PointStateIs1(l), "-", m%PointStateIsN(l)
          !K=K+1
-         CALL Connect_SetState(m%ConnectList(m%FreeConIs(l)), x%states(m%ConStateIs1(l):m%ConStateIsN(l)), t, m)
+         CALL Point_SetState(m%PointList(m%FreePointIs(l)), x%states(m%PointStateIs1(l):m%PointStateIsN(l)), t, m)
       END DO
       
       ! give Lines latest state variable values for internal nodes
@@ -2861,15 +3480,15 @@ CONTAINS
 
       ! calculate dynamics of free objects (will also calculate forces (doRHS()) from any child/dependent objects)...
          
-      ! calculate line dynamics (and calculate line forces and masses attributed to connections)
+      ! calculate line dynamics (and calculate line forces and masses attributed to points)
       DO l = 1,p%nLines
          CALL Line_GetStateDeriv(m%LineList(l), dxdt%states(m%LineStateIs1(l):m%LineStateIsN(l)), m, p)  !dt might also be passed for fancy friction models
       END DO
       
-      ! calculate connect dynamics (including contributions from attached lines
-      ! as well as hydrodynamic forces etc. on connect object itself if applicable)
-      DO l = 1,p%nFreeCons
-         CALL Connect_GetStateDeriv(m%ConnectList(m%FreeConIs(l)), dxdt%states(m%ConStateIs1(l):m%ConStateIsN(l)), m, p)
+      ! calculate point dynamics (including contributions from attached lines
+      ! as well as hydrodynamic forces etc. on point object itself if applicable)
+      DO l = 1,p%nFreePoints
+         CALL Point_GetStateDeriv(m%PointList(m%FreePointIs(l)), dxdt%states(m%PointStateIs1(l):m%PointStateIsN(l)), m, p)
       END DO
       
       ! calculate dynamics of independent Rods 
@@ -2888,21 +3507,25 @@ CONTAINS
       ! note: can do this in any order since there are no dependencies among coupled objects
       
       DO iTurb = 1,p%nTurbines
-         DO l = 1,p%nCpldCons(iTurb)
+         DO l = 1,p%nCpldPoints(iTurb)
          
-    !        >>>>>>>> here we should pass along accelerations and include inertial loads in the calculation!!! <<<??
-    !               in other words are the below good enough or do I need to call _getCoupledFOrce??
+            !        >>>>>>>> here we should pass along accelerations and include inertial loads in the calculation!!! <<<??
+            !               in other words are the below good enough or do I need to call _getCoupledFOrce??
          
-            CALL Connect_DoRHS(m%ConnectList(m%CpldConIs(l,iTurb)), m, p)
+            CALL Point_DoRHS(m%PointList(m%CpldPointIs(l,iTurb)), m, p)
          END DO
          
          DO l = 1,p%nCpldRods(iTurb)
-            CALL Rod_DoRHS(m%RodList(m%CpldRodIs(l,iTurb)), m, p)
-            ! NOTE: this won't compute net loads on Rod. Need Rod_GetNetForceAndMass for that. Change? <<<<
+            IF (m%RodList(m%CpldRodIs(l,iTurb))%typeNum /= -1) THEN ! For a coupled pinned rod, Rod_GetStateDeriv already calls doRHS 
+               CALL Rod_DoRHS(m%RodList(m%CpldRodIs(l,iTurb)), m, p)
+               ! NOTE: this won't compute net loads on Rod. Need Rod_GetNetForceAndMass for that. Change? <<<<
+            ENDIF
          END DO
          
          DO l = 1,p%nCpldBodies(iTurb)
-            CALL Body_DoRHS(m%BodyList(m%CpldBodyIs(l,iTurb)), m, p)
+            IF (m%BodyList(m%CpldBodyIs(l,iTurb))%typeNum /= -1) THEN ! For a coupled pinned body, Body_GetStateDeriv already calls doRHS 
+               CALL Body_DoRHS(m%BodyList(m%CpldBodyIs(l,iTurb)), m, p)
+            ENDIF
          END DO
       end do
 
@@ -2991,6 +3614,9 @@ CONTAINS
             ErrStat = MAX(ErrStat, ErrID)
 
             CALL WrScr( ErrMsg )  ! do this always or only if warning level?
+            if (p%writeLog > 0) then
+               write(p%UnLog,'(A)') ErrMsg
+             end if
 
          END IF
 
@@ -3146,9 +3772,9 @@ CONTAINS
 
    ! >>> below should no longer be necessary thanks to using ExtrapInterp of u(:) within the mooring time stepping loop.. <<<
    !      ! update Fairlead positions by integrating velocity and last position (do this AFTER the processing of the time step rather than before)
-   !      DO J = 1, p%nCpldCons
+   !      DO J = 1, p%nCpldPoints
    !         DO K = 1, 3
-   !          m%ConnectList(m%CpldConIs(J))%r(K) = m%ConnectList(m%CpldConIs(J))%r(K) + m%ConnectList(m%CpldConIs(J))%rd(K)*dtM
+   !          m%PointList(m%CpldPointIs(J))%r(K) = m%PointList(m%CpldPointIs(J))%r(K) + m%PointList(m%CpldPointIs(J))%rd(K)*dtM
    !         END DO
    !      END DO
       
@@ -3181,7 +3807,7 @@ CONTAINS
 
 
 !--------------------------------------------------------------
-!            Connection-Specific Subroutines
+!            Point-Specific Subroutines
 !--------------------------------------------------------------
 
 
@@ -3366,12 +3992,12 @@ SUBROUTINE MD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       do i=1,p%Jac_nx      ! index into dx dimension
          ! get x_op + delta x
          call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call MD_perturb_x(p, p%dxIdx_map2_xStateIdx(i), 1, x_perturb, delta )
+         call MD_perturb_x(p, i, 1, x_perturb, delta )
          ! compute y at x_op + delta x
          call MD_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          ! get x_op - delta x
          call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call MD_perturb_x(p, p%dxIdx_map2_xStateIdx(i), -1, x_perturb, delta )
+         call MD_perturb_x(p, i, -1, x_perturb, delta )
          ! compute y at x_op - delta x
          call MD_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          ! get central difference:
@@ -3391,12 +4017,12 @@ SUBROUTINE MD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       do i=1,p%Jac_nx      ! index into dx dimension
          ! get x_op + delta x
          call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call MD_perturb_x(p, p%dxIdx_map2_xStateIdx(i), 1, x_perturb, delta )
+         call MD_perturb_x(p, i, 1, x_perturb, delta )
          ! compute x at x_op + delta x
          call MD_CalcContStateDeriv( t, u, p, x_perturb, xd, z, OtherState, m, x_p, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          ! get x_op - delta x
          call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call MD_perturb_x(p, p%dxIdx_map2_xStateIdx(i), -1, x_perturb, delta )
+         call MD_perturb_x(p, i, -1, x_perturb, delta )
          ! compute x at x_op - delta x
          call MD_CalcContStateDeriv( t, u, p, x_perturb, xd, z, OtherState, m, x_m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
          if(Failed()) return
@@ -3726,27 +4352,39 @@ contains
       idx = 0
       ! Free bodies
       DO l = 1,p%nFreeBodies                 ! Body m%BodyList(m%FreeBodyIs(l))
-         p%dx(idx+1:idx+3) = dl_slack_min    ! body displacement [m]
-         p%dx(idx+4:idx+6) = 0.02            ! body rotation [rad]
-         ! corresponds to state indices: (m%BodyStateIs1(l)+6:m%BodyStateIs1(l)+11)
-         InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Px, m'
-         InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Py, m'
-         InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Pz, m'
-         InitOut%LinNames_x(idx+4) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_x, rad'
-         InitOut%LinNames_x(idx+5) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_y, rad'
-         InitOut%LinNames_x(idx+6) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_z, rad'
-         p%dxIdx_map2_xStateIdx(idx+1) = m%BodyStateIs1(l)+6         ! x%state index for Px
-         p%dxIdx_map2_xStateIdx(idx+2) = m%BodyStateIs1(l)+7         ! x%state index for Py
-         p%dxIdx_map2_xStateIdx(idx+3) = m%BodyStateIs1(l)+8         ! x%state index for Pz
-         p%dxIdx_map2_xStateIdx(idx+4) = m%BodyStateIs1(l)+9         ! x%state index for rot_x
-         p%dxIdx_map2_xStateIdx(idx+5) = m%BodyStateIs1(l)+10        ! x%state index for rot_y
-         p%dxIdx_map2_xStateIdx(idx+6) = m%BodyStateIs1(l)+11        ! x%state index for rot_z
-         idx = idx + 6
+         if (m%BodyList(m%FreeBodyIs(l))%typeNum == 2) then ! Coupled pinned body
+            p%dx(idx+4:idx+6) = 0.02            ! body rotation [rad]
+            ! corresponds to state indices: (m%BodyStateIs1(l)+6:m%BodyStateIs1(l)+8)
+            InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_x, rad'
+            InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_y, rad'
+            InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_z, rad'
+            p%dxIdx_map2_xStateIdx(idx+4) = m%BodyStateIs1(l)+3         ! x%state index for rot_x
+            p%dxIdx_map2_xStateIdx(idx+5) = m%BodyStateIs1(l)+4        ! x%state index for rot_y
+            p%dxIdx_map2_xStateIdx(idx+6) = m%BodyStateIs1(l)+5        ! x%state index for rot_z
+            idx = idx + 3
+         else ! free body
+            p%dx(idx+1:idx+3) = dl_slack_min    ! body displacement [m]
+            p%dx(idx+4:idx+6) = 0.02            ! body rotation [rad]
+            ! corresponds to state indices: (m%BodyStateIs1(l)+6:m%BodyStateIs1(l)+11)
+            InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Px, m'
+            InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Py, m'
+            InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Pz, m'
+            InitOut%LinNames_x(idx+4) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_x, rad'
+            InitOut%LinNames_x(idx+5) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_y, rad'
+            InitOut%LinNames_x(idx+6) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_z, rad'
+            p%dxIdx_map2_xStateIdx(idx+1) = m%BodyStateIs1(l)+6         ! x%state index for Px
+            p%dxIdx_map2_xStateIdx(idx+2) = m%BodyStateIs1(l)+7         ! x%state index for Py
+            p%dxIdx_map2_xStateIdx(idx+3) = m%BodyStateIs1(l)+8         ! x%state index for Pz
+            p%dxIdx_map2_xStateIdx(idx+4) = m%BodyStateIs1(l)+9         ! x%state index for rot_x
+            p%dxIdx_map2_xStateIdx(idx+5) = m%BodyStateIs1(l)+10        ! x%state index for rot_y
+            p%dxIdx_map2_xStateIdx(idx+6) = m%BodyStateIs1(l)+11        ! x%state index for rot_z
+            idx = idx + 6
+         endif
       END DO      
 
       ! Rods
       DO l = 1,p%nFreeRods                   ! Rod m%RodList(m%FreeRodIs(l))
-         if (m%RodList(m%FreeRodIs(l))%typeNum == 1) then  ! pinned rod
+         if (abs(m%RodList(m%FreeRodIs(l))%typeNum) == 1) then  ! pinned rod
             p%dx(idx+1:idx+3) = 0.02         ! rod rotation [rad]
             ! corresponds to state indices: (m%RodStateIs1(l)+3:m%RodStateIs1(l)+5)
             InitOut%LinNames_x(idx+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_x, rad'
@@ -3776,16 +4414,16 @@ contains
          end if
       END DO      
 
-      ! Free Connnections
-      DO l = 1,p%nFreeCons                   ! Point m%ConnectList(m%FreeConIs(l))
-         ! corresponds to state indices: (m%ConStateIs1(l)+3:m%ConStateIs1(l)+5)
+      ! Free Points
+      DO l = 1,p%nFreePoints                   ! Point m%PointList(m%FreePointIs(l))
+         ! corresponds to state indices: (m%PointStateIs1(l)+3:m%PointStateIs1(l)+5)
          p%dx(idx+1:idx+3) = dl_slack_min    ! point displacement [m]
-         InitOut%LinNames_x(idx+1) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Px, m'
-         InitOut%LinNames_x(idx+2) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Py, m'
-         InitOut%LinNames_x(idx+3) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Pz, m'
-         p%dxIdx_map2_xStateIdx(idx+1) = m%ConStateIs1(l)+3          ! x%state index for Px
-         p%dxIdx_map2_xStateIdx(idx+2) = m%ConStateIs1(l)+4          ! x%state index for Py
-         p%dxIdx_map2_xStateIdx(idx+3) = m%ConStateIs1(l)+5          ! x%state index for Pz
+         InitOut%LinNames_x(idx+1) = 'Point '//trim(num2lstr(m%FreePointIs(l)))//' Px, m'
+         InitOut%LinNames_x(idx+2) = 'Point '//trim(num2lstr(m%FreePointIs(l)))//' Py, m'
+         InitOut%LinNames_x(idx+3) = 'Point '//trim(num2lstr(m%FreePointIs(l)))//' Pz, m'
+         p%dxIdx_map2_xStateIdx(idx+1) = m%PointStateIs1(l)+3          ! x%state index for Px
+         p%dxIdx_map2_xStateIdx(idx+2) = m%PointStateIs1(l)+4          ! x%state index for Py
+         p%dxIdx_map2_xStateIdx(idx+3) = m%PointStateIs1(l)+5          ! x%state index for Pz
          idx = idx + 3
       END DO
 
@@ -3810,27 +4448,39 @@ contains
       !-----------------
       ! Free bodies
       DO l = 1,p%nFreeBodies                 ! Body m%BodyList(m%FreeBodyIs(l))
-         ! corresponds to state indices: (m%BodyStateIs1(l):m%BodyStateIs1(l)+5)
-         p%dx(idx+1:idx+3) = 0.1             ! body translational velocity [m/s]
-         p%dx(idx+4:idx+6) = 0.1             ! body rotational velocity [rad/s]
-         InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vx, m/s'
-         InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vy, m/s'
-         InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vz, m/s'
-         InitOut%LinNames_x(idx+4) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_x, rad/s'
-         InitOut%LinNames_x(idx+5) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_y, rad/s'
-         InitOut%LinNames_x(idx+6) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_z, rad/s'
-         p%dxIdx_map2_xStateIdx(idx+1) = m%BodyStateIs1(l)+0         ! x%state index for Rx
-         p%dxIdx_map2_xStateIdx(idx+2) = m%BodyStateIs1(l)+1         ! x%state index for Ry
-         p%dxIdx_map2_xStateIdx(idx+3) = m%BodyStateIs1(l)+2         ! x%state index for Rz
-         p%dxIdx_map2_xStateIdx(idx+4) = m%BodyStateIs1(l)+3         ! x%state index for omega_x
-         p%dxIdx_map2_xStateIdx(idx+5) = m%BodyStateIs1(l)+4         ! x%state index for omega_y
-         p%dxIdx_map2_xStateIdx(idx+6) = m%BodyStateIs1(l)+5         ! x%state index for omega_z
-         idx = idx + 6
+         if (m%BodyList(m%FreeBodyIs(l))%typeNum == 2) then ! Coupled pinned body
+            ! corresponds to state indices: (m%BodyStateIs1(l):m%BodyStateIs1(l)+5)
+            p%dx(idx+1:idx+3) = 0.1             ! body rotational velocity [rad/s]
+            InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_x, rad/s'
+            InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_y, rad/s'
+            InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_z, rad/s'
+            p%dxIdx_map2_xStateIdx(idx+1) = m%BodyStateIs1(l)+0         ! x%state index for omega_x
+            p%dxIdx_map2_xStateIdx(idx+2) = m%BodyStateIs1(l)+1         ! x%state index for omega_y
+            p%dxIdx_map2_xStateIdx(idx+3) = m%BodyStateIs1(l)+2         ! x%state index for omega_z
+            idx = idx + 3
+         else  !Free body
+            ! corresponds to state indices: (m%BodyStateIs1(l):m%BodyStateIs1(l)+5)
+            p%dx(idx+1:idx+3) = 0.1             ! body translational velocity [m/s]
+            p%dx(idx+4:idx+6) = 0.1             ! body rotational velocity [rad/s]
+            InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vx, m/s'
+            InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vy, m/s'
+            InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vz, m/s'
+            InitOut%LinNames_x(idx+4) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_x, rad/s'
+            InitOut%LinNames_x(idx+5) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_y, rad/s'
+            InitOut%LinNames_x(idx+6) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_z, rad/s'
+            p%dxIdx_map2_xStateIdx(idx+1) = m%BodyStateIs1(l)+0         ! x%state index for Rx
+            p%dxIdx_map2_xStateIdx(idx+2) = m%BodyStateIs1(l)+1         ! x%state index for Ry
+            p%dxIdx_map2_xStateIdx(idx+3) = m%BodyStateIs1(l)+2         ! x%state index for Rz
+            p%dxIdx_map2_xStateIdx(idx+4) = m%BodyStateIs1(l)+3         ! x%state index for omega_x
+            p%dxIdx_map2_xStateIdx(idx+5) = m%BodyStateIs1(l)+4         ! x%state index for omega_y
+            p%dxIdx_map2_xStateIdx(idx+6) = m%BodyStateIs1(l)+5         ! x%state index for omega_z
+            idx = idx + 6
+         endif
       END DO      
 
       ! Rods
       DO l = 1,p%nFreeRods                   ! Rod m%RodList(m%FreeRodIs(l))
-         if (m%RodList(m%FreeRodIs(l))%typeNum == 1) then ! pinned rod
+         if (abs(m%RodList(m%FreeRodIs(l))%typeNum) == 1) then ! pinned rod
             ! corresponds to state indices: (m%RodStateIs1(l):m%RodStateIs1(l)+2)
             p%dx(idx+1:idx+3) = 0.1          ! body rotational velocity [rad/s]
             InitOut%LinNames_x(idx+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_x, rad/s'
@@ -3860,16 +4510,16 @@ contains
          end if
       END DO      
 
-      ! Free Connnections
-      DO l = 1,p%nFreeCons                   ! Point m%ConnectList(m%FreeConIs(l))
-         ! corresponds to state indices: (m%ConStateIs1(l):m%ConStateIs1(l)+2)
+      ! Free Points
+      DO l = 1,p%nFreePoints                   ! Point m%PointList(m%FreePointIs(l))
+         ! corresponds to state indices: (m%PointStateIs1(l):m%PointStateIs1(l)+2)
          p%dx(idx+1:idx+3) = 0.1             ! point translational velocity [m/s]
-         InitOut%LinNames_x(idx+1) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Vx, m/s'
-         InitOut%LinNames_x(idx+2) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Vy, m/s'
-         InitOut%LinNames_x(idx+3) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Vz, m/s'
-         p%dxIdx_map2_xStateIdx(idx+1) = m%ConStateIs1(l)+0          ! x%state index for Vx
-         p%dxIdx_map2_xStateIdx(idx+2) = m%ConStateIs1(l)+1          ! x%state index for Vy
-         p%dxIdx_map2_xStateIdx(idx+3) = m%ConStateIs1(l)+2          ! x%state index for Vz
+         InitOut%LinNames_x(idx+1) = 'Point '//trim(num2lstr(m%FreePointIs(l)))//' Vx, m/s'
+         InitOut%LinNames_x(idx+2) = 'Point '//trim(num2lstr(m%FreePointIs(l)))//' Vy, m/s'
+         InitOut%LinNames_x(idx+3) = 'Point '//trim(num2lstr(m%FreePointIs(l)))//' Vz, m/s'
+         p%dxIdx_map2_xStateIdx(idx+1) = m%PointStateIs1(l)+0          ! x%state index for Vx
+         p%dxIdx_map2_xStateIdx(idx+2) = m%PointStateIs1(l)+1          ! x%state index for Vy
+         p%dxIdx_map2_xStateIdx(idx+3) = m%PointStateIs1(l)+2          ! x%state index for Vz
          idx = idx + 3
       END DO
 
@@ -4053,9 +4703,10 @@ SUBROUTINE MD_Perturb_x( p, i, perturb_sign, x, dx )
    INTEGER( IntKi )            , INTENT(IN   ) :: perturb_sign !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
    TYPE(MD_ContinuousStateType), INTENT(INOUT) :: x            !< perturbed MD states
    REAL( R8Ki )                , INTENT(  OUT) :: dx           !< amount that specific state was perturbed
-
-   dx=p%dx(i)
-   x%states(i)    = x%states(i)    + dx * perturb_sign
+   integer(IntKi) :: j
+   dx = p%dx(i)
+   j = p%dxIdx_map2_xStateIdx(i)
+   x%states(j)    = x%states(j)    + dx * perturb_sign
 END SUBROUTINE MD_Perturb_x
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine uses values of two output types to compute an array of differences.

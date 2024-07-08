@@ -109,9 +109,9 @@ endmacro(check_f2008_features)
 #
 macro(set_fast_gfortran)
   if(NOT WIN32)
-    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpic ")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpic")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fpic")
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fPIC ")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
   endif(NOT WIN32)
 
   # Fix free-form compilation for OpenFAST

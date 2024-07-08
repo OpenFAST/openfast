@@ -1,62 +1,70 @@
 module test_hawc_wind
 
-    use pFUnit_mod
-    use ifw_test_tools
-    use InflowWind_Subs
-    use InflowWind_Types
+use testdrive, only: new_unittest, unittest_type, error_type, check
+use ifw_test_tools
+use InflowWind_Subs
+use InflowWind_Types
 
-    implicit none
+implicit none
+private
+public :: test_hawc_wind_suite
 
 contains
 
-    @test
-    subroutine test_hawc_wind_input()
+!> Collect all exported unit tests
+subroutine test_hawc_wind_suite(testsuite)
+   type(unittest_type), allocatable, intent(out) :: testsuite(:)
+   testsuite = [new_unittest("test_hawc_wind_input", test_hawc_wind_input)]
+end subroutine
 
-        TYPE(FileInfoType)              :: InFileInfo
-        TYPE(InflowWind_InputFile)      :: InputFileData
-        CHARACTER(1024)                 :: PriPath 
-        INTEGER(IntKi)                  :: TmpErrStat
-        CHARACTER(ErrMsgLen)            :: TmpErrMsg
+subroutine test_hawc_wind_input(error)
+   type(error_type), allocatable, intent(out) :: error
 
-        CHARACTER(32)                   :: expected_fnu
-        CHARACTER(32)                   :: expected_fnv
-        CHARACTER(32)                   :: expected_fnw
+   type(FileInfoType)              :: InFileInfo
+   type(InflowWind_InputFile)      :: InputFileData
+   character(1024)                 :: PriPath
+   integer(IntKi)                  :: TmpErrStat
+   character(ErrMsgLen)            :: TmpErrMsg
 
-        PriPath = ""
-        expected_fnu = "wasp\Output\basic_5u.bin"
-        expected_fnv = "wasp\Output\basic_5v.bin"
-        expected_fnw = "wasp\Output\basic_5w.bin"
+   character(32)                   :: expected_fnu
+   character(32)                   :: expected_fnv
+   character(32)                   :: expected_fnw
 
-        InFileInfo = getInputFileData()
-        CALL InflowWind_ParseInputFileInfo(InputFileData , InFileInfo, PriPath, "inputFile.inp", "test.ech", .false., -1, TmpErrStat, TmpErrMsg)
+   PriPath = ""
+   expected_fnu = "wasp/Output/basic_5u.bin"
+   expected_fnv = "wasp/Output/basic_5v.bin"
+   expected_fnw = "wasp/Output/basic_5w.bin"
 
-        @assertEqual(0, TmpErrStat, message='Error message: '//trim(TmpErrMsg)//NewLine//'ErrStat: ')
+   InFileInfo = getInputFileData()
+   call InflowWind_ParseInputFileInfo(InputFileData, InFileInfo, PriPath, "inputFile.inp", "test.ech", .false., -1, TmpErrStat, TmpErrMsg)
 
-        @assertEqual(trim(expected_fnu), InputFileData%HAWC_FileName_u)
-        @assertEqual(trim(expected_fnv), InputFileData%HAWC_FileName_v)
-        @assertEqual(trim(expected_fnw), InputFileData%HAWC_FileName_w)
-        @assertEqual(64, InputFileData%HAWC_nx)
-        @assertEqual(32, InputFileData%HAWC_ny)
-        @assertEqual(32, InputFileData%HAWC_nz)
-        @assertEqual(16, InputFileData%HAWC_dx)
-        @assertEqual(3,  InputFileData%HAWC_dy)
-        @assertEqual(3,  InputFileData%HAWC_dz)
-        @assertEqual(90, InputFileData%FF%RefHt)
+   call check(error, TmpErrStat, ErrID_None, message='Error message: '//trim(TmpErrMsg)//NewLine//'ErrStat: '); if (allocated(error)) return
 
-        @assertEqual(1,  InputFileData%FF%ScaleMethod)
-        @assertEqual(1,  InputFileData%FF%SF(1))
-        @assertEqual(1,  InputFileData%FF%SF(2))
-        @assertEqual(1,  InputFileData%FF%SF(3))
-        @assertEqual(12, InputFileData%FF%SigmaF(1))
-        @assertEqual(8,  InputFileData%FF%SigmaF(2))
-        @assertEqual(2,  InputFileData%FF%SigmaF(3))
+   call check(error, InputFileData%HAWC_FileName_u, trim(expected_fnu)); if (allocated(error)) return
+   call check(error, InputFileData%HAWC_FileName_v, trim(expected_fnv)); if (allocated(error)) return
+   call check(error, InputFileData%HAWC_FileName_w, trim(expected_fnw)); if (allocated(error)) return
+   call check(error, InputFileData%HAWC_nx, 64); if (allocated(error)) return
+   call check(error, InputFileData%HAWC_ny, 32); if (allocated(error)) return
+   call check(error, InputFileData%HAWC_nz, 32); if (allocated(error)) return
+   call check(error, InputFileData%HAWC_dx, 16.0_ReKi); if (allocated(error)) return
+   call check(error, InputFileData%HAWC_dy, 3.0_ReKi); if (allocated(error)) return
+   call check(error, InputFileData%HAWC_dz, 3.0_ReKi); if (allocated(error)) return
+   call check(error, InputFileData%FF%RefHt, 90.0_ReKi); if (allocated(error)) return
 
-        @assertEqual(5,  InputFileData%FF%URef)
-        @assertEqual(2,  InputFileData%FF%WindProfileType)
-        @assertEqual(0,  InputFileData%FF%PLExp)
-        @assertEqual(0.03, InputFileData%FF%Z0)
-        @assertEqual(0,  InputFileData%FF%XOffset)
+   call check(error, InputFileData%FF%ScaleMethod, 1); if (allocated(error)) return
+   call check(error, InputFileData%FF%SF(1), 1.0_ReKi); if (allocated(error)) return
+   call check(error, InputFileData%FF%SF(2), 1.0_ReKi); if (allocated(error)) return
+   call check(error, InputFileData%FF%SF(3), 1.0_ReKi); if (allocated(error)) return
+   call check(error, InputFileData%FF%SigmaF(1), 12.0_ReKi); if (allocated(error)) return
+   call check(error, InputFileData%FF%SigmaF(2), 8.0_ReKi); if (allocated(error)) return
+   call check(error, InputFileData%FF%SigmaF(3), 2.0_ReKi); if (allocated(error)) return
 
-    end subroutine
+   call check(error, InputFileData%FF%URef, 5.0_ReKi); if (allocated(error)) return
+   call check(error, InputFileData%FF%WindProfileType, 2); if (allocated(error)) return
+   call check(error, InputFileData%FF%PLExp, 0.0_ReKi); if (allocated(error)) return
+   call check(error, InputFileData%FF%Z0, 0.03_ReKi); if (allocated(error)) return
+   call check(error, InputFileData%FF%XOffset, 0.0_ReKi); if (allocated(error)) return
+
+end subroutine
 
 end module

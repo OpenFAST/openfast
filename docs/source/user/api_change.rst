@@ -9,21 +9,101 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
-OpenFAST v3.5.0 to OpenFAST dev
+
+OpenFAST v3.5.3 to OpenFAST dev
 ----------------------------------
 
 The HydroDyn module was split into HydroDyn and SeaState.  This results in a
 completely new input file for SeaState, and complete revision of the HydroDyn
 input file.  See examples in the regression tests for the new formats.
 
-============================================= ==== ==================== ========================================================================================================================================================================================================
+============================================= ======= ==================== ========================================================================================================================================================================================================
 Modified in OpenFAST `dev`
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Module                                        Line  Flag Name           Example Value
-============================================= ==== ==================== ========================================================================================================================================================================================================
-HydroDyn                                       all                      Complete restructuring of input file
-SeaState                                       all                      New module (split from HydroDyn, so contains some inputs previously found in HydroDyn)
-============================================= ==== ==================== ========================================================================================================================================================================================================
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line    Flag Name            Example Value
+============================================= ======= ==================== ========================================================================================================================================================================================================
+HydroDyn                                       all                         Complete restructuring of input file
+SeaState                                       all                         New module (split from HydroDyn, so contains some inputs previously found in HydroDyn)
+SubDyn                                        56\*                                             ----------------------- SPRING ELEMENT PROPERTIES -------------------------------------
+SubDyn                                        57\*    NSpringPropSets  0                         - Number of spring properties
+SubDyn                                        58\*                                             PropSetID   k11     k12     k13     k14     k15     k16     k22     k23     k24     k25     k26     k33     k34     k35     k36     k44      k45      k46      k55      k56      k66
+SubDyn                                        59\*                                             (-)      (N/m)   (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)  (N/rad) (N/rad) (N/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad)  
+FAST.Farm                                     47      RotorDiamRef         125           RotorDiamRef       - Reference turbine rotor diameter for wake calculations (m) [>0.0]
+FAST.Farm                                     57      k_vAmb               DEFAULT       k_vAmb        - Calibrated parameters for the influence of the ambient turbulence in the eddy viscosity (set of 5 parameters: k, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=0.05, 1.0, 0.0, 1.0, 0.01]
+FAST.Farm                                     58      kvShr                DEFAULT       k_vShr        - Calibrated parameters for the influence of the shear layer in the eddy viscosity (set of 5 parameters: k, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=0.016, 0.2, 3.0, 25.0, 0.1]
+FAST.Farm                                     59-66   --removed--
+FAST.Farm                                     71                           --- WAKE-ADDED TURBULENCE ---
+FAST.Farm                                     72       WAT                 2                  WAT                - Switch between wake-added turbulence box options {0: no wake added turbulence, 1: predefined turbulence box, 2: user defined turbulence box} (switch)
+FAST.Farm                                     73       WAT_BoxFile         "../WAT_MannBoxDB/FFDB_D100_512x512x64.u" WAT_BoxFile  - Filepath to the file containing the u-component of the turbulence box (either predefined or user-defined) (quoted string)
+FAST.Farm                                     74       WAT_NxNyNz          512, 512, 64       WAT_NxNyNz         - Number of points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2, derived value if WAT=1] (-)
+FAST.Farm                                     75       WAT_DxDyDz          5.0, 5.0, 5.0      WAT_DxDyDz         - Distance (in meters) between points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2, derived value if WAT=1] (m)
+FAST.Farm                                     76       WAT_ScaleBox        default            WAT_ScaleBox       - Flag to scale the input turbulence box to zero mean and unit standard deviation at every node [DEFAULT=False] (flag)
+FAST.Farm                                     77       WAT_k_Def           default            WAT_k_Def          - Calibrated parameters for the influence of the maximum wake deficit on wake-added turbulence (set of 5 parameters: k_Def, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=[0.6, 0.0, 0.0, 2.0, 1.0 ]]
+FAST.Farm                                     78       WAT_k_Grad          default            WAT_k_Grad         - Calibrated parameters for the influence of the radial velocity gradient of the wake deficit on wake-added turbulence (set of 5 parameters: k_Grad, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=[3.0, 0.0, 0.0, 12.0, 0.65]                   
+============================================= ======= ==================== ========================================================================================================================================================================================================
+
+\*Exact line number depends on number of entries in various preceeding tables.
+
+
+.. _api_change_ad4x:
+
+AeroDyn changes starting from v4.x
+----------------------------------
+
+The table below shows how to convert from the Old AeroDyn inputs to the new AeroDyn inputs.
+Additional ressources:
+
+- The AeroDyn input file description (:numref:`ad_input`) for more details on the new inputs.
+
+- The `discussion <https://github.com/OpenFAST/openfast/discussions/1895>`__ that led to these new inputs.
+
+- An example of AeroDyn input file at it's latest format: :download:`Example <aerodyn/examples/ad_primary_example.dat>`: 
+
+- A directory with a working example: `here <https://github.com/OpenFAST/r-test/blob/dev/modules/aerodyn/ad_BAR_OLAF/OpenFAST_BAR_00_AeroDyn15.dat>`__
+
+- An example python converter (v3.5.x to 4.x): `here <https://github.com/OpenFAST/openfast_toolbox/blob/dev/openfast_toolbox/converters/examples/Main_AD30_AD40.py>`__
+
+
+=========================== ========================================================= 
+Old inputs                  Corresponding new inputs                                  
+=========================== ========================================================= 
+`WakeMod=0`                 `Wake_Mod=0`                                              
+`WakeMod=1` ("BEM")         `Wake_Mod=1` and `DBEMT_Mod=0` and `BEM_Mod=1`            
+`WakeMod=2` ("DBEMT")       `Wake_Mod=1` and `DBEMT_Mod={1,2,3}`                      
+`WakeMod=3` ("OLAF")        `Wake_Mod=3`                                              
+`AFAeroMod=1`               `UA_Mod=0` and `AoA34=False`                              
+`AFAeroMod=2`               `UA_Mod>0` and `AoA34=True` and `UA_Mod=UAMod`
+`FrozenWake=True`           `DBEMT_Mod=-1`                                            
+`FrozenWake=False`          `DBEMT_Mod=0` (quasi-steady) or `DBEMT_Mod>0` (dynamic)   
+`SkewMod=2` (Glauert)       `Skew_Mod=1` and `SkewRedistr_Mod=1`                      
+`SkewMod=0` (Orthogonal)    `Skew_Mod=-1`                                             
+`SkewModFactor`             `SkewRedistrFactor`
+`UAMod={2-7}`               `UA_Mod={2-7}` and `AoA34=True`                           
+=========================== ========================================================= 
+
+
+
+
+
+OpenFAST v3.5.2 to OpenFAST v3.5.3 
+----------------------------------
+
+No input file changes were made.
+
+
+OpenFAST v3.5.1 to OpenFAST v3.5.2 
+----------------------------------
+
+No input file changes were made.
+
+
+OpenFAST v3.5.0 to OpenFAST v3.5.1 
+----------------------------------
+
+No input file changes were made.  Some input files now include additional
+output channels:  AeroDyn nodal outputs for another coordinate system, new
+MoorDyn output names (Connect changed to Point).
+
 
 
 OpenFAST v3.4.0 to OpenFAST v3.5.0 
@@ -71,7 +151,7 @@ Added in OpenFAST `3.4.0`
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== ================= ========================================================================================================================================================================================================
-FAST.Farm                                     17   ModWake           1          Mod_Wake          - Switch between wake formulations {1:Polar, 2:Curl, 3:Cartesian} (-) (switch)
+FAST.Farm                                     42\* ModWake           1          Mod_Wake          - Switch between wake formulations {1:Polar, 2:Curl, 3:Cartesian} (-) (switch)
 FAST.Farm                                     67   CurlSection       --- CURLED-WAKE PARAMETERS [only used if Mod_Wake=2 or 3] ---
 FAST.Farm                                     68   Swirl             DEFAULT    Swirl             - Switch to include swirl velocities in wake (-) (switch) [DEFAULT=True]
 FAST.Farm                                     69   k_VortexDecay     DEFAULT    k_VortexDecay     - Vortex decay constant for curl (-) [DEFAULT=0.01] [only used if Mod_Wake=2]

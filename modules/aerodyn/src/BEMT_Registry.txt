@@ -16,13 +16,16 @@ usefrom   AirfoilInfo_Registry.txt
 usefrom   UnsteadyAero_Registry.txt
 usefrom   DBEMT_Registry.txt
 
-param     BEMT/BEMT                   -                              INTEGER                 SkewMod_Orthogonal          -      0     -   "Inflow orthogonal to rotor [-]" -
-param     BEMT/BEMT                   -                              INTEGER                 SkewMod_Uncoupled           -      1     -   "Uncoupled (no correction)" -
-param     BEMT/BEMT                   -                              INTEGER                 SkewMod_PittPeters          -      2     -   "Pitt/Peters" -
-param     BEMT/BEMT                   -                              INTEGER                 SkewMod_Coupled             -      3     -   "Coupled" -
-param     BEMT/BEMT                   -                              INTEGER                 SkewMod_PittPeters_Cont     -      4     -   "Pitt/Peters continuous formulation" -
+param     BEMT/BEMT                   -                              INTEGER                 Skew_Mod_Orthogonal         -     -1     -   "Inflow orthogonal to rotor [-]" -
+param     BEMT/BEMT                   -                              INTEGER                 Skew_Mod_None               -      0     -   "No skew model" -
+param     BEMT/BEMT                   -                              INTEGER                 Skew_Mod_Active             -      1     -   "Skew model active" - 
+param     BEMT/BEMT                   -                              INTEGER                 Skew_Mod_PittPeters_Cont    -      4     -   "Pitt/Peters continuous formulation" -
 
-param     BEMT/BEMT                   -                              INTEGER                 BEMMod_2D                   -      0     -   "2D BEM assuming Cx, Cy, phi, L, D are in the same plane" -
+param     BEMT/BEMT                   -                              INTEGER                 SkewRedistrMod_None         -      0     -   "No redistribution" -
+param     BEMT/BEMT                   -                              INTEGER                 SkewRedistrMod_PittPeters   -      1     -   "Pitt/Peters/Glauert redistribution" -
+#param     BEMT/BEMT                   -                              INTEGER                 SkewRedistrMod_VCyl        -      2     -   "Vortex cylinder redistribution" -
+
+param     BEMT/BEMT                   -                              INTEGER                 BEMMod_2D                   -      1     -   "2D BEM assuming Cx, Cy, phi, L, D are in the same plane" -
 param     BEMT/BEMT                   -                              INTEGER                 BEMMod_3D                   -      2     -   "3D BEM assuming a momentum balance system, and an airfoil system" -
 
 #
@@ -35,7 +38,8 @@ typedef   BEMT/BEMT                    InitInputType                 ReKi       
 typedef   ^                            ^                             INTEGER                  numBlades                       -          -         -        "Number of blades"    -
 typedef   ^                            ^                             ReKi                     airDens                         -          -         -        "Air density"        kg/m^3
 typedef   ^                            ^                             ReKi                     kinVisc                         -          -         -        "Kinematic air viscosity"       m^2/s
-typedef   ^                            ^                             INTEGER                  skewWakeMod                     -          -         -        "Type of skewed-wake correction model [switch] {1=uncoupled, 2=Pitt/Peters, 3=coupled}"  -
+typedef   ^                            ^                             INTEGER                  skewWakeMod                     -          -         -        "Type of skewed-wake model [switch] {0=None, 1=Glauert}"  -
+typedef   ^                            ^                             INTEGER                  skewRedistrMod                  -          -         -        "Type of skewed-wake redistribution model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1]" - 
 typedef   ^                            ^                             ReKi                     aTol                            -          -         -        "Tolerance for the induction solution" -
 typedef   ^                            ^                             LOGICAL                  useTipLoss                      -          -         -        "Use the Prandtl tip-loss model?  [flag]"        -
 typedef   ^                            ^                             LOGICAL                  useHubLoss                      -          -         -        "Use the Prandtl hub-loss model?  [flag]"        -
@@ -139,7 +143,8 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             INTEGER                  numBlades                       -             -         -        "Number of blades"    -
 typedef   ^                            ^                             ReKi                     airDens                         -             -         -        "Air density"        kg/m^3
 typedef   ^                            ^                             ReKi                     kinVisc                         -             -         -        "Kinematic air viscosity"       m^2/s
-typedef   ^                            ^                             INTEGER                  skewWakeMod                     -             -         -        "Type of skewed-wake correction model [switch] {1=uncoupled, 2=Pitt/Peters, 3=coupled}"  -
+typedef   ^                            ^                             INTEGER                  skewWakeMod                     -             -         -        "Type of skewed-wake correction model [switch] {0=None, 1=Glauert/Pitt/Peters}"  -
+typedef   ^                            ^                             INTEGER                  skewRedistrMod                  -             -         -        "Type of skewed-wake redistribution model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1]" - 
 typedef   ^                            ^                             ReKi                     aTol                            -             -         -        "Tolerance for the induction solution" -
 typedef   ^                            ^                             LOGICAL                  useTipLoss                      -             -         -        "Use the Prandtl tip-loss model?  [flag]"        -
 typedef   ^                            ^                             LOGICAL                  useHubLoss                      -             -         -        "Use the Prandtl hub-loss model?  [flag]"        -
@@ -173,8 +178,8 @@ typedef   ^                            ^                             IntKi      
 #
 typedef   ^                            InputType                     ReKi                     theta                           {:}{:}         -         -         "Twist angle (includes all sources of twist)  [Array of size (NumBlNds,numBlades)]" rad
 typedef   ^                            ^                             ReKi                     chi0                            -              -         -         "Angle between the vector normal to the rotor plane and the wind vector (e.g., the yaw angle in the case of no tilt)" rad
-typedef   ^                            ^                             ReKi                     psiSkewOffset                   -              -         -         "Azimuth angle offset (relative to 90 deg) of the most downwind blade when chi0 is non-zero" rad
-typedef   ^                            ^                             ReKi                     psi                             {:}            -         -         "Azimuth angle" rad
+typedef   ^                            ^                             ReKi                     psiSkewOffset                   -              -         -         "Skew azimuth angle offset (relative to 90 deg) of the most downwind blade when chi0 is non-zero" rad
+typedef   ^                            ^                             ReKi                     psi_s                           {:}            -         -         "Skew azimuth angle" rad
 typedef   ^                            ^                             ReKi                     omega                           -              -         -         "Angular velocity of rotor" rad/s
 typedef   ^                            ^                             ReKi                     TSR                             -              -         -         "Tip-speed ratio (to check if BEM should be turned off)" -
 typedef   ^                            ^                             ReKi                     Vx                              {:}{:}         -         -         "Local axial velocity at node" m/s
@@ -197,6 +202,11 @@ typedef   ^                            OutputType                    ReKi       
 typedef   ^                            ^                             ReKi                     phi                             {:}{:}         -         -         "angle between the plane of rotation and the direction of the local wind" rad
 typedef   ^                            ^                             ReKi                     axInduction                     {:}{:}         -         -         "axial induction"   -
 typedef   ^                            ^                             ReKi                     tanInduction                    {:}{:}         -         -         "tangential induction"   -
+typedef   ^                            ^                             ReKi                     axInduction_qs                  {:}{:}         -         -         "axial induction quasi steady"   -
+typedef   ^                            ^                             ReKi                     tanInduction_qs                 {:}{:}         -         -         "tangential induction quasi steady"   -
+typedef   ^                            ^                             ReKi                     k                               {:}{:}         -         -         "Factor k in blade element theory thrust coefficient"   -
+typedef   ^                            ^                             ReKi                     k_p                             {:}{:}         -         -         "Factor kp in blade element theory torque coefficient"   -
+typedef   ^                            ^                             ReKi                     F                               {:}{:}         -         -         "Tip/hub loss factor"   -
 typedef   ^                            ^                             ReKi                     Re                              {:}{:}         -         -         "Reynold's number"   -
 typedef   ^                            ^                             ReKi                     AOA                             {:}{:}         -         -         "angle of attack"   rad
 typedef   ^                            ^                             ReKi                     Cx                              {:}{:}         -         -         "normal force coefficient (normal to the plane, not chord) of the jth node in the kth blade"   -

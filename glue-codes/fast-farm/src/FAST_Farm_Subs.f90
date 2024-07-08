@@ -38,16 +38,9 @@ MODULE FAST_Farm_Subs
    USE OMP_LIB 
 #endif
 
-
    IMPLICIT NONE
-
-
-    
-   integer, parameter :: maxOutputPoints = 9
-   integer, parameter :: maxOutputPlanes = 99      ! Allow up to 99 outpt planes
    
-   CONTAINS
- 
+CONTAINS
 
    subroutine TrilinearInterpRegGrid(V, pt, dims, val)
    
@@ -170,9 +163,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
       
    IF (LEN_TRIM(InputFile) == 0) THEN ! no input file was specified
       CALL SetErrStat( ErrID_Fatal, 'The required input file was not specified on the command line.', ErrStat, ErrMsg, RoutineName )
-
       CALL NWTC_DisplaySyntax( InputFile, 'FAST.Farm.exe' )
-         
       RETURN
    END IF            
                         
@@ -192,23 +183,13 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    ! step 1: read input file
    !...............................................................................................................................  
       
-   call Farm_ReadPrimaryFile( InputFile, farm%p, WD_InitInput%InputFileData, AWAE_InitInput%InputFileData, SC_InitInp, OutList, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
+   call Farm_ReadPrimaryFile( InputFile, farm%p, WD_InitInput%InputFileData, AWAE_InitInput%InputFileData, SC_InitInp, OutList, ErrStat2, ErrMsg2 );  if(Failed()) return;
 
    !...............................................................................................................................  
    ! step 2: validate input & set parameters
    !...............................................................................................................................  
-   call Farm_ValidateInput( farm%p, WD_InitInput%InputFileData, AWAE_InitInput%InputFileData, SC_InitInp, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF   
       
+   call Farm_ValidateInput( farm%p, WD_InitInput%InputFileData, AWAE_InitInput%InputFileData, SC_InitInp, ErrStat2, ErrMsg2 );  if(Failed()) return;
    
    farm%p%NOutTurb = min(farm%p%NumTurbines,9)  ! We only support output for the first 9 turbines, even if the farm has more than 9 
    
@@ -233,14 +214,22 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    ENDIF
    
    !...............................................................................................................................  
-   ! step 3: initialize SC, AWAE, and WD (a, b, and c can be done in parallel)
+   ! step 3: initialize WAT, AWAE, SC, and WD (b, c, and d can be done in parallel)
    !...............................................................................................................................  
-   
+
       !-------------------
-      ! a. CALL AWAE_Init
-   
+      ! a. read WAT input files using InflowWind
+   if (farm%p%WAT /= Mod_WAT_None) then
+      call WAT_init( farm%p, farm%WAT_IfW, AWAE_InitInput, ErrStat2, ErrMsg2 )
+      if(Failed()) return;
+   endif
+
+      !-------------------
+      ! b. CALL AWAE_Init
+
+   if (farm%p%WAT /= Mod_WAT_None) AWAE_InitInput%WAT_Enabled = .true.
    AWAE_InitInput%InputFileData%dr           = WD_InitInput%InputFileData%dr
-   AWAE_InitInput%InputFileData%dt_low       = farm%p%dt_low 
+   AWAE_InitInput%InputFileData%dt_low       = farm%p%dt_low
    AWAE_InitInput%InputFileData%NumTurbines  = farm%p%NumTurbines
    AWAE_InitInput%InputFileData%NumRadii     = WD_InitInput%InputFileData%NumRadii
    AWAE_InitInput%InputFileData%NumPlanes    = WD_InitInput%InputFileData%NumPlanes
@@ -248,13 +237,12 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    AWAE_InitInput%n_high_low                 = farm%p%n_high_low
    AWAE_InitInput%NumDT                      = farm%p%n_TMax
    AWAE_InitInput%OutFileRoot                = farm%p%OutFileRoot
+   if (farm%p%WAT /= Mod_WAT_None .and. associated(farm%WAT_IfW%p%FlowField)) then
+      AWAE_InitInput%WAT_FlowField => farm%WAT_IfW%p%FlowField
+   endif
    call AWAE_Init( AWAE_InitInput, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, farm%AWAE%OtherSt, farm%AWAE%y, &
                    farm%AWAE%m, farm%p%DT_low, AWAE_InitOutput, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
+   if(Failed()) return;
       
    farm%AWAE%IsInitialized = .true.
 
@@ -270,16 +258,11 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    farm%p%Module_Ver( ModuleFF_AWAE  ) = AWAE_InitOutput%Ver
    
       !-------------------
-      ! b. CALL SC_Init
+      ! c. CALL SC_Init
    if ( farm%p%useSC ) then
       SC_InitInp%nTurbines = farm%p%NumTurbines
       call SC_Init(SC_InitInp, farm%SC%uInputs, farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, farm%SC%OtherState, &
-                     farm%SC%y, farm%SC%m, farm%p%DT_low, SC_InitOut, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            if (ErrStat >= AbortErrLev) then
-               call Cleanup()
-               return
-            end if 
+                     farm%SC%y, farm%SC%m, farm%p%DT_low, SC_InitOut, ErrStat2, ErrMsg2);  if(Failed()) return;
       farm%p%Module_Ver( ModuleFF_SC  ) = SC_InitOut%Ver
       farm%SC%IsInitialized = .true.
    else
@@ -300,38 +283,23 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    end if
    
       !-------------------
-      ! c. initialize WD (one instance per turbine, each can be done in parallel, too)
+      ! d. initialize WD (one instance per turbine, each can be done in parallel, too)
       
-   call Farm_InitWD( farm, WD_InitInput, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF   
+   call Farm_InitWD( farm, WD_InitInput, ErrStat2, ErrMsg2 );  if(Failed()) return;
       
       
    !...............................................................................................................................  
    ! step 4: initialize FAST (each instance of FAST can also be done in parallel)
    !...............................................................................................................................  
 
-   CALL Farm_InitFAST( farm, WD_InitInput%InputFileData, AWAE_InitOutput, SC_InitOut, farm%SC%y, ErrStat2, ErrMsg2)
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF   
+   CALL Farm_InitFAST( farm, WD_InitInput%InputFileData, AWAE_InitOutput, SC_InitOut, farm%SC%y, ErrStat2, ErrMsg2);  if(Failed()) return;
       
    !...............................................................................................................................  
    ! step 4.5: initialize farm-level MoorDyn if applicable
    !...............................................................................................................................  
    
    if (farm%p%MooringMod == 3) then
-      CALL Farm_InitMD( farm, ErrStat2, ErrMsg2)  ! FAST instances must be initialized first so that turbine initial positions are known
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF   
+      CALL Farm_InitMD( farm, ErrStat2, ErrMsg2);  if(Failed()) return;  ! FAST instances must be initialized first so that turbine initial positions are known
    end if
 
    !...............................................................................................................................  
@@ -339,24 +307,13 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    !...............................................................................................................................  
    
       ! Set parameters for output channels:
-   CALL Farm_SetOutParam(OutList, farm, ErrStat2, ErrMsg2 ) ! requires: p%NumOuts, sets: p%OutParam.
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF  
+   CALL Farm_SetOutParam(OutList, farm, ErrStat2, ErrMsg2 );  if(Failed()) return; ! requires: p%NumOuts, sets: p%OutParam.
       
-   call Farm_InitOutput( farm, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF  
+   call Farm_InitOutput( farm, ErrStat2, ErrMsg2 );  if(Failed()) return;
 
       ! Print the summary file if requested:
    IF (farm%p%SumPrint) THEN
-      CALL Farm_PrintSum( farm, WD_InitInput%InputFileData, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL Farm_PrintSum( farm, WD_InitInput%InputFileData, ErrStat2, ErrMsg2 );  if(Failed()) return;
    END IF
    
    !...............................................................................................................................
@@ -366,1223 +323,256 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    
 CONTAINS
    SUBROUTINE Cleanup()
-   
       call WD_DestroyInitInput(WD_InitInput, ErrStat2, ErrMsg2)
       call AWAE_DestroyInitInput(AWAE_InitInput, ErrStat2, ErrMsg2)
       call AWAE_DestroyInitOutput(AWAE_InitOutput, ErrStat2, ErrMsg2)
-         
    END SUBROUTINE Cleanup
 
-END SUBROUTINE Farm_Initialize
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine reads in the primary FAST.Farm input file, does some validation, and places the values it reads in the
-!!   parameter structure (p). It prints to an echo file if requested.
-SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_InitInp, OutList, ErrStat, ErrMsg )
-
-
-      ! Passed variables
-   TYPE(Farm_ParameterType),       INTENT(INOUT) :: p                               !< The parameter data for the FAST (glue-code) simulation
-   CHARACTER(*),                   INTENT(IN   ) :: InputFile                       !< Name of the file containing the primary input data
-   TYPE(WD_InputFileType),         INTENT(  OUT) :: WD_InitInp                      !< input-file data for WakeDynamics module
-   TYPE(AWAE_InputFileType),       INTENT(  OUT) :: AWAE_InitInp                    !< input-file data for AWAE module
-   TYPE(SC_InitInputType),         INTENT(  OUT) :: SC_InitInp                      !< input-file data for SC module
-   CHARACTER(ChanLen),             INTENT(  OUT) :: OutList(:)                      !< list of user-requested output channels
-   INTEGER(IntKi),                 INTENT(  OUT) :: ErrStat                         !< Error status
-   CHARACTER(*),                   INTENT(  OUT) :: ErrMsg                          !< Error message
-
-      ! Local variables:
-   REAL(DbKi)                    :: TmpTime                                   ! temporary variable to read SttsTime and ChkptTime before converting to #steps based on DT_low
-   INTEGER(IntKi)                :: I                                         ! loop counter
-   INTEGER(IntKi)                :: UnIn                                      ! Unit number for reading file
-   INTEGER(IntKi)                :: UnEc                                      ! I/O unit for echo file. If > 0, file is open for writing.
-
-   INTEGER(IntKi)                :: IOS                                       ! Temporary Error status
-   INTEGER(IntKi)                :: OutFileFmt                                ! An integer that indicates what kind of tabular output should be generated (1=text, 2=binary, 3=both)
-   INTEGER(IntKi)                :: NLinTimes                                 ! An integer that indicates how many times to linearize
-   LOGICAL                       :: Echo                                      ! Determines if an echo file should be written
-   LOGICAL                       :: TabDelim                                  ! Determines if text output should be delimited by tabs (true) or space (false)
-   CHARACTER(1024)               :: PriPath                                   ! Path name of the primary file
-
-   CHARACTER(10)                 :: AbortLevel                                ! String that indicates which error level should be used to abort the program: WARNING, SEVERE, or FATAL
-   CHARACTER(30)                 :: Line                                      ! string for default entry in input file
-
-   INTEGER(IntKi)                :: ErrStat2                                  ! Temporary Error status
-   CHARACTER(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
-   CHARACTER(*),   PARAMETER     :: RoutineName = 'Farm_ReadPrimaryFile'
-   Real(ReKi)                    :: DefaultReVal ! Default real value 
-   Real(ReKi)                    :: EstimatedRotorRadius ! Estimated rotor radius
-   
-   
-      ! Initialize some variables:
-   UnEc = -1
-   Echo = .FALSE.                        ! Don't echo until we've read the "Echo" flag
-   CALL GetPath( InputFile, PriPath )    ! Input files will be relative to the path where the primary input file is located.
-
-
-      ! Get an available unit number for the file.
-
-   CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) RETURN
-
-
-      ! Open the Primary input file.
-
-   CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-
-   ! Read the lines up/including to the "Echo" simulation control variable
-   ! If echo is FALSE, don't write these lines to the echo file.
-   ! If Echo is TRUE, rewind and write on the second try.
-
-   I = 1 !set the number of times we've read the file
-   DO
-   !-------------------------- HEADER ---------------------------------------------
-
-      CALL ReadCom( UnIn, InputFile, 'File header: FAST.Farm Version (line 1)', ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if ( ErrStat >= AbortErrLev ) then
-            call cleanup()
-            RETURN        
-         end if
-
-      CALL ReadStr( UnIn, InputFile, p%FTitle, 'FTitle', 'File Header: File Description (line 2)', ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if ( ErrStat >= AbortErrLev ) then
-            call cleanup()
-            RETURN        
-         end if
-
-
-   !---------------------- SIMULATION CONTROL --------------------------------------
-      CALL ReadCom( UnIn, InputFile, 'Section Header: Simulation Control', ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if ( ErrStat >= AbortErrLev ) then
-            call cleanup()
-            RETURN        
-         end if
-
-
-         ! Echo - Echo input data to <RootName>.ech (flag):
-      CALL ReadVar( UnIn, InputFile, Echo, "Echo", "Echo input data to <RootName>.ech (flag)", ErrStat2, ErrMsg2, UnEc)
-         CALL SetErrStat( ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if ( ErrStat >= AbortErrLev ) then
-            call cleanup()
-            RETURN        
-         end if
-
-
-      IF (.NOT. Echo .OR. I > 1) EXIT !exit this loop
-
-         ! Otherwise, open the echo file, then rewind the input file and echo everything we've read
-
-      I = I + 1         ! make sure we do this only once (increment counter that says how many times we've read this file)
-
-      CALL OpenEcho ( UnEc, TRIM(p%OutFileRoot)//'.ech', ErrStat2, ErrMsg2, Farm_Ver )
-         CALL SetErrStat( ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if ( ErrStat >= AbortErrLev ) then
-            call cleanup()
-            RETURN        
-         end if
-
-      IF ( UnEc > 0 )  WRITE (UnEc,'(/,A,/)')  'Data from '//TRIM(Farm_Ver%Name)//' primary input file "'//TRIM( InputFile )//'":'
-
-      REWIND( UnIn, IOSTAT=ErrStat2 )
-         IF (ErrStat2 /= 0_IntKi ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Error rewinding file "'//TRIM(InputFile)//'".',ErrStat,ErrMsg,RoutineName)
-            call cleanup()
-            RETURN        
-         END IF
-
-   END DO
-
-   CALL WrScr( ' Heading of the '//TRIM(Farm_Ver%Name)//' input file: ' )
-   CALL WrScr( '   '//TRIM( p%FTitle ) )
-
-
-      ! AbortLevel - Error level when simulation should abort:
-   CALL ReadVar( UnIn, InputFile, AbortLevel, "AbortLevel", "Error level when simulation should abort (string)", &
-                        ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-
-      ! Let's set the abort level here.... knowing that everything before this aborted only on FATAL errors!
-      CALL Conv2UC( AbortLevel ) !convert to upper case
-      SELECT CASE( TRIM(AbortLevel) )
-         CASE ( "WARNING" )
-            AbortErrLev = ErrID_Warn
-         CASE ( "SEVERE" )
-            AbortErrLev = ErrID_Severe
-         CASE ( "FATAL" )
-            AbortErrLev = ErrID_Fatal
-         CASE DEFAULT
-            CALL SetErrStat( ErrID_Fatal, 'Invalid AbortLevel specified in FAST.Farm input file. '// &
-                             'Valid entries are "WARNING", "SEVERE", or "FATAL".',ErrStat,ErrMsg,RoutineName)
-            call cleanup()
-            RETURN
-      END SELECT
-
-
-      ! TMax - Total run time (s):
-   CALL ReadVar( UnIn, InputFile, p%TMax, "TMax", "Total run time (s)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-       ! UseSC - Use a super controller? (flag):
-   CALL ReadVar( UnIn, InputFile, p%UseSC, "UseSC", "Use a super controller? (flag)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-       ! Mod_AmbWind - Ambient wind model (-) (switch) {1: high-fidelity precursor in VTK format, 2: one InflowWind module, 3: multiple InflowWind modules}:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%Mod_AmbWind, "Mod_AmbWind", "Ambient wind model (-) (switch) {1: high-fidelity precursor in VTK format, 2: one InflowWind module, 3: multiple InflowWind modules}", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-       ! Mod_WaveField - Wave field handling (-) (switch) {1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin}
-   CALL ReadVar( UnIn, InputFile, p%WaveFieldMod, "Mod_WaveField", "Wave field handling (-) (switch) {1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin}", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-       ! Mod_SharedMooring - flag for array-level mooring. (switch) 0: none, 3: yes/MoorDyn
-   CALL ReadVar( UnIn, InputFile, p%MooringMod, "Mod_SharedMooring", "Array-level mooring handling (-) (switch) {0: none; 3: array-level MoorDyn model}", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-   !---------------------- SUPER CONTROLLER ------------------------------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Super Controller', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      ! SC_FileName - Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms (quoated string):
-   CALL ReadVar( UnIn, InputFile, p%SC_FileName, "SC_FileName", "Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms (quoated string)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-   IF ( PathIsRelative( p%SC_FileName ) ) p%SC_FileName = TRIM(PriPath)//TRIM(p%SC_FileName)
-   SC_InitInp%DLL_FileName =  p%SC_FileName
-      
-   !---------------------- SHARED MOORING SYSTEM ------------------------------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: SHARED MOORING SYSTEM', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      ! MD_FileName - Name/location of the farm-level MoorDyn input file (quoated string):
-   CALL ReadVar( UnIn, InputFile, p%MD_FileName, "MD_FileName", "Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms (quoated string)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-   IF ( PathIsRelative( p%MD_FileName ) ) p%MD_FileName = TRIM(PriPath)//TRIM(p%MD_FileName)
-   
-      ! DT_Mooring - time step for farm-level mooring coupling with each turbine [used only when Mod_SharedMooring > 0] (s) [>0.0]:
-   CALL ReadVar( UnIn, InputFile, p%DT_mooring, "DT_Mooring", "Time step for farm-levem mooring coupling with each turbine [used only when Mod_SharedMooring > 0] (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-   
-   !---------------------- AMBIENT WIND: PRECURSOR IN VTK FORMAT ---------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Ambient Wind: Precursor in VTK Format', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      ! DT_low - Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]:
-   CALL ReadVar( UnIn, InputFile, p%DT_low, "DT_Low-VTK", "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-
-      ! DT_high - Time step for high-resolution wind data input files (s) [>0.0]:
-   CALL ReadVar( UnIn, InputFile, p%DT_high, "DT_High-VTK", "Time step for high-resolution wind data input files (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      ! WindFilePath - Path name of wind data files from ABLSolver precursor (string):
-   CALL ReadVar( UnIn, InputFile, p%WindFilePath, "WindFilePath", "Path name of wind data files from ABLSolver precursor (string)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-   IF ( PathIsRelative( p%WindFilePath ) ) p%WindFilePath = TRIM(PriPath)//TRIM(p%WindFilePath)
-            
-      ! ChkWndFiles - Check all the ambient wind files for data consistency? (flag):
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%ChkWndFiles, "ChkWndFiles", "Check all the ambient wind files for data consistency? (flag)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-   !---------------------- AMBIENT WIND: INFLOWWIND MODULE ---------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Ambient Wind: InflowWind Module', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      ! DT_low - Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%DT_low, "DT_Low", "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-   if ( AWAE_InitInp%Mod_AmbWind > 1 ) p%DT_low = AWAE_InitInp%DT_low
-   
-      ! DT_high - Time step for high-resolution wind data input files (s) [>0.0]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%DT_high, "DT_High", "Time step for high-resolution wind data input files (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-   if ( AWAE_InitInp%Mod_AmbWind > 1 ) p%DT_high = AWAE_InitInp%DT_high
-   
-      ! NX_Low - Number of low-resolution spatial nodes in X direction for wind data interpolation (-) [>=2]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%nX_Low, "nX_Low", "Number of low-resolution spatial nodes in X direction for wind data interpolation (-) [>=2]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      ! NY_Low - Number of low-resolution spatial nodes in Y direction for wind data interpolation (-) [>=2]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%nY_Low, "nY_Low", "Number of low-resolution spatial nodes in Y direction for wind data interpolation (-) [>=2]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-
-      ! NZ_Low - Number of low-resolution spatial nodes in Z direction for wind data interpolation (-) [>=2]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%nZ_Low, "nZ_Low", "Number of low-resolution spatial nodes in Z direction for wind data interpolation (-) [>=2]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-
-      ! X0_Low - Origin of low-resolution spatial nodes in X direction for wind data interpolation (m):
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%X0_Low, "X0_Low", "Origin of low-resolution spatial nodes in X direction for wind data interpolation (m)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-
-      ! Y0_Low - Origin of low-resolution spatial nodes in Y direction for wind data interpolation (m):
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%Y0_Low, "Y0_Low", "Origin of low-resolution spatial nodes in Y direction for wind data interpolation (m)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      ! Z0_Low - Origin of low-resolution spatial nodes in Z direction for wind data interpolation (m):
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%Z0_Low, "Z0_Low", "Origin of low-resolution spatial nodes in Z direction for wind data interpolation (m)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-
-      ! dX_Low - Spacing of low-resolution spatial nodes in X direction for wind data interpolation (m) [>0.0]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%dX_Low, "dX_Low", "Spacing of low-resolution spatial nodes in X direction for wind data interpolation (m) [>0.0]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      ! dY_Low - Spacing of low-resolution spatial nodes in Y direction for wind data interpolation (m) [>0.0]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%dY_Low, "dY_Low", "Spacing of low-resolution spatial nodes in Y direction for wind data interpolation (m) [>0.0]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      ! dZ_Low - Spacing of low-resolution spatial nodes in Z direction for wind data interpolation (m) [>0.0]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%dZ_Low, "dZ_Low", "Spacing of low-resolution spatial nodes in Z direction for wind data interpolation (m) [>0.0]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-
-      ! NX_High - Number of high-resolution spatial nodes in X direction for wind data interpolation (-) [>=2]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%nX_High, "nX_High", "Number of high-resolution spatial nodes in X direction for wind data interpolation (-) [>=2]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      ! NY_High - Number of high-resolution spatial nodes in Y direction for wind data interpolation (-) [>=2]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%nY_High, "nY_High", "Number of high-resolution spatial nodes in Y direction for wind data interpolation (-) [>=2]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      ! NZ_High - Number of high-resolution spatial nodes in Z direction for wind data interpolation (-) [>=2]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%nZ_High, "nZ_High", "Number of high-resolution spatial nodes in Z direction for wind data interpolation (-) [>=2]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-
-      ! InflowFile - Name of file containing InflowWind module input parameters (quoted string):
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%InflowFile, "InflowFile", "Name of file containing InflowWind module input parameters (quoted string)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-   IF ( PathIsRelative( AWAE_InitInp%InflowFile ) ) AWAE_InitInp%InflowFile = TRIM(PriPath)//TRIM(AWAE_InitInp%InflowFile)
-   if ( AWAE_InitInp%Mod_AmbWind > 1 ) p%WindFilePath = AWAE_InitInp%InflowFile  ! For the summary file
-   
-   !---------------------- WIND TURBINES ---------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Wind Turbines', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-      
-      
-      ! NumTurbines - Number of wind turbines (-) [>=1]:
-   CALL ReadVar( UnIn, InputFile, p%NumTurbines, "NumTurbines", "Number of wind turbines (-) [>=1]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-   CALL ReadCom( UnIn, InputFile, 'Section Header: WT column names', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   CALL ReadCom( UnIn, InputFile, 'Section Header: WT column units', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      
-   call AllocAry( p%WT_Position, 3, p%NumTurbines, 'WT_Position',   ErrStat2, ErrMsg2);  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call AllocAry( p%WT_FASTInFile,  p%NumTurbines, 'WT_FASTInFile', ErrStat2, ErrMsg2);  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call AllocAry( AWAE_InitInp%WT_Position, 3, p%NumTurbines, 'AWAE_InitInp%WT_Position', ErrStat2, ErrMsg2);  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-
-   if ( AWAE_InitInp%Mod_AmbWind > 1 ) then   
-         ! Using InflowWind
-      call AllocAry(AWAE_InitInp%X0_high, p%NumTurbines, 'AWAE_InitInp%X0_high', ErrStat2, ErrMsg2)
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      call AllocAry(AWAE_InitInp%Y0_high, p%NumTurbines, 'AWAE_InitInp%Y0_high', ErrStat2, ErrMsg2)
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      call AllocAry(AWAE_InitInp%Z0_high, p%NumTurbines, 'AWAE_InitInp%Z0_high', ErrStat2, ErrMsg2)
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      call AllocAry(AWAE_InitInp%dX_high, p%NumTurbines, 'AWAE_InitInp%dX_high', ErrStat2, ErrMsg2)
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      call AllocAry(AWAE_InitInp%dY_high, p%NumTurbines, 'AWAE_InitInp%dY_high', ErrStat2, ErrMsg2)
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      call AllocAry(AWAE_InitInp%dZ_high, p%NumTurbines, 'AWAE_InitInp%dZ_high', ErrStat2, ErrMsg2)
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-   end if
-
-      ! WT_Position (WT_X, WT_Y, WT_Z) and WT_FASTInFile
-   do i=1,p%NumTurbines
-      
-      if ( AWAE_InitInp%Mod_AmbWind == 1 ) then 
-         READ (UnIn, *, IOSTAT=IOS) p%WT_Position(:,i), p%WT_FASTInFile(i)
-      else
-         READ (UnIn, *, IOSTAT=IOS) p%WT_Position(:,i), p%WT_FASTInFile(i), AWAE_InitInp%X0_high(i), AWAE_InitInp%Y0_high(i), AWAE_InitInp%Z0_high(i), AWAE_InitInp%dX_high(i), AWAE_InitInp%dY_high(i), AWAE_InitInp%dZ_high(i)
-      end if
-      AWAE_InitInp%WT_Position(:,i) = p%WT_Position(:,i)
-      
-      CALL CheckIOS ( IOS, InputFile, 'Wind Turbine Columns', NumType, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-      IF ( UnEc > 0 ) THEN 
-         if ( AWAE_InitInp%Mod_AmbWind == 1 ) then 
-            WRITE( UnEc, "(3(ES11.4e2,2X),'""',A,'""',T50,' - WT(',I5,')')" ) p%WT_Position(:,i), TRIM( p%WT_FASTInFile(i) ), I
-         else
-            WRITE( UnEc, "(3(ES11.4e2,2X),'""',A,'""',T50,6(ES11.4e2,2X),' - WT(',I5,')')" ) p%WT_Position(:,i), TRIM( p%WT_FASTInFile(i) ), AWAE_InitInp%X0_high(i), AWAE_InitInp%Y0_high(i), AWAE_InitInp%Z0_high(i), AWAE_InitInp%dX_high(i), AWAE_InitInp%dY_high(i), AWAE_InitInp%dZ_high(i), I
-         end if
-         
-      END IF
-      IF ( PathIsRelative( p%WT_FASTInFile(i) ) ) p%WT_FASTInFile(i) = TRIM(PriPath)//TRIM(p%WT_FASTInFile(i))
-      
-   end do
-      
-      
-   !---------------------- WAKE DYNAMICS ---------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Wake Dynamics', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-      
-      
-   CALL ReadVar( UnIn, InputFile, WD_InitInp%Mod_Wake, "Mod_Wake", "Wake model", ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   CALL ReadVar( UnIn, InputFile, WD_InitInp%dr      , "dr", "Radial increment of radial finite-difference grid (m) [>0.0]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   CALL ReadVar( UnIn, InputFile, WD_InitInp%NumRadii, "NumRadii", "Number of radii in the radial finite-difference grid (-) [>=2]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   CALL ReadVar( UnIn, InputFile, WD_InitInp%NumPlanes,"NumPlanes", "Number of wake planes (-) [>=2]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   
-   ! Estimate rotor raidus based on grid size, if user follow approximately the guidelines
-   EstimatedRotorRadius = (WD_InitInp%dr * WD_InitInp%NumRadii) / 3._ReKi
-         
-      ! f_c - Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz) [>0.0] or DEFAULT [DEFAULT=0.0007]:
-   DefaultReVal = 12.5_ReKi/EstimatedRotorRadius ! Eq. (32) of https://doi.org/10.1002/we.2785, with U=10, a=1/3
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%f_c, "f_c", &
-      "Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz) [>0.0] or DEFAULT [DEFAULT=0.0007]", &
-      DefaultReVal, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      ! C_HWkDfl_O - Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor (m) or DEFAULT [DEFAULT=0.0]:
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_HWkDfl_O, "C_HWkDfl_O", &
-      "Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor (m) or DEFAULT [DEFAULT=0.0]", &
-      0.0_ReKi, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-
-      ! C_HWkDfl_OY - Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error (m/deg) or DEFAULT [DEFAULT=0.3]:
-   if (WD_InitInp%Mod_Wake == Mod_Wake_Curl) then
-      DefaultReVal = 0.0_ReKi
-   else
-      DefaultReVal = 0.3_ReKi
-   endif
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_HWkDfl_OY, "C_HWkDfl_OY", &
-      "Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error (m/deg) or DEFAULT [DEFAULT=0.3]", &
-      DefaultReVal, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-   WD_InitInp%C_HWkDfl_OY = WD_InitInp%C_HWkDfl_OY/D2R !immediately convert to m/radians instead of m/degrees      
-      
-      ! C_HWkDfl_x - Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance (-) or DEFAULT [DEFAULT=0.0]:
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_HWkDfl_x, "C_HWkDfl_x", &
-      "Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance (-) or DEFAULT [DEFAULT=0.0]", &
-      0.0_ReKi, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-         
-      ! C_HWkDfl_xY - Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error (1/deg) or DEFAULT [DEFAULT=-0.004]:
-   if (WD_InitInp%Mod_Wake == Mod_Wake_Curl) then
-      DefaultReVal = 0.0_ReKi
-   else
-      DefaultReVal = -0.004_ReKi
-   endif
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_HWkDfl_xY, "C_HWkDfl_xY", &
-      "Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error (1/deg) or DEFAULT [DEFAULT=-0.004]", &
-      DefaultReVal, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-   WD_InitInp%C_HWkDfl_xY = WD_InitInp%C_HWkDfl_xY/D2R !immediately convert to 1/radians instead of 1/degrees      
-
-   
-      ! C_NearWake - Calibrated parameter for the near-wake correction (-) [>1.0] or DEFAULT [DEFAULT=1.8]:
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_NearWake, "C_NearWake", &
-      "Calibrated parameter for the near-wake correction (-) [>1.0] or DEFAULT [DEFAULT=1.8]", &
-      1.8_ReKi, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-              
-      ! k_vAmb - Calibrated parameter for the influence of ambient turbulence in the eddy viscosity (-) [>=0.0] or DEFAULT [DEFAULT=0.05 ]:
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_vAmb, "k_vAmb", &
-      "Calibrated parameter for the influence of ambient turbulence in the eddy viscosity (-) [>=0.0] or DEFAULT [DEFAULT=0.05]", &
-      0.05_ReKi, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-         
-      ! k_vShr - Calibrated parameter for the influence of the shear layer in the eddy viscosity (-) [>=0.0] or DEFAULT [DEFAULT=0.016]:
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_vShr, "k_vShr", &
-      "Calibrated parameter for the influence of the shear layer in the eddy viscosity (-) [>=0.0] or DEFAULT [DEFAULT=0.016]", &
-      0.016_ReKi, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-
-      ! C_vAmb_DMin - Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the minimum and exponential regions (-) [>=0.0] or DEFAULT [DEFAULT=0.0]:
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vAmb_DMin, "C_vAmb_DMin", &
-      "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the minimum and exponential regions (-) [>=0.0] or DEFAULT [DEFAULT=0.0]", &
-      0.0_ReKi, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-      
-      ! C_vAmb_DMax - Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the exponential and maximum regions (-) [> C_vAmb_DMin  ] or DEFAULT [DEFAULT=1.0]:
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vAmb_DMax, "C_vAmb_DMax", &
-      "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the exponential and maximum regions (-) [> C_vAmb_DMin  ] or DEFAULT [DEFAULT=1.0]", &
-      1.0_ReKi, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-        
-      ! C_vAmb_FMin - Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the value in the minimum region (-) [>=0.0 and <=1.0] or DEFAULT [DEFAULT=1.0]:
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vAmb_FMin, "C_vAmb_FMin", &
-      "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the value in the minimum region (-) [>=0.0 and <=1.0] or DEFAULT [DEFAULT=1.0]", &
-      1.0_ReKi, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-      
-      ! C_vAmb_Exp - Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the exponent in the exponential region (-) [> 0.0] or DEFAULT [DEFAULT=0.01]:
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vAmb_Exp, "C_vAmb_Exp", &
-      "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the exponent in the exponential region (-) [> 0.0] or DEFAULT [DEFAULT=0.01]", &
-      0.01_ReKi, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-        
-      ! C_vShr_DMin - Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the minimum and exponential regions (-) [>=0.0] or DEFAULT [DEFAULT=3.0]:
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vShr_DMin, "C_vShr_DMin", &
-      "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the minimum and exponential regions (-) [>=0.0] or DEFAULT [DEFAULT=3.0]", &
-      3.0_ReKi, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if            
-         
-      ! C_vShr_DMax - Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the exponential and maximum regions (-) [> C_vShr_DMin] or DEFAULT [DEFAULT=25.0]:
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vShr_DMax, "C_vShr_DMax", &
-      "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the exponential and maximum regions (-) [> C_vShr_DMin] or DEFAULT [DEFAULT=25.0]", &
-      25.0_ReKi, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if            
-         
-      ! C_vShr_FMin - Calibrated parameter in the eddy viscosity filter function for the shear layer defining the value in the minimum region (-) [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.2]:
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vShr_FMin, "C_vShr_FMin", &
-      "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the value in the minimum region (-) [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.2]", &
-      0.2_ReKi, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if            
-        
-      ! C_vShr_Exp - Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region (-) [> 0.0] or DEFAULT [DEFAULT=0.1]:
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vShr_Exp, "C_vShr_Exp", &
-      "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region (-) [> 0.0] or DEFAULT [DEFAULT=0.1]", &
-      0.1_ReKi, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if            
-        
-      ! Mod_WakeDiam - Wake diameter calculation model (-) (switch) {1: rotor diameter, 2: velocity-based, 3: mass-flux based, 4: momentum-flux based} or DEFAULT [DEFAULT=1]:
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%Mod_WakeDiam, "Mod_WakeDiam", &
-      "Wake diameter calculation model (-) (switch) {1: rotor diameter, 2: velocity-based, 3: mass-flux based, 4: momentum-flux based} or DEFAULT [DEFAULT=1]", &
-      WakeDiamMod_RotDiam, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if            
-        
-      ! C_WakeDiam - Calibrated parameter for wake diameter calculation (-) [>0.0 and <1.0] or DEFAULT [DEFAULT=0.95] [unused for Mod_WakeDiam=1]:
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_WakeDiam, "C_WakeDiam", &
-      "Calibrated parameter for wake diameter calculation (-) [>0.0 and <1.0] or DEFAULT [DEFAULT=0.95] [unused for Mod_WakeDiam=1]", &
-      0.95_ReKi, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if           
-
-      ! Mod_Meander - Spatial filter model for wake meandering (-) (switch) {1: uniform, 2: truncated jinc, 3: windowed jinc} or DEFAULT [DEFAULT=3]:
-   CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%Mod_Meander, "Mod_Meander", &
-      "Spatial filter model for wake meandering (-) (switch) {1: uniform, 2: truncated jinc, 3: windowed jinc} or DEFAULT [DEFAULT=3]", &
-      MeanderMod_WndwdJinc, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if            
-        
-      ! C_Meander - Calibrated parameter for wake meandering (-) [>=1.0] or DEFAULT [DEFAULT=1.9]:
-   CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%C_Meander, "C_Meander", &
-      "Calibrated parameter for wake meandering (-) [>=1.0] or DEFAULT [DEFAULT=1.9]", &
-      1.9_ReKi, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if            
-
-   !----------------------- CURL WAKE PARAMETERS ------------------------------------------
-   CALL ReadCom        ( UnIn, InputFile, "Section Header: Curl wake parameters", ErrStat2, ErrMsg2, UnEc ); if(failed()) return
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%Swirl        ,    "Swirl", "Swirl switch", .True., ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_VortexDecay,    "k_VortexDecay", "Vortex decay constant", 0.01, ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%NumVortices,      "NumVortices", "Number of vortices in the curled wake", 100, ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%sigma_D,          "sigma_D", "Gaussian vortex width", 0.2, ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%FilterInit,       "FilterInit", "Filter Init", 1 , ErrStat2, ErrMsg2, UnEc); if(failed()) return    
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_vCurl,          "k_vCurl",    "Eddy viscosity for curl", 2.0 , ErrStat2, ErrMsg2, UnEc); if(failed()) return    
-   CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%Mod_Projection, "Mod_Projection", "Mod_Projection", -1 , ErrStat2, ErrMsg2, UnEc); if(failed()) return 
-   if (AWAE_InitInp%Mod_Projection==-1) then
-      ! -1 means the user selected "default"
-      if (WD_InitInp%Mod_Wake==Mod_Wake_Curl) then
-           AWAE_InitInp%Mod_Projection=2
-      else 
-           AWAE_InitInp%Mod_Projection=1
-      endif
-   endif
-   !----------------------- WAKE-ADDED TURBULENCE ------------------------------------------
-   ! Read WAT variables
-   WD_InitInp%WAT_k_Def  =1.0_ReKi
-   WD_InitInp%WAT_k_Grad =1.0_ReKi
-   WD_InitInp%WAT = .false.   ! initialize to false to avoid segfault
-   !CALL ReadCom( UnIn, InputFile, 'Section Header: Wake-added turbulence', ErrStat2, ErrMsg2, UnEc )
-   !CALL ReadVar( UnIn, InputFile, WD_InitInp%WAT, "WAT", "Switch for turning on and off wake-added turbulence", ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   !CALL ReadCom( UnIn, InputFile, 'dummy predef', ErrStat2, ErrMsg2, UnEc )
-   !CALL ReadCom( UnIn, InputFile, 'dummy user', ErrStat2, ErrMsg2, UnEc )
-   !CALL ReadCom( UnIn, InputFile, 'dummy userdx', ErrStat2, ErrMsg2, UnEc )
-   !CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_k_Def,  "WAT_k_Def,     "Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=1.44]", 1.44_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   !CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_k_Grad, "WAT_k_Grad",   "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.84]",  0.84_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   !IF ( PathIsRelative( p%File ) )p%File = TRIM(PriPath)//TRIM(p%File)
-
-   !---------------------- VISUALIZATION --------------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Visualization', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      
-      ! WrDisWind - Write disturbed wind data to <OutFileRoot>.Low.Dis.t<n/n_low-out>.vtk etc.? (flag):
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%WrDisWind, "WrDisWind", "Write disturbed wind data to <OutFileRoot>.Low.Dis.t<n/n_low-out>.vtk etc.? (flag)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      ! NOutDisWindXY - Number of XY planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisXY.<n_out>.t<n/n_low-out>.vtk (-) [0 to 9]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindXY, "NOutDisWindXY", "Number of XY planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisXY.<n_out>.t<n/n_low-out>.vtk (-) [0 to 99]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-     
-      call allocAry( AWAE_InitInp%OutDisWindZ, AWAE_InitInp%NOutDisWindXY, "OutDisWindZ", ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if ( ErrStat >= AbortErrLev ) then
-            call cleanup()
-            RETURN        
-         end if
-      
-      ! OutDisWindZ - Z coordinates of XY planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindXY] [unused for NOutDisWindXY=0]:
-   CALL ReadAry( UnIn, InputFile, AWAE_InitInp%OutDisWindZ, AWAE_InitInp%NOutDisWindXY, "OutDisWindZ", "Z coordinates of XY planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindXY] [unused for NOutDisWindXY=0]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      ! NOutDisWindYZ - Number of YZ planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisYZ.<n_out>.t<n/n_low-out>.vtk (-) [0 to 9]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindYZ, "NOutDisWindYZ", "Number of YZ planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisYZ.<n_out>.t<n/n_low-out>.vtk (-) [0 to 99]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-     
-      call allocAry( AWAE_InitInp%OutDisWindX, AWAE_InitInp%NOutDisWindYZ, "OutDisWindX", ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if ( ErrStat >= AbortErrLev ) then
-            call cleanup()
-            RETURN        
-         end if
-      
-      ! OutDisWindX - X coordinates of YZ planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindYZ] [unused for NOutDisWindYZ=0]:
-   CALL ReadAry( UnIn, InputFile, AWAE_InitInp%OutDisWindX, AWAE_InitInp%NOutDisWindYZ, "OutDisWindX", "X coordinates of YZ planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindYZ] [unused for NOutDisWindYZ=0]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-      
-      ! NOutDisWindXZ - Number of XZ planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low/DisXZ.<n_out>.t<n/n_low-out>.vtk (-) [0 to 9]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindXZ, "NOutDisWindXZ", "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low/DisXZ.<n_out>.t<n/n_low-out>.vtk (-) [0 to 99]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      call allocAry( AWAE_InitInp%OutDisWindY, AWAE_InitInp%NOutDisWindXZ, "OutDisWindY", ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if ( ErrStat >= AbortErrLev ) then
-            call cleanup()
-            RETURN        
-         end if
-      
-      ! OutDisWindY - Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindXZ] [unused for NOutDisWindXZ=0]:
-   CALL ReadAry( UnIn, InputFile, AWAE_InitInp%OutDisWindY, AWAE_InitInp%NOutDisWindXZ, "OutDisWindY", "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindXZ] [unused for NOutDisWindXZ=0]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-                  
-          ! WrDisDT -The time between vtk outputs [must be a multiple of the low resolution time step]:
-   CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%WrDisDT, "WrDisDT", &
-      "The time between vtk outputs [must be a multiple of the low resolution time step]", &
-      p%DT_low, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      
-   !---------------------- OUTPUT --------------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Output', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-
-      ! SumPrint - Print summary data to <RootName>.sum? (flag):
-   CALL ReadVar( UnIn, InputFile, p%SumPrint, "SumPrint", "Print summary data to <RootName>.sum? (flag)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      ! ChkptTime - Amount of time between creating checkpoint files for potential restart (s) [>0.0]:
-   CALL ReadVar( UnIn, InputFile, TmpTime, "ChkptTime", "Amount of time between creating checkpoint files for potential restart (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      IF (TmpTime > p%TMax) THEN
-         p%n_ChkptTime = HUGE(p%n_ChkptTime)
-      ELSE         
-         p%n_ChkptTime = NINT( TmpTime / p%DT_low )
-      END IF
-      
-
-      ! TStart - Time to begin tabular output (s) [>=0.0]:
-   CALL ReadVar( UnIn, InputFile, p%TStart, "TStart", "Time to begin tabular output (s) [>=0.0]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-   
-      ! OutFileFmt - Format for tabular (time-marching) output file (switch) {1: text file [<RootName>.out], 2: binary file [<RootName>.outb], 3: both}:
-   CALL ReadVar( UnIn, InputFile, OutFileFmt, "OutFileFmt", "Format for tabular (time-marching) output file (switch) {1: text file [<RootName>.out], 2: binary file [<RootName>.outb], 3: both}", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-
-      SELECT CASE (OutFileFmt)
-         CASE (1_IntKi)
-            p%WrBinOutFile = .FALSE.
-            p%WrTxtOutFile = .TRUE.
-         CASE (2_IntKi)
-            p%WrBinOutFile = .TRUE.
-            p%WrTxtOutFile = .FALSE.
-         CASE (3_IntKi)
-            p%WrBinOutFile = .TRUE.
-            p%WrTxtOutFile = .TRUE.
-         CASE DEFAULT
-            ! we'll check this later....
-            !CALL SetErrStat( ErrID_Fatal, "FAST.Farm's OutFileFmt must be 1, 2, or 3.",ErrStat,ErrMsg,RoutineName)
-            !if ( ErrStat >= AbortErrLev ) then
-            !   call cleanup()
-            !   RETURN        
-            !end if
-      END SELECT
-   
-      if ( OutFileFmt /= 1_IntKi ) then ! TODO: Only allow text format for now; add binary format later.
-         CALL SetErrStat( ErrID_Fatal, "FAST.Farm's OutFileFmt must be 1.",ErrStat,ErrMsg,RoutineName) 
-         call cleanup()
-         RETURN        
-      end if
-      
-   
-      ! TabDelim - Use tab delimiters in text tabular output file? (flag) {uses spaces if False}:
-   CALL ReadVar( UnIn, InputFile, TabDelim, "TabDelim", "Use tab delimiters in text tabular output file? (flag) {uses spaces if False}", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-   
-      IF ( TabDelim ) THEN
-         p%Delim = TAB
-      ELSE
-         p%Delim = ' '
-      END IF
-   
-      ! OutFmt - Format used for text tabular output, excluding the time channel. Resulting field should be 10 characters. (quoted string):
-   CALL ReadVar( UnIn, InputFile, p%OutFmt, "OutFmt", "Format used for text tabular output, excluding the time channel. Resulting field should be 10 characters. (quoted string)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%OutAllPlanes,    "OutAllPlanes", "Output all planes", .False., ErrStat2, ErrMsg2, UnEc); if(failed()) return
-
-      
-      ! NOutRadii - Number of radial nodes for wake output for an individual rotor (-) [0 to 20]:
-   CALL ReadVar( UnIn, InputFile, p%NOutRadii, "NOutRadii", "Number of radial nodes for wake output for an individual rotor (-) [0 to 20]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      call allocary( p%OutRadii, p%NOutRadii, "OutRadii", ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if ( ErrStat >= AbortErrLev ) then
-            call cleanup()
-            RETURN        
-         end if
-      
-      ! OutRadii - List of radial nodes for wake output for an individual rotor (-) [1 to NOutRadii]:
-   CALL ReadAry( UnIn, InputFile, p%OutRadii, p%NOutRadii, "OutRadii", "List of radial nodes for wake output for an individual rotor (-) [1 to NOutRadii]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-      
-      ! NOutDist - Number of downstream distances for wake output for an individual rotor (-) [0 to 9]:
-   CALL ReadVar( UnIn, InputFile, p%NOutDist, "NOutDist", "Number of downstream distances for wake output for an individual rotor (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      call allocary( p%OutDist, p%NOutDist, "OutDist", ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if ( ErrStat >= AbortErrLev ) then
-            call cleanup()
-            RETURN        
-         end if
-      
-      ! OutDist - List of downstream distances for wake output for an individual rotor (m) [1 to NOutDist] [unused for NOutDist=0]:
-   CALL ReadAry( UnIn, InputFile, p%OutDist, p%NOutDist, "OutDist", "List of downstream distances for wake output for an individual rotor (m) [1 to NOutDist] [unused for NOutDist=0]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-            
-      ! NWindVel - Number of points for wind output (-) [0 to 9]:
-   CALL ReadVar( UnIn, InputFile, p%NWindVel, "NWindVel", "Number of points for wind output (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
-      call allocAry( p%WindVelX, p%NWindVel, "WindVelX", ErrStat2, ErrMsg2 );  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      call allocAry( p%WindVelY, p%NWindVel, "WindVelY", ErrStat2, ErrMsg2 );  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      call allocAry( p%WindVelZ, p%NWindVel, "WindVelZ", ErrStat2, ErrMsg2 );  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if ( ErrStat >= AbortErrLev ) then
-            call cleanup()
-            RETURN        
-         end if
-      
-      ! WindVelX - List of coordinates in the X direction for wind output (m) [1 to NWindVel] [unused for NWindVel=0]:
-   CALL ReadAry( UnIn, InputFile, p%WindVelX, p%NWindVel, "WindVelX", "List of coordinates in the X direction for wind output (m) [1 to NWindVel] [unused for NWindVel=0]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-         
-      ! WindVelY - List of coordinates in the Y direction for wind output (m) [1 to NWindVel] [unused for NWindVel=0]:
-   CALL ReadAry( UnIn, InputFile, p%WindVelY, p%NWindVel, "WindVelY", "List of coordinates in the Y direction for wind output (m) [1 to NWindVel] [unused for NWindVel=0]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-      
-      ! WindVelZ - List of coordinates in the Z direction for wind output (m) [1 to NWindVel] [unused for NWindVel=0]:
-   CALL ReadAry( UnIn, InputFile, p%WindVelZ, p%NWindVel, "WindVelZ", "List of coordinates in the Z direction for wind output (m) [1 to NWindVel] [unused for NWindVel=0]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-      
-      
- !!!!!!!                  OutList            The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels (quoted string)      
-      !---------------------- OUTLIST  --------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: OutList', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      ! OutList - List of user-requested output channels (-):
-   CALL ReadOutputList ( UnIn, InputFile, OutList, p%NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  )     ! Routine in NWTC Subroutine Library
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF      
-   !---------------------- END OF FILE -----------------------------------------
-
-   call cleanup()
-   RETURN
-
-CONTAINS
-   !...............................................................................................................................
-   subroutine cleanup()
-      CLOSE( UnIn )
-      IF ( UnEc > 0 ) CLOSE ( UnEc )   
-   end subroutine cleanup
-
    logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      Failed =  ErrStat >= AbortErrLev
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+      Failed = errStat >= AbortErrLev
       if (Failed) call cleanup()
    end function Failed
-   !...............................................................................................................................
-END SUBROUTINE Farm_ReadPrimaryFile
+END SUBROUTINE Farm_Initialize
+
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat, ErrMsg )
-      ! Passed variables
-   TYPE(Farm_ParameterType), INTENT(INOUT) :: p                               !< The parameter data for the FAST (glue-code) simulation
-   TYPE(WD_InputFileType),   INTENT(IN   ) :: WD_InitInp                      !< input-file data for WakeDynamics module
-   TYPE(AWAE_InputFileType), INTENT(INOUT) :: AWAE_InitInp                    !< input-file data for AWAE module
-   TYPE(SC_InitInputType),   INTENT(INOUT) :: SC_InitInp              ! input-file data for SC module
-   INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
-   CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
+!> This routine sets the WAT InflowWind data storage.  Rather than initialize all of InflowWind, we just call the HAWC wind init.
+SUBROUTINE WAT_init( p, WAT_IfW, AWAE_InitInput, ErrStat, ErrMsg )
+   USE   InflowWind_IO, only: IfW_HAWC_Init
+   type(farm_ParameterType),  intent(inout) :: p                     !< farm parameters data
+   type(WAT_IfW_data),        intent(inout) :: WAT_IfW               !< InflowWind data
+   type(AWAE_InitInputType),  intent(inout) :: AWAE_InitInput        !< for error checking, and temporary to pass IfW
+   integer(IntKi),            intent(  out) :: ErrStat               !< Error status of the operation
+   character(*),              intent(  out) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
 
-      ! Local variables:
-   INTEGER(IntKi)                :: i  
-   INTEGER(IntKi)                :: ErrStat2                                  ! Temporary Error status
-   CHARACTER(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
-   CHARACTER(*),   PARAMETER     :: RoutineName = 'Farm_ValidateInput'
-   INTEGER(IntKi)                :: n_disDT_dt
-   
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-   
-   
-   ! --- SIMULATION CONTROL ---   
-   IF ((p%WaveFieldMod .ne. 1) .and. (p%WaveFieldMod .ne. 2)) CALL SetErrStat(ErrID_Fatal,'WaveFieldMod must be 1 or 2.',ErrStat,ErrMsg,RoutineName)
-   IF ((p%MooringMod .ne. 0) .and. (p%MooringMod .ne. 3)) CALL SetErrStat(ErrID_Fatal,'MooringMod must be 0 or 3.',ErrStat,ErrMsg,RoutineName)
-   
-   
-   IF (p%DT_low <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'DT_low must be positive.',ErrStat,ErrMsg,RoutineName)
-   IF (p%DT_high <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'DT_high must be positive.',ErrStat,ErrMsg,RoutineName)
-   IF (p%TMax < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'TMax must not be negative.',ErrStat,ErrMsg,RoutineName)
-   IF (p%NumTurbines < 1) CALL SetErrStat(ErrID_Fatal,'FAST.Farm requires at least 1 turbine. Set NumTurbines > 0.',ErrStat,ErrMsg,RoutineName)
-   
-   ! --- SUPER CONTROLLER ---
-   ! TODO : Verify that the DLL file exists
-   
-   ! --- SHARED MOORING SYSTEM ---
-   ! TODO : Verify that p%MD_FileName file exists
-   if ((p%DT_mooring <= 0.0_ReKi) .or. (p%DT_mooring > p%DT_high)) CALL SetErrStat(ErrID_Fatal,'DT_mooring must be greater than zero and no greater than dt_high.',ErrStat,ErrMsg,RoutineName)
-      
-   ! --- WAKE DYNAMICS ---
-   IF (WD_InitInp%Mod_Wake < 1 .or. WD_InitInp%Mod_Wake >3 ) CALL SetErrStat(ErrID_Fatal,'Mod_Wake needs to be 1,2 or 3',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%dr <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'dr (radial increment) must be larger than 0.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%NumRadii < 2) CALL SetErrStat(ErrID_Fatal,'NumRadii (number of radii) must be at least 2.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%NumPlanes < 2) CALL SetErrStat(ErrID_Fatal,'NumPlanes (number of wake planes) must be at least 2.',ErrStat,ErrMsg,RoutineName)
+   type(HAWC_InitInputType)                 :: HAWC_InitInput
+   type(WindFileDat)                        :: FileDat
+   character(1024)                          :: BoxFileRoot, BoxFile_u, BoxFile_v, BoxFile_w
+   character(1024)                          :: sDummy
+   character(6)                             :: FileEnding(3)
+   integer(IntKi)                           :: i,j,k,n
+   integer(IntKi)                           :: ErrStat2
+   character(ErrMsgLen)                     :: ErrMsg2
+   character(*), parameter                  :: RoutineName = 'WAT_init'
 
-   IF (WD_InitInp%k_VortexDecay < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'k_VortexDecay needs to be postive',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%NumVortices < 2) CALL SetErrStat(ErrID_Fatal,'NumVorticies needs to be greater than 1',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%sigma_D < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'sigma_D needs to be postive',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%f_c <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'f_c (cut-off [corner] frequency) must be more than 0 Hz.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%C_NearWake <= 1.0_Reki) CALL SetErrStat(ErrID_Fatal,'C_NearWake parameter must be greater than 1.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%k_vAmb < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'k_vAmb parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%k_vShr < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'k_vShr parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%k_vCurl < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'k_vCurl parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
-   
-   IF (WD_InitInp%C_vAmb_DMin < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'C_vAmb_DMin parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%C_vAmb_DMax <= WD_InitInp%C_vAmb_DMin) CALL SetErrStat(ErrID_Fatal,'C_vAmb_DMax parameter must be larger than C_vAmb_DMin.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%C_vAmb_FMin < 0.0_Reki .or. WD_InitInp%C_vAmb_FMin > 1.0_Reki) CALL SetErrStat(ErrID_Fatal,'C_vAmb_FMin parameter must be between 0 and 1 (inclusive).',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%C_vAmb_Exp  <= 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'C_vAmb_Exp parameter must be positive.',ErrStat,ErrMsg,RoutineName)
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
 
-   IF (WD_InitInp%C_vShr_DMin < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'C_vShr_DMin parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%C_vShr_DMax <= WD_InitInp%C_vShr_DMin) CALL SetErrStat(ErrID_Fatal,'C_vShr_DMax parameter must be larger than C_vShr_DMin.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%C_vShr_FMin < 0.0_Reki .or. WD_InitInp%C_vShr_FMin > 1.0_ReKi) CALL SetErrStat(ErrID_Fatal,'C_vShr_FMin parameter must be between 0 and 1 (inclusive).',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%C_vShr_Exp  <= 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'C_vShr_Exp parameter must be positive.',ErrStat,ErrMsg,RoutineName)
+   ! If flowfield is allocated, deallocate and allocate again to clear old data
+   if (associated(WAT_IfW%p%FlowField))   deallocate(WAT_IfW%p%FlowField)
+   allocate(WAT_IfW%p%FlowField)
 
-   IF (WD_InitInp%Mod_WakeDiam < WakeDiamMod_RotDiam .or. WD_InitInp%Mod_WakeDiam > WakeDiamMod_MtmFlux) THEN
-      call SetErrStat(ErrID_Fatal,'Wake diameter calculation model, Mod_WakeDiam, must be 1 (rotor diameter), 2 (velocity-based), 3 (mass-flux based), 4 (momentum-flux based) or DEFAULT.',ErrStat,ErrMsg,RoutineName)
-   END IF
-   
-   IF (WD_InitInp%Mod_WakeDiam /= WakeDiamMod_RotDiam) THEN
-      IF (WD_InitInp%C_WakeDiam <= 0.0_Reki .or. WD_InitInp%C_WakeDiam >= 1.0_ReKi) THEN
-         CALL SetErrStat(ErrID_Fatal,'C_WakeDiam parameter must be between 0 and 1 (exclusive).',ErrStat,ErrMsg,RoutineName)
-      END IF
-   END IF
-   
+   ! HAWC file names
+   call SplitFileName (p%WAT_BoxFile, BoxFileRoot, FileEnding, ErrStat2, ErrMsg2);  if (Failed()) return
+   HAWC_InitInput%WindFileName(1) = trim(BoxFileRoot)//trim(FileEnding(1))
+   HAWC_InitInput%WindFileName(2) = trim(BoxFileRoot)//trim(FileEnding(2))
+   HAWC_InitInput%WindFileName(3) = trim(BoxFileRoot)//trim(FileEnding(3))
 
-   
-   IF (AWAE_InitInp%C_Meander < 1.0_Reki) THEN
-      CALL SetErrStat(ErrID_Fatal,'C_Meander parameter must not be less than 1.',ErrStat,ErrMsg,RoutineName)
-   END IF
-   
-   ! --- CURL
-   IF (WD_InitInp%FilterInit < 0  ) CALL SetErrStat(ErrID_Fatal,'FilterInit needs to >= 0',ErrStat,ErrMsg,RoutineName)
-   IF (AWAE_InitInp%Mod_Meander < MeanderMod_Uniform .or. AWAE_InitInp%Mod_Meander > MeanderMod_WndwdJinc) THEN
-      call SetErrStat(ErrID_Fatal,'Spatial filter model for wake meandering, Mod_Meander, must be 1 (uniform), 2 (truncated jinc), 3 (windowed jinc) or DEFAULT.',ErrStat,ErrMsg,RoutineName)
-   END IF
-   IF (.not.(ANY((/1,2/)==AWAE_InitInp%Mod_Projection))) CALL SetErrStat(ErrID_Fatal,'Mod_Projection needs to be 1 or 2',ErrStat,ErrMsg,RoutineName)
-         
-   ! --- WAT      
-   IF (WD_InitInp%WAT_k_Def  <= 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'WAT_k_Def  parameter must be positive.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%WAT_k_Grad <= 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'WAT_k_Grad parameter must be positive.',ErrStat,ErrMsg,RoutineName)
-   
-   !--- OUTPUT ---
-   IF ( p%n_ChkptTime < 1_IntKi   ) CALL SetErrStat( ErrID_Fatal, 'ChkptTime must be greater than 0 seconds.', ErrStat, ErrMsg, RoutineName )
-   IF (p%TStart < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'TStart must not be negative.',ErrStat,ErrMsg,RoutineName)
-   IF (.not. p%WrBinOutFile .and. .not. p%WrTxtOutFile) CALL SetErrStat( ErrID_Fatal, "FAST.Farm's OutFileFmt must be 1, 2, or 3.",ErrStat,ErrMsg,RoutineName)
-   
-   if (AWAE_InitInp%WrDisDT < p%DT_low) CALL SetErrStat(ErrID_Fatal,'WrDisDT must greater than or equal to dt_low.',ErrStat,ErrMsg,RoutineName)
-   
-      ! let's make sure the FAST.Farm DT_low is an exact integer divisor of AWAE_InitInp%WrDisDT 
-   n_disDT_dt = nint( AWAE_InitInp%WrDisDT / p%DT_low )
-      ! (i'm doing this outside of Farm_ValidateInput so we know that dt_low/=0 before computing n_high_low):
-   IF ( .NOT. EqualRealNos( real(p%DT_low,SiKi)* n_disDT_dt, real(AWAE_InitInp%WrDisDT,SiKi)  )  ) THEN
-      CALL SetErrStat(ErrID_Fatal, "WrDisDT ("//TRIM(Num2LStr(AWAE_InitInp%WrDisDT))//" s) must be an integer multiple of dt_low ("//TRIM(Num2LStr(p%DT_low))//" s).", ErrStat, ErrMsg, RoutineName ) 
-   END IF
-   AWAE_InitInp%WrDisDT =  p%DT_low * n_disDT_dt
-   
-   
-   if (AWAE_InitInp%NOutDisWindXY < 0 .or. AWAE_InitInp%NOutDisWindXY > maxOutputPlanes ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXY must be in the range [0, 99].', ErrStat, ErrMsg, RoutineName )
-   if (AWAE_InitInp%NOutDisWindYZ < 0 .or. AWAE_InitInp%NOutDisWindYZ > maxOutputPlanes ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindYZ must be in the range [0, 99].', ErrStat, ErrMsg, RoutineName )
-   if (AWAE_InitInp%NOutDisWindXZ < 0 .or. AWAE_InitInp%NOutDisWindXZ > maxOutputPlanes ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXZ must be in the range [0, 99].', ErrStat, ErrMsg, RoutineName )
-   if (p%NOutDist < 0 .or. p%NOutDist > maxOutputPoints ) then
-      CALL SetErrStat( ErrID_Fatal, 'NOutDist must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
-   else
-      do i=1,p%NOutDist
-         if (p%OutDist(i) <  0.0_ReKi) then
-            CALL SetErrStat( ErrID_Fatal, 'OutDist values must be greater than or equal to zero.', ErrStat, ErrMsg, RoutineName )
+   ! HAWC spatial grid
+   if (p%WAT == Mod_WAT_PreDef) then       ! from libary of WAT files, set the NxNyNz and DxDyDz terms
+      call MannLibDims(BoxFileRoot, p%RotorDiamRef, p%WAT_NxNyNz, p%WAT_DxDyDz, ErrStat2, ErrMsg2);  if (Failed()) return
+      write(sDummy, '(3(I8,1X))') p%WAT_NxNyNz
+      call WrScr('  WAT: NxNyNz set to: '//trim(sDummy)//' (inferred from filename)')
+      write(sDummy, '(3(F8.3,1X))') p%WAT_DxDyDz
+      call WrScr('  WAT: DxDyDz set to: '//trim(sDummy)//' (based on rotor diameter)')
+   endif
+   ! Sanity check
+   if (any(p%WAT_NxNyNz<2)) then
+      call SetErrStat(ErrID_Fatal, "Values of WAT_NxNyNz should be above 2", ErrStat, ErrMsg, RoutineName)
+      return
+   endif
+   if (any(p%WAT_DxDyDz<=0)) then
+      call SetErrStat(ErrID_Fatal, "Values of WAT_DxDyDz should be strictly positive", ErrStat, ErrMsg, RoutineName)
+      return
+   endif
+   ! NOTE: We don't check for the dimensions of of the grid here compared to high res because we don't know it for VTKs
+   !       See AWAE_IO_InitGridInfo  
+
+   HAWC_InitInput%nx = p%WAT_NxNyNz(1)
+   HAWC_InitInput%ny = p%WAT_NxNyNz(2)
+   HAWC_InitInput%nz = p%WAT_NxNyNz(3)
+   HAWC_InitInput%dx = p%WAT_DxDyDz(1)
+   HAWC_InitInput%dy = p%WAT_DxDyDz(2)
+   HAWC_InitInput%dz = p%WAT_DxDyDz(3)
+   HAWC_InitInput%G3D%RefHt            = 0.5_ReKi * p%WAT_NxNyNz(3)*p%WAT_DxDyDz(3)          ! reference height; the height (in meters) of the vertical center of the grid (m)
+   HAWC_InitInput%G3D%URef             = 1.0_ReKi    ! Set to 1.0 so that dX = DTime (this affects data storage)
+   HAWC_InitInput%G3D%WindProfileType  = 0           ! Wind profile type (0=constant;1=logarithmic,2=power law)
+   HAWC_InitInput%G3D%PLExp            = 0.0_ReKi
+   HAWC_InitInput%G3D%ScaleMethod      = 0           ! NOTE: setting this to 2 doesn't do the same as what we do below with ScaleBox
+   HAWC_InitInput%G3D%SF               = 1.0_ReKi    ! Turbulence scaling factor for the x direction (-)   [ScaleMethod=1]
+   HAWC_InitInput%G3D%SigmaF           = 1.0_ReKi    ! Turbulence standard deviation to calculate scaling from in x direction (m/s)    [ScaleMethod=2] 
+   HAWC_InitInput%G3D%Z0               = 0.3_ReKi    ! Surface roughness (not used)
+   HAWC_InitInput%G3D%XOffset          = 0.0_ReKi    ! Initial offset in +x direction (shift of wind box)
+
+   WAT_IfW%p%FlowField%PropagationDir  = 0.0_ReKi
+   WAT_IfW%p%FlowField%VFlowAngle      = 0.0_ReKi
+   WAT_IfW%p%FlowField%RotateWindBox   = .false.
+
+   WAT_IfW%p%FlowField%FieldType = Grid3D_FieldType
+   call IfW_HAWC_Init(HAWC_InitInput, -1, WAT_IfW%p%FlowField%Grid3D, FileDat, ErrStat2, ErrMsg2);  if (Failed()) return   ! summary file unit set to -1
+
+   if (p%WAT_ScaleBox) then
+      call WrScr('   WAT: Scaling Box for unit standard deviation and zero mean')
+      call Grid3D_ZeroMean_UnitStd(WAT_IfW%p%FlowField%Grid3D%Vel)
+   endif
+
+   ! Reference position for wind rotation (not used here, but should be set)
+   WAT_IfW%p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, WAT_IfW%p%FlowField%Grid3D%RefHeight]
+
+   WAT_IfW%IsInitialized = .true.
+
+   call Cleanup()
+   return
+
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed =  ErrStat >= AbortErrLev
+      if (Failed) call Cleanup()
+   end function Failed
+   subroutine Cleanup()
+      ! nothing to clean up
+   end subroutine Cleanup
+
+   !  Split out the ending of .u or u.bin from the filename.
+   !  If none given, then append ending and check for file existance
+   subroutine SplitFileName(FileName, BaseName, Ending, ErrStat3, ErrMsg3)
+      character(1024),  intent(in   ) :: FileName
+      character(1024),  intent(  out) :: BaseName
+      character(6),     intent(  out) :: Ending(3)
+      integer(IntKi),   intent(  out) :: ErrStat3
+      character(*),     intent(  out) :: ErrMsg3
+      integer(IntKi)                  :: i,l
+      logical                         :: foundFile
+      ErrStat3 = ErrID_None
+      ErrMsg3  = ""
+      ! check if passed filename ends in .u or u.bin
+      l=len_trim(FileName)
+      if (index(FileName,'.u')>0) then
+         BaseName = FileName(1:l-2)
+         Ending(1)= '.u'
+         inquire(file=trim(BaseName)//trim(Ending(1)), exist=foundfile)
+         if (.not. foundFile) then
+            ErrStat3 = ErrID_Fatal
+            ErrMsg3  = 'Cannot find wake added turbulence Mann box file with name '//trim(BaseName)//trim(Ending(1))
+         endif
+         Ending(2)= '.v'
+         Ending(3)= '.w'
+         return
+      elseif (index(FileName,'u.bin') > 0) then
+         BaseName = FileName(1:l-4)
+         Ending(1)= 'u.bin'
+         inquire(file=trim(BaseName)//trim(Ending(1)), exist=foundfile)
+         if (.not. foundFile) then
+            ErrStat3 = ErrID_Fatal
+            ErrMsg3  = 'Cannot find wake added turbulence Mann box file with name '//trim(BaseName)//trim(Ending(1))
+         endif
+         Ending(2)= 'v.bin'
+         Ending(3)= 'w.bin'
+         return
+      else  ! Ending not included in filename, so try figure it out
+         BaseName = trim(FileName)
+         ! is it .u for file ending
+         Ending(1)= '.u'
+         Ending(2)= '.v'
+         Ending(3)= '.w'
+         inquire(file=trim(BaseName)//trim(Ending(1)),  exist=foundFile)
+         if (foundFile) return
+         ! is it u.bin for file ending
+         Ending(1)= 'u.bin'
+         Ending(2)= 'v.bin'
+         Ending(3)= 'w.bin'
+         inquire(file=trim(BaseName)//trim(Ending(1)),  exist=foundFile)
+         if (foundFile) return
+         ! didn't find file, so error out
+         ErrStat3 = ErrID_Fatal
+         ErrMsg3  = 'Cannot find wake added turbulence Mann box file with name '//trim(BaseName)//'.u '//' or '//trim(BaseName)//'u.bin '
+      endif
+   end subroutine SplitFileName
+   !> If it is a filename of a library, expect following format: FFDB_512x512x64.u where:
+   !!     512x512x64  -- Number of grid points in X,Y,Z -- Nx, Ny, Nz
+   subroutine MannLibDims(BoxFileRoot,RotorDiamRef,Nxyz,Dxyz,ErrStat3,ErrMsg3)
+      character(1024),  intent(in   ) :: BoxFileroot
+      real(ReKi),       intent(in   ) :: RotorDiamRef    ! reference rotordiam
+      integer(IntKi),   intent(  out) :: Nxyz(3)
+      real(ReKi),       intent(  out) :: Dxyz(3)         ! derived based on rotor diameter
+      integer(IntKi),   intent(  out) :: ErrStat3
+      character(*),     intent(  out) :: ErrMsg3
+      integer(IntKi)                  :: i,iLast, n      ! generic indexing stuff
+      character(1)                    :: C0              ! characters for testing
+      real(ReKi), parameter           :: ScaleFact=0.03  ! scale ifactor for Dx,Dy,Dz based on rotor diameter
+      character(1024)                 :: sDigitsX        ! String made of digits and "x"
+      character(11)                   :: CharNums="1234567890X"
+      character(1024), allocatable :: StrArray(:) ! Array of strings extracted from line
+      Nxyz(:)=-1
+
+      ErrStat3 = ErrID_None
+      ErrMsg3  = ""
+
+      ! Set Dxyz
+      Dxyz=real(RotorDiamRef,ReKi)*ScaleFact
+
+      ! --- Create a string made of digits and "x" only, starting from the end of the filename
+      n = len_trim(BoxFileRoot)
+      iLast = n
+      do i=n,1,-1
+         C0 = BoxFileRoot(i:i)
+         call Conv2UC(C0)
+         if ((index(CharNums,C0)==0)) then
             exit
-         end if
-      end do      
-   end if
+         endif
+         iLast=i
+      enddo
+      sDigitsX=BoxFileRoot(iLast:n)
+      call Conv2UC(sDigitsX)
 
-   if (p%NWindVel < 0 .or. p%NWindVel > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NWindVel must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
-   if (p%NOutRadii < 0 .or. p%NOutRadii > 20 ) then
-      CALL SetErrStat( ErrID_Fatal, 'NOutRadii must be in the range [0, 20].', ErrStat, ErrMsg, RoutineName )
-   else
-      do i=1,p%NOutRadii
-         if (p%OutRadii(i) > WD_InitInp%NumRadii - 1 .or. p%OutRadii(i) < 0) then
-            CALL SetErrStat( ErrID_Fatal, 'OutRadii must be in the range [0, NumRadii - 1].', ErrStat, ErrMsg, RoutineName )
-            exit
-         end if
-      end do      
-   end if
-   
-   
-   
-      ! Check that OutFmt is a valid format specifier and will fit over the column headings
-  CALL ChkRealFmtStr( p%OutFmt, 'OutFmt', p%FmtWidth, ErrStat2, ErrMsg2 ) !this sets p%FmtWidth!
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      
-   IF ( p%FmtWidth /= ChanLen ) CALL SetErrStat( ErrID_Warn, 'OutFmt produces a column width of '// &
-         TRIM(Num2LStr(p%FmtWidth))//' instead of '//TRIM(Num2LStr(ChanLen))//' characters.', ErrStat, ErrMsg, RoutineName )
-      
-   
-END SUBROUTINE Farm_ValidateInput
+      ! --- Splitting string according to character "x"
+      call strsplit(sDigitsX, StrArray, 'X')
+      if (size(StrArray)/=3) then
+         ErrStat3 = ErrID_Fatal
+         ErrMsg3  = "Could not find three substrings delimited by 'x' in filename "//trim(BoxFileRoot)// &
+                    ".  Expecting filename to include something like '512x512x64' for 512 by 512 by 64 points"
+         return
+      endif
+      do i=1,3
+         if (.not.(is_integer(StrArray(i), Nxyz(i)))) then
+            ! NOTE: should not happen, unless we have "xx"
+            ErrStat3 = ErrID_Fatal
+            ErrMsg3  = "Could not convert substring `"//trim(StrArray(i))//"` to an integer in filename "//trim(BoxFileRoot)// &
+                       ".  Expecting filename to include something like '512x512x64' for 512 by 512 by 64 points"
+            return
+         endif
+      enddo
+      ErrStat3=ErrID_None
+      ErrMsg3 =""
+   end subroutine MannLibDims
+end subroutine WAT_init
+
+!> Remove mean from all grid nodes and set standard deviation to 1 at all nodes
+! See Grid3D_ScaleTurbulence and ScaleMethod in InflowWind as well
+subroutine Grid3D_ZeroMean_UnitStd(Vel)
+   real(SiKi),  dimension(:,:,:,:), intent(inout) :: Vel !< Array of field velocities 3 x ny x nz x nt
+   integer(IntKi) :: i,j,k
+   real(SiKi)     :: vmean, vstd
+   real(SiKi)     :: nt
+   nt = real(size(Vel, 4), SiKi)
+   do i=1,size(Vel, 2)
+      do j=1,size(Vel, 3)
+         do k=1,3
+            vmean = sum(Vel(k,i,j,:))/nt
+            vstd  = sqrt(sum((Vel(k,i,j,:) - vmean)**2)/nt)
+            if ( EqualRealNos( vstd, 0.0_SiKi) ) then
+               vstd = 1.0_SiKi
+            endif
+            Vel(k,i,j,:) = (Vel(k,i,j,:) - vmean)/vstd
+         enddo
+      enddo
+   enddo
+end subroutine Grid3D_ZeroMean_UnitStd
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes all instances of WakeDynamics
 SUBROUTINE Farm_InitWD( farm, WD_InitInp, ErrStat, ErrMsg )
@@ -1605,11 +595,7 @@ SUBROUTINE Farm_InitWD( farm, WD_InitInp, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg = ""
    
-   ALLOCATE(farm%WD(farm%p%NumTurbines),STAT=ErrStat2)
-   if (ErrStat2 /= 0) then
-      CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for Wake Dynamics data', ErrStat, ErrMsg, RoutineName )
-      return
-   end if
+   ALLOCATE(farm%WD(farm%p%NumTurbines),STAT=ErrStat2);  if (Failed0('Wake Dynamics data')) return;
             
       !.................
       ! Initialize each instance of WD
@@ -1644,6 +630,18 @@ contains
    subroutine cleanup()
       call WD_DestroyInitOutput( WD_InitOut, ErrStat2, ErrMsg2 )
    end subroutine cleanup
+
+   ! check for failed where /= 0 is fatal
+   logical function Failed0(txt)
+      character(*), intent(in) :: txt
+      if (errStat /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate memory for "//trim(txt)
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+      endif
+      Failed0 = errStat >= AbortErrLev
+      if(Failed0) call cleanUp()
+   end function Failed0
 END SUBROUTINE Farm_InitWD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes all instances of FAST using the FASTWrapper module
@@ -1673,11 +671,7 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
    ErrStat = ErrID_None
    ErrMsg = ""
    
-   ALLOCATE(farm%FWrap(farm%p%NumTurbines),STAT=ErrStat2)
-   if (ErrStat2 /= 0) then
-      CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for FAST Wrapper data', ErrStat, ErrMsg, RoutineName )
-      return
-   end if
+   ALLOCATE(farm%FWrap(farm%p%NumTurbines),STAT=ErrStat2);  if (Failed0('FAST Wrapper data')) return;
             
       !.................
       ! Initialize each instance of FAST
@@ -1695,20 +689,12 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
       FWrap_InitInp%NumSC2Ctrl    = SC_InitOutput%NumSC2Ctrl
       FWrap_InitInp%NumSC2CtrlGlob= SC_InitOutput%NumSC2CtrlGlob
       FWrap_InitInp%NumCtrl2SC    = SC_InitOutput%NumCtrl2SC
-      allocate(FWrap_InitInp%fromSCglob(SC_InitOutput%NumSC2CtrlGlob), stat=ErrStat2)
-      if (ErrStat2 /= 0) then
-         CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for FAST Wrapper data `fromSCglob`', ErrStat, ErrMsg, RoutineName )
-         return
-      end if
+      allocate(FWrap_InitInp%fromSCglob(SC_InitOutput%NumSC2CtrlGlob), stat=ErrStat2);  if (Failed0('FAST Wrapper data `fromSCglob`')) return;
       if (SC_InitOutput%NumSC2CtrlGlob>0) then
          FWrap_InitInp%fromSCglob = SC_y%fromSCglob
       endif
       
-      allocate(FWrap_InitInp%fromSC(SC_InitOutput%NumSC2Ctrl), stat=ErrStat2)
-      if (ErrStat2 /= 0) then
-         CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for FAST Wrapper data `fromSC`', ErrStat, ErrMsg, RoutineName )
-         return
-      end if
+      allocate(FWrap_InitInp%fromSC(SC_InitOutput%NumSC2Ctrl), stat=ErrStat2);  if (Failed0('FAST Wrapper data `fromSC`')) return;
       
       if (farm%p%MooringMod > 0) then
          FWrap_Interval = farm%p%dt_mooring    ! when there is a farm-level mooring model, FASTWrapper will be called at the mooring coupling time step
@@ -1736,6 +722,9 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
          FWrap_InitInp%dX_high       = AWAE_InitOutput%dX_high(nt)
          FWrap_InitInp%dY_high       = AWAE_InitOutput%dY_high(nt)
          FWrap_InitInp%dZ_high       = AWAE_InitOutput%dZ_high(nt)
+
+         FWrap_InitInp%Vdist_High   => AWAE_InitOutput%Vdist_High(nt)%data
+
          if (SC_InitOutput%NumSC2Ctrl>0) then
             FWrap_InitInp%fromSC = SC_y%fromSC((nt-1)*SC_InitOutput%NumSC2Ctrl+1:nt*SC_InitOutput%NumSC2Ctrl)
          end if
@@ -1769,6 +758,17 @@ contains
       call FWrap_DestroyInitInput( FWrap_InitInp, ErrStat2, ErrMsg2 )
       call FWrap_DestroyInitOutput( FWrap_InitOut, ErrStat2, ErrMsg2 )
    end subroutine cleanup
+   ! check for failed where /= 0 is fatal
+   logical function Failed0(txt)
+      character(*), intent(in) :: txt
+      if (errStat /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate memory for "//trim(txt)
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+      endif
+      Failed0 = errStat >= AbortErrLev
+      if(Failed0) call cleanUp()
+   end function Failed0
 END SUBROUTINE Farm_InitFAST
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes a farm-level instance of MoorDyn if applicable
@@ -1831,11 +831,7 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
    MD_InitInp%FarmSize  = farm%p%NumTurbines                    ! number of turbines in the array. >0 tells MoorDyn to operate in farm mode
    
    ALLOCATE( MD_InitInp%PtfmInit(6,farm%p%NumTurbines), MD_InitInp%TurbineRefPos(3,farm%p%NumTurbines), STAT = ErrStat2 )
-   IF (ErrStat2 /= 0) THEN
-      CALL SetErrStat(ErrID_Fatal,"Error allocating MoorDyn PtfmInit and TurbineRefPos initialization inputs in FAST.Farm.",ErrStat,ErrMsg,RoutineName)
-      CALL Cleanup()
-      RETURN
-   END IF
+   if (Failed0("MoorDyn PtfmInit and TurbineRefPos initialization inputs in FAST.Farm.")) return;
    
    ! gather spatial initialization inputs for Farm-level MoorDyn
    DO nt = 1,farm%p%NumTurbines              
@@ -1851,43 +847,27 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
 
    ! allocate MoorDyn inputs (assuming size 2 for linear interpolation/extrapolation... >
    ALLOCATE( farm%MD%Input( 2 ), farm%MD%InputTimes( 2 ), STAT = ErrStat2 )
-   IF (ErrStat2 /= 0) THEN
-      CALL SetErrStat(ErrID_Fatal,"Error allocating MD%Input and MD%InputTimes.",ErrStat,ErrMsg,RoutineName)
-      CALL Cleanup()
-      RETURN
-   END IF
+   if (Failed0("MD%Input and MD%InputTimes.")) return;
 
    ! initialize MoorDyn
    CALL MD_Init( MD_InitInp, farm%MD%Input(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z, &
                  farm%MD%OtherSt, farm%MD%y, farm%MD%m, farm%p%DT_mooring, MD_InitOut, ErrStat2, ErrMsg2 )
+   if (Failed()) return;
    
    farm%MD%IsInitialized = .true.
 
-   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) then
-      call cleanup()
-      return
-   end if
-   
    
    ! Copy MD inputs over into the 2nd entry of the input array, to allow the first extrapolation in FARM_MD_Increment
-   CALL MD_CopyInput (farm%MD%Input(1),  farm%MD%Input(2),  MESH_NEWCOPY, Errstat2, ErrMsg2)
-   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+   CALL MD_CopyInput (farm%MD%Input(1),  farm%MD%Input(2),  MESH_NEWCOPY, Errstat2, ErrMsg2);  if (Failed()) return;
    farm%MD%InputTimes(2) = -0.1_DbKi
    
-   CALL MD_CopyInput (farm%MD%Input(1), farm%MD%u,  MESH_NEWCOPY, Errstat2, ErrMsg2) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
-   CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
+   CALL MD_CopyInput (farm%MD%Input(1), farm%MD%u,  MESH_NEWCOPY, Errstat2, ErrMsg2);  if (Failed()) return; ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
    
    
    ! Set up mesh maps between MoorDyn and floating platforms (or substructure).
    ! allocate mesh mappings for coupling farm-level MoorDyn with OpenFAST instances
    ALLOCATE( farm%m%MD_2_FWrap(farm%p%NumTurbines), farm%m%FWrap_2_MD(farm%p%NumTurbines), STAT = ErrStat2 )
-   IF (ErrStat2 /= 0) THEN
-      CALL SetErrStat(ErrID_Fatal,"Error allocating MD_2_FWrap and FWrap_2_MD.",ErrStat,ErrMsg,RoutineName)
-      CALL Cleanup()
-      RETURN
-   END IF
+   if (Failed0("MD_2_FWrap and FWrap_2_MD.")) return;
    
    ! MoorDyn point mesh to/from ElastoDyn (or SubDyn) point mesh
    do nt = 1,farm%p%NumTurbines
@@ -1895,7 +875,7 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
       
       ! loads
       CALL MeshMapCreate( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%SubstructureLoads_Tmp_Farm, farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':MD_2_FWrap' )
+      if (Failed()) return;
      
       ! kinematics
       IF (farm%FWrap(nt)%m%Turbine%p_FAST%CompSub == Module_SD) then
@@ -1905,7 +885,7 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
       END IF
    
       CALL MeshMapCreate( SubstructureMotion, farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':FWrap_2_MD' )
+      if (Failed()) return;
 
    end do
    
@@ -1919,6 +899,24 @@ contains
       call MD_DestroyInitInput(  MD_InitInp, ErrStat2, ErrMsg2 )
       call MD_DestroyInitOutput( MD_InitOut, ErrStat2, ErrMsg2 )
    end subroutine cleanup
+
+   logical function Failed()
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+      Failed = errStat >= AbortErrLev
+      if (Failed) call cleanup()
+   end function Failed
+
+   ! check for failed where /= 0 is fatal
+   logical function Failed0(txt)
+      character(*), intent(in) :: txt
+      if (errStat /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate memory for "//trim(txt)
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+      endif
+      Failed0 = errStat >= AbortErrLev
+      if(Failed0) call cleanUp()
+   end function Failed0
 END SUBROUTINE Farm_InitMD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine moves a farm-level MoorDyn simulation one step forward, to catch up with FWrap_Increment
@@ -1946,16 +944,16 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
 
    ! Do a linear extrapolation to estimate MoorDyn inputs at time n_ss+1
    CALL MD_Input_ExtrapInterp(farm%MD%Input, farm%MD%InputTimes, farm%MD%u, t_next, ErrStat2, ErrMsg2)
-   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+   if (Failed()) return;
    
    ! Shift "window" of MD%Input: move values of Input and InputTimes from index 1 to index 2
    CALL MD_CopyInput (farm%MD%Input(1),  farm%MD%Input(2),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
-   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+   if (Failed()) return;
    farm%MD%InputTimes(2) = farm%MD%InputTimes(1)
 
    ! update index 1 entries with the new extrapolated values
    CALL MD_CopyInput (farm%MD%u,  farm%MD%Input(1),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
-   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+   if (Failed()) return;
    farm%MD%InputTimes(1) = t_next  
 
 
@@ -1971,7 +969,7 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
          END IF
    
          CALL Transfer_Point_to_Point( SubstructureMotion, farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MD%CoupledKinematics' )
+         if (Failed()) return;
 
       !end if
    end do
@@ -1981,18 +979,18 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
    
    CALL MD_UpdateStates( t, n_FMD, farm%MD%Input, farm%MD%InputTimes, farm%MD%p, farm%MD%x,  &
                          farm%MD%xd, farm%MD%z, farm%MD%OtherSt, farm%MD%m, ErrStat2, ErrMsg2 )
-   CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (Failed()) return;
       
    
    CALL MD_CalcOutput( t, farm%MD%Input(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z,  &
                        farm%MD%OtherSt, farm%MD%y, farm%MD%m, ErrStat2, ErrMsg2 )
-   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (Failed()) return;
    
    
    ! ----- map MD load outputs to each turbine's substructure -----   (taken from U FullOpt1...)
    do nt = 1,farm%p%NumTurbines
    
-      if (farm%MD%p%nCpldCons(nt) > 0 ) then   ! only map loads if MoorDyn has connections to this turbine (currently considering only Point connections <<< )
+      if (farm%MD%p%nCpldPoints(nt) > 0 ) then   ! only map loads if MoorDyn has connections to this turbine (currently considering only Point connections <<< )
          
          IF (farm%FWrap(nt)%m%Turbine%p_FAST%CompSub == Module_SD) then
             SubstructureMotion => farm%FWrap(nt)%m%Turbine%SD%y%y3Mesh
@@ -2004,12 +1002,17 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
          CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%SubstructureLoads_Tmp_Farm,  &
                                        farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
                                        farm%MD%Input(1)%CoupledKinematics(nt), SubstructureMotion ) !u_MD and y_ED contain the displacements needed for moment calculations
+         if (Failed()) return;
          
-         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
       end if
    end do
    
-         
+
+contains
+   logical function Failed()
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+      Failed = errStat >= AbortErrLev
+   end function Failed
 end subroutine Farm_MD_Increment
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine performs the initial call to calculate outputs (at t=0).
@@ -2063,7 +1066,6 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
       !--------------------
       ! 1c. transfer y_AWAE to u_F and u_WD         
    
-   call Transfer_AWAE_to_FAST(farm)      
    call Transfer_AWAE_to_WD(farm)   
 
    if (farm%p%UseSC) then
@@ -2155,8 +1157,7 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    !.......................................................................................
    ! Transfer y_AWAE to u_F and u_WD
    !.......................................................................................
-   
-   call Transfer_AWAE_to_FAST(farm)              
+
    call Transfer_AWAE_to_WD(farm)   
    
    !.......................................................................................
@@ -2624,7 +1625,7 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
          farm%m%AllOuts(WVAmbZ(iVelPt)) = vel(3)
          
             ! Disturbed wind velocity (including wakes) for point, pt,  in global coordinates (from the low-resolution domain), m/s
-         call TrilinearInterpRegGrid(farm%AWAE%m%Vdist_low, pt, (/farm%p%nX_low,farm%p%nY_low,farm%p%nZ_low/), vel)
+         call TrilinearInterpRegGrid(farm%AWAE%m%Vdist_low_full, pt, (/farm%p%nX_low,farm%p%nY_low,farm%p%nZ_low/), vel)
          farm%m%AllOuts(WVDisX(iVelPt)) = vel(1)
          farm%m%AllOuts(WVDisY(iVelPt)) = vel(2)
          farm%m%AllOuts(WVDisZ(iVelPt)) = vel(3)
@@ -2689,6 +1690,17 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
    !$OMP END PARALLEL DO  
    if (ErrStat >= AbortErrLev) return
 
+   ! IO operation, not done using OpenMP
+   DO nt = 1,farm%p%NumTurbines
+      call WD_WritePlaneOutputs( t, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
+                     farm%WD(nt)%OtherSt, farm%WD(nt)%y, farm%WD(nt)%m, ErrStat2, ErrMsg2 )         
+      if (ErrStat2 >= AbortErrLev) then
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)       
+      endif
+   END DO
+   if (ErrStat >= AbortErrLev) return
+
+
    call Transfer_WD_to_AWAE(farm)
    
    if ( farm%p%UseSC ) then
@@ -2732,7 +1744,6 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
 
       !--------------------
       ! 2. Transfer y_AWAE to u_F  and u_WD   
-   call Transfer_AWAE_to_FAST(farm)      
    call Transfer_AWAE_to_WD(farm)   
    
    
@@ -2749,11 +1760,13 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
 end subroutine FARM_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine ends the modules used in this simulation. It does not exit the program.
-!!    -  In parallel: 
-!!       1. CALL AWAE_End
-!!       2. CALL WD_End
-!!       3. CALL SC_End
-!!       4. CALL F_End
+!!    -  In parallel:
+!!       1. CALL WAT_End 
+!!       2. CALL AWAE_End
+!!       3. CALL WD_End
+!!       4. CALL SC_End
+!!       5. CALL FWrap_End
+!!       6. CALL MD_End
 !!    -  Close Output File   
 subroutine FARM_End(farm, ErrStat, ErrMsg)
    type(All_FastFarm_Data),  INTENT(INOUT) :: farm  
@@ -2775,7 +1788,16 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
    !.......................................................................................
    
       !--------------
-      ! 1. end AWAE   
+      ! 1. end AWAE
+   if (farm%WAT_IfW%IsInitialized) then
+      call InflowWind_End(farm%WAT_IfW%u, farm%WAT_IfW%p, farm%WAT_IfW%x, farm%WAT_IfW%xd, farm%WAT_IfW%z, &
+                     farm%WAT_IfW%OtherSt, farm%WAT_IfW%y, farm%WAT_IfW%m, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         farm%WAT_IfW%IsInitialized = .false.
+   endif
+
+      !--------------
+      ! 2. end AWAE
    if (farm%AWAE%IsInitialized) then      
       call AWAE_End( farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
                      farm%AWAE%OtherSt, farm%AWAE%y, farm%AWAE%m, ErrStat2, ErrMsg2 )
@@ -2783,11 +1805,9 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
          farm%AWAE%IsInitialized = .false.
    end if      
       
-   
       !--------------
-      ! 2. end WakeDynamics
+      ! 3. end WakeDynamics
    if (allocated(farm%WD)) then
-      
       DO nt = 1,farm%p%NumTurbines
          if (farm%WD(nt)%IsInitialized) then      
             call WD_End( farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
@@ -2796,12 +1816,10 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
             farm%WD(nt)%IsInitialized = .false.
          end if      
       END DO
-      
    end if
    
       !--------------
-      ! 3. End supercontroller
-                     
+      ! 4. End supercontroller
    if ( farm%p%useSC ) then
       CALL SC_End(farm%SC%uInputs, farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, farm%SC%OtherState, &
                      farm%SC%y, farm%SC%m, ErrStat2, ErrMsg2)
@@ -2809,9 +1827,8 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
    end if
    
       !--------------
-      ! 4. End each instance of FAST (each instance of FAST can be done in parallel, too)   
+      ! 5. End each instance of FAST (each instance of FAST can be done in parallel, too)   
    if (allocated(farm%FWrap)) then
-      
       DO nt = 1,farm%p%NumTurbines
          if (farm%FWrap(nt)%IsInitialized) then
             CALL FWrap_End( farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
@@ -2820,11 +1837,10 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
             farm%FWrap(nt)%IsInitialized = .false.
          end if
       END DO
-      
    end if   
    
       !--------------
-      ! 5. End farm-level MoorDyn
+      ! 6. End farm-level MoorDyn
    if (farm%p%MooringMod == 3) then
       call MD_End(farm%MD%Input(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z, farm%MD%OtherSt, farm%MD%y, farm%MD%m, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -2879,18 +1895,6 @@ SUBROUTINE Transfer_AWAE_to_WD(farm)
    
 END SUBROUTINE Transfer_AWAE_to_WD
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Transfer_AWAE_to_FAST(farm)
-   type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
-
-   integer(intKi)  :: nt
-   
-   DO nt = 1,farm%p%NumTurbines
-         ! allocated in FAST's IfW initialization as 3,x,y,z,t
-      farm%FWrap(nt)%u%Vdist_High = farm%AWAE%y%Vdist_High(nt)%data
-   END DO
-   
-END SUBROUTINE Transfer_AWAE_to_FAST
-!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Transfer_WD_to_AWAE(farm)
    type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
 
@@ -2902,7 +1906,10 @@ SUBROUTINE Transfer_WD_to_AWAE(farm)
       farm%AWAE%u%Vx_wake(:,:,:,nt)  = farm%WD(nt)%y%Vx_wake2       ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
       farm%AWAE%u%Vy_wake(:,:,:,nt)  = farm%WD(nt)%y%Vy_wake2       ! Horizontal wake velocity deficit at wake planes, distributed radially, for each turbine
       farm%AWAE%u%Vz_wake(:,:,:,nt)  = farm%WD(nt)%y%Vz_wake2       ! "Vertical" wake velocity deficit at wake planes, distributed radially, for each turbine
-      farm%AWAE%u%D_wake(:,nt)       = farm%WD(nt)%y%D_wake         ! Wake diameters at wake planes for each turbine      
+      farm%AWAE%u%D_wake(:,nt)       = farm%WD(nt)%y%D_wake         ! Wake diameters at wake planes for each turbine
+      if (farm%p%WAT /= Mod_WAT_None) then
+         farm%AWAE%u%WAT_k(:,:,:,nt) = farm%WD(nt)%y%WAT_k          ! scaling factor for each wake plane for WAT
+      endif
    END DO
    
 END SUBROUTINE Transfer_WD_to_AWAE

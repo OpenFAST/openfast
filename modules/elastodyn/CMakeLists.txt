@@ -18,7 +18,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/ElastoDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/ElastoDyn_Types.f90)
 endif()
 
-add_library(elastodynlib 
+add_library(elastodynlib STATIC
   src/ElastoDyn.f90
   src/ElastoDyn_IO.f90
   src/ElastoDyn_AllBldNdOuts_IO.f90

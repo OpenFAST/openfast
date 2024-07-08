@@ -24,7 +24,6 @@ MODULE SeaState_Output
    USE                              NWTC_Library
    USE                              SeaState_Types
    USE                              Waves ! for WaveNumber
-   USE                              VersionInfo
    
    IMPLICIT                         NONE
    
@@ -232,25 +231,18 @@ MODULE SeaState_Output
 CONTAINS
 
 !====================================================================================================
-SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, NStepWave, WaveDT, X_HalfWidth, Y_HalfWidth, &
-                                     Z_Depth, deltaGrid, NGrid, WaveElev1, WaveElev2, &
-                                     WaveVel, WaveAcc, WaveDynP, ErrStat, ErrMsg )
+SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, WaveField, WaveDT, X_HalfWidth, Y_HalfWidth, &
+                                     deltaGrid, NGrid, ErrStat, ErrMsg )
 
       ! Passed variables
    CHARACTER(*),                  INTENT( IN    )   :: Rootname             ! filename including full path, minus any file extension.
    TYPE(ProgDesc),                INTENT( IN    )   :: SeaSt_Prog           ! the name/version/date of the SeaState program
-   INTEGER,                       INTENT( IN    )   :: NStepWave            ! Number of time steps for the wave kinematics arrays
+   TYPE(SeaSt_WaveFieldType),     INTENT( IN    )   :: WaveField            !< WaveFieldType
    real(DbKi),                    intent( in    )   :: WaveDT
    real(ReKi),                    intent( in    )   :: X_HalfWidth
    real(ReKi),                    intent( in    )   :: Y_HalfWidth
-   real(ReKi),                    intent( in    )   :: Z_Depth
    real(ReKi),                    intent( in    )   :: deltaGrid(3)
    INTEGER,                       INTENT( IN    )   :: NGrid(3)             ! Number of grid points for the wave kinematics arrays
-   REAL(SiKi), pointer,           INTENT( IN    )   :: WaveElev1 (:,:,: )     ! Instantaneous wave elevations at requested locations - 1st order
-   REAL(SiKi), pointer,           INTENT( IN    )   :: WaveElev2 (:,:,: )     ! Instantaneous wave elevations at requested locations - 2nd order
-   REAL(SiKi), pointer,           INTENT( IN    )   :: WaveVel (:,:,:,:,:)     ! The wave velocities (time,node,component)
-   REAL(SiKi), pointer,           INTENT( IN    )   :: WaveAcc (:,:,:,:,:)     ! The wave accelerations (time,node,component)
-   REAL(SiKi), pointer,           INTENT( IN    )   :: WaveDynP(:,:,:,:)       ! The wave dynamic pressure (time,node)
    INTEGER,                       INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),                  INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
       
@@ -280,7 +272,7 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, NStepWave, WaveDT, X_
       y_gridPts(i+1) = -Y_HalfWidth + deltaGrid(2)*i
    end do
    do i = 0, NGrid(3)-1
-      z_gridPts(i+1) =  - ( 1.0 - cos( real((NGrid(3) - 1) - i, ReKi) * deltaGrid(3) )  ) * Z_Depth
+      z_gridPts(i+1) =  - ( 1.0 - cos( real((NGrid(3) - 1) - i, ReKi) * deltaGrid(3) )  ) * WaveField%GridParams%Z_Depth
    end do
    
    ! Write the increments from [0, NStepWave] even though for OpenFAST data, NStepWave = 0, but for arbitrary user data this may not be true.
@@ -296,7 +288,7 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, NStepWave, WaveDT, X_
       
       call WriteWvKinHeader( UnWv, iFile, Delim, SeaSt_Prog, waveDT, -z_gridPts(1), NGrid, deltaGrid )
    
-      DO m= 0,NStepWave
+      DO m= 0,WaveField%NStepWave
          DO k = 1, NGrid(3)
             do j = 1, NGrid(2)
                do i = 1, NGrid(1)
@@ -307,19 +299,19 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, NStepWave, WaveDT, X_
                   
                   SELECT CASE (iFile)
                      CASE (1)              
-                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveVel (m,i,j,k,1)  
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveField%WaveVel (m,i,j,k,1)  
                      CASE (2)              
-                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveVel (m,i,j,k,2)  
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveField%WaveVel (m,i,j,k,2)  
                      CASE (3)              
-                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveVel (m,i,j,k,3)  
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveField%WaveVel (m,i,j,k,3)  
                      CASE (4)              
-                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveAcc (m,i,j,k,1) 
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveField%WaveAcc (m,i,j,k,1) 
                      CASE (5)              
-                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveAcc (m,i,j,k,2) 
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveField%WaveAcc (m,i,j,k,2) 
                      CASE (6)              
-                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveAcc (m,i,j,k,3) 
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveField%WaveAcc (m,i,j,k,3) 
                      CASE (7)              
-                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveDynP(m,i,j,k  )  
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveField%WaveDynP(m,i,j,k  )  
                   END SELECT
             !END IF
                END DO  ! for i
@@ -349,13 +341,13 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, NStepWave, WaveDT, X_
   call WriteWvKinHeader( UnWv, 8, Delim, SeaSt_Prog, waveDT, -z_gridPts(1), NGrid, deltaGrid )
    
    
-   DO m= 0,NStepWave
+   DO m= 0,WaveField%NStepWave
       do j = 1, NGrid(2)
          do i = 1, NGrid(1)   
-            if ( associated(WaveElev2) ) then
-               WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveElev1(m,i,j) + WaveElev2(m,i,j)
+            if ( allocated(WaveField%WaveElev2) ) then
+               WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveField%WaveElev1(m,i,j) + WaveField%WaveElev2(m,i,j)
             else
-               WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveElev1(m,i,j)
+               WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveField%WaveElev1(m,i,j)
             end if
          end do
          WRITE (UnWv,'()', IOSTAT=ErrStat)          ! write the line return 
@@ -435,9 +427,9 @@ subroutine SeaStOut_WriteWaveElev0( Rootname, NStepWave, NGrid, WaveElev1, WaveE
    CHARACTER(*),                  INTENT( IN    )   :: Rootname             ! filename including full path, minus any file extension.
    INTEGER,                       INTENT( IN    )   :: NStepWave            ! Number of time steps for the wave kinematics arrays
    INTEGER,                       INTENT( IN    )   :: NGrid(3)             ! Number of grid points for the wave kinematics arrays
-   REAL(SiKi), pointer,           INTENT( IN    )   :: WaveElev1 (:,:,: )     ! Instantaneous wave elevations at requested locations - 1st order
-   REAL(SiKi), pointer,           INTENT( IN    )   :: WaveElev2 (:,:,: )     ! Instantaneous wave elevations at requested locations - 2nd order
-   REAL(SiKi), pointer,           INTENT( IN    )   :: WaveTime (:    )     ! The time values for the wave kinematics  (time)
+   REAL(SiKi), allocatable,       INTENT( IN    )   :: WaveElev1 (:,:,: )   ! Instantaneous wave elevations at requested locations - 1st order
+   REAL(SiKi), allocatable,       INTENT( IN    )   :: WaveElev2 (:,:,: )   ! Instantaneous wave elevations at requested locations - 2nd order
+   REAL(SiKi), allocatable,       INTENT( IN    )   :: WaveTime (:    )     ! The time values for the wave kinematics  (time)
    INTEGER,                       INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),                  INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
       
@@ -466,12 +458,11 @@ subroutine SeaStOut_WriteWaveElev0( Rootname, NStepWave, NGrid, WaveElev1, WaveE
    ! Write the increments from [0, NStepWave] even though for OpenFAST data, NStepWave = 0, but for arbitrary user data this may not be true.
    ! As a result for WaveMod=5,6 we shouldn't assume periodic waves over the period WaveTMax
    DO m= 0,NStepWave
-      
-            if ( associated(WaveElev2) ) then
-               WRITE(UnWv,Frmt)   WaveTime(m), WaveElev1(m,i,j) + WaveElev2(m,i,j)
-            else
-               WRITE(UnWv,Frmt)   WaveTime(m), WaveElev1(m,i,j)
-            end if 
+      if ( allocated(WaveElev2) ) then
+         WRITE(UnWv,Frmt)   WaveTime(m), WaveElev1(m,i,j) + WaveElev2(m,i,j)
+      else
+         WRITE(UnWv,Frmt)   WaveTime(m), WaveElev1(m,i,j)
+      end if 
    END DO
       
    CLOSE( UnWv, IOSTAT=ErrStat )
@@ -988,11 +979,10 @@ SUBROUTINE SeaStOut_CloseOutput ( p, ErrStat, ErrMsg )
 END SUBROUTINE SeaStOut_CloseOutput
 !====================================================================================================
 
-SUBROUTINE SeaStOut_WrSummaryFile(InitInp, InputFileData, p, Waves_InitOut, ErrStat, ErrMsg )
+SUBROUTINE SeaStOut_WrSummaryFile(InitInp, InputFileData, p, ErrStat, ErrMsg )
       TYPE(SeaSt_InitInputType),       INTENT(IN   )  :: InitInp           !< Input data for initialization routine.
       TYPE(SeaSt_InputFile)    ,       INTENT(IN   )  :: InputFileData     !< Data from input file
       TYPE(SeaSt_ParameterType),       INTENT(IN   )  :: p                 !< Parameters      
-      TYPE(Waves_InitOutputType),      INTENT(IN   )  :: Waves_InitOut     !< Initialization Outputs from the Waves submodule initialization
       INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat           !< Error status of the operation
       CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
@@ -1032,15 +1022,14 @@ SUBROUTINE SeaStOut_WrSummaryFile(InitInp, InputFileData, p, Waves_InitOut, ErrS
       
       WRITE (UnSum,'(/,A/)', IOSTAT=ErrStat2)  'This summary file was generated by '//trim(SeaSt_ProgDesc%Name)//' on '//CurDate()//' at '//CurTime()//'.'
 
-      WRITE( UnSum, '(A/)') trim(GetVersion(SeaSt_ProgDesc))
-      IF (InputFileData%Waves%WaveMod /= 0 .and. InputFileData%Waves%WaveMod /= 6)  THEN
+      IF (InputFileData%WaveMod /= WaveMod_None .and. InputFileData%WaveMod /= WaveMod_ExtFull)  THEN
             
-            WRITE( UnSum, '(1X,A61,F8.2,A4/)' )           'The Mean Sea Level to Still Water Level (MSL2SWL) Offset is :',InputFileData%MSL2SWL,' (m)'
-            WRITE( UnSum, '(1X,A15,F8.2,A8)' )            'Water Density: ', InputFileData%Waves%WtrDens, '(kg/m^3)'
-            WRITE( UnSum, '(1X,A15,F8.2,A20,F8.2,A19)' )  'Water Depth  : ', InputFileData%Waves%WtrDpth - InputFileData%MSL2SWL, '(m) relative to MSL; ', &
-                                                                             InputFileData%Waves%WtrDpth,                         '(m) relative to SWL'
-            WRITE( UnSum, '(1X,A15,F8.2,A20,F8.2,A19/)' ) 'Grid Z_Depth : ', InputFileData%Z_Depth - InputFileData%MSL2SWL, '(m) relative to MSL; ', &
-                                                                             InputFileData%Z_Depth,                         '(m) relative to SWL'
+            WRITE( UnSum, '(1X,A61,F8.2,A4/)' )           'The Mean Sea Level to Still Water Level (MSL2SWL) Offset is :',p%WaveField%MSL2SWL,' (m)'
+            WRITE( UnSum, '(1X,A15,F8.2,A8)' )            'Water Density: ', p%WaveField%WtrDens,                         '(kg/m^3)'
+            WRITE( UnSum, '(1X,A15,F8.2,A20,F8.2,A19)' )  'Water Depth  : ', p%WaveField%WtrDpth,                         '(m) relative to MSL; ', &
+                                                                             p%WaveField%EffWtrDpth,                      '(m) relative to SWL'
+            WRITE( UnSum, '(1X,A15,F8.2,A20,F8.2,A19/)' ) 'Grid Z_Depth : ', InputFileData%Z_Depth - p%WaveField%MSL2SWL, '(m) relative to MSL; ', &
+                                                                             InputFileData%Z_Depth,                       '(m) relative to SWL'
       end if
       
       Frmt  = '(1X,ES18.4e2,2x,ES18.4e2,2x,ES18.4e2,2x,ES18.4e2)'
@@ -1050,7 +1039,7 @@ SUBROUTINE SeaStOut_WrSummaryFile(InitInp, InputFileData, p, Waves_InitOut, ErrS
       WRITE( UnSum, '(1X,A78)' )   '            Xi                  Yi  Zi relative to MSL  Z  relative to SWL'
       do i= 1, p%NGridPts
          ! NOTE: The Waves%WaveKinxi, yi, zi arrays hold all the grid point locations
-         WRITE(UnSum,Frmt)   InputFileData%Waves%WaveKinGridxi(i),  InputFileData%Waves%WaveKinGridyi(i),  InputFileData%Waves%WaveKinGridzi(i) + InputFileData%MSL2SWL,  InputFileData%Waves%WaveKinGridzi(i)
+         WRITE(UnSum,Frmt)   InputFileData%Waves%WaveKinGridxi(i),  InputFileData%Waves%WaveKinGridyi(i),  InputFileData%Waves%WaveKinGridzi(i) + p%WaveField%MSL2SWL,  InputFileData%Waves%WaveKinGridzi(i)
       end do
  
       !   ! Write User-requested Wave Kinematics locations
@@ -1062,7 +1051,7 @@ SUBROUTINE SeaStOut_WrSummaryFile(InitInp, InputFileData, p, Waves_InitOut, ErrS
          Frmt  = '(1X,I5, 2X,ES18.4e2,2x,ES18.4e2,2x,ES18.4e2,2x,ES18.4e2)'
          do i= 1, p%NWaveKin
             ! NOTE: The InputFileData%WaveKinxi, yi, zi arrays hold the User-request kinematics output locations
-            WRITE(UnSum,Frmt)   i, p%WaveKinxi(i),  p%WaveKinyi(i),  p%WaveKinzi(i) + InputFileData%MSL2SWL,  p%WaveKinzi(i)
+            WRITE(UnSum,Frmt)   i, p%WaveKinxi(i),  p%WaveKinyi(i),  p%WaveKinzi(i) + p%WaveField%MSL2SWL,  p%WaveKinzi(i)
          end do
                
       else
@@ -1090,7 +1079,7 @@ SUBROUTINE SeaStOut_WrSummaryFile(InitInp, InputFileData, p, Waves_InitOut, ErrS
          end do
       end if
          
-      IF (InputFileData%Waves%WaveMod /= 6)  THEN   
+      IF (InputFileData%WaveMod /= WaveMod_ExtFull)  THEN
             ! Write wave kinematics at (0,0)
          WRITE( UnSum,  '(/)' )         
          WRITE( UnSum, '(1X,A28/)' )   'Wave Kinematics DFT at (0,0)'
@@ -1101,10 +1090,10 @@ SUBROUTINE SeaStOut_WrSummaryFile(InitInp, InputFileData, p, Waves_InitOut, ErrS
                   '   (-)  ', '  (1/m)  ', '   (rad/s)   ', '     (deg)    ', '       (m)         ','       (m)         '
 
          ! Write the data
-         DO I = -1*Waves_InitOut%NStepWave2+1,Waves_InitOut%NStepWave2
-            WaveNmbr   = WaveNumber ( I*Waves_InitOut%WaveDOmega, InitInp%Gravity, InputFileData%Waves%WtrDpth )
-            WRITE( UnSum, '(1X,I10,2X,ES14.5,2X,ES14.5,2X,ES14.5,2X,ES14.5,7X,ES14.5)' ) I, WaveNmbr, I*Waves_InitOut%WaveDOmega, &
-                     Waves_InitOut%WaveDirArr(ABS(I)),  Waves_InitOut%WaveElevC0( 1,ABS(I ) ) ,   Waves_InitOut%WaveElevC0( 2, ABS(I ) )*SIGN(1,I)
+         DO I = -1*p%WaveField%NStepWave2+1, p%WaveField%NStepWave2
+            WaveNmbr   = WaveNumber ( I*p%WaveField%WaveDOmega, InitInp%Gravity, p%WaveField%EffWtrDpth )
+            WRITE( UnSum, '(1X,I10,2X,ES14.5,2X,ES14.5,2X,ES14.5,2X,ES14.5,7X,ES14.5)' ) I, WaveNmbr, I*p%WaveField%WaveDOmega, &
+                     p%WaveField%WaveDirArr(ABS(I)),  p%WaveField%WaveElevC0( 1,ABS(I ) ) ,   p%WaveField%WaveElevC0( 2, ABS(I ) )*SIGN(1,I)
          END DO
       END IF
          

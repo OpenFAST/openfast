@@ -24,7 +24,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/WAMIT2.txt ${CMAKE_CURRENT_LIST_DIR}/src/WAMIT2_Types.f90)
 endif()
 
-add_library(hydrodynlib 
+add_library(hydrodynlib STATIC
   src/Conv_Radiation.f90
   src/HydroDyn.f90
   src/HydroDyn_Input.f90
@@ -47,7 +47,7 @@ add_library(hydrodynlib
 target_link_libraries(hydrodynlib seastlib nwtclibs)
 
 # HydroDyn Driver Subs Library
-add_library(hydrodyn_driver_subs
+add_library(hydrodyn_driver_subs STATIC
   src/HydroDyn_DriverSubs.f90
 )
 target_link_libraries(hydrodyn_driver_subs hydrodynlib)
@@ -68,9 +68,6 @@ if(APPLE OR UNIX)
 endif()
 
 
-#add_executable(ss_radiation
-#  src/SS_Radiation_DriverCode.f90)
-#target_link_libraries(ss_radiation hydrodynlib nwtclibs)
 
 install(TARGETS hydrodynlib hydrodyn_driver hydrodyn_driver_subs hydrodyn_c_binding
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

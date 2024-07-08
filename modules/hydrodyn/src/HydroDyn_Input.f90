@@ -228,16 +228,6 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
       if (Failed())  return;
    
 
-!bjj: should we add this?
-!test for numerical stability
-!      IF ( FP_InitData%RdtnDT <= FP_InitData%RdtnTMax*EPSILON(FP_InitData%RdtnDT) )  THEN  ! Test RdtnDT and RdtnTMax to ensure numerical stability -- HINT: see the use of OnePlusEps."
-!         ErrStat = ErrID_Fatal
-!         ErrMsg2 = ' RdtnDT must be greater than '//TRIM ( Num2LStr( RdtnTMax*EPSILON(RdtnDT) ) )//' seconds.'
-!         if (Failed())  return;
-!      END IF
-
-
-
    !-------------------------------------------------------------------------------------------------
    ! Data section for 2nd order WAMIT forces
    !-------------------------------------------------------------------------------------------------
@@ -374,9 +364,19 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
       END IF
           
       DO I = 1,InputFileData%Morison%NAxCoefs
-            ! read the table entries   AxCoefID   CdAx  CaAx    in the HydroDyn input file
+         ! read the table entries AxCoefID, AxCd, AxCa, AxCp, AxFdMod, AxVnCOff, AxFDLoFSc in the HydroDyn input file
+         ! Try reading in 7 entries first
          call ParseAry( FileInfo_In, CurLine, ' axial coefficients line '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
-            if (Failed())  return;
+         if ( ErrStat2 /= 0 ) then ! Try reading in 5 entries
+            tmpReArray(6) = -1.0  ! AxVnCoff
+            tmpReArray(7) =  1.0  ! AxFDLoFSc
+            call ParseAry( FileInfo_In, CurLine, ' axial coefficients line '//trim( Int2LStr(I)), tmpReArray(1:5), 5, ErrStat2, ErrMsg2, UnEc )
+            if ( ErrStat2 /= 0 ) then ! Try reading in 4 entries
+               tmpReArray(5) =  0.0  ! AxFdMod
+               call ParseAry( FileInfo_In, CurLine, ' axial coefficients line '//trim( Int2LStr(I)), tmpReArray(1:4), 4, ErrStat2, ErrMsg2, UnEc )
+               if (Failed())  return;
+            end if
+         end if
          InputFileData%Morison%AxialCoefs(I)%AxCoefID = NINT(tmpReArray(1))
          InputFileData%Morison%AxialCoefs(I)%AxCd     =      tmpReArray(2)
          InputFileData%Morison%AxialCoefs(I)%AxCa     =      tmpReArray(3)
@@ -1127,49 +1127,26 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       !-------------------------------------------------------------------------
       ! Check environmental conditions
       !-------------------------------------------------------------------------
-
- 
-      ! WtrDens - Water density.
-
-   IF ( InputFileData%Morison%WtrDens < 0.0 )  THEN
-      CALL SetErrStat( ErrID_Fatal,'WtrDens must not be negative.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-
-
-      ! WtrDpth - Water depth
+   if (.not. associated(InitInp%WaveField)) then
+      call SetErrStat( ErrID_Fatal,' No SeaState information available.',ErrStat,ErrMsg,RoutineName)
+      return
+   endif
    
-   ! First adjust water depth based on MSL2SWL values
-   InputFileData%Morison%WtrDpth = InputFileData%Morison%WtrDpth + InputFileData%Morison%MSL2SWL
-   
-   IF ( InputFileData%Morison%WtrDpth <= 0.0 )  THEN
-      CALL SetErrStat( ErrID_Fatal,'WtrDpth must be greater than zero.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-
-
-      ! MSL2SWL - Mean sea level to still water level
-   
-
-   IF ( InputFileData%PotMod == 1 .AND. .NOT. EqualRealNos(InputFileData%Morison%MSL2SWL, 0.0_ReKi) ) THEN
-      CALL SetErrStat( ErrID_Fatal,'SeaState MSL2SWL must be 0 when PotMod = 1 (WAMIT).',ErrStat,ErrMsg,RoutineName)        
-      RETURN
-   END IF
-   IF ( InputFileData%PotMod == 1 .AND. .NOT. EqualRealNos(InputFileData%Morison%MSL2SWL, 0.0_ReKi) ) THEN
-      CALL SetErrStat( ErrID_Fatal,'HydroDyn MSL2SWL must be 0 when PotMod = 1 (WAMIT).',ErrStat,ErrMsg,RoutineName)        
-      RETURN
-   END IF
-     
-   
-
-      ! WaveMod - Wave kinematics model switch. -- Check that actual data was passed in from SeaState.  If none exists, then set WaveMod=0 and warn
-   if (.not. associated(InitInp%WaveTime) .or. InitInp%NStepWave == 0) then
-      call SetErrStat( ErrID_Fatal,' No SeaState wave information available.  Setting WaveMod=0.',ErrStat,ErrMsg,RoutineName)
+   if (InitInp%WaveField%NStepWave == 0) then
+      call SetErrStat( ErrID_Fatal,' No SeaState information available.',ErrStat,ErrMsg,RoutineName)
       return
    endif
 
-   IF ( InputFileData%PotMod > 0 .and. InitInp%WaveMod == 6 ) THEN
-         CALL SetErrStat( ErrID_Fatal,'WaveMod must be 0, 1, 1P#, 2, 3, 4, or 5 when PotMod is not 0',ErrStat,ErrMsg,RoutineName)
+      ! MSL2SWL - Mean sea level to still water level
+   IF ( InputFileData%PotMod == 1 .AND. .NOT. EqualRealNos(InitInp%WaveField%MSL2SWL, 0.0_ReKi) ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SeaState MSL2SWL must be 0 when PotMod = 1 (WAMIT).',ErrStat,ErrMsg,RoutineName)        
+      RETURN
+   END IF
+   
+
+      ! WaveMod - Wave kinematics model switch.
+   IF ( InputFileData%PotMod > 0 .and. InitInp%WaveField%WaveMod == WaveMod_ExtFull ) THEN
+         CALL SetErrStat( ErrID_Fatal,'WaveMod cannot be 6 when PotMod is not 0.',ErrStat,ErrMsg,RoutineName)
          RETURN
    END IF
 
@@ -1177,9 +1154,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    ! LIN-TODO:
    !errors if:
    !if (                                                                   &
-   !     (WaveModIn /= 0)                                             .or. &
-   !     (InputFileData%Waves2%WvDiffQTFF /= .false.)                       .or. &
-   !     (InputFileData%Waves2%WvSumQTFF /= .false.)                        .or. &
    !     (InputFileData%PotMod /= 0 .or. InputFileData%PotMod /=1)                .or. &
    !     (InputFileData%WAMIT%ExctnMod /=0 .or. InputFileData%WAMIT%ExctnMod /=2) .or. &
    !     (InputFileData%WAMIT%RdtnMod  /=0 .or. InputFileData%WAMIT%RdtnMod  /=2) .or. &
@@ -1188,45 +1162,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    !     (InputFileData%WAMIT2%SumQTF /= 0 )                                     ) then
    !   
    !end if
-        
-   
-   ! WaveStMod - Model switch for stretching incident wave kinematics to instantaneous free surface.
-   IF ( InitInp%WaveMod /= 0 .AND. InputFileData%Morison%NMembers > 0 ) THEN
-      IF ( InitInp%WaveMod /= 6 ) THEN 
-         IF ( ( InitInp%WaveStMod /= 0 ) .AND. ( InitInp%WaveStMod /= 1 ) .AND. &
-              ( InitInp%WaveStMod /= 2 ) .AND. ( InitInp%WaveStMod /= 3 ) ) THEN
-            ErrMsg  = ' WaveStMod must be 0, 1, 2, or 3.'
-            ErrStat = ErrID_Fatal
-            RETURN
-         END IF
-      ELSE
-         IF ( ( InitInp%WaveStMod /= 0 ) .AND. ( InitInp%WaveStMod /= 1 ) .AND. &
-              ( InitInp%WaveStMod /= 3 ) ) THEN
-            ErrMsg  = ' WaveStMod must be 0, 1, or 3 when WaveMod = 6.'
-            ErrStat = ErrID_Fatal
-            RETURN
-         END IF
-      END IF
-   END IF
-
-   
-        ! Copy over the first order frequency limits to the WAMIT2 module which needs them.
-   InputFileData%WAMIT2%WvLowCOff  = InitInp%WvLowCOff
-   InputFileData%WAMIT2%WvHiCOff   = InitInp%WvHiCOff
-
-
-        ! Copy over the 2nd order limits to the WAMIT2 module which needs them.
-   InputFileData%WAMIT2%WvLowCOffD  = InitInp%WvLowCOffD
-   InputFileData%WAMIT2%WvHiCOffD   = InitInp%WvHiCOffD
-   InputFileData%WAMIT2%WvLowCOffS  = InitInp%WvLowCOffS
-   InputFileData%WAMIT2%WvHiCOffS   = InitInp%WvHiCOffS
-
-      ! Set the flag for multidirectional waves for WAMIT2 module.  It needs to know since the Newman approximation
-      ! can only use uni-directional waves.
-   InputFileData%WAMIT2%WaveMultiDir = InitInp%WaveMultiDir
-
-
-
 
        ! PotFile - Root name of potential flow files
 
@@ -1281,7 +1216,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    END IF
    
       ! ExctnDisp - Method of computing Wave Excitation
-   if ( InputFileData%PotMod /= 1 .or. InputFileData%WAMIT%ExctnMod == 0 .or. InitInp%WaveMod == 0) then
+   if ( InputFileData%PotMod /= 1 .or. InputFileData%WAMIT%ExctnMod == 0 .or. InitInp%WaveField%WaveMod == WaveMod_None) then
       InputFileData%WAMIT%ExctnDisp    = 0  !Force ExctnDisp = 0, so that the Grid of Wave Excitation forces is not computed (saves time and memory)
    end if
    
@@ -1468,29 +1403,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    END IF
 
 
-      ! Check that the min / max diff frequencies make sense if using any DiffQTF method
-   IF ( InputFileData%WAMIT2%DiffQTF /= 0 .OR. InputFileData%WAMIT2%MnDrift /= 0 .OR. InputFileData%WAMIT2%NewmanApp /=0 ) THEN
-      IF ( ( InputFileData%WAMIT2%WvHiCOffD < InputFileData%WAMIT2%WvLowCOffD ) .OR. ( InputFileData%WAMIT2%WvLowCOffD < 0.0 ) ) THEN
-         CALL SetErrStat( ErrID_Fatal,'WvHiCOffD must be larger than WvLowCOffD. Both must be positive.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-   ELSE  ! set to zero since we don't need them
-      InputFileData%WAMIT2%WvLowCOffD  = 0.0
-      InputFileData%WAMIT2%WvHiCOffD  = 0.0
-   END IF
-
-
-      ! Check that the min / max diff frequencies make sense if using SumQTF
-   IF ( InputFileData%WAMIT2%SumQTF /= 0 ) THEN
-      IF ( ( InputFileData%WAMIT2%WvHiCOffS < InputFileData%WAMIT2%WvLowCOffS ) .OR. ( InputFileData%WAMIT2%WvLowCOffS < 0.0 ) ) THEN
-         CALL SetErrStat( ErrID_Fatal,'WvHiCOffS must be larger than WvLowCOffS. Both must be positive.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-   ELSE  ! set to zero since we don't need them
-      InputFileData%WAMIT2%WvLowCOffS  = 0.0
-      InputFileData%WAMIT2%WvHiCOffS  = 0.0
-   END IF
-
 
       ! now that it has been established that the input parameters for second order are good, we check to make sure that the WAMIT files actually exist.
       ! Check MnDrift file
@@ -1553,7 +1465,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    if ( (InputFileData%WAMIT%ExctnMod == 2) ) then
 
       if ( InitInp%InvalidWithSSExctn ) then
-         call SetErrStat( ErrID_Fatal, 'Given SeaState conditions cannot be used with state-space wave excitations. In SeaState, set WaveMod to 0, 1, 1P#, 2, 3, 4, or 5; WaveDirMod=0; WvDiffQTF=FALSE; and WvSumQTF=FALSE. Or in HydroDyn set ExctnMod to 0 or 1.', ErrStat, ErrMsg, RoutineName )
+         call SetErrStat( ErrID_Fatal, 'Given SeaState conditions cannot be used with state-space wave excitations. In SeaState, WaveMod cannot be 6; WaveDirMod must be 0; WvDiffQTF must be FALSE; and WvSumQTF must be FALSE. Or in HydroDyn set ExctnMod to 0 or 1.', ErrStat, ErrMsg, RoutineName )
       end if
       
 
@@ -2227,7 +2139,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
                CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
                IF ( ErrStat >= AbortErrLev ) RETURN
          ELSE
-            InputFileData%Morison%FilledGroups(I)%FillDens = InputFileData%Morison%WtrDens
+            InputFileData%Morison%FilledGroups(I)%FillDens = InitInp%WaveField%WtrDens
          END IF
 
       END DO
@@ -2415,8 +2327,15 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
       DEALLOCATE(foundMask)
    ELSE
+
+      ! Set number of outputs to zero
       InputFileData%NumOuts = 0
       InputFileData%Morison%NumOuts = 0
+
+      ! Allocate outlist with zero length
+      call AllocAry(InputFileData%OutList, 0, "InputFileData%OutList", ErrStat2, ErrMsg2); 
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
    END IF
       ! Now that we have the sub-lists organized, lets do some additional validation.
    
@@ -2425,19 +2344,15 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    !----------------------------------------------------------
 
       ! WAMIT
-      InputFileData%WAMIT%WtrDens      = InputFileData%Morison%WtrDens
-      InputFileData%WAMIT%WaveMod      = InitInp%WaveMod
       InputFileData%WAMIT%HasWAMIT     = InputFileData%PotMod == 1
       ! WAMIT2
-      InputFileData%WAMIT2%WtrDens     = InputFileData%Morison%WtrDens
-      InputFileData%WAMIT2%WaveMod     = InitInp%WaveMod
       InputFileData%WAMIT2%HasWAMIT    = InputFileData%PotMod == 1
       ! Morison
       InputFileData%Morison%UnSum      = InputFileData%UnSum
       InputFileData%Morison%Gravity    = InitInp%Gravity
 
          ! Process the input geometry and generate the simulation mesh representation
-      call Morison_GenerateSimulationNodes( InputFileData%Morison%MSL2SWL, InputFileData%Morison%NJoints, InputFileData%Morison%InpJoints, InputFileData%Morison%NMembers, InputFileData%Morison%InpMembers, InputFileData%Morison%NNodes, InputFileData%Morison%Nodes, errStat2, errMsg2 )
+      call Morison_GenerateSimulationNodes( InitInp%WaveField%MSL2SWL, InputFileData%Morison%NJoints, InputFileData%Morison%InpJoints, InputFileData%Morison%NMembers, InputFileData%Morison%InpMembers, InputFileData%Morison%NNodes, InputFileData%Morison%Nodes, errStat2, errMsg2 )
       !CALL Morison_ProcessMorisonGeometry( InputFileData%Morison, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF ( ErrStat >= AbortErrLev ) RETURN

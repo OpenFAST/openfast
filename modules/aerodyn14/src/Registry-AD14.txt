@@ -132,18 +132,15 @@ typedef	^	BladeParms	ReKi	BladeLength	-	-	-	"Blade Length"
 #typedef	^	BladeParms	INTEGER	NB	-	-	-	"Number odem blades"
 
 #DynInflow
-dimspec	maxinfl	constant=6
-dimspec	maxinfl0	constant=2
-dimspec	maxinfl1	constant=3:6
-typedef	AeroDyn14/AD14	DynInflow	ReKi	dAlph_dt	{maxinfl}{4}	-	-
-typedef	^	DynInflow	ReKi	dBeta_dt	{maxinfl1}{4}	-	-
+typedef	AeroDyn14/AD14	DynInflow	ReKi	dAlph_dt	{6}{4}	-	-
+typedef	^	DynInflow	ReKi	dBeta_dt	{3:6}{4}	-	-
 typedef	^	DynInflow	ReKi	DTO	-	-	-
-typedef	^	DynInflow	ReKi	old_Alph	{maxinfl}	-	-
-typedef	^	DynInflow	ReKi	old_Beta	{maxinfl1}	-	-
+typedef	^	DynInflow	ReKi	old_Alph	{6}	-	-
+typedef	^	DynInflow	ReKi	old_Beta	{3:6}	-	-
 typedef	^	DynInflow	ReKi	old_LmdM	-	-	-
 typedef	^	DynInflow	ReKi	oldKai	-	-	-
-typedef	^	DynInflow	ReKi	PhiLqC	{maxinfl}	-	-
-typedef	^	DynInflow	ReKi	PhiLqS	{maxinfl1}	-	-
+typedef	^	DynInflow	ReKi	PhiLqC	{6}	-	-
+typedef	^	DynInflow	ReKi	PhiLqS	{3:6}	-	-
 typedef	^	DynInflow	ReKi	Pzero	-	-	-
 typedef	^	DynInflow	ReKi	RMC_SAVE	{:}{:}{:}	-	-		-
 typedef	^	DynInflow	ReKi	RMS_SAVE	{:}{:}{:}	-	-		-
@@ -151,21 +148,21 @@ typedef	^	DynInflow	ReKi	TipSpeed	-	-	-
 typedef	^	DynInflow	ReKi	totalInf	-	-	-
 typedef	^	DynInflow	ReKi	Vparam	-	-	-
 typedef	^	DynInflow	ReKi	Vtotal	-	-	-
-typedef	^	DynInflow	ReKi	xAlpha	{maxinfl}	-	-
-typedef	^	DynInflow	ReKi	xBeta	{maxinfl1}	-	-
+typedef	^	DynInflow	ReKi	xAlpha	{6}	-	-
+typedef	^	DynInflow	ReKi	xBeta	{3:6}	-	-
 typedef	^	DynInflow	ReKi	xKai	-	-	-
 typedef	^	DynInflow	ReKi	XLAMBDA_M	-	-	-
-typedef	^	DynInflow	ReKi	xLcos	{maxinfl}{maxinfl}	-	-
-typedef	^	DynInflow	ReKi	xLsin	{maxinfl1}{maxinfl1}	-	-
-typedef	^	DynInflow	IntKi	MminR	{maxinfl}{maxinfl}	-	-
-typedef	^	DynInflow	IntKi	MminusR	{maxinfl}{maxinfl}	-	-
-typedef	^	DynInflow	IntKi	MplusR	{maxinfl}{maxinfl}	-	-
-typedef	^	DynInflow	ReKi	GAMMA	{maxinfl}{maxinfl}	-	-
+typedef	^	DynInflow	ReKi	xLcos	{6}{6}	-	-
+typedef	^	DynInflow	ReKi	xLsin	{3:6}{3:6}	-	-
+typedef	^	DynInflow	IntKi	MminR	{6}{6}	-	-
+typedef	^	DynInflow	IntKi	MminusR	{6}{6}	-	-
+typedef	^	DynInflow	IntKi	MplusR	{6}{6}	-	-
+typedef	^	DynInflow	ReKi	GAMMA	{6}{6}	-	-
 #typedef	^	DynInflowParms	IntKi	MAXINFL	-	6	-	#should be possible to spec with maxinfl
 typedef	^	DynInflowParms	IntKi	MAXINFLO	-	2	-	#should be possible to spec with maxinfl0
-#typedef	^	DynInflowParms	IntKi	MRvector	{maxinfl}	-	-
-#typedef	^	DynInflowParms	IntKi	NJvector	{maxinfl}	-	-
-typedef	^	DynInflowParms	ReKi	xMinv	{maxinfl}	-	-
+#typedef	^	DynInflowParms	IntKi	MRvector	{6}	-	-
+#typedef	^	DynInflowParms	IntKi	NJvector	{6}	-	-
+typedef	^	DynInflowParms	ReKi	xMinv	{6}	-	-
 
 #Element
 typedef	^	Element	ReKi	A	{:}{:}	-	-		-     "Axial induction factor" -
