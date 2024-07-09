@@ -1615,13 +1615,13 @@ CONTAINS
                            end if
                         else
                            CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Int2LStr(TempIDnums(J)))//' already is assigned to control channel '//TRIM(Int2LStr(m%LineList( TempIDnums(J) )%CtrlChan))//' so cannot also be assigned to channel '//TRIM(Int2LStr(Itemp)), ErrStat, ErrMsg, RoutineName )
-                           CALL CleanUp()	
+                           CALL CleanUp()
                            return
                         end if                     
                      else
                         CALL SetErrStat( ErrID_Fatal, ' Line ID '//TRIM(Int2LStr(TempIDnums(J)))//' of CtrlChan '//TRIM(Int2LStr(Itemp))//' is out of range', ErrStat, ErrMsg, RoutineName )
-                        CALL CleanUp()	
-                        return						   
+                        CALL CleanUp()
+                        return
                      end if
                   
                   END DO
@@ -1674,57 +1674,57 @@ CONTAINS
                      
                      CALL Conv2UC(TempString1) ! convert to uppercase so that matching is not case-sensitive
                      
-							call DecomposeString(TempString1, let1, num1, let2, num2, let3) ! divided failPoint into letters and numbers
-							
-							if (len_trim(num1)<1) then
+                     call DecomposeString(TempString1, let1, num1, let2, num2, let3) ! divided failPoint into letters and numbers
+
+                     if (len_trim(num1)<1) then
                         CALL SetErrStat( ErrID_Fatal,  "Error: no point number provided for line failure "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
                         CALL CleanUp()
                         return
                      end if
-							
+
                      READ(num1, *) m%FailList(l)%attachID   ! convert to int
-								
-							! if id starts with an "R" or "Rod"
-							if ((let1 == "R")  .OR. (let1 == "ROD")) then
-								if ((m%FailList(l)%attachID <= p%nRods)  .AND. (m%FailList(l)%attachID > 0)) then
-									if (let2 == "A") then
-										m%FailList(l)%isRod = 1
-									else if (let2 == "B") then
-										m%FailList(l)%isRod = 2
-									else
-									   CALL SetErrStat( ErrID_Fatal, ' Unable to parse line failure '//trim(Num2LStr(l))//'. Rod end must be A or B.', ErrStat, ErrMsg, RoutineName )
-                              CALL CleanUp()	
-                              return								
+
+                     ! if id starts with an "R" or "Rod"
+                     if ((let1 == "R")  .OR. (let1 == "ROD")) then
+                        if ((m%FailList(l)%attachID <= p%nRods)  .AND. (m%FailList(l)%attachID > 0)) then
+                           if (let2 == "A") then
+                              m%FailList(l)%isRod = 1
+                           else if (let2 == "B") then
+                              m%FailList(l)%isRod = 2
+                           else
+                              CALL SetErrStat( ErrID_Fatal, ' Unable to parse line failure '//trim(Num2LStr(l))//'. Rod end must be A or B.', ErrStat, ErrMsg, RoutineName )
+                              CALL CleanUp()
+                              return
                            endif
-								else
-									CALL SetErrStat( ErrID_Fatal, ' Unable to parse line failure '//trim(Num2LStr(l))//'. Rod number out of bounds.', ErrStat, ErrMsg, RoutineName )
-                           CALL CleanUp()	
-                           return						
+                        else
+                           CALL SetErrStat( ErrID_Fatal, ' Unable to parse line failure '//trim(Num2LStr(l))//'. Rod number out of bounds.', ErrStat, ErrMsg, RoutineName )
+                           CALL CleanUp()
+                           return
                         endif
-									
-							endif
+
+                     endif
 
                      if ((len_trim(let1)<1)  .OR. (let1 == "P")  .OR. (let1 == "POINT")) then
-								if ((m%FailList(l)%attachID <= p%nPoints)  .AND. (m%FailList(l)%attachID > 0)) then
-									m%FailList(l)%isRod = 0
-								else
-									CALL SetErrStat( ErrID_Fatal, ' Unable to parse line failure '//trim(Num2LStr(l))//'. Point number out of bounds.', ErrStat, ErrMsg, RoutineName )
-                           CALL CleanUp()	
-                           return						
+                        if ((m%FailList(l)%attachID <= p%nPoints)  .AND. (m%FailList(l)%attachID > 0)) then
+                           m%FailList(l)%isRod = 0
+                        else
+                           CALL SetErrStat( ErrID_Fatal, ' Unable to parse line failure '//trim(Num2LStr(l))//'. Point number out of bounds.', ErrStat, ErrMsg, RoutineName )
+                           CALL CleanUp()
+                           return
                         endif
-									
+
                      endif
-							
-							! get lines 
+
+                     ! get lines 
                      m%FailList(l)%nLinesToDetach = N 
                      
                      DO il = 1, m%FailList(l)%nLinesToDetach
                         if (TempIDnums(il) <= p%nLines) then      ! ensure line ID is in range
                            m%FailList(l)%lineIDs(il) = TempIDnums(il)
                         else
-									CALL SetErrStat( ErrID_Fatal, ' Unable to parse line failure '//trim(Num2LStr(l))//'. Line number '//TRIM(Int2LStr(TempIDnums(il)))//' out of bounds.', ErrStat, ErrMsg, RoutineName )
-                           CALL CleanUp()	
-                           return						   
+                           CALL SetErrStat( ErrID_Fatal, ' Unable to parse line failure '//trim(Num2LStr(l))//'. Line number '//TRIM(Int2LStr(TempIDnums(il)))//' out of bounds.', ErrStat, ErrMsg, RoutineName )
+                           CALL CleanUp()
+                           return                     
                         endif 
 
                         ! check whether line is attached to fail point at fairlead or anchor and assing line tops
@@ -1741,8 +1741,8 @@ CONTAINS
 
                            if (Success == 0) then
                               CALL SetErrStat( ErrID_Fatal, " Line "//trim(num2lstr(m%FailList(l)%lineIDs(il)))//" not attached to point "//trim(num2lstr(m%FailList(l)%attachID))//" for failure "//trim(num2lstr(m%FailList(l)%IdNum)), ErrStat, ErrMsg, RoutineName )
-                              CALL CleanUp()	
-                              return	
+                              CALL CleanUp()
+                              return
                            endif  
 
                         elseif (m%FailList(l)%isRod == 1) then ! Rod end A
@@ -1758,8 +1758,8 @@ CONTAINS
 
                            if (Success == 0) then 
                               CALL SetErrStat( ErrID_Fatal, " Line "//trim(num2lstr(m%FailList(l)%lineIDs(il)))//" not attached to R"//trim(num2lstr(m%FailList(l)%attachID))//"A for failure "//trim(num2lstr(m%FailList(l)%IdNum)), ErrStat, ErrMsg, RoutineName )
-                              CALL CleanUp()	
-                              return	
+                              CALL CleanUp()
+                              return
                            endif  
 
                         elseif (m%FailList(l)%isRod == 2) then ! Rod end B
@@ -1775,19 +1775,19 @@ CONTAINS
 
                            if (Success == 0) then 
                               CALL SetErrStat( ErrID_Fatal, " Line "//trim(num2lstr(m%FailList(l)%lineIDs(il)))//" not attached to R"//trim(num2lstr(m%FailList(l)%attachID))//"B for failure "//trim(num2lstr(m%FailList(l)%IdNum)), ErrStat, ErrMsg, RoutineName )
-                              CALL CleanUp()	
-                              return	
+                              CALL CleanUp()
+                              return
                            endif  
 
                         else
                            CALL SetErrStat( ErrID_Fatal, " isRod out of range for failure "//trim(num2lstr(m%FailList(l)%IdNum)), ErrStat, ErrMsg, RoutineName )
-                           CALL CleanUp()	
-                           return	
+                           CALL CleanUp()
+                           return
                         endif
                      ENDDO  
 
                      ! cant have both time and tension conditions, time is prioritized
-							if ((m%FailList(l)%failTime > 0) .AND. (m%FailList(l)%failTen > 0)) then 
+                     if ((m%FailList(l)%failTime > 0) .AND. (m%FailList(l)%failTen > 0)) then 
                         CALL SetErrStat( ErrID_Info, ' MoorDyn failure condition checks time before tension. If time reached before tension, failure '//trim(Num2LStr(m%FailList(l)%IdNum))//' will trigger.', ErrStat, ErrMsg, RoutineName )
                      endif
 
@@ -1804,12 +1804,12 @@ CONTAINS
 
                      else
 
-							   m%FailList(l)%failStatus = 0; ! initialize as unfailed
+                        m%FailList(l)%failStatus = 0; ! initialize as unfailed
 
                      endif
 
-						endif
-					enddo 
+                  endif
+               enddo 
 
                
             !-------------------------------------------------------------------------------------------
@@ -2847,11 +2847,11 @@ CONTAINS
 
       ! do we want to check failures here (at the coupling step level? Or at the dtM level?)
       ! --------------- check for line failures (detachments!) ----------------
-		DO l= 1,p%nFails 
+      DO l= 1,p%nFails 
 
-			if (m%FailList(l)%failStatus == 0) then
+         if (m%FailList(l)%failStatus == 0) then
 
-				if ((t >= m%FailList(l)%failTime) .AND. (m%FailList(l)%failTime .NE. 0.0)) then  
+            if ((t >= m%FailList(l)%failTime) .AND. (m%FailList(l)%failTime .NE. 0.0)) then  
                
                ! step 1: check for time-triggered failures
                
@@ -2860,7 +2860,7 @@ CONTAINS
                   write(p%UnLog,'(A)') "Failure number "//trim(Num2LStr(l))//" triggered by t = "//trim(Num2LStr(t))
                end if
 
-					m%FailList(l)%failStatus = 1; ! set status to failed so it's not checked again
+               m%FailList(l)%failStatus = 1; ! set status to failed so it's not checked again
                CALL DetachLines(m%FailList(l)%attachID, m%FailList(l)%isRod, m%FailList(l)%lineIDs, m%FailList(l)%lineTops, m%FailList(l)%nLinesToDetach, t)
                
             elseif (m%FailList(l)%failTen .NE. 0.0) then
@@ -2929,7 +2929,7 @@ CONTAINS
                ENDDO !li = 1, p%nFails
             endif ! m%FailList(l)%failStatus == 1
 
-         endif	 ! m%FailList(l)%failStatus == 0
+         endif    ! m%FailList(l)%failStatus == 0
 
       ENDDO ! l= 0,nFails
 
