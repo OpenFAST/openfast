@@ -1738,6 +1738,7 @@ SUBROUTINE ReadBladeFile ( BldFile, BladeKInputFileData, UnEc, ErrStat, ErrMsg )
    REAL(ReKi)                   :: AdjEdSt                                         ! Factor to adjust edge stiffness.
    REAL(ReKi)                   :: AdjFlSt                                         ! Factor to adjust flap stiffness.
 
+   TYPE(FileInfoType)           :: InFileInfo                                      !< The derived type for holding the full input file for parsing
    REAL(ReKi)                   :: TmpRAry(17)                                     ! Temporary variable to read table from file (up to 17 columns)
 
    INTEGER(IntKi)               :: I                                               ! A generic DO index.
@@ -1749,7 +1750,12 @@ SUBROUTINE ReadBladeFile ( BldFile, BladeKInputFileData, UnEc, ErrStat, ErrMsg )
 
    ErrStat = ErrID_None
    ErrMsg = ""
-   
+
+     ! read the input file   
+   call ProcessComFile( './tmp.dat', InFileInfo, ErrStat2, ErrMsg2 )
+call Print_FileInfo_Struct(CU, InFileInfo)
+
+ 
    UnIn = -1
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
 
