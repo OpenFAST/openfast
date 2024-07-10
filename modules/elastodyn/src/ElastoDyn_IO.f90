@@ -2005,6 +2005,10 @@ SUBROUTINE ReadBladeFile ( BldFile, BladeKInputFileData, UnEc, ErrStat, ErrMsg )
       ! Close the blade file.
 
    call Cleanup()
+
+   ! Verify that everything was read and stored correctly
+   call PrintBladeFileContents()
+
    RETURN
 
 
@@ -2014,6 +2018,45 @@ CONTAINS
       IF (UnIn > 0) CLOSE( UnIn )
    END SUBROUTINE Cleanup
    
+   !> write out the blade file contents to screen (use in debugging only)
+   subroutine PrintBladeFileContents()
+      integer(IntKi) :: j
+      character(1024):: TmpStr
+      call WrScr('========================================================')
+      call WrScr('Parsed contents of ED blade file:')
+      call WrScr('      NBlInpSt       '//trim(Num2LStr(BladeKInputFileData%NBlInpSt)))
+      do j=1,size(BladeKInputFileData%BldFlDmp)
+         call WrScr('      BldFlDmp('//trim(Num2LStr(j))//')    '//trim(Num2LStr(BladeKInputFileData%BldFlDmp(j))))
+      enddo
+      do j=1,size(BladeKInputFileData%BldEdDmp)
+         call WrScr('      BldEdDmp('//trim(Num2LStr(j))//')    '//trim(Num2LStr(BladeKInputFileData%BldEdDmp(j))))
+      enddo
+      do j=1,size(BladeKInputFileData%FlStTunr)
+         call WrScr('      FlStTunr('//trim(Num2LStr(j))//')    '//trim(Num2LStr(BladeKInputFileData%FlStTunr(j))))
+      enddo
+      call WrScr('      AdjBlMs        '//trim(Num2LStr(AdjBlMs)))
+      call WrScr('      AdjFlSt        '//trim(Num2LStr(AdjFlSt)))
+      call WrScr('      AdjEdSt        '//trim(Num2LStr(AdjEdSt)))
+
+      do j=1,size(BladeKInputFileData%BldFl1Sh)
+         call WrScr('      BldFl1Sh('//trim(Num2LStr(j))//')    '//trim(Num2LStr(BladeKInputFileData%BldFl1Sh(j))))
+      enddo
+      do j=1,size(BladeKInputFileData%BldFl2Sh)
+         call WrScr('      BldFl2Sh('//trim(Num2LStr(j))//')    '//trim(Num2LStr(BladeKInputFileData%BldFl2Sh(j))))
+      enddo
+      do j=1,size(BladeKInputFileData%BldEdgSh)
+         call WrScr('      BldEdgSh('//trim(Num2LStr(j))//')    '//trim(Num2LStr(BladeKInputFileData%BldEdgSh(j))))
+      enddo
+
+      call WrScr('      Blade table (after applied scalings)')
+      call WrScr('         BlFract           StrcTwst          BMassDen          FlpStff           EdgStff')
+      do j=1,BladeKInputFileData%NBlInpSt
+         write(TmpStr,'(A,5(3x,ES15.9))')  '    ',BladeKInputFileData%BlFract( j),BladeKInputFileData%StrcTwst(j),BladeKInputFileData%BMassDen(j),BladeKInputFileData%FlpStff( j),BladeKInputFileData%EdgStff( j)
+         call WrScr(trim(TmpStr))
+      enddo
+      call WrScr('========================================================')
+   end subroutine
+
 END SUBROUTINE ReadBladeFile
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine reads the furling file input and converts units as appropriate.
