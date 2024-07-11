@@ -1584,7 +1584,7 @@ END SUBROUTINE CheckR8Var
 
    Ch = 0
 
-   DO
+   DO while (Ch + 1 < len(Line))
 
       NextWhite = SCAN( Line(Ch+1:) , ' ,;''"'//Tab )
       Ch        = Ch + NextWhite
@@ -4355,12 +4355,11 @@ END SUBROUTINE CheckR8Var
             ! Deallocate the linked list of file names.
 
           CurrFile => FirstFile
-          NextFile => CurrFile%Next
-          DO
+          DO WHILE(ASSOCIATED(currFile))
+              NextFile => CurrFile%Next
               DEALLOCATE(CurrFile)
               IF ( .NOT. ASSOCIATED( NextFile ) )  EXIT
               CurrFile => NextFile
-              NextFile => CurrFile%Next
           ENDDO
           
 !bjj: this needs to happen elsewhere...
@@ -7708,7 +7707,7 @@ END SUBROUTINE CheckR8Var
    INTEGER                      :: NewLineIndx                                  ! The string index where the NewLine character occurs
 
    CHARACTER(10)                :: Frm                                          ! Format specifier for the output.
-   CHARACTER(LEN(InStr))        :: Str                                          ! The next string to be processed
+   CHARACTER(Len=:),allocatable :: Str                                          ! The next string to be processed
 
 
 
