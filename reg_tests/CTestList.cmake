@@ -473,8 +473,15 @@ seast_regression("seastate_wavemod5"                         "seastate")   # pla
 # MoorDyn regression tests
 md_regression("md_5MW_OC4Semi"                                "moordyn")
 md_regression("md_lineFail"                                   "moordyn")
-py_md_regression("py_md_5MW_OC4Semi"                             "moordyn;python")
+md_regression("md_BodiesAndRods"                              "moordyn")
+md_regression("md_bodyDrag"                                   "moordyn")
+md_regression("md_cable"                                      "moordyn")
+md_regression("md_case2"                                      "moordyn")
+md_regression("md_case5"                                      "moordyn")
+md_regression("md_float"                                      "moordyn")
+md_regression("md_horizontal"                                 "moordyn")
+md_regression("md_no_line"                                    "moordyn")
+md_regression("md_vertical"                                   "moordyn")
+py_md_regression("py_md_5MW_OC4Semi"                          "moordyn;python")
 # the following tests are excessively slow in double precision, so skip these in normal testing
-#md_regression("md_Node_Check_N20"                             "moordyn")
-#md_regression("md_Node_Check_N40"                             "moordyn")
 #md_regression("md_Single_Line_Quasi_Static_Test"              "moordyn")
