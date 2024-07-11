@@ -45,27 +45,34 @@ specified in the HydroDyn primary input file.
 
 **HDInputFile** is the filename of the primary HydroDyn input file. This
 name should be in quotations and can contain an absolute path or a
-relative path. All HydroDyn-generated output files will be prefixed with
-**OutRootName**. If this parameter includes a file path, the output will
-be generated in that folder. **NSteps** specifies the number of
-simulation time steps, and **TimeInterval** specifies the time between
-steps.
+relative path. Note that neither the standalone HydroDyn program nor HydroDyn 
+as part of OpenFAST can run without SeaState. Therefore, in addition to the 
+primary HydroDyn input file, the path to a SeaState input file must also 
+be provided through **SeaStateInputFile**.
 
-Setting **WAMITInputsMod** = 0 forces all WAMIT reference point (WRP)
-input motions to zero for all time. If you set **WAMITInputsMod** = 1,
-then you must set the steady-state inputs in the WAMIT STEADY STATE
-INPUTS section of the file. Setting **WAMITInputsMod** = 2, requires the
+All HydroDyn-generated output files will be prefixed with **OutRootName**. 
+If this parameter includes a file path, the output will be generated in 
+that folder. **Linearize** can be set to either TRUE or FALSE. If TRUE, 
+linearized 6-by-6 stiffness, damping, and added-mass matrices will be 
+computed and printed to the calling terminal. **NSteps** specifies the 
+number of simulation time steps, and **TimeInterval** specifies the time 
+between steps.
+
+Setting **PRPInputsMod** = 0 forces all principal reference point (PRP)
+input motions to zero for all time. If you set **PRPInputsMod** = 1,
+then you must set the steady-state inputs in the PRP STEADY STATE
+INPUTS section of the file. Setting **PRPInputsMod** = 2 requires the
 time-series input file whose name is specified via the
-**WAMITInputsFile** parameter. The WAMIT inputs file is a text-formatted
+**PRPInputsFile** parameter. The PRP input file is a text-formatted
 file. This file has no header lines. Each data row corresponds to a
 given time step, and the whitespace separated columns of floating point
 values represent the necessary motion inputs as shown in
-:numref:`hd-wamit_input_table`. All motions are specified in the global
+:numref:`hd-prp_input_table`. All motions are specified in the global
 inertial-frame coordinate system.
 
-.. _hd-wamit_input_table:
+.. _hd-prp_input_table:
 
-.. table:: WAMIT Inputs Time-Series Data File Contents
+.. table:: PRP Inputs Time-Series Data File Contents
    :widths: auto
 
    ============= ================================================================================ ======================================
@@ -80,29 +87,41 @@ inertial-frame coordinate system.
    17-19         Rotational accelerations about *X*, *Y*, and *Z*                                 .. math:: \frac{\text{radians}}{s^{2}}
    ============= ================================================================================ ======================================
 
-In a similar fashion, the input motions for the Morison members
-(strip-theory model) are set to zero if **MorisonInputsMod** = 0. If you
-select **MorsionInputsMod** = 1 then the motions at each substructure
-joint are set to the steady-state values given in the MORISON STEADY
-STATE INPUTS section. Currently, option 2 is unavailable for the Morison
-inputs.
+With **PRPInputsMod** = 1 or 2, any potential-flow bodies and strip-theory 
+members defined in the primary HydroDyn input file will follow the prescribed 
+motion of the PRP according to rigid-body kinematics. The standalone HydroDyn 
+does not check for physical consistency between motions (displacement, velocity, 
+and acceleration) specified for the PRP in the driver file. The user is 
+responsible for generating consistent kinematics if that is important.
 
-The standalone HydroDyn does not check for physical consistency between
-motions specified for the WRP and Morison members in the driver file.
+If the HydroDyn model contains one or more potential-flow bodies, 
+**PRPInputsMod** can be set to a negative number with |\ **PRPInputsMod**\ | = **NBody** 
+in the HydroDyn primary input file. In this case, an alternative form of 
+the PRP input file shown in :numref:`hd-prp_input_table_2` can be used 
+to specify different motions for the PRP, which controls the motion of 
+all strip-theory members based on rigid-body kinematics, and for each 
+potential-flow bodies separately. With this option, the user only specifies 
+the translational and rotational displacements. HydroDyn will compute the 
+velocity and acceleration by numerically differentiating the displacement 
+with respect to time. 
 
-Setting **WaveElevSeriesFlag** to TRUE enables the outputting of a grid
-of wave elevations to a text-based file with the name
-``OutRootName.WaveElev.out``. The grid consists of **WaveElevNX** by
-**WaveElevNY** wave elevations (centered at *X* = 0, *Y* = 0 i.e.,
-(0,0)) with a **dX** and **dY** spacing in the global inertial-frame
-coordinate system. These wave elevations are distinct and output
-separately from the wave elevations determined by **NWaveElev** in the
-HydroDyn primary input file, such that the total number of wave
-elevation outputs is **NWaveElev** + ( **WaveElevNX** × **WaveElevNY**
-). The wave-elevation output file ``OutRootName.WaveElev.out``
-contains the total wave elevation, which is the sum of the first- and
-second-order terms (when the second-order wave kinematics are optionally
-enabled).
+.. _hd-prp_input_table_2:
+
+.. table:: PRP Inputs Time-Series Data File Contents (**PRPInputsMod** < 0)
+   :widths: auto
+
+   ============= ================================================================================================================ ========================
+   Column Number Input                                                                                                            Units
+   ============= ================================================================================================================ ========================
+   1             Time step value                                                                                                  .. math:: s
+   2-4           Translational displacements of the PRP along *X*, *Y*, and *Z*                                                   .. math:: m
+   5-7           Rotational displacements of the PRP about *X*, *Y*, and *Z* (small angle assumptions apply)                      .. math:: \text{radians}
+   8-10          Translational displacements of the 1st potential-flow body along *X*, *Y*, and *Z*                               .. math:: m
+   11-13         Rotational displacements of the 1st potential-flow body about *X*, *Y*, and *Z* (small angle assumptions apply)  .. math:: \text{radians}
+   14-16         Translational displacements of the 2nd potential-flow body along *X*, *Y*, and *Z*                               .. math:: m
+   17-19         Rotational displacements of the 2nd potential-flow body about *X*, *Y*, and *Z* (small angle assumptions apply)  .. math:: \text{radians}
+   ...           ...                                                                                                              ...
+   ============= ================================================================================================================ ========================
 
 .. _hd-primary-input:
 
@@ -134,13 +153,13 @@ identifier for the table entry, and these IDs do not need to be
 consecutive or increasing, but they must be unique for a given table
 entry.
 
-The input file begins with two lines of header information which is for
-your use, but is not used by the software. On the next line, set the
+The input file begins with two lines of header information for
+your use, but they are not used by the software. On the next line, set the
 **Echo** flag to TRUE if you wish to have HydroDyn echo the contents of
 the HydroDyn input file (useful for debugging errors in the input file).
 The echo file has the naming convention of **OutRootName**\ *.HD.ech*.
 **OutRootName** is either specified in the HYDRODYN section of the
-driver input file when running HydroDyn standalone, or by FAST when
+driver input file when running HydroDyn standalone, or by OpenFAST when
 running a coupled simulation.
 
 
@@ -151,45 +170,35 @@ This and the next few sections of the input file have "Floating
 Platform" in the title, but the input parameters control the
 potential-flow model, regardless of whether the substructure is floating
 or not. The potential-flow solution cannot be used in conjunction with
-nonzero **MSL2SWL** or **WaveMod** = 6.
+nonzero **MSL2SWL** or **WaveMod** = 6 in SeaState.
 
-If the load contributions from potential-flow theory are to be used, set
-**PotMod** to 1 for the use of frequency-to-time-domain transforms based
-on WAMIT output or 2 for the use of FIT (FIT is not yet documented in
-this manual). With **PotMod** = 1, include the root name (without
-extensions) for the WAMIT-related output files in **PotFile**. These
-files consist of the *.1*, *.3*,\ *.hst* and second-order files. These
-are written by the WAMIT program and should not include any file
-headers. When the linear state-space model is used in placed of
-convolution, the *.ss* file generated by
-`SS_Fitting <https://nwtc.nrel.gov/SS_Fitting>`__ must have the same
-root name as the other WAMIT-related files (see **RdtnMod** below). The
-remaining parameters in this section are only used when **PotMod** = 1.
+If the load contributions from potential-flow theory are to be included, set
+**PotMod** to 1 to use frequency-to-time domain transforms based
+on WAMIT output or 2 to use FIT (FIT is not yet documented in
+this manual). The remaining parameters in this section are only used when 
+**PotMod** = 1.
 
-The output files from WAMIT are in a standard nondimensional form that
-HydroDyn will dimensionalize internally upon input. **WAMITULEN** is the
-characteristic body length scale used to redimensionalize the WAMIT
-output. The body motions and forces in these files are in relation to
-the WAMIT reference point (WRP) in HydroDyn, which for the undisplaced
-substructure is the same as the origin of the global inertial-frame
-coordinate system (0,0,0). The *.hst* file contains the 6x6 linear
-hydrostatic restoring (stiffness) matrix of the platform. The *.1* file
-contains the 6x6 frequency-dependent hydrodynamic added-mass and damping
-matrix of the platform from the radiation problem. The *.3* file
-contains the 6x1 frequency- and direction-dependent first-order
-wave-excitation force vector of the platform from the linear diffraction
-problem. While HydroDyn expects hydrodynamic coefficients derived from
-WAMIT, if you are not using WAMIT, it is recommended that you reformat
-your data according to the WAMIT format (including
-nondimensionalization) before inputting them to HydroDyn. Information on
-the WAMIT format is available from Chapter 4 of the WAMIT User's Guide
-:cite:`LeeNewman:2006`.
+**ExctnMod** can be set to 0 for no wave excitation, 1 for 
+frequency-to-time domain wave excitation using discrete Fourier transform, 
+or 2 for the state-space wave-excitation model. Depending on the choice of 
+**ExctnMod**, suitable hydrodynamic input files must be provided through the 
+**PotFile** input. More information below.
 
-**PtfmVol0** is the displaced volume of water when the platform is in
-its undisplaced position. This value should be set equal to the value
-computed by WAMIT as output in the WAMIT ``.out`` file. **PtfmCOBxt** and
-**PtfmCOByt** are the *X* and *Y* offsets of the center of buoyancy from
-the WRP.
+**ExctnDisp** specifies if and how structure displacement in the horizontal 
+plane should be considered when evaluating the potential-flow wave excitation. 
+Setting **ExctnDisp** = 0 ignores structure displacement, and wave 
+excitation will be computed using the undisplaced structure position as in 
+previous versions of OpenFAST. If **ExctnDisp** = 1, HydroDyn will compute 
+the potential-flow wave excitation using the unfiltered instantaneous PRP 
+position in the horizontal plane. If **ExctnDisp** = 2, HydroDyn will instead 
+compute the wave excitation based on the low-pass filtered PRP position in 
+the horizontal plane. The cutoff frequency is specified through **ExctnCutOff** 
+in Hz. This option is useful when second-order potential-flow wave excitation is 
+enabled. The cutoff frequency should be set to filter out as much of the 
+wave-frequency PRP motion as possible while retaining the low-frequency drift 
+motion to prevent double counting the contributions from first-order 
+structural motion already included in the second-order potential-flow wave 
+excitation.
 
 HydroDyn has two methods for calculating the radiation memory effect.
 Set **RdtnMod** to 1 for the convolution method, 2 for the linear
@@ -210,8 +219,85 @@ method, **RdtnDT** is the time step for the radiation calculations
 the cosine transform. For the state-space model, **RdtnDT** is the time
 step to use for time integration of the linear state-space model. In
 this version of HydroDyn, **RdtnDT** must match the glue code
-(FAST/driver program) simulation time step; the DEFAULT keyword can be
-used for this.
+(OpenFAST/driver program) simulation time step; the DEFAULT keyword can be
+used for this. Depending on the choice of **RdtnMod**, suitable hydrodynamic 
+input files must be provided through the **PotFile** input. More 
+information below.
+
+HydroDyn supports the inclusion of multiple potential-flow bodies. 
+**NBody** specifies the number of potential-flow bodies present. 
+**NBodyMod** controls how multiple potential-flow bodies should be modeled. 
+HydroDyn will retain the full hydrodynamic coupling among the potential-flow 
+bodies if **NBodyMod** = 1. For this option, all bodies should be present 
+in the same WAMIT run with **NBody** in HydroDyn being equal to NBODY in the 
+WAMIT input file. The WAMIT output files should contain results for 6·NBody modes. 
+HydroDyn will neglect hydrodynamic coupling among the potential-flow bodies if 
+**NBodyMod** = 2 or 3. In either case, WAMIT should be run for each body separately
+one at a time. If the WAMIT computation is run with each body centered at the 
+origin (XBODY=0 in WAMIT), **NBodyMod** = 2 should be used in HydroDyn. 
+In this case, HydroDyn will process the WAMIT outputs to account for the 
+shift in wave phase due to any offset of each potential-flow body from the 
+origin/PRP. HydroDyn will also rotate the WAMIT outputs according to the heading of 
+each body in HydroDyn. **NBodyMod** = 2 is convenient when, e.g., multiple 
+identical potential-flow bodies are present in the structure. If the hydrodynamic 
+coupling among the bodies can be neglected, the same set of WAMIT output files 
+can be used for each body by setting **NBodyMod** = 2. On the other hand, 
+**NBodyMod** = 3 should be used if each body is already positioned and oriented 
+correctly relative to the origin/PRP in WAMIT by setting XBODY in the WAMIT input 
+file. In this case, HydroDyn will use the provided WAMIT output as is.
+
+The **PotFile** input should contain the path and root name (without
+extensions) for the WAMIT output files enclosed in quotation marks. These
+files consist of the *.1*, *.3*, *.hst*, and second-order files. The 
+*.hst* file contains the hydrostatic restoring (stiffness) matrix. 
+The *.1* file contains the frequency-dependent hydrodynamic added-mass 
+and damping matrix from the wave radiation problem. The *.3* 
+file contains the frequency- and direction-dependent first-order
+wave-excitation vector from the linear wave diffraction
+problem. These are written by the WAMIT program and should not include 
+any file headers. When the linear state-space model is used in place of
+frequency-to-time domain transformation for wave excitation or in place 
+of convolution for radiation, the *.ssexctn* file for wave excitation 
+(more information to be provided in the future) and/or the *.ss* file 
+for radiation generated by `SS_Fitting <https://www.nrel.gov/wind/nwtc/ss-fitting.html>`__ 
+must have the same root name as the other WAMIT-related files.
+
+When **NBodyMod** = 1, **PotFile** should only contain one entry irrespective of 
+**NBody** because the hydrodynamic coefficients for all bodies with 
+hydrodynamic coupling should be contained within a single set of files. 
+When **NBodyMod** = 2 or 3, **PotFile** should contain **NBody** entries, 
+each enclosed in quotes and separated from each other with commas or spaces. 
+Each entry of **PotFile** corresponds to a single potential-flow body.
+
+In the reminder of this section, each input should contain **NBody** entries 
+separated by commas or spaces, irrespective of **NBodyMod**.
+
+The output files from WAMIT are in a standard nondimensional form that
+HydroDyn will dimensionalize internally upon input. **WAMITULEN** is the
+characteristic body length (in m) used to redimensionalize the WAMIT
+output. The body motion and force/moment in these WAMIT files are always 
+resolved in the body-local frame of reference given by XBODY in the WAMIT 
+input file. To correctly interpret the WAMIT outputs, the position and 
+heading of each potential-flow body relative to the origin/PRP must be 
+specified using **PtfmRefxt**, **PtfmRefyt**, **PtfmRefzt**, and 
+**PtfmRefztRot** (in m or deg). With the exception of **NBodyMod** = 2, 
+these inputs must match XBODY in the WAMIT input file. When 
+**NBodyMod** = 2, these inputs can be set freely except for **PtfmRefzt**, 
+which must always be zero.
+
+While HydroDyn expects hydrodynamic coefficients derived from
+WAMIT, if you are not using WAMIT, it is recommended that you reformat
+your data according to the WAMIT format (including
+nondimensionalization) before inputting them to HydroDyn. Information on
+the WAMIT format is available from Chapter 4 of the WAMIT User's Guide
+:cite:`LeeNewman:2006`.
+
+**PtfmVol0** is the displaced volume of water when the potential-flow body is in
+its undisplaced position (in m\ :sup:`3`). This value should be set equal 
+to the value computed by WAMIT as output in the WAMIT ``.out`` file. 
+**PtfmCOBxt** and **PtfmCOByt** are the *X* and *Y* offsets (in m) of the 
+center of buoyancy of each body from the origin/PRP, NOT from 
+**PtfmRefxt** and **PtfmRefyt**.
 
 .. _hd-2nd_order_floating_platform_forces_input:
 
@@ -221,26 +307,21 @@ The 2\ :sup:`ND`-ORDER FLOATING PLATFORM FORCES section of the input
 file allows the option of adding second-order contributions to the
 potential-flow solution. When second-order terms are optionally enabled,
 the second-order terms are calculated using the first-order
-wave-component amplitudes and extra energy is added to the wave spectrum
-(at the difference and sum frequencies). The second-order terms cannot
+wave-component amplitudes and added to the first-order wave excitation
+at the difference and/or sum frequencies. The second-order terms cannot
 be computed without also including the first-order terms from the
 FLOATING PLATFORM section above (**PotMod** = 1). Enabling the
-second-order terms allows one to capture some of the nonlinearities of
-real surface waves, permitting more accurate modeling of sea states and
-the associated wave loads at the expense of greater computational effort
-(mostly at HydroDyn initialization).
+second-order terms allows one to capture some of the nonlinearities in the 
+wave loads, permitting more accurate modeling at the expense of greater 
+computational effort (mostly at HydroDyn initialization).
 
 While the cut-off frequencies in the :ref:`sea-2nd_order_waves_input` section
-of the SeaState module to apply to both the second-order wave kinematics used by strip
+of the SeaState module apply to both the second-order wave kinematics used by strip
 theory and the second-order diffraction loads in potential-flow theory,
 the second-order terms themselves are enabled separately. The
 second-order wave kinematics used by strip theory are enabled in the
 :ref:`sea-2nd_order_waves_input` section while the second-order
 diffraction loads in potential-flow theory are enabled in this section.
-While the second-order effects are included when enabled, the wave
-elevations output from HydroDyn will only include the second-order terms
-when the second-order wave kinematics are enabled in the
-:ref:`sea-2nd_order_waves_input` section in the SeaState module documetation.
 
 The second-order difference-frequency potential-flow terms can be
 enabled in one of three ways. To compute only the mean-drift term, set
@@ -263,20 +344,20 @@ will be calculated from. Only one of **MnDrift**, **NewmanApp**, and
 difference-frequency contributions to the potential-flow solution.
 
 The .\ *7* WAMIT file refers to the mean-drift loads (diagonal of the
-difference-frequency QTF) in all 6 DOFs derived from the control-surface
+difference-frequency QTF) in all DOFs derived from the control-surface
 integration method based on the first-order solution. The .\ *8* WAMIT
 file refers to the mean-drift loads (diagonal of the
-difference-frequency QTF) only in surge, sway, and roll derived from the
+difference-frequency QTF) only in surge, sway, and yaw derived from the
 momentum conservation principle based on the first-order solution. The
 .\ *9* WAMIT file refers to the mean-drift loads (diagonal of the
-difference-frequency QTF) in all six DOFs derived from the pressure
+difference-frequency QTF) in all DOFs derived from the pressure
 integration method based on the first-order solution. For the
 difference-frequency terms, 10, 11, and 12 refer to the WAMIT .\ *10d*,
 .\ *11d*, and .\ *12d* files, corresponding to the full QTF of (.*10d*)
-loads in all 6 DOFs associated with the quadratic interaction of
+loads in all DOFs associated with the quadratic interaction of
 first-order quantities, (.*11d*) total (quadratic plus second-order
-potential) loads in all 6 DOFs derived by the indirect method, and
-(.*12d*) total (quadratic plus second-order potential) loads in all 6
+potential) loads in all DOFs derived by the indirect method, and
+(.*12d*) total (quadratic plus second-order potential) loads in all
 DOFs derived by the direct method, respectively.
 
 The second-order sum-frequency potential-flow terms can only be enabled
@@ -289,9 +370,13 @@ sum-frequency terms, 10, 11, and 12 refer to the WAMIT .\ *10s*,
 .\ *11s*, and .\ *12s* files, corresponding to the full QTF of (.*10s*)
 loads in all 6 DOFs associated with the quadratic interaction of
 first-order quantities, (.*11s*) total (quadratic plus second-order
-potential) loads in all 6 DOFs derived by the indirect method, and
-(.*12s*) total (quadratic plus second-order potential) loads in all 6
+potential) loads in all DOFs derived by the indirect method, and
+(.*12s*) total (quadratic plus second-order potential) loads in all
 DOFs derived by the direct method, respectively.
+
+Note that also apply here are the various considerations associated with 
+running WAMIT for multiple potential-flow bodies discussed in the 
+**FLOATING PLATFORM** section for first-order loads.
 
 Platform Additional Stiffness and Damping
 -----------------------------------------
@@ -304,25 +389,62 @@ calculated by HydroDyn), per the following equation.
 
   \overrightarrow{F}_{Add} = \overrightarrow{F}_{0} - [C] \overrightarrow{q} - [B] \dot{\overrightarrow{q}} - [B_{quad}] ABS \left(\dot{\overrightarrow{q}}\right) \dot{\overrightarrow{q}}
 
-where :math:`\overrightarrow{F}_{0}` corresponds to the **AddF0** 6x1 static load (preload) vector,
-:math:`[C]` corresponds to the **AddCLin** 6x6
-linear restoring (stiffness) matrix,
-:math:`[B]` corresponds to the **AddBLin** 6x6
-linear damping matrix, :math:`[B_{quad}]`
-corresponds to the **AddBQuad** 6x6 quadratic drag matrix, and :math:`\overrightarrow{q}`
-corresponds to the WRP 6x1 (six-DOF) displacement vector (three
-translations and three rotations), where the overdot refers to the first
-time-derivative.
+where :math:`\overrightarrow{F}_{0}` corresponds to the **AddF0** static load (preload) vector,
+:math:`[C]` corresponds to the **AddCLin** linear restoring (stiffness) matrix,
+:math:`[B]` corresponds to the **AddBLin** linear damping matrix, 
+:math:`[B_{quad}]` corresponds to the **AddBQuad** quadratic drag matrix, and 
+:math:`\overrightarrow{q}` corresponds to the displacement vector of the potential-flow bodies 
+(translation and rotation), where the overdot refers to the first time-derivative.
+
+**AddF0** is either a column vector with 6\ **NBody** entries 
+if **NBodyMod** = 1 or **NBody** column vectors with six entries each 
+if **NBodyMod** = 2 or 3. In the former case, **AddF0** will span 
+6\ **NBody** lines with each line containing a single number in the 
+input file. In the latter case, **AddF0** will span six lines with each line 
+containing **NBody** numbers in the input file.
+
+**AddCLin**, **AddBLin**, and **AddBQuad** are either a single 
+6\ **NBody**\ -by-6\ **NBody** matrix if **NBodyMod** = 1 or 
+six 6-by-6 matrices if **NBodyMod** = 2 or 3. In the former case, 
+each matrix spans 6\ **NBody** lines in the input file with each line 
+containing 6\ **NBody** numbers. In the latter case, each matrix 
+spans six lines in the input file, with each line containing 6\ **NBody** 
+numbers.
 
 These terms can be used, e.g., to model a linearized mooring system, to
 augment strip-theory members with a linear hydrostatic restoring matrix
-(see :numref:`hd-modeling-hydrostatic-restoring-strip-theory`), or to "tune" HydroDyn to match damping to
-experimental results, such as free-decay tests. While likely most useful
-for floating systems, these matrices can also be used for fixed-bottom
-systems; in both cases, the resulting load is applied at the WRP, which
-when HydroDyn is coupled to FAST, get applied to the platform in
-ElastoDyn (bypassing SubDyn for fixed-bottom systems). See :ref:`hd-modeling-considerations`
-for addition guidance for where these terms are necessary.
+(see :numref:`hd-modeling-hydrostatic-restoring-strip-theory`), or to "tune" 
+HydroDyn to match damping to experimental results, such as free-decay tests. 
+While likely most useful for floating systems, these matrices can also be 
+used for fixed-bottom systems; in both cases, the resulting load is applied 
+at the reference point of each potential-flow body given by **PtfmRefxt**, 
+**PtfmRefyt**, and **PtfmRefzt**.
+
+Strip theory options
+--------------------
+**WaveDisp** can be set to 0 to compute the strip-theory loads using the 
+wave kinematics and dynamic pressure at the undisplaced position of the 
+structure. If set to 1, the loads will be computed using the wave kinematics 
+and dynamic pressure at the instantaneous displaced positions of the strip-theory 
+members. Note that when wave stretching is not used (\ **WaveStMod** = 0 in 
+SeaState), only the *X*- and *Y*-displacements of the strip-theory member 
+nodes are considered when **WaveDisp** = 1, while the vertical *Z*-displacement is 
+ignored. This is done to avoid discontinuous nodal loads that can result in 
+unphysical structural vibration with a SubDyn substructure model. When 
+**WaveStMod** > 0 and **WaveDisp** = 1, displacements of strip-theory members 
+in all three directions are considered when computing the wave kinematics. 
+A load smoothing procedure is performed to avoid discontinuous nodal loads 
+in this case.
+
+**AMMod** controls the computation of distributed strip-theory added-mass force. 
+If **AMMod** = 0, the strip-theory added-mass force is always evaluated up 
+to the SWL while neglecting the vertical displacement of the strip-theory member 
+nodes, even if wave stretching is enabled. With **AMMod** = 1, the strip-theory 
+added-mass force is evaluated up to the instantaneous free surface if 
+**WaveStMod** > 0. The vertical displacement of strip-theory members will also be 
+accounted for if **WaveDisp** = 1. **AMMod** should only be set to 0 if wave 
+stretching is causing numerical instabilities with flexible fixed-bottom support 
+structures modeled in SubDyn.
 
 Axial Coefficients
 ------------------
@@ -331,13 +453,47 @@ strip-theory model for both fixed-bottom and floating substructures.
 
 HydroDyn computes lumped viscous-drag, added-mass, fluid-inertia, and
 static pressure loads at member ends (joints). The hydrodynamic
-coefficients for the lumped the lumped loads at joints are referred to
+coefficients for the lumped loads at joints are referred to
 as "axial coefficients" and include viscous-drag coefficients, **AxCd**,
 added-mass coefficients, **AxCa**, and dynamic-pressure coefficients,
 **AxCp**. **AxCa** influences both the added-mass loads and the
 scattering component of the fluid-inertia loads. Any number of separate
 axial coefficient sets, distinguished by **AxCoefID**, may be specified
 by setting **NAxCoef** > 1.
+
+There are three optional inputs that affect the viscous drag force on 
+endplates. These are **AxFDMod**, **AxVnCOff**, and **AxFDLoFSc**.
+
+**AxFDMod** can be either 0 or 1. When set to 0, the drag force on 
+endplates will be computed as in previous versions of OpenFAST. 
+When set to 1, drag force will only be applied when the relative 
+flow is directed away from the endplate where flow separation is 
+expected, not when the relative flow is impinging on the endplate 
+where flow separation is unlikely. Option 0 is suitable for 
+strip-theory-only members, whereas option 1 might be better suited for 
+hybrid potential-flow members with drag force. Note that option 1 
+uses a leading coefficient of 1/4 when computing the drag force, while 
+option 2 uses the more common leading coefficient of 1/2 since drag 
+is usually only applied to one of the two endplates of the member 
+instead of on both.
+
+**AxVnCOff** is the cutoff frequency in Hz for high-pass filtering 
+the relative normal flow velocity used to compute the endplate drag force. 
+This input parameter should be used together with the weighting factor 
+**AxFDLoFSc** (between 0 and 1). When **AxFDLoFSc** = 0, the endplate 
+drag force is computed purely based on the high-pass filtered relative 
+normal velocity. When **AxFDLoFSc** = 1, the endplate drag force is 
+computed purely based on the unfiltered relative normal velocity. This 
+formulation is added to allow the user to attenuate the drag force in 
+response to lower-frequency motion. In some cases, this approach can 
+help address the underprediction of low-frequency resonance motion.
+
+Users can opt to omit all three optional inputs. In this case, HydroDyn 
+will compute the endplate drag force as in previous versions of OpenFAST. 
+Alternatively, users can include only the optional parameter **AxFDMod**. 
+No velocity filtering will be applied in this case. Lastly, users can 
+include all three optional parameters to control the behavior of endplate 
+drag force as explained above.
 
 Axial viscous-drag loads will be calculated for all specified member
 joints. Axial added-mass, fluid-inertia, and static-pressure loads will
@@ -396,7 +552,7 @@ specified using any of three models, which we refer to as the simple
 model, a depth-based model, and a member-based model. All of these
 models require the specification of both transverse and axial
 hydrodynamic coefficients for viscous drag, added mass, and dynamic
-pressure (axial viscous drag is not yet available). The added-mass
+pressure. The added-mass
 coefficient influences both the added-mass loads and the scattering
 component of the fluid-inertia loads. There are separate set of
 hydrodynamic coefficients both with and without marine growth. A given
@@ -413,12 +569,18 @@ However, different members can specify different coefficient models.
 
 In the hydrodynamic coefficient input parameters, **Cd**, **Ca**, and
 **Cp** refer to the viscous-drag, added-mass, and dynamic-pressure
-coefficients, respectively, **MG** identifies the coefficients to be
+coefficients, respectively. **MG** identifies the coefficients to be
 applied for members with marine growth (the standard values are
 identified without **MG**), and **Ax** identifies the axial coefficients
 to be applied for tapered members (the transverse coefficients are
-identified without **Ax**). It is noted that for the transverse
-coefficients, , the inertia coefficient.
+identified without **Ax**). The **Cb** coefficients allow the user to 
+scale the hydrostatic load for, e.g., non-circular member cross sections. 
+To avoid unphysical hydrostatic loads, the **Cb** coefficients are not 
+used to directly scale the distributed hydrostatic load. Instead, the 
+local member diameter (with marine growth if specified) is scaled by 
+the square root of **Cb** when computing the hydrostatic load. This 
+scaling also affects the hydrostatic load on member endplates for 
+consistency. 
 
 While the strip-theory solution assumes circular cross sections, the
 hydrodynamic coefficients can include shape corrections; however, there
@@ -464,6 +626,45 @@ coefficients for a member distinguished by **MemberID** are as follows:
 joint of the member, respectively. Members use these hydrodynamic
 coefficients by setting **MCoefMod** = 3.
 
+MacCamy-Fuchs diffraction load model
+++++++++++++++++++++++++++++++++++++
+The MacCamy-Fuchs diffraction load model can be enabled for strip-theory 
+members using any of the three coefficient models listed above. To enable 
+the MacCamy-Fuchs model, all transverse **Cp** and **CpMG** coefficients 
+should be replaced with the keyword **MCF** instead of a numeric value. 
+For the simple model, this includes **SimplCp** and **SimplCpMG**. With 
+the depth-based model, **DpthCp** and **DpthCpMG** on all lines should have 
+the keyword **MCF**. Finally, for the member-based model, **MemberCp1**, 
+**MemberCp2**, **MemberCpMG1**, and **MemberCpMG2** should all have the keyword 
+**MCF** only for the members to use the MacCamy-Fuchs model. All other 
+coefficients can be specified as usual, including the added-mass 
+coefficients. With this configuration, the distributed transverse fluid-inertia force 
+on the members will simply follow the MacCamy-Fuchs diffraction load, 
+irrespective of the added-mass coefficient set by the user. In this case, 
+the added-mass coefficient only affects the force component proportional 
+to the structure acceleration, not the force component proportional to 
+the fluid acceleration. 
+
+Strictly speaking, the MacCamy-Fuchs diffraction solution only applies to 
+fixed-bottom or deep-drafted vertical circular cylinders with a constant 
+diameter. To ensure it is approximately applicable while still allowing for some 
+flexibility, some constraints are placed on members when applying the MacCamy-Fuchs 
+model:
+
+* The member must be surface-piercing at least when the structure is undisplaced in calm water.
+
+* The member must be nearly vertical with an inclination from vertical less than 10 deg.
+
+* The member can be tapered slightly, but the diameter must be within +/-10% of **MCFD** in the SeaState input file.
+
+* The member must have a draft at least as large as 0.5\ **MCFD**.
+
+Because the MacCamy-Fuchs diffraction solution is based on linear potential-flow 
+theory, second-order contributions to the fluid acceleration are neglected when 
+computing the wave load even if second-order wave kinematics are enabled in SeaState. 
+However, the MacCamy-Fuchs diffraction model can be used in conjunction with any of 
+the available wave-stretching models.
+
 .. _hd-members:
 
 Members
@@ -479,17 +680,26 @@ specify the ending cross-section properties, allowing for tapered
 members. **MDivSize** determines the maximum spacing (in meters) between
 simulation nodes where the distributed loads are actually computed; the
 smaller the number, the finer the resolution and longer the
-computational time.
-Each member in your model will have hydrodynamic coefficients, which are
-specified using one of the three models (**MCoefMod**). Model 1 uses a
-single set of coefficients found in the SIMPLE HYDRODYNAMIC COEFFICIENTS
-section. Model 2 is depth-based, and is determined via the table found
+computational time. Each member in your model will have hydrodynamic 
+coefficients, which are specified using one of the three models (**MCoefMod**). 
+Model 1 uses a single set of coefficients found in the SIMPLE HYDRODYNAMIC 
+COEFFICIENTS section. Model 2 is depth-based, and is determined via the table found
 in the DEPTH-BASED HYDRODYNAMIC COEFFICIENTS section. Model 3 specifies
 coefficients for a particular member, by referring to the MEMBER-BASED
-HYDRODYNAMIC COEFFICIENTS section. The **PropPot** flag indicates
-whether the corresponding member coincides with the body represented by
-the potential-flow solution. When **PropPot** = TRUE, only viscous-drag
-loads, and ballasting loads will be computed for that member.
+HYDRODYNAMIC COEFFICIENTS section. The **MHstLMod** switch controls the 
+computation of hydrostatic loads on strip-theory members when **PropPot** 
+= FALSE. Setting **MHstLMod** to 0 disables hydrostatic load. If set to 1,
+hydrostatic loads will be computed analytically. This approach is efficient, 
+but it only works for fully submerged or surface-piercing members 
+that are far from horizontal without partially wetted endplates. 
+For nearly horizontal members close to the free surface or members that experience  
+partially wetted endplates, a semi-numerical approach for hydrostatic load 
+can be selected by setting **MHstLMod** to 2. This approach works with any 
+member positioning in relation to the free surface at the cost of slightly 
+longer computing time. The **PropPot** flag indicates whether the corresponding 
+member coincides with the body represented by the potential-flow solution. 
+When **PropPot** = TRUE, only viscous-drag loads and ballasting loads will 
+be computed for that member.
 
 .. TODO 7.5.2 is the theory section which does not yet exist.
 .. Section 7.5.2 discusses the difference between the user-supplied discretization and the simulation discretization.
@@ -576,7 +786,7 @@ Output
 Specifying **HDSum** = TRUE causes HydroDyn to generate a summary file
 with name **OutRootname**\ *.HD.sum*. **OutRootName** is either
 specified in the HYDRODYN section of the driver input file when running
-HydroDyn standalone, or by the FAST program when running a coupled
+HydroDyn standalone, or by the OpenFAST program when running a coupled
 simulation. See :numref:`hd-summary-file` for summary file details.
 
 For this version, **OutAll** must be set to FALSE. In future versions,
@@ -585,7 +795,7 @@ for every joint and member in the input file.
 
 If **OutSwtch** is set to 1, outputs are sent to a file with the name
 ``OutRootname.HD.out``. If **OutSwtch** is set to 2, outputs are
-sent to the calling program (FAST) for writing. If **OutSwtch** is set
+sent to the calling program (OpenFAST) for writing. If **OutSwtch** is set
 to 3, both file outputs occur. In standalone mode, setting **OutSwitch**
 to 2 results in no output file being produced.
 
