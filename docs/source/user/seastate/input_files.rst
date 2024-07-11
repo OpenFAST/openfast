@@ -294,11 +294,13 @@ Seven files with extensions *.Vxi*, *.Vyi*, *.Vzi*, *.Axi*, *.Ayi*,
 *.Azi*, and *.DynP* correspond to the *X*, *Y*, and *Z* velocities (in
 m/s) and accelerations (in m/s\ :sup:`2`) in the global inertial-frame
 coordinate system and the dynamic pressure (in Pa) time series. Each of
-these files must have exactly **WaveTMax**/**WaveDT** rows and *N*
+these files must have 13 headerlines, which will be skipped by SeaState, 
+followed by exactly **WaveTMax**/**WaveDT** rows and *N*
 whitepace-separated columns, where *N* is the total number of SeaState 
 wave grid points (corresponding exactly to those written to the
 SeaState summary file). The nodes are ordered by incrementing the *X*-position first, 
-followed by incrementing the *Y*-position, and finally incrementing the *Z*-position. 
+followed by incrementing the *Y*-position, and finally incrementing the *Z*-position, 
+as they appear in the SeaState summary file. 
 The first node is located at (-**X_HalfWidth**,-**Y_HalfWidth**,\ **MSL2SWL**-**Z_Dpth**).
 Time is absent from the files but is assumed to go from zero to **WaveTMax** 
 in steps of **WaveDT**. The eighth file, with extension *.Elev*, contains the 
@@ -315,7 +317,10 @@ will be converted to a zero. The data in these files is not processed
 (filtered, etc.) or checked for physical correctness. Full externally 
 generated wave kinematics (**WaveMod** = 6) cannot be used in conjunction 
 with the potential-flow solution, and only vertical and Wheeler wave stretching 
-are allowed, not extrapolation stretching.
+are allowed, not extrapolation stretching. Users can run the SeaState 
+standalone driver program with any of the internal wave-generation models, 
+e.g., **WaveMod** = 2, with **WrWvKinMod** = 2 in the driver input to generate 
+a set of valid input files for **WaveMod** = 6 as templates.
 
 Using user-defined wave frequency components (**WaveMod** = 7) requires 
 a text-formatted input data file with the extension *.Comp* containing 

@@ -72,7 +72,7 @@ inertial-frame coordinate system.
 
 .. _hd-prp_input_table:
 
-.. table:: PRP Inputs Time-Series Data File Contents
+.. table:: PRP Inputs Time-Series Data File Contents (**PRPInputsMod** = 2)
    :widths: auto
 
    ============= ================================================================================ ======================================
