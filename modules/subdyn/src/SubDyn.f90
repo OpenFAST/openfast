@@ -734,6 +734,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       if (p%GuyanLoadCorrection.and.p%Floating) then
          ! --- Special case for floating with extra moment, we use "rotated loads" m%F_L previously computed
          ! Contributions from external forces - Note: T_I is in the rotated frame
+         call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
          Y1_Guy_R =   matmul( F_I, p%TI )     ! = - [-T_I.^T] F_R  = [T_I.^T] F_R =~ F_R T_I (~: FORTRAN convention)
          Y1_Guy_R =   matmul(RRb2g, Y1_Guy_R)
          Y1_Guy_L = - matmul(p%D1_142, m%F_L) ! = - (- T_I^T . Phi_Rb^T) F_L, rotated loads
