@@ -95,7 +95,7 @@ and acceleration) specified for the PRP in the driver file. The user is
 responsible for generating consistent kinematics if that is important.
 
 If the HydroDyn model contains one or more potential-flow bodies, 
-**PRPInputsMod** can be set to a negative number with |\ **PRPInputsMod**\ | = **NBody** 
+**PRPInputsMod** can be set to a negative number with :math:`|\ \text{**PRPInputsMod**}\ | = \text{**NBody**}` 
 in the HydroDyn primary input file. In this case, an alternative form of 
 the PRP input file shown in :numref:`hd-prp_input_table_2` can be used 
 to specify different motions for the PRP, which controls the motion of 
