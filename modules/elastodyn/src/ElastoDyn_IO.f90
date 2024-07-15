@@ -1749,7 +1749,7 @@ SUBROUTINE ReadBladeFile ( BldFile, BladeKInputFileData, UnEc, ErrStat, ErrMsg )
 
    ErrStat = ErrID_None
    ErrMsg = ""
-   
+ 
    UnIn = -1
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
 

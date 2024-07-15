@@ -3005,296 +3005,152 @@ SUBROUTINE SetOtherParameters( p, InputFileData, ErrStat, ErrMsg )
 
    CALL Coeff(p, InputFileData, ErrStat, ErrMsg)
    IF ( ErrStat /= ErrID_None ) RETURN
-   
-   
 END SUBROUTINE SetOtherParameters
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine allocates arrays in the RtHndSide data structure.
 !! It requires p\%TwrNodes, p\%NumBl, p\%TipNode, p\%NDOF, p\%BldNodes to be set before calling this routine.
 SUBROUTINE Alloc_RtHS( RtHS, p, ErrStat, ErrMsg  )
-!..................................................................................................................................
-
    TYPE(ED_RtHndSide),       INTENT(INOUT)  :: RtHS                         !< RtHndSide data type
    TYPE(ED_ParameterType),   INTENT(IN)     :: p                            !< Parameters of the structural dynamics module
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      !< Error status
    CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       !< Error message
 
    ! local variables:
+   integer(IntKi)                           :: ErrStat2
+   character(ErrMsgLen)                     :: ErrMsg2
    INTEGER(IntKi),   PARAMETER              :: Dims = 3                     ! The position arrays all must be allocated with a dimension for X,Y,and Z
    CHARACTER(*),     PARAMETER              :: RoutineName = 'Alloc_RtHS'
 
-      ! positions:
-  !CALL AllocAry( RtHS%rZT,       Dims, p%TwrNodes,        'rZT',       ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%rT,        Dims, p%TwrNodes,        'rT',        ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%rT0T,      Dims, p%TwrNodes,        'rT0T',      ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-  !CALL AllocAry( RtHS%rQS,       Dims, p%NumBl,p%TipNode, 'rQS',       ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-  !CALL AllocAry( RtHS%rS,        Dims, p%NumBl,p%TipNode, 'rS',        ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%rS0S,      Dims, p%NumBl,p%TipNode, 'rS0S',      ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%rPS0,      Dims, p%NumBl,           'rPS0',      ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%rSAerCen,  Dims, p%TipNode, p%NumBl,'rSAerCen',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
+   ! positions:
+  !call AllocAry( RtHS%rZT,       Dims, p%TwrNodes,        'rZT',      ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%rZT      = 0.0_ReKi
+   call AllocAry( RtHS%rT,        Dims, p%TwrNodes,        'rT',       ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%rT       = 0.0_ReKi
+   call AllocAry( RtHS%rT0T,      Dims, p%TwrNodes,        'rT0T',     ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%rT0T     = 0.0_ReKi
+  !call AllocAry( RtHS%rQS,       Dims, p%NumBl,p%TipNode, 'rQS',      ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%rQS      = 0.0_ReKi
+  !call AllocAry( RtHS%rS,        Dims, p%NumBl,p%TipNode, 'rS',       ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%rS       = 0.0_ReKi
+   call AllocAry( RtHS%rS0S,      Dims, p%NumBl,p%TipNode, 'rS0S',     ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%rS0S     = 0.0_ReKi
+   call AllocAry( RtHS%rPS0,      Dims, p%NumBl,           'rPS0',     ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%rPS0     = 0.0_ReKi
+   call AllocAry( RtHS%rSAerCen,  Dims, p%TipNode, p%NumBl,'rSAerCen', ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%rSAerCen = 0.0_ReKi
   
-      ! tower
-   allocate(RtHS%rZT(      Dims,  0:p%TwrNodes), &
-            RtHS%AngPosEF( Dims,  0:p%TwrNodes), &
-            RtHS%AngPosXF( Dims,  0:p%TwrNodes), &
-            RtHS%AngVelEF( Dims,  0:p%TwrNodes), &
-            RtHS%LinVelET( Dims,  0:p%TwrNodes), &
-            RtHS%AngAccEFt(Dims,  0:p%TwrNodes), &
-            RtHS%LinAccETt(Dims,  0:p%TwrNodes), &
-      STAT=ErrStat)
-      if (ErrStat /= 0) then
-         ErrStat = ErrID_Fatal
-         ErrMsg  = "Error allocating rZT, AngPosEF, AngPosXF, LinVelET, AngVelEF, LinAccETt, and AngAccEFt arrays."
-         RETURN
-      end if
-               
+   ! tower
+   allocate(RtHS%rZT(      Dims, 0:p%TwrNodes), STAT=ErrStat2); if (Failed0('rZT      ')) return;   RtHS%rZT       = 0.0_ReKi
+   allocate(RtHS%AngPosEF( Dims, 0:p%TwrNodes), STAT=ErrStat2); if (Failed0('AngPosEF ')) return;   RtHS%AngPosEF  = 0.0_ReKi
+   allocate(RtHS%AngPosXF( Dims, 0:p%TwrNodes), STAT=ErrStat2); if (Failed0('AngPosXF ')) return;   RtHS%AngPosXF  = 0.0_ReKi
+   allocate(RtHS%AngVelEF( Dims, 0:p%TwrNodes), STAT=ErrStat2); if (Failed0('AngVelEF ')) return;   RtHS%AngVelEF  = 0.0_ReKi
+   allocate(RtHS%LinVelET( Dims, 0:p%TwrNodes), STAT=ErrStat2); if (Failed0('LinVelET ')) return;   RtHS%LinVelET  = 0.0_ReKi
+   allocate(RtHS%AngAccEFt(Dims, 0:p%TwrNodes), STAT=ErrStat2); if (Failed0('AngAccEFt')) return;   RtHS%AngAccEFt = 0.0_ReKi
+   allocate(RtHS%LinAccETt(Dims, 0:p%TwrNodes), STAT=ErrStat2); if (Failed0('LinAccETt')) return;   RtHS%LinAccETt = 0.0_ReKi
       
-      ! blades
-   allocate(RtHS%rS( Dims, p%NumBl,0:p%TipNode), &
-            RtHS%rQS(Dims, p%NumBl,0:p%TipNode), STAT=ErrStat)
-      if (ErrStat /= 0) then
-         ErrStat = ErrID_Fatal
-         ErrMsg  = "Error allocating rS and rQS."
-         RETURN
-      end if
+   ! blades
+   allocate(RtHS%rS( Dims, p%NumBl, 0:p%TipNode), STAT=ErrStat2); if (Failed0('rS ')) return;   RtHS%rS  = 0.0_ReKi
+   allocate(RtHS%rQS(Dims, p%NumBl, 0:p%TipNode), STAT=ErrStat2); if (Failed0('rQS')) return;   RtHS%rQS = 0.0_ReKi
+
+   ! angular velocities (including partial angular velocities):
+   !call AllocAry( RtHS%AngVelEF,  Dims, p%TwrNodes, 'AngVelEF', ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%AngVelEF = 0.0_ReKi
+   !call AllocAry( RtHS%AngPosEF,  Dims, p%TwrNodes, 'AngPosEF', ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%AngPosEF = 0.0_ReKi
+   !call AllocAry( RtHS%AngPosXF,  Dims, p%TwrNodes, 'AngPosXF', ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%AngPosXF = 0.0_ReKi
+
+
+   ! These angular velocities are allocated to start numbering a dimension with 0 instead of 1:
+   allocate(RtHS%PAngVelEB(                    p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelEB')) return;  RtHS%PAngVelEB = 0.0_ReKi
+   allocate(RtHS%PAngVelER(                    p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelER')) return;  RtHS%PAngVelER = 0.0_ReKi
+   allocate(RtHS%PAngVelEX(                    p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelEX')) return;  RtHS%PAngVelEX = 0.0_ReKi
+   allocate(RtHS%PAngVelEA(                    p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelEA')) return;  RtHS%PAngVelEA = 0.0_ReKi
+   allocate(RtHS%PAngVelEF(0:p%TwrNodes,       p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelEF')) return;  RtHS%PAngVelEF = 0.0_ReKi
+   allocate(RtHS%PAngVelEG(                    p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelEG')) return;  RtHS%PAngVelEG = 0.0_ReKi
+   allocate(RtHS%PAngVelEH(                    p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelEH')) return;  RtHS%PAngVelEH = 0.0_ReKi
+   allocate(RtHS%PAngVelEL(                    p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelEL')) return;  RtHS%PAngVelEL = 0.0_ReKi
+   allocate(RtHS%PAngVelEM(p%NumBl,0:p%TipNode,p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelEM')) return;  RtHS%PAngVelEM = 0.0_ReKi
+   allocate(RtHS%PAngVelEN(                    p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelEN')) return;  RtHS%PAngVelEN = 0.0_ReKi
+
+   ! angular accelerations:
+   !CALL AllocAry( RtHS%AngAccEFt, Dims, p%TwrNodes,         'AngAccEFt', ErrStat2, ErrMsg2 ); 
+
+   ! linear velocities (including partial linear velocities):
+   !CALL AllocAry( RtHS%LinVelET,  Dims, p%TwrNodes,         'LinVelET',  ErrStat2, ErrMsg2 ); 
+   !CALL AllocAry( RtHS%LinVelESm2,                 p%NumBl, 'LinVelESm2',ErrStat2, ErrMsg2 );           ! The m2-component (closest to tip) of LinVelES
+   allocate(RtHS%LinVelES( Dims, 0:p%TipNode, p%NumBl), STAT=ErrStat2); if (Failed0('LinVelES')) return; RtHS%LinVelES  = 0.0_ReKi
+   allocate(RtHS%AngVelEM( Dims, 0:p%TipNode, p%NumBl), STAT=ErrStat2); if (Failed0('AngVelEM')) return; RtHS%AngVelEM  = 0.0_ReKi
    
+   ! These linear velocities are allocated to start numbering a dimension with 0 instead of 1:
+   allocate(RtHS%PLinVelEIMU(p%NDOF,0:1,Dims), STAT=ErrStat2);                   if (Failed0('PLinVelEIMU')) return;  RtHS%PLinVelEIMU = 0.0_ReKi;
+   allocate(RtHS%PLinVelEO(p%NDOF,0:1,Dims), STAT=ErrStat2);                     if (Failed0('PLinVelEO  ')) return;  RtHS%PLinVelEO   = 0.0_ReKi;
+   allocate(RtHS%PLinVelES(p%NumBl,0:p%TipNode,p%NDOF,0:1,Dims), STAT=ErrStat2); if (Failed0('PLinVelES  ')) return;  RtHS%PLinVelES   = 0.0_ReKi;
+   allocate(RtHS%PLinVelET(0:p%TwrNodes,p%NDOF,0:1,Dims), STAT=ErrStat2);        if (Failed0('PLinVelET  ')) return;  RtHS%PLinVelET   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEZ(p%NDOF,0:1,Dims), STAT=ErrStat2);                     if (Failed0('PLinVelEZ  ')) return;  RtHS%PLinVelEZ   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEC(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelEC  ')) return;  RtHS%PLinVelEC   = 0.0_ReKi;
+   allocate(RtHS%PLinVelED(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelED  ')) return;  RtHS%PLinVelED   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEI(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelEI  ')) return;  RtHS%PLinVelEI   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEJ(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelEJ  ')) return;  RtHS%PLinVelEJ   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEP(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelEP  ')) return;  RtHS%PLinVelEP   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEQ(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelEQ  ')) return;  RtHS%PLinVelEQ   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEU(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelEU  ')) return;  RtHS%PLinVelEU   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEV(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelEV  ')) return;  RtHS%PLinVelEV   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEW(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelEW  ')) return;  RtHS%PLinVelEW   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEY(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelEY  ')) return;  RtHS%PLinVelEY   = 0.0_ReKi;
+   allocate(RtHS%LinAccESt(Dims, p%NumBl, 0:p%TipNode), STAT=ErrStat2);          if (Failed0('LinAccESt  ')) return;  RtHS%LinAccESt   = 0.0_ReKi;
+   allocate(RtHS%AngAccEKt(Dims, 0:p%TipNode, p%NumBl), STAT=ErrStat2);          if (Failed0('AngAccEKt  ')) return;  RtHS%AngAccEKt   = 0.0_ReKi;
+   allocate(RtHS%AngPosHM( Dims, p%NumBl, 0:p%TipNode), STAT=ErrStat2);          if (Failed0('AngPosHM   ')) return;  RtHS%AngPosHM    = 0.0_ReKi;
 
-      ! angular velocities (including partial angular velocities):
-   !CALL AllocAry( RtHS%AngVelEF,  Dims, p%TwrNodes,        'AngVelEF',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   !CALL AllocAry( RtHS%AngPosEF,  Dims, p%TwrNodes,        'AngPosEF',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   !CALL AllocAry( RtHS%AngPosXF,  Dims, p%TwrNodes,        'AngPosXF',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
+   !call AllocAry( RtHS%LinAccESt, Dims, p%NumBl, p%TipNode,'LinAccESt', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%LinAccESt  = 0.0_ReKi;
+   !call AllocAry( RtHS%LinAccETt, Dims, p%TwrNodes,        'LinAccETt', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%LinAccETt  = 0.0_ReKi
+   call AllocAry( RtHS%PFrcS0B,   Dims, p%NumBl,p%NDOF,    'PFrcS0B  ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PFrcS0B   = 0.0_ReKi
+   call AllocAry( RtHS%FrcS0Bt,   Dims, p%NumBl,           'FrcS0Bt  ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%FrcS0Bt   = 0.0_ReKi
+   call AllocAry( RtHS%PMomH0B,   Dims, p%NumBl, p%NDOF,   'PMomH0B  ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PMomH0B   = 0.0_ReKi
+   call AllocAry( RtHS%MomH0Bt,   Dims, p%NumBl,           'MomH0Bt  ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%MomH0Bt   = 0.0_ReKi
+   call AllocAry( RtHS%PFrcPRot,  Dims, p%NDOF,            'PFrcPRot ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PFrcPRot  = 0.0_ReKi
+   call AllocAry( RtHS%PMomLPRot, Dims, p%NDOF,            'PMomLPRot', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PMomLPRot = 0.0_ReKi
+   call AllocAry( RtHS%PMomNGnRt, Dims, p%NDOF,            'PMomNGnRt', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PMomNGnRt = 0.0_ReKi
+   call AllocAry( RtHS%PMomNTail, Dims, p%NDOF,            'PMomNTail', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PMomNTail = 0.0_ReKi
+   call AllocAry( RtHS%PFrcONcRt, Dims, p%NDOF,            'PFrcONcRt', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PFrcONcRt = 0.0_ReKi
+   call AllocAry( RtHS%PMomBNcRt, Dims, p%NDOF,            'PMomBNcRt', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PMomBNcRt = 0.0_ReKi
+   call AllocAry( RtHS%PFrcT0Trb, Dims, p%NDOF,            'PFrcT0Trb', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PFrcT0Trb = 0.0_ReKi
+   call AllocAry( RtHS%PMomX0Trb, Dims, p%NDOF,            'PMomX0Trb', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PMomX0Trb = 0.0_ReKi
+   call AllocAry( RtHS%FSAero,    Dims, p%NumBl,p%BldNodes,'FSAero   ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%FSAero    = 0.0_ReKi
+   call AllocAry( RtHS%MMAero,    Dims, p%NumBl,p%BldNodes,'MMAero   ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%MMAero    = 0.0_ReKi
+   call AllocAry( RtHS%FSTipDrag, Dims, p%NumBl,           'FSTipDrag', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%FSTipDrag = 0.0_ReKi
+   call AllocAry( RtHS%PFTHydro,  Dims, p%TwrNodes, p%NDOF,'PFTHydro ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PFTHydro  = 0.0_ReKi
+   call AllocAry( RtHS%PMFHydro,  Dims, p%TwrNodes, p%NDOF,'PMFHydro ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PMFHydro  = 0.0_ReKi
+   call AllocAry( RtHS%FTHydrot,  Dims, p%TwrNodes,        'FTHydrot ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%FTHydrot  = 0.0_ReKi
+   call AllocAry( RtHS%MFHydrot,  Dims, p%TwrNodes,        'MFHydrot ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%MFHydrot  = 0.0_ReKi
 
+   call AllocAry( RtHS%PFrcVGnRt, Dims, p%NDOF,            'PFrcVGnRt', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PFrcVGnRt = 0.0_ReKi
+   call AllocAry( RtHS%PFrcWTail, Dims, p%NDOF,            'PFrcWTail', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PFrcWTail = 0.0_ReKi
+   call AllocAry( RtHS%PFrcZAll,  Dims, p%NDOF,            'PFrcZAll ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PFrcZAll  = 0.0_ReKi
+   call AllocAry( RtHS%PMomXAll,  Dims, p%NDOF,            'PMomXAll ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PMomXAll  = 0.0_ReKi
 
-         ! These angular velocities are allocated to start numbering a dimension with 0 instead of 1:
-   ALLOCATE ( RtHS%PAngVelEB(p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelEB array.'
-      RETURN
-   ENDIF
-
-   ALLOCATE ( RtHS%PAngVelER(p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelER array.'
-      RETURN
-   ENDIF
-
-   ALLOCATE ( RtHS%PAngVelEX(p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelEX array.'
-      RETURN
-   ENDIF
-
-   ALLOCATE ( RtHS%PAngVelEA(p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelEA array.'
-      RETURN
-   ENDIF
-
-   ALLOCATE ( RtHS%PAngVelEF(0:p%TwrNodes, p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelEF array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PAngVelEG(                  p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelEG array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PAngVelEH(                  p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelEH array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PAngVelEL(                  p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelEL array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PAngVelEM(p%NumBl,0:p%TipNode,p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelEM array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PAngVelEN(                  p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelEN array.'
-      RETURN
-   ENDIF
-
-      ! angular accelerations:
-   !CALL AllocAry( RtHS%AngAccEFt, Dims, p%TwrNodes,         'AngAccEFt', ErrStat, ErrMsg );  IF ( ErrStat /= ErrID_None ) RETURN
-
-      ! linear velocities (including partial linear velocities):
-   !CALL AllocAry( RtHS%LinVelET,  Dims, p%TwrNodes,         'LinVelET',  ErrStat, ErrMsg );  IF ( ErrStat /= ErrID_None ) RETURN         
-
-   !CALL AllocAry( RtHS%LinVelESm2,                 p%NumBl, 'LinVelESm2',ErrStat, ErrMsg );  IF ( ErrStat /= ErrID_None ) RETURN ! The m2-component (closest to tip) of LinVelES
-   ALLOCATE( RtHS%LinVelES( Dims, 0:p%TipNode, p%NumBl ), &
-             RtHS%AngVelEM( Dims, 0:p%TipNode, p%NumBl ), STAT=ErrStat )
-   IF (ErrStat /= 0 ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = RoutineName//":Error allocating LinVelES and AngVelEM."
-      RETURN
-   END IF
-   
-            ! These linear velocities are allocated to start numbering a dimension with 0 instead of 1:
-
-   ALLOCATE ( RtHS%PLinVelEIMU(p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEIMU array.'
-      RETURN
-   ENDIF
-
-   ALLOCATE ( RtHS%PLinVelEO(p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEO array.'
-      RETURN
-   ENDIF
-
-   ALLOCATE ( RtHS%PLinVelES(p%NumBl,0:p%TipNode,p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelES array.'
-      RETURN
-   ENDIF
-
-   ALLOCATE ( RtHS%PLinVelET(0:p%TwrNodes,p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelET array.'
-      RETURN
-   ENDIF
-
-   ALLOCATE ( RtHS%PLinVelEZ(p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEZ array.'
-      RETURN
-   ENDIF
-
-   ALLOCATE ( RtHS%PLinVelEC(p%NDOF,0:1,3) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEC array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PLinVelED(p%NDOF,0:1,3) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelED array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PLinVelEI(p%NDOF,0:1,3) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEI array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PLinVelEJ(p%NDOF,0:1,3) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEJ array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PLinVelEP(p%NDOF,0:1,3) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEP array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PLinVelEQ(p%NDOF,0:1,3) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEQ array.'
-      RETURN
-   ENDIF
-   
-   ALLOCATE ( RtHS%PLinVelEU(p%NDOF,0:1,3) , &
-              RtHS%PLinVelEV(p%NDOF,0:1,3) , &
-              RtHS%PLinVelEW(p%NDOF,0:1,3) , &
-              RtHS%PLinVelEY(p%NDOF,0:1,3) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEU, PLinVelEV, PLinVelEW and PLinVelEY arrays.'
-      RETURN
-   ENDIF
-
-   
-   ALLOCATE( RtHS%LinAccESt( Dims, p%NumBl, 0:p%TipNode ), STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for LinAccESt.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%AngAccEKt( Dims, 0:p%TipNode, p%NumBl ) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for AngAccEKt.'
-      RETURN
-   ENDIF
-
-   ALLOCATE(RtHS%AngPosHM(Dims, p%NumBl, 0:p%TipNode), STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the AngPosHM arrays.'
-      RETURN
-   ENDIF
-
-   !CALL AllocAry( RtHS%LinAccESt, Dims, p%NumBl, p%TipNode,'LinAccESt', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   !CALL AllocAry( RtHS%LinAccETt, Dims, p%TwrNodes,        'LinAccETt', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PFrcS0B,   Dims, p%NumBl,p%NDOF,    'PFrcS0B',   ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%FrcS0Bt,   Dims, p%NumBl,           'FrcS0Bt',   ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PMomH0B,   Dims, p%NumBl, p%NDOF,   'PMomH0B',   ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%MomH0Bt,   Dims, p%NumBl,           'MomH0Bt',   ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PFrcPRot,  Dims, p%NDOF,            'PFrcPRot',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PMomLPRot, Dims, p%NDOF,            'PMomLPRot', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PMomNGnRt, Dims, p%NDOF,            'PMomNGnRt', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PMomNTail, Dims, p%NDOF,            'PMomNTail', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PFrcONcRt, Dims, p%NDOF,            'PFrcONcRt', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PMomBNcRt, Dims, p%NDOF,            'PMomBNcRt', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PFrcT0Trb, Dims, p%NDOF,            'PFrcT0Trb', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PMomX0Trb, Dims, p%NDOF,            'PMomX0Trb', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%FSAero,    Dims, p%NumBl,p%BldNodes,'FSAero',    ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%MMAero,    Dims, p%NumBl,p%BldNodes,'MMAero',    ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%FSTipDrag, Dims, p%NumBl,           'FSTipDrag', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PFTHydro,  Dims, p%TwrNodes, p%NDOF,'PFTHydro',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PMFHydro,  Dims, p%TwrNodes, p%NDOF,'PMFHydro',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%FTHydrot,  Dims, p%TwrNodes,        'FTHydrot',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%MFHydrot,  Dims, p%TwrNodes,        'MFHydrot',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-
-   CALL AllocAry( RtHS%PFrcVGnRt, Dims, p%NDOF,            'PFrcVGnRt', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PFrcWTail, Dims, p%NDOF,            'PFrcWTail', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PFrcZAll,  Dims, p%NDOF,            'PFrcZAll',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PMomXAll,  Dims, p%NDOF,            'PMomXAll',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
+   ! check for failed where /= 0 is fatal
+   logical function Failed0(txt)
+      character(*), intent(in) :: txt
+      if (errStat /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate "//trim(txt)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg2, RoutineName)
+      endif
+      Failed0 = ErrStat >= AbortErrLev
+   end function Failed0
 END SUBROUTINE Alloc_RtHS
+
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This takes the tower input file data and sets the corresponding tower parameters, performing linear interpolation of the
 !! input data to the specified tower mesh.
 !! It requires p\%TwrFlexL, and p\%TwrNodes to be set first.
-SUBROUTINE SetTowerParameters( p, InputFileData, ErrStat, ErrMsg  )
-!..................................................................................................................................
-
-      ! Passed variables
-
+SUBROUTINE SetTowerParameters( p, InputFileData, ErrStat, ErrMsg )
+   ! Passed variables
    TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                            !< Parameters of the structural dynamics module
    TYPE(ED_InputFile),       INTENT(IN)     :: InputFileData                !< Data stored in the module's input file
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      !< Error status
    CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       !< Error message
 
-      ! Local variables:
-
+   ! Local variables:
    REAL(ReKi)                               :: x                            ! Fractional location between two points in linear interpolation
    INTEGER(IntKi )                          :: J                            ! Index for the node arrays
    INTEGER(IntKi)                           :: InterpInd                    ! Index for the interpolation routine
