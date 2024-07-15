@@ -401,10 +401,8 @@ bd_regression("bd_static_cantilever_beam"   "beamdyn;static")
 bd_regression("bd_static_twisted_with_k1"   "beamdyn;static")
 
 # HydroDyn regression tests
-hd_regression("hd_OC3tripod_offshore_fixedbottom_wavesirr"  "hydrodyn;offshore")
-hd_regression("hd_5MW_ITIBarge_DLL_WTurb_WavesIrr"         "hydrodyn;offshore")
+hd_regression("hd_5MW_ITIBarge_DLL_WTurb_WavesIrr"          "hydrodyn;offshore")
 hd_regression("hd_5MW_OC3Spar_DLL_WTurb_WavesIrr"           "hydrodyn;offshore")
-hd_regression("hd_5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth"  "hydrodyn;offshore")
 hd_regression("hd_5MW_OC4Semi_WSt_WavesWN"                  "hydrodyn;offshore")
 hd_regression("hd_5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti"    "hydrodyn;offshore")
 hd_regression("hd_TaperCylinderPitchMoment"                 "hydrodyn;offshore")
