@@ -1917,7 +1917,7 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
       
    end if
       
-   if (p%DBEMT_Mod > DBEMT_none) then
+   if (p%DBEMT_Mod == DBEMT_none) then
       InvalidOutput( DBEMTau1 ) = .true.
    end if
 
