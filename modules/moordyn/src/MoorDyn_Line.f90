@@ -926,7 +926,7 @@ CONTAINS
 
 
          IF (reverseFlag) THEN
-		      ! Follows process of MoorPy catenary.py
+            ! Follows process of MoorPy catenary.py
             s = s( size(s):1:-1 )
             X = X( size(X):1:-1 )
             Z = Z( size(Z):1:-1 )

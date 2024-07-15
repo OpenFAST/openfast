@@ -520,8 +520,8 @@ CONTAINS
 
       ! calculate the aggregate 3/6DOF rigid-body loads of a coupled rod including inertial loads
    !--------------------------------------------------------------
-   SUBROUTINE Body_GetCoupledForce(Body, Fnet_out, m, p)
-
+   SUBROUTINE Body_GetCoupledForce(t, Body, Fnet_out, m, p)
+      real(R8Ki),            intent(in   )  :: t           ! time - for ramping inertial loading
       Type(MD_Body),         INTENT(INOUT)  :: Body        ! the Body object
       Real(DbKi),            INTENT(  OUT)  :: Fnet_out(6) ! force and moment vector
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
@@ -537,6 +537,9 @@ CONTAINS
       
          if (p%inertialF == 1) then      ! include inertial components 
             F6_iner = -MATMUL(Body%M, Body%a6)     ! unstable in OpenFAST v4 and below becasue of loose coupling with ED and SD. Transients in acceleration can cause issues
+         elseif (p%inertialF == 2) then  ! include inertial components, but ramp up load
+            F6_iner = -MATMUL(Body%M, Body%a6)
+            if (t < p%inertialF_rampT) F6_iner = F6_iner * t / p%inertialF_rampT
          else
             ! When OpenFAST v5 is released w/ tight coupling, remove this hack and just use the inertial term above 
             F6_iner = 0.0
@@ -550,6 +553,9 @@ CONTAINS
          if (p%inertialF == 1) then      ! include inertial components  
             ! inertial loads ... from input translational ... and solved rotational ... acceleration
             F6_iner(1:3)  = -MATMUL(Body%M(1:3,1:3), Body%a6(1:3)) - MATMUL(Body%M(1:3,4:6), Body%a6(4:6))
+         elseif (p%inertialF == 2) then
+            F6_iner(1:3)  = -MATMUL(Body%M(1:3,1:3), Body%a6(1:3)) - MATMUL(Body%M(1:3,4:6), Body%a6(4:6))
+            if (t < p%inertialF_rampT) F6_iner = F6_iner * t / p%inertialF_rampT
          else 
             F6_iner(1:3) = 0.0
          endif

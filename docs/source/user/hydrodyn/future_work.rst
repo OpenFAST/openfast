@@ -9,8 +9,6 @@ releases:
 
 *  Enable tight-coupling to FAST, including linearization.
 
-*  Enable wave stretching (**WaveStMod** > 0).
-
 *  Enable full support for floating platform force flags.
 
 *  Enable joint overlap calculations (**JointOvrlp** = 1).
@@ -24,21 +22,11 @@ releases:
 *  Ensure that the output channels are written in the order they are
    entered.
 
-*  Allow for a WAMIT reference point location other than (0,0,0).
-
 *  Allow **RdtnDT** to be independent from the FAST simulation time
    step.
 
-*  Add distributed axial viscous-drag loads on tapered members.
-
 *  Add rotational inertia terms for fluid-filled members and marine
    growth.
-
-*  Calculate the effective 6x6 added-mass matrix from strip-theory
-   members and place in the HydroDyn summary file.
-
-*  Add graphics/animation capability to visualize the substructure
-   geometry and motion, wave elevation, and hydrodynamic loads.
 
 *  Add convective fluid acceleration terms.
 
@@ -50,8 +38,6 @@ releases:
    substructures.
 
 *  Add breaking wave-impact loads for fixed-bottom substructures.
-
-*  Add floating platform hydro-elastics.
 
 *  Add pressure mapping for floating platforms.
 

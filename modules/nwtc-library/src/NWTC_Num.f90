@@ -1693,8 +1693,8 @@ CONTAINS
 
    END FUNCTION EqualRealNos8
 !=======================================================================
-!> This function creates a rotation matrix, M, from a 1-2-3 rotation
-!! sequence of the 3 Euler angles, \f$\theta_x\f$, \f$\theta_y\f$, and \f$\theta_z\f$, in radians.
+!> This function creates a rotation matrix, M, from a 3-2-1 intrinsic rotation
+!! sequence of the 3 Tait-Bryan angles (1-2-3 extrinsic rotation), \f$\theta_x\f$, \f$\theta_y\f$, and \f$\theta_z\f$, in radians.
 !! M represents a change of basis (from global to local coordinates; 
 !! not a physical rotation of the body). It is the inverse of EulerExtract (nwtc_num::eulerextract).
 !!
@@ -1758,8 +1758,8 @@ CONTAINS
 !> \copydoc nwtc_num::eulerconstructr4
    FUNCTION EulerConstructR8(theta) result(M)
    
-      ! this function creates a rotation matrix, M, from a 1-2-3 rotation
-      ! sequence of the 3 Euler angles, theta_x, theta_y, and theta_z, in radians.
+      ! this function creates a rotation matrix, M, from a 3-2-1 intrinsic rotation
+!! sequence of the 3 Tait-Bryan angles (1-2-3 extrinsic rotation), theta_x, theta_y, and theta_z, in radians.
       ! M represents a change of basis (from global to local coordinates; 
       ! not a physical rotation of the body). it is the inverse of EulerExtract (nwtc_num::eulerextract).
       !
