@@ -169,6 +169,9 @@ typedef	^	RotInputFile	ReKi	HubCenBx    -	-	-	"Hub center of buoyancy x directio
 # Nacelle
 typedef	^	RotInputFile	ReKi	VolNac	    -	-	-	"Nacelle volume" m^3
 typedef	^	RotInputFile	ReKi	NacCenB     3	-	-	"Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates" m
+typedef	^	RotInputFile	ReKi	NacArea     3	-	-	"Projected area of the nacelle in X, Y, Z in the nacelle coordinate system" m^2
+typedef	^	RotInputFile	ReKi	NacCd       3	-	-	"Drag cefficient for the nacelle areas defied above" -
+typedef	^	RotInputFile	ReKi	NacDragAC   3	-	-	"Position of aerodynamic center of nacelle drag in nacelle coordinates" m
 # TailFin
 typedef  ^  RotInputFile   LOGICAL          TFinAero  - .FALSE. -   "Calculate tail fin aerodynamics model (flag)" flag
 typedef  ^  RotInputFile   CHARACTER(1024)  TFinFile  -    -    -   "Input file for tail fin aerodynamics [used only when TFinAero=True]" -
@@ -183,6 +186,7 @@ typedef	^	AD_InputFile	IntKi	TwrShadow	-	-	-	"Type of tower influence on wind ba
 typedef	^	AD_InputFile	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	AD_InputFile	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
 typedef ^   AD_InputFile    Logical Buoyancy    -   -   -   "Include buoyancy effects?" flag
+typedef ^   AD_InputFile    Logical NacelleDrag    -   -   -   "Include NacelleDrag effects?" flag
 typedef	^	AD_InputFile	Logical	CompAA   -  -  -  "Compute AeroAcoustic noise" flag
 typedef	^	AD_InputFile	CHARACTER(1024)	AA_InputFile	-	-	-	"AeroAcoustics input file name"	"quoted strings"
 typedef	^	AD_InputFile	CHARACTER(1024)	ADBlFile {:}	-	-	"AD blade file (NumBl filenames)"	"quoted strings"
@@ -317,6 +321,10 @@ typedef	^	RotMiscVarType	ReKi	HubFB	{:}	        -	-	  "buoyant force at hub node
 typedef	^	RotMiscVarType	ReKi	HubMB	{:}  	    -	-	  "buoyant moment at hub node"   Nm
 typedef	^	RotMiscVarType	ReKi	NacFB	{:}	        -	-	  "buoyant force at nacelle (tower top) node"   N
 typedef	^	RotMiscVarType	ReKi	NacMB	{:}  	    -	-	  "buoyant moment at nacelle (tower top) node"   Nm
+typedef	^	RotMiscVarType	ReKi	NacDragF	{:}	        -	-	  "drag force at nacelle (tower top) node"   N
+typedef	^	RotMiscVarType	ReKi	NacDragM	{:}  	    -	-	  "drag moment at nacelle (tower top) node"   Nm
+typedef	^	RotMiscVarType	ReKi	NacFi	{:}	        -	-	  "Total force at nacelle (tower top) node"   N
+typedef	^	RotMiscVarType	ReKi	NacMi	{:}  	    -	-	  "Total moment at nacelle (tower top) node"   Nm
 typedef	^	RotMiscVarType	MeshType	BladeRootLoad	{:}	-	-	"meshes at blade root; used to compute an integral for mapping the output blade loads to single points (for writing to file only)"	-
 typedef	^	RotMiscVarType	MeshMapType	B_L_2_R_P	{:}	-	-	"mapping data structure to map each bladeLoad output mesh to corresponding MiscVar%BladeRootLoad mesh"
 typedef	^	RotMiscVarType	MeshType	BladeBuoyLoadPoint	{:}	-	-	"point mesh for lumped buoyant blade loads"	-
@@ -393,6 +401,9 @@ typedef	^	RotParameterType	ReKi	VolHub	    -	-	-	"Hub volume" m^3
 typedef	^	RotParameterType	ReKi	HubCenBx    -	-	-	"Hub center of buoyancy x direction offset" m
 typedef	^	RotParameterType	ReKi	VolNac	    -	-	-	"Nacelle volume" m^3
 typedef	^	RotParameterType	ReKi	NacCenB     3	-	-	"Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates" m
+typedef	^	RotParameterType	ReKi	NacArea     3	-	-	"Projected area of the nacelle in X, Y, Z in the nacelle coordinate system" m^2
+typedef	^	RotParameterType	ReKi	NacCd       3	-	-	"Drag cefficient for the nacelle areas defied above" -
+typedef	^	RotParameterType	ReKi	NacDragAC   3	-	-	"Position of aerodynamic center of nacelle drag in nacelle coordinates" m
 typedef	^	RotParameterType	ReKi	VolBl       -	-	-	"Buoyancy volume of all blades" m^3
 typedef	^	RotParameterType	ReKi	VolTwr       -	-	-	"Buoyancy volume of the tower" m^3
 typedef ^   RotParameterType	ReKi	BlRad     {:}{:}	-	-	"Matrix of equivalent blade radius at each node, used in buoyancy calculation" m
@@ -420,6 +431,7 @@ typedef	^	RotParameterType	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic lo
 typedef	^	RotParameterType	Integer	DBEMT_Mod	-	-	-	"DBEMT_Mod"	-
 typedef	^	RotParameterType	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
 typedef ^   RotParameterType    Logical Buoyancy    -   -   -   "Include buoyancy effects?" flag
+typedef ^   RotParameterType    Logical NacelleDrag    -   -   -   "Include NacelleDrag effects?" flag
 typedef ^   RotParameterType    IntKi   MHK         -   -   -   "MHK" flag
 typedef	^	RotParameterType	Logical	CompAA   -  -  -  "Compute AeroAcoustic noise" flag
 typedef	^	RotParameterType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
