@@ -1825,7 +1825,7 @@ SUBROUTINE ReadBladeFile ( BldFile, BladeKInputFileData, UnEc, ErrStat, ErrMsg )
 
    !  -------------- END OF FILE --------------------------------------------
    ! Verify that everything was read and stored correctly
-   call PrintBladeFileContents()
+   !call PrintBladeFileContents()
 
 
 CONTAINS
