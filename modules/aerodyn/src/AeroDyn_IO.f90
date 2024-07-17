@@ -656,7 +656,6 @@ END SUBROUTINE ReadInputFiles
 !> This routine parses the input file data stored in FileInfo_In and places it in the InputFileData structure for validating.
 SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlades, interval, FileInfo_In, InputFileData, UnEc, ErrStat, ErrMsg )
 
-   use UnsteadyAero, only : UA_Method_ABM4
    implicit    none
 
       ! Passed variables

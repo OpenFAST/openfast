@@ -64,12 +64,6 @@ private
    real(ReKi), parameter         :: K1pos=1.0_ReKi, K1neg=0.5_ReKi ! K1 coefficients for BV model
    real(ReKi), parameter         :: MaxTuOmega = 1.5_ReKi          ! adding a little safety factor for UA models
 
-
-   INTEGER(IntKi), PARAMETER, public        :: UA_Method_RK4  = 1
-   INTEGER(IntKi), PARAMETER, public        :: UA_Method_AB4  = 2
-   INTEGER(IntKi), PARAMETER, public        :: UA_Method_ABM4 = 3
-   INTEGER(IntKi), PARAMETER, public        :: UA_Method_BDF2 = 4
-   
    contains
    
 ! **************************************************
@@ -1491,7 +1485,8 @@ subroutine UA_ValidateInput(InitInp, ErrStat, ErrMsg)
          .and. InitInp%IntegrationMethod /= UA_Method_BDF2 ) call SetErrStat ( ErrID_Fatal, 'Invalid integration method in UA. Integration method must be 1, 2, 3, or 4.', ErrStat, ErrMsg, RoutineName )
    end if
 
-
+   if (InitInp%UAMod == UA_HGMV360) call SetErrStat( ErrID_Fatal, 'HGMV360 model not implemented for this version. Choose another model for UA_Mod.', ErrStat, ErrMsg, RoutineName )
+   
 end subroutine UA_ValidateInput
 !==============================================================================     
 subroutine UA_ValidateAFI(UAMod, FLookup, AFInfo, ErrStat, ErrMsg)

@@ -34,6 +34,10 @@ MODULE UnsteadyAero_Types
 USE AirfoilInfo_Types
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Method_RK4 = 1      ! RK4 integration method [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Method_AB4 = 2      ! AB4 integration method [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Method_ABM4 = 3      ! ABM4 integration method [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Method_BDF2 = 4      ! BDF2 integration method [-]
 ! =========  UA_InitInputType  =======
   TYPE, PUBLIC :: UA_InitInputType
     REAL(DbKi)  :: dt = 0.0_R8Ki      !< time step [s]
@@ -50,7 +54,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: UAOff_innerNode      !< Last node on each blade where UA should be turned off based on span location from blade root (0 if always on) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: UAOff_outerNode      !< First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on) [-]
     INTEGER(IntKi)  :: UA_OUTS = 0      !< Store write outputs 0=None, 1=WriteOutpus, 2=WriteToFile [-]
-    INTEGER(IntKi)  :: integrationMethod = 3      !< method to integrate states (default is 4=BDF2) [-]
+    INTEGER(IntKi)  :: integrationMethod = 3      !< method to integrate states (default is 3=UA_Method_ABM4) [-]
   END TYPE UA_InitInputType
 ! =======================
 ! =========  UA_InitOutputType  =======
