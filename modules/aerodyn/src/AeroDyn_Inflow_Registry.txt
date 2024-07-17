@@ -37,8 +37,9 @@ typedef    ^        ^                  ReKi                             HWindSpe
 typedef    ^        ^                  ReKi                             RefHt            -      -     -   "RefHeight"
 typedef    ^        ^                  ReKi                             PLExp            -      -     -   "PLExp"
 typedef    ^        ^                  IntKi                            MHK              -      -     -   "MHK turbine type switch"   -
-typedef    ^        ^                  LOGICAL                          UseInputFile     -    .TRUE.  -   "Should we read everthing from an input file, or is it passed in?"  -
-typedef    ^        ^                  FileInfoType                     PassedFileData   -      -     -   "If we don't use the input file, pass everything through this"      -
+typedef    ^        ^                  IntKi                            FilePassingMethod -     0     -   "Should we read everthing from an input file (0), passed in as a FileInfoType structure (1), or passed as the IfW_InputFile structure (2)"  -
+typedef    ^        ^                  FileInfoType                     PassedFileInfo   -      -     -   "If we don't use the input file, pass everything through this as a FileInfo structure"       -
+typedef    ^        ^                  InflowWind_InputFile             PassedFileData   -      -     -   "If we don't use the input file, pass everything through this as an IfW InputFile structure" -
 typedef    ^        ^                  LOGICAL                          Linearize        -    .FALSE. -   "Flag that tells this module if the glue code wants to linearize." -
 
 

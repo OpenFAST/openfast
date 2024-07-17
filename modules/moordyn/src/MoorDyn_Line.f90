@@ -39,7 +39,8 @@ MODULE MoorDyn_Line
    PUBLIC :: Line_GetEndStuff
    PUBLIC :: Line_GetEndSegmentInfo
    PUBLIC :: Line_SetEndOrientation
-   
+   public :: VisLinesMesh_Init
+   public :: VisLinesMesh_Update
    
 
 CONTAINS
@@ -56,7 +57,7 @@ CONTAINS
       INTEGER,       INTENT(   INOUT )   :: ErrStat       ! returns a non-zero value when an error occurs
       CHARACTER(*),  INTENT(   INOUT )   :: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
-      INTEGER(4)                         :: I, J, K       ! Generic index
+      INTEGER(4)                         :: I, J          ! Generic index
       INTEGER(IntKi)                     :: N
       REAL(DbKi)                         :: temp
 
@@ -212,25 +213,6 @@ CONTAINS
          RETURN
       END IF
       
-      
-      if (p%writeLog > 1) then
-         write(p%UnLog, '(A)') "  - Line"//trim(num2lstr(Line%IdNum))
-         write(p%UnLog, '(A)') "    ID: "//trim(num2lstr(Line%IdNum))
-         write(p%UnLog, '(A)') "    UnstrLen: "//trim(num2lstr(Line%UnstrLen))
-         write(p%UnLog, '(A)') "    N   : "//trim(num2lstr(Line%N   ))
-         write(p%UnLog, '(A)') "    d   : "//trim(num2lstr(Line%d   ))
-         write(p%UnLog, '(A)') "    rho : "//trim(num2lstr(Line%rho ))
-         write(p%UnLog, '(A)') "    E   : "//trim(num2lstr(Line%EA  ))
-         write(p%UnLog, '(A)') "    EI  : "//trim(num2lstr(Line%EI  ))
-         !write(p%UnLog, '(A)') "    BAin: "//trim(num2lstr(Line%BAin))
-         write(p%UnLog, '(A)') "    Can : "//trim(num2lstr(Line%Can ))
-         write(p%UnLog, '(A)') "    Cat : "//trim(num2lstr(Line%Cat ))
-         write(p%UnLog, '(A)') "    Cdn : "//trim(num2lstr(Line%Cdn ))
-         write(p%UnLog, '(A)') "    Cdt : "//trim(num2lstr(Line%Cdt ))
-         !write(p%UnLog, '(A)') "    ww_l: " << ( (rho - env->rho_w)*(pi/4.*d*d) )*9.81 << endl;	
-      end if
-    
-      
       ! need to add cleanup sub <<<
 
 
@@ -242,14 +224,14 @@ CONTAINS
 
 
    !----------------------------------------------------------------------------------------=======
-   SUBROUTINE Line_Initialize (Line, LineProp, rhoW, ErrStat, ErrMsg)
+   SUBROUTINE Line_Initialize (Line, LineProp, p, ErrStat, ErrMsg)
       ! calculate initial profile of the line using quasi-static model
 
-      TYPE(MD_Line),     INTENT(INOUT)       :: Line        ! the single line object of interest
-      TYPE(MD_LineProp), INTENT(INOUT)       :: LineProp    ! the single line property set for the line of interest
-      REAL(DbKi),        INTENT(IN)          :: rhoW
-      INTEGER,           INTENT(   INOUT )   :: ErrStat     ! returns a non-zero value when an error occurs
-      CHARACTER(*),      INTENT(   INOUT )   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      TYPE(MD_Line),          INTENT(INOUT)       :: Line        ! the single line object of interest
+      TYPE(MD_LineProp),      INTENT(INOUT)       :: LineProp    ! the single line property set for the line of interest
+      TYPE(MD_ParameterType), INTENT(IN   )       :: p           ! Parameters
+      INTEGER,                INTENT(   INOUT )   :: ErrStat     ! returns a non-zero value when an error occurs
+      CHARACTER(*),           INTENT(   INOUT )   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
       REAL(DbKi)                             :: COSPhi      ! Cosine of the angle between the xi-axis of the inertia frame and the X-axis of the local coordinate system of the current mooring line (-)
       REAL(DbKi)                             :: SINPhi      ! Sine   of the angle between the xi-axis of the inertia frame and the X-axis of the local coordinate system of the current mooring line (-)
@@ -263,7 +245,7 @@ CONTAINS
       CHARACTER(ErrMsgLen)                   :: ErrMsg2       ! Error message if ErrStat2 /= ErrID_None
       REAL(DbKi)                             :: WetWeight
       REAL(DbKi)                             :: SeabedCD = 0.0_DbKi
-      REAL(DbKi)                             :: TenTol = 0.0001_DbKi
+      REAL(DbKi)                             :: Tol = 0.00001_DbKi
       REAL(DbKi), ALLOCATABLE                :: LSNodes(:)
       REAL(DbKi), ALLOCATABLE                :: LNodesX(:)
       REAL(DbKi), ALLOCATABLE                :: LNodesZ(:)
@@ -292,7 +274,7 @@ CONTAINS
                 SINPhi  =       ( Line%r(2,N) - Line%r(2,0) )/XF
              ENDIF
 
-        WetWeight = LineProp%w - 0.25*Pi*LineProp%d*LineProp%d*rhoW
+        WetWeight = (LineProp%w - 0.25*Pi*LineProp%d*LineProp%d*p%rhoW)*p%g
 
         !LineNodes = Line%N + 1  ! number of nodes in line for catenary model to worry about
 
@@ -335,41 +317,50 @@ CONTAINS
           !       are stored in a module and thus their values are saved from CALL to
           !       CALL).
 
+      IF (XF == 0.0) THEN
 
-             CALL Catenary ( XF           , ZF          , Line%UnstrLen, LineProp%EA  , &
-                             WetWeight    , SeabedCD,    TenTol,     (N+1)     , &
-                             LSNodes, LNodesX, LNodesZ , ErrStat2, ErrMsg2)
+         DO J = 0,N ! Loop through all nodes per line where the line position and tension can be output
+            Line%r(1,J) = Line%r(1,0) + (Line%r(1,N) - Line%r(1,0))*REAL(J, DbKi)/REAL(N, DbKi)
+            Line%r(2,J) = Line%r(2,0) + (Line%r(2,N) - Line%r(2,0))*REAL(J, DbKi)/REAL(N, DbKi)
+            Line%r(3,J) = Line%r(3,0) + (Line%r(3,N) - Line%r(3,0))*REAL(J, DbKi)/REAL(N, DbKi)
+         END DO
 
-      IF (ErrStat2 == ErrID_None) THEN ! if it worked, use it
-          ! Transform the positions of each node on the current line from the local
-          !   coordinate system of the current line to the inertial frame coordinate
-          !   system:
+         CALL WrScr(' Vertical initial profile for Line '//trim(Num2LStr(Line%IdNum))//'.')
 
-          DO J = 0,N ! Loop through all nodes per line where the line position and tension can be output
-             Line%r(1,J) = Line%r(1,0) + LNodesX(J+1)*COSPhi
-             Line%r(2,J) = Line%r(2,0) + LNodesX(J+1)*SINPhi
-             Line%r(3,J) = Line%r(3,0) + LNodesZ(J+1)
-          ENDDO              ! J - All nodes per line where the line position and tension can be output
+      ELSE ! If the line is not vertical, solve for the catenary profile
 
+         CALL Catenary ( XF           , ZF          , Line%UnstrLen, LineProp%EA  , &
+                           WetWeight    , SeabedCD,    Tol,     (N+1)     , &
+                           LSNodes, LNodesX, LNodesZ , ErrStat2, ErrMsg2)
 
-      ELSE ! if there is a problem with the catenary approach, just stretch the nodes linearly between fairlead and anchor
+         IF (ErrStat2 == ErrID_None) THEN ! if it worked, use it
+            ! Transform the positions of each node on the current line from the local
+            !   coordinate system of the current line to the inertial frame coordinate
+            !   system:
 
-          !CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Line_Initialize')
-          call WrScr(" Catenary solve of Line "//trim(Num2LStr(Line%IdNum))//" unsuccessful. Initializing as linear.")
+            DO J = 0,N ! Loop through all nodes per line where the line position and tension can be output
+               Line%r(1,J) = Line%r(1,0) + LNodesX(J+1)*COSPhi
+               Line%r(2,J) = Line%r(2,0) + LNodesX(J+1)*SINPhi
+               Line%r(3,J) = Line%r(3,0) + LNodesZ(J+1)
+            ENDDO              ! J - All nodes per line where the line position and tension can be output
 
-!          print *, "Node positions: "
+         ELSE ! if there is a problem with the catenary approach, just stretch the nodes linearly between fairlead and anchor
+            ! CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, ' Line_Initialize: Line '//trim(Num2LStr(Line%IdNum))//' ')
+            CALL WrScr('   Catenary solve of Line '//trim(Num2LStr(Line%IdNum))//' unsuccessful. Initializing as linear.')
+            IF (wordy == 1) THEN 
+               CALL WrScr('   Message from catenary solver: '//ErrMsg2)
+            ENDIF
+            ! print *, "Node positions: "
 
-          DO J = 0,N ! Loop through all nodes per line where the line position and tension can be output
-             Line%r(1,J) = Line%r(1,0) + (Line%r(1,N) - Line%r(1,0))*REAL(J, DbKi)/REAL(N, DbKi)
-             Line%r(2,J) = Line%r(2,0) + (Line%r(2,N) - Line%r(2,0))*REAL(J, DbKi)/REAL(N, DbKi)
-             Line%r(3,J) = Line%r(3,0) + (Line%r(3,N) - Line%r(3,0))*REAL(J, DbKi)/REAL(N, DbKi)
-             
-!             print*, Line%r(:,J)
-          ENDDO
-          
-!          print*,"FYI line end A and B node coords are"
-!          print*, Line%r(:,0)
-!          print*, Line%r(:,N)
+            DO J = 0,N ! Loop through all nodes per line where the line position and tension can be output
+               Line%r(1,J) = Line%r(1,0) + (Line%r(1,N) - Line%r(1,0))*REAL(J, DbKi)/REAL(N, DbKi)
+               Line%r(2,J) = Line%r(2,0) + (Line%r(2,N) - Line%r(2,0))*REAL(J, DbKi)/REAL(N, DbKi)
+               Line%r(3,J) = Line%r(3,0) + (Line%r(3,N) - Line%r(3,0))*REAL(J, DbKi)/REAL(N, DbKi)
+               
+             ENDDO
+            
+         ENDIF
+
       ENDIF
 
 
@@ -500,6 +491,7 @@ CONTAINS
          INTEGER(4)                   :: MaxIter                                         ! Maximum number of Newton-Raphson iterations possible before giving up (-)
 
          LOGICAL                      :: FirstIter                                       ! Flag to determine whether or not this is the first time through the Newton-Raphson interation (flag)
+         LOGICAL                      :: reverseFlag                                     ! Flag for when the anchor is above the fairlead
 
 
          ErrStat = ERrId_None
@@ -518,9 +510,15 @@ CONTAINS
          W      = REAL( W_In     , DbKi )
          XF     = REAL( XF_In    , DbKi )
          ZF     = REAL( ZF_In    , DbKi )
+      IF ( ZF <  0.0 )  THEN   ! .TRUE. if the fairlead has passed below its anchor
+         ZF = -ZF
+         reverseFlag = .TRUE.
+         CALL WrScr(' Warning from catenary: Anchor point is above the fairlead point for Line '//trim(Num2LStr(Line%IdNum))//', consider changing.')
+      ELSE 
+         reverseFlag = .FALSE.
+      ENDIF
 
 
-         
       !  HF and VF cannot be initialized to zero when a  portion of the line rests on the seabed and the anchor tension is nonzero
          
       ! Generate the initial guess values for the horizontal and vertical tensions
@@ -531,9 +529,9 @@ CONTAINS
          XF2     = XF*XF
          ZF2     = ZF*ZF
 
-         IF     ( XF           == 0.0_DbKi    )  THEN ! .TRUE. if the current mooring line is exactly vertical
-            Lamda0 = 1.0D+06
-         ELSEIF ( L <= SQRT( XF2 + ZF2 ) )  THEN ! .TRUE. if the current mooring line is taut
+         ! IF     ( XF           == 0.0_DbKi    )  THEN ! .TRUE. if the current mooring line is exactly vertical
+         !    Lamda0 = 1.0D+06
+         IF ( L <= SQRT( XF2 + ZF2 ) )  THEN ! .TRUE. if the current mooring line is taut
             Lamda0 = 0.2_DbKi
          ELSE                                    ! The current mooring line must be slack and not vertical
             Lamda0 = SQRT( 3.0_DbKi*( ( L**2 - ZF2 )/XF2 - 1.0_DbKi ) )
@@ -549,33 +547,26 @@ CONTAINS
          IF (    Tol <= EPSILON(TOL) )  THEN   ! .TRUE. when the convergence tolerance is specified incorrectly
            ErrStat = ErrID_Warn
            ErrMsg = ' Convergence tolerance must be greater than zero in routine Catenary().'
-           return
+           RETURN
          ELSEIF ( XF <  0.0_DbKi )  THEN   ! .TRUE. only when the local coordinate system is not computed correctly
            ErrStat = ErrID_Warn
            ErrMsg =  ' The horizontal distance between an anchor and its'// &
                          ' fairlead must not be less than zero in routine Catenary().'
-           return
-
-         ELSEIF ( ZF <  0.0_DbKi )  THEN   ! .TRUE. if the fairlead has passed below its anchor
-           ErrStat = ErrID_Warn
-           ErrMsg =  " A line's fairlead is defined as below its anchor. You may need to swap a line's fairlead and anchor end nodes."
-           return
-
+           RETURN
          ELSEIF ( L  <= 0.0_DbKi )  THEN   ! .TRUE. when the unstretched line length is specified incorrectly
            ErrStat = ErrID_Warn
            ErrMsg =  ' Unstretched length of line must be greater than zero in routine Catenary().'
-           return
+           RETURN
 
          ELSEIF ( EA <= 0.0_DbKi )  THEN   ! .TRUE. when the unstretched line length is specified incorrectly
            ErrStat = ErrID_Warn
            ErrMsg =  ' Extensional stiffness of line must be greater than zero in routine Catenary().'
-           return
+           RETURN
 
          ELSEIF ( W  == 0.0_DbKi )  THEN   ! .TRUE. when the weight of the line in fluid is zero so that catenary solution is ill-conditioned
            ErrStat = ErrID_Warn
-           ErrMsg = ' The weight of the line in fluid must not be zero. '// &
-                         ' Routine Catenary() cannot solve quasi-static mooring line solution.'
-           return
+           ErrMsg = ' The weight of the line in fluid must not be zero in routine Catenary().'
+           RETURN
 
 
          ELSEIF ( W  >  0.0_DbKi )  THEN   ! .TRUE. when the line will sink in fluid
@@ -584,9 +575,8 @@ CONTAINS
 
             IF ( ( L  >=  LMax   ) .AND. ( CB >= 0.0_DbKi ) )  then  ! .TRUE. if the line is as long or longer than its maximum possible value with seabed interaction
                ErrStat = ErrID_Warn
-               !ErrMsg =  ' Unstretched mooring line length too large. '// &
-               !             ' Routine Catenary() cannot solve quasi-static mooring line solution.'
-               return
+               ErrMsg =  ' Unstretched mooring line length too large in routine Catenary().'
+               RETURN
             END IF
 
          ENDIF
@@ -612,7 +602,7 @@ CONTAINS
 
          HF = MAX( HF, Tol )
          XF = MAX( XF, Tol )
-         ZF = MAX( ZF, TOl )
+         ZF = MAX( ZF, Tol )
 
 
 
@@ -717,13 +707,12 @@ CONTAINS
             
             DET = dXFdHF*dZFdVF - dXFdVF*dZFdHF
             
-            if ( EqualRealNos( DET, 0.0_DbKi ) ) then               
-!bjj: there is a serious problem with the debugger here when DET = 0
+            IF ( EqualRealNos( DET, 0.0_DbKi ) ) THEN               
+            !bjj: there is a serious problem with the debugger here when DET = 0
                 ErrStat = ErrID_Warn
-                ErrMsg =  ' Iteration not convergent (DET is 0). '// &
-                          ' Routine Catenary() cannot solve quasi-static mooring line solution.'
-                return
-            endif
+                ErrMsg =  ' Iteration not convergent (DET is 0) in routine Catenary().'
+                RETURN
+            ENDIF
 
                
             dHF = ( -dZFdVF*EXF + dXFdVF*EZF )/DET    ! This is the incremental change in horizontal tension at the fairlead as predicted by Newton-Raphson
@@ -776,8 +765,7 @@ CONTAINS
 
            ELSEIF ( ( I == MaxIter )        .AND. ( .NOT. FirstIter         ) )  THEN ! .TRUE. if we've iterated as much as we can take without finding a solution; Abort
              ErrStat = ErrID_Warn
-             ErrMsg =  ' Iteration not convergent. '// &
-                       ' Routine Catenary() cannot solve quasi-static mooring line solution.'
+             ErrMsg =  ' Iteration not convergent in routine Catenary().'
              RETURN
 
 
@@ -937,6 +925,26 @@ CONTAINS
          ENDIF
 
 
+         IF (reverseFlag) THEN
+            ! Follows process of MoorPy catenary.py
+            s = s( size(s):1:-1 )
+            X = X( size(X):1:-1 )
+            Z = Z( size(Z):1:-1 )
+            Te = Te( size(Te):1:-1 )
+            DO I = 1,N
+               s(I) = L - s(I)
+               X(I) = XF - X(I)
+               Z(I) = Z(I) - ZF
+            ENDDO
+            ZF = -ZF ! Return to orginal value
+         ENDIF
+
+         IF (abs(Z(N) - ZF) > Tol) THEN 
+            ! Check fairlead node z position is same as z distance between fairlead and anchor
+              ErrStat2 = ErrID_Warn
+              ErrMsg2 = ' Wrong catenary initial profile. Fairlead and anchor vertical seperation has changed in routine Catenary().'
+              RETURN
+         ENDIF
 
             ! The Newton-Raphson iteration is only accurate in double precision, so
             !   convert the output arguments back into the default precision for real
@@ -1005,10 +1013,10 @@ CONTAINS
       !   Real(DbKi), INTENT (IN)       :: t              ! instantaneous time
       !   TYPE(MD_Line), INTENT (INOUT) :: Line           ! label for the current line, for convenience
       !   TYPE(MD_LineProp), INTENT(IN) :: LineProp       ! the single line property set for the line of interest
-      !    Real(DbKi), INTENT(INOUT)     :: FairFtot(:)    ! total force on Connect top of line is attached to
-      !    Real(DbKi), INTENT(INOUT)     :: FairMtot(:,:)  ! total mass of Connect top of line is attached to
-      !    Real(DbKi), INTENT(INOUT)     :: AnchFtot(:)    ! total force on Connect bottom of line is attached to
-      !    Real(DbKi), INTENT(INOUT)     :: AnchMtot(:,:)  ! total mass of Connect bottom of line is attached to
+      !    Real(DbKi), INTENT(INOUT)     :: FairFtot(:)    ! total force on Point top of line is attached to
+      !    Real(DbKi), INTENT(INOUT)     :: FairMtot(:,:)  ! total mass of Point top of line is attached to
+      !    Real(DbKi), INTENT(INOUT)     :: AnchFtot(:)    ! total force on Point bottom of line is attached to
+      !    Real(DbKi), INTENT(INOUT)     :: AnchMtot(:,:)  ! total mass of Point bottom of line is attached to
 
 
       INTEGER(IntKi)                   :: i              ! index of segments or nodes along line
@@ -1070,10 +1078,10 @@ CONTAINS
 
       !   ! set end node positions and velocities from connect objects' states
       !   DO J = 1, 3
-      !      Line%r( J,N) = m%ConnectList(Line%FairConnect)%r(J)
-      !      Line%r( J,0) = m%ConnectList(Line%AnchConnect)%r(J)
-      !      Line%rd(J,N) = m%ConnectList(Line%FairConnect)%rd(J)
-      !      Line%rd(J,0) = m%ConnectList(Line%AnchConnect)%rd(J)
+      !      Line%r( J,N) = m%PointList(Line%FairPoint)%r(J)
+      !      Line%r( J,0) = m%PointList(Line%AnchPoint)%r(J)
+      !      Line%rd(J,N) = m%PointList(Line%FairPoint)%rd(J)
+      !      Line%rd(J,0) = m%PointList(Line%AnchPoint)%rd(J)
       !   END DO
 
 
@@ -1225,10 +1233,10 @@ CONTAINS
          ! loop through all nodes to calculate bending forces due to bending stiffness
          do i=0,N
          
-            ! end node A case (only if attached to a Rod, i.e. a cantilever rather than pinned connection)
+            ! end node A case (only if attached to a Rod, i.e. a cantilever rather than pinned point)
             if (i==0) then
             
-               if (Line%endTypeA > 0) then ! if attached to Rod i.e. cantilever connection
+               if (Line%endTypeA > 0) then ! if attached to Rod i.e. cantilever point
                
                   Kurvi = GetCurvature(Line%lstr(1), Line%q(:,0), Line%qs(:,1))  ! curvature (assuming rod angle is node angle which is middle of if there was a segment -1/2)
          
@@ -1248,10 +1256,10 @@ CONTAINS
                   
                end if
             
-            ! end node A case (only if attached to a Rod, i.e. a cantilever rather than pinned connection)
+            ! end node A case (only if attached to a Rod, i.e. a cantilever rather than pinned point)
             else if (i==N) then
             
-               if (Line%endTypeB > 0) then ! if attached to Rod i.e. cantilever connection
+               if (Line%endTypeB > 0) then ! if attached to Rod i.e. cantilever point
                
                   Kurvi = GetCurvature(Line%lstr(N), Line%qs(:,N), Line%q(:,N))  ! curvature (assuming rod angle is node angle which is middle of if there was a segment -1/2
                   
@@ -1452,7 +1460,7 @@ CONTAINS
       ! check for NaNs
       DO J = 1, 6*(N-1)
          IF (Is_NaN(Xd(J))) THEN
-            print *, "NaN detected at time ", Line%time, " in Line ", Line%IdNum, " in MoorDyn."
+            Call WrScr( "NaN detected at time "//trim(num2lstr(Line%time))//" in Line "//trim(num2lstr(Line%IdNum))//" in MoorDyn.")
             IF (wordy > 1) THEN
                print *, "state derivatives:"
                print *, Xd
@@ -1488,7 +1496,7 @@ CONTAINS
       END DO
 
 
-      !   ! add force and mass of end nodes to the Connects they correspond to <<<<<<<<<<<< do this from Connection instead now!
+      !   ! add force and mass of end nodes to the Points they correspond to <<<<<<<<<<<< do this from Point instead now!
       !   DO J = 1,3
       !      FairFtot(J) = FairFtot(J) + Line%F(J,N)
       !      AnchFtot(J) = AnchFtot(J) + Line%F(J,0)
@@ -1511,15 +1519,15 @@ CONTAINS
       Real(DbKi),       INTENT(IN   )  :: t              ! instantaneous time
       INTEGER(IntKi),   INTENT(IN   )  :: topOfLine      ! 0 for end A (Node 0), 1 for end B (node N)
 
-      Integer(IntKi)                   :: I,J      
+      Integer(IntKi)                   :: J      
       INTEGER(IntKi)                   :: inode
       
       IF (topOfLine==1) THEN
          inode = Line%N      
-         Line%endTypeB = 0   ! set as ball rather than rigid connection (unless changed later by SetEndOrientation)
+         Line%endTypeB = 0   ! set as ball rather than rigid point (unless changed later by SetEndOrientation)
       ELSE
          inode = 0
-         Line%endTypeA = 0   ! set as ball rather than rigid connection (unless changed later by SetEndOrientation)
+         Line%endTypeA = 0   ! set as ball rather than rigid point (unless changed later by SetEndOrientation)
       END IF 
       
       !Line%r( :,inode) = r_in
@@ -1551,8 +1559,8 @@ CONTAINS
       REAL(DbKi),       INTENT(  OUT)  :: M_out(3,3)     ! mass matrix of end node
       INTEGER(IntKi),   INTENT(IN   )  :: topOfLine      ! 0 for end A (Node 0), 1 for end B (node N)
       
-      Integer(IntKi)                   :: I,J
-      INTEGER(IntKi)                   :: inode
+      Integer(IntKi)                   :: J
+!      INTEGER(IntKi)                   :: inode
       
       IF (topOfLine==1) THEN           ! end B of line
          Fnet_out   = Line%Fnet(:, Line%N)
@@ -1630,6 +1638,95 @@ CONTAINS
 
    END SUBROUTINE Line_SetEndOrientation
    !--------------------------------------------------------------
+
+   subroutine VisLinesMesh_Init(p,m,y,ErrStat,ErrMsg)
+      type(MD_ParameterType), intent(in   )  :: p
+      type(MD_MiscVarType),   intent(in   )  :: m
+      type(MD_OutputType),    intent(inout)  :: y
+      integer(IntKi),         intent(  out)  :: ErrStat
+      character(*),           intent(  out)  :: ErrMsg
+      integer(IntKi)                         :: ErrStat2
+      character(ErrMsgLen)                   :: ErrMsg2
+      integer(IntKi)                         :: i,l
+      character(*), parameter                :: RoutineName = 'VisLinesMesh_Init'
+
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+
+      ! allocate line2 mesh for all lines
+      allocate (y%VisLinesMesh(p%NLines), STAT=ErrStat2);   if (Failed0('visualization mesh for lines')) return
+
+      ! Initialize mesh for each line (line nodes start at 0 index, so N+1 total nodes)
+      do l=1,p%NLines
+         CALL MeshCreate( BlankMesh = y%VisLinesMesh(l), &
+                NNodes          = m%LineList(l)%N+1,     &
+                IOS             = COMPONENT_OUTPUT,      &
+                TranslationDisp = .true.,                &
+                ErrStat=ErrStat2, ErrMess=ErrMsg2)
+         if (Failed())  return
+
+         ! Internal nodes (line nodes start at 0 index)
+         do i = 0,m%LineList(l)%N
+            call MeshPositionNode ( y%VisLinesMesh(l), i+1, real(m%LineList(l)%r(:,I),ReKi), ErrStat2, ErrMsg2 )
+            if (Failed())  return
+         enddo
+
+         ! make elements (line nodes start at 0 index, so N+1 total nodes)
+         do i = 2,m%LineList(l)%N+1
+            call MeshConstructElement ( Mesh      = y%VisLinesMesh(l)  &
+                                       , Xelement = ELEMENT_LINE2      &
+                                       , P1       = i-1                &   ! node1 number
+                                       , P2       = i                  &   ! node2 number
+                                       , ErrStat  = ErrStat2           &
+                                       , ErrMess  = ErrMsg2            )
+            if (Failed())  return
+         enddo
+
+         ! Commit mesh
+         call MeshCommit ( y%VisLinesMesh(l), ErrStat2, ErrMsg2 )
+         if (Failed())  return
+      enddo
+   contains
+      logical function Failed()
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         Failed = ErrStat >= AbortErrLev
+      end function Failed
+
+      ! check for failed where /= 0 is fatal
+      logical function Failed0(txt)
+         character(*), intent(in) :: txt
+         if (errStat /= 0) then
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = "Could not allocate "//trim(txt)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         endif
+         Failed0 = ErrStat >= AbortErrLev
+      end function Failed0
+   end subroutine VisLinesMesh_Init
+
+
+
+   subroutine VisLinesMesh_Update(p,m,y,ErrStat,ErrMsg)
+      type(MD_ParameterType), intent(in   )  :: p
+      type(MD_MiscVarType),   intent(in   )  :: m
+      type(MD_OutputType),    intent(inout)  :: y
+      integer(IntKi),         intent(  out)  :: ErrStat
+      character(*),           intent(  out)  :: ErrMsg
+      integer(IntKi)                         :: i,l
+      character(*), parameter                :: RoutineName = 'VisLinesMesh_Update'
+
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+
+      ! Initialize mesh for each line (line nodes start at 0 index, so N+1 total nodes)
+      do l=1,p%NLines
+         ! Update node positions nodes (line nodes start at 0 index)
+         do i = 0,m%LineList(l)%N
+            y%VisLinesMesh(l)%TranslationDisp(:,i+1) = real(m%LineList(l)%r(:,I),ReKi) - y%VisLinesMesh(l)%Position(:,i+1)
+         enddo
+      enddo
+   end subroutine VisLinesMesh_Update
+
 
 
 END MODULE MoorDyn_Line

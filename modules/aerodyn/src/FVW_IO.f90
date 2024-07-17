@@ -41,8 +41,8 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    !------------------------ CIRCULATION SPECIFICATIONS  -------------------------------------------
    CALL ReadCom(UnIn,FileName,                               '--- Circulation specification header'  , ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvMethod    ,'CircSolvMethod'    ,'', idCircPolarData, ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvConvCrit  ,'CircSolvConvCrit ' ,'', 0.001          , ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvRelaxation,'CircSolvRelaxation','', 0.1            , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvConvCrit  ,'CircSolvConvCrit ' ,'', 0.001_ReKi     , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvRelaxation,'CircSolvRelaxation','', 0.1_ReKi       , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvMaxIter   ,'CircSolvMaxIter'   ,'', 30             , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%CirculationFile   ,'CirculationFile'   ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ WAKE OPTIONS -------------------------------------------
@@ -277,7 +277,7 @@ CONTAINS
       ! Name
       GridOut%name =StrArray(1) 
       ! Type
-      if (.not. is_int    (StrArray(2), GridOut%type  ) ) then
+      if (.not. is_integer(StrArray(2), GridOut%type  ) ) then
          ErrMsg2=trim(ErrMsg2)//NewLine//'GridType needs to be an integer.'
          return
       endif
@@ -317,61 +317,21 @@ CONTAINS
       ErrMsg2='Error reading OLAF "x" inputs for grid outputs line: '//trim(sLine)
       if (.not. is_numeric(StrArray( 6), GridOut%xStart) ) return
       if (.not. is_numeric(StrArray( 7), GridOut%xEnd  ) ) return
-      if (.not. is_int    (StrArray( 8), GridOut%nx    ) ) return
+      if (.not. is_integer(StrArray( 8), GridOut%nx    ) ) return
       ErrMsg2='Error reading OLAF "y" inputs for grid outputs line: '//trim(sLine)
       if (.not. is_numeric(StrArray( 9), GridOut%yStart) ) return
       if (.not. is_numeric(StrArray(10), GridOut%yEnd  ) ) return
-      if (.not. is_int    (StrArray(11), GridOut%ny    ) ) return
+      if (.not. is_integer(StrArray(11), GridOut%ny    ) ) return
       ErrMsg2='Error reading OLAF "z" inputs for grid outputs line: '//trim(sLine)
       if (.not. is_numeric(StrArray(12), GridOut%zStart) ) return
       if (.not. is_numeric(StrArray(13), GridOut%zEnd  ) ) return
-      if (.not. is_int    (StrArray(14), GridOut%nz    ) ) return
+      if (.not. is_integer(StrArray(14), GridOut%nz    ) ) return
       ! Success
       ErrStat2=ErrID_None
       ErrMsg2=''
    end subroutine ReadGridOut
 
 END SUBROUTINE FVW_ReadInputFile
-
-function is_numeric(string, x)
-   implicit none
-   character(len=*), intent(in) :: string
-   real(reki), intent(out) :: x
-   logical :: is_numeric
-   integer :: e,n
-   character(len=12) :: fmt
-   x = 0.0_reki
-   n=len_trim(string)
-   
-   if (n==0) then ! blank lines shouldn't be valid numbers
-      is_numeric = .false.
-      return
-   end if
-   
-   write(fmt,'("(F",I0,".0)")') n
-   read(string,fmt,iostat=e) x
-   is_numeric = e == 0
-end function is_numeric
-
-function is_int(string, x)
-   implicit none
-   character(len=*), intent(in) :: string
-   integer(IntKi), intent(out) :: x
-   logical :: is_int
-   integer :: e,n
-   character(len=12) :: fmt
-   x = 0
-   n=len_trim(string)
-   
-   if (n==0) then ! blank lines shouldn't be valid integers
-      is_int = .false.
-      return
-   end if
-   
-   write(fmt,'("(I",I0,")")') n
-   read(string,fmt,iostat=e) x
-   is_int = e == 0
-end function is_int
 
 
 !=================================================

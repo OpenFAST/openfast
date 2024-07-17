@@ -185,7 +185,7 @@ subroutine IfW_UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrM
    if (InitInp%UseInputFile) then
       call ProcessComFile(InitInp%WindFileName, WindFileInfo, TmpErrStat, TmpErrMsg)
    else
-      call NWTC_Library_CopyFileInfoType(InitInp%PassedFileData, WindFileInfo, MESH_NEWCOPY, TmpErrStat, TmpErrMsg)
+      call NWTC_Library_CopyFileInfoType(InitInp%PassedFileInfo, WindFileInfo, MESH_NEWCOPY, TmpErrStat, TmpErrMsg)
    end if
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -256,6 +256,7 @@ subroutine IfW_UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrM
          call SetErrStat(ErrID_Fatal, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       end if
    end do
+   if (ErrStat >= AbortErrLev) return
 
    !----------------------------------------------------------------------------
    ! Find out information on the timesteps and range
@@ -276,6 +277,24 @@ subroutine IfW_UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrM
       WindFileConstantDT = .false.
       WindFileDT = 0.0_ReKi
    end if
+
+   !----------------------------------------------------------------------------
+   ! Check that time is always increasing
+   !----------------------------------------------------------------------------
+
+   ! Check that last timestep is always increasing
+   if (UF%DataSize > 2) then
+      do I = 2, UF%DataSize
+         if (UF%Time(I)<=UF%Time(I-1)) then
+            TmpErrMsg = ' Time vector must always increase in the uniform wind file. Error around wind step ' &
+                        //TRIM(Num2LStr(I))//' at time '//TRIM(Num2LStr(UF%Time(I)))//' in wind file ' &
+                        //TRIM(InitInp%WindFileName)//'.'
+            call SetErrStat(ErrID_Fatal, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+            exit
+         endif
+      end do
+      if (ErrStat >= AbortErrLev) return
+   endif
 
    !----------------------------------------------------------------------------
    ! Store wind file metadata
@@ -747,7 +766,7 @@ subroutine IfW_TurbSim_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
             TRIM(Num2LStr(G3D%RefHeight - G3D%ZHWid))//' : '//TRIM(Num2LStr(G3D%RefHeight + G3D%ZHWid))//' ]'
       end if
 
-      if (G3D%BoxExceedAllowF) then
+      if (G3D%BoxExceedAllow) then
          write (SumFileUnit, '(A)') '     Wind grid exceedence allowed:  '// &
             'True      -- Only for points requested by OLAF free vortex wake, or LidarSim module'
          write (SumFileUnit, '(A)') '                                    '// &
@@ -970,7 +989,7 @@ subroutine IfW_HAWC_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
       write (SumFileUnit, '(A)') '     Z range (m):                 [ '// &
          TRIM(Num2LStr(G3D%GridBase))//' : '//TRIM(Num2LStr(G3D%GridBase + G3D%ZHWid*2.0))//' ]'
 
-      if (G3D%BoxExceedAllowF) then
+      if (G3D%BoxExceedAllow) then
          write (SumFileUnit, '(A)') '     Wind grid exceedence allowed:  '// &
             'True      -- Only for points requested by OLAF free vortex wake, or LidarSim module'
          write (SumFileUnit, '(A)') '                                    '// &
@@ -1023,27 +1042,17 @@ subroutine IfW_Grid4D_Init(InitInp, G4D, ErrStat, ErrMsg)
    character(*), intent(out)              :: ErrMsg
 
    character(*), parameter                :: RoutineName = "IfW_Grid4D_Init"
-   integer(IntKi)                         :: TmpErrStat
-   character(ErrMsgLen)                   :: TmpErrMsg
 
    ErrStat = ErrID_None
    ErrMsg = ""
 
    ! Initialize field from inputs
    G4D%n = InitInp%n
-   G4D%delta = InitInp%delta
+   G4D%delta = real(InitInp%delta, DbKi)
    G4D%pZero = InitInp%pZero
    G4D%TimeStart = 0.0_ReKi
    G4D%RefHeight = InitInp%pZero(3) + (InitInp%n(3)/2) * InitInp%delta(3)
-
-   ! uvw velocity components at x,y,z,t coordinates
-   call AllocAry(G4D%Vel, 3, G4D%n(1), G4D%n(2), G4D%n(3), G4D%n(4), &
-                 'External Grid Velocity', TmpErrStat, TmpErrMsg)
-   call SetErrStat(ErrStat, ErrMsg, TmpErrStat, TmpErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-
-   ! Initialize velocities to zero
-   G4D%Vel = 0.0_SiKi
+   G4D%Vel => InitInp%Vel
 
 end subroutine
 
@@ -1399,7 +1408,7 @@ subroutine IfW_Bladed_Init(InitInp, SumFileUnit, InitOut, G3D, FileDat, ErrStat,
             TRIM(Num2LStr(G3D%RefHeight - G3D%ZHWid))//' : '//TRIM(Num2LStr(G3D%RefHeight + G3D%ZHWid))//' ]'
       end if
 
-      if (G3D%BoxExceedAllowF) then
+      if (G3D%BoxExceedAllow) then
          write (SumFileUnit, '(A)') '     Wind grid exceedence allowed:  '// &
             'True      -- Only for points requested by OLAF free vortex wake, or LidarSim module'
          write (SumFileUnit, '(A)') '                                    '// &
@@ -2405,7 +2414,7 @@ subroutine Grid3D_PopulateWindFileDat(Grid3DField, FileName, WindType, HasTower,
    if (HasTower) then
       FileDat%ZRange = [0.0_Reki, Grid3DField%RefHeight + Grid3DField%ZHWid]
    else
-      FileDat%ZRange = [Grid3DField%GridBase, Grid3DField%GridBase + Grid3DField%ZHWid*2.0]
+      FileDat%ZRange = [Grid3DField%GridBase, Grid3DField%GridBase + Grid3DField%ZHWid*2.0_ReKi]
    end if
 
    FileDat%ZRange_Limited = .true.
@@ -2540,8 +2549,8 @@ subroutine Grid3D_ScaleTurbulence(InitInp, Vel, ScaleFactors, ErrStat, ErrMsg)
       iy = (ny + 1)/2 ! integer division
 
       ! compute the actual sigma at the point specified by (iy,iz). (This sigma should be close to 1.)
-      vSum = sum(Vel(:, iy, iz, :), dim=2)
-      vSum2 = sum(Vel(:, iy, iz, :)**2, dim=2)
+      vSum = sum(real(Vel(:, iy, iz, :),R8Ki), dim=2)
+      vSum2 = sum(real(Vel(:, iy, iz, :),R8Ki)**2, dim=2)
       vMean = vSum/nt
       ActualSigma = real(SQRT(ABS((vSum2/nt) - vMean**2)), ReKi)
 

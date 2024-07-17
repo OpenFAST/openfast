@@ -22,7 +22,6 @@ module AeroDyn_Driver_Subs
    use AeroDyn_Inflow_Types
    use AeroDyn_Inflow, only: ADI_Init, ADI_ReInit, ADI_End, ADI_CalcOutput, ADI_UpdateStates 
    use AeroDyn_Inflow, only: concatOutputHeaders
-   use AeroDyn_Inflow, only: ADI_ADIW_Solve ! TODO remove me
    use AeroDyn_Inflow, only: Init_MeshMap_For_ADI, Set_Inputs_For_ADI
    use AeroDyn_IO,     only: AD_WrVTK_Surfaces, AD_WrVTK_LinesPoints
    
@@ -238,7 +237,6 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
    DO j = 1-numInp, 0
       call Shift_ADI_Inputs(j,dvr, ADI, errStat2, errMsg2); if(Failed()) return
       call Set_Inputs_For_ADI(ADI%u(1), FED, errStat2, errMsg2); if(Failed()) return
-      call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%p, ADI%u(1)%AD, ADI%OtherState(1)%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat2, errMsg2); if(Failed()) return ! TODO TODO TODO remove me
    END DO              
    ! --- AeroDyn + Inflow at T=0
    call ADI_CalcOutput(ADI%inputTimes(1), ADI%u(1), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, errStat2, errMsg2); if(Failed()) return
@@ -291,8 +289,7 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, FED, errStat, errMsg)
    ! u(1) is at nt, u(2) is at nt-1.  Set inputs for nt timestep
    call Shift_ADI_Inputs(nt,dvr, ADI, errStat2, errMsg2); if(Failed()) return
    call Set_Inputs_For_ADI(ADI%u(1), FED, errStat2, errMsg2); if(Failed()) return
-   call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%p, ADI%u(1)%AD, ADI%OtherState(1)%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat, errMsg)
-
+   
    time = ADI%inputTimes(2)
 
    ! Calculate outputs at nt - 1 (current time)
@@ -361,7 +358,7 @@ subroutine Dvr_EndCase(dvr, ADI, initialized, errStat, errMsg)
             else
                sWT = ''
             endif
-            call WrBinFAST(trim(dvr%out%Root)//trim(sWT)//'.outb', FileFmtID_ChanLen_In, 'AeroDynDriver', dvr%out%WriteOutputHdr, dvr%out%WriteOutputUnt, (/0.0_DbKi, dvr%dt/), dvr%out%storage(:,:,iWT), errStat2, errMsg2)
+            call WrBinFAST(trim(dvr%out%Root)//trim(sWT)//'.outb', FileFmtID_ChanLen_In, GetVersion(version), dvr%out%WriteOutputHdr, dvr%out%WriteOutputUnt, (/0.0_DbKi, dvr%dt/), dvr%out%storage(:,:,iWT), errStat2, errMsg2)
             call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
          enddo
       endif
@@ -391,7 +388,9 @@ subroutine Dvr_CleanUp(dvr, ADI, FED, initialized, errStat, errMsg)
    call Dvr_EndCase(dvr, ADI, initialized, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
    ! End modules
-   call ADI_End( ADI%u(:), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName); 
+   if (allocated(ADI%x)) then
+      call ADI_End( ADI%u(:), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName); 
+   endif
 
    call AD_Dvr_DestroyDvr_SimData   (dvr ,    errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
@@ -446,7 +445,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
          !call AD_Dvr_DestroyAeroDyn_Data   (AD     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
          needInit=.true.
       endif
-      if (ADI%p%AD%WakeMod == WakeMod_FVW) then
+      if (ADI%p%AD%Wake_Mod == WakeMod_FVW) then
          call WrScr('[INFO] OLAF is used, AeroDyn will be re-initialized')
          needInit=.true.
       endif
@@ -466,8 +465,8 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
       InitInp%IW_InitInp%HWindSpeed = dvr%IW_InitInp%HWindSpeed
       InitInp%IW_InitInp%RefHt      = dvr%IW_InitInp%RefHt
       InitInp%IW_InitInp%PLExp      = dvr%IW_InitInp%PLExp
-      InitInp%IW_InitInp%UseInputFile = .true.     ! read input file instead of passed file data
       InitInp%IW_InitInp%MHK        = dvr%MHK
+      InitInp%IW_InitInp%FilePassingMethod = 0_IntKi ! read input file instead of passed file data
       ! AeroDyn
       InitInp%AD%Gravity   = 9.80665_ReKi
       InitInp%AD%RootName  = dvr%out%Root ! 'C:/Work/XFlow/'
@@ -497,15 +496,15 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
          if (wt%projMod==-1)then
             !call WrScr('>>> Using HAWTprojection to determine projMod')
             if (wt%HAWTprojection) then
-               InitInp%AD%rotors(iWT)%AeroProjMod = APM_BEM_NoSweepPitchTwist ! default, with WithoutSweepPitchTwist
+               !InitInp%AD%rotors(iWT)%AeroProjMod = APM_BEM_NoSweepPitchTwist ! default, with WithoutSweepPitchTwist
+               InitInp%AD%rotors(iWT)%AeroProjMod = -1 ! We let the code decide based on BEM_Mod
             else
                InitInp%AD%rotors(iWT)%AeroProjMod = APM_LiftingLine
             endif
          else
             InitInp%AD%rotors(iWT)%AeroProjMod = wt%projMod
          endif
-         InitInp%AD%rotors(iWT)%AeroBEM_Mod = wt%BEM_Mod
-         !call WrScr('   Driver:  projMod: '//trim(num2lstr(InitInp%AD%rotors(iWT)%AeroProjMod))//', BEM_Mod:'//trim(num2lstr(InitInp%AD%rotors(iWT)%AeroBEM_Mod)))
+         call WrScr('   Driver:  projMod: '//trim(num2lstr(InitInp%AD%rotors(iWT)%AeroProjMod)))
          InitInp%AD%rotors(iWT)%HubPosition    = y_ED%HubPtMotion%Position(:,1)
          InitInp%AD%rotors(iWT)%HubOrientation = y_ED%HubPtMotion%RefOrientation(:,:,1)
          InitInp%AD%rotors(iWT)%NacellePosition    = y_ED%NacelleMotion%Position(:,1)
@@ -517,7 +516,8 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
       enddo
 
       call ADI_Init(InitInp, ADI%u(1), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, dt, InitOut, errStat, errMsg)
-
+      dvr%out%AD_ver = InitOut%Ver
+      
       ! Set output headers
       if (iCase==1) then
          call concatOutputHeaders(dvr%out%WriteOutputHdr, dvr%out%WriteOutputUnt, InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
@@ -549,7 +549,7 @@ contains
       if (errStat /= 0) then
          ErrStat2 = ErrID_Fatal
          ErrMsg2  = "Could not allocate "//trim(txt)
-         call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Dvr_InitCase')
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_ADI_ForDriver')
       endif
       Failed0 = errStat >= AbortErrLev
       if(Failed0) call cleanUp()
@@ -702,9 +702,12 @@ subroutine Set_Mesh_Motion(nt, dvr, ADI, FED, errStat, errMsg)
       ! Getting current time values by interpolation
       ! timestate = HWindSpeed, PLExp, RotSpeed, Pitch, yaw
       call interpTimeValue(dvr%timeSeries, time, dvr%iTimeSeries, timeState)
-      ! Set wind at this time
+      ! Set wind at this time 
       ADI%m%IW%HWindSpeed = timeState(1)
       ADI%m%IW%PLexp      = timeState(2)
+      ! Set values in flow field (not recommended)
+      ADI%m%IW%p%FlowField%Uniform%VelH = timeState(1)
+      ADI%m%IW%p%FlowField%Uniform%ShrV = timeState(2)
       !! Set motion at this time
       dvr%WT(1)%hub%rotSpeed = timeState(3)     ! rad/s
       do j=1,size(dvr%WT(1)%bld)
@@ -1007,9 +1010,6 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       call ParseVar(FileInfo_In, CurLine, 'ProjMod'//sWT    , wt%projMod       , errStat2, errMsg2, unEc);
       if (errStat2==ErrID_Fatal) then
          wt%projMod = -1
-         wt%BEM_Mod = -1
-      else
-         call ParseVar(FileInfo_In, CurLine, 'BEM_Mod'//sWT    , wt%BEM_Mod     , errStat2, errMsg2, unEc); if(Failed()) return
       endif
       call ParseVar(FileInfo_In, CurLine, 'BasicHAWTFormat'//sWT    , wt%basicHAWTFormat       , errStat2, errMsg2, unEc); if(Failed()) return
 
@@ -1021,7 +1021,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       if (wt%BasicHAWTFormat) then
          ! --- Basic Geometry
          call ParseAry(FileInfo_In, CurLine, 'baseOriginInit'//sWT , wt%originInit , 3 , errStat2, errMsg2 , unEc); if(Failed()) return
-         if ( dvr%MHK == 1 ) then
+         if ( dvr%MHK == MHK_FixedBottom ) then
             wt%originInit(3) = wt%originInit(3) - dvr%WtrDpth
          end if
          call ParseVar(FileInfo_In, CurLine, 'numBlades'//sWT      , wt%numBlades      , errStat2, errMsg2 , unEc); if(Failed()) return
@@ -1059,7 +1059,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          ! --- Advanced geometry
          ! Rotor origin and orientation
          call ParseAry(FileInfo_In, CurLine, 'baseOriginInit'//sWT     , wt%originInit, 3         , errStat2, errMsg2, unEc); if(Failed()) return
-         if ( dvr%MHK == 1 ) then
+         if ( dvr%MHK == MHK_FixedBottom ) then
             wt%originInit(3) = wt%originInit(3) - dvr%WtrDpth
          end if
          call ParseAry(FileInfo_In, CurLine, 'baseOrientationInit'//sWT, wt%orientationInit, 3    , errStat2, errMsg2, unEc); if(Failed()) return
@@ -1345,7 +1345,7 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
    ! Turbine Data:
    !if ( dvr%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", errStat, ErrMsg, RoutineName)
       ! Combined-Case Analysis:
-   if (dvr%MHK /= 0 .and. dvr%MHK /= 1 .and. dvr%MHK /= 2) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0, 1, or 2.', ErrStat, ErrMsg, RoutineName)
+   if (dvr%MHK /= MHK_None .and. dvr%MHK /= MHK_FixedBottom .and. dvr%MHK /= MHK_Floating) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0, 1, or 2.', ErrStat, ErrMsg, RoutineName)
    
    if (dvr%DT < epsilon(0.0_ReKi) ) call SetErrStat(ErrID_Fatal,'dT must be larger than 0.',errStat, errMsg,RoutineName)
    if (Check(.not.(ANY((/0,1/) == dvr%IW_InitInp%compInflow) ), 'CompInflow needs to be 0 or 1')) return
@@ -1452,7 +1452,7 @@ subroutine Dvr_InitializeOutputs(nWT, out, numSteps, errStat, errMsg)
             end if
             call OpenFOutFile ( out%unOutFile(iWT), trim(out%Root)//trim(sWT)//'.out', errStat, errMsg )
             if ( errStat >= AbortErrLev ) return
-            write (out%unOutFile(iWT),'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim( version%Name )
+            write (out%unOutFile(iWT),'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim( GetVersion(version) )
             write (out%unOutFile(iWT),'(1X,A)') trim(GetNVD(out%AD_ver))
             write (out%unOutFile(iWT),'()' )    !print a blank line
             write (out%unOutFile(iWT),'()' )    !print a blank line
@@ -1668,8 +1668,8 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, yADI, errStat, errMsg)
          out%outLine(1:nDV)         = dvr%wt(iWT)%WriteOutput(1:nDV)  ! Driver Write Outputs
          ! out%outLine(11)            = dvr%WT(iWT)%hub%azimuth       ! azimuth already stored a nt-1
 
-         out%outLine(nDV+1:nDV+nAD) = yADI%AD%rotors(iWT)%WriteOutput     ! AeroDyn WriteOutputs
-         out%outLine(nDV+nAD+1:)    = yADI%IW_WriteOutput                 ! InflowWind WriteOutputs
+         out%outLine(nDV+1:nDV+nIW) = yADI%IW_WriteOutput                 ! InflowWind WriteOutputs
+         out%outLine(nDV+nIW+1:)    = yADI%AD%rotors(iWT)%WriteOutput     ! AeroDyn WriteOutputs
 
          if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtAscii) then
             ! ASCII
@@ -1682,125 +1682,11 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, yADI, errStat, errMsg)
          endif
          if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtBinary) then
             ! Store for binary
-            out%storage(1:nDV+nAD+nIW, nt, iWT) = out%outLine(1:nDV+nAD+nIW)
+            out%storage(1:nDV+nIW+nAD, nt, iWT) = out%outLine(1:nDV+nIW+nAD)
          endif
       endif
    enddo
 end subroutine Dvr_WriteOutputs
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Read a delimited file with one line of header
-subroutine ReadDelimFile(Filename, nCol, Array, errStat, errMsg, nHeaderLines, priPath)
-   character(len=*),                        intent(in)  :: Filename
-   integer,                                 intent(in)  :: nCol
-   real(ReKi), dimension(:,:), allocatable, intent(out) :: Array
-   integer(IntKi)         ,                 intent(out) :: errStat ! Status of error message
-   character(*)           ,                 intent(out) :: errMsg  ! Error message if errStat /= ErrID_None
-   integer(IntKi), optional,                intent(in ) :: nHeaderLines
-   character(*)  , optional,                intent(in ) :: priPath  ! Primary path, to use if filename is not absolute
-   integer              :: UnIn, i, j, nLine, nHead
-   character(len= 2048) :: line
-   integer(IntKi)       :: errStat2      ! local status of error message
-   character(ErrMsgLen) :: errMsg2       ! temporary Error message
-   character(len=2048) :: Filename_Loc   ! filename local to this function
-   errStat = ErrID_None
-   errMsg  = ""
-
-   Filename_Loc = Filename
-   if (present(priPath)) then
-      if (PathIsRelative(Filename_Loc)) Filename_Loc = trim(PriPath)//trim(Filename)
-   endif
-
-   ! Open file
-   call GetNewUnit(UnIn) 
-   call OpenFInpFile(UnIn, Filename_Loc, errStat2, errMsg2); if(Failed()) return 
-   ! Count number of lines
-   nLine = line_count(UnIn)
-   allocate(Array(nLine-1, nCol), stat=errStat2); errMsg2='allocation failed'; if(Failed())return
-   ! Read header
-   nHead=1
-   if (present(nHeaderLines)) nHead = nHeaderLines
-   do i=1,nHead
-      read(UnIn, *, IOSTAT=errStat2) line
-      errMsg2 = ' Error reading line '//trim(Num2LStr(1))//' of file: '//trim(Filename_Loc)
-      if(Failed()) return
-   enddo
-   ! Read data
-   do I = 1,nLine-1
-      read (UnIn,*,IOSTAT=errStat2) (Array(I,J), J=1,nCol)
-      errMsg2 = ' Error reading line '//trim(Num2LStr(I+1))//' of file: '//trim(Filename_Loc)
-      if(Failed()) return
-   end do  
-   close(UnIn) 
-contains
-   logical function Failed()
-      CALL SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ReadDelimFile' )
-      Failed = errStat >= AbortErrLev
-      if (Failed) then
-         if ((UnIn)>0) close(UnIn)
-      endif
-   end function Failed
-end subroutine ReadDelimFile
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Counts number of lines in a file
-integer function line_count(iunit)
-   integer, intent(in) :: iunit
-   character(len=2048) :: line
-   ! safety for infinite loop..
-   integer :: i
-   integer, parameter :: nline_max=100000000 ! 100 M
-   line_count=0
-   do i=1,nline_max 
-      line=''
-      read(iunit,'(A)',END=100)line
-      line_count=line_count+1
-   enddo
-   if (line_count==nline_max) then
-      print*,'Error: maximum number of line exceeded for line_count'
-      STOP
-   endif
-100 if(len(trim(line))>0) then
-      line_count=line_count+1
-   endif
-   rewind(iunit)
-   return
-end function
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Perform linear interpolation of an array, where first column is assumed to be ascending time values
-!! First value is used for times before, and last value is used for time beyond
-subroutine interpTimeValue(array, time, iLast, values)
-   real(ReKi), dimension(:,:), intent(in)    :: array !< vector of time steps
-   real(DbKi),                 intent(in)    :: time  !< time
-   integer,                    intent(inout) :: iLast
-   real(ReKi), dimension(:),   intent(out)   :: values !< vector of values at given time
-   integer :: i
-   real(ReKi) :: alpha
-   if (array(iLast,1)> time) then 
-      values = array(iLast,2:)
-   elseif (iLast == size(array,1)) then 
-      values = array(iLast,2:)
-   else
-      ! Look for index
-      do i=iLast,size(array,1)
-         if (array(i,1)<=time) then
-            iLast=i
-         else
-            exit
-         endif
-      enddo
-      if (iLast==size(array,1)) then
-         values = array(iLast,2:)
-      else
-         ! Linear interpolation
-         alpha = (array(iLast+1,1)-time)/(array(iLast+1,1)-array(iLast,1))
-         values = array(iLast,2:)*alpha + array(iLast+1,2:)*(1-alpha)
-         !print*,'time', array(iLast,1), '<=', time,'<',  array(iLast+1,1), 'fact', alpha
-      endif
-   endif
-end subroutine interpTimeValue
-
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets up the information needed for plotting VTK surfaces.
 subroutine setVTKParameters(p_FAST, dvr, ADI, errStat, errMsg, dirname)
@@ -2225,6 +2111,7 @@ subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc,
    alphaTq = min(max(alphaTq, 0._ReKi), 1.0_ReKi) ! Bounding value
 
    ! --- Rotor torque
+   !bjj: note: WriteOutput isn't always computed when AD_CalcOutput is called (though it appears to be okay in AeroDyn_Inflow.f90); be careful that AllOuts( RtAeroMxh ) is up to date.
    rotTorque = ADI%m%AD%rotors(iWT)%AllOuts( RtAeroMxh )
    ! Optional filtering of input torque
    rotTorque_filt = ( 1.0 - alphaTq )*rotTorque + alphaTq*rotTorque_filt_prev

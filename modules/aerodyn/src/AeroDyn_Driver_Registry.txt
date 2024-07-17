@@ -15,7 +15,7 @@ usefrom    AeroDyn_Registry.txt
 usefrom    AeroDyn_Inflow_Registry.txt
 #
 # ..... Table of combined cases to run .......................................................................................................
-typedef   AeroDyn_Driver/AD_Dvr Dvr_Case   ReKi                   HWindSpeed       -      -     -   "Hub wind speed" "m/s"
+typedef   AeroDyn_Driver/AD_Dvr Dvr_Case          ReKi                   HWindSpeed       -      -     -   "Hub wind speed" "m/s"
 typedef   ^                         ^             ReKi                   PLExp            -      -     -   "Power law wind-shear exponent" "-"
 typedef   ^                         ^             ReKi                   rotSpeed         -      -     -   "Rotor speed" "rad/s"
 typedef   ^                         ^             ReKi                   bldPitch         -      -     -   "Pitch angle" "rad"
@@ -36,7 +36,7 @@ typedef    ^    DvrVTK_SurfaceType    SiKi    BaseBox       {3}{8}    -    -    
 # typedef    ^    DvrVTK_SurfaceType    DvrVTK_BLSurfaceType    BladeShape    {:}    -    -    "AirfoilCoords for each blade"    m
 
 # ..... Data for driver output file .......................................................................................................
-typedef   AeroDyn_Driver/AD_Dvr  Dvr_Outputs ProgDesc          AD_ver           -      -     -   "AeroDyn version information" -
+typedef   AeroDyn_Driver/AD_Dvr  Dvr_Outputs      ProgDesc               AD_ver           -      -     -   "AeroDyn version information" -
 typedef   ^                         ^             IntKi                  unOutFile        :      -     -   "unit number for writing output file for each rotor" "-"
 typedef   ^                         ^             IntKi                  ActualChanLen    -      -     -   "Actual length of channels written to text file (less than or equal to ChanLen)" "-"
 typedef   ^                         ^             IntKi                  nDvrOutputs      -      -     -   "Number of outputs for the driver (without AD and IW)" "-"
@@ -138,7 +138,7 @@ typedef   ^                         ^            ReKi                    Patm   
 typedef   ^                         ^            ReKi                    Pvap             -      -     -   "Vapour pressure of working fluid" "Pa"
 typedef   ^                         ^            ReKi                    WtrDpth          -      -     -   "Water depth" "m"
 typedef   ^                         ^            ReKi                    MSL2SWL          -      -     -   "Offset between still-water level and mean sea level" "m"
-typedef   ^                         ^            IntKi                   numTurbines      -      -     -   "number of blades on turbine" "-"
+typedef   ^                         ^            IntKi                   numTurbines      -   -9999    -   "number of turbine rotors" "-"
 typedef   ^                         ^            WTData                  WT               :      -     -   "Wind turbine data for driver" "-"
 typedef   ^                         ^            DbKi                    dT               -      -     -   "time increment" "s"
 typedef   ^                         ^            DbKi                    tMax             -      -     -   "time increment" "s"

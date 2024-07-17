@@ -42,12 +42,12 @@ MODULE MoorDyn_IO
   ! Each output channel is described by the following fields:
   !  Name   - (string) what appears at the top of the output column
   !  Units  - (string) selected from UnitList (see below) based on index QType
-  !  OType  - (int) the type of object the output is from. 1=line, 2=connect (0=invalid)
-  !  ObjID  - (int) the ID number of the line or connect
+  !  OType  - (int) the type of object the output is from. 1=line, 2=point (0=invalid)
+  !  ObjID  - (int) the ID number of the line or point
   !  QType  - (int) the type of quantity to output.  0=tension, 1=x pos, etc.  see the parameters below
   !  NodeID - (int) the ID number of the node of the output quantity
 
-  ! These are the "OTypes": 1=Line, 2=Connect, 3=Rod, 4=Body
+  ! These are the "OTypes": 1=Line, 2=point, 3=Rod, 4=Body
 
   ! Indices for computing output channels:  - customized for the MD_OutParmType approach
   ! these are the "QTypes"
@@ -55,32 +55,43 @@ MODULE MoorDyn_IO
   INTEGER, PARAMETER             :: PosX      =    1
   INTEGER, PARAMETER             :: PosY      =    2
   INTEGER, PARAMETER             :: PosZ      =    3
-  INTEGER, PARAMETER             :: VelX      =    4
-  INTEGER, PARAMETER             :: VelY      =    5
-  INTEGER, PARAMETER             :: VelZ      =    6
-  INTEGER, PARAMETER             :: AccX      =    7
-  INTEGER, PARAMETER             :: AccY      =    8
-  INTEGER, PARAMETER             :: AccZ      =    9
-  INTEGER, PARAMETER             :: Ten       =   10
-  INTEGER, PARAMETER             :: FX        =   11
-  INTEGER, PARAMETER             :: FY        =   12
-  INTEGER, PARAMETER             :: FZ        =   13
-  INTEGER, PARAMETER             :: MX        =   14
-  INTEGER, PARAMETER             :: MY        =   15
-  INTEGER, PARAMETER             :: MZ        =   16
-  INTEGER, PARAMETER             :: Pitch     =   17
-  INTEGER, PARAMETER             :: Roll      =   18
-  INTEGER, PARAMETER             :: Yaw       =   19
-  INTEGER, PARAMETER             :: Sub       =   20
+  INTEGER, PARAMETER             :: RotX      =    4
+  INTEGER, PARAMETER             :: RotY      =    5
+  INTEGER, PARAMETER             :: RotZ      =    6
+  INTEGER, PARAMETER             :: VelX      =    7
+  INTEGER, PARAMETER             :: VelY      =    8
+  INTEGER, PARAMETER             :: VelZ      =    9
+  INTEGER, PARAMETER             :: RVelX     =   10
+  INTEGER, PARAMETER             :: RVelY     =   11 
+  INTEGER, PARAMETER             :: RVelZ     =   12
+  INTEGER, PARAMETER             :: AccX      =   13
+  INTEGER, PARAMETER             :: AccY      =   14
+  INTEGER, PARAMETER             :: AccZ      =   15
+  INTEGER, PARAMETER             :: RAccX     =   16
+  INTEGER, PARAMETER             :: RAccY     =   17
+  INTEGER, PARAMETER             :: RAccZ     =   18
+  INTEGER, PARAMETER             :: Ten       =   19
+  INTEGER, PARAMETER             :: FX        =   20
+  INTEGER, PARAMETER             :: FY        =   21
+  INTEGER, PARAMETER             :: FZ        =   22
+  INTEGER, PARAMETER             :: MX        =   23
+  INTEGER, PARAMETER             :: MY        =   24
+  INTEGER, PARAMETER             :: MZ        =   25
+  INTEGER, PARAMETER             :: Sub       =   26
+  INTEGER, PARAMETER             :: TenA      =   27 
+  INTEGER, PARAMETER             :: TenB      =   28 
+
 
   ! List of units corresponding to the quantities parameters for QTypes
-  CHARACTER(ChanLen), PARAMETER :: UnitList(0:20) =  (/ &
+  CHARACTER(ChanLen), PARAMETER :: UnitList(0:26) =  (/ &
                                "(s)       ","(m)       ","(m)       ","(m)       ", &
+                               "(deg)     ","(deg)     ","(deg)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ", &
+                               "(deg/s)   ","(deg/s)   ","(deg/s)   ", &
                                "(m/s2)    ","(m/s2)    ","(m/s2)    ", &
+                               "(deg/s2)  ","(deg/s2)  ","(deg/s2)  ", &
                                "(N)       ","(N)       ","(N)       ","(N)       ", &
-                               "(Nm)      ","(Nm)      ","(Nm)      ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(frac)    "/)
+                               "(Nm)      ","(Nm)      ","(Nm)      ","(frac)    "/)
 
   CHARACTER(28), PARAMETER  :: OutPFmt = "( I4, 3X,A 10,1 X, A10 )"   ! Output format parameter output list.
   CHARACTER(28), PARAMETER  :: OutSFmt = "ES10.3E2"
@@ -89,9 +100,9 @@ MODULE MoorDyn_IO
   ! output naming scheme is as
   ! examples:
   !  FairTen1, AnchTen1
-  !  Con1pX
-  !  Con3vY (connection 3, y velocity)
-  !  L2N4pX (line 2, node 4, x position)
+  !  POINT1PX
+  !  P3VY (Point 3, y velocity)
+  !  L2N4PX (line 2, node 4, x position)
 
   ! ---------------------------------------------------------------------------------------------------------
 
@@ -107,6 +118,7 @@ MODULE MoorDyn_IO
    PUBLIC :: MDIO_CloseOutput
    PUBLIC :: MDIO_ProcessOutList
    PUBLIC :: MDIO_WriteOutputs
+   PUBLIC :: Line_GetNodeTen
 
 
 CONTAINS
@@ -128,7 +140,7 @@ CONTAINS
       
       INTEGER(IntKi)                   :: ErrStat4
       CHARACTER(120)                   :: ErrMsg4         
-      CHARACTER(120)                   :: Line2
+      CHARACTER(4096)                   :: Line2
 
       CHARACTER(20)                    :: nGridX_string  ! string to temporarily hold the nGridX string from Line2
       CHARACTER(20)                    :: nGridY_string  ! string to temporarily hold the nGridY string from Line3
@@ -171,7 +183,7 @@ CONTAINS
          READ(UnCoef,*,IOSTAT=ErrStat4) nGridY_string, nGridY  ! read in the third line as the number of y values in the BathGrid
 
          ! Allocate the bathymetry matrix and associated grid x and y values
-         ALLOCATE(BathGrid(nGridX, nGridY), STAT=ErrStat4)
+         ALLOCATE(BathGrid(nGridY, nGridX), STAT=ErrStat4)
          ALLOCATE(BathGrid_Xs(nGridX), STAT=ErrStat4)
          ALLOCATE(BathGrid_Ys(nGridY), STAT=ErrStat4)
 
@@ -215,7 +227,7 @@ CONTAINS
       INTEGER(IntKi),   INTENT( OUT)   :: ErrStat3 ! Error status of the operation
       CHARACTER(*),     INTENT( OUT)   :: ErrMsg3  ! Error message if ErrStat /= ErrID_None
 
-      INTEGER(IntKi)                   :: nC, I
+      INTEGER(IntKi)                   :: I
       INTEGER(IntKi)                   :: UnCoef   ! unit number for coefficient input file
            
            
@@ -231,8 +243,7 @@ CONTAINS
          LineProp_npoints = 0;
       
       else ! otherwise interpet the input as a file name to load stress-strain lookup data from
-      
-         CALL WrScr("found A letter in the line coefficient value so will try to load the filename.")
+         CALL WrScr1(" Found a letter in the line EA coefficient value so will try to load the filename.")
          
          LineProp_c = 0.0
          
@@ -240,8 +251,13 @@ CONTAINS
         
          CALL GetNewUnit( UnCoef )
          CALL OpenFInpFile( UnCoef, TRIM(inputString), ErrStat4, ErrMsg4 )   ! add error handling?
+         IF (ErrStat4 == ErrID_Fatal) then
+            ErrStat3 = ErrStat4
+            ErrMsg3 = ErrMsg4
+            RETURN
+         ENDIF   
          
-         READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2   ! skip the first two lines (title, names, and units) then parse
+         READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2   ! skip the first three lines (title, names, and units) then parse
          READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2
          READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2
             
@@ -283,7 +299,7 @@ CONTAINS
       INTEGER(IntKi),        INTENT(  OUT)  :: n
       CHARACTER(40),         INTENT(INOUT)  :: outstrings(6)  ! array of output strings. Up to 6 strings can be read
       
-      INTEGER :: pos1, pos2, i
+      INTEGER :: pos1, pos2
  
       n = 0
       pos1=1
@@ -318,13 +334,13 @@ CONTAINS
 !      INTEGER(IntKi),        INTENT(  OUT)  :: num2
       CHARACTER(25),         INTENT(  OUT)  :: let3
    
-      INTEGER(IntKi)               :: I                                        ! Generic loop-counting index
+!      INTEGER(IntKi)               :: I                                        ! Generic loop-counting index
       
-      CHARACTER(ChanLen)           :: OutListTmp                               ! A string to temporarily hold OutList(I), the name of each output channel
-      CHARACTER(ChanLen)           :: qVal                                     ! quantity type string to match to list of valid options
+!      CHARACTER(ChanLen)           :: OutListTmp                               ! A string to temporarily hold OutList(I), the name of each output channel
+!      CHARACTER(ChanLen)           :: qVal                                     ! quantity type string to match to list of valid options
       
-      INTEGER                      :: oID                                      ! ID number of connect or line object
-      INTEGER                      :: nID                                      ! ID number of node object
+!      INTEGER                      :: oID                                      ! ID number of connect or line object
+!      INTEGER                      :: nID                                      ! ID number of node object
       INTEGER                      :: i1 = 0                                   ! indices of start of numbers or letters in OutListTmp string, for parsing
       INTEGER                      :: i2 = 0
       INTEGER                      :: i3 = 0
@@ -415,9 +431,9 @@ CONTAINS
     CHARACTER(ChanLen)           :: OutListTmp                               ! A string to temporarily hold OutList(I), the name of each output channel
     CHARACTER(ChanLen)           :: qVal                                     ! quantity type string to match to list of valid options
 
-    INTEGER                      :: oID                                      ! ID number of connect or line object
+    INTEGER                      :: oID                                      ! ID number of point or line object
     INTEGER                      :: nID                                      ! ID number of node object
-    INTEGER                      :: i1,i2,i3,i4                              ! indices of start of numbers or letters in OutListTmp string, for parsing
+!    INTEGER                      :: i1,i2,i3,i4                              ! indices of start of numbers or letters in OutListTmp string, for parsing
     
       CHARACTER(25)                 :: let1                ! strings used for splitting and parsing identifiers
       CHARACTER(25)                 :: num1
@@ -510,6 +526,16 @@ CONTAINS
       ! more general case
       ELSE
 
+        ! object number
+        IF (num1/=" ") THEN
+          READ (num1,*) oID
+          p%OutParam(I)%ObjID = oID                ! line or point ID number
+        ELSE
+          CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
+          CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Object ID missing.')
+          CYCLE
+        END IF
+
         ! what object type?
         
         ! Line case                               
@@ -519,23 +545,46 @@ CONTAINS
           IF (num2/=" ") THEN
               READ (num2,*) nID                      ! node or segment ID
               p%OutParam(I)%NodeID = nID
+              qVal = let3                            ! quantity type string
+          ELSE IF (let2 == 'TENA' .OR. let2 == 'TA' .OR. let2(1:2) == 'NA') THEN
+              p%OutParam(I)%NodeID =  0
+              IF (let2(1:2) == 'NA') THEN
+               let2 = let2(3:)
+              END IF
+              qVal = let2
+          ELSE IF (let2 == 'TENB' .OR. let2 == 'TB' .OR. let2(1:2) == 'NB') THEN
+              p%OutParam(I)%NodeID = m%LineList(p%OutParam(I)%ObjID)%N
+              IF (let2(1:2) == 'NB') THEN
+               let2 = let2(3:)
+              END IF
+              qVal = let2
+          ELSE IF (num2 == ' ') THEN
+              p%OutParam(I)%NodeID = 0
+              qVal = let2
           ELSE
               CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
-              CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'. Line ID or Node ID missing.')
+              CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'. Line ID or Node ID missing or incorrect tension flag.')
               CYCLE
           END IF
-          qVal = let3                            ! quantity type string
         
-        ! Connect case                            
-        ELSE IF (let1(1:1) == 'C') THEN    ! Look for C?xxx or Con?xxx
-          p%OutParam(I)%OType = 2                ! Connect object type
+        ! Point case                            
+        ELSE IF (let1(1:1) == 'P' .OR. let1(1:1) == 'C') THEN    ! Look for P?xxx or Point?xxx (C?xxx and Con?xxx for backwards compatability)
+          p%OutParam(I)%OType = 2                ! Point object type
           qVal = let2                            ! quantity type string
           
         ! Rod case                            
         ELSE IF (let1(1:1) == 'R') THEN    ! Look for R?xxx or Rod?xxx
           p%OutParam(I)%OType = 3                ! Rod object type
-          IF (LEN_TRIM(let3)== 0) THEN           ! No third character cluster indicates this is a whole-rod channel
-            p%OutParam(I)%NodeID = 0
+          IF (LEN_TRIM(let3)== 0) THEN           ! No third character cluster indicates this is a whole-rod channel or endpoint
+            IF (let2(1:2) == 'NA') THEN
+               p%OutParam(I)%NodeID = 0 
+               let2 = let2(3:)
+            ELSE IF (let2(1:2) == 'NB') THEN
+               p%OutParam(I)%NodeID = m%RodList(p%OutParam(I)%ObjID)%N
+               let2 = let2(3:)
+            ELSE
+               p%OutParam(I)%NodeID = -1
+            END IF
             qVal = let2                          ! quantity type string
           ELSE IF (num2/=" ") THEN
             READ (num2,*) nID                    ! rod node ID
@@ -557,17 +606,7 @@ CONTAINS
         ! error
         ELSE
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
-          CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Must start with L, C, R, or B')
-          CYCLE
-        END IF
-
-        ! object number
-        IF (num1/=" ") THEN
-            READ (num1,*) oID
-            p%OutParam(I)%ObjID = oID                ! line or connect ID number
-        ELSE
-          CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
-          CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Object ID missing.')
+          CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Must start with L, R, or B')
           CYCLE
         END IF
 
@@ -581,6 +620,15 @@ CONTAINS
         ELSE IF (qVal == 'PZ') THEN
           p%OutParam(I)%QType = PosZ
           p%OutParam(I)%Units = UnitList(PosZ)
+        ELSE IF (qVal == 'RX') THEN
+         p%OutParam(I)%QType = RotX
+         p%OutParam(I)%Units = UnitList(RotX)
+        ELSE IF (qVal == 'RY') THEN
+         p%OutParam(I)%QType = RotY
+         p%OutParam(I)%Units = UnitList(RotY)
+        ELSE IF (qVal == 'RZ') THEN
+         p%OutParam(I)%QType = RotZ
+         p%OutParam(I)%Units = UnitList(RotZ)
         ELSE IF (qVal == 'VX') THEN
           p%OutParam(I)%QType = VelX
           p%OutParam(I)%Units = UnitList(VelX)
@@ -590,6 +638,15 @@ CONTAINS
         ELSE IF (qVal == 'VZ') THEN
           p%OutParam(I)%QType = VelZ
           p%OutParam(I)%Units = UnitList(VelZ)
+        ELSE IF (qVal == 'RVX') THEN
+          p%OutParam(I)%QType = RVelX
+          p%OutParam(I)%Units = UnitList(RVelX)
+        ELSE IF (qVal == 'RVY') THEN
+          p%OutParam(I)%QType = RVelY
+          p%OutParam(I)%Units = UnitList(RVelY)
+        ELSE IF (qVal == 'RVZ') THEN
+          p%OutParam(I)%QType = RVelZ
+          p%OutParam(I)%Units = UnitList(RVelZ)
         ELSE IF (qVal == 'AX') THEN
           p%OutParam(I)%QType = AccX
           p%OutParam(I)%Units = UnitList(AccX)
@@ -599,8 +656,23 @@ CONTAINS
         ELSE IF (qVal == 'AZ') THEN
           p%OutParam(I)%QType = AccZ
           p%OutParam(I)%Units = UnitList(AccZ)
-        ELSE IF ((qVal == 'T') .or. (qVal == 'TEN')) THEN
+        ELSE IF (qVal == 'RAX') THEN
+          p%OutParam(I)%QType = RAccX
+          p%OutParam(I)%Units = UnitList(RAccX)
+        ELSE IF (qVal == 'RAY') THEN   ! fixed typo Nov 24
+          p%OutParam(I)%QType = RAccY
+          p%OutParam(I)%Units = UnitList(RAccY)
+        ELSE IF (qVal == 'RAZ') THEN
+          p%OutParam(I)%QType = RAccZ
+          p%OutParam(I)%Units = UnitList(RAccZ)
+        ELSE IF ((qVal == 'T') .OR. (qVal == 'TEN')) THEN
           p%OutParam(I)%QType = Ten
+          p%OutParam(I)%Units = UnitList(Ten)
+        ELSE IF ((qVal == 'TA') .OR. (qVal == 'TENA')) THEN
+          p%OutParam(I)%QType = TenA
+          p%OutParam(I)%Units = UnitList(Ten)
+        ELSE IF ((qVal == 'TB') .OR. (qVal == 'TENB')) THEN
+          p%OutParam(I)%QType = TenB
           p%OutParam(I)%Units = UnitList(Ten)
         ELSE IF (qVal == 'FX') THEN
           p%OutParam(I)%QType = FX
@@ -611,15 +683,15 @@ CONTAINS
         ELSE IF (qVal == 'FZ') THEN
           p%OutParam(I)%QType = FZ
           p%OutParam(I)%Units = UnitList(FZ)   ! <<<< should add moments as well <<<<
-        ELSE IF (qVal == 'ROLL') THEN
-          p%OutParam(I)%QType = Roll
-          p%OutParam(I)%Units = UnitList(Roll)
-        ELSE IF (qVal == 'PITCH') THEN
-          p%OutParam(I)%QType = Pitch
-          p%OutParam(I)%Units = UnitList(Pitch)
-        ELSE IF (qVal == 'YAW') THEN
-          p%OutParam(I)%QType = Yaw
-          p%OutParam(I)%Units = UnitList(Yaw)
+        ELSE IF (qVal == 'MX') THEN
+          p%OutParam(I)%QType = MX
+          p%OutParam(I)%Units = UnitList(MX)
+        ELSE IF (qVal == 'MY') THEN
+          p%OutParam(I)%QType = MY
+          p%OutParam(I)%Units = UnitList(MY)
+        ELSE IF (qVal == 'MZ') THEN
+          p%OutParam(I)%QType = MZ
+          p%OutParam(I)%Units = UnitList(MZ)   ! <<<< should add moments as well <<<<
         ELSE IF (qVal == 'SUB') THEN
           p%OutParam(I)%QType = Sub
           p%OutParam(I)%Units = UnitList(Sub)
@@ -646,9 +718,9 @@ CONTAINS
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
         END IF
         
-      ELSE IF (p%OutParam(I)%OType==2) THEN         ! Connect
-        IF (p%OutParam(I)%ObjID > p%NConnects) THEN
-          CALL WrScr('Warning: output Connect index excedes number of Connects in requested output '//trim(OutListTmp)//'.')
+      ELSE IF (p%OutParam(I)%OType==2) THEN         ! point
+        IF (p%OutParam(I)%ObjID > p%NPoints) THEN
+          CALL WrScr('Warning: output point index excedes number of points in requested output '//trim(OutListTmp)//'.')
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
         END IF
         
@@ -660,8 +732,8 @@ CONTAINS
         IF (p%OutParam(I)%NodeID > m%RodList(p%OutParam(I)%ObjID)%N) THEN
           CALL WrScr('Warning: output node index excedes number of nodes in requested output '//trim(OutListTmp)//'.')
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
-        ELSE IF (p%OutParam(I)%NodeID < 0) THEN
-          CALL WrScr('Warning: output node index is less than zero in requested output '//trim(OutListTmp)//'.')
+        ELSE IF (p%OutParam(I)%NodeID < -1) THEN
+          CALL WrScr('Warning: output node index is less than -1 in requested output '//trim(OutListTmp)//'.')
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
         END IF
         
@@ -785,7 +857,7 @@ CONTAINS
       INTEGER                                        :: I                    ! Generic loop counter
       INTEGER                                        :: J                    ! Generic loop counter
       CHARACTER(1024)                                :: OutFileName          ! The name of the output file  including the full path.
-      INTEGER                                        :: L                    ! counter for index in LineWrOutput
+!      INTEGER                                        :: L                    ! counter for index in LineWrOutput
       INTEGER                                        :: LineNumOuts          ! number of entries in LineWrOutput for each line
       INTEGER                                        :: RodNumOuts           ! for Rods ... redundant <<<
       CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
@@ -1287,87 +1359,142 @@ CONTAINS
                     y%WriteOutput(I) = m%LineList(p%OutParam(I)%ObjID)%rd(2,p%OutParam(I)%NodeID) ! y velocity
                   CASE (VelZ)
                     y%WriteOutput(I) = m%LineList(p%OutParam(I)%ObjID)%rd(3,p%OutParam(I)%NodeID) ! z velocity
+                  CASE (FX)
+                     y%WriteOutput(I) = m%LineList(p%OutParam(I)%ObjID)%Fnet(1,p%OutParam(I)%NodeID)  ! node force in x
+                  CASE (FY)
+                     y%WriteOutput(I) = m%LineList(p%OutParam(I)%ObjID)%Fnet(2,p%OutParam(I)%NodeID)  ! node force in y
+                  CASE (FZ)
+                     y%WriteOutput(I) = m%LineList(p%OutParam(I)%ObjID)%Fnet(3,p%OutParam(I)%NodeID)  ! node force in z
                   CASE (Ten)
-                    y%WriteOutput(I) = Line_GetNodeTen(m%LineList(p%OutParam(I)%ObjID), p%OutParam(I)%NodeID, p)  ! this is actually the segment tension ( 1 < NodeID < N )  Should deal with properly!
-                    
+                    y%WriteOutput(I) = Line_GetNodeTen(m%LineList(p%OutParam(I)%ObjID), p%OutParam(I)%NodeID)  ! this is actually the segment tension ( 1 < NodeID < N )  Should deal with properly!
+                  CASE (TenA)
+                     y%WriteOutput(I) = Line_GetNodeTen(m%LineList(p%OutParam(I)%ObjID), 0) 
+                  CASE (TenB)
+                     y%WriteOutput(I) = Line_GetNodeTen(m%LineList(p%OutParam(I)%ObjID), m%LineList(p%OutParam(I)%ObjID)%N)  
                   CASE DEFAULT
                     y%WriteOutput(I) = 0.0_ReKi
                     ErrStat = ErrID_Warn
                     ErrMsg = ' Unsupported output quantity '//TRIM(p%OutParam(I)%Name)//' requested from Line '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
                END SELECT
 
-            ELSE IF (p%OutParam(I)%OType == 2) THEN  ! if dealing with a Connect output
+            ELSE IF (p%OutParam(I)%OType == 2) THEN  ! if dealing with a Point output
                SELECT CASE (p%OutParam(I)%QType)
                   CASE (PosX)
-                     y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%r(1)  ! x position
+                     y%WriteOutput(I) = m%PointList(p%OutParam(I)%ObjID)%r(1)  ! x position
                   CASE (PosY)
-                     y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%r(2) ! y position
+                     y%WriteOutput(I) = m%PointList(p%OutParam(I)%ObjID)%r(2) ! y position
                   CASE (PosZ)
-                     y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%r(3) ! z position
+                     y%WriteOutput(I) = m%PointList(p%OutParam(I)%ObjID)%r(3) ! z position
                   CASE (VelX)
-                     y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%rd(1) ! x velocity
+                     y%WriteOutput(I) = m%PointList(p%OutParam(I)%ObjID)%rd(1) ! x velocity
                   CASE (VelY)
-                     y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%rd(2) ! y velocity
+                     y%WriteOutput(I) = m%PointList(p%OutParam(I)%ObjID)%rd(2) ! y velocity
                   CASE (VelZ)
-                     y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%rd(3) ! z velocity
+                     y%WriteOutput(I) = m%PointList(p%OutParam(I)%ObjID)%rd(3) ! z velocity
                   CASE (AccX)
-                     y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%a(1) ! x acceleration
+                     y%WriteOutput(I) = m%PointList(p%OutParam(I)%ObjID)%a(1) ! x acceleration
                   CASE (AccY)
-                     y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%a(2) ! y acceleration
+                     y%WriteOutput(I) = m%PointList(p%OutParam(I)%ObjID)%a(2) ! y acceleration
                   CASE (AccZ)
-                     y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%a(3) ! z acceleration
+                     y%WriteOutput(I) = m%PointList(p%OutParam(I)%ObjID)%a(3) ! z acceleration
                   CASE (Ten)
-                     y%WriteOutput(I) = TwoNorm(m%ConnectList(p%OutParam(I)%ObjID)%Fnet)  ! total force magnitude on a connect (used eg. for fairlead and anchor tensions)
+                     y%WriteOutput(I) = sqrt(m%PointList(p%OutParam(I)%ObjID)%Fnet(1)**2 + m%PointList(p%OutParam(I)%ObjID)%Fnet(2)**2 + m%PointList(p%OutParam(I)%ObjID)%Fnet(3)**2)  ! total force magnitude on a point (used eg. for fairlead and anchor tensions)
                   CASE (FX)
-                     y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%Fnet(1)  ! total force in x - added Nov 24
+                     y%WriteOutput(I) = m%PointList(p%OutParam(I)%ObjID)%Fnet(1)  ! total force in x - added Nov 24
                   CASE (FY)
-                     y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%Fnet(2)  ! total force in y
+                     y%WriteOutput(I) = m%PointList(p%OutParam(I)%ObjID)%Fnet(2)  ! total force in y
                   CASE (FZ)
-                     y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%Fnet(3)  ! total force in z
+                     y%WriteOutput(I) = m%PointList(p%OutParam(I)%ObjID)%Fnet(3)  ! total force in z
                   CASE DEFAULT
                      y%WriteOutput(I) = 0.0_ReKi
                      ErrStat = ErrID_Warn
-                     ErrMsg = ' Unsupported output quantity '//TRIM(p%OutParam(I)%Name)//' requested from Connection '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
+                     ErrMsg = ' Unsupported output quantity '//TRIM(p%OutParam(I)%Name)//' requested from Point '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
                END SELECT
 
             ELSE IF (p%OutParam(I)%OType == 3) THEN  ! if dealing with a Rod output
 
-               SELECT CASE (p%OutParam(I)%QType)
-                  CASE (PosX)
-                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%r(1,p%OutParam(I)%NodeID)  ! x position
-                  CASE (PosY)
-                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%r(2,p%OutParam(I)%NodeID) ! y position
-                  CASE (PosZ)
-                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%r(3,p%OutParam(I)%NodeID) ! z position
-                  CASE (VelX)
-                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%rd(1,p%OutParam(I)%NodeID) ! x velocity
-                  CASE (VelY)
-                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%rd(2,p%OutParam(I)%NodeID) ! y velocity
-                  CASE (VelZ)
-                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%rd(3,p%OutParam(I)%NodeID) ! z velocity                     
-                  CASE (AccX)
-                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%a6(1) ! x acceleration <<< should this become distributed for each node?
-                  CASE (AccY)
-                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%a6(2) ! y acceleration
-                  CASE (AccZ)
-                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%a6(3) ! z acceleration
-                  CASE (FX)
-                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%F6net(1)  ! total force in x - added Nov 24
-                  CASE (FY)
-                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%F6net(2)  ! total force in y
-                  CASE (FZ)
-                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%F6net(3)  ! total force in z
-                  CASE (Roll)
-                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%roll*180.0/pi  ! rod roll
-                  CASE (Pitch)
-                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%pitch*180.0/pi ! rod pitch
-                  CASE (Sub)
-                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%h0 / m%RodList(p%OutParam(I)%ObjID)%UnstrLen ! rod submergence
-                  CASE DEFAULT
-                     y%WriteOutput(I) = 0.0_ReKi
-                     ErrStat = ErrID_Warn
-                     ErrMsg = ' Unsupported output quantity '//TRIM(p%OutParam(I)%Name)//' requested from Rod '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
-               END SELECT
+               IF (p%OutParam(I)%NodeID == -1) THEN ! if whole rod outputs or node 0 (aka end A)
+                  SELECT CASE (p%OutParam(I)%QType)
+                     CASE (PosX)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%r6(1)  ! x position
+                     CASE (PosY)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%r6(2) ! y position
+                     CASE (PosZ)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%r6(3) ! z position
+                     CASE (RotX)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%roll*180.0/pi  ! rod roll
+                     CASE (RotY)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%pitch*180.0/pi ! rod pitch
+                     CASE (VelX)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%v6(1) ! x velocity
+                     CASE (VelY)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%v6(2) ! y velocity
+                     CASE (VelZ)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%v6(3) ! z velocity
+                     CASE (RVelX)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%v6(4)*180.0/pi ! rx velocity
+                     CASE (RVelY)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%v6(5)*180.0/pi ! ry velocity
+                     CASE (AccX)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%a6(1) ! x acceleration <<< should this become distributed for each node?
+                     CASE (AccY)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%a6(2) ! y acceleration
+                     CASE (AccZ)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%a6(3) ! z acceleration
+                     CASE (RAccX)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%a6(4)*180.0/pi ! rx acceleration <<< should this become distributed for each node?
+                     CASE (RAccY)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%a6(5)*180.0/pi ! ry acceleration
+                     CASE (FX)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%F6net(1)  ! total force in x - added Nov 24
+                     CASE (FY)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%F6net(2)  ! total force in y
+                     CASE (FZ)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%F6net(3)  ! total force in z
+                     CASE (MX)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%F6net(4)  ! total force in x - added Nov 24
+                     CASE (MY)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%F6net(5)  ! total force in y
+                     CASE (MZ)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%F6net(6)  ! total force in z
+                     CASE (Sub)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%h0 / m%RodList(p%OutParam(I)%ObjID)%UnstrLen ! rod submergence
+                     CASE (TenA)
+                        y%WriteOutput(I) = sqrt(m%RodList(p%OutParam(I)%ObjID)%FextA(1)**2 + m%RodList(p%OutParam(I)%ObjID)%FextA(2)**2 + m%RodList(p%OutParam(I)%ObjID)%FextA(3)**2)! external forces on end A
+                     CASE (TenB)
+                        y%WriteOutput(I) = sqrt(m%RodList(p%OutParam(I)%ObjID)%FextB(1)**2 + m%RodList(p%OutParam(I)%ObjID)%FextB(2)**2 + m%RodList(p%OutParam(I)%ObjID)%FextB(3)**2) ! external forces on end B
+                     CASE DEFAULT
+                        y%WriteOutput(I) = 0.0_ReKi
+                        ErrStat = ErrID_Warn
+                        ErrMsg = ' Unsupported output quantity for whole rod'//TRIM(p%OutParam(I)%Name)//' requested from Rod '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
+                  END SELECT
+
+               ELSE ! if rod node outputs
+                  SELECT CASE (p%OutParam(I)%QType)
+                     CASE (PosX)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%r(1,p%OutParam(I)%NodeID)  ! x position
+                     CASE (PosY)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%r(2,p%OutParam(I)%NodeID) ! y position
+                     CASE (PosZ)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%r(3,p%OutParam(I)%NodeID) ! z position
+                     CASE (VelX)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%rd(1,p%OutParam(I)%NodeID) ! x velocity
+                     CASE (VelY)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%rd(2,p%OutParam(I)%NodeID) ! y velocity
+                     CASE (VelZ)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%rd(3,p%OutParam(I)%NodeID) ! z velocity                     
+                     CASE (FX)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Fnet(1,p%OutParam(I)%NodeID)  ! node force in x
+                     CASE (FY)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Fnet(2,p%OutParam(I)%NodeID)  ! node force in y
+                     CASE (FZ)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Fnet(3,p%OutParam(I)%NodeID)  ! node force in z
+                     CASE DEFAULT
+                        y%WriteOutput(I) = 0.0_ReKi
+                        ErrStat = ErrID_Warn
+                        ErrMsg = ' Unsupported output quantity for rod nodes '//TRIM(p%OutParam(I)%Name)//' requested from Rod '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
+                  END SELECT
+               END IF
 
             ELSE IF (p%OutParam(I)%OType == 4) THEN  ! if dealing with a Body output
                SELECT CASE (p%OutParam(I)%QType)
@@ -1377,24 +1504,50 @@ CONTAINS
                      y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%r6(2) ! y position
                   CASE (PosZ)
                      y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%r6(3) ! z position
+                  CASE (RotX)
+                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%r6(4)*180.0/pi  ! roll
+                  CASE (RotY)
+                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%r6(5)*180.0/pi  ! pitch
+                  CASE (RotZ)
+                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%r6(6)*180.0/pi  ! yaw
                   CASE (VelX)
                      y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%v6(1) ! x velocity
                   CASE (VelY)
                      y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%v6(2) ! y velocity
                   CASE (VelZ)
                      y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%v6(3) ! z velocity
+                  CASE (RVelX)
+                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%v6(4)*180.0/pi ! rx velocity
+                  CASE (RVelY)
+                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%v6(5)*180.0/pi ! ry velocity
+                  CASE (RVelZ)
+                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%v6(6)*180.0/pi ! rz velocity
+                  CASE (AccX)
+                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%a6(1) ! x acceleration
+                  CASE (AccY)
+                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%a6(2) ! y acceleration
+                  CASE (AccZ)
+                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%a6(3) ! z acceleration
+                  CASE (RAccX)
+                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%a6(4)*180.0/pi ! rx acceleration
+                  CASE (RAccY)
+                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%a6(5)*180.0/pi ! ry acceleration
+                  CASE (RAccZ)
+                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%a6(6)*180.0/pi ! rz acceleration
                   CASE (FX)
                      y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%F6net(1)  ! total force in x - added Nov 24
                   CASE (FY)
                      y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%F6net(2)  ! total force in y
                   CASE (FZ)
                      y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%F6net(3)  ! total force in z
-                  CASE (Roll)
-                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%r6(4)*180.0/pi  ! roll
-                  CASE (Pitch)
-                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%r6(5)*180.0/pi  ! pitch
-                  CASE (Yaw)
-                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%r6(6)*180.0/pi  ! yaw
+                  CASE (TEN)
+                     y%WriteOutput(I) = sqrt(m%BodyList(p%OutParam(I)%ObjID)%F6net(1)**2 + m%BodyList(p%OutParam(I)%ObjID)%F6net(2)**2 + m%BodyList(p%OutParam(I)%ObjID)%F6net(3)**2)
+                  CASE (MX)
+                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%F6net(4)  ! total moment in x - added Nov 24
+                  CASE (MY)
+                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%F6net(5)  ! total moment in y
+                  CASE (MZ)
+                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%F6net(6)  ! total moment in z
                   CASE DEFAULT
                      y%WriteOutput(I) = 0.0_ReKi
                      ErrStat = ErrID_Warn
@@ -1734,11 +1887,10 @@ CONTAINS
 
    ! get tension at any node including fairlead or anchor (accounting for weight in these latter cases)
    !--------------------------------------------------------------
-   FUNCTION Line_GetNodeTen(Line, i, p) result(NodeTen)
+   FUNCTION Line_GetNodeTen(Line, i) result(NodeTen)
 
       TYPE(MD_Line),          INTENT(IN   )  :: Line           ! label for the current line, for convenience
       INTEGER(IntKi),         INTENT(IN   )  :: i              ! node index to get tension at
-      TYPE(MD_ParameterType), INTENT(IN   )  :: p              ! Parameters
       REAL(DbKi)                             :: NodeTen        ! returned calculation of tension at node   
       
       INTEGER(IntKi)                   :: J      

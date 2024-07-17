@@ -93,9 +93,9 @@
 		<File RelativePath="..\..\modules\InflowWind\src\IfW_FlowField.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\InflowWind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\InflowWind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\InflowWind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\InflowWind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\InflowWind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
@@ -103,34 +103,16 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\InflowWind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\InflowWind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\InflowWind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\InflowWind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\InflowWind\src\IfW_FlowField_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\InflowWind\src\InflowWind_IO.txt">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\InflowWind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\InflowWind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\InflowWind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\InflowWind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\InflowWind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\InflowWind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\InflowWind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\InflowWind\src\InflowWind_IO_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\InflowWind\src\InflowWind_IO_Types.f90"/>
 		<File RelativePath="..\..\modules\InflowWind\src\InflowWind.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\InflowWind\src\InflowWind_Types.f90" AdditionalDependencies="..\..\modules\InflowWind\src\Reg-IfW_FFWind.txt;..\..\modules\InflowWind\src\Reg-IfW_HHWind.txt"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\InflowWind\src\InflowWind_Types.f90" AdditionalDependencies="..\..\modules\InflowWind\src\Reg-IfW_FFWind.txt;..\..\modules\InflowWind\src\Reg-IfW_HHWind.txt"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\InflowWind\src\InflowWind_Types.f90" AdditionalDependencies="..\..\modules\InflowWind\src\Reg-IfW_FFWind.txt;..\..\modules\InflowWind\src\Reg-IfW_HHWind.txt"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\InflowWind\src\InflowWind_Types.f90" AdditionalDependencies="..\..\modules\InflowWind\src\Reg-IfW_FFWind.txt;..\..\modules\InflowWind\src\Reg-IfW_HHWind.txt"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\InflowWind\src\InflowWind_Types.f90" AdditionalDependencies="..\..\modules\InflowWind\src\Reg-IfW_FFWind.txt;..\..\modules\InflowWind\src\Reg-IfW_HHWind.txt"/></FileConfiguration>
@@ -138,17 +120,35 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\InflowWind\src\InflowWind_Types.f90" AdditionalDependencies="..\..\modules\InflowWind\src\Reg-IfW_FFWind.txt;..\..\modules\InflowWind\src\Reg-IfW_HHWind.txt"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\InflowWind\src\InflowWind_Types.f90" AdditionalDependencies="..\..\modules\InflowWind\src\Reg-IfW_FFWind.txt;..\..\modules\InflowWind\src\Reg-IfW_HHWind.txt"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\InflowWind\src\InflowWind_Types.f90" AdditionalDependencies="..\..\modules\InflowWind\src\Reg-IfW_FFWind.txt;..\..\modules\InflowWind\src\Reg-IfW_HHWind.txt"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\InflowWind\src\InflowWind_Types.f90" AdditionalDependencies="..\..\modules\InflowWind\src\Reg-IfW_FFWind.txt;..\..\modules\InflowWind\src\Reg-IfW_HHWind.txt"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\InflowWind\src\InflowWind_Types.f90" AdditionalDependencies="..\..\modules\InflowWind\src\Reg-IfW_FFWind.txt;..\..\modules\InflowWind\src\Reg-IfW_HHWind.txt"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\InflowWind\src\InflowWind_IO.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\InflowWind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\InflowWind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\InflowWind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\InflowWind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\InflowWind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\InflowWind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\InflowWind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\InflowWind\src\InflowWind_IO_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\InflowWind\src\InflowWind_IO_Types.f90"/>
 		<File RelativePath="..\..\modules\InflowWind\src\InflowWind_Types.f90"/>
 		<File RelativePath="..\..\modules\InflowWind\src\Lidar.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\InflowWind\src\Lidar_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\InflowWind\src\Lidar_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\InflowWind\src\Lidar_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\InflowWind\src\Lidar_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\InflowWind\src\Lidar_Types.f90"/></FileConfiguration>
@@ -156,14 +156,14 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\InflowWind\src\Lidar_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\InflowWind\src\Lidar_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\InflowWind\src\Lidar_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\InflowWind\src\Lidar_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\InflowWind\src\Lidar_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\InflowWind\src\Lidar_Types.f90"/></Filter>
 		<File RelativePath="..\..\modules\InflowWind\src\IfW_FlowField.f90"/>
 		<File RelativePath="..\..\modules\InflowWind\src\IfW_FlowField_Types.f90"/>
-		<File RelativePath="..\..\modules\InflowWind\src\InflowWind_IO.f90">
+		<File RelativePath="..\..\modules\InflowWind\src\InflowWind.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="true"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -172,7 +172,7 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="true"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="true"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\InflowWind\src\InflowWind.f90">
+		<File RelativePath="..\..\modules\InflowWind\src\InflowWind_IO.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="true"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -203,15 +203,26 @@
 		<Filter Name="NetLib">
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\lapack\NWTC_LAPACK.f90"/></Filter>
 		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules\nwtc-library\src\Registry_NWTC_Library.txt"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library_Types.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\Registry_NWTC_Library.txt"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\Registry_NWTC_Library_typedef_nomesh.txt">
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat NWTC_Lib" Description="Running Registry for NWTC_Lib" Outputs="..\..\modules\nwtc-library\src\NWTC_Library_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat NWTC_Lib" Description="Running Registry for NWTC_Lib" Outputs="..\..\modules\nwtc-library\src\NWTC_Library_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat NWTC_Lib" Description="Running Registry for NWTC_Lib" Outputs="..\..\modules\nwtc-library\src\NWTC_Library_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat NWTC_Lib" Description="Running Registry for NWTC_Lib" Outputs="..\..\modules\nwtc-library\src\NWTC_Library_Types.f90"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Mapping.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Types.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\ModReg.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Base.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_IO.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library_Types.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Num.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Str.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\SingPrec.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/></Filter>
