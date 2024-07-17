@@ -1995,7 +1995,8 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    ! Cavitation check
    call AD_CavtCrit(u, p, m, errStat2, errMsg2)
    if(Failed()) return
-      ! initialize nacelle mesh loads
+
+   ! initialize nacelle mesh loads
    do iR = 1,size(p%rotors)
       y%rotors(iR)%NacelleLoad%Force = 0.0_ReKi
       y%rotors(iR)%NacelleLoad%Moment = 0.0_ReKi
@@ -2011,7 +2012,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
 
    ! Calculate nacelle drag loads
    do iR = 1,size(p%rotors)
-      if ( p%rotors(iR)%NacelleDrag ) then ! m%Inflow(1)%RotInflow(iR)
+      if ( p%rotors(iR)%NacelleDrag ) then 
          call computeNacelleDrag( u%rotors(iR), p%rotors(iR), m%rotors(iR), y%rotors(iR), m%Inflow(1)%RotInflow(iR), ErrStat, ErrMsg )
             if(Failed()) return
       end if
@@ -2594,6 +2595,11 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
    if ( p%VolNac == 0 ) then
       m%NacFB = NacFBtmp
       m%NacMB = NacMBtmp
+
+      ! Passing buoyant loads to m variable, drag loads are called after buoyant loads
+      m%NacFi = NacFBtmp
+      m%NacMi = NacMBtmp
+
    else
          ! Check that nacelle node does not go beneath the seabed or pierce the free surface
       if ( u%NacelleMotion%Position(3,1) + u%NacelleMotion%TranslationDisp(3,1) >= p%MSL2SWL .OR. u%NacelleMotion%Position(3,1) + u%NacelleMotion%TranslationDisp(3,1) <= -p%WtrDpth ) &
@@ -2629,6 +2635,10 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
          ! Pass to m variable
       m%NacFB = NacFBtmp
       m%NacMB = NacMBtmp
+
+      ! Passing buoyant loads to m variable, drag loads are called after buoyant loads
+      m%NacFi = NacFBtmp
+      m%NacMi = NacMBtmp
    end if
 
       ! Assign buoyant loads to nacelle mesh. Mesh might contain the nacelle drag force.
