@@ -215,6 +215,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(1:6)  :: a6 = 0.0_R8Ki      !< 6 DOF acceleration vector (only used for coupled Rods) [-]
     REAL(DbKi) , DIMENSION(1:6)  :: F6net = 0.0_R8Ki      !< total force and moment about end A (excluding inertial loads) that Rod may exert on whatever it's attached to [-]
     REAL(DbKi) , DIMENSION(1:6,1:6)  :: M6net = 0.0_R8Ki      !< total mass matrix about end A of Rod and any attached Points [-]
+    REAL(DbKi) , DIMENSION(1:3,1:3)  :: Imat = 0.0_R8Ki      !< inertia about CG in global frame [-]
     REAL(DbKi) , DIMENSION(1:3,1:3)  :: OrMat = 0.0_R8Ki      !< DCM for body orientation [-]
     INTEGER(IntKi)  :: RodUnOut = 0_IntKi      !< unit number of rod output file [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: RodWrOutput      !< one row of output data for this rod [-]
@@ -1336,6 +1337,7 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
    DstRodData%a6 = SrcRodData%a6
    DstRodData%F6net = SrcRodData%F6net
    DstRodData%M6net = SrcRodData%M6net
+   DstRodData%Imat = SrcRodData%Imat
    DstRodData%OrMat = SrcRodData%OrMat
    DstRodData%RodUnOut = SrcRodData%RodUnOut
    if (allocated(SrcRodData%RodWrOutput)) then
@@ -1478,6 +1480,7 @@ subroutine MD_PackRod(RF, Indata)
    call RegPack(RF, InData%a6)
    call RegPack(RF, InData%F6net)
    call RegPack(RF, InData%M6net)
+   call RegPack(RF, InData%Imat)
    call RegPack(RF, InData%OrMat)
    call RegPack(RF, InData%RodUnOut)
    call RegPackAlloc(RF, InData%RodWrOutput)
@@ -1547,6 +1550,7 @@ subroutine MD_UnPackRod(RF, OutData)
    call RegUnpack(RF, OutData%a6); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%F6net); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%M6net); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Imat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OrMat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RodUnOut); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%RodWrOutput); if (RegCheckErr(RF, RoutineName)) return

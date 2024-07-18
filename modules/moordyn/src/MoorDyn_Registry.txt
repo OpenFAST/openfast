@@ -194,6 +194,7 @@ typedef  ^            ^                DbKi               v6           {6}      
 typedef  ^            ^                DbKi               a6           {6}       -  -   "6 DOF acceleration vector (only used for coupled Rods)" -
 typedef  ^            ^                DbKi               F6net        {6}       -  -   "total force and moment about end A (excluding inertial loads) that Rod may exert on whatever it's attached to"
 typedef  ^            ^                DbKi               M6net        {6}{6}    -  -   "total mass matrix about end A of Rod and any attached Points"
+typedef  ^            ^                DbKi               Imat         {3}{3}    -  -   "inertia about CG in global frame"     
 typedef  ^            ^                DbKi               OrMat        {3}{3}    -  -   "DCM for body orientation"
 typedef  ^            ^                IntKi              RodUnOut      -        -  -   "unit number of rod output file"
 typedef  ^            ^                DbKi               RodWrOutput  {:}       -  -   "one row of output data for this rod"

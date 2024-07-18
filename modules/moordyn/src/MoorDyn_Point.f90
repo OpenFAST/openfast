@@ -314,16 +314,19 @@ CONTAINS
 
    ! calculate the force and mass contributions of the point on the parent body (only for type 3 points?)
    !--------------------------------------------------------------
-   SUBROUTINE Point_GetNetForceAndMass(Point, rRef, Fnet_out, M_out, m, p)
+   SUBROUTINE Point_GetNetForceAndMass(Point, rRef, wRef, Fnet_out, M_out, m, p)
    
       Type(MD_Point),      INTENT(INOUT)  :: Point     ! the Point object
       Real(DbKi),            INTENT(IN   )  :: rRef(3)     ! global coordinates of reference point (i.e. the parent body)
+      Real(DbKi),            INTENT(IN   )  :: wRef(3)     ! global angular velocities of reference point (i.e. the parent body)
       Real(DbKi),            INTENT(  OUT)  :: Fnet_out(6) ! force and moment vector about rRef
       Real(DbKi),            INTENT(  OUT)  :: M_out(6,6)  ! mass and inertia matrix about rRef
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
       TYPE(MD_ParameterType),INTENT(IN   )  :: p           ! Parameters
 
       Real(DbKi)                            :: rRel(  3)   ! position of point relative to the body reference point (global orientation frame)
+      Real(DbKi)                            :: Fcentripetal(3)        ! centripetal force
+      Real(DbKi)                            :: Mcentripetal(3)        ! centripetal moment     
 
 
       CALL Point_DoRHS(Point, m, p)
@@ -332,9 +335,16 @@ CONTAINS
 
       ! convert net force into 6dof force about body ref point
       CALL translateForce3to6DOF(rRel, Point%Fnet, Fnet_out)
-      
+
       ! convert mass matrix to 6by6 mass matrix about body ref point
       CALL translateMass3to6DOF(rRel, Point%M, M_out)
+
+      ! add in the centripetal force and moment on the body. If rRel is zero there will be no translational centripetal component
+      Fcentripetal = - MATMUL(M_out(1:3,1:3), CROSS_PRODUCT(wRef, CROSS_PRODUCT(wRef,rRel)))
+      Mcentripetal = - CROSS_PRODUCT(wRef, MATMUL(M_out(4:6,4:6), wRef)) + CROSS_PRODUCT(rRel, Fcentripetal)
+
+      Fnet_out(1:3) = Fnet_out(1:3) + Fcentripetal
+      Fnet_out(4:6) = Fnet_out(4:6) + Mcentripetal
 
    END SUBROUTINE Point_GetNetForceAndMass
    

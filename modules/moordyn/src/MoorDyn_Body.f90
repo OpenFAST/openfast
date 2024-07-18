@@ -439,6 +439,10 @@ CONTAINS
       Real(DbKi)                 :: cda(6)             ! body drag coefficients
       Real(DbKi)                 :: cda_t(3,3) = 0.0         ! matrix with translational drag coefficients as diagonals
       Real(DbKi)                 :: cda_r(3,3) = 0.0         ! matrix with rotational drag coefficients as diagonals
+      Real(DbKi)                 :: w(3)                     ! body angular velocity vector
+      Real(DbKi)                 :: Fcentripetal(3)        ! centripetal force
+      Real(DbKi)                 :: Mcentripetal(3)        ! centripetal moment     
+
 
       ! Initialize variables
       U = 0.0_DbKi      ! Set to zero for now
@@ -456,6 +460,13 @@ CONTAINS
       body_rCGrotated = MATMUL(Body%OrMat, Body%rCG) ! rotateVector3(body_rCG, OrMat, body_rCGrotated); ! relative vector to body CG in inertial orientation
       CALL translateForce3to6DOF(body_rCGrotated, Fgrav, Body%F6net)  ! gravity forces and moments about body ref point given CG location
 
+      ! Centripetal force and moment due to COM not being at body origin plus gyroscopic moment
+      w = Body%v6(4:6)
+      Fcentripetal = - MATMUL(Body%M(1:3,1:3), CROSS_PRODUCT(w, CROSS_PRODUCT(w, body_rCGrotated)))
+      Mcentripetal = - CROSS_PRODUCT(w, MATMUL(Body%M(4:6,4:6), w)) + CROSS_PRODUCT(body_rCGrotated, Fcentripetal)
+
+      Body%F6net(1:3) = Body%F6net(1:3) + Fcentripetal
+      Body%F6net(4:6) = Body%F6net(4:6) + Mcentripetal
 
       ! --------------------------------- apply wave kinematics ------------------------------------
       !env->waves->getU(r6, t, U); ! call generic function to get water velocities <<<<<<<<< all needs updating
@@ -487,7 +498,7 @@ CONTAINS
       do l = 1,Body%nAttachedC
       
          ! get net force and mass from Point on body ref point (global orientation)
-         CALL Point_GetNetForceAndMass( m%PointList(Body%attachedC(l)), Body%r6(1:3), F6_i, M6_i, m, p)
+         CALL Point_GetNetForceAndMass( m%PointList(Body%attachedC(l)), Body%r6(1:3), Body%v6(4:6), F6_i, M6_i, m, p)
          
          if (ABS(F6_i(5)) > 1.0E12) then
             Call WrScr( "Warning: extreme pitch moment from body-attached Point "//trim(num2lstr(l)))
@@ -502,7 +513,7 @@ CONTAINS
       do l=1,Body%nAttachedR
       
          ! get net force and mass from Rod on body ref point (global orientation)
-         CALL Rod_GetNetForceAndMass(m%RodList(Body%attachedR(l)), Body%r6(1:3), F6_i, M6_i, m, p)
+         CALL Rod_GetNetForceAndMass(m%RodList(Body%attachedR(l)), Body%r6(1:3), Body%v6(4:6), F6_i, M6_i, m, p)
          
          if (ABS(F6_i(5)) > 1.0E12) then
             Call WrScr("Warning: extreme pitch moment from body-attached Rod "//trim(num2lstr(l)))
