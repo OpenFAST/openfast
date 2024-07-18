@@ -162,7 +162,7 @@ aid in selecting an appropriate value of **RdtnTMax**. The dimensions of the
 radiation kernel matrix depend on the number of potential-flow bodies 
 present (**NBody**) and **NBodyMod** in the HydroDyn primary input file. If 
 **NBodyMod** = 1 (full hydrodynamic coupling), the summary file will contain 
-data for a single 6**NBody**-by-6**NBody** matrix. If **NBodyMod** > 1 
+data for a single 6\ **NBody**-by-6\ **NBody** matrix. If **NBodyMod** > 1 
 (no hydrodynamic coupling), the summary file will contain data for **NBody** 
 6-by-6 radiation kernal matrices.
 
