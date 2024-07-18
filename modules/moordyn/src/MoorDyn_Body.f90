@@ -463,7 +463,7 @@ CONTAINS
       ! Centripetal force and moment due to COM not being at body origin plus gyroscopic moment
       w = Body%v6(4:6)
       Fcentripetal = - MATMUL(Body%M(1:3,1:3), CROSS_PRODUCT(w, CROSS_PRODUCT(w, body_rCGrotated)))
-      Mcentripetal = - CROSS_PRODUCT(w, MATMUL(Body%M(4:6,4:6), w)) + CROSS_PRODUCT(body_rCGrotated, Fcentripetal)
+      Mcentripetal = - CROSS_PRODUCT(w, MATMUL(Body%M(4:6,4:6), w)) 
 
       Body%F6net(1:3) = Body%F6net(1:3) + Fcentripetal
       Body%F6net(4:6) = Body%F6net(4:6) + Mcentripetal

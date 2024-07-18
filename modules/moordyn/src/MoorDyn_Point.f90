@@ -341,7 +341,7 @@ CONTAINS
 
       ! add in the centripetal force and moment on the body. If rRel is zero there will be no translational centripetal component
       Fcentripetal = - MATMUL(M_out(1:3,1:3), CROSS_PRODUCT(wRef, CROSS_PRODUCT(wRef,rRel)))
-      Mcentripetal = - CROSS_PRODUCT(wRef, MATMUL(M_out(4:6,4:6), wRef)) + CROSS_PRODUCT(rRel, Fcentripetal)
+      Mcentripetal = - CROSS_PRODUCT(wRef, MATMUL(M_out(4:6,4:6), wRef))
 
       Fnet_out(1:3) = Fnet_out(1:3) + Fcentripetal
       Fnet_out(4:6) = Fnet_out(4:6) + Mcentripetal

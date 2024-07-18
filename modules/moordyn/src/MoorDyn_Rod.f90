@@ -1072,7 +1072,7 @@ CONTAINS
          CALL TranslateMass3to6DOF(r_c+rRel, Rod%Imat, I_out) ! translate the COG inertia matrix (no parallel axis terms) about the body ref point
 
          Fcentripetal = - MATMUL(Rod%M6net(1:3,1:3), CROSS_PRODUCT(wRef, CROSS_PRODUCT(wRef,r_c+rRel)))
-         Mcentripetal = CROSS_PRODUCT(r_c+rRel, Fcentripetal) - CROSS_PRODUCT(wRef, MATMUL(I_out(4:6,4:6), wRef))
+         Mcentripetal = - CROSS_PRODUCT(wRef, MATMUL(I_out(4:6,4:6), wRef))
 
          Fnet_out(1:3) = Fnet_out(1:3) + Fcentripetal
          Fnet_out(4:6) = Fnet_out(4:6) + Mcentripetal
