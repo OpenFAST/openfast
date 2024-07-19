@@ -135,12 +135,13 @@ end subroutine WriteDisWindFiles
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine 
 !!
-subroutine ReadLowResWindFile(n, p, Vamb_Low, errStat, errMsg)
+subroutine ReadLowResWindFile(n, p, Vamb_Low, errStat, errMsg, UnStart)
    integer(IntKi),                 intent(in   )  :: n            !< Current simulation timestep increment (zero-based)
    type(AWAE_ParameterType),       intent(in   )  :: p            !< Parameters
    real(SiKi),                     intent(inout)  :: Vamb_Low(:,0:,0:,0:)         !< Array which will contain the low resolution grid of ambient wind velocities
    integer(IntKi),                 intent(  out)  :: errStat      !< Error status of the operation
    character(*),                   intent(  out)  :: errMsg       !< Error message if errStat /= ErrID_None
+   integer(IntKi), optional,       intent(in   )  :: UnStart      !< Optional start unit -- for parrallelization we may want to start each turbine at n*100 to clobbering openings
   
    integer(IntKi)           :: dims(3)              !  dimension of the 3D grid (nX,nY,nZ)
    real(ReKi)               :: origin(3)            !  the lower-left corner of the 3D grid (X0,Y0,Z0)
@@ -154,8 +155,12 @@ subroutine ReadLowResWindFile(n, p, Vamb_Low, errStat, errMsg)
    errMsg  = ""
   
    FileName = trim(p%WindFilePath)//trim(PathSep)//"Low"//trim(PathSep)//"Amb.t"//trim(num2lstr(n))//".vtk"
-   Un = 0; ! Initialization different from -1, important to prevent file closing 
-   call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 
+   if (present(UnStart)) then
+      Un = max(UnStart,0)
+   else
+      Un = 0; ! Initialization different from -1, important to prevent file closing
+   endif
+   call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg )
       if (ErrStat >= AbortErrLev) return
    call ReadVTK_SP_vectors( FileName, Un, dims, Vamb_Low, ErrStat, ErrMsg )
       
@@ -168,7 +173,7 @@ end subroutine ReadLowResWindFile
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine 
 !!
-subroutine ReadHighResWindFile(nt, n, p, Vamb_high, errStat, errMsg)
+subroutine ReadHighResWindFile(nt, n, p, Vamb_high, errStat, errMsg, UnStart)
 
    integer(IntKi),                 intent(in   )  :: nt
    integer(IntKi),                 intent(in   )  :: n                       !< high-res time increment
@@ -176,6 +181,7 @@ subroutine ReadHighResWindFile(nt, n, p, Vamb_high, errStat, errMsg)
    real(SiKi),                     intent(inout)  :: Vamb_high(:,0:,0:,0:)         !< Array which will contain the low resolution grid of ambient wind velocities
    integer(IntKi),                 intent(  out)  :: errStat      !< Error status of the operation
    character(*),                   intent(  out)  :: errMsg       !< Error message if errStat /= ErrID_None
+   integer(IntKi), optional,       intent(in   )  :: UnStart      !< Optional start unit -- for parrallelization we may want to start each turbine at n*100 to clobbering openings
   
    
    integer(IntKi)           :: dims(3)              !  dimension of the 3D grid (nX,nY,nZ)
@@ -190,7 +196,11 @@ subroutine ReadHighResWindFile(nt, n, p, Vamb_high, errStat, errMsg)
    errMsg  = ""
    
    FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT"//trim(num2lstr(nt))//trim(PathSep)//"Amb.t"//trim(num2lstr(n))//".vtk"
-   Un = 0; ! Initialization different from -1, important to prevent file closing 
+   if (present(UnStart)) then
+      Un = max(UnStart,0)
+   else
+      Un = 0; ! Initialization different from -1, important to prevent file closing
+   endif
    call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 
       if (ErrStat >= AbortErrLev) return
    call ReadVTK_SP_vectors( FileName, Un, dims, Vamb_high, ErrStat, ErrMsg ) 

@@ -1458,6 +1458,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    character(*), parameter                      :: RoutineName = 'AWAE_UpdateStates'
 !   real(DbKi)          :: t1, t2
    integer(IntKi)                               :: n_high_low, nt, n_hl, i,j,k,c
+   integer(IntKi)                               :: UnStart        ! Start number for opening file for this turbine (to avoid two turbines using same number in parallel)
    
    errStat = ErrID_None
    errMsg  = ""
@@ -1483,11 +1484,12 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    !   write(*,*) '        AWAE_UpdateStates: Time spent reading Low Res data : '//trim(num2lstr(t2-t1))//' seconds'            
    !#endif   
       
-      !$OMP PARALLEL DO DEFAULT(Shared) PRIVATE(nt, n_hl, errStat2, errMsg2) !Private(nt,tm2,tm3)
+      !$OMP PARALLEL DO DEFAULT(Shared) PRIVATE(nt, n_hl, errStat2, errMsg2) !Private(nt,tm2,tm3,UnStart)
       do nt = 1,p%NumTurbines
          do n_hl=0, n_high_low
                ! read from file the ambient flow for the current time step
-            call ReadHighResWindFile(nt, (n+1)*p%n_high_low + n_hl, p, m%Vamb_high(nt)%data(:,:,:,:,n_hl), errStat2, errMsg2)
+            UnStart = nt*100  ! Start unit for file reading -- to avoid using same unit number in parallel.
+            call ReadHighResWindFile(nt, (n+1)*p%n_high_low + n_hl, p, m%Vamb_high(nt)%data(:,:,:,:,n_hl), errStat2, errMsg2, UnStart)
             if (ErrStat2 >= AbortErrLev) then
                !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
                 call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )

@@ -1797,42 +1797,46 @@ END SUBROUTINE CheckR8Var
 
    RETURN
    END SUBROUTINE FindLine
+
+
 !=======================================================================
 !> This routine returns the next unit number greater than 9 that is not currently in use.
 !! If it cannot find any unit between 10 and 99 that is available, it either aborts or returns an appropriate error status/message.   
-   SUBROUTINE GetNewUnit ( UnIn, ErrStat, ErrMsg )
-
-
-
-      ! Argument declarations.
-
+   SUBROUTINE GetNewUnit ( UnIn, ErrStat, ErrMsg, ReqStartUnit )
+   ! Argument declarations.
    INTEGER,        INTENT(OUT)            :: UnIn                                         !< Logical unit for the file.
    INTEGER(IntKi), INTENT(OUT), OPTIONAL  :: ErrStat                                      !< The error status code; If not present code aborts
    CHARACTER(*),   INTENT(OUT), OPTIONAL  :: ErrMsg                                       !< The error message, if an error occurred
+   INTEGER(IntKi), INTENT(IN ), OPTIONAL  :: ReqStartUnit
 
-
-      ! Local declarations.
-
+   ! Local declarations.
    INTEGER                                :: Un                                           ! Unit number
    LOGICAL                                :: Opened                                       ! Flag indicating whether or not a file is opened.
-   INTEGER(IntKi), PARAMETER              :: StartUnit = 10                               ! Starting unit number to check (numbers less than 10 reserved)
+   INTEGER(IntKi), PARAMETER              :: MinStartUnit = 10                            ! Starting unit number to check (numbers less than 10 reserved)
+   INTEGER(IntKi)                         :: StartUnit
    ! NOTE: maximum unit numbers in fortran 90 and later is 2**31-1.  However, there are limits within the OS.
    !     macos -- 256  (change with ulimit -n)
    !     linux -- 1024 (change with ulimit -n)
    !     windows -- 512 (not sure how to change -- ADP)
-   INTEGER(IntKi), PARAMETER              :: MaxUnit   = 1024                             ! The maximum unit number available (or 10 less than the number of files you want to have open at a time)
+   ! Since we need more unit numbers during FAST.Farm, increasing MaxUnit to 64k.  It is possible that this
+   ! might cause issues on some systems, but we expect that more than 1024 files would only be needed when
+   ! using FAST.Farm with parallization on supercomputers with higher limits anyhow.
+   INTEGER(IntKi), PARAMETER              :: MaxUnit   = 65536                            ! The maximum unit number available (or 10 less than the number of files you want to have open at a time)
    CHARACTER(ErrMsgLen)                   :: Msg                                          ! Temporary error message
 
-
-      ! Initialize subroutine outputs
-
-   Un = StartUnit
-
+   ! Initialize subroutine outputs
    IF ( PRESENT( ErrStat ) ) ErrStat = ErrID_None
    IF ( PRESENT( ErrMsg  ) ) ErrMsg  =  ''
 
-      ! See if unit is connected to an open file. Check the next largest number until it is not opened.
+   ! Set starting unit number if present
+   if ( PRESENT( ReqStartUnit ) ) then
+      StartUnit = max(ReqStartUnit, MinStartUnit)
+   else
+      StartUnit = MinStartUnit
+   endif
+   Un = StartUnit
 
+   ! See if unit is connected to an open file. Check the next largest number until it is not opened.
    DO
 
       INQUIRE ( UNIT=Un , OPENED=Opened )

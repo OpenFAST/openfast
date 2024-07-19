@@ -158,7 +158,11 @@ contains
          closeOnReturn = .FALSE.
       END IF
       
-      CALL GetNewUnit( Un, ErrStat, ErrMsg )      
+      if (Un > 0) then
+         CALL GetNewUnit( Un, ErrStat, ErrMsg, Un )      ! Optional argument to start at a much higher unit number
+      else
+         CALL GetNewUnit( Un, ErrStat, ErrMsg )
+      endif
       CALL OpenFInpFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
          if (ErrStat >= AbortErrLev) return
       
@@ -358,7 +362,7 @@ contains
       INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
       CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
    
-      CALL GetNewUnit( Un, ErrStat, ErrMsg )      
+      CALL GetNewUnit( Un, ErrStat, ErrMsg )
       CALL OpenFOutFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
          if (ErrStat >= AbortErrLev) return
       
