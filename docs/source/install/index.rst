@@ -208,11 +208,11 @@ To pull a specific release, substitute the version number in place of `latest` i
 
 Build your own images
 ---------------------
-You can also build your own custom images using our `Dockerfile` or base your images on ours. See
-`here <https://github.com/OpenFAST/openfast/blob/main/share/docker/README.md>`_ for more information on this.
+You can also build your own custom images using our `Dockerfile` or base your images on ours. See the
+`Docker readme <https://github.com/OpenFAST/openfast/blob/main/share/docker/README.md>`_ for more information on this.
 
 
-.. _python_wrapper
+.. _python_wrapper:
 
 Install the ``openfast_io`` python wrapper
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -229,7 +229,7 @@ or
 
     poetry add openfast_io
 
-For more information and installation options, see `here <https://github.com/OpenFAST/openfast/blob/main/openfast_python/README.md>`_.
+For more information and installation options, see the `OpenFAST Python readme <https://github.com/OpenFAST/openfast/blob/main/openfast_python/README.md>`_.
 
 
 .. _compile_from_source:
