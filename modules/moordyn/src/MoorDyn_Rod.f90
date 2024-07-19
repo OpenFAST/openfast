@@ -962,7 +962,7 @@ CONTAINS
       
       ! note that Rod%v6(4:6) is the rotational velocity vector, omega   
       Fcentripetal = -cross_product(Rod%v6(4:6), cross_product(Rod%v6(4:6), r_c ))*Rod%mass
-      Mcentripetal = cross_product(r_c, Fcentripetal) - cross_product(Rod%v6(4:6), MATMUL(Rod%Imat,Rod%v6(4:6)))
+      Mcentripetal = cross_product(r_c, Fcentripetal) - cross_product(Rod%v6(4:6), MATMUL(Rod%Imat,Rod%v6(4:6))) ! r_c cross Fcentripetal term needed becasue inertia matrix is about COG not end A
 
       ! add centripetal force/moment, gyroscopic moment, and any moments applied from lines at either end (might be zero)
       Rod%F6net(1:3) = Rod%F6net(1:3) + Fcentripetal 
