@@ -91,7 +91,7 @@ When ``Wake_Mod`` is set to 3, the free vortex wake model is used, also referred
 
 .. note::
     Link to old inputs: The previous input `WakeMod` is removed, `WakeMod=2` used to mean DBEMT, but this now controlled using `DBEMT_Mod`. 
-    `WakeMod=2` is a placeholder for future induction calculation method. 
+    `Wake_Mod=2` is a placeholder for future induction calculation method. 
 
 
 **~~AFAeroMod~~**
@@ -116,7 +116,7 @@ Set the ``TwrAero`` flag to TRUE to calculate fluid drag loads on the
 tower or FALSE to disable these effects. 
 
 During linearization analyses
-with AeroDyn coupled OpenFAST and BEM enabled (``WakeMod = 1``), set the
+with AeroDyn coupled OpenFAST and BEM enabled (``Wake_Mod = 1``), set the
 ``DBEMT_Mod=-1`` to employ frozen-wake assumptions 
 (i.e. to fix the axial and tangential induces velocities, and, at their operating-point values during linearization)
 or 
@@ -186,7 +186,7 @@ Determines the kind of BEM algorithm to use.
 
     ``BEM_Mod`` currently governs the coordinate system used for "ill-defined" outputs (outputs that don't have a specified coordinate system) such as the ones that ends with "x" and "y". Other ill-defined outputs are the typical BEM quantities such as "AxInd", "TnInd", "Phi", etc. These are defined in a different coordinate system depending on `BEM_Mod`. For consistency accross differents `Wake_Mod` (even when `Wake_Mod/=1`), we use `BEM_Mod` to determine the coordinate system of the ill-defined outputs. 
 
-The following inputs in this section are only used when ``WakeMod = 1``.
+The following inputs in this section are only used when ``Wake_Mod = 1``.
 
 
 
@@ -306,7 +306,7 @@ Only the options ``DBEMT_Mod={-1,3}`` can be used for linearization.
 OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The input parameters in this section are used only when ``WakeMod = 3``.
+The input parameters in this section are used only when ``Wake_Mod = 3``.
 
 The settings for the free vortex wake model are set in the OLAF input file
 described in :numref:`OLAF-Input-Files`.  ``OLAFInputFileName`` is the filename
@@ -523,7 +523,7 @@ file with name ``<OutFileRoot>.AD.sum``. ``<OutFileRoot>`` is either
 specified in the I/O SETTINGS section of the driver input file when
 running AeroDyn standalone, or by the OpenFAST program when running a
 coupled simulation. See :numref:`sec:ad_SumFile` for summary file details.
-If ``AFAeroMod=2``, the unsteady aero module will also generate a file
+If ``UAMod>0``, the unsteady aero module will also generate a file
 called ``<OutFileRoot>.UA.sum`` that will list all of the UA parameters
 used in the airfoil tables. This allows the user to check what values
 are being used in case the code has computed the parameters

@@ -66,7 +66,7 @@ Model Options Under Operational and Parked/Idling Conditions
 ------------------------------------------------------------
 
 To model an operational rotor, we recommend to include the dynamic BEM model
-(``WakeMod = 2``) and UA (``AFAeroMod = 2``). Normally, the Pitt and
+(``Wake_Mod = 1``) and UA (``AFAeroMod = 2``). Normally, the Pitt and
 Peters skewed-wake (``SkewMod = 2``), Prandtl tip-loss (``TipLoss
 = TRUE``), Prandtl hub-loss (``HubLoss = TRUE``), and tangential
 induction (``TanInd = TRUE``) models should all be enabled, but
@@ -91,7 +91,7 @@ normal force, tangential force, and pitching-moment coefficient
 hysteresis and to adjust the UA model parameters appropriately.*
 
 To model a parked or idling rotor, we recommend to disable induction
-(``WakeMod = 0``) and UA (``AFAeroMod = 1``), in which case the
+(``Wake_Mod = 0``) and UA (``AFAeroMod = 1``), in which case the
 inflow velocity and angle are determined purely geometrically and the
 airfoil data is determined statically.
 

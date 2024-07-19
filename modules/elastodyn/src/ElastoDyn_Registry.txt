@@ -20,7 +20,6 @@ param	ElastoDyn/ED	-	IntKi	ED_NMX	-	4	-	"Used in updating predictor-corrector va
 # Define inputs that the initialization routine may need here:
 typedef	ElastoDyn/ED	InitInputType	CHARACTER(1024)	InputFile	-	-	-	"Name of the input file"	-
 typedef	^	InitInputType	Logical	Linearize	-	.FALSE.	-	"Flag that tells this module if the glue code wants to linearize."	-
-typedef	^	InitInputType	CHARACTER(1024)	ADInputFile	-	-	-	"Name of the AeroDyn input file (in this verison, that is where we'll get the blade mesh info"	-
 typedef	^	InitInputType	LOGICAL	CompElast	-	-	-	"flag to determine if ElastoDyn is computing blade loads (true) or BeamDyn is (false)"	-
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"
 typedef ^   InitInputType   ReKi Gravity	-	-	-	"Gravitational acceleration"	m/s^2
@@ -783,7 +782,6 @@ typedef	^	ParameterType	IntKi	method	-	-	-	"Identifier for integration method (1
 typedef	^	ParameterType	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
 typedef	^	ParameterType	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
 typedef	^	ParameterType	LOGICAL	BD4Blades	-	-	-	"flag to determine if BeamDyn is computing blade loads (true) or ElastoDyn is (false)"	-
-typedef	^	ParameterType	LOGICAL	UseAD14	-	-	-	"flag to determine if AeroDyn14 is being used. Will remove this later when we've replaced AD14."	-
 typedef ^       ParameterType   IntKi   YawFrctMod      -       -       -       "Identifier for YawFrctMod (0 [no friction], 1 [does not use Fz at bearing], or 2 [does use Fz at bearing]"     -
 typedef ^       ParameterType   R8Ki    M_CD    -       -       -       "Dynamic friction moment at null yaw rate"      N-m
 typedef ^       ParameterType   R8Ki    M_CSMAX -       -       -       "Maximum Coulomb friction torque"       N-m
@@ -834,13 +832,9 @@ typedef	^	InputType	ReKi	HSSBrTrqC	-	-	-	"Commanded HSS brake torque"	N-m
 typedef	^	OutputType	MeshType	BladeLn2Mesh	{:}	-	-	"A mesh on each blade, containing positions and orientations of the blade elements"
 typedef	^	OutputType	MeshType	PlatformPtMesh	-	-	-	"Platform reference point positions/orientations/velocities/accelerations"	-
 typedef	^	OutputType	MeshType	TowerLn2Mesh	-	-	-	"Tower line2 mesh with positions/orientations/velocities/accelerations"	-
-typedef	^	OutputType	MeshType	HubPtMotion14	-	-	-	"For AeroDyn v14: motions of the hub"
 typedef	^	OutputType	MeshType	HubPtMotion	-	-	-	"For AeroDyn and Lidar(InflowWind): motions of the hub"
-typedef	^	OutputType	MeshType	BladeRootMotion14	-	-	-	"For AeroDyn v14: motions of the blade roots"
 typedef	^	OutputType	MeshType	BladeRootMotion	{:}	-	-	"For AeroDyn/BeamDyn: motions at the blade roots"
-typedef	^	OutputType	MeshType	RotorFurlMotion14	-	-	-	"For AeroDyn14: motions of the rotor furl point."
-typedef	^	OutputType	MeshType	NacelleMotion	-	-	-	"For AeroDyn14 & ServoDyn/TMD: motions of the nacelle."
-typedef	^	OutputType	MeshType	TowerBaseMotion14	-	-	-	"For AeroDyn 14: motions of the tower base"
+typedef	^	OutputType	MeshType	NacelleMotion	-	-	-	"For AeroDyn & ServoDyn/TMD: motions of the nacelle."
 typedef	^	OutputType	MeshType	TFinCMMotion    	-	-	-	"For AeroDyn: motions of the tail find CM point (point J)"
 
 # Define outputs that are not on this mesh here:

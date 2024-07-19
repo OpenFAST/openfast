@@ -43,10 +43,12 @@ vs-build/
 .fortls
 .devcontainer
 .idea
+.env
 
 # backup files
 *.asv
 ~$*.xlsx
+.*.swp
 
 # LaTeX compiling files
 *.aux
