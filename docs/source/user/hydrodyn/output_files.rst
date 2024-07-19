@@ -55,7 +55,7 @@ regardless of its **PropPot** flag.
 Total Buoyancy Loads
 -------------------------
 This section details the buoyancy loads of the undisplaced substructure
-when summed about the PRP (0,0,0). The external buoyancy includes the
+when summed about (0,0,0). The external buoyancy includes the
 effects of marine growth, and only applies to members whose **PropPot**
 flag is set to FALSE. The internal buoyancy is the negative effect on
 buoyancy due to flooding or ballasting and is independent of the
@@ -64,7 +64,7 @@ buoyancy due to flooding or ballasting and is independent of the
 Integrated Marine Growth Weights
 --------------------------------
 This section details the marine growth weight loads of the undisplaced
-substructure when summed about the PRP (0,0,0).
+substructure when summed about (0,0,0).
 
 Strip-Theory Node Table
 ---------------------
