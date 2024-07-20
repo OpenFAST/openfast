@@ -1554,9 +1554,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       ! Set the initial displacement of ED%PlatformPtMesh here to use MeshMapping
       ED%y%PlatformPtMesh%TranslationDisp(:,1) = Init%OutData_ED%PlatformPos(1:3)
       CALL SmllRotTrans( 'initial platform rotation ', &
-                          Init%OutData_ED%PlatformPos(4), &
-                          Init%OutData_ED%PlatformPos(5), &
-                          Init%OutData_ED%PlatformPos(6), &
+                          REAL(Init%OutData_ED%PlatformPos(4),R8Ki), &
+                          REAL(Init%OutData_ED%PlatformPos(5),R8Ki), &
+                          REAL(Init%OutData_ED%PlatformPos(6),R8Ki), &
                           ED%y%PlatformPtMesh%Orientation(:,:,1), '', ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       ED%y%PlatformPtMesh%TranslationDisp(1,1) = ED%y%PlatformPtMesh%TranslationDisp(1,1) + ED%y%PlatformPtMesh%Orientation(3,1,1) * ED%p%PtfmRefzt
