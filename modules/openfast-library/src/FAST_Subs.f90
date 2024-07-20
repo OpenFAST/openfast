@@ -1550,7 +1550,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! -------------------------------------------------------------------------
    ! Initialize low-pass-filtered displacements of HydroDyn potential-flow bodies
    ! -------------------------------------------------------------------------
-   IF ( p_FAST%CompHydro == Module_HD .AND. HD%p%PotMod) THEN
+   IF ( (p_FAST%CompHydro == Module_HD) .AND. (HD%p%PotMod == 1_IntKi) ) THEN
       ! Set the initial displacement of ED%PlatformPtMesh here to use MeshMapping
       ED%y%PlatformPtMesh%TranslationDisp(:,1) = Init%OutData_ED%PlatformPos(1:3)
       CALL SmllRotTrans( 'initial platform rotation ', &
