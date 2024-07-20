@@ -1547,37 +1547,39 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          ErrMsg = ""
       END IF
 
-   ! -------------------------------------------------------------------------
+   ! ----------------------------------------------------------------------------
    ! Initialize low-pass-filtered displacements of HydroDyn potential-flow bodies
-   ! -------------------------------------------------------------------------
-   IF ( (p_FAST%CompHydro == Module_HD) .AND. (HD%p%PotMod == 1_IntKi) .AND. (HD%p%WAMIT(1)%ExctnDisp == 2_IntKi) ) THEN
-      ! Set the initial displacement of ED%PlatformPtMesh here to use MeshMapping
-      ED%y%PlatformPtMesh%TranslationDisp(:,1) = Init%OutData_ED%PlatformPos(1:3)
-      CALL SmllRotTrans( 'initial platform rotation ', &
-                          REAL(Init%OutData_ED%PlatformPos(4),R8Ki), &
-                          REAL(Init%OutData_ED%PlatformPos(5),R8Ki), &
-                          REAL(Init%OutData_ED%PlatformPos(6),R8Ki), &
-                          ED%y%PlatformPtMesh%Orientation(:,:,1), '', ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      ED%y%PlatformPtMesh%TranslationDisp(1,1) = ED%y%PlatformPtMesh%TranslationDisp(1,1) + ED%y%PlatformPtMesh%Orientation(3,1,1) * ED%p%PtfmRefzt
-      ED%y%PlatformPtMesh%TranslationDisp(2,1) = ED%y%PlatformPtMesh%TranslationDisp(2,1) + ED%y%PlatformPtMesh%Orientation(3,2,1) * ED%p%PtfmRefzt
-      ED%y%PlatformPtMesh%TranslationDisp(3,1) = ED%y%PlatformPtMesh%TranslationDisp(3,1) + ED%y%PlatformPtMesh%Orientation(3,3,1) * ED%p%PtfmRefzt - ED%p%PtfmRefzt
-      CALL Transfer_PlatformMotion_to_HD( ED%y%PlatformPtMesh, HD%Input(1), MeshMapData, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-      IF (HD%p%NBodyMod .EQ. 1_IntKi) THEN ! One instance of WAMIT with NBody
-         DO i = 1,HD%p%NBody
-            HD%xd(STATE_CURR)%WAMIT(1)%BdyPosFilt(1,i,:) = HD%Input(1)%WAMITMesh%TranslationDisp(1,i)
-            HD%xd(STATE_CURR)%WAMIT(1)%BdyPosFilt(2,i,:) = HD%Input(1)%WAMITMesh%TranslationDisp(2,i)
-         END DO
-      ELSE IF (HD%p%NBodyMod > 1_IntKi) THEN ! NBody instance of WAMIT with one body each
-         DO i = 1,HD%p%NBody
-            HD%xd(STATE_CURR)%WAMIT(i)%BdyPosFilt(1,1,:) = HD%Input(1)%WAMITMesh%TranslationDisp(1,i)
-            HD%xd(STATE_CURR)%WAMIT(i)%BdyPosFilt(2,1,:) = HD%Input(1)%WAMITMesh%TranslationDisp(2,i)
-         END DO
+   ! ----------------------------------------------------------------------------
+   IF ( (p_FAST%CompHydro == Module_HD) .AND. (HD%p%PotMod == 1_IntKi) ) THEN
+      IF ( HD%p%WAMIT(1)%ExctnDisp == 2_IntKi ) THEN
+         ! Set the initial displacement of ED%PlatformPtMesh here to use MeshMapping
+         ED%y%PlatformPtMesh%TranslationDisp(:,1) = Init%OutData_ED%PlatformPos(1:3)
+         CALL SmllRotTrans( 'initial platform rotation ', &
+                             REAL(Init%OutData_ED%PlatformPos(4),R8Ki), &
+                             REAL(Init%OutData_ED%PlatformPos(5),R8Ki), &
+                             REAL(Init%OutData_ED%PlatformPos(6),R8Ki), &
+                             ED%y%PlatformPtMesh%Orientation(:,:,1), '', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         ED%y%PlatformPtMesh%TranslationDisp(1,1) = ED%y%PlatformPtMesh%TranslationDisp(1,1) + ED%y%PlatformPtMesh%Orientation(3,1,1) * ED%p%PtfmRefzt
+         ED%y%PlatformPtMesh%TranslationDisp(2,1) = ED%y%PlatformPtMesh%TranslationDisp(2,1) + ED%y%PlatformPtMesh%Orientation(3,2,1) * ED%p%PtfmRefzt
+         ED%y%PlatformPtMesh%TranslationDisp(3,1) = ED%y%PlatformPtMesh%TranslationDisp(3,1) + ED%y%PlatformPtMesh%Orientation(3,3,1) * ED%p%PtfmRefzt - ED%p%PtfmRefzt
+         CALL Transfer_PlatformMotion_to_HD( ED%y%PlatformPtMesh, HD%Input(1), MeshMapData, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+         IF (HD%p%NBodyMod .EQ. 1_IntKi) THEN ! One instance of WAMIT with NBody
+            DO i = 1,HD%p%NBody
+               HD%xd(STATE_CURR)%WAMIT(1)%BdyPosFilt(1,i,:) = HD%Input(1)%WAMITMesh%TranslationDisp(1,i)
+               HD%xd(STATE_CURR)%WAMIT(1)%BdyPosFilt(2,i,:) = HD%Input(1)%WAMITMesh%TranslationDisp(2,i)
+            END DO
+         ELSE IF (HD%p%NBodyMod > 1_IntKi) THEN ! NBody instance of WAMIT with one body each
+            DO i = 1,HD%p%NBody
+               HD%xd(STATE_CURR)%WAMIT(i)%BdyPosFilt(1,1,:) = HD%Input(1)%WAMITMesh%TranslationDisp(1,i)
+               HD%xd(STATE_CURR)%WAMIT(i)%BdyPosFilt(2,1,:) = HD%Input(1)%WAMITMesh%TranslationDisp(2,i)
+            END DO
+         END IF
       END IF
    END IF
 
