@@ -239,18 +239,20 @@ PROGRAM HydroDynDriver
       CALL SetHDInputs(0.0_R8Ki, n, u(1), mappingData, drvrData, ErrStat, ErrMsg);   CALL CheckError()
    END IF
 
-   IF ( (p%PotMod == 1_IntKi) .AND. (p%WAMIT(1)%ExctnDisp == 2_IntKi) ) THEN
-      ! Set the initial displacement of ED%PlatformPtMesh here to use MeshMapping
-      IF (p%NBodyMod .EQ. 1_IntKi) THEN ! One instance of WAMIT with NBody
-         DO i = 1,p%NBody
-            xd%WAMIT(1)%BdyPosFilt(1,i,:) = u(1)%WAMITMesh%TranslationDisp(1,i)
-            xd%WAMIT(1)%BdyPosFilt(2,i,:) = u(1)%WAMITMesh%TranslationDisp(2,i)
-         END DO
-      ELSE IF (p%NBodyMod > 1_IntKi) THEN ! NBody instance of WAMIT with one body each
-         DO i = 1,p%NBody
-            xd%WAMIT(i)%BdyPosFilt(1,1,:) = u(1)%WAMITMesh%TranslationDisp(1,i)
-            xd%WAMIT(i)%BdyPosFilt(2,1,:) = u(1)%WAMITMesh%TranslationDisp(2,i)
-         END DO
+   IF ( p%PotMod == 1_IntKi ) THEN
+      IF ( p%WAMIT(1)%ExctnDisp == 2_IntKi ) THEN
+         ! Set the initial displacement of ED%PlatformPtMesh here to use MeshMapping
+         IF (p%NBodyMod .EQ. 1_IntKi) THEN ! One instance of WAMIT with NBody
+            DO i = 1,p%NBody
+               xd%WAMIT(1)%BdyPosFilt(1,i,:) = u(1)%WAMITMesh%TranslationDisp(1,i)
+               xd%WAMIT(1)%BdyPosFilt(2,i,:) = u(1)%WAMITMesh%TranslationDisp(2,i)
+            END DO
+         ELSE IF (p%NBodyMod > 1_IntKi) THEN ! NBody instance of WAMIT with one body each
+            DO i = 1,p%NBody
+               xd%WAMIT(i)%BdyPosFilt(1,1,:) = u(1)%WAMITMesh%TranslationDisp(1,i)
+               xd%WAMIT(i)%BdyPosFilt(2,1,:) = u(1)%WAMITMesh%TranslationDisp(2,i)
+            END DO
+         END IF
       END IF
    END IF
 
@@ -289,10 +291,11 @@ PROGRAM HydroDynDriver
       Time = (n-1) * drvrData%TimeInterval
       InputTime(1) = Time
 
+      IF (( drvrData%PRPInputsMod == 2 ) .OR. ( drvrData%PRPInputsMod < 0 )) THEN
          ! Modify u (likely from the outputs of another module or a set of test conditions) here:
-      call SetHDInputs(Time, n, u(1), mappingData, drvrData, ErrStat, ErrMsg);  CALL CheckError()
-      ! SeaState has no inputs, so no need to set them.
-      
+         call SetHDInputs(Time, n, u(1), mappingData, drvrData, ErrStat, ErrMsg);  CALL CheckError()
+         ! SeaState has no inputs, so no need to set them.
+      END IF
      
       if (n==1 .and. drvrData%Linearize) then
          ! we set u(1)%PRPMesh motions, so we should assume that EDRP changed similarly: 
