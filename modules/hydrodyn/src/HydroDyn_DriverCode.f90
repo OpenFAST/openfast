@@ -239,7 +239,7 @@ PROGRAM HydroDynDriver
       CALL SetHDInputs(0.0_R8Ki, n, u(1), mappingData, drvrData, ErrStat, ErrMsg);   CALL CheckError()
    END IF
 
-   IF ( p%PotMod == 1_IntKi ) THEN
+   IF ( (p%PotMod == 1_IntKi) .AND. (p%WAMIT(1)%ExctnDisp == 2_IntKi) ) THEN
       ! Set the initial displacement of ED%PlatformPtMesh here to use MeshMapping
       IF (p%NBodyMod .EQ. 1_IntKi) THEN ! One instance of WAMIT with NBody
          DO i = 1,p%NBody
