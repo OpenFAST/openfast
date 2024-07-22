@@ -296,20 +296,16 @@ CONTAINS
 !! If the array is already allocated on entry to this routine, an error will be generated. \n
 !! Use AllocAry (nwtc_io::allocary) instead of directly calling a specific routine in the generic interface.   
    SUBROUTINE AllCAry1 ( Ary, AryDim1, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 1-D CHARACTER array.
 
-      ! This routine allocates a 1-D CHARACTER array.
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    CHARACTER(*), ALLOCATABLE         :: Ary    (:)                                 !< Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    !< The size of the first dimension of the array.
    CHARACTER(*), INTENT(IN)          :: Descr                                      !< Brief array description (for error message).
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !< Error status
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !< Error message corresponding to ErrStat
-
    
    ALLOCATE ( Ary(AryDim1) , STAT=ErrStat )
-
 
    IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
@@ -321,6 +317,7 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = ''
    END IF
 
    RETURN
@@ -328,20 +325,15 @@ CONTAINS
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllCAry2 ( Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 2-D CHARACTER array.
 
-      ! This routine allocates a 2-D CHARACTER array.
-
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    CHARACTER(*), ALLOCATABLE         :: Ary    (:,:)                               !  Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    !< The size of the second dimension of the array.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
-
-
 
    ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=ErrStat )
 
@@ -355,21 +347,17 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = ''
    END IF
-
 
    RETURN
    END SUBROUTINE AllCAry2
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllCAry3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 3-D CHARACTER array.
 
-
-      ! This routine allocates a 3-D CHARACTER array.
-
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    CHARACTER(*), ALLOCATABLE         :: Ary    (:,:,:)                             !  Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    !< The size of the second dimension of the array.
@@ -377,7 +365,6 @@ CONTAINS
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
-
 
    ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=ErrStat )
 
@@ -391,27 +378,22 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = ''
    END IF
-
-
 
    RETURN
    END SUBROUTINE AllCAry3
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllI1BAry1 ( Ary, AryDim1, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 1-D INTEGER B1Ki array.
 
-      ! This routine allocates a 1-D INTEGER B1Ki array.
-
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    INTEGER(B1Ki),  ALLOCATABLE :: Ary    (:)                                 ! Array to be allocated
    INTEGER(IntKi), INTENT(IN)  :: AryDim1                                    ! The size of the array
    CHARACTER(*),   INTENT(IN)  :: Descr                                      ! Brief array description
    INTEGER(IntKi), INTENT(OUT) :: ErrStat                                    ! Error status
    CHARACTER(*),   INTENT(OUT) :: ErrMsg                                     ! Error message corresponding to ErrStat
-
 
    ALLOCATE ( Ary(AryDim1) , STAT=ErrStat )
 
@@ -425,6 +407,7 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg = ' '
+      Ary = 0_B1Ki
    END IF
 
    RETURN
@@ -432,19 +415,14 @@ CONTAINS
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllI2BAry1 ( Ary, AryDim1, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 1-D INTEGER B2Ki array.
 
-
-      ! This routine allocates a 1-D INTEGER B2Ki array.
-
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    INTEGER(B2Ki),  ALLOCATABLE :: Ary    (:)                                 ! Array to be allocated
    INTEGER(IntKi), INTENT(IN)  :: AryDim1                                     ! The size of the array
    CHARACTER(*),   INTENT(IN)  :: Descr                                      ! Brief array description
    INTEGER(IntKi), INTENT(OUT) :: ErrStat                                    ! Error status
    CHARACTER(*),   INTENT(OUT) :: ErrMsg                                     ! Error message corresponding to ErrStat
-
 
    ALLOCATE ( Ary(AryDim1) , STAT=ErrStat )
 
@@ -458,6 +436,7 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg = ' '
+      Ary = 0_B2Ki
    END IF
 
    RETURN
@@ -465,19 +444,14 @@ CONTAINS
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllI4BAry1 ( Ary, AryDim1, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 1-D INTEGER B1Ki array.
 
-
-      ! This routine allocates a 1-D INTEGER B1Ki array.
-
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    INTEGER(B4Ki),  ALLOCATABLE :: Ary    (:)                                 !  Array to be allocated
    INTEGER(IntKi), INTENT(IN)  :: AryDim1                                     !  The size of the array
    CHARACTER(*),   INTENT(IN)  :: Descr                                      !  Brief array description
    INTEGER(IntKi), INTENT(OUT) :: ErrStat                                    !  Error status
    CHARACTER(*),   INTENT(OUT) :: ErrMsg                                     !  Error message corresponding to ErrStat
-
 
    ALLOCATE ( Ary(AryDim1) , STAT=ErrStat )
 
@@ -491,6 +465,7 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg = ' '
+      Ary = 0_B4Ki
    END IF
 
    RETURN
@@ -498,20 +473,15 @@ CONTAINS
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllIAry2 (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 2-D INTEGER array.
 
-
-      ! This routine allocates a 2-D INTEGER array.
-
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    INTEGER(IntKi), ALLOCATABLE       :: Ary    (:,:)                               ! Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    !< The size of the second dimension of the array.
    CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
-
 
    ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=ErrStat )
 
@@ -525,6 +495,7 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = 0_IntKi
    END IF
 
    RETURN
@@ -532,13 +503,9 @@ CONTAINS
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllIAry3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 3-D INTEGER array.
 
-
-      ! This routine allocates a 3-D INTEGER array.
-
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    INTEGER(IntKi),  ALLOCATABLE      :: Ary    (:,:,:)                             !  Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    !< The size of the second dimension of the array.
@@ -546,8 +513,6 @@ CONTAINS
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status; if present, program does not abort on error
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
-
-
 
    ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=ErrStat )
 
@@ -561,8 +526,8 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = 0_IntKi
    END IF
-   
 
    RETURN
    END SUBROUTINE AllIAry3
@@ -573,17 +538,14 @@ CONTAINS
 !! will be deallocated first. \n
 !! Use AllocPAry (nwtc_io::allocpary) instead of directly calling a specific routine in the generic interface.   
    SUBROUTINE AllIPAry1 ( Ary, AryDim1, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 1-D INTEGER array.
 
-      ! This routine allocates a 1-D INTEGER array.
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    INTEGER,      POINTER             :: Ary    (:)                                 !< Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    !< The size of the first dimension of the array.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !< Error status
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !< Error message corresponding to ErrStat
    CHARACTER(*), INTENT(IN)          :: Descr                                      !< Brief array description.
-
 
    IF ( ASSOCIATED(Ary) ) THEN
       DEALLOCATE(Ary)
@@ -599,29 +561,23 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = 0
    END IF
-   
-   Ary = 0
 
    RETURN
    END SUBROUTINE AllIPAry1 
 !=======================================================================
 !> \copydoc nwtc_io::allipary1
    SUBROUTINE AllIPAry2 (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 2-D INTEGER array.
 
-
-      ! This routine allocates a 2-D INTEGER array.
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    INTEGER,      POINTER             :: Ary    (:,:)                               !  Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    !< The size of the second dimension of the array.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
-
-
 
    IF ( ASSOCIATED(Ary) ) THEN
       DEALLOCATE(Ary)
@@ -636,25 +592,23 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = 0
    END IF
    
-   Ary = 0
    RETURN
    END SUBROUTINE AllIPAry2 
 !=======================================================================
 !> \copydoc nwtc_io::allipary1
    SUBROUTINE AllFPAry1 (  Ary, AryDim1, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 1-D REAL array.
 
-      ! This routine allocates a 1-D REAL array.
-      ! Argument declarations.
-
+   ! Argument declarations.
    REAL(C_FLOAT), POINTER            :: Ary    (:)                                 !  Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !< Error status
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
 
-
    IF ( ASSOCIATED(Ary) ) THEN
       DEALLOCATE(Ary)
       !ErrStat = ErrID_Warn
@@ -669,25 +623,23 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = 0
    END IF
    
-   Ary = 0
    RETURN
    END SUBROUTINE AllFPAry1
 !=======================================================================
 !> \copydoc nwtc_io::allipary1
    SUBROUTINE AllDPAry1 (  Ary, AryDim1, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 1-D REAL array.
 
-      ! This routine allocates a 1-D REAL array.
-      ! Argument declarations.
-
+   ! Argument declarations.
    REAL(C_DOUBLE), POINTER           :: Ary    (:)                                 !  Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !< Error status
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
 
-
    IF ( ASSOCIATED(Ary) ) THEN
       DEALLOCATE(Ary)
       !ErrStat = ErrID_Warn
@@ -702,25 +654,23 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = 0
    END IF
    
-   Ary = 0
    RETURN
    END SUBROUTINE AllDPAry1
 !=======================================================================
 !> \copydoc nwtc_io::allipary1
    SUBROUTINE AllRPAry2 (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 2-D REAL array.
 
-      ! This routine allocates a 2-D REAL array.
-      ! Argument declarations.
-
+   ! Argument declarations.
    REAL(ReKi),   POINTER             :: Ary    (:,:)                               !  Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    !< The size of the second dimension of the array.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
-
 
    IF ( ASSOCIATED(Ary) ) THEN
       DEALLOCATE(Ary)
@@ -736,20 +686,17 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = 0
    END IF
    
-   Ary = 0
    RETURN
    END SUBROUTINE AllRPAry2 
 !=======================================================================
 !> \copydoc nwtc_io::allipary1
    SUBROUTINE AllR4PAry3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg ) 
+   ! This routine allocates a 3-D REAL array.
 
-
-      ! This routine allocates a 3-D REAL array.
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    REAL(SiKi),   POINTER             :: Ary    (:,:,:)                             !  Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    !< The size of the second dimension of the array.
@@ -757,7 +704,6 @@ CONTAINS
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
-
 
    IF ( ASSOCIATED(Ary) ) THEN
       DEALLOCATE(Ary)
@@ -773,20 +719,17 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = 0
    END IF
    
-   Ary = 0
    RETURN
   END SUBROUTINE AllR4PAry3
 !=======================================================================
 !> \copydoc nwtc_io::allipary1
    SUBROUTINE AllR8PAry3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg ) 
+   ! This routine allocates a 3-D REAL array.
 
-
-      ! This routine allocates a 3-D REAL array.
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    REAL(R8Ki),   POINTER             :: Ary    (:,:,:)                             !  Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    !< The size of the second dimension of the array.
@@ -794,7 +737,6 @@ CONTAINS
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
-
 
    IF ( ASSOCIATED(Ary) ) THEN
       DEALLOCATE(Ary)
@@ -810,28 +752,22 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = 0
    END IF
    
-   Ary = 0
    RETURN
    END SUBROUTINE AllR8PAry3
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllLAry1 ( Ary, AryDim1, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 1-D LOGICAL array.
 
-
-      ! This routine allocates a 1-D LOGICAL array.
-
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    LOGICAL,      ALLOCATABLE         :: Ary    (:)                                 !  Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the array.
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status; if present, program does not abort on error
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
-
-
 
    ALLOCATE ( Ary(AryDim1) , STAT=ErrStat )
 
@@ -846,29 +782,23 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = .FALSE.
    END IF
-
 
    RETURN
    END SUBROUTINE AllLAry1
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllLAry2 (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 2-D LOGICAL array.
 
-
-      ! This routine allocates a 2-D LOGICAL array.
-
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    LOGICAL,      ALLOCATABLE         :: Ary    (:,:)                               !  Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    !< The size of the second dimension of the array.
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status; if present, program does not abort on error
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
-
-
 
    ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=ErrStat )
 
@@ -883,8 +813,8 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = .FALSE.
    END IF
-
 
    RETURN
    END SUBROUTINE AllLAry2
@@ -892,17 +822,14 @@ CONTAINS
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllLAry3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg )
 
-      ! Argument declarations.
+   ! Argument declarations.
    LOGICAL,      ALLOCATABLE         :: Ary    (:,:,:)                             !  Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    !< The size of the second dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim3                                    !< The size of the third dimension of the array.
-
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status; if present, program does not abort on error
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
-
-
 
    ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=ErrStat )
 
@@ -917,8 +844,8 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = .FALSE.
    END IF
-
 
    RETURN
    END SUBROUTINE AllLAry3
@@ -926,15 +853,12 @@ CONTAINS
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllR4Ary1 ( Ary, AryDim1, Descr, ErrStat, ErrMsg )
 
-      ! Argument declarations.
-
+   ! Argument declarations.
    REAL(SiKi),      ALLOCATABLE      :: Ary    (:)                                 !  Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the array.
-
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
-
 
    ALLOCATE ( Ary(AryDim1) , STAT=ErrStat )
 
@@ -948,27 +872,22 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = 0.0_SiKi
    END IF
-
+ 
    RETURN
    END SUBROUTINE AllR4Ary1
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllR8Ary1 ( Ary, AryDim1, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 1-D 8-byte REAL array.
 
-
-      ! This routine allocates a 1-D 8-byte REAL array.
-
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    REAL(R8Ki),      ALLOCATABLE      :: Ary    (:)                                 !  Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the array.
-                                                                                     
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
-
    
    ALLOCATE ( Ary(AryDim1) , STAT=ErrStat )
 
@@ -982,31 +901,25 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = 0.0_R8Ki
    END IF
-
+ 
    RETURN
    END SUBROUTINE AllR8Ary1
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllR4Ary2 (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 2-D 4-Byte REAL array.
 
-
-      ! This routine allocates a 2-D 4-Byte REAL array.
-
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    REAL(SiKi), ALLOCATABLE           :: Ary    (:,:)                               !  Array to be allocated
-                                                                                     
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    !< The size of the second dimension of the array.
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
 
-
    ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=ErrStat )
-
    
    IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
@@ -1019,30 +932,23 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = 0.0_SiKi
    END IF
-
 
    RETURN
    END SUBROUTINE AllR4Ary2
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllR8Ary2 (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 2-D 8-Byte REAL array.
 
-
-      ! This routine allocates a 2-D 8-Byte REAL array.
-
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    REAL(R8Ki), ALLOCATABLE           :: Ary    (:,:)                               !  Array to be allocated
-                                                                                     
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    !< The size of the second dimension of the array.
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
-
-
 
    ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=ErrStat )
 
@@ -1057,30 +963,24 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = 0.0_R8Ki
    END IF
-
 
    RETURN
    END SUBROUTINE AllR8Ary2
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllR4Ary3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 3-D 4-byte REAL array.
 
-
-      ! This routine allocates a 3-D 4-byte REAL array.
-
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    REAL(SiKi), ALLOCATABLE           :: Ary    (:,:,:)                             !  Array to be allocated
-                                                                                     
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    !< The size of the second dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim3                                    !< The size of the third dimension of the array.
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status; if present, program does not abort on error
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
-
 
    ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=ErrStat )
 
@@ -1095,6 +995,7 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = 0.0_SiKi
    END IF
 
    RETURN
@@ -1102,22 +1003,16 @@ CONTAINS
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllR8Ary3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 3-D 8-byte REAL array.
 
-
-      ! This routine allocates a 3-D 8-byte REAL array.
-
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    REAL(R8Ki), ALLOCATABLE           :: Ary    (:,:,:)                             !  Array to be allocated
-                                                                                     
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    !< The size of the second dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim3                                    !< The size of the third dimension of the array.
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status; if present, program does not abort on error
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
-
 
    ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=ErrStat )
 
@@ -1132,6 +1027,7 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = 0.0_R8Ki
    END IF
 
    RETURN
@@ -1139,15 +1035,10 @@ CONTAINS
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllR4Ary4 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 4-D 4-byte REAL array.
 
-
-      ! This routine allocates a 4-D 4-byte REAL array.
-
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    REAL(SiKi),      ALLOCATABLE      :: Ary    (:,:,:,:)                           !  Array to be allocated
-                                                                                     
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    !< The size of the second dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim3                                    !< The size of the third dimension of the array.
@@ -1155,7 +1046,6 @@ CONTAINS
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status; if present, program does not abort on error
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
-
 
    ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3,AryDim4) , STAT=ErrStat )
 
@@ -1170,6 +1060,7 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = 0.0_SiKi
    END IF
 
    RETURN
@@ -1177,15 +1068,10 @@ CONTAINS
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllR8Ary4 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 4-D 8-byte REAL array.
 
-
-      ! This routine allocates a 4-D 8-byte REAL array.
-
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    REAL(R8Ki),      ALLOCATABLE      :: Ary    (:,:,:,:)                           !  Array to be allocated
-                                                                                     
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    !< The size of the second dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim3                                    !< The size of the third dimension of the array.
@@ -1193,7 +1079,6 @@ CONTAINS
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status; if present, program does not abort on error
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
-
 
    ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3,AryDim4) , STAT=ErrStat )
 
@@ -1208,6 +1093,7 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = 0.0_R8Ki
    END IF
 
    RETURN
@@ -1215,15 +1101,10 @@ CONTAINS
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllR4Ary5 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 5-D 4-byte REAL array.
 
-
-      ! This routine allocates a 5-D 4-byte REAL array.
-
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    REAL(SiKi),      ALLOCATABLE      :: Ary    (:,:,:,:,:)                         !  Array to be allocated
-                                                                                     
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    !< The size of the second dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim3                                    !< The size of the third dimension of the array.
@@ -1232,7 +1113,6 @@ CONTAINS
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status; if present, program does not abort on error
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
-
 
    ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3,AryDim4,AryDim5) , STAT=ErrStat )
 
@@ -1247,24 +1127,18 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = 0.0_SiKi
    END IF
-
-
 
    RETURN
    END SUBROUTINE AllR4Ary5
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllR8Ary5 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 5-D 8-byte REAL array.
 
-
-      ! This routine allocates a 5-D 8-byte REAL array.
-
-
-      ! Argument declarations.
-
+   ! Argument declarations.
    REAL(R8Ki),      ALLOCATABLE      :: Ary    (:,:,:,:,:)                         !  Array to be allocated
-                                                                                     
    INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    !< The size of the second dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim3                                    !< The size of the third dimension of the array.
@@ -1273,7 +1147,6 @@ CONTAINS
    CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
    INTEGER,      INTENT(OUT)         :: ErrStat                                    !  Error status; if present, program does not abort on error
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
-
 
    ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3,AryDim4,AryDim5) , STAT=ErrStat )
 
@@ -1288,9 +1161,8 @@ CONTAINS
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
+      Ary = 0.0_R8Ki
    END IF
-
-
 
    RETURN
    END SUBROUTINE AllR8Ary5
@@ -1626,7 +1498,7 @@ END SUBROUTINE CheckR8Var
 
    Ch = 0
 
-   DO
+   DO while (Ch + 1 < len(Line))
 
       NextWhite = SCAN( Line(Ch+1:) , ' ,;''"'//Tab )
       Ch        = Ch + NextWhite
@@ -4375,12 +4247,11 @@ END SUBROUTINE CheckR8Var
             ! Deallocate the linked list of file names.
 
           CurrFile => FirstFile
-          NextFile => CurrFile%Next
-          DO
+          DO WHILE(ASSOCIATED(currFile))
+              NextFile => CurrFile%Next
               DEALLOCATE(CurrFile)
               IF ( .NOT. ASSOCIATED( NextFile ) )  EXIT
               CurrFile => NextFile
-              NextFile => CurrFile%Next
           ENDDO
           
 !bjj: this needs to happen elsewhere...
@@ -7867,7 +7738,7 @@ end subroutine ReadR8AryWDefault
    INTEGER                      :: NewLineIndx                                  ! The string index where the NewLine character occurs
 
    CHARACTER(10)                :: Frm                                          ! Format specifier for the output.
-   CHARACTER(LEN(InStr))        :: Str                                          ! The next string to be processed
+   CHARACTER(Len=:),allocatable :: Str                                          ! The next string to be processed
 
 
 

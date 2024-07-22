@@ -189,7 +189,6 @@ set(OPENFAST_MODULES
   inflowwind
   extloads
   aerodyn
-  aerodyn14
   servodyn
   elastodyn
   beamdyn

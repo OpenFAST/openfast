@@ -15,7 +15,6 @@ usefrom Glue_Registry.txt
 usefrom	ElastoDyn_Registry.txt
 usefrom	Registry_BeamDyn.txt
 usefrom	ServoDyn_Registry.txt
-usefrom	Registry-AD14.txt
 usefrom	AeroDyn_Registry.txt
 usefrom ExtLoads_Registry.txt
 usefrom	SubDyn_Registry.txt
@@ -44,7 +43,6 @@ param	^	-	INTEGER	Module_IfW	-	2	-	"InflowWind"	-
 param	^	-	INTEGER	Module_ExtInfw	-	3	-	"ExternalInflow"	-
 param	^	-	INTEGER	Module_ED	-	4	-	"ElastoDyn"	-
 param	^	-	INTEGER	Module_BD	-	5	-	"BeamDyn"	-
-param	^	-	INTEGER	Module_AD14	-	6	-	"AeroDyn14"	-
 param	^	-	INTEGER	Module_AD	-	7	-	"AeroDyn"	-
 param	^	-	INTEGER	Module_ExtLd	-	8	-	"ExternalLoads"	-
 param	^	-	INTEGER	Module_SrvD	-	9	-	"ServoDyn"	-
@@ -130,7 +128,7 @@ typedef	^	FAST_ParameterType	IntKi	SolveOption	-	-	-	"Switch to determine which 
 # Feature switches and flags:
 typedef	^	FAST_ParameterType	IntKi	CompElast	-	-	-	"Compute blade loads (switch) {Module_ED; Module_BD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompInflow	-	-	-	"Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_ExtInfw}"	-
-typedef	^	FAST_ParameterType	IntKi	CompAero	-	-	-	"Compute aerodynamic loads (switch) {Module_None; Module_AD14; Module_AD}"	-
+typedef	^	FAST_ParameterType	IntKi	CompAero	-	-	-	"Compute aerodynamic loads (switch) {Module_None; Module_AD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompServo	-	-	-	"Compute control and electrical-drive dynamics (switch) {Module_None; Module_SrvD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompSeaSt   -	-	-	"Compute sea states; wave kinematics (switch) {Module_None; Module_SeaSt}"	-
 typedef	^	FAST_ParameterType	IntKi	CompHydro	-	-	-	"Compute hydrodynamic loads (switch) {Module_None; Module_HD}"	-
@@ -254,7 +252,6 @@ typedef   ^      ^                   SrvD_DiscreteStateType                xd_Sr
 typedef   ^      ^                   SrvD_ConstraintStateType               z_SrvD    {:}    -   -   "Constraint states"
 typedef   ^      ^                   SrvD_OtherStateType              OtherSt_SrvD    {:}    -   -   "Other states"
 typedef   ^      ^                   SrvD_InputType                         u_SrvD    {:}    -   -   "System inputs"
-# ..... No AeroDyn14 data .....................................................................................................
 # ..... AeroDyn OP data .......................................................................................................
 typedef   FAST   FAST_LinStateSave   AD_ContinuousStateType                 x_AD      {:}    -   -   "Continuous states"
 typedef   ^      ^                   AD_DiscreteStateType                  xd_AD      {:}    -   -   "Discrete states"
@@ -467,19 +464,6 @@ typedef	^	^	SrvD_OutputType	Output	{:}	-	-	"Array of outputs associated with Cal
 typedef	^	^	SrvD_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	SrvD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	SrvD_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
-typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-
-# ..... AeroDyn14 data .......................................................................................................
-typedef	FAST	AeroDyn14_Data	AD14_ContinuousStateType	x	{:}	-	-	"Continuous states"
-typedef	^	^	AD14_DiscreteStateType	xd	{:}	-	-	"Discrete states"
-typedef	^	^	AD14_ConstraintStateType	z	{:}	-	-	"Constraint states"
-typedef	^	^	AD14_OtherStateType	OtherSt	{:}	-	-	"Other states"
-typedef	^	^	AD14_ParameterType	p	-	-	-	"Parameters"
-typedef	^	^	AD14_InputType	u	-	-	-	"System inputs"
-typedef	^	^	AD14_OutputType	y	-	-	-	"System outputs"
-typedef	^	^	AD14_MiscVarType	m	-	-	-	"Misc/optimization variables"
-typedef	^	^	AD14_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	AD14_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 
 # ..... AeroDyn data .......................................................................................................
@@ -789,8 +773,6 @@ typedef   ^   FAST_InitData    BD_InitInputType             InData_BD       -  -
 typedef   ^   FAST_InitData    BD_InitOutputType           OutData_BD       :  -  -  "BD Initialization output data"
 typedef   ^   FAST_InitData    SrvD_InitInputType           InData_SrvD     -  -  -  "SrvD Initialization input data"
 typedef   ^   FAST_InitData    SrvD_InitOutputType         OutData_SrvD     -  -  -  "SrvD Initialization output data"
-typedef   ^   FAST_InitData    AD14_InitInputType           InData_AD14     -  -  -  "AD14 Initialization input data"
-typedef   ^   FAST_InitData    AD14_InitOutputType         OutData_AD14     -  -  -  "AD14 Initialization output data"
 typedef   ^   FAST_InitData    AD_InitInputType             InData_AD       -  -  -  "AD Initialization input data"
 typedef   ^   FAST_InitData    AD_InitOutputType           OutData_AD       -  -  -  "AD Initialization output data"
 typedef   ^   FAST_InitData    ExtLd_InitInputType          InData_ExtLd     -  -  - "ExtLd Initialization input data"
@@ -864,7 +846,6 @@ typedef	^	FAST_TurbineType	ElastoDyn_Data	ED	-	-	-	"Data for the ElastoDyn modul
 typedef	^	FAST_TurbineType	BeamDyn_Data	BD	-	-	-	"Data for the BeamDyn module"	-
 typedef	^	FAST_TurbineType	ServoDyn_Data	SrvD	-	-	-	"Data for the ServoDyn module"	-
 typedef	^	FAST_TurbineType	AeroDyn_Data	AD	-	-	-	"Data for the AeroDyn module"	-
-typedef	^	FAST_TurbineType	AeroDyn14_Data	AD14	-	-	-	"Data for the AeroDyn14 module"	-
 typedef	^	FAST_TurbineType	ExtLoads_Data	ExtLd	-	-	-	"Data for the External loads module"	-
 typedef	^	FAST_TurbineType	InflowWind_Data	IfW	-	-	-	"Data for InflowWind module"	-
 typedef	^	FAST_TurbineType	ExternalInflow_Data	ExtInfw	-	-	-	"Data for ExternalInflow integration module"	-

@@ -397,7 +397,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: mu_kA = 0.0_R8Ki      !< axial kinetic friction coefficient [(-)]
     REAL(DbKi)  :: mc = 0.0_R8Ki      !< ratio of the static friction coefficient to the kinetic friction coefficient [(-)]
     REAL(DbKi)  :: cv = 0.0_R8Ki      !< saturated damping coefficient [(-)]
-    INTEGER(IntKi)  :: inertialF = 0      !< Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 1 if yes, 0 if no [-]
+    INTEGER(IntKi)  :: inertialF = 0      !< Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 0: no, 1: yes, 2: yes with ramp to inertialF_rampT [-]
+    REAL(R8Ki)  :: inertialF_rampT = 30      !< Ramp time for inertial forces [-]
     INTEGER(IntKi)  :: nxWave = 0_IntKi      !< number of x wave grid points [-]
     INTEGER(IntKi)  :: nyWave = 0_IntKi      !< number of y wave grid points [-]
     INTEGER(IntKi)  :: nzWave = 0_IntKi      !< number of z wave grid points [-]
@@ -2928,6 +2929,7 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%mc = SrcParamData%mc
    DstParamData%cv = SrcParamData%cv
    DstParamData%inertialF = SrcParamData%inertialF
+   DstParamData%inertialF_rampT = SrcParamData%inertialF_rampT
    DstParamData%nxWave = SrcParamData%nxWave
    DstParamData%nyWave = SrcParamData%nyWave
    DstParamData%nzWave = SrcParamData%nzWave
@@ -3341,6 +3343,7 @@ subroutine MD_PackParam(RF, Indata)
    call RegPack(RF, InData%mc)
    call RegPack(RF, InData%cv)
    call RegPack(RF, InData%inertialF)
+   call RegPack(RF, InData%inertialF_rampT)
    call RegPack(RF, InData%nxWave)
    call RegPack(RF, InData%nyWave)
    call RegPack(RF, InData%nzWave)
@@ -3465,6 +3468,7 @@ subroutine MD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%mc); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%cv); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%inertialF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%inertialF_rampT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nxWave); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nyWave); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nzWave); if (RegCheckErr(RF, RoutineName)) return

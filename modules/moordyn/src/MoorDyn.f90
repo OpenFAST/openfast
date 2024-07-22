@@ -461,6 +461,8 @@ CONTAINS
                      read (OptValue,*) p%cv
                   else if ( OptString == 'INERTIALF')  then
                      read (OptValue,*) p%inertialF
+                  else if ( OptString == 'INERTIALF_RAMPT') then
+                     read (OptValue,*) p%inertialF_rampT
                   else
                      CALL SetErrStat( ErrID_Warn, 'Unable to interpret input '//trim(OptString)//' in OPTIONS section.', ErrStat, ErrMsg, RoutineName )
                   end if
@@ -1699,7 +1701,7 @@ CONTAINS
                            CALL CleanUp()
                            return
                         endif
-                           
+
                      endif
 
                      if ((len_trim(let1)<1)  .OR. (let1 == "P")  .OR. (let1 == "POINT")) then
@@ -1710,7 +1712,7 @@ CONTAINS
                            CALL CleanUp()
                            return
                         endif
-                           
+
                      endif
 
                      ! get lines 
@@ -1722,7 +1724,7 @@ CONTAINS
                         else
                            CALL SetErrStat( ErrID_Fatal, ' Unable to parse line failure '//trim(Num2LStr(l))//'. Line number '//TRIM(Int2LStr(TempIDnums(il)))//' out of bounds.', ErrStat, ErrMsg, RoutineName )
                            CALL CleanUp()
-                           return
+                           return                     
                         endif 
 
                         ! check whether line is attached to fail point at fairlead or anchor and assing line tops
@@ -3257,7 +3259,7 @@ CONTAINS
                ENDDO !li = 1, p%nFails
             endif ! m%FailList(l)%failStatus == 1
 
-         endif ! m%FailList(l)%failStatus == 0
+         endif    ! m%FailList(l)%failStatus == 0
 
       ENDDO ! l= 0,nFails
 
@@ -3470,14 +3472,14 @@ CONTAINS
          J = 0    ! mesh index
          DO l = 1,p%nCpldBodies(iTurb)
             J = J + 1
-            CALL Body_GetCoupledForce(m%BodyList(m%CpldBodyIs(l,iTurb)), F6net, m, p)
+            CALL Body_GetCoupledForce(t, m%BodyList(m%CpldBodyIs(l,iTurb)), F6net, m, p)
             y%CoupledLoads(iTurb)%Force( :,J) = F6net(1:3)
             y%CoupledLoads(iTurb)%Moment(:,J) = F6net(4:6)
          END DO
                
          DO l = 1,p%nCpldRods(iTurb)
             J = J + 1
-            CALL Rod_GetCoupledForce(m%RodList(m%CpldRodIs(l,iTurb)), F6net, m, p)
+            CALL Rod_GetCoupledForce(t, m%RodList(m%CpldRodIs(l,iTurb)), F6net, m, p)
             y%CoupledLoads(iTurb)%Force( :,J) = F6net(1:3)
             y%CoupledLoads(iTurb)%Moment(:,J) = F6net(4:6)
          END DO

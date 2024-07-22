@@ -18,7 +18,6 @@
 # This list will be linked twice to resolve undefined symbols due to linking order.
 set(MEX_LIBS
   $<TARGET_FILE:openfast_prelib>
-  $<TARGET_FILE:aerodyn14lib>
   $<TARGET_FILE:basicaerolib>
   $<TARGET_FILE:aerodynlib>
   $<TARGET_FILE:beamdynlib>

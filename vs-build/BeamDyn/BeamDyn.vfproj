@@ -201,7 +201,6 @@
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModReg.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\ModVar.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Base.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>

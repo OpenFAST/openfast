@@ -361,7 +361,8 @@ typedef   ^       ^                    DbKi                mu_kT          -     
 typedef   ^       ^                    DbKi                mu_kA          -     -    -   "axial kinetic friction coefficient" "(-)"
 typedef   ^       ^                    DbKi                mc             -     -    -   "ratio of the static friction coefficient to the kinetic friction coefficient" "(-)"
 typedef   ^       ^                    DbKi                cv             -     -    -   "saturated damping coefficient" "(-)"
-typedef   ^       ^                    IntKi        inertialF            -           0  -   "Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 1 if yes, 0 if no" - 
+typedef   ^       ^                    IntKi        inertialF             -     0    -   "Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 0: no, 1: yes, 2: yes with ramp to inertialF_rampT" - 
+typedef   ^       ^                    R8Ki         inertialF_rampT       -    30    -   "Ramp time for inertial forces" - 
 # --- parameters for wave and current ---
 typedef   ^       ^                    IntKi        nxWave             -            -  -   "number of x wave grid points"            -
 typedef   ^       ^                    IntKi        nyWave             -            -  -   "number of y wave grid points"            -
