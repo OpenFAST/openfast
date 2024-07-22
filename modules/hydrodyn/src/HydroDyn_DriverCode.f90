@@ -83,6 +83,7 @@ PROGRAM HydroDynDriver
 
    REAL(R8Ki)                                         :: PRPHdg
    REAL(ReKi)                                         :: CYawFilt
+   integer                                            :: i                    ! Loop counter
    
    logical                                            :: SeaState_Initialized, HydroDyn_Initialized
    ! For testing
@@ -235,11 +236,34 @@ PROGRAM HydroDynDriver
          CALL CheckError()
       end if
    END IF
-   
-   
-   ! Set any steady-state inputs, once before the time-stepping loop (these don't change, so we don't need to update them in the time-marching simulation)
-   CALL SetHDInputs_Constant(u(1), mappingData, drvrData, ErrStat, ErrMsg);       CALL CheckError()
+
+   ! Constant for the platform yaw low-pass filter
    drvrData%CYawFilt = exp(-TwoPi*drvrData%TimeInterval*drvrData%PtfmYCutoff)
+
+   ! Set initial inputs at t = 0
+   IF (( drvrData%PRPInputsMod /= 2 ) .AND. ( drvrData%PRPInputsMod >= 0 )) THEN
+      ! Set any steady-state inputs, once before the time-stepping loop (these don't change, so we don't need to update them in the time-marching simulation)
+      CALL SetHDInputs_Constant(u(1), mappingData, drvrData, ErrStat, ErrMsg);       CALL CheckError()
+   ELSE
+      CALL SetHDInputs(0.0_R8Ki, n, u(1), mappingData, drvrData, ErrStat, ErrMsg);   CALL CheckError()
+   END IF
+
+   ! Set the initial low-pass-filtered displacements of potential-flow bodies if ExctnDisp = 2
+   IF ( p%PotMod == 1_IntKi ) THEN
+      IF ( p%WAMIT(1)%ExctnDisp == 2_IntKi ) THEN
+         IF (p%NBodyMod .EQ. 1_IntKi) THEN ! One instance of WAMIT with NBody
+            DO i = 1,p%NBody
+               xd%WAMIT(1)%BdyPosFilt(1,i,:) = u(1)%WAMITMesh%TranslationDisp(1,i)
+               xd%WAMIT(1)%BdyPosFilt(2,i,:) = u(1)%WAMITMesh%TranslationDisp(2,i)
+            END DO
+         ELSE IF (p%NBodyMod > 1_IntKi) THEN ! NBody instances of WAMIT with one body each
+            DO i = 1,p%NBody
+               xd%WAMIT(i)%BdyPosFilt(1,1,:) = u(1)%WAMITMesh%TranslationDisp(1,i)
+               xd%WAMIT(i)%BdyPosFilt(2,1,:) = u(1)%WAMITMesh%TranslationDisp(2,i)
+            END DO
+         END IF
+      END IF
+   END IF
 
    !...............................................................................................................................
    ! --- Linearization
@@ -276,10 +300,11 @@ PROGRAM HydroDynDriver
       Time = (n-1) * drvrData%TimeInterval
       InputTime(1) = Time
 
+      IF (( drvrData%PRPInputsMod == 2 ) .OR. ( drvrData%PRPInputsMod < 0 )) THEN
          ! Modify u (likely from the outputs of another module or a set of test conditions) here:
-      call SetHDInputs(Time, n, u(1), mappingData, drvrData, ErrStat, ErrMsg);  CALL CheckError()
-      ! SeaState has no inputs, so no need to set them.
-      
+         call SetHDInputs(Time, n, u(1), mappingData, drvrData, ErrStat, ErrMsg);  CALL CheckError()
+         ! SeaState has no inputs, so no need to set them.
+      END IF
      
       if (n==1 .and. drvrData%Linearize) then
          ! we set u(1)%PRPMesh motions, so we should assume that EDRP changed similarly: 
