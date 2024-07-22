@@ -134,7 +134,8 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:2)  :: iAry = 0      !< first user defined index for variable [-]
     INTEGER(IntKi)  :: jAry = 0      !< second user defined index for variable [-]
     INTEGER(IntKi)  :: kAry = 0      !< third user defined index for variable [-]
-    INTEGER(IntKi)  :: mAry = 0      !< third user defined index for variable [-]
+    INTEGER(IntKi)  :: mAry = 0      !< fourth user defined index for variable [-]
+    INTEGER(IntKi)  :: nAry = 0      !< fifth user defined index for variable [-]
     INTEGER(IntKi)  :: MeshID = 0      !< Mesh identification number [-]
     REAL(R8Ki)  :: Perturb = 0      !< perturbation amount for linearization [-]
     TYPE(DatLoc)  :: DL      !< data location [-]
@@ -697,6 +698,7 @@ subroutine NWTC_Library_CopyModVarType(SrcModVarTypeData, DstModVarTypeData, Ctr
    DstModVarTypeData%jAry = SrcModVarTypeData%jAry
    DstModVarTypeData%kAry = SrcModVarTypeData%kAry
    DstModVarTypeData%mAry = SrcModVarTypeData%mAry
+   DstModVarTypeData%nAry = SrcModVarTypeData%nAry
    DstModVarTypeData%MeshID = SrcModVarTypeData%MeshID
    DstModVarTypeData%Perturb = SrcModVarTypeData%Perturb
    call NWTC_Library_CopyDatLoc(SrcModVarTypeData%DL, DstModVarTypeData%DL, CtrlCode, ErrStat2, ErrMsg2)
@@ -749,6 +751,7 @@ subroutine NWTC_Library_PackModVarType(RF, Indata)
    call RegPack(RF, InData%jAry)
    call RegPack(RF, InData%kAry)
    call RegPack(RF, InData%mAry)
+   call RegPack(RF, InData%nAry)
    call RegPack(RF, InData%MeshID)
    call RegPack(RF, InData%Perturb)
    call NWTC_Library_PackDatLoc(RF, InData%DL) 
@@ -776,6 +779,7 @@ subroutine NWTC_Library_UnPackModVarType(RF, OutData)
    call RegUnpack(RF, OutData%jAry); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%kAry); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%mAry); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nAry); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MeshID); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Perturb); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackDatLoc(RF, OutData%DL) ! DL 

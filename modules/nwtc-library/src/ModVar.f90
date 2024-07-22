@@ -59,14 +59,14 @@ interface MV_Unpack
 end interface
 
 interface MV_Pack2
-   module procedure MV_Pack2VarRank0R4, MV_Pack2VarRank1R4, MV_Pack2VarRank2R4, MV_Pack2VarRank3R4, MV_Pack2VarRank4R4
-   module procedure MV_Pack2VarRank0R8, MV_Pack2VarRank1R8, MV_Pack2VarRank2R8, MV_Pack2VarRank3R8, MV_Pack2VarRank4R8
+   module procedure MV_Pack2VarRank0R4, MV_Pack2VarRank1R4, MV_Pack2VarRank2R4, MV_Pack2VarRank3R4, MV_Pack2VarRank4R4, MV_Pack2VarRank5R4
+   module procedure MV_Pack2VarRank0R8, MV_Pack2VarRank1R8, MV_Pack2VarRank2R8, MV_Pack2VarRank3R8, MV_Pack2VarRank4R8, MV_Pack2VarRank5R8
    module procedure MV_Pack2Mesh
 end interface
 
 interface MV_Unpack2
-   module procedure MV_Unpack2VarRank0R4, MV_Unpack2VarRank1R4, MV_Unpack2VarRank2R4, MV_Unpack2VarRank3R4, MV_Unpack2VarRank4R4
-   module procedure MV_Unpack2VarRank0R8, MV_Unpack2VarRank1R8, MV_Unpack2VarRank2R8, MV_Unpack2VarRank3R8, MV_Unpack2VarRank4R8
+   module procedure MV_Unpack2VarRank0R4, MV_Unpack2VarRank1R4, MV_Unpack2VarRank2R4, MV_Unpack2VarRank3R4, MV_Unpack2VarRank4R4, MV_Unpack2VarRank5R4
+   module procedure MV_Unpack2VarRank0R8, MV_Unpack2VarRank1R8, MV_Unpack2VarRank2R8, MV_Unpack2VarRank3R8, MV_Unpack2VarRank4R8, MV_Unpack2VarRank5R8
    module procedure MV_Unpack2Mesh
 end interface
 
@@ -184,6 +184,20 @@ subroutine MV_Pack2VarRank4R8(Var, Vals, Ary)
    Ary(Var%iLoc(1):Var%iLoc(2)) = pack(Vals(Var%iAry(1):Var%iAry(2), Var%jAry, Var%kAry, Var%mAry), .true.)
 end subroutine
 
+subroutine MV_Pack2VarRank5R4(Var, Vals, Ary)
+   type(ModVarType), intent(in)  :: Var
+   real(R4Ki), intent(in)        :: Vals(:, :, :, :, :)
+   real(R8Ki), intent(inout)     :: Ary(:)
+   Ary(Var%iLoc(1):Var%iLoc(2)) = pack(real(Vals(Var%iAry(1):Var%iAry(2), Var%jAry, Var%kAry, Var%mAry, Var%nAry), R8Ki), .true.)
+end subroutine
+
+subroutine MV_Pack2VarRank5R8(Var, Vals, Ary)
+   type(ModVarType), intent(in)  :: Var
+   real(R8Ki), intent(in)        :: Vals(:, :, :, :, :)
+   real(R8Ki), intent(inout)     :: Ary(:)
+   Ary(Var%iLoc(1):Var%iLoc(2)) = pack(Vals(Var%iAry(1):Var%iAry(2), Var%jAry, Var%kAry, Var%mAry, Var%nAry), .true.)
+end subroutine
+
 subroutine MV_Pack2Mesh(Var, Mesh, Ary)
    type(ModVarType), intent(in)  :: Var
    type(MeshType), intent(in)    :: Mesh
@@ -297,6 +311,24 @@ subroutine MV_Unpack2VarRank4R8(Var, Ary, Vals)
    real(R8Ki), intent(in)        :: Ary(:)
    real(R8Ki), intent(inout)     :: Vals(:, :, :, :)
    associate (V => Vals(Var%iAry(1):Var%iAry(2), Var%jAry, Var%kAry, Var%mAry))
+      V = reshape(Ary(Var%iLoc(1):Var%iLoc(2)), shape(V))
+   end associate
+end subroutine
+
+subroutine MV_Unpack2VarRank5R4(Var, Ary, Vals)
+   type(ModVarType), intent(in)  :: Var
+   real(R8Ki), intent(in)        :: Ary(:)
+   real(R4Ki), intent(inout)     :: Vals(:, :, :, :, :)
+   associate (V => Vals(Var%iAry(1):Var%iAry(2), Var%jAry, Var%kAry, Var%mAry, Var%nAry))
+      V = reshape(real(Ary(Var%iLoc(1):Var%iLoc(2)), R4Ki), shape(V))
+   end associate
+end subroutine
+
+subroutine MV_Unpack2VarRank5R8(Var, Ary, Vals)
+   type(ModVarType), intent(in)  :: Var
+   real(R8Ki), intent(in)        :: Ary(:)
+   real(R8Ki), intent(inout)     :: Vals(:, :, :, :, :)
+   associate (V => Vals(Var%iAry(1):Var%iAry(2), Var%jAry, Var%kAry, Var%mAry, Var%nAry))
       V = reshape(Ary(Var%iLoc(1):Var%iLoc(2)), shape(V))
    end associate
 end subroutine

@@ -123,7 +123,13 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< outputs to be written to a file [-]
   END TYPE LD_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: LD_x_q                           =   1 ! LD%q
+   integer(IntKi), public, parameter :: LD_z_Dummy                       =   2 ! LD%Dummy
+   integer(IntKi), public, parameter :: LD_u_Fext                        =   3 ! LD%Fext
+   integer(IntKi), public, parameter :: LD_y_xdd                         =   4 ! LD%xdd
+   integer(IntKi), public, parameter :: LD_y_WriteOutput                 =   5 ! LD%WriteOutput
+
+contains
 
 subroutine LD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(LD_InitInputType), intent(in) :: SrcInitInputData
@@ -1558,7 +1564,7 @@ END SUBROUTINE
 
 function LD_InputMeshPointer(u, ML) result(Mesh)
    type(LD_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1566,7 +1572,7 @@ function LD_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function LD_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -1575,7 +1581,7 @@ end function
 
 function LD_OutputMeshPointer(y, ML) result(Mesh)
    type(LD_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1583,11 +1589,211 @@ function LD_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function LD_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
    end select
 end function
+
+subroutine LD_PackContStateVar(Var, x, ValAry)
+   type(LD_ContinuousStateType), intent(in) :: x
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (LD_x_q)
+         call MV_Pack2(Var, x%q, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine LD_PackContStateAry(Vars, x, ValAry)
+   type(LD_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      call LD_PackContStateVar(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine LD_UnpackContStateVar(Var, ValAry, x)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(LD_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (LD_x_q)
+         call MV_Unpack2(Var, ValAry, x%q)  ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+subroutine LD_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(LD_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      call LD_UnpackContStateVar(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+
+subroutine LD_PackConstrStateVar(Var, z, ValAry)
+   type(LD_ConstraintStateType), intent(in) :: z
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (LD_z_Dummy)
+         call MV_Pack2(Var, z%Dummy, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine LD_PackConstrStateAry(Vars, z, ValAry)
+   type(LD_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      call LD_PackConstrStateVar(Vars%z(i), z, ValAry)
+   end do
+end subroutine
+
+subroutine LD_UnpackConstrStateVar(Var, ValAry, z)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(LD_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (LD_z_Dummy)
+         call MV_Unpack2(Var, ValAry, z%Dummy)  ! Scalar
+      end select
+   end associate
+end subroutine
+
+subroutine LD_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(LD_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      call LD_UnpackConstrStateVar(Vars%z(i), ValAry, z)
+   end do
+end subroutine
+
+
+subroutine LD_PackInputVar(Var, u, ValAry)
+   type(LD_InputType), intent(in) :: u
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (LD_u_Fext)
+         call MV_Pack2(Var, u%Fext, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine LD_PackInputAry(Vars, u, ValAry)
+   type(LD_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      call LD_PackInputVar(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine LD_UnpackInputVar(Var, ValAry, u)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(LD_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (LD_u_Fext)
+         call MV_Unpack2(Var, ValAry, u%Fext)  ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+subroutine LD_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(LD_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      call LD_UnpackInputVar(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+
+subroutine LD_PackOutputVar(Var, y, ValAry)
+   type(LD_OutputType), intent(in) :: y
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (LD_y_xdd)
+         call MV_Pack2(Var, y%xdd, ValAry)  ! Rank 1 Array
+      case (LD_y_WriteOutput)
+         call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine LD_PackOutputAry(Vars, y, ValAry)
+   type(LD_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      call LD_PackOutputVar(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine LD_UnpackOutputVar(Var, ValAry, y)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(LD_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (LD_y_xdd)
+         call MV_Unpack2(Var, ValAry, y%xdd)  ! Rank 1 Array
+      case (LD_y_WriteOutput)
+         call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+subroutine LD_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(LD_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      call LD_UnpackOutputVar(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
 END MODULE LinDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

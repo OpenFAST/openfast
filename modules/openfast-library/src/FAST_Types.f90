@@ -51,36 +51,36 @@ USE OrcaFlexInterface_Types
 USE ExtPtfm_MCKF_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_Unknown = -1      ! Unknown [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_None = 0      ! No module selected [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_Glue = 1      ! Glue code [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_IfW = 2      ! InflowWind [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ExtInfw = 3      ! ExternalInflow [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ED = 4      ! ElastoDyn [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_BD = 5      ! BeamDyn [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_AD = 7      ! AeroDyn [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ExtLd = 8      ! ExternalLoads [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_SrvD = 9      ! ServoDyn [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_SeaSt = 10      ! SeaState [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_HD = 11      ! HydroDyn [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_SD = 12      ! SubDyn [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ExtPtfm = 13      ! External Platform Loading MCKF [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_MAP = 14      ! MAP (Mooring Analysis Program) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_FEAM = 15      ! FEAMooring [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_MD = 16      ! MoorDyn [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_Orca = 17      ! OrcaFlex integration (HD/Mooring) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_IceF = 18      ! IceFloe [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_IceD = 19      ! IceDyn [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: NumModules = 19      ! The number of modules available in FAST [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxNBlades = 3      ! Maximum number of blades allowed on a turbine [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: IceD_MaxLegs = 4      ! because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Pitch = 1      ! pitch [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_TSR = 2      ! TSR [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_WS = 3      ! wind speed [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_RotSpeed = 4      ! rotor speed [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Err = 5      ! err in the ss solve [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Iter = 6      ! number of iterations [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: NumStateTimes = 4      ! size of arrays of state derived types (Continuous state type etc). (STATE_CURR, STATE_PRED, STATE_SAVED_CURR, STATE_SAVED_PRED) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_Unknown                   = -1      ! Unknown [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_None                      = 0      ! No module selected [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_Glue                      = 1      ! Glue code [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_IfW                       = 2      ! InflowWind [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ExtInfw                   = 3      ! ExternalInflow [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ED                        = 4      ! ElastoDyn [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_BD                        = 5      ! BeamDyn [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_AD                        = 7      ! AeroDyn [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ExtLd                     = 8      ! ExternalLoads [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_SrvD                      = 9      ! ServoDyn [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_SeaSt                     = 10      ! SeaState [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_HD                        = 11      ! HydroDyn [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_SD                        = 12      ! SubDyn [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ExtPtfm                   = 13      ! External Platform Loading MCKF [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_MAP                       = 14      ! MAP (Mooring Analysis Program) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_FEAM                      = 15      ! FEAMooring [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_MD                        = 16      ! MoorDyn [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_Orca                      = 17      ! OrcaFlex integration (HD/Mooring) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_IceF                      = 18      ! IceFloe [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_IceD                      = 19      ! IceDyn [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: NumModules                       = 19      ! The number of modules available in FAST [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxNBlades                       = 3      ! Maximum number of blades allowed on a turbine [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: IceD_MaxLegs                     = 4      ! because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Pitch                    = 1      ! pitch [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_TSR                      = 2      ! TSR [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_WS                       = 3      ! wind speed [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_RotSpeed                 = 4      ! rotor speed [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Err                      = 5      ! err in the ss solve [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Iter                     = 6      ! number of iterations [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: NumStateTimes                    = 4      ! size of arrays of state derived types (Continuous state type etc). (STATE_CURR, STATE_PRED, STATE_SAVED_CURR, STATE_SAVED_PRED) [-]
 ! =========  FAST_VTK_BLSurfaceType  =======
   TYPE, PUBLIC :: FAST_VTK_BLSurfaceType
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AirfoilCoords      !< x,y coordinates for airfoil around each blade node on a blade (relative to reference) [-]
@@ -8287,32 +8287,7 @@ subroutine FAST_UnPackServoDyn_Data(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
-   LB(1:1) = lbound(OutData%x, kind=B8Ki)
-   UB(1:1) = ubound(OutData%x, kind=B8Ki)
-   do i1 = LB(1), UB(1)
-      call SrvD_UnpackContState(RF, OutData%x(i1)) ! x 
-   end do
-   LB(1:1) = lbound(OutData%xd, kind=B8Ki)
-   UB(1:1) = ubound(OutData%xd, kind=B8Ki)
-   do i1 = LB(1), UB(1)
-      call SrvD_UnpackDiscState(RF, OutData%xd(i1)) ! xd 
-   end do
-   LB(1:1) = lbound(OutData%z, kind=B8Ki)
-   UB(1:1) = ubound(OutData%z, kind=B8Ki)
-   do i1 = LB(1), UB(1)
-      call SrvD_UnpackConstrState(RF, OutData%z(i1)) ! z 
-   end do
-   LB(1:1) = lbound(OutData%OtherSt, kind=B8Ki)
-   UB(1:1) = ubound(OutData%OtherSt, kind=B8Ki)
-   do i1 = LB(1), UB(1)
-      call SrvD_UnpackOtherState(RF, OutData%OtherSt(i1)) ! OtherSt 
-   end do
-   call SrvD_UnpackParam(RF, OutData%p) ! p 
-   call SrvD_UnpackInput(RF, OutData%u) ! u 
-   call SrvD_UnpackOutput(RF, OutData%y) ! y 
-   call SrvD_UnpackMisc(RF, OutData%m) ! m 
-   call SrvD_UnpackMisc(RF, OutData%m_bak) ! m_bak 
-   if (allocated(OutData%Output)) deallocate(OutData%Output)
+   if (allocated(OutData%x)) deallocate(OutData%x)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
       call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
@@ -8351,8 +8326,65 @@ subroutine FAST_UnPackServoDyn_Data(RF, OutData)
          call SrvD_UnpackConstrState(RF, OutData%z(i1)) ! z 
       end do
    end if
+   if (allocated(OutData%OtherSt)) deallocate(OutData%OtherSt)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%OtherSt(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%OtherSt.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SrvD_UnpackOtherState(RF, OutData%OtherSt(i1)) ! OtherSt 
+      end do
+   end if
+   call SrvD_UnpackParam(RF, OutData%p) ! p 
+   call SrvD_UnpackInput(RF, OutData%u) ! u 
+   call SrvD_UnpackOutput(RF, OutData%y) ! y 
+   call SrvD_UnpackMisc(RF, OutData%m) ! m 
+   call SrvD_UnpackMisc(RF, OutData%m_bak) ! m_bak 
+   if (allocated(OutData%Output)) deallocate(OutData%Output)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%Output(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Output.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SrvD_UnpackOutput(RF, OutData%Output(i1)) ! Output 
+      end do
+   end if
+   call SrvD_UnpackOutput(RF, OutData%y_interp) ! y_interp 
+   if (allocated(OutData%Input)) deallocate(OutData%Input)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%Input(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Input.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SrvD_UnpackInput(RF, OutData%Input(i1)) ! Input 
+      end do
+   end if
+   if (allocated(OutData%Input_Saved)) deallocate(OutData%Input_Saved)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%Input_Saved(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Input_Saved.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SrvD_UnpackInput(RF, OutData%Input_Saved(i1)) ! Input_Saved 
+      end do
+   end if
    call RegUnpackAlloc(RF, OutData%InputTimes); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%InputTimes_Saved); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine FAST_CopyAeroDyn_Data(SrcAeroDyn_DataData, DstAeroDyn_DataData, CtrlCode, ErrStat, ErrMsg)

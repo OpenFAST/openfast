@@ -197,7 +197,8 @@ IMPLICIT NONE
     LOGICAL  :: initialized = .false.      !<  [-]
   END TYPE AllData
 ! =======================
-CONTAINS
+
+contains
 
 subroutine AD_Dvr_CopyDvr_Case(SrcDvr_CaseData, DstDvr_CaseData, CtrlCode, ErrStat, ErrMsg)
    type(Dvr_Case), intent(in) :: SrcDvr_CaseData

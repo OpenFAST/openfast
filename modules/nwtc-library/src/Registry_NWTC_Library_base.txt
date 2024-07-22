@@ -91,7 +91,8 @@ typedef     ^       ^           IntKi           iGlu                2   0   -   
 typedef     ^       ^           IntKi           iAry                2   0   -   "first user defined index for variable"  -
 typedef     ^       ^           IntKi           jAry                -   0   -   "second user defined index for variable"  -
 typedef     ^       ^           IntKi           kAry                -   0   -   "third user defined index for variable"  -
-typedef     ^       ^           IntKi           mAry                -   0   -   "third user defined index for variable"  -
+typedef     ^       ^           IntKi           mAry                -   0   -   "fourth user defined index for variable"  -
+typedef     ^       ^           IntKi           nAry                -   0   -   "fifth user defined index for variable"  -
 typedef     ^       ^           IntKi           MeshID              -   0   -   "Mesh identification number"  -
 typedef     ^       ^           R8Ki            Perturb             -   0   -   "perturbation amount for linearization"  -
 typedef     ^       ^           DatLoc          DL                  -   -   -   "data location"  -

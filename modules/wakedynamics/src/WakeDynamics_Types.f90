@@ -244,7 +244,32 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WAT_k      !< Scaling factor k_mt(iP,y,z) for wake-added turbulence [-]
   END TYPE WD_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: WD_x_DummyContState              =   1 ! WD%DummyContState
+   integer(IntKi), public, parameter :: WD_z_DummyConstrState            =   2 ! WD%DummyConstrState
+   integer(IntKi), public, parameter :: WD_u_xhat_disk                   =   3 ! WD%xhat_disk
+   integer(IntKi), public, parameter :: WD_u_YawErr                      =   4 ! WD%YawErr
+   integer(IntKi), public, parameter :: WD_u_psi_skew                    =   5 ! WD%psi_skew
+   integer(IntKi), public, parameter :: WD_u_chi_skew                    =   6 ! WD%chi_skew
+   integer(IntKi), public, parameter :: WD_u_p_hub                       =   7 ! WD%p_hub
+   integer(IntKi), public, parameter :: WD_u_V_plane                     =   8 ! WD%V_plane
+   integer(IntKi), public, parameter :: WD_u_Vx_wind_disk                =   9 ! WD%Vx_wind_disk
+   integer(IntKi), public, parameter :: WD_u_TI_amb                      =  10 ! WD%TI_amb
+   integer(IntKi), public, parameter :: WD_u_D_rotor                     =  11 ! WD%D_rotor
+   integer(IntKi), public, parameter :: WD_u_Vx_rel_disk                 =  12 ! WD%Vx_rel_disk
+   integer(IntKi), public, parameter :: WD_u_Ct_azavg                    =  13 ! WD%Ct_azavg
+   integer(IntKi), public, parameter :: WD_u_Cq_azavg                    =  14 ! WD%Cq_azavg
+   integer(IntKi), public, parameter :: WD_y_xhat_plane                  =  15 ! WD%xhat_plane
+   integer(IntKi), public, parameter :: WD_y_p_plane                     =  16 ! WD%p_plane
+   integer(IntKi), public, parameter :: WD_y_Vx_wake                     =  17 ! WD%Vx_wake
+   integer(IntKi), public, parameter :: WD_y_Vr_wake                     =  18 ! WD%Vr_wake
+   integer(IntKi), public, parameter :: WD_y_Vx_wake2                    =  19 ! WD%Vx_wake2
+   integer(IntKi), public, parameter :: WD_y_Vy_wake2                    =  20 ! WD%Vy_wake2
+   integer(IntKi), public, parameter :: WD_y_Vz_wake2                    =  21 ! WD%Vz_wake2
+   integer(IntKi), public, parameter :: WD_y_D_wake                      =  22 ! WD%D_wake
+   integer(IntKi), public, parameter :: WD_y_x_plane                     =  23 ! WD%x_plane
+   integer(IntKi), public, parameter :: WD_y_WAT_k                       =  24 ! WD%WAT_k
+
+contains
 
 subroutine WD_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, CtrlCode, ErrStat, ErrMsg)
    type(WD_InputFileType), intent(in) :: SrcInputFileTypeData
@@ -1914,7 +1939,7 @@ end subroutine
 
 function WD_InputMeshPointer(u, ML) result(Mesh)
    type(WD_InputType), target, intent(in) :: u
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1922,7 +1947,7 @@ function WD_InputMeshPointer(u, ML) result(Mesh)
 end function
 
 function WD_InputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
@@ -1931,7 +1956,7 @@ end function
 
 function WD_OutputMeshPointer(y, ML) result(Mesh)
    type(WD_OutputType), target, intent(in) :: y
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    type(MeshType), pointer            :: Mesh
    nullify(Mesh)
    select case (ML%Num)
@@ -1939,11 +1964,287 @@ function WD_OutputMeshPointer(y, ML) result(Mesh)
 end function
 
 function WD_OutputMeshName(ML) result(Name)
-   type(MeshLocType), intent(in)      :: ML
+   type(DatLoc), intent(in)      :: ML
    character(32)                      :: Name
    Name = ""
    select case (ML%Num)
    end select
 end function
+
+subroutine WD_PackContStateVar(Var, x, ValAry)
+   type(WD_ContinuousStateType), intent(in) :: x
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (WD_x_DummyContState)
+         call MV_Pack2(Var, x%DummyContState, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine WD_PackContStateAry(Vars, x, ValAry)
+   type(WD_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      call WD_PackContStateVar(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine WD_UnpackContStateVar(Var, ValAry, x)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(WD_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (WD_x_DummyContState)
+         call MV_Unpack2(Var, ValAry, x%DummyContState)  ! Scalar
+      end select
+   end associate
+end subroutine
+
+subroutine WD_UnpackContStateAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(WD_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%x)
+      call WD_UnpackContStateVar(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+
+subroutine WD_PackConstrStateVar(Var, z, ValAry)
+   type(WD_ConstraintStateType), intent(in) :: z
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (WD_z_DummyConstrState)
+         call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine WD_PackConstrStateAry(Vars, z, ValAry)
+   type(WD_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      call WD_PackConstrStateVar(Vars%z(i), z, ValAry)
+   end do
+end subroutine
+
+subroutine WD_UnpackConstrStateVar(Var, ValAry, z)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(WD_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (WD_z_DummyConstrState)
+         call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
+      end select
+   end associate
+end subroutine
+
+subroutine WD_UnpackConstrStateAry(Vars, ValAry, z)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(WD_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%z)
+      call WD_UnpackConstrStateVar(Vars%z(i), ValAry, z)
+   end do
+end subroutine
+
+
+subroutine WD_PackInputVar(Var, u, ValAry)
+   type(WD_InputType), intent(in) :: u
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (WD_u_xhat_disk)
+         call MV_Pack2(Var, u%xhat_disk, ValAry)  ! Rank 1 Array
+      case (WD_u_YawErr)
+         call MV_Pack2(Var, u%YawErr, ValAry)  ! Scalar
+      case (WD_u_psi_skew)
+         call MV_Pack2(Var, u%psi_skew, ValAry)  ! Scalar
+      case (WD_u_chi_skew)
+         call MV_Pack2(Var, u%chi_skew, ValAry)  ! Scalar
+      case (WD_u_p_hub)
+         call MV_Pack2(Var, u%p_hub, ValAry)  ! Rank 1 Array
+      case (WD_u_V_plane)
+         call MV_Pack2(Var, u%V_plane, ValAry)  ! Rank 2 Array
+      case (WD_u_Vx_wind_disk)
+         call MV_Pack2(Var, u%Vx_wind_disk, ValAry)  ! Scalar
+      case (WD_u_TI_amb)
+         call MV_Pack2(Var, u%TI_amb, ValAry)  ! Scalar
+      case (WD_u_D_rotor)
+         call MV_Pack2(Var, u%D_rotor, ValAry)  ! Scalar
+      case (WD_u_Vx_rel_disk)
+         call MV_Pack2(Var, u%Vx_rel_disk, ValAry)  ! Scalar
+      case (WD_u_Ct_azavg)
+         call MV_Pack2(Var, u%Ct_azavg, ValAry)  ! Rank 1 Array
+      case (WD_u_Cq_azavg)
+         call MV_Pack2(Var, u%Cq_azavg, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine WD_PackInputAry(Vars, u, ValAry)
+   type(WD_InputType), intent(in) :: u
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      call WD_PackInputVar(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine WD_UnpackInputVar(Var, ValAry, u)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(WD_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (WD_u_xhat_disk)
+         call MV_Unpack2(Var, ValAry, u%xhat_disk)  ! Rank 1 Array
+      case (WD_u_YawErr)
+         call MV_Unpack2(Var, ValAry, u%YawErr)  ! Scalar
+      case (WD_u_psi_skew)
+         call MV_Unpack2(Var, ValAry, u%psi_skew)  ! Scalar
+      case (WD_u_chi_skew)
+         call MV_Unpack2(Var, ValAry, u%chi_skew)  ! Scalar
+      case (WD_u_p_hub)
+         call MV_Unpack2(Var, ValAry, u%p_hub)  ! Rank 1 Array
+      case (WD_u_V_plane)
+         call MV_Unpack2(Var, ValAry, u%V_plane)  ! Rank 2 Array
+      case (WD_u_Vx_wind_disk)
+         call MV_Unpack2(Var, ValAry, u%Vx_wind_disk)  ! Scalar
+      case (WD_u_TI_amb)
+         call MV_Unpack2(Var, ValAry, u%TI_amb)  ! Scalar
+      case (WD_u_D_rotor)
+         call MV_Unpack2(Var, ValAry, u%D_rotor)  ! Scalar
+      case (WD_u_Vx_rel_disk)
+         call MV_Unpack2(Var, ValAry, u%Vx_rel_disk)  ! Scalar
+      case (WD_u_Ct_azavg)
+         call MV_Unpack2(Var, ValAry, u%Ct_azavg)  ! Rank 1 Array
+      case (WD_u_Cq_azavg)
+         call MV_Unpack2(Var, ValAry, u%Cq_azavg)  ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+subroutine WD_UnpackInputAry(Vars, ValAry, u)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(WD_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%u)
+      call WD_UnpackInputVar(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+
+subroutine WD_PackOutputVar(Var, y, ValAry)
+   type(WD_OutputType), intent(in) :: y
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (WD_y_xhat_plane)
+         call MV_Pack2(Var, y%xhat_plane, ValAry)  ! Rank 2 Array
+      case (WD_y_p_plane)
+         call MV_Pack2(Var, y%p_plane, ValAry)  ! Rank 2 Array
+      case (WD_y_Vx_wake)
+         call MV_Pack2(Var, y%Vx_wake, ValAry)  ! Rank 2 Array
+      case (WD_y_Vr_wake)
+         call MV_Pack2(Var, y%Vr_wake, ValAry)  ! Rank 2 Array
+      case (WD_y_Vx_wake2)
+         call MV_Pack2(Var, y%Vx_wake2, ValAry)  ! Rank 3 Array
+      case (WD_y_Vy_wake2)
+         call MV_Pack2(Var, y%Vy_wake2, ValAry)  ! Rank 3 Array
+      case (WD_y_Vz_wake2)
+         call MV_Pack2(Var, y%Vz_wake2, ValAry)  ! Rank 3 Array
+      case (WD_y_D_wake)
+         call MV_Pack2(Var, y%D_wake, ValAry)  ! Rank 1 Array
+      case (WD_y_x_plane)
+         call MV_Pack2(Var, y%x_plane, ValAry)  ! Rank 1 Array
+      case (WD_y_WAT_k)
+         call MV_Pack2(Var, y%WAT_k, ValAry)  ! Rank 3 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine WD_PackOutputAry(Vars, y, ValAry)
+   type(WD_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      call WD_PackOutputVar(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine WD_UnpackOutputVar(Var, ValAry, y)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(WD_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (WD_y_xhat_plane)
+         call MV_Unpack2(Var, ValAry, y%xhat_plane)  ! Rank 2 Array
+      case (WD_y_p_plane)
+         call MV_Unpack2(Var, ValAry, y%p_plane)  ! Rank 2 Array
+      case (WD_y_Vx_wake)
+         call MV_Unpack2(Var, ValAry, y%Vx_wake)  ! Rank 2 Array
+      case (WD_y_Vr_wake)
+         call MV_Unpack2(Var, ValAry, y%Vr_wake)  ! Rank 2 Array
+      case (WD_y_Vx_wake2)
+         call MV_Unpack2(Var, ValAry, y%Vx_wake2)  ! Rank 3 Array
+      case (WD_y_Vy_wake2)
+         call MV_Unpack2(Var, ValAry, y%Vy_wake2)  ! Rank 3 Array
+      case (WD_y_Vz_wake2)
+         call MV_Unpack2(Var, ValAry, y%Vz_wake2)  ! Rank 3 Array
+      case (WD_y_D_wake)
+         call MV_Unpack2(Var, ValAry, y%D_wake)  ! Rank 1 Array
+      case (WD_y_x_plane)
+         call MV_Unpack2(Var, ValAry, y%x_plane)  ! Rank 1 Array
+      case (WD_y_WAT_k)
+         call MV_Unpack2(Var, ValAry, y%WAT_k)  ! Rank 3 Array
+      end select
+   end associate
+end subroutine
+
+subroutine WD_UnpackOutputAry(Vars, ValAry, y)
+   type(ModVarsType), intent(in)   :: Vars
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(WD_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   do i = 1, size(Vars%y)
+      call WD_UnpackOutputVar(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
 END MODULE WakeDynamics_Types
 !ENDOFREGISTRYGENERATEDFILE

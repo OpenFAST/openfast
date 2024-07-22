@@ -863,42 +863,38 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: ED_y_BladeLn2Mesh                =  16 ! ED%BladeLn2Mesh(DL%i1)
    integer(IntKi), public, parameter :: ED_y_PlatformPtMesh              =  17 ! ED%PlatformPtMesh
    integer(IntKi), public, parameter :: ED_y_TowerLn2Mesh                =  18 ! ED%TowerLn2Mesh
-   integer(IntKi), public, parameter :: ED_y_HubPtMotion14               =  19 ! ED%HubPtMotion14
-   integer(IntKi), public, parameter :: ED_y_HubPtMotion                 =  20 ! ED%HubPtMotion
-   integer(IntKi), public, parameter :: ED_y_BladeRootMotion14           =  21 ! ED%BladeRootMotion14
-   integer(IntKi), public, parameter :: ED_y_BladeRootMotion             =  22 ! ED%BladeRootMotion(DL%i1)
-   integer(IntKi), public, parameter :: ED_y_RotorFurlMotion14           =  23 ! ED%RotorFurlMotion14
-   integer(IntKi), public, parameter :: ED_y_NacelleMotion               =  24 ! ED%NacelleMotion
-   integer(IntKi), public, parameter :: ED_y_TowerBaseMotion14           =  25 ! ED%TowerBaseMotion14
-   integer(IntKi), public, parameter :: ED_y_TFinCMMotion                =  26 ! ED%TFinCMMotion
-   integer(IntKi), public, parameter :: ED_y_WriteOutput                 =  27 ! ED%WriteOutput
-   integer(IntKi), public, parameter :: ED_y_BlPitch                     =  28 ! ED%BlPitch
-   integer(IntKi), public, parameter :: ED_y_Yaw                         =  29 ! ED%Yaw
-   integer(IntKi), public, parameter :: ED_y_YawRate                     =  30 ! ED%YawRate
-   integer(IntKi), public, parameter :: ED_y_LSS_Spd                     =  31 ! ED%LSS_Spd
-   integer(IntKi), public, parameter :: ED_y_HSS_Spd                     =  32 ! ED%HSS_Spd
-   integer(IntKi), public, parameter :: ED_y_RotSpeed                    =  33 ! ED%RotSpeed
-   integer(IntKi), public, parameter :: ED_y_TwrAccel                    =  34 ! ED%TwrAccel
-   integer(IntKi), public, parameter :: ED_y_YawAngle                    =  35 ! ED%YawAngle
-   integer(IntKi), public, parameter :: ED_y_RootMyc                     =  36 ! ED%RootMyc
-   integer(IntKi), public, parameter :: ED_y_YawBrTAxp                   =  37 ! ED%YawBrTAxp
-   integer(IntKi), public, parameter :: ED_y_YawBrTAyp                   =  38 ! ED%YawBrTAyp
-   integer(IntKi), public, parameter :: ED_y_LSSTipPxa                   =  39 ! ED%LSSTipPxa
-   integer(IntKi), public, parameter :: ED_y_RootMxc                     =  40 ! ED%RootMxc
-   integer(IntKi), public, parameter :: ED_y_LSSTipMxa                   =  41 ! ED%LSSTipMxa
-   integer(IntKi), public, parameter :: ED_y_LSSTipMya                   =  42 ! ED%LSSTipMya
-   integer(IntKi), public, parameter :: ED_y_LSSTipMza                   =  43 ! ED%LSSTipMza
-   integer(IntKi), public, parameter :: ED_y_LSSTipMys                   =  44 ! ED%LSSTipMys
-   integer(IntKi), public, parameter :: ED_y_LSSTipMzs                   =  45 ! ED%LSSTipMzs
-   integer(IntKi), public, parameter :: ED_y_YawBrMyn                    =  46 ! ED%YawBrMyn
-   integer(IntKi), public, parameter :: ED_y_YawBrMzn                    =  47 ! ED%YawBrMzn
-   integer(IntKi), public, parameter :: ED_y_NcIMURAxs                   =  48 ! ED%NcIMURAxs
-   integer(IntKi), public, parameter :: ED_y_NcIMURAys                   =  49 ! ED%NcIMURAys
-   integer(IntKi), public, parameter :: ED_y_NcIMURAzs                   =  50 ! ED%NcIMURAzs
-   integer(IntKi), public, parameter :: ED_y_RotPwr                      =  51 ! ED%RotPwr
-   integer(IntKi), public, parameter :: ED_y_LSShftFxa                   =  52 ! ED%LSShftFxa
-   integer(IntKi), public, parameter :: ED_y_LSShftFys                   =  53 ! ED%LSShftFys
-   integer(IntKi), public, parameter :: ED_y_LSShftFzs                   =  54 ! ED%LSShftFzs
+   integer(IntKi), public, parameter :: ED_y_HubPtMotion                 =  19 ! ED%HubPtMotion
+   integer(IntKi), public, parameter :: ED_y_BladeRootMotion             =  20 ! ED%BladeRootMotion(DL%i1)
+   integer(IntKi), public, parameter :: ED_y_NacelleMotion               =  21 ! ED%NacelleMotion
+   integer(IntKi), public, parameter :: ED_y_TFinCMMotion                =  22 ! ED%TFinCMMotion
+   integer(IntKi), public, parameter :: ED_y_WriteOutput                 =  23 ! ED%WriteOutput
+   integer(IntKi), public, parameter :: ED_y_BlPitch                     =  24 ! ED%BlPitch
+   integer(IntKi), public, parameter :: ED_y_Yaw                         =  25 ! ED%Yaw
+   integer(IntKi), public, parameter :: ED_y_YawRate                     =  26 ! ED%YawRate
+   integer(IntKi), public, parameter :: ED_y_LSS_Spd                     =  27 ! ED%LSS_Spd
+   integer(IntKi), public, parameter :: ED_y_HSS_Spd                     =  28 ! ED%HSS_Spd
+   integer(IntKi), public, parameter :: ED_y_RotSpeed                    =  29 ! ED%RotSpeed
+   integer(IntKi), public, parameter :: ED_y_TwrAccel                    =  30 ! ED%TwrAccel
+   integer(IntKi), public, parameter :: ED_y_YawAngle                    =  31 ! ED%YawAngle
+   integer(IntKi), public, parameter :: ED_y_RootMyc                     =  32 ! ED%RootMyc
+   integer(IntKi), public, parameter :: ED_y_YawBrTAxp                   =  33 ! ED%YawBrTAxp
+   integer(IntKi), public, parameter :: ED_y_YawBrTAyp                   =  34 ! ED%YawBrTAyp
+   integer(IntKi), public, parameter :: ED_y_LSSTipPxa                   =  35 ! ED%LSSTipPxa
+   integer(IntKi), public, parameter :: ED_y_RootMxc                     =  36 ! ED%RootMxc
+   integer(IntKi), public, parameter :: ED_y_LSSTipMxa                   =  37 ! ED%LSSTipMxa
+   integer(IntKi), public, parameter :: ED_y_LSSTipMya                   =  38 ! ED%LSSTipMya
+   integer(IntKi), public, parameter :: ED_y_LSSTipMza                   =  39 ! ED%LSSTipMza
+   integer(IntKi), public, parameter :: ED_y_LSSTipMys                   =  40 ! ED%LSSTipMys
+   integer(IntKi), public, parameter :: ED_y_LSSTipMzs                   =  41 ! ED%LSSTipMzs
+   integer(IntKi), public, parameter :: ED_y_YawBrMyn                    =  42 ! ED%YawBrMyn
+   integer(IntKi), public, parameter :: ED_y_YawBrMzn                    =  43 ! ED%YawBrMzn
+   integer(IntKi), public, parameter :: ED_y_NcIMURAxs                   =  44 ! ED%NcIMURAxs
+   integer(IntKi), public, parameter :: ED_y_NcIMURAys                   =  45 ! ED%NcIMURAys
+   integer(IntKi), public, parameter :: ED_y_NcIMURAzs                   =  46 ! ED%NcIMURAzs
+   integer(IntKi), public, parameter :: ED_y_RotPwr                      =  47 ! ED%RotPwr
+   integer(IntKi), public, parameter :: ED_y_LSShftFxa                   =  48 ! ED%LSShftFxa
+   integer(IntKi), public, parameter :: ED_y_LSShftFys                   =  49 ! ED%LSShftFys
+   integer(IntKi), public, parameter :: ED_y_LSShftFzs                   =  50 ! ED%LSShftFzs
 
 contains
 
@@ -7719,20 +7715,12 @@ function ED_OutputMeshPointer(y, ML) result(Mesh)
        Mesh => y%PlatformPtMesh
    case (ED_y_TowerLn2Mesh)
        Mesh => y%TowerLn2Mesh
-   case (ED_y_HubPtMotion14)
-       Mesh => y%HubPtMotion14
    case (ED_y_HubPtMotion)
        Mesh => y%HubPtMotion
-   case (ED_y_BladeRootMotion14)
-       Mesh => y%BladeRootMotion14
    case (ED_y_BladeRootMotion)
        Mesh => y%BladeRootMotion(ML%i1)
-   case (ED_y_RotorFurlMotion14)
-       Mesh => y%RotorFurlMotion14
    case (ED_y_NacelleMotion)
        Mesh => y%NacelleMotion
-   case (ED_y_TowerBaseMotion14)
-       Mesh => y%TowerBaseMotion14
    case (ED_y_TFinCMMotion)
        Mesh => y%TFinCMMotion
    end select
@@ -7749,20 +7737,12 @@ function ED_OutputMeshName(ML) result(Name)
        Name = "y%PlatformPtMesh"
    case (ED_y_TowerLn2Mesh)
        Name = "y%TowerLn2Mesh"
-   case (ED_y_HubPtMotion14)
-       Name = "y%HubPtMotion14"
    case (ED_y_HubPtMotion)
        Name = "y%HubPtMotion"
-   case (ED_y_BladeRootMotion14)
-       Name = "y%BladeRootMotion14"
    case (ED_y_BladeRootMotion)
        Name = "y%BladeRootMotion("//trim(Num2LStr(ML%i1))//")"
-   case (ED_y_RotorFurlMotion14)
-       Name = "y%RotorFurlMotion14"
    case (ED_y_NacelleMotion)
        Name = "y%NacelleMotion"
-   case (ED_y_TowerBaseMotion14)
-       Name = "y%TowerBaseMotion14"
    case (ED_y_TFinCMMotion)
        Name = "y%TFinCMMotion"
    end select
@@ -7976,20 +7956,12 @@ subroutine ED_PackOutputVar(Var, y, ValAry)
          call MV_Pack2(Var, y%PlatformPtMesh, ValAry)  ! Mesh
       case (ED_y_TowerLn2Mesh)
          call MV_Pack2(Var, y%TowerLn2Mesh, ValAry)  ! Mesh
-      case (ED_y_HubPtMotion14)
-         call MV_Pack2(Var, y%HubPtMotion14, ValAry)  ! Mesh
       case (ED_y_HubPtMotion)
          call MV_Pack2(Var, y%HubPtMotion, ValAry)  ! Mesh
-      case (ED_y_BladeRootMotion14)
-         call MV_Pack2(Var, y%BladeRootMotion14, ValAry)  ! Mesh
       case (ED_y_BladeRootMotion)
          call MV_Pack2(Var, y%BladeRootMotion(DL%i1), ValAry)  ! Mesh
-      case (ED_y_RotorFurlMotion14)
-         call MV_Pack2(Var, y%RotorFurlMotion14, ValAry)  ! Mesh
       case (ED_y_NacelleMotion)
          call MV_Pack2(Var, y%NacelleMotion, ValAry)  ! Mesh
-      case (ED_y_TowerBaseMotion14)
-         call MV_Pack2(Var, y%TowerBaseMotion14, ValAry)  ! Mesh
       case (ED_y_TFinCMMotion)
          call MV_Pack2(Var, y%TFinCMMotion, ValAry)  ! Mesh
       case (ED_y_WriteOutput)
@@ -8077,20 +8049,12 @@ subroutine ED_UnpackOutputVar(Var, ValAry, y)
          call MV_Unpack2(Var, ValAry, y%PlatformPtMesh)  ! Mesh
       case (ED_y_TowerLn2Mesh)
          call MV_Unpack2(Var, ValAry, y%TowerLn2Mesh)  ! Mesh
-      case (ED_y_HubPtMotion14)
-         call MV_Unpack2(Var, ValAry, y%HubPtMotion14)  ! Mesh
       case (ED_y_HubPtMotion)
          call MV_Unpack2(Var, ValAry, y%HubPtMotion)  ! Mesh
-      case (ED_y_BladeRootMotion14)
-         call MV_Unpack2(Var, ValAry, y%BladeRootMotion14)  ! Mesh
       case (ED_y_BladeRootMotion)
          call MV_Unpack2(Var, ValAry, y%BladeRootMotion(DL%i1))  ! Mesh
-      case (ED_y_RotorFurlMotion14)
-         call MV_Unpack2(Var, ValAry, y%RotorFurlMotion14)  ! Mesh
       case (ED_y_NacelleMotion)
          call MV_Unpack2(Var, ValAry, y%NacelleMotion)  ! Mesh
-      case (ED_y_TowerBaseMotion14)
-         call MV_Unpack2(Var, ValAry, y%TowerBaseMotion14)  ! Mesh
       case (ED_y_TFinCMMotion)
          call MV_Unpack2(Var, ValAry, y%TFinCMMotion)  ! Mesh
       case (ED_y_WriteOutput)
