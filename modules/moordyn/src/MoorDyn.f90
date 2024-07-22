@@ -726,21 +726,21 @@ CONTAINS
                        RETURN
                    END IF
                    
-                   ! parse out entries: Name  Diam MassDen Cd  Ca  CdEnd  CaEnd  LinDamp	
+                   ! parse out entries: Name  Diam MassDen Cd  Ca  CdEnd  CaEnd  LinDamp
                    IF (ErrStat2 == 0) THEN
                       READ(Line,*,IOSTAT=ErrStat2) m%RodTypeList(l)%name, m%RodTypeList(l)%d, m%RodTypeList(l)%w, &
                          m%RodTypeList(l)%Cdn, m%RodTypeList(l)%Can, m%RodTypeList(l)%CdEnd, m%RodTypeList(l)%CaEnd,&
                          tempString6    ! Linear damping coefficient
                          read(tempString6, '(F)') tempString6
 						 
-                      if (ErrStat2 .ne. 0) then 
+                      if (ErrStat2 .ne. 0) then
                           READ(Line,*,IOSTAT=ErrStat2) m%RodTypeList(l)%name, m%RodTypeList(l)%d, m%RodTypeList(l)%w, &
                           m%RodTypeList(l)%Cdn, m%RodTypeList(l)%Can, m%RodTypeList(l)%CdEnd, m%RodTypeList(l)%CaEnd
 			  
                           tempString6 = '' 
-                      end if 
-					  
-                         
+                      end if
+
+
                       m%RodTypeList(l)%Cdt = 0.0_DbKi ! not used
                       m%RodTypeList(l)%Cat = 0.0_DbKi ! not used
 
