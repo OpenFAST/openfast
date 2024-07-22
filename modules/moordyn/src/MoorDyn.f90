@@ -127,6 +127,8 @@ CONTAINS
       CHARACTER(40)                :: TempString5          !
       CHARACTER(40)                :: TempStrings(6)       ! Array of 6 strings used when parsing comma-separated items
 !      CHARACTER(1024)              :: FileName             !
+      CHARACTER(20)                :: TempString6          ! Linear damping (transverse direction) for rod element	  
+
 
       REAL(DbKi)                   :: depth                ! local water depth interpolated from bathymetry grid [m]
       Real(DbKi)                   :: nvec(3)              ! local seabed surface normal vector (positive out)
@@ -724,13 +726,32 @@ CONTAINS
                        RETURN
                    END IF
                    
-                   ! parse out entries: Name  Diam MassDen Cd  Ca  CdEnd  CaEnd
+                   ! parse out entries: Name  Diam MassDen Cd  Ca  CdEnd  CaEnd  LinDamp	
                    IF (ErrStat2 == 0) THEN
                       READ(Line,*,IOSTAT=ErrStat2) m%RodTypeList(l)%name, m%RodTypeList(l)%d, m%RodTypeList(l)%w, &
-                         m%RodTypeList(l)%Cdn, m%RodTypeList(l)%Can, m%RodTypeList(l)%CdEnd, m%RodTypeList(l)%CaEnd   
+                         m%RodTypeList(l)%Cdn, m%RodTypeList(l)%Can, m%RodTypeList(l)%CdEnd, m%RodTypeList(l)%CaEnd,&
+                         tempString6    ! Linear damping coefficient
+                         read(tempString6, '(F)') tempString6
+						 
+                      if (ErrStat2 .ne. 0) then 
+                          READ(Line,*,IOSTAT=ErrStat2) m%RodTypeList(l)%name, m%RodTypeList(l)%d, m%RodTypeList(l)%w, &
+                          m%RodTypeList(l)%Cdn, m%RodTypeList(l)%Can, m%RodTypeList(l)%CdEnd, m%RodTypeList(l)%CaEnd
+			  
+                          tempString6 = '' 
+                      end if 
+					  
                          
                       m%RodTypeList(l)%Cdt = 0.0_DbKi ! not used
                       m%RodTypeList(l)%Cat = 0.0_DbKi ! not used
+
+                      if (len(trim(tempString6)) .gt. 0) then 
+                          read(tempString6, *)  m%RodTypeList(l)%LinDamp					      
+                          m%RodTypeList(l)%isLinDamp = .TRUE.
+                      else 
+                          m%RodTypeList(l)%LinDamp = 0.0
+                          m%RodTypeList(l)%isLinDamp = .FALSE. 
+                      end if
+
                    END IF
 
                    ! specify IdNum of rod type for error checking

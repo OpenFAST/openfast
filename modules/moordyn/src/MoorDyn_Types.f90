@@ -99,6 +99,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: Cdt = 0.0_R8Ki      !< tangential drag coefficient [-]
     REAL(DbKi)  :: CdEnd = 0.0_R8Ki      !< drag coefficient for rod end [[-]]
     REAL(DbKi)  :: CaEnd = 0.0_R8Ki      !< added mass coefficient for rod end [[-]]
+    REAL(DbKi)  :: LinDamp      !< Linear damping [[N/(m/s)/m]], transverse damping for rod element
+    logical     :: isLinDamp  !< Linear damping [[N/(m/s)/m]], transverse damping for rod element
   END TYPE MD_RodProp
 ! =======================
 ! =========  MD_Body  =======
@@ -184,6 +186,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: Cdt = 0.0_R8Ki      !<  [[-]]
     REAL(DbKi)  :: CdEnd = 0.0_R8Ki      !< drag coefficient for rod end [[-]]
     REAL(DbKi)  :: CaEnd = 0.0_R8Ki      !< added mass coefficient for rod end [[-]]
+    REAL(DbKi)  :: linDamp  ! linear damping
+    logical     :: isLinDamp              !< Linear damping [[N/(m/s)/m]], transverse damping for rod element	
     REAL(DbKi)  :: time = 0.0_R8Ki      !< current time [[s]]
     REAL(DbKi)  :: roll = 0.0_R8Ki      !< roll relative to vertical [[rad]]
     REAL(DbKi)  :: pitch = 0.0_R8Ki      !< pitch relative to vertical [[rad]]
