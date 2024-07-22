@@ -1574,7 +1574,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
                HD%xd(STATE_CURR)%WAMIT(1)%BdyPosFilt(1,i,:) = HD%Input(1)%WAMITMesh%TranslationDisp(1,i)
                HD%xd(STATE_CURR)%WAMIT(1)%BdyPosFilt(2,i,:) = HD%Input(1)%WAMITMesh%TranslationDisp(2,i)
             END DO
-         ELSE IF (HD%p%NBodyMod > 1_IntKi) THEN ! NBody instance of WAMIT with one body each
+         ELSE IF (HD%p%NBodyMod > 1_IntKi) THEN ! NBody instances of WAMIT with one body each
             DO i = 1,HD%p%NBody
                HD%xd(STATE_CURR)%WAMIT(i)%BdyPosFilt(1,1,:) = HD%Input(1)%WAMITMesh%TranslationDisp(1,i)
                HD%xd(STATE_CURR)%WAMIT(i)%BdyPosFilt(2,1,:) = HD%Input(1)%WAMITMesh%TranslationDisp(2,i)

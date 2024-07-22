@@ -239,15 +239,15 @@ PROGRAM HydroDynDriver
       CALL SetHDInputs(0.0_R8Ki, n, u(1), mappingData, drvrData, ErrStat, ErrMsg);   CALL CheckError()
    END IF
 
+   ! Set the initial low-pass-filtered displacements of potential-flow bodies if ExctnDisp = 2
    IF ( p%PotMod == 1_IntKi ) THEN
       IF ( p%WAMIT(1)%ExctnDisp == 2_IntKi ) THEN
-         ! Set the initial displacement of ED%PlatformPtMesh here to use MeshMapping
          IF (p%NBodyMod .EQ. 1_IntKi) THEN ! One instance of WAMIT with NBody
             DO i = 1,p%NBody
                xd%WAMIT(1)%BdyPosFilt(1,i,:) = u(1)%WAMITMesh%TranslationDisp(1,i)
                xd%WAMIT(1)%BdyPosFilt(2,i,:) = u(1)%WAMITMesh%TranslationDisp(2,i)
             END DO
-         ELSE IF (p%NBodyMod > 1_IntKi) THEN ! NBody instance of WAMIT with one body each
+         ELSE IF (p%NBodyMod > 1_IntKi) THEN ! NBody instances of WAMIT with one body each
             DO i = 1,p%NBody
                xd%WAMIT(i)%BdyPosFilt(1,1,:) = u(1)%WAMITMesh%TranslationDisp(1,i)
                xd%WAMIT(i)%BdyPosFilt(2,1,:) = u(1)%WAMITMesh%TranslationDisp(2,i)
