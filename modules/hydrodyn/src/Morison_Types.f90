@@ -4711,19 +4711,42 @@ function Morison_OutputMeshName(ML) result(Name)
    end select
 end function
 
+subroutine Morison_PackContStateVar(Var, x, ValAry)
+   type(Morison_ContinuousStateType), intent(in) :: x
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Morison_x_DummyContState)
+         call MV_Pack2(Var, x%DummyContState, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
 subroutine Morison_PackContStateAry(Vars, x, ValAry)
    type(Morison_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)   :: Vars
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (Morison_x_DummyContState)
-             call MV_Pack2(Var, x%DummyContState, ValAry)  ! Scalar
-         end select
-      end associate
+      call Morison_PackContStateVar(Vars%x(i), x, ValAry)
    end do
+end subroutine
+
+subroutine Morison_UnpackContStateVar(Var, ValAry, x)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(Morison_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Morison_x_DummyContState)
+         call MV_Unpack2(Var, ValAry, x%DummyContState)  ! Scalar
+      end select
+   end associate
 end subroutine
 
 subroutine Morison_UnpackContStateAry(Vars, ValAry, x)
@@ -4732,13 +4755,24 @@ subroutine Morison_UnpackContStateAry(Vars, ValAry, x)
    type(Morison_ContinuousStateType), intent(inout) :: x
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (Morison_x_DummyContState)
-             call MV_Unpack2(Var, ValAry, x%DummyContState)  ! Scalar
-         end select
-      end associate
+      call Morison_UnpackContStateVar(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+
+subroutine Morison_PackConstrStateVar(Var, z, ValAry)
+   type(Morison_ConstraintStateType), intent(in) :: z
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Morison_z_DummyConstrState)
+         call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine Morison_PackConstrStateAry(Vars, z, ValAry)
@@ -4747,13 +4781,21 @@ subroutine Morison_PackConstrStateAry(Vars, z, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (Morison_z_DummyConstrState)
-             call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
-         end select
-      end associate
+      call Morison_PackConstrStateVar(Vars%z(i), z, ValAry)
    end do
+end subroutine
+
+subroutine Morison_UnpackConstrStateVar(Var, ValAry, z)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(Morison_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Morison_z_DummyConstrState)
+         call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
+      end select
+   end associate
 end subroutine
 
 subroutine Morison_UnpackConstrStateAry(Vars, ValAry, z)
@@ -4762,13 +4804,24 @@ subroutine Morison_UnpackConstrStateAry(Vars, ValAry, z)
    type(Morison_ConstraintStateType), intent(inout) :: z
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (Morison_z_DummyConstrState)
-             call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
-         end select
-      end associate
+      call Morison_UnpackConstrStateVar(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+
+subroutine Morison_PackInputVar(Var, u, ValAry)
+   type(Morison_InputType), intent(in) :: u
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Morison_u_Mesh)
+         call MV_Pack2(Var, u%Mesh, ValAry)  ! Mesh
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine Morison_PackInputAry(Vars, u, ValAry)
@@ -4777,13 +4830,21 @@ subroutine Morison_PackInputAry(Vars, u, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (Morison_u_Mesh)
-             call MV_Pack2(Var, u%Mesh, ValAry)  ! Mesh
-         end select
-      end associate
+      call Morison_PackInputVar(Vars%u(i), u, ValAry)
    end do
+end subroutine
+
+subroutine Morison_UnpackInputVar(Var, ValAry, u)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(Morison_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Morison_u_Mesh)
+         call MV_Unpack2(Var, ValAry, u%Mesh)  ! Mesh
+      end select
+   end associate
 end subroutine
 
 subroutine Morison_UnpackInputAry(Vars, ValAry, u)
@@ -4792,13 +4853,28 @@ subroutine Morison_UnpackInputAry(Vars, ValAry, u)
    type(Morison_InputType), intent(inout) :: u
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (Morison_u_Mesh)
-             call MV_Unpack2(Var, ValAry, u%Mesh)  ! Mesh
-         end select
-      end associate
+      call Morison_UnpackInputVar(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+
+subroutine Morison_PackOutputVar(Var, y, ValAry)
+   type(Morison_OutputType), intent(in) :: y
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Morison_y_Mesh)
+         call MV_Pack2(Var, y%Mesh, ValAry)  ! Mesh
+      case (Morison_y_VisMesh)
+         call MV_Pack2(Var, y%VisMesh, ValAry)  ! Mesh
+      case (Morison_y_WriteOutput)
+         call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine Morison_PackOutputAry(Vars, y, ValAry)
@@ -4807,17 +4883,25 @@ subroutine Morison_PackOutputAry(Vars, y, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (Morison_y_Mesh)
-             call MV_Pack2(Var, y%Mesh, ValAry)  ! Mesh
-         case (Morison_y_VisMesh)
-             call MV_Pack2(Var, y%VisMesh, ValAry)  ! Mesh
-         case (Morison_y_WriteOutput)
-             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
-         end select
-      end associate
+      call Morison_PackOutputVar(Vars%y(i), y, ValAry)
    end do
+end subroutine
+
+subroutine Morison_UnpackOutputVar(Var, ValAry, y)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(Morison_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Morison_y_Mesh)
+         call MV_Unpack2(Var, ValAry, y%Mesh)  ! Mesh
+      case (Morison_y_VisMesh)
+         call MV_Unpack2(Var, ValAry, y%VisMesh)  ! Mesh
+      case (Morison_y_WriteOutput)
+         call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 subroutine Morison_UnpackOutputAry(Vars, ValAry, y)
@@ -4826,17 +4910,9 @@ subroutine Morison_UnpackOutputAry(Vars, ValAry, y)
    type(Morison_OutputType), intent(inout) :: y
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (Morison_y_Mesh)
-             call MV_Unpack2(Var, ValAry, y%Mesh)  ! Mesh
-         case (Morison_y_VisMesh)
-             call MV_Unpack2(Var, ValAry, y%VisMesh)  ! Mesh
-         case (Morison_y_WriteOutput)
-             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
-         end select
-      end associate
+      call Morison_UnpackOutputVar(Vars%y(i), ValAry, y)
    end do
 end subroutine
+
 END MODULE Morison_Types
 !ENDOFREGISTRYGENERATEDFILE

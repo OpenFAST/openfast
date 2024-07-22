@@ -1725,29 +1725,62 @@ function ExtLdDX_OutputMeshName(ML) result(Name)
    end select
 end function
 
+subroutine ExtLdDX_PackInputVar(Var, u, ValAry)
+   type(ExtLdDX_InputType), intent(in) :: u
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (ExtLdDX_u_twrDef)
+         call MV_Pack2(Var, u%twrDef, ValAry)  ! Rank 1 Array
+      case (ExtLdDX_u_bldDef)
+         call MV_Pack2(Var, u%bldDef, ValAry)  ! Rank 1 Array
+      case (ExtLdDX_u_hubDef)
+         call MV_Pack2(Var, u%hubDef, ValAry)  ! Rank 1 Array
+      case (ExtLdDX_u_nacDef)
+         call MV_Pack2(Var, u%nacDef, ValAry)  ! Rank 1 Array
+      case (ExtLdDX_u_bldRootDef)
+         call MV_Pack2(Var, u%bldRootDef, ValAry)  ! Rank 1 Array
+      case (ExtLdDX_u_bldPitch)
+         call MV_Pack2(Var, u%bldPitch, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
 subroutine ExtLdDX_PackInputAry(Vars, u, ValAry)
    type(ExtLdDX_InputType), intent(in) :: u
    type(ModVarsType), intent(in)   :: Vars
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (ExtLdDX_u_twrDef)
-             call MV_Pack2(Var, u%twrDef, ValAry)  ! Rank 1 Array
-         case (ExtLdDX_u_bldDef)
-             call MV_Pack2(Var, u%bldDef, ValAry)  ! Rank 1 Array
-         case (ExtLdDX_u_hubDef)
-             call MV_Pack2(Var, u%hubDef, ValAry)  ! Rank 1 Array
-         case (ExtLdDX_u_nacDef)
-             call MV_Pack2(Var, u%nacDef, ValAry)  ! Rank 1 Array
-         case (ExtLdDX_u_bldRootDef)
-             call MV_Pack2(Var, u%bldRootDef, ValAry)  ! Rank 1 Array
-         case (ExtLdDX_u_bldPitch)
-             call MV_Pack2(Var, u%bldPitch, ValAry)  ! Rank 1 Array
-         end select
-      end associate
+      call ExtLdDX_PackInputVar(Vars%u(i), u, ValAry)
    end do
+end subroutine
+
+subroutine ExtLdDX_UnpackInputVar(Var, ValAry, u)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ExtLdDX_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (ExtLdDX_u_twrDef)
+         call MV_Unpack2(Var, ValAry, u%twrDef)  ! Rank 1 Array
+      case (ExtLdDX_u_bldDef)
+         call MV_Unpack2(Var, ValAry, u%bldDef)  ! Rank 1 Array
+      case (ExtLdDX_u_hubDef)
+         call MV_Unpack2(Var, ValAry, u%hubDef)  ! Rank 1 Array
+      case (ExtLdDX_u_nacDef)
+         call MV_Unpack2(Var, ValAry, u%nacDef)  ! Rank 1 Array
+      case (ExtLdDX_u_bldRootDef)
+         call MV_Unpack2(Var, ValAry, u%bldRootDef)  ! Rank 1 Array
+      case (ExtLdDX_u_bldPitch)
+         call MV_Unpack2(Var, ValAry, u%bldPitch)  ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 subroutine ExtLdDX_UnpackInputAry(Vars, ValAry, u)
@@ -1756,23 +1789,26 @@ subroutine ExtLdDX_UnpackInputAry(Vars, ValAry, u)
    type(ExtLdDX_InputType), intent(inout) :: u
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (ExtLdDX_u_twrDef)
-             call MV_Unpack2(Var, ValAry, u%twrDef)  ! Rank 1 Array
-         case (ExtLdDX_u_bldDef)
-             call MV_Unpack2(Var, ValAry, u%bldDef)  ! Rank 1 Array
-         case (ExtLdDX_u_hubDef)
-             call MV_Unpack2(Var, ValAry, u%hubDef)  ! Rank 1 Array
-         case (ExtLdDX_u_nacDef)
-             call MV_Unpack2(Var, ValAry, u%nacDef)  ! Rank 1 Array
-         case (ExtLdDX_u_bldRootDef)
-             call MV_Unpack2(Var, ValAry, u%bldRootDef)  ! Rank 1 Array
-         case (ExtLdDX_u_bldPitch)
-             call MV_Unpack2(Var, ValAry, u%bldPitch)  ! Rank 1 Array
-         end select
-      end associate
+      call ExtLdDX_UnpackInputVar(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+
+subroutine ExtLdDX_PackOutputVar(Var, y, ValAry)
+   type(ExtLdDX_OutputType), intent(in) :: y
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (ExtLdDX_y_twrLd)
+         call MV_Pack2(Var, y%twrLd, ValAry)  ! Rank 1 Array
+      case (ExtLdDX_y_bldLd)
+         call MV_Pack2(Var, y%bldLd, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine ExtLdDX_PackOutputAry(Vars, y, ValAry)
@@ -1781,15 +1817,23 @@ subroutine ExtLdDX_PackOutputAry(Vars, y, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (ExtLdDX_y_twrLd)
-             call MV_Pack2(Var, y%twrLd, ValAry)  ! Rank 1 Array
-         case (ExtLdDX_y_bldLd)
-             call MV_Pack2(Var, y%bldLd, ValAry)  ! Rank 1 Array
-         end select
-      end associate
+      call ExtLdDX_PackOutputVar(Vars%y(i), y, ValAry)
    end do
+end subroutine
+
+subroutine ExtLdDX_UnpackOutputVar(Var, ValAry, y)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ExtLdDX_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (ExtLdDX_y_twrLd)
+         call MV_Unpack2(Var, ValAry, y%twrLd)  ! Rank 1 Array
+      case (ExtLdDX_y_bldLd)
+         call MV_Unpack2(Var, ValAry, y%bldLd)  ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 subroutine ExtLdDX_UnpackOutputAry(Vars, ValAry, y)
@@ -1798,15 +1842,9 @@ subroutine ExtLdDX_UnpackOutputAry(Vars, ValAry, y)
    type(ExtLdDX_OutputType), intent(inout) :: y
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (ExtLdDX_y_twrLd)
-             call MV_Unpack2(Var, ValAry, y%twrLd)  ! Rank 1 Array
-         case (ExtLdDX_y_bldLd)
-             call MV_Unpack2(Var, ValAry, y%bldLd)  ! Rank 1 Array
-         end select
-      end associate
+      call ExtLdDX_UnpackOutputVar(Vars%y(i), ValAry, y)
    end do
 end subroutine
+
 END MODULE ExtLoadsDX_Types
 !ENDOFREGISTRYGENERATEDFILE

@@ -655,19 +655,42 @@ function WAMIT2_OutputMeshName(ML) result(Name)
    end select
 end function
 
+subroutine WAMIT2_PackOutputVar(Var, y, ValAry)
+   type(WAMIT2_OutputType), intent(in) :: y
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (WAMIT2_y_Mesh)
+         call MV_Pack2(Var, y%Mesh, ValAry)  ! Mesh
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
 subroutine WAMIT2_PackOutputAry(Vars, y, ValAry)
    type(WAMIT2_OutputType), intent(in) :: y
    type(ModVarsType), intent(in)   :: Vars
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (WAMIT2_y_Mesh)
-             call MV_Pack2(Var, y%Mesh, ValAry)  ! Mesh
-         end select
-      end associate
+      call WAMIT2_PackOutputVar(Vars%y(i), y, ValAry)
    end do
+end subroutine
+
+subroutine WAMIT2_UnpackOutputVar(Var, ValAry, y)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(WAMIT2_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (WAMIT2_y_Mesh)
+         call MV_Unpack2(Var, ValAry, y%Mesh)  ! Mesh
+      end select
+   end associate
 end subroutine
 
 subroutine WAMIT2_UnpackOutputAry(Vars, ValAry, y)
@@ -676,13 +699,9 @@ subroutine WAMIT2_UnpackOutputAry(Vars, ValAry, y)
    type(WAMIT2_OutputType), intent(inout) :: y
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (WAMIT2_y_Mesh)
-             call MV_Unpack2(Var, ValAry, y%Mesh)  ! Mesh
-         end select
-      end associate
+      call WAMIT2_UnpackOutputVar(Vars%y(i), ValAry, y)
    end do
 end subroutine
+
 END MODULE WAMIT2_Types
 !ENDOFREGISTRYGENERATEDFILE

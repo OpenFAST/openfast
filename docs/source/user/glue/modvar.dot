@@ -1,0 +1,120 @@
+digraph UML_Class_diagram {
+    graph [fontname = "Helvetica,Arial,sans-serif"; rankdir = LR; ranksep = 1]
+    node [fontname = "Helvetica,Arial,sans-serif"; shape = record; style = filled; fillcolor = gray95]
+    edge [fontname = "Helvetica,Arial,sans-serif"]
+    
+    
+    
+    DatLoc [shape = plain;label = <<table border="0" cellborder="1" cellspacing="0" cellpadding="0">
+        <tr><td colspan="2" port="header"> <b>DatLoc</b> </td></tr>
+        <tr><td align="left" width="110">Num</td><td width="100">IntKi</td></tr>
+        <tr><td align="left">i1</td><td>IntKi</td></tr>
+        <tr><td align="left">i2</td><td>IntKi</td></tr>
+        <tr><td align="left">i3</td><td>IntKi</td></tr>
+        </table>>]
+    
+    ModVarType [shape = plain;label = <<table border="0" cellborder="1" cellspacing="0" cellpadding="0">
+        <tr><td colspan="2" port="header"> <b>ModVarType</b> </td></tr>
+        <tr><td align="left" width="110">Name</td><td width="100">character</td></tr>
+        <tr><td align="left">LinNames(:)</td><td>character</td></tr>
+        <tr><td align="left">DL</td><td port="DatLoc">DatLoc</td></tr>
+        <tr><td align="left">Field</td><td>IntKi</td></tr>
+        <tr><td align="left">Nodes</td><td>IntKi</td></tr>
+        <tr><td align="left">Num</td><td>IntKi</td></tr>
+        <tr><td align="left">Flags</td><td>IntKi</td></tr>
+        <tr><td align="left">DerivOrder</td><td>IntKi</td></tr>
+        <tr><td align="left">iLoc(2)</td><td>IntKi</td></tr>
+        <tr><td align="left">iGlu(2)</td><td>IntKi</td></tr>
+        <tr><td align="left">iAry(2)</td><td>IntKi</td></tr>
+        <tr><td align="left">jAry</td><td>IntKi</td></tr>
+        <tr><td align="left">kAry</td><td>IntKi</td></tr>
+        <tr><td align="left">mAry</td><td>IntKi</td></tr>
+        <tr><td align="left">MeshID</td><td>IntKi</td></tr>
+        <tr><td align="left">Perturb</td><td>R8Ki</td></tr>
+        </table>>]
+    
+    ModVarsType [shape = plain;label = <<table border="0" cellborder="1" cellspacing="0" cellpadding="0">
+        <tr><td colspan="2" port="header"> <b>ModVarsType</b> </td></tr>
+        <tr><td align="left" width="110">Nx</td><td width="100">IntKi</td></tr>
+        <tr><td align="left">x(:)</td><td port="x">ModVarType</td></tr>
+        <tr><td align="left">Nz</td><td>IntKi</td></tr>
+        <tr><td align="left">z(:)</td><td port="z">ModVarType</td></tr>
+        <tr><td align="left">Nu</td><td>IntKi</td></tr>
+        <tr><td align="left">u(:)</td><td port="u">ModVarType</td></tr>
+        <tr><td align="left">Ny</td><td>IntKi</td></tr>
+        <tr><td align="left">y(:)</td><td port="y">ModVarType</td></tr>
+        </table>>]
+
+    ModLinType [shape = plain;label = <<table border="0" cellborder="1" cellspacing="0" cellpadding="0">
+        <tr><td colspan="2" port="header"> <b>ModLinType</b> </td></tr>
+        <tr><td align="left" width="110">Abbr</td><td width="100">character</td></tr>
+        <tr><td align="left">x(:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">dx(:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">z(:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">u(:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">y(:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">J(:,:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">dYdx(:,:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">dXdx(:,:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">dYdu(:,:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">dXdu(:,:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">dXdy(:,:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">dUdu(:,:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">dUdy(:,:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">StateRotation(:,:)</td><td>R8Ki</td></tr>
+        </table>>]
+    
+    ModDataType [shape = plain;label = <<table border="0" cellborder="1" cellspacing="0" cellpadding="0">
+        <tr><td colspan="2" port="header"> <b>ModDataType</b> </td></tr>
+        <tr><td align="left" width="110">Abbr</td><td width="100">character</td></tr>
+        <tr><td align="left">ID</td><td>IntKi</td></tr>
+        <tr><td align="left">iMod</td><td>IntKi</td></tr>
+        <tr><td align="left">Ins</td><td>IntKi</td></tr>
+        <tr><td align="left">DT</td><td>R8Ki</td></tr>
+        <tr><td align="left">SubSteps</td><td>IntKi</td></tr>
+        <tr><td align="left">iSrcMap(:)</td><td>IntKi</td></tr>
+        <tr><td align="left">iDstMap(:)</td><td>IntKi</td></tr>
+        <tr><td align="left">Vars</td><td port="Vars">ModVarsType</td></tr>
+        <tr><td align="left">Lin</td><td port="Lin">ModLinType</td></tr>
+        </table>>]
+    
+    ModGlueType [shape = plain;label = <<table border="0" cellborder="1" cellspacing="0" cellpadding="0">
+        <tr><td colspan="2" port="header"> <b>ModGlueType</b> </td></tr>
+        <tr><td align="left" width="110">Name</td><td width="100">character</td></tr>
+        <tr><td align="left">Vars</td><td port="Vars">ModVarsType</td></tr>
+        <tr><td align="left">Mods(:)</td><td port="Mods">ModDataType</td></tr>
+        <tr><td align="left">Lin</td><td port="Lin">ModLinType</td></tr>
+        </table>>]
+    
+    ModVarType:DatLoc:e -> DatLoc:header:w;
+    ModVarsType:x:e -> ModVarType:header:w;
+    ModVarsType:z:e -> ModVarType:header:w;
+    ModVarsType:u:e -> ModVarType:header:w;
+    ModVarsType:y:e -> ModVarType:header:w;
+    
+    ModDataType:Vars:e -> ModVarsType:header:w;
+
+    ModDataType:Lin:e -> ModLinType:header:w;
+
+    ModGlueType:Mods:e -> ModDataType:header:w;
+    ModGlueType:Lin:e -> ModLinType:header:w;
+
+
+
+    ModJacType [shape = plain;label = <<table border="0" cellborder="1" cellspacing="0" cellpadding="0">
+        <tr><td colspan="2" port="header"> <b>ModJacType</b> </td></tr>
+        <tr><td align="left" width="110">Name</td><td width="100">character</td></tr>
+        <tr><td align="left">x(:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">z(:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">u(:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">y(:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">x_perturb(:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">z_perturb(:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">u_perturb(:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">X_pos(:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">X_neg(:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">Y_pos(:)</td><td>R8Ki</td></tr>
+        <tr><td align="left">Y_neg(:)</td><td>R8Ki</td></tr>
+        </table>>]
+
+}

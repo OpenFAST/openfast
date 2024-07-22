@@ -31,9 +31,9 @@ param    ^                       -                 IntKi             IfW_NumPtsA
 param    ^                       -                 IntKi             InflowWind_u_HWindSpeed     -   -1   -  "DatLoc number for HWindSpeed extended input" -
 param    ^                       -                 IntKi             InflowWind_u_PLExp          -   -2   -  "DatLoc number for PLExp extended input" -
 param    ^                       -                 IntKi             InflowWind_u_PropagationDir -   -3   -  "DatLoc number for PropagationDir extended input" -
-param    ^                       -                 IntKi             InflowWind_y_HWindSpeed     -   -1   -  "DatLoc number for HWindSpeed extended output" -
-param    ^                       -                 IntKi             InflowWind_y_PLExp          -   -2   -  "DatLoc number for PLExp extended output" -
-param    ^                       -                 IntKi             InflowWind_y_PropagationDir -   -3   -  "DatLoc number for PropagationDir extended output" -
+param    ^                       -                 IntKi             InflowWind_y_HWindSpeed     -   -4   -  "DatLoc number for HWindSpeed extended output" -
+param    ^                       -                 IntKi             InflowWind_y_PLExp          -   -5   -  "DatLoc number for PLExp extended output" -
+param    ^                       -                 IntKi             InflowWind_y_PropagationDir -   -6   -  "DatLoc number for PropagationDir extended output" -
 
 #########################
 # ..... Input file data ...........................................................................................................

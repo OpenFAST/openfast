@@ -451,7 +451,7 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
         w << indent;
     }
 
-    // Subroutines to pack and unpack variable type data
+    // Subroutines to pack and unpack arrays based on variables
     for (const auto &tmp : std::vector<std::array<std::string, 3>>{
              {"ContinuousState", "x", "ContState"},
              {"ConstraintState", "z", "ConstrState"},
@@ -474,57 +474,68 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
         std::vector<Field> fields;
         ddt.get_field_names_paths(mod.nickname + "_" + abbr, abbr, 0, fields);
 
-        // Array packing routine
-        std::string routine_name = mod.nickname + "_Pack" + tmp[2] + "Ary";
+        // Var packing routine
+        std::string routine_name = mod.nickname + "_Pack" + tmp[2] + "Var";
         std::string indent("\n");
-        std::string var_str = std::string("Vars%") + abbr;
-        w << indent << "subroutine " << routine_name << "(Vars, " << abbr << ", ValAry)";
+        std::string var_str = std::string("Var");
+        w << indent << "subroutine " << routine_name << "(Var, " << abbr << ", ValAry)";
+        indent += "   ";
+        w << indent << "type(" << ddt.type_fortran << "), intent(in) :: " << abbr;
+        w << indent << "type(ModVarType), intent(in)    :: Var";
+        w << indent << "real(R8Ki), intent(inout)       :: ValAry(:)";
+        w << indent << "integer(IntKi)                  :: i";
+        w << indent << "associate (DL => Var%DL)";
+        indent += "   ";
+        w << indent << "select case (Var%DL%Num)";
+        for (const auto &field : fields)
+        {
+            w << indent << "case (" << field.name << ")";
+            std::string comment = "Scalar";
+            auto field_path = field.desc;
+            if ((field.data_type->tag == DataType::Tag::Derived))
+            {
+                comment = "Mesh";
+            }
+            else if (field.rank > 0)
+            {
+                comment = std::string("Rank ") + std::to_string(field.rank) + " Array";
+            }
+            w << indent << "   call MV_Pack2(Var, " << field_path << ", ValAry)  ! " << comment;
+        }
+        w << indent << "case default";
+        w << indent << "   ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki";
+        w << indent << "end select";
+        indent.erase(indent.size() - 3);
+        w << indent << "end associate";
+        indent.erase(indent.size() - 3);
+        w << indent << "end subroutine";
+        w << indent;
+
+        // Vars packing routine
+        indent = "\n";
+        w << indent << "subroutine " << mod.nickname + "_Pack" + tmp[2] + "Ary" << "(Vars, " << abbr << ", ValAry)";
         indent += "   ";
         w << indent << "type(" << ddt.type_fortran << "), intent(in) :: " << abbr;
         w << indent << "type(ModVarsType), intent(in)   :: Vars";
         w << indent << "real(R8Ki), intent(inout)       :: ValAry(:)";
         w << indent << "integer(IntKi)                  :: i";
-        w << indent << "do i = 1, size(" << var_str << ")";
-        indent += "   ";
-        w << indent << "associate (Var => " << var_str << "(i), DL => " << var_str << "(i)%DL)";
-        indent += "   ";
-        w << indent << "select case (Var%DL%Num)";
-        for (const auto &field : fields)
-        {
-            w << indent << "case (" << field.name << ")";
-            std::string comment = "Scalar";
-            auto field_path = field.desc;
-            if ((field.data_type->tag == DataType::Tag::Derived))
-            {
-                comment = "Mesh";
-            }
-            else if (field.rank > 0)
-            {
-                comment = std::string("Rank ") + std::to_string(field.rank) + " Array";
-            }
-            w << indent << "    call MV_Pack2(Var, " << field_path << ", ValAry)  ! " << comment;
-        }
-        w << indent << "end select";
-        indent.erase(indent.size() - 3);
-        w << indent << "end associate";
-        indent.erase(indent.size() - 3);
+        w << indent << "do i = 1, size(Vars%" << abbr << ")";
+        w << indent << "   call " << routine_name << "(Vars%" << abbr << "(i), " << abbr << ", ValAry)";
         w << indent << "end do";
         indent.erase(indent.size() - 3);
         w << indent << "end subroutine";
         w << indent;
 
-        // Array unpacking routine
-        routine_name = mod.nickname + "_Unpack" + tmp[2] + "Ary";
+        // Var unpacking routine
+        routine_name = mod.nickname + "_Unpack" + tmp[2] + "Var";
         indent = "\n";
-        w << indent << "subroutine " << routine_name << "(Vars, ValAry, "<< abbr <<")";
+        w << indent << "subroutine " << routine_name << "(Var, ValAry, " << abbr << ")";
         indent += "   ";
-        w << indent << "type(ModVarsType), intent(in)   :: Vars";
+        w << indent << "type(ModVarType), intent(in)    :: Var";
         w << indent << "real(R8Ki), intent(in)          :: ValAry(:)";
         w << indent << "type(" << ddt.type_fortran << "), intent(inout) :: " << abbr;
         w << indent << "integer(IntKi)                  :: i";
-        w << indent << "do i = 1, size(" << var_str << ")";
-        indent += "   ";
-        w << indent << "associate (Var => " << var_str << "(i), DL => " << var_str << "(i)%DL)";
+        w << indent << "associate (DL => Var%DL)";
         indent += "   ";
         w << indent << "select case (Var%DL%Num)";
         for (const auto &field : fields)
@@ -540,15 +551,29 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
             {
                 comment = std::string("Rank ") + std::to_string(field.rank) + " Array";
             }
-            w << indent << "    call MV_Unpack2(Var, ValAry, " << field_path << ")  ! " << comment;
+            w << indent << "   call MV_Unpack2(Var, ValAry, " << field_path << ")  ! " << comment;
         }
         w << indent << "end select";
         indent.erase(indent.size() - 3);
         w << indent << "end associate";
         indent.erase(indent.size() - 3);
+        w << indent << "end subroutine";
+        w << indent;
+
+        // Vars unpacking routine
+        indent = "\n";
+        w << indent << "subroutine " << mod.nickname + "_Unpack" + tmp[2] + "Ary" << "(Vars, ValAry, " << abbr << ")";
+        indent += "   ";
+        w << indent << "type(ModVarsType), intent(in)   :: Vars";
+        w << indent << "real(R8Ki), intent(in)          :: ValAry(:)";
+        w << indent << "type(" << ddt.type_fortran << "), intent(inout) :: " << abbr;
+        w << indent << "integer(IntKi)                  :: i";
+        w << indent << "do i = 1, size(Vars%" << abbr << ")";
+        w << indent << "   call " << routine_name << "(Vars%" << abbr << "(i), ValAry, " << abbr << ")";
         w << indent << "end do";
         indent.erase(indent.size() - 3);
         w << indent << "end subroutine";
+        w << indent;
         w << indent;
     }
 }

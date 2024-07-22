@@ -858,8 +858,8 @@ subroutine SeaSt_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, E
       ! Initialize Jacobian to zero
       dYdu = 0.0_R8Ki
 
-      iVar_u_WaveElev0 = MV_FindVarDatLoc(p%Vars%u, SeaSt_u_WaveElev0)
-      iVar_y_WaveElev0 = MV_FindVarDatLoc(p%Vars%y, SeaSt_y_WaveElev0)
+      iVar_u_WaveElev0 = MV_FindVarDatLoc(p%Vars%u, DatLoc(SeaSt_u_WaveElev0))
+      iVar_y_WaveElev0 = MV_FindVarDatLoc(p%Vars%y, DatLoc(SeaSt_y_WaveElev0))
 
       ! Extended input to extended output (direct pass-through)
       if (iVar_u_WaveElev0 > 0 .and. iVar_y_WaveElev0 > 0) then

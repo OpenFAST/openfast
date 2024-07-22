@@ -3132,19 +3132,42 @@ function MAP_OutputMeshName(ML) result(Name)
    end select
 end function
 
+subroutine MAP_PackContStateVar(Var, x, ValAry)
+   type(MAP_ContinuousStateType), intent(in) :: x
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (MAP_x_dummy)
+         call MV_Pack2(Var, x%dummy, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
 subroutine MAP_PackContStateAry(Vars, x, ValAry)
    type(MAP_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)   :: Vars
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (MAP_x_dummy)
-             call MV_Pack2(Var, x%dummy, ValAry)  ! Scalar
-         end select
-      end associate
+      call MAP_PackContStateVar(Vars%x(i), x, ValAry)
    end do
+end subroutine
+
+subroutine MAP_UnpackContStateVar(Var, ValAry, x)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(MAP_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (MAP_x_dummy)
+         call MV_Unpack2(Var, ValAry, x%dummy)  ! Scalar
+      end select
+   end associate
 end subroutine
 
 subroutine MAP_UnpackContStateAry(Vars, ValAry, x)
@@ -3153,13 +3176,32 @@ subroutine MAP_UnpackContStateAry(Vars, ValAry, x)
    type(MAP_ContinuousStateType), intent(inout) :: x
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (MAP_x_dummy)
-             call MV_Unpack2(Var, ValAry, x%dummy)  ! Scalar
-         end select
-      end associate
+      call MAP_UnpackContStateVar(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+
+subroutine MAP_PackConstrStateVar(Var, z, ValAry)
+   type(MAP_ConstraintStateType), intent(in) :: z
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (MAP_z_H)
+         call MV_Pack2(Var, z%H, ValAry)  ! Rank 1 Array
+      case (MAP_z_V)
+         call MV_Pack2(Var, z%V, ValAry)  ! Rank 1 Array
+      case (MAP_z_x)
+         call MV_Pack2(Var, z%x, ValAry)  ! Rank 1 Array
+      case (MAP_z_y)
+         call MV_Pack2(Var, z%y, ValAry)  ! Rank 1 Array
+      case (MAP_z_z)
+         call MV_Pack2(Var, z%z, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine MAP_PackConstrStateAry(Vars, z, ValAry)
@@ -3168,21 +3210,29 @@ subroutine MAP_PackConstrStateAry(Vars, z, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (MAP_z_H)
-             call MV_Pack2(Var, z%H, ValAry)  ! Rank 1 Array
-         case (MAP_z_V)
-             call MV_Pack2(Var, z%V, ValAry)  ! Rank 1 Array
-         case (MAP_z_x)
-             call MV_Pack2(Var, z%x, ValAry)  ! Rank 1 Array
-         case (MAP_z_y)
-             call MV_Pack2(Var, z%y, ValAry)  ! Rank 1 Array
-         case (MAP_z_z)
-             call MV_Pack2(Var, z%z, ValAry)  ! Rank 1 Array
-         end select
-      end associate
+      call MAP_PackConstrStateVar(Vars%z(i), z, ValAry)
    end do
+end subroutine
+
+subroutine MAP_UnpackConstrStateVar(Var, ValAry, z)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(MAP_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (MAP_z_H)
+         call MV_Unpack2(Var, ValAry, z%H)  ! Rank 1 Array
+      case (MAP_z_V)
+         call MV_Unpack2(Var, ValAry, z%V)  ! Rank 1 Array
+      case (MAP_z_x)
+         call MV_Unpack2(Var, ValAry, z%x)  ! Rank 1 Array
+      case (MAP_z_y)
+         call MV_Unpack2(Var, ValAry, z%y)  ! Rank 1 Array
+      case (MAP_z_z)
+         call MV_Unpack2(Var, ValAry, z%z)  ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 subroutine MAP_UnpackConstrStateAry(Vars, ValAry, z)
@@ -3191,21 +3241,30 @@ subroutine MAP_UnpackConstrStateAry(Vars, ValAry, z)
    type(MAP_ConstraintStateType), intent(inout) :: z
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (MAP_z_H)
-             call MV_Unpack2(Var, ValAry, z%H)  ! Rank 1 Array
-         case (MAP_z_V)
-             call MV_Unpack2(Var, ValAry, z%V)  ! Rank 1 Array
-         case (MAP_z_x)
-             call MV_Unpack2(Var, ValAry, z%x)  ! Rank 1 Array
-         case (MAP_z_y)
-             call MV_Unpack2(Var, ValAry, z%y)  ! Rank 1 Array
-         case (MAP_z_z)
-             call MV_Unpack2(Var, ValAry, z%z)  ! Rank 1 Array
-         end select
-      end associate
+      call MAP_UnpackConstrStateVar(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+
+subroutine MAP_PackInputVar(Var, u, ValAry)
+   type(MAP_InputType), intent(in) :: u
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (MAP_u_x)
+         call MV_Pack2(Var, u%x, ValAry)  ! Rank 1 Array
+      case (MAP_u_y)
+         call MV_Pack2(Var, u%y, ValAry)  ! Rank 1 Array
+      case (MAP_u_z)
+         call MV_Pack2(Var, u%z, ValAry)  ! Rank 1 Array
+      case (MAP_u_PtFairDisplacement)
+         call MV_Pack2(Var, u%PtFairDisplacement, ValAry)  ! Mesh
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine MAP_PackInputAry(Vars, u, ValAry)
@@ -3214,19 +3273,27 @@ subroutine MAP_PackInputAry(Vars, u, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (MAP_u_x)
-             call MV_Pack2(Var, u%x, ValAry)  ! Rank 1 Array
-         case (MAP_u_y)
-             call MV_Pack2(Var, u%y, ValAry)  ! Rank 1 Array
-         case (MAP_u_z)
-             call MV_Pack2(Var, u%z, ValAry)  ! Rank 1 Array
-         case (MAP_u_PtFairDisplacement)
-             call MV_Pack2(Var, u%PtFairDisplacement, ValAry)  ! Mesh
-         end select
-      end associate
+      call MAP_PackInputVar(Vars%u(i), u, ValAry)
    end do
+end subroutine
+
+subroutine MAP_UnpackInputVar(Var, ValAry, u)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(MAP_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (MAP_u_x)
+         call MV_Unpack2(Var, ValAry, u%x)  ! Rank 1 Array
+      case (MAP_u_y)
+         call MV_Unpack2(Var, ValAry, u%y)  ! Rank 1 Array
+      case (MAP_u_z)
+         call MV_Unpack2(Var, ValAry, u%z)  ! Rank 1 Array
+      case (MAP_u_PtFairDisplacement)
+         call MV_Unpack2(Var, ValAry, u%PtFairDisplacement)  ! Mesh
+      end select
+   end associate
 end subroutine
 
 subroutine MAP_UnpackInputAry(Vars, ValAry, u)
@@ -3235,19 +3302,34 @@ subroutine MAP_UnpackInputAry(Vars, ValAry, u)
    type(MAP_InputType), intent(inout) :: u
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (MAP_u_x)
-             call MV_Unpack2(Var, ValAry, u%x)  ! Rank 1 Array
-         case (MAP_u_y)
-             call MV_Unpack2(Var, ValAry, u%y)  ! Rank 1 Array
-         case (MAP_u_z)
-             call MV_Unpack2(Var, ValAry, u%z)  ! Rank 1 Array
-         case (MAP_u_PtFairDisplacement)
-             call MV_Unpack2(Var, ValAry, u%PtFairDisplacement)  ! Mesh
-         end select
-      end associate
+      call MAP_UnpackInputVar(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+
+subroutine MAP_PackOutputVar(Var, y, ValAry)
+   type(MAP_OutputType), intent(in) :: y
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (MAP_y_Fx)
+         call MV_Pack2(Var, y%Fx, ValAry)  ! Rank 1 Array
+      case (MAP_y_Fy)
+         call MV_Pack2(Var, y%Fy, ValAry)  ! Rank 1 Array
+      case (MAP_y_Fz)
+         call MV_Pack2(Var, y%Fz, ValAry)  ! Rank 1 Array
+      case (MAP_y_WriteOutput)
+         call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+      case (MAP_y_wrtOutput)
+         call MV_Pack2(Var, y%wrtOutput, ValAry)  ! Rank 1 Array
+      case (MAP_y_ptFairleadLoad)
+         call MV_Pack2(Var, y%ptFairleadLoad, ValAry)  ! Mesh
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine MAP_PackOutputAry(Vars, y, ValAry)
@@ -3256,23 +3338,31 @@ subroutine MAP_PackOutputAry(Vars, y, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (MAP_y_Fx)
-             call MV_Pack2(Var, y%Fx, ValAry)  ! Rank 1 Array
-         case (MAP_y_Fy)
-             call MV_Pack2(Var, y%Fy, ValAry)  ! Rank 1 Array
-         case (MAP_y_Fz)
-             call MV_Pack2(Var, y%Fz, ValAry)  ! Rank 1 Array
-         case (MAP_y_WriteOutput)
-             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
-         case (MAP_y_wrtOutput)
-             call MV_Pack2(Var, y%wrtOutput, ValAry)  ! Rank 1 Array
-         case (MAP_y_ptFairleadLoad)
-             call MV_Pack2(Var, y%ptFairleadLoad, ValAry)  ! Mesh
-         end select
-      end associate
+      call MAP_PackOutputVar(Vars%y(i), y, ValAry)
    end do
+end subroutine
+
+subroutine MAP_UnpackOutputVar(Var, ValAry, y)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(MAP_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (MAP_y_Fx)
+         call MV_Unpack2(Var, ValAry, y%Fx)  ! Rank 1 Array
+      case (MAP_y_Fy)
+         call MV_Unpack2(Var, ValAry, y%Fy)  ! Rank 1 Array
+      case (MAP_y_Fz)
+         call MV_Unpack2(Var, ValAry, y%Fz)  ! Rank 1 Array
+      case (MAP_y_WriteOutput)
+         call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+      case (MAP_y_wrtOutput)
+         call MV_Unpack2(Var, ValAry, y%wrtOutput)  ! Rank 1 Array
+      case (MAP_y_ptFairleadLoad)
+         call MV_Unpack2(Var, ValAry, y%ptFairleadLoad)  ! Mesh
+      end select
+   end associate
 end subroutine
 
 subroutine MAP_UnpackOutputAry(Vars, ValAry, y)
@@ -3281,23 +3371,9 @@ subroutine MAP_UnpackOutputAry(Vars, ValAry, y)
    type(MAP_OutputType), intent(inout) :: y
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (MAP_y_Fx)
-             call MV_Unpack2(Var, ValAry, y%Fx)  ! Rank 1 Array
-         case (MAP_y_Fy)
-             call MV_Unpack2(Var, ValAry, y%Fy)  ! Rank 1 Array
-         case (MAP_y_Fz)
-             call MV_Unpack2(Var, ValAry, y%Fz)  ! Rank 1 Array
-         case (MAP_y_WriteOutput)
-             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
-         case (MAP_y_wrtOutput)
-             call MV_Unpack2(Var, ValAry, y%wrtOutput)  ! Rank 1 Array
-         case (MAP_y_ptFairleadLoad)
-             call MV_Unpack2(Var, ValAry, y%ptFairleadLoad)  ! Mesh
-         end select
-      end associate
+      call MAP_UnpackOutputVar(Vars%y(i), ValAry, y)
    end do
 end subroutine
+
 END MODULE MAP_Types
 !ENDOFREGISTRYGENERATEDFILE

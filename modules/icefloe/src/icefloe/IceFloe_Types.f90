@@ -1070,19 +1070,42 @@ function IceFloe_OutputMeshName(ML) result(Name)
    end select
 end function
 
+subroutine IceFloe_PackContStateVar(Var, x, ValAry)
+   type(IceFloe_ContinuousStateType), intent(in) :: x
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (IceFloe_x_DummyContStateVar)
+         call MV_Pack2(Var, x%DummyContStateVar, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
 subroutine IceFloe_PackContStateAry(Vars, x, ValAry)
    type(IceFloe_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)   :: Vars
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (IceFloe_x_DummyContStateVar)
-             call MV_Pack2(Var, x%DummyContStateVar, ValAry)  ! Scalar
-         end select
-      end associate
+      call IceFloe_PackContStateVar(Vars%x(i), x, ValAry)
    end do
+end subroutine
+
+subroutine IceFloe_UnpackContStateVar(Var, ValAry, x)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(IceFloe_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (IceFloe_x_DummyContStateVar)
+         call MV_Unpack2(Var, ValAry, x%DummyContStateVar)  ! Scalar
+      end select
+   end associate
 end subroutine
 
 subroutine IceFloe_UnpackContStateAry(Vars, ValAry, x)
@@ -1091,13 +1114,24 @@ subroutine IceFloe_UnpackContStateAry(Vars, ValAry, x)
    type(IceFloe_ContinuousStateType), intent(inout) :: x
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (IceFloe_x_DummyContStateVar)
-             call MV_Unpack2(Var, ValAry, x%DummyContStateVar)  ! Scalar
-         end select
-      end associate
+      call IceFloe_UnpackContStateVar(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+
+subroutine IceFloe_PackConstrStateVar(Var, z, ValAry)
+   type(IceFloe_ConstraintStateType), intent(in) :: z
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (IceFloe_z_DummyConstrStateVar)
+         call MV_Pack2(Var, z%DummyConstrStateVar, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine IceFloe_PackConstrStateAry(Vars, z, ValAry)
@@ -1106,13 +1140,21 @@ subroutine IceFloe_PackConstrStateAry(Vars, z, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (IceFloe_z_DummyConstrStateVar)
-             call MV_Pack2(Var, z%DummyConstrStateVar, ValAry)  ! Scalar
-         end select
-      end associate
+      call IceFloe_PackConstrStateVar(Vars%z(i), z, ValAry)
    end do
+end subroutine
+
+subroutine IceFloe_UnpackConstrStateVar(Var, ValAry, z)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(IceFloe_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (IceFloe_z_DummyConstrStateVar)
+         call MV_Unpack2(Var, ValAry, z%DummyConstrStateVar)  ! Scalar
+      end select
+   end associate
 end subroutine
 
 subroutine IceFloe_UnpackConstrStateAry(Vars, ValAry, z)
@@ -1121,13 +1163,24 @@ subroutine IceFloe_UnpackConstrStateAry(Vars, ValAry, z)
    type(IceFloe_ConstraintStateType), intent(inout) :: z
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (IceFloe_z_DummyConstrStateVar)
-             call MV_Unpack2(Var, ValAry, z%DummyConstrStateVar)  ! Scalar
-         end select
-      end associate
+      call IceFloe_UnpackConstrStateVar(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+
+subroutine IceFloe_PackInputVar(Var, u, ValAry)
+   type(IceFloe_InputType), intent(in) :: u
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (IceFloe_u_iceMesh)
+         call MV_Pack2(Var, u%iceMesh, ValAry)  ! Mesh
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine IceFloe_PackInputAry(Vars, u, ValAry)
@@ -1136,13 +1189,21 @@ subroutine IceFloe_PackInputAry(Vars, u, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (IceFloe_u_iceMesh)
-             call MV_Pack2(Var, u%iceMesh, ValAry)  ! Mesh
-         end select
-      end associate
+      call IceFloe_PackInputVar(Vars%u(i), u, ValAry)
    end do
+end subroutine
+
+subroutine IceFloe_UnpackInputVar(Var, ValAry, u)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(IceFloe_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (IceFloe_u_iceMesh)
+         call MV_Unpack2(Var, ValAry, u%iceMesh)  ! Mesh
+      end select
+   end associate
 end subroutine
 
 subroutine IceFloe_UnpackInputAry(Vars, ValAry, u)
@@ -1151,13 +1212,26 @@ subroutine IceFloe_UnpackInputAry(Vars, ValAry, u)
    type(IceFloe_InputType), intent(inout) :: u
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (IceFloe_u_iceMesh)
-             call MV_Unpack2(Var, ValAry, u%iceMesh)  ! Mesh
-         end select
-      end associate
+      call IceFloe_UnpackInputVar(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+
+subroutine IceFloe_PackOutputVar(Var, y, ValAry)
+   type(IceFloe_OutputType), intent(in) :: y
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (IceFloe_y_iceMesh)
+         call MV_Pack2(Var, y%iceMesh, ValAry)  ! Mesh
+      case (IceFloe_y_WriteOutput)
+         call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine IceFloe_PackOutputAry(Vars, y, ValAry)
@@ -1166,15 +1240,23 @@ subroutine IceFloe_PackOutputAry(Vars, y, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (IceFloe_y_iceMesh)
-             call MV_Pack2(Var, y%iceMesh, ValAry)  ! Mesh
-         case (IceFloe_y_WriteOutput)
-             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
-         end select
-      end associate
+      call IceFloe_PackOutputVar(Vars%y(i), y, ValAry)
    end do
+end subroutine
+
+subroutine IceFloe_UnpackOutputVar(Var, ValAry, y)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(IceFloe_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (IceFloe_y_iceMesh)
+         call MV_Unpack2(Var, ValAry, y%iceMesh)  ! Mesh
+      case (IceFloe_y_WriteOutput)
+         call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 subroutine IceFloe_UnpackOutputAry(Vars, ValAry, y)
@@ -1183,15 +1265,9 @@ subroutine IceFloe_UnpackOutputAry(Vars, ValAry, y)
    type(IceFloe_OutputType), intent(inout) :: y
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (IceFloe_y_iceMesh)
-             call MV_Unpack2(Var, ValAry, y%iceMesh)  ! Mesh
-         case (IceFloe_y_WriteOutput)
-             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
-         end select
-      end associate
+      call IceFloe_UnpackOutputVar(Vars%y(i), ValAry, y)
    end do
 end subroutine
+
 END MODULE IceFloe_Types
 !ENDOFREGISTRYGENERATEDFILE

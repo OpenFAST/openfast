@@ -20,23 +20,35 @@ param	^ -                 IntKi               Map_MotionMesh          -  2  -   
 param	^ -                 IntKi               Map_Variable            -  3  -     "Individual variable mapping type"	-
 param	^ -                 IntKi               Map_Custom              -  4  -     "Custom mapping not used for linearization"	-
 
+typedef     ^       ModMapType  IntKi           iMapping                -   0   -   "Mapping index"
+typedef     ^       ^           IntKi           iModSrc                 -   0   -   "Source module index"
+typedef     ^       ^           IntKi           iModDst                 -   0   -   "Destination module index"
+typedef     ^       ^           IntKi           iVarSrc            10   0   -   "Source variable indices"
+typedef     ^       ^           IntKi           iVarSrcDisp        10   0   -   "Source variable indices"
+typedef     ^       ^           IntKi           iVarDst            10   0   -   "Destination variable indices"
+typedef     ^       ^           IntKi           iVarDstDisp        10   0   -   "Destination variable indices"
+
+typedef ^ ModGlueType       character(ChanLen)  Name                    -  -  -     "Glue name"  -
+typedef ^ ^                 ModDataType         ModDataAry                 :  -  -     "Array of module info"  -
+typedef ^ ^                 ModVarsType         Vars                    -  -  -     "Combined module variables"  -
+typedef ^ ^                 ModLinType          Lin                     -  -  -     "Glue linearization data"  -
+typedef ^ ^                 ModMapType          ModMaps                 :  -  -     "Var mapping"
+
 typedef ^ MappingType       character(128)      Desc                    -  -  -     "Description of mapping (used to lookup non-mesh maps)" -
-typedef ^ ^                 IntKi               iModSrc               -  0  -     "Source module index in ModData array" -
-typedef ^ ^                 IntKi               iModDst               -  0  -     "Destination module index in ModData array" -
+typedef ^ ^                 IntKi               iModSrc                 -  0  -     "Source module index in ModData array" -
+typedef ^ ^                 IntKi               iModDst                 -  0  -     "Destination module index in ModData array" -
 typedef ^ ^                 IntKi               SrcModID                -  0  -     "Source module ID" -
 typedef ^ ^                 IntKi               DstModID                -  0  -     "Destination module ID" -
 typedef ^ ^                 IntKi               SrcIns                  -  0  -     "Source module Instance" -
 typedef ^ ^                 IntKi               DstIns                  -  0  -     "Destination module Instance" -
 typedef ^ ^                 IntKi               SrcMeshID               -  0  -     "Source mesh identifier" -
 typedef ^ ^                 IntKi               DstMeshID               -  0  -     "Destination mesh identifier" -
-typedef ^ ^                 IntKi               iVarSrc                 -  0  -     "Source variable index" -
-typedef ^ ^                 IntKi               iVarDst                 -  0  -     "Destination variable index" -
 typedef ^ ^                 IntKi               SrcDispMeshID           -  0  -     "Source displacement mesh identifier" -
 typedef ^ ^                 IntKi               DstDispMeshID           -  0  -     "Destination displacement mesh identifier" -
-typedef ^ ^                 DatLoc              SrcMeshLoc              -  -  -     "Source mesh locator (number and indices)" -
-typedef ^ ^                 DatLoc              DstMeshLoc              -  -  -     "Destination mesh locator (number and indices)" -
-typedef ^ ^                 DatLoc              SrcDispMeshLoc          -  -  -     "Source displacement mesh locator (number and indices)" -
-typedef ^ ^                 DatLoc              DstDispMeshLoc          -  -  -     "Destination displacement mesh locator (number and indices)" -
+typedef ^ ^                 DatLoc              SrcDL              -  -  -     "Source mesh locator (number and indices)" -
+typedef ^ ^                 DatLoc              DstDL              -  -  -     "Destination mesh locator (number and indices)" -
+typedef ^ ^                 DatLoc              SrcDispDL          -  -  -     "Source displacement mesh locator (number and indices)" -
+typedef ^ ^                 DatLoc              DstDispDL          -  -  -     "Destination displacement mesh locator (number and indices)" -
 typedef ^ ^                 IntKi               MapType                 -  0  -     "Integer denoting mapping type (1=Load Mesh, 2=Motion Mesh, 3=Non-Mesh)" -
 typedef ^ ^                 IntKi               XfrType                 -  0  -     "Integer denoting transfer type (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L)" -
 typedef ^ ^                 IntKi               XfrTypeAux              -  0  -     "Integer denoting transfer type (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L)" -
@@ -47,68 +59,25 @@ typedef ^ ^                 MeshType            TmpMotionMesh           -  -  - 
 typedef ^ ^                 R8Ki                TmpMatrix               :: -  -     "Temporary matrix for performing transfer for destination load meshes without sibling motion meshes" -
 typedef ^ ^                 MeshMapType         MeshMap                 -  -  -     "Mesh mapping from Source variable to Destination variable" -
 typedef ^ ^                 MeshMapType         MeshMapAux              -  -  -     "Auxiliary mesh mapping for destination load meshes without sibling motion mesh" -
-typedef ^ ^                 IntKi               iVarSrcTransDisp        -  -  -     "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi               iVarSrcTransVel         -  -  -     "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi               iVarSrcTransAcc         -  -  -     "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi               iVarSrcOrientation      -  -  -     "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi               iVarSrcAngularVel       -  -  -     "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi               iVarSrcAngularAcc       -  -  -     "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi               iVarSrcForce            -  -  -     "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi               iVarSrcMoment           -  -  -     "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi               iVarSrcDispTransDisp    -  -  -     "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi               iVarDstTransDisp        -  -  -     "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi               iVarDstTransVel         -  -  -     "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi               iVarDstTransAcc         -  -  -     "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi               iVarDstOrientation      -  -  -     "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi               iVarDstAngularVel       -  -  -     "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi               iVarDstAngularAcc       -  -  -     "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi               iVarDstForce            -  -  -     "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi               iVarDstMoment           -  -  -     "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi               iVarDstDispTransDisp    -  -  -     "Var index for linearized mesh mapping"
-typedef ^ ^                 IntKi               iVarDstDispOrientation  -  -  -     "Var index for linearized mesh mapping"
-
-#----------------------------------------------------------------------------------------------------------------------------------
-# Glue Linearization
-#----------------------------------------------------------------------------------------------------------------------------------
-
-typedef ^ Glue_LinType          character(ChanLen) Abbr                 -  -  -     ""  -
-typedef ^ ^                     R8Ki            x                       :  -  -     ""  -
-typedef ^ ^                     R8Ki            dx                      :  -  -     ""  -
-typedef ^ ^                     R8Ki            xd                      :  -  -     ""  -
-typedef ^ ^                     R8Ki            z                       :  -  -     ""  -
-typedef ^ ^                     R8Ki            u                       :  -  -     ""  -
-typedef ^ ^                     R8Ki            y                       :  -  -     ""  -
-typedef ^ ^                     R8Ki            u_perturb               :  -  -     ""  -
-typedef ^ ^                     R8Ki            x_perturb               :  -  -     ""  -
-typedef ^ ^                     R8Ki            x_pos                   :  -  -     ""  -
-typedef ^ ^                     R8Ki            x_neg                   :  -  -     ""  -
-typedef ^ ^                     R8Ki            y_pos                   :  -  -     ""  -
-typedef ^ ^                     R8Ki            y_neg                   :  -  -     ""  -
-typedef ^ ^                     R8Ki            J                       :: -  -     ""  -
-typedef ^ ^                     R8Ki            dYdx                    :: -  -     ""  -
-typedef ^ ^                     R8Ki            dXdx                    :: -  -     ""  -
-typedef ^ ^                     R8Ki            dYdu                    :: -  -     ""  -
-typedef ^ ^                     R8Ki            dXdu                    :: -  -     ""  -
-typedef ^ ^                     R8Ki            dXdy                    :: -  -     ""  -
-typedef ^ ^                     R8Ki            dUdu                    :: -  -     ""  -
-typedef ^ ^                     R8Ki            dUdy                    :: -  -     ""  -
-typedef ^ ^                     R8Ki            StateRotation           :: -  -     ""  -
-
-#----------------------------------------------------------------------------------------------------------------------------------
-# Module Data
-#----------------------------------------------------------------------------------------------------------------------------------
-
-typedef ^ ModDataType           character(ChanLen) Abbr                 -  -  -     "Module name abbreviation"  -
-typedef ^ ^                     IntKi           ID                      -  0  -     "Module identification number"  -
-typedef ^ ^                     IntKi           iMod                    -  0  -     "Module index in array of modules"  -
-typedef ^ ^                     IntKi           Ins                     -  0  -     "Module instance number"  -
-typedef ^ ^                     R8Ki            DT                      -  0  -     "Module time step"  -
-typedef ^ ^                     IntKi           SubSteps                -  0  -     "Module number of substeps per solver time step"  -
-typedef ^ ^                     ModVarsType    *Vars                    -  -  -     "Pointer to module variables type"  -
-typedef ^ ^                     ModXfrType      Xfr                     :  -  -     "Variable index for combined modules"  -
-typedef ^ ^                     Glue_LinType    Lin                     -  -  -     "Module linearization data"  -
-typedef ^ ^                     IntKi           SrcMaps                 :  -  -     "Indices of mappings where module is the source"
-typedef ^ ^                     IntKi           DstMaps                 :  -  -     "Indices of mappings where module is the destination"
+#typedef ^ ^                 IntKi               iVarSrcTransDisp        -  -  -     "Var index for linearized mesh mapping"
+#typedef ^ ^                 IntKi               iVarSrcTransVel         -  -  -     "Var index for linearized mesh mapping"
+#typedef ^ ^                 IntKi               iVarSrcTransAcc         -  -  -     "Var index for linearized mesh mapping"
+#typedef ^ ^                 IntKi               iVarSrcOrientation      -  -  -     "Var index for linearized mesh mapping"
+#typedef ^ ^                 IntKi               iVarSrcAngularVel       -  -  -     "Var index for linearized mesh mapping"
+#typedef ^ ^                 IntKi               iVarSrcAngularAcc       -  -  -     "Var index for linearized mesh mapping"
+#typedef ^ ^                 IntKi               iVarSrcForce            -  -  -     "Var index for linearized mesh mapping"
+#typedef ^ ^                 IntKi               iVarSrcMoment           -  -  -     "Var index for linearized mesh mapping"
+#typedef ^ ^                 IntKi               iVarSrcDispTransDisp    -  -  -     "Var index for linearized mesh mapping"
+#typedef ^ ^                 IntKi               iVarDstTransDisp        -  -  -     "Var index for linearized mesh mapping"
+#typedef ^ ^                 IntKi               iVarDstTransVel         -  -  -     "Var index for linearized mesh mapping"
+#typedef ^ ^                 IntKi               iVarDstTransAcc         -  -  -     "Var index for linearized mesh mapping"
+#typedef ^ ^                 IntKi               iVarDstOrientation      -  -  -     "Var index for linearized mesh mapping"
+#typedef ^ ^                 IntKi               iVarDstAngularVel       -  -  -     "Var index for linearized mesh mapping"
+#typedef ^ ^                 IntKi               iVarDstAngularAcc       -  -  -     "Var index for linearized mesh mapping"
+#typedef ^ ^                 IntKi               iVarDstForce            -  -  -     "Var index for linearized mesh mapping"
+#typedef ^ ^                 IntKi               iVarDstMoment           -  -  -     "Var index for linearized mesh mapping"
+#typedef ^ ^                 IntKi               iVarDstDispTransDisp    -  -  -     "Var index for linearized mesh mapping"
+#typedef ^ ^                 IntKi               iVarDstDispOrientation  -  -  -     "Var index for linearized mesh mapping"
 
 #----------------------------------------------------------------------------------------------------------------------------------
 # Glue Parameters
@@ -215,7 +184,7 @@ typedef ^ ^                     logical         IsConverged             -  -  - 
 
 typedef ^ Glue_MiscVarType      ModDataType     Modules                 :  -  -     "Module variable and value data" -
 typedef ^ ^                     MappingType     Mappings                :  -  -     "Module mapping" -
-typedef ^ ^                     ModDataType     ModGlue                 -  -  -     "Glue code module" -
+typedef ^ ^                     ModGlueType     ModGlue                 -  -  -     "Glue code module" -
 typedef ^ ^                     Glue_LinMisc    Lin                     -  -  -     "Linearization misc vars"
 typedef ^ ^                     Glue_CalcSteady CS                      -  -  -     "CalcSteady calculation data"
 typedef ^ ^                     Glue_AeroMap    AM                      -  -  -     "AeroMap data"

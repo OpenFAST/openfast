@@ -6792,27 +6792,58 @@ function AD_OutputMeshName(ML) result(Name)
    end select
 end function
 
+subroutine AD_PackContStateVar(Var, x, ValAry)
+   type(RotContinuousStateType), intent(in) :: x
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (AD_x_BEMT_UA_element_x)
+         call MV_Pack2(Var, x%BEMT%UA%element(DL%i1, DL%i2)%x, ValAry)  ! Rank 1 Array
+      case (AD_x_BEMT_DBEMT_element_vind)
+         call MV_Pack2(Var, x%BEMT%DBEMT%element(DL%i1, DL%i2)%vind, ValAry)  ! Rank 1 Array
+      case (AD_x_BEMT_DBEMT_element_vind_1)
+         call MV_Pack2(Var, x%BEMT%DBEMT%element(DL%i1, DL%i2)%vind_1, ValAry)  ! Rank 1 Array
+      case (AD_x_BEMT_V_w)
+         call MV_Pack2(Var, x%BEMT%V_w, ValAry)  ! Rank 1 Array
+      case (AD_x_AA_DummyContState)
+         call MV_Pack2(Var, x%AA%DummyContState, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
 subroutine AD_PackContStateAry(Vars, x, ValAry)
    type(RotContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)   :: Vars
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (AD_x_BEMT_UA_element_x)
-             call MV_Pack2(Var, x%BEMT%UA%element(DL%i1, DL%i2)%x, ValAry)  ! Rank 1 Array
-         case (AD_x_BEMT_DBEMT_element_vind)
-             call MV_Pack2(Var, x%BEMT%DBEMT%element(DL%i1, DL%i2)%vind, ValAry)  ! Rank 1 Array
-         case (AD_x_BEMT_DBEMT_element_vind_1)
-             call MV_Pack2(Var, x%BEMT%DBEMT%element(DL%i1, DL%i2)%vind_1, ValAry)  ! Rank 1 Array
-         case (AD_x_BEMT_V_w)
-             call MV_Pack2(Var, x%BEMT%V_w, ValAry)  ! Rank 1 Array
-         case (AD_x_AA_DummyContState)
-             call MV_Pack2(Var, x%AA%DummyContState, ValAry)  ! Scalar
-         end select
-      end associate
+      call AD_PackContStateVar(Vars%x(i), x, ValAry)
    end do
+end subroutine
+
+subroutine AD_UnpackContStateVar(Var, ValAry, x)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(RotContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (AD_x_BEMT_UA_element_x)
+         call MV_Unpack2(Var, ValAry, x%BEMT%UA%element(DL%i1, DL%i2)%x)  ! Rank 1 Array
+      case (AD_x_BEMT_DBEMT_element_vind)
+         call MV_Unpack2(Var, ValAry, x%BEMT%DBEMT%element(DL%i1, DL%i2)%vind)  ! Rank 1 Array
+      case (AD_x_BEMT_DBEMT_element_vind_1)
+         call MV_Unpack2(Var, ValAry, x%BEMT%DBEMT%element(DL%i1, DL%i2)%vind_1)  ! Rank 1 Array
+      case (AD_x_BEMT_V_w)
+         call MV_Unpack2(Var, ValAry, x%BEMT%V_w)  ! Rank 1 Array
+      case (AD_x_AA_DummyContState)
+         call MV_Unpack2(Var, ValAry, x%AA%DummyContState)  ! Scalar
+      end select
+   end associate
 end subroutine
 
 subroutine AD_UnpackContStateAry(Vars, ValAry, x)
@@ -6821,21 +6852,26 @@ subroutine AD_UnpackContStateAry(Vars, ValAry, x)
    type(RotContinuousStateType), intent(inout) :: x
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (AD_x_BEMT_UA_element_x)
-             call MV_Unpack2(Var, ValAry, x%BEMT%UA%element(DL%i1, DL%i2)%x)  ! Rank 1 Array
-         case (AD_x_BEMT_DBEMT_element_vind)
-             call MV_Unpack2(Var, ValAry, x%BEMT%DBEMT%element(DL%i1, DL%i2)%vind)  ! Rank 1 Array
-         case (AD_x_BEMT_DBEMT_element_vind_1)
-             call MV_Unpack2(Var, ValAry, x%BEMT%DBEMT%element(DL%i1, DL%i2)%vind_1)  ! Rank 1 Array
-         case (AD_x_BEMT_V_w)
-             call MV_Unpack2(Var, ValAry, x%BEMT%V_w)  ! Rank 1 Array
-         case (AD_x_AA_DummyContState)
-             call MV_Unpack2(Var, ValAry, x%AA%DummyContState)  ! Scalar
-         end select
-      end associate
+      call AD_UnpackContStateVar(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+
+subroutine AD_PackConstrStateVar(Var, z, ValAry)
+   type(RotConstraintStateType), intent(in) :: z
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (AD_z_BEMT_phi)
+         call MV_Pack2(Var, z%BEMT%phi, ValAry)  ! Rank 2 Array
+      case (AD_z_AA_DummyConstrState)
+         call MV_Pack2(Var, z%AA%DummyConstrState, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine AD_PackConstrStateAry(Vars, z, ValAry)
@@ -6844,15 +6880,23 @@ subroutine AD_PackConstrStateAry(Vars, z, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (AD_z_BEMT_phi)
-             call MV_Pack2(Var, z%BEMT%phi, ValAry)  ! Rank 2 Array
-         case (AD_z_AA_DummyConstrState)
-             call MV_Pack2(Var, z%AA%DummyConstrState, ValAry)  ! Scalar
-         end select
-      end associate
+      call AD_PackConstrStateVar(Vars%z(i), z, ValAry)
    end do
+end subroutine
+
+subroutine AD_UnpackConstrStateVar(Var, ValAry, z)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(RotConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (AD_z_BEMT_phi)
+         call MV_Unpack2(Var, ValAry, z%BEMT%phi)  ! Rank 2 Array
+      case (AD_z_AA_DummyConstrState)
+         call MV_Unpack2(Var, ValAry, z%AA%DummyConstrState)  ! Scalar
+      end select
+   end associate
 end subroutine
 
 subroutine AD_UnpackConstrStateAry(Vars, ValAry, z)
@@ -6861,15 +6905,36 @@ subroutine AD_UnpackConstrStateAry(Vars, ValAry, z)
    type(RotConstraintStateType), intent(inout) :: z
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (AD_z_BEMT_phi)
-             call MV_Unpack2(Var, ValAry, z%BEMT%phi)  ! Rank 2 Array
-         case (AD_z_AA_DummyConstrState)
-             call MV_Unpack2(Var, ValAry, z%AA%DummyConstrState)  ! Scalar
-         end select
-      end associate
+      call AD_UnpackConstrStateVar(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+
+subroutine AD_PackInputVar(Var, u, ValAry)
+   type(RotInputType), intent(in) :: u
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (AD_u_NacelleMotion)
+         call MV_Pack2(Var, u%NacelleMotion, ValAry)  ! Mesh
+      case (AD_u_TowerMotion)
+         call MV_Pack2(Var, u%TowerMotion, ValAry)  ! Mesh
+      case (AD_u_HubMotion)
+         call MV_Pack2(Var, u%HubMotion, ValAry)  ! Mesh
+      case (AD_u_BladeRootMotion)
+         call MV_Pack2(Var, u%BladeRootMotion(DL%i1), ValAry)  ! Mesh
+      case (AD_u_BladeMotion)
+         call MV_Pack2(Var, u%BladeMotion(DL%i1), ValAry)  ! Mesh
+      case (AD_u_TFinMotion)
+         call MV_Pack2(Var, u%TFinMotion, ValAry)  ! Mesh
+      case (AD_u_UserProp)
+         call MV_Pack2(Var, u%UserProp, ValAry)  ! Rank 2 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine AD_PackInputAry(Vars, u, ValAry)
@@ -6878,25 +6943,33 @@ subroutine AD_PackInputAry(Vars, u, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (AD_u_NacelleMotion)
-             call MV_Pack2(Var, u%NacelleMotion, ValAry)  ! Mesh
-         case (AD_u_TowerMotion)
-             call MV_Pack2(Var, u%TowerMotion, ValAry)  ! Mesh
-         case (AD_u_HubMotion)
-             call MV_Pack2(Var, u%HubMotion, ValAry)  ! Mesh
-         case (AD_u_BladeRootMotion)
-             call MV_Pack2(Var, u%BladeRootMotion(DL%i1), ValAry)  ! Mesh
-         case (AD_u_BladeMotion)
-             call MV_Pack2(Var, u%BladeMotion(DL%i1), ValAry)  ! Mesh
-         case (AD_u_TFinMotion)
-             call MV_Pack2(Var, u%TFinMotion, ValAry)  ! Mesh
-         case (AD_u_UserProp)
-             call MV_Pack2(Var, u%UserProp, ValAry)  ! Rank 2 Array
-         end select
-      end associate
+      call AD_PackInputVar(Vars%u(i), u, ValAry)
    end do
+end subroutine
+
+subroutine AD_UnpackInputVar(Var, ValAry, u)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(RotInputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (AD_u_NacelleMotion)
+         call MV_Unpack2(Var, ValAry, u%NacelleMotion)  ! Mesh
+      case (AD_u_TowerMotion)
+         call MV_Unpack2(Var, ValAry, u%TowerMotion)  ! Mesh
+      case (AD_u_HubMotion)
+         call MV_Unpack2(Var, ValAry, u%HubMotion)  ! Mesh
+      case (AD_u_BladeRootMotion)
+         call MV_Unpack2(Var, ValAry, u%BladeRootMotion(DL%i1))  ! Mesh
+      case (AD_u_BladeMotion)
+         call MV_Unpack2(Var, ValAry, u%BladeMotion(DL%i1))  ! Mesh
+      case (AD_u_TFinMotion)
+         call MV_Unpack2(Var, ValAry, u%TFinMotion)  ! Mesh
+      case (AD_u_UserProp)
+         call MV_Unpack2(Var, ValAry, u%UserProp)  ! Rank 2 Array
+      end select
+   end associate
 end subroutine
 
 subroutine AD_UnpackInputAry(Vars, ValAry, u)
@@ -6905,25 +6978,34 @@ subroutine AD_UnpackInputAry(Vars, ValAry, u)
    type(RotInputType), intent(inout) :: u
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (AD_u_NacelleMotion)
-             call MV_Unpack2(Var, ValAry, u%NacelleMotion)  ! Mesh
-         case (AD_u_TowerMotion)
-             call MV_Unpack2(Var, ValAry, u%TowerMotion)  ! Mesh
-         case (AD_u_HubMotion)
-             call MV_Unpack2(Var, ValAry, u%HubMotion)  ! Mesh
-         case (AD_u_BladeRootMotion)
-             call MV_Unpack2(Var, ValAry, u%BladeRootMotion(DL%i1))  ! Mesh
-         case (AD_u_BladeMotion)
-             call MV_Unpack2(Var, ValAry, u%BladeMotion(DL%i1))  ! Mesh
-         case (AD_u_TFinMotion)
-             call MV_Unpack2(Var, ValAry, u%TFinMotion)  ! Mesh
-         case (AD_u_UserProp)
-             call MV_Unpack2(Var, ValAry, u%UserProp)  ! Rank 2 Array
-         end select
-      end associate
+      call AD_UnpackInputVar(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+
+subroutine AD_PackOutputVar(Var, y, ValAry)
+   type(RotOutputType), intent(in) :: y
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (AD_y_NacelleLoad)
+         call MV_Pack2(Var, y%NacelleLoad, ValAry)  ! Mesh
+      case (AD_y_HubLoad)
+         call MV_Pack2(Var, y%HubLoad, ValAry)  ! Mesh
+      case (AD_y_TowerLoad)
+         call MV_Pack2(Var, y%TowerLoad, ValAry)  ! Mesh
+      case (AD_y_BladeLoad)
+         call MV_Pack2(Var, y%BladeLoad(DL%i1), ValAry)  ! Mesh
+      case (AD_y_TFinLoad)
+         call MV_Pack2(Var, y%TFinLoad, ValAry)  ! Mesh
+      case (AD_y_WriteOutput)
+         call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine AD_PackOutputAry(Vars, y, ValAry)
@@ -6932,23 +7014,31 @@ subroutine AD_PackOutputAry(Vars, y, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (AD_y_NacelleLoad)
-             call MV_Pack2(Var, y%NacelleLoad, ValAry)  ! Mesh
-         case (AD_y_HubLoad)
-             call MV_Pack2(Var, y%HubLoad, ValAry)  ! Mesh
-         case (AD_y_TowerLoad)
-             call MV_Pack2(Var, y%TowerLoad, ValAry)  ! Mesh
-         case (AD_y_BladeLoad)
-             call MV_Pack2(Var, y%BladeLoad(DL%i1), ValAry)  ! Mesh
-         case (AD_y_TFinLoad)
-             call MV_Pack2(Var, y%TFinLoad, ValAry)  ! Mesh
-         case (AD_y_WriteOutput)
-             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
-         end select
-      end associate
+      call AD_PackOutputVar(Vars%y(i), y, ValAry)
    end do
+end subroutine
+
+subroutine AD_UnpackOutputVar(Var, ValAry, y)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(RotOutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (AD_y_NacelleLoad)
+         call MV_Unpack2(Var, ValAry, y%NacelleLoad)  ! Mesh
+      case (AD_y_HubLoad)
+         call MV_Unpack2(Var, ValAry, y%HubLoad)  ! Mesh
+      case (AD_y_TowerLoad)
+         call MV_Unpack2(Var, ValAry, y%TowerLoad)  ! Mesh
+      case (AD_y_BladeLoad)
+         call MV_Unpack2(Var, ValAry, y%BladeLoad(DL%i1))  ! Mesh
+      case (AD_y_TFinLoad)
+         call MV_Unpack2(Var, ValAry, y%TFinLoad)  ! Mesh
+      case (AD_y_WriteOutput)
+         call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 subroutine AD_UnpackOutputAry(Vars, ValAry, y)
@@ -6957,23 +7047,9 @@ subroutine AD_UnpackOutputAry(Vars, ValAry, y)
    type(RotOutputType), intent(inout) :: y
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (AD_y_NacelleLoad)
-             call MV_Unpack2(Var, ValAry, y%NacelleLoad)  ! Mesh
-         case (AD_y_HubLoad)
-             call MV_Unpack2(Var, ValAry, y%HubLoad)  ! Mesh
-         case (AD_y_TowerLoad)
-             call MV_Unpack2(Var, ValAry, y%TowerLoad)  ! Mesh
-         case (AD_y_BladeLoad)
-             call MV_Unpack2(Var, ValAry, y%BladeLoad(DL%i1))  ! Mesh
-         case (AD_y_TFinLoad)
-             call MV_Unpack2(Var, ValAry, y%TFinLoad)  ! Mesh
-         case (AD_y_WriteOutput)
-             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
-         end select
-      end associate
+      call AD_UnpackOutputVar(Vars%y(i), ValAry, y)
    end do
 end subroutine
+
 END MODULE AeroDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

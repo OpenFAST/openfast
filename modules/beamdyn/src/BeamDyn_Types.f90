@@ -3809,21 +3809,46 @@ function BD_OutputMeshName(ML) result(Name)
    end select
 end function
 
+subroutine BD_PackContStateVar(Var, x, ValAry)
+   type(BD_ContinuousStateType), intent(in) :: x
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (BD_x_q)
+         call MV_Pack2(Var, x%q, ValAry)  ! Rank 2 Array
+      case (BD_x_dqdt)
+         call MV_Pack2(Var, x%dqdt, ValAry)  ! Rank 2 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
 subroutine BD_PackContStateAry(Vars, x, ValAry)
    type(BD_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)   :: Vars
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (BD_x_q)
-             call MV_Pack2(Var, x%q, ValAry)  ! Rank 2 Array
-         case (BD_x_dqdt)
-             call MV_Pack2(Var, x%dqdt, ValAry)  ! Rank 2 Array
-         end select
-      end associate
+      call BD_PackContStateVar(Vars%x(i), x, ValAry)
    end do
+end subroutine
+
+subroutine BD_UnpackContStateVar(Var, ValAry, x)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(BD_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (BD_x_q)
+         call MV_Unpack2(Var, ValAry, x%q)  ! Rank 2 Array
+      case (BD_x_dqdt)
+         call MV_Unpack2(Var, ValAry, x%dqdt)  ! Rank 2 Array
+      end select
+   end associate
 end subroutine
 
 subroutine BD_UnpackContStateAry(Vars, ValAry, x)
@@ -3832,15 +3857,24 @@ subroutine BD_UnpackContStateAry(Vars, ValAry, x)
    type(BD_ContinuousStateType), intent(inout) :: x
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (BD_x_q)
-             call MV_Unpack2(Var, ValAry, x%q)  ! Rank 2 Array
-         case (BD_x_dqdt)
-             call MV_Unpack2(Var, ValAry, x%dqdt)  ! Rank 2 Array
-         end select
-      end associate
+      call BD_UnpackContStateVar(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+
+subroutine BD_PackConstrStateVar(Var, z, ValAry)
+   type(BD_ConstraintStateType), intent(in) :: z
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (BD_z_DummyConstrState)
+         call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine BD_PackConstrStateAry(Vars, z, ValAry)
@@ -3849,13 +3883,21 @@ subroutine BD_PackConstrStateAry(Vars, z, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (BD_z_DummyConstrState)
-             call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
-         end select
-      end associate
+      call BD_PackConstrStateVar(Vars%z(i), z, ValAry)
    end do
+end subroutine
+
+subroutine BD_UnpackConstrStateVar(Var, ValAry, z)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(BD_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (BD_z_DummyConstrState)
+         call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
+      end select
+   end associate
 end subroutine
 
 subroutine BD_UnpackConstrStateAry(Vars, ValAry, z)
@@ -3864,13 +3906,30 @@ subroutine BD_UnpackConstrStateAry(Vars, ValAry, z)
    type(BD_ConstraintStateType), intent(inout) :: z
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (BD_z_DummyConstrState)
-             call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
-         end select
-      end associate
+      call BD_UnpackConstrStateVar(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+
+subroutine BD_PackInputVar(Var, u, ValAry)
+   type(BD_InputType), intent(in) :: u
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (BD_u_RootMotion)
+         call MV_Pack2(Var, u%RootMotion, ValAry)  ! Mesh
+      case (BD_u_PointLoad)
+         call MV_Pack2(Var, u%PointLoad, ValAry)  ! Mesh
+      case (BD_u_DistrLoad)
+         call MV_Pack2(Var, u%DistrLoad, ValAry)  ! Mesh
+      case (BD_u_HubMotion)
+         call MV_Pack2(Var, u%HubMotion, ValAry)  ! Mesh
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine BD_PackInputAry(Vars, u, ValAry)
@@ -3879,19 +3938,27 @@ subroutine BD_PackInputAry(Vars, u, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (BD_u_RootMotion)
-             call MV_Pack2(Var, u%RootMotion, ValAry)  ! Mesh
-         case (BD_u_PointLoad)
-             call MV_Pack2(Var, u%PointLoad, ValAry)  ! Mesh
-         case (BD_u_DistrLoad)
-             call MV_Pack2(Var, u%DistrLoad, ValAry)  ! Mesh
-         case (BD_u_HubMotion)
-             call MV_Pack2(Var, u%HubMotion, ValAry)  ! Mesh
-         end select
-      end associate
+      call BD_PackInputVar(Vars%u(i), u, ValAry)
    end do
+end subroutine
+
+subroutine BD_UnpackInputVar(Var, ValAry, u)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(BD_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (BD_u_RootMotion)
+         call MV_Unpack2(Var, ValAry, u%RootMotion)  ! Mesh
+      case (BD_u_PointLoad)
+         call MV_Unpack2(Var, ValAry, u%PointLoad)  ! Mesh
+      case (BD_u_DistrLoad)
+         call MV_Unpack2(Var, ValAry, u%DistrLoad)  ! Mesh
+      case (BD_u_HubMotion)
+         call MV_Unpack2(Var, ValAry, u%HubMotion)  ! Mesh
+      end select
+   end associate
 end subroutine
 
 subroutine BD_UnpackInputAry(Vars, ValAry, u)
@@ -3900,19 +3967,32 @@ subroutine BD_UnpackInputAry(Vars, ValAry, u)
    type(BD_InputType), intent(inout) :: u
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (BD_u_RootMotion)
-             call MV_Unpack2(Var, ValAry, u%RootMotion)  ! Mesh
-         case (BD_u_PointLoad)
-             call MV_Unpack2(Var, ValAry, u%PointLoad)  ! Mesh
-         case (BD_u_DistrLoad)
-             call MV_Unpack2(Var, ValAry, u%DistrLoad)  ! Mesh
-         case (BD_u_HubMotion)
-             call MV_Unpack2(Var, ValAry, u%HubMotion)  ! Mesh
-         end select
-      end associate
+      call BD_UnpackInputVar(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+
+subroutine BD_PackOutputVar(Var, y, ValAry)
+   type(BD_OutputType), intent(in) :: y
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (BD_y_ReactionForce)
+         call MV_Pack2(Var, y%ReactionForce, ValAry)  ! Mesh
+      case (BD_y_BldMotion)
+         call MV_Pack2(Var, y%BldMotion, ValAry)  ! Mesh
+      case (BD_y_RootMxr)
+         call MV_Pack2(Var, y%RootMxr, ValAry)  ! Scalar
+      case (BD_y_RootMyr)
+         call MV_Pack2(Var, y%RootMyr, ValAry)  ! Scalar
+      case (BD_y_WriteOutput)
+         call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine BD_PackOutputAry(Vars, y, ValAry)
@@ -3921,21 +4001,29 @@ subroutine BD_PackOutputAry(Vars, y, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (BD_y_ReactionForce)
-             call MV_Pack2(Var, y%ReactionForce, ValAry)  ! Mesh
-         case (BD_y_BldMotion)
-             call MV_Pack2(Var, y%BldMotion, ValAry)  ! Mesh
-         case (BD_y_RootMxr)
-             call MV_Pack2(Var, y%RootMxr, ValAry)  ! Scalar
-         case (BD_y_RootMyr)
-             call MV_Pack2(Var, y%RootMyr, ValAry)  ! Scalar
-         case (BD_y_WriteOutput)
-             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
-         end select
-      end associate
+      call BD_PackOutputVar(Vars%y(i), y, ValAry)
    end do
+end subroutine
+
+subroutine BD_UnpackOutputVar(Var, ValAry, y)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(BD_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (BD_y_ReactionForce)
+         call MV_Unpack2(Var, ValAry, y%ReactionForce)  ! Mesh
+      case (BD_y_BldMotion)
+         call MV_Unpack2(Var, ValAry, y%BldMotion)  ! Mesh
+      case (BD_y_RootMxr)
+         call MV_Unpack2(Var, ValAry, y%RootMxr)  ! Scalar
+      case (BD_y_RootMyr)
+         call MV_Unpack2(Var, ValAry, y%RootMyr)  ! Scalar
+      case (BD_y_WriteOutput)
+         call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 subroutine BD_UnpackOutputAry(Vars, ValAry, y)
@@ -3944,21 +4032,9 @@ subroutine BD_UnpackOutputAry(Vars, ValAry, y)
    type(BD_OutputType), intent(inout) :: y
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (BD_y_ReactionForce)
-             call MV_Unpack2(Var, ValAry, y%ReactionForce)  ! Mesh
-         case (BD_y_BldMotion)
-             call MV_Unpack2(Var, ValAry, y%BldMotion)  ! Mesh
-         case (BD_y_RootMxr)
-             call MV_Unpack2(Var, ValAry, y%RootMxr)  ! Scalar
-         case (BD_y_RootMyr)
-             call MV_Unpack2(Var, ValAry, y%RootMyr)  ! Scalar
-         case (BD_y_WriteOutput)
-             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
-         end select
-      end associate
+      call BD_UnpackOutputVar(Vars%y(i), ValAry, y)
    end do
 end subroutine
+
 END MODULE BeamDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

@@ -49,12 +49,13 @@ param       ^       -           IntKi           FieldForce          -   1   -   
 param       ^       -           IntKi           FieldMoment         -   2   -   ""  -
 param       ^       -           IntKi           FieldOrientation    -   3   -   ""  -
 param       ^       -           IntKi           FieldTransDisp      -   4   -   ""  -
-param       ^       -           IntKi           FieldAngularDisp    -   5   -   ""  -
-param       ^       -           IntKi           FieldTransVel       -   6   -   ""  -
-param       ^       -           IntKi           FieldAngularVel     -   7   -   ""  -
-param       ^       -           IntKi           FieldTransAcc       -   8   -   ""  -
-param       ^       -           IntKi           FieldAngularAcc     -   9   -   ""  -
-param       ^       -           IntKi           FieldScalar         -  10   -   ""  -
+param       ^       -           IntKi           FieldTransVel       -   5   -   ""  -
+param       ^       -           IntKi           FieldAngularVel     -   6   -   ""  -
+param       ^       -           IntKi           FieldTransAcc       -   7   -   ""  -
+param       ^       -           IntKi           FieldAngularAcc     -   8   -   ""  -
+param       ^       -           IntKi           FieldScalar         -   9   -   ""  -
+param       ^       -           IntKi           FieldAngularDisp    -  10   -   ""  -
+param       ^       -           IntKi           FieldCount          -  10   -   ""  -
 
 param       ^       -           IntKi           VF_None             -    0  -   "Variable with no flags"  -
 param       ^       -           IntKi           VF_Mesh             -    1  -   "Variable contained in mesh"  -
@@ -80,52 +81,71 @@ typedef     ^       ^           IntKi           i1                  -   0   -   
 typedef     ^       ^           IntKi           i2                  -   0   -   "Index 2"
 typedef     ^       ^           IntKi           i3                  -   0   -   "Index 3"
 
-typedef     ^       ModVarType  character(VarNameLen)   Name        -   -   -   ""  -
-typedef     ^       ^           IntKi           iMod                -   0   -   "Module index"  -
-typedef     ^       ^           IntKi           iVar                -   0   -   "Variable index"  -
-typedef     ^       ^           DatLoc          DL                  -   -   -   "data location"  -
-typedef     ^       ^           IntKi           Field               -   0   -   ""  -
+typedef     ^       ModVarType  IntKi           Field               -   0   -   ""  -
 typedef     ^       ^           IntKi           Nodes               -   1   -   ""  -
 typedef     ^       ^           IntKi           Num                 -   1   -   ""  -
 typedef     ^       ^           IntKi           Flags               -   0   -   ""  -
 typedef     ^       ^           IntKi           DerivOrder          -   0   -   ""  -
-typedef     ^       ^           IntKi           iLoc                2   0   -   "indices in local arrays"  -
+typedef     ^       ^           IntKi           iLoc                2   0   -   "indices in module arrays"  -
+typedef     ^       ^           IntKi           iGlu                2   0   -   "indices in module arrays"  -
 typedef     ^       ^           IntKi           iAry                2   0   -   "first user defined index for variable"  -
 typedef     ^       ^           IntKi           jAry                -   0   -   "second user defined index for variable"  -
 typedef     ^       ^           IntKi           kAry                -   0   -   "third user defined index for variable"  -
 typedef     ^       ^           IntKi           mAry                -   0   -   "third user defined index for variable"  -
 typedef     ^       ^           IntKi           MeshID              -   0   -   "Mesh identification number"  -
 typedef     ^       ^           R8Ki            Perturb             -   0   -   "perturbation amount for linearization"  -
+typedef     ^       ^           DatLoc          DL                  -   -   -   "data location"  -
+typedef     ^       ^           character(VarNameLen)   Name        -   -   -   ""  -
 typedef     ^       ^           character(LinChanLen)   LinNames    :   -   -   ""  -
 
 typedef     ^       ModVarsType IntKi           Nx                  -   0   -   "Number of x values"
 typedef     ^       ^           IntKi           Nz                  -   0   -   "Number of z values"
 typedef     ^       ^           IntKi           Nu                  -   0   -   "Number of u values"
 typedef     ^       ^           IntKi           Ny                  -   0   -   "Number of y values"
-typedef     ^       ^           ModVarType      x                   :   -   -   "Module state variable array"  -
-typedef     ^       ^           ModVarType      z                   :   -   -   "Module state variable array"  -
-typedef     ^       ^           ModVarType      u                   :   -   -   "Module input variable array"  -
-typedef     ^       ^           ModVarType      y                   :   -   -   "Module output variable array"  -
+typedef     ^       ^           ModVarType      x                   :   -   -   "Module state variable array"
+typedef     ^       ^           ModVarType      z                   :   -   -   "Module state variable array"
+typedef     ^       ^           ModVarType      u                   :   -   -   "Module input variable array"
+typedef     ^       ^           ModVarType      y                   :   -   -   "Module output variable array"
 
-typedef     ^       ModJacType  R8Ki            x                   :   -   -   ""  -
-typedef     ^       ^           R8Ki            dx                  :   -   -   ""  -
+typedef     ^       ModJacType  IntKi           Nx                  -   0   -   "Number of x values"
+typedef     ^       ^           IntKi           Nz                  -   0   -   "Number of z values"
+typedef     ^       ^           IntKi           Nu                  -   0   -   "Number of u values"
+typedef     ^       ^           IntKi           Ny                  -   0   -   "Number of y values"
+typedef     ^       ^           R8Ki            x                   :   -   -   ""  -
 typedef     ^       ^           R8Ki            z                   :   -   -   ""  -
 typedef     ^       ^           R8Ki            u                   :   -   -   ""  -
 typedef     ^       ^           R8Ki            y                   :   -   -   ""  -
-typedef     ^       ^           R8Ki            u_perturb           :   -   -   ""  -
 typedef     ^       ^           R8Ki            x_perturb           :   -   -   ""  -
+typedef     ^       ^           R8Ki            z_perturb           :   -   -   ""  -
+typedef     ^       ^           R8Ki            u_perturb           :   -   -   ""  -
 typedef     ^       ^           R8Ki            x_pos               :   -   -   ""  -
 typedef     ^       ^           R8Ki            x_neg               :   -   -   ""  -
 typedef     ^       ^           R8Ki            y_pos               :   -   -   ""  -
 typedef     ^       ^           R8Ki            y_neg               :   -   -   ""  -
+typedef     ^       ^           R8Ki            StateRotation       ::  -   -   ""  -
 
-typedef     ^       VarXfrType  IntKi           iVar                -   -   -   ""  -
-typedef     ^       ^           IntKi           NumVals             -   -   -   ""  -
-typedef     ^       ^           IntKi           iSrc                2   -   -   ""  -
-typedef     ^       ^           IntKi           iDst                2   -   -   ""  -
+typedef     ^       ModLinType  R8Ki            x                   :   -   -   ""  -
+typedef     ^       ^           R8Ki            dx                  :   -   -   ""  -
+typedef     ^       ^           R8Ki            z                   :   -   -   ""  -
+typedef     ^       ^           R8Ki            u                   :   -   -   ""  -
+typedef     ^       ^           R8Ki            y                   :   -   -   ""  -
+typedef     ^       ^           R8Ki            J                   ::  -   -   ""  -
+typedef     ^       ^           R8Ki            dYdx                ::  -   -   ""  -
+typedef     ^       ^           R8Ki            dXdx                ::  -   -   ""  -
+typedef     ^       ^           R8Ki            dYdu                ::  -   -   ""  -
+typedef     ^       ^           R8Ki            dXdu                ::  -   -   ""  -
+typedef     ^       ^           R8Ki            dXdy                ::  -   -   ""  -
+typedef     ^       ^           R8Ki            dUdu                ::  -   -   ""  -
+typedef     ^       ^           R8Ki            dUdy                ::  -   -   ""  -
+typedef     ^       ^           R8Ki            StateRotation       :: -  -     ""  -
 
-typedef     ^       ModXfrType  VarXfrType      x                   :   -   -   ""  -
-typedef     ^       ^           VarXfrType      z                   :   -   -   ""  -
-typedef     ^       ^           VarXfrType      u                   :   -   -   ""  -
-typedef     ^       ^           VarXfrType      y                   :   -   -   ""  -
-
+typedef     ^       ModDataType character(ChanLen) Abbr             -   -   -   "Module name abbreviation"  -
+typedef     ^       ^           IntKi           ID                  -   0   -   "Module identification number"  -
+typedef     ^       ^           IntKi           iMod                -   0   -   "Module index in array of modules"  -
+typedef     ^       ^           IntKi           Ins                 -   0   -   "Module instance number"  -
+typedef     ^       ^           IntKi           SubSteps            -   0   -   "Module number of substeps per solver time step"  -
+typedef     ^       ^           R8Ki            DT                  -   0   -   "Module time step"  -
+typedef     ^       ^           IntKi           iSrcMaps            :   -   -   "Indices of mappings where module is the source"
+typedef     ^       ^           IntKi           iDstMaps            :   -   -   "Indices of mappings where module is the destination"
+typedef     ^       ^           ModVarsType     Vars                -   -   -   "Module variables type"  -
+typedef     ^       ^           ModLinType      Lin                 -   -   -   "Module linearization arrays and matrices"

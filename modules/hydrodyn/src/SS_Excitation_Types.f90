@@ -1192,19 +1192,42 @@ function SS_Exc_OutputMeshName(ML) result(Name)
    end select
 end function
 
+subroutine SS_Exc_PackContStateVar(Var, x, ValAry)
+   type(SS_Exc_ContinuousStateType), intent(in) :: x
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (SS_Exc_x_x)
+         call MV_Pack2(Var, x%x, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
 subroutine SS_Exc_PackContStateAry(Vars, x, ValAry)
    type(SS_Exc_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)   :: Vars
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (SS_Exc_x_x)
-             call MV_Pack2(Var, x%x, ValAry)  ! Rank 1 Array
-         end select
-      end associate
+      call SS_Exc_PackContStateVar(Vars%x(i), x, ValAry)
    end do
+end subroutine
+
+subroutine SS_Exc_UnpackContStateVar(Var, ValAry, x)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SS_Exc_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (SS_Exc_x_x)
+         call MV_Unpack2(Var, ValAry, x%x)  ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 subroutine SS_Exc_UnpackContStateAry(Vars, ValAry, x)
@@ -1213,13 +1236,24 @@ subroutine SS_Exc_UnpackContStateAry(Vars, ValAry, x)
    type(SS_Exc_ContinuousStateType), intent(inout) :: x
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (SS_Exc_x_x)
-             call MV_Unpack2(Var, ValAry, x%x)  ! Rank 1 Array
-         end select
-      end associate
+      call SS_Exc_UnpackContStateVar(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+
+subroutine SS_Exc_PackConstrStateVar(Var, z, ValAry)
+   type(SS_Exc_ConstraintStateType), intent(in) :: z
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (SS_Exc_z_DummyConstrState)
+         call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine SS_Exc_PackConstrStateAry(Vars, z, ValAry)
@@ -1228,13 +1262,21 @@ subroutine SS_Exc_PackConstrStateAry(Vars, z, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (SS_Exc_z_DummyConstrState)
-             call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
-         end select
-      end associate
+      call SS_Exc_PackConstrStateVar(Vars%z(i), z, ValAry)
    end do
+end subroutine
+
+subroutine SS_Exc_UnpackConstrStateVar(Var, ValAry, z)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SS_Exc_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (SS_Exc_z_DummyConstrState)
+         call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
+      end select
+   end associate
 end subroutine
 
 subroutine SS_Exc_UnpackConstrStateAry(Vars, ValAry, z)
@@ -1243,13 +1285,24 @@ subroutine SS_Exc_UnpackConstrStateAry(Vars, ValAry, z)
    type(SS_Exc_ConstraintStateType), intent(inout) :: z
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (SS_Exc_z_DummyConstrState)
-             call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
-         end select
-      end associate
+      call SS_Exc_UnpackConstrStateVar(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+
+subroutine SS_Exc_PackInputVar(Var, u, ValAry)
+   type(SS_Exc_InputType), intent(in) :: u
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (SS_Exc_u_PtfmPos)
+         call MV_Pack2(Var, u%PtfmPos, ValAry)  ! Rank 2 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine SS_Exc_PackInputAry(Vars, u, ValAry)
@@ -1258,13 +1311,21 @@ subroutine SS_Exc_PackInputAry(Vars, u, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (SS_Exc_u_PtfmPos)
-             call MV_Pack2(Var, u%PtfmPos, ValAry)  ! Rank 2 Array
-         end select
-      end associate
+      call SS_Exc_PackInputVar(Vars%u(i), u, ValAry)
    end do
+end subroutine
+
+subroutine SS_Exc_UnpackInputVar(Var, ValAry, u)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SS_Exc_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (SS_Exc_u_PtfmPos)
+         call MV_Unpack2(Var, ValAry, u%PtfmPos)  ! Rank 2 Array
+      end select
+   end associate
 end subroutine
 
 subroutine SS_Exc_UnpackInputAry(Vars, ValAry, u)
@@ -1273,13 +1334,26 @@ subroutine SS_Exc_UnpackInputAry(Vars, ValAry, u)
    type(SS_Exc_InputType), intent(inout) :: u
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (SS_Exc_u_PtfmPos)
-             call MV_Unpack2(Var, ValAry, u%PtfmPos)  ! Rank 2 Array
-         end select
-      end associate
+      call SS_Exc_UnpackInputVar(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+
+subroutine SS_Exc_PackOutputVar(Var, y, ValAry)
+   type(SS_Exc_OutputType), intent(in) :: y
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (SS_Exc_y_y)
+         call MV_Pack2(Var, y%y, ValAry)  ! Rank 1 Array
+      case (SS_Exc_y_WriteOutput)
+         call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine SS_Exc_PackOutputAry(Vars, y, ValAry)
@@ -1288,15 +1362,23 @@ subroutine SS_Exc_PackOutputAry(Vars, y, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (SS_Exc_y_y)
-             call MV_Pack2(Var, y%y, ValAry)  ! Rank 1 Array
-         case (SS_Exc_y_WriteOutput)
-             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
-         end select
-      end associate
+      call SS_Exc_PackOutputVar(Vars%y(i), y, ValAry)
    end do
+end subroutine
+
+subroutine SS_Exc_UnpackOutputVar(Var, ValAry, y)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(SS_Exc_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (SS_Exc_y_y)
+         call MV_Unpack2(Var, ValAry, y%y)  ! Rank 1 Array
+      case (SS_Exc_y_WriteOutput)
+         call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 subroutine SS_Exc_UnpackOutputAry(Vars, ValAry, y)
@@ -1305,15 +1387,9 @@ subroutine SS_Exc_UnpackOutputAry(Vars, ValAry, y)
    type(SS_Exc_OutputType), intent(inout) :: y
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (SS_Exc_y_y)
-             call MV_Unpack2(Var, ValAry, y%y)  ! Rank 1 Array
-         case (SS_Exc_y_WriteOutput)
-             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
-         end select
-      end associate
+      call SS_Exc_UnpackOutputVar(Vars%y(i), ValAry, y)
    end do
 end subroutine
+
 END MODULE SS_Excitation_Types
 !ENDOFREGISTRYGENERATEDFILE

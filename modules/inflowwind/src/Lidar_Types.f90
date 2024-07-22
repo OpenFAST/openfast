@@ -1144,19 +1144,42 @@ function Lidar_OutputMeshName(ML) result(Name)
    end select
 end function
 
+subroutine Lidar_PackContStateVar(Var, x, ValAry)
+   type(Lidar_ContinuousStateType), intent(in) :: x
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Lidar_x_DummyContState)
+         call MV_Pack2(Var, x%DummyContState, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
 subroutine Lidar_PackContStateAry(Vars, x, ValAry)
    type(Lidar_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)   :: Vars
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (Lidar_x_DummyContState)
-             call MV_Pack2(Var, x%DummyContState, ValAry)  ! Scalar
-         end select
-      end associate
+      call Lidar_PackContStateVar(Vars%x(i), x, ValAry)
    end do
+end subroutine
+
+subroutine Lidar_UnpackContStateVar(Var, ValAry, x)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(Lidar_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Lidar_x_DummyContState)
+         call MV_Unpack2(Var, ValAry, x%DummyContState)  ! Scalar
+      end select
+   end associate
 end subroutine
 
 subroutine Lidar_UnpackContStateAry(Vars, ValAry, x)
@@ -1165,13 +1188,24 @@ subroutine Lidar_UnpackContStateAry(Vars, ValAry, x)
    type(Lidar_ContinuousStateType), intent(inout) :: x
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (Lidar_x_DummyContState)
-             call MV_Unpack2(Var, ValAry, x%DummyContState)  ! Scalar
-         end select
-      end associate
+      call Lidar_UnpackContStateVar(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+
+subroutine Lidar_PackConstrStateVar(Var, z, ValAry)
+   type(Lidar_ConstraintStateType), intent(in) :: z
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Lidar_z_DummyConstrState)
+         call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine Lidar_PackConstrStateAry(Vars, z, ValAry)
@@ -1180,13 +1214,21 @@ subroutine Lidar_PackConstrStateAry(Vars, z, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (Lidar_z_DummyConstrState)
-             call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
-         end select
-      end associate
+      call Lidar_PackConstrStateVar(Vars%z(i), z, ValAry)
    end do
+end subroutine
+
+subroutine Lidar_UnpackConstrStateVar(Var, ValAry, z)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(Lidar_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Lidar_z_DummyConstrState)
+         call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
+      end select
+   end associate
 end subroutine
 
 subroutine Lidar_UnpackConstrStateAry(Vars, ValAry, z)
@@ -1195,13 +1237,32 @@ subroutine Lidar_UnpackConstrStateAry(Vars, ValAry, z)
    type(Lidar_ConstraintStateType), intent(inout) :: z
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (Lidar_z_DummyConstrState)
-             call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
-         end select
-      end associate
+      call Lidar_UnpackConstrStateVar(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+
+subroutine Lidar_PackInputVar(Var, u, ValAry)
+   type(Lidar_InputType), intent(in) :: u
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Lidar_u_PulseLidEl)
+         call MV_Pack2(Var, u%PulseLidEl, ValAry)  ! Scalar
+      case (Lidar_u_PulseLidAz)
+         call MV_Pack2(Var, u%PulseLidAz, ValAry)  ! Scalar
+      case (Lidar_u_HubDisplacementX)
+         call MV_Pack2(Var, u%HubDisplacementX, ValAry)  ! Scalar
+      case (Lidar_u_HubDisplacementY)
+         call MV_Pack2(Var, u%HubDisplacementY, ValAry)  ! Scalar
+      case (Lidar_u_HubDisplacementZ)
+         call MV_Pack2(Var, u%HubDisplacementZ, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine Lidar_PackInputAry(Vars, u, ValAry)
@@ -1210,21 +1271,29 @@ subroutine Lidar_PackInputAry(Vars, u, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (Lidar_u_PulseLidEl)
-             call MV_Pack2(Var, u%PulseLidEl, ValAry)  ! Scalar
-         case (Lidar_u_PulseLidAz)
-             call MV_Pack2(Var, u%PulseLidAz, ValAry)  ! Scalar
-         case (Lidar_u_HubDisplacementX)
-             call MV_Pack2(Var, u%HubDisplacementX, ValAry)  ! Scalar
-         case (Lidar_u_HubDisplacementY)
-             call MV_Pack2(Var, u%HubDisplacementY, ValAry)  ! Scalar
-         case (Lidar_u_HubDisplacementZ)
-             call MV_Pack2(Var, u%HubDisplacementZ, ValAry)  ! Scalar
-         end select
-      end associate
+      call Lidar_PackInputVar(Vars%u(i), u, ValAry)
    end do
+end subroutine
+
+subroutine Lidar_UnpackInputVar(Var, ValAry, u)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(Lidar_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Lidar_u_PulseLidEl)
+         call MV_Unpack2(Var, ValAry, u%PulseLidEl)  ! Scalar
+      case (Lidar_u_PulseLidAz)
+         call MV_Unpack2(Var, ValAry, u%PulseLidAz)  ! Scalar
+      case (Lidar_u_HubDisplacementX)
+         call MV_Unpack2(Var, ValAry, u%HubDisplacementX)  ! Scalar
+      case (Lidar_u_HubDisplacementY)
+         call MV_Unpack2(Var, ValAry, u%HubDisplacementY)  ! Scalar
+      case (Lidar_u_HubDisplacementZ)
+         call MV_Unpack2(Var, ValAry, u%HubDisplacementZ)  ! Scalar
+      end select
+   end associate
 end subroutine
 
 subroutine Lidar_UnpackInputAry(Vars, ValAry, u)
@@ -1233,21 +1302,32 @@ subroutine Lidar_UnpackInputAry(Vars, ValAry, u)
    type(Lidar_InputType), intent(inout) :: u
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (Lidar_u_PulseLidEl)
-             call MV_Unpack2(Var, ValAry, u%PulseLidEl)  ! Scalar
-         case (Lidar_u_PulseLidAz)
-             call MV_Unpack2(Var, ValAry, u%PulseLidAz)  ! Scalar
-         case (Lidar_u_HubDisplacementX)
-             call MV_Unpack2(Var, ValAry, u%HubDisplacementX)  ! Scalar
-         case (Lidar_u_HubDisplacementY)
-             call MV_Unpack2(Var, ValAry, u%HubDisplacementY)  ! Scalar
-         case (Lidar_u_HubDisplacementZ)
-             call MV_Unpack2(Var, ValAry, u%HubDisplacementZ)  ! Scalar
-         end select
-      end associate
+      call Lidar_UnpackInputVar(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+
+subroutine Lidar_PackOutputVar(Var, y, ValAry)
+   type(Lidar_OutputType), intent(in) :: y
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Lidar_y_LidSpeed)
+         call MV_Pack2(Var, y%LidSpeed, ValAry)  ! Rank 1 Array
+      case (Lidar_y_WtTrunc)
+         call MV_Pack2(Var, y%WtTrunc, ValAry)  ! Rank 1 Array
+      case (Lidar_y_MsrPositionsX)
+         call MV_Pack2(Var, y%MsrPositionsX, ValAry)  ! Rank 1 Array
+      case (Lidar_y_MsrPositionsY)
+         call MV_Pack2(Var, y%MsrPositionsY, ValAry)  ! Rank 1 Array
+      case (Lidar_y_MsrPositionsZ)
+         call MV_Pack2(Var, y%MsrPositionsZ, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine Lidar_PackOutputAry(Vars, y, ValAry)
@@ -1256,21 +1336,29 @@ subroutine Lidar_PackOutputAry(Vars, y, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (Lidar_y_LidSpeed)
-             call MV_Pack2(Var, y%LidSpeed, ValAry)  ! Rank 1 Array
-         case (Lidar_y_WtTrunc)
-             call MV_Pack2(Var, y%WtTrunc, ValAry)  ! Rank 1 Array
-         case (Lidar_y_MsrPositionsX)
-             call MV_Pack2(Var, y%MsrPositionsX, ValAry)  ! Rank 1 Array
-         case (Lidar_y_MsrPositionsY)
-             call MV_Pack2(Var, y%MsrPositionsY, ValAry)  ! Rank 1 Array
-         case (Lidar_y_MsrPositionsZ)
-             call MV_Pack2(Var, y%MsrPositionsZ, ValAry)  ! Rank 1 Array
-         end select
-      end associate
+      call Lidar_PackOutputVar(Vars%y(i), y, ValAry)
    end do
+end subroutine
+
+subroutine Lidar_UnpackOutputVar(Var, ValAry, y)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(Lidar_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Lidar_y_LidSpeed)
+         call MV_Unpack2(Var, ValAry, y%LidSpeed)  ! Rank 1 Array
+      case (Lidar_y_WtTrunc)
+         call MV_Unpack2(Var, ValAry, y%WtTrunc)  ! Rank 1 Array
+      case (Lidar_y_MsrPositionsX)
+         call MV_Unpack2(Var, ValAry, y%MsrPositionsX)  ! Rank 1 Array
+      case (Lidar_y_MsrPositionsY)
+         call MV_Unpack2(Var, ValAry, y%MsrPositionsY)  ! Rank 1 Array
+      case (Lidar_y_MsrPositionsZ)
+         call MV_Unpack2(Var, ValAry, y%MsrPositionsZ)  ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 subroutine Lidar_UnpackOutputAry(Vars, ValAry, y)
@@ -1279,21 +1367,9 @@ subroutine Lidar_UnpackOutputAry(Vars, ValAry, y)
    type(Lidar_OutputType), intent(inout) :: y
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (Lidar_y_LidSpeed)
-             call MV_Unpack2(Var, ValAry, y%LidSpeed)  ! Rank 1 Array
-         case (Lidar_y_WtTrunc)
-             call MV_Unpack2(Var, ValAry, y%WtTrunc)  ! Rank 1 Array
-         case (Lidar_y_MsrPositionsX)
-             call MV_Unpack2(Var, ValAry, y%MsrPositionsX)  ! Rank 1 Array
-         case (Lidar_y_MsrPositionsY)
-             call MV_Unpack2(Var, ValAry, y%MsrPositionsY)  ! Rank 1 Array
-         case (Lidar_y_MsrPositionsZ)
-             call MV_Unpack2(Var, ValAry, y%MsrPositionsZ)  ! Rank 1 Array
-         end select
-      end associate
+      call Lidar_UnpackOutputVar(Vars%y(i), ValAry, y)
    end do
 end subroutine
+
 END MODULE Lidar_Types
 !ENDOFREGISTRYGENERATEDFILE

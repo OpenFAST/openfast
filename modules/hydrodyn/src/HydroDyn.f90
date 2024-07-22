@@ -1710,10 +1710,10 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    end if
 
    ! Get extended input variable indices
-   iVarWaveElev0      = MV_FindVarDatLoc(VarsL%u, HydroDyn_u_WaveElev0)
-   iVarHWindSpeed     = MV_FindVarDatLoc(VarsL%u, HydroDyn_u_HWindSpeed)
-   iVarPLexp          = MV_FindVarDatLoc(VarsL%u, HydroDyn_u_PLexp)
-   iVarPropagationDir = MV_FindVarDatLoc(VarsL%u, HydroDyn_u_PropagationDir)
+   iVarWaveElev0      = MV_FindVarDatLoc(VarsL%u, DatLoc(HydroDyn_u_WaveElev0))
+   iVarHWindSpeed     = MV_FindVarDatLoc(VarsL%u, DatLoc(HydroDyn_u_HWindSpeed))
+   iVarPLexp          = MV_FindVarDatLoc(VarsL%u, DatLoc(HydroDyn_u_PLexp))
+   iVarPropagationDir = MV_FindVarDatLoc(VarsL%u, DatLoc(HydroDyn_u_PropagationDir))
 
    ! make a copy of the inputs to perturb
    call HydroDyn_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return

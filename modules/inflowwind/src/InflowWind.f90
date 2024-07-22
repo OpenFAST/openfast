@@ -58,6 +58,8 @@ MODULE InflowWind
    PUBLIC :: InflowWind_JacobianPDiscState
    PUBLIC :: InflowWind_JacobianPConstrState
    PUBLIC :: InflowWind_GetOP
+   PUBLIC :: InflowWind_PackExtInputAry
+   PUBLIC :: InflowWind_PackExtOutputAry
 
 CONTAINS
 !====================================================================================================
@@ -577,15 +579,15 @@ subroutine IfW_InitVars(InitInp, p, y, m, InitOut, Linearize, ErrStat, ErrMsg)
 
    call MV_AddVar(p%Vars%u, "HWindSpeed", FieldScalar, DatLoc(InflowWind_u_HWindSpeed), &
                   Flags=ior(VF_ExtLin, VF_Linearize), &
-                  LinNames=['Extended input: horizontal wind speed (steady/uniform wind), m/s'])
+                  LinNames=['Extended input: horizontal wind speed (steady/uniform wind) (hub), m/s'])
 
    call MV_AddVar(p%Vars%u, "PLExp", FieldScalar, DatLoc(InflowWind_u_PLExp), &
                   Flags=ior(VF_ExtLin, VF_Linearize), &
-                  LinNames=['Extended input: vertical power-law shear exponent, -'])
+                  LinNames=['Extended input: vertical power-law shear exponent (hub), -'])
 
    call MV_AddVar(p%Vars%u, "PropagationDir", FieldScalar, DatLoc(InflowWind_u_PropagationDir), &
                   Flags=ior(VF_ExtLin, VF_Linearize), &
-                  LinNames=['Extended input: propagation direction, rad'])
+                  LinNames=['Extended input: propagation direction (hub), rad'])
 
    !----------------------------------------------------------------------------
    ! Output variables
@@ -593,15 +595,15 @@ subroutine IfW_InitVars(InitInp, p, y, m, InitOut, Linearize, ErrStat, ErrMsg)
 
    call MV_AddVar(p%Vars%y, "HWindSpeed", FieldScalar, DatLoc(InflowWind_y_HWindSpeed), &
                   Flags=VF_ExtLin, &
-                  LinNames=['Extended output: horizontal wind speed (steady/uniform wind), m/s'])
+                  LinNames=['Extended output: horizontal wind speed (steady/uniform wind) (hub), m/s'])
 
    call MV_AddVar(p%Vars%y, "PLExp", FieldScalar, DatLoc(InflowWind_y_PLExp), &
                   Flags=VF_ExtLin, &
-                  LinNames=['Extended output: vertical power-law shear exponent, -'])
+                  LinNames=['Extended output: vertical power-law shear exponent (hub), -'])
 
    call MV_AddVar(p%Vars%y, "PropagationDir", FieldScalar, DatLoc(InflowWind_y_PropagationDir), &
                   Flags=VF_ExtLin, &
-                  LinNames=['Extended output: propagation direction, rad'])
+                  LinNames=['Extended output: propagation direction (hub), rad'])
 
    call MV_AddVar(p%Vars%y, "WriteOutput", FieldScalar, DatLoc(InflowWind_y_WriteOutput), &
                   Flags=VF_WriteOut, &
@@ -774,7 +776,8 @@ END SUBROUTINE InflowWind_End
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and dZ/du are returned.
-SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu )
+SUBROUTINE InflowWind_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu )
+   TYPE(ModVarsType),                     INTENT(IN   )           :: Vars    !< Module information
    REAL(DbKi),                            INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(InflowWind_InputType),            INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(InflowWind_ParameterType),        INTENT(IN   )           :: p          !< Parameters
@@ -1130,5 +1133,88 @@ SUBROUTINE InflowWind_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
 !   IF ( PRESENT( z_op ) ) THEN
 !   END IF
 END SUBROUTINE InflowWind_GetOP
+
+subroutine InflowWind_PackExtInputAry(Vars, t, p, ValAry)
+   type(ModVarsType), intent(in)                :: Vars
+   real(DbKi), intent(in)                       :: t     !< Time in seconds at operating point
+   type(InflowWind_ParameterType), intent(in)   :: p     !< Parameters
+   real(R8Ki), intent(inout)                    :: ValAry(:)
+   type(UniformField_Interp)                    :: op    !< Interpolated values of UniformField
+   integer(IntKi)                               :: i
+   logical                                      :: first
+   do i = 1, size(Vars%u)
+      associate(Var => Vars%u(i))
+         select case(Var%DL%Num)
+         case (InflowWind_u_HWindSpeed)
+            call CalcExtOP()
+            call MV_Pack2(Var, op%VelH, ValAry)
+         case (InflowWind_u_PLExp)
+            call CalcExtOP()
+            call MV_Pack2(Var, op%ShrV, ValAry)
+         case (InflowWind_u_PropagationDir)
+            call CalcExtOP()
+            call MV_Pack2(Var, op%AngleH + p%FlowField%PropagationDir, ValAry)
+         end select
+      end associate
+   end do
+contains   
+   subroutine CalcExtOP()
+      if (.not. first) return
+      first = .false.
+      if (p%FlowField%FieldType == Uniform_FieldType) then
+         if (P%FlowField%VelInterpCubic) then
+            op = UniformField_InterpCubic(p%FlowField%Uniform, t)
+         else
+            op = UniformField_InterpLinear(p%FlowField%Uniform, t)
+         end if
+      else
+         op%VelH = 0.0_ReKi
+         op%ShrV = 0.0_ReKi
+         op%AngleH = 0.0_ReKi
+      end if
+   end subroutine
+end subroutine
+
+subroutine InflowWind_PackExtOutputAry(Vars, t, p, ValAry)
+   type(ModVarsType), intent(in)                :: Vars  !< Time
+   real(DbKi), intent(in)                       :: t     !< Time in seconds at operating point
+   type(InflowWind_ParameterType), intent(in)   :: p     !< Parameters
+   real(R8Ki), intent(inout)                    :: ValAry(:)
+   type(UniformField_Interp)                    :: op    !< Interpolated values of UniformField
+   integer(IntKi)                               :: i
+   logical                                      :: first
+   first = .true.   
+   do i = 1, size(Vars%y)
+      associate(Var => Vars%y(i))
+         select case(Var%DL%Num)
+         case (InflowWind_y_HWindSpeed)
+            call CalcExtOP()
+            call MV_Pack2(Var, op%VelH, ValAry)
+         case (InflowWind_y_PLExp)
+            call CalcExtOP()
+            call MV_Pack2(Var, op%ShrV, ValAry)
+         case (InflowWind_y_PropagationDir)
+            call CalcExtOP()
+            call MV_Pack2(Var, op%AngleH + p%FlowField%PropagationDir, ValAry)
+         end select
+      end associate
+   end do
+contains   
+   subroutine CalcExtOP()
+      if (.not. first) return
+      first = .false.
+      if (p%FlowField%FieldType == Uniform_FieldType) then
+         if (P%FlowField%VelInterpCubic) then
+            op = UniformField_InterpCubic(p%FlowField%Uniform, t)
+         else
+            op = UniformField_InterpLinear(p%FlowField%Uniform, t)
+         end if
+      else
+         op%VelH = 0.0_ReKi
+         op%ShrV = 0.0_ReKi
+         op%AngleH = 0.0_ReKi
+      end if
+   end subroutine
+end subroutine
 
 END MODULE InflowWind

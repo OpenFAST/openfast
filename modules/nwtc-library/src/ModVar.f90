@@ -33,17 +33,18 @@ private
 public :: MV_InitVarsJac, MV_Pack, MV_Unpack, MV_Pack2, MV_Unpack2
 public :: MV_ComputeCentralDiff, MV_Perturb, MV_ComputeDiff, MV_ExtrapInterp, MV_AddDelta
 public :: MV_AddVar, MV_AddMeshVar
-public :: MV_HasFlags, MV_SetFlags, MV_ClearFlags, MV_NumVars, MV_FindVarDatLoc
+public :: MV_HasFlags, MV_SetFlags, MV_ClearFlags, MV_NumVars, MV_NumVals, MV_FindVarDatLoc
 public :: LoadFields, MotionFields, TransFields, AngularFields
 public :: quat_to_dcm, dcm_to_quat, quat_inv, quat_to_rvec, rvec_to_quat, wm_to_quat, quat_to_wm, wm_inv
 public :: MV_FieldString, MV_IsLoad, IdxStr
-public :: DumpMatrix
+public :: DumpMatrix, MV_AddModule
+public :: MV_PackArray, MV_UnpackArray, MV_PackMatrix, MV_EqualDL
 
 integer(IntKi), parameter :: &
    LoadFields(*) = [FieldForce, FieldMoment], &
    TransFields(*) = [FieldTransDisp, FieldTransVel, FieldTransAcc], &
-   AngularFields(*) = [FieldOrientation, FieldAngularDisp, FieldAngularVel, FieldAngularAcc], &
-   MotionFields(*) = [FieldTransDisp, FieldOrientation, FieldTransVel, FieldAngularVel, FieldTransAcc, FieldAngularAcc]
+   AngularFields(*) = [FieldOrientation, FieldAngularVel, FieldAngularAcc, FieldAngularDisp], &
+   MotionFields(*) = [FieldOrientation, FieldTransDisp, FieldTransVel, FieldAngularVel, FieldTransAcc, FieldAngularAcc]
 
 interface MV_Pack
    module procedure MV_PackVarRank0R4, MV_PackVarRank1R4, MV_PackVarRank2R4
@@ -72,6 +73,42 @@ end interface
 logical, parameter   :: UseSmallRotAngs = .true.
 
 contains
+
+subroutine MV_PackArray(VarAry, ModAry, GluAry)
+   type(ModVarType), intent(in)           :: VarAry(:)
+   real(R8Ki), allocatable, intent(in)    :: ModAry(:)
+   real(R8Ki), intent(inout)              :: GluAry(:)
+   integer(IntKi)                         :: i
+   if (.not. allocated(ModAry) .or. size(VarAry) == 0) return
+   do i = 1, size(VarAry)
+      GluAry(VarAry(i)%iGlu(1):VarAry(i)%iGlu(2)) = ModAry(VarAry(i)%iLoc(1):VarAry(i)%iLoc(2))
+   end do
+end subroutine
+
+subroutine MV_UnpackArray(VarAry, GluAry, ModAry)
+   type(ModVarType), intent(in)           :: VarAry(:)
+   real(R8Ki), allocatable, intent(in)    :: GluAry(:)
+   real(R8Ki), intent(inout)              :: ModAry(:)
+   integer(IntKi)                         :: i
+   if (.not. allocated(GluAry) .or. size(VarAry) == 0) return
+   do i = 1, size(VarAry)
+      ModAry(VarAry(i)%iLoc(1):VarAry(i)%iLoc(2)) = GluAry(VarAry(i)%iGlu(1):VarAry(i)%iGlu(2))
+   end do
+end subroutine
+
+subroutine MV_PackMatrix(RowVarAry, ColVarAry, ModMat, GluMat)
+   type(ModVarType), intent(in)           :: RowVarAry(:), ColVarAry(:)
+   real(R8Ki), allocatable, intent(in)    :: ModMat(:, :)
+   real(R8Ki), intent(inout)              :: GluMat(:, :)
+   integer(IntKi)                         :: i, j
+   if (.not. allocated(ModMat) .or. size(RowVarAry) == 0 .or. size(ColVarAry) == 0) return
+   do i = 1, size(ColVarAry)
+      do j = 1, size(RowVarAry)
+         GluMat(RowVarAry(j)%iGlu(1):RowVarAry(j)%iGlu(2), ColVarAry(i)%iGlu(1):ColVarAry(i)%iGlu(2)) = &
+            ModMat(RowVarAry(j)%iLoc(1):RowVarAry(j)%iLoc(2), ColVarAry(i)%iLoc(1):ColVarAry(i)%iLoc(2))
+      end do
+   end do
+end subroutine
 
 !-------------------------------------------------------------------------------
 ! MV_Pack2
@@ -327,13 +364,13 @@ function MV_FieldString(Field) result(str)
 end function
 
 subroutine MV_InitVarsJac(Vars, Jac, Linearize, ErrStat, ErrMsg)
-   type(ModVarsType), pointer, intent(inout)    :: Vars
-   type(ModJacType), intent(inout)              :: Jac
-   logical, intent(in)                          :: Linearize
-   integer(IntKi), intent(out)                  :: ErrStat
-   character(ErrMsgLen), intent(out)            :: ErrMsg
+   type(ModVarsType), intent(inout)    :: Vars
+   type(ModJacType), intent(inout)     :: Jac
+   logical, intent(in)                 :: Linearize
+   integer(IntKi), intent(out)         :: ErrStat
+   character(ErrMsgLen), intent(out)   :: ErrMsg
 
-   character(*), parameter       :: RoutineName = 'MV_InitVarsLin'
+   character(*), parameter       :: RoutineName = 'MV_InitVarsJac'
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
    integer(IntKi)                :: i, StartIndex
@@ -356,6 +393,7 @@ subroutine MV_InitVarsJac(Vars, Jac, Linearize, ErrStat, ErrMsg)
       if (Failed()) return
    end do
    Vars%Nx = sum(Vars%x%Num)
+   Jac%Nx = Vars%Nx
 
    ! Initialize constraint state variables
    if (.not. allocated(Vars%z)) allocate (Vars%z(0))
@@ -365,6 +403,7 @@ subroutine MV_InitVarsJac(Vars, Jac, Linearize, ErrStat, ErrMsg)
       if (Failed()) return
    end do
    Vars%Nz = sum(Vars%z%Num)
+   Jac%Nz = Vars%Nz
 
    ! Initialize input variables
    if (.not. allocated(Vars%u)) allocate (Vars%u(0))
@@ -374,6 +413,7 @@ subroutine MV_InitVarsJac(Vars, Jac, Linearize, ErrStat, ErrMsg)
       if (Failed()) return
    end do
    Vars%Nu = sum(Vars%u%Num)
+   Jac%Nu = Vars%Nu
 
    ! Initialize output variables
    if (.not. allocated(Vars%y)) allocate (Vars%y(0))
@@ -383,26 +423,28 @@ subroutine MV_InitVarsJac(Vars, Jac, Linearize, ErrStat, ErrMsg)
       if (Failed()) return
    end do
    Vars%Ny = sum(Vars%y%Num)
+   Jac%Ny = Vars%Ny
 
-   ! Allocate arrays
-   if (Vars%Nx > 0) then
-      call AllocAry(Jac%x, Vars%Nx, "Lin%x", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(Jac%dx, Vars%Nx, "Lin%dx", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(Jac%x_perturb, Vars%Nx, "Lin%x_perturb", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(Jac%x_pos, Vars%Nx, "Lin%x_pos", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(Jac%x_neg, Vars%Nx, "Lin%x_neg", ErrStat2, ErrMsg2); if (Failed()) return
-   end if
-   if (Vars%Nz > 0) then
-      call AllocAry(Jac%z, Vars%Nz, "Lin%z", ErrStat2, ErrMsg2); if (Failed()) return
-   end if
-   if (Vars%Nu > 0) then
-      call AllocAry(Jac%u, Vars%Nu, "Lin%u", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(Jac%u_perturb, Vars%Nu, "Lin%u_perturb", ErrStat2, ErrMsg2); if (Failed()) return
-   end if
-   if (Vars%Ny > 0) then
-      call AllocAry(Jac%y, Vars%Ny, "Lin%y", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(Jac%y_pos, Vars%Ny, "Lin%y_pos", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(Jac%y_neg, Vars%Ny, "Lin%y_neg", ErrStat2, ErrMsg2); if (Failed()) return
+   ! Allocate Jacobian data arrays
+   if (Linearize) then
+      if (Jac%Nx > 0) then
+         call AllocAry(Jac%x, Jac%Nx, "Lin%x", ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(Jac%x_perturb, Jac%Nx, "Lin%x_perturb", ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(Jac%x_pos, Jac%Nx, "Lin%x_pos", ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(Jac%x_neg, Jac%Nx, "Lin%x_neg", ErrStat2, ErrMsg2); if (Failed()) return
+      end if
+      if (Jac%Nz > 0) then
+         call AllocAry(Jac%z, Jac%Nz, "Lin%z", ErrStat2, ErrMsg2); if (Failed()) return
+      end if
+      if (Jac%Nu > 0) then
+         call AllocAry(Jac%u, Jac%Nu, "Lin%u", ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(Jac%u_perturb, Jac%Nu, "Lin%u_perturb", ErrStat2, ErrMsg2); if (Failed()) return
+      end if
+      if (Jac%Ny > 0) then
+         call AllocAry(Jac%y, Jac%Ny, "Lin%y", ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(Jac%y_pos, Jac%Ny, "Lin%y_pos", ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(Jac%y_neg, Jac%Ny, "Lin%y_neg", ErrStat2, ErrMsg2); if (Failed()) return
+      end if
    end if
 
 contains
@@ -530,31 +572,120 @@ contains
    end function
 end subroutine
 
+subroutine MV_AddModule(ModDataAry, ModID, ModAbbr, Instance, ModDT, SolverDT, Vars, Linearize, ErrStat, ErrMsg)
+   type(ModDataType), allocatable, intent(inout)   :: ModDataAry(:)
+   integer(IntKi), intent(in)                      :: ModID
+   character(*), intent(in)                        :: ModAbbr
+   integer(IntKi), intent(in)                      :: Instance
+   real(R8Ki), intent(in)                          :: ModDT
+   real(R8Ki), intent(in)                          :: SolverDT
+   type(ModVarsType), intent(in)                   :: Vars
+   logical, intent(in)                             :: Linearize
+   integer(IntKi), intent(out)                     :: ErrStat
+   character(ErrMsgLen), intent(out)               :: ErrMsg
+
+   character(*), parameter                         :: RoutineName = 'MV_AddModule'
+   integer(IntKi)                                  :: ErrStat2
+   character(ErrMsgLen)                            :: ErrMsg2
+   type(ModDataType)                               :: ModData
+   integer(IntKi)                                  :: i, StartIndex
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   ! Populate module information
+   if (allocated(ModDataAry)) then
+      ModData%iMod = size(ModDataAry) + 1
+   else
+      ModData%iMod = 1
+   end if
+   ModData%ID = ModID
+   ModData%Abbr = ModAbbr
+   ModData%Ins = Instance
+   ModData%DT = ModDT
+   call NWTC_Library_CopyModVarsType(Vars, ModData%Vars, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+
+   !----------------------------------------------------------------------------
+   ! Initialize arrays
+   !----------------------------------------------------------------------------
+
+   ! Allocate source and destination mapping arrays
+   call AllocAry(ModData%iSrcMaps, 0, "ModData%iSrcMaps", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(ModData%iDstMaps, 0, "ModData%iDstMaps", ErrStat2, ErrMsg2); if (Failed()) return
+
+   !----------------------------------------------------------------------------
+   ! Calculate Module Substepping
+   !----------------------------------------------------------------------------
+
+   ! If module time step is same as global time step, set substeps to 1
+   if (EqualRealNos(ModData%DT, SolverDT)) then
+      ModData%SubSteps = 1
+   else
+      ! If the module time step is greater than the global time step, set error
+      if (ModData%DT > SolverDT) then
+         call SetErrStat(ErrID_Fatal, "The "//trim(ModData%Abbr)// &
+                         " module time step ("//trim(Num2LStr(ModData%DT))//" s) "// &
+                         "cannot be larger than FAST time step ("//trim(Num2LStr(SolverDT))//" s).", &
+                         ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+
+      ! Calculate the number of substeps
+      ModData%SubSteps = nint(SolverDT/ModData%DT)
+
+      ! If the module DT is not an exact integer divisor of the global time step, set error
+      if (.not. EqualRealNos(SolverDT, ModData%DT*ModData%SubSteps)) then
+         call SetErrStat(ErrID_Fatal, "The "//trim(ModData%Abbr)// &
+                         " module time step ("//trim(Num2LStr(ModData%DT))//" s) "// &
+                         "must be an integer divisor of the FAST time step ("//trim(Num2LStr(SolverDT))//" s).", &
+                         ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+   end if
+
+   !----------------------------------------------------------------------------
+   ! Add module info to array
+   !----------------------------------------------------------------------------
+
+   if (.not. allocated(ModDataAry)) then
+      ModDataAry = [ModData]
+   else
+      ModDataAry = [ModDataAry, ModData]
+   end if
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
+end subroutine
+
+subroutine GetModuleOrder(ModDataAry, ModIDs, ModOrder)
+   type(ModDataType), intent(in)             :: ModDataAry(:)     !< Array of module data structures
+   integer(IntKi), intent(in)                :: ModIDs(:)   !< List of module IDs to keep in order
+   integer(IntKi), allocatable, intent(out)  :: ModOrder(:) !< Module data indices in order of ModIDs
+   integer(IntKi), allocatable               :: ModIDAry(:), indices(:)
+   integer(IntKi)                            :: i
+
+   ! Create array 1 to size(Mod) representing the index of each module data
+   indices = [(i, i=1, size(ModDataAry))]
+
+   ! Get array of module IDs from array of module data
+   ModIDAry = [(ModDataAry(i)%ID, i=1, size(ModDataAry))]
+
+   ! Initialize module order array with no size
+   allocate (ModOrder(0))
+
+   ! Loop through module IDs to keep, add module data indices that match module ID to order array
+   do i = 1, size(ModIDs)
+      ModOrder = [ModOrder, pack(indices, ModIDAry == ModIDs(i))]
+   end do
+
+end subroutine
+
 !-------------------------------------------------------------------------------
 ! Functions for packing and unpacking data by variable
 !-------------------------------------------------------------------------------
-
-subroutine MV_PackMatrix(RowVarAry, ColVarAry, M, SubM, FlagFilter)
-   type(ModVarType), intent(in)  :: RowVarAry(:), ColVarAry(:)
-   real(R8Ki), intent(in)        :: M(:, :)
-   real(R8Ki), intent(inout)     :: SubM(:, :)
-   integer(IntKi), intent(in)    :: FlagFilter
-   integer(IntKi)                :: i, j
-   integer(IntKi)                :: row, col
-   col = 1
-   row = 1
-   do i = 1, size(ColVarAry)
-      if (.not. MV_HasFlags(ColVarAry(i), FlagFilter)) cycle
-      do j = 1, size(RowVarAry)
-         if (.not. MV_HasFlags(RowVarAry(j), FlagFilter)) cycle
-         associate (rVar => RowVarAry(i), cVar => ColVarAry(i))
-            SubM(row:row + rVar%Num - 1, col:col + cVar%Num - 1) = M(rVar%iLoc(1):rVar%iLoc(2), cVar%iLoc(1):cVar%iLoc(2))
-         end associate
-         row = row + RowVarAry(j)%Num - 1
-      end do
-      col = col + ColVarAry(i)%Num - 1
-   end do
-end subroutine
 
 subroutine MV_PackVarRank0R4(VarAry, iVar, Val, Ary)
    type(ModVarType), intent(in)  :: VarAry(:)
@@ -1225,6 +1356,20 @@ subroutine MV_AddVar(VarAry, Name, Field, DL, Num, iAry, jAry, kAry, Flags, Deri
 
 end subroutine
 
+function MV_NumVals(VarAry, FlagFilter) result(Num)
+   type(ModVarType), intent(in)           :: VarAry(:)
+   integer(IntKi), optional, intent(in)   :: FlagFilter
+   integer(IntKi)                         :: Num, i
+   if (present(FlagFilter)) then
+      Num = 0
+      do i = 1, size(VarAry)
+         if (MV_HasFlags(VarAry(i), FlagFilter)) Num = Num + VarAry(i)%Num
+      end do
+   else
+      Num = sum(VarAry%Num)
+   end if
+end function
+
 function MV_NumVars(VarAry, FlagFilter) result(Num)
    type(ModVarType), intent(in)           :: VarAry(:)
    integer(IntKi), optional, intent(in)   :: FlagFilter
@@ -1232,30 +1377,43 @@ function MV_NumVars(VarAry, FlagFilter) result(Num)
    if (present(FlagFilter)) then
       Num = 0
       do i = 1, size(VarAry)
-         if ((FlagFilter == VF_None) .or. (iand(VarAry(i)%Flags, FlagFilter) /= 0)) Num = Num + VarAry(i)%Num
+         if (MV_HasFlags(VarAry(i), FlagFilter)) Num = Num + 1
       end do
    else
-      Num = sum(VarAry%Num)
+      Num = size(VarAry)
    end if
 end function
 
+! MV_IsLoad returns true if the variable field is FieldForce or FieldMoment
 pure logical function MV_IsLoad(Var)
    type(ModVarType), intent(in)  :: Var
    MV_IsLoad = Var%Field == FieldForce .or. Var%Field == FieldMoment
 end function
 
+! MV_EqualDL returns true if data location numbers are greater than zero and
+! all components of the data location are the same.
+pure logical function MV_EqualDL(DL1, DL2)
+   type(DatLoc), intent(in)   :: DL1, DL2
+   MV_EqualDL = DL1%Num > 0 .and. DL2%Num > 0 .and. &
+                DL1%Num == DL2%Num .and. &
+                DL1%i1 == DL2%i1 .and. &
+                DL1%i2 == DL2%i2 .and. &
+                DL1%i3 == DL2%i3
+end function
+
 ! Find variable index in array based on DatLoc number
-pure integer(IntKi) function MV_FindVarDatLoc(VarAry, DatLocNum)
+pure function MV_FindVarDatLoc(VarAry, DL) result(iVar)
    type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(in)    :: DatLocNum
-   integer(IntKi)                :: i
-   do i = 1, size(VarAry)
-      if (VarAry(i)%DL%Num == DatLocNum) then
-         MV_FindVarDatLoc = i
-         return
-      end if
+   type(DatLoc), intent(in)      :: DL
+   integer(IntKi)                :: iVar
+   do iVar = 1, size(VarAry)
+      if (VarAry(iVar)%DL%Num /= DL%Num) cycle
+      if (VarAry(iVar)%DL%i1 /= DL%i1) cycle
+      if (VarAry(iVar)%DL%i2 /= DL%i2) cycle
+      if (VarAry(iVar)%DL%i3 /= DL%i3) cycle
+      return
    end do
-   MV_FindVarDatLoc = 0
+   iVar = 0
 end function
 
 !-------------------------------------------------------------------------------

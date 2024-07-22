@@ -2734,25 +2734,54 @@ function BEMT_OutputMeshName(ML) result(Name)
    end select
 end function
 
+subroutine BEMT_PackContStateVar(Var, x, ValAry)
+   type(BEMT_ContinuousStateType), intent(in) :: x
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (BEMT_x_UA_element_x)
+         call MV_Pack2(Var, x%UA%element(DL%i1, DL%i2)%x, ValAry)  ! Rank 1 Array
+      case (BEMT_x_DBEMT_element_vind)
+         call MV_Pack2(Var, x%DBEMT%element(DL%i1, DL%i2)%vind, ValAry)  ! Rank 1 Array
+      case (BEMT_x_DBEMT_element_vind_1)
+         call MV_Pack2(Var, x%DBEMT%element(DL%i1, DL%i2)%vind_1, ValAry)  ! Rank 1 Array
+      case (BEMT_x_V_w)
+         call MV_Pack2(Var, x%V_w, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
 subroutine BEMT_PackContStateAry(Vars, x, ValAry)
    type(BEMT_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)   :: Vars
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (BEMT_x_UA_element_x)
-             call MV_Pack2(Var, x%UA%element(DL%i1, DL%i2)%x, ValAry)  ! Rank 1 Array
-         case (BEMT_x_DBEMT_element_vind)
-             call MV_Pack2(Var, x%DBEMT%element(DL%i1, DL%i2)%vind, ValAry)  ! Rank 1 Array
-         case (BEMT_x_DBEMT_element_vind_1)
-             call MV_Pack2(Var, x%DBEMT%element(DL%i1, DL%i2)%vind_1, ValAry)  ! Rank 1 Array
-         case (BEMT_x_V_w)
-             call MV_Pack2(Var, x%V_w, ValAry)  ! Rank 1 Array
-         end select
-      end associate
+      call BEMT_PackContStateVar(Vars%x(i), x, ValAry)
    end do
+end subroutine
+
+subroutine BEMT_UnpackContStateVar(Var, ValAry, x)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(BEMT_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (BEMT_x_UA_element_x)
+         call MV_Unpack2(Var, ValAry, x%UA%element(DL%i1, DL%i2)%x)  ! Rank 1 Array
+      case (BEMT_x_DBEMT_element_vind)
+         call MV_Unpack2(Var, ValAry, x%DBEMT%element(DL%i1, DL%i2)%vind)  ! Rank 1 Array
+      case (BEMT_x_DBEMT_element_vind_1)
+         call MV_Unpack2(Var, ValAry, x%DBEMT%element(DL%i1, DL%i2)%vind_1)  ! Rank 1 Array
+      case (BEMT_x_V_w)
+         call MV_Unpack2(Var, ValAry, x%V_w)  ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 subroutine BEMT_UnpackContStateAry(Vars, ValAry, x)
@@ -2761,19 +2790,24 @@ subroutine BEMT_UnpackContStateAry(Vars, ValAry, x)
    type(BEMT_ContinuousStateType), intent(inout) :: x
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (BEMT_x_UA_element_x)
-             call MV_Unpack2(Var, ValAry, x%UA%element(DL%i1, DL%i2)%x)  ! Rank 1 Array
-         case (BEMT_x_DBEMT_element_vind)
-             call MV_Unpack2(Var, ValAry, x%DBEMT%element(DL%i1, DL%i2)%vind)  ! Rank 1 Array
-         case (BEMT_x_DBEMT_element_vind_1)
-             call MV_Unpack2(Var, ValAry, x%DBEMT%element(DL%i1, DL%i2)%vind_1)  ! Rank 1 Array
-         case (BEMT_x_V_w)
-             call MV_Unpack2(Var, ValAry, x%V_w)  ! Rank 1 Array
-         end select
-      end associate
+      call BEMT_UnpackContStateVar(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+
+subroutine BEMT_PackConstrStateVar(Var, z, ValAry)
+   type(BEMT_ConstraintStateType), intent(in) :: z
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (BEMT_z_phi)
+         call MV_Pack2(Var, z%phi, ValAry)  ! Rank 2 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine BEMT_PackConstrStateAry(Vars, z, ValAry)
@@ -2782,13 +2816,21 @@ subroutine BEMT_PackConstrStateAry(Vars, z, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (BEMT_z_phi)
-             call MV_Pack2(Var, z%phi, ValAry)  ! Rank 2 Array
-         end select
-      end associate
+      call BEMT_PackConstrStateVar(Vars%z(i), z, ValAry)
    end do
+end subroutine
+
+subroutine BEMT_UnpackConstrStateVar(Var, ValAry, z)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(BEMT_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (BEMT_z_phi)
+         call MV_Unpack2(Var, ValAry, z%phi)  ! Rank 2 Array
+      end select
+   end associate
 end subroutine
 
 subroutine BEMT_UnpackConstrStateAry(Vars, ValAry, z)
@@ -2797,13 +2839,60 @@ subroutine BEMT_UnpackConstrStateAry(Vars, ValAry, z)
    type(BEMT_ConstraintStateType), intent(inout) :: z
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (BEMT_z_phi)
-             call MV_Unpack2(Var, ValAry, z%phi)  ! Rank 2 Array
-         end select
-      end associate
+      call BEMT_UnpackConstrStateVar(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+
+subroutine BEMT_PackInputVar(Var, u, ValAry)
+   type(BEMT_InputType), intent(in) :: u
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (BEMT_u_theta)
+         call MV_Pack2(Var, u%theta, ValAry)  ! Rank 2 Array
+      case (BEMT_u_chi0)
+         call MV_Pack2(Var, u%chi0, ValAry)  ! Scalar
+      case (BEMT_u_psiSkewOffset)
+         call MV_Pack2(Var, u%psiSkewOffset, ValAry)  ! Scalar
+      case (BEMT_u_psi_s)
+         call MV_Pack2(Var, u%psi_s, ValAry)  ! Rank 1 Array
+      case (BEMT_u_omega)
+         call MV_Pack2(Var, u%omega, ValAry)  ! Scalar
+      case (BEMT_u_TSR)
+         call MV_Pack2(Var, u%TSR, ValAry)  ! Scalar
+      case (BEMT_u_Vx)
+         call MV_Pack2(Var, u%Vx, ValAry)  ! Rank 2 Array
+      case (BEMT_u_Vy)
+         call MV_Pack2(Var, u%Vy, ValAry)  ! Rank 2 Array
+      case (BEMT_u_Vz)
+         call MV_Pack2(Var, u%Vz, ValAry)  ! Rank 2 Array
+      case (BEMT_u_omega_z)
+         call MV_Pack2(Var, u%omega_z, ValAry)  ! Rank 2 Array
+      case (BEMT_u_xVelCorr)
+         call MV_Pack2(Var, u%xVelCorr, ValAry)  ! Rank 2 Array
+      case (BEMT_u_rLocal)
+         call MV_Pack2(Var, u%rLocal, ValAry)  ! Rank 2 Array
+      case (BEMT_u_Un_disk)
+         call MV_Pack2(Var, u%Un_disk, ValAry)  ! Scalar
+      case (BEMT_u_V0)
+         call MV_Pack2(Var, u%V0, ValAry)  ! Rank 1 Array
+      case (BEMT_u_x_hat_disk)
+         call MV_Pack2(Var, u%x_hat_disk, ValAry)  ! Rank 1 Array
+      case (BEMT_u_UserProp)
+         call MV_Pack2(Var, u%UserProp, ValAry)  ! Rank 2 Array
+      case (BEMT_u_CantAngle)
+         call MV_Pack2(Var, u%CantAngle, ValAry)  ! Rank 2 Array
+      case (BEMT_u_drdz)
+         call MV_Pack2(Var, u%drdz, ValAry)  ! Rank 2 Array
+      case (BEMT_u_toeAngle)
+         call MV_Pack2(Var, u%toeAngle, ValAry)  ! Rank 2 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine BEMT_PackInputAry(Vars, u, ValAry)
@@ -2812,49 +2901,57 @@ subroutine BEMT_PackInputAry(Vars, u, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (BEMT_u_theta)
-             call MV_Pack2(Var, u%theta, ValAry)  ! Rank 2 Array
-         case (BEMT_u_chi0)
-             call MV_Pack2(Var, u%chi0, ValAry)  ! Scalar
-         case (BEMT_u_psiSkewOffset)
-             call MV_Pack2(Var, u%psiSkewOffset, ValAry)  ! Scalar
-         case (BEMT_u_psi_s)
-             call MV_Pack2(Var, u%psi_s, ValAry)  ! Rank 1 Array
-         case (BEMT_u_omega)
-             call MV_Pack2(Var, u%omega, ValAry)  ! Scalar
-         case (BEMT_u_TSR)
-             call MV_Pack2(Var, u%TSR, ValAry)  ! Scalar
-         case (BEMT_u_Vx)
-             call MV_Pack2(Var, u%Vx, ValAry)  ! Rank 2 Array
-         case (BEMT_u_Vy)
-             call MV_Pack2(Var, u%Vy, ValAry)  ! Rank 2 Array
-         case (BEMT_u_Vz)
-             call MV_Pack2(Var, u%Vz, ValAry)  ! Rank 2 Array
-         case (BEMT_u_omega_z)
-             call MV_Pack2(Var, u%omega_z, ValAry)  ! Rank 2 Array
-         case (BEMT_u_xVelCorr)
-             call MV_Pack2(Var, u%xVelCorr, ValAry)  ! Rank 2 Array
-         case (BEMT_u_rLocal)
-             call MV_Pack2(Var, u%rLocal, ValAry)  ! Rank 2 Array
-         case (BEMT_u_Un_disk)
-             call MV_Pack2(Var, u%Un_disk, ValAry)  ! Scalar
-         case (BEMT_u_V0)
-             call MV_Pack2(Var, u%V0, ValAry)  ! Rank 1 Array
-         case (BEMT_u_x_hat_disk)
-             call MV_Pack2(Var, u%x_hat_disk, ValAry)  ! Rank 1 Array
-         case (BEMT_u_UserProp)
-             call MV_Pack2(Var, u%UserProp, ValAry)  ! Rank 2 Array
-         case (BEMT_u_CantAngle)
-             call MV_Pack2(Var, u%CantAngle, ValAry)  ! Rank 2 Array
-         case (BEMT_u_drdz)
-             call MV_Pack2(Var, u%drdz, ValAry)  ! Rank 2 Array
-         case (BEMT_u_toeAngle)
-             call MV_Pack2(Var, u%toeAngle, ValAry)  ! Rank 2 Array
-         end select
-      end associate
+      call BEMT_PackInputVar(Vars%u(i), u, ValAry)
    end do
+end subroutine
+
+subroutine BEMT_UnpackInputVar(Var, ValAry, u)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(BEMT_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (BEMT_u_theta)
+         call MV_Unpack2(Var, ValAry, u%theta)  ! Rank 2 Array
+      case (BEMT_u_chi0)
+         call MV_Unpack2(Var, ValAry, u%chi0)  ! Scalar
+      case (BEMT_u_psiSkewOffset)
+         call MV_Unpack2(Var, ValAry, u%psiSkewOffset)  ! Scalar
+      case (BEMT_u_psi_s)
+         call MV_Unpack2(Var, ValAry, u%psi_s)  ! Rank 1 Array
+      case (BEMT_u_omega)
+         call MV_Unpack2(Var, ValAry, u%omega)  ! Scalar
+      case (BEMT_u_TSR)
+         call MV_Unpack2(Var, ValAry, u%TSR)  ! Scalar
+      case (BEMT_u_Vx)
+         call MV_Unpack2(Var, ValAry, u%Vx)  ! Rank 2 Array
+      case (BEMT_u_Vy)
+         call MV_Unpack2(Var, ValAry, u%Vy)  ! Rank 2 Array
+      case (BEMT_u_Vz)
+         call MV_Unpack2(Var, ValAry, u%Vz)  ! Rank 2 Array
+      case (BEMT_u_omega_z)
+         call MV_Unpack2(Var, ValAry, u%omega_z)  ! Rank 2 Array
+      case (BEMT_u_xVelCorr)
+         call MV_Unpack2(Var, ValAry, u%xVelCorr)  ! Rank 2 Array
+      case (BEMT_u_rLocal)
+         call MV_Unpack2(Var, ValAry, u%rLocal)  ! Rank 2 Array
+      case (BEMT_u_Un_disk)
+         call MV_Unpack2(Var, ValAry, u%Un_disk)  ! Scalar
+      case (BEMT_u_V0)
+         call MV_Unpack2(Var, ValAry, u%V0)  ! Rank 1 Array
+      case (BEMT_u_x_hat_disk)
+         call MV_Unpack2(Var, ValAry, u%x_hat_disk)  ! Rank 1 Array
+      case (BEMT_u_UserProp)
+         call MV_Unpack2(Var, ValAry, u%UserProp)  ! Rank 2 Array
+      case (BEMT_u_CantAngle)
+         call MV_Unpack2(Var, ValAry, u%CantAngle)  ! Rank 2 Array
+      case (BEMT_u_drdz)
+         call MV_Unpack2(Var, ValAry, u%drdz)  ! Rank 2 Array
+      case (BEMT_u_toeAngle)
+         call MV_Unpack2(Var, ValAry, u%toeAngle)  ! Rank 2 Array
+      end select
+   end associate
 end subroutine
 
 subroutine BEMT_UnpackInputAry(Vars, ValAry, u)
@@ -2863,49 +2960,66 @@ subroutine BEMT_UnpackInputAry(Vars, ValAry, u)
    type(BEMT_InputType), intent(inout) :: u
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (BEMT_u_theta)
-             call MV_Unpack2(Var, ValAry, u%theta)  ! Rank 2 Array
-         case (BEMT_u_chi0)
-             call MV_Unpack2(Var, ValAry, u%chi0)  ! Scalar
-         case (BEMT_u_psiSkewOffset)
-             call MV_Unpack2(Var, ValAry, u%psiSkewOffset)  ! Scalar
-         case (BEMT_u_psi_s)
-             call MV_Unpack2(Var, ValAry, u%psi_s)  ! Rank 1 Array
-         case (BEMT_u_omega)
-             call MV_Unpack2(Var, ValAry, u%omega)  ! Scalar
-         case (BEMT_u_TSR)
-             call MV_Unpack2(Var, ValAry, u%TSR)  ! Scalar
-         case (BEMT_u_Vx)
-             call MV_Unpack2(Var, ValAry, u%Vx)  ! Rank 2 Array
-         case (BEMT_u_Vy)
-             call MV_Unpack2(Var, ValAry, u%Vy)  ! Rank 2 Array
-         case (BEMT_u_Vz)
-             call MV_Unpack2(Var, ValAry, u%Vz)  ! Rank 2 Array
-         case (BEMT_u_omega_z)
-             call MV_Unpack2(Var, ValAry, u%omega_z)  ! Rank 2 Array
-         case (BEMT_u_xVelCorr)
-             call MV_Unpack2(Var, ValAry, u%xVelCorr)  ! Rank 2 Array
-         case (BEMT_u_rLocal)
-             call MV_Unpack2(Var, ValAry, u%rLocal)  ! Rank 2 Array
-         case (BEMT_u_Un_disk)
-             call MV_Unpack2(Var, ValAry, u%Un_disk)  ! Scalar
-         case (BEMT_u_V0)
-             call MV_Unpack2(Var, ValAry, u%V0)  ! Rank 1 Array
-         case (BEMT_u_x_hat_disk)
-             call MV_Unpack2(Var, ValAry, u%x_hat_disk)  ! Rank 1 Array
-         case (BEMT_u_UserProp)
-             call MV_Unpack2(Var, ValAry, u%UserProp)  ! Rank 2 Array
-         case (BEMT_u_CantAngle)
-             call MV_Unpack2(Var, ValAry, u%CantAngle)  ! Rank 2 Array
-         case (BEMT_u_drdz)
-             call MV_Unpack2(Var, ValAry, u%drdz)  ! Rank 2 Array
-         case (BEMT_u_toeAngle)
-             call MV_Unpack2(Var, ValAry, u%toeAngle)  ! Rank 2 Array
-         end select
-      end associate
+      call BEMT_UnpackInputVar(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+
+subroutine BEMT_PackOutputVar(Var, y, ValAry)
+   type(BEMT_OutputType), intent(in) :: y
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (BEMT_y_Vrel)
+         call MV_Pack2(Var, y%Vrel, ValAry)  ! Rank 2 Array
+      case (BEMT_y_phi)
+         call MV_Pack2(Var, y%phi, ValAry)  ! Rank 2 Array
+      case (BEMT_y_axInduction)
+         call MV_Pack2(Var, y%axInduction, ValAry)  ! Rank 2 Array
+      case (BEMT_y_tanInduction)
+         call MV_Pack2(Var, y%tanInduction, ValAry)  ! Rank 2 Array
+      case (BEMT_y_axInduction_qs)
+         call MV_Pack2(Var, y%axInduction_qs, ValAry)  ! Rank 2 Array
+      case (BEMT_y_tanInduction_qs)
+         call MV_Pack2(Var, y%tanInduction_qs, ValAry)  ! Rank 2 Array
+      case (BEMT_y_k)
+         call MV_Pack2(Var, y%k, ValAry)  ! Rank 2 Array
+      case (BEMT_y_k_p)
+         call MV_Pack2(Var, y%k_p, ValAry)  ! Rank 2 Array
+      case (BEMT_y_F)
+         call MV_Pack2(Var, y%F, ValAry)  ! Rank 2 Array
+      case (BEMT_y_Re)
+         call MV_Pack2(Var, y%Re, ValAry)  ! Rank 2 Array
+      case (BEMT_y_AOA)
+         call MV_Pack2(Var, y%AOA, ValAry)  ! Rank 2 Array
+      case (BEMT_y_Cx)
+         call MV_Pack2(Var, y%Cx, ValAry)  ! Rank 2 Array
+      case (BEMT_y_Cy)
+         call MV_Pack2(Var, y%Cy, ValAry)  ! Rank 2 Array
+      case (BEMT_y_Cz)
+         call MV_Pack2(Var, y%Cz, ValAry)  ! Rank 2 Array
+      case (BEMT_y_Cmx)
+         call MV_Pack2(Var, y%Cmx, ValAry)  ! Rank 2 Array
+      case (BEMT_y_Cmy)
+         call MV_Pack2(Var, y%Cmy, ValAry)  ! Rank 2 Array
+      case (BEMT_y_Cmz)
+         call MV_Pack2(Var, y%Cmz, ValAry)  ! Rank 2 Array
+      case (BEMT_y_Cm)
+         call MV_Pack2(Var, y%Cm, ValAry)  ! Rank 2 Array
+      case (BEMT_y_Cl)
+         call MV_Pack2(Var, y%Cl, ValAry)  ! Rank 2 Array
+      case (BEMT_y_Cd)
+         call MV_Pack2(Var, y%Cd, ValAry)  ! Rank 2 Array
+      case (BEMT_y_chi)
+         call MV_Pack2(Var, y%chi, ValAry)  ! Rank 2 Array
+      case (BEMT_y_Cpmin)
+         call MV_Pack2(Var, y%Cpmin, ValAry)  ! Rank 2 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine BEMT_PackOutputAry(Vars, y, ValAry)
@@ -2914,55 +3028,63 @@ subroutine BEMT_PackOutputAry(Vars, y, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (BEMT_y_Vrel)
-             call MV_Pack2(Var, y%Vrel, ValAry)  ! Rank 2 Array
-         case (BEMT_y_phi)
-             call MV_Pack2(Var, y%phi, ValAry)  ! Rank 2 Array
-         case (BEMT_y_axInduction)
-             call MV_Pack2(Var, y%axInduction, ValAry)  ! Rank 2 Array
-         case (BEMT_y_tanInduction)
-             call MV_Pack2(Var, y%tanInduction, ValAry)  ! Rank 2 Array
-         case (BEMT_y_axInduction_qs)
-             call MV_Pack2(Var, y%axInduction_qs, ValAry)  ! Rank 2 Array
-         case (BEMT_y_tanInduction_qs)
-             call MV_Pack2(Var, y%tanInduction_qs, ValAry)  ! Rank 2 Array
-         case (BEMT_y_k)
-             call MV_Pack2(Var, y%k, ValAry)  ! Rank 2 Array
-         case (BEMT_y_k_p)
-             call MV_Pack2(Var, y%k_p, ValAry)  ! Rank 2 Array
-         case (BEMT_y_F)
-             call MV_Pack2(Var, y%F, ValAry)  ! Rank 2 Array
-         case (BEMT_y_Re)
-             call MV_Pack2(Var, y%Re, ValAry)  ! Rank 2 Array
-         case (BEMT_y_AOA)
-             call MV_Pack2(Var, y%AOA, ValAry)  ! Rank 2 Array
-         case (BEMT_y_Cx)
-             call MV_Pack2(Var, y%Cx, ValAry)  ! Rank 2 Array
-         case (BEMT_y_Cy)
-             call MV_Pack2(Var, y%Cy, ValAry)  ! Rank 2 Array
-         case (BEMT_y_Cz)
-             call MV_Pack2(Var, y%Cz, ValAry)  ! Rank 2 Array
-         case (BEMT_y_Cmx)
-             call MV_Pack2(Var, y%Cmx, ValAry)  ! Rank 2 Array
-         case (BEMT_y_Cmy)
-             call MV_Pack2(Var, y%Cmy, ValAry)  ! Rank 2 Array
-         case (BEMT_y_Cmz)
-             call MV_Pack2(Var, y%Cmz, ValAry)  ! Rank 2 Array
-         case (BEMT_y_Cm)
-             call MV_Pack2(Var, y%Cm, ValAry)  ! Rank 2 Array
-         case (BEMT_y_Cl)
-             call MV_Pack2(Var, y%Cl, ValAry)  ! Rank 2 Array
-         case (BEMT_y_Cd)
-             call MV_Pack2(Var, y%Cd, ValAry)  ! Rank 2 Array
-         case (BEMT_y_chi)
-             call MV_Pack2(Var, y%chi, ValAry)  ! Rank 2 Array
-         case (BEMT_y_Cpmin)
-             call MV_Pack2(Var, y%Cpmin, ValAry)  ! Rank 2 Array
-         end select
-      end associate
+      call BEMT_PackOutputVar(Vars%y(i), y, ValAry)
    end do
+end subroutine
+
+subroutine BEMT_UnpackOutputVar(Var, ValAry, y)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(BEMT_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (BEMT_y_Vrel)
+         call MV_Unpack2(Var, ValAry, y%Vrel)  ! Rank 2 Array
+      case (BEMT_y_phi)
+         call MV_Unpack2(Var, ValAry, y%phi)  ! Rank 2 Array
+      case (BEMT_y_axInduction)
+         call MV_Unpack2(Var, ValAry, y%axInduction)  ! Rank 2 Array
+      case (BEMT_y_tanInduction)
+         call MV_Unpack2(Var, ValAry, y%tanInduction)  ! Rank 2 Array
+      case (BEMT_y_axInduction_qs)
+         call MV_Unpack2(Var, ValAry, y%axInduction_qs)  ! Rank 2 Array
+      case (BEMT_y_tanInduction_qs)
+         call MV_Unpack2(Var, ValAry, y%tanInduction_qs)  ! Rank 2 Array
+      case (BEMT_y_k)
+         call MV_Unpack2(Var, ValAry, y%k)  ! Rank 2 Array
+      case (BEMT_y_k_p)
+         call MV_Unpack2(Var, ValAry, y%k_p)  ! Rank 2 Array
+      case (BEMT_y_F)
+         call MV_Unpack2(Var, ValAry, y%F)  ! Rank 2 Array
+      case (BEMT_y_Re)
+         call MV_Unpack2(Var, ValAry, y%Re)  ! Rank 2 Array
+      case (BEMT_y_AOA)
+         call MV_Unpack2(Var, ValAry, y%AOA)  ! Rank 2 Array
+      case (BEMT_y_Cx)
+         call MV_Unpack2(Var, ValAry, y%Cx)  ! Rank 2 Array
+      case (BEMT_y_Cy)
+         call MV_Unpack2(Var, ValAry, y%Cy)  ! Rank 2 Array
+      case (BEMT_y_Cz)
+         call MV_Unpack2(Var, ValAry, y%Cz)  ! Rank 2 Array
+      case (BEMT_y_Cmx)
+         call MV_Unpack2(Var, ValAry, y%Cmx)  ! Rank 2 Array
+      case (BEMT_y_Cmy)
+         call MV_Unpack2(Var, ValAry, y%Cmy)  ! Rank 2 Array
+      case (BEMT_y_Cmz)
+         call MV_Unpack2(Var, ValAry, y%Cmz)  ! Rank 2 Array
+      case (BEMT_y_Cm)
+         call MV_Unpack2(Var, ValAry, y%Cm)  ! Rank 2 Array
+      case (BEMT_y_Cl)
+         call MV_Unpack2(Var, ValAry, y%Cl)  ! Rank 2 Array
+      case (BEMT_y_Cd)
+         call MV_Unpack2(Var, ValAry, y%Cd)  ! Rank 2 Array
+      case (BEMT_y_chi)
+         call MV_Unpack2(Var, ValAry, y%chi)  ! Rank 2 Array
+      case (BEMT_y_Cpmin)
+         call MV_Unpack2(Var, ValAry, y%Cpmin)  ! Rank 2 Array
+      end select
+   end associate
 end subroutine
 
 subroutine BEMT_UnpackOutputAry(Vars, ValAry, y)
@@ -2971,55 +3093,9 @@ subroutine BEMT_UnpackOutputAry(Vars, ValAry, y)
    type(BEMT_OutputType), intent(inout) :: y
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (BEMT_y_Vrel)
-             call MV_Unpack2(Var, ValAry, y%Vrel)  ! Rank 2 Array
-         case (BEMT_y_phi)
-             call MV_Unpack2(Var, ValAry, y%phi)  ! Rank 2 Array
-         case (BEMT_y_axInduction)
-             call MV_Unpack2(Var, ValAry, y%axInduction)  ! Rank 2 Array
-         case (BEMT_y_tanInduction)
-             call MV_Unpack2(Var, ValAry, y%tanInduction)  ! Rank 2 Array
-         case (BEMT_y_axInduction_qs)
-             call MV_Unpack2(Var, ValAry, y%axInduction_qs)  ! Rank 2 Array
-         case (BEMT_y_tanInduction_qs)
-             call MV_Unpack2(Var, ValAry, y%tanInduction_qs)  ! Rank 2 Array
-         case (BEMT_y_k)
-             call MV_Unpack2(Var, ValAry, y%k)  ! Rank 2 Array
-         case (BEMT_y_k_p)
-             call MV_Unpack2(Var, ValAry, y%k_p)  ! Rank 2 Array
-         case (BEMT_y_F)
-             call MV_Unpack2(Var, ValAry, y%F)  ! Rank 2 Array
-         case (BEMT_y_Re)
-             call MV_Unpack2(Var, ValAry, y%Re)  ! Rank 2 Array
-         case (BEMT_y_AOA)
-             call MV_Unpack2(Var, ValAry, y%AOA)  ! Rank 2 Array
-         case (BEMT_y_Cx)
-             call MV_Unpack2(Var, ValAry, y%Cx)  ! Rank 2 Array
-         case (BEMT_y_Cy)
-             call MV_Unpack2(Var, ValAry, y%Cy)  ! Rank 2 Array
-         case (BEMT_y_Cz)
-             call MV_Unpack2(Var, ValAry, y%Cz)  ! Rank 2 Array
-         case (BEMT_y_Cmx)
-             call MV_Unpack2(Var, ValAry, y%Cmx)  ! Rank 2 Array
-         case (BEMT_y_Cmy)
-             call MV_Unpack2(Var, ValAry, y%Cmy)  ! Rank 2 Array
-         case (BEMT_y_Cmz)
-             call MV_Unpack2(Var, ValAry, y%Cmz)  ! Rank 2 Array
-         case (BEMT_y_Cm)
-             call MV_Unpack2(Var, ValAry, y%Cm)  ! Rank 2 Array
-         case (BEMT_y_Cl)
-             call MV_Unpack2(Var, ValAry, y%Cl)  ! Rank 2 Array
-         case (BEMT_y_Cd)
-             call MV_Unpack2(Var, ValAry, y%Cd)  ! Rank 2 Array
-         case (BEMT_y_chi)
-             call MV_Unpack2(Var, ValAry, y%chi)  ! Rank 2 Array
-         case (BEMT_y_Cpmin)
-             call MV_Unpack2(Var, ValAry, y%Cpmin)  ! Rank 2 Array
-         end select
-      end associate
+      call BEMT_UnpackOutputVar(Vars%y(i), ValAry, y)
    end do
 end subroutine
+
 END MODULE BEMT_Types
 !ENDOFREGISTRYGENERATEDFILE

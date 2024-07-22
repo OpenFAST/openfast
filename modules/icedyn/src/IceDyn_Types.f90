@@ -1789,21 +1789,46 @@ function IceD_OutputMeshName(ML) result(Name)
    end select
 end function
 
+subroutine IceD_PackContStateVar(Var, x, ValAry)
+   type(IceD_ContinuousStateType), intent(in) :: x
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (IceD_x_q)
+         call MV_Pack2(Var, x%q, ValAry)  ! Scalar
+      case (IceD_x_dqdt)
+         call MV_Pack2(Var, x%dqdt, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
 subroutine IceD_PackContStateAry(Vars, x, ValAry)
    type(IceD_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)   :: Vars
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (IceD_x_q)
-             call MV_Pack2(Var, x%q, ValAry)  ! Scalar
-         case (IceD_x_dqdt)
-             call MV_Pack2(Var, x%dqdt, ValAry)  ! Scalar
-         end select
-      end associate
+      call IceD_PackContStateVar(Vars%x(i), x, ValAry)
    end do
+end subroutine
+
+subroutine IceD_UnpackContStateVar(Var, ValAry, x)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(IceD_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (IceD_x_q)
+         call MV_Unpack2(Var, ValAry, x%q)  ! Scalar
+      case (IceD_x_dqdt)
+         call MV_Unpack2(Var, ValAry, x%dqdt)  ! Scalar
+      end select
+   end associate
 end subroutine
 
 subroutine IceD_UnpackContStateAry(Vars, ValAry, x)
@@ -1812,15 +1837,24 @@ subroutine IceD_UnpackContStateAry(Vars, ValAry, x)
    type(IceD_ContinuousStateType), intent(inout) :: x
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (IceD_x_q)
-             call MV_Unpack2(Var, ValAry, x%q)  ! Scalar
-         case (IceD_x_dqdt)
-             call MV_Unpack2(Var, ValAry, x%dqdt)  ! Scalar
-         end select
-      end associate
+      call IceD_UnpackContStateVar(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+
+subroutine IceD_PackConstrStateVar(Var, z, ValAry)
+   type(IceD_ConstraintStateType), intent(in) :: z
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (IceD_z_DummyConstrState)
+         call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine IceD_PackConstrStateAry(Vars, z, ValAry)
@@ -1829,13 +1863,21 @@ subroutine IceD_PackConstrStateAry(Vars, z, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (IceD_z_DummyConstrState)
-             call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
-         end select
-      end associate
+      call IceD_PackConstrStateVar(Vars%z(i), z, ValAry)
    end do
+end subroutine
+
+subroutine IceD_UnpackConstrStateVar(Var, ValAry, z)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(IceD_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (IceD_z_DummyConstrState)
+         call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
+      end select
+   end associate
 end subroutine
 
 subroutine IceD_UnpackConstrStateAry(Vars, ValAry, z)
@@ -1844,13 +1886,24 @@ subroutine IceD_UnpackConstrStateAry(Vars, ValAry, z)
    type(IceD_ConstraintStateType), intent(inout) :: z
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (IceD_z_DummyConstrState)
-             call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
-         end select
-      end associate
+      call IceD_UnpackConstrStateVar(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+
+subroutine IceD_PackInputVar(Var, u, ValAry)
+   type(IceD_InputType), intent(in) :: u
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (IceD_u_PointMesh)
+         call MV_Pack2(Var, u%PointMesh, ValAry)  ! Mesh
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine IceD_PackInputAry(Vars, u, ValAry)
@@ -1859,13 +1912,21 @@ subroutine IceD_PackInputAry(Vars, u, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (IceD_u_PointMesh)
-             call MV_Pack2(Var, u%PointMesh, ValAry)  ! Mesh
-         end select
-      end associate
+      call IceD_PackInputVar(Vars%u(i), u, ValAry)
    end do
+end subroutine
+
+subroutine IceD_UnpackInputVar(Var, ValAry, u)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(IceD_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (IceD_u_PointMesh)
+         call MV_Unpack2(Var, ValAry, u%PointMesh)  ! Mesh
+      end select
+   end associate
 end subroutine
 
 subroutine IceD_UnpackInputAry(Vars, ValAry, u)
@@ -1874,13 +1935,26 @@ subroutine IceD_UnpackInputAry(Vars, ValAry, u)
    type(IceD_InputType), intent(inout) :: u
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (IceD_u_PointMesh)
-             call MV_Unpack2(Var, ValAry, u%PointMesh)  ! Mesh
-         end select
-      end associate
+      call IceD_UnpackInputVar(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+
+subroutine IceD_PackOutputVar(Var, y, ValAry)
+   type(IceD_OutputType), intent(in) :: y
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (IceD_y_PointMesh)
+         call MV_Pack2(Var, y%PointMesh, ValAry)  ! Mesh
+      case (IceD_y_WriteOutput)
+         call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine IceD_PackOutputAry(Vars, y, ValAry)
@@ -1889,15 +1963,23 @@ subroutine IceD_PackOutputAry(Vars, y, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (IceD_y_PointMesh)
-             call MV_Pack2(Var, y%PointMesh, ValAry)  ! Mesh
-         case (IceD_y_WriteOutput)
-             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
-         end select
-      end associate
+      call IceD_PackOutputVar(Vars%y(i), y, ValAry)
    end do
+end subroutine
+
+subroutine IceD_UnpackOutputVar(Var, ValAry, y)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(IceD_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (IceD_y_PointMesh)
+         call MV_Unpack2(Var, ValAry, y%PointMesh)  ! Mesh
+      case (IceD_y_WriteOutput)
+         call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 subroutine IceD_UnpackOutputAry(Vars, ValAry, y)
@@ -1906,15 +1988,9 @@ subroutine IceD_UnpackOutputAry(Vars, ValAry, y)
    type(IceD_OutputType), intent(inout) :: y
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (IceD_y_PointMesh)
-             call MV_Unpack2(Var, ValAry, y%PointMesh)  ! Mesh
-         case (IceD_y_WriteOutput)
-             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
-         end select
-      end associate
+      call IceD_UnpackOutputVar(Vars%y(i), ValAry, y)
    end do
 end subroutine
+
 END MODULE IceDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

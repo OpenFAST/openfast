@@ -1011,19 +1011,42 @@ function Conv_Rdtn_OutputMeshName(ML) result(Name)
    end select
 end function
 
+subroutine Conv_Rdtn_PackContStateVar(Var, x, ValAry)
+   type(Conv_Rdtn_ContinuousStateType), intent(in) :: x
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Conv_Rdtn_x_DummyContState)
+         call MV_Pack2(Var, x%DummyContState, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
 subroutine Conv_Rdtn_PackContStateAry(Vars, x, ValAry)
    type(Conv_Rdtn_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)   :: Vars
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (Conv_Rdtn_x_DummyContState)
-             call MV_Pack2(Var, x%DummyContState, ValAry)  ! Scalar
-         end select
-      end associate
+      call Conv_Rdtn_PackContStateVar(Vars%x(i), x, ValAry)
    end do
+end subroutine
+
+subroutine Conv_Rdtn_UnpackContStateVar(Var, ValAry, x)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(Conv_Rdtn_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Conv_Rdtn_x_DummyContState)
+         call MV_Unpack2(Var, ValAry, x%DummyContState)  ! Scalar
+      end select
+   end associate
 end subroutine
 
 subroutine Conv_Rdtn_UnpackContStateAry(Vars, ValAry, x)
@@ -1032,13 +1055,24 @@ subroutine Conv_Rdtn_UnpackContStateAry(Vars, ValAry, x)
    type(Conv_Rdtn_ContinuousStateType), intent(inout) :: x
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (Conv_Rdtn_x_DummyContState)
-             call MV_Unpack2(Var, ValAry, x%DummyContState)  ! Scalar
-         end select
-      end associate
+      call Conv_Rdtn_UnpackContStateVar(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+
+subroutine Conv_Rdtn_PackConstrStateVar(Var, z, ValAry)
+   type(Conv_Rdtn_ConstraintStateType), intent(in) :: z
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Conv_Rdtn_z_DummyConstrState)
+         call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine Conv_Rdtn_PackConstrStateAry(Vars, z, ValAry)
@@ -1047,13 +1081,21 @@ subroutine Conv_Rdtn_PackConstrStateAry(Vars, z, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (Conv_Rdtn_z_DummyConstrState)
-             call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
-         end select
-      end associate
+      call Conv_Rdtn_PackConstrStateVar(Vars%z(i), z, ValAry)
    end do
+end subroutine
+
+subroutine Conv_Rdtn_UnpackConstrStateVar(Var, ValAry, z)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(Conv_Rdtn_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Conv_Rdtn_z_DummyConstrState)
+         call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
+      end select
+   end associate
 end subroutine
 
 subroutine Conv_Rdtn_UnpackConstrStateAry(Vars, ValAry, z)
@@ -1062,13 +1104,24 @@ subroutine Conv_Rdtn_UnpackConstrStateAry(Vars, ValAry, z)
    type(Conv_Rdtn_ConstraintStateType), intent(inout) :: z
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (Conv_Rdtn_z_DummyConstrState)
-             call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
-         end select
-      end associate
+      call Conv_Rdtn_UnpackConstrStateVar(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+
+subroutine Conv_Rdtn_PackInputVar(Var, u, ValAry)
+   type(Conv_Rdtn_InputType), intent(in) :: u
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Conv_Rdtn_u_Velocity)
+         call MV_Pack2(Var, u%Velocity, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine Conv_Rdtn_PackInputAry(Vars, u, ValAry)
@@ -1077,13 +1130,21 @@ subroutine Conv_Rdtn_PackInputAry(Vars, u, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (Conv_Rdtn_u_Velocity)
-             call MV_Pack2(Var, u%Velocity, ValAry)  ! Rank 1 Array
-         end select
-      end associate
+      call Conv_Rdtn_PackInputVar(Vars%u(i), u, ValAry)
    end do
+end subroutine
+
+subroutine Conv_Rdtn_UnpackInputVar(Var, ValAry, u)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(Conv_Rdtn_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Conv_Rdtn_u_Velocity)
+         call MV_Unpack2(Var, ValAry, u%Velocity)  ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 subroutine Conv_Rdtn_UnpackInputAry(Vars, ValAry, u)
@@ -1092,13 +1153,24 @@ subroutine Conv_Rdtn_UnpackInputAry(Vars, ValAry, u)
    type(Conv_Rdtn_InputType), intent(inout) :: u
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (Conv_Rdtn_u_Velocity)
-             call MV_Unpack2(Var, ValAry, u%Velocity)  ! Rank 1 Array
-         end select
-      end associate
+      call Conv_Rdtn_UnpackInputVar(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+
+subroutine Conv_Rdtn_PackOutputVar(Var, y, ValAry)
+   type(Conv_Rdtn_OutputType), intent(in) :: y
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Conv_Rdtn_y_F_Rdtn)
+         call MV_Pack2(Var, y%F_Rdtn, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine Conv_Rdtn_PackOutputAry(Vars, y, ValAry)
@@ -1107,13 +1179,21 @@ subroutine Conv_Rdtn_PackOutputAry(Vars, y, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (Conv_Rdtn_y_F_Rdtn)
-             call MV_Pack2(Var, y%F_Rdtn, ValAry)  ! Rank 1 Array
-         end select
-      end associate
+      call Conv_Rdtn_PackOutputVar(Vars%y(i), y, ValAry)
    end do
+end subroutine
+
+subroutine Conv_Rdtn_UnpackOutputVar(Var, ValAry, y)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(Conv_Rdtn_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (Conv_Rdtn_y_F_Rdtn)
+         call MV_Unpack2(Var, ValAry, y%F_Rdtn)  ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 subroutine Conv_Rdtn_UnpackOutputAry(Vars, ValAry, y)
@@ -1122,13 +1202,9 @@ subroutine Conv_Rdtn_UnpackOutputAry(Vars, ValAry, y)
    type(Conv_Rdtn_OutputType), intent(inout) :: y
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (Conv_Rdtn_y_F_Rdtn)
-             call MV_Unpack2(Var, ValAry, y%F_Rdtn)  ! Rank 1 Array
-         end select
-      end associate
+      call Conv_Rdtn_UnpackOutputVar(Vars%y(i), ValAry, y)
    end do
 end subroutine
+
 END MODULE Conv_Radiation_Types
 !ENDOFREGISTRYGENERATEDFILE

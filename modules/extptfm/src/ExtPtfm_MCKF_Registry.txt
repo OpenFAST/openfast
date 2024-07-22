@@ -83,6 +83,7 @@ typedef    ^              MiscVarType          ReKi     F_at_t   {:} - - "The 6 
 typedef    ^              MiscVarType          IntKi    Indx       - - - "Index into times, to speed up interpolation" -
 typedef    ^              MiscVarType          LOGICAL  EquilStart - - - "Flag to determine the equilibrium position of the CB DOF at initialization (first call)" -
 typedef    ^                  ^                ReKi     AllOuts  {:} - - "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
+typedef    ^                  ^     ExtPtfm_ContinuousStateType dxdt_lin   - - - "continuous state derivatives" -
 
 
 # ..... Parameters ................................................................................................................

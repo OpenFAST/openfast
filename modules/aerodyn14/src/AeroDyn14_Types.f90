@@ -4991,21 +4991,46 @@ function AD14_OutputMeshName(ML) result(Name)
    end select
 end function
 
+subroutine AD14_PackContStateVar(Var, x, ValAry)
+   type(AD14_ContinuousStateType), intent(in) :: x
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (AD14_x_DWM_dummy)
+         call MV_Pack2(Var, x%DWM%dummy, ValAry)  ! Scalar
+      case (AD14_x_DWM_IfW_DummyContState)
+         call MV_Pack2(Var, x%DWM%IfW%DummyContState, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
 subroutine AD14_PackContStateAry(Vars, x, ValAry)
    type(AD14_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)   :: Vars
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (AD14_x_DWM_dummy)
-             call MV_Pack2(Var, x%DWM%dummy, ValAry)  ! Scalar
-         case (AD14_x_DWM_IfW_DummyContState)
-             call MV_Pack2(Var, x%DWM%IfW%DummyContState, ValAry)  ! Scalar
-         end select
-      end associate
+      call AD14_PackContStateVar(Vars%x(i), x, ValAry)
    end do
+end subroutine
+
+subroutine AD14_UnpackContStateVar(Var, ValAry, x)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(AD14_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (AD14_x_DWM_dummy)
+         call MV_Unpack2(Var, ValAry, x%DWM%dummy)  ! Scalar
+      case (AD14_x_DWM_IfW_DummyContState)
+         call MV_Unpack2(Var, ValAry, x%DWM%IfW%DummyContState)  ! Scalar
+      end select
+   end associate
 end subroutine
 
 subroutine AD14_UnpackContStateAry(Vars, ValAry, x)
@@ -5014,15 +5039,26 @@ subroutine AD14_UnpackContStateAry(Vars, ValAry, x)
    type(AD14_ContinuousStateType), intent(inout) :: x
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (AD14_x_DWM_dummy)
-             call MV_Unpack2(Var, ValAry, x%DWM%dummy)  ! Scalar
-         case (AD14_x_DWM_IfW_DummyContState)
-             call MV_Unpack2(Var, ValAry, x%DWM%IfW%DummyContState)  ! Scalar
-         end select
-      end associate
+      call AD14_UnpackContStateVar(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+
+subroutine AD14_PackConstrStateVar(Var, z, ValAry)
+   type(AD14_ConstraintStateType), intent(in) :: z
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (AD14_z_DWM_dummy)
+         call MV_Pack2(Var, z%DWM%dummy, ValAry)  ! Scalar
+      case (AD14_z_DWM_IfW_DummyConstrState)
+         call MV_Pack2(Var, z%DWM%IfW%DummyConstrState, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine AD14_PackConstrStateAry(Vars, z, ValAry)
@@ -5031,15 +5067,23 @@ subroutine AD14_PackConstrStateAry(Vars, z, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (AD14_z_DWM_dummy)
-             call MV_Pack2(Var, z%DWM%dummy, ValAry)  ! Scalar
-         case (AD14_z_DWM_IfW_DummyConstrState)
-             call MV_Pack2(Var, z%DWM%IfW%DummyConstrState, ValAry)  ! Scalar
-         end select
-      end associate
+      call AD14_PackConstrStateVar(Vars%z(i), z, ValAry)
    end do
+end subroutine
+
+subroutine AD14_UnpackConstrStateVar(Var, ValAry, z)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(AD14_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (AD14_z_DWM_dummy)
+         call MV_Unpack2(Var, ValAry, z%DWM%dummy)  ! Scalar
+      case (AD14_z_DWM_IfW_DummyConstrState)
+         call MV_Unpack2(Var, ValAry, z%DWM%IfW%DummyConstrState)  ! Scalar
+      end select
+   end associate
 end subroutine
 
 subroutine AD14_UnpackConstrStateAry(Vars, ValAry, z)
@@ -5048,15 +5092,98 @@ subroutine AD14_UnpackConstrStateAry(Vars, ValAry, z)
    type(AD14_ConstraintStateType), intent(inout) :: z
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (AD14_z_DWM_dummy)
-             call MV_Unpack2(Var, ValAry, z%DWM%dummy)  ! Scalar
-         case (AD14_z_DWM_IfW_DummyConstrState)
-             call MV_Unpack2(Var, ValAry, z%DWM%IfW%DummyConstrState)  ! Scalar
-         end select
-      end associate
+      call AD14_UnpackConstrStateVar(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+
+subroutine AD14_PackInputVar(Var, u, ValAry)
+   type(AD14_InputType), intent(in) :: u
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (AD14_u_InputMarkers)
+         call MV_Pack2(Var, u%InputMarkers(DL%i1), ValAry)  ! Mesh
+      case (AD14_u_Twr_InputMarkers)
+         call MV_Pack2(Var, u%Twr_InputMarkers, ValAry)  ! Mesh
+      case (AD14_u_TurbineComponents_Blade_Position)
+         call MV_Pack2(Var, u%TurbineComponents%Blade(DL%i1)%Position, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Blade_Orientation)
+         call MV_Pack2(Var, u%TurbineComponents%Blade(DL%i1)%Orientation, ValAry)  ! Rank 2 Array
+      case (AD14_u_TurbineComponents_Blade_TranslationVel)
+         call MV_Pack2(Var, u%TurbineComponents%Blade(DL%i1)%TranslationVel, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Blade_RotationVel)
+         call MV_Pack2(Var, u%TurbineComponents%Blade(DL%i1)%RotationVel, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Hub_Position)
+         call MV_Pack2(Var, u%TurbineComponents%Hub%Position, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Hub_Orientation)
+         call MV_Pack2(Var, u%TurbineComponents%Hub%Orientation, ValAry)  ! Rank 2 Array
+      case (AD14_u_TurbineComponents_Hub_TranslationVel)
+         call MV_Pack2(Var, u%TurbineComponents%Hub%TranslationVel, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Hub_RotationVel)
+         call MV_Pack2(Var, u%TurbineComponents%Hub%RotationVel, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_RotorFurl_Position)
+         call MV_Pack2(Var, u%TurbineComponents%RotorFurl%Position, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_RotorFurl_Orientation)
+         call MV_Pack2(Var, u%TurbineComponents%RotorFurl%Orientation, ValAry)  ! Rank 2 Array
+      case (AD14_u_TurbineComponents_RotorFurl_TranslationVel)
+         call MV_Pack2(Var, u%TurbineComponents%RotorFurl%TranslationVel, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_RotorFurl_RotationVel)
+         call MV_Pack2(Var, u%TurbineComponents%RotorFurl%RotationVel, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Nacelle_Position)
+         call MV_Pack2(Var, u%TurbineComponents%Nacelle%Position, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Nacelle_Orientation)
+         call MV_Pack2(Var, u%TurbineComponents%Nacelle%Orientation, ValAry)  ! Rank 2 Array
+      case (AD14_u_TurbineComponents_Nacelle_TranslationVel)
+         call MV_Pack2(Var, u%TurbineComponents%Nacelle%TranslationVel, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Nacelle_RotationVel)
+         call MV_Pack2(Var, u%TurbineComponents%Nacelle%RotationVel, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_TailFin_Position)
+         call MV_Pack2(Var, u%TurbineComponents%TailFin%Position, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_TailFin_Orientation)
+         call MV_Pack2(Var, u%TurbineComponents%TailFin%Orientation, ValAry)  ! Rank 2 Array
+      case (AD14_u_TurbineComponents_TailFin_TranslationVel)
+         call MV_Pack2(Var, u%TurbineComponents%TailFin%TranslationVel, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_TailFin_RotationVel)
+         call MV_Pack2(Var, u%TurbineComponents%TailFin%RotationVel, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Tower_Position)
+         call MV_Pack2(Var, u%TurbineComponents%Tower%Position, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Tower_Orientation)
+         call MV_Pack2(Var, u%TurbineComponents%Tower%Orientation, ValAry)  ! Rank 2 Array
+      case (AD14_u_TurbineComponents_Tower_TranslationVel)
+         call MV_Pack2(Var, u%TurbineComponents%Tower%TranslationVel, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Tower_RotationVel)
+         call MV_Pack2(Var, u%TurbineComponents%Tower%RotationVel, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_SubStructure_Position)
+         call MV_Pack2(Var, u%TurbineComponents%SubStructure%Position, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_SubStructure_Orientation)
+         call MV_Pack2(Var, u%TurbineComponents%SubStructure%Orientation, ValAry)  ! Rank 2 Array
+      case (AD14_u_TurbineComponents_SubStructure_TranslationVel)
+         call MV_Pack2(Var, u%TurbineComponents%SubStructure%TranslationVel, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_SubStructure_RotationVel)
+         call MV_Pack2(Var, u%TurbineComponents%SubStructure%RotationVel, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Foundation_Position)
+         call MV_Pack2(Var, u%TurbineComponents%Foundation%Position, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Foundation_Orientation)
+         call MV_Pack2(Var, u%TurbineComponents%Foundation%Orientation, ValAry)  ! Rank 2 Array
+      case (AD14_u_TurbineComponents_Foundation_TranslationVel)
+         call MV_Pack2(Var, u%TurbineComponents%Foundation%TranslationVel, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Foundation_RotationVel)
+         call MV_Pack2(Var, u%TurbineComponents%Foundation%RotationVel, ValAry)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_BladeLength)
+         call MV_Pack2(Var, u%TurbineComponents%BladeLength, ValAry)  ! Scalar
+      case (AD14_u_MulTabLoc)
+         call MV_Pack2(Var, u%MulTabLoc, ValAry)  ! Rank 2 Array
+      case (AD14_u_InflowVelocity)
+         call MV_Pack2(Var, u%InflowVelocity, ValAry)  ! Rank 2 Array
+      case (AD14_u_AvgInfVel)
+         call MV_Pack2(Var, u%AvgInfVel, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine AD14_PackInputAry(Vars, u, ValAry)
@@ -5065,87 +5192,95 @@ subroutine AD14_PackInputAry(Vars, u, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (AD14_u_InputMarkers)
-             call MV_Pack2(Var, u%InputMarkers(DL%i1), ValAry)  ! Mesh
-         case (AD14_u_Twr_InputMarkers)
-             call MV_Pack2(Var, u%Twr_InputMarkers, ValAry)  ! Mesh
-         case (AD14_u_TurbineComponents_Blade_Position)
-             call MV_Pack2(Var, u%TurbineComponents%Blade(DL%i1)%Position, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Blade_Orientation)
-             call MV_Pack2(Var, u%TurbineComponents%Blade(DL%i1)%Orientation, ValAry)  ! Rank 2 Array
-         case (AD14_u_TurbineComponents_Blade_TranslationVel)
-             call MV_Pack2(Var, u%TurbineComponents%Blade(DL%i1)%TranslationVel, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Blade_RotationVel)
-             call MV_Pack2(Var, u%TurbineComponents%Blade(DL%i1)%RotationVel, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Hub_Position)
-             call MV_Pack2(Var, u%TurbineComponents%Hub%Position, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Hub_Orientation)
-             call MV_Pack2(Var, u%TurbineComponents%Hub%Orientation, ValAry)  ! Rank 2 Array
-         case (AD14_u_TurbineComponents_Hub_TranslationVel)
-             call MV_Pack2(Var, u%TurbineComponents%Hub%TranslationVel, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Hub_RotationVel)
-             call MV_Pack2(Var, u%TurbineComponents%Hub%RotationVel, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_RotorFurl_Position)
-             call MV_Pack2(Var, u%TurbineComponents%RotorFurl%Position, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_RotorFurl_Orientation)
-             call MV_Pack2(Var, u%TurbineComponents%RotorFurl%Orientation, ValAry)  ! Rank 2 Array
-         case (AD14_u_TurbineComponents_RotorFurl_TranslationVel)
-             call MV_Pack2(Var, u%TurbineComponents%RotorFurl%TranslationVel, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_RotorFurl_RotationVel)
-             call MV_Pack2(Var, u%TurbineComponents%RotorFurl%RotationVel, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Nacelle_Position)
-             call MV_Pack2(Var, u%TurbineComponents%Nacelle%Position, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Nacelle_Orientation)
-             call MV_Pack2(Var, u%TurbineComponents%Nacelle%Orientation, ValAry)  ! Rank 2 Array
-         case (AD14_u_TurbineComponents_Nacelle_TranslationVel)
-             call MV_Pack2(Var, u%TurbineComponents%Nacelle%TranslationVel, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Nacelle_RotationVel)
-             call MV_Pack2(Var, u%TurbineComponents%Nacelle%RotationVel, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_TailFin_Position)
-             call MV_Pack2(Var, u%TurbineComponents%TailFin%Position, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_TailFin_Orientation)
-             call MV_Pack2(Var, u%TurbineComponents%TailFin%Orientation, ValAry)  ! Rank 2 Array
-         case (AD14_u_TurbineComponents_TailFin_TranslationVel)
-             call MV_Pack2(Var, u%TurbineComponents%TailFin%TranslationVel, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_TailFin_RotationVel)
-             call MV_Pack2(Var, u%TurbineComponents%TailFin%RotationVel, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Tower_Position)
-             call MV_Pack2(Var, u%TurbineComponents%Tower%Position, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Tower_Orientation)
-             call MV_Pack2(Var, u%TurbineComponents%Tower%Orientation, ValAry)  ! Rank 2 Array
-         case (AD14_u_TurbineComponents_Tower_TranslationVel)
-             call MV_Pack2(Var, u%TurbineComponents%Tower%TranslationVel, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Tower_RotationVel)
-             call MV_Pack2(Var, u%TurbineComponents%Tower%RotationVel, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_SubStructure_Position)
-             call MV_Pack2(Var, u%TurbineComponents%SubStructure%Position, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_SubStructure_Orientation)
-             call MV_Pack2(Var, u%TurbineComponents%SubStructure%Orientation, ValAry)  ! Rank 2 Array
-         case (AD14_u_TurbineComponents_SubStructure_TranslationVel)
-             call MV_Pack2(Var, u%TurbineComponents%SubStructure%TranslationVel, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_SubStructure_RotationVel)
-             call MV_Pack2(Var, u%TurbineComponents%SubStructure%RotationVel, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Foundation_Position)
-             call MV_Pack2(Var, u%TurbineComponents%Foundation%Position, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Foundation_Orientation)
-             call MV_Pack2(Var, u%TurbineComponents%Foundation%Orientation, ValAry)  ! Rank 2 Array
-         case (AD14_u_TurbineComponents_Foundation_TranslationVel)
-             call MV_Pack2(Var, u%TurbineComponents%Foundation%TranslationVel, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Foundation_RotationVel)
-             call MV_Pack2(Var, u%TurbineComponents%Foundation%RotationVel, ValAry)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_BladeLength)
-             call MV_Pack2(Var, u%TurbineComponents%BladeLength, ValAry)  ! Scalar
-         case (AD14_u_MulTabLoc)
-             call MV_Pack2(Var, u%MulTabLoc, ValAry)  ! Rank 2 Array
-         case (AD14_u_InflowVelocity)
-             call MV_Pack2(Var, u%InflowVelocity, ValAry)  ! Rank 2 Array
-         case (AD14_u_AvgInfVel)
-             call MV_Pack2(Var, u%AvgInfVel, ValAry)  ! Rank 1 Array
-         end select
-      end associate
+      call AD14_PackInputVar(Vars%u(i), u, ValAry)
    end do
+end subroutine
+
+subroutine AD14_UnpackInputVar(Var, ValAry, u)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(AD14_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (AD14_u_InputMarkers)
+         call MV_Unpack2(Var, ValAry, u%InputMarkers(DL%i1))  ! Mesh
+      case (AD14_u_Twr_InputMarkers)
+         call MV_Unpack2(Var, ValAry, u%Twr_InputMarkers)  ! Mesh
+      case (AD14_u_TurbineComponents_Blade_Position)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Blade(DL%i1)%Position)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Blade_Orientation)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Blade(DL%i1)%Orientation)  ! Rank 2 Array
+      case (AD14_u_TurbineComponents_Blade_TranslationVel)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Blade(DL%i1)%TranslationVel)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Blade_RotationVel)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Blade(DL%i1)%RotationVel)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Hub_Position)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Hub%Position)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Hub_Orientation)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Hub%Orientation)  ! Rank 2 Array
+      case (AD14_u_TurbineComponents_Hub_TranslationVel)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Hub%TranslationVel)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Hub_RotationVel)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Hub%RotationVel)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_RotorFurl_Position)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%RotorFurl%Position)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_RotorFurl_Orientation)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%RotorFurl%Orientation)  ! Rank 2 Array
+      case (AD14_u_TurbineComponents_RotorFurl_TranslationVel)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%RotorFurl%TranslationVel)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_RotorFurl_RotationVel)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%RotorFurl%RotationVel)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Nacelle_Position)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Nacelle%Position)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Nacelle_Orientation)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Nacelle%Orientation)  ! Rank 2 Array
+      case (AD14_u_TurbineComponents_Nacelle_TranslationVel)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Nacelle%TranslationVel)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Nacelle_RotationVel)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Nacelle%RotationVel)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_TailFin_Position)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%TailFin%Position)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_TailFin_Orientation)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%TailFin%Orientation)  ! Rank 2 Array
+      case (AD14_u_TurbineComponents_TailFin_TranslationVel)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%TailFin%TranslationVel)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_TailFin_RotationVel)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%TailFin%RotationVel)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Tower_Position)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Tower%Position)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Tower_Orientation)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Tower%Orientation)  ! Rank 2 Array
+      case (AD14_u_TurbineComponents_Tower_TranslationVel)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Tower%TranslationVel)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Tower_RotationVel)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Tower%RotationVel)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_SubStructure_Position)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%SubStructure%Position)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_SubStructure_Orientation)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%SubStructure%Orientation)  ! Rank 2 Array
+      case (AD14_u_TurbineComponents_SubStructure_TranslationVel)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%SubStructure%TranslationVel)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_SubStructure_RotationVel)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%SubStructure%RotationVel)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Foundation_Position)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Foundation%Position)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Foundation_Orientation)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Foundation%Orientation)  ! Rank 2 Array
+      case (AD14_u_TurbineComponents_Foundation_TranslationVel)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Foundation%TranslationVel)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_Foundation_RotationVel)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%Foundation%RotationVel)  ! Rank 1 Array
+      case (AD14_u_TurbineComponents_BladeLength)
+         call MV_Unpack2(Var, ValAry, u%TurbineComponents%BladeLength)  ! Scalar
+      case (AD14_u_MulTabLoc)
+         call MV_Unpack2(Var, ValAry, u%MulTabLoc)  ! Rank 2 Array
+      case (AD14_u_InflowVelocity)
+         call MV_Unpack2(Var, ValAry, u%InflowVelocity)  ! Rank 2 Array
+      case (AD14_u_AvgInfVel)
+         call MV_Unpack2(Var, ValAry, u%AvgInfVel)  ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 subroutine AD14_UnpackInputAry(Vars, ValAry, u)
@@ -5154,87 +5289,26 @@ subroutine AD14_UnpackInputAry(Vars, ValAry, u)
    type(AD14_InputType), intent(inout) :: u
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (AD14_u_InputMarkers)
-             call MV_Unpack2(Var, ValAry, u%InputMarkers(DL%i1))  ! Mesh
-         case (AD14_u_Twr_InputMarkers)
-             call MV_Unpack2(Var, ValAry, u%Twr_InputMarkers)  ! Mesh
-         case (AD14_u_TurbineComponents_Blade_Position)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Blade(DL%i1)%Position)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Blade_Orientation)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Blade(DL%i1)%Orientation)  ! Rank 2 Array
-         case (AD14_u_TurbineComponents_Blade_TranslationVel)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Blade(DL%i1)%TranslationVel)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Blade_RotationVel)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Blade(DL%i1)%RotationVel)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Hub_Position)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Hub%Position)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Hub_Orientation)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Hub%Orientation)  ! Rank 2 Array
-         case (AD14_u_TurbineComponents_Hub_TranslationVel)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Hub%TranslationVel)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Hub_RotationVel)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Hub%RotationVel)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_RotorFurl_Position)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%RotorFurl%Position)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_RotorFurl_Orientation)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%RotorFurl%Orientation)  ! Rank 2 Array
-         case (AD14_u_TurbineComponents_RotorFurl_TranslationVel)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%RotorFurl%TranslationVel)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_RotorFurl_RotationVel)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%RotorFurl%RotationVel)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Nacelle_Position)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Nacelle%Position)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Nacelle_Orientation)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Nacelle%Orientation)  ! Rank 2 Array
-         case (AD14_u_TurbineComponents_Nacelle_TranslationVel)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Nacelle%TranslationVel)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Nacelle_RotationVel)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Nacelle%RotationVel)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_TailFin_Position)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%TailFin%Position)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_TailFin_Orientation)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%TailFin%Orientation)  ! Rank 2 Array
-         case (AD14_u_TurbineComponents_TailFin_TranslationVel)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%TailFin%TranslationVel)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_TailFin_RotationVel)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%TailFin%RotationVel)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Tower_Position)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Tower%Position)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Tower_Orientation)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Tower%Orientation)  ! Rank 2 Array
-         case (AD14_u_TurbineComponents_Tower_TranslationVel)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Tower%TranslationVel)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Tower_RotationVel)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Tower%RotationVel)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_SubStructure_Position)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%SubStructure%Position)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_SubStructure_Orientation)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%SubStructure%Orientation)  ! Rank 2 Array
-         case (AD14_u_TurbineComponents_SubStructure_TranslationVel)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%SubStructure%TranslationVel)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_SubStructure_RotationVel)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%SubStructure%RotationVel)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Foundation_Position)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Foundation%Position)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Foundation_Orientation)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Foundation%Orientation)  ! Rank 2 Array
-         case (AD14_u_TurbineComponents_Foundation_TranslationVel)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Foundation%TranslationVel)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_Foundation_RotationVel)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%Foundation%RotationVel)  ! Rank 1 Array
-         case (AD14_u_TurbineComponents_BladeLength)
-             call MV_Unpack2(Var, ValAry, u%TurbineComponents%BladeLength)  ! Scalar
-         case (AD14_u_MulTabLoc)
-             call MV_Unpack2(Var, ValAry, u%MulTabLoc)  ! Rank 2 Array
-         case (AD14_u_InflowVelocity)
-             call MV_Unpack2(Var, ValAry, u%InflowVelocity)  ! Rank 2 Array
-         case (AD14_u_AvgInfVel)
-             call MV_Unpack2(Var, ValAry, u%AvgInfVel)  ! Rank 1 Array
-         end select
-      end associate
+      call AD14_UnpackInputVar(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+
+subroutine AD14_PackOutputVar(Var, y, ValAry)
+   type(AD14_OutputType), intent(in) :: y
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (AD14_y_OutputLoads)
+         call MV_Pack2(Var, y%OutputLoads(DL%i1), ValAry)  ! Mesh
+      case (AD14_y_Twr_OutputLoads)
+         call MV_Pack2(Var, y%Twr_OutputLoads, ValAry)  ! Mesh
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine AD14_PackOutputAry(Vars, y, ValAry)
@@ -5243,15 +5317,23 @@ subroutine AD14_PackOutputAry(Vars, y, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (AD14_y_OutputLoads)
-             call MV_Pack2(Var, y%OutputLoads(DL%i1), ValAry)  ! Mesh
-         case (AD14_y_Twr_OutputLoads)
-             call MV_Pack2(Var, y%Twr_OutputLoads, ValAry)  ! Mesh
-         end select
-      end associate
+      call AD14_PackOutputVar(Vars%y(i), y, ValAry)
    end do
+end subroutine
+
+subroutine AD14_UnpackOutputVar(Var, ValAry, y)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(AD14_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (AD14_y_OutputLoads)
+         call MV_Unpack2(Var, ValAry, y%OutputLoads(DL%i1))  ! Mesh
+      case (AD14_y_Twr_OutputLoads)
+         call MV_Unpack2(Var, ValAry, y%Twr_OutputLoads)  ! Mesh
+      end select
+   end associate
 end subroutine
 
 subroutine AD14_UnpackOutputAry(Vars, ValAry, y)
@@ -5260,15 +5342,9 @@ subroutine AD14_UnpackOutputAry(Vars, ValAry, y)
    type(AD14_OutputType), intent(inout) :: y
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (AD14_y_OutputLoads)
-             call MV_Unpack2(Var, ValAry, y%OutputLoads(DL%i1))  ! Mesh
-         case (AD14_y_Twr_OutputLoads)
-             call MV_Unpack2(Var, ValAry, y%Twr_OutputLoads)  ! Mesh
-         end select
-      end associate
+      call AD14_UnpackOutputVar(Vars%y(i), ValAry, y)
    end do
 end subroutine
+
 END MODULE AeroDyn14_Types
 !ENDOFREGISTRYGENERATEDFILE

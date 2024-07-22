@@ -58,7 +58,7 @@ typedef	^	InitOutputType	IntKi	DerivOrder_x {:}	-	-	"Integer that tells FAST/MBC
 typedef	^	InitOutputType	LOGICAL	RotFrame_u	{:}	-	-	"Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
 typedef	^	InitOutputType	LOGICAL	IsLoad_u	{:}	-	-	"Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
 typedef	^	InitOutputType	IntKi	GearBox_index	-	-	-	"Index to gearbox rotation in state array (for steady-state calculations)"   -
-typedef	^	InitOutputType	ModVarsType	*Vars	-	-	-	"Module Variables"
+typedef	^	InitOutputType	ModVarsType	Vars	-	-	-	"Module Variables"
 
 # ..... Blade Input file data ...........................................................................................................
 typedef	ElastoDyn/ED	BladeInputData	IntKi	NBlInpSt	-	-	-	"Number of blade input stations"	-
@@ -527,7 +527,6 @@ typedef ^       OtherStateType  R8Ki    OmegaDotTn      -       -       -       
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef	^	ParameterType	ModVarsType	&Vars	-	-	-	"Module Variables"
 typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
 typedef	^	ParameterType	DbKi	DT24	-	-	-	"=DT/24 (used in loose coupling)"	seconds
 typedef	^	ParameterType	IntKi	BldNodes	-	-	-	"Number of blade nodes used in the analysis"	-

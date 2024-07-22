@@ -2560,21 +2560,46 @@ function FEAM_OutputMeshName(ML) result(Name)
    end select
 end function
 
+subroutine FEAM_PackContStateVar(Var, x, ValAry)
+   type(FEAM_ContinuousStateType), intent(in) :: x
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (FEAM_x_GLU)
+         call MV_Pack2(Var, x%GLU, ValAry)  ! Rank 2 Array
+      case (FEAM_x_GLDU)
+         call MV_Pack2(Var, x%GLDU, ValAry)  ! Rank 2 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
 subroutine FEAM_PackContStateAry(Vars, x, ValAry)
    type(FEAM_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)   :: Vars
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (FEAM_x_GLU)
-             call MV_Pack2(Var, x%GLU, ValAry)  ! Rank 2 Array
-         case (FEAM_x_GLDU)
-             call MV_Pack2(Var, x%GLDU, ValAry)  ! Rank 2 Array
-         end select
-      end associate
+      call FEAM_PackContStateVar(Vars%x(i), x, ValAry)
    end do
+end subroutine
+
+subroutine FEAM_UnpackContStateVar(Var, ValAry, x)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(FEAM_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (FEAM_x_GLU)
+         call MV_Unpack2(Var, ValAry, x%GLU)  ! Rank 2 Array
+      case (FEAM_x_GLDU)
+         call MV_Unpack2(Var, ValAry, x%GLDU)  ! Rank 2 Array
+      end select
+   end associate
 end subroutine
 
 subroutine FEAM_UnpackContStateAry(Vars, ValAry, x)
@@ -2583,15 +2608,26 @@ subroutine FEAM_UnpackContStateAry(Vars, ValAry, x)
    type(FEAM_ContinuousStateType), intent(inout) :: x
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (FEAM_x_GLU)
-             call MV_Unpack2(Var, ValAry, x%GLU)  ! Rank 2 Array
-         case (FEAM_x_GLDU)
-             call MV_Unpack2(Var, ValAry, x%GLDU)  ! Rank 2 Array
-         end select
-      end associate
+      call FEAM_UnpackContStateVar(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+
+subroutine FEAM_PackConstrStateVar(Var, z, ValAry)
+   type(FEAM_ConstraintStateType), intent(in) :: z
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (FEAM_z_TSN)
+         call MV_Pack2(Var, z%TSN, ValAry)  ! Rank 1 Array
+      case (FEAM_z_TZER)
+         call MV_Pack2(Var, z%TZER, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine FEAM_PackConstrStateAry(Vars, z, ValAry)
@@ -2600,15 +2636,23 @@ subroutine FEAM_PackConstrStateAry(Vars, z, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (FEAM_z_TSN)
-             call MV_Pack2(Var, z%TSN, ValAry)  ! Rank 1 Array
-         case (FEAM_z_TZER)
-             call MV_Pack2(Var, z%TZER, ValAry)  ! Rank 1 Array
-         end select
-      end associate
+      call FEAM_PackConstrStateVar(Vars%z(i), z, ValAry)
    end do
+end subroutine
+
+subroutine FEAM_UnpackConstrStateVar(Var, ValAry, z)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(FEAM_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (FEAM_z_TSN)
+         call MV_Unpack2(Var, ValAry, z%TSN)  ! Rank 1 Array
+      case (FEAM_z_TZER)
+         call MV_Unpack2(Var, ValAry, z%TZER)  ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 subroutine FEAM_UnpackConstrStateAry(Vars, ValAry, z)
@@ -2617,15 +2661,26 @@ subroutine FEAM_UnpackConstrStateAry(Vars, ValAry, z)
    type(FEAM_ConstraintStateType), intent(inout) :: z
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (FEAM_z_TSN)
-             call MV_Unpack2(Var, ValAry, z%TSN)  ! Rank 1 Array
-         case (FEAM_z_TZER)
-             call MV_Unpack2(Var, ValAry, z%TZER)  ! Rank 1 Array
-         end select
-      end associate
+      call FEAM_UnpackConstrStateVar(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+
+subroutine FEAM_PackInputVar(Var, u, ValAry)
+   type(FEAM_InputType), intent(in) :: u
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (FEAM_u_HydroForceLineMesh)
+         call MV_Pack2(Var, u%HydroForceLineMesh, ValAry)  ! Mesh
+      case (FEAM_u_PtFairleadDisplacement)
+         call MV_Pack2(Var, u%PtFairleadDisplacement, ValAry)  ! Mesh
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine FEAM_PackInputAry(Vars, u, ValAry)
@@ -2634,15 +2689,23 @@ subroutine FEAM_PackInputAry(Vars, u, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (FEAM_u_HydroForceLineMesh)
-             call MV_Pack2(Var, u%HydroForceLineMesh, ValAry)  ! Mesh
-         case (FEAM_u_PtFairleadDisplacement)
-             call MV_Pack2(Var, u%PtFairleadDisplacement, ValAry)  ! Mesh
-         end select
-      end associate
+      call FEAM_PackInputVar(Vars%u(i), u, ValAry)
    end do
+end subroutine
+
+subroutine FEAM_UnpackInputVar(Var, ValAry, u)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(FEAM_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (FEAM_u_HydroForceLineMesh)
+         call MV_Unpack2(Var, ValAry, u%HydroForceLineMesh)  ! Mesh
+      case (FEAM_u_PtFairleadDisplacement)
+         call MV_Unpack2(Var, ValAry, u%PtFairleadDisplacement)  ! Mesh
+      end select
+   end associate
 end subroutine
 
 subroutine FEAM_UnpackInputAry(Vars, ValAry, u)
@@ -2651,15 +2714,28 @@ subroutine FEAM_UnpackInputAry(Vars, ValAry, u)
    type(FEAM_InputType), intent(inout) :: u
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (FEAM_u_HydroForceLineMesh)
-             call MV_Unpack2(Var, ValAry, u%HydroForceLineMesh)  ! Mesh
-         case (FEAM_u_PtFairleadDisplacement)
-             call MV_Unpack2(Var, ValAry, u%PtFairleadDisplacement)  ! Mesh
-         end select
-      end associate
+      call FEAM_UnpackInputVar(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+
+subroutine FEAM_PackOutputVar(Var, y, ValAry)
+   type(FEAM_OutputType), intent(in) :: y
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (FEAM_y_WriteOutput)
+         call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+      case (FEAM_y_PtFairleadLoad)
+         call MV_Pack2(Var, y%PtFairleadLoad, ValAry)  ! Mesh
+      case (FEAM_y_LineMeshPosition)
+         call MV_Pack2(Var, y%LineMeshPosition, ValAry)  ! Mesh
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine FEAM_PackOutputAry(Vars, y, ValAry)
@@ -2668,17 +2744,25 @@ subroutine FEAM_PackOutputAry(Vars, y, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (FEAM_y_WriteOutput)
-             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
-         case (FEAM_y_PtFairleadLoad)
-             call MV_Pack2(Var, y%PtFairleadLoad, ValAry)  ! Mesh
-         case (FEAM_y_LineMeshPosition)
-             call MV_Pack2(Var, y%LineMeshPosition, ValAry)  ! Mesh
-         end select
-      end associate
+      call FEAM_PackOutputVar(Vars%y(i), y, ValAry)
    end do
+end subroutine
+
+subroutine FEAM_UnpackOutputVar(Var, ValAry, y)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(FEAM_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (FEAM_y_WriteOutput)
+         call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+      case (FEAM_y_PtFairleadLoad)
+         call MV_Unpack2(Var, ValAry, y%PtFairleadLoad)  ! Mesh
+      case (FEAM_y_LineMeshPosition)
+         call MV_Unpack2(Var, ValAry, y%LineMeshPosition)  ! Mesh
+      end select
+   end associate
 end subroutine
 
 subroutine FEAM_UnpackOutputAry(Vars, ValAry, y)
@@ -2687,17 +2771,9 @@ subroutine FEAM_UnpackOutputAry(Vars, ValAry, y)
    type(FEAM_OutputType), intent(inout) :: y
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (FEAM_y_WriteOutput)
-             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
-         case (FEAM_y_PtFairleadLoad)
-             call MV_Unpack2(Var, ValAry, y%PtFairleadLoad)  ! Mesh
-         case (FEAM_y_LineMeshPosition)
-             call MV_Unpack2(Var, ValAry, y%LineMeshPosition)  ! Mesh
-         end select
-      end associate
+      call FEAM_UnpackOutputVar(Vars%y(i), ValAry, y)
    end do
 end subroutine
+
 END MODULE FEAMooring_Types
 !ENDOFREGISTRYGENERATEDFILE

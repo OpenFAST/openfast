@@ -106,6 +106,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Indx = 0_IntKi      !< Index into times, to speed up interpolation [-]
     LOGICAL  :: EquilStart = .false.      !< Flag to determine the equilibrium position of the CB DOF at initialization (first call) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< An array holding the value of all of the calculated (not only selected) output channels [see OutListParameters.xlsx spreadsheet]
+    TYPE(ExtPtfm_ContinuousStateType)  :: dxdt_lin      !< continuous state derivatives [-]
   END TYPE ExtPtfm_MiscVarType
 ! =======================
 ! =========  ExtPtfm_ParameterType  =======
@@ -831,6 +832,7 @@ subroutine ExtPtfm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    character(*),    intent(  out) :: ErrMsg
    integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtPtfm_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -873,12 +875,17 @@ subroutine ExtPtfm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%AllOuts = SrcMiscData%AllOuts
    end if
+   call ExtPtfm_CopyContState(SrcMiscData%dxdt_lin, DstMiscData%dxdt_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine ExtPtfm_DestroyMisc(MiscData, ErrStat, ErrMsg)
    type(ExtPtfm_MiscVarType), intent(inout) :: MiscData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtPtfm_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -891,6 +898,8 @@ subroutine ExtPtfm_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%AllOuts)) then
       deallocate(MiscData%AllOuts)
    end if
+   call ExtPtfm_DestroyContState(MiscData%dxdt_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine ExtPtfm_PackMisc(RF, Indata)
@@ -904,6 +913,7 @@ subroutine ExtPtfm_PackMisc(RF, Indata)
    call RegPack(RF, InData%Indx)
    call RegPack(RF, InData%EquilStart)
    call RegPackAlloc(RF, InData%AllOuts)
+   call ExtPtfm_PackContState(RF, InData%dxdt_lin) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -921,6 +931,7 @@ subroutine ExtPtfm_UnPackMisc(RF, OutData)
    call RegUnpack(RF, OutData%Indx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EquilStart); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AllOuts); if (RegCheckErr(RF, RoutineName)) return
+   call ExtPtfm_UnpackContState(RF, OutData%dxdt_lin) ! dxdt_lin 
 end subroutine
 
 subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -1908,21 +1919,46 @@ function ExtPtfm_OutputMeshName(ML) result(Name)
    end select
 end function
 
+subroutine ExtPtfm_PackContStateVar(Var, x, ValAry)
+   type(ExtPtfm_ContinuousStateType), intent(in) :: x
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (ExtPtfm_x_qm)
+         call MV_Pack2(Var, x%qm, ValAry)  ! Rank 1 Array
+      case (ExtPtfm_x_qmdot)
+         call MV_Pack2(Var, x%qmdot, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
 subroutine ExtPtfm_PackContStateAry(Vars, x, ValAry)
    type(ExtPtfm_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)   :: Vars
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (ExtPtfm_x_qm)
-             call MV_Pack2(Var, x%qm, ValAry)  ! Rank 1 Array
-         case (ExtPtfm_x_qmdot)
-             call MV_Pack2(Var, x%qmdot, ValAry)  ! Rank 1 Array
-         end select
-      end associate
+      call ExtPtfm_PackContStateVar(Vars%x(i), x, ValAry)
    end do
+end subroutine
+
+subroutine ExtPtfm_UnpackContStateVar(Var, ValAry, x)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ExtPtfm_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (ExtPtfm_x_qm)
+         call MV_Unpack2(Var, ValAry, x%qm)  ! Rank 1 Array
+      case (ExtPtfm_x_qmdot)
+         call MV_Unpack2(Var, ValAry, x%qmdot)  ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 subroutine ExtPtfm_UnpackContStateAry(Vars, ValAry, x)
@@ -1931,15 +1967,24 @@ subroutine ExtPtfm_UnpackContStateAry(Vars, ValAry, x)
    type(ExtPtfm_ContinuousStateType), intent(inout) :: x
    integer(IntKi)                  :: i
    do i = 1, size(Vars%x)
-      associate (Var => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (Var%DL%Num)
-         case (ExtPtfm_x_qm)
-             call MV_Unpack2(Var, ValAry, x%qm)  ! Rank 1 Array
-         case (ExtPtfm_x_qmdot)
-             call MV_Unpack2(Var, ValAry, x%qmdot)  ! Rank 1 Array
-         end select
-      end associate
+      call ExtPtfm_UnpackContStateVar(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+
+subroutine ExtPtfm_PackConstrStateVar(Var, z, ValAry)
+   type(ExtPtfm_ConstraintStateType), intent(in) :: z
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (ExtPtfm_z_DummyConstrState)
+         call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine ExtPtfm_PackConstrStateAry(Vars, z, ValAry)
@@ -1948,13 +1993,21 @@ subroutine ExtPtfm_PackConstrStateAry(Vars, z, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (ExtPtfm_z_DummyConstrState)
-             call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
-         end select
-      end associate
+      call ExtPtfm_PackConstrStateVar(Vars%z(i), z, ValAry)
    end do
+end subroutine
+
+subroutine ExtPtfm_UnpackConstrStateVar(Var, ValAry, z)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ExtPtfm_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (ExtPtfm_z_DummyConstrState)
+         call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
+      end select
+   end associate
 end subroutine
 
 subroutine ExtPtfm_UnpackConstrStateAry(Vars, ValAry, z)
@@ -1963,13 +2016,24 @@ subroutine ExtPtfm_UnpackConstrStateAry(Vars, ValAry, z)
    type(ExtPtfm_ConstraintStateType), intent(inout) :: z
    integer(IntKi)                  :: i
    do i = 1, size(Vars%z)
-      associate (Var => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (Var%DL%Num)
-         case (ExtPtfm_z_DummyConstrState)
-             call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
-         end select
-      end associate
+      call ExtPtfm_UnpackConstrStateVar(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+
+subroutine ExtPtfm_PackInputVar(Var, u, ValAry)
+   type(ExtPtfm_InputType), intent(in) :: u
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (ExtPtfm_u_PtfmMesh)
+         call MV_Pack2(Var, u%PtfmMesh, ValAry)  ! Mesh
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine ExtPtfm_PackInputAry(Vars, u, ValAry)
@@ -1978,13 +2042,21 @@ subroutine ExtPtfm_PackInputAry(Vars, u, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (ExtPtfm_u_PtfmMesh)
-             call MV_Pack2(Var, u%PtfmMesh, ValAry)  ! Mesh
-         end select
-      end associate
+      call ExtPtfm_PackInputVar(Vars%u(i), u, ValAry)
    end do
+end subroutine
+
+subroutine ExtPtfm_UnpackInputVar(Var, ValAry, u)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ExtPtfm_InputType), intent(inout) :: u
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (ExtPtfm_u_PtfmMesh)
+         call MV_Unpack2(Var, ValAry, u%PtfmMesh)  ! Mesh
+      end select
+   end associate
 end subroutine
 
 subroutine ExtPtfm_UnpackInputAry(Vars, ValAry, u)
@@ -1993,13 +2065,26 @@ subroutine ExtPtfm_UnpackInputAry(Vars, ValAry, u)
    type(ExtPtfm_InputType), intent(inout) :: u
    integer(IntKi)                  :: i
    do i = 1, size(Vars%u)
-      associate (Var => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (Var%DL%Num)
-         case (ExtPtfm_u_PtfmMesh)
-             call MV_Unpack2(Var, ValAry, u%PtfmMesh)  ! Mesh
-         end select
-      end associate
+      call ExtPtfm_UnpackInputVar(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+
+subroutine ExtPtfm_PackOutputVar(Var, y, ValAry)
+   type(ExtPtfm_OutputType), intent(in) :: y
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(inout)       :: ValAry(:)
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (ExtPtfm_y_PtfmMesh)
+         call MV_Pack2(Var, y%PtfmMesh, ValAry)  ! Mesh
+      case (ExtPtfm_y_WriteOutput)
+         call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
+      case default
+         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
+      end select
+   end associate
 end subroutine
 
 subroutine ExtPtfm_PackOutputAry(Vars, y, ValAry)
@@ -2008,15 +2093,23 @@ subroutine ExtPtfm_PackOutputAry(Vars, y, ValAry)
    real(R8Ki), intent(inout)       :: ValAry(:)
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (ExtPtfm_y_PtfmMesh)
-             call MV_Pack2(Var, y%PtfmMesh, ValAry)  ! Mesh
-         case (ExtPtfm_y_WriteOutput)
-             call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
-         end select
-      end associate
+      call ExtPtfm_PackOutputVar(Vars%y(i), y, ValAry)
    end do
+end subroutine
+
+subroutine ExtPtfm_UnpackOutputVar(Var, ValAry, y)
+   type(ModVarType), intent(in)    :: Var
+   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ExtPtfm_OutputType), intent(inout) :: y
+   integer(IntKi)                  :: i
+   associate (DL => Var%DL)
+      select case (Var%DL%Num)
+      case (ExtPtfm_y_PtfmMesh)
+         call MV_Unpack2(Var, ValAry, y%PtfmMesh)  ! Mesh
+      case (ExtPtfm_y_WriteOutput)
+         call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 subroutine ExtPtfm_UnpackOutputAry(Vars, ValAry, y)
@@ -2025,15 +2118,9 @@ subroutine ExtPtfm_UnpackOutputAry(Vars, ValAry, y)
    type(ExtPtfm_OutputType), intent(inout) :: y
    integer(IntKi)                  :: i
    do i = 1, size(Vars%y)
-      associate (Var => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (Var%DL%Num)
-         case (ExtPtfm_y_PtfmMesh)
-             call MV_Unpack2(Var, ValAry, y%PtfmMesh)  ! Mesh
-         case (ExtPtfm_y_WriteOutput)
-             call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
-         end select
-      end associate
+      call ExtPtfm_UnpackOutputVar(Vars%y(i), ValAry, y)
    end do
 end subroutine
+
 END MODULE ExtPtfm_MCKF_Types
 !ENDOFREGISTRYGENERATEDFILE

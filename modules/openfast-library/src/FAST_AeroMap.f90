@@ -20,7 +20,6 @@
 
 module FAST_AeroMap
 
-use FAST_ModData
 use FAST_ModTypes
 use FAST_Types
 use FAST_Funcs

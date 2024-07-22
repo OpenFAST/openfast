@@ -464,7 +464,7 @@ subroutine FAST_CalcOutput(ModData, Maps, ThisTime, InputIndex, StateIndex, T, E
    else
       CalcWriteOutputLoc = .true.
    end if
-   
+
    ! Select based on module ID
    select case (ModData%ID)
 
@@ -515,26 +515,24 @@ subroutine FAST_CalcOutput(ModData, Maps, ThisTime, InputIndex, StateIndex, T, E
    if (ErrStat >= AbortErrLev) return
 
    ! Set updated flag in mappings where this module is the source
-   Maps(ModData%SrcMaps)%Ready = .true.
+   Maps(ModData%iSrcMaps)%Ready = .true.
 
 end subroutine
 
 subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
-                      Vars, u_op, y_op, x_op, dx_op, xd_op, z_op)
-   type(ModDataType), intent(in)                      :: ModData     !< Module data
+                      u_op, y_op, x_op, dx_op, z_op, u_glue, y_glue, x_glue, dx_glue, z_glue)
+   type(ModDataType), intent(in)                      :: ModData     !< Module information
    real(DbKi), intent(in)                             :: ThisTime    !< Time
    integer(IntKi), intent(in)                         :: InputIndex  !< Input index
    integer(IntKi), intent(in)                         :: StateIndex  !< State index
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
-   type(ModVarsType), optional, intent(in)            :: Vars        !< Variables
-   real(R8Ki), allocatable, optional, intent(inout)   :: u_op(:)     !< values of linearized inputs
-   real(R8Ki), allocatable, optional, intent(inout)   :: y_op(:)     !< values of linearized outputs
-   real(R8Ki), allocatable, optional, intent(inout)   :: x_op(:)     !< values of linearized continuous states
-   real(R8Ki), allocatable, optional, intent(inout)   :: dx_op(:)    !< values of first time derivatives of linearized continuous states
-   real(R8Ki), allocatable, optional, intent(inout)   :: xd_op(:)    !< values of linearized discrete states
-   real(R8Ki), allocatable, optional, intent(inout)   :: z_op(:)     !< values of linearized constraint states
+   real(R8Ki), allocatable, optional, intent(inout)   :: u_op(:), u_glue(:)     !< values of linearized inputs
+   real(R8Ki), allocatable, optional, intent(inout)   :: y_op(:), y_glue(:)     !< values of linearized outputs
+   real(R8Ki), allocatable, optional, intent(inout)   :: x_op(:), x_glue(:)     !< values of linearized continuous states
+   real(R8Ki), allocatable, optional, intent(inout)   :: dx_op(:), dx_glue(:)    !< values of first time derivatives of linearized continuous states
+   real(R8Ki), allocatable, optional, intent(inout)   :: z_op(:), z_glue(:)     !< values of linearized constraint states
 
    character(*), parameter    :: RoutineName = 'FAST_GetOP'
    integer(IntKi)             :: ErrStat2
@@ -544,186 +542,529 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
    ErrStat = ErrID_None
    ErrMsg = ''
 
-   ! Select based on module ID
-   select case (ModData%ID)
+   ! If inputs are requested
+   if (present(u_op)) then
 
-   case (Module_AD)
-      call AD_GetOP(ModData%Ins, ThisTime, T%AD%Input(InputIndex), T%AD%p, T%AD%x(StateIndex), T%AD%xd(StateIndex), T%AD%z(StateIndex), &
-                    T%AD%OtherSt(StateIndex), T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
-                    Vars=Vars, u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+      if (.not. allocated(u_op)) then
+         call AllocAry(u_op, ModData%Vars%Nu, "u_op", ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end if
 
-   case (Module_BD)
-      call BD_GetOP(ThisTime, T%BD%Input(InputIndex, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, StateIndex), &
-                    T%BD%xd(ModData%Ins, StateIndex), T%BD%z(ModData%Ins, StateIndex), T%BD%OtherSt(ModData%Ins, StateIndex), &
-                    T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
-                    u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+      ! Select based on module ID
+      select case (ModData%ID)
+      case (Module_AD)
+         call AD_PackInputAry(ModData%Vars, T%AD%Input(InputIndex)%rotors(ModData%Ins), u_op)
+      case (Module_BD)
+         call BD_PackInputAry(ModData%Vars, T%BD%Input(InputIndex, ModData%Ins), u_op)
+      case (Module_ED)
+         call ED_PackInputAry(ModData%Vars, T%ED%Input(InputIndex), u_op)
+      case (Module_ExtPtfm)
+         call ExtPtfm_PackInputAry(ModData%Vars, T%ExtPtfm%Input(InputIndex), u_op)
+      case (Module_FEAM)
+         call FEAM_PackInputAry(ModData%Vars, T%FEAM%Input(InputIndex), u_op)
+      case (Module_HD)
+         call HydroDyn_PackInputAry(ModData%Vars, T%HD%Input(InputIndex), u_op)
+      case (Module_IceD)
+         call IceD_PackInputAry(ModData%Vars, T%IceD%Input(InputIndex, ModData%Ins), u_op)
+      case (Module_IceF)
+         call IceFloe_PackInputAry(ModData%Vars, T%IceF%Input(InputIndex), u_op)
+      case (Module_IfW)
+         call InflowWind_PackInputAry(ModData%Vars, T%IfW%Input(InputIndex), u_op)
+         call InflowWind_PackExtInputAry(ModData%Vars, ThisTime, T%IfW%p, u_op)
+      case (Module_MAP)
+         call MAP_PackInputAry(ModData%Vars, T%MAP%Input(InputIndex), u_op)
+      case (Module_MD)
+         call MD_PackInputAry(ModData%Vars, T%MD%Input(InputIndex), u_op)
+      case (Module_ExtInfw)
+         ! call ExtInfw_PackInputAry(ModData%Vars, T%ExtInfw%Input(InputIndex), u_op)
+      case (Module_Orca)
+         call Orca_PackInputAry(ModData%Vars, T%Orca%Input(InputIndex), u_op)
+      case (Module_SD)
+         call SD_PackInputAry(ModData%Vars, T%SD%Input(InputIndex), u_op)
+      case (Module_SeaSt)
+         call SeaSt_PackInputAry(ModData%Vars, T%SeaSt%Input(InputIndex), u_op)
+      case (Module_SrvD)
+         call SrvD_PackInputAry(ModData%Vars, T%SrvD%Input(InputIndex), u_op)
+      case default
+         call SetErrStat(ErrID_Fatal, "Input unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
+         return
+      end select
 
-   case (Module_ED)
-      call ED_GetOP(ThisTime, T%ED%Input(InputIndex), T%ED%p, T%ED%x(StateIndex), T%ED%xd(StateIndex), &
-                    T%ED%z(StateIndex), T%ED%OtherSt(StateIndex), T%ED%y, T%ED%m, ErrStat2, ErrMsg2, &
-                    u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+      ! If glue array is present, transfer from module to glue
+      if (present(u_glue)) call MV_PackArray(ModData%Vars%u, u_op, u_glue)
+   end if
 
-!  case (Module_ExtPtfm)
+   ! If outputs are requested
+   if (present(y_op)) then
 
-!  case (Module_FEAM)
+      if (.not. allocated(y_op)) then
+         call AllocAry(y_op, ModData%Vars%Ny, "y_op", ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end if
 
-   case (Module_HD)
-      call HD_GetOP(ThisTime, T%HD%Input(InputIndex), T%HD%p, T%HD%x(StateIndex), T%HD%xd(StateIndex), &
-                    T%HD%z(StateIndex), T%HD%OtherSt(StateIndex), T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
-                    u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+      ! Select based on module ID
+      select case (ModData%ID)
+      case (Module_AD)
+         call AD_PackOutputAry(ModData%Vars, T%AD%y%rotors(ModData%Ins), y_op)
+      case (Module_BD)
+         call BD_PackOutputAry(ModData%Vars, T%BD%y(ModData%Ins), y_op)
+      case (Module_ED)
+         call ED_PackOutputAry(ModData%Vars, T%ED%y, y_op)
+      case (Module_ExtPtfm)
+         call ExtPtfm_PackOutputAry(ModData%Vars, T%ExtPtfm%y, y_op)
+      case (Module_FEAM)
+         call FEAM_PackOutputAry(ModData%Vars, T%FEAM%y, y_op)
+      case (Module_HD)
+         call HydroDyn_PackOutputAry(ModData%Vars, T%HD%y, y_op)
+      case (Module_IceD)
+         call IceD_PackOutputAry(ModData%Vars, T%IceD%y(ModData%Ins), y_op)
+      case (Module_IceF)
+         call IceFloe_PackOutputAry(ModData%Vars, T%IceF%y, y_op)
+      case (Module_IfW)
+         call InflowWind_PackOutputAry(ModData%Vars, T%IfW%y, y_op)
+         call InflowWind_PackExtOutputAry(ModData%Vars, ThisTime, T%IfW%p, y_op)
+      case (Module_MAP)
+         call MAP_PackOutputAry(ModData%Vars, T%MAP%y, y_op)
+      case (Module_MD)
+         call MD_PackOutputAry(ModData%Vars, T%MD%y, y_op)
+      case (Module_ExtInfw)
+         call ExtInfw_PackOutputAry(ModData%Vars, T%ExtInfw%y, y_op)
+      case (Module_Orca)
+         call Orca_PackOutputAry(ModData%Vars, T%Orca%y, y_op)
+      case (Module_SD)
+         call SD_PackOutputAry(ModData%Vars, T%SD%y, y_op)
+      case (Module_SeaSt)
+         call SeaSt_PackOutputAry(ModData%Vars, T%SeaSt%y, y_op)
+      case (Module_SrvD)
+         call SrvD_PackOutputAry(ModData%Vars, T%SrvD%y, y_op)
+      case default
+         call SetErrStat(ErrID_Fatal, "Output unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
+         return
+      end select
 
-!  case (Module_IceD)
-!  case (Module_IceF)
-   case (Module_IfW)
-      call InflowWind_GetOP(ThisTime, T%IfW%Input(InputIndex), T%IfW%p, T%IfW%x(StateIndex), T%IfW%xd(StateIndex), T%IfW%z(StateIndex), &
-                            T%IfW%OtherSt(StateIndex), T%IfW%y, T%IfW%m, ErrStat2, ErrMsg2, &
-                            u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+      ! If glue array is present, transfer from module to glue
+      if (present(y_glue)) call MV_PackArray(ModData%Vars%y, y_op, y_glue)
+   end if
 
-   case (Module_MAP)
-      call MAP_GetOP(ThisTime, T%MAP%Input(InputIndex), T%MAP%p, T%MAP%x(StateIndex), T%MAP%xd(StateIndex), T%MAP%z(StateIndex), &
-                     T%MAP%OtherSt, T%MAP%y, ErrStat2, ErrMsg2, &
-                     u_op=u_op, y_op=y_op) !, x_op=x_op, dx_op=dx_op) MAP doesn't have states
+   ! If continuous states are requested
+   if (present(x_op)) then
 
-   case (Module_MD)
-      call MD_GetOP(ThisTime, T%MD%Input(InputIndex), T%MD%p, T%MD%x(StateIndex), T%MD%xd(StateIndex), T%MD%z(StateIndex), &
-                    T%MD%OtherSt(StateIndex), T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
-                    u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+      if (.not. allocated(x_op)) then
+         call AllocAry(x_op, ModData%Vars%Nx, "x_op", ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end if
 
-!  case (Module_OpFM)
-!  case (Module_Orca)
-   case (Module_SD)
-      call SD_GetOP(ThisTime, T%SD%Input(InputIndex), T%SD%p, T%SD%x(StateIndex), T%SD%xd(StateIndex), T%SD%z(StateIndex), &
-                    T%SD%OtherSt(StateIndex), T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
-                    u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+      ! Select based on module ID
+      select case (ModData%ID)
+      case (Module_AD)
+         call AD_PackContStateAry(ModData%Vars, T%AD%x(StateIndex)%rotors(ModData%Ins), x_op)
+      case (Module_BD)
+         call BD_PackContStateAry(ModData%Vars, T%BD%x(StateIndex, ModData%Ins), x_op)
+      case (Module_ED)
+         call ED_PackContStateAry(ModData%Vars, T%ED%x(StateIndex), x_op)
+      case (Module_ExtPtfm)
+         call ExtPtfm_PackContStateAry(ModData%Vars, T%ExtPtfm%x(StateIndex), x_op)
+      case (Module_FEAM)
+         call FEAM_PackContStateAry(ModData%Vars, T%FEAM%x(StateIndex), x_op)
+      case (Module_HD)
+         call HydroDyn_PackContStateAry(ModData%Vars, T%HD%x(StateIndex), x_op)
+      case (Module_IceD)
+         call IceD_PackContStateAry(ModData%Vars, T%IceD%x(StateIndex, ModData%Ins), x_op)
+      case (Module_IceF)
+         call IceFloe_PackContStateAry(ModData%Vars, T%IceF%x(StateIndex), x_op)
+      case (Module_IfW)
+         call InflowWind_PackContStateAry(ModData%Vars, T%IfW%x(StateIndex), x_op)
+      case (Module_MAP)
+         call MAP_PackContStateAry(ModData%Vars, T%MAP%x(StateIndex), x_op)
+      case (Module_MD)
+         call MD_PackContStateAry(ModData%Vars, T%MD%x(StateIndex), x_op)
+      case (Module_ExtInfw)
+         ! call ExtInfw_PackContStateAry(ModData%Vars, T%ExtInfw%x(StateIndex), x_op)
+      case (Module_Orca)
+         call Orca_PackContStateAry(ModData%Vars, T%Orca%x(StateIndex), x_op)
+      case (Module_SD)
+         call SD_PackContStateAry(ModData%Vars, T%SD%x(StateIndex), x_op)
+      case (Module_SeaSt)
+         call SeaSt_PackContStateAry(ModData%Vars, T%SeaSt%x(StateIndex), x_op)
+      case (Module_SrvD)
+         call SrvD_PackContStateAry(ModData%Vars, T%SrvD%x(StateIndex), x_op)
+      case default
+         call SetErrStat(ErrID_Fatal, "Continuous State unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
+         return
+      end select
 
-   case (Module_SeaSt)
-      call SeaSt_GetOP(ThisTime, T%SeaSt%Input(InputIndex), T%SeaSt%p, T%SeaSt%x(StateIndex), T%SeaSt%xd(StateIndex), T%SeaSt%z(StateIndex), &
-                       T%SeaSt%OtherSt(StateIndex), T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
-                       u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+      ! If glue array is present, transfer from module to glue
+      if (present(x_glue)) call MV_PackArray(ModData%Vars%x, x_op, x_glue)
+   end if
 
-   case (Module_SrvD)
-      call SrvD_GetOP(ThisTime, T%SrvD%Input(InputIndex), T%SrvD%p, T%SrvD%x(StateIndex), T%SrvD%xd(StateIndex), T%SrvD%z(StateIndex), &
-                      T%SrvD%OtherSt(StateIndex), T%SrvD%y, T%SrvD%m, ErrStat2, ErrMsg2, &
-                      u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+   ! If continuous state derivatives are requested
+   if (present(dx_op)) then
 
-   case default
-      ! Unknown module
-      ErrStat2 = ErrID_Fatal
-      ErrMsg2 = "Unsupported module: "//trim(ModData%Abbr)
-   end select
+      if (.not. allocated(dx_op)) then
+         call AllocAry(dx_op, ModData%Vars%Nx, "dx_op", ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end if
 
-   ! Check for errors during calc output call
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      ! Select based on module ID
+      select case (ModData%ID)
+      case (Module_AD)
+         call RotCalcContStateDeriv(ThisTime, T%AD%Input(InputIndex)%rotors(ModData%Ins), &
+                                    T%AD%m%Inflow(InputIndex)%RotInflow(ModData%Ins), &
+                                    T%AD%p%rotors(ModData%Ins), &
+                                    T%AD%p, T%AD%x(StateIndex)%rotors(ModData%Ins), &
+                                    T%AD%xd(StateIndex)%rotors(ModData%Ins), &
+                                    T%AD%z(StateIndex)%rotors(ModData%Ins), &
+                                    T%AD%OtherSt(StateIndex)%rotors(ModData%Ins), &
+                                    T%AD%m%rotors(ModData%Ins), &
+                                    T%AD%m%rotors(ModData%Ins)%dxdt_lin, &
+                                    ErrStat2, ErrMsg2); if (Failed()) return
+         call AD_PackContStateAry(ModData%Vars, T%AD%m%rotors(ModData%Ins)%dxdt_lin, dx_op)
+      case (Module_BD)
+         call BD_CalcContStateDeriv(ThisTime, T%BD%Input(InputIndex, ModData%Ins), &
+                                    T%BD%p(ModData%Ins), &
+                                    T%BD%x(ModData%Ins, StateIndex), &
+                                    T%BD%xd(ModData%Ins, StateIndex), &
+                                    T%BD%z(ModData%Ins, StateIndex), &
+                                    T%BD%OtherSt(ModData%Ins, StateIndex), &
+                                    T%BD%m(ModData%Ins), &
+                                    T%BD%m(ModData%Ins)%dxdt_lin, &
+                                    ErrStat2, ErrMsg2); if (Failed()) return
+         call BD_PackContStateAry(ModData%Vars, T%BD%m(ModData%Ins)%dxdt_lin, dx_op)
+      case (Module_ED)
+         call ED_CalcContStateDeriv(ThisTime, T%ED%Input(InputIndex), T%ED%p, T%ED%x(StateIndex), &
+                                    T%ED%xd(StateIndex), T%ED%z(StateIndex), T%ED%OtherSt(StateIndex), &
+                                    T%ED%m, T%ED%m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+         call ED_PackContStateAry(ModData%Vars, T%ED%m%dxdt_lin, dx_op)
+!     case (Module_ExtPtfm)
+!        call ExtPtfm_CalcContStatExtPtfmeriv(ThisTime, T%ExtPtfm%Input(InputIndex), &
+!                                             T%ExtPtfm%p, T%ExtPtfm%x(StateIndex), &
+!                                             T%ExtPtfm%xd(StateIndex), T%ExtPtfm%z(StateIndex), &
+!                                             T%ExtPtfm%OtherSt(StateIndex), &
+!                                             T%ExtPtfm%m, T%ExtPtfm%m%dxdt_lin, &
+!                                             ErrStat2, ErrMsg2); if (Failed()) return
+!        call ExtPtfm_PackContStateAry(ModData%Vars, T%ExtPtfm%m%dxdt_lin, dx_op)
+!     case (Module_FEAM)
+!        call FEAM_PackContStateAry(ModData%Vars, T%FEAM%x(StateIndex), dx_op)
+      case (Module_HD)
+         call HydroDyn_CalcContStateDeriv(ThisTime, T%HD%Input(InputIndex), T%HD%p, T%HD%x(StateIndex), &
+                                          T%HD%xd(StateIndex), T%HD%z(StateIndex), T%HD%OtherSt(StateIndex), &
+                                          T%HD%m, T%HD%m%dxdt_lin, ErrStat2, ErrMsg2)
+         call HydroDyn_PackContStateAry(ModData%Vars, T%HD%x(StateIndex), dx_op)
+!     case (Module_IceD)
+!        call IceD_CalcContStateDeriv(ThisTime, T%IceD%Input(InputIndex), T%IceD%p, T%IceD%x(StateIndex), &
+!                                     T%IceD%xd(StateIndex), T%IceD%z(StateIndex), T%IceD%OtherSt(StateIndex), &
+!                                     T%IceD%m, T%IceD%m%dxdt_lin, ErrStat2, ErrMsg2)
+!        call IceD_PackContStateAry(ModData%Vars, T%IceD%m%dxdt_lin, dx_op)
+!     case (Module_IceF)
+!        call IceFloe_PackContStateAry(ModData%Vars, T%IceF%x(StateIndex), dx_op)
+      case (Module_IfW)
+         call InflowWind_PackContStateAry(ModData%Vars, T%IfW%x(StateIndex), dx_op)
+      case (Module_MAP)
+         call MAP_PackContStateAry(ModData%Vars, T%MAP%x(StateIndex), dx_op)
+      case (Module_MD)
+         call MD_PackContStateAry(ModData%Vars, T%MD%x(StateIndex), dx_op)
+      case (Module_ExtInfw)
+         ! call ExtInfw_PackContStateAry(ModData%Vars, T%ExtInfw%x(StateIndex), dx_op)
+      case (Module_Orca)
+         call Orca_PackContStateAry(ModData%Vars, T%Orca%x(StateIndex), dx_op)
+      case (Module_SD)
+         call SD_PackContStateAry(ModData%Vars, T%SD%x(StateIndex), dx_op)
+      case (Module_SeaSt)
+         call SeaSt_PackContStateAry(ModData%Vars, T%SeaSt%x(StateIndex), dx_op)
+      case (Module_SrvD)
+         call SrvD_PackContStateAry(ModData%Vars, T%SrvD%x(StateIndex), dx_op)
+      case default
+         call SetErrStat(ErrID_Fatal, "Continuous State Derivatives unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
+         return
+      end select
 
+      ! If glue array is present, transfer from module to glue
+      if (present(dx_glue)) call MV_PackArray(ModData%Vars%x, dx_op, dx_glue)
+   end if
+
+   ! If constraint states are requested
+   if (present(z_op)) then
+
+      if (.not. allocated(z_op)) then
+         call AllocAry(z_op, ModData%Vars%Nz, "z_op", ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end if
+
+      ! Select based on module ID
+      select case (ModData%ID)
+      case (Module_AD)
+         call AD_PackContStateAry(ModData%Vars, T%AD%x(StateIndex)%rotors(ModData%Ins), z_op)
+      case (Module_BD)
+         call BD_PackContStateAry(ModData%Vars, T%BD%x(StateIndex, ModData%Ins), z_op)
+      case (Module_ED)
+         call ED_PackContStateAry(ModData%Vars, T%ED%x(StateIndex), z_op)
+      case (Module_ExtPtfm)
+         call ExtPtfm_PackContStateAry(ModData%Vars, T%ExtPtfm%x(StateIndex), z_op)
+      case (Module_FEAM)
+         call FEAM_PackContStateAry(ModData%Vars, T%FEAM%x(StateIndex), z_op)
+      case (Module_HD)
+         call HydroDyn_PackContStateAry(ModData%Vars, T%HD%x(StateIndex), z_op)
+      case (Module_IceD)
+         call IceD_PackContStateAry(ModData%Vars, T%IceD%x(StateIndex, ModData%Ins), z_op)
+      case (Module_IceF)
+         call IceFloe_PackContStateAry(ModData%Vars, T%IceF%x(StateIndex), z_op)
+      case (Module_IfW)
+         call InflowWind_PackContStateAry(ModData%Vars, T%IfW%x(StateIndex), z_op)
+      case (Module_MAP)
+         call MAP_PackContStateAry(ModData%Vars, T%MAP%x(StateIndex), z_op)
+      case (Module_MD)
+         call MD_PackContStateAry(ModData%Vars, T%MD%x(StateIndex), z_op)
+      case (Module_ExtInfw)
+         ! call ExtInfw_PackContStateAry(ModData%Vars, T%ExtInfw%x(StateIndex), z_op)
+      case (Module_Orca)
+         call Orca_PackContStateAry(ModData%Vars, T%Orca%x(StateIndex), z_op)
+      case (Module_SD)
+         call SD_PackContStateAry(ModData%Vars, T%SD%x(StateIndex), z_op)
+      case (Module_SeaSt)
+         call SeaSt_PackContStateAry(ModData%Vars, T%SeaSt%x(StateIndex), z_op)
+      case (Module_SrvD)
+         call SrvD_PackContStateAry(ModData%Vars, T%SrvD%x(StateIndex), z_op)
+      case default
+         call SetErrStat(ErrID_Fatal, "Constraint State unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
+         return
+      end select
+
+      ! If glue array is present, transfer from module to glue
+      if (present(z_glue)) call MV_PackArray(ModData%Vars%z, z_op, z_glue)
+   end if
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
 end subroutine
 
-subroutine FAST_SetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
-                      FlagFilter, u_op, x_op, xd_op, z_op)
-   type(ModDataType), intent(in)                      :: ModData     !< Module data
-   real(DbKi), intent(in)                             :: ThisTime    !< Time
+subroutine FAST_SetOP(ModData, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
+                      u_op, y_op, x_op, z_op, u_glue, y_glue, x_glue, z_glue)
+   type(ModDataType), intent(in)                      :: ModData     !< Module information
    integer(IntKi), intent(in)                         :: InputIndex  !< Input index
    integer(IntKi), intent(in)                         :: StateIndex  !< State index
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
-   integer(IntKi), optional, intent(in)               :: FlagFilter  !< Flag to filter variables
-   real(R8Ki), allocatable, optional, intent(inout)   :: u_op(:)     !< values of linearized inputs
-   real(R8Ki), allocatable, optional, intent(inout)   :: x_op(:)     !< values of linearized continuous states
-   real(R8Ki), allocatable, optional, intent(inout)   :: xd_op(:)    !< values of linearized discrete states
-   real(R8Ki), allocatable, optional, intent(inout)   :: z_op(:)     !< values of linearized constraint states
+   real(R8Ki), allocatable, optional, intent(inout)   :: u_op(:), u_glue(:)     !< values of linearized inputs
+   real(R8Ki), allocatable, optional, intent(inout)   :: y_op(:), y_glue(:)     !< values of linearized outputs
+   real(R8Ki), allocatable, optional, intent(inout)   :: x_op(:), x_glue(:)     !< values of linearized continuous states
+   real(R8Ki), allocatable, optional, intent(inout)   :: z_op(:), z_glue(:)     !< values of linearized constraint states
 
    character(*), parameter    :: RoutineName = 'FAST_SetOP'
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
+   integer(IntKi)             :: i
 
    ErrStat = ErrID_None
    ErrMsg = ''
-   ErrStat2 = ErrID_None
-   ErrMsg2 = ""
 
-   ! Select based on module ID
-   select case (ModData%ID)
+   ! If inputs are requested
+   if (present(u_op)) then
 
-   case (Module_AD)
-      call AD_SetOP(ModData%Ins, T%AD%Input(InputIndex), T%AD%p, T%AD%x(StateIndex), &
-                    T%AD%xd(StateIndex), T%AD%z(StateIndex), ErrStat2, ErrMsg2, &
-                    u_op=u_op, x_op=x_op, xd_op=xd_op, z_op=z_op)
+      ! If glue array is present, transfer from module to glue
+      if (present(u_glue)) call MV_UnpackArray(ModData%Vars%u, u_glue, u_op)
 
-!  case (Module_BD)
-      ! call BD_SetOP(ThisTime, T%BD%Input(InputIndex, ModData%Ins), T%BD%p(ModData%Ins), &
-      !               T%BD%x(ModData%Ins, StateIndex), T%BD%xd(ModData%Ins, StateIndex), &
-      !               T%BD%z(ModData%Ins, StateIndex), T%BD%OtherSt(ModData%Ins, StateIndex), &
-      !               T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
-      !               u_op=u_op, x_op=x_op)
+      ! Select based on module ID
+      select case (ModData%ID)
+      case (Module_AD)
+         call AD_UnpackInputAry(ModData%Vars, u_op, T%AD%Input(InputIndex)%rotors(ModData%Ins))
+      case (Module_BD)
+         call BD_UnpackInputAry(ModData%Vars, u_op, T%BD%Input(InputIndex, ModData%Ins))
+      case (Module_ED)
+         call ED_UnpackInputAry(ModData%Vars, u_op, T%ED%Input(InputIndex))
+      case (Module_ExtPtfm)
+         call ExtPtfm_UnpackInputAry(ModData%Vars, u_op, T%ExtPtfm%Input(InputIndex))
+      case (Module_FEAM)
+         call FEAM_UnpackInputAry(ModData%Vars, u_op, T%FEAM%Input(InputIndex))
+      case (Module_HD)
+         call HydroDyn_UnpackInputAry(ModData%Vars, u_op, T%HD%Input(InputIndex))
+      case (Module_IceD)
+         call IceD_UnpackInputAry(ModData%Vars, u_op, T%IceD%Input(InputIndex, ModData%Ins))
+      case (Module_IceF)
+         call IceFloe_UnpackInputAry(ModData%Vars, u_op, T%IceF%Input(InputIndex))
+      case (Module_IfW)
+         call InflowWind_UnpackInputAry(ModData%Vars, u_op, T%IfW%Input(InputIndex))
+      case (Module_MAP)
+         call MAP_UnpackInputAry(ModData%Vars, u_op, T%MAP%Input(InputIndex))
+      case (Module_MD)
+         call MD_UnpackInputAry(ModData%Vars, u_op, T%MD%Input(InputIndex))
+      case (Module_ExtInfw)
+         ! call ExtInfw_UnpackInputAry(ModData%Vu_op, ars, T%ExtInfw%Input(InputIndex))
+      case (Module_Orca)
+         call Orca_UnpackInputAry(ModData%Vars, u_op, T%Orca%Input(InputIndex))
+      case (Module_SD)
+         call SD_UnpackInputAry(ModData%Vars, u_op, T%SD%Input(InputIndex))
+      case (Module_SeaSt)
+         call SeaSt_UnpackInputAry(ModData%Vars, u_op, T%SeaSt%Input(InputIndex))
+      case (Module_SrvD)
+         call SrvD_UnpackInputAry(ModData%Vars, u_op, T%SrvD%Input(InputIndex))
+      case default
+         call SetErrStat(ErrID_Fatal, "Input unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
+         return
+      end select
 
-   case (Module_ED)
-      call ED_SetOP(T%ED%Input(InputIndex), T%ED%p, T%ED%x(StateIndex), T%ED%xd(StateIndex), &
-                    T%ED%z(StateIndex), u_op=u_op, x_op=x_op, xd_op=xd_op, z_op=z_op)
+   end if
 
-!  case (Module_ExtPtfm)
+   ! If outputs are requested
+   if (present(y_op)) then
 
-!  case (Module_FEAM)
+      ! If glue array is present, transfer from module to glue
+      if (present(y_glue)) call MV_UnpackArray(ModData%Vars%y, y_glue, y_op)
 
-!  case (Module_HD)
-      ! call HD_SetOP(ThisTime, T%HD%Input(InputIndex), T%HD%p, T%HD%x(StateIndex), T%HD%xd(StateIndex), &
-      !               T%HD%z(StateIndex), T%HD%OtherSt(StateIndex), T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
-      !               u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+      ! Select based on module ID
+      select case (ModData%ID)
+      case (Module_AD)
+         call AD_UnpackOutputAry(ModData%Vars, y_op, T%AD%y%rotors(ModData%Ins))
+      case (Module_BD)
+         call BD_UnpackOutputAry(ModData%Vars, y_op, T%BD%y(ModData%Ins))
+      case (Module_ED)
+         call ED_UnpackOutputAry(ModData%Vars, y_op, T%ED%y)
+      case (Module_ExtPtfm)
+         call ExtPtfm_UnpackOutputAry(ModData%Vars, y_op, T%ExtPtfm%y)
+      case (Module_FEAM)
+         call FEAM_UnpackOutputAry(ModData%Vars, y_op, T%FEAM%y)
+      case (Module_HD)
+         call HydroDyn_UnpackOutputAry(ModData%Vars, y_op, T%HD%y)
+      case (Module_IceD)
+         call IceD_UnpackOutputAry(ModData%Vars, y_op, T%IceD%y(ModData%Ins))
+      case (Module_IceF)
+         call IceFloe_UnpackOutputAry(ModData%Vars, y_op, T%IceF%y)
+      case (Module_IfW)
+         call InflowWind_UnpackOutputAry(ModData%Vars, y_op, T%IfW%y)
+      case (Module_MAP)
+         call MAP_UnpackOutputAry(ModData%Vars, y_op, T%MAP%y)
+      case (Module_MD)
+         call MD_UnpackOutputAry(ModData%Vars, y_op, T%MD%y)
+      case (Module_ExtInfw)
+         call ExtInfw_UnpackOutputAry(ModData%Vars, y_op, T%ExtInfw%y)
+      case (Module_Orca)
+         call Orca_UnpackOutputAry(ModData%Vars, y_op, T%Orca%y)
+      case (Module_SD)
+         call SD_UnpackOutputAry(ModData%Vars, y_op, T%SD%y)
+      case (Module_SeaSt)
+         call SeaSt_UnpackOutputAry(ModData%Vars, y_op, T%SeaSt%y)
+      case (Module_SrvD)
+         call SrvD_UnpackOutputAry(ModData%Vars, y_op, T%SrvD%y)
+      case default
+         call SetErrStat(ErrID_Fatal, "Output unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
+         return
+      end select
 
-!  case (Module_IceD)
-!  case (Module_IceF)
-!  case (Module_IfW)
-      ! call InflowWind_SetOP(ThisTime, T%IfW%Input(InputIndex), T%IfW%p, T%IfW%x(StateIndex), T%IfW%xd(StateIndex), T%IfW%z(StateIndex), &
-      !                       T%IfW%OtherSt(StateIndex), T%IfW%y, T%IfW%m, ErrStat2, ErrMsg2, &
-      !                       u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+   end if
 
-!  case (Module_MAP)
-      ! call MAP_SetOP(ThisTime, T%MAP%Input(InputIndex), T%MAP%p, T%MAP%x(StateIndex), T%MAP%xd(StateIndex), T%MAP%z(StateIndex), &
-      !                T%MAP%OtherSt, T%MAP%y, ErrStat2, ErrMsg2, &
-      !                u_op=u_op, y_op=y_op) !, x_op=x_op, dx_op=dx_op) MAP doesn't have states
+   ! If continuous states are requested
+   if (present(x_op)) then
 
-!  case (Module_MD)
-      ! call MD_SetOP(ThisTime, T%MD%Input(InputIndex), T%MD%p, T%MD%x(StateIndex), T%MD%xd(StateIndex), T%MD%z(StateIndex), &
-      !               T%MD%OtherSt(StateIndex), T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
-      !               FlagFilter=FlagFilter, u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+      ! If glue array is present, transfer from module to glue
+      if (present(x_glue)) call MV_UnpackArray(ModData%Vars%x, x_glue, x_op)
 
-!  case (Module_OpFM)
-!  case (Module_Orca)
-!  case (Module_SD)
-      ! call SD_SetOP(ThisTime, T%SD%Input(InputIndex), T%SD%p, T%SD%x(StateIndex), T%SD%xd(StateIndex), T%SD%z(StateIndex), &
-      !               T%SD%OtherSt(StateIndex), T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
-      !               u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+      ! Select based on module ID
+      select case (ModData%ID)
+      case (Module_AD)
+         call AD_UnpackContStateAry(ModData%Vars, x_op, T%AD%x(StateIndex)%rotors(ModData%Ins))
+      case (Module_BD)
+         call BD_UnpackContStateAry(ModData%Vars, x_op, T%BD%x(StateIndex, ModData%Ins))
+      case (Module_ED)
+         call ED_UnpackContStateAry(ModData%Vars, x_op, T%ED%x(StateIndex))
+      case (Module_ExtPtfm)
+         call ExtPtfm_UnpackContStateAry(ModData%Vars, x_op, T%ExtPtfm%x(StateIndex))
+      case (Module_FEAM)
+         call FEAM_UnpackContStateAry(ModData%Vars, x_op, T%FEAM%x(StateIndex))
+      case (Module_HD)
+         call HydroDyn_UnpackContStateAry(ModData%Vars, x_op, T%HD%x(StateIndex))
+      case (Module_IceD)
+         call IceD_UnpackContStateAry(ModData%Vars, x_op, T%IceD%x(StateIndex, ModData%Ins))
+      case (Module_IceF)
+         call IceFloe_UnpackContStateAry(ModData%Vars, x_op, T%IceF%x(StateIndex))
+      case (Module_IfW)
+         call InflowWind_UnpackContStateAry(ModData%Vars, x_op, T%IfW%x(StateIndex))
+      case (Module_MAP)
+         call MAP_UnpackContStateAry(ModData%Vars, x_op, T%MAP%x(StateIndex))
+      case (Module_MD)
+         call MD_UnpackContStateAry(ModData%Vars, x_op, T%MD%x(StateIndex))
+      case (Module_ExtInfw)
+         ! call ExtInfw_UnpackContStateAry(ModData%Varsx_op,, T%ExtInfw%x(StateIndex))
+      case (Module_Orca)
+         call Orca_UnpackContStateAry(ModData%Vars, x_op, T%Orca%x(StateIndex))
+      case (Module_SD)
+         call SD_UnpackContStateAry(ModData%Vars, x_op, T%SD%x(StateIndex))
+      case (Module_SeaSt)
+         call SeaSt_UnpackContStateAry(ModData%Vars, x_op, T%SeaSt%x(StateIndex))
+      case (Module_SrvD)
+         call SrvD_UnpackContStateAry(ModData%Vars, x_op, T%SrvD%x(StateIndex))
+      case default
+         call SetErrStat(ErrID_Fatal, "Continuous State unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
+         return
+      end select
 
-!  case (Module_SeaSt)
-      ! call SeaSt_SetOP(ThisTime, T%SeaSt%Input(InputIndex), T%SeaSt%p, T%SeaSt%x(StateIndex), T%SeaSt%xd(StateIndex), T%SeaSt%z(StateIndex), &
-      !                  T%SeaSt%OtherSt(StateIndex), T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
-      !                  u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+   end if
 
-!  case (Module_SrvD)
-      ! call SrvD_SetOP(ThisTime, T%SrvD%Input(InputIndex), T%SrvD%p, T%SrvD%x(StateIndex), T%SrvD%xd(StateIndex), T%SrvD%z(StateIndex), &
-      !                 T%SrvD%OtherSt(StateIndex), T%SrvD%y, T%SrvD%m, ErrStat2, ErrMsg2, &
-      !                 u_op=u_op, y_op=y_op, x_op=x_op, dx_op=dx_op)
+   ! If constraint states are requested
+   if (present(z_op)) then
 
-   case default
-      ! Unknown module
-      ErrStat2 = ErrID_Fatal
-      ErrMsg2 = "Unsupported module: "//trim(ModData%Abbr)
-   end select
+      ! If glue array is present, transfer from module to glue
+      if (present(z_glue)) call MV_UnpackArray(ModData%Vars%z, z_glue, z_op)
 
-   ! Check for errors during calc output call
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      ! Select based on module ID
+      select case (ModData%ID)
+      case (Module_AD)
+         call AD_UnpackContStateAry(ModData%Vars, z_op, T%AD%x(StateIndex)%rotors(ModData%Ins))
+      case (Module_BD)
+         call BD_UnpackContStateAry(ModData%Vars, z_op, T%BD%x(StateIndex, ModData%Ins))
+      case (Module_ED)
+         call ED_UnpackContStateAry(ModData%Vars, z_op, T%ED%x(StateIndex))
+      case (Module_ExtPtfm)
+         call ExtPtfm_UnpackContStateAry(ModData%Vars, z_op, T%ExtPtfm%x(StateIndex))
+      case (Module_FEAM)
+         call FEAM_UnpackContStateAry(ModData%Vars, z_op, T%FEAM%x(StateIndex))
+      case (Module_HD)
+         call HydroDyn_UnpackContStateAry(ModData%Vars, z_op, T%HD%x(StateIndex))
+      case (Module_IceD)
+         call IceD_UnpackContStateAry(ModData%Vars, z_op, T%IceD%x(StateIndex, ModData%Ins))
+      case (Module_IceF)
+         call IceFloe_UnpackContStateAry(ModData%Vars, z_op, T%IceF%x(StateIndex))
+      case (Module_IfW)
+         call InflowWind_UnpackContStateAry(ModData%Vars, z_op, T%IfW%x(StateIndex))
+      case (Module_MAP)
+         call MAP_UnpackContStateAry(ModData%Vars, z_op, T%MAP%x(StateIndex))
+      case (Module_MD)
+         call MD_UnpackContStateAry(ModData%Vars, z_op, T%MD%x(StateIndex))
+      case (Module_ExtInfw)
+         ! call ExtInfw_UnpackContStateAry(ModData%z_op,Vars, T%ExtInfw%x(StateIndex))
+      case (Module_Orca)
+         call Orca_UnpackContStateAry(ModData%Vars, z_op, T%Orca%x(StateIndex))
+      case (Module_SD)
+         call SD_UnpackContStateAry(ModData%Vars, z_op, T%SD%x(StateIndex))
+      case (Module_SeaSt)
+         call SeaSt_UnpackContStateAry(ModData%Vars, z_op, T%SeaSt%x(StateIndex))
+      case (Module_SrvD)
+         call SrvD_UnpackContStateAry(ModData%Vars, z_op, T%SrvD%x(StateIndex))
+      case default
+         call SetErrStat(ErrID_Fatal, "Constraint State unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
+         return
+      end select
 
+   end if
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
 end subroutine
 
-subroutine FAST_JacobianPInput(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg, Vars, dYdu, dXdu)
-   type(ModDataType), intent(in)                      :: ModData     !< Module data
+subroutine FAST_JacobianPInput(ModData, ThisTime, StateIndex, T, ErrStat, ErrMsg, dYdu, dXdu, dYduGlue, dXduGlue)
+   type(ModDataType), intent(in)                      :: ModData      !< Module information
    real(DbKi), intent(in)                             :: ThisTime    !< Time
-   integer(IntKi), intent(in)                         :: ThisState   !< State
+   integer(IntKi), intent(in)                         :: StateIndex   !< State
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
-   type(ModVarsType), optional, intent(in)            :: Vars        !< Variables
-   real(R8Ki), allocatable, optional, intent(inout)   :: dYdu(:, :)
-   real(R8Ki), allocatable, optional, intent(inout)   :: dXdu(:, :)
+   real(R8Ki), allocatable, optional, intent(inout)   :: dYdu(:, :), dYduGlue(:, :)
+   real(R8Ki), allocatable, optional, intent(inout)   :: dXdu(:, :), dXduGlue(:, :)
 
    character(*), parameter    :: RoutineName = 'FAST_JacobianPInput'
    integer(IntKi)             :: ErrStat2
@@ -736,79 +1077,84 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg,
    select case (ModData%ID)
 
    case (Module_AD)
-      call AD_JacobianPInput(ThisTime, T%AD%Input(1), T%AD%p, T%AD%x(ThisState), T%AD%xd(ThisState), &
-                             T%AD%z(ThisState), T%AD%OtherSt(ThisState), T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
-                             Vars=Vars, dYdu=dYdu, dXdu=dXdu)
+      call AD_JacobianPInput(ModData%Vars, ModData%Ins, ThisTime, T%AD%Input(1), T%AD%p, T%AD%x(StateIndex), T%AD%xd(StateIndex), &
+                             T%AD%z(StateIndex), T%AD%OtherSt(StateIndex), T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
+                             dYdu=dYdu, dXdu=dXdu)
 
-   case (Module_BD)
-      call BD_JacobianPInput(ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), &
-                             T%BD%x(ModData%Ins, ThisState), T%BD%xd(ModData%Ins, ThisState), &
-                             T%BD%z(ModData%Ins, ThisState), T%BD%OtherSt(ModData%Ins, ThisState), &
-                             T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
-                             Vars=Vars, dYdu=dYdu, dXdu=dXdu)
+      ! case (Module_BD)
+      !    call BD_JacobianPInput(ThisTime, T%BD%Input(1, ModData%ModIns), T%BD%p(ModData%ModIns), &
+      !                           T%BD%x(ModData%ModIns, StateIndex), T%BD%xd(ModData%ModIns, StateIndex), &
+      !                           T%BD%z(ModData%ModIns, StateIndex), T%BD%OtherSt(ModData%ModIns, StateIndex), &
+      !                           T%BD%y(ModData%ModIns), T%BD%m(ModData%ModIns), ErrStat2, ErrMsg2, &
+      !                           dYdu=dYdu, dXdu=dXdu)
 
    case (Module_ED)
-      call ED_JacobianPInput(ThisTime, T%ED%Input(1), T%ED%p, T%ED%x(ThisState), T%ED%xd(ThisState), &
-                             T%ED%z(ThisState), T%ED%OtherSt(ThisState), T%ED%y, T%ED%m, ErrStat2, ErrMsg2, &
-                             Vars=Vars, dYdu=dYdu, dXdu=dXdu)
+      call ED_JacobianPInput(ModData%Vars, ThisTime, T%ED%Input(1), T%ED%p, T%ED%x(StateIndex), T%ED%xd(StateIndex), &
+                             T%ED%z(StateIndex), T%ED%OtherSt(StateIndex), T%ED%y, T%ED%m, ErrStat2, ErrMsg2, &
+                             dYdu=dYdu, dXdu=dXdu)
 
 !  case (Module_ExtPtfm)
 
-   case (Module_HD)
-      call HD_JacobianPInput(ThisTime, T%HD%Input(1), T%HD%p, T%HD%x(ThisState), T%HD%xd(ThisState), &
-                             T%HD%z(ThisState), T%HD%OtherSt(ThisState), T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
-                             dYdu=dYdu, dXdu=dXdu)
+      ! case (Module_HD)
+      !    call HD_JacobianPInput(ThisTime, T%HD%Input(1), T%HD%p, T%HD%x(StateIndex), T%HD%xd(StateIndex), &
+      !                           T%HD%z(StateIndex), T%HD%OtherSt(StateIndex), T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
+      !                           dYdu=dYdu, dXdu=dXdu)
 
    case (Module_IfW)
-      call InflowWind_JacobianPInput(ThisTime, T%IfW%Input(1), T%IfW%p, T%IfW%x(ThisState), T%IfW%xd(ThisState), &
-                                     T%IfW%z(ThisState), T%IfW%OtherSt(ThisState), T%IfW%y, T%IfW%m, ErrStat2, ErrMsg2, &
+      call InflowWind_JacobianPInput(ModData%Vars, ThisTime, T%IfW%Input(1), T%IfW%p, T%IfW%x(StateIndex), T%IfW%xd(StateIndex), &
+                                     T%IfW%z(StateIndex), T%IfW%OtherSt(StateIndex), T%IfW%y, T%IfW%m, ErrStat2, ErrMsg2, &
                                      dYdu=dYdu, dXdu=dXdu)
 
-   case (Module_MAP)
-      call MAP_JacobianPInput(ThisTime, T%MAP%Input(1), T%MAP%p, T%MAP%x(ThisState), T%MAP%xd(ThisState), &
-                              T%MAP%z(ThisState), T%MAP%OtherSt, T%MAP%y, T%MAP%m, ErrStat2, ErrMsg2, &
-                              dYdu=dYdu, dXdu=dXdu)
+      ! case (Module_MAP)
+      !    call MAP_JacobianPInput(ThisTime, T%MAP%Input(1), T%MAP%p, T%MAP%x(StateIndex), T%MAP%xd(StateIndex), &
+      !                            T%MAP%z(StateIndex), T%MAP%OtherSt, T%MAP%y, T%MAP%m, ErrStat2, ErrMsg2, &
+      !                            dYdu=dYdu, dXdu=dXdu)
 
-   case (Module_MD)
-      call MD_JacobianPInput(ThisTime, T%MD%Input(1), T%MD%p, T%MD%x(ThisState), T%MD%xd(ThisState), &
-                             T%MD%z(ThisState), T%MD%OtherSt(ThisState), T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
-                             dYdu=dYdu, dXdu=dXdu)
+      ! case (Module_MD)
+      !    call MD_JacobianPInput(ThisTime, T%MD%Input(1), T%MD%p, T%MD%x(StateIndex), T%MD%xd(StateIndex), &
+      !                           T%MD%z(StateIndex), T%MD%OtherSt(StateIndex), T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
+      !                           dYdu=dYdu, dXdu=dXdu)
 
-   case (Module_SD)
-      call SD_JacobianPInput(ThisTime, T%SD%Input(1), T%SD%p, T%SD%x(ThisState), T%SD%xd(ThisState), &
-                             T%SD%z(ThisState), T%SD%OtherSt(ThisState), T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
-                             dYdu=dYdu, dXdu=dXdu)
+      ! case (Module_SD)
+      !    call SD_JacobianPInput(ThisTime, T%SD%Input(1), T%SD%p, T%SD%x(StateIndex), T%SD%xd(StateIndex), &
+      !                           T%SD%z(StateIndex), T%SD%OtherSt(StateIndex), T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
+      !                           dYdu=dYdu, dXdu=dXdu)
 
-   case (Module_SeaSt)
-      call SeaSt_JacobianPInput(ThisTime, T%SeaSt%Input(1), T%SeaSt%p, T%SeaSt%x(ThisState), T%SeaSt%xd(ThisState), &
-                                T%SeaSt%z(ThisState), T%SeaSt%OtherSt(ThisState), T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
-                                dYdu=dYdu, dXdu=dXdu)
+      ! case (Module_SeaSt)
+      !    call SeaSt_JacobianPInput(ThisTime, T%SeaSt%Input(1), T%SeaSt%p, T%SeaSt%x(StateIndex), T%SeaSt%xd(StateIndex), &
+      !                              T%SeaSt%z(StateIndex), T%SeaSt%OtherSt(StateIndex), T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
+      !                              dYdu=dYdu, dXdu=dXdu)
 
    case (Module_SrvD)
-      call SrvD_JacobianPInput(ThisTime, T%SrvD%Input(1), T%SrvD%p, T%SrvD%x(ThisState), T%SrvD%xd(ThisState), &
-                               T%SrvD%z(ThisState), T%SrvD%OtherSt(ThisState), T%SrvD%y, T%SrvD%m, &
+      call SrvD_JacobianPInput(ThisTime, T%SrvD%Input(1), T%SrvD%p, T%SrvD%x(StateIndex), T%SrvD%xd(StateIndex), &
+                               T%SrvD%z(StateIndex), T%SrvD%OtherSt(StateIndex), T%SrvD%y, T%SrvD%m, &
                                ErrStat2, ErrMsg2, dYdu=dYdu, dXdu=dXdu)
 
    case default
       ErrStat2 = ErrID_Fatal
-      ErrMsg2 = "Unsupported module: "//ModData%Abbr
+      ErrMsg2 = "Unsupported module ID: "//ModData%Abbr
    end select
 
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   ! If dYdu and dYduGlue are present, transfer from module matrix to glue matrix
+   if (present(dYdu) .and. present(dYduGlue)) call MV_PackMatrix(ModData%Vars%y, ModData%Vars%u, dYdu, dYduGlue)
+
+   ! If dXdu and dXduGlue are present, transfer from module matrix to glue matrix
+   if (present(dXdu) .and. present(dXduGlue)) call MV_PackMatrix(ModData%Vars%x, ModData%Vars%u, dXdu, dXduGlue)
 
 end subroutine
 
-subroutine FAST_JacobianPContState(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg, Vars, dYdx, dXdx, StateRotation)
-   type(ModDataType), intent(in)                      :: ModData     !< Module data
+subroutine FAST_JacobianPContState(ModData, ThisTime, StateIndex, T, ErrStat, ErrMsg, dYdx, dXdx, dYdxGlue, dXdxGlue)
+   type(ModDataType), intent(in)                      :: ModData     !< Module info
    real(DbKi), intent(in)                             :: ThisTime    !< Time
-   integer(IntKi), intent(in)                         :: ThisState   !< State
+   integer(IntKi), intent(in)                         :: StateIndex   !< State
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
-   type(ModVarsType), optional, intent(in)            :: Vars        !< Variables
-   real(R8Ki), allocatable, optional, intent(inout)   :: dYdx(:, :)
-   real(R8Ki), allocatable, optional, intent(inout)   :: dXdx(:, :)
-   real(R8Ki), allocatable, optional, intent(inout)   :: StateRotation(:, :)
+   real(R8Ki), allocatable, optional, intent(inout)   :: dYdx(:, :), dYdxGlue(:, :)
+   real(R8Ki), allocatable, optional, intent(inout)   :: dXdx(:, :), dXdxGlue(:, :)
 
    character(*), parameter    :: RoutineName = 'FAST_JacobianPContState'
    integer(IntKi)             :: ErrStat2
@@ -821,39 +1167,39 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, ThisState, T, ErrStat, Err
    select case (ModData%ID)
 
    case (Module_AD)
-      call AD_JacobianPContState(ThisTime, T%AD%Input(1), T%AD%p, &
-                                 T%AD%x(ThisState), T%AD%xd(ThisState), &
-                                 T%AD%z(ThisState), T%AD%OtherSt(ThisState), &
+      call AD_JacobianPContState(ModData%Vars, ModData%Ins, ThisTime, T%AD%Input(1), T%AD%p, &
+                                 T%AD%x(StateIndex), T%AD%xd(StateIndex), &
+                                 T%AD%z(StateIndex), T%AD%OtherSt(StateIndex), &
                                  T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
-                                 Vars=Vars, dYdx=dYdx, dXdx=dXdx)
+                                 dYdx=dYdx, dXdx=dXdx)
 
-   case (Module_BD)
-      call BD_JacobianPContState(ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), &
-                                 T%BD%x(ModData%Ins, ThisState), T%BD%xd(ModData%Ins, ThisState), &
-                                 T%BD%z(ModData%Ins, ThisState), T%BD%OtherSt(ModData%Ins, ThisState), &
-                                 T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
-                                 Vars=Vars, dYdx=dYdx, dXdx=dXdx, StateRotation=StateRotation)
+      ! case (Module_BD)
+      !    call BD_JacobianPContState(Vars, ThisTime, T%BD%Input(1, ModData%ModIns), T%BD%p(ModData%ModIns), &
+      !                               T%BD%x(ModData%ModIns, StateIndex), T%BD%xd(ModData%ModIns, StateIndex), &
+      !                               T%BD%z(ModData%ModIns, StateIndex), T%BD%OtherSt(ModData%ModIns, StateIndex), &
+      !                               T%BD%y(ModData%ModIns), T%BD%m(ModData%ModIns), ErrStat2, ErrMsg2, &
+      !                               dYdx=dYdx, dXdx=dXdx, StateRotation=ModData%Lin%StateRotation)
 
    case (Module_ED)
-      call ED_JacobianPContState(ThisTime, T%ED%Input(1), T%ED%p, &
-                                 T%ED%x(ThisState), T%ED%xd(ThisState), &
-                                 T%ED%z(ThisState), T%ED%OtherSt(ThisState), &
+      call ED_JacobianPContState(ModData%Vars, ThisTime, T%ED%Input(1), T%ED%p, &
+                                 T%ED%x(StateIndex), T%ED%xd(StateIndex), &
+                                 T%ED%z(StateIndex), T%ED%OtherSt(StateIndex), &
                                  T%ED%y, T%ED%m, ErrStat2, ErrMsg2, &
-                                 Vars=Vars, dYdx=dYdx, dXdx=dXdx)
+                                 dYdx=dYdx, dXdx=dXdx)
 
 !  case (Module_ExtPtfm)
 
-   case (Module_HD)
-      call HD_JacobianPContState(ThisTime, T%HD%Input(1), T%HD%p, &
-                                 T%HD%x(ThisState), T%HD%xd(ThisState), &
-                                 T%HD%z(ThisState), T%HD%OtherSt(ThisState), &
-                                 T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
-                                 dYdx=dYdx, dXdx=dXdx)
+      ! case (Module_HD)
+      !    call HD_JacobianPContState(ThisTime, T%HD%Input(1), T%HD%p, &
+      !                               T%HD%x(StateIndex), T%HD%xd(StateIndex), &
+      !                               T%HD%z(StateIndex), T%HD%OtherSt(StateIndex), &
+      !                               T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
+      !                               dYdx=dYdx, dXdx=dXdx)
 
    case (Module_IfW)
       call InflowWind_JacobianPContState(ThisTime, T%IfW%Input(1), T%IfW%p, &
-                                         T%IfW%x(ThisState), T%IfW%xd(ThisState), &
-                                         T%IfW%z(ThisState), T%IfW%OtherSt(ThisState), &
+                                         T%IfW%x(StateIndex), T%IfW%xd(StateIndex), &
+                                         T%IfW%z(StateIndex), T%IfW%OtherSt(StateIndex), &
                                          T%IfW%y, T%IfW%m, ErrStat2, ErrMsg2, &
                                          dYdx=dYdx, dXdx=dXdx)
 
@@ -862,40 +1208,47 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, ThisState, T, ErrStat, Err
       ErrStat2 = ErrID_None
       ErrMsg2 = ''
 
-   case (Module_MD)
-      call MD_JacobianPContState(ThisTime, T%MD%Input(1), T%MD%p, &
-                                 T%MD%x(ThisState), T%MD%xd(ThisState), &
-                                 T%MD%z(ThisState), T%MD%OtherSt(ThisState), &
-                                 T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
-                                 dYdx=dYdx, dXdx=dXdx)
+      ! case (Module_MD)
+      !    call MD_JacobianPContState(ThisTime, T%MD%Input(1), T%MD%p, &
+      !                               T%MD%x(StateIndex), T%MD%xd(StateIndex), &
+      !                               T%MD%z(StateIndex), T%MD%OtherSt(StateIndex), &
+      !                               T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
+      !                               dYdx=dYdx, dXdx=dXdx)
 
-   case (Module_SD)
-      call SD_JacobianPContState(ThisTime, T%SD%Input(1), T%SD%p, &
-                                 T%SD%x(ThisState), T%SD%xd(ThisState), &
-                                 T%SD%z(ThisState), T%SD%OtherSt(ThisState), &
-                                 T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
-                                 dYdx=dYdx, dXdx=dXdx)
+      ! case (Module_SD)
+      !    call SD_JacobianPContState(ThisTime, T%SD%Input(1), T%SD%p, &
+      !                               T%SD%x(StateIndex), T%SD%xd(StateIndex), &
+      !                               T%SD%z(StateIndex), T%SD%OtherSt(StateIndex), &
+      !                               T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
+      !                               dYdx=dYdx, dXdx=dXdx)
 
-   case (Module_SeaSt)
-      call SeaSt_JacobianPContState(ThisTime, T%SeaSt%Input(1), T%SeaSt%p, &
-                                    T%SeaSt%x(ThisState), T%SeaSt%xd(ThisState), &
-                                    T%SeaSt%z(ThisState), T%SeaSt%OtherSt(ThisState), &
-                                    T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
-                                    dYdx=dYdx, dXdx=dXdx)
+      ! case (Module_SeaSt)
+      !    call SeaSt_JacobianPContState(ThisTime, T%SeaSt%Input(1), T%SeaSt%p, &
+      !                                  T%SeaSt%x(StateIndex), T%SeaSt%xd(StateIndex), &
+      !                                  T%SeaSt%z(StateIndex), T%SeaSt%OtherSt(StateIndex), &
+      !                                  T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
+      !                                  dYdx=dYdx, dXdx=dXdx)
 
    case (Module_SrvD)
       call SrvD_JacobianPContState(ThisTime, T%SrvD%Input(1), T%SrvD%p, &
-                                   T%SrvD%x(ThisState), T%SrvD%xd(ThisState), &
-                                   T%SrvD%z(ThisState), T%SrvD%OtherSt(ThisState), &
+                                   T%SrvD%x(StateIndex), T%SrvD%xd(StateIndex), &
+                                   T%SrvD%z(StateIndex), T%SrvD%OtherSt(StateIndex), &
                                    T%SrvD%y, T%SrvD%m, ErrStat2, ErrMsg2, &
                                    dYdx=dYdx, dXdx=dXdx)
 
    case default
       ErrStat2 = ErrID_Fatal
-      ErrMsg2 = "Unsupported module: "//ModData%Abbr
+      ErrMsg2 = "Unsupported module ID: "//ModData%Abbr
    end select
 
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   ! If dYdx and dYdxGlue are present, transfer from module matrix to glue matrix
+   if (present(dYdx) .and. present(dYdxGlue)) call MV_PackMatrix(ModData%Vars%y, ModData%Vars%x, dYdx, dYdxGlue)
+
+   ! If dXdx and dXdxGlue are present, transfer from module matrix to glue matrix
+   if (present(dXdx) .and. present(dXdxGlue)) call MV_PackMatrix(ModData%Vars%x, ModData%Vars%x, dXdx, dXdxGlue)
 
 end subroutine
 
@@ -1052,7 +1405,7 @@ subroutine FAST_CopyStates(ModData, T, Src, Dst, CtrlCode, ErrStat, ErrMsg)
       call SrvD_CopyOtherState(T%SrvD%OtherSt(Src), T%SrvD%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case default
-      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(ModData%ID)), ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(ModData%Abbr), ErrStat, ErrMsg, RoutineName)
       return
    end select
 
