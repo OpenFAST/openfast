@@ -148,9 +148,10 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
    call ParseVar( FileInfo_In, CurLine, 'PtfmYMod', InputFileData%PtfmYMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
 
-      ! PtfmRefY - Constant or initial platform reference yaw offset (rad)
+      ! PtfmRefY - Constant or initial platform reference yaw offset (deg)
    call ParseVar( FileInfo_In, CurLine, 'PtfmRefY', InputFileData%PtfmRefY, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
+   InputFileData%PtfmRefY = InputFileData%PtfmRefY * D2R
 
       ! PtfmYCutOff - Cutoff frequency for the low-pass filtering of PRP yaw motion when PtfmYMod=1 [unused when PtfmYMod=0] (Hz)
    call ParseVar( FileInfo_In, CurLine, 'PtfmYCutOff', InputFileData%PtfmYCutOff, ErrStat2, ErrMsg2, UnEc )
