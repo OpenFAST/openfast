@@ -4258,35 +4258,30 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, SED, BD, AD, ADsk, ExtLd, HD, SD, ExtP
    ErrStat = ErrID_None
    ErrMsg  = ""
   
-!FIXME:ROM this logic needs fixing 
-!!<<<<<<< HEAD
    if (p_FAST%CompElast == Module_SED) then
       NumBl   = SIZE(SED%y%BladeRootMotion,1)
       PlatformMotion => SED%y%PlatformPtMesh
-   else
+   elseif (p_FAST%CompElast == Module_ED) then
       NumBl   = SIZE(ED%y%BladeRootMotion,1)
       PlatformMotion => ED%y%PlatformPtMesh
       PlatformLoads  => ED%Input(1)%PlatformPtMesh
-   endif
-!!=======
-      IF (p_FAST%CompElast == Module_BD) THEN
-         NumBl = p_FAST%nBeams ! BeamDyn might set this to 1 blade for aeromaps (instead of SIZE(ED%y%BladeRootMotion,1))
-      ELSE
-         NumBl   = SIZE(ED%y%BladeRootMotion,1)
-      END IF
+   elseif (p_FAST%CompElast == Module_BD) then
+      NumBl = p_FAST%nBeams ! BeamDyn might set this to 1 blade for aeromaps (instead of SIZE(ED%y%BladeRootMotion,1))
       PlatformMotion => ED%y%PlatformPtMesh
       PlatformLoads  => ED%Input(1)%PlatformPtMesh
+   endif
       
-   IF (p_FAST%CompSub == MODULE_SD) THEN 
-      SubstructureMotion2HD => SD%y%y2Mesh
-      SubstructureMotion    => SD%y%y3Mesh
-      SubstructureLoads     => SD%Input(1)%LMesh
-   ELSE ! all of these get mapped to ElastoDyn ! (offshore floating with rigid substructure)
-      SubstructureMotion2HD => ED%y%PlatformPtMesh
-      SubstructureMotion    => ED%y%PlatformPtMesh
-      SubstructureLoads     => ED%Input(1)%PlatformPtMesh
-   END IF
-!!>>>>>>> OpenFAST/dev
+   if (p_FAST%CompElast /= Module_SED) then  ! HD cannot be used with SED
+      IF (p_FAST%CompSub == MODULE_SD) THEN 
+         SubstructureMotion2HD => SD%y%y2Mesh
+         SubstructureMotion    => SD%y%y3Mesh
+         SubstructureLoads     => SD%Input(1)%LMesh
+      ELSE ! all of these get mapped to ElastoDyn ! (offshore floating with rigid substructure)
+         SubstructureMotion2HD => ED%y%PlatformPtMesh
+         SubstructureMotion    => ED%y%PlatformPtMesh
+         SubstructureLoads     => ED%Input(1)%PlatformPtMesh
+      END IF
+   endif
 
 
    !............................................................................................................................
