@@ -210,9 +210,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       !............................................................................................
       ! Define initial system states here:
       !............................................................................................
-   xd%PtfmRefY                = InputFileData%PtfmRefY                         ! Low-pass filtered platform reference yaw position
-   InitOut%PtfmRefY           = InputFileData%PtfmRefY
-   InitOut%PtfmYMod           = InputFileData%PtfmYMod
+   xd%DummyDiscState          = 0.                                             ! we don't have discrete states
    z%DummyConstrState         = 0.                                             ! we don't have constraint states
 
       ! initialize the continuous states:
@@ -1689,12 +1687,6 @@ END IF
    y%PlatformPtMesh%TranslationAcc(1,1) = m%QD2T(DOF_Sg)     
    y%PlatformPtMesh%TranslationAcc(2,1) = m%QD2T(DOF_Sw)    
    y%PlatformPtMesh%TranslationAcc(3,1) = m%QD2T(DOF_Hv)    
-
-   IF (p%PtfmYMod .EQ. 0) THEN
-      y%PtfmRefY = xd%PtfmRefY
-   ELSE IF (p%PtfmYMod .EQ. 1) THEN
-      y%PtfmRefY = p%CYawFilt * xd%PtfmRefY + (1.0-p%CYawFilt) * x%QT(DOF_Y)
-   END IF
      
    !...............................................................................................................................
    ! Outputs required for external tower loads
@@ -2020,9 +2012,6 @@ SUBROUTINE ED_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat, Err
          ! Update discrete states here:
 
       ! StateData%DiscState =
-      IF (p%PtfmYMod .EQ. 1) THEN
-         xd%PtfmRefY = p%CYawFilt * xd%PtfmRefY + (1.0-p%CYawFilt) * x%QT(DOF_Y)
-      END IF
 
 END SUBROUTINE ED_UpdateDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -3458,9 +3447,6 @@ SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
    !p%NcIMUxn   = InputFileData%NcIMUxn
    !p%NcIMUyn   = InputFileData%NcIMUyn
    !p%NcIMUzn   = InputFileData%NcIMUzn
-
-   p%PtfmYMod  = InputFileData%PtfmYMod
-   p%CYawFilt  = exp(-TwoPi*InputFileData%DT*InputFileData%PtfmYCutoff)
 
    ! plus everything else from FAST_Initialize
 

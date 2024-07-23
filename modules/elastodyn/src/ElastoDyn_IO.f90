@@ -2696,39 +2696,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
          RETURN
       END IF
 
-   !---------------------- LARGE YAW MODEL -----------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: LARGE YAW MODEL', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      ! PtfmYMod - Large yaw offset modeling (0: static, 1: dynamic):
-   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmYMod, "PtfmYMod", "Large yaw offset modeling (0: static, 1: dynamic)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      ! PtfmRefY - Constant or initial platform reference yaw offset (deg):
-   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmRefY, "PtfmRefY", "Constant or initial platform reference yaw offset (deg)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-   InputFileData%PtfmRefY = InputFileData%PtfmRefY*D2R
-
-      ! PtfmYCutOff - Cutoff frequency for the low-pass filtering of PRP yaw motion when PtfmYMod=1 [unused when PtfmYMod=0] (Hz):
-   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmYCutOff, "PtfmYCutOff", "Cutoff frequency for the low-pass filtering of PRP yaw motion when PtfmYMod=1 [unused when PtfmYMod=0] (Hz)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
    !---------------------- INITIAL CONDITIONS --------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Initial Conditions', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -4309,29 +4276,21 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrSta
       CALL SetErrStat(ErrID_Fatal,'ShftTilt must be between -pi/2 and pi/2 radians (i.e., in the range [-90, 90] degrees).',ErrStat,ErrMsg,RoutineName)
    END IF
 
-      ! Check the inputs associated with large platform yaw modeling, PtfmYMod and PtfmYCutoff, are valid
-   IF ( (InputFileData%PtfmYMod .NE. 0_IntKi) .AND. (InputFileData%PtfmYMod .NE. 1_IntKi) ) THEN
-      CALL SetErrStat( ErrID_Fatal, 'PtfmYMod must be 0 (static platform reference yaw offset) or 1 (dynamic platform reference yaw offset)',ErrStat,ErrMsg,RoutineName)
-   END IF
-   IF ( (InputFileData%PtfmYMod .EQ. 1_IntKi) .AND. (InputFileData%PtfmYCutOff <= 0_ReKi) ) THEN
-      CALL SetErrStat( ErrID_Fatal, 'PtfmYCutOff must be greater than 0 Hz.',ErrStat,ErrMsg,RoutineName)
-   END IF
-
       ! Check for violations of the small-angle assumption (15-degree limit, using radians):
-   IF ( ABS( InputFileData%PtfmRoll ) > SmallAngleLimit_Rad ) THEN
-      CALL SetErrStat( ErrID_Fatal, 'PtfmRoll must be between -'//TRIM(Num2LStr(SmallAngleLimit_Rad))//' and ' &
-                                    //TRIM(Num2LStr(SmallAngleLimit_Rad))//' radians.',ErrStat,ErrMsg,RoutineName)
-   END IF
+   ! IF ( ABS( InputFileData%PtfmRoll ) > SmallAngleLimit_Rad ) THEN
+   !    CALL SetErrStat( ErrID_Fatal, 'PtfmRoll must be between -'//TRIM(Num2LStr(SmallAngleLimit_Rad))//' and ' &
+   !                                  //TRIM(Num2LStr(SmallAngleLimit_Rad))//' radians.',ErrStat,ErrMsg,RoutineName)
+   ! END IF
 
-   IF ( ABS( InputFileData%PtfmPitch ) > SmallAngleLimit_Rad ) THEN
-      CALL SetErrStat( ErrID_Fatal, 'PtfmPitch must be between -'//TRIM(Num2LStr(SmallAngleLimit_Rad))//' and ' &
-                                    //TRIM(Num2LStr(SmallAngleLimit_Rad))//' radians.',ErrStat,ErrMsg,RoutineName)
-   END IF
+   ! IF ( ABS( InputFileData%PtfmPitch ) > SmallAngleLimit_Rad ) THEN
+   !    CALL SetErrStat( ErrID_Fatal, 'PtfmPitch must be between -'//TRIM(Num2LStr(SmallAngleLimit_Rad))//' and ' &
+   !                                  //TRIM(Num2LStr(SmallAngleLimit_Rad))//' radians.',ErrStat,ErrMsg,RoutineName)
+   ! END IF
 
-   IF ( ABS( InputFileData%PtfmYaw - InputFileData%PtfmRefY ) > SmallAngleLimit_Rad ) THEN
-      CALL SetErrStat( ErrID_Fatal, 'PtfmYaw must be between -'//TRIM(Num2LStr(SmallAngleLimit_Rad))//' and ' &
-                                    //TRIM(Num2LStr(SmallAngleLimit_Rad))//' radians from PtfmRefY.',ErrStat,ErrMsg,RoutineName)
-   END IF
+   ! IF ( ABS( InputFileData%PtfmYaw  ) > SmallAngleLimit_Rad ) THEN
+   !    CALL SetErrStat( ErrID_Fatal, 'PtfmYaw must be between -'//TRIM(Num2LStr(SmallAngleLimit_Rad))//' and ' &
+   !                                  //TRIM(Num2LStr(SmallAngleLimit_Rad))//' radians.',ErrStat,ErrMsg,RoutineName)
+   ! END IF
 
       ! Check the output parameters:
    IF ( InputFileData%DecFact < 1_IntKi )  CALL SetErrStat( ErrID_Fatal, 'DecFact must be greater than 0.',ErrStat,ErrMsg,RoutineName )

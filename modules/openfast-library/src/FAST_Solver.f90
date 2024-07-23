@@ -1204,9 +1204,6 @@ SUBROUTINE Transfer_Structure_to_Opt1Inputs( this_time, this_state, p_FAST, y_ED
          CALL Transfer_SubStructureMotion_to_HD( SubstructureMotion2HD, u_HD%WAMITMesh, u_HD%Morison%Mesh, MeshMapData, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
       !END IF ! don't transfer for SubDyn unless we have called SD_CalcOutput
-
-         ! send the low-pass filtered platform reference yaw position from ED to HD
-      u_HD%PtfmRefY = y_ED%PtfmRefY
             
    END IF
 
