@@ -848,6 +848,15 @@ subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
    do i=1,size(AFInfo,1)
       if (IsUsed(i)) then
          call UA_ValidateAFI(p%UAMod, p%Flookup, AFInfo(i), ErrStat2, ErrMsg2)
+            if (LEN_TRIM(ErrMsg2) + LEN_TRIM(ErrMsg) > LEN(ErrMsg) ) then
+               if (LEN_TRIM(ErrMsg) > LEN_TRIM(ErrMsg2)) then
+                  call WrScr(TRIM(ErrMsg))
+                  ErrMsg = ""
+               else
+                  call WrScr(TRIM(RoutineName)//TRIM(ErrMsg2))
+                  ErrMsg2 = ""
+               end if
+            end if
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end if
    end do
@@ -1496,11 +1505,13 @@ subroutine UA_ValidateAFI(UAMod, FLookup, AFInfo, ErrStat, ErrMsg)
    integer(IntKi),                  intent(  out)  :: ErrStat     ! Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
-   integer(IntKi)                               :: j
-   integer(IntKi)                               :: indx
-   real(ReKi)                                   :: cl_fs, vmax
-   character(*), parameter                      :: RoutineName = 'UA_ValidateAFI'
-   type(AFI_Table_Type), pointer :: tab !< Alias
+   integer(IntKi)                                  :: j
+   integer(IntKi)                                  :: indx
+   real(ReKi)                                      :: cl_fs, vmax
+   character(*), parameter                         :: RoutineName = 'UA_ValidateAFI'
+   
+   integer(IntKi)                                 :: ErrStat_tab     ! Error status of the operation
+   character(ErrMsgLen)                           :: ErrMsg_tab      ! Error message if ErrStat_tab /= ErrID_None
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1510,92 +1521,94 @@ subroutine UA_ValidateAFI(UAMod, FLookup, AFInfo, ErrStat, ErrMsg)
    else
 
       do j=1, AFInfo%NumTabs
-         tab => AFInfo%Table(j)
+         associate( tab => AFInfo%Table(j) )
+         ErrStat_tab = ErrID_None
+         ErrMsg_tab = " "
 
-         if ( AFInfo%Table(j)%InclUAdata ) then
+         if ( tab%InclUAdata ) then
             ! parameters used only for UAMod/=UA_HGM)
             if (UAMod == UA_Baseline .or. UAMod == UA_Gonzalez .or. UAMod == UA_MinnemaPierce .or. UAMod == UA_HGMV) then
             
                if (UAMod /= UA_HGMV) then
-                  if ( EqualRealNos(AFInfo%Table(j)%UA_BL%St_sh, 0.0_ReKi) ) then
-                     call SetErrStat(ErrID_Fatal, 'UA St_sh parameter must not be 0 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+                  if ( EqualRealNos(tab%UA_BL%St_sh, 0.0_ReKi) ) then
+                     call SetErrStat(ErrID_Fatal, 'UA St_sh parameter must not be 0.', ErrStat_tab, ErrMsg_tab, "" )
                   end if
 
                   ! we won't check alpha1 or alph2 validity if we aren't using them for the lookup (curve fit)
                   if (.not. Flookup) then
-                     if ( AFInfo%Table(j)%UA_BL%alpha1 > pi .or. AFInfo%Table(j)%UA_BL%alpha1 < -pi ) then
-                        call SetErrStat(ErrID_Fatal, 'UA alpha1 parameter must be between -180 and 180 degrees in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+                     if ( tab%UA_BL%alpha1 > pi .or. tab%UA_BL%alpha1 < -pi ) then
+                        call SetErrStat(ErrID_Fatal, 'UA alpha1 parameter must be between -180 and 180 degrees.', ErrStat_tab, ErrMsg_tab, "" )
                      end if
 
-                     if ( AFInfo%Table(j)%UA_BL%alpha2 > pi .or. AFInfo%Table(j)%UA_BL%alpha2 < -pi ) then
-                        call SetErrStat(ErrID_Fatal, 'UA alpha2 parameter must be between -180 and 180 degrees in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+                     if ( tab%UA_BL%alpha2 > pi .or. tab%UA_BL%alpha2 < -pi ) then
+                        call SetErrStat(ErrID_Fatal, 'UA alpha2 parameter must be between -180 and 180 degrees.', ErrStat_tab, ErrMsg_tab, "" )
                      end if
 
-                     if ( AFInfo%Table(j)%UA_BL%alpha1 < AFInfo%Table(j)%UA_BL%alpha2 ) then
-                        call SetErrStat(ErrID_Fatal, 'UA alpha2 parameter must be less than alpha1 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+                     if ( tab%UA_BL%alpha1 < tab%UA_BL%alpha2 ) then
+                        call SetErrStat(ErrID_Fatal, 'UA alpha2 parameter must be less than alpha1.', ErrStat_tab, ErrMsg_tab, "" )
                      end if
                
-                     if ( AFInfo%Table(j)%UA_BL%alpha0 > AFInfo%Table(j)%UA_BL%alpha1 ) then
-                        call SetErrStat(ErrID_Fatal, 'UA alpha0 parameter must be less than alpha1 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+                     if ( tab%UA_BL%alpha0 > tab%UA_BL%alpha1 ) then
+                        call SetErrStat(ErrID_Fatal, 'UA alpha0 parameter must be less than alpha1.', ErrStat_tab, ErrMsg_tab, "" )
                      end if
                
-                     if ( AFInfo%Table(j)%UA_BL%alpha2 > AFInfo%Table(j)%UA_BL%alpha0 ) then
-                     call SetErrStat(ErrID_Fatal, 'UA alpha0 parameter must be greater than alpha2 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
-                  end if
+                     if ( tab%UA_BL%alpha2 > tab%UA_BL%alpha0 ) then
+                        call SetErrStat(ErrID_Fatal, 'UA alpha0 parameter must be greater than alpha2.', ErrStat_tab, ErrMsg_tab, "" )
+                     end if
                   end if ! don't check alpha1 and alpha2 unless they are going to be used
-                  if ( AFInfo%Table(j)%UA_BL%filtCutOff < 0.0_ReKi ) then
-                     call SetErrStat(ErrID_Fatal, 'UA filtCutOff parameter must be greater than 0 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+                  if ( tab%UA_BL%filtCutOff < 0.0_ReKi ) then
+                     call SetErrStat(ErrID_Fatal, 'UA filtCutOff parameter must be greater than 0.', ErrStat_tab, ErrMsg_tab, "" )
                   end if
                end if ! not UA_HGMV
                
-               if ( AFInfo%Table(j)%UA_BL%T_VL <= 0.0_ReKi ) then
-                  call SetErrStat(ErrID_Fatal, 'UA T_VL parameter must be greater than 0 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+               if ( tab%UA_BL%T_VL <= 0.0_ReKi ) then
+                  call SetErrStat(ErrID_Fatal, 'UA T_VL parameter must be greater than 0.', ErrStat_tab, ErrMsg_tab, "" )
                end if
                
-               if ( AFInfo%Table(j)%UA_BL%T_V0 <= 0.0_ReKi ) then
-                  call SetErrStat(ErrID_Fatal, 'UA T_V0 parameter must be greater than 0 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+               if ( tab%UA_BL%T_V0 <= 0.0_ReKi ) then
+                  call SetErrStat(ErrID_Fatal, 'UA T_V0 parameter must be greater than 0.', ErrStat_tab, ErrMsg_tab, "" )
                end if
             
-               if (AFInfo%Table(j)%UA_BL%Cn2 >= AFInfo%Table(j)%UA_BL%Cn1) call SetErrStat(ErrID_Fatal, 'Cn2 must be less than Cn1 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+               if (tab%UA_BL%Cn2 >= tab%UA_BL%Cn1) call SetErrStat(ErrID_Fatal, 'Cn2 must be less than Cn1.', ErrStat_tab, ErrMsg_tab, "" )
                
             end if
             
             if (UAMod /= UA_HGMV) then
-               if ( AFInfo%Table(j)%UA_BL%alpha0 > pi .or. AFInfo%Table(j)%UA_BL%alpha0 < -pi ) then
-                  call SetErrStat(ErrID_Fatal, 'UA alpha0 parameter must be between -180 and 180 degrees in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+               if ( tab%UA_BL%alpha0 > pi .or. tab%UA_BL%alpha0 < -pi ) then
+                  call SetErrStat(ErrID_Fatal, 'UA alpha0 parameter must be between -180 and 180 degrees.', ErrStat_tab, ErrMsg_tab, "" )
                end if
             end if ! Not UA_HGM
 
-            if ( AFInfo%Table(j)%UA_BL%UACutout < Pi .and. (UAMod == UA_HGM .or. UAMod == UA_HGMV .or. UAMod == UA_OYE .or. UAMod == UA_HGMV360) ) then
-               cl_fs = InterpStp( AFInfo%Table(j)%UA_BL%UACutout, AFInfo%Table(j)%alpha, AFInfo%Table(j)%Coefs(:,AFInfo%ColUAf), indx, AFInfo%Table(j)%NumAlf )
+            if ( tab%UA_BL%UACutout < Pi .and. (UAMod == UA_HGM .or. UAMod == UA_HGMV .or. UAMod == UA_OYE .or. UAMod == UA_HGMV360) ) then
+               cl_fs = InterpStp( tab%UA_BL%UACutout, tab%alpha, tab%Coefs(:,AFInfo%ColUAf), indx, tab%NumAlf )
                if (.not. EqualRealNos( cl_fs, 0.0_ReKi ) ) then
-                  call SetErrStat(ErrID_Severe, 'UA cutout parameter should be at a value where the separation function is 0 in "'//trim(AFInfo%FileName)//'".'// &
-                                 " Separation function is "//trim(num2lstr(cl_fs)), ErrStat, ErrMsg, RoutineName )
+                  call SetErrStat(ErrID_Severe, 'UA cutout parameter should be at a value where the separation function is 0;'// &
+                       ' separation function is '//trim(num2lstr(cl_fs))//'.' , ErrStat_tab, ErrMsg_tab, "" )
                end if
                ! C_alpha should have a reasonable value
                if (abs(tab%UA_BL%C_lalpha)>9.11_ReKi) then ! 45% above 2*pi, arbitrary..
-                  call SetErrStat(ErrID_Severe, 'Large value of C_lalpha in "'//trim(AFInfo%FileName)//'".'// &
+                  call SetErrStat(ErrID_Severe, 'Large value of C_lalpha.'// &
                                  " C_lalpha="//trim(num2lstr(tab%UA_BL%C_lalpha))//&
-                                 ". We advise to check this value or provide it in the input file.", ErrStat, ErrMsg, RoutineName )
+                                 ". We advise to check this value or provide it in the input file.", ErrStat_tab, ErrMsg_tab, "" )
                endif
                ! NOTE: check if C_nalpha is alwasy defined
                ! C_lalpha and C_nalpha should be in the same ballpark
                if (abs(tab%UA_BL%C_nalpha-tab%UA_BL%C_lalpha)>3.0_ReKi) then ! arbitrary criteria..
-                  call SetErrStat(ErrID_Severe, 'Large difference between C_lalpha and C_nalpha in "'//trim(AFInfo%FileName)//'".'// &
+                  call SetErrStat(ErrID_Severe, 'Large difference between C_lalpha and C_nalpha.'// &
                                  " C_lalpha="//trim(num2lstr(tab%UA_BL%C_lalpha))//&
                                  " C_nalpha="//trim(num2lstr(tab%UA_BL%C_nalpha))//&
-                                 ". We advise to check these value or provide them in the input file.", ErrStat, ErrMsg, RoutineName )
+                                 ". We advise to check these values or provide them in the input file.", ErrStat_tab, ErrMsg_tab, "" )
                endif
                vmax = maxval(tab%Coefs(:,AFInfo%ColUAf))
                if (vmax>1.00_ReKi) then
-                  call SetErrStat(ErrID_Severe, 'The separation function f_st exceed 1 in "'//trim(AFInfo%FileName)//'".'// &
+                  call SetErrStat(ErrID_Severe, 'The separation function f_st exceeds 1;'// &
                                  " max(f_st)="//trim(num2lstr(vmax))//&
-                                 ". Check the calculation or provide f_st in the input file.", ErrStat, ErrMsg, RoutineName )
+                                 ". Check the calculation or provide f_st in the input file.", ErrStat_tab, ErrMsg_tab, "" )
                endif
                if (vmax<0.70_ReKi) then
-                  call SetErrStat(ErrID_Severe, 'The separation function f_st does not reach 1 in "'//trim(AFInfo%FileName)//'".'// &
+                  call SetErrStat(ErrID_Severe, 'The separation function f_st does not reach 1;'// &
                                  " max(f_st)="//trim(num2lstr(vmax))//&
-                                 ". Check the calculation or provide f_st in the input file.", ErrStat, ErrMsg, RoutineName )
+                                 ". Check the calculation or provide f_st in the input file.", ErrStat_tab, ErrMsg_tab, "" )
                endif
             end if
 
@@ -1604,24 +1617,30 @@ subroutine UA_ValidateAFI(UAMod, FLookup, AFInfo, ErrStat, ErrMsg)
             endif
             
                ! variables used in all UA models:
-            if ( AFInfo%Table(j)%UA_BL%T_f0 <= 0.0_ReKi ) then
-               call SetErrStat(ErrID_Fatal, 'UA T_f0 parameter must be greater than 0 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+            if ( tab%UA_BL%T_f0 <= 0.0_ReKi ) then
+               call SetErrStat(ErrID_Fatal, 'UA T_f0 parameter must be greater than 0.', ErrStat_tab, ErrMsg_tab, "" )
             end if
             
-            if ( AFInfo%Table(j)%UA_BL%T_p <= 0.0_ReKi ) then
-               call SetErrStat(ErrID_Fatal, 'UA T_p parameter must be greater than 0 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+            if ( tab%UA_BL%T_p <= 0.0_ReKi ) then
+               call SetErrStat(ErrID_Fatal, 'UA T_p parameter must be greater than 0.', ErrStat_tab, ErrMsg_tab, "" )
             end if
             
          end if ! UAtable included
             
-         if ( AFInfo%Table(j)%UA_BL%UACutout < 0.0_ReKi ) then
-            call SetErrStat(ErrID_Fatal, 'UA UACutout parameter must not be negative in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+         if ( tab%UA_BL%UACutout < 0.0_ReKi ) then
+            call SetErrStat(ErrID_Fatal, 'UA UACutout parameter must not be negative.', ErrStat_tab, ErrMsg_tab, "" )
          end if
             
             ! this should never occur (if it does, check how it is set in AirfoilInfo)
-         if ( AFInfo%Table(j)%UA_BL%UACutout_blend > AFInfo%Table(j)%UA_BL%UACutout ) then
-            call SetErrStat(ErrID_Fatal, 'UA UACutout parameter must not be smaller than than UACutout_blend in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+         if ( tab%UA_BL%UACutout_blend > tab%UA_BL%UACutout ) then
+            call SetErrStat(ErrID_Fatal, 'UA UACutout parameter must not be smaller than than UACutout_blend.', ErrStat_tab, ErrMsg_tab, "" )
          end if
+         
+         if (ErrStat_tab /= ErrID_None) then
+            call SetErrStat(ErrStat_tab, 'File "'//trim(AFInfo%FileName)//'"'//trim(ErrMsg_tab)//NewLine, ErrStat, ErrMsg, RoutineName )
+         end if
+         
+         end associate ! tab => AFInfo%Table(j)
          
       end do
 
