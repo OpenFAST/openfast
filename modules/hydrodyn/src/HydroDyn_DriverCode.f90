@@ -81,8 +81,6 @@ PROGRAM HydroDynDriver
    real(DbKi)                                         :: TiLstPrn             ! The simulation time of the last print
    integer                                            :: n_SttsTime           ! Number of time steps between screen status messages (-)
 
-   REAL(R8Ki)                                         :: PRPHdg
-   REAL(ReKi)                                         :: CYawFilt
    integer                                            :: i                    ! Loop counter
    
    logical                                            :: SeaState_Initialized, HydroDyn_Initialized
@@ -176,9 +174,6 @@ PROGRAM HydroDynDriver
    InitInData_SeaSt%Linearize    = drvrData%Linearize
 
       ! Initialize the HydroDyn module
-   InitInData_HD%PtfmYMod        = drvrData%PtfmYMod
-   InitInData_HD%PtfmRefY        = drvrData%PtfmRefY
-   
    Interval = drvrData%TimeInterval
    
    call SeaSt_Init( InitInData_SeaSt, u_SeaSt(1), p_SeaSt,  x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, Interval, InitOutData_SeaSt, ErrStat, ErrMsg )
@@ -236,9 +231,6 @@ PROGRAM HydroDynDriver
          CALL CheckError()
       end if
    END IF
-
-   ! Constant for the platform yaw low-pass filter
-   drvrData%CYawFilt = exp(-TwoPi*drvrData%TimeInterval*drvrData%PtfmYCutoff)
 
    ! Set initial inputs at t = 0
    IF (( drvrData%PRPInputsMod /= 2 ) .AND. ( drvrData%PRPInputsMod >= 0 )) THEN
@@ -331,12 +323,6 @@ PROGRAM HydroDynDriver
 
       CALL HydroDyn_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, m, ErrStat, ErrMsg ); CALL CheckError()
       
-      ! Update PtfmRefY if PtfmYMod = 1 by low-pass filtering the instantaneous PRP heading/yaw angle
-      if (n<drvrData%NSteps .AND. p%PtfmYMod == 1) then
-         call GetPRPHdg(Time+drvrData%TimeInterval, n+1, mappingData, drvrData, ErrStat, ErrMsg);  CALL CheckError()
-         drvrData%PtfmRefY = drvrData%CYawFilt*drvrData%PtfmRefY + (1.0-drvrData%CYawFilt)*drvrData%PRPHdg
-      end if
-
       IF ( MOD( n + 1, n_SttsTime ) == 0 ) THEN
          CALL SimStatus( TiLstPrn, PrevClockTime, time, drvrData%TMax )
       ENDIF   

@@ -94,8 +94,6 @@ IMPLICIT NONE
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
     LOGICAL  :: InvalidWithSSExctn = .false.      !< Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2) [(-)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
-    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
-    REAL(ReKi)  :: PtfmRefY = 0.0_ReKi      !< Initial reference yaw offset [(rad)]
   END TYPE HydroDyn_InitInputType
 ! =======================
 ! =========  HydroDyn_InitOutputType  =======
@@ -615,8 +613,6 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
    DstInitInputData%VisMeshes = SrcInitInputData%VisMeshes
    DstInitInputData%InvalidWithSSExctn = SrcInitInputData%InvalidWithSSExctn
    DstInitInputData%WaveField => SrcInitInputData%WaveField
-   DstInitInputData%PtfmYMod = SrcInitInputData%PtfmYMod
-   DstInitInputData%PtfmRefY = SrcInitInputData%PtfmRefY
 end subroutine
 
 subroutine HydroDyn_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -655,8 +651,6 @@ subroutine HydroDyn_PackInitInput(RF, Indata)
          call SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, InData%WaveField) 
       end if
    end if
-   call RegPack(RF, InData%PtfmYMod)
-   call RegPack(RF, InData%PtfmRefY)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -697,8 +691,6 @@ subroutine HydroDyn_UnPackInitInput(RF, OutData)
    else
       OutData%WaveField => null()
    end if
-   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)

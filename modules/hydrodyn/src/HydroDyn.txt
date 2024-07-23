@@ -78,8 +78,6 @@ typedef   ^                            ^                             logical    
 #
 typedef   ^                            ^                             LOGICAL                  InvalidWithSSExctn              -          -          -         "Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2)" (-)
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                       -          -          -         "Pointer to SeaState wave field" -
-typedef   ^                            ^                             INTEGER                  PtfmYMod                        -          -          -         "Large yaw model" - 
-typedef   ^                            ^                             ReKi                     PtfmRefY                        -          -          -         "Initial reference yaw offset" (rad)
 #
 #
 # Define outputs from the initialization routine here:

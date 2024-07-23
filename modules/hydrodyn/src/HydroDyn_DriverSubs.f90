@@ -82,9 +82,6 @@ MODULE HydroDynDriverSubs
       REAL(DbKi)                       :: TMax
       INTEGER                          :: PRPInputsMod
       REAL(ReKi)                       :: PtfmRefzt
-      INTEGER                          :: PtfmYMod
-      REAL(ReKi)                       :: PtfmRefY
-      REAL(ReKi)                       :: PtfmYCutOff
       CHARACTER(1024)                  :: PRPInputsFile
       REAL(R8Ki)                       :: uPRPInSteady(6)
       REAL(R8Ki)                       :: uDotPRPInSteady(6)
@@ -260,19 +257,6 @@ SUBROUTINE ReadDriverInputFile( FileName, drvrData, ErrStat, ErrMsg )
        ! PtfmRefzt
    CALL ReadVar ( UnIn, FileName, drvrData%PtfmRefzt, 'PtfmRefzt', 'Vertical distance from the ground level to the platform reference point', ErrStat, ErrMsg, UnEchoLocal )
    if (Failed()) return
-
-       ! PtfmYMod
-   CALL ReadVar ( UnIn, FileName, drvrData%PtfmYMod, 'PtfmYMod', 'Model for large yaw offset', ErrStat2, ErrMsg2, UnEchoLocal )
-   if (Failed()) return
-
-       ! PtfmRefY
-   CALL ReadVar ( UnIn, FileName, drvrData%PtfmRefY, 'PtfmRefY', 'Constant or initial refernce yaw offset', ErrStat2, ErrMsg2, UnEchoLocal )
-   if (Failed()) return
-   !drvrData%PtfmRefY = drvrData%PtfmRefY * D2R_D
-
-       ! PtfmYCutOff
-   CALL ReadVar ( UnIn, FileName, drvrData%PtfmYCutOff, 'PtfmYCutOff', 'Cutoff frequency for low-pass filtering the PRP yaw motion', ErrStat2, ErrMsg2, UnEchoLocal )
-   if (Failed()) return
    
        ! PRPInputsFile
    CALL ReadVar ( UnIn, FileName, drvrData%PRPInputsFile, 'PRPInputsFile', 'Filename for the PRP HydroDyn inputs', ErrStat2, ErrMsg2, UnEchoLocal )
@@ -308,13 +292,6 @@ SUBROUTINE ReadDriverInputFile( FileName, drvrData, ErrStat, ErrMsg )
 
    drvrData%WrTxtOutFile = .true.
    drvrData%WrBinOutFile = .false.
-
-   !--------------- Check validity of driver inputs -----------------------------
-   if (drvrData%PtfmYMod /= 0 .AND. drvrData%PtfmYMod /= 1) then
-      ErrStat2=ErrID_Fatal
-      ErrMsg2='PtfmYMod must be 0 or 1.'
-      if (Failed()) return
-   end if
    
    CALL cleanup()
    
@@ -800,8 +777,6 @@ SUBROUTINE SetHDInputs_Constant(u_HD, mappingData, drvrData, ErrStat, ErrMsg)
       u_HD%PRPMesh%TranslationDisp(:,1)   = drvrData%uPRPInSteady(1:3) 
 
          ! Compute direction cosine matrix from the rotation angles
-      ! call RotTrans('InputRotation',drvrData%PtfmRefY,drvrData%uPRPInSteady(4:6),u_HD%PRPMesh%Orientation(:,:,1), 'PRP orientation', ErrStat2, ErrMsg2)
-      ! call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       u_HD%PRPMesh%Orientation(:,:,1) = EulerConstructZYX(drvrData%uPRPInSteady(4:6))
 
          ! Translation - No transformation needed
@@ -813,12 +788,7 @@ SUBROUTINE SetHDInputs_Constant(u_HD, mappingData, drvrData, ErrStat, ErrMsg)
                                  REAL(drvrData%uDotDotPRPInSteady(4:6),ReKi),&
                                  u_HD%PRPMesh%RotationVel(:,1),&
                                  u_HD%PRPMesh%RotationAcc(:,1))
-      ! call hiFrameTransform(h2i,drvrData%PtfmRefY,REAL(drvrData%uDotPRPInSteady(4:6),ReKi),u_HD%PRPMesh%RotationVel(:,1),ErrStat2,ErrMsg2)
-      !    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      ! call hiFrameTransform(h2i,drvrData%PtfmRefY,REAL(drvrData%uDotDotPRPInSteady(4:6),ReKi),u_HD%PRPMesh%RotationAcc(:,1),ErrStat2,ErrMsg2)
-      !    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-      u_HD%PtfmRefY                       = drvrData%PtfmRefY      
       CALL PRP_TransferToMotionInputs(u_HD, mappingData, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -859,8 +829,6 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
 !         maxAngle = max( maxAngle, abs(yInterp(4:6)) )
 
       ! Obtain the orientation matrix for the small rotation part from the reference yaw orientation
-      ! call RotTrans('InputRotation',drvrData%PtfmRefY,yInterp(4:6),u_HD%PRPMesh%Orientation(:,:,1), 'PRP orientation', ErrStat2, ErrMsg2)
-      ! call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       u_HD%PRPMesh%Orientation(:,:,1) = EulerConstructZYX(yInterp(4:6))
 
       ! Translation - No transformation needed
@@ -872,12 +840,7 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
                                  REAL(yInterp(16:18),ReKi),&
                                  u_HD%PRPMesh%RotationVel(:,1),&
                                  u_HD%PRPMesh%RotationAcc(:,1))
-      ! call hiFrameTransform(h2i,drvrData%PtfmRefY,REAL(yInterp(10:12),ReKi),u_HD%PRPMesh%RotationVel(:,1),ErrStat2,ErrMsg2)
-      !    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      ! call hiFrameTransform(h2i,drvrData%PtfmRefY,REAL(yInterp(16:18),ReKi),u_HD%PRPMesh%RotationAcc(:,1),ErrStat2,ErrMsg2)
-      !    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      
-      u_HD%PtfmRefY                       = drvrData%PtfmRefY      
+
       CALL PRP_TransferToMotionInputs(u_HD, mappingData, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -900,13 +863,9 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
       END DO
                
       ! PRP and body 1-NBody orientations (skipping the maxAngle stuff)
-      ! call RotTrans('InputRotation',drvrData%PtfmRefY,drvrData%PRPin(n,4:6),u_HD%PRPMesh%Orientation(:,:,1), 'PRP orientation', ErrStat2, ErrMsg2)
-      ! call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       u_HD%PRPMesh%Orientation(:,:,1) = EulerConstructZYX(drvrData%PRPin(n,4:6))
             
       DO I=1, drvrData%NBody
-         ! call RotTrans('InputRotation',drvrData%PtfmRefY,drvrData%PRPin(n,(6*I+4):(6*I+6)),u_HD%WAMITMesh%Orientation(:,:,I), 'body orientation', ErrStat2, ErrMsg2)
-         ! call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          u_HD%WAMITMesh%Orientation(:,:,I) = EulerConstructZYX(drvrData%PRPin(n,(6*I+4):(6*I+6)))
       END DO
 
@@ -970,14 +929,6 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
       u_HD%PRPMesh%RotationVel(:,1) = tmp
       u_HD%PRPMesh%RotationAcc(:,1) = tmp2
 
-      ! call hiFrameTransform(h2i,drvrData%PtfmRefY,u_HD%PRPMesh%RotationVel(:,1),tmp,ErrStat2,ErrMsg2)
-      ! call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      ! u_HD%PRPMesh%RotationVel(:,1) = tmp
-
-      ! call hiFrameTransform(h2i,drvrData%PtfmRefY,u_HD%PRPMesh%RotationAcc(:,1),tmp,ErrStat2,ErrMsg2)
-      ! call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      ! u_HD%PRPMesh%RotationAcc(:,1) = tmp
-
       DO I=1,drvrData%NBody
          call EulerDerivativeToAngVelAcc(drvrData%PRPin(n,(6*I+4):(6*I+6)),&
                                            u_HD%WAMITMesh%RotationVel(:,I),&
@@ -986,22 +937,13 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
          u_HD%WAMITMesh%RotationVel(:,I) = tmp
          u_HD%WAMITMesh%RotationAcc(:,I) = tmp2
 
-         ! call hiFrameTransform(h2i,drvrData%PtfmRefY,u_HD%WAMITMesh%RotationVel(:,I),tmp,ErrStat2,ErrMsg2)
-         ! call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         ! u_HD%WAMITMesh%RotationVel(:,I) = tmp
-
-         ! call hiFrameTransform(h2i,drvrData%PtfmRefY,u_HD%WAMITMesh%RotationAcc(:,I),tmp,ErrStat2,ErrMsg2)
-         ! call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         ! u_HD%WAMITMesh%RotationAcc(:,I) = tmp
       END DO
             
-      u_HD%PtfmRefY                       = drvrData%PtfmRefY
-       ! half of the PRP_TransferToMotionInputs routine:
+      ! half of the PRP_TransferToMotionInputs routine:
       IF ( u_HD%Morison%Mesh%Initialized ) THEN
          ! Map kinematics to the WAMIT mesh with 1 to NBody nodes
          CALL Transfer_Point_to_Point( u_HD%PRPMesh, u_HD%Morison%Mesh, mappingData%HD_Ref_2_M_P, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         u_HD%Morison%PtfmRefY = u_HD%PtfmRefY
       END IF
 
    ELSE
@@ -1182,7 +1124,6 @@ SUBROUTINE PRP_TransferToMotionInputs(u, mappingData, ErrStat, ErrMsg)
    if ( u%Morison%Mesh%Initialized ) then
       CALL Transfer_Point_to_Point( u%PRPMesh, u%Morison%Mesh, mappingData%HD_Ref_2_M_P, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      u%Morison%PtfmRefY = u%PtfmRefY
    end if
    
 END SUBROUTINE PRP_TransferToMotionInputs
@@ -1342,51 +1283,6 @@ contains
    end subroutine cleanup
    
 END SUBROUTINE LINEARIZATION
-
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE GetPRPHdg(time, n, mappingData, drvrData, ErrStat, ErrMsg)
-   REAL(DbKi),                      INTENT( IN    ) :: time
-   INTEGER(IntKi),                  INTENT( IN    ) :: n
-   TYPE(HD_Drvr_MappingData),       INTENT( INOUT ) :: mappingData
-   TYPE(HD_Drvr_Data),              INTENT( INOUT ) :: drvrData
-   
-   INTEGER,                         INTENT(   OUT ) :: ErrStat                ! returns a non-zero value when an error occurs  
-   CHARACTER(*),                    INTENT(   OUT ) :: ErrMsg                 ! Error message if ErrStat /= ErrID_None
-
-   integer(IntKi)                                   :: errStat2      ! temporary error status of the operation
-   character(ErrMsgLen)                             :: errMsg2       ! temporary error message 
-   character(*), parameter                          :: RoutineName = 'GetPRPHdg'
-   real(R8Ki)                                       :: yInterp(size(drvrData%PRPin,2))
-   integer(intKi)                                   :: i
-   
-   ErrStat = ErrID_None
-   ErrMsg = ""
-
-   ! PRPInputsMod 2: Reads time series of positions, velocities, and accelerations for the platform reference point
-   IF ( drvrData%PRPInputsMod == 2 ) THEN
-
-      call InterpStpMat( time, drvrData%PRPinTime, drvrData%PRPin, mappingData%Ind, size(drvrData%PRPinTime), yInterp )
-      drvrData%PRPHdg = yInterp(6) 
-
-   ELSEIF ( drvrData%PRPInputsMod < 0 ) THEN
-      
-      !@mhall: new kinematics input for moving bodies individually
-      ! PRPInputsMod < 0: Reads time series of positions for each body individually, and uses finite differences to also get velocities and accelerations.
-      ! The number of bodies is the negative of PRPInputsMod.
-      
-      i = min(n,drvrData%NSteps)
-      if (n <= drvrData%NSteps .and. .not. EqualRealNos( time, drvrData%PRPinTime(i) ) ) then
-         call SetErrStat(ErrID_Fatal, 'time does not match PRP input file data', ErrStat, ErrMsg, RoutineName)
-         return
-      end if
-      drvrData%PRPHdg = drvrData%PRPin(n,6)
-
-   ELSE
-      ! constant inputs are not recalculated at each time step. Instead this is called at initialization
-      ! CALL SetHDInputs_Constant()
-   END IF
-      
-END SUBROUTINE
 
 SUBROUTINE EulerDerivativeToAngVelAcc(u,udot,uddot,AngVel,AngAcc)
    REAL(DbKi),                     INTENT( IN    ) :: u(3)       ! Tait-Bryan angles following the ZYX convention

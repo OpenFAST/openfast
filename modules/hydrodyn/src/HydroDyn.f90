@@ -145,10 +145,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       ErrMsg  = ""               
       p%UnOutFile = -1
       
-      p%WaveField    =>  InitInp%WaveField
-
-      p%PtfmYMod     =   InitInp%PtfmYMod
-      
          ! Initialize the NWTC Subroutine Library
          
       CALL NWTC_Init(  )
@@ -187,7 +183,9 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             CALL CleanUp()
             RETURN
          END IF
-      
+
+      p%WaveField    =>  InitInp%WaveField
+      p%PtfmYMod     =   InputFileData%PtfmYMod
       
       InputFileData%Morison%WaveField => InitInp%WaveField
       InputFileData%WAMIT%WaveField   => InitInp%WaveField
