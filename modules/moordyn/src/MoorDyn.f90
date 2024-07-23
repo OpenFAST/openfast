@@ -127,7 +127,6 @@ CONTAINS
       CHARACTER(40)                :: TempString5          !
       CHARACTER(40)                :: TempStrings(6)       ! Array of 6 strings used when parsing comma-separated items
 !      CHARACTER(1024)              :: FileName             !
-      CHARACTER(20)                :: TempString6          ! Linear damping (transverse direction) for rod element
 
 
       REAL(DbKi)                   :: depth                ! local water depth interpolated from bathymetry grid [m]
@@ -730,27 +729,21 @@ CONTAINS
                    IF (ErrStat2 == 0) THEN
                       READ(Line,*,IOSTAT=ErrStat2) m%RodTypeList(l)%name, m%RodTypeList(l)%d, m%RodTypeList(l)%w, &
                          m%RodTypeList(l)%Cdn, m%RodTypeList(l)%Can, m%RodTypeList(l)%CdEnd, m%RodTypeList(l)%CaEnd,&
-                         tempString6    ! Linear damping coefficient
-                         read(tempString6,*) tempString6    ! remove trailing comments, if any
+                         m%RodTypeList(l)%LinDamp    ! Linear damping coefficient
 
-                      if (ErrStat2 .ne. 0) then
+                      if (ErrStat2 == 0) then
+                          m%RodTypeList(l)%isLinDamp = .TRUE.     ! linear damping was read
+                      else    ! Linear damping not present, so reread the line without it
                           READ(Line,*,IOSTAT=ErrStat2) m%RodTypeList(l)%name, m%RodTypeList(l)%d, m%RodTypeList(l)%w, &
                           m%RodTypeList(l)%Cdn, m%RodTypeList(l)%Can, m%RodTypeList(l)%CdEnd, m%RodTypeList(l)%CaEnd
 
-                          tempString6 = '' 
+                          m%RodTypeList(l)%LinDamp = 0.0
+                          m%RodTypeList(l)%isLinDamp = .FALSE. 
                       end if
 
 
                       m%RodTypeList(l)%Cdt = 0.0_DbKi ! not used
                       m%RodTypeList(l)%Cat = 0.0_DbKi ! not used
-
-                      if (len(trim(tempString6)) .gt. 0) then 
-                          read(tempString6, *)  m%RodTypeList(l)%LinDamp
-                          m%RodTypeList(l)%isLinDamp = .TRUE.
-                      else 
-                          m%RodTypeList(l)%LinDamp = 0.0
-                          m%RodTypeList(l)%isLinDamp = .FALSE. 
-                      end if
 
                    END IF
 
