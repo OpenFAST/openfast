@@ -228,7 +228,7 @@ FUNCTION WrapTo180(angle)
 
    REAL(ReKi),    INTENT(IN) :: angle
    REAL(ReKi)                :: WrapTo180
-   WrapTo180 = mod(angle + 180.0, 360.0) - 180.0
+   WrapTo180 = modulo(angle + 180.0, 360.0) - 180.0
 
 END FUNCTION WrapTo180
 
@@ -236,7 +236,7 @@ FUNCTION WrapToPi(angle)
 
    REAL(ReKi),    INTENT(IN) :: angle
    REAL(ReKi)                :: WrapToPi
-   WrapToPi = mod(angle + PI, TwoPi) - PI
+   WrapToPi = modulo(angle + PI, TwoPi) - PI
 
 END FUNCTION WrapToPi
 
