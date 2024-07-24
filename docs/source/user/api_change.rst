@@ -22,6 +22,8 @@ Modified in OpenFAST `dev`
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line    Flag Name            Example Value
 ============================================= ======= ==================== ========================================================================================================================================================================================================
+OpenFAST                                      15      CompAero\**          2   CompAero        - Compute aerodynamic loads (switch) {0=None; 2=AeroDyn v15}
+ElastoDyn blade file                          15                           Removal of the `PitchAxis` input column
 HydroDyn                                       all                         Complete restructuring of input file
 SeaState                                       all                         New module (split from HydroDyn, so contains some inputs previously found in HydroDyn)
 SubDyn                                        56\*                                             ----------------------- SPRING ELEMENT PROPERTIES -------------------------------------
@@ -44,6 +46,8 @@ FAST.Farm                                     78       WAT_k_Grad          defau
 
 \*Exact line number depends on number of entries in various preceeding tables.
 
+\*\* The AeroDyn 14 module has been removed.  AeroDyn15 renamed to AeroDyn
+
 
 .. _api_change_ad4x:
 
@@ -59,7 +63,7 @@ Additional ressources:
 
 - An example of AeroDyn input file at it's latest format: :download:`Example <aerodyn/examples/ad_primary_example.dat>`: 
 
-- A directory with a working example: `here <https://github.com/OpenFAST/r-test/blob/dev/modules/aerodyn/ad_BAR_OLAF/OpenFAST_BAR_00_AeroDyn15.dat>`__
+- A directory with a working example: `here <https://github.com/OpenFAST/r-test/blob/dev/modules/aerodyn/ad_BAR_OLAF/OpenFAST_BAR_00_AeroDyn.dat>`__
 
 - An example python converter (v3.5.x to 4.x): `here <https://github.com/OpenFAST/openfast_toolbox/blob/dev/openfast_toolbox/converters/examples/Main_AD30_AD40.py>`__
 
@@ -141,6 +145,23 @@ OpenFAST v3.4.0 to OpenFAST v3.4.1
 Restored the AeroDyn channel names with `Aero` in the name.  These had be
 changed to `Fld` in v3.4.0 which caused headaches for users.  The `Fld` names
 are now aliases to the `Aero` names.
+
+
+OpenFAST v3.4.0 to OpenFAST dev
+----------------------------------
+
+AeroDyn14 has been removed!
+
+============================================= ==== ================= ========================================================================================================================================================================================================
+Changed in OpenFAST `dev`
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== ================= ========================================================================================================================================================================================================
+OpenFAST                                      15   CompAero             2   CompAero        - Compute aerodynamic loads (switch) {0=None; 2=AeroDyn v15}
+============================================= ==== ================= ========================================================================================================================================================================================================
+
+
+
 
 
 OpenFAST v3.3.0 to OpenFAST v3.4.0 
@@ -577,7 +598,7 @@ InflowWind      49    InitPosition(x)  XOffset        0                 XOffset 
 OpenFAST v2.3.0 to OpenFAST v2.4.0
 ----------------------------------
 
-Additional nodal output channels added for :ref:`AeroDyn15<AD-Nodal-Outputs>`, :ref:`BeamDyn<BD-Nodal-Outputs>`, and :ref:`ElastoDyn<ED-Nodal-Outputs>`.
+Additional nodal output channels added for :ref:`AeroDyn<AD-Nodal-Outputs>`, :ref:`BeamDyn<BD-Nodal-Outputs>`, and :ref:`ElastoDyn<ED-Nodal-Outputs>`.
 
 ============== ==== ================== =============================================================================================================================================================================
 Added in OpenFAST v2.4.0

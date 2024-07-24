@@ -82,7 +82,8 @@ CONTAINS
       Rod%Cdt   = RodProp%Cdt      
       Rod%CaEnd = RodProp%CaEnd      
       Rod%CdEnd = RodProp%CdEnd   
-
+      Rod%linDamp = RodProp%linDamp 
+      Rod%islinDamp = RodProp%islinDamp 
 
       ! allocate node positions and velocities (NOTE: these arrays start at ZERO)
       ALLOCATE(Rod%r(3, 0:N), Rod%rd(3, 0:N), STAT=ErrStat2);  if(AllocateFailed("")) return
@@ -568,6 +569,10 @@ CONTAINS
       Real(DbKi)                 :: Mnet_i(3)    ! moment from an attached line
       Real(DbKi)                 :: Mass_i(3,3)  ! mass from an attached line
 
+     ! Linear damping, Front Energies, July 2024 
+     Real(DbKi)                 :: Vi_lin(3)            ! velocity induced by Rod Motion 
+     Real(DbKi)                 :: Vp_lin(3), Vq_lin(3) ! transverse and axial components of Rod motion at a given node     
+
       ! used in lumped 6DOF calculations:
       Real(DbKi)                 :: rRel(  3)              ! relative position of each node i from rRef      
       !Real(DbKi)                 :: OrMat(3,3)             ! rotation matrix to rotate global z to rod's axis
@@ -738,6 +743,7 @@ CONTAINS
             !relative flow velocities
             DO J = 1, 3
                Vi(J) = Rod%U(J,I) - Rod%rd(J,I)                               ! relative flow velocity over node -- this is where wave velicites would be added
+               Vi_lin(J) = Rod%rd(J,I)                                        ! linear damping
             END DO
 
             ! decomponse relative flow into components
@@ -748,13 +754,20 @@ CONTAINS
                Vp(J) = Vi(J) - Vq(J)                                    ! transverse relative flow component
                SumSqVq = SumSqVq + Vq(J)*Vq(J)
                SumSqVp = SumSqVp + Vp(J)*Vp(J)
+
+               ! linear damping 
+               Vq_lin(J) = DOT_PRODUCT( Vi_lin , Rod%q ) * Rod%q(J)     ! tangential relative Rod velocity component
+               Vp_lin(J) = Vi_lin(J) - Vq_lin(J)                        ! transverse relative Rod velocity component
+
             END DO
             MagVp = sqrt(SumSqVp)                                       ! get magnitudes of flow components
             MagVq = sqrt(SumSqVq)
 
             ! transverse and tangenential drag
-            Rod%Dp(:,I) = VOF * 0.5*p%rhoW*Rod%Cdn*    Rod%d* dL * MagVp * Vp
+            Rod%Dp(:,I) = VOF * 0.5*p%rhoW*Rod%Cdn*    Rod%d* dL * MagVp * Vp   - Rod%linDamp * Vp_lin * dL  ! linear damping added 
             Rod%Dq(:,I) = 0.0_DbKi ! 0.25*p%rhoW*Rod%Cdt* Pi*Rod%d* dL * MagVq * Vq <<< should these axial side loads be included?
+
+
 
             ! fluid acceleration components for current node
             aq = DOT_PRODUCT(Rod%Ud(:,I), Rod%q) * Rod%q  ! tangential component of fluid acceleration
@@ -981,8 +994,8 @@ CONTAINS
 
    ! calculate the aggregate 3/6DOF rigid-body loads of a coupled rod including inertial loads
    !--------------------------------------------------------------
-   SUBROUTINE Rod_GetCoupledForce(Rod, Fnet_out, m, p)
-
+   SUBROUTINE Rod_GetCoupledForce(t, Rod, Fnet_out, m, p)
+      real(R8Ki),            intent(in   )  :: t           ! time -- for ramping inertial forces
       Type(MD_Rod),          INTENT(INOUT)  :: Rod         ! the Rod object
       Real(DbKi),            INTENT(  OUT)  :: Fnet_out(6) ! force and moment vector
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
@@ -999,6 +1012,9 @@ CONTAINS
 
          if (p%inertialF == 1) then      ! include inertial components  
             F6_iner  = -MATMUL(Rod%M6net, Rod%a6)    ! inertial loads 
+         elseif (p%inertialF == 2) then  ! ramped inertial components
+            F6_iner  = -MATMUL(Rod%M6net, Rod%a6)
+            if (t < p%inertialF_rampT) F6_iner  = F6_iner * real( t/p%inertialF_rampT, ReKi)
          else 
             F6_iner = 0.0
          endif     
@@ -1010,6 +1026,9 @@ CONTAINS
          if (p%inertialF == 1) then      ! include inertial components 
             ! inertial loads ... from input translational ... and solved rotational ... acceleration
             F6_iner(1:3)  = -MATMUL(Rod%M6net(1:3,1:3), Rod%a6(1:3)) - MATMUL(Rod%M6net(1:3,4:6), Rod%a6(4:6))
+         elseif (p%inertialF == 2) then  ! ramped inertial components
+            F6_iner(1:3)  = -MATMUL(Rod%M6net(1:3,1:3), Rod%a6(1:3)) - MATMUL(Rod%M6net(1:3,4:6), Rod%a6(4:6))
+            if (t < p%inertialF_rampT) F6_iner  = F6_iner * real( t/p%inertialF_rampT, ReKi)
          else
             F6_iner(1:3) = 0.0
          endif
