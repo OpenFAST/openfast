@@ -1140,6 +1140,11 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       endif
    endif
 
+   !====== Print new and old inputs =====================================================================
+   if (wakeModProvided .or. frozenWakeProvided .or. skewModProvided .or. AFAeroModProvided .or. UAModProvided) then
+      call printNewOldInputs()
+   endif
+
    !======  Nodal Outputs  ==============================================================================
       ! In case there is something ill-formed in the additional nodal outputs section, we will simply ignore it.
       ! Expecting at least 5 more lines in the input file for this section
@@ -1172,11 +1177,6 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    ! Prevent segfault when no blades specified.  All logic tests on BldNd_NumOuts at present.
    if (InputFileData%BldNd_BladesOut <= 0)   InputFileData%BldNd_NumOuts = 0
 
-
-   !====== Print new and old inputs =====================================================================
-   if (wakeModProvided .or. frozenWakeProvided .or. skewModProvided .or. AFAeroModProvided .or. UAModProvided) then
-   call printNewOldInputs()
-   endif
 
    !====== Advanced Options =============================================================================
    if ((CurLine) >= size(FileInfo_In%Lines)) RETURN
@@ -1224,7 +1224,6 @@ CONTAINS
          InputFileData%BldNd_BladesOut = 0
          InputFileData%BldNd_NumOuts = 0
          call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
-         call printNewOldInputs()
       endif
    end function FailedNodal
    subroutine LegacyWarning(Message)
@@ -1917,7 +1916,7 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
       
    end if
       
-   if (p%DBEMT_Mod > DBEMT_none) then
+   if (p%DBEMT_Mod == DBEMT_none) then
       InvalidOutput( DBEMTau1 ) = .true.
    end if
 

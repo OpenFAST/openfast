@@ -771,11 +771,7 @@ subroutine FAST_ExtInfw_Init(iTurb_c, TMax, InputFileName_c, TurbIDforName, OutF
 
    ! 7-Sep-2015: OpenFAST doesn't restrict the number of nodes on each blade mesh to be the same, so if this DOES ever change,
    ! we'll need to make ExternalInflow less tied to the AeroDyn mapping.
-   IF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD14) THEN
-      NumBl_c     = SIZE(Turbine(iTurb)%AD14%Input(1)%InputMarkers)
-      NumBlElem_c = Turbine(iTurb)%AD14%Input(1)%InputMarkers(1)%Nnodes
-      NumTwrElem_c = 0 ! Don't care about Aerodyn14 anymore
-   ELSEIF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD) THEN
+   IF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD) THEN
       IF (ALLOCATED(Turbine(iTurb)%AD%Input(1)%rotors)) THEN
          IF (ALLOCATED(Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion)) THEN
             NumBl_c     = SIZE(Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion)
