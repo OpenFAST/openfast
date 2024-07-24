@@ -80,7 +80,7 @@ typedef  ^  InitInputType  Logical          Linearize    - .FALSE. - "Flag that 
 typedef  ^  InitOutputType  CHARACTER(ChanLen)     WriteOutputHdr {:}  - -   "Names of the output-to-file channels" -
 typedef  ^  InitOutputType  CHARACTER(ChanLen)     WriteOutputUnt {:}  - -   "Units of the output-to-file channels" -
 typedef  ^  InitOutputType  ProgDesc               Ver             -   - -   "This module's name, version, and date" -
-typedef	 ^  InitOutputType  ModVarsType           *Vars            -   - -   "Module Variables"
+typedef	 ^  InitOutputType  ModVarsType            Vars            -   - -   "Module Variables"
 # Linearization
 typedef  ^  InitOutputType  CHARACTER(LinChanLen)  LinNames_y   {:}  -   -   "Names of the outputs used in linearization" -
 typedef  ^  InitOutputType  CHARACTER(LinChanLen)  LinNames_x   {:}  -   -   "Names of the continuous states used in linearization" -
@@ -161,7 +161,6 @@ typedef  ^  OtherStateType SD_ContinuousStateType  xdot       {:} -  -  "previou
 typedef  ^          ^      IntKi                   n           -  -  -  "tracks time step for which OtherState was updated last"
 
 # ============================== Parameters ============================================================================================================================================
-typedef  ^  ParameterType  ModVarsType    &Vars          -  -  -  "Module Variables"
 typedef  ^  ParameterType   IntKi          iVarTPMesh    -  0  -  "Variable index for TPMesh"
 typedef  ^  ParameterType   IntKi          iVarLMesh     -  0  -  "Variable index for LMesh"
 typedef  ^  ParameterType   IntKi          iVarY1Mesh    -  0  -  "Variable index for Y1Mesh"

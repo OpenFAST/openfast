@@ -554,6 +554,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       select case (ModData%ID)
       case (Module_AD)
          call AD_PackInputAry(ModData%Vars, T%AD%Input(InputIndex)%rotors(ModData%Ins), u_op)
+         call AD_PackExtInputAry(ModData%Vars, ThisTime, T%AD%p, u_op)
       case (Module_BD)
          call BD_PackInputAry(ModData%Vars, T%BD%Input(InputIndex, ModData%Ins), u_op)
       case (Module_ED)
@@ -591,7 +592,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       end select
 
       ! If glue array is present, transfer from module to glue
-      if (present(u_glue)) call MV_PackArray(ModData%Vars%u, u_op, u_glue)
+      if (present(u_glue)) call MV_XfrLocToGluAry(ModData%Vars%u, u_op, u_glue)
    end if
 
    ! If outputs are requested
@@ -643,7 +644,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       end select
 
       ! If glue array is present, transfer from module to glue
-      if (present(y_glue)) call MV_PackArray(ModData%Vars%y, y_op, y_glue)
+      if (present(y_glue)) call MV_XfrLocToGluAry(ModData%Vars%y, y_op, y_glue)
    end if
 
    ! If continuous states are requested
@@ -659,7 +660,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       case (Module_AD)
          call AD_PackContStateAry(ModData%Vars, T%AD%x(StateIndex)%rotors(ModData%Ins), x_op)
       case (Module_BD)
-         call BD_PackContStateAry(ModData%Vars, T%BD%x(StateIndex, ModData%Ins), x_op)
+         call BD_PackContStateAry(ModData%Vars, T%BD%x(ModData%Ins, StateIndex), x_op)
       case (Module_ED)
          call ED_PackContStateAry(ModData%Vars, T%ED%x(StateIndex), x_op)
       case (Module_ExtPtfm)
@@ -669,7 +670,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       case (Module_HD)
          call HydroDyn_PackContStateAry(ModData%Vars, T%HD%x(StateIndex), x_op)
       case (Module_IceD)
-         call IceD_PackContStateAry(ModData%Vars, T%IceD%x(StateIndex, ModData%Ins), x_op)
+         call IceD_PackContStateAry(ModData%Vars, T%IceD%x(ModData%Ins, StateIndex), x_op)
       case (Module_IceF)
          call IceFloe_PackContStateAry(ModData%Vars, T%IceF%x(StateIndex), x_op)
       case (Module_IfW)
@@ -694,7 +695,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       end select
 
       ! If glue array is present, transfer from module to glue
-      if (present(x_glue)) call MV_PackArray(ModData%Vars%x, x_op, x_glue)
+      if (present(x_glue)) call MV_XfrLocToGluAry(ModData%Vars%x, x_op, x_glue)
    end if
 
    ! If continuous state derivatives are requested
@@ -718,7 +719,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
                                     T%AD%m%rotors(ModData%Ins), &
                                     T%AD%m%rotors(ModData%Ins)%dxdt_lin, &
                                     ErrStat2, ErrMsg2); if (Failed()) return
-         call AD_PackContStateAry(ModData%Vars, T%AD%m%rotors(ModData%Ins)%dxdt_lin, dx_op)
+         call AD_PackContStateDerivAry(ModData%Vars, T%AD%m%rotors(ModData%Ins)%dxdt_lin, dx_op)
       case (Module_BD)
          call BD_CalcContStateDeriv(ThisTime, T%BD%Input(InputIndex, ModData%Ins), &
                                     T%BD%p(ModData%Ins), &
@@ -729,12 +730,12 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
                                     T%BD%m(ModData%Ins), &
                                     T%BD%m(ModData%Ins)%dxdt_lin, &
                                     ErrStat2, ErrMsg2); if (Failed()) return
-         call BD_PackContStateAry(ModData%Vars, T%BD%m(ModData%Ins)%dxdt_lin, dx_op)
+         call BD_PackContStateDerivAry(ModData%Vars, T%BD%m(ModData%Ins)%dxdt_lin, dx_op)
       case (Module_ED)
          call ED_CalcContStateDeriv(ThisTime, T%ED%Input(InputIndex), T%ED%p, T%ED%x(StateIndex), &
                                     T%ED%xd(StateIndex), T%ED%z(StateIndex), T%ED%OtherSt(StateIndex), &
                                     T%ED%m, T%ED%m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-         call ED_PackContStateAry(ModData%Vars, T%ED%m%dxdt_lin, dx_op)
+         call ED_PackContStateDerivAry(ModData%Vars, T%ED%m%dxdt_lin, dx_op)
 !     case (Module_ExtPtfm)
 !        call ExtPtfm_CalcContStatExtPtfmeriv(ThisTime, T%ExtPtfm%Input(InputIndex), &
 !                                             T%ExtPtfm%p, T%ExtPtfm%x(StateIndex), &
@@ -749,37 +750,40 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
          call HydroDyn_CalcContStateDeriv(ThisTime, T%HD%Input(InputIndex), T%HD%p, T%HD%x(StateIndex), &
                                           T%HD%xd(StateIndex), T%HD%z(StateIndex), T%HD%OtherSt(StateIndex), &
                                           T%HD%m, T%HD%m%dxdt_lin, ErrStat2, ErrMsg2)
-         call HydroDyn_PackContStateAry(ModData%Vars, T%HD%x(StateIndex), dx_op)
+         call HydroDyn_PackContStateDerivAry(ModData%Vars, T%HD%x(StateIndex), dx_op)
 !     case (Module_IceD)
 !        call IceD_CalcContStateDeriv(ThisTime, T%IceD%Input(InputIndex), T%IceD%p, T%IceD%x(StateIndex), &
 !                                     T%IceD%xd(StateIndex), T%IceD%z(StateIndex), T%IceD%OtherSt(StateIndex), &
 !                                     T%IceD%m, T%IceD%m%dxdt_lin, ErrStat2, ErrMsg2)
-!        call IceD_PackContStateAry(ModData%Vars, T%IceD%m%dxdt_lin, dx_op)
+!        call IceD_PackContStateDerivAry(ModData%Vars, T%IceD%m%dxdt_lin, dx_op)
 !     case (Module_IceF)
-!        call IceFloe_PackContStateAry(ModData%Vars, T%IceF%x(StateIndex), dx_op)
+!        call IceFloe_PackContStateDerivAry(ModData%Vars, T%IceF%x(StateIndex), dx_op)
       case (Module_IfW)
-         call InflowWind_PackContStateAry(ModData%Vars, T%IfW%x(StateIndex), dx_op)
+         call InflowWind_PackContStateDerivAry(ModData%Vars, T%IfW%x(StateIndex), dx_op)
       case (Module_MAP)
-         call MAP_PackContStateAry(ModData%Vars, T%MAP%x(StateIndex), dx_op)
+         call MAP_PackContStateDerivAry(ModData%Vars, T%MAP%x(StateIndex), dx_op)
       case (Module_MD)
-         call MD_PackContStateAry(ModData%Vars, T%MD%x(StateIndex), dx_op)
+         call MD_PackContStateDerivAry(ModData%Vars, T%MD%x(StateIndex), dx_op)
       case (Module_ExtInfw)
-         ! call ExtInfw_PackContStateAry(ModData%Vars, T%ExtInfw%x(StateIndex), dx_op)
+         ! call ExtInfw_PackContStateDerivAry(ModData%Vars, T%ExtInfw%x(StateIndex), dx_op)
       case (Module_Orca)
-         call Orca_PackContStateAry(ModData%Vars, T%Orca%x(StateIndex), dx_op)
+         call Orca_PackContStateDerivAry(ModData%Vars, T%Orca%x(StateIndex), dx_op)
       case (Module_SD)
-         call SD_PackContStateAry(ModData%Vars, T%SD%x(StateIndex), dx_op)
+         call SD_PackContStateDerivAry(ModData%Vars, T%SD%x(StateIndex), dx_op)
       case (Module_SeaSt)
-         call SeaSt_PackContStateAry(ModData%Vars, T%SeaSt%x(StateIndex), dx_op)
+         call SeaSt_PackContStateDerivAry(ModData%Vars, T%SeaSt%x(StateIndex), dx_op)
       case (Module_SrvD)
-         call SrvD_PackContStateAry(ModData%Vars, T%SrvD%x(StateIndex), dx_op)
+         call SrvD_CalcContStateDeriv(ThisTime, T%SrvD%Input(InputIndex), T%SrvD%p, T%SrvD%x(StateIndex), &
+                                      T%SrvD%xd(StateIndex), T%SrvD%z(StateIndex), T%SrvD%OtherSt(StateIndex), &
+                                      T%SrvD%m, T%SrvD%m%dxdt_lin, ErrStat2, ErrMsg2)
+         call SrvD_PackContStateDerivAry(ModData%Vars, T%SrvD%m%dxdt_lin, dx_op)
       case default
          call SetErrStat(ErrID_Fatal, "Continuous State Derivatives unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
          return
       end select
 
       ! If glue array is present, transfer from module to glue
-      if (present(dx_glue)) call MV_PackArray(ModData%Vars%x, dx_op, dx_glue)
+      if (present(dx_glue)) call MV_XfrLocToGluAry(ModData%Vars%x, dx_op, dx_glue)
    end if
 
    ! If constraint states are requested
@@ -795,7 +799,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       case (Module_AD)
          call AD_PackContStateAry(ModData%Vars, T%AD%x(StateIndex)%rotors(ModData%Ins), z_op)
       case (Module_BD)
-         call BD_PackContStateAry(ModData%Vars, T%BD%x(StateIndex, ModData%Ins), z_op)
+         call BD_PackContStateAry(ModData%Vars, T%BD%x(ModData%Ins, StateIndex), z_op)
       case (Module_ED)
          call ED_PackContStateAry(ModData%Vars, T%ED%x(StateIndex), z_op)
       case (Module_ExtPtfm)
@@ -805,7 +809,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       case (Module_HD)
          call HydroDyn_PackContStateAry(ModData%Vars, T%HD%x(StateIndex), z_op)
       case (Module_IceD)
-         call IceD_PackContStateAry(ModData%Vars, T%IceD%x(StateIndex, ModData%Ins), z_op)
+         call IceD_PackContStateAry(ModData%Vars, T%IceD%x(ModData%Ins, StateIndex), z_op)
       case (Module_IceF)
          call IceFloe_PackContStateAry(ModData%Vars, T%IceF%x(StateIndex), z_op)
       case (Module_IfW)
@@ -830,7 +834,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       end select
 
       ! If glue array is present, transfer from module to glue
-      if (present(z_glue)) call MV_PackArray(ModData%Vars%z, z_op, z_glue)
+      if (present(z_glue)) call MV_XfrLocToGluAry(ModData%Vars%z, z_op, z_glue)
    end if
 
 contains
@@ -865,7 +869,7 @@ subroutine FAST_SetOP(ModData, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
    if (present(u_op)) then
 
       ! If glue array is present, transfer from module to glue
-      if (present(u_glue)) call MV_UnpackArray(ModData%Vars%u, u_glue, u_op)
+      if (present(u_glue)) call MV_XfrGluToModAry(ModData%Vars%u, u_glue, u_op)
 
       ! Select based on module ID
       select case (ModData%ID)
@@ -912,7 +916,7 @@ subroutine FAST_SetOP(ModData, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
    if (present(y_op)) then
 
       ! If glue array is present, transfer from module to glue
-      if (present(y_glue)) call MV_UnpackArray(ModData%Vars%y, y_glue, y_op)
+      if (present(y_glue)) call MV_XfrGluToModAry(ModData%Vars%y, y_glue, y_op)
 
       ! Select based on module ID
       select case (ModData%ID)
@@ -959,14 +963,14 @@ subroutine FAST_SetOP(ModData, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
    if (present(x_op)) then
 
       ! If glue array is present, transfer from module to glue
-      if (present(x_glue)) call MV_UnpackArray(ModData%Vars%x, x_glue, x_op)
+      if (present(x_glue)) call MV_XfrGluToModAry(ModData%Vars%x, x_glue, x_op)
 
       ! Select based on module ID
       select case (ModData%ID)
       case (Module_AD)
          call AD_UnpackContStateAry(ModData%Vars, x_op, T%AD%x(StateIndex)%rotors(ModData%Ins))
       case (Module_BD)
-         call BD_UnpackContStateAry(ModData%Vars, x_op, T%BD%x(StateIndex, ModData%Ins))
+         call BD_UnpackContStateAry(ModData%Vars, x_op, T%BD%x(ModData%Ins, StateIndex))
       case (Module_ED)
          call ED_UnpackContStateAry(ModData%Vars, x_op, T%ED%x(StateIndex))
       case (Module_ExtPtfm)
@@ -976,7 +980,7 @@ subroutine FAST_SetOP(ModData, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
       case (Module_HD)
          call HydroDyn_UnpackContStateAry(ModData%Vars, x_op, T%HD%x(StateIndex))
       case (Module_IceD)
-         call IceD_UnpackContStateAry(ModData%Vars, x_op, T%IceD%x(StateIndex, ModData%Ins))
+         call IceD_UnpackContStateAry(ModData%Vars, x_op, T%IceD%x(ModData%Ins, StateIndex))
       case (Module_IceF)
          call IceFloe_UnpackContStateAry(ModData%Vars, x_op, T%IceF%x(StateIndex))
       case (Module_IfW)
@@ -1006,14 +1010,14 @@ subroutine FAST_SetOP(ModData, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
    if (present(z_op)) then
 
       ! If glue array is present, transfer from module to glue
-      if (present(z_glue)) call MV_UnpackArray(ModData%Vars%z, z_glue, z_op)
+      if (present(z_glue)) call MV_XfrGluToModAry(ModData%Vars%z, z_glue, z_op)
 
       ! Select based on module ID
       select case (ModData%ID)
       case (Module_AD)
          call AD_UnpackContStateAry(ModData%Vars, z_op, T%AD%x(StateIndex)%rotors(ModData%Ins))
       case (Module_BD)
-         call BD_UnpackContStateAry(ModData%Vars, z_op, T%BD%x(StateIndex, ModData%Ins))
+         call BD_UnpackContStateAry(ModData%Vars, z_op, T%BD%x(ModData%Ins, StateIndex))
       case (Module_ED)
          call ED_UnpackContStateAry(ModData%Vars, z_op, T%ED%x(StateIndex))
       case (Module_ExtPtfm)
@@ -1023,7 +1027,7 @@ subroutine FAST_SetOP(ModData, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
       case (Module_HD)
          call HydroDyn_UnpackContStateAry(ModData%Vars, z_op, T%HD%x(StateIndex))
       case (Module_IceD)
-         call IceD_UnpackContStateAry(ModData%Vars, z_op, T%IceD%x(StateIndex, ModData%Ins))
+         call IceD_UnpackContStateAry(ModData%Vars, z_op, T%IceD%x(ModData%Ins, StateIndex))
       case (Module_IceF)
          call IceFloe_UnpackContStateAry(ModData%Vars, z_op, T%IceF%x(StateIndex))
       case (Module_IfW)
@@ -1057,9 +1061,9 @@ contains
 end subroutine
 
 subroutine FAST_JacobianPInput(ModData, ThisTime, StateIndex, T, ErrStat, ErrMsg, dYdu, dXdu, dYduGlue, dXduGlue)
-   type(ModDataType), intent(in)                      :: ModData      !< Module information
+   type(ModDataType), intent(in)                      :: ModData     !< Module data
    real(DbKi), intent(in)                             :: ThisTime    !< Time
-   integer(IntKi), intent(in)                         :: StateIndex   !< State
+   integer(IntKi), intent(in)                         :: StateIndex  !< State
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
@@ -1081,12 +1085,12 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, StateIndex, T, ErrStat, ErrMsg
                              T%AD%z(StateIndex), T%AD%OtherSt(StateIndex), T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
                              dYdu=dYdu, dXdu=dXdu)
 
-      ! case (Module_BD)
-      !    call BD_JacobianPInput(ThisTime, T%BD%Input(1, ModData%ModIns), T%BD%p(ModData%ModIns), &
-      !                           T%BD%x(ModData%ModIns, StateIndex), T%BD%xd(ModData%ModIns, StateIndex), &
-      !                           T%BD%z(ModData%ModIns, StateIndex), T%BD%OtherSt(ModData%ModIns, StateIndex), &
-      !                           T%BD%y(ModData%ModIns), T%BD%m(ModData%ModIns), ErrStat2, ErrMsg2, &
-      !                           dYdu=dYdu, dXdu=dXdu)
+   case (Module_BD)
+      call BD_JacobianPInput(ModData%Vars, ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), &
+                             T%BD%x(ModData%Ins, StateIndex), T%BD%xd(ModData%Ins, StateIndex), &
+                             T%BD%z(ModData%Ins, StateIndex), T%BD%OtherSt(ModData%Ins, StateIndex), &
+                             T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
+                             dYdu=dYdu, dXdu=dXdu)
 
    case (Module_ED)
       call ED_JacobianPInput(ModData%Vars, ThisTime, T%ED%Input(1), T%ED%p, T%ED%x(StateIndex), T%ED%xd(StateIndex), &
@@ -1095,35 +1099,35 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, StateIndex, T, ErrStat, ErrMsg
 
 !  case (Module_ExtPtfm)
 
-      ! case (Module_HD)
-      !    call HD_JacobianPInput(ThisTime, T%HD%Input(1), T%HD%p, T%HD%x(StateIndex), T%HD%xd(StateIndex), &
-      !                           T%HD%z(StateIndex), T%HD%OtherSt(StateIndex), T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
-      !                           dYdu=dYdu, dXdu=dXdu)
+   case (Module_HD)
+      call HD_JacobianPInput(ModData%Vars, ThisTime, T%HD%Input(1), T%HD%p, T%HD%x(StateIndex), T%HD%xd(StateIndex), &
+                             T%HD%z(StateIndex), T%HD%OtherSt(StateIndex), T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
+                             dYdu=dYdu, dXdu=dXdu)
 
    case (Module_IfW)
       call InflowWind_JacobianPInput(ModData%Vars, ThisTime, T%IfW%Input(1), T%IfW%p, T%IfW%x(StateIndex), T%IfW%xd(StateIndex), &
                                      T%IfW%z(StateIndex), T%IfW%OtherSt(StateIndex), T%IfW%y, T%IfW%m, ErrStat2, ErrMsg2, &
                                      dYdu=dYdu, dXdu=dXdu)
 
-      ! case (Module_MAP)
-      !    call MAP_JacobianPInput(ThisTime, T%MAP%Input(1), T%MAP%p, T%MAP%x(StateIndex), T%MAP%xd(StateIndex), &
-      !                            T%MAP%z(StateIndex), T%MAP%OtherSt, T%MAP%y, T%MAP%m, ErrStat2, ErrMsg2, &
-      !                            dYdu=dYdu, dXdu=dXdu)
+   case (Module_MAP)
+      call MAP_JacobianPInput(ModData%Vars, ThisTime, T%MAP%Input(1), T%MAP%p, T%MAP%x(StateIndex), T%MAP%xd(StateIndex), &
+                              T%MAP%z(StateIndex), T%MAP%OtherSt, T%MAP%y, T%MAP%m, ErrStat2, ErrMsg2, &
+                              dYdu=dYdu, dXdu=dXdu)
 
-      ! case (Module_MD)
-      !    call MD_JacobianPInput(ThisTime, T%MD%Input(1), T%MD%p, T%MD%x(StateIndex), T%MD%xd(StateIndex), &
-      !                           T%MD%z(StateIndex), T%MD%OtherSt(StateIndex), T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
-      !                           dYdu=dYdu, dXdu=dXdu)
+   case (Module_MD)
+      call MD_JacobianPInput(ThisTime, T%MD%Input(1), T%MD%p, T%MD%x(StateIndex), T%MD%xd(StateIndex), &
+                             T%MD%z(StateIndex), T%MD%OtherSt(StateIndex), T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
+                             dYdu=dYdu, dXdu=dXdu)
 
-      ! case (Module_SD)
-      !    call SD_JacobianPInput(ThisTime, T%SD%Input(1), T%SD%p, T%SD%x(StateIndex), T%SD%xd(StateIndex), &
-      !                           T%SD%z(StateIndex), T%SD%OtherSt(StateIndex), T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
-      !                           dYdu=dYdu, dXdu=dXdu)
+   case (Module_SD)
+      call SD_JacobianPInput(ModData%Vars, ThisTime, T%SD%Input(1), T%SD%p, T%SD%x(StateIndex), T%SD%xd(StateIndex), &
+                             T%SD%z(StateIndex), T%SD%OtherSt(StateIndex), T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
+                             dYdu=dYdu, dXdu=dXdu)
 
-      ! case (Module_SeaSt)
-      !    call SeaSt_JacobianPInput(ThisTime, T%SeaSt%Input(1), T%SeaSt%p, T%SeaSt%x(StateIndex), T%SeaSt%xd(StateIndex), &
-      !                              T%SeaSt%z(StateIndex), T%SeaSt%OtherSt(StateIndex), T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
-      !                              dYdu=dYdu, dXdu=dXdu)
+   case (Module_SeaSt)
+      call SeaSt_JacobianPInput(ModData%Vars, ThisTime, T%SeaSt%Input(1), T%SeaSt%p, T%SeaSt%x(StateIndex), T%SeaSt%xd(StateIndex), &
+                                T%SeaSt%z(StateIndex), T%SeaSt%OtherSt(StateIndex), T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
+                                dYdu=dYdu, dXdu=dXdu)
 
    case (Module_SrvD)
       call SrvD_JacobianPInput(ThisTime, T%SrvD%Input(1), T%SrvD%p, T%SrvD%x(StateIndex), T%SrvD%xd(StateIndex), &
@@ -1147,9 +1151,9 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, StateIndex, T, ErrStat, ErrMsg
 end subroutine
 
 subroutine FAST_JacobianPContState(ModData, ThisTime, StateIndex, T, ErrStat, ErrMsg, dYdx, dXdx, dYdxGlue, dXdxGlue)
-   type(ModDataType), intent(in)                      :: ModData     !< Module info
+   type(ModDataType), intent(inout)                   :: ModData     !< Module data
    real(DbKi), intent(in)                             :: ThisTime    !< Time
-   integer(IntKi), intent(in)                         :: StateIndex   !< State
+   integer(IntKi), intent(in)                         :: StateIndex  !< State
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
@@ -1173,12 +1177,12 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, StateIndex, T, ErrStat, Er
                                  T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
                                  dYdx=dYdx, dXdx=dXdx)
 
-      ! case (Module_BD)
-      !    call BD_JacobianPContState(Vars, ThisTime, T%BD%Input(1, ModData%ModIns), T%BD%p(ModData%ModIns), &
-      !                               T%BD%x(ModData%ModIns, StateIndex), T%BD%xd(ModData%ModIns, StateIndex), &
-      !                               T%BD%z(ModData%ModIns, StateIndex), T%BD%OtherSt(ModData%ModIns, StateIndex), &
-      !                               T%BD%y(ModData%ModIns), T%BD%m(ModData%ModIns), ErrStat2, ErrMsg2, &
-      !                               dYdx=dYdx, dXdx=dXdx, StateRotation=ModData%Lin%StateRotation)
+   case (Module_BD)
+      call BD_JacobianPContState(ModData%Vars, ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), &
+                                 T%BD%x(ModData%Ins, StateIndex), T%BD%xd(ModData%Ins, StateIndex), &
+                                 T%BD%z(ModData%Ins, StateIndex), T%BD%OtherSt(ModData%Ins, StateIndex), &
+                                 T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
+                                 dYdx=dYdx, dXdx=dXdx, StateRotation=ModData%Lin%StateRotation)
 
    case (Module_ED)
       call ED_JacobianPContState(ModData%Vars, ThisTime, T%ED%Input(1), T%ED%p, &
@@ -1189,15 +1193,15 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, StateIndex, T, ErrStat, Er
 
 !  case (Module_ExtPtfm)
 
-      ! case (Module_HD)
-      !    call HD_JacobianPContState(ThisTime, T%HD%Input(1), T%HD%p, &
-      !                               T%HD%x(StateIndex), T%HD%xd(StateIndex), &
-      !                               T%HD%z(StateIndex), T%HD%OtherSt(StateIndex), &
-      !                               T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
-      !                               dYdx=dYdx, dXdx=dXdx)
+   case (Module_HD)
+      call HD_JacobianPContState(ModData%Vars, ThisTime, T%HD%Input(1), T%HD%p, &
+                                 T%HD%x(StateIndex), T%HD%xd(StateIndex), &
+                                 T%HD%z(StateIndex), T%HD%OtherSt(StateIndex), &
+                                 T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
+                                 dYdx=dYdx, dXdx=dXdx)
 
    case (Module_IfW)
-      call InflowWind_JacobianPContState(ThisTime, T%IfW%Input(1), T%IfW%p, &
+      call InflowWind_JacobianPContState(ModData%Vars, ThisTime, T%IfW%Input(1), T%IfW%p, &
                                          T%IfW%x(StateIndex), T%IfW%xd(StateIndex), &
                                          T%IfW%z(StateIndex), T%IfW%OtherSt(StateIndex), &
                                          T%IfW%y, T%IfW%m, ErrStat2, ErrMsg2, &
@@ -1208,26 +1212,26 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, StateIndex, T, ErrStat, Er
       ErrStat2 = ErrID_None
       ErrMsg2 = ''
 
-      ! case (Module_MD)
-      !    call MD_JacobianPContState(ThisTime, T%MD%Input(1), T%MD%p, &
-      !                               T%MD%x(StateIndex), T%MD%xd(StateIndex), &
-      !                               T%MD%z(StateIndex), T%MD%OtherSt(StateIndex), &
-      !                               T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
-      !                               dYdx=dYdx, dXdx=dXdx)
+   case (Module_MD)
+      call MD_JacobianPContState(ThisTime, T%MD%Input(1), T%MD%p, &
+                                 T%MD%x(StateIndex), T%MD%xd(StateIndex), &
+                                 T%MD%z(StateIndex), T%MD%OtherSt(StateIndex), &
+                                 T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
+                                 dYdx=dYdx, dXdx=dXdx)
 
-      ! case (Module_SD)
-      !    call SD_JacobianPContState(ThisTime, T%SD%Input(1), T%SD%p, &
-      !                               T%SD%x(StateIndex), T%SD%xd(StateIndex), &
-      !                               T%SD%z(StateIndex), T%SD%OtherSt(StateIndex), &
-      !                               T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
-      !                               dYdx=dYdx, dXdx=dXdx)
+   case (Module_SD)
+      call SD_JacobianPContState(ModData%Vars, ThisTime, T%SD%Input(1), T%SD%p, &
+                                 T%SD%x(StateIndex), T%SD%xd(StateIndex), &
+                                 T%SD%z(StateIndex), T%SD%OtherSt(StateIndex), &
+                                 T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
+                                 dYdx=dYdx, dXdx=dXdx)
 
-      ! case (Module_SeaSt)
-      !    call SeaSt_JacobianPContState(ThisTime, T%SeaSt%Input(1), T%SeaSt%p, &
-      !                                  T%SeaSt%x(StateIndex), T%SeaSt%xd(StateIndex), &
-      !                                  T%SeaSt%z(StateIndex), T%SeaSt%OtherSt(StateIndex), &
-      !                                  T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
-      !                                  dYdx=dYdx, dXdx=dXdx)
+   case (Module_SeaSt)
+      call SeaSt_JacobianPContState(ModData%Vars, ThisTime, T%SeaSt%Input(1), T%SeaSt%p, &
+                                    T%SeaSt%x(StateIndex), T%SeaSt%xd(StateIndex), &
+                                    T%SeaSt%z(StateIndex), T%SeaSt%OtherSt(StateIndex), &
+                                    T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
+                                    dYdx=dYdx, dXdx=dXdx)
 
    case (Module_SrvD)
       call SrvD_JacobianPContState(ThisTime, T%SrvD%Input(1), T%SrvD%p, &

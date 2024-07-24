@@ -97,7 +97,7 @@ typedef   ^                  ^                      SiKi                     Wav
 typedef   ^                  ^                      SiKi                     WaveElevVisY       {:}     -      -  "Y locations of grid output"    "m,-"
 typedef   ^                  ^                      SiKi                     WaveElevVisGrid    {:}{:}{:}  -   -  "Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second/third dimensions are the grid of points." (m)
 typedef   ^                  ^                      SeaSt_WaveFieldType     *WaveField          -      -      -  "Pointer to wave field"
-typedef   ^                  ^                      ModVarsType             *Vars               -      -      -  "Module Variables"
+typedef   ^                  ^                      ModVarsType              Vars               -      -      -  "Module Variables"
 
 
 
@@ -124,8 +124,7 @@ typedef   ^                            OtherStateType                R8Ki    Unu
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
-typedef   ^                  ParameterType          ModVarsType             &Vars              -       -      -  "Module Variables"
-typedef   ^                  ^                      DbKi                     WaveDT            -       -      -  "Wave DT" sec
+typedef   ^                  ParameterType          DbKi                     WaveDT            -       -      -  "Wave DT" sec
 typedef   ^                  ^                      INTEGER                  NGridPts          -       -      -  "Number of data points in the wave kinematics grid"        -
 typedef   ^                  ^                      INTEGER                  NGrid             3       -      -  "Number of grid entries in x, y, and z"
 typedef   ^                  ^                      ReKi                     deltaGrid         3       -      -  "delta between grid points in x, y, and theta (for z)" m,m,rad

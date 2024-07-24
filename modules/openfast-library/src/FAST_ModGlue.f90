@@ -143,10 +143,10 @@ subroutine Glue_CombineModules(ModDataAry, iModAry, FlagFilter, Linearize, Mappi
          ! Determine module name prefix for linearization
          if ((GlueModData%ID == Module_BD) .or. (count(ModDataAry%ID == GlueModData%ID) > 1)) then
             NamePrefix = trim(GlueModData%Abbr)//"_"//Num2LStr(GlueModData%Ins)
-            GlueModData%Abbr = "."//trim(GlueModData%Abbr)//Num2LStr(GlueModData%Ins)
+            GlueModData%Abbr = trim(GlueModData%Abbr)//Num2LStr(GlueModData%Ins)
          else
             NamePrefix = GlueModData%Abbr
-            GlueModData%Abbr = "."//GlueModData%Abbr
+            GlueModData%Abbr = GlueModData%Abbr
          end if
 
          ! Continuous state
@@ -192,6 +192,8 @@ subroutine Glue_CombineModules(ModDataAry, iModAry, FlagFilter, Linearize, Mappi
    ! Determine mappings which apply to the modules in this glue module
    !----------------------------------------------------------------------------
 
+   allocate(ModGlue%ModMaps(0))
+
    ! Loop through mappings
    do i = 1, size(Mappings)
 
@@ -204,6 +206,7 @@ subroutine Glue_CombineModules(ModDataAry, iModAry, FlagFilter, Linearize, Mappi
          do j = 1, size(iModAry)
             if (iModAry(j) == Mapping%iModSrc) then
                ModMap%iModSrc = j
+               exit
             end if
          end do
          if (ModMap%iModSrc == 0) cycle
@@ -213,16 +216,19 @@ subroutine Glue_CombineModules(ModDataAry, iModAry, FlagFilter, Linearize, Mappi
          do j = 1, size(iModAry)
             if (iModAry(j) == Mapping%iModDst) then
                ModMap%iModDst = j
+               exit
             end if
          end do
          if (ModMap%iModDst == 0) cycle
 
-         ! Set mapping index
+         ! Set mapping index and clear variable indices
          ModMap%iMapping = i
-
-         ! Init variable indices and find indices that apply to the source data location
          ModMap%iVarSrc = 0
          ModMap%iVarSrcDisp = 0
+         ModMap%iVarDst = 0
+         ModMap%iVarDstDisp = 0
+
+         ! Init variable indices and find indices that apply to the source data location
          select case (Mapping%MapType)
          case (Map_Variable)
 
@@ -237,20 +243,18 @@ subroutine Glue_CombineModules(ModDataAry, iModAry, FlagFilter, Linearize, Mappi
             end do
 
             if (Mapping%MapType == Map_LoadMesh) then
-               do j = 1, size(ModSrc%Vars%y)
-                  if (MV_EqualDL(ModSrc%Vars%y(j)%DL, Mapping%SrcDispDL)) ModMap%iVarSrcDisp(ModSrc%Vars%y(j)%Field) = j
+               do j = 1, size(ModSrc%Vars%u)
+                  if (MV_EqualDL(ModSrc%Vars%u(j)%DL, Mapping%SrcDispDL)) ModMap%iVarSrcDisp(ModSrc%Vars%u(j)%Field) = j
                end do
             end if
 
          end select
 
          ! If no source variable indices found, cycle
-         if (sum(ModMap%iVarSrc) == 0) cycle
-         if (Mapping%MapType == Map_LoadMesh .and. sum(ModMap%iVarSrcDisp) == 0) cycle
+         if (all(ModMap%iVarSrc == 0)) cycle
+         if (Mapping%MapType == Map_LoadMesh .and. all(ModMap%iVarSrcDisp == 0)) cycle
 
          ! Init variable indices and find indices that apply to the destination data location
-         ModMap%iVarDst = 0
-         ModMap%iVarDstDisp = 0
          select case (Mapping%MapType)
          case (Map_Variable)
 
@@ -261,27 +265,24 @@ subroutine Glue_CombineModules(ModDataAry, iModAry, FlagFilter, Linearize, Mappi
          case (Map_LoadMesh, Map_MotionMesh)
 
             do j = 1, size(ModDst%Vars%u)
-               if (MV_EqualDL(ModDst%Vars%u(j)%DL, Mapping%DstDL)) ModMap%iVarDst(ModSrc%Vars%y(j)%Field) = j
+               if (MV_EqualDL(ModDst%Vars%u(j)%DL, Mapping%DstDL)) ModMap%iVarDst(ModDst%Vars%u(j)%Field) = j
             end do
 
             if (Mapping%MapType == Map_LoadMesh) then
-               do j = 1, size(ModDst%Vars%u)
-                  if (MV_EqualDL(ModDst%Vars%u(j)%DL, Mapping%DstDispDL)) ModMap%iVarDstDisp(ModSrc%Vars%y(j)%Field) = j
+               do j = 1, size(ModDst%Vars%y)
+                  if (MV_EqualDL(ModDst%Vars%y(j)%DL, Mapping%DstDispDL)) ModMap%iVarDstDisp(ModDst%Vars%y(j)%Field) = j
                end do
             end if
             
          end select
 
          ! If no destination variable indices found, cycle
-         if (sum(ModMap%iVarDst) == 0) cycle
-         if (Mapping%MapType == Map_LoadMesh .and. sum(ModMap%iVarDstDisp) == 0) cycle
+         if (all(ModMap%iVarDst == 0)) cycle
+         if (Mapping%MapType == Map_LoadMesh .and. all(ModMap%iVarDstDisp == 0)) cycle
 
          ! Add new module mapping to array
-         if (allocated(ModGlue%ModMaps)) then
-            ModGlue%ModMaps = [ModGlue%ModMaps, ModMap]
-         else
-            ModGlue%ModMaps = [ModMap]
-         end if
+         ModGlue%ModMaps = [ModGlue%ModMaps, ModMap]
+         
       end associate
    end do
 
@@ -634,7 +635,7 @@ subroutine ModGlue_CalcSteady(n_t_global, t_global, p, m, y, p_FAST, m_FAST, T, 
          if (size(ModData%Vars%y) == 0) cycle
 
          ! Get outputs
-         call FAST_GetOP(ModData, t_global, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2, y_op=m%ModGlue%Lin%y)
+         call FAST_GetOP(ModData, t_global, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2, y_op=m%ModGlue%Lin%y, y_glue=m%ModGlue%Lin%y)
          if (Failed()) return
 
       end associate
@@ -926,8 +927,6 @@ subroutine ModGlue_Linearize_OP(Turbine, p, m, y, p_FAST, m_FAST, y_FAST, t_glob
    if (size(m%ModGlue%Lin%u) > 0) y%Lin%u(:, m%Lin%TimeIndex) = m%ModGlue%Lin%u
 
    ! Linearize mesh mappings to populate dUdy and dUdu
-   m%ModGlue%Lin%dUdy = 0.0_R8Ki
-   call Eye2D(m%ModGlue%Lin%dUdu, ErrStat2, ErrMsg2); if (Failed()) return
    call FAST_LinearizeMappings(m%ModGlue, m%Mappings, Turbine, ErrStat2, ErrMsg2)
    if (Failed()) return
 
@@ -1247,7 +1246,7 @@ subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinR
    type(FAST_ParameterType), intent(in)      :: p_FAST         !< Parameters
    type(FAST_OutputFileType), intent(in)     :: y_FAST         !< Output variables
    real(DbKi), intent(in)                    :: t_global       !< current time step (written in file)
-   integer(IntKi), intent(out)               :: Un             !< Unit number for file
+   integer(IntKi), intent(in)                :: Un             !< Unit number for file
    character(*), intent(in)                  :: LinRootName    !< output file name
    integer(IntKi), intent(in)                :: FilterFlag     !< Variable flag for filtering
    integer(IntKi), intent(out)               :: ErrStat        !< Error status of the operation
@@ -1269,7 +1268,7 @@ subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinR
 
    ! Assemble output file name based on glue linearization abbreviation
    if (present(ModSuffix)) then
-      OutFileName = trim(LinRootName)//trim(ModSuffix)//".lin"
+      OutFileName = trim(LinRootName)//"."//trim(ModSuffix)//".lin"
    else
       OutFileName = trim(LinRootName)//".lin"
    end if
@@ -1429,7 +1428,7 @@ subroutine WrLinFile_txt_Table(VarAry, FlagFilter, p_FAST, Un, RowCol, op, IsDer
    character(100)                :: Fmt, FmtStr, FmtRot
    character(25)                 :: DerivStr, DerivUnitStr
    logical                       :: ShowRotLoc
-   real(R8Ki)                    :: DCM(3, 3)
+   real(R8Ki)                    :: DCM(3, 3), wm(3)
    integer(IntKi)                :: i, j, RowColIdx
 
    ShowRotLoc = .false.
@@ -1507,9 +1506,26 @@ subroutine WrLinFile_txt_Table(VarAry, FlagFilter, p_FAST, Un, RowCol, op, IsDer
                write (Un, FmtRot) RowColIdx + 2, dcm(3, 1), dcm(3, 2), dcm(3, 3), VarRotFrame, VarDerivOrder, trim(Var%LinNames(j + 2))
 
             else if (IsDerivLoc) then
+
                write (Un, Fmt) RowColIdx, op(i_op), VarRotFrame, VarDerivOrder, trim(DerivStr)//' '//trim(Var%LinNames(j))//trim(DerivUnitStr)
+
+            else if (MV_HasFlags(Var, VF_WM_Rot)) then ! BeamDyn Wiener-Milenkovic orientation
+
+               ! Skip writing if not the first value in orientation (3 values)
+               if (mod(j - 1, 3) /= 0) cycle
+
+               ! Convert from quaternion in operating point to BeamDyn WM parameter
+               wm = -quat_to_wm(op(i_op:i_op + 2))
+
+               ! Write all components of WM parameters
+               write (Un, Fmt) RowColIdx, wm(1), VarRotFrame, VarDerivOrder, trim(Var%LinNames(j))
+               write (Un, Fmt) RowColIdx, wm(2), VarRotFrame, VarDerivOrder, trim(Var%LinNames(j))
+               write (Un, Fmt) RowColIdx, wm(3), VarRotFrame, VarDerivOrder, trim(Var%LinNames(j))
+
             else
+
                write (Un, Fmt) RowColIdx, op(i_op), VarRotFrame, VarDerivOrder, trim(Var%LinNames(j))
+
             end if
 
          end do

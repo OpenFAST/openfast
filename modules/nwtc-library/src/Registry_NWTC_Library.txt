@@ -65,11 +65,12 @@ param       ^       -           IntKi           VF_Linearize        -    8  -   
 param       ^       -           IntKi           VF_ExtLin           -   16  -   "Variable for extended linearization"  -
 param       ^       -           IntKi           VF_SmallAngle       -   32  -   "Use small angles to calculate difference in linearization"  -
 param       ^       -           IntKi           VF_2PI              -   64  -   "Variable is an angle with range [0,2pi]"  -
-param       ^       -           IntKi           VF_WriteOut         -  128  -   "Variable for write output"  -
-param       ^       -           IntKi           VF_Solve            -  256  -   "Variable for solver"  -
-param       ^       -           IntKi           VF_AeroMap          -  512  -   "Variable for aeromap"  -
-param       ^       -           IntKi           VF_DerivOrder1      - 1024  -   "Variable is derivative order 1 in linearization file"  -
-param       ^       -           IntKi           VF_DerivOrder2      - 2048  -   "Variable is derivative order 2 in linearization file"  -
+param       ^       -           IntKi           VF_WM_Rot           -  128  -   "Variable is a Wiener-Milenkovic rotation"  -
+param       ^       -           IntKi           VF_WriteOut         -  256  -   "Variable for write output"  -
+param       ^       -           IntKi           VF_Solve            -  512  -   "Variable for solver"  -
+param       ^       -           IntKi           VF_AeroMap          - 1024  -   "Variable for aeromap"  -
+param       ^       -           IntKi           VF_DerivOrder1      - 2048  -   "Variable is derivative order 1 in linearization file"  -
+param       ^       -           IntKi           VF_DerivOrder2      - 4096  -   "Variable is derivative order 2 in linearization file"  -
 
 param       ^       -           IntKi           VC_None             -   0   -   ""  -
 param       ^       -           IntKi           VC_Tight            -   1   -   ""  -
@@ -80,6 +81,8 @@ typedef     ^       DatLoc      IntKi           Num                 -   0   -   
 typedef     ^       ^           IntKi           i1                  -   0   -   "Index 1"
 typedef     ^       ^           IntKi           i2                  -   0   -   "Index 2"
 typedef     ^       ^           IntKi           i3                  -   0   -   "Index 3"
+typedef     ^       ^           IntKi           i4                  -   0   -   "Index 4"
+typedef     ^       ^           IntKi           i5                  -   0   -   "Index 5"
 
 typedef     ^       ModVarType  IntKi           Field               -   0   -   ""  -
 typedef     ^       ^           IntKi           Nodes               -   1   -   ""  -

@@ -369,12 +369,16 @@ struct DataType
                 std::string array_index;
                 switch (field.rank)
                 {
+                case 5:
+                    array_index = ", DL%i" + std::to_string(index_num + 5) + array_index;
+                case 4:
+                    array_index = ", DL%i" + std::to_string(index_num + 4) + array_index;
                 case 3:
-                    array_index = ", ML%i" + std::to_string(index_num + 3) + array_index;
+                    array_index = ", DL%i" + std::to_string(index_num + 3) + array_index;
                 case 2:
-                    array_index = ", ML%i" + std::to_string(index_num + 2) + array_index;
+                    array_index = ", DL%i" + std::to_string(index_num + 2) + array_index;
                 case 1:
-                    array_index = "(ML%i" + std::to_string(index_num + 1) + array_index + ")";
+                    array_index = "(DL%i" + std::to_string(index_num + 1) + array_index + ")";
                 }
 
                 // If this field is a mesh, add field name to vector

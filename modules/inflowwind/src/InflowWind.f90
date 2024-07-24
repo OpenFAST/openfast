@@ -57,7 +57,6 @@ MODULE InflowWind
    PUBLIC :: InflowWind_JacobianPContState
    PUBLIC :: InflowWind_JacobianPDiscState
    PUBLIC :: InflowWind_JacobianPConstrState
-   PUBLIC :: InflowWind_GetOP
    PUBLIC :: InflowWind_PackExtInputAry
    PUBLIC :: InflowWind_PackExtOutputAry
 
@@ -777,7 +776,7 @@ END SUBROUTINE InflowWind_End
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and dZ/du are returned.
 SUBROUTINE InflowWind_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu )
-   TYPE(ModVarsType),                     INTENT(IN   )           :: Vars    !< Module information
+   TYPE(ModVarsType),                     INTENT(IN   )           :: Vars       !< Module information
    REAL(DbKi),                            INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(InflowWind_InputType),            INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(InflowWind_ParameterType),        INTENT(IN   )           :: p          !< Parameters
@@ -957,7 +956,8 @@ END SUBROUTINE IfW_UniformWind_JacobianPInput
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
 !! Note: there are no states, so this routine is simply a placeholder to satisfy the framework and automate some glue code
-SUBROUTINE InflowWind_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
+SUBROUTINE InflowWind_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
+   TYPE(ModVarsType),                     INTENT(OUT  )           :: Vars       !< Module variables
    REAL(DbKi),                            INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(InflowWind_InputType),            INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(InflowWind_ParameterType),        INTENT(IN   )           :: p          !< Parameters
@@ -978,7 +978,6 @@ SUBROUTINE InflowWind_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, E
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   return
 !   IF ( PRESENT( dYdx ) ) THEN
 !   END IF
 !   IF ( PRESENT( dXdx ) ) THEN
@@ -992,7 +991,8 @@ END SUBROUTINE InflowWind_JacobianPContState
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and dZ/dxd are returned.
 !! Note: there are no states, so this routine is simply a placeholder to satisfy the framework and automate some glue code
-SUBROUTINE InflowWind_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdxd, dXdxd, dXddxd, dZdxd )
+SUBROUTINE InflowWind_JacobianPDiscState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdxd, dXdxd, dXddxd, dZdxd )
+   TYPE(ModVarsType),                     INTENT(OUT  )           :: Vars       !< Module variables
    REAL(DbKi),                            INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(InflowWind_InputType),            INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(InflowWind_ParameterType),        INTENT(IN   )           :: p          !< Parameters
@@ -1013,8 +1013,6 @@ SUBROUTINE InflowWind_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, E
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   return
-
 !   IF ( PRESENT( dYdxd ) ) THEN
 !   END IF
 !   IF ( PRESENT( dXdxd ) ) THEN
@@ -1028,7 +1026,8 @@ END SUBROUTINE InflowWind_JacobianPDiscState
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and dZ/dz are returned.
 !! Note: there are no states, so this routine is simply a placeholder to satisfy the framework and automate some glue code
-SUBROUTINE InflowWind_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdz, dXdz, dXddz, dZdz )
+SUBROUTINE InflowWind_JacobianPConstrState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdz, dXdz, dXddz, dZdz )
+   TYPE(ModVarsType),                     INTENT(OUT  )           :: Vars       !< Module variables
    REAL(DbKi),                            INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(InflowWind_InputType),            INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(InflowWind_ParameterType),        INTENT(IN   )           :: p          !< Parameters
@@ -1049,8 +1048,6 @@ SUBROUTINE InflowWind_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m,
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   return
-
 !   IF ( PRESENT( dYdz ) ) THEN
 !   END IF
 !   IF ( PRESENT( dXdz ) ) THEN
@@ -1060,79 +1057,6 @@ SUBROUTINE InflowWind_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m,
 !   IF ( PRESENT( dZdz ) ) THEN
 !   END IF
 END SUBROUTINE InflowWind_JacobianPConstrState
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE InflowWind_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
-   REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
-   TYPE(InflowWind_InputType),           INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(InflowWind_ParameterType),       INTENT(IN   )           :: p          !< Parameters
-   TYPE(InflowWind_ContinuousStateType), INTENT(IN   )           :: x          !< Continuous states at operating point
-   TYPE(InflowWind_DiscreteStateType),   INTENT(IN   )           :: xd         !< Discrete states at operating point
-   TYPE(InflowWind_ConstraintStateType), INTENT(IN   )           :: z          !< Constraint states at operating point
-   TYPE(InflowWind_OtherStateType),      INTENT(IN   )           :: OtherState !< Other states at operating point
-   TYPE(InflowWind_OutputType),          INTENT(IN   )           :: y          !< Output at operating point
-   TYPE(InflowWind_MiscVarType),         INTENT(INOUT)           :: m          !< Misc/optimization variables
-   INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
-   CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: u_op(:)    !< values of linearized inputs
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: y_op(:)    !< values of linearized outputs
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: x_op(:)    !< values of linearized continuous states
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
-
-   INTEGER(IntKi)                                    :: i
-   real(R8Ki)                                        :: tmp_op(NumExtendedIO)
-   INTEGER(IntKi)                                    :: ErrStat2
-   CHARACTER(ErrMsgLen)                              :: ErrMsg2
-   CHARACTER(*), PARAMETER                           :: RoutineName = 'InflowWind_GetOP'
-   
-
-      ! Initialize ErrStat
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-
-   ! Since both u_op and y_op need this, calculate it up front
-   if (present(u_op) .or. present(y_op)) then
-      call IfW_UniformWind_GetOP( p%FlowField%Uniform, t, p%FlowField%VelInterpCubic, tmp_op )
-      tmp_op(3) = p%FlowField%PropagationDir + tmp_op(3)  ! include the AngleH from Uniform Wind input files
-   endif
-
-   if ( PRESENT( u_op ) ) then
-      if (.not. allocated(u_op)) then
-         call AllocAry(u_op, NumExtendedIO, 'u_op', ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            if (ErrStat >= AbortErrLev) return
-      end if
-
-      u_op(1:NumExtendedIO) = tmp_op(1:NumExtendedIO)
-
-   end if
-
-   if ( PRESENT( y_op ) ) then
-      if (.not. allocated(y_op)) then
-         call AllocAry(y_op, NumExtendedIO + p%NumOuts, 'y_op', ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            if (ErrStat >= AbortErrLev) return
-      end if
-
-      y_op(1:NumExtendedIO) = tmp_op(1:NumExtendedIO)
-      do i=1,p%NumOuts
-         y_op(NumExtendedIO + i) = y%WriteOutput( i )
-      end do
-   end if
-
-   return
-
-!   IF ( PRESENT( x_op ) ) THEN
-!   END IF
-!   IF ( PRESENT( dx_op ) ) THEN
-!   END IF
-!   IF ( PRESENT( xd_op ) ) THEN
-!   END IF
-!   IF ( PRESENT( z_op ) ) THEN
-!   END IF
-END SUBROUTINE InflowWind_GetOP
 
 subroutine InflowWind_PackExtInputAry(Vars, t, p, ValAry)
    type(ModVarsType), intent(in)                :: Vars
@@ -1142,6 +1066,7 @@ subroutine InflowWind_PackExtInputAry(Vars, t, p, ValAry)
    type(UniformField_Interp)                    :: op    !< Interpolated values of UniformField
    integer(IntKi)                               :: i
    logical                                      :: first
+   first = .true.
    do i = 1, size(Vars%u)
       associate(Var => Vars%u(i))
          select case(Var%DL%Num)

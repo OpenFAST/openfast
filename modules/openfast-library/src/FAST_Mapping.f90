@@ -282,100 +282,103 @@ subroutine FAST_OutputMeshPointer(ModData, Turbine, MeshLoc, Mesh, ErrStat, ErrM
    end if
 end subroutine
 
-function FAST_InputMeshName(ModData, MeshLoc) result(Name)
-   type(ModDataType), intent(in)                :: ModData
-   type(DatLoc), intent(in)                :: MeshLoc
-   character(32)                                :: Name
+function FAST_InputMeshName(ModData, DL) result(Name)
+   type(ModDataType), intent(in) :: ModData
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name, tmp
    Name = "Unknown mesh in "//ModData%Abbr
    select case (ModData%ID)
    case (Module_AD)
-      Name = trim(ModData%Abbr)//"%"//AD_InputMeshName(MeshLoc)
+      tmp = AD_InputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%y%rotors("//trim(Num2LStr(ModData%Ins))//")"//tmp(2:)
    case (Module_BD)
-      Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//BD_InputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//BD_InputMeshName(DL)
    case (Module_ED)
-      Name = trim(ModData%Abbr)//"%"//ED_InputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//ED_InputMeshName(DL)
    case (Module_ExtInfw)
-      Name = trim(ModData%Abbr)//"%"//ExtInfw_InputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//ExtInfw_InputMeshName(DL)
    case (Module_ExtPtfm)
-      Name = trim(ModData%Abbr)//"%"//ExtPtfm_InputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//ExtPtfm_InputMeshName(DL)
    case (Module_FEAM)
-      Name = trim(ModData%Abbr)//"%"//FEAM_InputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//FEAM_InputMeshName(DL)
    case (Module_HD)
-      Name = trim(ModData%Abbr)//"%"//HydroDyn_InputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//HydroDyn_InputMeshName(DL)
    case (Module_IceD)
-      Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//IceD_InputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//IceD_InputMeshName(DL)
    case (Module_IceF)
-      Name = trim(ModData%Abbr)//"%"//IceFloe_InputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//IceFloe_InputMeshName(DL)
    case (Module_IfW)
-      Name = trim(ModData%Abbr)//"%"//InflowWind_InputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//InflowWind_InputMeshName(DL)
    case (Module_MAP)
-      Name = trim(ModData%Abbr)//"%"//MAP_InputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//MAP_InputMeshName(DL)
    case (Module_MD)
-      Name = trim(ModData%Abbr)//"%"//MD_InputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//MD_InputMeshName(DL)
    case (Module_Orca)
-      Name = trim(ModData%Abbr)//"%"//Orca_InputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//Orca_InputMeshName(DL)
    case (Module_SD)
-      Name = trim(ModData%Abbr)//"%"//SD_InputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//SD_InputMeshName(DL)
    case (Module_SeaSt)
-      Name = trim(ModData%Abbr)//"%"//SeaSt_InputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//SeaSt_InputMeshName(DL)
    case (Module_SrvD)
-      Name = trim(ModData%Abbr)//"%"//SrvD_InputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//SrvD_InputMeshName(DL)
    end select
 end function
 
-function FAST_OutputMeshName(ModData, MeshLoc) result(Name)
-   type(ModDataType), intent(in)                :: ModData
-   type(DatLoc), intent(in)                :: MeshLoc
-   character(32)                                :: Name
+function FAST_OutputMeshName(ModData, DL) result(Name)
+   type(ModDataType), intent(in)    :: ModData
+   type(DatLoc), intent(in)         :: DL
+   character(32)                    :: Name, tmp
    Name = "Unknown mesh in "//ModData%Abbr
    select case (ModData%ID)
    case (Module_AD)
-      Name = trim(ModData%Abbr)//"%"//AD_OutputMeshName(MeshLoc)
+      tmp = AD_OutputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%y%rotors("//trim(Num2LStr(ModData%Ins))//")"//tmp(2:)
    case (Module_BD)
-      Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//BD_OutputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//BD_OutputMeshName(DL)
    case (Module_ED)
-      Name = trim(ModData%Abbr)//"%"//ED_OutputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//ED_OutputMeshName(DL)
    case (Module_ExtInfw)
-      Name = trim(ModData%Abbr)//"%"//ExtInfw_OutputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//ExtInfw_OutputMeshName(DL)
    case (Module_ExtPtfm)
-      Name = trim(ModData%Abbr)//"%"//ExtPtfm_OutputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//ExtPtfm_OutputMeshName(DL)
    case (Module_FEAM)
-      Name = trim(ModData%Abbr)//"%"//FEAM_OutputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//FEAM_OutputMeshName(DL)
    case (Module_HD)
-      Name = trim(ModData%Abbr)//"%"//HydroDyn_OutputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//HydroDyn_OutputMeshName(DL)
    case (Module_IceD)
-      Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//IceD_OutputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//IceD_OutputMeshName(DL)
    case (Module_IceF)
-      Name = trim(ModData%Abbr)//"%"//IceFloe_OutputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//IceFloe_OutputMeshName(DL)
    case (Module_IfW)
-      Name = trim(ModData%Abbr)//"%"//InflowWind_OutputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//InflowWind_OutputMeshName(DL)
    case (Module_MAP)
-      Name = trim(ModData%Abbr)//"%"//MAP_OutputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//MAP_OutputMeshName(DL)
    case (Module_MD)
-      Name = trim(ModData%Abbr)//"%"//MD_OutputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//MD_OutputMeshName(DL)
    case (Module_Orca)
-      Name = trim(ModData%Abbr)//"%"//Orca_OutputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//Orca_OutputMeshName(DL)
    case (Module_SD)
-      Name = trim(ModData%Abbr)//"%"//SD_OutputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//SD_OutputMeshName(DL)
    case (Module_SeaSt)
-      Name = trim(ModData%Abbr)//"%"//SeaSt_OutputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//SeaSt_OutputMeshName(DL)
    case (Module_SrvD)
-      Name = trim(ModData%Abbr)//"%"//SrvD_OutputMeshName(MeshLoc)
+      Name = trim(ModData%Abbr)//"%"//SrvD_OutputMeshName(DL)
    end select
 end function
 
 subroutine FAST_InitMappings(Mods, Mappings, Turbine, ErrStat, ErrMsg)
    type(ModDataType), intent(inout)                   :: Mods(:)     !< Module data
-   type(MappingType), allocatable, intent(inout)   :: Mappings(:)
+   type(MappingType), allocatable, intent(inout)      :: Mappings(:)
    type(FAST_TurbineType), intent(inout)              :: Turbine     !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
 
-   character(*), parameter    :: RoutineName = 'FAST_InitMappings'
-   integer(IntKi)             :: ErrStat2
-   character(ErrMsgLen)       :: ErrMsg2
-   integer(IntKi)             :: i, j, k
-   integer(IntKi)             :: iMap, ModIns, iModIn, iModSrc, iModDst
+   character(*), parameter          :: RoutineName = 'FAST_InitMappings'
+   integer(IntKi)                   :: ErrStat2
+   character(ErrMsgLen)             :: ErrMsg2
+   integer(IntKi)                   :: i, j, k
+   integer(IntKi)                   :: iMap, ModIns, iModIn, iModSrc, iModDst
+   type(MappingType), allocatable   :: MappingsTmp(:)
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -685,47 +688,47 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
       do i = 1, Turbine%ED%p%NumBl
          call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                          SrcDL=DatLoc(AD_y_BladeLoad, SrcMod%Ins, i), &       ! AD%y%rotors(SrcMod%InsR)%BladeLoad(i)
-                          SrcDispDL=DatLoc(AD_u_BladeMotion, SrcMod%Ins, i), & ! AD%u%rotors(SrcMod%InsR)%BladeMotion(i)
-                          DstDL=DatLoc(ED_u_BladePtLoads, i), &                       ! ED%u%BladePtLoads(i)
-                          DstDispDL=DatLoc(ED_y_BladeLn2Mesh, i), &                   ! ED%y%BladeLn2Mesh(i)
+                          SrcDL=DatLoc(AD_y_BladeLoad, i), &            ! AD%y%rotors(SrcMod%InsR)%BladeLoad(i)
+                          SrcDispDL=DatLoc(AD_u_BladeMotion, i), &      ! AD%u%rotors(SrcMod%InsR)%BladeMotion(i)
+                          DstDL=DatLoc(ED_u_BladePtLoads, i), &         ! ED%u%BladePtLoads(i)
+                          DstDispDL=DatLoc(ED_y_BladeLn2Mesh, i), &     ! ED%y%BladeLn2Mesh(i)
                           ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
                           Active=(Turbine%p_FAST%CompElast == Module_ED) .and. (NotCompAeroMaps .or. (i == 1)))
          if (Failed()) return
       end do
 
       call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                       SrcDL=DatLoc(AD_y_HubLoad, SrcMod%Ins), &            ! AD%y%rotors(SrcMod%Ins)%HubLoad
-                       SrcDispDL=DatLoc(AD_u_HubMotion, SrcMod%Ins), &      ! AD%u%rotors(SrcMod%Ins)%HubMotion
-                       DstDL=DatLoc(ED_u_HubPtLoad), &                             ! ED%u%HubPtLoad
-                       DstDispDL=DatLoc(ED_y_HubPtMotion), &                       ! ED%y%HubPtMotion
+                       SrcDL=DatLoc(AD_y_HubLoad), &           ! AD%y%rotors(SrcMod%Ins)%HubLoad
+                       SrcDispDL=DatLoc(AD_u_HubMotion), &     ! AD%u%rotors(SrcMod%Ins)%HubMotion
+                       DstDL=DatLoc(ED_u_HubPtLoad), &         ! ED%u%HubPtLoad
+                       DstDispDL=DatLoc(ED_y_HubPtMotion), &   ! ED%y%HubPtMotion
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
                        Active=NotCompAeroMaps)
       if (Failed()) return
 
       call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                       SrcDL=DatLoc(AD_y_NacelleLoad, SrcMod%Ins), &        ! AD%y%rotors(SrcMod%Ins)%NacelleLoad
-                       SrcDispDL=DatLoc(AD_u_NacelleMotion, SrcMod%Ins), &  ! AD%u%rotors(SrcMod%Ins)%NacelleMotion
-                       DstDL=DatLoc(ED_u_NacelleLoads), &                          ! ED%u%NacelleLoads
-                       DstDispDL=DatLoc(ED_y_NacelleMotion), &                     ! ED%y%NacelleMotion
+                       SrcDL=DatLoc(AD_y_NacelleLoad), &       ! AD%y%rotors(SrcMod%Ins)%NacelleLoad
+                       SrcDispDL=DatLoc(AD_u_NacelleMotion), & ! AD%u%rotors(SrcMod%Ins)%NacelleMotion
+                       DstDL=DatLoc(ED_u_NacelleLoads), &      ! ED%u%NacelleLoads
+                       DstDispDL=DatLoc(ED_y_NacelleMotion), & ! ED%y%NacelleMotion
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
                        Active=NotCompAeroMaps)
       if (Failed()) return
 
       call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                       SrcDL=DatLoc(AD_y_TFinLoad, SrcMod%Ins), &           ! AD%y%rotors(SrcMod%Ins)%TFinLoad
-                       SrcDispDL=DatLoc(AD_u_TFinMotion, SrcMod%Ins), &     ! AD%u%rotors(SrcMod%Ins)%TFinMotion
-                       DstDL=DatLoc(ED_u_TFinCMLoads), &                           ! ED%u%TFinCMLoads
-                       DstDispDL=DatLoc(ED_y_TFinCMMotion), &                      ! ED%y%TFinCMMotion
+                       SrcDL=DatLoc(AD_y_TFinLoad), &          ! AD%y%rotors(SrcMod%Ins)%TFinLoad
+                       SrcDispDL=DatLoc(AD_u_TFinMotion), &    ! AD%u%rotors(SrcMod%Ins)%TFinMotion
+                       DstDL=DatLoc(ED_u_TFinCMLoads), &       ! ED%u%TFinCMLoads
+                       DstDispDL=DatLoc(ED_y_TFinCMMotion), &  ! ED%y%TFinCMMotion
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
                        Active=NotCompAeroMaps)
       if (Failed()) return
 
       call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                       SrcDL=DatLoc(AD_y_TowerLoad, SrcMod%Ins), &          ! AD%y%rotors(SrcMod%Ins)%TowerLoad
-                       SrcDispDL=DatLoc(AD_u_TowerMotion, SrcMod%Ins), &    ! AD%u%rotors(SrcMod%Ins)%TowerMotion
-                       DstDL=DatLoc(ED_u_TowerPtLoads), &                          ! ED%u%TowerPtLoads
-                       DstDispDL=DatLoc(ED_y_TowerLn2Mesh), &                      ! ED%y%TowerLn2Mesh
+                       SrcDL=DatLoc(AD_y_TowerLoad), &         ! AD%y%rotors(SrcMod%Ins)%TowerLoad
+                       SrcDispDL=DatLoc(AD_u_TowerMotion), &   ! AD%u%rotors(SrcMod%Ins)%TowerMotion
+                       DstDL=DatLoc(ED_u_TowerPtLoads), &      ! ED%u%TowerPtLoads
+                       DstDispDL=DatLoc(ED_y_TowerLn2Mesh), &  ! ED%y%TowerLn2Mesh
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
                        Active=NotCompAeroMaps)
       if (Failed()) return
@@ -733,10 +736,10 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    case (Module_BD)
 
       call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                       SrcDL=DatLoc(BD_y_ReactionForce), &                      ! BD%y(SrcMod%Ins)%ReactionForce
-                       SrcDispDL=DatLoc(BD_u_RootMotion), &                     ! BD%u(SrcMod%Ins)%RootMotion
-                       DstDL=DatLoc(ED_u_HubPtLoad), &                          ! ED%u%HubPtLoad
-                       DstDispDL=DatLoc(ED_y_HubPtMotion), &                    ! ED%y%HubPtMotion
+                       SrcDL=DatLoc(BD_y_ReactionForce), &      ! BD%y(SrcMod%Ins)%ReactionForce
+                       SrcDispDL=DatLoc(BD_u_RootMotion), &     ! BD%u(SrcMod%Ins)%RootMotion
+                       DstDL=DatLoc(ED_u_HubPtLoad), &          ! ED%u%HubPtLoad
+                       DstDispDL=DatLoc(ED_y_HubPtMotion), &    ! ED%y%HubPtMotion
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
                        Active=NotCompAeroMaps)
       if (Failed()) return
@@ -1573,11 +1576,6 @@ subroutine InitMappings_SrvD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                        DstMod=DstMod, DstDL=DatLoc(SrvD_u_HSS_Spd), &
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
-      call MapVariable(Mappings, "ED HSS_Spd -> SrvD HSS_Spd", &
-                       SrcMod=SrcMod, SrcDL=DatLoc(ED_y_HSS_Spd), &
-                       DstMod=DstMod, DstDL=DatLoc(SrvD_u_HSS_Spd), &
-                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
-
       ! Nacelle Structural Controller
       do j = 1, Turbine%SrvD%p%NumNStC
          call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
@@ -2024,13 +2022,19 @@ subroutine FAST_LinearizeMappings(ModGlue, Mappings, Turbine, ErrStat, ErrMsg)
    character(*), parameter       :: RoutineName = 'FAST_LinearizeMappings'
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
-   integer(IntKi)                :: iLocSrc(2), iLocDst(2), nLocSrc, nLocDst
+   integer(IntKi)                :: iGluSrc(2), iGluDst(2), nLocSrc, nLocDst
    integer(IntKi)                :: i, j, k
    type(MeshType), pointer       :: SrcMesh, DstMesh
    type(MeshType), pointer       :: SrcDispMesh, DstDispMesh
 
    ErrStat = ErrID_None
    ErrMsg = ''
+
+   ! Initialize dUdy to zero
+   ModGlue%Lin%dUdy = 0.0_R8Ki
+
+   ! Initialize dUdu to identity matrix
+   call Eye2D(ModGlue%Lin%dUdu, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Loop through variable maps
    do i = 1, size(ModGlue%ModMaps)
@@ -2047,25 +2051,25 @@ subroutine FAST_LinearizeMappings(ModGlue, Mappings, Turbine, ErrStat, ErrMsg)
 
             ! Get source and destination indices, skip if no variable index for either
             if (ModMap%iVarSrc(1) == 0 .or. ModMap%iVarDst(1) == 0) cycle
-            iLocSrc = ModSrc%Vars%y(ModMap%iVarSrc(1))%iLoc
-            iLocDst = ModDst%Vars%u(ModMap%iVarDst(1))%iLoc
+            iGluSrc = ModSrc%Vars%y(ModMap%iVarSrc(1))%iGlu
+            iGluDst = ModDst%Vars%u(ModMap%iVarDst(1))%iGlu
 
             ! Get number of source and destination locations
-            nLocSrc = iLocSrc(2) - iLocSrc(1) + 1
-            nLocDst = iLocDst(2) - iLocDst(1) + 1
+            nLocSrc = iGluSrc(2) - iGluSrc(1) + 1
+            nLocDst = iGluDst(2) - iGluDst(1) + 1
 
             ! If source has multiple locations, destination must have same number, connect 1-to-1
             ! MapVariable checks that variables have same number if nLocSrc > 1
             if (nLocSrc > 1) then
                do k = 0, nLocDst - 1
-                  ModGlue%Lin%dUdy(iLocDst(1) + k, iLocSrc(1) + k) = -1.0_R8Ki
+                  ModGlue%Lin%dUdy(iGluDst(1) + k, iGluSrc(1) + k) = -1.0_R8Ki
                end do
             else if (nLocDst == 1) then
                ! Source and destination have one location
-               ModGlue%Lin%dUdy(iLocDst(1), iLocSrc(1)) = -1.0_R8Ki
+               ModGlue%Lin%dUdy(iGluDst(1), iGluSrc(1)) = -1.0_R8Ki
             else
                ! One source location to many destination locations
-               ModGlue%Lin%dUdy(iLocDst(1):iLocDst(2), iLocSrc(1)) = -1.0_R8Ki
+               ModGlue%Lin%dUdy(iGluDst(1):iGluDst(2), iGluSrc(1)) = -1.0_R8Ki
             end if
 
          case (Map_MotionMesh)
@@ -2292,10 +2296,10 @@ contains
       if (iVarDst == 0 .or. iVarSrc == 0) return
 
       ! Get pointers to source and destination locations
-      associate (iLocSrc => VarArySrc(iVarSrc)%iLoc, iLocDst => VarAryDst(iVarDst)%iLoc)
+      associate (iGluSrc => VarArySrc(iVarSrc)%iGlu, iGluDst => VarAryDst(iVarDst)%iGlu)
 
          ! Subtracts the source matrix from the destination sub-matrix
-         associate (DstSubM => DstM(iLocDst(1):iLocDst(2), iLocSrc(1):iLocSrc(2)))
+         associate (DstSubM => DstM(iGluDst(1):iGluDst(2), iGluSrc(1):iGluSrc(2)))
             DstSubM = DstSubM - SrcM
          end associate
 

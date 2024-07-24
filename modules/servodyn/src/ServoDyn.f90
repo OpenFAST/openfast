@@ -641,14 +641,15 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
    integer(IntKi)             :: ErrStat2                     ! Temporary Error status
    character(ErrMsgLen)       :: ErrMsg2                      ! Temporary Error message
    character(ChanLen)         :: Desc
-   integer(IntKi)             :: i, j, k, iUser
+   integer(IntKi)             :: i, j, k
    character(36), parameter   :: StCLabels(*) = [&
                                     ' local displacement state X  m      ', &
-                                    ' local displacement state Y  m      ', &
-                                    ' local displacement state Z  m      ', &
                                     ' local displacement state dX/dt  m/s', &
+                                    ' local displacement state Y  m      ', &
                                     ' local displacement state dY/dt  m/s', &
+                                    ' local displacement state Z  m      ', &
                                     ' local displacement state dZ/dt  m/s']
+   integer(IntKi), parameter  :: StCInds(*) = [1, 3, 5, 2, 4, 6]
    real(R8Ki)                 :: xPerturb, uPerturbTrans, uPerturbAng, uPerturbs(6)
 
    ErrStat = ErrID_None
@@ -673,45 +674,53 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
    xPerturb = 0.2_R8Ki*Pi/180.0_R8Ki * max(real(TwoNorm(InitInp%NacRefPos - InitInp%TwrBaseRefPos), R8Ki), 1.0_R8Ki)
 
    ! Blade Structural Controller
-   do i = 1, p%NumBStC
-      do j = 1, p%NumBl
+   do j = 1, p%NumBStC
+      do i = 1, p%NumBl
          Desc = 'Blade '//trim(Num2LStr(i))//' StC '//Num2LStr(j)
-         call MV_AddVar(p%Vars%x, Desc, FieldScalar, DatLoc(SrvD_x_BStC_StC_x), &
-                        Num=6, &
-                        Flags=VF_DerivOrder2+VF_RotFrame, &
-                        LinNames=[(trim(Desc)//StCLabels(k), k = 1, 6)], &
-                        Perturb=xPerturb)
+         do k = 1, size(StCInds)
+            call MV_AddVar(p%Vars%x, Desc, FieldScalar, DatLoc(SrvD_x_BStC_StC_x, j), &
+                           iAry=StCInds(k), jAry=i, &
+                           Flags=VF_DerivOrder2+VF_RotFrame, &
+                           LinNames=[trim(Desc)//StCLabels(StCInds(k))], &
+                           Perturb=xPerturb)
+         end do
       end do
    end do
 
    ! Nacelle Structural Controller
    do j = 1, p%NumNStC
       Desc = 'Nacelle StC '//Num2LStr(j)
-      call MV_AddVar(p%Vars%x, Desc, FieldScalar, DatLoc(SrvD_x_NStC_StC_x), &
-                     Num=6, &
-                     Flags=VF_DerivOrder2, &
-                     LinNames=[(trim(Desc)//StCLabels(k), k = 1, 6)], &
-                     Perturb=xPerturb)
+      do k = 1, size(StCInds)
+         call MV_AddVar(p%Vars%x, Desc, FieldScalar, DatLoc(SrvD_x_NStC_StC_x, j), &
+                        iAry=StCInds(k), jAry=1, &
+                        Flags=VF_DerivOrder2, &
+                        LinNames=[trim(Desc)//StCLabels(StCInds(k))], &
+                        Perturb=xPerturb)
+      end do
    enddo
 
    ! Tower Structural Controller
    do j = 1, p%NumTStC
       Desc = 'Tower StC '//Num2LStr(j)
-      call MV_AddVar(p%Vars%x, Desc, FieldScalar, DatLoc(SrvD_x_TStC_StC_x), &
-                     Num=6, &
-                     Flags=VF_DerivOrder2, &
-                     LinNames=[(trim(Desc)//StCLabels(k), k = 1, 6)], &
-                     Perturb=xPerturb)
+      do k = 1, size(StCInds)
+         call MV_AddVar(p%Vars%x, Desc, FieldScalar, DatLoc(SrvD_x_TStC_StC_x, j), &
+                        iAry=StCInds(k), jAry=1, &
+                        Flags=VF_DerivOrder2, &
+                        LinNames=[trim(Desc)//StCLabels(StCInds(k))], &
+                        Perturb=xPerturb)
+      end do
    enddo
 
    ! Substructure Structural Controller
    do j = 1, p%NumSStC
       Desc = 'Substructure StC '//Num2LStr(j)
-      call MV_AddVar(p%Vars%x, Desc, FieldScalar, DatLoc(SrvD_x_SStC_StC_x), &
-                     Num=6, &
-                     Flags=VF_DerivOrder2, &
-                     LinNames=[(trim(Desc)//StCLabels(k), k = 1, 6)], &
-                     Perturb=xPerturb)
+      do k = 1, size(StCInds)
+         call MV_AddVar(p%Vars%x, Desc, FieldScalar, DatLoc(SrvD_x_SStC_StC_x, j), &
+                        iAry=StCInds(k), jAry=1, &
+                        Flags=VF_DerivOrder2, &
+                        LinNames=[trim(Desc)//StCLabels(StCInds(k))], &
+                        Perturb=xPerturb)
+      end do
    enddo
 
    !----------------------------------------------------------------------------

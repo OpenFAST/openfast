@@ -33,7 +33,6 @@ MODULE MAP
    PUBLIC :: MAP_UpdateStates
    PUBLIC :: MAP_CalcOutput
    PUBLIC :: MAP_JacobianPInput
-   PUBLIC :: MAP_GetOP
    PUBLIC :: MAP_End
    PUBLIC :: MAP_Restart
 
@@ -691,7 +690,7 @@ IF (ErrStat >= AbortErrLev) RETURN
     !............................................................................................
     ! Module Variables
     !............................................................................................
-    call MAP_InitVars(InitInp, u, p, x, z, y, m, InitOut, InitInp%Linearize, ErrStat2, ErrMsg2)
+    call MAP_InitVars(InitOut%Vars, InitInp, u, p, x, z, y, m, InitOut, InitInp%Linearize, ErrStat2, ErrMsg2)
     call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
     
     !............................................................................................
@@ -708,7 +707,8 @@ IF (ErrStat >= AbortErrLev) RETURN
 
    !----------------------------------------------------------------------------------------------------------------------------------   
    !> This routine initializes module variables for use by the solver and linearization.
-   subroutine MAP_InitVars(InitInp, u, p, x, z, y, m, InitOut, Linearize, ErrStat, ErrMsg)
+   subroutine MAP_InitVars(Vars, InitInp, u, p, x, z, y, m, InitOut, Linearize, ErrStat, ErrMsg)
+      type(ModVarsType),              intent(out)    :: Vars        !< Module variables
       type(MAP_InitInputType),        intent(in)     :: InitInp     !< Initialization input
       type(MAP_InputType),            intent(inout)  :: u           !< An initial guess for the input; input mesh must be defined
       type(MAP_ParameterType),        intent(inout)  :: p           !< Parameters
@@ -730,27 +730,15 @@ IF (ErrStat >= AbortErrLev) RETURN
       ErrStat = ErrID_None
       ErrMsg = ""
 
-      ! Allocate space for variables (deallocate if already allocated)
-      if (associated(p%Vars)) deallocate(p%Vars)
-      allocate(p%Vars, stat=ErrStat2)
-      if (ErrStat2 /= 0) then
-         call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
-         return
-      end if
-
-      ! Add pointers to vars to initialization output
-      InitOut%Vars => p%Vars
-
       !-------------------------------------------------------------------------
       ! Continuous State Variables
       !-------------------------------------------------------------------------
-
 
       !-------------------------------------------------------------------------
       ! Input variables
       !-------------------------------------------------------------------------
 
-      call MV_AddMeshVar(p%Vars%u, "PtFairDisplacement", [FieldTransDisp], &
+      call MV_AddMeshVar(Vars%u, "PtFairDisplacement", [FieldTransDisp], &
                          DatLoc(MAP_u_PtFairDisplacement), &
                          Mesh=u%PtFairDisplacement, &
                          Perturbs=[0.2_R8Ki*D2R * max(p%depth,1.0_R8Ki)])
@@ -759,12 +747,12 @@ IF (ErrStat >= AbortErrLev) RETURN
       ! Output variables
       !-------------------------------------------------------------------------
 
-      call MV_AddMeshVar(p%Vars%y, "FairleadLoads", [FieldForce], &
+      call MV_AddMeshVar(Vars%y, "FairleadLoads", [FieldForce], &
                          DatLoc(MAP_y_PtFairleadLoad), &
                          Mesh=y%ptFairleadLoad)
 
       ! Write outputs
-      call MV_AddVar(p%Vars%y, "WriteOutput", FieldScalar, &
+      call MV_AddVar(Vars%y, "WriteOutput", FieldScalar, &
                      DatLoc(MAP_y_WriteOutput), &
                      Flags=VF_WriteOut, &
                      Num=p%numOuts,&
@@ -774,7 +762,7 @@ IF (ErrStat >= AbortErrLev) RETURN
       ! Initialize Variables and Jacobian data
       !-------------------------------------------------------------------------
 
-      CALL MV_InitVarsJac(p%Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+      CALL MV_InitVarsJac(Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
 
       call MAP_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
       call MAP_CopyConstrState(z, m%z_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
@@ -1171,7 +1159,8 @@ IF (ErrStat >= AbortErrLev) RETURN
   END SUBROUTINE map_set_input_file_contents 
 
    
-SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu, FlagFilter)
+SUBROUTINE MAP_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+   TYPE(ModVarsType),                    INTENT(IN   )           :: Vars       !< Module variables
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(map_InputType),                  INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(map_ParameterType),              INTENT(INOUT)           :: p          !< Parameters
@@ -1184,7 +1173,6 @@ SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
                                                                                !!   available here so that mesh parameter information (i.e.,  
                                                                                !!   connectivity) does not have to be recalculated for dYdu.
    TYPE(map_MiscVarType),                INTENT(INOUT)           :: m          !< Misc/optimization variables
-   INTEGER(IntKi),          OPTIONAL,    INTENT(IN   )           :: FlagFilter !< Filter variables by flag value
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect to the inputs (u) [intent in to avoid deallocation]
@@ -1195,8 +1183,6 @@ SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    CHARACTER(*), PARAMETER                            :: RoutineName = 'map_JacobianPInput'
    INTEGER(IntKi)                                     :: ErrStat2
    CHARACTER(ErrMsgLen)                               :: ErrMsg2
-   logical                                            :: IsFullLin
-   integer(IntKi)                                     :: FlagFilterLoc
    INTEGER(KIND=C_INT)                                :: status_from_MAP 
    CHARACTER(KIND=C_CHAR), DIMENSION(1024)            :: message_from_MAP 
    REAL(KIND=C_FLOAT)                                 :: time 
@@ -1208,40 +1194,28 @@ SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
 
    time = t
    interval = t / p%dt
-
-   ! Set full linearization flag and local filter flag
-   if (present(FlagFilter)) then
-      IsFullLin = FlagFilter == VF_None
-      FlagFilterLoc = FlagFilter
-   else
-      IsFullLin = .true.
-      FlagFilterLoc = VF_None
-   end if
    
    ! Make a copy of the inputs to perturb
    call MAP_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
-   call MAP_PackInputValues(p, u, m%Jac%u)
+   call MAP_PackInputAry(Vars, u, m%Jac%u)
 
    ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
    if (present(dYdu)) then
 
       ! allocate dYdu if necessary
       if (.not. allocated(dYdu)) then
-         call AllocAry(dYdu, p%Vars%Ny, p%Vars%Nu, 'dYdu', ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(dYdu, Vars%Ny, Vars%Nu, 'dYdu', ErrStat2, ErrMsg2); if (Failed()) return
       end if
 
       ! Loop through input variables
-      do i = 1, size(p%Vars%u)
-
-         ! If variable flag not in flag filter, skip
-         if (.not. MV_HasFlags(p%Vars%u(i), FlagFilterLoc)) cycle
+      do i = 1, size(Vars%u)
 
          ! Loop through number of linearization perturbations in variable
-         do j = 1, p%Vars%u(i)%Num
+         do j = 1, Vars%u(i)%Num
 
             ! Calculate positive perturbation
-            call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call MAP_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
+            call MAP_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
             call MAP_CopyConstrState(z, m%z_lin, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
             
             ! Calculate absolute position of each node
@@ -1266,11 +1240,11 @@ SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
             ! compute y at u_op + delta u
             ! MAP++ (in the c-code) requires that the output data structure be y, which was used when MAP++ was initialized.
             call map_CalcOutput(t, m%u_perturb, p, x, xd, m%z_lin, OtherState, y, ErrStat2, ErrMsg2); if (Failed()) return
-            call MAP_PackOutputValues(p, y, m%Jac%y_pos, IsFullLin)
+            call MAP_PackOutputAry(Vars, y, m%Jac%y_pos)
             
             ! Calculate negative perturbation
-            call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call MAP_UnpackInputValues(p, m%Jac%u_perturb, m%u_perturb)
+            call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
+            call MAP_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
             call MAP_CopyConstrState(z, m%z_lin, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
             
             ! Calculate absolute position of each node
@@ -1295,13 +1269,13 @@ SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
             ! compute y at u_op - delta u
             ! MAP++ (in the c-code) requires that the output data structure be y, which was used when MAP++ was initialized.
             call map_CalcOutput(t, m%u_perturb, p, x, xd, m%z_lin, OtherState, y, ErrStat2, ErrMsg2 ); if (Failed()) return
-            call MAP_PackOutputValues(p, y, m%Jac%y_neg, IsFullLin)
+            call MAP_PackOutputAry(Vars, y, m%Jac%y_neg)
             
             ! Calculate column index
-            col = p%Vars%u(i)%iLoc(1) + j - 1
+            col = Vars%u(i)%iLoc(1) + j - 1
 
             ! Get partial derivative via central difference and store in full linearization array
-            call MV_ComputeCentralDiff(p%Vars%y, p%Vars%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,col))
+            call MV_ComputeCentralDiff(Vars%y, Vars%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,col))
          end do
       end do
    end if
@@ -1330,80 +1304,12 @@ contains
       Failed = ErrStat >= AbortErrLev
    end function
 END SUBROUTINE MAP_JacobianPInput
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE MAP_GetOP(t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg, u_op, y_op)
-   REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
-   TYPE(map_InputType),                  INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(map_ParameterType),              INTENT(IN   )           :: p          !< Parameters
-   TYPE(map_ContinuousStateType),        INTENT(IN   )           :: x          !< Continuous states at operating point
-   TYPE(map_DiscreteStateType),          INTENT(IN   )           :: xd         !< Discrete states at operating point
-   TYPE(map_ConstraintStateType),        INTENT(IN   )           :: z          !< Constraint states at operating point
-   TYPE(map_OtherStateType),             INTENT(IN   )           :: OtherState !< Other states at operating point
-   TYPE(map_OutputType),                 INTENT(IN   )           :: y          !< Output at operating point
-   INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
-   CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: u_op(:)    !< values of linearized inputs
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: y_op(:)    !< values of linearized outputs
-  
-   CHARACTER(*), PARAMETER       :: RoutineName = 'map_GetOP'
-   INTEGER(IntKi)                :: ErrStat2
-   CHARACTER(ErrMsgLen)          :: ErrMsg2
-
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-
-   !..................................
-   if (present(u_op)) then
-      if (.not. allocated(u_op)) then   
-         call AllocAry(u_op, p%Vars%Nu, 'u_op', ErrStat2, ErrMsg2); if (Failed()) return      
-      end if
-      call MAP_PackInputValues(p, u, u_op)                
-   end if
-
-   !..................................
-   if (present(y_op)) then
-      if (.not. allocated(y_op)) then 
-         call AllocAry(y_op, p%Vars%Ny, 'y_op', ErrStat2, ErrMsg2); if (Failed()) return
-      end if
-      call MAP_PackOutputValues(p, y, y_op, .true.)
-   end if   
-
-contains
-   logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      Failed = ErrStat >= AbortErrLev
-   end function
-END SUBROUTINE MAP_GetOP   
-
-subroutine MAP_PackInputValues(p, u, Ary)
-   type(MAP_ParameterType), intent(in) :: p
-   type(MAP_InputType), intent(in)     :: u
-   real(R8Ki), intent(out)             :: Ary(:)
-   ! call MV_Pack(p%Vars%u, p%iVarPtFairDisplacement, u%PtFairDisplacement, Ary)
-end subroutine
-
-subroutine MAP_UnpackInputValues(p, Ary, u)
-   type(MAP_ParameterType), intent(in) :: p
-   real(R8Ki), intent(in)              :: Ary(:)
-   type(MAP_InputType), intent(inout)  :: u
-   ! call MV_Unpack(p%Vars%u, p%iVarPtFairDisplacement, Ary, u%PtFairDisplacement)
-end subroutine
-
-subroutine MAP_PackOutputValues(p, y, Ary, PackWriteOutput)
-   type(MAP_ParameterType), intent(in) :: p
-   type(MAP_OutputType), intent(in)    :: y
-   real(R8Ki), intent(out)             :: Ary(:)
-   logical, intent(in)                 :: PackWriteOutput
-   ! call MV_Pack(p%Vars%y, p%iVarPtFairleadLoad, y%ptFairleadLoad, Ary)
-   ! if (PackWriteOutput) call MV_Pack(p%Vars%y, p%iVarWriteOutput, y%WriteOutput, Ary)
-end subroutine
 
  !==========================================================================================================
    
   ! ==========   MAP_ERROR_CHECKER   ======     <-----------------------------------------------------------+
   !                                                                                              !          |
-  ! A convenient way to convert C-character arrays into a fortran string. The return argustment 
+  ! A convenient way to convert C-character arrays into a fortran string. The return argument 
   ! is a logical: False if program is safe; True if program fails in the MAP DLL 
   SUBROUTINE MAP_ERROR_CHECKER(msg, stat, ErrMsg, ErrStat)
     CHARACTER(KIND=C_CHAR), DIMENSION(1024), INTENT(INOUT) :: msg

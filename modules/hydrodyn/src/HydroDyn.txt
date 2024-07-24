@@ -84,7 +84,7 @@ typedef     ^                          ^                     SeaSt_WaveFieldType
 #
 # Define outputs from the initialization routine here:
 #
-typedef   ^                            InitOutputType                ModVarsType             *Vars                            -          -        -         "Module Variables"  -
+typedef   ^                            InitOutputType                ModVarsType              Vars                            -          -        -         "Module Variables"  -
 typedef   ^                            InitOutputType                Morison_InitOutputType   Morison                         -          -        -         "Initialization output from the Morison module"    -
 typedef   ^                            InitOutputType                CHARACTER(ChanLen)       WriteOutputHdr                  {:}        -        -         "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
 typedef   ^                            ^                             CHARACTER(ChanLen)       WriteOutputUnt                  {:}        -        -         "The is the list of all HD-related output channel unit strings (includes all sub-module channels)"    -
@@ -128,8 +128,7 @@ typedef   ^                            ^                             Morison_Oth
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
-typedef   ^                            ParameterType                 ModVarsType             &Vars                            -          -          -         "Module Variables" -
-typedef   ^                            ^                             INTEGER                  nWAMITObj                       -          -          -         "number of WAMIT input files and matrices.  If NBodyMod = 1 then nPotFiles will be 1 even if NBody > 1" -
+typedef   ^                            ParameterType                 INTEGER                  nWAMITObj                       -          -          -         "number of WAMIT input files and matrices.  If NBodyMod = 1 then nPotFiles will be 1 even if NBody > 1" -
 typedef   ^                            ^                             INTEGER                  vecMultiplier                   -          -          -         "multiplier for the WAMIT vectors and matrices.  If NBodyMod=1 then this = NBody, else 1" -
 typedef   ^                            ^                             WAMIT_ParameterType      WAMIT                           {:}        -          -         "Parameter data for the WAMIT module"  -
 typedef   ^                            ^                             WAMIT2_ParameterType     WAMIT2                          {:}        -          -         "Parameter data for the WAMIT2 module"  -

@@ -91,6 +91,7 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
 
         this->gen_fortran_subs(w, mod);
 
+        w << "\n";
         w << "!ENDOFREGISTRYGENERATEDFILE\n";
         return;
     }
@@ -331,7 +332,7 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
     this->gen_fortran_subs(w, mod);
 
     // Write module footer
-    w << "END MODULE " << mod.name << "_Types\n";
+    w << "\nEND MODULE " << mod.name << "_Types\n\n";
     w << "!ENDOFREGISTRYGENERATEDFILE\n";
 }
 
@@ -404,13 +405,13 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
         std::string indent("\n");
 
         // Mesh pointer routine
-        w << indent << "function " << routine_name << "(" << tmp[1] << ", ML) result(Mesh)";
+        w << indent << "function " << routine_name << "(" << tmp[1] << ", DL) result(Mesh)";
         indent += "   ";
         w << indent << "type(" << ddt.type_fortran << "), target, intent(in) :: " << tmp[1];
-        w << indent << "type(DatLoc), intent(in)      :: ML";
+        w << indent << "type(DatLoc), intent(in)      :: DL";
         w << indent << "type(MeshType), pointer            :: Mesh";
         w << indent << "nullify(Mesh)";
-        w << indent << "select case (ML%Num)";
+        w << indent << "select case (DL%Num)";
         for (int i = 0; i < mesh_paths.size(); ++i)
         {
             w << indent << "case (" << mesh_names[i] << ")";
@@ -424,18 +425,18 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
         // Mesh name routine
         indent = "\n";
         routine_name = mod.nickname + "_" + tmp[0] + "MeshName";
-        w << indent << "function " << routine_name << "(ML) result(Name)";
+        w << indent << "function " << routine_name << "(DL) result(Name)";
         indent += "   ";
-        w << indent << "type(DatLoc), intent(in)      :: ML";
+        w << indent << "type(DatLoc), intent(in)      :: DL";
         w << indent << "character(32)                      :: Name";
         w << indent << "Name = \"\"";
-        w << indent << "select case (ML%Num)";
+        w << indent << "select case (DL%Num)";
         for (int i = 0; i < mesh_paths.size(); ++i)
         {
             std::string new_path(mesh_paths[i]);
             for (int j = 1; j < 5; ++j)
             {
-                auto ind_str = "ML%i" + std::to_string(j);
+                auto ind_str = "DL%i" + std::to_string(j);
                 auto ind = new_path.find(ind_str);
                 if (ind != std::string::npos)
                 {
@@ -454,37 +455,41 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
     // Subroutines to pack and unpack arrays based on variables
     for (const auto &tmp : std::vector<std::array<std::string, 3>>{
              {"ContinuousState", "x", "ContState"},
+             {"ContinuousState", "x", "ContStateDeriv"},
              {"ConstraintState", "z", "ConstrState"},
              {"Input", "u", "Input"},
              {"Output", "y", "Output"},
          })
     {
-        auto type_name = mod.nickname + "_" + tmp[0] + "Type";
+        auto base_type = tmp[0];
+        auto &abbr = tmp[1];
+        auto short_type = tmp[2];
+        auto type_name = mod.nickname + "_" + base_type + "Type";
         if (tolower(mod.name).compare("aerodyn") == 0)
         {
-            type_name = std::string("Rot") + tmp[0] + "Type";
+            type_name = std::string("Rot") + base_type + "Type";
         }
         auto it = mod.data_types.find(type_name);
         if (it == mod.data_types.end())
             continue;
         auto &ddt = it->second->derived;
-        auto &abbr = tmp[1];
 
         // Get mesh names in derived type or subtypes and add parameters for identifying the mesh
         std::vector<Field> fields;
         ddt.get_field_names_paths(mod.nickname + "_" + abbr, abbr, 0, fields);
 
-        // Var packing routine
-        std::string routine_name = mod.nickname + "_Pack" + tmp[2] + "Var";
+        // Vars packing routine
+        std::string routine_name = mod.nickname + "_Pack" + short_type + "Ary";
         std::string indent("\n");
-        std::string var_str = std::string("Var");
-        w << indent << "subroutine " << routine_name << "(Var, " << abbr << ", ValAry)";
+        w << indent << "subroutine " << routine_name << "(Vars, " << abbr << ", ValAry)";
         indent += "   ";
         w << indent << "type(" << ddt.type_fortran << "), intent(in) :: " << abbr;
-        w << indent << "type(ModVarType), intent(in)    :: Var";
+        w << indent << "type(ModVarsType), intent(in)   :: Vars";
         w << indent << "real(R8Ki), intent(inout)       :: ValAry(:)";
         w << indent << "integer(IntKi)                  :: i";
-        w << indent << "associate (DL => Var%DL)";
+        w << indent << "do i = 1, size(Vars%" << abbr << ")";
+        indent += "   ";
+        w << indent << "associate (Var => Vars%" << abbr << "(i), DL => Vars%" << abbr << "(i)%DL)";
         indent += "   ";
         w << indent << "select case (Var%DL%Num)";
         for (const auto &field : fields)
@@ -500,7 +505,19 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
             {
                 comment = std::string("Rank ") + std::to_string(field.rank) + " Array";
             }
-            w << indent << "   call MV_Pack2(Var, " << field_path << ", ValAry)  ! " << comment;
+            if ((field.name.compare("BD_x_q") == 0) && (short_type.compare("ContState") == 0))
+            {
+                // This is a hack to convert BeamDyn's WM orientations to quaternions
+                w << indent << "   if (Var%Field == FieldOrientation) then";
+                w << indent << "      ValAry(Var%iLoc(1):Var%iLoc(2)) = wm_to_quat(wm_inv(x%q(4:6, Var%jAry)))  ! Convert WM parameters to quaternions";
+                w << indent << "   else";
+                w << indent << "      call MV_Pack2(Var, " << field_path << ", ValAry)  ! " << comment;
+                w << indent << "   end if";
+            }
+            else
+            {
+                w << indent << "   call MV_Pack2(Var, " << field_path << ", ValAry)  ! " << comment;
+            }
         }
         w << indent << "case default";
         w << indent << "   ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki";
@@ -508,34 +525,27 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
         indent.erase(indent.size() - 3);
         w << indent << "end associate";
         indent.erase(indent.size() - 3);
-        w << indent << "end subroutine";
-        w << indent;
-
-        // Vars packing routine
-        indent = "\n";
-        w << indent << "subroutine " << mod.nickname + "_Pack" + tmp[2] + "Ary" << "(Vars, " << abbr << ", ValAry)";
-        indent += "   ";
-        w << indent << "type(" << ddt.type_fortran << "), intent(in) :: " << abbr;
-        w << indent << "type(ModVarsType), intent(in)   :: Vars";
-        w << indent << "real(R8Ki), intent(inout)       :: ValAry(:)";
-        w << indent << "integer(IntKi)                  :: i";
-        w << indent << "do i = 1, size(Vars%" << abbr << ")";
-        w << indent << "   call " << routine_name << "(Vars%" << abbr << "(i), " << abbr << ", ValAry)";
         w << indent << "end do";
         indent.erase(indent.size() - 3);
         w << indent << "end subroutine";
         w << indent;
 
-        // Var unpacking routine
-        routine_name = mod.nickname + "_Unpack" + tmp[2] + "Var";
+        // No unpack function for continuous state derivatives
+        if (abbr.compare("ContStateDeriv") == 0)
+            continue;
+
+        // Vars unpacking routine
         indent = "\n";
-        w << indent << "subroutine " << routine_name << "(Var, ValAry, " << abbr << ")";
+        routine_name = mod.nickname + "_Unpack" + short_type + "Ary";
+        w << indent << "subroutine " << routine_name << "(Vars, ValAry, " << abbr << ")";
         indent += "   ";
-        w << indent << "type(ModVarType), intent(in)    :: Var";
+        w << indent << "type(ModVarsType), intent(in)   :: Vars";
         w << indent << "real(R8Ki), intent(in)          :: ValAry(:)";
         w << indent << "type(" << ddt.type_fortran << "), intent(inout) :: " << abbr;
         w << indent << "integer(IntKi)                  :: i";
-        w << indent << "associate (DL => Var%DL)";
+        w << indent << "do i = 1, size(Vars%" << abbr << ")";
+        indent += "   ";
+        w << indent << "associate (Var => Vars%" << abbr << "(i), DL => Vars%" << abbr << "(i)%DL)";
         indent += "   ";
         w << indent << "select case (Var%DL%Num)";
         for (const auto &field : fields)
@@ -551,29 +561,27 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
             {
                 comment = std::string("Rank ") + std::to_string(field.rank) + " Array";
             }
-            w << indent << "   call MV_Unpack2(Var, ValAry, " << field_path << ")  ! " << comment;
+            if (field.name.compare("BD_x_q") == 0)
+            {
+                // This is a hack to convert BeamDyn's WM orientations to quaternions
+                w << indent << "   if (Var%Field == FieldOrientation) then";
+                w << indent << "      x%q(4:6, Var%jAry) = wm_inv(quat_to_wm(ValAry(Var%iLoc(1):Var%iLoc(2))))  ! Convert quaternion to WM parameters";
+                w << indent << "   else";
+                w << indent << "      call MV_Unpack2(Var, ValAry, " << field_path << ")  ! " << comment;
+                w << indent << "   end if";
+            }
+            else
+            {
+                w << indent << "   call MV_Unpack2(Var, ValAry, " << field_path << ")  ! " << comment;
+            }
         }
         w << indent << "end select";
         indent.erase(indent.size() - 3);
         w << indent << "end associate";
         indent.erase(indent.size() - 3);
-        w << indent << "end subroutine";
-        w << indent;
-
-        // Vars unpacking routine
-        indent = "\n";
-        w << indent << "subroutine " << mod.nickname + "_Unpack" + tmp[2] + "Ary" << "(Vars, ValAry, " << abbr << ")";
-        indent += "   ";
-        w << indent << "type(ModVarsType), intent(in)   :: Vars";
-        w << indent << "real(R8Ki), intent(in)          :: ValAry(:)";
-        w << indent << "type(" << ddt.type_fortran << "), intent(inout) :: " << abbr;
-        w << indent << "integer(IntKi)                  :: i";
-        w << indent << "do i = 1, size(Vars%" << abbr << ")";
-        w << indent << "   call " << routine_name << "(Vars%" << abbr << "(i), ValAry, " << abbr << ")";
         w << indent << "end do";
         indent.erase(indent.size() - 3);
         w << indent << "end subroutine";
-        w << indent;
         w << indent;
     }
 }

@@ -46,7 +46,6 @@ Module SubDyn
    PUBLIC :: SD_JacobianPInput       ! 
    PUBLIC :: SD_JacobianPDiscState   ! 
    PUBLIC :: SD_JacobianPConstrState ! 
-   PUBLIC :: SD_GetOP                ! 
    PUBLIC :: SD_ProgDesc
    
 CONTAINS
@@ -387,7 +386,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    END IF
       
    ! Initialize module variables
-   call SD_InitVars(Init, u, p, x, y, m, InitOut, InitInput%Linearize, ErrStat2, ErrMsg2); if(Failed()) return
+   call SD_InitVars(InitOut%Vars, Init, u, p, x, y, m, InitOut, InitInput%Linearize, ErrStat2, ErrMsg2); if(Failed()) return
    
    ! Tell GLUECODE the SubDyn timestep interval 
    Interval = p%SDdeltaT
@@ -414,7 +413,8 @@ END SUBROUTINE SD_Init
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> SD_InitVars initializes the variables for this module for use by the solver and linearization
-subroutine SD_InitVars(Init, u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
+subroutine SD_InitVars(Vars, Init, u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
+   type(ModVarsType),            intent(out)    :: Vars        !< Module variables
    type(SD_InitType),            intent(in)     :: Init        !< Input data for initialization routine
    type(SD_InputType),           intent(inout)  :: u           !< An initial guess for the input; input mesh must be defined
    type(SD_ParameterType),       intent(inout)  :: p           !< Parameters
@@ -433,28 +433,17 @@ subroutine SD_InitVars(Init, u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    integer(IntKi)          :: i, j
    real(R8Ki)              :: dx, dy, dz, maxDim
 
-   ! Allocate space for variables (deallocate if already allocated)
-   if (associated(p%Vars)) deallocate(p%Vars)
-   allocate(p%Vars, stat=ErrStat2)
-   if (ErrStat2 /= 0) then
-      call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
-      return
-   end if
-
-   ! Add pointers to vars to initialization output
-   InitOut%Vars => p%Vars
-
    !----------------------------------------------------------------------------
    ! Continuous State Variables
    !----------------------------------------------------------------------------
 
-   call MV_AddVar(p%Vars%x, "Modes", FieldScalar, DatLoc(SD_x_qm), &
+   call MV_AddVar(Vars%x, "Modes", FieldScalar, DatLoc(SD_x_qm), &
                   Num=p%nDOFM, &
                   DerivOrder=0, &
                   Perturb=2.0_ReKi*D2R_D, &
                   LinNames=[('Craig-Bampton mode '//trim(num2lstr(i))//' amplitude, -', i=1, p%nDOFM)])
 
-   call MV_AddVar(p%Vars%x, "Modes", FieldScalar, DatLoc(SD_x_qmdot), &
+   call MV_AddVar(Vars%x, "Modes", FieldScalar, DatLoc(SD_x_qmdot), &
                   Num=p%nDOFM, &
                   DerivOrder=0, &
                   Perturb=2.0_ReKi*D2R_D, &
@@ -469,7 +458,7 @@ subroutine SD_InitVars(Init, u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    dz = maxval(Init%Nodes(:,4))- minval(Init%Nodes(:,4))
    maxDim = max(dx, dy, dz)
 
-   call MV_AddMeshVar(p%Vars%u, "TPMesh", MotionFields, DatLoc(SD_u_TPMesh), &
+   call MV_AddMeshVar(Vars%u, "TPMesh", MotionFields, DatLoc(SD_u_TPMesh), &
                       Mesh=u%TPMesh, &
                       Perturbs=[2.0_R8Ki*D2R_D, &  ! TranslationDisp
                                 2.0_R8Ki*D2R_D, &  ! Orientation
@@ -478,7 +467,7 @@ subroutine SD_InitVars(Init, u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
                                 2.0_R8Ki*D2R_D, &  ! TranslationAcc
                                 2.0_R8Ki*D2R_D])   ! RotationAcc
 
-   call MV_AddMeshVar(p%Vars%u, "LMesh", LoadFields, DatLoc(SD_u_LMesh), &
+   call MV_AddMeshVar(Vars%u, "LMesh", LoadFields, DatLoc(SD_u_LMesh), &
                       Mesh=u%LMesh, &
                       Perturbs=[170*maxDim**2, 14*maxDim**3]) ! Force, Moment
    
@@ -487,12 +476,12 @@ subroutine SD_InitVars(Init, u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    ! Mesh variables
-   call MV_AddMeshVar(p%Vars%y, 'Y1Mesh', LoadFields, DatLoc(SD_y_Y1Mesh), Mesh=y%Y1Mesh)
-   call MV_AddMeshVar(p%Vars%y, 'Y2Mesh', MotionFields, DatLoc(SD_y_Y2Mesh), Mesh=y%Y2Mesh)
-   call MV_AddMeshVar(p%Vars%y, 'Y3Mesh', MotionFields, DatLoc(SD_y_Y3Mesh), Mesh=y%Y3Mesh)
+   call MV_AddMeshVar(Vars%y, 'Y1Mesh', LoadFields, DatLoc(SD_y_Y1Mesh), Mesh=y%Y1Mesh)
+   call MV_AddMeshVar(Vars%y, 'Y2Mesh', MotionFields, DatLoc(SD_y_Y2Mesh), Mesh=y%Y2Mesh)
+   call MV_AddMeshVar(Vars%y, 'Y3Mesh', MotionFields, DatLoc(SD_y_Y3Mesh), Mesh=y%Y3Mesh)
 
    ! Output variables
-   call MV_AddVar(p%Vars%y, "WriteOutput", FieldScalar, DatLoc(SD_y_WriteOutput), &
+   call MV_AddVar(Vars%y, "WriteOutput", FieldScalar, DatLoc(SD_y_WriteOutput), &
                   Num=p%NumOuts, &
                   Flags=VF_WriteOut, &
                   LinNames=[(WriteOutputLinName(i), i = 1, p%numOuts)])
@@ -501,7 +490,7 @@ subroutine SD_InitVars(Init, u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    ! Initialize Variables and Values
    !----------------------------------------------------------------------------
 
-   CALL MV_InitVarsJac(p%Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+   CALL MV_InitVarsJac(Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
 
    call SD_CopyContState(x, m%x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
    call SD_CopyContState(x, m%dxdt_jac, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
@@ -517,77 +506,6 @@ contains
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
       Failed =  ErrStat >= AbortErrLev
    end function Failed
-end subroutine
-
-subroutine SD_PackStateOP(p, x, op)
-   type(SD_ParameterType), intent(in)        :: p
-   type(SD_ContinuousStateType), intent(in)  :: x
-   real(R8Ki), intent(out)                   :: op(:)
-   integer(IntKi)                            :: i
-   ! do i = 1, size(p%Vars%x)
-   !    associate(Var => p%Vars%x(i))
-   !       select case(Var%jUsr)
-   !       case (1)
-   !          op(Var%iLoc(1):Var%iLoc(2)) = x%qm
-   !       case (2)
-   !          op(Var%iLoc(1):Var%iLoc(2)) = x%qmdot
-   !       end select
-   !    end associate
-   ! end do
-end subroutine
-
-subroutine SD_UnpackStateOP(p, op, x)
-   type(SD_ParameterType), intent(in)           :: p
-   real(R8Ki), intent(in)                       :: op(:)
-   type(SD_ContinuousStateType), intent(inout)  :: x
-   integer(IntKi)                               :: i
-   ! do i = 1, size(p%Vars%x)
-   !    associate(Var => p%Vars%x(i))
-   !       select case(Var%jUsr)
-   !       case (1)
-   !          x%qm = op(Var%iLoc(1):Var%iLoc(2))
-   !       case (2)
-   !          x%qmdot = op(Var%iLoc(1):Var%iLoc(2))
-   !       end select
-   !    end associate
-   ! end do
-end subroutine
-
-subroutine SD_PackInputOP(p, u, op)
-   type(SD_ParameterType), intent(in)  :: p
-   type(SD_InputType), intent(in)      :: u
-   real(R8Ki), intent(out)             :: op(:)
-   ! call MV_Pack(p%Vars%u, p%iVarTPMesh, u%TPMesh, op)
-   ! call MV_Pack(p%Vars%u, p%iVarLMesh, u%LMesh, op)
-end subroutine
-
-subroutine SD_UnpackInputOP(p, op, u)
-   type(SD_ParameterType), intent(in)  :: p
-   real(R8Ki), intent(in)              :: op(:)
-   type(SD_InputType), intent(inout)   :: u
-   ! call MV_Unpack(p%Vars%u, p%iVarTPMesh, op, u%TPMesh)
-   ! call MV_Unpack(p%Vars%u, p%iVarLMesh, op, u%LMesh)
-end subroutine
-
-subroutine SD_PackOutputOP(p, y, op, PackWriteOutput)
-   type(SD_ParameterType), intent(in)  :: p
-   type(SD_OutputType), intent(in)     :: y
-   real(R8Ki), intent(out)             :: op(:)
-   logical, intent(in)                 :: PackWriteOutput
-   ! call MV_Pack(p%Vars%y, p%iVarY1Mesh, y%Y1Mesh, op)
-   ! call MV_Pack(p%Vars%y, p%iVarY2Mesh, y%Y2Mesh, op)
-   ! call MV_Pack(p%Vars%y, p%iVarY3Mesh, y%Y3Mesh, op)
-   ! if (PackWriteOutput) call MV_Pack(p%Vars%y, p%iVarWriteOutput, y%WriteOutput, op)
-end subroutine
-
-subroutine SD_UnpackOutputOP(p, op, y)
-   type(SD_ParameterType), intent(in)  :: p
-   real(R8Ki), intent(in)              :: op(:)
-   type(SD_OutputType), intent(out)    :: y
-   ! call MV_Unpack(p%Vars%y, p%iVarY1Mesh, op, y%Y1Mesh)
-   ! call MV_Unpack(p%Vars%y, p%iVarY2Mesh, op, y%Y2Mesh)
-   ! call MV_Unpack(p%Vars%y, p%iVarY3Mesh, op, y%Y3Mesh)
-   ! call MV_Unpack(p%Vars%y, p%iVarWriteOutput, op, y%WriteOutput)
 end subroutine
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2121,7 +2039,8 @@ END SUBROUTINE SD_AM2
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
-SUBROUTINE SD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, FlagFilter, dYdu, dXdu, dXddu, dZdu)
+SUBROUTINE SD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+   TYPE(ModVarsType),                 INTENT(IN   ) :: Vars               !< Module variables
    REAL(DbKi),                        INTENT(IN   ) :: t                  !< Time in seconds at operating point
    TYPE(SD_InputType),                INTENT(INOUT) :: u                  !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(SD_ParameterType),            INTENT(IN   ) :: p                  !< Parameters
@@ -2133,7 +2052,6 @@ SUBROUTINE SD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    TYPE(SD_MiscVarType),              INTENT(INOUT) :: m                  !< Misc/optimization variables
    INTEGER(IntKi),                    INTENT(  OUT) :: ErrStat            !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT) :: ErrMsg             !< Error message if ErrStat /= ErrID_None
-   integer(IntKi),          OPTIONAL, INTENT(IN   ) :: FlagFilter         !< Flag filter for variable calculation
    REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dYdu(:,:)          !< Partial derivatives of output functions (Y) wrt the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXdu(:,:)          !< Partial derivatives of continuous state functions (X) wrt the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXddu(:,:)         !< Partial derivatives of discrete state functions (Xd) wrt the inputs (u) [intent in to avoid deallocation]
@@ -2142,99 +2060,82 @@ SUBROUTINE SD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    character(*), parameter       :: RoutineName = 'SD_JacobianPInput'
    integer(intKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
-   logical                       :: IsFullLin
-   integer(IntKi)                :: FlagFilterLoc
    integer(IntKi)                :: i, j, k, col
 
    ErrStat = ErrID_None
    ErrMsg  = ''
-
-   ! Set full linearization flag and local filter flag
-   if (present(FlagFilter)) then
-      IsFullLin = FlagFilter == VF_None
-      FlagFilterLoc = FlagFilter
-   else
-      IsFullLin = .true.
-      FlagFilterLoc = VF_None
-   end if
 
    ! Calculate OP values here
    call SD_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 ); if(Failed()) return
 
    ! Make a copy of the inputs to perturb
    call SD_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if(Failed()) return
-   call SD_PackInputOP(p, u, m%Jac%u)
+   call SD_PackInputAry(Vars, u, m%Jac%u)
 
    ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
    if (present(dYdu)) then
 
       if (.not. allocated(dYdu)) then
-         call AllocAry(dYdu, p%Vars%Ny, p%Vars%Nu, 'dYdu', ErrStat2, ErrMsg2); if(Failed()) return
+         call AllocAry(dYdu, m%Jac%Ny, m%Jac%Nu, 'dYdu', ErrStat2, ErrMsg2); if(Failed()) return
       end if
       
       ! Loop through input variables
-      do i = 1, size(p%Vars%u)
-
-         ! If variable flag not in flag filter, skip
-         if (.not. MV_HasFlags(p%Vars%u(i), FlagFilterLoc)) cycle
+      do i = 1, size(Vars%u)
 
          ! Loop through number of linearization perturbations in variable
-         do j = 1,p%Vars%u(i)%Num
+         do j = 1,Vars%u(i)%Num
                        
             ! Calculate positive perturbation
-            call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call SD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
+            call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
+            call SD_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
             call SD_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_jac, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call SD_PackOutputOP(p, m%y_jac, m%Jac%y_pos, IsFullLin)
+            call SD_PackOutputAry(Vars, m%y_jac, m%Jac%y_pos)
 
             ! Calculate negative perturbation
-            call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call SD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
+            call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
+            call SD_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
             call SD_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_jac, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call SD_PackOutputOP(p, m%y_jac, m%Jac%y_neg, IsFullLin)
+            call SD_PackOutputAry(Vars, m%y_jac, m%Jac%y_neg)
 
             ! Calculate column index
-            col = p%Vars%u(i)%iLoc(1) + j - 1
+            col = Vars%u(i)%iLoc(1) + j - 1
 
             ! Get partial derivative via central difference
-            call MV_ComputeCentralDiff(p%Vars%y, p%Vars%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,col))
+            call MV_ComputeCentralDiff(Vars%y, Vars%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,col))
          end do
       end do
    end if
 
    ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
-   if (present(dXdu) .and. (p%Vars%Nx > 0)) then
+   if (present(dXdu) .and. (m%Jac%Nx > 0)) then
 
       if (.not. allocated(dXdu)) then
-         call AllocAry(dXdu, p%Vars%Nx, p%Vars%Nu, 'dXdu', ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(dXdu, m%Jac%Nx, m%Jac%Nu, 'dXdu', ErrStat2, ErrMsg2); if (Failed()) return
       endif
       
       ! Loop through input variables
-      do i = 1,size(p%Vars%u)
-
-         ! If variable flag not in flag filter, skip
-         if (.not. MV_HasFlags(p%Vars%u(i), FlagFilterLoc)) cycle
+      do i = 1,size(Vars%u)
 
          ! Loop through number of linearization perturbations in variable
-         do j = 1,p%Vars%u(i)%Num
+         do j = 1,Vars%u(i)%Num
                        
             ! Calculate positive perturbation and resulting continuous state derivatives
-            call MV_Perturb(p%Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call SD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
+            call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
+            call SD_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
             call SD_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_jac, ErrStat2, ErrMsg2); if (Failed()) return
-            call SD_PackStateOP(p, m%dxdt_jac, m%Jac%x_pos)
+            call SD_PackContStateAry(Vars, m%dxdt_jac, m%Jac%x_pos)
 
             ! Calculate negative perturbation and resulting continuous state derivatives
-            call MV_Perturb(p%Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call SD_UnpackInputOP(p, m%Jac%u_perturb, m%u_perturb)
+            call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
+            call SD_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
             call SD_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_jac, ErrStat2, ErrMsg2); if (Failed()) return
-            call SD_PackStateOP(p, m%dxdt_jac, m%Jac%x_neg)
+            call SD_PackContStateAry(Vars, m%dxdt_jac, m%Jac%x_neg)
 
             ! Calculate column index
-            col = p%Vars%u(i)%iLoc(1) + j - 1
+            col = Vars%u(i)%iLoc(1) + j - 1
 
             ! Get partial derivative via central difference
-            dXdu(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * p%Vars%u(i)%Perturb) 
+            dXdu(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%u(i)%Perturb) 
          end do
       end do
    end if
@@ -2256,7 +2157,8 @@ END SUBROUTINE SD_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
-SUBROUTINE SD_JacobianPContState(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, FlagFilter, dYdx, dXdx, dXddx, dZdx)
+SUBROUTINE SD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx)
+   TYPE(ModVarsType),                 INTENT(IN   ) :: Vars               !< Module variables
    REAL(DbKi),                        INTENT(IN   ) :: t                  !< Time in seconds at operating point
    TYPE(SD_InputType),                INTENT(INOUT) :: u                  !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(SD_ParameterType),            INTENT(IN   ) :: p                  !< Parameters
@@ -2268,7 +2170,6 @@ SUBROUTINE SD_JacobianPContState(t, u, p, x, xd, z, OtherState, y, m, ErrStat, E
    TYPE(SD_MiscVarType),              INTENT(INOUT) :: m                  !< Misc/optimization variables
    INTEGER(IntKi),                    INTENT(  OUT) :: ErrStat            !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT) :: ErrMsg             !< Error message if ErrStat /= ErrID_None
-   integer(IntKi),          OPTIONAL, INTENT(IN   ) :: FlagFilter         !< Flag filter for variable calculation
    REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dYdx(:,:)          !< Partial derivatives of output functions wrt the continuous states (x) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXdx(:,:)          !< Partial derivatives of continuous state functions (X) wrt the continuous states (x) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXddx(:,:)         !< Partial derivatives of discrete state functions (Xd) wrt the continuous states (x) [intent in to avoid deallocation]
@@ -2277,8 +2178,6 @@ SUBROUTINE SD_JacobianPContState(t, u, p, x, xd, z, OtherState, y, m, ErrStat, E
    character(*), parameter       :: RoutineName = 'SD_JacobianPContState'
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
-   logical                       :: IsFullLin
-   integer(IntKi)                :: FlagFilterLoc
    integer(IntKi)                :: i, j, k, col
    
    ! Initialize ErrStat
@@ -2286,55 +2185,43 @@ SUBROUTINE SD_JacobianPContState(t, u, p, x, xd, z, OtherState, y, m, ErrStat, E
    ErrMsg  = ''
 
    ! If no state variables, return
-   if (p%Vars%Nx == 0) return
-
-   ! Set full linearization flag and local filter flag
-   if (present(FlagFilter)) then
-      IsFullLin = FlagFilter == VF_None
-      FlagFilterLoc = FlagFilter
-   else
-      IsFullLin = .true.
-      FlagFilterLoc = VF_None
-   end if
+   if (m%Jac%Nx == 0) return
    
    ! make a copy of the continuous states to perturb NOTE: MESH_NEWCOPY
    call SD_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if(Failed()) return
-   call SD_PackStateOP(p, x, m%Jac%x)
+   call SD_PackContStateAry(Vars, x, m%Jac%x)
 
    ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
    if (present(dYdx)) then
 
       ! Allocate dYdx if not allocated
       if (.not. allocated(dYdx)) then
-         call AllocAry(dYdx, p%Vars%Ny, p%Vars%Nx, 'dYdx', ErrStat2, ErrMsg2); if(Failed()) return
+         call AllocAry(dYdx, m%Jac%Ny, m%Jac%Nx, 'dYdx', ErrStat2, ErrMsg2); if(Failed()) return
       end if
 
       ! Loop through state variables
-      do i = 1,size(p%Vars%x)
-
-         ! If variable flag not in flag filter, skip
-         if (.not. MV_HasFlags(p%Vars%x(i), FlagFilterLoc)) cycle
+      do i = 1,size(Vars%x)
 
          ! Loop through number of linearization perturbations in variable
-         do j = 1,p%Vars%x(i)%Num
+         do j = 1,Vars%x(i)%Num
                         
             ! Calculate positive perturbation
-            call MV_Perturb(p%Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-            call SD_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
+            call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
+            call SD_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
             call SD_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_jac, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call SD_PackOutputOP(p, m%y_jac, m%Jac%y_pos, IsFullLin)
+            call SD_PackOutputAry(Vars, m%y_jac, m%Jac%y_pos)
 
             ! Calculate negative perturbation
-            call MV_Perturb(p%Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-            call SD_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
+            call MV_Perturb(Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
+            call SD_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
             call SD_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_jac, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call SD_PackOutputOP(p, m%y_jac, m%Jac%y_neg, IsFullLin)
+            call SD_PackOutputAry(Vars, m%y_jac, m%Jac%y_neg)
 
             ! Calculate column index
-            col = p%Vars%x(i)%iLoc(1) + j - 1
+            col = Vars%x(i)%iLoc(1) + j - 1
 
             ! Get partial derivative via central difference and store in full linearization array
-            call MV_ComputeCentralDiff(p%Vars%y, p%Vars%x(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdx(:,col))
+            call MV_ComputeCentralDiff(Vars%y, Vars%x(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdx(:,col))
          end do
       end do
    end if
@@ -2353,35 +2240,32 @@ SUBROUTINE SD_JacobianPContState(t, u, p, x, xd, z, OtherState, y, m, ErrStat, E
          
          ! Allocate dXdx if not allocated
          if (.not. allocated(dXdx)) then
-            call AllocAry(dXdx, p%Vars%Nx, p%Vars%Nx, 'dXdx', ErrStat2, ErrMsg2); if(Failed()) return
+            call AllocAry(dXdx, m%Jac%Nx, m%Jac%Nx, 'dXdx', ErrStat2, ErrMsg2); if(Failed()) return
          end if
 
          ! Loop through state variables
-         do i = 1,size(p%Vars%x)
-
-            ! If variable flag not in flag filter, skip
-            if (.not. MV_HasFlags(p%Vars%x(i), FlagFilterLoc)) cycle
+         do i = 1,size(Vars%x)
 
             ! Loop through number of linearization perturbations in variable
-            do j = 1, p%Vars%x(i)%Num
+            do j = 1, Vars%x(i)%Num
 
                ! Calculate positive perturbation
-               call MV_Perturb(p%Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-               call ED_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
-               call ED_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_jac, ErrStat2, ErrMsg2); if (Failed()) return
-               call ED_PackContStateOP(p, m%dxdt_jac, m%Jac%x_pos)
+               call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
+               call SD_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+               call SD_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_jac, ErrStat2, ErrMsg2); if (Failed()) return
+               call SD_PackContStateAry(Vars, m%dxdt_jac, m%Jac%x_pos)
 
                ! Calculate negative perturbation
-               call MV_Perturb(p%Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-               call ED_UnpackStateOP(p, m%Jac%x_perturb, m%x_perturb)
-               call ED_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_jac, ErrStat2, ErrMsg2); if (Failed()) return
-               call ED_PackContStateOP(p, m%dxdt_jac, m%Jac%x_neg)
+               call MV_Perturb(Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
+               call SD_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+               call SD_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_jac, ErrStat2, ErrMsg2); if (Failed()) return
+               call SD_PackContStateAry(Vars, m%dxdt_jac, m%Jac%x_neg)
 
                ! Calculate column index
-               col = p%Vars%x(i)%iLoc(1) + j - 1
+               col = Vars%x(i)%iLoc(1) + j - 1
 
                ! Get partial derivative via central difference and store in full linearization array
-               dXdx(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * p%Vars%x(i)%Perturb)
+               dXdx(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%x(i)%Perturb)
             end do
          end do
       endif ! analytical or numerical
@@ -2468,76 +2352,7 @@ SUBROUTINE SD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
    IF ( PRESENT(dZdz) ) THEN
    END IF
 END SUBROUTINE SD_JacobianPConstrState
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedTrimOP )
-   REAL(DbKi),                        INTENT(IN   ) :: t          !< Time in seconds at operating point
-   TYPE(SD_InputType),                INTENT(INOUT) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(SD_ParameterType),            INTENT(IN   ) :: p          !< Parameters
-   TYPE(SD_ContinuousStateType),      INTENT(IN   ) :: x          !< Continuous states at operating point
-   TYPE(SD_DiscreteStateType),        INTENT(IN   ) :: xd         !< Discrete states at operating point
-   TYPE(SD_ConstraintStateType),      INTENT(IN   ) :: z          !< Constraint states at operating point
-   TYPE(SD_OtherStateType),           INTENT(IN   ) :: OtherState !< Other states at operating point
-   TYPE(SD_OutputType),               INTENT(IN   ) :: y          !< Output at operating point
-   TYPE(SD_MiscVarType),              INTENT(INOUT) :: m          !< Misc/optimization variables
-   INTEGER(IntKi),                    INTENT(  OUT) :: ErrStat    !< Error status of the operation
-   CHARACTER(*),                      INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: u_op(:)    !< values of linearized inputs
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: y_op(:)    !< values of linearized outputs
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: x_op(:)    !< values of linearized continuous states
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dx_op(:)   !< values of first time derivatives of linearized continuous states
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: xd_op(:)   !< values of linearized discrete states
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: z_op(:)    !< values of linearized constraint states
-   LOGICAL,                 OPTIONAL, INTENT(IN   ) :: NeedTrimOP !< whether a y_op values should contain values for trim solution (3-value representation instead of full orientation matrices, no rotation acc)
 
-   CHARACTER(*), PARAMETER       :: RoutineName = 'SD_GetOP'
-   INTEGER(IntKi)                :: ErrStat2
-   CHARACTER(ErrMsgLen)          :: ErrMsg2
-
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-
-   if (present(u_op)) then
-      if (.not. allocated(u_op)) then
-         call AllocAry(u_op, p%Vars%Nu, 'u_op', ErrStat2, ErrMsg2); if(Failed()) return
-      end if
-      call SD_PackInputOP(p, u, u_op)
-   end if
-   
-   if (present(y_op)) then
-      if (.not. allocated(y_op)) then
-         call AllocAry(y_op, p%Vars%Ny, 'y_op', ErrStat2, ErrMsg2); if(Failed()) return
-      end if
-      call SD_PackOutputOP(p, y, y_op, .true.)
-   end if
-   
-   if (present(x_op)) then
-      if (.not. allocated(x_op)) then
-         call AllocAry(x_op, p%Vars%Nx, 'x_op', ErrStat2, ErrMsg2); if (Failed()) return
-      end if
-      call SD_PackStateOP(p, x, x_op)
-   end if
-
-   if (present(dx_op)) then
-      if (.not. allocated(dx_op)) then
-         call AllocAry(dx_op, p%Vars%Nx, 'dx_op', ErrStat2, ErrMsg2); if(failed()) return
-      end if
-      call SD_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, m%dxdt_jac, ErrStat2, ErrMsg2); if(Failed()) return
-      call SD_PackStateOP(p, m%dxdt_jac, dx_op)
-   end if
-
-   if (present(xd_op)) then
-   end if
-
-   if (present(z_op)) then
-   end if
-
-contains
-   logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
-        Failed =  ErrStat >= AbortErrLev
-   end function Failed
-END SUBROUTINE SD_GetOP
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++   
 !------------------------------------------------------------------------------------------------------
 !> Perform Craig Bampton (CB) reduction and set parameters needed for States and Ouputs equations

@@ -32,7 +32,7 @@ typedef         ^       ^                   CHARACTER(24)    compilingData      
 typedef         ^       ^                   CHARACTER(15)    writeOutputHdr    {:}        ""                  -            "first line output file contents: output variable names"
 typedef         ^       ^                   CHARACTER(15)    writeOutputUnt    {:}        ""                  -            "second line of output file contents: units"
 typedef         ^       ^                   ProgDesc         Ver                -         ""                  -            "this module's name, version, and date"
-typedef         ^       ^                   ModVarsType     *Vars               -          -                  -            "Module Variables"  -
+typedef         ^       ^                   ModVarsType      Vars               -          -                  -            "Module Variables"  -
 
 ## ============================== Define Continuous states here: =====================================================================================================================================
 typedef         ^       ContinuousStateType R8Ki             dummy              -         -                   -            "Remove this variable if you have continuous states" -
@@ -70,8 +70,7 @@ typedef        ^        ^                   R8Ki             z                 {
 
 
 ## ============================== Parameters ============================================================================================================================================
-typedef         ^        ParameterType       ModVarsType     &Vars               -         -                   -            "Module Variables"
-typedef         ^        ^                   R8Ki             g                  -         -                   -            "gravitational constant"                          "[kg/m^2]"
+typedef         ^        ParameterType       R8Ki             g                  -         -                   -            "gravitational constant"                          "[kg/m^2]"
 typedef         ^        ^                   R8Ki             depth              -         -                   -            "distance to seabed"                              "[m]"
 typedef         ^        ^                   R8Ki             rho_sea            -         -                   -            "density of seawater"                             "[m]"
 typedef         ^        ^                   R8Ki             dt                 -         -                   -            "time step coupling interval"                     "[sec]"
