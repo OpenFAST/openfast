@@ -1685,6 +1685,11 @@ subroutine UA_TurnOff_param(p, AFInfo, ErrStat, ErrMsg)
          ErrStat = ErrID_Fatal
          ErrMsg  = 'UA parameters are not included in airfoil.'
          return
+      else if ( (p%UAMod == UA_HGM .or. p%UAMod == UA_OYE .or. p%UAMod == UA_HGMV .or. p%UAMod==UA_HGMV360) .and. &
+                (maxval( AFInfo%Table(j)%Coefs(:, AFInfo%ColUAf) ) == 0.0_ReKi ) ) then
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'separation function is 0 at all values.'
+         return
       end if
    end do
       
