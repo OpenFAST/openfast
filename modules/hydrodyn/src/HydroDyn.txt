@@ -181,7 +181,6 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            InputType                     Morison_InputType        Morison                         -          -          -         "Morison module inputs" -
 typedef   ^                            InputType                     MeshType                 WAMITMesh                       -          -          -         "Motions at the WAMIT reference point(s) in the inertial frame" -
 typedef   ^                            InputType                     MeshType                 PRPMesh                         -          -          -         "Motions at the Platform reference point in the inertial frame" -
-typedef   ^                            InputType                     ReKi                     PtfmRefY                        -          -          -         "Reference yaw position of the PRP relative to the inertial frame" (radians) 
 #
 #
 # ..... Outputs ...................................................................................................................
