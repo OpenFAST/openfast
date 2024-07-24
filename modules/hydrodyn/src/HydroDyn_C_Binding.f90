@@ -547,7 +547,8 @@ CONTAINS
          ! initial position and orientation of node
          InitPos  = tmpNodePos(1:3,iNode)
          theta    = real(tmpNodePos(4:6,iNode),DbKi)    ! convert ReKi to DbKi to avoid roundoff
-         CALL SmllRotTrans( 'InputRotation', theta(1), theta(2), theta(3), Orient, 'Orient', ErrStat, ErrMsg )
+         ! CALL SmllRotTrans( 'InputRotation', theta(1), theta(2), theta(3), Orient, 'Orient', ErrStat, ErrMsg )
+         Orient = EulerConstructZYX(theta)
          call MeshPositionNode(  HD_MotionMesh            , &
                                  iNode                    , &
                                  InitPos                  , &  ! position
@@ -1071,7 +1072,8 @@ subroutine Set_MotionMesh(ErrStat3, ErrMsg3)
    ! Set mesh corresponding to input motions
    do iNode=1,NumNodePts
       theta    = real(tmpNodePos(4:6,iNode),DbKi)    ! convert ReKi to DbKi to avoid roundoff
-      CALL SmllRotTrans( 'InputRotation', theta(1), theta(2), theta(3), Orient, 'Orient', ErrStat3, ErrMsg3 )
+      ! CALL SmllRotTrans( 'InputRotation', theta(1), theta(2), theta(3), Orient, 'Orient', ErrStat3, ErrMsg3 )
+      Orient = EulerConstructZYX(theta)
       HD_MotionMesh%TranslationDisp(1:3,iNode) = tmpNodePos(1:3,iNode) - HD_MotionMesh%Position(1:3,iNode)  ! relative displacement only
       HD_MotionMesh%Orientation(1:3,1:3,iNode) = Orient
       HD_MotionMesh%TranslationVel( 1:3,iNode) = tmpNodeVel(1:3,iNode)
