@@ -9,6 +9,7 @@ False         Echo               - Echo the input to "<rootname>.AD.ech"?  (flag
 False         TwrAero            - Calculate tower aerodynamic loads? (flag)
 False         CavitCheck         - Perform cavitation check? (flag) [UA_Mod must be 0 when CavitCheck=true]
 False         Buoyancy           - Include buoyancy effects? (flag)
+False         NacelleDrag        - Include Nacelle Drag effects? (flag)
 False         CompAA             - Flag to compute AeroAcoustics calculation [used only when Wake_Mod = 1 or 2]
 "unused"      AA_InputFile       - AeroAcoustics input file [used only when CompAA=true]
 ======  Environmental Conditions  ===================================================================
@@ -75,9 +76,12 @@ True          UseBlCm            - Include aerodynamic pitching moment in calcul
 ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
           0   VolHub             - Hub volume (m^3)
           0   HubCenBx           - Hub center of buoyancy x direction offset (m)
-======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
+======  Nacelle Properties ========================================================================== [used only when Buoyancy=True or NacelleDrag=True]
           0   VolNac             - Nacelle volume (m^3)
-          0,          0,          0    NacCenB            - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
+    0, 0, 0   NacCenB            - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
+    0, 0, 0   NacArea            - Projected area of the nacelle in X, Y, Z in the nacelle coordinate system (m^2)
+    0, 0, 0   NacCd              - Drag coefficient for the nacelle areas defined above (-)
+    0, 0, 0   NacDragAC          - Position of aerodynamic center of nacelle drag in nacelle coordinates (m)
 ======  Tail Fin Aerodynamics =======================================================================
 False         TFinAero           - Calculate tail fin aerodynamics model (flag)
 "unused"      TFinFile           - Input file for tail fin aerodynamics [used only when TFinAero=True]
