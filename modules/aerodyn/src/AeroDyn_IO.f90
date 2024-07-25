@@ -1029,7 +1029,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
          ! NacArea - Projected area of the nacelle in X, Y, Z in the nacelle coordinate system (m^2)
       call ParseAry( FileInfo_In, CurLine, "NacArea", InputFileData%rotors(iR)%NacArea, 3, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return
-         ! NacCd - Drag cefficient for the nacelle areas defied above (-)
+         ! NacCd - Drag coefficient for the nacelle areas defined above (-)
          call ParseAry( FileInfo_In, CurLine, "NacCd", InputFileData%rotors(iR)%NacCd, 3, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return
          ! NacDragAC - Position of aerodynamic center of nacelle drag in nacelle coordinates (m)
