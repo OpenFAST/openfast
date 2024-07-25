@@ -179,6 +179,12 @@ structural motion, depending on features enabled). The tower drag load
 calculation is quasi-steady and independent from the tower influence on
 flow models.
 
+Similarly, the aerodynamics drag loads on the nacelle is calculated using the 
+nacelle geometry, drag coefficients, and the local relative fluid 
+velocity between the freestream (undisturbed) flow and nacelle. The 
+nacelle drag load calculation is quasi-steady and independent from the 
+rotors influence on flow models.
+
 The primary AeroDyn input file defines modeling options, environmental
 conditions (except freestream flow), airfoils, tower nodal
 discretization and properties, tower, hub, and nacelle properties,
