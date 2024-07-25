@@ -68,7 +68,7 @@ typedef  ^            ^                DbKi               stiffXs        {30}   
 typedef  ^            ^                DbKi               stiffYs        {30}    -  -   "y array for stress-strain lookup table"
 typedef  ^            ^                IntKi              nBApoints      -       0  -   "number of values in stress-strainrate lookup table (0 means using constant c)"
 typedef  ^            ^                DbKi               dampXs         {30}     -  -   "x array for stress-strainrate lookup table (up to nCoef)"
-typedef  ^            ^                DbKi               dampYs         {30}     -  -   "y array for stress-strainrate lookup table	"
+typedef  ^            ^                DbKi               dampYs         {30}     -  -   "y array for stress-strainrate lookup table"
 typedef  ^            ^                IntKi              nEIpoints      -       0  -   "number of values in bending stress-strain lookup table (0 means using constant E)"
 typedef  ^            ^                DbKi               bstiffXs       {30}    -  -   "x array for stress-strain lookup table (up to nCoef)"
 typedef  ^            ^                DbKi               bstiffYs       {30}    -  -   "y array for stress-strain lookup table"
@@ -84,6 +84,8 @@ typedef  ^            ^                DbKi               Cdn            -      
 typedef  ^            ^                DbKi               Cdt            -       -  -   "tangential drag coefficient"
 typedef  ^            ^                DbKi               CdEnd          -       -  -   "drag coefficient for rod end"  "[-]"
 typedef  ^            ^                DbKi               CaEnd          -       -  -   "added mass coefficient for rod end"  "[-]"
+typedef  ^            ^                DbKi               LinDamp        -       -  -   "Linear damping, transverse damping for body element" "[N/(m/s)/m]"
+typedef  ^            ^                LOGICAL            isLinDamp      -       -  -   "Linear damping, transverse damping for body element is used" "-"
 
 # this is the Body type, which holds data for each body object
 typedef  ^            MD_Body          IntKi              IdNum          -       -  -   "integer identifier of this Point"
@@ -163,6 +165,8 @@ typedef  ^            ^                DbKi               Cdn            -      
 typedef  ^            ^                DbKi               Cdt            -        -  -   ""  "[-]"
 typedef  ^            ^                DbKi               CdEnd          -       -  -   "drag coefficient for rod end"  "[-]"
 typedef  ^            ^                DbKi               CaEnd          -       -  -   "added mass coefficient for rod end"  "[-]"
+typedef  ^            ^                DbKi               LinDamp        -       -  -   "Linear damping, transverse damping for rod element" "[N/(m/s)/m]"
+typedef  ^            ^                LOGICAL            isLinDamp      -       -  -   "Linear damping, transverse damping for rod element is used" "-"
 typedef  ^            ^                DbKi               time           -       -  -   "current time"         "[s]"
 typedef  ^            ^                DbKi               roll           -       -  -   "roll relative to vertical"         "[rad]"
 typedef  ^            ^                DbKi               pitch          -       -  -   "pitch relative to vertical"        "[rad]"
@@ -228,7 +232,7 @@ typedef  ^            ^                DbKi               stiffXs       {30}    
 typedef  ^            ^                DbKi               stiffYs       {30}     -  -   "y array for stress-strain lookup table"
 typedef  ^            ^                IntKi              nBApoints     -        0  -   "number of values in stress-strainrate lookup table (0 means using constant c)"
 typedef  ^            ^                DbKi               dampXs        {30}     -  -   "x array for stress-strainrate lookup table (up to nCoef)"
-typedef  ^            ^                DbKi               dampYs        {30}     -  -   "y array for stress-strainrate lookup table	"
+typedef  ^            ^                DbKi               dampYs        {30}     -  -   "y array for stress-strainrate lookup table"
 typedef  ^            ^                IntKi              nEIpoints     -        0  -   "number of values in bending stress-strain lookup table (0 means using constant E)"
 typedef  ^            ^                DbKi               bstiffXs      {30}     -  -   "x array for stress-strain lookup table (up to nCoef)"
 typedef  ^            ^                DbKi               bstiffYs      {30}     -  -   "y array for stress-strain lookup table"
@@ -265,9 +269,16 @@ typedef  ^            ^                DbKi               EndMomentB   {3}      
 typedef  ^            ^                IntKi              LineUnOut     -        -  -   "unit number of line output file"
 typedef  ^            ^                DbKi               LineWrOutput {:}       -  -   "one row of output data for this line"
 
-# this is the Fail type, which holds data for possible line failure descriptors  TO BE FILLED IN LATER
-typedef  ^            MD_Fail          IntKi              IdNum         -        -  -   "integer identifier of this failure"
-
+# this is the Fail type, which holds data for possible line failure descriptors 
+typedef  ^            MD_Fail          IntKi              IdNum           -        -  -   "integer identifier of this failure" "-"
+typedef  ^            ^                IntKi              attachID        -        -  -   "ID of connection or Rod the lines are attached to" "-"
+typedef  ^            ^                IntKi              isRod           -        -  -   "1 Rod end A, 2 Rod end B, 0 if point" "-"
+typedef  ^            ^                IntKi              lineIDs         {30}     -  -   "array of one or more lines to detach (starting from 1...)" "-"
+typedef  ^            ^                IntKi              lineTops        {30}     -  -   "an array that will be FILLED IN to return which end of each line was disconnected ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)" "-"
+typedef  ^            ^                IntKi              nLinesToDetach  -        -  -   "how many lines to dettach" "-"
+typedef  ^            ^                DbKi               failTime        -        -  -   "time of failure" "s"
+typedef  ^            ^                DbKi               failTen         -        -  -   "tension threshold of failure" "N"
+typedef  ^            ^                IntKi              failStatus      -        -  -   "0 not failed yet, 1 failed, 2 invalid" "-"
 
 # this is the MDOutParmType - a less literal alternative of the NWTC OutParmType for MoorDyn (to avoid huge lists of possible output channel permutations)
 typedef  ^            MD_OutParmType   CHARACTER(10)      Name          -        -  -   "name of output channel"
@@ -333,6 +344,7 @@ typedef   ^       ^                    IntKi               RodStateIsN      {:} 
 typedef   ^       ^                    IntKi               BodyStateIs1     {:}  -  -   "starting index of each body's states in state vector"                 ""
 typedef   ^       ^                    IntKi               BodyStateIsN     {:}  -  -   "ending index of each body's states in state vector"                 ""
 typedef   ^       ^                    IntKi               Nx                -   -  -   "number of states and size of state vector"                 ""
+typedef   ^       ^                    IntKi               Nxtra             -   -  -   "number of states and size of state vector including points for potential line failures"                 ""
 typedef   ^       ^                    IntKi               WaveTi            -   -  -   "current interpolation index for wave time series data"                 ""
 typedef   ^       ^           MD_ContinuousStateType       xTemp             -   -  -   "contains temporary state vector used in integration (put here so it's only allocated once)"
 typedef   ^       ^           MD_ContinuousStateType       xdTemp            -   -  -   "contains temporary state derivative vector used in integration (put here so it's only allocated once)"
@@ -390,7 +402,8 @@ typedef   ^       ^                    DbKi                mu_kT          -     
 typedef   ^       ^                    DbKi                mu_kA          -     -    -   "axial kinetic friction coefficient" "(-)"
 typedef   ^       ^                    DbKi                mc             -     -    -   "ratio of the static friction coefficient to the kinetic friction coefficient" "(-)"
 typedef   ^       ^                    DbKi                cv             -     -    -   "saturated damping coefficient" "(-)"
-typedef   ^       ^                    IntKi        inertialF            -           0  -   "Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 1 if yes, 0 if no" - 
+typedef   ^       ^                    IntKi        inertialF             -     0    -   "Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 0: no, 1: yes, 2: yes with ramp to inertialF_rampT" - 
+typedef   ^       ^                    R8Ki         inertialF_rampT       -    30    -   "Ramp time for inertial forces" - 
 # --- parameters for wave and current ---
 typedef   ^       ^                    IntKi        nxWave             -            -  -   "number of x wave grid points"            -
 typedef   ^       ^                    IntKi        nyWave             -            -  -   "number of y wave grid points"            -

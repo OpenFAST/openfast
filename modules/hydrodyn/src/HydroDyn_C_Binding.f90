@@ -353,6 +353,12 @@ SUBROUTINE HydroDyn_C_Init( OutRootName_C,                                      
    SeaSt%InitInp%defMSL2SWL      = REAL(defMSL2SWL_C, ReKi)    ! use values from SeaState
    SeaSt%InitInp%TMax            = REAL(TMax_C,       DbKi)
 
+   ! Platform reference position
+   !     This is only specified as an (X,Y) position (no Z).
+   SeaSt%InitInp%PtfmLocationX         = REAL(PtfmRefPtPositionX_C, ReKi)
+   SeaSt%InitInp%PtfmLocationY         = REAL(PtfmRefPtPositionY_C, ReKi)
+
+   
    ! Wave elevation output
    !     Wave elevations can be exported for a set of points (grid or any other layout).
    !     This feature is used only in the driver codes for exporting for visualization
@@ -398,60 +404,13 @@ SUBROUTINE HydroDyn_C_Init( OutRootName_C,                                      
 
    ! Values passed in
    HD%InitInp%Gravity            = REAL(Gravity_C,    ReKi)
-   HD%InitInp%WtrDens            = REAL(defWtrDens_C, ReKi)    ! use values from SeaState
-   HD%InitInp%WtrDpth            = REAL(defWtrDpth_C, ReKi)    ! use values from SeaState
-   HD%InitInp% MSL2SWL           = REAL(defMSL2SWL_C, ReKi)    ! use values from SeaState
    HD%InitInp%TMax               = REAL(TMax_C,       DbKi)
 
    ! Transfer data from SeaState
    ! Need to set up other module's InitInput data here because we will also need to clean up SeaState data and would rather not defer that cleanup
-   HD%InitInp%NStepWave      =  SeaSt%InitOutData%NStepWave
-   HD%InitInp%NStepWave2     =  SeaSt%InitOutData%NStepWave2
-   HD%InitInp%RhoXg          =  SeaSt%InitOutData%RhoXg
-   HD%InitInp%WaveMod        =  SeaSt%InitOutData%WaveMod
-   HD%InitInp%WaveStMod      =  SeaSt%InitOutData%WaveStMod
-   HD%InitInp%WaveDirMod     =  SeaSt%InitOutData%WaveDirMod
-   HD%InitInp%WvLowCOff      =  SeaSt%InitOutData%WvLowCOff 
-   HD%InitInp%WvHiCOff       =  SeaSt%InitOutData%WvHiCOff  
-   HD%InitInp%WvLowCOffD     =  SeaSt%InitOutData%WvLowCOffD
-   HD%InitInp%WvHiCOffD      =  SeaSt%InitOutData%WvHiCOffD 
-   HD%InitInp%WvLowCOffS     =  SeaSt%InitOutData%WvLowCOffS
-   HD%InitInp%WvHiCOffS      =  SeaSt%InitOutData%WvHiCOffS 
    HD%InitInp%InvalidWithSSExctn = SeaSt%InitOutData%InvalidWithSSExctn
-   
-   HD%InitInp%WaveDirMin     =  SeaSt%InitOutData%WaveDirMin  
-   HD%InitInp%WaveDirMax     =  SeaSt%InitOutData%WaveDirMax  
-   HD%InitInp%WaveDir        =  SeaSt%InitOutData%WaveDir     
-   HD%InitInp%WaveMultiDir   =  SeaSt%InitOutData%WaveMultiDir
-   HD%InitInp%WaveDOmega     =  SeaSt%InitOutData%WaveDOmega  
-   HD%InitInp%MCFD           =  SeaSt%InitOutData%MCFD
-   
-   CALL MOVE_ALLOC(  SeaSt%InitOutData%WaveElev0,  HD%InitInp%WaveElev0 )  
-   if(associated(SeaSt%InitOutData%WaveTime  ))    HD%InitInp%WaveTime       => SeaSt%InitOutData%WaveTime  
-   if(associated(SeaSt%InitOutData%WaveDynP  ))    HD%InitInp%WaveDynP       => SeaSt%InitOutData%WaveDynP  
-   if(associated(SeaSt%InitOutData%WaveAcc   ))    HD%InitInp%WaveAcc        => SeaSt%InitOutData%WaveAcc   
-   if(associated(SeaSt%InitOutData%WaveVel   ))    HD%InitInp%WaveVel        => SeaSt%InitOutData%WaveVel 
-   if(associated(SeaSt%InitOutData%PWaveDynP0))    HD%InitInp%PWaveDynP0     => SeaSt%InitOutData%PWaveDynP0  
-   if(associated(SeaSt%InitOutData%PWaveAcc0 ))    HD%InitInp%PWaveAcc0      => SeaSt%InitOutData%PWaveAcc0   
-   if(associated(SeaSt%InitOutData%PWaveVel0 ))    HD%InitInp%PWaveVel0      => SeaSt%InitOutData%PWaveVel0   
-   if(associated(SeaSt%InitOutData%WaveElevC0))    HD%InitInp%WaveElevC0     => SeaSt%InitOutData%WaveElevC0
-   CALL MOVE_ALLOC( SeaSt%InitOutData%WaveElevC,   HD%InitInp%WaveElevC )
-   if(associated(SeaSt%InitOutData%WaveDirArr))    HD%InitInp%WaveDirArr     => SeaSt%InitOutData%WaveDirArr
-   if(associated(SeaSt%InitOutData%WaveElev1 ))    HD%InitInp%WaveElev1      => SeaSt%InitOutData%WaveElev1
-   if(associated(SeaSt%InitOutData%WaveElev2 ))    HD%InitInp%WaveElev2      => SeaSt%InitOutData%WaveElev2
-   
-   HD%InitInp%WaveAccMCF     => SeaSt%InitOutData%WaveAccMCF
-   HD%InitInp%PWaveAccMCF0   => SeaSt%InitOutData%PWaveAccMCF0
-   
-   call SeaSt_Interp_CopyParam(SeaSt%InitOutData%SeaSt_Interp_p, HD%InitInp%SeaSt_Interp_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
- 
 
-   ! Platform reference position
-   !     The HD model uses this for building the moddel.  This is only specified as an (X,Y)
-   !     position (no Z).
-   HD%InitInp%PtfmLocationX         = REAL(PtfmRefPtPositionX_C, ReKi)
-   HD%InitInp%PtfmLocationY         = REAL(PtfmRefPtPositionY_C, ReKi)
+   HD%InitInp%WaveField      => SeaSt%InitOutData%WaveField ! can be set regardless of association(); if not associated, HD shouldn't work
 
 
    !-------------------------------------------------------------
@@ -719,7 +678,7 @@ CONTAINS
       real(ReKi)                             :: tmpZpos     !< temporary z-position
       ErrStat3 = ErrID_None
       ErrMsg3  = ""
-      tmpZpos=-0.001_ReKi*abs(HD%p%WtrDpth)                    ! Initial comparison value close to surface
+      tmpZpos=-0.001_ReKi*abs(HD%p%WaveField%EffWtrDpth)                    ! Initial comparison value close to surface
       if ( NumNodePts == 1 .and. HD%u(1)%Morison%Mesh%Committed ) then
          do i=1,HD%u(1)%Morison%Mesh%Nnodes
             ! Find lowest Morison node
@@ -727,7 +686,7 @@ CONTAINS
                tmpZpos = HD%u(1)%Morison%Mesh%Position(3,i)
             endif
          enddo
-         if (tmpZpos < -abs(HD%p%WtrDpth)*0.9_ReKi) then       ! within 10% of the seafloor
+         if (tmpZpos < -abs(HD%p%WaveField%EffWtrDpth)*0.9_ReKi) then       ! within 10% of the seafloor
             ErrStat3 = ErrID_Severe
             ErrMsg3  = "Inconsistent model"//NewLine//"   -- Single library input node for simulating rigid floating structure."//  &
                         NewLine//"   -- Lowest Morison node is is in lowest 10% of water depth indicating fixed bottom structure from HydroDyn."// &

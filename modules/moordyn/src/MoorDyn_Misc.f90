@@ -1300,8 +1300,7 @@ CONTAINS
       REAL(SiKi)                       :: t, Frac
       CHARACTER(1024)                  :: FileName             ! Name of MoorDyn input file  
       CHARACTER(120)                   :: Line
-!      CHARACTER(120)                   :: Line2  
-      CHARACTER(120)                   :: entries2  
+      CHARACTER(4096)                  :: entries2  
       INTEGER(IntKi)                   :: coordtype
    
       INTEGER(IntKi)                   :: NStepWave    ! 
@@ -1501,6 +1500,10 @@ CONTAINS
 
          ! Close the inputs file 
          CLOSE ( UnElev ) 
+
+         IF (WaveTimeIn(1) .NE. 0.0) THEN
+            CALL SetErrStat( ErrID_Warn, ' MoorDyn WaveElev time series should start at t = 0 seconds. First two lines are read as headers.',ErrStat, ErrMsg, RoutineName); return
+         ENDIF
          
          call WrScr( "Read "//trim(num2lstr(ntIn))//" time steps from input file." )
 

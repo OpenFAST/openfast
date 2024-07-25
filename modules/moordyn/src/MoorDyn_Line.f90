@@ -357,12 +357,8 @@ CONTAINS
                Line%r(2,J) = Line%r(2,0) + (Line%r(2,N) - Line%r(2,0))*REAL(J, DbKi)/REAL(N, DbKi)
                Line%r(3,J) = Line%r(3,0) + (Line%r(3,N) - Line%r(3,0))*REAL(J, DbKi)/REAL(N, DbKi)
                
-             !          print*, Line%r(:,J)
              ENDDO
             
-             !          print*,"FYI line end A and B node coords are"
-             !          print*, Line%r(:,0)
-             !          print*, Line%r(:,N)
          ENDIF
 
       ENDIF
@@ -930,7 +926,7 @@ CONTAINS
 
 
          IF (reverseFlag) THEN
-		      ! Follows process of MoorPy catenary.py
+            ! Follows process of MoorPy catenary.py
             s = s( size(s):1:-1 )
             X = X( size(X):1:-1 )
             Z = Z( size(Z):1:-1 )
@@ -1464,7 +1460,7 @@ CONTAINS
       ! check for NaNs
       DO J = 1, 6*(N-1)
          IF (Is_NaN(Xd(J))) THEN
-            print *, "NaN detected at time ", Line%time, " in Line ", Line%IdNum, " in MoorDyn."
+            Call WrScr( "NaN detected at time "//trim(num2lstr(Line%time))//" in Line "//trim(num2lstr(Line%IdNum))//" in MoorDyn.")
             IF (wordy > 1) THEN
                print *, "state derivatives:"
                print *, Xd

@@ -130,10 +130,11 @@ subroutine ReadAndInterpGamma(CirculationFileName, s_CP_LL, L, Gamma_CP_LL, ErrS
    real(ReKi), parameter :: ReNaN = huge(1.0_ReKi)
    ErrStat = ErrID_None
    ErrMsg  = ''
+   ! TODO Poentially use ReadDelimFile Instead
    ! ---
    call GetNewUnit(iUnit)
    call OpenFInpFile(iUnit, CirculationFileName, errStat2, errMsg2); if(Failed()) return
-   nLines=line_count(iUnit)-1
+   nLines=line_count(iUnit, errStat2, errMsg2)-1
    ! Read Header
    read(iUnit,*, iostat=errStat2) line ; if(Failed()) return
    ! Read table:  s/L [-], GammaPresc [m^2/s]
@@ -171,28 +172,6 @@ contains
       Failed =  ErrStat >= AbortErrLev
       if (Failed) call CleanUp()
    end function Failed
-
-   !> Counts number of lines in a file
-   integer function line_count(iunit)
-      integer(IntKi), intent(in) :: iunit
-      character(len=1054) :: line
-      ! safety for infinite loop..
-      integer(IntKi), parameter :: nline_max=100000000 ! 100 M
-      integer(IntKi) :: i
-      line_count=0
-      do i=1,nline_max
-         line=''
-         read(iunit,'(A)',END=100)line
-         line_count=line_count+1
-      enddo
-      if (line_count==nline_max) then
-         print*,'Error: maximum number of line exceeded'
-      endif
-      100 if(len(trim(line))>0) then
-         line_count=line_count+1
-      endif
-      rewind(iunit)
-   end function
 
 endsubroutine ReadAndInterpGamma
 ! =====================================================================================
@@ -415,17 +394,20 @@ end subroutine PropagateWake
 
 
 !> Print the states, useful for debugging
-subroutine print_x_NW_FW(p, m, x, label)
+subroutine print_x_NW_FW(p, m, x, label, nSteps_in)
    type(FVW_ParameterType),         intent(in)  :: p              !< Parameters
    type(FVW_MiscVarType),           intent(in)  :: m              !< Initial misc/optimization variables
    type(FVW_ContinuousStateType),   intent(in)  :: x              !< Continuous states
+   integer(IntKi),   optional,      intent(in)  :: nSteps_in      !< number of steps to limit to
    character(len=*),intent(in) :: label
-   integer(IntKi) :: iAge, iW
+   integer(IntKi) :: iAge, iW, nSteps
    character(len=1):: flag
+   nSteps=99999999   ! big number
+   if (present(nSteps_in)) nSteps = nSteps_in
    print*,'------------------------------------------------------------------'
    print'(A,I0,A,I0)',' NW .....................iNWStart:',p%iNWStart,' nNW:',m%nNW
    iW=1
-   do iAge=1,p%nNWMax+1
+   do iAge=1,min(p%nNWMax+1,nSteps)
       flag='X'
       if ((iAge)<= m%nNW+1) flag='.'
       print'(A,A,I0,A)',flag,'iAge ',iAge,'      Root              Tip'
@@ -438,7 +420,7 @@ subroutine print_x_NW_FW(p, m, x, label)
       endif
    enddo
    print'(A,I0)','FW <<<<<<<<<<<<<<<<<<<< nFW:',m%nFW
-   do iAge=1,p%nFWMax+1
+   do iAge=1,min(p%nFWMax+1,nSteps)
       flag='X'
       if ((iAge)<= m%nFW+1) flag='.'
       print'(A,A,I0,A)',flag,'iAge ',iAge,'      Root              Tip'

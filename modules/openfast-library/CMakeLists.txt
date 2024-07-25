@@ -43,7 +43,6 @@ add_library(openfast_prelib STATIC
 target_link_libraries(openfast_prelib 
   nwtclibs
   versioninfolib
-  aerodyn14lib
   aerodynlib
   extloadslib
   beamdynlib

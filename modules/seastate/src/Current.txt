@@ -27,7 +27,7 @@ typedef   ^                   ^                             SiKi              Cu
 typedef   ^                   ^                             SiKi              CurrDIV                -          -        -         ""    -
 typedef   ^                   ^                             SiKi              CurrDIDir              -          -        -         ""    -
 typedef   ^                   ^                             INTEGER           CurrMod                -          -        -         ""    -
-typedef   ^                   ^                             SiKi              WtrDpth                -          -        -         ""    -
+typedef   ^                   ^                             SiKi              EffWtrDpth             -          -        -         ""    -
 typedef   ^                   ^                             SiKi              WaveKinGridzi         {:}         -        -         ""    -
 typedef   ^                   ^                             INTEGER           NGridPts               -          -        -         ""    -
 typedef   ^                   ^                             CHARACTER(1024)   DirRoot                -         ""        -         ""    -

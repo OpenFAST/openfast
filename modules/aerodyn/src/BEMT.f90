@@ -90,6 +90,21 @@ real(ReKi) function ComputePhiWithInduction( Vx, Vy, a, aprime, cantAngle, xVelC
    
 end function ComputePhiWithInduction
  
+subroutine ComputePhiFromInductions(u, p, phi, axInduction, tanInduction)
+   type(BEMT_InputType),         intent(in   ) :: u
+   type(BEMT_ParameterType),     intent(in   ) :: p
+   real(ReKi),                   intent(inout) :: phi(:,:)
+   real(ReKi),                   intent(in   ) :: axInduction(:,:)
+   real(ReKi),                   intent(in   ) :: tanInduction(:,:)
+   integer(IntKi)                              :: i, j
+   do j = 1,p%numBlades ! Loop through all blades
+      do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
+         phi(i,j) = ComputePhiWithInduction( u%Vx(i,j), u%Vy(i,j),  axInduction(i,j), tanInduction(i,j), u%cantAngle(i,j), u%xVelCorr(i,j) )
+      enddo             ! I - Blade nodes / elements
+   enddo          ! J - All blades
+end subroutine ComputePhiFromInductions
+
+ 
 !----------------------------------------------------------------------------------------------------------------------------------   
 subroutine BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMsg )
 ! This routine is called from BEMT_Init.
@@ -126,7 +141,7 @@ subroutine BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMs
    call move_alloc(InitInp%UAOff_outerNode, Init_UA_Data%UAOff_outerNode)
    
    Init_UA_Data%dt              = interval          
-   Init_UA_Data%OutRootName     = InitInp%RootName ! was 'Debug.UA'
+   Init_UA_Data%OutRootName     = trim(InitInp%RootName)//'.UA'
                
    Init_UA_Data%numBlades       = InitInp%numBlades 
    Init_UA_Data%nNodesPerBlade  = InitInp%numBladeNodes
@@ -136,6 +151,9 @@ subroutine BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMs
    Init_UA_Data%a_s             = InitInp%a_s ! m/s  
    Init_UA_Data%ShedEffect      = .true. ! This should be true when coupled to BEM
    Init_UA_Data%WrSum           = InitInp%SumPrint
+   
+   Init_UA_Data%UA_OUTS         = 0
+   Init_UA_Data%d_34_to_ac      = 0.5_ReKi
    
 end subroutine BEMT_Set_UA_InitData
 
@@ -172,10 +190,9 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    p%numBlades      = InitInp%numBlades    
    p%UA_Flag        = InitInp%UA_Flag   
    p%DBEMT_Mod      = InitInp%DBEMT_Mod
-   p%MomentumCorr   = InitInp%MomentumCorr
    p%BEM_Mod        = InitInp%BEM_Mod
    !call WrScr('>>>> BEM_Mod '//trim(num2lstr(p%BEM_Mod)))
-   if ((p%BEM_Mod/=BEMMod_2D .and. p%BEM_Mod/=BEMMod_3D )) then
+   if (.not.(ANY( p%BEM_Mod == (/BEMMod_2D, BEMMod_3D/)))) then
       call SetErrStat( ErrID_Fatal, 'BEM_Mod needs to be 0 or 2 for now', errStat, errMsg, RoutineName )
       return
    endif
@@ -235,6 +252,13 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    p%airDens          = InitInp%airDens
    p%kinVisc          = InitInp%kinVisc
    p%skewWakeMod      = InitInp%skewWakeMod
+   if (p%skewWakeMod==Skew_Mod_Active) then
+      p%SkewRedistrMod   = InitInp%SkewRedistrMod
+      p%MomentumCorr     = InitInp%MomentumCorr
+   else
+      p%SkewRedistrMod   = SkewRedistrMod_None
+      p%MomentumCorr     = .false.
+   endif
    p%yawCorrFactor    = InitInp%yawCorrFactor
    p%useTipLoss       = InitInp%useTipLoss
    p%useHubLoss       = InitInp%useHubLoss
@@ -581,7 +605,8 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
    call BEMT_InitOtherStates( OtherState, p,  errStat, errMsg )    ! initialize the other states
    if (errStat >= AbortErrLev) return
 
-   if ( p%DBEMT_Mod /= DBEMT_none ) then
+   InitInp_DBEMT%DBEMT_Mod = p%DBEMT_Mod
+   if ( p%DBEMT_Mod > DBEMT_none ) then
       InitInp_DBEMT%DBEMT_Mod  = p%DBEMT_Mod
       InitInp_DBEMT%numBlades  = p%numBlades 
       InitInp_DBEMT%numNodes   = p%numBladeNodes
@@ -720,7 +745,7 @@ subroutine BEMT_ReInit(p,x,xd,z,OtherState,misc,ErrStat,ErrMsg)
    if (p%UseInduction) then
       OtherState%ValidPhi = .true.
       
-      if (p%DBEMT_Mod /= DBEMT_none ) then
+      if (p%DBEMT_Mod > DBEMT_none ) then
          call DBEMT_ReInit(p%DBEMT, x%DBEMT, OtherState%DBEMT, misc%DBEMT)
       end if
    
@@ -1266,7 +1291,8 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
    ! calculate inductions using BEMT, applying the DBEMT, and/or skewed wake corrections as applicable:
    ! NOTE that we don't use the DBEMT inputs when calling its CalcOutput routine, so we'll skip calculating them here
    !............................................
-   call BEMT_CalcOutput_Inductions( InputIndex, t, .false., .true., y%phi, u, p, x, xd, z, OtherState, AFInfo, y%axInduction, y%tanInduction, y%chi, m, errStat, errMsg )
+   call BEMT_CalcOutput_Inductions( InputIndex, t, .false., .true., y%phi, u, p, x, xd, z, OtherState, AFInfo, y%axInduction, y%tanInduction, y%chi, m, errStat, errMsg,&
+         y%axInduction_qs, y%tanInduction_qs, y%k, y%k_p, y%F)
    
    !............................................
    ! update phi if necessary (consistent with inductions) and calculate inputs to UA (EVEN if UA isn't used, because we use the inputs later):
@@ -1386,7 +1412,7 @@ subroutine BEMT_InitStates(t, u, p, x, xd, z, OtherState, m, AFInfo, ErrStat, Er
    m%phi = z%phi
    call BEMT_CalcOutput_Inductions( InputIndex, t, CalculateDBEMTInputs, ApplyCorrections, m%phi, u, p, x, xd, z, OtherState, AFInfo, m%axInduction, m%tanInduction, m%chi, m, errStat, errMsg )
 
-   if (p%DBEMT_Mod /= DBEMT_none) then
+   if (p%DBEMT_Mod > DBEMT_none) then
       call DBEMT_InitStates_AllNodes( m%u_DBEMT(InputIndex), p%DBEMT, x%DBEMT, OtherState%DBEMT )
    end if
    
@@ -1490,7 +1516,7 @@ subroutine BEMT_CalcOutput_Inductions( InputIndex, t, CalculateDBEMTInputs, Appl
          !............................................
          ! apply DBEMT correction to axInduction and tanInduction:
          !............................................
-         if (p%DBEMT_Mod /= DBEMT_none) then
+         if (p%DBEMT_Mod > DBEMT_none) then
             ! If we are using DBEMT, then we will obtain the time-filtered versions of axInduction(i,j), tanInduction(i,j)
          
             ! Note that the outputs of DBEMT are the state variables x%vind, so we don't NEED to set the inputs except on initialization step (when we output the inputs instead of the states)
@@ -1573,7 +1599,7 @@ subroutine ApplySkewedWakeCorrection_AllNodes(p, u, m, x, phi, OtherState, axInd
    !............................................
    ! Apply skewed wake correction to the axial induction (y%axInduction)
    !............................................
-   if ( p%skewWakeMod == SkewMod_PittPeters ) then
+   if ( p%skewWakeMod == Skew_Mod_Active ) then
       if (p%BEM_Mod==BEMMod_2D) then
          ! do nothing
       else
@@ -1585,7 +1611,7 @@ subroutine ApplySkewedWakeCorrection_AllNodes(p, u, m, x, phi, OtherState, axInd
          do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
             if ( .not. p%FixedInductions(i,j) ) then
                F = getHubTipLossCorrection(p%BEM_Mod, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), phi(i,j), u%cantAngle(i,j) )
-               call ApplySkewedWakeCorrection( p%BEM_Mod, p%skewWakeMod, p%yawCorrFactor, F, u%psi_s(j), u%psiSkewOffset, u%chi0, u%rlocal(i,j)/m%Rtip(j), axInduction(i,j), chi(i,j), m%FirstWarn_Skew )
+               call ApplySkewedWakeCorrection( p%BEM_Mod, p%SkewRedistrMod, p%yawCorrFactor, F, u%psi_s(j), u%psiSkewOffset, u%chi0, u%rlocal(i,j)/m%Rtip(j), axInduction(i,j), chi(i,j), m%FirstWarn_Skew )
             end if ! .not. p%FixedInductions (special case for tip and/or hub loss)
          enddo    ! I - Blade nodes / elements
       enddo       ! J - All blades
@@ -1673,7 +1699,7 @@ subroutine BEMT_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, AFIn
    !...............................................................................................................................
    !  compute derivatives for DBEMT continuous states:
    !...............................................................................................................................
-   if (p%DBEMT_Mod /= DBEMT_none) then
+   if (p%DBEMT_Mod > DBEMT_none) then
       if (.not. allocated(dxdt%DBEMT%element)) then
          call DBEMT_CopyContState( x%DBEMT, dxdt%DBEMT, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -2321,6 +2347,11 @@ subroutine SetInputs_for_UA(BEM_Mod, phi, theta, cantAngle, toeAngle, axInductio
       call GetRelativeVelocity( axInduction, tanInduction, Vx, Vy, cantAngle, xVelCorr, u_UA%U, u_UA%v_ac )
       call GetReynoldsNumber(BEM_Mod,   axInduction, tanInduction, Vx, Vy, Vz, chord, kinVisc, theta, phi, cantAngle, toeAngle, u_UA%Re)
    endif
+
+   ! NOTE: 
+   ! U: is here is the norm of the velocity made of Vx(1-a) and Vy(1+a'). 
+   !    Ideally we would go back to the airfoil coordinate system
+   ! Below, v_ac is in the airfoil coordinate system. In baseline configurations, v_ac(1)>0 and v_ac(2)>0 
 
    u_UA%v_ac(1) = sin(u_UA%alpha)*u_UA%U
    u_UA%v_ac(2) = cos(u_UA%alpha)*u_UA%U

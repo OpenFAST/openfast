@@ -40,6 +40,7 @@ typedef      ^            InitInputType       IntKi      NumCtrl2SC             
 typedef      ^            InitInputType       Logical    UseSC                     -      -      -   "Use the SuperController? (flag)" -
 typedef      ^            InitInputType       SiKi       fromSCGlob               {:}     -      -   "Global outputs from SuperController" -
 typedef      ^            InitInputType       SiKi       fromSC                   {:}     -      -   "Turbine-specific outputs from SuperController" -
+typedef      ^            InitInputType       SiKi      *Vdist_High     {:}{:}{:}{:}{:}   -      -   "Pointer to UVW components of disturbed wind [nx^high, ny^high, nz^high, n^high/low] (ambient + deficits) across the high-resolution domain around the turbine for each high-resolution time step within a low-resolution time step"      "(m/s)"
 
 # Define outputs from the initialization routine here:
 #typedef   ^               InitOutputType CHARACTER(ChanLen) WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -
@@ -85,7 +86,6 @@ typedef      ^            ParameterType       ReKi       p_ref_Turbine          
 # Define inputs that are contained on the mesh here:
 typedef      ^            InputType           SiKi       fromSCglob              {:}     -      -      "Global (turbine-independent) commands from the super controller"      "(various units)"
 typedef      ^            InputType           SiKi       fromSC                  {:}     -      -      "Turbine-dependent commands from the super controller from the super controller"      "(various units)"
-typedef      ^            InputType           SiKi       Vdist_High     {:}{:}{:}{:}{:}   -      -      "UVW components of disturbed wind [nx^high, ny^high, nz^high, n^high/low] (ambient + deficits) across the high-resolution domain around the turbine for each high-resolution time step within a low-resolution time step"      "(m/s)"
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:

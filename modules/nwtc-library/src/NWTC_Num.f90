@@ -1687,8 +1687,8 @@ CONTAINS
 
    END FUNCTION EqualRealNos8
 !=======================================================================
-!> This function creates a rotation matrix, M, from a 1-2-3 rotation
-!! sequence of the 3 Euler angles, \f$\theta_x\f$, \f$\theta_y\f$, and \f$\theta_z\f$, in radians.
+!> This function creates a rotation matrix, M, from a 3-2-1 intrinsic rotation
+!! sequence of the 3 Tait-Bryan angles (1-2-3 extrinsic rotation), \f$\theta_x\f$, \f$\theta_y\f$, and \f$\theta_z\f$, in radians.
 !! M represents a change of basis (from global to local coordinates; 
 !! not a physical rotation of the body). It is the inverse of EulerExtract (nwtc_num::eulerextract).
 !!
@@ -1752,8 +1752,8 @@ CONTAINS
 !> \copydoc nwtc_num::eulerconstructr4
    FUNCTION EulerConstructR8(theta) result(M)
    
-      ! this function creates a rotation matrix, M, from a 1-2-3 rotation
-      ! sequence of the 3 Euler angles, theta_x, theta_y, and theta_z, in radians.
+      ! this function creates a rotation matrix, M, from a 3-2-1 intrinsic rotation
+!! sequence of the 3 Tait-Bryan angles (1-2-3 extrinsic rotation), theta_x, theta_y, and theta_z, in radians.
       ! M represents a change of basis (from global to local coordinates; 
       ! not a physical rotation of the body). it is the inverse of EulerExtract (nwtc_num::eulerextract).
       !
@@ -3311,6 +3311,44 @@ END FUNCTION FindValidChannelIndx
 
    RETURN
    END SUBROUTINE InterpStpMat8
+!=======================================================================
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Perform linear interpolation of an array, where first column is assumed to be ascending time values
+!! Similar to InterpStpMat, I think (to check), interpTimeValues=InterpStpMat( array(:,1), time, array(:,1:), iLast, AryLen, values )
+!! First value is used for times before, and last value is used for time beyond
+   subroutine interpTimeValue(array, time, iLast, values)
+      real(ReKi), dimension(:,:), intent(in)    :: array  !< Values, shape nt x nc, where array(:,1) is the time vector
+      real(DbKi),                 intent(in)    :: time   !< Time where values are to be interpolated
+      integer(IntKi),             intent(inout) :: iLast  !< previous index used (to speed up interpolation) 
+      real(ReKi), dimension(:),   intent(out)   :: values !< vector of values, shape nc, at given `time`
+      integer :: i, nMax
+      real(ReKi) :: alpha
+      nMax = size(array, 1)
+      iLast = max( min(iLast, nMax), 1) ! Clip iLast between 1 and nMax
+      !call InterpStpMat( array(:,1), time, array(:,1:), iLast, AryLen, values )
+      if (array(iLast,1) > time) then 
+         values = array(iLast,2:)
+      elseif (iLast == nMax) then 
+         values = array(iLast,2:)
+      else
+         ! Look for index
+         do i = iLast, nMax
+            if (array(i,1)<=time) then
+               iLast=i
+            else
+               exit
+            endif
+         enddo
+         if (iLast==nMax) then
+            values = array(iLast,2:)
+         else
+            ! Linear interpolation
+            alpha = (array(iLast+1,1)-time)/(array(iLast+1,1)-array(iLast,1))
+            values = array(iLast,2:)*alpha + array(iLast+1,2:)*(1-alpha)
+         endif
+      endif
+   end subroutine interpTimeValue
+
 !=======================================================================   
 !< This routine linearly interpolates Dataset. It is
 !! set for a 2-d interpolation on x and y of the input point.
@@ -4946,7 +4984,7 @@ end function Rad2M180to180Deg
    RETURN
    END FUNCTION RegCubicSplineInterpM ! ( X, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
 !=======================================================================
-!> This routine is used to integrate funciton f over the interval [a, b]. This routine
+!> This routine is used to integrate function f over the interval [a, b]. This routine
 !! is useful for sufficiently smooth (e.g., analytic) integrands, integrated over
 !! intervals which contain no singularities, and where the endpoints are also nonsingular.
 !!

@@ -45,6 +45,8 @@ SET SrvD_Loc=%Modules_Loc%\servodyn\src
 SET BD_Loc=%Modules_Loc%\beamdyn\src
 SET SC_Loc=%Modules_Loc%\supercontroller\src
 
+SET LD_Loc=%Modules_Loc%\lindyn\src
+
 SET AWAE_Loc=%Modules_Loc%\awae\src
 SET WD_Loc=%Modules_Loc%\wakedynamics\src
 SET Farm_Loc=%Root_Loc%\glue-codes\fast-farm\src
@@ -62,6 +64,12 @@ GOTO %ModuleName%
 REM ----------------------------------------------------------------------------
 REM ---------------- RUN THE REGISTRY TO AUTO-GENERATE FILES -------------------
 REM ----------------------------------------------------------------------------
+:NWTC_Lib
+SET CURR_LOC=%NWTC_Lib_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\Registry_NWTC_Library_base.txt"  -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%" -noextrap
+GOTO checkError
+
 :MAP
 SET CURR_LOC=%MAP_Loc%
 SET Output_Loc=%CURR_LOC%
@@ -130,13 +138,13 @@ GOTO checkError
 :ExternalInflow
 SET CURR_LOC=%ExtInfw_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -ccode -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%IfW_Loc%" -ccode -O "%Output_Loc%"
 GOTO checkError
 
 :ExtLoads
 SET CURR_LOC=%ExtLoads_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%ExtLoads_Loc%" -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -I "%IfW_Loc%" -O "%Output_Loc%"
 GOTO checkError
 
 :ExtLoadsDX
@@ -150,7 +158,7 @@ GOTO checkError
 :DBEMT
 SET CURR_LOC=%AD_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%IfW_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
 GOTO checkError
 
 :AeroDyn_Driver
@@ -176,6 +184,12 @@ GOTO checkError
 SET CURR_LOC=%AD_Loc%
 SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\UnsteadyAero_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
+GOTO checkError
+
+:LD
+SET CURR_LOC=%LD_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\LinDyn_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
 GOTO checkError
 
 :FVW
@@ -218,7 +232,7 @@ GOTO checkError
 :Current
 :Waves
 :Waves2
-:SeaState_Interp
+:SeaSt_WaveField
 
 SET CURR_LOC=%SEAST_Loc%
 SET Output_Loc=%CURR_LOC%
