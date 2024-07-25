@@ -1798,7 +1798,7 @@ SUBROUTINE ReadBladeFile ( BldFile, BladeKInputFileData, UnEc, ErrStat, ErrMsg )
       CurLine = CurLine - 1   ! Backup one line to read entire table
       call ParseTable6Col(ErrStat2, ErrMsg2); if (Failed()) return;
    else                                ! no PitchAxis input
-      CurLine = CurLine - 1   ! Backup one line to read entire table
+      ! NOTE: don't backup a line as a failed ParesAry above won't increment the current line
       call ParseTable5Col(ErrStat2, ErrMsg2); if (Failed()) return;
    endif
 
@@ -1825,7 +1825,7 @@ SUBROUTINE ReadBladeFile ( BldFile, BladeKInputFileData, UnEc, ErrStat, ErrMsg )
 
    !  -------------- END OF FILE --------------------------------------------
    ! Verify that everything was read and stored correctly
-   call PrintBladeFileContents()
+   !call PrintBladeFileContents()
 
 
 CONTAINS

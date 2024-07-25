@@ -8267,7 +8267,7 @@ SUBROUTINE WrVTK_WaveElevVisGrid(t_global, p_FAST, y_FAST, SeaSt)
 
    do ix=1,p_FAST%VTK_surface%NWaveElevPts(1)-1
       do iy=1,p_FAST%VTK_surface%NWaveElevPts(2)-1
-         n = p_FAST%VTK_surface%NWaveElevPts(1)*(ix-1)+iy - 1 ! points start at 0
+         n = p_FAST%VTK_surface%NWaveElevPts(2)*(ix-1)+iy - 1 ! points start at 0
 
          WRITE(Un,'(3(i7))') n,   n+1,                                    n+p_FAST%VTK_surface%NWaveElevPts(2)
          WRITE(Un,'(3(i7))') n+1, n+1+p_FAST%VTK_surface%NWaveElevPts(2), n+p_FAST%VTK_surface%NWaveElevPts(2)
