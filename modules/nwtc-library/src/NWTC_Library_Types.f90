@@ -54,11 +54,12 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_ExtLin                        = 16      ! Variable for extended linearization [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_SmallAngle                    = 32      ! Use small angles to calculate difference in linearization [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_2PI                           = 64      ! Variable is an angle with range [0,2pi] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_WriteOut                      = 128      ! Variable for write output [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_Solve                         = 256      ! Variable for solver [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_AeroMap                       = 512      ! Variable for aeromap [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_DerivOrder1                   = 1024      ! Variable is derivative order 1 in linearization file [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_DerivOrder2                   = 2048      ! Variable is derivative order 2 in linearization file [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_WM_Rot                        = 128      ! Variable is a Wiener-Milenkovic rotation [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_WriteOut                      = 256      ! Variable for write output [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_Solve                         = 512      ! Variable for solver [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_AeroMap                       = 1024      ! Variable for aeromap [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_DerivOrder1                   = 2048      ! Variable is derivative order 1 in linearization file [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_DerivOrder2                   = 4096      ! Variable is derivative order 2 in linearization file [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VC_None                          = 0      !  [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VC_Tight                         = 1      !  [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VC_Option1                       = 2      !  [-]
@@ -120,6 +121,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: i1 = 0      !< Index 1 [-]
     INTEGER(IntKi)  :: i2 = 0      !< Index 2 [-]
     INTEGER(IntKi)  :: i3 = 0      !< Index 3 [-]
+    INTEGER(IntKi)  :: i4 = 0      !< Index 4 [-]
+    INTEGER(IntKi)  :: i5 = 0      !< Index 5 [-]
   END TYPE DatLoc
 ! =======================
 ! =========  ModVarType  =======
@@ -641,6 +644,8 @@ subroutine NWTC_Library_CopyDatLoc(SrcDatLocData, DstDatLocData, CtrlCode, ErrSt
    DstDatLocData%i1 = SrcDatLocData%i1
    DstDatLocData%i2 = SrcDatLocData%i2
    DstDatLocData%i3 = SrcDatLocData%i3
+   DstDatLocData%i4 = SrcDatLocData%i4
+   DstDatLocData%i5 = SrcDatLocData%i5
 end subroutine
 
 subroutine NWTC_Library_DestroyDatLoc(DatLocData, ErrStat, ErrMsg)
@@ -661,6 +666,8 @@ subroutine NWTC_Library_PackDatLoc(RF, Indata)
    call RegPack(RF, InData%i1)
    call RegPack(RF, InData%i2)
    call RegPack(RF, InData%i3)
+   call RegPack(RF, InData%i4)
+   call RegPack(RF, InData%i5)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -673,6 +680,8 @@ subroutine NWTC_Library_UnPackDatLoc(RF, OutData)
    call RegUnpack(RF, OutData%i1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%i2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%i3); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%i4); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%i5); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine NWTC_Library_CopyModVarType(SrcModVarTypeData, DstModVarTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -1678,5 +1687,7 @@ subroutine NWTC_Library_UnPackModDataType(RF, OutData)
    call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
    call NWTC_Library_UnpackModLinType(RF, OutData%Lin) ! Lin 
 end subroutine
+
 END MODULE NWTC_Library_Types
+
 !ENDOFREGISTRYGENERATEDFILE

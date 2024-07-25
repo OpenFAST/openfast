@@ -970,7 +970,7 @@ subroutine HydroDyn_InitVars(Vars, u, p, x, y, m, InitOut, InputFileData, Linear
       if (p%WAMIT(k)%SS_Exctn%numStates == 0) cycle
       if (p%NBody > 1) BodyDesc = 'B'//trim(Num2LStr(k))
       call MV_AddVar(Vars%x, "WAMIT("//trim(Num2LStr(k))//")%SS_Exctn", FieldScalar, &
-                     DatLoc(HydroDyn_x_WAMIT_SS_Exctn_x), &
+                     DatLoc(HydroDyn_x_WAMIT_SS_Exctn_x, k), &
                      Flags=VF_DerivOrder1, &
                      Num=p%WAMIT(k)%SS_Exctn%numStates, &
                      Perturb=20000.0_R8Ki * D2R_D, &
@@ -981,7 +981,7 @@ subroutine HydroDyn_InitVars(Vars, u, p, x, y, m, InitOut, InputFileData, Linear
       if (p%WAMIT(k)%SS_Rdtn%numStates == 0) cycle
       if (p%NBody > 1) BodyDesc = 'B'//trim(Num2LStr(k))
       call MV_AddVar(Vars%x, "WAMIT("//trim(Num2LStr(k))//")%SS_Rdtn", FieldScalar, &
-                     DatLoc(HydroDyn_x_WAMIT_SS_Rdtn_x), &
+                     DatLoc(HydroDyn_x_WAMIT_SS_Rdtn_x, k), &
                      Flags=VF_DerivOrder1, &
                      Num=p%WAMIT(k)%SS_Rdtn%numStates, &
                      Perturb=2.0_R8Ki * D2R_D , &

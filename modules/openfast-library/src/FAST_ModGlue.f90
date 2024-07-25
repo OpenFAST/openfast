@@ -38,13 +38,13 @@ public :: CalcWriteLinearMatrices
 
 contains
 
-subroutine Glue_CombineModules(ModDataAry, iModAry, FlagFilter, Linearize, Mappings, ModGlue, ErrStat, ErrMsg)
+subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilter, Linearize, ErrStat, ErrMsg)
+   type(ModGlueType), intent(out)      :: ModGlue
    type(ModDataType), intent(inout)    :: ModDataAry(:)
    integer(IntKi), intent(in)          :: iModAry(:)
    integer(IntKi), intent(in)          :: FlagFilter
    logical, intent(in)                 :: Linearize
    type(MappingType), intent(in)       :: Mappings(:)    !< Mesh and variable mappings
-   type(ModGlueType), intent(out)      :: ModGlue
    integer(IntKi), intent(out)         :: ErrStat
    character(ErrMsgLen), intent(out)   :: ErrMsg
 
@@ -192,34 +192,35 @@ subroutine Glue_CombineModules(ModDataAry, iModAry, FlagFilter, Linearize, Mappi
    ! Determine mappings which apply to the modules in this glue module
    !----------------------------------------------------------------------------
 
-   allocate(ModGlue%ModMaps(0))
+   allocate (ModGlue%ModMaps(0))
 
    ! Loop through mappings
    do i = 1, size(Mappings)
 
+      ! Find index of source module in glue module, cycle if not found
+      ModMap%iModSrc = 0
+      do j = 1, size(iModAry)
+         if (iModAry(j) == Mappings(i)%iModSrc) then
+            ModMap%iModSrc = j
+            exit
+         end if
+      end do
+      if (ModMap%iModSrc == 0) cycle
+
+      ! Find index of destination module in glue module, cycle if not found
+      ModMap%iModDst = 0
+      do j = 1, size(iModAry)
+         if (iModAry(j) == Mappings(i)%iModDst) then
+            ModMap%iModDst = j
+            exit
+         end if
+      end do
+      if (ModMap%iModDst == 0) cycle
+
+      ! Get source and destination modules from glue module data array
       associate (Mapping => Mappings(i), &
-                 ModSrc => ModDataAry(Mappings(i)%iModSrc), &
-                 ModDst => ModDataAry(Mappings(i)%iModDst))
-
-         ! Find index of source module in glue module, cycle if not found
-         ModMap%iModSrc = 0
-         do j = 1, size(iModAry)
-            if (iModAry(j) == Mapping%iModSrc) then
-               ModMap%iModSrc = j
-               exit
-            end if
-         end do
-         if (ModMap%iModSrc == 0) cycle
-
-         ! Find index of destination module in glue module, cycle if not found
-         ModMap%iModDst = 0
-         do j = 1, size(iModAry)
-            if (iModAry(j) == Mapping%iModDst) then
-               ModMap%iModDst = j
-               exit
-            end if
-         end do
-         if (ModMap%iModDst == 0) cycle
+                 ModSrc => ModGlue%ModDataAry(ModMap%iModSrc), &
+                 ModDst => ModGlue%ModDataAry(ModMap%iModDst))
 
          ! Set mapping index and clear variable indices
          ModMap%iMapping = i
@@ -273,7 +274,7 @@ subroutine Glue_CombineModules(ModDataAry, iModAry, FlagFilter, Linearize, Mappi
                   if (MV_EqualDL(ModDst%Vars%y(j)%DL, Mapping%DstDispDL)) ModMap%iVarDstDisp(ModDst%Vars%y(j)%Field) = j
                end do
             end if
-            
+
          end select
 
          ! If no destination variable indices found, cycle
@@ -282,7 +283,7 @@ subroutine Glue_CombineModules(ModDataAry, iModAry, FlagFilter, Linearize, Mappi
 
          ! Add new module mapping to array
          ModGlue%ModMaps = [ModGlue%ModMaps, ModMap]
-         
+
       end associate
    end do
 
@@ -394,16 +395,16 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    ! If no modules were added, return error
-   if (.not. allocated(m%Modules)) then
+   if (.not. allocated(m%ModDataAry)) then
       call SetErrStat(ErrID_Fatal, "No modules were used", ErrStat, ErrMsg, RoutineName)
       return
    end if
 
    ! Create array of indices for Mods array
-   modIdx = [(i, i=1, size(m%Modules))]
+   modIdx = [(i, i=1, size(m%ModDataAry))]
 
    ! Get array of module IDs
-   modIDs = [(m%Modules(i)%ID, i=1, size(m%Modules))]
+   modIDs = [(m%ModDataAry(i)%ID, i=1, size(m%ModDataAry))]
 
    ! Establish module index order for linearization
    allocate (p%Lin%iMod(0))
@@ -412,9 +413,9 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
    end do
 
    ! Loop through modules, if module is not in index, return with error
-   do i = 1, size(m%Modules)
+   do i = 1, size(m%ModDataAry)
       if (.not. any(i == p%Lin%iMod)) then
-         call SetErrStat(ErrID_Fatal, "Module "//trim(m%Modules(i)%Abbr)// &
+         call SetErrStat(ErrID_Fatal, "Module "//trim(m%ModDataAry(i)%Abbr)// &
                          " not supported in linearization", ErrStat, ErrMsg, RoutineName)
          return
       end if
@@ -426,7 +427,7 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
 
    ! Loop through each module by index
    do i = 1, size(p%Lin%iMod)
-      associate (ModData => m%Modules(p%Lin%iMod(i)))
+      associate (ModData => m%ModDataAry(p%Lin%iMod(i)))
 
          ! Set linearize flag on all continuous state variables
          do j = 1, size(ModData%Vars%x)
@@ -474,13 +475,13 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
    ! Mesh Mapping
    !----------------------------------------------------------------------------
 
-   call FAST_InitMappings(m%Modules, m%Mappings, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+   call FAST_InitMappings(m%Mappings, m%ModDataAry, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
 
    !----------------------------------------------------------------------------
    ! Glue Module
    !----------------------------------------------------------------------------
 
-   call Glue_CombineModules(m%Modules, p%Lin%iMod, VF_None, p_FAST%Linearize, m%Mappings, m%ModGlue, ErrStat2, ErrMsg2); if (Failed()) return
+   call Glue_CombineModules(m%ModGlue, m%ModDataAry, m%Mappings, p%Lin%iMod, VF_None, p_FAST%Linearize, ErrStat2, ErrMsg2); if (Failed()) return
 
    !----------------------------------------------------------------------------
    ! Allocate linearization arrays and matrices
@@ -523,46 +524,47 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
       call AllocAry(y%Lin%z, m%ModGlue%Vars%Nz, p%Lin%NumTimes, "Lin%z", ErrStat2, ErrMsg2); if (Failed()) return
       call AllocAry(y%Lin%u, m%ModGlue%Vars%Nu, p%Lin%NumTimes, "Lin%u", ErrStat2, ErrMsg2); if (Failed()) return
 
-      ! If steady state calculation is enabled
-      if (p_FAST%CalcSteady) then
+   end if
 
-         ! Disable saving of OPs during linearization as ModGlue_CalcSteady saves them automatically
-         p%Lin%SaveOPs = .false.
+   ! If linearization and steady state calculation is enabled
+   if (p_FAST%Linearize .and. p_FAST%CalcSteady) then
 
-         ! Initialize variables
-         m%CS%AzimuthDelta = TwoPi_D/p%Lin%NumTimes
-         m%CS%NumRotations = 0
-         m%CS%IsConverged = .false.
-         m%CS%FoundSteady = .false.
-         m%CS%ForceLin = .false.
+      ! Disable saving of OPs during linearization as ModGlue_CalcSteady saves them automatically
+      p%Lin%SaveOPs = .false.
 
-         ! Calculate number of output values (ignoring write outputs)
-         m%CS%NumOutputs = 0
-         do i = 1, size(m%ModGlue%Vars%y)
-            associate (Var => m%ModGlue%Vars%y(i))
-               if (.not. MV_HasFlags(Var, VF_WriteOut)) m%CS%NumOutputs = m%CS%NumOutputs + Var%Num
-            end associate
-         end do
+      ! Initialize variables
+      m%CS%AzimuthDelta = TwoPi_D/p%Lin%NumTimes
+      m%CS%NumRotations = 0
+      m%CS%IsConverged = .false.
+      m%CS%FoundSteady = .false.
+      m%CS%ForceLin = .false.
 
-         ! Allocate arrays
-         call AllocAry(y%Lin%Times, p%Lin%NumTimes, "Lin%Times", ErrStat2, ErrMsg2); if (Failed()) return
-         call AllocAry(m%CS%AzimuthTarget, p%Lin%NumTimes, "CS%AzimuthTarget", ErrStat2, ErrMsg2); if (Failed()) return
-         call AllocAry(m%CS%psi_buffer, p_FAST%LinInterpOrder + 1, "CS%psi_buffer", ErrStat2, ErrMsg2); if (Failed()) return
-         call AllocAry(m%CS%y_buffer, m%ModGlue%Vars%Ny, p_FAST%LinInterpOrder + 1, "CS%y_buffer", ErrStat2, ErrMsg2); if (Failed()) return
-         call AllocAry(m%CS%y_interp, m%ModGlue%Vars%Ny, "CS%y_interp", ErrStat2, ErrMsg2); if (Failed()) return
-         call AllocAry(m%CS%y_diff, m%ModGlue%Vars%Ny, "CS%y_diff", ErrStat2, ErrMsg2); if (Failed()) return
-         call AllocAry(m%CS%y_azimuth, m%ModGlue%Vars%Ny, p%Lin%NumTimes, "CS%y_azimuth", ErrStat2, ErrMsg2); if (Failed()) return
-         call AllocAry(m%CS%y_ref, m%ModGlue%Vars%Ny, "CS%y_ref", ErrStat2, ErrMsg2); if (Failed()) return
+      ! Calculate number of output values (ignoring write outputs)
+      m%CS%NumOutputs = 0
+      do i = 1, size(m%ModGlue%Vars%y)
+         associate (Var => m%ModGlue%Vars%y(i))
+            if (.not. MV_HasFlags(Var, VF_WriteOut)) m%CS%NumOutputs = m%CS%NumOutputs + Var%Num
+         end associate
+      end do
 
-         ! Initialize arrays to zero
-         m%CS%psi_buffer = 0.0_R8Ki
-         m%CS%y_buffer = 0.0_R8Ki
-         m%CS%y_interp = 0.0_R8Ki
-         m%CS%y_diff = 0.0_R8Ki
-         m%CS%y_azimuth = 0.0_R8Ki
-         m%CS%y_ref = 1.0_R8Ki
+      ! Allocate arrays
+      call AllocAry(y%Lin%Times, p%Lin%NumTimes, "Lin%Times", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(m%CS%AzimuthTarget, p%Lin%NumTimes, "CS%AzimuthTarget", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(m%CS%psi_buffer, p_FAST%LinInterpOrder + 1, "CS%psi_buffer", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(m%CS%y_buffer, m%ModGlue%Vars%Ny, p_FAST%LinInterpOrder + 1, "CS%y_buffer", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(m%CS%y_interp, m%ModGlue%Vars%Ny, "CS%y_interp", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(m%CS%y_diff, m%ModGlue%Vars%Ny, "CS%y_diff", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(m%CS%y_azimuth, m%ModGlue%Vars%Ny, p%Lin%NumTimes, "CS%y_azimuth", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(m%CS%y_ref, m%ModGlue%Vars%Ny, "CS%y_ref", ErrStat2, ErrMsg2); if (Failed()) return
 
-      end if
+      ! Initialize arrays to zero
+      m%CS%psi_buffer = 0.0_R8Ki
+      m%CS%y_buffer = 0.0_R8Ki
+      m%CS%y_interp = 0.0_R8Ki
+      m%CS%y_diff = 0.0_R8Ki
+      m%CS%y_azimuth = 0.0_R8Ki
+      m%CS%y_ref = 1.0_R8Ki
+
    end if
 
 contains
@@ -814,7 +816,7 @@ contains
    end function Failed
 end subroutine
 
-subroutine ModGlue_Linearize_OP(Turbine, p, m, y, p_FAST, m_FAST, y_FAST, t_global, ErrStat, ErrMsg)
+subroutine ModGlue_Linearize_OP(p, m, y, p_FAST, m_FAST, y_FAST, t_global, Turbine, ErrStat, ErrMsg)
 
    type(Glue_ParameterType), intent(inout)   :: p        !< Glue parameters
    type(Glue_MiscVarType), intent(inout)     :: m        !< Glue MiscVars
@@ -987,7 +989,7 @@ subroutine ModGlue_SaveOperatingPoint(p, m, OPIndex, NewCopy, Turbine, ErrStat, 
 
    ! Loop through modules by index
    do i = 1, size(p%Lin%iMod)
-      associate (ModData => m%Modules(p%Lin%iMod(i)))
+      associate (ModData => m%ModDataAry(p%Lin%iMod(i)))
 
          ! Copy current module state to linearization save location
          call FAST_CopyStates(ModData, Turbine, STATE_CURR, StateIndex, CtrlCode, ErrStat2, ErrMsg2)
@@ -1031,7 +1033,7 @@ subroutine ModGlue_RestoreOperatingPoint(p, m, OPIndex, Turbine, ErrStat, ErrMsg
 
    ! Loop through modules by index
    do i = 1, size(p%Lin%iMod)
-      associate (ModData => m%Modules(p%Lin%iMod(i)))
+      associate (ModData => m%ModDataAry(p%Lin%iMod(i)))
 
          ! Copy current module state to linearization save location
          call FAST_CopyStates(ModData, Turbine, StateIndex, STATE_CURR, MESH_UPDATECOPY, ErrStat2, ErrMsg2)

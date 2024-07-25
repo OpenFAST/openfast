@@ -322,7 +322,8 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
         {
             ++field_num;
             // w << "   type(DatDesc), public, parameter :: " << std::setw(32) << std::left << field.name << " = DatDesc(" << field_num << ", " << field.rank << ", \"" << field.desc << "\")\n";
-            w << "   integer(IntKi), public, parameter :: " << std::setw(32) << std::left << field.name << " = " << std::setw(3) << std::right << field_num << " ! " << field.desc << "\n";
+            w << "   integer(IntKi), public, parameter :: " << std::setw(32) << std::left << field.name << " = " << std::setw(3) << std::right << field_num << " ! " << field.desc << "\n"
+              << std::left;
         }
     }
 
@@ -407,9 +408,9 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
         // Mesh pointer routine
         w << indent << "function " << routine_name << "(" << tmp[1] << ", DL) result(Mesh)";
         indent += "   ";
-        w << indent << "type(" << ddt.type_fortran << "), target, intent(in) :: " << tmp[1];
-        w << indent << "type(DatLoc), intent(in)      :: DL";
-        w << indent << "type(MeshType), pointer            :: Mesh";
+        w << indent << std::setw(40) << "type(" + ddt.type_fortran + "), target, intent(in) " << ":: " << tmp[1];
+        w << indent << "type(DatLoc), intent(in)               :: DL";
+        w << indent << "type(MeshType), pointer                :: Mesh";
         w << indent << "nullify(Mesh)";
         w << indent << "select case (DL%Num)";
         for (int i = 0; i < mesh_paths.size(); ++i)
@@ -483,21 +484,21 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
         std::string indent("\n");
         w << indent << "subroutine " << routine_name << "(Vars, " << abbr << ", ValAry)";
         indent += "   ";
-        w << indent << "type(" << ddt.type_fortran << "), intent(in) :: " << abbr;
-        w << indent << "type(ModVarsType), intent(in)   :: Vars";
-        w << indent << "real(R8Ki), intent(inout)       :: ValAry(:)";
-        w << indent << "integer(IntKi)                  :: i";
+        w << indent << std::setw(40) << "type(" + ddt.type_fortran + "), intent(in) " << ":: " << abbr;
+        w << indent << "type(ModVarsType), intent(in)          :: Vars";
+        w << indent << "real(R8Ki), intent(inout)              :: ValAry(:)";
+        w << indent << "integer(IntKi)                         :: i";
         w << indent << "do i = 1, size(Vars%" << abbr << ")";
         indent += "   ";
-        w << indent << "associate (Var => Vars%" << abbr << "(i), DL => Vars%" << abbr << "(i)%DL)";
+        w << indent << "associate (V => Vars%" << abbr << "(i), DL => Vars%" << abbr << "(i)%DL)";
         indent += "   ";
-        w << indent << "select case (Var%DL%Num)";
+        w << indent << "select case (DL%Num)";
         for (const auto &field : fields)
         {
             w << indent << "case (" << field.name << ")";
             std::string comment = "Scalar";
             auto field_path = field.desc;
-            if ((field.data_type->tag == DataType::Tag::Derived))
+            if (field.data_type->tag == DataType::Tag::Derived)
             {
                 comment = "Mesh";
             }
@@ -505,22 +506,46 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
             {
                 comment = std::string("Rank ") + std::to_string(field.rank) + " Array";
             }
+
             if ((field.name.compare("BD_x_q") == 0) && (short_type.compare("ContState") == 0))
             {
                 // This is a hack to convert BeamDyn's WM orientations to quaternions
-                w << indent << "   if (Var%Field == FieldOrientation) then";
-                w << indent << "      ValAry(Var%iLoc(1):Var%iLoc(2)) = wm_to_quat(wm_inv(x%q(4:6, Var%jAry)))  ! Convert WM parameters to quaternions";
+                w << indent << "   if (V%Field == FieldOrientation) then";
+                w << indent << "      ValAry(V%iLoc(1):V%iLoc(2)) = wm_to_quat(wm_inv(x%q(4:6, V%jAry)))  ! Convert WM parameters to quaternions";
                 w << indent << "   else";
-                w << indent << "      call MV_Pack2(Var, " << field_path << ", ValAry)  ! " << comment;
+                w << indent << std::setw(71) << "      call MV_Pack(V, " + field_path + "(V%iAry(1):V%iAry(2),V%jAry), ValAry)  " << "! " + comment;
                 w << indent << "   end if";
+            }
+            else if (field.data_type->tag == DataType::Tag::Derived)
+            {
+                w << indent << std::setw(71) << "   call MV_Pack(V, " + field_path + ", ValAry)" << "! Mesh";
             }
             else
             {
-                w << indent << "   call MV_Pack2(Var, " << field_path << ", ValAry)  ! " << comment;
+                std::string tmp{"   call MV_Pack(V, " + field_path};
+                switch (field.rank)
+                {
+                case 1:
+                    tmp += "(V%iAry(1):V%iAry(2))";
+                    break;
+                case 2:
+                    tmp += "(V%iAry(1):V%iAry(2),V%jAry)";
+                    break;
+                case 3:
+                    tmp += "(V%iAry(1):V%iAry(2), V%jAry, V%kAry)";
+                    break;
+                case 4:
+                    tmp += "(V%iAry(1):V%iAry(2), V%jAry, V%kAry, V%mAry)";
+                    break;
+                case 5:
+                    tmp += "(V%iAry(1):V%iAry(2), V%jAry, V%kAry, V%mAry, V%nAry)";
+                    break;
+                }
+                w << indent << std::setw(71) << tmp + ", ValAry) " << "! " + comment;
             }
         }
         w << indent << "case default";
-        w << indent << "   ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki";
+        w << indent << "   ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki";
         w << indent << "end select";
         indent.erase(indent.size() - 3);
         w << indent << "end associate";
@@ -539,40 +564,59 @@ void Registry::gen_fortran_subs(std::ostream &w, const Module &mod)
         routine_name = mod.nickname + "_Unpack" + short_type + "Ary";
         w << indent << "subroutine " << routine_name << "(Vars, ValAry, " << abbr << ")";
         indent += "   ";
-        w << indent << "type(ModVarsType), intent(in)   :: Vars";
-        w << indent << "real(R8Ki), intent(in)          :: ValAry(:)";
-        w << indent << "type(" << ddt.type_fortran << "), intent(inout) :: " << abbr;
-        w << indent << "integer(IntKi)                  :: i";
+        w << indent << "type(ModVarsType), intent(in)          :: Vars";
+        w << indent << "real(R8Ki), intent(in)                 :: ValAry(:)";
+        w << indent << std::setw(40) << "type(" + ddt.type_fortran + "), intent(inout) " << ":: " + abbr;
+        w << indent << "integer(IntKi)                         :: i";
         w << indent << "do i = 1, size(Vars%" << abbr << ")";
         indent += "   ";
-        w << indent << "associate (Var => Vars%" << abbr << "(i), DL => Vars%" << abbr << "(i)%DL)";
+        w << indent << "associate (V => Vars%" << abbr << "(i), DL => Vars%" << abbr << "(i)%DL)";
         indent += "   ";
-        w << indent << "select case (Var%DL%Num)";
+        w << indent << "select case (DL%Num)";
         for (const auto &field : fields)
         {
             w << indent << "case (" << field.name << ")";
             std::string comment = "Scalar";
             auto field_path = field.desc;
-            if ((field.data_type->tag == DataType::Tag::Derived))
-            {
-                comment = "Mesh";
-            }
-            else if (field.rank > 0)
+            if (field.rank > 0)
             {
                 comment = std::string("Rank ") + std::to_string(field.rank) + " Array";
             }
             if (field.name.compare("BD_x_q") == 0)
             {
                 // This is a hack to convert BeamDyn's WM orientations to quaternions
-                w << indent << "   if (Var%Field == FieldOrientation) then";
-                w << indent << "      x%q(4:6, Var%jAry) = wm_inv(quat_to_wm(ValAry(Var%iLoc(1):Var%iLoc(2))))  ! Convert quaternion to WM parameters";
+                w << indent << "   if (V%Field == FieldOrientation) then";
+                w << indent << "      x%q(4:6, V%jAry) = wm_inv(quat_to_wm(ValAry(V%iLoc(1):V%iLoc(2))))  ! Convert quaternion to WM parameters";
                 w << indent << "   else";
-                w << indent << "      call MV_Unpack2(Var, ValAry, " << field_path << ")  ! " << comment;
+                w << indent << std::setw(71) << "      call MV_Unpack(V, ValAry, " + field_path + "(V%iAry(1):V%iAry(2),V%jAry))  " << "! Rank 2 Array";
                 w << indent << "   end if";
+            }
+            else if (field.data_type->tag == DataType::Tag::Derived)
+            {
+                w << indent << std::setw(71) << "   call MV_Unpack(V, ValAry, " + field_path + ") " << "! Mesh";
             }
             else
             {
-                w << indent << "   call MV_Unpack2(Var, ValAry, " << field_path << ")  ! " << comment;
+                std::string tmp{"   call MV_Unpack(V, ValAry, " + field_path};
+                switch (field.rank)
+                {
+                case 1:
+                    tmp += "(V%iAry(1):V%iAry(2))";
+                    break;
+                case 2:
+                    tmp += "(V%iAry(1):V%iAry(2),V%jAry)";
+                    break;
+                case 3:
+                    tmp += "(V%iAry(1):V%iAry(2), V%jAry, V%kAry)";
+                    break;
+                case 4:
+                    tmp += "(V%iAry(1):V%iAry(2), V%jAry, V%kAry, V%mAry)";
+                    break;
+                case 5:
+                    tmp += "(V%iAry(1):V%iAry(2), V%jAry, V%kAry, V%mAry, V%nAry)";
+                    break;
+                }
+                w << indent << std::setw(71) << tmp + ") " << "! " + comment;
             }
         }
         w << indent << "end select";

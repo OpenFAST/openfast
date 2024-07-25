@@ -62,8 +62,8 @@ MODULE ElastoDyn
                                                !   (Xd), and constraint-state (Z) equations all with respect to the constraint
                                                !   states (z)
 
-   PUBLIC :: ED_GetOP                          ! Routine to pack the operating point values (for linearization) into arrays
-   PUBLIC :: ED_SetOP                          ! Routine to unpack the operating point values from arrays
+   PUBLIC :: ED_PackExtInputAry                ! Routine to pack extended inputs for linearization
+   
 
    PUBLIC :: ED_UpdateAzimuth
    
@@ -10808,31 +10808,40 @@ contains
    end function
 END SUBROUTINE ED_GetOP
 
-!----------------------------------------------------------------------------------------------------------------------------------
-!> ED_SetOP sets input and state values from an array. Inverse of ED_GetOP
-subroutine ED_SetOP(Vars, u, p, x, xd, z, u_op, x_op, xd_op, z_op)
-   TYPE(ModVarsType),                    INTENT(IN   )   :: Vars    !< Module information
-   TYPE(ED_InputType),                   INTENT(INOUT)   :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(ED_ParameterType),               INTENT(IN   )   :: p          !< Parameters
-   TYPE(ED_ContinuousStateType),         INTENT(INOUT)   :: x          !< Continuous states at operating point
-   TYPE(ED_DiscreteStateType),           INTENT(INOUT)   :: xd         !< Discrete states at operating point
-   TYPE(ED_ConstraintStateType),         INTENT(INOUT)   :: z          !< Constraint states at operating point
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)   :: u_op(:)    !< values of linearized inputs
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)   :: x_op(:)    !< values of linearized continuous states
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)   :: xd_op(:)   !< values of linearized discrete states
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)   :: z_op(:)    !< values of linearized constraint states
+subroutine ED_PackExtInputAry(Vars, u, ValAry, ErrStat, ErrMsg)
+   type(ModVarsType), intent(in)    :: Vars
+   type(ED_InputType), intent(in)   :: u        !< Inputs
+   real(R8Ki), intent(inout)        :: ValAry(:)
+   integer(IntKi),intent(out)       :: ErrStat  !< Error status of the operation
+   character(*),intent(out)         :: ErrMsg   !< Error message if ErrStat /= ErrID_None
 
-   if (present(u_op)) call ED_UnpackInputAry(Vars, u_op, u)
-   if (present(x_op)) call ED_UnpackContStateAry(Vars, x_op, x)
-   ! if (present(xd_op)) call ED_UnpackDiscStateAry(Vars, xd, xd_op)
-   ! if (present(z_op)) call ED_UnpackDiscStateAry(Vars, z, z_op)
+   character(*), parameter          :: RoutineName = 'ED_PackExtInputAry'
+   integer(IntKi)                   :: i
 
-END subroutine
-!----------------------------------------------------------------------------------------------------------------------------------
+   ErrStat = ErrID_None
+   ErrMsg = ""
 
-!----------------------------------------------------------------------------------------------------------------------------------
-! Tight Coupling
-!----------------------------------------------------------------------------------------------------------------------------------
+   ! Find variable index corresponding to blade pitch command collective
+   i = MV_FindVarDatLoc(Vars%u, DatLoc(ED_u_BlPitchComC))
+   
+   ! If variable found
+   if (i > 0) then
+      
+      ! Copy to value array
+      ValAry(Vars%u(i)%iLoc(1):Vars%u(i)%iLoc(2)) = u%BlPitchCom(1)
+
+      ! Check that all blades have the same pitch command
+      do i = 2, size(u%BlPitchCom)
+         if (.not. EqualRealNos(u%BlPitchCom(1), u%BlPitchCom(i))) then
+            call SetErrStat(ErrID_Info,"Operating point of collective pitch extended input is invalid because "// &
+                            "the commanded blade pitch angles are not the same for each blade.", &
+                            ErrStat, ErrMsg, RoutineName)
+            exit
+         end if  
+      end do
+   end if
+end subroutine
+
 subroutine ED_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrStat, ErrMsg)
    type(ED_InputType),           intent(inout)  :: u              !< An initial guess for the input; input mesh must be defined
    type(ED_ParameterType),       intent(inout)  :: p              !< Parameters

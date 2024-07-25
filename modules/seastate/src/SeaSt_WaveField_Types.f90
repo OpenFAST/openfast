@@ -572,5 +572,7 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(RF, OutData)
    call RegUnpack(RF, OutData%NStepWave); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NStepWave2); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
 END MODULE SeaSt_WaveField_Types
+
 !ENDOFREGISTRYGENERATEDFILE

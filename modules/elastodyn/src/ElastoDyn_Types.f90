@@ -7662,14 +7662,14 @@ SUBROUTINE ED_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Err
    y_out%LSShftFzs = a1*y1%LSShftFzs + a2*y2%LSShftFzs + a3*y3%LSShftFzs
 END SUBROUTINE
 
-function ED_InputMeshPointer(u, ML) result(Mesh)
-   type(ED_InputType), target, intent(in) :: u
-   type(DatLoc), intent(in)      :: ML
-   type(MeshType), pointer            :: Mesh
+function ED_InputMeshPointer(u, DL) result(Mesh)
+   type(ED_InputType), target, intent(in)  :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (ML%Num)
+   select case (DL%Num)
    case (ED_u_BladePtLoads)
-       Mesh => u%BladePtLoads(ML%i1)
+       Mesh => u%BladePtLoads(DL%i1)
    case (ED_u_PlatformPtMesh)
        Mesh => u%PlatformPtMesh
    case (ED_u_TowerPtLoads)
@@ -7683,13 +7683,13 @@ function ED_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function ED_InputMeshName(ML) result(Name)
-   type(DatLoc), intent(in)      :: ML
+function ED_InputMeshName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
    character(32)                      :: Name
    Name = ""
-   select case (ML%Num)
+   select case (DL%Num)
    case (ED_u_BladePtLoads)
-       Name = "u%BladePtLoads("//trim(Num2LStr(ML%i1))//")"
+       Name = "u%BladePtLoads("//trim(Num2LStr(DL%i1))//")"
    case (ED_u_PlatformPtMesh)
        Name = "u%PlatformPtMesh"
    case (ED_u_TowerPtLoads)
@@ -7703,14 +7703,14 @@ function ED_InputMeshName(ML) result(Name)
    end select
 end function
 
-function ED_OutputMeshPointer(y, ML) result(Mesh)
+function ED_OutputMeshPointer(y, DL) result(Mesh)
    type(ED_OutputType), target, intent(in) :: y
-   type(DatLoc), intent(in)      :: ML
-   type(MeshType), pointer            :: Mesh
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (ML%Num)
+   select case (DL%Num)
    case (ED_y_BladeLn2Mesh)
-       Mesh => y%BladeLn2Mesh(ML%i1)
+       Mesh => y%BladeLn2Mesh(DL%i1)
    case (ED_y_PlatformPtMesh)
        Mesh => y%PlatformPtMesh
    case (ED_y_TowerLn2Mesh)
@@ -7718,7 +7718,7 @@ function ED_OutputMeshPointer(y, ML) result(Mesh)
    case (ED_y_HubPtMotion)
        Mesh => y%HubPtMotion
    case (ED_y_BladeRootMotion)
-       Mesh => y%BladeRootMotion(ML%i1)
+       Mesh => y%BladeRootMotion(DL%i1)
    case (ED_y_NacelleMotion)
        Mesh => y%NacelleMotion
    case (ED_y_TFinCMMotion)
@@ -7726,13 +7726,13 @@ function ED_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function ED_OutputMeshName(ML) result(Name)
-   type(DatLoc), intent(in)      :: ML
+function ED_OutputMeshName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
    character(32)                      :: Name
    Name = ""
-   select case (ML%Num)
+   select case (DL%Num)
    case (ED_y_BladeLn2Mesh)
-       Name = "y%BladeLn2Mesh("//trim(Num2LStr(ML%i1))//")"
+       Name = "y%BladeLn2Mesh("//trim(Num2LStr(DL%i1))//")"
    case (ED_y_PlatformPtMesh)
        Name = "y%PlatformPtMesh"
    case (ED_y_TowerLn2Mesh)
@@ -7740,7 +7740,7 @@ function ED_OutputMeshName(ML) result(Name)
    case (ED_y_HubPtMotion)
        Name = "y%HubPtMotion"
    case (ED_y_BladeRootMotion)
-       Name = "y%BladeRootMotion("//trim(Num2LStr(ML%i1))//")"
+       Name = "y%BladeRootMotion("//trim(Num2LStr(DL%i1))//")"
    case (ED_y_NacelleMotion)
        Name = "y%NacelleMotion"
    case (ED_y_TFinCMMotion)
@@ -7748,384 +7748,354 @@ function ED_OutputMeshName(ML) result(Name)
    end select
 end function
 
-subroutine ED_PackContStateVar(Var, x, ValAry)
-   type(ED_ContinuousStateType), intent(in) :: x
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (ED_x_QT)
-         call MV_Pack2(Var, x%QT, ValAry)  ! Rank 1 Array
-      case (ED_x_QDT)
-         call MV_Pack2(Var, x%QDT, ValAry)  ! Rank 1 Array
-      case default
-         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
 subroutine ED_PackContStateAry(Vars, x, ValAry)
    type(ED_ContinuousStateType), intent(in) :: x
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      call ED_PackContStateVar(Vars%x(i), x, ValAry)
+      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (DL%Num)
+         case (ED_x_QT)
+            call MV_Pack(V, x%QT(V%iAry(1):V%iAry(2)), ValAry)                  ! Rank 1 Array
+         case (ED_x_QDT)
+            call MV_Pack(V, x%QDT(V%iAry(1):V%iAry(2)), ValAry)                 ! Rank 1 Array
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
    end do
-end subroutine
-
-subroutine ED_UnpackContStateVar(Var, ValAry, x)
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(ED_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (ED_x_QT)
-         call MV_Unpack2(Var, ValAry, x%QT)  ! Rank 1 Array
-      case (ED_x_QDT)
-         call MV_Unpack2(Var, ValAry, x%QDT)  ! Rank 1 Array
-      end select
-   end associate
 end subroutine
 
 subroutine ED_UnpackContStateAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
    type(ED_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                  :: i
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      call ED_UnpackContStateVar(Vars%x(i), ValAry, x)
+      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (DL%Num)
+         case (ED_x_QT)
+            call MV_Unpack(V, ValAry, x%QT(V%iAry(1):V%iAry(2)))                ! Rank 1 Array
+         case (ED_x_QDT)
+            call MV_Unpack(V, ValAry, x%QDT(V%iAry(1):V%iAry(2)))               ! Rank 1 Array
+         end select
+      end associate
    end do
 end subroutine
 
+subroutine ED_PackContStateDerivAry(Vars, x, ValAry)
+   type(ED_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (DL%Num)
+         case (ED_x_QT)
+            call MV_Pack(V, x%QT(V%iAry(1):V%iAry(2)), ValAry)                  ! Rank 1 Array
+         case (ED_x_QDT)
+            call MV_Pack(V, x%QDT(V%iAry(1):V%iAry(2)), ValAry)                 ! Rank 1 Array
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
+   end do
+end subroutine
 
-subroutine ED_PackConstrStateVar(Var, z, ValAry)
-   type(ED_ConstraintStateType), intent(in) :: z
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (ED_z_DummyConstrState)
-         call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
-      case default
-         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
-      end select
-   end associate
+subroutine ED_UnpackContStateDerivAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(ED_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (DL%Num)
+         case (ED_x_QT)
+            call MV_Unpack(V, ValAry, x%QT(V%iAry(1):V%iAry(2)))                ! Rank 1 Array
+         case (ED_x_QDT)
+            call MV_Unpack(V, ValAry, x%QDT(V%iAry(1):V%iAry(2)))               ! Rank 1 Array
+         end select
+      end associate
+   end do
 end subroutine
 
 subroutine ED_PackConstrStateAry(Vars, z, ValAry)
    type(ED_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      call ED_PackConstrStateVar(Vars%z(i), z, ValAry)
+      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (DL%Num)
+         case (ED_z_DummyConstrState)
+            call MV_Pack(V, z%DummyConstrState, ValAry)                         ! Scalar
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
    end do
-end subroutine
-
-subroutine ED_UnpackConstrStateVar(Var, ValAry, z)
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(ED_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (ED_z_DummyConstrState)
-         call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
-      end select
-   end associate
 end subroutine
 
 subroutine ED_UnpackConstrStateAry(Vars, ValAry, z)
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
    type(ED_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                  :: i
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      call ED_UnpackConstrStateVar(Vars%z(i), ValAry, z)
+      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (DL%Num)
+         case (ED_z_DummyConstrState)
+            call MV_Unpack(V, ValAry, z%DummyConstrState)                       ! Scalar
+         end select
+      end associate
    end do
-end subroutine
-
-
-subroutine ED_PackInputVar(Var, u, ValAry)
-   type(ED_InputType), intent(in) :: u
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (ED_u_BladePtLoads)
-         call MV_Pack2(Var, u%BladePtLoads(DL%i1), ValAry)  ! Mesh
-      case (ED_u_PlatformPtMesh)
-         call MV_Pack2(Var, u%PlatformPtMesh, ValAry)  ! Mesh
-      case (ED_u_TowerPtLoads)
-         call MV_Pack2(Var, u%TowerPtLoads, ValAry)  ! Mesh
-      case (ED_u_HubPtLoad)
-         call MV_Pack2(Var, u%HubPtLoad, ValAry)  ! Mesh
-      case (ED_u_NacelleLoads)
-         call MV_Pack2(Var, u%NacelleLoads, ValAry)  ! Mesh
-      case (ED_u_TFinCMLoads)
-         call MV_Pack2(Var, u%TFinCMLoads, ValAry)  ! Mesh
-      case (ED_u_TwrAddedMass)
-         call MV_Pack2(Var, u%TwrAddedMass, ValAry)  ! Rank 3 Array
-      case (ED_u_PtfmAddedMass)
-         call MV_Pack2(Var, u%PtfmAddedMass, ValAry)  ! Rank 2 Array
-      case (ED_u_BlPitchCom)
-         call MV_Pack2(Var, u%BlPitchCom, ValAry)  ! Rank 1 Array
-      case (ED_u_YawMom)
-         call MV_Pack2(Var, u%YawMom, ValAry)  ! Scalar
-      case (ED_u_GenTrq)
-         call MV_Pack2(Var, u%GenTrq, ValAry)  ! Scalar
-      case (ED_u_HSSBrTrqC)
-         call MV_Pack2(Var, u%HSSBrTrqC, ValAry)  ! Scalar
-      case default
-         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
-      end select
-   end associate
 end subroutine
 
 subroutine ED_PackInputAry(Vars, u, ValAry)
-   type(ED_InputType), intent(in) :: u
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
+   type(ED_InputType), intent(in)          :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      call ED_PackInputVar(Vars%u(i), u, ValAry)
+      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (DL%Num)
+         case (ED_u_BladePtLoads)
+            call MV_Pack(V, u%BladePtLoads(DL%i1), ValAry)                      ! Mesh
+         case (ED_u_PlatformPtMesh)
+            call MV_Pack(V, u%PlatformPtMesh, ValAry)                           ! Mesh
+         case (ED_u_TowerPtLoads)
+            call MV_Pack(V, u%TowerPtLoads, ValAry)                             ! Mesh
+         case (ED_u_HubPtLoad)
+            call MV_Pack(V, u%HubPtLoad, ValAry)                                ! Mesh
+         case (ED_u_NacelleLoads)
+            call MV_Pack(V, u%NacelleLoads, ValAry)                             ! Mesh
+         case (ED_u_TFinCMLoads)
+            call MV_Pack(V, u%TFinCMLoads, ValAry)                              ! Mesh
+         case (ED_u_TwrAddedMass)
+            call MV_Pack(V, u%TwrAddedMass(V%iAry(1):V%iAry(2), V%jAry, V%kAry), ValAry) ! Rank 3 Array
+         case (ED_u_PtfmAddedMass)
+            call MV_Pack(V, u%PtfmAddedMass(V%iAry(1):V%iAry(2),V%jAry), ValAry) ! Rank 2 Array
+         case (ED_u_BlPitchCom)
+            call MV_Pack(V, u%BlPitchCom(V%iAry(1):V%iAry(2)), ValAry)          ! Rank 1 Array
+         case (ED_u_YawMom)
+            call MV_Pack(V, u%YawMom, ValAry)                                   ! Scalar
+         case (ED_u_GenTrq)
+            call MV_Pack(V, u%GenTrq, ValAry)                                   ! Scalar
+         case (ED_u_HSSBrTrqC)
+            call MV_Pack(V, u%HSSBrTrqC, ValAry)                                ! Scalar
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
    end do
-end subroutine
-
-subroutine ED_UnpackInputVar(Var, ValAry, u)
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(ED_InputType), intent(inout) :: u
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (ED_u_BladePtLoads)
-         call MV_Unpack2(Var, ValAry, u%BladePtLoads(DL%i1))  ! Mesh
-      case (ED_u_PlatformPtMesh)
-         call MV_Unpack2(Var, ValAry, u%PlatformPtMesh)  ! Mesh
-      case (ED_u_TowerPtLoads)
-         call MV_Unpack2(Var, ValAry, u%TowerPtLoads)  ! Mesh
-      case (ED_u_HubPtLoad)
-         call MV_Unpack2(Var, ValAry, u%HubPtLoad)  ! Mesh
-      case (ED_u_NacelleLoads)
-         call MV_Unpack2(Var, ValAry, u%NacelleLoads)  ! Mesh
-      case (ED_u_TFinCMLoads)
-         call MV_Unpack2(Var, ValAry, u%TFinCMLoads)  ! Mesh
-      case (ED_u_TwrAddedMass)
-         call MV_Unpack2(Var, ValAry, u%TwrAddedMass)  ! Rank 3 Array
-      case (ED_u_PtfmAddedMass)
-         call MV_Unpack2(Var, ValAry, u%PtfmAddedMass)  ! Rank 2 Array
-      case (ED_u_BlPitchCom)
-         call MV_Unpack2(Var, ValAry, u%BlPitchCom)  ! Rank 1 Array
-      case (ED_u_YawMom)
-         call MV_Unpack2(Var, ValAry, u%YawMom)  ! Scalar
-      case (ED_u_GenTrq)
-         call MV_Unpack2(Var, ValAry, u%GenTrq)  ! Scalar
-      case (ED_u_HSSBrTrqC)
-         call MV_Unpack2(Var, ValAry, u%HSSBrTrqC)  ! Scalar
-      end select
-   end associate
 end subroutine
 
 subroutine ED_UnpackInputAry(Vars, ValAry, u)
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(ED_InputType), intent(inout) :: u
-   integer(IntKi)                  :: i
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(ED_InputType), intent(inout)       :: u
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      call ED_UnpackInputVar(Vars%u(i), ValAry, u)
+      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (DL%Num)
+         case (ED_u_BladePtLoads)
+            call MV_Unpack(V, ValAry, u%BladePtLoads(DL%i1))                    ! Mesh
+         case (ED_u_PlatformPtMesh)
+            call MV_Unpack(V, ValAry, u%PlatformPtMesh)                         ! Mesh
+         case (ED_u_TowerPtLoads)
+            call MV_Unpack(V, ValAry, u%TowerPtLoads)                           ! Mesh
+         case (ED_u_HubPtLoad)
+            call MV_Unpack(V, ValAry, u%HubPtLoad)                              ! Mesh
+         case (ED_u_NacelleLoads)
+            call MV_Unpack(V, ValAry, u%NacelleLoads)                           ! Mesh
+         case (ED_u_TFinCMLoads)
+            call MV_Unpack(V, ValAry, u%TFinCMLoads)                            ! Mesh
+         case (ED_u_TwrAddedMass)
+            call MV_Unpack(V, ValAry, u%TwrAddedMass(V%iAry(1):V%iAry(2), V%jAry, V%kAry)) ! Rank 3 Array
+         case (ED_u_PtfmAddedMass)
+            call MV_Unpack(V, ValAry, u%PtfmAddedMass(V%iAry(1):V%iAry(2),V%jAry)) ! Rank 2 Array
+         case (ED_u_BlPitchCom)
+            call MV_Unpack(V, ValAry, u%BlPitchCom(V%iAry(1):V%iAry(2)))        ! Rank 1 Array
+         case (ED_u_YawMom)
+            call MV_Unpack(V, ValAry, u%YawMom)                                 ! Scalar
+         case (ED_u_GenTrq)
+            call MV_Unpack(V, ValAry, u%GenTrq)                                 ! Scalar
+         case (ED_u_HSSBrTrqC)
+            call MV_Unpack(V, ValAry, u%HSSBrTrqC)                              ! Scalar
+         end select
+      end associate
    end do
-end subroutine
-
-
-subroutine ED_PackOutputVar(Var, y, ValAry)
-   type(ED_OutputType), intent(in) :: y
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (ED_y_BladeLn2Mesh)
-         call MV_Pack2(Var, y%BladeLn2Mesh(DL%i1), ValAry)  ! Mesh
-      case (ED_y_PlatformPtMesh)
-         call MV_Pack2(Var, y%PlatformPtMesh, ValAry)  ! Mesh
-      case (ED_y_TowerLn2Mesh)
-         call MV_Pack2(Var, y%TowerLn2Mesh, ValAry)  ! Mesh
-      case (ED_y_HubPtMotion)
-         call MV_Pack2(Var, y%HubPtMotion, ValAry)  ! Mesh
-      case (ED_y_BladeRootMotion)
-         call MV_Pack2(Var, y%BladeRootMotion(DL%i1), ValAry)  ! Mesh
-      case (ED_y_NacelleMotion)
-         call MV_Pack2(Var, y%NacelleMotion, ValAry)  ! Mesh
-      case (ED_y_TFinCMMotion)
-         call MV_Pack2(Var, y%TFinCMMotion, ValAry)  ! Mesh
-      case (ED_y_WriteOutput)
-         call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
-      case (ED_y_BlPitch)
-         call MV_Pack2(Var, y%BlPitch, ValAry)  ! Rank 1 Array
-      case (ED_y_Yaw)
-         call MV_Pack2(Var, y%Yaw, ValAry)  ! Scalar
-      case (ED_y_YawRate)
-         call MV_Pack2(Var, y%YawRate, ValAry)  ! Scalar
-      case (ED_y_LSS_Spd)
-         call MV_Pack2(Var, y%LSS_Spd, ValAry)  ! Scalar
-      case (ED_y_HSS_Spd)
-         call MV_Pack2(Var, y%HSS_Spd, ValAry)  ! Scalar
-      case (ED_y_RotSpeed)
-         call MV_Pack2(Var, y%RotSpeed, ValAry)  ! Scalar
-      case (ED_y_TwrAccel)
-         call MV_Pack2(Var, y%TwrAccel, ValAry)  ! Scalar
-      case (ED_y_YawAngle)
-         call MV_Pack2(Var, y%YawAngle, ValAry)  ! Scalar
-      case (ED_y_RootMyc)
-         call MV_Pack2(Var, y%RootMyc, ValAry)  ! Rank 1 Array
-      case (ED_y_YawBrTAxp)
-         call MV_Pack2(Var, y%YawBrTAxp, ValAry)  ! Scalar
-      case (ED_y_YawBrTAyp)
-         call MV_Pack2(Var, y%YawBrTAyp, ValAry)  ! Scalar
-      case (ED_y_LSSTipPxa)
-         call MV_Pack2(Var, y%LSSTipPxa, ValAry)  ! Scalar
-      case (ED_y_RootMxc)
-         call MV_Pack2(Var, y%RootMxc, ValAry)  ! Rank 1 Array
-      case (ED_y_LSSTipMxa)
-         call MV_Pack2(Var, y%LSSTipMxa, ValAry)  ! Scalar
-      case (ED_y_LSSTipMya)
-         call MV_Pack2(Var, y%LSSTipMya, ValAry)  ! Scalar
-      case (ED_y_LSSTipMza)
-         call MV_Pack2(Var, y%LSSTipMza, ValAry)  ! Scalar
-      case (ED_y_LSSTipMys)
-         call MV_Pack2(Var, y%LSSTipMys, ValAry)  ! Scalar
-      case (ED_y_LSSTipMzs)
-         call MV_Pack2(Var, y%LSSTipMzs, ValAry)  ! Scalar
-      case (ED_y_YawBrMyn)
-         call MV_Pack2(Var, y%YawBrMyn, ValAry)  ! Scalar
-      case (ED_y_YawBrMzn)
-         call MV_Pack2(Var, y%YawBrMzn, ValAry)  ! Scalar
-      case (ED_y_NcIMURAxs)
-         call MV_Pack2(Var, y%NcIMURAxs, ValAry)  ! Scalar
-      case (ED_y_NcIMURAys)
-         call MV_Pack2(Var, y%NcIMURAys, ValAry)  ! Scalar
-      case (ED_y_NcIMURAzs)
-         call MV_Pack2(Var, y%NcIMURAzs, ValAry)  ! Scalar
-      case (ED_y_RotPwr)
-         call MV_Pack2(Var, y%RotPwr, ValAry)  ! Scalar
-      case (ED_y_LSShftFxa)
-         call MV_Pack2(Var, y%LSShftFxa, ValAry)  ! Scalar
-      case (ED_y_LSShftFys)
-         call MV_Pack2(Var, y%LSShftFys, ValAry)  ! Scalar
-      case (ED_y_LSShftFzs)
-         call MV_Pack2(Var, y%LSShftFzs, ValAry)  ! Scalar
-      case default
-         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
-      end select
-   end associate
 end subroutine
 
 subroutine ED_PackOutputAry(Vars, y, ValAry)
-   type(ED_OutputType), intent(in) :: y
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
+   type(ED_OutputType), intent(in)         :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      call ED_PackOutputVar(Vars%y(i), y, ValAry)
+      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (DL%Num)
+         case (ED_y_BladeLn2Mesh)
+            call MV_Pack(V, y%BladeLn2Mesh(DL%i1), ValAry)                      ! Mesh
+         case (ED_y_PlatformPtMesh)
+            call MV_Pack(V, y%PlatformPtMesh, ValAry)                           ! Mesh
+         case (ED_y_TowerLn2Mesh)
+            call MV_Pack(V, y%TowerLn2Mesh, ValAry)                             ! Mesh
+         case (ED_y_HubPtMotion)
+            call MV_Pack(V, y%HubPtMotion, ValAry)                              ! Mesh
+         case (ED_y_BladeRootMotion)
+            call MV_Pack(V, y%BladeRootMotion(DL%i1), ValAry)                   ! Mesh
+         case (ED_y_NacelleMotion)
+            call MV_Pack(V, y%NacelleMotion, ValAry)                            ! Mesh
+         case (ED_y_TFinCMMotion)
+            call MV_Pack(V, y%TFinCMMotion, ValAry)                             ! Mesh
+         case (ED_y_WriteOutput)
+            call MV_Pack(V, y%WriteOutput(V%iAry(1):V%iAry(2)), ValAry)         ! Rank 1 Array
+         case (ED_y_BlPitch)
+            call MV_Pack(V, y%BlPitch(V%iAry(1):V%iAry(2)), ValAry)             ! Rank 1 Array
+         case (ED_y_Yaw)
+            call MV_Pack(V, y%Yaw, ValAry)                                      ! Scalar
+         case (ED_y_YawRate)
+            call MV_Pack(V, y%YawRate, ValAry)                                  ! Scalar
+         case (ED_y_LSS_Spd)
+            call MV_Pack(V, y%LSS_Spd, ValAry)                                  ! Scalar
+         case (ED_y_HSS_Spd)
+            call MV_Pack(V, y%HSS_Spd, ValAry)                                  ! Scalar
+         case (ED_y_RotSpeed)
+            call MV_Pack(V, y%RotSpeed, ValAry)                                 ! Scalar
+         case (ED_y_TwrAccel)
+            call MV_Pack(V, y%TwrAccel, ValAry)                                 ! Scalar
+         case (ED_y_YawAngle)
+            call MV_Pack(V, y%YawAngle, ValAry)                                 ! Scalar
+         case (ED_y_RootMyc)
+            call MV_Pack(V, y%RootMyc(V%iAry(1):V%iAry(2)), ValAry)             ! Rank 1 Array
+         case (ED_y_YawBrTAxp)
+            call MV_Pack(V, y%YawBrTAxp, ValAry)                                ! Scalar
+         case (ED_y_YawBrTAyp)
+            call MV_Pack(V, y%YawBrTAyp, ValAry)                                ! Scalar
+         case (ED_y_LSSTipPxa)
+            call MV_Pack(V, y%LSSTipPxa, ValAry)                                ! Scalar
+         case (ED_y_RootMxc)
+            call MV_Pack(V, y%RootMxc(V%iAry(1):V%iAry(2)), ValAry)             ! Rank 1 Array
+         case (ED_y_LSSTipMxa)
+            call MV_Pack(V, y%LSSTipMxa, ValAry)                                ! Scalar
+         case (ED_y_LSSTipMya)
+            call MV_Pack(V, y%LSSTipMya, ValAry)                                ! Scalar
+         case (ED_y_LSSTipMza)
+            call MV_Pack(V, y%LSSTipMza, ValAry)                                ! Scalar
+         case (ED_y_LSSTipMys)
+            call MV_Pack(V, y%LSSTipMys, ValAry)                                ! Scalar
+         case (ED_y_LSSTipMzs)
+            call MV_Pack(V, y%LSSTipMzs, ValAry)                                ! Scalar
+         case (ED_y_YawBrMyn)
+            call MV_Pack(V, y%YawBrMyn, ValAry)                                 ! Scalar
+         case (ED_y_YawBrMzn)
+            call MV_Pack(V, y%YawBrMzn, ValAry)                                 ! Scalar
+         case (ED_y_NcIMURAxs)
+            call MV_Pack(V, y%NcIMURAxs, ValAry)                                ! Scalar
+         case (ED_y_NcIMURAys)
+            call MV_Pack(V, y%NcIMURAys, ValAry)                                ! Scalar
+         case (ED_y_NcIMURAzs)
+            call MV_Pack(V, y%NcIMURAzs, ValAry)                                ! Scalar
+         case (ED_y_RotPwr)
+            call MV_Pack(V, y%RotPwr, ValAry)                                   ! Scalar
+         case (ED_y_LSShftFxa)
+            call MV_Pack(V, y%LSShftFxa, ValAry)                                ! Scalar
+         case (ED_y_LSShftFys)
+            call MV_Pack(V, y%LSShftFys, ValAry)                                ! Scalar
+         case (ED_y_LSShftFzs)
+            call MV_Pack(V, y%LSShftFzs, ValAry)                                ! Scalar
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
    end do
 end subroutine
 
-subroutine ED_UnpackOutputVar(Var, ValAry, y)
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(ED_OutputType), intent(inout) :: y
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (ED_y_BladeLn2Mesh)
-         call MV_Unpack2(Var, ValAry, y%BladeLn2Mesh(DL%i1))  ! Mesh
-      case (ED_y_PlatformPtMesh)
-         call MV_Unpack2(Var, ValAry, y%PlatformPtMesh)  ! Mesh
-      case (ED_y_TowerLn2Mesh)
-         call MV_Unpack2(Var, ValAry, y%TowerLn2Mesh)  ! Mesh
-      case (ED_y_HubPtMotion)
-         call MV_Unpack2(Var, ValAry, y%HubPtMotion)  ! Mesh
-      case (ED_y_BladeRootMotion)
-         call MV_Unpack2(Var, ValAry, y%BladeRootMotion(DL%i1))  ! Mesh
-      case (ED_y_NacelleMotion)
-         call MV_Unpack2(Var, ValAry, y%NacelleMotion)  ! Mesh
-      case (ED_y_TFinCMMotion)
-         call MV_Unpack2(Var, ValAry, y%TFinCMMotion)  ! Mesh
-      case (ED_y_WriteOutput)
-         call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
-      case (ED_y_BlPitch)
-         call MV_Unpack2(Var, ValAry, y%BlPitch)  ! Rank 1 Array
-      case (ED_y_Yaw)
-         call MV_Unpack2(Var, ValAry, y%Yaw)  ! Scalar
-      case (ED_y_YawRate)
-         call MV_Unpack2(Var, ValAry, y%YawRate)  ! Scalar
-      case (ED_y_LSS_Spd)
-         call MV_Unpack2(Var, ValAry, y%LSS_Spd)  ! Scalar
-      case (ED_y_HSS_Spd)
-         call MV_Unpack2(Var, ValAry, y%HSS_Spd)  ! Scalar
-      case (ED_y_RotSpeed)
-         call MV_Unpack2(Var, ValAry, y%RotSpeed)  ! Scalar
-      case (ED_y_TwrAccel)
-         call MV_Unpack2(Var, ValAry, y%TwrAccel)  ! Scalar
-      case (ED_y_YawAngle)
-         call MV_Unpack2(Var, ValAry, y%YawAngle)  ! Scalar
-      case (ED_y_RootMyc)
-         call MV_Unpack2(Var, ValAry, y%RootMyc)  ! Rank 1 Array
-      case (ED_y_YawBrTAxp)
-         call MV_Unpack2(Var, ValAry, y%YawBrTAxp)  ! Scalar
-      case (ED_y_YawBrTAyp)
-         call MV_Unpack2(Var, ValAry, y%YawBrTAyp)  ! Scalar
-      case (ED_y_LSSTipPxa)
-         call MV_Unpack2(Var, ValAry, y%LSSTipPxa)  ! Scalar
-      case (ED_y_RootMxc)
-         call MV_Unpack2(Var, ValAry, y%RootMxc)  ! Rank 1 Array
-      case (ED_y_LSSTipMxa)
-         call MV_Unpack2(Var, ValAry, y%LSSTipMxa)  ! Scalar
-      case (ED_y_LSSTipMya)
-         call MV_Unpack2(Var, ValAry, y%LSSTipMya)  ! Scalar
-      case (ED_y_LSSTipMza)
-         call MV_Unpack2(Var, ValAry, y%LSSTipMza)  ! Scalar
-      case (ED_y_LSSTipMys)
-         call MV_Unpack2(Var, ValAry, y%LSSTipMys)  ! Scalar
-      case (ED_y_LSSTipMzs)
-         call MV_Unpack2(Var, ValAry, y%LSSTipMzs)  ! Scalar
-      case (ED_y_YawBrMyn)
-         call MV_Unpack2(Var, ValAry, y%YawBrMyn)  ! Scalar
-      case (ED_y_YawBrMzn)
-         call MV_Unpack2(Var, ValAry, y%YawBrMzn)  ! Scalar
-      case (ED_y_NcIMURAxs)
-         call MV_Unpack2(Var, ValAry, y%NcIMURAxs)  ! Scalar
-      case (ED_y_NcIMURAys)
-         call MV_Unpack2(Var, ValAry, y%NcIMURAys)  ! Scalar
-      case (ED_y_NcIMURAzs)
-         call MV_Unpack2(Var, ValAry, y%NcIMURAzs)  ! Scalar
-      case (ED_y_RotPwr)
-         call MV_Unpack2(Var, ValAry, y%RotPwr)  ! Scalar
-      case (ED_y_LSShftFxa)
-         call MV_Unpack2(Var, ValAry, y%LSShftFxa)  ! Scalar
-      case (ED_y_LSShftFys)
-         call MV_Unpack2(Var, ValAry, y%LSShftFys)  ! Scalar
-      case (ED_y_LSShftFzs)
-         call MV_Unpack2(Var, ValAry, y%LSShftFzs)  ! Scalar
-      end select
-   end associate
-end subroutine
-
 subroutine ED_UnpackOutputAry(Vars, ValAry, y)
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(ED_OutputType), intent(inout) :: y
-   integer(IntKi)                  :: i
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(ED_OutputType), intent(inout)      :: y
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      call ED_UnpackOutputVar(Vars%y(i), ValAry, y)
+      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (DL%Num)
+         case (ED_y_BladeLn2Mesh)
+            call MV_Unpack(V, ValAry, y%BladeLn2Mesh(DL%i1))                    ! Mesh
+         case (ED_y_PlatformPtMesh)
+            call MV_Unpack(V, ValAry, y%PlatformPtMesh)                         ! Mesh
+         case (ED_y_TowerLn2Mesh)
+            call MV_Unpack(V, ValAry, y%TowerLn2Mesh)                           ! Mesh
+         case (ED_y_HubPtMotion)
+            call MV_Unpack(V, ValAry, y%HubPtMotion)                            ! Mesh
+         case (ED_y_BladeRootMotion)
+            call MV_Unpack(V, ValAry, y%BladeRootMotion(DL%i1))                 ! Mesh
+         case (ED_y_NacelleMotion)
+            call MV_Unpack(V, ValAry, y%NacelleMotion)                          ! Mesh
+         case (ED_y_TFinCMMotion)
+            call MV_Unpack(V, ValAry, y%TFinCMMotion)                           ! Mesh
+         case (ED_y_WriteOutput)
+            call MV_Unpack(V, ValAry, y%WriteOutput(V%iAry(1):V%iAry(2)))       ! Rank 1 Array
+         case (ED_y_BlPitch)
+            call MV_Unpack(V, ValAry, y%BlPitch(V%iAry(1):V%iAry(2)))           ! Rank 1 Array
+         case (ED_y_Yaw)
+            call MV_Unpack(V, ValAry, y%Yaw)                                    ! Scalar
+         case (ED_y_YawRate)
+            call MV_Unpack(V, ValAry, y%YawRate)                                ! Scalar
+         case (ED_y_LSS_Spd)
+            call MV_Unpack(V, ValAry, y%LSS_Spd)                                ! Scalar
+         case (ED_y_HSS_Spd)
+            call MV_Unpack(V, ValAry, y%HSS_Spd)                                ! Scalar
+         case (ED_y_RotSpeed)
+            call MV_Unpack(V, ValAry, y%RotSpeed)                               ! Scalar
+         case (ED_y_TwrAccel)
+            call MV_Unpack(V, ValAry, y%TwrAccel)                               ! Scalar
+         case (ED_y_YawAngle)
+            call MV_Unpack(V, ValAry, y%YawAngle)                               ! Scalar
+         case (ED_y_RootMyc)
+            call MV_Unpack(V, ValAry, y%RootMyc(V%iAry(1):V%iAry(2)))           ! Rank 1 Array
+         case (ED_y_YawBrTAxp)
+            call MV_Unpack(V, ValAry, y%YawBrTAxp)                              ! Scalar
+         case (ED_y_YawBrTAyp)
+            call MV_Unpack(V, ValAry, y%YawBrTAyp)                              ! Scalar
+         case (ED_y_LSSTipPxa)
+            call MV_Unpack(V, ValAry, y%LSSTipPxa)                              ! Scalar
+         case (ED_y_RootMxc)
+            call MV_Unpack(V, ValAry, y%RootMxc(V%iAry(1):V%iAry(2)))           ! Rank 1 Array
+         case (ED_y_LSSTipMxa)
+            call MV_Unpack(V, ValAry, y%LSSTipMxa)                              ! Scalar
+         case (ED_y_LSSTipMya)
+            call MV_Unpack(V, ValAry, y%LSSTipMya)                              ! Scalar
+         case (ED_y_LSSTipMza)
+            call MV_Unpack(V, ValAry, y%LSSTipMza)                              ! Scalar
+         case (ED_y_LSSTipMys)
+            call MV_Unpack(V, ValAry, y%LSSTipMys)                              ! Scalar
+         case (ED_y_LSSTipMzs)
+            call MV_Unpack(V, ValAry, y%LSSTipMzs)                              ! Scalar
+         case (ED_y_YawBrMyn)
+            call MV_Unpack(V, ValAry, y%YawBrMyn)                               ! Scalar
+         case (ED_y_YawBrMzn)
+            call MV_Unpack(V, ValAry, y%YawBrMzn)                               ! Scalar
+         case (ED_y_NcIMURAxs)
+            call MV_Unpack(V, ValAry, y%NcIMURAxs)                              ! Scalar
+         case (ED_y_NcIMURAys)
+            call MV_Unpack(V, ValAry, y%NcIMURAys)                              ! Scalar
+         case (ED_y_NcIMURAzs)
+            call MV_Unpack(V, ValAry, y%NcIMURAzs)                              ! Scalar
+         case (ED_y_RotPwr)
+            call MV_Unpack(V, ValAry, y%RotPwr)                                 ! Scalar
+         case (ED_y_LSShftFxa)
+            call MV_Unpack(V, ValAry, y%LSShftFxa)                              ! Scalar
+         case (ED_y_LSShftFys)
+            call MV_Unpack(V, ValAry, y%LSShftFys)                              ! Scalar
+         case (ED_y_LSShftFzs)
+            call MV_Unpack(V, ValAry, y%LSShftFzs)                              ! Scalar
+         end select
+      end associate
    end do
 end subroutine
 
 END MODULE ElastoDyn_Types
+
 !ENDOFREGISTRYGENERATEDFILE

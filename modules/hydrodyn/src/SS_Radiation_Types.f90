@@ -1079,238 +1079,204 @@ SUBROUTINE SS_Rad_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat,
    END IF ! check if allocated
 END SUBROUTINE
 
-function SS_Rad_InputMeshPointer(u, ML) result(Mesh)
+function SS_Rad_InputMeshPointer(u, DL) result(Mesh)
    type(SS_Rad_InputType), target, intent(in) :: u
-   type(DatLoc), intent(in)      :: ML
-   type(MeshType), pointer            :: Mesh
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (ML%Num)
+   select case (DL%Num)
    end select
 end function
 
-function SS_Rad_InputMeshName(ML) result(Name)
-   type(DatLoc), intent(in)      :: ML
+function SS_Rad_InputMeshName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
    character(32)                      :: Name
    Name = ""
-   select case (ML%Num)
+   select case (DL%Num)
    end select
 end function
 
-function SS_Rad_OutputMeshPointer(y, ML) result(Mesh)
+function SS_Rad_OutputMeshPointer(y, DL) result(Mesh)
    type(SS_Rad_OutputType), target, intent(in) :: y
-   type(DatLoc), intent(in)      :: ML
-   type(MeshType), pointer            :: Mesh
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (ML%Num)
+   select case (DL%Num)
    end select
 end function
 
-function SS_Rad_OutputMeshName(ML) result(Name)
-   type(DatLoc), intent(in)      :: ML
+function SS_Rad_OutputMeshName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
    character(32)                      :: Name
    Name = ""
-   select case (ML%Num)
+   select case (DL%Num)
    end select
 end function
-
-subroutine SS_Rad_PackContStateVar(Var, x, ValAry)
-   type(SS_Rad_ContinuousStateType), intent(in) :: x
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (SS_Rad_x_x)
-         call MV_Pack2(Var, x%x, ValAry)  ! Rank 1 Array
-      case default
-         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
 
 subroutine SS_Rad_PackContStateAry(Vars, x, ValAry)
    type(SS_Rad_ContinuousStateType), intent(in) :: x
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      call SS_Rad_PackContStateVar(Vars%x(i), x, ValAry)
+      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (DL%Num)
+         case (SS_Rad_x_x)
+            call MV_Pack(V, x%x(V%iAry(1):V%iAry(2)), ValAry)                   ! Rank 1 Array
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
    end do
-end subroutine
-
-subroutine SS_Rad_UnpackContStateVar(Var, ValAry, x)
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(SS_Rad_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (SS_Rad_x_x)
-         call MV_Unpack2(Var, ValAry, x%x)  ! Rank 1 Array
-      end select
-   end associate
 end subroutine
 
 subroutine SS_Rad_UnpackContStateAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
    type(SS_Rad_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                  :: i
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      call SS_Rad_UnpackContStateVar(Vars%x(i), ValAry, x)
+      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (DL%Num)
+         case (SS_Rad_x_x)
+            call MV_Unpack(V, ValAry, x%x(V%iAry(1):V%iAry(2)))                 ! Rank 1 Array
+         end select
+      end associate
    end do
 end subroutine
 
+subroutine SS_Rad_PackContStateDerivAry(Vars, x, ValAry)
+   type(SS_Rad_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (DL%Num)
+         case (SS_Rad_x_x)
+            call MV_Pack(V, x%x(V%iAry(1):V%iAry(2)), ValAry)                   ! Rank 1 Array
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
+   end do
+end subroutine
 
-subroutine SS_Rad_PackConstrStateVar(Var, z, ValAry)
-   type(SS_Rad_ConstraintStateType), intent(in) :: z
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (SS_Rad_z_DummyConstrState)
-         call MV_Pack2(Var, z%DummyConstrState, ValAry)  ! Scalar
-      case default
-         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
-      end select
-   end associate
+subroutine SS_Rad_UnpackContStateDerivAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(SS_Rad_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (DL%Num)
+         case (SS_Rad_x_x)
+            call MV_Unpack(V, ValAry, x%x(V%iAry(1):V%iAry(2)))                 ! Rank 1 Array
+         end select
+      end associate
+   end do
 end subroutine
 
 subroutine SS_Rad_PackConstrStateAry(Vars, z, ValAry)
    type(SS_Rad_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      call SS_Rad_PackConstrStateVar(Vars%z(i), z, ValAry)
+      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (DL%Num)
+         case (SS_Rad_z_DummyConstrState)
+            call MV_Pack(V, z%DummyConstrState, ValAry)                         ! Scalar
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
    end do
-end subroutine
-
-subroutine SS_Rad_UnpackConstrStateVar(Var, ValAry, z)
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(SS_Rad_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (SS_Rad_z_DummyConstrState)
-         call MV_Unpack2(Var, ValAry, z%DummyConstrState)  ! Scalar
-      end select
-   end associate
 end subroutine
 
 subroutine SS_Rad_UnpackConstrStateAry(Vars, ValAry, z)
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
    type(SS_Rad_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                  :: i
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      call SS_Rad_UnpackConstrStateVar(Vars%z(i), ValAry, z)
+      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (DL%Num)
+         case (SS_Rad_z_DummyConstrState)
+            call MV_Unpack(V, ValAry, z%DummyConstrState)                       ! Scalar
+         end select
+      end associate
    end do
-end subroutine
-
-
-subroutine SS_Rad_PackInputVar(Var, u, ValAry)
-   type(SS_Rad_InputType), intent(in) :: u
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (SS_Rad_u_dq)
-         call MV_Pack2(Var, u%dq, ValAry)  ! Rank 1 Array
-      case default
-         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
-      end select
-   end associate
 end subroutine
 
 subroutine SS_Rad_PackInputAry(Vars, u, ValAry)
-   type(SS_Rad_InputType), intent(in) :: u
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
+   type(SS_Rad_InputType), intent(in)      :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      call SS_Rad_PackInputVar(Vars%u(i), u, ValAry)
+      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (DL%Num)
+         case (SS_Rad_u_dq)
+            call MV_Pack(V, u%dq(V%iAry(1):V%iAry(2)), ValAry)                  ! Rank 1 Array
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
    end do
-end subroutine
-
-subroutine SS_Rad_UnpackInputVar(Var, ValAry, u)
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(SS_Rad_InputType), intent(inout) :: u
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (SS_Rad_u_dq)
-         call MV_Unpack2(Var, ValAry, u%dq)  ! Rank 1 Array
-      end select
-   end associate
 end subroutine
 
 subroutine SS_Rad_UnpackInputAry(Vars, ValAry, u)
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(SS_Rad_InputType), intent(inout) :: u
-   integer(IntKi)                  :: i
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(SS_Rad_InputType), intent(inout)   :: u
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      call SS_Rad_UnpackInputVar(Vars%u(i), ValAry, u)
+      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (DL%Num)
+         case (SS_Rad_u_dq)
+            call MV_Unpack(V, ValAry, u%dq(V%iAry(1):V%iAry(2)))                ! Rank 1 Array
+         end select
+      end associate
    end do
-end subroutine
-
-
-subroutine SS_Rad_PackOutputVar(Var, y, ValAry)
-   type(SS_Rad_OutputType), intent(in) :: y
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (SS_Rad_y_y)
-         call MV_Pack2(Var, y%y, ValAry)  ! Rank 1 Array
-      case (SS_Rad_y_WriteOutput)
-         call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
-      case default
-         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
-      end select
-   end associate
 end subroutine
 
 subroutine SS_Rad_PackOutputAry(Vars, y, ValAry)
-   type(SS_Rad_OutputType), intent(in) :: y
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
+   type(SS_Rad_OutputType), intent(in)     :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      call SS_Rad_PackOutputVar(Vars%y(i), y, ValAry)
+      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (DL%Num)
+         case (SS_Rad_y_y)
+            call MV_Pack(V, y%y(V%iAry(1):V%iAry(2)), ValAry)                   ! Rank 1 Array
+         case (SS_Rad_y_WriteOutput)
+            call MV_Pack(V, y%WriteOutput(V%iAry(1):V%iAry(2)), ValAry)         ! Rank 1 Array
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
    end do
 end subroutine
 
-subroutine SS_Rad_UnpackOutputVar(Var, ValAry, y)
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(SS_Rad_OutputType), intent(inout) :: y
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (SS_Rad_y_y)
-         call MV_Unpack2(Var, ValAry, y%y)  ! Rank 1 Array
-      case (SS_Rad_y_WriteOutput)
-         call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
-      end select
-   end associate
-end subroutine
-
 subroutine SS_Rad_UnpackOutputAry(Vars, ValAry, y)
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(SS_Rad_OutputType), intent(inout) :: y
-   integer(IntKi)                  :: i
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(SS_Rad_OutputType), intent(inout)  :: y
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      call SS_Rad_UnpackOutputVar(Vars%y(i), ValAry, y)
+      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (DL%Num)
+         case (SS_Rad_y_y)
+            call MV_Unpack(V, ValAry, y%y(V%iAry(1):V%iAry(2)))                 ! Rank 1 Array
+         case (SS_Rad_y_WriteOutput)
+            call MV_Unpack(V, ValAry, y%WriteOutput(V%iAry(1):V%iAry(2)))       ! Rank 1 Array
+         end select
+      end associate
    end do
 end subroutine
 
 END MODULE SS_Radiation_Types
+
 !ENDOFREGISTRYGENERATEDFILE

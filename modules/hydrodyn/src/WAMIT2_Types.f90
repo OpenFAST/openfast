@@ -634,74 +634,59 @@ SUBROUTINE WAMIT2_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat,
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 END SUBROUTINE
 
-function WAMIT2_OutputMeshPointer(y, ML) result(Mesh)
+function WAMIT2_OutputMeshPointer(y, DL) result(Mesh)
    type(WAMIT2_OutputType), target, intent(in) :: y
-   type(DatLoc), intent(in)      :: ML
-   type(MeshType), pointer            :: Mesh
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (ML%Num)
+   select case (DL%Num)
    case (WAMIT2_y_Mesh)
        Mesh => y%Mesh
    end select
 end function
 
-function WAMIT2_OutputMeshName(ML) result(Name)
-   type(DatLoc), intent(in)      :: ML
+function WAMIT2_OutputMeshName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
    character(32)                      :: Name
    Name = ""
-   select case (ML%Num)
+   select case (DL%Num)
    case (WAMIT2_y_Mesh)
        Name = "y%Mesh"
    end select
 end function
 
-subroutine WAMIT2_PackOutputVar(Var, y, ValAry)
-   type(WAMIT2_OutputType), intent(in) :: y
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (WAMIT2_y_Mesh)
-         call MV_Pack2(Var, y%Mesh, ValAry)  ! Mesh
-      case default
-         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
 subroutine WAMIT2_PackOutputAry(Vars, y, ValAry)
-   type(WAMIT2_OutputType), intent(in) :: y
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
+   type(WAMIT2_OutputType), intent(in)     :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      call WAMIT2_PackOutputVar(Vars%y(i), y, ValAry)
+      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (DL%Num)
+         case (WAMIT2_y_Mesh)
+            call MV_Pack(V, y%Mesh, ValAry)                                     ! Mesh
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
    end do
 end subroutine
 
-subroutine WAMIT2_UnpackOutputVar(Var, ValAry, y)
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(WAMIT2_OutputType), intent(inout) :: y
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (WAMIT2_y_Mesh)
-         call MV_Unpack2(Var, ValAry, y%Mesh)  ! Mesh
-      end select
-   end associate
-end subroutine
-
 subroutine WAMIT2_UnpackOutputAry(Vars, ValAry, y)
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(WAMIT2_OutputType), intent(inout) :: y
-   integer(IntKi)                  :: i
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(WAMIT2_OutputType), intent(inout)  :: y
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      call WAMIT2_UnpackOutputVar(Vars%y(i), ValAry, y)
+      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (DL%Num)
+         case (WAMIT2_y_Mesh)
+            call MV_Unpack(V, ValAry, y%Mesh)                                   ! Mesh
+         end select
+      end associate
    end do
 end subroutine
 
 END MODULE WAMIT2_Types
+
 !ENDOFREGISTRYGENERATEDFILE

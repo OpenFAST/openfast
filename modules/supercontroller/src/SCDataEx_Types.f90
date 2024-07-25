@@ -661,140 +661,108 @@ SUBROUTINE SC_DX_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
    END IF
 END SUBROUTINE
 
-function SC_DX_InputMeshPointer(u, ML) result(Mesh)
+function SC_DX_InputMeshPointer(u, DL) result(Mesh)
    type(SC_DX_InputType), target, intent(in) :: u
-   type(DatLoc), intent(in)      :: ML
-   type(MeshType), pointer            :: Mesh
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (ML%Num)
+   select case (DL%Num)
    end select
 end function
 
-function SC_DX_InputMeshName(ML) result(Name)
-   type(DatLoc), intent(in)      :: ML
+function SC_DX_InputMeshName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
    character(32)                      :: Name
    Name = ""
-   select case (ML%Num)
+   select case (DL%Num)
    end select
 end function
 
-function SC_DX_OutputMeshPointer(y, ML) result(Mesh)
+function SC_DX_OutputMeshPointer(y, DL) result(Mesh)
    type(SC_DX_OutputType), target, intent(in) :: y
-   type(DatLoc), intent(in)      :: ML
-   type(MeshType), pointer            :: Mesh
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (ML%Num)
+   select case (DL%Num)
    end select
 end function
 
-function SC_DX_OutputMeshName(ML) result(Name)
-   type(DatLoc), intent(in)      :: ML
+function SC_DX_OutputMeshName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
    character(32)                      :: Name
    Name = ""
-   select case (ML%Num)
+   select case (DL%Num)
    end select
 end function
-
-subroutine SC_DX_PackInputVar(Var, u, ValAry)
-   type(SC_DX_InputType), intent(in) :: u
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (SC_DX_u_toSC)
-         call MV_Pack2(Var, u%toSC, ValAry)  ! Rank 1 Array
-      case default
-         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
 
 subroutine SC_DX_PackInputAry(Vars, u, ValAry)
-   type(SC_DX_InputType), intent(in) :: u
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
+   type(SC_DX_InputType), intent(in)       :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      call SC_DX_PackInputVar(Vars%u(i), u, ValAry)
+      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (DL%Num)
+         case (SC_DX_u_toSC)
+            call MV_Pack(V, u%toSC(V%iAry(1):V%iAry(2)), ValAry)                ! Rank 1 Array
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
    end do
-end subroutine
-
-subroutine SC_DX_UnpackInputVar(Var, ValAry, u)
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(SC_DX_InputType), intent(inout) :: u
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (SC_DX_u_toSC)
-         call MV_Unpack2(Var, ValAry, u%toSC)  ! Rank 1 Array
-      end select
-   end associate
 end subroutine
 
 subroutine SC_DX_UnpackInputAry(Vars, ValAry, u)
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(SC_DX_InputType), intent(inout) :: u
-   integer(IntKi)                  :: i
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(SC_DX_InputType), intent(inout)    :: u
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      call SC_DX_UnpackInputVar(Vars%u(i), ValAry, u)
+      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (DL%Num)
+         case (SC_DX_u_toSC)
+            call MV_Unpack(V, ValAry, u%toSC(V%iAry(1):V%iAry(2)))              ! Rank 1 Array
+         end select
+      end associate
    end do
-end subroutine
-
-
-subroutine SC_DX_PackOutputVar(Var, y, ValAry)
-   type(SC_DX_OutputType), intent(in) :: y
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (SC_DX_y_fromSC)
-         call MV_Pack2(Var, y%fromSC, ValAry)  ! Rank 1 Array
-      case (SC_DX_y_fromSCglob)
-         call MV_Pack2(Var, y%fromSCglob, ValAry)  ! Rank 1 Array
-      case default
-         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
-      end select
-   end associate
 end subroutine
 
 subroutine SC_DX_PackOutputAry(Vars, y, ValAry)
-   type(SC_DX_OutputType), intent(in) :: y
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
+   type(SC_DX_OutputType), intent(in)      :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      call SC_DX_PackOutputVar(Vars%y(i), y, ValAry)
+      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (DL%Num)
+         case (SC_DX_y_fromSC)
+            call MV_Pack(V, y%fromSC(V%iAry(1):V%iAry(2)), ValAry)              ! Rank 1 Array
+         case (SC_DX_y_fromSCglob)
+            call MV_Pack(V, y%fromSCglob(V%iAry(1):V%iAry(2)), ValAry)          ! Rank 1 Array
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
    end do
 end subroutine
 
-subroutine SC_DX_UnpackOutputVar(Var, ValAry, y)
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(SC_DX_OutputType), intent(inout) :: y
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (SC_DX_y_fromSC)
-         call MV_Unpack2(Var, ValAry, y%fromSC)  ! Rank 1 Array
-      case (SC_DX_y_fromSCglob)
-         call MV_Unpack2(Var, ValAry, y%fromSCglob)  ! Rank 1 Array
-      end select
-   end associate
-end subroutine
-
 subroutine SC_DX_UnpackOutputAry(Vars, ValAry, y)
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(SC_DX_OutputType), intent(inout) :: y
-   integer(IntKi)                  :: i
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(SC_DX_OutputType), intent(inout)   :: y
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      call SC_DX_UnpackOutputVar(Vars%y(i), ValAry, y)
+      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (DL%Num)
+         case (SC_DX_y_fromSC)
+            call MV_Unpack(V, ValAry, y%fromSC(V%iAry(1):V%iAry(2)))            ! Rank 1 Array
+         case (SC_DX_y_fromSCglob)
+            call MV_Unpack(V, ValAry, y%fromSCglob(V%iAry(1):V%iAry(2)))        ! Rank 1 Array
+         end select
+      end associate
    end do
 end subroutine
 
 END MODULE SCDataEx_Types
+
 !ENDOFREGISTRYGENERATEDFILE

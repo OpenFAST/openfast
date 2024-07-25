@@ -1425,254 +1425,224 @@ SUBROUTINE DBEMT_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, 
    END IF ! check if allocated
 END SUBROUTINE
 
-function DBEMT_InputMeshPointer(u, ML) result(Mesh)
+function DBEMT_InputMeshPointer(u, DL) result(Mesh)
    type(DBEMT_InputType), target, intent(in) :: u
-   type(DatLoc), intent(in)      :: ML
-   type(MeshType), pointer            :: Mesh
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (ML%Num)
+   select case (DL%Num)
    end select
 end function
 
-function DBEMT_InputMeshName(ML) result(Name)
-   type(DatLoc), intent(in)      :: ML
+function DBEMT_InputMeshName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
    character(32)                      :: Name
    Name = ""
-   select case (ML%Num)
+   select case (DL%Num)
    end select
 end function
 
-function DBEMT_OutputMeshPointer(y, ML) result(Mesh)
+function DBEMT_OutputMeshPointer(y, DL) result(Mesh)
    type(DBEMT_OutputType), target, intent(in) :: y
-   type(DatLoc), intent(in)      :: ML
-   type(MeshType), pointer            :: Mesh
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (ML%Num)
+   select case (DL%Num)
    end select
 end function
 
-function DBEMT_OutputMeshName(ML) result(Name)
-   type(DatLoc), intent(in)      :: ML
+function DBEMT_OutputMeshName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
    character(32)                      :: Name
    Name = ""
-   select case (ML%Num)
+   select case (DL%Num)
    end select
 end function
-
-subroutine DBEMT_PackContStateVar(Var, x, ValAry)
-   type(DBEMT_ContinuousStateType), intent(in) :: x
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (DBEMT_x_element_vind)
-         call MV_Pack2(Var, x%element(DL%i1, DL%i2)%vind, ValAry)  ! Rank 1 Array
-      case (DBEMT_x_element_vind_1)
-         call MV_Pack2(Var, x%element(DL%i1, DL%i2)%vind_1, ValAry)  ! Rank 1 Array
-      case default
-         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
 
 subroutine DBEMT_PackContStateAry(Vars, x, ValAry)
    type(DBEMT_ContinuousStateType), intent(in) :: x
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      call DBEMT_PackContStateVar(Vars%x(i), x, ValAry)
+      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (DL%Num)
+         case (DBEMT_x_element_vind)
+            call MV_Pack(V, x%element(DL%i1, DL%i2)%vind(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
+         case (DBEMT_x_element_vind_1)
+            call MV_Pack(V, x%element(DL%i1, DL%i2)%vind_1(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
    end do
-end subroutine
-
-subroutine DBEMT_UnpackContStateVar(Var, ValAry, x)
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(DBEMT_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (DBEMT_x_element_vind)
-         call MV_Unpack2(Var, ValAry, x%element(DL%i1, DL%i2)%vind)  ! Rank 1 Array
-      case (DBEMT_x_element_vind_1)
-         call MV_Unpack2(Var, ValAry, x%element(DL%i1, DL%i2)%vind_1)  ! Rank 1 Array
-      end select
-   end associate
 end subroutine
 
 subroutine DBEMT_UnpackContStateAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
    type(DBEMT_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                  :: i
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      call DBEMT_UnpackContStateVar(Vars%x(i), ValAry, x)
+      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (DL%Num)
+         case (DBEMT_x_element_vind)
+            call MV_Unpack(V, ValAry, x%element(DL%i1, DL%i2)%vind(V%iAry(1):V%iAry(2))) ! Rank 1 Array
+         case (DBEMT_x_element_vind_1)
+            call MV_Unpack(V, ValAry, x%element(DL%i1, DL%i2)%vind_1(V%iAry(1):V%iAry(2))) ! Rank 1 Array
+         end select
+      end associate
    end do
 end subroutine
 
+subroutine DBEMT_PackContStateDerivAry(Vars, x, ValAry)
+   type(DBEMT_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (DL%Num)
+         case (DBEMT_x_element_vind)
+            call MV_Pack(V, x%element(DL%i1, DL%i2)%vind(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
+         case (DBEMT_x_element_vind_1)
+            call MV_Pack(V, x%element(DL%i1, DL%i2)%vind_1(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
+   end do
+end subroutine
 
-subroutine DBEMT_PackConstrStateVar(Var, z, ValAry)
-   type(DBEMT_ConstraintStateType), intent(in) :: z
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (DBEMT_z_DummyState)
-         call MV_Pack2(Var, z%DummyState, ValAry)  ! Scalar
-      case default
-         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
-      end select
-   end associate
+subroutine DBEMT_UnpackContStateDerivAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(DBEMT_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (DL%Num)
+         case (DBEMT_x_element_vind)
+            call MV_Unpack(V, ValAry, x%element(DL%i1, DL%i2)%vind(V%iAry(1):V%iAry(2))) ! Rank 1 Array
+         case (DBEMT_x_element_vind_1)
+            call MV_Unpack(V, ValAry, x%element(DL%i1, DL%i2)%vind_1(V%iAry(1):V%iAry(2))) ! Rank 1 Array
+         end select
+      end associate
+   end do
 end subroutine
 
 subroutine DBEMT_PackConstrStateAry(Vars, z, ValAry)
    type(DBEMT_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      call DBEMT_PackConstrStateVar(Vars%z(i), z, ValAry)
+      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (DL%Num)
+         case (DBEMT_z_DummyState)
+            call MV_Pack(V, z%DummyState, ValAry)                               ! Scalar
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
    end do
-end subroutine
-
-subroutine DBEMT_UnpackConstrStateVar(Var, ValAry, z)
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(DBEMT_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (DBEMT_z_DummyState)
-         call MV_Unpack2(Var, ValAry, z%DummyState)  ! Scalar
-      end select
-   end associate
 end subroutine
 
 subroutine DBEMT_UnpackConstrStateAry(Vars, ValAry, z)
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
    type(DBEMT_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                  :: i
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      call DBEMT_UnpackConstrStateVar(Vars%z(i), ValAry, z)
+      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (DL%Num)
+         case (DBEMT_z_DummyState)
+            call MV_Unpack(V, ValAry, z%DummyState)                             ! Scalar
+         end select
+      end associate
    end do
-end subroutine
-
-
-subroutine DBEMT_PackInputVar(Var, u, ValAry)
-   type(DBEMT_InputType), intent(in) :: u
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (DBEMT_u_AxInd_disk)
-         call MV_Pack2(Var, u%AxInd_disk, ValAry)  ! Scalar
-      case (DBEMT_u_Un_disk)
-         call MV_Pack2(Var, u%Un_disk, ValAry)  ! Scalar
-      case (DBEMT_u_R_disk)
-         call MV_Pack2(Var, u%R_disk, ValAry)  ! Scalar
-      case (DBEMT_u_element_vind_s)
-         call MV_Pack2(Var, u%element(DL%i1, DL%i2)%vind_s, ValAry)  ! Rank 1 Array
-      case (DBEMT_u_element_spanRatio)
-         call MV_Pack2(Var, u%element(DL%i1, DL%i2)%spanRatio, ValAry)  ! Scalar
-      case default
-         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
-      end select
-   end associate
 end subroutine
 
 subroutine DBEMT_PackInputAry(Vars, u, ValAry)
-   type(DBEMT_InputType), intent(in) :: u
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
+   type(DBEMT_InputType), intent(in)       :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      call DBEMT_PackInputVar(Vars%u(i), u, ValAry)
+      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (DL%Num)
+         case (DBEMT_u_AxInd_disk)
+            call MV_Pack(V, u%AxInd_disk, ValAry)                               ! Scalar
+         case (DBEMT_u_Un_disk)
+            call MV_Pack(V, u%Un_disk, ValAry)                                  ! Scalar
+         case (DBEMT_u_R_disk)
+            call MV_Pack(V, u%R_disk, ValAry)                                   ! Scalar
+         case (DBEMT_u_element_vind_s)
+            call MV_Pack(V, u%element(DL%i1, DL%i2)%vind_s(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
+         case (DBEMT_u_element_spanRatio)
+            call MV_Pack(V, u%element(DL%i1, DL%i2)%spanRatio, ValAry)          ! Scalar
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
    end do
-end subroutine
-
-subroutine DBEMT_UnpackInputVar(Var, ValAry, u)
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(DBEMT_InputType), intent(inout) :: u
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (DBEMT_u_AxInd_disk)
-         call MV_Unpack2(Var, ValAry, u%AxInd_disk)  ! Scalar
-      case (DBEMT_u_Un_disk)
-         call MV_Unpack2(Var, ValAry, u%Un_disk)  ! Scalar
-      case (DBEMT_u_R_disk)
-         call MV_Unpack2(Var, ValAry, u%R_disk)  ! Scalar
-      case (DBEMT_u_element_vind_s)
-         call MV_Unpack2(Var, ValAry, u%element(DL%i1, DL%i2)%vind_s)  ! Rank 1 Array
-      case (DBEMT_u_element_spanRatio)
-         call MV_Unpack2(Var, ValAry, u%element(DL%i1, DL%i2)%spanRatio)  ! Scalar
-      end select
-   end associate
 end subroutine
 
 subroutine DBEMT_UnpackInputAry(Vars, ValAry, u)
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(DBEMT_InputType), intent(inout) :: u
-   integer(IntKi)                  :: i
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(DBEMT_InputType), intent(inout)    :: u
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      call DBEMT_UnpackInputVar(Vars%u(i), ValAry, u)
+      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (DL%Num)
+         case (DBEMT_u_AxInd_disk)
+            call MV_Unpack(V, ValAry, u%AxInd_disk)                             ! Scalar
+         case (DBEMT_u_Un_disk)
+            call MV_Unpack(V, ValAry, u%Un_disk)                                ! Scalar
+         case (DBEMT_u_R_disk)
+            call MV_Unpack(V, ValAry, u%R_disk)                                 ! Scalar
+         case (DBEMT_u_element_vind_s)
+            call MV_Unpack(V, ValAry, u%element(DL%i1, DL%i2)%vind_s(V%iAry(1):V%iAry(2))) ! Rank 1 Array
+         case (DBEMT_u_element_spanRatio)
+            call MV_Unpack(V, ValAry, u%element(DL%i1, DL%i2)%spanRatio)        ! Scalar
+         end select
+      end associate
    end do
-end subroutine
-
-
-subroutine DBEMT_PackOutputVar(Var, y, ValAry)
-   type(DBEMT_OutputType), intent(in) :: y
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (DBEMT_y_vind)
-         call MV_Pack2(Var, y%vind, ValAry)  ! Rank 3 Array
-      case default
-         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
-      end select
-   end associate
 end subroutine
 
 subroutine DBEMT_PackOutputAry(Vars, y, ValAry)
-   type(DBEMT_OutputType), intent(in) :: y
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
+   type(DBEMT_OutputType), intent(in)      :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      call DBEMT_PackOutputVar(Vars%y(i), y, ValAry)
+      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (DL%Num)
+         case (DBEMT_y_vind)
+            call MV_Pack(V, y%vind(V%iAry(1):V%iAry(2), V%jAry, V%kAry), ValAry) ! Rank 3 Array
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
    end do
 end subroutine
 
-subroutine DBEMT_UnpackOutputVar(Var, ValAry, y)
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(DBEMT_OutputType), intent(inout) :: y
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (DBEMT_y_vind)
-         call MV_Unpack2(Var, ValAry, y%vind)  ! Rank 3 Array
-      end select
-   end associate
-end subroutine
-
 subroutine DBEMT_UnpackOutputAry(Vars, ValAry, y)
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(DBEMT_OutputType), intent(inout) :: y
-   integer(IntKi)                  :: i
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(DBEMT_OutputType), intent(inout)   :: y
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      call DBEMT_UnpackOutputVar(Vars%y(i), ValAry, y)
+      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (DL%Num)
+         case (DBEMT_y_vind)
+            call MV_Unpack(V, ValAry, y%vind(V%iAry(1):V%iAry(2), V%jAry, V%kAry)) ! Rank 3 Array
+         end select
+      end associate
    end do
 end subroutine
 
 END MODULE DBEMT_Types
+
 !ENDOFREGISTRYGENERATEDFILE

@@ -2974,15 +2974,17 @@ CONTAINS
 
       allocate(p%Vars%u(0))
 
-      call MV_AddMeshVar(p%Vars%u, "CoupledKinematics", MotionFields, &
-                         DatLoc(MD_u_CoupledKinematics), &
-                         Mesh=u%CoupledKinematics(1), &
-                         Perturbs=[dl_slack_min, & ! FieldTransDisp
-                                   0.1_R8Ki, &     ! FieldOrientation
-                                   0.1_R8Ki, &     ! FieldTransVel
-                                   0.1_R8Ki, &     ! FieldAngularVel
-                                   0.1_R8Ki, &     ! FieldTransAcc
-                                   0.1_R8Ki])      ! FieldAngularAcc
+      do i = 1, p%nTurbines
+         call MV_AddMeshVar(p%Vars%u, "CoupledKinematics", MotionFields, &
+                            DatLoc(MD_u_CoupledKinematics, i), &
+                            Mesh=u%CoupledKinematics(i), &
+                            Perturbs=[dl_slack_min, & ! FieldTransDisp
+                                     0.1_R8Ki, &     ! FieldOrientation
+                                     0.1_R8Ki, &     ! FieldTransVel
+                                     0.1_R8Ki, &     ! FieldAngularVel
+                                     0.1_R8Ki, &     ! FieldTransAcc
+                                     0.1_R8Ki])      ! FieldAngularAcc
+      end do
 
       ! This could be stored more efficiently, but maintains order compatible with previous implementation.
       if (allocated(u%DeltaL)) then
@@ -3022,8 +3024,11 @@ CONTAINS
       ! Output variables
       !-------------------------------------------------------------------------
 
-      call MV_AddMeshVar(p%Vars%y, "LinNames_y", LoadFields, DatLoc(MD_y_CoupledLoads), &
-                         Mesh=y%CoupledLoads(1))
+      do i = 1, p%nTurbines
+         call MV_AddMeshVar(p%Vars%y, "LinNames_y", LoadFields, &
+                           DatLoc(MD_y_CoupledLoads, i), &
+                           Mesh=y%CoupledLoads(i))
+      end do
 
       ! Write outputs
       call MV_AddVar(p%Vars%y, "WriteOutput", FieldScalar, DatLoc(MD_y_WriteOutput), &

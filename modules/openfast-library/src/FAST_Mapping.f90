@@ -366,9 +366,9 @@ function FAST_OutputMeshName(ModData, DL) result(Name)
    end select
 end function
 
-subroutine FAST_InitMappings(Mods, Mappings, Turbine, ErrStat, ErrMsg)
+subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
+   type(MappingType), allocatable, intent(out)        :: Mappings(:)
    type(ModDataType), intent(inout)                   :: Mods(:)     !< Module data
-   type(MappingType), allocatable, intent(inout)      :: Mappings(:)
    type(FAST_TurbineType), intent(inout)              :: Turbine     !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
@@ -454,8 +454,16 @@ subroutine FAST_InitMappings(Mods, Mappings, Turbine, ErrStat, ErrMsg)
                  DstMod => Mods(Mappings(iMap)%iModDst))
 
          ! Add mapping index to sorce and destination module mapping arrays
-         SrcMod%iSrcMaps = [SrcMod%iSrcMaps, iMap]
-         DstMod%iDstMaps = [DstMod%iDstMaps, iMap]
+         if (allocated(SrcMod%iSrcMaps)) then
+            SrcMod%iSrcMaps = [SrcMod%iSrcMaps, iMap]
+         else
+            SrcMod%iSrcMaps = [iMap]
+         end if
+         if (allocated(DstMod%iDstMaps)) then
+            DstMod%iDstMaps = [DstMod%iDstMaps, iMap]
+         else
+            DstMod%iDstMaps = [iMap]
+         end if
 
          write (*, *) "Mapping: ", Mappings(iMap)%Desc
 
@@ -2179,7 +2187,7 @@ contains
       type(MappingType), intent(in) :: Mapping
       type(ModMapType), intent(in)  :: ModMap
       type(ModVarsType), intent(in) :: VarsSrc, VarsDst
-      real(R8Ki), intent(inout)     :: dUdu(:,:)
+      real(R8Ki), intent(inout)     :: dUdu(:, :)
 
       ! Effect of input Translation Displacement on input Translation Velocity
       if (allocated(Mapping%MeshMap%dM%tv_uD)) then
@@ -2207,7 +2215,7 @@ contains
       type(MappingType), intent(inout) :: Mapping
       type(ModMapType), intent(in)     :: ModMap
       type(ModVarsType), intent(in)    :: VarsSrc, VarsDst
-      real(R8Ki), intent(inout)        :: dUdy(:,:)
+      real(R8Ki), intent(inout)        :: dUdy(:, :)
 
       ! Load identity
       if (allocated(Mapping%MeshMap%dM%li)) then
@@ -2251,7 +2259,7 @@ contains
       type(MappingType), intent(in) :: Mapping
       type(ModMapType), intent(in)  :: ModMap
       type(ModVarsType), intent(in) :: VarsSrc, VarsDst
-      real(R8Ki), intent(inout)     :: dUdy(:,:)
+      real(R8Ki), intent(inout)     :: dUdy(:, :)
 
       ! Motion identity
       if (allocated(Mapping%MeshMap%dM%mi)) then

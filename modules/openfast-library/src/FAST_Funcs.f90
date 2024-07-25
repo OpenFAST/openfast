@@ -559,6 +559,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
          call BD_PackInputAry(ModData%Vars, T%BD%Input(InputIndex, ModData%Ins), u_op)
       case (Module_ED)
          call ED_PackInputAry(ModData%Vars, T%ED%Input(InputIndex), u_op)
+         call ED_PackExtInputAry(ModData%Vars, T%ED%Input(InputIndex), u_op, ErrStat2, ErrMsg2); if (Failed()) return
       case (Module_ExtPtfm)
          call ExtPtfm_PackInputAry(ModData%Vars, T%ExtPtfm%Input(InputIndex), u_op)
       case (Module_FEAM)
@@ -592,7 +593,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       end select
 
       ! If glue array is present, transfer from module to glue
-      if (present(u_glue)) call MV_XfrLocToGluAry(ModData%Vars%u, u_op, u_glue)
+      if (present(u_glue)) call XfrLocToGluAry(ModData%Vars%u, u_op, u_glue)
    end if
 
    ! If outputs are requested
@@ -644,7 +645,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       end select
 
       ! If glue array is present, transfer from module to glue
-      if (present(y_glue)) call MV_XfrLocToGluAry(ModData%Vars%y, y_op, y_glue)
+      if (present(y_glue)) call XfrLocToGluAry(ModData%Vars%y, y_op, y_glue)
    end if
 
    ! If continuous states are requested
@@ -695,7 +696,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       end select
 
       ! If glue array is present, transfer from module to glue
-      if (present(x_glue)) call MV_XfrLocToGluAry(ModData%Vars%x, x_op, x_glue)
+      if (present(x_glue)) call XfrLocToGluAry(ModData%Vars%x, x_op, x_glue)
    end if
 
    ! If continuous state derivatives are requested
@@ -783,7 +784,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       end select
 
       ! If glue array is present, transfer from module to glue
-      if (present(dx_glue)) call MV_XfrLocToGluAry(ModData%Vars%x, dx_op, dx_glue)
+      if (present(dx_glue)) call XfrLocToGluAry(ModData%Vars%x, dx_op, dx_glue)
    end if
 
    ! If constraint states are requested
@@ -834,7 +835,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       end select
 
       ! If glue array is present, transfer from module to glue
-      if (present(z_glue)) call MV_XfrLocToGluAry(ModData%Vars%z, z_op, z_glue)
+      if (present(z_glue)) call XfrLocToGluAry(ModData%Vars%z, z_op, z_glue)
    end if
 
 contains
@@ -845,7 +846,7 @@ contains
 end subroutine
 
 subroutine FAST_SetOP(ModData, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
-                      u_op, y_op, x_op, z_op, u_glue, y_glue, x_glue, z_glue)
+                      u_op, x_op, z_op, u_glue, x_glue, z_glue)
    type(ModDataType), intent(in)                      :: ModData     !< Module information
    integer(IntKi), intent(in)                         :: InputIndex  !< Input index
    integer(IntKi), intent(in)                         :: StateIndex  !< State index
@@ -853,7 +854,6 @@ subroutine FAST_SetOP(ModData, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
    real(R8Ki), allocatable, optional, intent(inout)   :: u_op(:), u_glue(:)     !< values of linearized inputs
-   real(R8Ki), allocatable, optional, intent(inout)   :: y_op(:), y_glue(:)     !< values of linearized outputs
    real(R8Ki), allocatable, optional, intent(inout)   :: x_op(:), x_glue(:)     !< values of linearized continuous states
    real(R8Ki), allocatable, optional, intent(inout)   :: z_op(:), z_glue(:)     !< values of linearized constraint states
 
@@ -869,7 +869,7 @@ subroutine FAST_SetOP(ModData, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
    if (present(u_op)) then
 
       ! If glue array is present, transfer from module to glue
-      if (present(u_glue)) call MV_XfrGluToModAry(ModData%Vars%u, u_glue, u_op)
+      if (present(u_glue)) call XfrGluToModAry(ModData%Vars%u, u_glue, u_op)
 
       ! Select based on module ID
       select case (ModData%ID)
@@ -912,58 +912,11 @@ subroutine FAST_SetOP(ModData, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
 
    end if
 
-   ! If outputs are requested
-   if (present(y_op)) then
-
-      ! If glue array is present, transfer from module to glue
-      if (present(y_glue)) call MV_XfrGluToModAry(ModData%Vars%y, y_glue, y_op)
-
-      ! Select based on module ID
-      select case (ModData%ID)
-      case (Module_AD)
-         call AD_UnpackOutputAry(ModData%Vars, y_op, T%AD%y%rotors(ModData%Ins))
-      case (Module_BD)
-         call BD_UnpackOutputAry(ModData%Vars, y_op, T%BD%y(ModData%Ins))
-      case (Module_ED)
-         call ED_UnpackOutputAry(ModData%Vars, y_op, T%ED%y)
-      case (Module_ExtPtfm)
-         call ExtPtfm_UnpackOutputAry(ModData%Vars, y_op, T%ExtPtfm%y)
-      case (Module_FEAM)
-         call FEAM_UnpackOutputAry(ModData%Vars, y_op, T%FEAM%y)
-      case (Module_HD)
-         call HydroDyn_UnpackOutputAry(ModData%Vars, y_op, T%HD%y)
-      case (Module_IceD)
-         call IceD_UnpackOutputAry(ModData%Vars, y_op, T%IceD%y(ModData%Ins))
-      case (Module_IceF)
-         call IceFloe_UnpackOutputAry(ModData%Vars, y_op, T%IceF%y)
-      case (Module_IfW)
-         call InflowWind_UnpackOutputAry(ModData%Vars, y_op, T%IfW%y)
-      case (Module_MAP)
-         call MAP_UnpackOutputAry(ModData%Vars, y_op, T%MAP%y)
-      case (Module_MD)
-         call MD_UnpackOutputAry(ModData%Vars, y_op, T%MD%y)
-      case (Module_ExtInfw)
-         call ExtInfw_UnpackOutputAry(ModData%Vars, y_op, T%ExtInfw%y)
-      case (Module_Orca)
-         call Orca_UnpackOutputAry(ModData%Vars, y_op, T%Orca%y)
-      case (Module_SD)
-         call SD_UnpackOutputAry(ModData%Vars, y_op, T%SD%y)
-      case (Module_SeaSt)
-         call SeaSt_UnpackOutputAry(ModData%Vars, y_op, T%SeaSt%y)
-      case (Module_SrvD)
-         call SrvD_UnpackOutputAry(ModData%Vars, y_op, T%SrvD%y)
-      case default
-         call SetErrStat(ErrID_Fatal, "Output unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
-         return
-      end select
-
-   end if
-
    ! If continuous states are requested
    if (present(x_op)) then
 
       ! If glue array is present, transfer from module to glue
-      if (present(x_glue)) call MV_XfrGluToModAry(ModData%Vars%x, x_glue, x_op)
+      if (present(x_glue)) call XfrGluToModAry(ModData%Vars%x, x_glue, x_op)
 
       ! Select based on module ID
       select case (ModData%ID)
@@ -1010,7 +963,7 @@ subroutine FAST_SetOP(ModData, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
    if (present(z_op)) then
 
       ! If glue array is present, transfer from module to glue
-      if (present(z_glue)) call MV_XfrGluToModAry(ModData%Vars%z, z_glue, z_op)
+      if (present(z_glue)) call XfrGluToModAry(ModData%Vars%z, z_glue, z_op)
 
       ! Select based on module ID
       select case (ModData%ID)
@@ -1143,10 +1096,10 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, StateIndex, T, ErrStat, ErrMsg
    if (ErrStat >= AbortErrLev) return
 
    ! If dYdu and dYduGlue are present, transfer from module matrix to glue matrix
-   if (present(dYdu) .and. present(dYduGlue)) call MV_PackMatrix(ModData%Vars%y, ModData%Vars%u, dYdu, dYduGlue)
+   if (present(dYdu) .and. present(dYduGlue)) call XfrModToGlueMatrix(ModData%Vars%y, ModData%Vars%u, dYdu, dYduGlue)
 
    ! If dXdu and dXduGlue are present, transfer from module matrix to glue matrix
-   if (present(dXdu) .and. present(dXduGlue)) call MV_PackMatrix(ModData%Vars%x, ModData%Vars%u, dXdu, dXduGlue)
+   if (present(dXdu) .and. present(dXduGlue)) call XfrModToGlueMatrix(ModData%Vars%x, ModData%Vars%u, dXdu, dXduGlue)
 
 end subroutine
 
@@ -1249,10 +1202,10 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, StateIndex, T, ErrStat, Er
    if (ErrStat >= AbortErrLev) return
 
    ! If dYdx and dYdxGlue are present, transfer from module matrix to glue matrix
-   if (present(dYdx) .and. present(dYdxGlue)) call MV_PackMatrix(ModData%Vars%y, ModData%Vars%x, dYdx, dYdxGlue)
+   if (present(dYdx) .and. present(dYdxGlue)) call XfrModToGlueMatrix(ModData%Vars%y, ModData%Vars%x, dYdx, dYdxGlue)
 
    ! If dXdx and dXdxGlue are present, transfer from module matrix to glue matrix
-   if (present(dXdx) .and. present(dXdxGlue)) call MV_PackMatrix(ModData%Vars%x, ModData%Vars%x, dXdx, dXdxGlue)
+   if (present(dXdx) .and. present(dXdxGlue)) call XfrModToGlueMatrix(ModData%Vars%x, ModData%Vars%x, dXdx, dXdxGlue)
 
 end subroutine
 
@@ -1906,6 +1859,42 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
    ! Set error
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
+end subroutine
+
+subroutine XfrLocToGluAry(VarAry, ModAry, GluAry)
+   type(ModVarType), intent(in)           :: VarAry(:)
+   real(R8Ki), allocatable, intent(in)    :: ModAry(:)
+   real(R8Ki), intent(inout)              :: GluAry(:)
+   integer(IntKi)                         :: i
+   if (.not. allocated(ModAry) .or. size(VarAry) == 0) return
+   do i = 1, size(VarAry)
+      GluAry(VarAry(i)%iGlu(1):VarAry(i)%iGlu(2)) = ModAry(VarAry(i)%iLoc(1):VarAry(i)%iLoc(2))
+   end do
+end subroutine
+
+subroutine XfrGluToModAry(VarAry, GluAry, ModAry)
+   type(ModVarType), intent(in)           :: VarAry(:)
+   real(R8Ki), allocatable, intent(in)    :: GluAry(:)
+   real(R8Ki), intent(inout)              :: ModAry(:)
+   integer(IntKi)                         :: i
+   if (.not. allocated(GluAry) .or. size(VarAry) == 0) return
+   do i = 1, size(VarAry)
+      ModAry(VarAry(i)%iLoc(1):VarAry(i)%iLoc(2)) = GluAry(VarAry(i)%iGlu(1):VarAry(i)%iGlu(2))
+   end do
+end subroutine
+
+subroutine XfrModToGlueMatrix(RowVarAry, ColVarAry, ModMat, GluMat)
+   type(ModVarType), intent(in)           :: RowVarAry(:), ColVarAry(:)
+   real(R8Ki), allocatable, intent(in)    :: ModMat(:, :)
+   real(R8Ki), intent(inout)              :: GluMat(:, :)
+   integer(IntKi)                         :: i, j
+   if (.not. allocated(ModMat) .or. size(RowVarAry) == 0 .or. size(ColVarAry) == 0) return
+   do i = 1, size(ColVarAry)
+      do j = 1, size(RowVarAry)
+         GluMat(RowVarAry(j)%iGlu(1):RowVarAry(j)%iGlu(2), ColVarAry(i)%iGlu(1):ColVarAry(i)%iGlu(2)) = &
+            ModMat(RowVarAry(j)%iLoc(1):RowVarAry(j)%iLoc(2), ColVarAry(i)%iLoc(1):ColVarAry(i)%iLoc(2))
+      end do
+   end do
 end subroutine
 
 end module

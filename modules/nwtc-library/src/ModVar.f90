@@ -30,7 +30,7 @@ use ModMesh
 implicit none
 
 private
-public :: MV_InitVarsJac, MV_Pack, MV_Unpack, MV_Pack2, MV_Unpack2
+public :: MV_InitVarsJac, MV_Pack, MV_Unpack
 public :: MV_ComputeCentralDiff, MV_Perturb, MV_ComputeDiff, MV_ExtrapInterp, MV_AddDelta
 public :: MV_AddVar, MV_AddMeshVar
 public :: MV_HasFlags, MV_SetFlags, MV_ClearFlags, MV_NumVars, MV_NumVals, MV_FindVarDatLoc
@@ -38,7 +38,7 @@ public :: LoadFields, MotionFields, TransFields, AngularFields
 public :: quat_to_dcm, dcm_to_quat, quat_inv, quat_to_rvec, rvec_to_quat, wm_to_quat, quat_to_wm, wm_inv
 public :: MV_FieldString, MV_IsLoad, IdxStr
 public :: DumpMatrix, MV_AddModule
-public :: MV_XfrLocToGluAry, MV_XfrGluToModAry, MV_PackMatrix, MV_EqualDL
+public :: MV_EqualDL
 
 integer(IntKi), parameter :: &
    LoadFields(*) = [FieldForce, FieldMoment], &
@@ -47,158 +47,54 @@ integer(IntKi), parameter :: &
    MotionFields(*) = [FieldTransDisp, FieldOrientation, FieldTransVel, FieldAngularVel, FieldTransAcc, FieldAngularAcc]
 
 interface MV_Pack
-   module procedure MV_PackVarRank0R4, MV_PackVarRank1R4, MV_PackVarRank2R4
-   module procedure MV_PackVarRank0R8, MV_PackVarRank1R8, MV_PackVarRank2R8
+   module procedure MV_PackVarRank0R4, MV_PackVarRank1R4
+   module procedure MV_PackVarRank0R8, MV_PackVarRank1R8
    module procedure MV_PackMesh
 end interface
 
 interface MV_Unpack
-   module procedure MV_UnpackVarRank0R4, MV_UnpackVarRank1R4, MV_UnpackVarRank2R4
-   module procedure MV_UnpackVarRank0R8, MV_UnpackVarRank1R8, MV_UnpackVarRank2R8
+   module procedure MV_UnpackVarRank0R4, MV_UnpackVarRank1R4
+   module procedure MV_UnpackVarRank0R8, MV_UnpackVarRank1R8
    module procedure MV_UnpackMesh
-end interface
-
-interface MV_Pack2
-   module procedure MV_Pack2VarRank0R4, MV_Pack2VarRank1R4, MV_Pack2VarRank2R4, MV_Pack2VarRank3R4, MV_Pack2VarRank4R4, MV_Pack2VarRank5R4
-   module procedure MV_Pack2VarRank0R8, MV_Pack2VarRank1R8, MV_Pack2VarRank2R8, MV_Pack2VarRank3R8, MV_Pack2VarRank4R8, MV_Pack2VarRank5R8
-   module procedure MV_Pack2Mesh
-end interface
-
-interface MV_Unpack2
-   module procedure MV_Unpack2VarRank0R4, MV_Unpack2VarRank1R4, MV_Unpack2VarRank2R4, MV_Unpack2VarRank3R4, MV_Unpack2VarRank4R4, MV_Unpack2VarRank5R4
-   module procedure MV_Unpack2VarRank0R8, MV_Unpack2VarRank1R8, MV_Unpack2VarRank2R8, MV_Unpack2VarRank3R8, MV_Unpack2VarRank4R8, MV_Unpack2VarRank5R8
-   module procedure MV_Unpack2Mesh
 end interface
 
 logical, parameter   :: UseSmallRotAngles = .true.
 
 contains
 
-subroutine MV_XfrLocToGluAry(VarAry, ModAry, GluAry)
-   type(ModVarType), intent(in)           :: VarAry(:)
-   real(R8Ki), allocatable, intent(in)    :: ModAry(:)
-   real(R8Ki), intent(inout)              :: GluAry(:)
-   integer(IntKi)                         :: i
-   if (.not. allocated(ModAry) .or. size(VarAry) == 0) return
-   do i = 1, size(VarAry)
-      GluAry(VarAry(i)%iGlu(1):VarAry(i)%iGlu(2)) = ModAry(VarAry(i)%iLoc(1):VarAry(i)%iLoc(2))
-   end do
-end subroutine
-
-subroutine MV_XfrGluToModAry(VarAry, GluAry, ModAry)
-   type(ModVarType), intent(in)           :: VarAry(:)
-   real(R8Ki), allocatable, intent(in)    :: GluAry(:)
-   real(R8Ki), intent(inout)              :: ModAry(:)
-   integer(IntKi)                         :: i
-   if (.not. allocated(GluAry) .or. size(VarAry) == 0) return
-   do i = 1, size(VarAry)
-      ModAry(VarAry(i)%iLoc(1):VarAry(i)%iLoc(2)) = GluAry(VarAry(i)%iGlu(1):VarAry(i)%iGlu(2))
-   end do
-end subroutine
-
-subroutine MV_PackMatrix(RowVarAry, ColVarAry, ModMat, GluMat)
-   type(ModVarType), intent(in)           :: RowVarAry(:), ColVarAry(:)
-   real(R8Ki), allocatable, intent(in)    :: ModMat(:, :)
-   real(R8Ki), intent(inout)              :: GluMat(:, :)
-   integer(IntKi)                         :: i, j
-   if (.not. allocated(ModMat) .or. size(RowVarAry) == 0 .or. size(ColVarAry) == 0) return
-   do i = 1, size(ColVarAry)
-      do j = 1, size(RowVarAry)
-         GluMat(RowVarAry(j)%iGlu(1):RowVarAry(j)%iGlu(2), ColVarAry(i)%iGlu(1):ColVarAry(i)%iGlu(2)) = &
-            ModMat(RowVarAry(j)%iLoc(1):RowVarAry(j)%iLoc(2), ColVarAry(i)%iLoc(1):ColVarAry(i)%iLoc(2))
-      end do
-   end do
-end subroutine
-
 !-------------------------------------------------------------------------------
-! MV_Pack2
+! MV_Pack
 !-------------------------------------------------------------------------------
 
-subroutine MV_Pack2VarRank0R4(Var, SrcVal, DstAry)
+subroutine MV_PackVarRank0R4(Var, SrcVal, DstAry)
    type(ModVarType), intent(in)  :: Var
    real(R4Ki), intent(in)        :: SrcVal
    real(R8Ki), intent(inout)     :: DstAry(:)
    DstAry(Var%iLoc(1)) = real(SrcVal, R8Ki)
 end subroutine
 
-subroutine MV_Pack2VarRank0R8(Var, SrcVal, DstAry)
+subroutine MV_PackVarRank0R8(Var, SrcVal, DstAry)
    type(ModVarType), intent(in)  :: Var
    real(R8Ki), intent(in)        :: SrcVal
    real(R8Ki), intent(inout)     :: DstAry(:)
    DstAry(Var%iLoc(1)) = SrcVal
 end subroutine
 
-subroutine MV_Pack2VarRank1R4(Var, SrcAry, DstAry)
+subroutine MV_PackVarRank1R4(Var, SrcAry, DstAry)
    type(ModVarType), intent(in)  :: Var
    real(R4Ki), intent(in)        :: SrcAry(:)
    real(R8Ki), intent(inout)     :: DstAry(:)
-   DstAry(Var%iLoc(1):Var%iLoc(2)) = real(SrcAry(Var%iAry(1):Var%iAry(2)), R8Ki)
+   DstAry(Var%iLoc(1):Var%iLoc(2)) = real(SrcAry, R8Ki)
 end subroutine
 
-subroutine MV_Pack2VarRank1R8(Var, SrcAry, Ary)
+subroutine MV_PackVarRank1R8(Var, SrcAry, Ary)
    type(ModVarType), intent(in)  :: Var
    real(R8Ki), intent(in)        :: SrcAry(:)
    real(R8Ki), intent(inout)     :: Ary(:)
-   Ary(Var%iLoc(1):Var%iLoc(2)) = SrcAry(Var%iAry(1):Var%iAry(2))
+   Ary(Var%iLoc(1):Var%iLoc(2)) = SrcAry
 end subroutine
 
-subroutine MV_Pack2VarRank2R4(Var, SrcAry, DstAry)
-   type(ModVarType), intent(in)  :: Var
-   real(R4Ki), intent(in)        :: SrcAry(:, :)
-   real(R8Ki), intent(inout)     :: DstAry(:)
-   DstAry(Var%iLoc(1):Var%iLoc(2)) = pack(real(SrcAry(Var%iAry(1):Var%iAry(2), Var%jAry), R8Ki), .true.)
-end subroutine
-
-subroutine MV_Pack2VarRank2R8(Var, SrcAry, DstAry)
-   type(ModVarType), intent(in)  :: Var
-   real(R8Ki), intent(in)        :: SrcAry(:, :)
-   real(R8Ki), intent(inout)     :: DstAry(:)
-   DstAry(Var%iLoc(1):Var%iLoc(2)) = pack(SrcAry(Var%iAry(1):Var%iAry(2), Var%jAry), .true.)
-end subroutine
-
-subroutine MV_Pack2VarRank3R4(Var, SrcAry, DstAry)
-   type(ModVarType), intent(in)  :: Var
-   real(R4Ki), intent(in)        :: SrcAry(:, :, :)
-   real(R8Ki), intent(inout)     :: DstAry(:)
-   DstAry(Var%iLoc(1):Var%iLoc(2)) = pack(real(SrcAry(Var%iAry(1):Var%iAry(2), Var%jAry, Var%kAry), R8Ki), .true.)
-end subroutine
-
-subroutine MV_Pack2VarRank3R8(Var, SrcAry, DstAry)
-   type(ModVarType), intent(in)  :: Var
-   real(R8Ki), intent(in)        :: SrcAry(:, :, :)
-   real(R8Ki), intent(inout)     :: DstAry(:)
-   DstAry(Var%iLoc(1):Var%iLoc(2)) = pack(SrcAry(Var%iAry(1):Var%iAry(2), Var%jAry, Var%kAry), .true.)
-end subroutine
-
-subroutine MV_Pack2VarRank4R4(Var, SrcAry, DstAry)
-   type(ModVarType), intent(in)  :: Var
-   real(R4Ki), intent(in)        :: SrcAry(:, :, :, :)
-   real(R8Ki), intent(inout)     :: DstAry(:)
-   DstAry(Var%iLoc(1):Var%iLoc(2)) = pack(real(SrcAry(Var%iAry(1):Var%iAry(2), Var%jAry, Var%kAry, Var%mAry), R8Ki), .true.)
-end subroutine
-
-subroutine MV_Pack2VarRank4R8(Var, SrcAry, Ary)
-   type(ModVarType), intent(in)  :: Var
-   real(R8Ki), intent(in)        :: SrcAry(:, :, :, :)
-   real(R8Ki), intent(inout)     :: Ary(:)
-   Ary(Var%iLoc(1):Var%iLoc(2)) = pack(SrcAry(Var%iAry(1):Var%iAry(2), Var%jAry, Var%kAry, Var%mAry), .true.)
-end subroutine
-
-subroutine MV_Pack2VarRank5R4(Var, SrcAry, Ary)
-   type(ModVarType), intent(in)  :: Var
-   real(R4Ki), intent(in)        :: SrcAry(:, :, :, :, :)
-   real(R8Ki), intent(inout)     :: Ary(:)
-   Ary(Var%iLoc(1):Var%iLoc(2)) = pack(real(SrcAry(Var%iAry(1):Var%iAry(2), Var%jAry, Var%kAry, Var%mAry, Var%nAry), R8Ki), .true.)
-end subroutine
-
-subroutine MV_Pack2VarRank5R8(Var, SrcAry, Ary)
-   type(ModVarType), intent(in)  :: Var
-   real(R8Ki), intent(in)        :: SrcAry(:, :, :, :, :)
-   real(R8Ki), intent(inout)     :: Ary(:)
-   Ary(Var%iLoc(1):Var%iLoc(2)) = pack(SrcAry(Var%iAry(1):Var%iAry(2), Var%jAry, Var%kAry, Var%mAry, Var%nAry), .true.)
-end subroutine
-
-subroutine MV_Pack2Mesh(Var, Mesh, DstAry)
+subroutine MV_PackMesh(Var, Mesh, DstAry)
    type(ModVarType), intent(in)  :: Var
    type(MeshType), intent(in)    :: Mesh
    real(R8Ki), intent(inout)     :: DstAry(:)
@@ -230,110 +126,38 @@ subroutine MV_Pack2Mesh(Var, Mesh, DstAry)
 end subroutine
 
 !-------------------------------------------------------------------------------
-! MV_Unpack2
+! MV_Unpack
 !-------------------------------------------------------------------------------
 
-subroutine MV_Unpack2VarRank0R4(Var, SrcAry, DstVal)
+subroutine MV_UnpackVarRank0R4(Var, SrcAry, DstVal)
    type(ModVarType), intent(in)  :: Var
    real(R8Ki), intent(in)        :: SrcAry(:)
    real(R4Ki), intent(inout)     :: DstVal
    DstVal = real(SrcAry(Var%iLoc(1)), R4Ki)
 end subroutine
 
-subroutine MV_Unpack2VarRank0R8(Var, SrcAry, DstVal)
+subroutine MV_UnpackVarRank0R8(Var, SrcAry, DstVal)
    type(ModVarType), intent(in)  :: Var
    real(R8Ki), intent(in)        :: SrcAry(:)
    real(R8Ki), intent(inout)     :: DstVal
    DstVal = SrcAry(Var%iLoc(1))
 end subroutine
 
-subroutine MV_Unpack2VarRank1R4(Var, SrcAry, DstAry)
+subroutine MV_UnpackVarRank1R4(Var, SrcAry, DstAry)
    type(ModVarType), intent(in)  :: Var
    real(R8Ki), intent(in)        :: SrcAry(:)
    real(R4Ki), intent(inout)     :: DstAry(:)
-   DstAry(Var%iAry(1):Var%iAry(2)) = real(SrcAry(Var%iLoc(1):Var%iLoc(2)), R4Ki)
+   DstAry = real(SrcAry(Var%iLoc(1):Var%iLoc(2)), R4Ki)
 end subroutine
 
-subroutine MV_Unpack2VarRank1R8(Var, SrcAry, DstAry)
+subroutine MV_UnpackVarRank1R8(Var, SrcAry, DstAry)
    type(ModVarType), intent(in)  :: Var
    real(R8Ki), intent(in)        :: SrcAry(:)
    real(R8Ki), intent(inout)     :: DstAry(:)
-   DstAry(Var%iAry(1):Var%iAry(2)) = SrcAry(Var%iLoc(1):Var%iLoc(2))
+   DstAry = SrcAry(Var%iLoc(1):Var%iLoc(2))
 end subroutine
 
-subroutine MV_Unpack2VarRank2R4(Var, SrcAry, DstAry)
-   type(ModVarType), intent(in)  :: Var
-   real(R8Ki), intent(in)        :: SrcAry(:)
-   real(R4Ki), intent(inout)     :: DstAry(:, :)
-   associate (V => DstAry(Var%iAry(1):Var%iAry(2), Var%jAry))
-      V = real(SrcAry(Var%iLoc(1):Var%iLoc(2)), R4Ki)
-   end associate
-end subroutine
-
-subroutine MV_Unpack2VarRank2R8(Var, SrcAry, DstAry)
-   type(ModVarType), intent(in)  :: Var
-   real(R8Ki), intent(in)        :: SrcAry(:)
-   real(R8Ki), intent(inout)     :: DstAry(:, :)
-   associate (V => DstAry(Var%iAry(1):Var%iAry(2), Var%jAry))
-      V = SrcAry(Var%iLoc(1):Var%iLoc(2))
-   end associate
-end subroutine
-
-subroutine MV_Unpack2VarRank3R4(Var, SrcAry, DstAry)
-   type(ModVarType), intent(in)  :: Var
-   real(R8Ki), intent(in)        :: SrcAry(:)
-   real(R4Ki), intent(inout)     :: DstAry(:, :, :)
-   associate (V => DstAry(Var%iAry(1):Var%iAry(2), Var%jAry, Var%kAry))
-      V = real(SrcAry(Var%iLoc(1):Var%iLoc(2)), R4Ki)
-   end associate
-end subroutine
-
-subroutine MV_Unpack2VarRank3R8(Var, SrcAry, DstAry)
-   type(ModVarType), intent(in)  :: Var
-   real(R8Ki), intent(in)        :: SrcAry(:)
-   real(R8Ki), intent(inout)     :: DstAry(:, :, :)
-   associate (V => DstAry(Var%iAry(1):Var%iAry(2), Var%jAry, Var%kAry))
-      V = SrcAry(Var%iLoc(1):Var%iLoc(2))
-   end associate
-end subroutine
-
-subroutine MV_Unpack2VarRank4R4(Var, SrcAry, DstAry)
-   type(ModVarType), intent(in)  :: Var
-   real(R8Ki), intent(in)        :: SrcAry(:)
-   real(R4Ki), intent(inout)     :: DstAry(:, :, :, :)
-   associate (V => DstAry(Var%iAry(1):Var%iAry(2), Var%jAry, Var%kAry, Var%mAry))
-      V = real(SrcAry(Var%iLoc(1):Var%iLoc(2)), R4Ki)
-   end associate
-end subroutine
-
-subroutine MV_Unpack2VarRank4R8(Var, SrcAry, DstAry)
-   type(ModVarType), intent(in)  :: Var
-   real(R8Ki), intent(in)        :: SrcAry(:)
-   real(R8Ki), intent(inout)     :: DstAry(:, :, :, :)
-   associate (V => DstAry(Var%iAry(1):Var%iAry(2), Var%jAry, Var%kAry, Var%mAry))
-      V = SrcAry(Var%iLoc(1):Var%iLoc(2))
-   end associate
-end subroutine
-
-subroutine MV_Unpack2VarRank5R4(Var, SrcAry, DstAry)
-   type(ModVarType), intent(in)  :: Var
-   real(R8Ki), intent(in)        :: SrcAry(:)
-   real(R4Ki), intent(inout)     :: DstAry(:, :, :, :, :)
-   associate (V => DstAry(Var%iAry(1):Var%iAry(2), Var%jAry, Var%kAry, Var%mAry, Var%nAry))
-      V = real(SrcAry(Var%iLoc(1):Var%iLoc(2)), R4Ki)
-   end associate
-end subroutine
-
-subroutine MV_Unpack2VarRank5R8(Var, SrcAry, DstAry)
-   type(ModVarType), intent(in)  :: Var
-   real(R8Ki), intent(in)        :: SrcAry(:)
-   real(R8Ki), intent(inout)     :: DstAry(:, :, :, :, :)
-   associate (V => DstAry(Var%iAry(1):Var%iAry(2), Var%jAry, Var%kAry, Var%mAry, Var%nAry))
-      V = SrcAry(Var%iLoc(1):Var%iLoc(2))
-   end associate
-end subroutine
-
-subroutine MV_Unpack2Mesh(Var, SrcAry, Mesh)
+subroutine MV_UnpackMesh(Var, SrcAry, Mesh)
    type(ModVarType), intent(in)  :: Var
    real(R8Ki), intent(in)        :: SrcAry(:)
    type(MeshType), intent(inout) :: Mesh
@@ -711,207 +535,6 @@ end subroutine
 ! Functions for packing and unpacking data by variable
 !-------------------------------------------------------------------------------
 
-subroutine MV_PackVarRank0R4(VarAry, iVar, Val, Ary)
-   type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(in)    :: iVar
-   real(R4Ki), intent(in)        :: Val
-   real(R8Ki), intent(inout)     :: Ary(:)
-   if (iVar == 0) return
-   Ary(VarAry(iVar)%iLoc(1)) = real(Val, R8Ki)
-end subroutine
-
-subroutine MV_PackVarRank0R8(VarAry, iVar, Val, Ary)
-   type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(in)    :: iVar
-   real(R8Ki), intent(in)        :: Val
-   real(R8Ki), intent(inout)     :: Ary(:)
-   if (iVar == 0) return
-   Ary(VarAry(iVar)%iLoc(1)) = Val
-end subroutine
-
-subroutine MV_PackVarRank1R4(VarAry, iVar, Vals, Ary)
-   type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(in)    :: iVar
-   real(R4Ki), intent(in)        :: Vals(:)
-   real(R8Ki), intent(inout)     :: Ary(:)
-   if (iVar == 0) return
-   associate (iLoc => VarAry(iVar)%iLoc)
-      Ary(iLoc(1):iLoc(2)) = real(Vals, R8Ki)
-   end associate
-end subroutine
-
-subroutine MV_PackVarRank1R8(VarAry, iVar, Vals, Ary)
-   type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(in)    :: iVar
-   real(R8Ki), intent(in)        :: Vals(:)
-   real(R8Ki), intent(inout)     :: Ary(:)
-   if (iVar == 0) return
-   associate (iLoc => VarAry(iVar)%iLoc)
-      Ary(iLoc(1):iLoc(2)) = Vals
-   end associate
-end subroutine
-
-subroutine MV_PackVarRank2R4(VarAry, iVar, Vals, Ary)
-   type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(in)    :: iVar
-   real(R4Ki), intent(in)        :: Vals(:, :)
-   real(R8Ki), intent(inout)     :: Ary(:)
-   if (iVar == 0) return
-   associate (iLoc => VarAry(iVar)%iLoc)
-      Ary(iLoc(1):iLoc(2)) = pack(real(Vals, R8Ki), .true.)
-   end associate
-end subroutine
-
-subroutine MV_PackVarRank2R8(VarAry, iVar, Vals, Ary)
-   type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(in)    :: iVar
-   real(R8Ki), intent(in)        :: Vals(:, :)
-   real(R8Ki), intent(inout)     :: Ary(:)
-   if (iVar == 0) return
-   associate (iLoc => VarAry(iVar)%iLoc)
-      Ary(iLoc(1):iLoc(2)) = pack(Vals, .true.)
-   end associate
-end subroutine
-
-subroutine MV_UnpackVarRank0R4(VarAry, iVar, Ary, Val)
-   type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(in)    :: iVar
-   real(R8Ki), intent(in)        :: Ary(:)
-   real(R4Ki), intent(inout)     :: Val
-   if (iVar == 0) return
-   Val = Ary(VarAry(iVar)%iLoc(1))
-end subroutine
-
-subroutine MV_UnpackVarRank0R8(VarAry, iVar, Ary, Vals)
-   type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(in)    :: iVar
-   real(R8Ki), intent(in)        :: Ary(:)
-   real(R8Ki), intent(inout)     :: Vals
-   if (iVar == 0) return
-   Vals = Ary(VarAry(iVar)%iLoc(1))
-end subroutine
-
-subroutine MV_UnpackVarRank1R4(VarAry, iVar, Ary, Vals)
-   type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(in)    :: iVar
-   real(R8Ki), intent(in)        :: Ary(:)
-   real(R4Ki), intent(inout)     :: Vals(:)
-   if (iVar == 0) return
-   associate (iLoc => VarAry(iVar)%iLoc)
-      Vals = real(Ary(iLoc(1):iLoc(2)), R4Ki)
-   end associate
-end subroutine
-
-subroutine MV_UnpackVarRank1R8(VarAry, iVar, Ary, Vals)
-   type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(in)    :: iVar
-   real(R8Ki), intent(in)        :: Ary(:)
-   real(R8Ki), intent(inout)     :: Vals(:)
-   if (iVar == 0) return
-   associate (iLoc => VarAry(iVar)%iLoc)
-      Vals = Ary(iLoc(1):iLoc(2))
-   end associate
-end subroutine
-
-subroutine MV_UnpackVarRank2R4(VarAry, iVar, Ary, Vals)
-   type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(in)    :: iVar
-   real(R8Ki), intent(in)        :: Ary(:)
-   real(R4Ki), intent(inout)     :: Vals(:, :)
-   if (iVar == 0) return
-   associate (iLoc => VarAry(iVar)%iLoc)
-      Vals = reshape(real(Ary(iLoc(1):iLoc(2)), R4Ki), shape(Vals))
-   end associate
-end subroutine
-
-subroutine MV_UnpackVarRank2R8(VarAry, iVar, Ary, Vals)
-   type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(in)    :: iVar
-   real(R8Ki), intent(in)        :: Ary(:)
-   real(R8Ki), intent(inout)     :: Vals(:, :)
-   if (iVar == 0) return
-   associate (iLoc => VarAry(iVar)%iLoc)
-      Vals = reshape(Ary(iLoc(1):iLoc(2)), shape(Vals))
-   end associate
-end subroutine
-
-subroutine MV_PackMesh(VarAry, iVar, Mesh, Values)
-   type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(in)    :: iVar
-   type(MeshType), intent(in)    :: Mesh
-   real(R8Ki), intent(inout)     :: Values(:)
-   integer(IntKi)                :: MeshID, i, j, k
-   if (iVar == 0) return
-   MeshID = VarAry(iVar)%MeshID
-   do i = iVar, size(VarAry)
-      if (VarAry(i)%MeshID /= MeshID) exit
-      associate (iLoc => VarAry(i)%iLoc)
-         select case (VarAry(i)%Field)
-         case (FieldForce)
-            Values(iLoc(1):iLoc(2)) = pack(Mesh%Force, .true.)
-         case (FieldMoment)
-            Values(iLoc(1):iLoc(2)) = pack(Mesh%Moment, .true.)
-         case (FieldTransDisp)
-            Values(iLoc(1):iLoc(2)) = pack(Mesh%TranslationDisp, .true.)
-         case (FieldOrientation)
-            k = iLoc(1)
-            do j = 1, VarAry(i)%Nodes
-               Values(k:k + 2) = dcm_to_quat(Mesh%Orientation(:, :, j))
-               k = k + 3
-            end do
-         case (FieldTransVel)
-            Values(iLoc(1):iLoc(2)) = pack(Mesh%TranslationVel, .true.)
-         case (FieldAngularVel)
-            Values(iLoc(1):iLoc(2)) = pack(Mesh%RotationVel, .true.)
-         case (FieldTransAcc)
-            Values(iLoc(1):iLoc(2)) = pack(Mesh%TranslationAcc, .true.)
-         case (FieldAngularAcc)
-            Values(iLoc(1):iLoc(2)) = pack(Mesh%RotationAcc, .true.)
-         case (FieldScalar)
-            Values(iLoc(1):iLoc(2)) = pack(Mesh%Scalars, .true.)
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine MV_UnpackMesh(VarAry, iVar, Values, Mesh)
-   type(ModVarType), intent(in)  :: VarAry(:)
-   integer(IntKi), intent(in) :: iVar
-   real(R8Ki), intent(in)        :: Values(:)
-   type(MeshType), intent(inout) :: Mesh
-   integer(IntKi)                :: MeshID, i, j, k
-   if (iVar == 0) return
-   MeshID = VarAry(iVar)%MeshID
-   do i = iVar, size(VarAry)
-      if (VarAry(i)%MeshID /= MeshID) exit
-      associate (iLoc => VarAry(i)%iLoc)
-         select case (VarAry(i)%Field)
-         case (FieldForce)
-            Mesh%Force = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%Force))
-         case (FieldMoment)
-            Mesh%Moment = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%Moment))
-         case (FieldTransDisp)
-            Mesh%TranslationDisp = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%TranslationDisp))
-         case (FieldOrientation)
-            k = iLoc(1)
-            do j = 1, VarAry(i)%Nodes
-               Mesh%Orientation(:, :, j) = quat_to_dcm(Values(k:k + 2))
-               k = k + 3
-            end do
-         case (FieldTransVel)
-            Mesh%TranslationVel = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%TranslationVel))
-         case (FieldAngularVel)
-            Mesh%RotationVel = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%RotationVel))
-         case (FieldTransAcc)
-            Mesh%TranslationAcc = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%TranslationAcc))
-         case (FieldAngularAcc)
-            Mesh%RotationAcc = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%RotationAcc))
-         case (FieldScalar)
-            Mesh%Scalars = reshape(Values(iLoc(1):iLoc(2)), shape(Mesh%Scalars))
-         end select
-      end associate
-   end do
-end subroutine
 
 subroutine MV_Perturb(Var, iLin, PerturbSign, BaseAry, PerturbAry)
    type(ModVarType), intent(in)     :: Var
@@ -1343,7 +966,11 @@ subroutine MV_AddVar(VarAry, Name, Field, DL, Num, iAry, jAry, kAry, Flags, Deri
 
    ! Set optional values
    if (present(Flags)) Var%Flags = Flags
-   if (present(iAry)) Var%iAry = [iAry, iAry + Var%Num - 1]
+   if (present(iAry)) then
+      Var%iAry = [iAry, iAry + Var%Num - 1]
+   else
+      Var%iAry = [1, Var%Num]
+   end if
    if (present(jAry)) Var%jAry = jAry
    if (present(kAry)) Var%kAry = kAry
    if (present(Perturb)) Var%Perturb = Perturb
@@ -1353,9 +980,6 @@ subroutine MV_AddVar(VarAry, Name, Field, DL, Num, iAry, jAry, kAry, Flags, Deri
          Var%LinNames(i) = LinNames(i)
       end do
    end if
-
-   ! If number is greater than 1 but iAry is zero, assume that iAry should be [1,Num]
-   if ((Var%Num > 1) .and. (Var%iAry(1) == 0)) Var%iAry = [1, Var%Num]
 
    ! Set Derivative Order
    if (present(DerivOrder)) then

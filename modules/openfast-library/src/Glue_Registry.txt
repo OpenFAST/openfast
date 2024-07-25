@@ -182,7 +182,7 @@ typedef ^ Glue_LinMisc          IntKi           TimeIndex               -  -  - 
 typedef ^ ^                     IntKi           AzimuthIndex            -  -  -     "" -
 typedef ^ ^                     logical         IsConverged             -  -  -     "" -
 
-typedef ^ Glue_MiscVarType      ModDataType     Modules                 :  -  -     "Module variable and value data" -
+typedef ^ Glue_MiscVarType      ModDataType     ModDataAry              :  -  -     "Module variable and value data" -
 typedef ^ ^                     MappingType     Mappings                :  -  -     "Module mapping" -
 typedef ^ ^                     ModGlueType     ModGlue                 -  -  -     "Glue code module" -
 typedef ^ ^                     Glue_LinMisc    Lin                     -  -  -     "Linearization misc vars"

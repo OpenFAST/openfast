@@ -738,5 +738,7 @@ subroutine InflowWind_IO_UnPackPoints_InitInputType(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%NumWindPoints); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
 END MODULE InflowWind_IO_Types
+
 !ENDOFREGISTRYGENERATEDFILE

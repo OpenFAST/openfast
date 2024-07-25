@@ -335,5 +335,7 @@ subroutine Waves_UnPackInitOutput(RF, OutData)
    call RegUnpack(RF, OutData%WaveNDir); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveTMax); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
 END MODULE Waves_Types
+
 !ENDOFREGISTRYGENERATEDFILE

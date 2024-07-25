@@ -203,7 +203,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  Glue_MiscVarType  =======
   TYPE, PUBLIC :: Glue_MiscVarType
-    TYPE(ModDataType) , DIMENSION(:), ALLOCATABLE  :: Modules      !< Module variable and value data [-]
+    TYPE(ModDataType) , DIMENSION(:), ALLOCATABLE  :: ModDataAry      !< Module variable and value data [-]
     TYPE(MappingType) , DIMENSION(:), ALLOCATABLE  :: Mappings      !< Module mapping [-]
     TYPE(ModGlueType)  :: ModGlue      !< Glue code module [-]
     TYPE(Glue_LinMisc)  :: Lin      !< Linearization misc vars [-]
@@ -1737,18 +1737,18 @@ subroutine Glue_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Glue_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(SrcMiscData%Modules)) then
-      LB(1:1) = lbound(SrcMiscData%Modules, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%Modules, kind=B8Ki)
-      if (.not. allocated(DstMiscData%Modules)) then
-         allocate(DstMiscData%Modules(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcMiscData%ModDataAry)) then
+      LB(1:1) = lbound(SrcMiscData%ModDataAry, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%ModDataAry, kind=B8Ki)
+      if (.not. allocated(DstMiscData%ModDataAry)) then
+         allocate(DstMiscData%ModDataAry(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Modules.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
       do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyModDataType(SrcMiscData%Modules(i1), DstMiscData%Modules(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call NWTC_Library_CopyModDataType(SrcMiscData%ModDataAry(i1), DstMiscData%ModDataAry(i1), CtrlCode, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
@@ -2086,14 +2086,14 @@ subroutine Glue_DestroyMisc(MiscData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Glue_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(MiscData%Modules)) then
-      LB(1:1) = lbound(MiscData%Modules, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%Modules, kind=B8Ki)
+   if (allocated(MiscData%ModDataAry)) then
+      LB(1:1) = lbound(MiscData%ModDataAry, kind=B8Ki)
+      UB(1:1) = ubound(MiscData%ModDataAry, kind=B8Ki)
       do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyModDataType(MiscData%Modules(i1), ErrStat2, ErrMsg2)
+         call NWTC_Library_DestroyModDataType(MiscData%ModDataAry(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end do
-      deallocate(MiscData%Modules)
+      deallocate(MiscData%ModDataAry)
    end if
    if (allocated(MiscData%Mappings)) then
       LB(1:1) = lbound(MiscData%Mappings, kind=B8Ki)
@@ -2193,13 +2193,13 @@ subroutine Glue_PackMisc(RF, Indata)
    integer(B8Ki)   :: i1, i2
    integer(B8Ki)   :: LB(2), UB(2)
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, allocated(InData%Modules))
-   if (allocated(InData%Modules)) then
-      call RegPackBounds(RF, 1, lbound(InData%Modules, kind=B8Ki), ubound(InData%Modules, kind=B8Ki))
-      LB(1:1) = lbound(InData%Modules, kind=B8Ki)
-      UB(1:1) = ubound(InData%Modules, kind=B8Ki)
+   call RegPack(RF, allocated(InData%ModDataAry))
+   if (allocated(InData%ModDataAry)) then
+      call RegPackBounds(RF, 1, lbound(InData%ModDataAry, kind=B8Ki), ubound(InData%ModDataAry, kind=B8Ki))
+      LB(1:1) = lbound(InData%ModDataAry, kind=B8Ki)
+      UB(1:1) = ubound(InData%ModDataAry, kind=B8Ki)
       do i1 = LB(1), UB(1)
-         call NWTC_Library_PackModDataType(RF, InData%Modules(i1)) 
+         call NWTC_Library_PackModDataType(RF, InData%ModDataAry(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%Mappings))
@@ -2255,17 +2255,17 @@ subroutine Glue_UnPackMisc(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
-   if (allocated(OutData%Modules)) deallocate(OutData%Modules)
+   if (allocated(OutData%ModDataAry)) deallocate(OutData%ModDataAry)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
       call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%Modules(LB(1):UB(1)),stat=stat)
+      allocate(OutData%ModDataAry(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
          call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Modules.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackModDataType(RF, OutData%Modules(i1)) ! Modules 
+         call NWTC_Library_UnpackModDataType(RF, OutData%ModDataAry(i1)) ! Modules 
       end do
    end if
    if (allocated(OutData%Mappings)) deallocate(OutData%Mappings)
@@ -2314,5 +2314,7 @@ subroutine Glue_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%UDiff); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ConvWarn); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
 END MODULE Glue_Types
+
 !ENDOFREGISTRYGENERATEDFILE

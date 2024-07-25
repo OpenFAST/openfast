@@ -309,5 +309,7 @@ subroutine Waves2_UnPackInitOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WaveVel2D); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WaveVel2S); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
 END MODULE Waves2_Types
+
 !ENDOFREGISTRYGENERATEDFILE

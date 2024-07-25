@@ -6658,11 +6658,11 @@ SUBROUTINE RotGetOP(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, z, OtherState
             do i = 1, size(Vars%u)
                select case (Vars%u(i)%DL%Num)
                case (AD_u_HWindSpeed)
-                  call MV_Pack2(Vars%u(i), UF_op%VelH, u_op)
+                  call MV_Pack(Vars%u(i), UF_op%VelH, u_op)
                case (AD_u_PLexp)
-                  call MV_Pack2(Vars%u(i), UF_op%ShrV, u_op)
+                  call MV_Pack(Vars%u(i), UF_op%ShrV, u_op)
                case (AD_u_PropagationDir)
-                  call MV_Pack2(Vars%u(i), UF_op%AngleH + p_AD%FlowField%PropagationDir, u_op)
+                  call MV_Pack(Vars%u(i), UF_op%AngleH + p_AD%FlowField%PropagationDir, u_op)
                end select
             end do
          end if
@@ -6729,13 +6729,13 @@ subroutine AD_PackExtInputAry(Vars, t, p, ValAry)
          select case(Var%DL%Num)
          case (AD_u_HWindSpeed)
             call CalcExtOP()
-            call MV_Pack2(Var, op%VelH, ValAry)
+            call MV_Pack(Var, op%VelH, ValAry)
          case (AD_u_PLExp)
             call CalcExtOP()
-            call MV_Pack2(Var, op%ShrV, ValAry)
+            call MV_Pack(Var, op%ShrV, ValAry)
          case (AD_u_PropagationDir)
             call CalcExtOP()
-            call MV_Pack2(Var, op%AngleH + p%FlowField%PropagationDir, ValAry)
+            call MV_Pack(Var, op%AngleH + p%FlowField%PropagationDir, ValAry)
          end select
       end associate
    end do

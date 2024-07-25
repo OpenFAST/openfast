@@ -99,7 +99,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  HydroDyn_InitOutputType  =======
   TYPE, PUBLIC :: HydroDyn_InitOutputType
-    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
+    TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
     TYPE(Morison_InitOutputType)  :: Morison      !< Initialization output from the Morison module [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< The is the list of all HD-related output channel header strings (includes all sub-module channels) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< The is the list of all HD-related output channel unit strings (includes all sub-module channels) [-]
@@ -144,7 +144,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  HydroDyn_ParameterType  =======
   TYPE, PUBLIC :: HydroDyn_ParameterType
-    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
     INTEGER(IntKi)  :: nWAMITObj = 0_IntKi      !< number of WAMIT input files and matrices.  If NBodyMod = 1 then nPotFiles will be 1 even if NBody > 1 [-]
     INTEGER(IntKi)  :: vecMultiplier = 0_IntKi      !< multiplier for the WAMIT vectors and matrices.  If NBodyMod=1 then this = NBody, else 1 [-]
     TYPE(WAMIT_ParameterType) , DIMENSION(:), ALLOCATABLE  :: WAMIT      !< Parameter data for the WAMIT module [-]
@@ -719,7 +718,9 @@ subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCod
    character(*), parameter        :: RoutineName = 'HydroDyn_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   DstInitOutputData%Vars => SrcInitOutputData%Vars
+   call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    call Morison_CopyInitOutput(SrcInitOutputData%Morison, DstInitOutputData%Morison, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -821,7 +822,8 @@ subroutine HydroDyn_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'HydroDyn_DestroyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   nullify(InitOutputData%Vars)
+   call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call Morison_DestroyInitOutput(InitOutputData%Morison, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%WriteOutputHdr)) then
@@ -853,15 +855,8 @@ subroutine HydroDyn_PackInitOutput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(HydroDyn_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackInitOutput'
-   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, associated(InData%Vars))
-   if (associated(InData%Vars)) then
-      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-      end if
-   end if
+   call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    call Morison_PackInitOutput(RF, InData%Morison) 
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
@@ -881,27 +876,8 @@ subroutine HydroDyn_UnPackInitOutput(RF, OutData)
    integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(B8Ki)   :: PtrIdx
-   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
-   if (associated(OutData%Vars)) deallocate(OutData%Vars)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vars)
-      else
-         allocate(OutData%Vars,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
-            return
-         end if
-         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
-         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-      end if
-   else
-      OutData%Vars => null()
-   end if
+   call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
    call Morison_UnpackInitOutput(RF, OutData%Morison) ! Morison 
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
@@ -1348,18 +1324,6 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
    character(*), parameter        :: RoutineName = 'HydroDyn_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (associated(SrcParamData%Vars)) then
-      if (.not. associated(DstParamData%Vars)) then
-         allocate(DstParamData%Vars, stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Vars.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-   end if
    DstParamData%nWAMITObj = SrcParamData%nWAMITObj
    DstParamData%vecMultiplier = SrcParamData%vecMultiplier
    if (allocated(SrcParamData%WAMIT)) then
@@ -1529,12 +1493,6 @@ subroutine HydroDyn_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'HydroDyn_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (associated(ParamData%Vars)) then
-      call NWTC_Library_DestroyModVarsType(ParamData%Vars, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      deallocate(ParamData%Vars)
-      ParamData%Vars => null()
-   end if
    if (allocated(ParamData%WAMIT)) then
       LB(1:1) = lbound(ParamData%WAMIT, kind=B8Ki)
       UB(1:1) = ubound(ParamData%WAMIT, kind=B8Ki)
@@ -1596,13 +1554,6 @@ subroutine HydroDyn_PackParam(RF, Indata)
    integer(B8Ki)   :: LB(3), UB(3)
    logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, associated(InData%Vars))
-   if (associated(InData%Vars)) then
-      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-      end if
-   end if
    call RegPack(RF, InData%nWAMITObj)
    call RegPack(RF, InData%vecMultiplier)
    call RegPack(RF, allocated(InData%WAMIT))
@@ -1679,24 +1630,6 @@ subroutine HydroDyn_UnPackParam(RF, OutData)
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
-   if (associated(OutData%Vars)) deallocate(OutData%Vars)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vars)
-      else
-         allocate(OutData%Vars,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
-            return
-         end if
-         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
-         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-      end if
-   else
-      OutData%Vars => null()
-   end if
    call RegUnpack(RF, OutData%nWAMITObj); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%vecMultiplier); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%WAMIT)) deallocate(OutData%WAMIT)
@@ -2665,12 +2598,12 @@ SUBROUTINE HydroDyn_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrSta
    END IF ! check if allocated
 END SUBROUTINE
 
-function HydroDyn_InputMeshPointer(u, ML) result(Mesh)
+function HydroDyn_InputMeshPointer(u, DL) result(Mesh)
    type(HydroDyn_InputType), target, intent(in) :: u
-   type(DatLoc), intent(in)      :: ML
-   type(MeshType), pointer            :: Mesh
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (ML%Num)
+   select case (DL%Num)
    case (HydroDyn_u_Morison_Mesh)
        Mesh => u%Morison%Mesh
    case (HydroDyn_u_WAMITMesh)
@@ -2680,11 +2613,11 @@ function HydroDyn_InputMeshPointer(u, ML) result(Mesh)
    end select
 end function
 
-function HydroDyn_InputMeshName(ML) result(Name)
-   type(DatLoc), intent(in)      :: ML
+function HydroDyn_InputMeshName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
    character(32)                      :: Name
    Name = ""
-   select case (ML%Num)
+   select case (DL%Num)
    case (HydroDyn_u_Morison_Mesh)
        Name = "u%Morison%Mesh"
    case (HydroDyn_u_WAMITMesh)
@@ -2694,16 +2627,16 @@ function HydroDyn_InputMeshName(ML) result(Name)
    end select
 end function
 
-function HydroDyn_OutputMeshPointer(y, ML) result(Mesh)
+function HydroDyn_OutputMeshPointer(y, DL) result(Mesh)
    type(HydroDyn_OutputType), target, intent(in) :: y
-   type(DatLoc), intent(in)      :: ML
-   type(MeshType), pointer            :: Mesh
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (ML%Num)
+   select case (DL%Num)
    case (HydroDyn_y_WAMIT_Mesh)
-       Mesh => y%WAMIT(ML%i1)%Mesh
+       Mesh => y%WAMIT(DL%i1)%Mesh
    case (HydroDyn_y_WAMIT2_Mesh)
-       Mesh => y%WAMIT2(ML%i1)%Mesh
+       Mesh => y%WAMIT2(DL%i1)%Mesh
    case (HydroDyn_y_Morison_Mesh)
        Mesh => y%Morison%Mesh
    case (HydroDyn_y_Morison_VisMesh)
@@ -2713,15 +2646,15 @@ function HydroDyn_OutputMeshPointer(y, ML) result(Mesh)
    end select
 end function
 
-function HydroDyn_OutputMeshName(ML) result(Name)
-   type(DatLoc), intent(in)      :: ML
+function HydroDyn_OutputMeshName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
    character(32)                      :: Name
    Name = ""
-   select case (ML%Num)
+   select case (DL%Num)
    case (HydroDyn_y_WAMIT_Mesh)
-       Name = "y%WAMIT("//trim(Num2LStr(ML%i1))//")%Mesh"
+       Name = "y%WAMIT("//trim(Num2LStr(DL%i1))//")%Mesh"
    case (HydroDyn_y_WAMIT2_Mesh)
-       Name = "y%WAMIT2("//trim(Num2LStr(ML%i1))//")%Mesh"
+       Name = "y%WAMIT2("//trim(Num2LStr(DL%i1))//")%Mesh"
    case (HydroDyn_y_Morison_Mesh)
        Name = "y%Morison%Mesh"
    case (HydroDyn_y_Morison_VisMesh)
@@ -2731,256 +2664,234 @@ function HydroDyn_OutputMeshName(ML) result(Name)
    end select
 end function
 
-subroutine HydroDyn_PackContStateVar(Var, x, ValAry)
-   type(HydroDyn_ContinuousStateType), intent(in) :: x
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (HydroDyn_x_WAMIT_SS_Rdtn_x)
-         call MV_Pack2(Var, x%WAMIT(DL%i1)%SS_Rdtn%x, ValAry)  ! Rank 1 Array
-      case (HydroDyn_x_WAMIT_SS_Exctn_x)
-         call MV_Pack2(Var, x%WAMIT(DL%i1)%SS_Exctn%x, ValAry)  ! Rank 1 Array
-      case (HydroDyn_x_WAMIT_Conv_Rdtn_DummyContState)
-         call MV_Pack2(Var, x%WAMIT(DL%i1)%Conv_Rdtn%DummyContState, ValAry)  ! Scalar
-      case (HydroDyn_x_Morison_DummyContState)
-         call MV_Pack2(Var, x%Morison%DummyContState, ValAry)  ! Scalar
-      case default
-         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
 subroutine HydroDyn_PackContStateAry(Vars, x, ValAry)
    type(HydroDyn_ContinuousStateType), intent(in) :: x
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      call HydroDyn_PackContStateVar(Vars%x(i), x, ValAry)
+      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (DL%Num)
+         case (HydroDyn_x_WAMIT_SS_Rdtn_x)
+            call MV_Pack(V, x%WAMIT(DL%i1)%SS_Rdtn%x(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
+         case (HydroDyn_x_WAMIT_SS_Exctn_x)
+            call MV_Pack(V, x%WAMIT(DL%i1)%SS_Exctn%x(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
+         case (HydroDyn_x_WAMIT_Conv_Rdtn_DummyContState)
+            call MV_Pack(V, x%WAMIT(DL%i1)%Conv_Rdtn%DummyContState, ValAry)    ! Scalar
+         case (HydroDyn_x_Morison_DummyContState)
+            call MV_Pack(V, x%Morison%DummyContState, ValAry)                   ! Scalar
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
    end do
-end subroutine
-
-subroutine HydroDyn_UnpackContStateVar(Var, ValAry, x)
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(HydroDyn_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (HydroDyn_x_WAMIT_SS_Rdtn_x)
-         call MV_Unpack2(Var, ValAry, x%WAMIT(DL%i1)%SS_Rdtn%x)  ! Rank 1 Array
-      case (HydroDyn_x_WAMIT_SS_Exctn_x)
-         call MV_Unpack2(Var, ValAry, x%WAMIT(DL%i1)%SS_Exctn%x)  ! Rank 1 Array
-      case (HydroDyn_x_WAMIT_Conv_Rdtn_DummyContState)
-         call MV_Unpack2(Var, ValAry, x%WAMIT(DL%i1)%Conv_Rdtn%DummyContState)  ! Scalar
-      case (HydroDyn_x_Morison_DummyContState)
-         call MV_Unpack2(Var, ValAry, x%Morison%DummyContState)  ! Scalar
-      end select
-   end associate
 end subroutine
 
 subroutine HydroDyn_UnpackContStateAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
    type(HydroDyn_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                  :: i
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      call HydroDyn_UnpackContStateVar(Vars%x(i), ValAry, x)
+      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (DL%Num)
+         case (HydroDyn_x_WAMIT_SS_Rdtn_x)
+            call MV_Unpack(V, ValAry, x%WAMIT(DL%i1)%SS_Rdtn%x(V%iAry(1):V%iAry(2))) ! Rank 1 Array
+         case (HydroDyn_x_WAMIT_SS_Exctn_x)
+            call MV_Unpack(V, ValAry, x%WAMIT(DL%i1)%SS_Exctn%x(V%iAry(1):V%iAry(2))) ! Rank 1 Array
+         case (HydroDyn_x_WAMIT_Conv_Rdtn_DummyContState)
+            call MV_Unpack(V, ValAry, x%WAMIT(DL%i1)%Conv_Rdtn%DummyContState)  ! Scalar
+         case (HydroDyn_x_Morison_DummyContState)
+            call MV_Unpack(V, ValAry, x%Morison%DummyContState)                 ! Scalar
+         end select
+      end associate
    end do
 end subroutine
 
+subroutine HydroDyn_PackContStateDerivAry(Vars, x, ValAry)
+   type(HydroDyn_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (DL%Num)
+         case (HydroDyn_x_WAMIT_SS_Rdtn_x)
+            call MV_Pack(V, x%WAMIT(DL%i1)%SS_Rdtn%x(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
+         case (HydroDyn_x_WAMIT_SS_Exctn_x)
+            call MV_Pack(V, x%WAMIT(DL%i1)%SS_Exctn%x(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
+         case (HydroDyn_x_WAMIT_Conv_Rdtn_DummyContState)
+            call MV_Pack(V, x%WAMIT(DL%i1)%Conv_Rdtn%DummyContState, ValAry)    ! Scalar
+         case (HydroDyn_x_Morison_DummyContState)
+            call MV_Pack(V, x%Morison%DummyContState, ValAry)                   ! Scalar
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
+   end do
+end subroutine
 
-subroutine HydroDyn_PackConstrStateVar(Var, z, ValAry)
-   type(HydroDyn_ConstraintStateType), intent(in) :: z
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (HydroDyn_z_WAMIT_Conv_Rdtn_DummyConstrState)
-         call MV_Pack2(Var, z%WAMIT%Conv_Rdtn%DummyConstrState, ValAry)  ! Scalar
-      case (HydroDyn_z_WAMIT_SS_Rdtn_DummyConstrState)
-         call MV_Pack2(Var, z%WAMIT%SS_Rdtn%DummyConstrState, ValAry)  ! Scalar
-      case (HydroDyn_z_WAMIT_SS_Exctn_DummyConstrState)
-         call MV_Pack2(Var, z%WAMIT%SS_Exctn%DummyConstrState, ValAry)  ! Scalar
-      case (HydroDyn_z_Morison_DummyConstrState)
-         call MV_Pack2(Var, z%Morison%DummyConstrState, ValAry)  ! Scalar
-      case default
-         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
-      end select
-   end associate
+subroutine HydroDyn_UnpackContStateDerivAry(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(HydroDyn_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
+         select case (DL%Num)
+         case (HydroDyn_x_WAMIT_SS_Rdtn_x)
+            call MV_Unpack(V, ValAry, x%WAMIT(DL%i1)%SS_Rdtn%x(V%iAry(1):V%iAry(2))) ! Rank 1 Array
+         case (HydroDyn_x_WAMIT_SS_Exctn_x)
+            call MV_Unpack(V, ValAry, x%WAMIT(DL%i1)%SS_Exctn%x(V%iAry(1):V%iAry(2))) ! Rank 1 Array
+         case (HydroDyn_x_WAMIT_Conv_Rdtn_DummyContState)
+            call MV_Unpack(V, ValAry, x%WAMIT(DL%i1)%Conv_Rdtn%DummyContState)  ! Scalar
+         case (HydroDyn_x_Morison_DummyContState)
+            call MV_Unpack(V, ValAry, x%Morison%DummyContState)                 ! Scalar
+         end select
+      end associate
+   end do
 end subroutine
 
 subroutine HydroDyn_PackConstrStateAry(Vars, z, ValAry)
    type(HydroDyn_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      call HydroDyn_PackConstrStateVar(Vars%z(i), z, ValAry)
+      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (DL%Num)
+         case (HydroDyn_z_WAMIT_Conv_Rdtn_DummyConstrState)
+            call MV_Pack(V, z%WAMIT%Conv_Rdtn%DummyConstrState, ValAry)         ! Scalar
+         case (HydroDyn_z_WAMIT_SS_Rdtn_DummyConstrState)
+            call MV_Pack(V, z%WAMIT%SS_Rdtn%DummyConstrState, ValAry)           ! Scalar
+         case (HydroDyn_z_WAMIT_SS_Exctn_DummyConstrState)
+            call MV_Pack(V, z%WAMIT%SS_Exctn%DummyConstrState, ValAry)          ! Scalar
+         case (HydroDyn_z_Morison_DummyConstrState)
+            call MV_Pack(V, z%Morison%DummyConstrState, ValAry)                 ! Scalar
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
    end do
-end subroutine
-
-subroutine HydroDyn_UnpackConstrStateVar(Var, ValAry, z)
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(HydroDyn_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (HydroDyn_z_WAMIT_Conv_Rdtn_DummyConstrState)
-         call MV_Unpack2(Var, ValAry, z%WAMIT%Conv_Rdtn%DummyConstrState)  ! Scalar
-      case (HydroDyn_z_WAMIT_SS_Rdtn_DummyConstrState)
-         call MV_Unpack2(Var, ValAry, z%WAMIT%SS_Rdtn%DummyConstrState)  ! Scalar
-      case (HydroDyn_z_WAMIT_SS_Exctn_DummyConstrState)
-         call MV_Unpack2(Var, ValAry, z%WAMIT%SS_Exctn%DummyConstrState)  ! Scalar
-      case (HydroDyn_z_Morison_DummyConstrState)
-         call MV_Unpack2(Var, ValAry, z%Morison%DummyConstrState)  ! Scalar
-      end select
-   end associate
 end subroutine
 
 subroutine HydroDyn_UnpackConstrStateAry(Vars, ValAry, z)
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
    type(HydroDyn_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                  :: i
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      call HydroDyn_UnpackConstrStateVar(Vars%z(i), ValAry, z)
+      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
+         select case (DL%Num)
+         case (HydroDyn_z_WAMIT_Conv_Rdtn_DummyConstrState)
+            call MV_Unpack(V, ValAry, z%WAMIT%Conv_Rdtn%DummyConstrState)       ! Scalar
+         case (HydroDyn_z_WAMIT_SS_Rdtn_DummyConstrState)
+            call MV_Unpack(V, ValAry, z%WAMIT%SS_Rdtn%DummyConstrState)         ! Scalar
+         case (HydroDyn_z_WAMIT_SS_Exctn_DummyConstrState)
+            call MV_Unpack(V, ValAry, z%WAMIT%SS_Exctn%DummyConstrState)        ! Scalar
+         case (HydroDyn_z_Morison_DummyConstrState)
+            call MV_Unpack(V, ValAry, z%Morison%DummyConstrState)               ! Scalar
+         end select
+      end associate
    end do
-end subroutine
-
-
-subroutine HydroDyn_PackInputVar(Var, u, ValAry)
-   type(HydroDyn_InputType), intent(in) :: u
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (HydroDyn_u_Morison_Mesh)
-         call MV_Pack2(Var, u%Morison%Mesh, ValAry)  ! Mesh
-      case (HydroDyn_u_WAMITMesh)
-         call MV_Pack2(Var, u%WAMITMesh, ValAry)  ! Mesh
-      case (HydroDyn_u_PRPMesh)
-         call MV_Pack2(Var, u%PRPMesh, ValAry)  ! Mesh
-      case default
-         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
-      end select
-   end associate
 end subroutine
 
 subroutine HydroDyn_PackInputAry(Vars, u, ValAry)
-   type(HydroDyn_InputType), intent(in) :: u
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
+   type(HydroDyn_InputType), intent(in)    :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      call HydroDyn_PackInputVar(Vars%u(i), u, ValAry)
+      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (DL%Num)
+         case (HydroDyn_u_Morison_Mesh)
+            call MV_Pack(V, u%Morison%Mesh, ValAry)                             ! Mesh
+         case (HydroDyn_u_WAMITMesh)
+            call MV_Pack(V, u%WAMITMesh, ValAry)                                ! Mesh
+         case (HydroDyn_u_PRPMesh)
+            call MV_Pack(V, u%PRPMesh, ValAry)                                  ! Mesh
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
    end do
-end subroutine
-
-subroutine HydroDyn_UnpackInputVar(Var, ValAry, u)
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(HydroDyn_InputType), intent(inout) :: u
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (HydroDyn_u_Morison_Mesh)
-         call MV_Unpack2(Var, ValAry, u%Morison%Mesh)  ! Mesh
-      case (HydroDyn_u_WAMITMesh)
-         call MV_Unpack2(Var, ValAry, u%WAMITMesh)  ! Mesh
-      case (HydroDyn_u_PRPMesh)
-         call MV_Unpack2(Var, ValAry, u%PRPMesh)  ! Mesh
-      end select
-   end associate
 end subroutine
 
 subroutine HydroDyn_UnpackInputAry(Vars, ValAry, u)
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
    type(HydroDyn_InputType), intent(inout) :: u
-   integer(IntKi)                  :: i
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      call HydroDyn_UnpackInputVar(Vars%u(i), ValAry, u)
+      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
+         select case (DL%Num)
+         case (HydroDyn_u_Morison_Mesh)
+            call MV_Unpack(V, ValAry, u%Morison%Mesh)                           ! Mesh
+         case (HydroDyn_u_WAMITMesh)
+            call MV_Unpack(V, ValAry, u%WAMITMesh)                              ! Mesh
+         case (HydroDyn_u_PRPMesh)
+            call MV_Unpack(V, ValAry, u%PRPMesh)                                ! Mesh
+         end select
+      end associate
    end do
-end subroutine
-
-
-subroutine HydroDyn_PackOutputVar(Var, y, ValAry)
-   type(HydroDyn_OutputType), intent(in) :: y
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (HydroDyn_y_WAMIT_Mesh)
-         call MV_Pack2(Var, y%WAMIT(DL%i1)%Mesh, ValAry)  ! Mesh
-      case (HydroDyn_y_WAMIT2_Mesh)
-         call MV_Pack2(Var, y%WAMIT2(DL%i1)%Mesh, ValAry)  ! Mesh
-      case (HydroDyn_y_Morison_Mesh)
-         call MV_Pack2(Var, y%Morison%Mesh, ValAry)  ! Mesh
-      case (HydroDyn_y_Morison_VisMesh)
-         call MV_Pack2(Var, y%Morison%VisMesh, ValAry)  ! Mesh
-      case (HydroDyn_y_Morison_WriteOutput)
-         call MV_Pack2(Var, y%Morison%WriteOutput, ValAry)  ! Rank 1 Array
-      case (HydroDyn_y_WAMITMesh)
-         call MV_Pack2(Var, y%WAMITMesh, ValAry)  ! Mesh
-      case (HydroDyn_y_WriteOutput)
-         call MV_Pack2(Var, y%WriteOutput, ValAry)  ! Rank 1 Array
-      case default
-         ValAry(Var%iLoc(1):Var%iLoc(2)) = 0.0_R8Ki
-      end select
-   end associate
 end subroutine
 
 subroutine HydroDyn_PackOutputAry(Vars, y, ValAry)
-   type(HydroDyn_OutputType), intent(in) :: y
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(inout)       :: ValAry(:)
-   integer(IntKi)                  :: i
+   type(HydroDyn_OutputType), intent(in)   :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      call HydroDyn_PackOutputVar(Vars%y(i), y, ValAry)
+      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (DL%Num)
+         case (HydroDyn_y_WAMIT_Mesh)
+            call MV_Pack(V, y%WAMIT(DL%i1)%Mesh, ValAry)                        ! Mesh
+         case (HydroDyn_y_WAMIT2_Mesh)
+            call MV_Pack(V, y%WAMIT2(DL%i1)%Mesh, ValAry)                       ! Mesh
+         case (HydroDyn_y_Morison_Mesh)
+            call MV_Pack(V, y%Morison%Mesh, ValAry)                             ! Mesh
+         case (HydroDyn_y_Morison_VisMesh)
+            call MV_Pack(V, y%Morison%VisMesh, ValAry)                          ! Mesh
+         case (HydroDyn_y_Morison_WriteOutput)
+            call MV_Pack(V, y%Morison%WriteOutput(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
+         case (HydroDyn_y_WAMITMesh)
+            call MV_Pack(V, y%WAMITMesh, ValAry)                                ! Mesh
+         case (HydroDyn_y_WriteOutput)
+            call MV_Pack(V, y%WriteOutput(V%iAry(1):V%iAry(2)), ValAry)         ! Rank 1 Array
+         case default
+            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
    end do
 end subroutine
 
-subroutine HydroDyn_UnpackOutputVar(Var, ValAry, y)
-   type(ModVarType), intent(in)    :: Var
-   real(R8Ki), intent(in)          :: ValAry(:)
-   type(HydroDyn_OutputType), intent(inout) :: y
-   integer(IntKi)                  :: i
-   associate (DL => Var%DL)
-      select case (Var%DL%Num)
-      case (HydroDyn_y_WAMIT_Mesh)
-         call MV_Unpack2(Var, ValAry, y%WAMIT(DL%i1)%Mesh)  ! Mesh
-      case (HydroDyn_y_WAMIT2_Mesh)
-         call MV_Unpack2(Var, ValAry, y%WAMIT2(DL%i1)%Mesh)  ! Mesh
-      case (HydroDyn_y_Morison_Mesh)
-         call MV_Unpack2(Var, ValAry, y%Morison%Mesh)  ! Mesh
-      case (HydroDyn_y_Morison_VisMesh)
-         call MV_Unpack2(Var, ValAry, y%Morison%VisMesh)  ! Mesh
-      case (HydroDyn_y_Morison_WriteOutput)
-         call MV_Unpack2(Var, ValAry, y%Morison%WriteOutput)  ! Rank 1 Array
-      case (HydroDyn_y_WAMITMesh)
-         call MV_Unpack2(Var, ValAry, y%WAMITMesh)  ! Mesh
-      case (HydroDyn_y_WriteOutput)
-         call MV_Unpack2(Var, ValAry, y%WriteOutput)  ! Rank 1 Array
-      end select
-   end associate
-end subroutine
-
 subroutine HydroDyn_UnpackOutputAry(Vars, ValAry, y)
-   type(ModVarsType), intent(in)   :: Vars
-   real(R8Ki), intent(in)          :: ValAry(:)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
    type(HydroDyn_OutputType), intent(inout) :: y
-   integer(IntKi)                  :: i
+   integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      call HydroDyn_UnpackOutputVar(Vars%y(i), ValAry, y)
+      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
+         select case (DL%Num)
+         case (HydroDyn_y_WAMIT_Mesh)
+            call MV_Unpack(V, ValAry, y%WAMIT(DL%i1)%Mesh)                      ! Mesh
+         case (HydroDyn_y_WAMIT2_Mesh)
+            call MV_Unpack(V, ValAry, y%WAMIT2(DL%i1)%Mesh)                     ! Mesh
+         case (HydroDyn_y_Morison_Mesh)
+            call MV_Unpack(V, ValAry, y%Morison%Mesh)                           ! Mesh
+         case (HydroDyn_y_Morison_VisMesh)
+            call MV_Unpack(V, ValAry, y%Morison%VisMesh)                        ! Mesh
+         case (HydroDyn_y_Morison_WriteOutput)
+            call MV_Unpack(V, ValAry, y%Morison%WriteOutput(V%iAry(1):V%iAry(2))) ! Rank 1 Array
+         case (HydroDyn_y_WAMITMesh)
+            call MV_Unpack(V, ValAry, y%WAMITMesh)                              ! Mesh
+         case (HydroDyn_y_WriteOutput)
+            call MV_Unpack(V, ValAry, y%WriteOutput(V%iAry(1):V%iAry(2)))       ! Rank 1 Array
+         end select
+      end associate
    end do
 end subroutine
 
 END MODULE HydroDyn_Types
+
 !ENDOFREGISTRYGENERATEDFILE

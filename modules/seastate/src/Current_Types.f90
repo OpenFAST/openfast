@@ -233,5 +233,7 @@ subroutine Current_UnPackInitOutput(RF, OutData)
    call RegUnpack(RF, OutData%PCurrVxiPz0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PCurrVyiPz0); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
 END MODULE Current_Types
+
 !ENDOFREGISTRYGENERATEDFILE

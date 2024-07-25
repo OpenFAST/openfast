@@ -15723,5 +15723,7 @@ subroutine FAST_UnPackTurbineType(RF, OutData)
    call FAST_UnpackIceDyn_Data(RF, OutData%IceD) ! IceD 
    call FAST_UnpackExtPtfm_Data(RF, OutData%ExtPtfm) ! ExtPtfm 
 end subroutine
+
 END MODULE FAST_Types
+
 !ENDOFREGISTRYGENERATEDFILE
