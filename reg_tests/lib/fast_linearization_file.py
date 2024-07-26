@@ -175,7 +175,7 @@ class FASTLinearizationFile(dict):
                 elif line.find('D:')>=0:
                     self['D'] = readMat(f, ny, nu, 'D')
                 elif line.find('J:')>=0:
-                    _, rows, _, cols = line.spit()
+                    _, rows, _, cols = line.split()
                     self['J'] = readMat(f, int(rows), int(cols), 'J')
                 elif line.find('dUdu:')>=0:
                     self['dUdu'] = readMat(f, nu, nu,'dUdu')
