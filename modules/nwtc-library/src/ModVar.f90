@@ -841,7 +841,9 @@ subroutine MV_AddDelta(VarAry, DeltaAry, DataAry)
    real(R8Ki), intent(in)        :: DeltaAry(:)    ! Array of delta values
    real(R8Ki), intent(inout)     :: DataAry(:)     ! Array to be modified
    integer(IntKi)                :: i, j, k
-   real(R8Ki)                    :: quat_base(3), quat_delta(3)
+   real(R8Ki)                    :: quat_base(3), quat_delta(3), rvec(3), dcm(3,3)
+   integer(IntKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
 
    ! Loop through variables
    do i = 1, size(VarAry)
@@ -855,9 +857,18 @@ subroutine MV_AddDelta(VarAry, DeltaAry, DataAry)
             ! Loop through nodes
             do j = 1, VarAry(i)%Nodes
 
-               ! Quaternions from negative and positive perturbations
+               ! Quaternion from data array
                quat_base = DataAry(k:k + 2)
-               quat_delta = rvec_to_quat(DeltaAry(k:k + 2))
+
+               ! Get rotation vector delta
+               rvec = DeltaAry(k:k + 2)
+
+               if (UseSmallRotAngles) then
+                  call SmllRotTrans('linearization perturbation', rvec(1), rvec(2), rvec(3), dcm, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+                  quat_delta = dcm_to_quat(dcm)
+               else
+                  quat_delta = rvec_to_quat(rvec)
+               end if
 
                ! Calculate composition of base quaternion and delta quaternion
                DataAry(k:k + 2) = quat_compose(quat_base, quat_delta)

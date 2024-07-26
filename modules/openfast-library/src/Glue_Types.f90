@@ -173,11 +173,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  Glue_AeroMap  =======
   TYPE, PUBLIC :: Glue_AeroMap
-    TYPE(ModDataType)  :: Mod      !< Module combining all active modules [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModOrder      !< Index of module order for AeroMap modules [-]
-    INTEGER(IntKi)  :: iModED = 0_IntKi      !< Index of ElastoDyn module [-]
-    INTEGER(IntKi)  :: iModBD = 0      !< Index of BeamDyn blade 1 module [-]
-    INTEGER(IntKi)  :: iModAD = 0_IntKi      !< Index of AeroDyn module [-]
+    TYPE(ModGlueType)  :: Mod      !< Module combining all active modules [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Jac11      !< Components of Jacobian matrix [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Jac12      !< Components of Jacobian matrix [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Jac21      !< Components of Jacobian matrix [-]
@@ -1385,24 +1381,9 @@ subroutine Glue_CopyAeroMap(SrcAeroMapData, DstAeroMapData, CtrlCode, ErrStat, E
    character(*), parameter        :: RoutineName = 'Glue_CopyAeroMap'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   call NWTC_Library_CopyModDataType(SrcAeroMapData%Mod, DstAeroMapData%Mod, CtrlCode, ErrStat2, ErrMsg2)
+   call Glue_CopyModGlueType(SrcAeroMapData%Mod, DstAeroMapData%Mod, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcAeroMapData%iModOrder)) then
-      LB(1:1) = lbound(SrcAeroMapData%iModOrder, kind=B8Ki)
-      UB(1:1) = ubound(SrcAeroMapData%iModOrder, kind=B8Ki)
-      if (.not. allocated(DstAeroMapData%iModOrder)) then
-         allocate(DstAeroMapData%iModOrder(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstAeroMapData%iModOrder.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstAeroMapData%iModOrder = SrcAeroMapData%iModOrder
-   end if
-   DstAeroMapData%iModED = SrcAeroMapData%iModED
-   DstAeroMapData%iModBD = SrcAeroMapData%iModBD
-   DstAeroMapData%iModAD = SrcAeroMapData%iModAD
    if (allocated(SrcAeroMapData%Jac11)) then
       LB(1:2) = lbound(SrcAeroMapData%Jac11, kind=B8Ki)
       UB(1:2) = ubound(SrcAeroMapData%Jac11, kind=B8Ki)
@@ -1555,11 +1536,8 @@ subroutine Glue_DestroyAeroMap(AeroMapData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Glue_DestroyAeroMap'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   call NWTC_Library_DestroyModDataType(AeroMapData%Mod, ErrStat2, ErrMsg2)
+   call Glue_DestroyModGlueType(AeroMapData%Mod, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(AeroMapData%iModOrder)) then
-      deallocate(AeroMapData%iModOrder)
-   end if
    if (allocated(AeroMapData%Jac11)) then
       deallocate(AeroMapData%Jac11)
    end if
@@ -1608,11 +1586,7 @@ subroutine Glue_PackAeroMap(RF, Indata)
    integer(B8Ki)   :: i1, i2, i3
    integer(B8Ki)   :: LB(3), UB(3)
    if (RF%ErrStat >= AbortErrLev) return
-   call NWTC_Library_PackModDataType(RF, InData%Mod) 
-   call RegPackAlloc(RF, InData%iModOrder)
-   call RegPack(RF, InData%iModED)
-   call RegPack(RF, InData%iModBD)
-   call RegPack(RF, InData%iModAD)
+   call Glue_PackModGlueType(RF, InData%Mod) 
    call RegPackAlloc(RF, InData%Jac11)
    call RegPackAlloc(RF, InData%Jac12)
    call RegPackAlloc(RF, InData%Jac21)
@@ -1647,11 +1621,7 @@ subroutine Glue_UnPackAeroMap(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
-   call NWTC_Library_UnpackModDataType(RF, OutData%Mod) ! Mod 
-   call RegUnpackAlloc(RF, OutData%iModOrder); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iModED); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iModBD); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iModAD); if (RegCheckErr(RF, RoutineName)) return
+   call Glue_UnpackModGlueType(RF, OutData%Mod) ! Mod 
    call RegUnpackAlloc(RF, OutData%Jac11); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Jac12); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Jac21); if (RegCheckErr(RF, RoutineName)) return
@@ -1743,7 +1713,7 @@ subroutine Glue_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       if (.not. allocated(DstMiscData%ModDataAry)) then
          allocate(DstMiscData%ModDataAry(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Modules.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ModDataAry.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
@@ -2261,11 +2231,11 @@ subroutine Glue_UnPackMisc(RF, OutData)
       call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%ModDataAry(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Modules.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ModDataAry.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackModDataType(RF, OutData%ModDataAry(i1)) ! Modules 
+         call NWTC_Library_UnpackModDataType(RF, OutData%ModDataAry(i1)) ! ModDataAry 
       end do
    end if
    if (allocated(OutData%Mappings)) deallocate(OutData%Mappings)

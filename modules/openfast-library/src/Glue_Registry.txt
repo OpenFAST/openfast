@@ -158,11 +158,7 @@ typedef ^ ^                     ReKi            TSR                     -  -  - 
 typedef ^ ^                     ReKi            WindSpeed               -  -  -     "Windspeed for this case of the steady-state solve [>0]" "m/s"
 typedef ^ ^                     ReKi            Pitch                   -  -  -     "Pitch angle for this case of the steady-state solve" "rad"
 
-typedef ^ Glue_AeroMap          ModDataType     Mod                     -  -  -     "Module combining all active modules" -
-typedef ^ ^                     IntKi           iModOrder               :  -  -     "Index of module order for AeroMap modules" -
-typedef ^ ^                     IntKi           iModED                  -  -  -     "Index of ElastoDyn module" -
-typedef ^ ^                     IntKi           iModBD                  -  0  -     "Index of BeamDyn blade 1 module" -
-typedef ^ ^                     IntKi           iModAD                  -  -  -     "Index of AeroDyn module" -
+typedef ^ Glue_AeroMap          ModGlueType     Mod                     -  -  -     "Module combining all active modules" -
 typedef ^ ^                     R8Ki            Jac11                   :: -  -     "Components of Jacobian matrix" -
 typedef ^ ^                     R8Ki            Jac12                   :: -  -     "Components of Jacobian matrix" -
 typedef ^ ^                     R8Ki            Jac21                   :: -  -     "Components of Jacobian matrix" -

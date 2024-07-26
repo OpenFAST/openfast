@@ -521,6 +521,7 @@ end subroutine
 
 subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
                       u_op, y_op, x_op, dx_op, z_op, u_glue, y_glue, x_glue, dx_glue, z_glue)
+   use AeroDyn, only: AD_CalcWind_Rotor
    type(ModDataType), intent(in)                      :: ModData     !< Module information
    real(DbKi), intent(in)                             :: ThisTime    !< Time
    integer(IntKi), intent(in)                         :: InputIndex  !< Input index
@@ -528,11 +529,16 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
-   real(R8Ki), allocatable, optional, intent(inout)   :: u_op(:), u_glue(:)     !< values of linearized inputs
-   real(R8Ki), allocatable, optional, intent(inout)   :: y_op(:), y_glue(:)     !< values of linearized outputs
-   real(R8Ki), allocatable, optional, intent(inout)   :: x_op(:), x_glue(:)     !< values of linearized continuous states
-   real(R8Ki), allocatable, optional, intent(inout)   :: dx_op(:), dx_glue(:)    !< values of first time derivatives of linearized continuous states
-   real(R8Ki), allocatable, optional, intent(inout)   :: z_op(:), z_glue(:)     !< values of linearized constraint states
+   real(R8Ki), allocatable, optional, intent(inout)   :: u_op(:)     !< values of linearized inputs
+   real(R8Ki), allocatable, optional, intent(inout)   :: y_op(:)     !< values of linearized outputs
+   real(R8Ki), allocatable, optional, intent(inout)   :: x_op(:)     !< values of linearized continuous states
+   real(R8Ki), allocatable, optional, intent(inout)   :: dx_op(:)    !< values of first time derivatives of linearized continuous states
+   real(R8Ki), allocatable, optional, intent(inout)   :: z_op(:)     !< values of linearized constraint states
+   real(R8Ki), optional, intent(inout)                :: u_glue(:)
+   real(R8Ki), optional, intent(inout)                :: y_glue(:)
+   real(R8Ki), optional, intent(inout)                :: x_glue(:)
+   real(R8Ki), optional, intent(inout)                :: dx_glue(:)
+   real(R8Ki), optional, intent(inout)                :: z_glue(:)
 
    character(*), parameter    :: RoutineName = 'FAST_GetOP'
    integer(IntKi)             :: ErrStat2
@@ -543,7 +549,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
    ErrMsg = ''
 
    ! If inputs are requested
-   if (present(u_op)) then
+   if (present(u_op) .and. (ModData%Vars%Nu > 0)) then
 
       if (.not. allocated(u_op)) then
          call AllocAry(u_op, ModData%Vars%Nu, "u_op", ErrStat2, ErrMsg2)
@@ -597,7 +603,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
    end if
 
    ! If outputs are requested
-   if (present(y_op)) then
+   if (present(y_op) .and. (ModData%Vars%Ny > 0)) then
 
       if (.not. allocated(y_op)) then
          call AllocAry(y_op, ModData%Vars%Ny, "y_op", ErrStat2, ErrMsg2)
@@ -649,7 +655,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
    end if
 
    ! If continuous states are requested
-   if (present(x_op)) then
+   if (present(x_op) .and. (ModData%Vars%Nx > 0)) then
 
       if (.not. allocated(x_op)) then
          call AllocAry(x_op, ModData%Vars%Nx, "x_op", ErrStat2, ErrMsg2)
@@ -700,7 +706,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
    end if
 
    ! If continuous state derivatives are requested
-   if (present(dx_op)) then
+   if (present(dx_op) .and. (ModData%Vars%Nx > 0)) then
 
       if (.not. allocated(dx_op)) then
          call AllocAry(dx_op, ModData%Vars%Nx, "dx_op", ErrStat2, ErrMsg2)
@@ -710,17 +716,25 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       ! Select based on module ID
       select case (ModData%ID)
       case (Module_AD)
+         i = 1
+         call AD_CalcWind_Rotor(ThisTime, T%AD%Input(InputIndex)%rotors(ModData%Ins), &
+                                T%AD%p%FlowField, T%AD%p%rotors(ModData%Ins), &
+                                T%AD%m%Inflow(InputIndex)%RotInflow(ModData%Ins), &
+                                i, ErrStat2, ErrMsg2)
+         if (Failed()) return
          call RotCalcContStateDeriv(ThisTime, T%AD%Input(InputIndex)%rotors(ModData%Ins), &
                                     T%AD%m%Inflow(InputIndex)%RotInflow(ModData%Ins), &
-                                    T%AD%p%rotors(ModData%Ins), &
-                                    T%AD%p, T%AD%x(StateIndex)%rotors(ModData%Ins), &
+                                    T%AD%p%rotors(ModData%Ins), T%AD%p, &
+                                    T%AD%x(StateIndex)%rotors(ModData%Ins), &
                                     T%AD%xd(StateIndex)%rotors(ModData%Ins), &
                                     T%AD%z(StateIndex)%rotors(ModData%Ins), &
                                     T%AD%OtherSt(StateIndex)%rotors(ModData%Ins), &
                                     T%AD%m%rotors(ModData%Ins), &
                                     T%AD%m%rotors(ModData%Ins)%dxdt_lin, &
-                                    ErrStat2, ErrMsg2); if (Failed()) return
+                                    ErrStat2, ErrMsg2)
+         if (Failed()) return
          call AD_PackContStateDerivAry(ModData%Vars, T%AD%m%rotors(ModData%Ins)%dxdt_lin, dx_op)
+
       case (Module_BD)
          call BD_CalcContStateDeriv(ThisTime, T%BD%Input(InputIndex, ModData%Ins), &
                                     T%BD%p(ModData%Ins), &
@@ -730,13 +744,17 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
                                     T%BD%OtherSt(ModData%Ins, StateIndex), &
                                     T%BD%m(ModData%Ins), &
                                     T%BD%m(ModData%Ins)%dxdt_lin, &
-                                    ErrStat2, ErrMsg2); if (Failed()) return
+                                    ErrStat2, ErrMsg2)
+         if (Failed()) return
          call BD_PackContStateDerivAry(ModData%Vars, T%BD%m(ModData%Ins)%dxdt_lin, dx_op)
+
       case (Module_ED)
          call ED_CalcContStateDeriv(ThisTime, T%ED%Input(InputIndex), T%ED%p, T%ED%x(StateIndex), &
                                     T%ED%xd(StateIndex), T%ED%z(StateIndex), T%ED%OtherSt(StateIndex), &
-                                    T%ED%m, T%ED%m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+                                    T%ED%m, T%ED%m%dxdt_lin, ErrStat2, ErrMsg2)
+         if (Failed()) return
          call ED_PackContStateDerivAry(ModData%Vars, T%ED%m%dxdt_lin, dx_op)
+
 !     case (Module_ExtPtfm)
 !        call ExtPtfm_CalcContStatExtPtfmeriv(ThisTime, T%ExtPtfm%Input(InputIndex), &
 !                                             T%ExtPtfm%p, T%ExtPtfm%x(StateIndex), &
@@ -745,39 +763,62 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
 !                                             T%ExtPtfm%m, T%ExtPtfm%m%dxdt_lin, &
 !                                             ErrStat2, ErrMsg2); if (Failed()) return
 !        call ExtPtfm_PackContStateAry(ModData%Vars, T%ExtPtfm%m%dxdt_lin, dx_op)
+
 !     case (Module_FEAM)
 !        call FEAM_PackContStateAry(ModData%Vars, T%FEAM%x(StateIndex), dx_op)
+
       case (Module_HD)
          call HydroDyn_CalcContStateDeriv(ThisTime, T%HD%Input(InputIndex), T%HD%p, T%HD%x(StateIndex), &
                                           T%HD%xd(StateIndex), T%HD%z(StateIndex), T%HD%OtherSt(StateIndex), &
                                           T%HD%m, T%HD%m%dxdt_lin, ErrStat2, ErrMsg2)
-         call HydroDyn_PackContStateDerivAry(ModData%Vars, T%HD%x(StateIndex), dx_op)
+         if (Failed()) return
+         call HydroDyn_PackContStateDerivAry(ModData%Vars, T%HD%m%dxdt_lin, dx_op)
+
 !     case (Module_IceD)
 !        call IceD_CalcContStateDeriv(ThisTime, T%IceD%Input(InputIndex), T%IceD%p, T%IceD%x(StateIndex), &
 !                                     T%IceD%xd(StateIndex), T%IceD%z(StateIndex), T%IceD%OtherSt(StateIndex), &
 !                                     T%IceD%m, T%IceD%m%dxdt_lin, ErrStat2, ErrMsg2)
+!        if (Failed()) return
 !        call IceD_PackContStateDerivAry(ModData%Vars, T%IceD%m%dxdt_lin, dx_op)
+
 !     case (Module_IceF)
 !        call IceFloe_PackContStateDerivAry(ModData%Vars, T%IceF%x(StateIndex), dx_op)
-      case (Module_IfW)
-         call InflowWind_PackContStateDerivAry(ModData%Vars, T%IfW%x(StateIndex), dx_op)
-      case (Module_MAP)
-         call MAP_PackContStateDerivAry(ModData%Vars, T%MAP%x(StateIndex), dx_op)
+
+!     case (Module_IfW)
+!        call InflowWind_PackContStateDerivAry(ModData%Vars, T%IfW%x(StateIndex), dx_op)
+
+!     case (Module_MAP)
+!        call MAP_PackContStateDerivAry(ModData%Vars, T%MAP%x(StateIndex), dx_op)
+
       case (Module_MD)
-         call MD_PackContStateDerivAry(ModData%Vars, T%MD%x(StateIndex), dx_op)
-      case (Module_ExtInfw)
-         ! call ExtInfw_PackContStateDerivAry(ModData%Vars, T%ExtInfw%x(StateIndex), dx_op)
-      case (Module_Orca)
-         call Orca_PackContStateDerivAry(ModData%Vars, T%Orca%x(StateIndex), dx_op)
+         call MD_CalcContStateDeriv(ThisTime, T%MD%Input(InputIndex), T%MD%p, T%MD%x(StateIndex), &
+                                    T%MD%xd(StateIndex), T%MD%z(StateIndex), T%MD%OtherSt(StateIndex), &
+                                    T%MD%m, T%MD%m%dxdt_lin, ErrStat2, ErrMsg2)
+         if (Failed()) return
+         call MD_PackContStateDerivAry(ModData%Vars, T%MD%m%dxdt_lin, dx_op)
+
+!     case (Module_ExtInfw)
+!        call ExtInfw_PackContStateDerivAry(ModData%Vars, T%ExtInfw%x(StateIndex), dx_op)
+
+!     case (Module_Orca)
+!        call Orca_PackContStateDerivAry(ModData%Vars, T%Orca%x(StateIndex), dx_op)
+
       case (Module_SD)
-         call SD_PackContStateDerivAry(ModData%Vars, T%SD%x(StateIndex), dx_op)
-      case (Module_SeaSt)
-         call SeaSt_PackContStateDerivAry(ModData%Vars, T%SeaSt%x(StateIndex), dx_op)
+         call SD_CalcContStateDeriv(ThisTime, T%SD%Input(InputIndex), T%SD%p, T%SD%x(StateIndex), &
+                                    T%SD%xd(StateIndex), T%SD%z(StateIndex), T%SD%OtherSt(StateIndex), &
+                                    T%SD%m, T%SD%m%dxdt_lin, ErrStat2, ErrMsg2)
+         if (Failed()) return
+         call SD_PackContStateDerivAry(ModData%Vars, T%SD%m%dxdt_lin, dx_op)
+
+!     case (Module_SeaSt)
+!        call SeaSt_PackContStateDerivAry(ModData%Vars, T%SeaSt%x(StateIndex), dx_op)
+
       case (Module_SrvD)
          call SrvD_CalcContStateDeriv(ThisTime, T%SrvD%Input(InputIndex), T%SrvD%p, T%SrvD%x(StateIndex), &
                                       T%SrvD%xd(StateIndex), T%SrvD%z(StateIndex), T%SrvD%OtherSt(StateIndex), &
                                       T%SrvD%m, T%SrvD%m%dxdt_lin, ErrStat2, ErrMsg2)
          call SrvD_PackContStateDerivAry(ModData%Vars, T%SrvD%m%dxdt_lin, dx_op)
+
       case default
          call SetErrStat(ErrID_Fatal, "Continuous State Derivatives unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
          return

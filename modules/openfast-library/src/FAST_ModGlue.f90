@@ -34,7 +34,7 @@ private
 public :: ModGlue_Init
 public :: ModGlue_Linearize_OP, ModGlue_CalcSteady
 public :: ModGlue_SaveOperatingPoint, ModGlue_RestoreOperatingPoint
-public :: CalcWriteLinearMatrices
+public :: CalcWriteLinearMatrices, Glue_CombineModules
 
 contains
 
@@ -118,6 +118,10 @@ subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilte
          call CopyVariables(ModData%Vars%y, GlueModData%Vars%y, yNumVals); if (Failed()) return
          GlueModData%Vars%Ny = ModData%Vars%Ny ! Same as original module
          yNumVars = yNumVars + size(GlueModData%Vars%y)
+
+         ! Module Mappings
+         GlueModData%iSrcMaps = ModData%iSrcMaps
+         GlueModData%iDstMaps = ModData%iDstMaps
 
       end associate
    end do
@@ -1242,7 +1246,7 @@ subroutine Postcondition(uVars, dUdu, dUdy, JacScaleFactor)
 
 end subroutine
 
-subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinRootName, FilterFlag, ErrStat, ErrMsg, ModSuffix)
+subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinRootName, FilterFlag, ErrStat, ErrMsg, ModSuffix, CalcGlue)
    type(ModVarsType), intent(in)             :: Vars           !< Variable data
    type(ModLinType), intent(inout)           :: Lin            !< Linearization data
    type(FAST_ParameterType), intent(in)      :: p_FAST         !< Parameters
@@ -1254,6 +1258,7 @@ subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinR
    integer(IntKi), intent(out)               :: ErrStat        !< Error status of the operation
    character(*), intent(out)                 :: ErrMsg         !< Error message if ErrStat /= ErrID_None
    character(*), optional, intent(in)        :: ModSuffix      !< Module suffix for file name
+   logical, optional, intent(in)             :: CalcGlue       !< Flag to calculate glue state matrices
 
    character(*), parameter          :: RoutineName = 'WriteModuleLinearMatrices'
    integer(IntKi)                   :: ErrStat2
@@ -1264,6 +1269,7 @@ subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinR
    integer(IntKi)                   :: Nx, Nxd, Nz, Nu, Ny
    character(50)                    :: Fmt
    logical, allocatable             :: uUse(:), yUse(:), xUse(:)
+   logical                          :: CalcGlueLoc
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -1271,9 +1277,14 @@ subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinR
    ! Assemble output file name based on glue linearization abbreviation
    if (present(ModSuffix)) then
       OutFileName = trim(LinRootName)//"."//trim(ModSuffix)//".lin"
+      CalcGlueLoc = .false.
    else
       OutFileName = trim(LinRootName)//".lin"
+      CalcGlueLoc = .true.
    end if
+
+   ! Set flag to calculate glue matrices based on optional parameter
+   if (present(CalcGlue)) CalcGlueLoc = CalcGlue
 
    ! Open linearization file
    call OpenFOutFile(Un, OutFileName, ErrStat2, ErrMsg2); if (Failed()) return
@@ -1386,7 +1397,7 @@ subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinR
    ! If this is glue code module, calculate the glue code state matrices (A, B, C, D)
    ! Called here, after writing dUdu and dUdy, because those matrices are overwritten
    ! in the process of calculating the other state matrices
-   if (.not. present(ModSuffix)) then
+   if (CalcGlueLoc) then
       call CalcGlueStateMatrices(Vars, Lin, real(p_FAST%UJacSclFact, R8Ki), ErrStat2, ErrMsg2)
       if (Failed()) return
    end if

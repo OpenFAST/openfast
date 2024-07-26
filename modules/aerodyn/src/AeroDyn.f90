@@ -60,8 +60,8 @@ module AeroDyn
    PUBLIC :: AD_JacobianPConstrState           ! Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
                                                !   (Xd), and constraint - state(Z) functions all with respect to the constraint
                                                !   states(z)
-   PUBLIC :: AD_GetOP                          !< Routine to pack the operating point values into arrays
    PUBLIC :: AD_PackExtInputAry                !< Routine pack extended inputs
+   public :: AD_CalcWind_Rotor                 !< Routine to calculate rotor wind inputs
   
 contains    
 !----------------------------------------------------------------------------------------------------------------------------------   
@@ -6569,149 +6569,6 @@ contains
    end subroutine cleanup   
 
 END SUBROUTINE RotJacobianPConstrState
-
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE AD_GetOP(Vars, iRotor, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op)
-   type(ModVarsType),                    INTENT(IN   )           :: Vars       !< Module variables for packing arrays
-   INTEGER(IntKi),                       INTENT(IN   )           :: iRotor     !< Rotor index
-   REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
-   TYPE(AD_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(AD_ParameterType),               INTENT(IN   )           :: p          !< Parameters
-   TYPE(AD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
-   TYPE(AD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
-   TYPE(AD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
-   TYPE(AD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
-   TYPE(AD_OutputType),                  INTENT(IN   )           :: y          !< Output at operating point
-   TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
-   INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
-   CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: u_op(:)    !< values of linearized inputs
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: y_op(:)    !< values of linearized outputs
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: x_op(:)    !< values of linearized continuous states
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
-   
-   integer(IntKi) :: StartNode
-
-   if (iRotor < 1 .or. iRotor > size(p%rotors)) then
-      ErrStat = ErrID_Fatal
-      ErrMsg = "AD_GetOP: Invalid rotor index: "//trim(Num2LStr(iRotor))//", must be between 1 and "//Num2LStr(size(p%rotors))
-      return
-   end if
-
-   StartNode = 1
-   call AD_CalcWind_Rotor(t, u%rotors(iRotor), p%FlowField, p%rotors(iRotor), m%Inflow(1)%RotInflow(iRotor), StartNode, ErrStat, ErrMsg)
-   if (ErrStat >= AbortErrLev) return
-   call RotGetOP(Vars, iRotor, t, u%rotors(iRotor), m%Inflow(1)%RotInflow(iRotor), p%rotors(iRotor), p, x%rotors(iRotor), &
-                 xd%rotors(iRotor), z%rotors(iRotor), OtherState%rotors(iRotor), y%rotors(iRotor), m%rotors(iRotor), &
-                 ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op)
-
-END SUBROUTINE AD_GetOP
-
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE RotGetOP(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op)
-   use IfW_FlowField, only: FlowFieldType, Uniform_FieldType, UniformField_InterpLinear
-   TYPE(ModVarsType),                    INTENT(IN   )           :: Vars       !< Module variables for packing arrays
-   INTEGER(IntKi),                       INTENT(IN   )           :: iRotor     !< Rotor index
-   REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
-   TYPE(RotInputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(RotInflowType),                  INTENT(IN   )           :: RotInflow  !< Rotor Inflow at operating point (may change to inout if a mesh copy is required)
-   TYPE(RotParameterType),               INTENT(IN   )           :: p          !< Parameters
-   TYPE(AD_ParameterType),               INTENT(IN   )           :: p_AD       !< Parameters
-   TYPE(RotContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
-   TYPE(RotDiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
-   TYPE(RotConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
-   TYPE(RotOtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
-   TYPE(RotOutputType),                  INTENT(IN   )           :: y          !< Output at operating point
-   TYPE(RotMiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
-   INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
-   CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: u_op(:)    !< values of linearized inputs
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: y_op(:)    !< values of linearized outputs
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: x_op(:)    !< values of linearized continuous states
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
-
-   CHARACTER(*), PARAMETER          :: RoutineName = 'AD_GetOP'
-   INTEGER(IntKi)                   :: ErrStat2
-   CHARACTER(ErrMsgLen)             :: ErrMsg2
-   INTEGER(IntKi)                   :: i
-   type(UniformField_Interp)        :: UF_op
-
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-
-   ! Inputs
-   if (present(u_op)) then
-      if (.not. allocated(u_op)) then   
-         call AllocAry(u_op, Vars%Nu, 'u_op', ErrStat2, ErrMsg2); if (Failed()) return      
-      end if
-      call AD_PackInputAry(Vars, u, u_op)
-
-      if (associated(p_AD%FlowField)) then
-         if (p_AD%FlowField%FieldType == Uniform_FieldType) then
-            UF_op = UniformField_InterpLinear(p_AD%FlowField%Uniform, t)
-            do i = 1, size(Vars%u)
-               select case (Vars%u(i)%DL%Num)
-               case (AD_u_HWindSpeed)
-                  call MV_Pack(Vars%u(i), UF_op%VelH, u_op)
-               case (AD_u_PLexp)
-                  call MV_Pack(Vars%u(i), UF_op%ShrV, u_op)
-               case (AD_u_PropagationDir)
-                  call MV_Pack(Vars%u(i), UF_op%AngleH + p_AD%FlowField%PropagationDir, u_op)
-               end select
-            end do
-         end if
-      end if
-   end if
-
-   ! Outputs
-   if (present(y_op)) then
-      if (.not. allocated(y_op)) then   
-         call AllocAry(y_op, Vars%Ny, 'y_op', ErrStat2, ErrMsg2); if (Failed()) return      
-      end if
-      call AD_PackOutputAry(Vars, y, y_op)
-   end if
-
-   ! Continuous States
-   if (present(x_op)) then
-      if (.not. allocated(x_op)) then   
-         call AllocAry(x_op, Vars%Nx, 'x_op', ErrStat2, ErrMsg2); if (Failed()) return      
-      end if
-      call AD_PackContStateAry(Vars, x, x_op)
-   end if
-
-   ! Continous State Derivatives
-   if (present(dx_op)) then
-      if (.not. allocated(dx_op)) then   
-         call AllocAry(dx_op, Vars%Nx, 'dx_op', ErrStat2, ErrMsg2); if (Failed()) return      
-      end if
-      call RotCalcContStateDeriv(t, u, RotInflow, p, p_AD, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); If (Failed()) return
-      call AD_PackContStateAry(Vars, m%dxdt_lin, dx_op)
-   end if
-
-   ! Discrete States
-   if (present(xd_op)) then
-   end if
-
-   ! Constraint States
-   if (present(z_op)) then
-      if (.not. allocated(z_op)) then
-         call AllocAry(z_op, p%NumBlades*p%NumBlNds, 'z_op', ErrStat2, ErrMsg2); if (Failed()) return
-      end if
-      call AD_PackConstrStateAry(Vars, z, z_op)    
-   end if
-
-contains
-   logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      Failed = ErrStat >= AbortErrLev
-   end function
-end subroutine RotGetOP
 
 subroutine AD_PackExtInputAry(Vars, t, p, ValAry)
    use IfW_FlowField_Types, only : UniformField_Interp
