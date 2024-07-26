@@ -424,9 +424,9 @@ typedef   ^       ^                    MeshType     VisAnchsMesh          {:}   
 ## ============================== Define Misc variables here: =====================================================================================================================================
 typedef   ^       MiscVarType          ModJacType          Jac               -   -  -   "Jacobian values corresponding to module variables"   -
 typedef   ^       ^                    MD_ContinuousStateType   x_perturb    -   -  -   "States for calculating Jacobians"   -
-typedef   ^       ^                    MD_ContinuousStateType   dxdt_jac     -   -  -   "States for calculating Jacobians"   -
+typedef   ^       ^                    MD_ContinuousStateType   dxdt_lin     -   -  -   "States for calculating Jacobians"   -
 typedef   ^       ^                    MD_InputType        u_perturb         -   -  -   "Inputs for calculating Jacobians"   -
-typedef   ^       ^                    MD_OutputType       y_jac             -   -  -   "Outputs for calculating Jacobians"  -
+typedef   ^       ^                    MD_OutputType       y_lin             -   -  -   "Outputs for calculating Jacobians"  -
 typedef   ^       ^                    MD_LineProp         LineTypeList     {:}  -  -   "array of properties for each line type"   -
 typedef   ^       ^                    MD_RodProp          RodTypeList      {:}  -  -   "array of properties for each rod type"   -
 typedef   ^       ^                    MD_Body             GroundBody        -   -  -   "the single ground body which is the parent of all stationary points"   -

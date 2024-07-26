@@ -288,9 +288,9 @@ typedef  ^  OutputType  ReKi        WriteOutput   {:} - - "Data to be written to
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
 typedef  ^    MiscVarType    ModJacType     Jac            -   -  -  "Values corresponding to module variables"
 typedef  ^    MiscVarType    SD_ContinuousStateType   x_perturb -   -  -  ""
-typedef  ^    MiscVarType    SD_ContinuousStateType   dxdt_jac  -   -  -  ""
+typedef  ^    MiscVarType    SD_ContinuousStateType   dxdt_lin  -   -  -  ""
 typedef  ^    MiscVarType    SD_InputType   u_perturb      -   -  -  ""
-typedef  ^    MiscVarType    SD_OutputType  y_jac          -   -  -  ""
+typedef  ^    MiscVarType    SD_OutputType  y_lin          -   -  -  ""
 typedef  ^    MiscVarType    ReKi           qmdotdot      {:}  -  -  "2nd Derivative of states, used only for output-file purposes"
 typedef  ^    MiscVarType    ReKi           u_TP           6   -  -  
 typedef  ^    MiscVarType    ReKi           udot_TP        6   -  -  

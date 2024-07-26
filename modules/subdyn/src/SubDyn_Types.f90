@@ -338,9 +338,9 @@ IMPLICIT NONE
   TYPE, PUBLIC :: SD_MiscVarType
     TYPE(ModJacType)  :: Jac      !< Values corresponding to module variables [-]
     TYPE(SD_ContinuousStateType)  :: x_perturb      !<  [-]
-    TYPE(SD_ContinuousStateType)  :: dxdt_jac      !<  [-]
+    TYPE(SD_ContinuousStateType)  :: dxdt_lin      !<  [-]
     TYPE(SD_InputType)  :: u_perturb      !<  [-]
-    TYPE(SD_OutputType)  :: y_jac      !<  [-]
+    TYPE(SD_OutputType)  :: y_lin      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: qmdotdot      !< 2nd Derivative of states, used only for output-file purposes [-]
     REAL(ReKi) , DIMENSION(1:6)  :: u_TP = 0.0_ReKi 
     REAL(ReKi) , DIMENSION(1:6)  :: udot_TP = 0.0_ReKi 
@@ -3609,13 +3609,13 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call SD_CopyContState(SrcMiscData%x_perturb, DstMiscData%x_perturb, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call SD_CopyContState(SrcMiscData%dxdt_jac, DstMiscData%dxdt_jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SD_CopyContState(SrcMiscData%dxdt_lin, DstMiscData%dxdt_lin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call SD_CopyInput(SrcMiscData%u_perturb, DstMiscData%u_perturb, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call SD_CopyOutput(SrcMiscData%y_jac, DstMiscData%y_jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SD_CopyOutput(SrcMiscData%y_lin, DstMiscData%y_lin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcMiscData%qmdotdot)) then
@@ -3926,11 +3926,11 @@ subroutine SD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call SD_DestroyContState(MiscData%x_perturb, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call SD_DestroyContState(MiscData%dxdt_jac, ErrStat2, ErrMsg2)
+   call SD_DestroyContState(MiscData%dxdt_lin, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call SD_DestroyInput(MiscData%u_perturb, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call SD_DestroyOutput(MiscData%y_jac, ErrStat2, ErrMsg2)
+   call SD_DestroyOutput(MiscData%y_lin, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%qmdotdot)) then
       deallocate(MiscData%qmdotdot)
@@ -4013,9 +4013,9 @@ subroutine SD_PackMisc(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call NWTC_Library_PackModJacType(RF, InData%Jac) 
    call SD_PackContState(RF, InData%x_perturb) 
-   call SD_PackContState(RF, InData%dxdt_jac) 
+   call SD_PackContState(RF, InData%dxdt_lin) 
    call SD_PackInput(RF, InData%u_perturb) 
-   call SD_PackOutput(RF, InData%y_jac) 
+   call SD_PackOutput(RF, InData%y_lin) 
    call RegPackAlloc(RF, InData%qmdotdot)
    call RegPack(RF, InData%u_TP)
    call RegPack(RF, InData%udot_TP)
@@ -4058,9 +4058,9 @@ subroutine SD_UnPackMisc(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
    call SD_UnpackContState(RF, OutData%x_perturb) ! x_perturb 
-   call SD_UnpackContState(RF, OutData%dxdt_jac) ! dxdt_jac 
+   call SD_UnpackContState(RF, OutData%dxdt_lin) ! dxdt_lin 
    call SD_UnpackInput(RF, OutData%u_perturb) ! u_perturb 
-   call SD_UnpackOutput(RF, OutData%y_jac) ! y_jac 
+   call SD_UnpackOutput(RF, OutData%y_lin) ! y_lin 
    call RegUnpackAlloc(RF, OutData%qmdotdot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%u_TP); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%udot_TP); if (RegCheckErr(RF, RoutineName)) return

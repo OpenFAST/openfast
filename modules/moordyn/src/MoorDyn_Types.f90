@@ -455,9 +455,9 @@ IMPLICIT NONE
   TYPE, PUBLIC :: MD_MiscVarType
     TYPE(ModJacType)  :: Jac      !< Jacobian values corresponding to module variables [-]
     TYPE(MD_ContinuousStateType)  :: x_perturb      !< States for calculating Jacobians [-]
-    TYPE(MD_ContinuousStateType)  :: dxdt_jac      !< States for calculating Jacobians [-]
+    TYPE(MD_ContinuousStateType)  :: dxdt_lin      !< States for calculating Jacobians [-]
     TYPE(MD_InputType)  :: u_perturb      !< Inputs for calculating Jacobians [-]
-    TYPE(MD_OutputType)  :: y_jac      !< Outputs for calculating Jacobians [-]
+    TYPE(MD_OutputType)  :: y_lin      !< Outputs for calculating Jacobians [-]
     TYPE(MD_LineProp) , DIMENSION(:), ALLOCATABLE  :: LineTypeList      !< array of properties for each line type [-]
     TYPE(MD_RodProp) , DIMENSION(:), ALLOCATABLE  :: RodTypeList      !< array of properties for each rod type [-]
     TYPE(MD_Body)  :: GroundBody      !< the single ground body which is the parent of all stationary points [-]
@@ -3978,13 +3978,13 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call MD_CopyContState(SrcMiscData%x_perturb, DstMiscData%x_perturb, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call MD_CopyContState(SrcMiscData%dxdt_jac, DstMiscData%dxdt_jac, CtrlCode, ErrStat2, ErrMsg2)
+   call MD_CopyContState(SrcMiscData%dxdt_lin, DstMiscData%dxdt_lin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call MD_CopyInput(SrcMiscData%u_perturb, DstMiscData%u_perturb, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call MD_CopyOutput(SrcMiscData%y_jac, DstMiscData%y_jac, CtrlCode, ErrStat2, ErrMsg2)
+   call MD_CopyOutput(SrcMiscData%y_lin, DstMiscData%y_lin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcMiscData%LineTypeList)) then
@@ -4359,11 +4359,11 @@ subroutine MD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call MD_DestroyContState(MiscData%x_perturb, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MD_DestroyContState(MiscData%dxdt_jac, ErrStat2, ErrMsg2)
+   call MD_DestroyContState(MiscData%dxdt_lin, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call MD_DestroyInput(MiscData%u_perturb, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MD_DestroyOutput(MiscData%y_jac, ErrStat2, ErrMsg2)
+   call MD_DestroyOutput(MiscData%y_lin, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%LineTypeList)) then
       LB(1:1) = lbound(MiscData%LineTypeList, kind=B8Ki)
@@ -4502,9 +4502,9 @@ subroutine MD_PackMisc(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call NWTC_Library_PackModJacType(RF, InData%Jac) 
    call MD_PackContState(RF, InData%x_perturb) 
-   call MD_PackContState(RF, InData%dxdt_jac) 
+   call MD_PackContState(RF, InData%dxdt_lin) 
    call MD_PackInput(RF, InData%u_perturb) 
-   call MD_PackOutput(RF, InData%y_jac) 
+   call MD_PackOutput(RF, InData%y_lin) 
    call RegPack(RF, allocated(InData%LineTypeList))
    if (allocated(InData%LineTypeList)) then
       call RegPackBounds(RF, 1, lbound(InData%LineTypeList, kind=B8Ki), ubound(InData%LineTypeList, kind=B8Ki))
@@ -4610,9 +4610,9 @@ subroutine MD_UnPackMisc(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
    call MD_UnpackContState(RF, OutData%x_perturb) ! x_perturb 
-   call MD_UnpackContState(RF, OutData%dxdt_jac) ! dxdt_jac 
+   call MD_UnpackContState(RF, OutData%dxdt_lin) ! dxdt_lin 
    call MD_UnpackInput(RF, OutData%u_perturb) ! u_perturb 
-   call MD_UnpackOutput(RF, OutData%y_jac) ! y_jac 
+   call MD_UnpackOutput(RF, OutData%y_lin) ! y_lin 
    if (allocated(OutData%LineTypeList)) deallocate(OutData%LineTypeList)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
