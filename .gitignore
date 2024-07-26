@@ -43,6 +43,7 @@ vs-build/
 .fortls
 .devcontainer
 .idea
+.env
 
 # backup files
 *.asv
