@@ -1412,5 +1412,7 @@ subroutine AD_Dvr_UnPackAllData(RF, OutData)
    call RegUnpack(RF, OutData%errMsg); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%initialized); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
 END MODULE AeroDyn_Driver_Types
+
 !ENDOFREGISTRYGENERATEDFILE
