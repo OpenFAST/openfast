@@ -8709,7 +8709,7 @@ SUBROUTINE WrVTK_WaveElevVisGrid(t_global, p_FAST, y_FAST, SeaSt)
 
    do ix=1,p_FAST%VTK_surface%NWaveElevPts(1)
       do iy=1,p_FAST%VTK_surface%NWaveElevPts(2)
-         WRITE(Un,VTK_AryFmt) p_FAST%VTK_surface%WaveElevVisX(ix), p_FAST%VTK_surface%WaveElevVisX(iy), p_FAST%VTK_surface%WaveElevVisGrid(y_FAST%VTK_LastWaveIndx,ix,iy)
+         WRITE(Un,VTK_AryFmt) p_FAST%VTK_surface%WaveElevVisX(ix), p_FAST%VTK_surface%WaveElevVisY(iy), p_FAST%VTK_surface%WaveElevVisGrid(y_FAST%VTK_LastWaveIndx,ix,iy)
       end do
    end do
 
