@@ -492,6 +492,12 @@ subroutine MV_AddModule(ModDataAry, ModID, ModAbbr, Instance, ModDT, SolverDT, V
    end if
 
    !----------------------------------------------------------------------------
+   ! Allocate source and destination mapping indices
+   !----------------------------------------------------------------------------
+
+   allocate(ModData%iSrcMaps(0), ModData%iDstMaps(0))
+
+   !----------------------------------------------------------------------------
    ! Add module info to array
    !----------------------------------------------------------------------------
 
