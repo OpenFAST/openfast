@@ -291,7 +291,8 @@ typedef	^	RotMiscVarType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all
 typedef	^	RotMiscVarType	ReKi	W_Twr	{:}	-	-	"relative wind speed normal to the tower at node j"	m/s
 typedef	^	RotMiscVarType	ReKi	X_Twr	{:}	-	-	"local x-component of force per unit length of the jth node in the tower"	m/s
 typedef	^	RotMiscVarType	ReKi	Y_Twr	{:}	-	-	"local y-component of force per unit length of the jth node in the tower"	m/s
-typedef	^	RotMiscVarType	ReKi	Curve	{:}{:}	-	-	"curvature angle, saved for possible output to file"	rad
+typedef	^	RotMiscVarType	ReKi	Cant	{:}{:}	-	-	"curvature angle, saved for possible output to file"	rad
+typedef	^	RotMiscVarType	ReKi	Toe 	{:}{:}	-	-	"Toe angle, saved for possible output to file"	rad
 typedef	^	RotMiscVarType	ReKi	TwrClrnc	{:}{:}	-	-	"Distance between tower (including tower radius) and blade node (not including blade width), saved for possible output to file"	m
 typedef	^	RotMiscVarType	ReKi	X	{:}{:}	-	-	"normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade"	N/m
 typedef	^	RotMiscVarType	ReKi	Y	{:}{:}	-	-	"tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade"	N/m
