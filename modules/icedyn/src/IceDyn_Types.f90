@@ -1758,16 +1758,6 @@ function IceD_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function IceD_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (IceD_u_PointMesh)
-       Name = "u%PointMesh"
-   end select
-end function
-
 function IceD_OutputMeshPointer(y, DL) result(Mesh)
    type(IceD_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
@@ -1776,16 +1766,6 @@ function IceD_OutputMeshPointer(y, DL) result(Mesh)
    select case (DL%Num)
    case (IceD_y_PointMesh)
        Mesh => y%PointMesh
-   end select
-end function
-
-function IceD_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (IceD_y_PointMesh)
-       Name = "y%PointMesh"
    end select
 end function
 
@@ -1825,6 +1805,19 @@ subroutine IceD_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function IceD_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (IceD_x_q)
+       Name = "x%q"
+   case (IceD_x_dqdt)
+       Name = "x%dqdt"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine IceD_PackContStateDerivAry(Vars, x, ValAry)
    type(IceD_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -1839,23 +1832,6 @@ subroutine IceD_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%dqdt, ValAry)                                     ! Scalar
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine IceD_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(IceD_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (IceD_x_q)
-            call MV_Unpack(V, ValAry, x%q)                                      ! Scalar
-         case (IceD_x_dqdt)
-            call MV_Unpack(V, ValAry, x%dqdt)                                   ! Scalar
          end select
       end associate
    end do
@@ -1893,6 +1869,17 @@ subroutine IceD_UnpackConstrStateAry(Vars, ValAry, z)
    end do
 end subroutine
 
+function IceD_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (IceD_z_DummyConstrState)
+       Name = "z%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine IceD_PackInputAry(Vars, u, ValAry)
    type(IceD_InputType), intent(in)        :: u
    type(ModVarsType), intent(in)          :: Vars
@@ -1924,6 +1911,17 @@ subroutine IceD_UnpackInputAry(Vars, ValAry, u)
       end associate
    end do
 end subroutine
+
+function IceD_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (IceD_u_PointMesh)
+       Name = "u%PointMesh"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine IceD_PackOutputAry(Vars, y, ValAry)
    type(IceD_OutputType), intent(in)       :: y
@@ -1960,6 +1958,19 @@ subroutine IceD_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function IceD_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (IceD_y_PointMesh)
+       Name = "y%PointMesh"
+   case (IceD_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE IceDyn_Types
 

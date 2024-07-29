@@ -317,7 +317,7 @@ contains
       do k = 1, size(VarAryIn)
 
          ! If variable doesn't have flag, cycle
-         if (.not. MV_HasFlags(VarAryIn(k), FlagFilter)) cycle
+         if (.not. MV_HasFlagsAll(VarAryIn(k), FlagFilter)) cycle
 
          associate (Var => VarAryOut(iVar))
 
@@ -460,7 +460,7 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
             end do
          case (LIN_STANDARD)  ! Set linearize flag for write output variables
             do j = 1, size(ModData%Vars%y)
-               if (MV_HasFlags(ModData%Vars%y(j), VF_WriteOut)) then
+               if (MV_HasFlagsAll(ModData%Vars%y(j), VF_WriteOut)) then
                   call MV_SetFlags(ModData%Vars%y(j), VF_Linearize)
                else
                   call MV_ClearFlags(ModData%Vars%y(j), VF_Linearize)
@@ -547,7 +547,7 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
       m%CS%NumOutputs = 0
       do i = 1, size(m%ModGlue%Vars%y)
          associate (Var => m%ModGlue%Vars%y(i))
-            if (.not. MV_HasFlags(Var, VF_WriteOut)) m%CS%NumOutputs = m%CS%NumOutputs + Var%Num
+            if (.not. MV_HasFlagsAll(Var, VF_WriteOut)) m%CS%NumOutputs = m%CS%NumOutputs + Var%Num
          end associate
       end do
 
@@ -797,7 +797,7 @@ contains
          associate (Var => m%ModGlue%Vars%y(i))
 
             ! Skip write outputs
-            if (MV_HasFlags(Var, VF_WriteOut)) cycle
+            if (MV_HasFlagsAll(Var, VF_WriteOut)) cycle
 
             ! Loop through values in variable
             do j = Var%iLoc(1), Var%iLoc(2)
@@ -898,14 +898,14 @@ subroutine ModGlue_Linearize_OP(p, m, y, p_FAST, m_FAST, y_FAST, t_global, Turbi
 
          ! Derivatives with respect to input
          call FAST_JacobianPInput(ModData, t_global, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
-                                  dYdu=ModData%Lin%dYdu, dYduGlue=m%ModGlue%Lin%dYdu, &
-                                  dXdu=ModData%Lin%dXdu, dXduGlue=m%ModGlue%Lin%dXdu)
+                                  dYdu=ModData%Lin%dYdu, dYdu_glue=m%ModGlue%Lin%dYdu, &
+                                  dXdu=ModData%Lin%dXdu, dXdu_glue=m%ModGlue%Lin%dXdu)
          if (Failed()) return
 
          ! Derivatives with respect to continuous state
          call FAST_JacobianPContState(ModData, t_global, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
-                                      dYdx=ModData%Lin%dYdx, dYdxGlue=m%ModGlue%Lin%dYdx, &
-                                      dXdx=ModData%Lin%dXdx, dXdxGlue=m%ModGlue%Lin%dXdx)
+                                      dYdx=ModData%Lin%dYdx, dYdx_glue=m%ModGlue%Lin%dYdx, &
+                                      dXdx=ModData%Lin%dXdx, dXdx_glue=m%ModGlue%Lin%dXdx)
          if (Failed()) return
 
          ! Operating point values (must come after Jacobian routines because
@@ -1357,7 +1357,7 @@ subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinR
    xUse = .false.
    do i = 1, size(Vars%x)
       associate (Var => Vars%x(i))
-         if (MV_HasFlags(Var, FilterFlag)) xUse(Var%iLoc(1):Var%iLoc(2)) = .true.
+         if (MV_HasFlagsAll(Var, FilterFlag)) xUse(Var%iLoc(1):Var%iLoc(2)) = .true.
       end associate
    end do
 
@@ -1366,7 +1366,7 @@ subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinR
    uUse = .false.
    do i = 1, size(Vars%u)
       associate (Var => Vars%u(i))
-         if (MV_HasFlags(Var, FilterFlag)) uUse(Var%iLoc(1):Var%iLoc(2)) = .true.
+         if (MV_HasFlagsAll(Var, FilterFlag)) uUse(Var%iLoc(1):Var%iLoc(2)) = .true.
       end associate
    end do
 
@@ -1375,7 +1375,7 @@ subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinR
    yUse = .false.
    do i = 1, size(Vars%y)
       associate (Var => Vars%y(i))
-         if (MV_HasFlags(Var, FilterFlag)) yUse(Var%iLoc(1):Var%iLoc(2)) = .true.
+         if (MV_HasFlagsAll(Var, FilterFlag)) yUse(Var%iLoc(1):Var%iLoc(2)) = .true.
       end associate
    end do
 
@@ -1481,15 +1481,15 @@ subroutine WrLinFile_txt_Table(VarAry, FlagFilter, p_FAST, Un, RowCol, op, IsDer
       associate (Var => VarAry(i))
 
          ! If variable does not have the filter flag, continue
-         if (.not. MV_HasFlags(Var, FlagFilter)) cycle
+         if (.not. MV_HasFlagsAll(Var, FlagFilter)) cycle
 
          ! Is variable in the rotating frame?
-         VarRotFrame = MV_HasFlags(Var, VF_RotFrame)
+         VarRotFrame = MV_HasFlagsAll(Var, VF_RotFrame)
 
          ! Get variable derivative order
-         if (MV_HasFlags(Var, VF_DerivOrder2)) then
+         if (MV_HasFlagsAll(Var, VF_DerivOrder2)) then
             VarDerivOrder = 2
-         else if (MV_HasFlags(Var, VF_DerivOrder1)) then
+         else if (MV_HasFlagsAll(Var, VF_DerivOrder1)) then
             VarDerivOrder = 1
          else
             VarDerivOrder = 0
@@ -1522,7 +1522,7 @@ subroutine WrLinFile_txt_Table(VarAry, FlagFilter, p_FAST, Un, RowCol, op, IsDer
 
                write (Un, Fmt) RowColIdx, op(i_op), VarRotFrame, VarDerivOrder, trim(DerivStr)//' '//trim(Var%LinNames(j))//trim(DerivUnitStr)
 
-            else if (MV_HasFlags(Var, VF_WM_Rot)) then ! BeamDyn Wiener-Milenkovic orientation
+            else if (MV_HasFlagsAll(Var, VF_WM_Rot)) then ! BeamDyn Wiener-Milenkovic orientation
 
                ! Skip writing if not the first value in orientation (3 values)
                if (mod(j - 1, 3) /= 0) cycle

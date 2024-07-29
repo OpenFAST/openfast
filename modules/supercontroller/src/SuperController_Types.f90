@@ -1838,27 +1838,11 @@ function SC_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function SC_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   end select
-end function
-
 function SC_OutputMeshPointer(y, DL) result(Mesh)
    type(SC_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
    type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (DL%Num)
-   end select
-end function
-
-function SC_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
    select case (DL%Num)
    end select
 end function
@@ -1895,6 +1879,17 @@ subroutine SC_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function SC_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SC_x_Dummy)
+       Name = "x%Dummy"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine SC_PackContStateDerivAry(Vars, x, ValAry)
    type(SC_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -1907,21 +1902,6 @@ subroutine SC_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%Dummy, ValAry)                                    ! Scalar
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine SC_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(SC_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (SC_x_Dummy)
-            call MV_Unpack(V, ValAry, x%Dummy)                                  ! Scalar
          end select
       end associate
    end do
@@ -1959,6 +1939,17 @@ subroutine SC_UnpackConstrStateAry(Vars, ValAry, z)
    end do
 end subroutine
 
+function SC_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SC_z_Dummy)
+       Name = "z%Dummy"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine SC_PackInputAry(Vars, u, ValAry)
    type(SC_InputType), intent(in)          :: u
    type(ModVarsType), intent(in)          :: Vars
@@ -1995,6 +1986,19 @@ subroutine SC_UnpackInputAry(Vars, ValAry, u)
    end do
 end subroutine
 
+function SC_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SC_u_toSCglob)
+       Name = "u%toSCglob"
+   case (SC_u_toSC)
+       Name = "u%toSC"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine SC_PackOutputAry(Vars, y, ValAry)
    type(SC_OutputType), intent(in)         :: y
    type(ModVarsType), intent(in)          :: Vars
@@ -2030,6 +2034,19 @@ subroutine SC_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function SC_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SC_y_fromSCglob)
+       Name = "y%fromSCglob"
+   case (SC_y_fromSC)
+       Name = "y%fromSC"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE SuperController_Types
 

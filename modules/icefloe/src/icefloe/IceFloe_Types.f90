@@ -1039,16 +1039,6 @@ function IceFloe_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function IceFloe_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (IceFloe_u_iceMesh)
-       Name = "u%iceMesh"
-   end select
-end function
-
 function IceFloe_OutputMeshPointer(y, DL) result(Mesh)
    type(IceFloe_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
@@ -1057,16 +1047,6 @@ function IceFloe_OutputMeshPointer(y, DL) result(Mesh)
    select case (DL%Num)
    case (IceFloe_y_iceMesh)
        Mesh => y%iceMesh
-   end select
-end function
-
-function IceFloe_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (IceFloe_y_iceMesh)
-       Name = "y%iceMesh"
    end select
 end function
 
@@ -1102,6 +1082,17 @@ subroutine IceFloe_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function IceFloe_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (IceFloe_x_DummyContStateVar)
+       Name = "x%DummyContStateVar"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine IceFloe_PackContStateDerivAry(Vars, x, ValAry)
    type(IceFloe_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -1114,21 +1105,6 @@ subroutine IceFloe_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%DummyContStateVar, ValAry)                        ! Scalar
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine IceFloe_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(IceFloe_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (IceFloe_x_DummyContStateVar)
-            call MV_Unpack(V, ValAry, x%DummyContStateVar)                      ! Scalar
          end select
       end associate
    end do
@@ -1166,6 +1142,17 @@ subroutine IceFloe_UnpackConstrStateAry(Vars, ValAry, z)
    end do
 end subroutine
 
+function IceFloe_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (IceFloe_z_DummyConstrStateVar)
+       Name = "z%DummyConstrStateVar"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine IceFloe_PackInputAry(Vars, u, ValAry)
    type(IceFloe_InputType), intent(in)     :: u
    type(ModVarsType), intent(in)          :: Vars
@@ -1197,6 +1184,17 @@ subroutine IceFloe_UnpackInputAry(Vars, ValAry, u)
       end associate
    end do
 end subroutine
+
+function IceFloe_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (IceFloe_u_iceMesh)
+       Name = "u%iceMesh"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine IceFloe_PackOutputAry(Vars, y, ValAry)
    type(IceFloe_OutputType), intent(in)    :: y
@@ -1233,6 +1231,19 @@ subroutine IceFloe_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function IceFloe_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (IceFloe_y_iceMesh)
+       Name = "y%iceMesh"
+   case (IceFloe_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE IceFloe_Types
 

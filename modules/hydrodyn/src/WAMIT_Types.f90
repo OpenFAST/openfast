@@ -1445,16 +1445,6 @@ function WAMIT_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function WAMIT_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (WAMIT_u_Mesh)
-       Name = "u%Mesh"
-   end select
-end function
-
 function WAMIT_OutputMeshPointer(y, DL) result(Mesh)
    type(WAMIT_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
@@ -1463,16 +1453,6 @@ function WAMIT_OutputMeshPointer(y, DL) result(Mesh)
    select case (DL%Num)
    case (WAMIT_y_Mesh)
        Mesh => y%Mesh
-   end select
-end function
-
-function WAMIT_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (WAMIT_y_Mesh)
-       Name = "y%Mesh"
    end select
 end function
 
@@ -1516,6 +1496,21 @@ subroutine WAMIT_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function WAMIT_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (WAMIT_x_SS_Rdtn_x)
+       Name = "x%SS_Rdtn%x"
+   case (WAMIT_x_SS_Exctn_x)
+       Name = "x%SS_Exctn%x"
+   case (WAMIT_x_Conv_Rdtn_DummyContState)
+       Name = "x%Conv_Rdtn%DummyContState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine WAMIT_PackContStateDerivAry(Vars, x, ValAry)
    type(WAMIT_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -1532,25 +1527,6 @@ subroutine WAMIT_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%Conv_Rdtn%DummyContState, ValAry)                 ! Scalar
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine WAMIT_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(WAMIT_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (WAMIT_x_SS_Rdtn_x)
-            call MV_Unpack(V, ValAry, x%SS_Rdtn%x(V%iAry(1):V%iAry(2)))         ! Rank 1 Array
-         case (WAMIT_x_SS_Exctn_x)
-            call MV_Unpack(V, ValAry, x%SS_Exctn%x(V%iAry(1):V%iAry(2)))        ! Rank 1 Array
-         case (WAMIT_x_Conv_Rdtn_DummyContState)
-            call MV_Unpack(V, ValAry, x%Conv_Rdtn%DummyContState)               ! Scalar
          end select
       end associate
    end do
@@ -1596,6 +1572,21 @@ subroutine WAMIT_UnpackConstrStateAry(Vars, ValAry, z)
    end do
 end subroutine
 
+function WAMIT_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (WAMIT_z_Conv_Rdtn_DummyConstrState)
+       Name = "z%Conv_Rdtn%DummyConstrState"
+   case (WAMIT_z_SS_Rdtn_DummyConstrState)
+       Name = "z%SS_Rdtn%DummyConstrState"
+   case (WAMIT_z_SS_Exctn_DummyConstrState)
+       Name = "z%SS_Exctn%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine WAMIT_PackInputAry(Vars, u, ValAry)
    type(WAMIT_InputType), intent(in)       :: u
    type(ModVarsType), intent(in)          :: Vars
@@ -1628,6 +1619,17 @@ subroutine WAMIT_UnpackInputAry(Vars, ValAry, u)
    end do
 end subroutine
 
+function WAMIT_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (WAMIT_u_Mesh)
+       Name = "u%Mesh"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine WAMIT_PackOutputAry(Vars, y, ValAry)
    type(WAMIT_OutputType), intent(in)      :: y
    type(ModVarsType), intent(in)          :: Vars
@@ -1659,6 +1661,17 @@ subroutine WAMIT_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function WAMIT_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (WAMIT_y_Mesh)
+       Name = "y%Mesh"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE WAMIT_Types
 

@@ -27,16 +27,18 @@ use NWTC_Library_Types
 use NWTC_IO
 use NWTC_Num
 use ModMesh
+
 implicit none
 
 private
 public :: MV_InitVarsJac, MV_Pack, MV_Unpack
-public :: MV_ComputeCentralDiff, MV_Perturb, MV_ComputeDiff, MV_ExtrapInterp, MV_AddDelta
 public :: MV_AddVar, MV_AddMeshVar
-public :: MV_HasFlags, MV_SetFlags, MV_ClearFlags, MV_NumVars, MV_NumVals, MV_FindVarDatLoc
+public :: MV_Perturb, MV_ComputeCentralDiff, MV_ComputeDiff, MV_ExtrapInterp, MV_AddDelta
+public :: MV_HasFlagsAll, MV_HasFlagsAny, MV_SetFlags, MV_ClearFlags
+public :: MV_NumVars, MV_NumVals, MV_FindVarDatLoc
 public :: LoadFields, MotionFields, TransFields, AngularFields
 public :: quat_to_dcm, dcm_to_quat, quat_inv, quat_to_rvec, rvec_to_quat, wm_to_quat, quat_to_wm, wm_inv
-public :: MV_FieldString, MV_IsLoad, IdxStr
+public :: MV_FieldString, MV_IsLoad, MV_IsMotion, IdxStr
 public :: DumpMatrix, MV_AddModule
 public :: MV_EqualDL
 
@@ -349,7 +351,7 @@ subroutine ModVarType_Init(Var, Index, Linearize, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    ! If this variable belongs to a mesh
-   if (MV_HasFlags(Var, VF_Mesh)) then
+   if (MV_HasFlagsAll(Var, VF_Mesh)) then
 
       ! Size is the number of nodes in a mesh
       Var%Nodes = Var%Num
@@ -362,7 +364,7 @@ subroutine ModVarType_Init(Var, Index, Linearize, ErrStat, ErrMsg)
 
          ! Set unit description for line mesh
          UnitDesc = ''
-         if (MV_HasFlags(Var, VF_Line)) UnitDesc = "/m"
+         if (MV_HasFlagsAll(Var, VF_Line)) UnitDesc = "/m"
 
          ! Switch based on field number
          select case (Var%Field)
@@ -495,7 +497,7 @@ subroutine MV_AddModule(ModDataAry, ModID, ModAbbr, Instance, ModDT, SolverDT, V
    ! Allocate source and destination mapping indices
    !----------------------------------------------------------------------------
 
-   allocate(ModData%iSrcMaps(0), ModData%iDstMaps(0))
+   allocate (ModData%iSrcMaps(0), ModData%iDstMaps(0))
 
    !----------------------------------------------------------------------------
    ! Add module info to array
@@ -541,7 +543,6 @@ end subroutine
 ! Functions for packing and unpacking data by variable
 !-------------------------------------------------------------------------------
 
-
 subroutine MV_Perturb(Var, iLin, PerturbSign, BaseAry, PerturbAry)
    type(ModVarType), intent(in)     :: Var
    integer(IntKi), intent(in)       :: iLin
@@ -551,7 +552,7 @@ subroutine MV_Perturb(Var, iLin, PerturbSign, BaseAry, PerturbAry)
 
    real(R8Ki)                       :: Perturb
    real(R8Ki)                       :: quat(3), quat_p(3)
-   real(R8Ki)                       :: rv(3), dcm(3,3)
+   real(R8Ki)                       :: rv(3), dcm(3, 3)
    integer(IntKi)                   :: i, j
    integer(IntKi)                   :: ErrStat
    character(ErrMsgLen)             :: ErrMsg
@@ -570,10 +571,10 @@ subroutine MV_Perturb(Var, iLin, PerturbSign, BaseAry, PerturbAry)
       j = mod(iLin - 1, 3)                      ! component being modified (0, 1, 2)
       i = i - j                                 ! index of start of quaternion parameters (3)
       quat = BaseAry(i:i + 2)                   ! Current quat parameters value
-      if (MV_HasFlags(Var, VF_SmallAngle)) then
+      if (MV_HasFlagsAll(Var, VF_SmallAngle)) then
          dcm = quat_to_dcm(quat)
          rv = GetSmllRotAngs(dcm, ErrStat, ErrMsg)
-         rv(j+1) = rv(j+1) + Perturb
+         rv(j + 1) = rv(j + 1) + Perturb
          call SmllRotTrans('linearization perturbation', rv(1), rv(2), rv(3), dcm, ErrStat=ErrStat, ErrMsg=ErrMsg)
          quat = dcm_to_quat(dcm)
       else
@@ -618,7 +619,7 @@ subroutine MV_ComputeDiff(VarAry, PosAry, NegAry, DiffAry)
             if (UseSmallRotAngles) then
 
                ! If variable has flag to use small angles when computing difference
-               if (MV_HasFlags(VarAry(i), VF_SmallAngle)) then
+               if (MV_HasFlagsAll(VarAry(i), VF_SmallAngle)) then
 
                   ang_pos = GetSmllRotAngs(quat_to_dcm(quat_pos), ErrStat, ErrMsg)
                   ang_neg = GetSmllRotAngs(quat_to_dcm(quat_neg), ErrStat, ErrMsg)
@@ -756,7 +757,7 @@ subroutine MV_ExtrapInterp(VarAry, y, tin, y_out, tin_out, ErrStat, ErrMsg)
          case (FieldScalar) ! Scalar field
 
             ! If field is on the range [0,2PI], perform angular interp
-            if (MV_HasFlags(VarAry(i), VF_2PI)) then
+            if (MV_HasFlagsAll(VarAry(i), VF_2PI)) then
 
                k = VarAry(i)%iLoc(1)
                do j = 1, VarAry(i)%Num
@@ -819,7 +820,7 @@ subroutine MV_ExtrapInterp(VarAry, y, tin, y_out, tin_out, ErrStat, ErrMsg)
          case (FieldScalar) ! Scalar field
 
             ! If field is on the range [0,2PI], perform angular interp
-            if (MV_HasFlags(VarAry(i), VF_2PI)) then
+            if (MV_HasFlagsAll(VarAry(i), VF_2PI)) then
 
                k = VarAry(i)%iLoc(1)
                do j = 1, VarAry(i)%Num
@@ -847,7 +848,7 @@ subroutine MV_AddDelta(VarAry, DeltaAry, DataAry)
    real(R8Ki), intent(in)        :: DeltaAry(:)    ! Array of delta values
    real(R8Ki), intent(inout)     :: DataAry(:)     ! Array to be modified
    integer(IntKi)                :: i, j, k
-   real(R8Ki)                    :: quat_base(3), quat_delta(3), rvec(3), dcm(3,3)
+   real(R8Ki)                    :: quat_base(3), quat_delta(3), rvec(3), dcm(3, 3)
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
 
@@ -1023,28 +1024,28 @@ subroutine MV_AddVar(VarAry, Name, Field, DL, Num, iAry, jAry, kAry, Flags, Deri
 
 end subroutine
 
-function MV_NumVals(VarAry, FlagFilter) result(Num)
+pure function MV_NumVals(VarAry, FlagFilter) result(Num)
    type(ModVarType), intent(in)           :: VarAry(:)
    integer(IntKi), optional, intent(in)   :: FlagFilter
    integer(IntKi)                         :: Num, i
    if (present(FlagFilter)) then
       Num = 0
       do i = 1, size(VarAry)
-         if (MV_HasFlags(VarAry(i), FlagFilter)) Num = Num + VarAry(i)%Num
+         if (MV_HasFlagsAll(VarAry(i), FlagFilter)) Num = Num + VarAry(i)%Num
       end do
    else
       Num = sum(VarAry%Num)
    end if
 end function
 
-function MV_NumVars(VarAry, FlagFilter) result(Num)
+pure function MV_NumVars(VarAry, FlagFilter) result(Num)
    type(ModVarType), intent(in)           :: VarAry(:)
    integer(IntKi), optional, intent(in)   :: FlagFilter
    integer(IntKi)                         :: Num, i
    if (present(FlagFilter)) then
       Num = 0
       do i = 1, size(VarAry)
-         if (MV_HasFlags(VarAry(i), FlagFilter)) Num = Num + 1
+         if (MV_HasFlagsAll(VarAry(i), FlagFilter)) Num = Num + 1
       end do
    else
       Num = size(VarAry)
@@ -1054,7 +1055,23 @@ end function
 ! MV_IsLoad returns true if the variable field is FieldForce or FieldMoment
 pure logical function MV_IsLoad(Var)
    type(ModVarType), intent(in)  :: Var
-   MV_IsLoad = Var%Field == FieldForce .or. Var%Field == FieldMoment
+   select case (Var%Field)
+   case (FieldForce, FieldMoment)
+      MV_IsLoad = .true.
+   case default
+      MV_IsLoad = .false.
+   end select
+end function
+
+! MV_IsMotion returns true if the variable field is a motion
+pure logical function MV_IsMotion(Var)
+   type(ModVarType), intent(in)  :: Var
+   select case (Var%Field)
+   case (FieldTransDisp, FieldOrientation, FieldTransVel, FieldAngularVel, FieldTransAcc, FieldAngularAcc)
+      MV_IsMotion = .true.
+   case default
+      MV_IsMotion = .false.
+   end select
 end function
 
 ! MV_EqualDL returns true if data location numbers are greater than zero and
@@ -1087,12 +1104,18 @@ end function
 ! Flag Utilities
 !-------------------------------------------------------------------------------
 
-!> MV_HasFlags returns true if Flags is VF_None or if variable contains all
-!> flags in Flags.
-pure logical function MV_HasFlags(Var, Flags)
+!> MV_HasFlagsAll returns true if Flags is VF_None or variable contains all flags in Flags.
+pure logical function MV_HasFlagsAll(Var, Flags)
    type(ModVarType), intent(in)  :: Var
    integer(IntKi), intent(in)    :: Flags
-   MV_HasFlags = iand(Var%Flags, Flags) == Flags
+   MV_HasFlagsAll = iand(Var%Flags, Flags) == Flags
+end function
+
+!> MV_HasFlagsAny returns true if Flags is VF_None or variable contains any flags in Flags.
+pure logical function MV_HasFlagsAny(Var, Flags)
+   type(ModVarType), intent(in)  :: Var
+   integer(IntKi), intent(in)    :: Flags
+   MV_HasFlagsAny = (Flags == VF_None) .or. (iand(Var%Flags, Flags) > 0)
 end function
 
 !> MV_SetFlags adds the given flags to the variable.
@@ -1160,6 +1183,7 @@ function perturb_quat(theta, idir) result(q)
    end if
 end function
 
+! quat_scalar returns the scalar part of the quaternion
 pure function quat_scalar(q) result(w)
    real(R8Ki), intent(in)  :: q(3)
    real(R8Ki)              :: im, w
@@ -1167,36 +1191,23 @@ pure function quat_scalar(q) result(w)
    im = dot_product(q, q)
    if (im < 1.0_R8Ki) then
       w = sqrt(1.0_R8Ki - im)
-   else if (im > 1.0_R8Ki) then
-      w = 0.0_R8Ki
    else
       w = 0.0_R8Ki
    end if
 end function
 
+! quat_canonical returns the imaginary part of the quaternion after ensuring
+! that it's a unit quaternion with a positive real part.
 pure function quat_canonical(q0, q) result(qc)
    real(R8Ki), intent(in)  :: q0, q(3)
    real(R8Ki)              :: qc(3), m
    integer(IntKi)          :: i
-   m = q0*q0 + dot_product(q, q)
-   qc = q/m
+   m = q0*q0 + q(1)*q(1) + q(2)*q(2) + q(3)*q(3)
    if (q0 < 0.0_R8Ki) then
       qc = -q/m
    else
       qc = q/m
    end if
-   ! if (q0 > 0.0_R8Ki) return
-   ! if (q0 < 0.0_R8Ki) then
-   !    qc = -qc
-   !    return
-   ! end if
-   ! do i = 1, 3
-   !    if (q(i) > 0.0_R8Ki) return
-   !    if (q(i) < 0.0_R8Ki) then
-   !       qc = -qc
-   !       return
-   !    end if
-   ! end do
 end function
 
 function dcm_to_quat(dcm) result(q)
@@ -1309,17 +1320,9 @@ pure function quat_to_dcm(q) result(dcm)
       s = 2.0_R8Ki/n
    end if
 
-   dcm(1, 1) = 1.0_R8Ki - s*(yy + zz)
-   dcm(2, 1) = s*(xy + wz)
-   dcm(3, 1) = s*(xz - wy)
-
-   dcm(1, 2) = s*(xy - wz)
-   dcm(2, 2) = 1.0_R8Ki - s*(xx + zz)
-   dcm(3, 2) = s*(yz + wx)
-
-   dcm(1, 3) = s*(xz + wy)
-   dcm(2, 3) = s*(yz - wx)
-   dcm(3, 3) = 1.0_R8Ki - s*(xx + yy)
+   dcm(:, 1) = [1.0_R8Ki - s*(yy + zz), s*(xy + wz), s*(xz - wy)]
+   dcm(:, 2) = [s*(xy - wz), 1.0_R8Ki - s*(xx + zz), s*(yz + wx)]
+   dcm(:, 3) = [s*(xz + wy), s*(yz - wx), 1.0_R8Ki - s*(xx + yy)]
 
 end function
 
@@ -1357,8 +1360,8 @@ pure function quat_to_rvec(q) result(rvec)
    if (m < epsilon(m)) then
       rvec = 0.0_R8Ki
    else
-      qr = sqrt(1.0_R8Ki - m*m)        ! Scalar part
-      theta = 2.0_R8Ki*atan2(m, qr)  ! Angle
+      qr = sqrt(1.0_R8Ki - m*m)     ! Scalar part
+      theta = 2.0_R8Ki*atan2(m, qr) ! Angle
       rvec = -theta*q/m             ! Negative sign doesn't make sense, but needed for quaternions
    end if
 end function

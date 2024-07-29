@@ -53,6 +53,9 @@ MODULE SeaState
    PUBLIC :: SeaSt_JacobianPContState           ! Jacobians dY/dx, dX/dx, dXd/dx, and dZ/dx
    PUBLIC :: SeaSt_JacobianPDiscState           ! Jacobians dY/dxd, dX/dxd, dXd/dxd, and dZ/dxd
    PUBLIC :: SeaSt_JacobianPConstrState         ! Jacobians dY/dz, dX/dz, dXd/dz, and dZ/dz
+
+   PUBLIC :: SeaSt_PackExtInputAry              ! Pack extended inputs
+   PUBLIC :: SeaSt_PackExtOutputAry             ! Pack extended outputs
   
    CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1006,6 +1009,44 @@ subroutine SeaSt_JacobianPConstrState(Vars, t, u, p, x, xd, z, OtherState, y, m,
    ! if (present(dZdz)) then
    ! endif
 end subroutine SeaSt_JacobianPConstrState
+
+subroutine SeaSt_PackExtInputAry(Vars, u, ValAry)
+   type(ModVarsType), intent(in)       :: Vars        !< Module variables
+   type(SeaSt_InputType), intent(in)   :: u           !< Inputs
+   real(R8Ki), intent(inout)           :: ValAry(:)
+   integer(IntKi)                      :: i
+
+   ! Loop through Input variables
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i))
+         ! Select based on data location number
+         select case (Var%DL%Num)
+         case (SeaSt_u_WaveElev0)
+             ! WaveElev0 is zero to be consistent with linearization requirements
+            ValAry(Vars%u(i)%iLoc(1):Vars%u(i)%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
+   end do
+end subroutine
+
+subroutine SeaSt_PackExtOutputAry(Vars, y, ValAry)
+   type(ModVarsType), intent(in)       :: Vars        !< Module variables
+   type(SeaSt_OutputType), intent(in)  :: y           !< Outputs
+   real(R8Ki), intent(inout)           :: ValAry(:)
+   integer(IntKi)                      :: i
+
+   ! Loop through output variables
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i))
+         ! Select based on data location number
+         select case (Var%DL%Num)
+         case (SeaSt_y_WaveElev0)
+             ! WaveElev0 is zero to be consistent with linearization requirements
+            ValAry(Vars%y(i)%iLoc(1):Vars%y(i)%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
+   end do
+end subroutine
 
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE SeaState

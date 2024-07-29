@@ -2709,27 +2709,11 @@ function BEMT_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function BEMT_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   end select
-end function
-
 function BEMT_OutputMeshPointer(y, DL) result(Mesh)
    type(BEMT_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
    type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (DL%Num)
-   end select
-end function
-
-function BEMT_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
    select case (DL%Num)
    end select
 end function
@@ -2778,6 +2762,23 @@ subroutine BEMT_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function BEMT_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (BEMT_x_UA_element_x)
+       Name = "x%UA%element("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")%x"
+   case (BEMT_x_DBEMT_element_vind)
+       Name = "x%DBEMT%element("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")%vind"
+   case (BEMT_x_DBEMT_element_vind_1)
+       Name = "x%DBEMT%element("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")%vind_1"
+   case (BEMT_x_V_w)
+       Name = "x%V_w"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine BEMT_PackContStateDerivAry(Vars, x, ValAry)
    type(BEMT_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -2796,27 +2797,6 @@ subroutine BEMT_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%V_w(V%iAry(1):V%iAry(2)), ValAry)                 ! Rank 1 Array
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine BEMT_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(BEMT_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (BEMT_x_UA_element_x)
-            call MV_Unpack(V, ValAry, x%UA%element(DL%i1, DL%i2)%x(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (BEMT_x_DBEMT_element_vind)
-            call MV_Unpack(V, ValAry, x%DBEMT%element(DL%i1, DL%i2)%vind(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (BEMT_x_DBEMT_element_vind_1)
-            call MV_Unpack(V, ValAry, x%DBEMT%element(DL%i1, DL%i2)%vind_1(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (BEMT_x_V_w)
-            call MV_Unpack(V, ValAry, x%V_w(V%iAry(1):V%iAry(2)))               ! Rank 1 Array
          end select
       end associate
    end do
@@ -2853,6 +2833,17 @@ subroutine BEMT_UnpackConstrStateAry(Vars, ValAry, z)
       end associate
    end do
 end subroutine
+
+function BEMT_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (BEMT_z_phi)
+       Name = "z%phi"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine BEMT_PackInputAry(Vars, u, ValAry)
    type(BEMT_InputType), intent(in)        :: u
@@ -2957,6 +2948,53 @@ subroutine BEMT_UnpackInputAry(Vars, ValAry, u)
       end associate
    end do
 end subroutine
+
+function BEMT_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (BEMT_u_theta)
+       Name = "u%theta"
+   case (BEMT_u_chi0)
+       Name = "u%chi0"
+   case (BEMT_u_psiSkewOffset)
+       Name = "u%psiSkewOffset"
+   case (BEMT_u_psi_s)
+       Name = "u%psi_s"
+   case (BEMT_u_omega)
+       Name = "u%omega"
+   case (BEMT_u_TSR)
+       Name = "u%TSR"
+   case (BEMT_u_Vx)
+       Name = "u%Vx"
+   case (BEMT_u_Vy)
+       Name = "u%Vy"
+   case (BEMT_u_Vz)
+       Name = "u%Vz"
+   case (BEMT_u_omega_z)
+       Name = "u%omega_z"
+   case (BEMT_u_xVelCorr)
+       Name = "u%xVelCorr"
+   case (BEMT_u_rLocal)
+       Name = "u%rLocal"
+   case (BEMT_u_Un_disk)
+       Name = "u%Un_disk"
+   case (BEMT_u_V0)
+       Name = "u%V0"
+   case (BEMT_u_x_hat_disk)
+       Name = "u%x_hat_disk"
+   case (BEMT_u_UserProp)
+       Name = "u%UserProp"
+   case (BEMT_u_CantAngle)
+       Name = "u%CantAngle"
+   case (BEMT_u_drdz)
+       Name = "u%drdz"
+   case (BEMT_u_toeAngle)
+       Name = "u%toeAngle"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine BEMT_PackOutputAry(Vars, y, ValAry)
    type(BEMT_OutputType), intent(in)       :: y
@@ -3073,6 +3111,59 @@ subroutine BEMT_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function BEMT_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (BEMT_y_Vrel)
+       Name = "y%Vrel"
+   case (BEMT_y_phi)
+       Name = "y%phi"
+   case (BEMT_y_axInduction)
+       Name = "y%axInduction"
+   case (BEMT_y_tanInduction)
+       Name = "y%tanInduction"
+   case (BEMT_y_axInduction_qs)
+       Name = "y%axInduction_qs"
+   case (BEMT_y_tanInduction_qs)
+       Name = "y%tanInduction_qs"
+   case (BEMT_y_k)
+       Name = "y%k"
+   case (BEMT_y_k_p)
+       Name = "y%k_p"
+   case (BEMT_y_F)
+       Name = "y%F"
+   case (BEMT_y_Re)
+       Name = "y%Re"
+   case (BEMT_y_AOA)
+       Name = "y%AOA"
+   case (BEMT_y_Cx)
+       Name = "y%Cx"
+   case (BEMT_y_Cy)
+       Name = "y%Cy"
+   case (BEMT_y_Cz)
+       Name = "y%Cz"
+   case (BEMT_y_Cmx)
+       Name = "y%Cmx"
+   case (BEMT_y_Cmy)
+       Name = "y%Cmy"
+   case (BEMT_y_Cmz)
+       Name = "y%Cmz"
+   case (BEMT_y_Cm)
+       Name = "y%Cm"
+   case (BEMT_y_Cl)
+       Name = "y%Cl"
+   case (BEMT_y_Cd)
+       Name = "y%Cd"
+   case (BEMT_y_chi)
+       Name = "y%chi"
+   case (BEMT_y_Cpmin)
+       Name = "y%Cpmin"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE BEMT_Types
 

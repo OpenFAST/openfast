@@ -3023,16 +3023,6 @@ function MAP_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function MAP_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (MAP_u_PtFairDisplacement)
-       Name = "u%PtFairDisplacement"
-   end select
-end function
-
 function MAP_OutputMeshPointer(y, DL) result(Mesh)
    type(MAP_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
@@ -3041,16 +3031,6 @@ function MAP_OutputMeshPointer(y, DL) result(Mesh)
    select case (DL%Num)
    case (MAP_y_ptFairleadLoad)
        Mesh => y%ptFairleadLoad
-   end select
-end function
-
-function MAP_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (MAP_y_ptFairleadLoad)
-       Name = "y%ptFairleadLoad"
    end select
 end function
 
@@ -3086,6 +3066,17 @@ subroutine MAP_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function MAP_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (MAP_x_dummy)
+       Name = "x%dummy"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine MAP_PackContStateDerivAry(Vars, x, ValAry)
    type(MAP_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -3098,21 +3089,6 @@ subroutine MAP_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%dummy, ValAry)                                    ! Scalar
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine MAP_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(MAP_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (MAP_x_dummy)
-            call MV_Unpack(V, ValAry, x%dummy)                                  ! Scalar
          end select
       end associate
    end do
@@ -3166,6 +3142,25 @@ subroutine MAP_UnpackConstrStateAry(Vars, ValAry, z)
    end do
 end subroutine
 
+function MAP_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (MAP_z_H)
+       Name = "z%H"
+   case (MAP_z_V)
+       Name = "z%V"
+   case (MAP_z_x)
+       Name = "z%x"
+   case (MAP_z_y)
+       Name = "z%y"
+   case (MAP_z_z)
+       Name = "z%z"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine MAP_PackInputAry(Vars, u, ValAry)
    type(MAP_InputType), intent(in)         :: u
    type(ModVarsType), intent(in)          :: Vars
@@ -3209,6 +3204,23 @@ subroutine MAP_UnpackInputAry(Vars, ValAry, u)
       end associate
    end do
 end subroutine
+
+function MAP_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (MAP_u_x)
+       Name = "u%x"
+   case (MAP_u_y)
+       Name = "u%y"
+   case (MAP_u_z)
+       Name = "u%z"
+   case (MAP_u_PtFairDisplacement)
+       Name = "u%PtFairDisplacement"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine MAP_PackOutputAry(Vars, y, ValAry)
    type(MAP_OutputType), intent(in)        :: y
@@ -3261,6 +3273,27 @@ subroutine MAP_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function MAP_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (MAP_y_Fx)
+       Name = "y%Fx"
+   case (MAP_y_Fy)
+       Name = "y%Fy"
+   case (MAP_y_Fz)
+       Name = "y%Fz"
+   case (MAP_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case (MAP_y_wrtOutput)
+       Name = "y%wrtOutput"
+   case (MAP_y_ptFairleadLoad)
+       Name = "y%ptFairleadLoad"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE MAP_Types
 

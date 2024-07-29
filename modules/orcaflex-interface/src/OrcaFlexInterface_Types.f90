@@ -1169,16 +1169,6 @@ function Orca_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function Orca_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (Orca_u_PtfmMesh)
-       Name = "u%PtfmMesh"
-   end select
-end function
-
 function Orca_OutputMeshPointer(y, DL) result(Mesh)
    type(Orca_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
@@ -1187,16 +1177,6 @@ function Orca_OutputMeshPointer(y, DL) result(Mesh)
    select case (DL%Num)
    case (Orca_y_PtfmMesh)
        Mesh => y%PtfmMesh
-   end select
-end function
-
-function Orca_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (Orca_y_PtfmMesh)
-       Name = "y%PtfmMesh"
    end select
 end function
 
@@ -1232,6 +1212,17 @@ subroutine Orca_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function Orca_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Orca_x_Dummy)
+       Name = "x%Dummy"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine Orca_PackContStateDerivAry(Vars, x, ValAry)
    type(Orca_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -1244,21 +1235,6 @@ subroutine Orca_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%Dummy, ValAry)                                    ! Scalar
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine Orca_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(Orca_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (Orca_x_Dummy)
-            call MV_Unpack(V, ValAry, x%Dummy)                                  ! Scalar
          end select
       end associate
    end do
@@ -1296,6 +1272,17 @@ subroutine Orca_UnpackConstrStateAry(Vars, ValAry, z)
    end do
 end subroutine
 
+function Orca_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Orca_z_DummyConstrState)
+       Name = "z%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine Orca_PackInputAry(Vars, u, ValAry)
    type(Orca_InputType), intent(in)        :: u
    type(ModVarsType), intent(in)          :: Vars
@@ -1327,6 +1314,17 @@ subroutine Orca_UnpackInputAry(Vars, ValAry, u)
       end associate
    end do
 end subroutine
+
+function Orca_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Orca_u_PtfmMesh)
+       Name = "u%PtfmMesh"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine Orca_PackOutputAry(Vars, y, ValAry)
    type(Orca_OutputType), intent(in)       :: y
@@ -1363,6 +1361,19 @@ subroutine Orca_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function Orca_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Orca_y_PtfmMesh)
+       Name = "y%PtfmMesh"
+   case (Orca_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE OrcaFlexInterface_Types
 

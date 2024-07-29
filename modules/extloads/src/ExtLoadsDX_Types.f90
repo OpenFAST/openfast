@@ -1700,27 +1700,11 @@ function ExtLdDX_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function ExtLdDX_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   end select
-end function
-
 function ExtLdDX_OutputMeshPointer(y, DL) result(Mesh)
    type(ExtLdDX_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
    type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (DL%Num)
-   end select
-end function
-
-function ExtLdDX_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
    select case (DL%Num)
    end select
 end function
@@ -1777,6 +1761,27 @@ subroutine ExtLdDX_UnpackInputAry(Vars, ValAry, u)
    end do
 end subroutine
 
+function ExtLdDX_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtLdDX_u_twrDef)
+       Name = "u%twrDef"
+   case (ExtLdDX_u_bldDef)
+       Name = "u%bldDef"
+   case (ExtLdDX_u_hubDef)
+       Name = "u%hubDef"
+   case (ExtLdDX_u_nacDef)
+       Name = "u%nacDef"
+   case (ExtLdDX_u_bldRootDef)
+       Name = "u%bldRootDef"
+   case (ExtLdDX_u_bldPitch)
+       Name = "u%bldPitch"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine ExtLdDX_PackOutputAry(Vars, y, ValAry)
    type(ExtLdDX_OutputType), intent(in)    :: y
    type(ModVarsType), intent(in)          :: Vars
@@ -1812,6 +1817,19 @@ subroutine ExtLdDX_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function ExtLdDX_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtLdDX_y_twrLd)
+       Name = "y%twrLd"
+   case (ExtLdDX_y_bldLd)
+       Name = "y%bldLd"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE ExtLoadsDX_Types
 

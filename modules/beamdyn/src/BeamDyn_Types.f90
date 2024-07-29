@@ -3768,22 +3768,6 @@ function BD_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function BD_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (BD_u_RootMotion)
-       Name = "u%RootMotion"
-   case (BD_u_PointLoad)
-       Name = "u%PointLoad"
-   case (BD_u_DistrLoad)
-       Name = "u%DistrLoad"
-   case (BD_u_HubMotion)
-       Name = "u%HubMotion"
-   end select
-end function
-
 function BD_OutputMeshPointer(y, DL) result(Mesh)
    type(BD_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
@@ -3794,18 +3778,6 @@ function BD_OutputMeshPointer(y, DL) result(Mesh)
        Mesh => y%ReactionForce
    case (BD_y_BldMotion)
        Mesh => y%BldMotion
-   end select
-end function
-
-function BD_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (BD_y_ReactionForce)
-       Name = "y%ReactionForce"
-   case (BD_y_BldMotion)
-       Name = "y%BldMotion"
    end select
 end function
 
@@ -3853,6 +3825,19 @@ subroutine BD_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function BD_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (BD_x_q)
+       Name = "x%q"
+   case (BD_x_dqdt)
+       Name = "x%dqdt"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine BD_PackContStateDerivAry(Vars, x, ValAry)
    type(BD_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -3867,27 +3852,6 @@ subroutine BD_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%dqdt(V%iAry(1):V%iAry(2),V%jAry), ValAry)         ! Rank 2 Array
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine BD_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(BD_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (BD_x_q)
-            if (V%Field == FieldOrientation) then
-               x%q(4:6, V%jAry) = wm_inv(quat_to_wm(ValAry(V%iLoc(1):V%iLoc(2))))  ! Convert quaternion to WM parameters
-            else
-               call MV_Unpack(V, ValAry, x%q(V%iAry(1):V%iAry(2),V%jAry))       ! Rank 2 Array
-            end if
-         case (BD_x_dqdt)
-            call MV_Unpack(V, ValAry, x%dqdt(V%iAry(1):V%iAry(2),V%jAry))       ! Rank 2 Array
          end select
       end associate
    end do
@@ -3924,6 +3888,17 @@ subroutine BD_UnpackConstrStateAry(Vars, ValAry, z)
       end associate
    end do
 end subroutine
+
+function BD_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (BD_z_DummyConstrState)
+       Name = "z%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine BD_PackInputAry(Vars, u, ValAry)
    type(BD_InputType), intent(in)          :: u
@@ -3968,6 +3943,23 @@ subroutine BD_UnpackInputAry(Vars, ValAry, u)
       end associate
    end do
 end subroutine
+
+function BD_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (BD_u_RootMotion)
+       Name = "u%RootMotion"
+   case (BD_u_PointLoad)
+       Name = "u%PointLoad"
+   case (BD_u_DistrLoad)
+       Name = "u%DistrLoad"
+   case (BD_u_HubMotion)
+       Name = "u%HubMotion"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine BD_PackOutputAry(Vars, y, ValAry)
    type(BD_OutputType), intent(in)         :: y
@@ -4016,6 +4008,25 @@ subroutine BD_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function BD_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (BD_y_ReactionForce)
+       Name = "y%ReactionForce"
+   case (BD_y_BldMotion)
+       Name = "y%BldMotion"
+   case (BD_y_RootMxr)
+       Name = "y%RootMxr"
+   case (BD_y_RootMyr)
+       Name = "y%RootMyr"
+   case (BD_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE BeamDyn_Types
 

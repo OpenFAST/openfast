@@ -645,16 +645,6 @@ function WAMIT2_OutputMeshPointer(y, DL) result(Mesh)
    end select
 end function
 
-function WAMIT2_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (WAMIT2_y_Mesh)
-       Name = "y%Mesh"
-   end select
-end function
-
 subroutine WAMIT2_PackOutputAry(Vars, y, ValAry)
    type(WAMIT2_OutputType), intent(in)     :: y
    type(ModVarsType), intent(in)          :: Vars
@@ -686,6 +676,17 @@ subroutine WAMIT2_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function WAMIT2_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (WAMIT2_y_Mesh)
+       Name = "y%Mesh"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE WAMIT2_Types
 

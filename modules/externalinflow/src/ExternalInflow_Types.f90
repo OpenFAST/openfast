@@ -2843,27 +2843,11 @@ function ExtInfw_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function ExtInfw_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   end select
-end function
-
 function ExtInfw_OutputMeshPointer(y, DL) result(Mesh)
    type(ExtInfw_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
    type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (DL%Num)
-   end select
-end function
-
-function ExtInfw_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
    select case (DL%Num)
    end select
 end function
@@ -2964,6 +2948,49 @@ subroutine ExtInfw_UnpackInputAry(Vars, ValAry, u)
    end do
 end subroutine
 
+function ExtInfw_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtInfw_u_pxVel)
+       Name = "u%pxVel"
+   case (ExtInfw_u_pyVel)
+       Name = "u%pyVel"
+   case (ExtInfw_u_pzVel)
+       Name = "u%pzVel"
+   case (ExtInfw_u_pxForce)
+       Name = "u%pxForce"
+   case (ExtInfw_u_pyForce)
+       Name = "u%pyForce"
+   case (ExtInfw_u_pzForce)
+       Name = "u%pzForce"
+   case (ExtInfw_u_xdotForce)
+       Name = "u%xdotForce"
+   case (ExtInfw_u_ydotForce)
+       Name = "u%ydotForce"
+   case (ExtInfw_u_zdotForce)
+       Name = "u%zdotForce"
+   case (ExtInfw_u_pOrientation)
+       Name = "u%pOrientation"
+   case (ExtInfw_u_fx)
+       Name = "u%fx"
+   case (ExtInfw_u_fy)
+       Name = "u%fy"
+   case (ExtInfw_u_fz)
+       Name = "u%fz"
+   case (ExtInfw_u_momentx)
+       Name = "u%momentx"
+   case (ExtInfw_u_momenty)
+       Name = "u%momenty"
+   case (ExtInfw_u_momentz)
+       Name = "u%momentz"
+   case (ExtInfw_u_forceNodesChord)
+       Name = "u%forceNodesChord"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine ExtInfw_PackOutputAry(Vars, y, ValAry)
    type(ExtInfw_OutputType), intent(in)    :: y
    type(ModVarsType), intent(in)          :: Vars
@@ -3007,6 +3034,23 @@ subroutine ExtInfw_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function ExtInfw_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtInfw_y_u)
+       Name = "y%u"
+   case (ExtInfw_y_v)
+       Name = "y%v"
+   case (ExtInfw_y_w)
+       Name = "y%w"
+   case (ExtInfw_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE ExternalInflow_Types
 

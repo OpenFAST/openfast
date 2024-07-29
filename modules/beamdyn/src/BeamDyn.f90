@@ -6051,7 +6051,7 @@ SUBROUTINE BD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
       ! Determine if write outputs need to be calculated (usually at end of output variables)
       NeedWriteOutput = .false.
       do i = size(Vars%y), 1, -1
-         if (MV_HasFlags(Vars%y(i), VF_WriteOut)) then
+         if (MV_HasFlagsAll(Vars%y(i), VF_WriteOut)) then
             NeedWriteOutput = .true.
             exit
          end if
@@ -6222,7 +6222,7 @@ SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
       ! Determine if write outputs need to be calculated (usually at end of output variables)
       NeedWriteOutput = .false.
       do i = size(Vars%y), 1, -1
-         if (MV_HasFlags(Vars%y(i), VF_WriteOut)) then
+         if (MV_HasFlagsAll(Vars%y(i), VF_WriteOut)) then
             NeedWriteOutput = .true.
             exit
          end if

@@ -333,7 +333,7 @@ IMPLICIT NONE
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DerivOrder_x      !< Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization [-]
-    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
+    TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
   END TYPE MD_InitOutputType
 ! =======================
 ! =========  MD_ContinuousStateType  =======
@@ -358,7 +358,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  MD_ParameterType  =======
   TYPE, PUBLIC :: MD_ParameterType
-    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables []
     INTEGER(IntKi)  :: nLineTypes = 0      !< number of line types []
     INTEGER(IntKi)  :: nRodTypes = 0      !< number of rod types []
     INTEGER(IntKi)  :: nPoints = 0      !< number of Point objects []
@@ -2527,7 +2526,9 @@ subroutine MD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       end if
       DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
    end if
-   DstInitOutputData%Vars => SrcInitOutputData%Vars
+   call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine MD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -2574,14 +2575,14 @@ subroutine MD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%DerivOrder_x)) then
       deallocate(InitOutputData%DerivOrder_x)
    end if
-   nullify(InitOutputData%Vars)
+   call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine MD_PackInitOutput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(MD_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MD_PackInitOutput'
-   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%writeOutputHdr)
    call RegPackAlloc(RF, InData%writeOutputUnt)
@@ -2595,13 +2596,7 @@ subroutine MD_PackInitOutput(RF, Indata)
    call RegPackAlloc(RF, InData%RotFrame_u)
    call RegPackAlloc(RF, InData%IsLoad_u)
    call RegPackAlloc(RF, InData%DerivOrder_x)
-   call RegPack(RF, associated(InData%Vars))
-   if (associated(InData%Vars)) then
-      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-      end if
-   end if
+   call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2612,8 +2607,6 @@ subroutine MD_UnPackInitOutput(RF, OutData)
    integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(B8Ki)   :: PtrIdx
-   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%writeOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%writeOutputUnt); if (RegCheckErr(RF, RoutineName)) return
@@ -2627,24 +2620,7 @@ subroutine MD_UnPackInitOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%RotFrame_u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%IsLoad_u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%DerivOrder_x); if (RegCheckErr(RF, RoutineName)) return
-   if (associated(OutData%Vars)) deallocate(OutData%Vars)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vars)
-      else
-         allocate(OutData%Vars,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
-            return
-         end if
-         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
-         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-      end if
-   else
-      OutData%Vars => null()
-   end if
+   call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
 end subroutine
 
 subroutine MD_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
@@ -2831,18 +2807,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'MD_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (associated(SrcParamData%Vars)) then
-      if (.not. associated(DstParamData%Vars)) then
-         allocate(DstParamData%Vars, stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Vars.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-   end if
    DstParamData%nLineTypes = SrcParamData%nLineTypes
    DstParamData%nRodTypes = SrcParamData%nRodTypes
    DstParamData%nPoints = SrcParamData%nPoints
@@ -3201,12 +3165,6 @@ subroutine MD_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'MD_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (associated(ParamData%Vars)) then
-      call NWTC_Library_DestroyModVarsType(ParamData%Vars, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      deallocate(ParamData%Vars)
-      ParamData%Vars => null()
-   end if
    if (allocated(ParamData%nCpldBodies)) then
       deallocate(ParamData%nCpldBodies)
    end if
@@ -3299,15 +3257,7 @@ subroutine MD_PackParam(RF, Indata)
    character(*), parameter         :: RoutineName = 'MD_PackParam'
    integer(B8Ki)   :: i1, i2, i3, i4
    integer(B8Ki)   :: LB(4), UB(4)
-   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, associated(InData%Vars))
-   if (associated(InData%Vars)) then
-      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-      end if
-   end if
    call RegPack(RF, InData%nLineTypes)
    call RegPack(RF, InData%nRodTypes)
    call RegPack(RF, InData%nPoints)
@@ -3408,27 +3358,7 @@ subroutine MD_UnPackParam(RF, OutData)
    integer(B8Ki)   :: LB(4), UB(4)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(B8Ki)   :: PtrIdx
-   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
-   if (associated(OutData%Vars)) deallocate(OutData%Vars)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vars)
-      else
-         allocate(OutData%Vars,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
-            return
-         end if
-         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
-         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-      end if
-   else
-      OutData%Vars => null()
-   end if
    call RegUnpack(RF, OutData%nLineTypes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nRodTypes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nPoints); if (RegCheckErr(RF, RoutineName)) return
@@ -5147,16 +5077,6 @@ function MD_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function MD_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (MD_u_CoupledKinematics)
-       Name = "u%CoupledKinematics("//trim(Num2LStr(DL%i1))//")"
-   end select
-end function
-
 function MD_OutputMeshPointer(y, DL) result(Mesh)
    type(MD_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
@@ -5173,24 +5093,6 @@ function MD_OutputMeshPointer(y, DL) result(Mesh)
        Mesh => y%VisBodiesMesh(DL%i1)
    case (MD_y_VisAnchsMesh)
        Mesh => y%VisAnchsMesh(DL%i1)
-   end select
-end function
-
-function MD_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (MD_y_CoupledLoads)
-       Name = "y%CoupledLoads("//trim(Num2LStr(DL%i1))//")"
-   case (MD_y_VisLinesMesh)
-       Name = "y%VisLinesMesh("//trim(Num2LStr(DL%i1))//")"
-   case (MD_y_VisRodsMesh)
-       Name = "y%VisRodsMesh("//trim(Num2LStr(DL%i1))//")"
-   case (MD_y_VisBodiesMesh)
-       Name = "y%VisBodiesMesh("//trim(Num2LStr(DL%i1))//")"
-   case (MD_y_VisAnchsMesh)
-       Name = "y%VisAnchsMesh("//trim(Num2LStr(DL%i1))//")"
    end select
 end function
 
@@ -5226,6 +5128,17 @@ subroutine MD_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function MD_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (MD_x_states)
+       Name = "x%states"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine MD_PackContStateDerivAry(Vars, x, ValAry)
    type(MD_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -5238,21 +5151,6 @@ subroutine MD_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%states(V%iAry(1):V%iAry(2)), ValAry)              ! Rank 1 Array
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine MD_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(MD_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (MD_x_states)
-            call MV_Unpack(V, ValAry, x%states(V%iAry(1):V%iAry(2)))            ! Rank 1 Array
          end select
       end associate
    end do
@@ -5289,6 +5187,17 @@ subroutine MD_UnpackConstrStateAry(Vars, ValAry, z)
       end associate
    end do
 end subroutine
+
+function MD_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (MD_z_dummy)
+       Name = "z%dummy"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine MD_PackInputAry(Vars, u, ValAry)
    type(MD_InputType), intent(in)          :: u
@@ -5329,6 +5238,21 @@ subroutine MD_UnpackInputAry(Vars, ValAry, u)
       end associate
    end do
 end subroutine
+
+function MD_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (MD_u_CoupledKinematics)
+       Name = "u%CoupledKinematics("//trim(Num2LStr(DL%i1))//")"
+   case (MD_u_DeltaL)
+       Name = "u%DeltaL"
+   case (MD_u_DeltaLdot)
+       Name = "u%DeltaLdot"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine MD_PackOutputAry(Vars, y, ValAry)
    type(MD_OutputType), intent(in)         :: y
@@ -5381,6 +5305,27 @@ subroutine MD_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function MD_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (MD_y_CoupledLoads)
+       Name = "y%CoupledLoads("//trim(Num2LStr(DL%i1))//")"
+   case (MD_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case (MD_y_VisLinesMesh)
+       Name = "y%VisLinesMesh("//trim(Num2LStr(DL%i1))//")"
+   case (MD_y_VisRodsMesh)
+       Name = "y%VisRodsMesh("//trim(Num2LStr(DL%i1))//")"
+   case (MD_y_VisBodiesMesh)
+       Name = "y%VisBodiesMesh("//trim(Num2LStr(DL%i1))//")"
+   case (MD_y_VisAnchsMesh)
+       Name = "y%VisAnchsMesh("//trim(Num2LStr(DL%i1))//")"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE MoorDyn_Types
 

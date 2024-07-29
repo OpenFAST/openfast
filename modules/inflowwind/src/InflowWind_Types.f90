@@ -1909,27 +1909,11 @@ function InflowWind_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function InflowWind_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   end select
-end function
-
 function InflowWind_OutputMeshPointer(y, DL) result(Mesh)
    type(InflowWind_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
    type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (DL%Num)
-   end select
-end function
-
-function InflowWind_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
    select case (DL%Num)
    end select
 end function
@@ -1966,6 +1950,17 @@ subroutine InflowWind_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function InflowWind_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (InflowWind_x_DummyContState)
+       Name = "x%DummyContState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine InflowWind_PackContStateDerivAry(Vars, x, ValAry)
    type(InflowWind_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -1978,21 +1973,6 @@ subroutine InflowWind_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%DummyContState, ValAry)                           ! Scalar
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine InflowWind_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(InflowWind_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (InflowWind_x_DummyContState)
-            call MV_Unpack(V, ValAry, x%DummyContState)                         ! Scalar
          end select
       end associate
    end do
@@ -2029,6 +2009,17 @@ subroutine InflowWind_UnpackConstrStateAry(Vars, ValAry, z)
       end associate
    end do
 end subroutine
+
+function InflowWind_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (InflowWind_z_DummyConstrState)
+       Name = "z%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine InflowWind_PackInputAry(Vars, u, ValAry)
    type(InflowWind_InputType), intent(in)  :: u
@@ -2089,6 +2080,31 @@ subroutine InflowWind_UnpackInputAry(Vars, ValAry, u)
       end associate
    end do
 end subroutine
+
+function InflowWind_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (InflowWind_u_PositionXYZ)
+       Name = "u%PositionXYZ"
+   case (InflowWind_u_lidar_PulseLidEl)
+       Name = "u%lidar%PulseLidEl"
+   case (InflowWind_u_lidar_PulseLidAz)
+       Name = "u%lidar%PulseLidAz"
+   case (InflowWind_u_lidar_HubDisplacementX)
+       Name = "u%lidar%HubDisplacementX"
+   case (InflowWind_u_lidar_HubDisplacementY)
+       Name = "u%lidar%HubDisplacementY"
+   case (InflowWind_u_lidar_HubDisplacementZ)
+       Name = "u%lidar%HubDisplacementZ"
+   case (InflowWind_u_HubPosition)
+       Name = "u%HubPosition"
+   case (InflowWind_u_HubOrientation)
+       Name = "u%HubOrientation"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine InflowWind_PackOutputAry(Vars, y, ValAry)
    type(InflowWind_OutputType), intent(in) :: y
@@ -2157,6 +2173,35 @@ subroutine InflowWind_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function InflowWind_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (InflowWind_y_VelocityUVW)
+       Name = "y%VelocityUVW"
+   case (InflowWind_y_AccelUVW)
+       Name = "y%AccelUVW"
+   case (InflowWind_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case (InflowWind_y_DiskVel)
+       Name = "y%DiskVel"
+   case (InflowWind_y_HubVel)
+       Name = "y%HubVel"
+   case (InflowWind_y_lidar_LidSpeed)
+       Name = "y%lidar%LidSpeed"
+   case (InflowWind_y_lidar_WtTrunc)
+       Name = "y%lidar%WtTrunc"
+   case (InflowWind_y_lidar_MsrPositionsX)
+       Name = "y%lidar%MsrPositionsX"
+   case (InflowWind_y_lidar_MsrPositionsY)
+       Name = "y%lidar%MsrPositionsY"
+   case (InflowWind_y_lidar_MsrPositionsZ)
+       Name = "y%lidar%MsrPositionsZ"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE InflowWind_Types
 

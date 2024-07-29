@@ -2523,18 +2523,6 @@ function FEAM_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function FEAM_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (FEAM_u_HydroForceLineMesh)
-       Name = "u%HydroForceLineMesh"
-   case (FEAM_u_PtFairleadDisplacement)
-       Name = "u%PtFairleadDisplacement"
-   end select
-end function
-
 function FEAM_OutputMeshPointer(y, DL) result(Mesh)
    type(FEAM_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
@@ -2545,18 +2533,6 @@ function FEAM_OutputMeshPointer(y, DL) result(Mesh)
        Mesh => y%PtFairleadLoad
    case (FEAM_y_LineMeshPosition)
        Mesh => y%LineMeshPosition
-   end select
-end function
-
-function FEAM_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (FEAM_y_PtFairleadLoad)
-       Name = "y%PtFairleadLoad"
-   case (FEAM_y_LineMeshPosition)
-       Name = "y%LineMeshPosition"
    end select
 end function
 
@@ -2596,6 +2572,19 @@ subroutine FEAM_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function FEAM_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (FEAM_x_GLU)
+       Name = "x%GLU"
+   case (FEAM_x_GLDU)
+       Name = "x%GLDU"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine FEAM_PackContStateDerivAry(Vars, x, ValAry)
    type(FEAM_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -2610,23 +2599,6 @@ subroutine FEAM_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%GLDU(V%iAry(1):V%iAry(2),V%jAry), ValAry)         ! Rank 2 Array
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine FEAM_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(FEAM_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (FEAM_x_GLU)
-            call MV_Unpack(V, ValAry, x%GLU(V%iAry(1):V%iAry(2),V%jAry))        ! Rank 2 Array
-         case (FEAM_x_GLDU)
-            call MV_Unpack(V, ValAry, x%GLDU(V%iAry(1):V%iAry(2),V%jAry))       ! Rank 2 Array
          end select
       end associate
    end do
@@ -2668,6 +2640,19 @@ subroutine FEAM_UnpackConstrStateAry(Vars, ValAry, z)
    end do
 end subroutine
 
+function FEAM_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (FEAM_z_TSN)
+       Name = "z%TSN"
+   case (FEAM_z_TZER)
+       Name = "z%TZER"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine FEAM_PackInputAry(Vars, u, ValAry)
    type(FEAM_InputType), intent(in)        :: u
    type(ModVarsType), intent(in)          :: Vars
@@ -2703,6 +2688,19 @@ subroutine FEAM_UnpackInputAry(Vars, ValAry, u)
       end associate
    end do
 end subroutine
+
+function FEAM_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (FEAM_u_HydroForceLineMesh)
+       Name = "u%HydroForceLineMesh"
+   case (FEAM_u_PtFairleadDisplacement)
+       Name = "u%PtFairleadDisplacement"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine FEAM_PackOutputAry(Vars, y, ValAry)
    type(FEAM_OutputType), intent(in)       :: y
@@ -2743,6 +2741,21 @@ subroutine FEAM_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function FEAM_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (FEAM_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case (FEAM_y_PtFairleadLoad)
+       Name = "y%PtFairleadLoad"
+   case (FEAM_y_LineMeshPosition)
+       Name = "y%LineMeshPosition"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE FEAMooring_Types
 

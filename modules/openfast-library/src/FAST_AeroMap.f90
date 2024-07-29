@@ -730,14 +730,14 @@ subroutine SS_BuildJacobian(AM, caseData, Mappings, p_FAST, y_FAST, m_FAST, T, E
 
          ! Calculate dYdu and dXdu
          call FAST_JacobianPInput(ModData, SS_t_global, STATE_CURR, T, ErrStat2, ErrMsg2, &
-                                  dYdu=ModData%Lin%dYdu, dYduGlue=AM%Mod%Lin%dYdu, &
-                                  dXdu=ModData%Lin%dXdu, dXduGlue=AM%Mod%Lin%dXdu)
+                                  dYdu=ModData%Lin%dYdu, dYdu_glue=AM%Mod%Lin%dYdu, &
+                                  dXdu=ModData%Lin%dXdu, dXdu_glue=AM%Mod%Lin%dXdu)
          if (Failed()) return
 
          ! Calculate dYdx and dXdx
          call FAST_JacobianPContState(ModData, SS_t_global, STATE_CURR, T, ErrStat2, ErrMsg2, &
-                                      dYdx=ModData%Lin%dYdx, dYdxGlue=AM%Mod%Lin%dYdx, &
-                                      dXdx=ModData%Lin%dXdx, dXdxGlue=AM%Mod%Lin%dXdx)
+                                      dYdx=ModData%Lin%dYdx, dYdx_glue=AM%Mod%Lin%dYdx, &
+                                      dXdx=ModData%Lin%dXdx, dXdx_glue=AM%Mod%Lin%dXdx)
          if (Failed()) return
 
          ! If output debugging requested

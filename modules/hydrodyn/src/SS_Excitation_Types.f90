@@ -1167,27 +1167,11 @@ function SS_Exc_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function SS_Exc_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   end select
-end function
-
 function SS_Exc_OutputMeshPointer(y, DL) result(Mesh)
    type(SS_Exc_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
    type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (DL%Num)
-   end select
-end function
-
-function SS_Exc_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
    select case (DL%Num)
    end select
 end function
@@ -1224,6 +1208,17 @@ subroutine SS_Exc_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function SS_Exc_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SS_Exc_x_x)
+       Name = "x%x"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine SS_Exc_PackContStateDerivAry(Vars, x, ValAry)
    type(SS_Exc_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -1236,21 +1231,6 @@ subroutine SS_Exc_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%x(V%iAry(1):V%iAry(2)), ValAry)                   ! Rank 1 Array
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine SS_Exc_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(SS_Exc_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (SS_Exc_x_x)
-            call MV_Unpack(V, ValAry, x%x(V%iAry(1):V%iAry(2)))                 ! Rank 1 Array
          end select
       end associate
    end do
@@ -1288,6 +1268,17 @@ subroutine SS_Exc_UnpackConstrStateAry(Vars, ValAry, z)
    end do
 end subroutine
 
+function SS_Exc_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SS_Exc_z_DummyConstrState)
+       Name = "z%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine SS_Exc_PackInputAry(Vars, u, ValAry)
    type(SS_Exc_InputType), intent(in)      :: u
    type(ModVarsType), intent(in)          :: Vars
@@ -1319,6 +1310,17 @@ subroutine SS_Exc_UnpackInputAry(Vars, ValAry, u)
       end associate
    end do
 end subroutine
+
+function SS_Exc_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SS_Exc_u_PtfmPos)
+       Name = "u%PtfmPos"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine SS_Exc_PackOutputAry(Vars, y, ValAry)
    type(SS_Exc_OutputType), intent(in)     :: y
@@ -1355,6 +1357,19 @@ subroutine SS_Exc_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function SS_Exc_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SS_Exc_y_y)
+       Name = "y%y"
+   case (SS_Exc_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE SS_Excitation_Types
 

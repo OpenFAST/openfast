@@ -42,9 +42,9 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxHDOutputs                     = 510      ! The maximum number of output channels supported by this module [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxUserOutputs                   = 5150      !  Total possible number of output channels:  SS_Excitation = 7 + SS_Radiation = 7 + Morison= 4626 + HydroDyn=510   =  5150 [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: HydroDyn_u_WaveElev0             = -1      ! WaveElev0 Extended input DatLoc number [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: HydroDyn_u_HWindSpeed            = -1      ! HWindSpeed extended input DatLoc number [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: HydroDyn_u_PLexp                 = -1      ! PLexp extended input DatLoc number [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: HydroDyn_u_PropagationDir        = -1      ! PropagationDir extended input DatLoc number [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: HydroDyn_u_HWindSpeed            = -2      ! HWindSpeed extended input DatLoc number [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: HydroDyn_u_PLexp                 = -3      ! PLexp extended input DatLoc number [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: HydroDyn_u_PropagationDir        = -4      ! PropagationDir extended input DatLoc number [-]
 ! =========  HydroDyn_InputFile  =======
   TYPE, PUBLIC :: HydroDyn_InputFile
     LOGICAL  :: EchoFlag = .false.      !< Echo the input file [-]
@@ -2613,20 +2613,6 @@ function HydroDyn_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function HydroDyn_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (HydroDyn_u_Morison_Mesh)
-       Name = "u%Morison%Mesh"
-   case (HydroDyn_u_WAMITMesh)
-       Name = "u%WAMITMesh"
-   case (HydroDyn_u_PRPMesh)
-       Name = "u%PRPMesh"
-   end select
-end function
-
 function HydroDyn_OutputMeshPointer(y, DL) result(Mesh)
    type(HydroDyn_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
@@ -2643,24 +2629,6 @@ function HydroDyn_OutputMeshPointer(y, DL) result(Mesh)
        Mesh => y%Morison%VisMesh
    case (HydroDyn_y_WAMITMesh)
        Mesh => y%WAMITMesh
-   end select
-end function
-
-function HydroDyn_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (HydroDyn_y_WAMIT_Mesh)
-       Name = "y%WAMIT("//trim(Num2LStr(DL%i1))//")%Mesh"
-   case (HydroDyn_y_WAMIT2_Mesh)
-       Name = "y%WAMIT2("//trim(Num2LStr(DL%i1))//")%Mesh"
-   case (HydroDyn_y_Morison_Mesh)
-       Name = "y%Morison%Mesh"
-   case (HydroDyn_y_Morison_VisMesh)
-       Name = "y%Morison%VisMesh"
-   case (HydroDyn_y_WAMITMesh)
-       Name = "y%WAMITMesh"
    end select
 end function
 
@@ -2708,6 +2676,23 @@ subroutine HydroDyn_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function HydroDyn_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (HydroDyn_x_WAMIT_SS_Rdtn_x)
+       Name = "x%WAMIT("//trim(Num2LStr(DL%i1))//")%SS_Rdtn%x"
+   case (HydroDyn_x_WAMIT_SS_Exctn_x)
+       Name = "x%WAMIT("//trim(Num2LStr(DL%i1))//")%SS_Exctn%x"
+   case (HydroDyn_x_WAMIT_Conv_Rdtn_DummyContState)
+       Name = "x%WAMIT("//trim(Num2LStr(DL%i1))//")%Conv_Rdtn%DummyContState"
+   case (HydroDyn_x_Morison_DummyContState)
+       Name = "x%Morison%DummyContState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine HydroDyn_PackContStateDerivAry(Vars, x, ValAry)
    type(HydroDyn_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -2726,27 +2711,6 @@ subroutine HydroDyn_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%Morison%DummyContState, ValAry)                   ! Scalar
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine HydroDyn_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(HydroDyn_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (HydroDyn_x_WAMIT_SS_Rdtn_x)
-            call MV_Unpack(V, ValAry, x%WAMIT(DL%i1)%SS_Rdtn%x(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (HydroDyn_x_WAMIT_SS_Exctn_x)
-            call MV_Unpack(V, ValAry, x%WAMIT(DL%i1)%SS_Exctn%x(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (HydroDyn_x_WAMIT_Conv_Rdtn_DummyContState)
-            call MV_Unpack(V, ValAry, x%WAMIT(DL%i1)%Conv_Rdtn%DummyContState)  ! Scalar
-         case (HydroDyn_x_Morison_DummyContState)
-            call MV_Unpack(V, ValAry, x%Morison%DummyContState)                 ! Scalar
          end select
       end associate
    end do
@@ -2796,6 +2760,23 @@ subroutine HydroDyn_UnpackConstrStateAry(Vars, ValAry, z)
    end do
 end subroutine
 
+function HydroDyn_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (HydroDyn_z_WAMIT_Conv_Rdtn_DummyConstrState)
+       Name = "z%WAMIT%Conv_Rdtn%DummyConstrState"
+   case (HydroDyn_z_WAMIT_SS_Rdtn_DummyConstrState)
+       Name = "z%WAMIT%SS_Rdtn%DummyConstrState"
+   case (HydroDyn_z_WAMIT_SS_Exctn_DummyConstrState)
+       Name = "z%WAMIT%SS_Exctn%DummyConstrState"
+   case (HydroDyn_z_Morison_DummyConstrState)
+       Name = "z%Morison%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine HydroDyn_PackInputAry(Vars, u, ValAry)
    type(HydroDyn_InputType), intent(in)    :: u
    type(ModVarsType), intent(in)          :: Vars
@@ -2835,6 +2816,21 @@ subroutine HydroDyn_UnpackInputAry(Vars, ValAry, u)
       end associate
    end do
 end subroutine
+
+function HydroDyn_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (HydroDyn_u_Morison_Mesh)
+       Name = "u%Morison%Mesh"
+   case (HydroDyn_u_WAMITMesh)
+       Name = "u%WAMITMesh"
+   case (HydroDyn_u_PRPMesh)
+       Name = "u%PRPMesh"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine HydroDyn_PackOutputAry(Vars, y, ValAry)
    type(HydroDyn_OutputType), intent(in)   :: y
@@ -2891,6 +2887,29 @@ subroutine HydroDyn_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function HydroDyn_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (HydroDyn_y_WAMIT_Mesh)
+       Name = "y%WAMIT("//trim(Num2LStr(DL%i1))//")%Mesh"
+   case (HydroDyn_y_WAMIT2_Mesh)
+       Name = "y%WAMIT2("//trim(Num2LStr(DL%i1))//")%Mesh"
+   case (HydroDyn_y_Morison_Mesh)
+       Name = "y%Morison%Mesh"
+   case (HydroDyn_y_Morison_VisMesh)
+       Name = "y%Morison%VisMesh"
+   case (HydroDyn_y_Morison_WriteOutput)
+       Name = "y%Morison%WriteOutput"
+   case (HydroDyn_y_WAMITMesh)
+       Name = "y%WAMITMesh"
+   case (HydroDyn_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE HydroDyn_Types
 

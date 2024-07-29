@@ -1888,16 +1888,6 @@ function ExtPtfm_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function ExtPtfm_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (ExtPtfm_u_PtfmMesh)
-       Name = "u%PtfmMesh"
-   end select
-end function
-
 function ExtPtfm_OutputMeshPointer(y, DL) result(Mesh)
    type(ExtPtfm_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
@@ -1906,16 +1896,6 @@ function ExtPtfm_OutputMeshPointer(y, DL) result(Mesh)
    select case (DL%Num)
    case (ExtPtfm_y_PtfmMesh)
        Mesh => y%PtfmMesh
-   end select
-end function
-
-function ExtPtfm_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (ExtPtfm_y_PtfmMesh)
-       Name = "y%PtfmMesh"
    end select
 end function
 
@@ -1955,6 +1935,19 @@ subroutine ExtPtfm_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function ExtPtfm_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtPtfm_x_qm)
+       Name = "x%qm"
+   case (ExtPtfm_x_qmdot)
+       Name = "x%qmdot"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine ExtPtfm_PackContStateDerivAry(Vars, x, ValAry)
    type(ExtPtfm_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -1969,23 +1962,6 @@ subroutine ExtPtfm_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%qmdot(V%iAry(1):V%iAry(2)), ValAry)               ! Rank 1 Array
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine ExtPtfm_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(ExtPtfm_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (ExtPtfm_x_qm)
-            call MV_Unpack(V, ValAry, x%qm(V%iAry(1):V%iAry(2)))                ! Rank 1 Array
-         case (ExtPtfm_x_qmdot)
-            call MV_Unpack(V, ValAry, x%qmdot(V%iAry(1):V%iAry(2)))             ! Rank 1 Array
          end select
       end associate
    end do
@@ -2023,6 +1999,17 @@ subroutine ExtPtfm_UnpackConstrStateAry(Vars, ValAry, z)
    end do
 end subroutine
 
+function ExtPtfm_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtPtfm_z_DummyConstrState)
+       Name = "z%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine ExtPtfm_PackInputAry(Vars, u, ValAry)
    type(ExtPtfm_InputType), intent(in)     :: u
    type(ModVarsType), intent(in)          :: Vars
@@ -2054,6 +2041,17 @@ subroutine ExtPtfm_UnpackInputAry(Vars, ValAry, u)
       end associate
    end do
 end subroutine
+
+function ExtPtfm_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtPtfm_u_PtfmMesh)
+       Name = "u%PtfmMesh"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine ExtPtfm_PackOutputAry(Vars, y, ValAry)
    type(ExtPtfm_OutputType), intent(in)    :: y
@@ -2090,6 +2088,19 @@ subroutine ExtPtfm_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function ExtPtfm_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtPtfm_y_PtfmMesh)
+       Name = "y%PtfmMesh"
+   case (ExtPtfm_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE ExtPtfm_MCKF_Types
 

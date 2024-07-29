@@ -1323,27 +1323,11 @@ function SeaSt_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function SeaSt_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   end select
-end function
-
 function SeaSt_OutputMeshPointer(y, DL) result(Mesh)
    type(SeaSt_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
    type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (DL%Num)
-   end select
-end function
-
-function SeaSt_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
    select case (DL%Num)
    end select
 end function
@@ -1380,6 +1364,17 @@ subroutine SeaSt_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function SeaSt_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SeaSt_x_UnusedStates)
+       Name = "x%UnusedStates"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine SeaSt_PackContStateDerivAry(Vars, x, ValAry)
    type(SeaSt_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -1392,21 +1387,6 @@ subroutine SeaSt_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%UnusedStates, ValAry)                             ! Scalar
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine SeaSt_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(SeaSt_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (SeaSt_x_UnusedStates)
-            call MV_Unpack(V, ValAry, x%UnusedStates)                           ! Scalar
          end select
       end associate
    end do
@@ -1444,6 +1424,17 @@ subroutine SeaSt_UnpackConstrStateAry(Vars, ValAry, z)
    end do
 end subroutine
 
+function SeaSt_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SeaSt_z_UnusedStates)
+       Name = "z%UnusedStates"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine SeaSt_PackInputAry(Vars, u, ValAry)
    type(SeaSt_InputType), intent(in)       :: u
    type(ModVarsType), intent(in)          :: Vars
@@ -1476,6 +1467,17 @@ subroutine SeaSt_UnpackInputAry(Vars, ValAry, u)
    end do
 end subroutine
 
+function SeaSt_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SeaSt_u_DummyInput)
+       Name = "u%DummyInput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine SeaSt_PackOutputAry(Vars, y, ValAry)
    type(SeaSt_OutputType), intent(in)      :: y
    type(ModVarsType), intent(in)          :: Vars
@@ -1507,6 +1509,17 @@ subroutine SeaSt_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function SeaSt_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SeaSt_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE SeaState_Types
 

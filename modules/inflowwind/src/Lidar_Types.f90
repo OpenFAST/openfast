@@ -1119,27 +1119,11 @@ function Lidar_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function Lidar_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   end select
-end function
-
 function Lidar_OutputMeshPointer(y, DL) result(Mesh)
    type(Lidar_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
    type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (DL%Num)
-   end select
-end function
-
-function Lidar_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
    select case (DL%Num)
    end select
 end function
@@ -1176,6 +1160,17 @@ subroutine Lidar_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function Lidar_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Lidar_x_DummyContState)
+       Name = "x%DummyContState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine Lidar_PackContStateDerivAry(Vars, x, ValAry)
    type(Lidar_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -1188,21 +1183,6 @@ subroutine Lidar_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%DummyContState, ValAry)                           ! Scalar
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine Lidar_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(Lidar_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (Lidar_x_DummyContState)
-            call MV_Unpack(V, ValAry, x%DummyContState)                         ! Scalar
          end select
       end associate
    end do
@@ -1239,6 +1219,17 @@ subroutine Lidar_UnpackConstrStateAry(Vars, ValAry, z)
       end associate
    end do
 end subroutine
+
+function Lidar_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Lidar_z_DummyConstrState)
+       Name = "z%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine Lidar_PackInputAry(Vars, u, ValAry)
    type(Lidar_InputType), intent(in)       :: u
@@ -1288,6 +1279,25 @@ subroutine Lidar_UnpackInputAry(Vars, ValAry, u)
    end do
 end subroutine
 
+function Lidar_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Lidar_u_PulseLidEl)
+       Name = "u%PulseLidEl"
+   case (Lidar_u_PulseLidAz)
+       Name = "u%PulseLidAz"
+   case (Lidar_u_HubDisplacementX)
+       Name = "u%HubDisplacementX"
+   case (Lidar_u_HubDisplacementY)
+       Name = "u%HubDisplacementY"
+   case (Lidar_u_HubDisplacementZ)
+       Name = "u%HubDisplacementZ"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine Lidar_PackOutputAry(Vars, y, ValAry)
    type(Lidar_OutputType), intent(in)      :: y
    type(ModVarsType), intent(in)          :: Vars
@@ -1335,6 +1345,25 @@ subroutine Lidar_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function Lidar_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Lidar_y_LidSpeed)
+       Name = "y%LidSpeed"
+   case (Lidar_y_WtTrunc)
+       Name = "y%WtTrunc"
+   case (Lidar_y_MsrPositionsX)
+       Name = "y%MsrPositionsX"
+   case (Lidar_y_MsrPositionsY)
+       Name = "y%MsrPositionsY"
+   case (Lidar_y_MsrPositionsZ)
+       Name = "y%MsrPositionsZ"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE Lidar_Types
 

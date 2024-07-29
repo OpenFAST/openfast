@@ -670,27 +670,11 @@ function SC_DX_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function SC_DX_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   end select
-end function
-
 function SC_DX_OutputMeshPointer(y, DL) result(Mesh)
    type(SC_DX_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
    type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (DL%Num)
-   end select
-end function
-
-function SC_DX_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
    select case (DL%Num)
    end select
 end function
@@ -727,6 +711,17 @@ subroutine SC_DX_UnpackInputAry(Vars, ValAry, u)
    end do
 end subroutine
 
+function SC_DX_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SC_DX_u_toSC)
+       Name = "u%toSC"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine SC_DX_PackOutputAry(Vars, y, ValAry)
    type(SC_DX_OutputType), intent(in)      :: y
    type(ModVarsType), intent(in)          :: Vars
@@ -762,6 +757,19 @@ subroutine SC_DX_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function SC_DX_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SC_DX_y_fromSC)
+       Name = "y%fromSC"
+   case (SC_DX_y_fromSCglob)
+       Name = "y%fromSCglob"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE SCDataEx_Types
 

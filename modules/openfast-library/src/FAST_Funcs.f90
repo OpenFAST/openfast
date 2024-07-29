@@ -572,6 +572,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
          call FEAM_PackInputAry(ModData%Vars, T%FEAM%Input(InputIndex), u_op)
       case (Module_HD)
          call HydroDyn_PackInputAry(ModData%Vars, T%HD%Input(InputIndex), u_op)
+         call HD_PackExtInputAry(ModData%Vars, T%HD%Input(InputIndex), u_op)
       case (Module_IceD)
          call IceD_PackInputAry(ModData%Vars, T%IceD%Input(InputIndex, ModData%Ins), u_op)
       case (Module_IceF)
@@ -591,6 +592,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
          call SD_PackInputAry(ModData%Vars, T%SD%Input(InputIndex), u_op)
       case (Module_SeaSt)
          call SeaSt_PackInputAry(ModData%Vars, T%SeaSt%Input(InputIndex), u_op)
+         call SeaSt_PackExtInputAry(ModData%Vars, T%SeaSt%Input(InputIndex), u_op)
       case (Module_SrvD)
          call SrvD_PackInputAry(ModData%Vars, T%SrvD%Input(InputIndex), u_op)
       case default
@@ -642,6 +644,7 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       case (Module_SD)
          call SD_PackOutputAry(ModData%Vars, T%SD%y, y_op)
       case (Module_SeaSt)
+         call SeaSt_PackExtOutputAry(ModData%Vars, T%SeaSt%y, y_op)
          call SeaSt_PackOutputAry(ModData%Vars, T%SeaSt%y, y_op)
       case (Module_SrvD)
          call SrvD_PackOutputAry(ModData%Vars, T%SrvD%y, y_op)
@@ -1054,15 +1057,15 @@ contains
    end function
 end subroutine
 
-subroutine FAST_JacobianPInput(ModData, ThisTime, StateIndex, T, ErrStat, ErrMsg, dYdu, dXdu, dYduGlue, dXduGlue)
+subroutine FAST_JacobianPInput(ModData, ThisTime, StateIndex, T, ErrStat, ErrMsg, dYdu, dXdu, dYdu_glue, dXdu_glue)
    type(ModDataType), intent(in)                      :: ModData     !< Module data
    real(DbKi), intent(in)                             :: ThisTime    !< Time
    integer(IntKi), intent(in)                         :: StateIndex  !< State
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
-   real(R8Ki), allocatable, optional, intent(inout)   :: dYdu(:, :), dYduGlue(:, :)
-   real(R8Ki), allocatable, optional, intent(inout)   :: dXdu(:, :), dXduGlue(:, :)
+   real(R8Ki), allocatable, optional, intent(inout)   :: dYdu(:, :), dYdu_glue(:, :)
+   real(R8Ki), allocatable, optional, intent(inout)   :: dXdu(:, :), dXdu_glue(:, :)
 
    character(*), parameter    :: RoutineName = 'FAST_JacobianPInput'
    integer(IntKi)             :: ErrStat2
@@ -1109,7 +1112,7 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, StateIndex, T, ErrStat, ErrMsg
                               dYdu=dYdu, dXdu=dXdu)
 
    case (Module_MD)
-      call MD_JacobianPInput(ThisTime, T%MD%Input(1), T%MD%p, T%MD%x(StateIndex), T%MD%xd(StateIndex), &
+      call MD_JacobianPInput(ModData%Vars, ThisTime, T%MD%Input(1), T%MD%p, T%MD%x(StateIndex), T%MD%xd(StateIndex), &
                              T%MD%z(StateIndex), T%MD%OtherSt(StateIndex), T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
                              dYdu=dYdu, dXdu=dXdu)
 
@@ -1136,23 +1139,23 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, StateIndex, T, ErrStat, ErrMsg
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
-   ! If dYdu and dYduGlue are present, transfer from module matrix to glue matrix
-   if (present(dYdu) .and. present(dYduGlue)) call XfrModToGlueMatrix(ModData%Vars%y, ModData%Vars%u, dYdu, dYduGlue)
+   ! If dYdu and dYdu_glue are present, transfer from module matrix to glue matrix
+   if (present(dYdu) .and. present(dYdu_glue)) call XfrModToGlueMatrix(ModData%Vars%y, ModData%Vars%u, dYdu, dYdu_glue)
 
-   ! If dXdu and dXduGlue are present, transfer from module matrix to glue matrix
-   if (present(dXdu) .and. present(dXduGlue)) call XfrModToGlueMatrix(ModData%Vars%x, ModData%Vars%u, dXdu, dXduGlue)
+   ! If dXdu and dXdu_glue are present, transfer from module matrix to glue matrix
+   if (present(dXdu) .and. present(dXdu_glue)) call XfrModToGlueMatrix(ModData%Vars%x, ModData%Vars%u, dXdu, dXdu_glue)
 
 end subroutine
 
-subroutine FAST_JacobianPContState(ModData, ThisTime, StateIndex, T, ErrStat, ErrMsg, dYdx, dXdx, dYdxGlue, dXdxGlue)
+subroutine FAST_JacobianPContState(ModData, ThisTime, StateIndex, T, ErrStat, ErrMsg, dYdx, dXdx, dYdx_glue, dXdx_glue)
    type(ModDataType), intent(inout)                   :: ModData     !< Module data
    real(DbKi), intent(in)                             :: ThisTime    !< Time
    integer(IntKi), intent(in)                         :: StateIndex  !< State
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
-   real(R8Ki), allocatable, optional, intent(inout)   :: dYdx(:, :), dYdxGlue(:, :)
-   real(R8Ki), allocatable, optional, intent(inout)   :: dXdx(:, :), dXdxGlue(:, :)
+   real(R8Ki), allocatable, optional, intent(inout)   :: dYdx(:, :), dYdx_glue(:, :)
+   real(R8Ki), allocatable, optional, intent(inout)   :: dXdx(:, :), dXdx_glue(:, :)
 
    character(*), parameter    :: RoutineName = 'FAST_JacobianPContState'
    integer(IntKi)             :: ErrStat2
@@ -1207,7 +1210,7 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, StateIndex, T, ErrStat, Er
       ErrMsg2 = ''
 
    case (Module_MD)
-      call MD_JacobianPContState(ThisTime, T%MD%Input(1), T%MD%p, &
+      call MD_JacobianPContState(ModData%Vars, ThisTime, T%MD%Input(1), T%MD%p, &
                                  T%MD%x(StateIndex), T%MD%xd(StateIndex), &
                                  T%MD%z(StateIndex), T%MD%OtherSt(StateIndex), &
                                  T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
@@ -1242,11 +1245,11 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, StateIndex, T, ErrStat, Er
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
-   ! If dYdx and dYdxGlue are present, transfer from module matrix to glue matrix
-   if (present(dYdx) .and. present(dYdxGlue)) call XfrModToGlueMatrix(ModData%Vars%y, ModData%Vars%x, dYdx, dYdxGlue)
+   ! If dYdx and dYdx_glue are present, transfer from module matrix to glue matrix
+   if (present(dYdx) .and. present(dYdx_glue)) call XfrModToGlueMatrix(ModData%Vars%y, ModData%Vars%x, dYdx, dYdx_glue)
 
-   ! If dXdx and dXdxGlue are present, transfer from module matrix to glue matrix
-   if (present(dXdx) .and. present(dXdxGlue)) call XfrModToGlueMatrix(ModData%Vars%x, ModData%Vars%x, dXdx, dXdxGlue)
+   ! If dXdx and dXdx_glue are present, transfer from module matrix to glue matrix
+   if (present(dXdx) .and. present(dXdx_glue)) call XfrModToGlueMatrix(ModData%Vars%x, ModData%Vars%x, dXdx, dXdx_glue)
 
 end subroutine
 

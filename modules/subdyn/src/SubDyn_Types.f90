@@ -4449,18 +4449,6 @@ function SD_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function SD_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (SD_u_TPMesh)
-       Name = "u%TPMesh"
-   case (SD_u_LMesh)
-       Name = "u%LMesh"
-   end select
-end function
-
 function SD_OutputMeshPointer(y, DL) result(Mesh)
    type(SD_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
@@ -4473,20 +4461,6 @@ function SD_OutputMeshPointer(y, DL) result(Mesh)
        Mesh => y%Y2Mesh
    case (SD_y_Y3Mesh)
        Mesh => y%Y3Mesh
-   end select
-end function
-
-function SD_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (SD_y_Y1Mesh)
-       Name = "y%Y1Mesh"
-   case (SD_y_Y2Mesh)
-       Name = "y%Y2Mesh"
-   case (SD_y_Y3Mesh)
-       Name = "y%Y3Mesh"
    end select
 end function
 
@@ -4526,6 +4500,19 @@ subroutine SD_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function SD_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SD_x_qm)
+       Name = "x%qm"
+   case (SD_x_qmdot)
+       Name = "x%qmdot"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine SD_PackContStateDerivAry(Vars, x, ValAry)
    type(SD_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -4540,23 +4527,6 @@ subroutine SD_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%qmdot(V%iAry(1):V%iAry(2)), ValAry)               ! Rank 1 Array
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine SD_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(SD_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (SD_x_qm)
-            call MV_Unpack(V, ValAry, x%qm(V%iAry(1):V%iAry(2)))                ! Rank 1 Array
-         case (SD_x_qmdot)
-            call MV_Unpack(V, ValAry, x%qmdot(V%iAry(1):V%iAry(2)))             ! Rank 1 Array
          end select
       end associate
    end do
@@ -4593,6 +4563,17 @@ subroutine SD_UnpackConstrStateAry(Vars, ValAry, z)
       end associate
    end do
 end subroutine
+
+function SD_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SD_z_DummyConstrState)
+       Name = "z%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine SD_PackInputAry(Vars, u, ValAry)
    type(SD_InputType), intent(in)          :: u
@@ -4633,6 +4614,21 @@ subroutine SD_UnpackInputAry(Vars, ValAry, u)
       end associate
    end do
 end subroutine
+
+function SD_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SD_u_TPMesh)
+       Name = "u%TPMesh"
+   case (SD_u_LMesh)
+       Name = "u%LMesh"
+   case (SD_u_CableDeltaL)
+       Name = "u%CableDeltaL"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine SD_PackOutputAry(Vars, y, ValAry)
    type(SD_OutputType), intent(in)         :: y
@@ -4677,6 +4673,23 @@ subroutine SD_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function SD_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SD_y_Y1Mesh)
+       Name = "y%Y1Mesh"
+   case (SD_y_Y2Mesh)
+       Name = "y%Y2Mesh"
+   case (SD_y_Y3Mesh)
+       Name = "y%Y3Mesh"
+   case (SD_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE SubDyn_Types
 

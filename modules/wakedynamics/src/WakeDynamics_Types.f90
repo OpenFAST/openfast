@@ -1946,27 +1946,11 @@ function WD_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function WD_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   end select
-end function
-
 function WD_OutputMeshPointer(y, DL) result(Mesh)
    type(WD_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
    type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (DL%Num)
-   end select
-end function
-
-function WD_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
    select case (DL%Num)
    end select
 end function
@@ -2003,6 +1987,17 @@ subroutine WD_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function WD_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (WD_x_DummyContState)
+       Name = "x%DummyContState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine WD_PackContStateDerivAry(Vars, x, ValAry)
    type(WD_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -2015,21 +2010,6 @@ subroutine WD_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%DummyContState, ValAry)                           ! Scalar
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine WD_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(WD_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (WD_x_DummyContState)
-            call MV_Unpack(V, ValAry, x%DummyContState)                         ! Scalar
          end select
       end associate
    end do
@@ -2066,6 +2046,17 @@ subroutine WD_UnpackConstrStateAry(Vars, ValAry, z)
       end associate
    end do
 end subroutine
+
+function WD_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (WD_z_DummyConstrState)
+       Name = "z%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine WD_PackInputAry(Vars, u, ValAry)
    type(WD_InputType), intent(in)          :: u
@@ -2143,6 +2134,39 @@ subroutine WD_UnpackInputAry(Vars, ValAry, u)
    end do
 end subroutine
 
+function WD_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (WD_u_xhat_disk)
+       Name = "u%xhat_disk"
+   case (WD_u_YawErr)
+       Name = "u%YawErr"
+   case (WD_u_psi_skew)
+       Name = "u%psi_skew"
+   case (WD_u_chi_skew)
+       Name = "u%chi_skew"
+   case (WD_u_p_hub)
+       Name = "u%p_hub"
+   case (WD_u_V_plane)
+       Name = "u%V_plane"
+   case (WD_u_Vx_wind_disk)
+       Name = "u%Vx_wind_disk"
+   case (WD_u_TI_amb)
+       Name = "u%TI_amb"
+   case (WD_u_D_rotor)
+       Name = "u%D_rotor"
+   case (WD_u_Vx_rel_disk)
+       Name = "u%Vx_rel_disk"
+   case (WD_u_Ct_azavg)
+       Name = "u%Ct_azavg"
+   case (WD_u_Cq_azavg)
+       Name = "u%Cq_azavg"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine WD_PackOutputAry(Vars, y, ValAry)
    type(WD_OutputType), intent(in)         :: y
    type(ModVarsType), intent(in)          :: Vars
@@ -2210,6 +2234,35 @@ subroutine WD_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function WD_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (WD_y_xhat_plane)
+       Name = "y%xhat_plane"
+   case (WD_y_p_plane)
+       Name = "y%p_plane"
+   case (WD_y_Vx_wake)
+       Name = "y%Vx_wake"
+   case (WD_y_Vr_wake)
+       Name = "y%Vr_wake"
+   case (WD_y_Vx_wake2)
+       Name = "y%Vx_wake2"
+   case (WD_y_Vy_wake2)
+       Name = "y%Vy_wake2"
+   case (WD_y_Vz_wake2)
+       Name = "y%Vz_wake2"
+   case (WD_y_D_wake)
+       Name = "y%D_wake"
+   case (WD_y_x_plane)
+       Name = "y%x_plane"
+   case (WD_y_WAT_k)
+       Name = "y%WAT_k"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE WakeDynamics_Types
 

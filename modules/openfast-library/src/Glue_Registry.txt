@@ -45,39 +45,20 @@ typedef ^ ^                 IntKi               SrcMeshID               -  0  - 
 typedef ^ ^                 IntKi               DstMeshID               -  0  -     "Destination mesh identifier" -
 typedef ^ ^                 IntKi               SrcDispMeshID           -  0  -     "Source displacement mesh identifier" -
 typedef ^ ^                 IntKi               DstDispMeshID           -  0  -     "Destination displacement mesh identifier" -
-typedef ^ ^                 DatLoc              SrcDL              -  -  -     "Source mesh locator (number and indices)" -
-typedef ^ ^                 DatLoc              DstDL              -  -  -     "Destination mesh locator (number and indices)" -
-typedef ^ ^                 DatLoc              SrcDispDL          -  -  -     "Source displacement mesh locator (number and indices)" -
-typedef ^ ^                 DatLoc              DstDispDL          -  -  -     "Destination displacement mesh locator (number and indices)" -
-typedef ^ ^                 IntKi               MapType                 -  0  -     "Integer denoting mapping type (1=Load Mesh, 2=Motion Mesh, 3=Non-Mesh)" -
+typedef ^ ^                 DatLoc              SrcDL                   -  -  -     "Source mesh locator (number and indices)" -
+typedef ^ ^                 DatLoc              DstDL                   -  -  -     "Destination mesh locator (number and indices)" -
+typedef ^ ^                 DatLoc              SrcDispDL               -  -  -     "Source displacement mesh locator (number and indices)" -
+typedef ^ ^                 DatLoc              DstDispDL               -  -  -     "Destination displacement mesh locator (number and indices)" -
+typedef ^ ^                 IntKi               MapType                 -  0  -     "Integer denoting mapping type (1=Load Mesh, 2=Motion Mesh, 3=Variable, 4=Custom)" -
 typedef ^ ^                 IntKi               XfrType                 -  0  -     "Integer denoting transfer type (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L)" -
-typedef ^ ^                 IntKi               XfrTypeAux              -  0  -     "Integer denoting transfer type (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L)" -
-typedef ^ ^                 logical             Ready                   -  F  -     "Flag indicating Source has been ready to be transferred" -
-typedef ^ ^                 logical             DstUsesSibling          -  F  -     "Flag indicating the destination displacement mesh is a sibling of the destination load mesh" -
-typedef ^ ^                 MeshType            TmpLoadMesh             -  -  -     "Temporary load mesh for intermediate transfers" -
-typedef ^ ^                 MeshType            TmpMotionMesh           -  -  -     "Temporary motion mesh for intermediate transfers" -
+typedef ^ ^                 IntKi               XfrTypeAux              -  0  -     "Integer denoting transfer type to auxiliary mesh (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L)" -
+typedef ^ ^                 logical             Ready                   -  F  -     "Flag indicating source data is ready to be transferred" -
+typedef ^ ^                 logical             DstUsesSibling          -  F  -     "Flag indicating the destination displacement mesh is a sibling of the source destination load mesh" -
 typedef ^ ^                 R8Ki                TmpMatrix               :: -  -     "Temporary matrix for performing transfer for destination load meshes without sibling motion meshes" -
 typedef ^ ^                 MeshMapType         MeshMap                 -  -  -     "Mesh mapping from Source variable to Destination variable" -
 typedef ^ ^                 MeshMapType         MeshMapAux              -  -  -     "Auxiliary mesh mapping for destination load meshes without sibling motion mesh" -
-#typedef ^ ^                 IntKi               iVarSrcTransDisp        -  -  -     "Var index for linearized mesh mapping"
-#typedef ^ ^                 IntKi               iVarSrcTransVel         -  -  -     "Var index for linearized mesh mapping"
-#typedef ^ ^                 IntKi               iVarSrcTransAcc         -  -  -     "Var index for linearized mesh mapping"
-#typedef ^ ^                 IntKi               iVarSrcOrientation      -  -  -     "Var index for linearized mesh mapping"
-#typedef ^ ^                 IntKi               iVarSrcAngularVel       -  -  -     "Var index for linearized mesh mapping"
-#typedef ^ ^                 IntKi               iVarSrcAngularAcc       -  -  -     "Var index for linearized mesh mapping"
-#typedef ^ ^                 IntKi               iVarSrcForce            -  -  -     "Var index for linearized mesh mapping"
-#typedef ^ ^                 IntKi               iVarSrcMoment           -  -  -     "Var index for linearized mesh mapping"
-#typedef ^ ^                 IntKi               iVarSrcDispTransDisp    -  -  -     "Var index for linearized mesh mapping"
-#typedef ^ ^                 IntKi               iVarDstTransDisp        -  -  -     "Var index for linearized mesh mapping"
-#typedef ^ ^                 IntKi               iVarDstTransVel         -  -  -     "Var index for linearized mesh mapping"
-#typedef ^ ^                 IntKi               iVarDstTransAcc         -  -  -     "Var index for linearized mesh mapping"
-#typedef ^ ^                 IntKi               iVarDstOrientation      -  -  -     "Var index for linearized mesh mapping"
-#typedef ^ ^                 IntKi               iVarDstAngularVel       -  -  -     "Var index for linearized mesh mapping"
-#typedef ^ ^                 IntKi               iVarDstAngularAcc       -  -  -     "Var index for linearized mesh mapping"
-#typedef ^ ^                 IntKi               iVarDstForce            -  -  -     "Var index for linearized mesh mapping"
-#typedef ^ ^                 IntKi               iVarDstMoment           -  -  -     "Var index for linearized mesh mapping"
-#typedef ^ ^                 IntKi               iVarDstDispTransDisp    -  -  -     "Var index for linearized mesh mapping"
-#typedef ^ ^                 IntKi               iVarDstDispOrientation  -  -  -     "Var index for linearized mesh mapping"
+typedef ^ ^                 MeshType            TmpLoadMesh             -  -  -     "Temporary load mesh for intermediate transfers" -
+typedef ^ ^                 MeshType            TmpMotionMesh           -  -  -     "Temporary motion mesh for intermediate transfers" -
 
 #----------------------------------------------------------------------------------------------------------------------------------
 # Glue Parameters

@@ -7233,24 +7233,6 @@ function SrvD_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function SrvD_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (SrvD_u_PtfmMotionMesh)
-       Name = "u%PtfmMotionMesh"
-   case (SrvD_u_BStCMotionMesh)
-       Name = "u%BStCMotionMesh("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")"
-   case (SrvD_u_NStCMotionMesh)
-       Name = "u%NStCMotionMesh("//trim(Num2LStr(DL%i1))//")"
-   case (SrvD_u_TStCMotionMesh)
-       Name = "u%TStCMotionMesh("//trim(Num2LStr(DL%i1))//")"
-   case (SrvD_u_SStCMotionMesh)
-       Name = "u%SStCMotionMesh("//trim(Num2LStr(DL%i1))//")"
-   end select
-end function
-
 function SrvD_OutputMeshPointer(y, DL) result(Mesh)
    type(SrvD_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
@@ -7265,22 +7247,6 @@ function SrvD_OutputMeshPointer(y, DL) result(Mesh)
        Mesh => y%TStCLoadMesh(DL%i1)
    case (SrvD_y_SStCLoadMesh)
        Mesh => y%SStCLoadMesh(DL%i1)
-   end select
-end function
-
-function SrvD_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (SrvD_y_BStCLoadMesh)
-       Name = "y%BStCLoadMesh("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")"
-   case (SrvD_y_NStCLoadMesh)
-       Name = "y%NStCLoadMesh("//trim(Num2LStr(DL%i1))//")"
-   case (SrvD_y_TStCLoadMesh)
-       Name = "y%TStCLoadMesh("//trim(Num2LStr(DL%i1))//")"
-   case (SrvD_y_SStCLoadMesh)
-       Name = "y%SStCLoadMesh("//trim(Num2LStr(DL%i1))//")"
    end select
 end function
 
@@ -7332,6 +7298,25 @@ subroutine SrvD_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function SrvD_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SrvD_x_DummyContState)
+       Name = "x%DummyContState"
+   case (SrvD_x_BStC_StC_x)
+       Name = "x%BStC("//trim(Num2LStr(DL%i1))//")%StC_x"
+   case (SrvD_x_NStC_StC_x)
+       Name = "x%NStC("//trim(Num2LStr(DL%i1))//")%StC_x"
+   case (SrvD_x_TStC_StC_x)
+       Name = "x%TStC("//trim(Num2LStr(DL%i1))//")%StC_x"
+   case (SrvD_x_SStC_StC_x)
+       Name = "x%SStC("//trim(Num2LStr(DL%i1))//")%StC_x"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine SrvD_PackContStateDerivAry(Vars, x, ValAry)
    type(SrvD_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -7352,29 +7337,6 @@ subroutine SrvD_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%SStC(DL%i1)%StC_x(V%iAry(1):V%iAry(2),V%jAry), ValAry) ! Rank 2 Array
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine SrvD_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(SrvD_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (SrvD_x_DummyContState)
-            call MV_Unpack(V, ValAry, x%DummyContState)                         ! Scalar
-         case (SrvD_x_BStC_StC_x)
-            call MV_Unpack(V, ValAry, x%BStC(DL%i1)%StC_x(V%iAry(1):V%iAry(2),V%jAry)) ! Rank 2 Array
-         case (SrvD_x_NStC_StC_x)
-            call MV_Unpack(V, ValAry, x%NStC(DL%i1)%StC_x(V%iAry(1):V%iAry(2),V%jAry)) ! Rank 2 Array
-         case (SrvD_x_TStC_StC_x)
-            call MV_Unpack(V, ValAry, x%TStC(DL%i1)%StC_x(V%iAry(1):V%iAry(2),V%jAry)) ! Rank 2 Array
-         case (SrvD_x_SStC_StC_x)
-            call MV_Unpack(V, ValAry, x%SStC(DL%i1)%StC_x(V%iAry(1):V%iAry(2),V%jAry)) ! Rank 2 Array
          end select
       end associate
    end do
@@ -7427,6 +7389,25 @@ subroutine SrvD_UnpackConstrStateAry(Vars, ValAry, z)
       end associate
    end do
 end subroutine
+
+function SrvD_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SrvD_z_DummyConstrState)
+       Name = "z%DummyConstrState"
+   case (SrvD_z_BStC_DummyConstrState)
+       Name = "z%BStC("//trim(Num2LStr(DL%i1))//")%DummyConstrState"
+   case (SrvD_z_NStC_DummyConstrState)
+       Name = "z%NStC("//trim(Num2LStr(DL%i1))//")%DummyConstrState"
+   case (SrvD_z_TStC_DummyConstrState)
+       Name = "z%TStC("//trim(Num2LStr(DL%i1))//")%DummyConstrState"
+   case (SrvD_z_SStC_DummyConstrState)
+       Name = "z%SStC("//trim(Num2LStr(DL%i1))//")%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine SrvD_PackInputAry(Vars, u, ValAry)
    type(SrvD_InputType), intent(in)        :: u
@@ -7660,6 +7641,117 @@ subroutine SrvD_UnpackInputAry(Vars, ValAry, u)
    end do
 end subroutine
 
+function SrvD_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SrvD_u_BlPitch)
+       Name = "u%BlPitch"
+   case (SrvD_u_Yaw)
+       Name = "u%Yaw"
+   case (SrvD_u_YawRate)
+       Name = "u%YawRate"
+   case (SrvD_u_LSS_Spd)
+       Name = "u%LSS_Spd"
+   case (SrvD_u_HSS_Spd)
+       Name = "u%HSS_Spd"
+   case (SrvD_u_RotSpeed)
+       Name = "u%RotSpeed"
+   case (SrvD_u_ExternalYawPosCom)
+       Name = "u%ExternalYawPosCom"
+   case (SrvD_u_ExternalYawRateCom)
+       Name = "u%ExternalYawRateCom"
+   case (SrvD_u_ExternalBlPitchCom)
+       Name = "u%ExternalBlPitchCom"
+   case (SrvD_u_ExternalGenTrq)
+       Name = "u%ExternalGenTrq"
+   case (SrvD_u_ExternalElecPwr)
+       Name = "u%ExternalElecPwr"
+   case (SrvD_u_ExternalHSSBrFrac)
+       Name = "u%ExternalHSSBrFrac"
+   case (SrvD_u_ExternalBlAirfoilCom)
+       Name = "u%ExternalBlAirfoilCom"
+   case (SrvD_u_ExternalCableDeltaL)
+       Name = "u%ExternalCableDeltaL"
+   case (SrvD_u_ExternalCableDeltaLdot)
+       Name = "u%ExternalCableDeltaLdot"
+   case (SrvD_u_TwrAccel)
+       Name = "u%TwrAccel"
+   case (SrvD_u_YawErr)
+       Name = "u%YawErr"
+   case (SrvD_u_WindDir)
+       Name = "u%WindDir"
+   case (SrvD_u_RootMyc)
+       Name = "u%RootMyc"
+   case (SrvD_u_YawBrTAxp)
+       Name = "u%YawBrTAxp"
+   case (SrvD_u_YawBrTAyp)
+       Name = "u%YawBrTAyp"
+   case (SrvD_u_LSSTipPxa)
+       Name = "u%LSSTipPxa"
+   case (SrvD_u_RootMxc)
+       Name = "u%RootMxc"
+   case (SrvD_u_LSSTipMxa)
+       Name = "u%LSSTipMxa"
+   case (SrvD_u_LSSTipMya)
+       Name = "u%LSSTipMya"
+   case (SrvD_u_LSSTipMza)
+       Name = "u%LSSTipMza"
+   case (SrvD_u_LSSTipMys)
+       Name = "u%LSSTipMys"
+   case (SrvD_u_LSSTipMzs)
+       Name = "u%LSSTipMzs"
+   case (SrvD_u_YawBrMyn)
+       Name = "u%YawBrMyn"
+   case (SrvD_u_YawBrMzn)
+       Name = "u%YawBrMzn"
+   case (SrvD_u_NcIMURAxs)
+       Name = "u%NcIMURAxs"
+   case (SrvD_u_NcIMURAys)
+       Name = "u%NcIMURAys"
+   case (SrvD_u_NcIMURAzs)
+       Name = "u%NcIMURAzs"
+   case (SrvD_u_RotPwr)
+       Name = "u%RotPwr"
+   case (SrvD_u_HorWindV)
+       Name = "u%HorWindV"
+   case (SrvD_u_YawAngle)
+       Name = "u%YawAngle"
+   case (SrvD_u_LSShftFxa)
+       Name = "u%LSShftFxa"
+   case (SrvD_u_LSShftFys)
+       Name = "u%LSShftFys"
+   case (SrvD_u_LSShftFzs)
+       Name = "u%LSShftFzs"
+   case (SrvD_u_fromSC)
+       Name = "u%fromSC"
+   case (SrvD_u_fromSCglob)
+       Name = "u%fromSCglob"
+   case (SrvD_u_Lidar)
+       Name = "u%Lidar"
+   case (SrvD_u_PtfmMotionMesh)
+       Name = "u%PtfmMotionMesh"
+   case (SrvD_u_BStCMotionMesh)
+       Name = "u%BStCMotionMesh("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")"
+   case (SrvD_u_NStCMotionMesh)
+       Name = "u%NStCMotionMesh("//trim(Num2LStr(DL%i1))//")"
+   case (SrvD_u_TStCMotionMesh)
+       Name = "u%TStCMotionMesh("//trim(Num2LStr(DL%i1))//")"
+   case (SrvD_u_SStCMotionMesh)
+       Name = "u%SStCMotionMesh("//trim(Num2LStr(DL%i1))//")"
+   case (SrvD_u_LidSpeed)
+       Name = "u%LidSpeed"
+   case (SrvD_u_MsrPositionsX)
+       Name = "u%MsrPositionsX"
+   case (SrvD_u_MsrPositionsY)
+       Name = "u%MsrPositionsY"
+   case (SrvD_u_MsrPositionsZ)
+       Name = "u%MsrPositionsZ"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine SrvD_PackOutputAry(Vars, y, ValAry)
    type(SrvD_OutputType), intent(in)       :: y
    type(ModVarsType), intent(in)          :: Vars
@@ -7751,6 +7843,47 @@ subroutine SrvD_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function SrvD_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SrvD_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case (SrvD_y_BlPitchCom)
+       Name = "y%BlPitchCom"
+   case (SrvD_y_BlAirfoilCom)
+       Name = "y%BlAirfoilCom"
+   case (SrvD_y_YawMom)
+       Name = "y%YawMom"
+   case (SrvD_y_GenTrq)
+       Name = "y%GenTrq"
+   case (SrvD_y_HSSBrTrqC)
+       Name = "y%HSSBrTrqC"
+   case (SrvD_y_ElecPwr)
+       Name = "y%ElecPwr"
+   case (SrvD_y_TBDrCon)
+       Name = "y%TBDrCon"
+   case (SrvD_y_Lidar)
+       Name = "y%Lidar"
+   case (SrvD_y_CableDeltaL)
+       Name = "y%CableDeltaL"
+   case (SrvD_y_CableDeltaLdot)
+       Name = "y%CableDeltaLdot"
+   case (SrvD_y_BStCLoadMesh)
+       Name = "y%BStCLoadMesh("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")"
+   case (SrvD_y_NStCLoadMesh)
+       Name = "y%NStCLoadMesh("//trim(Num2LStr(DL%i1))//")"
+   case (SrvD_y_TStCLoadMesh)
+       Name = "y%TStCLoadMesh("//trim(Num2LStr(DL%i1))//")"
+   case (SrvD_y_SStCLoadMesh)
+       Name = "y%SStCLoadMesh("//trim(Num2LStr(DL%i1))//")"
+   case (SrvD_y_toSC)
+       Name = "y%toSC"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE ServoDyn_Types
 

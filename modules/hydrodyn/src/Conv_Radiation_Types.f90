@@ -986,27 +986,11 @@ function Conv_Rdtn_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function Conv_Rdtn_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   end select
-end function
-
 function Conv_Rdtn_OutputMeshPointer(y, DL) result(Mesh)
    type(Conv_Rdtn_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
    type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (DL%Num)
-   end select
-end function
-
-function Conv_Rdtn_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
    select case (DL%Num)
    end select
 end function
@@ -1043,6 +1027,17 @@ subroutine Conv_Rdtn_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function Conv_Rdtn_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Conv_Rdtn_x_DummyContState)
+       Name = "x%DummyContState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine Conv_Rdtn_PackContStateDerivAry(Vars, x, ValAry)
    type(Conv_Rdtn_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -1055,21 +1050,6 @@ subroutine Conv_Rdtn_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%DummyContState, ValAry)                           ! Scalar
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine Conv_Rdtn_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(Conv_Rdtn_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (Conv_Rdtn_x_DummyContState)
-            call MV_Unpack(V, ValAry, x%DummyContState)                         ! Scalar
          end select
       end associate
    end do
@@ -1107,6 +1087,17 @@ subroutine Conv_Rdtn_UnpackConstrStateAry(Vars, ValAry, z)
    end do
 end subroutine
 
+function Conv_Rdtn_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Conv_Rdtn_z_DummyConstrState)
+       Name = "z%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine Conv_Rdtn_PackInputAry(Vars, u, ValAry)
    type(Conv_Rdtn_InputType), intent(in)   :: u
    type(ModVarsType), intent(in)          :: Vars
@@ -1139,6 +1130,17 @@ subroutine Conv_Rdtn_UnpackInputAry(Vars, ValAry, u)
    end do
 end subroutine
 
+function Conv_Rdtn_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Conv_Rdtn_u_Velocity)
+       Name = "u%Velocity"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine Conv_Rdtn_PackOutputAry(Vars, y, ValAry)
    type(Conv_Rdtn_OutputType), intent(in)  :: y
    type(ModVarsType), intent(in)          :: Vars
@@ -1170,6 +1172,17 @@ subroutine Conv_Rdtn_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function Conv_Rdtn_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Conv_Rdtn_y_F_Rdtn)
+       Name = "y%F_Rdtn"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE Conv_Radiation_Types
 

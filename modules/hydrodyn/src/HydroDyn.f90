@@ -72,7 +72,8 @@ MODULE HydroDyn
    PUBLIC :: HD_JacobianPConstrState           ! Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
                                                !   (Xd), and constraint - state(Z) functions all with respect to the constraint
                                                !   states(z)
-   
+   PUBLIC :: HD_PackExtInputAry                ! Pack extended inputs
+
    CONTAINS
    
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1692,11 +1693,23 @@ SUBROUTINE HD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
    ErrMsg  = ''
 
    ! Get extended input variable indices
-   iVarWaveElev0      = MV_FindVarDatLoc(Vars%u, DatLoc(HydroDyn_u_WaveElev0))
-   iVarHWindSpeed     = MV_FindVarDatLoc(Vars%u, DatLoc(HydroDyn_u_HWindSpeed))
-   iVarPLexp          = MV_FindVarDatLoc(Vars%u, DatLoc(HydroDyn_u_PLexp))
-   iVarPropagationDir = MV_FindVarDatLoc(Vars%u, DatLoc(HydroDyn_u_PropagationDir))
-
+   iVarWaveElev0 = 0
+   iVarHWindSpeed = 0
+   iVarPLexp = 0
+   iVarPropagationDir = 0
+   do i = 1, size(Vars%u)
+      select case (Vars%u(i)%DL%Num)
+      case (HydroDyn_u_WaveElev0)
+         iVarWaveElev0 = i
+      case (HydroDyn_u_HWindSpeed)
+         iVarHWindSpeed = i
+      case (HydroDyn_u_PLexp)
+         iVarPLexp = i
+      case (HydroDyn_u_PropagationDir)
+         iVarPropagationDir = i
+      end select
+   end do
+   
    ! make a copy of the inputs to perturb
    call HydroDyn_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
    
@@ -1715,7 +1728,7 @@ SUBROUTINE HD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
       do i = 1, size(Vars%u)
 
          ! If variable is extended input, skip
-         if (MV_HasFlags(Vars%u(i), VF_ExtLin)) cycle
+         if (MV_HasFlagsAll(Vars%u(i), VF_ExtLin)) cycle
 
          ! Loop through number of linearization perturbations in variable
          do j = 1, Vars%u(i)%Num
@@ -1741,10 +1754,10 @@ SUBROUTINE HD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
       end do
 
       ! Set extended inputs
-      dYdu(:, Vars%u(iVarWaveElev0)%iLoc(1)) = 0.0_R8Ki
-      dYdu(:, Vars%u(iVarHWindSpeed)%iLoc(1)) = 0.0_R8Ki
-      dYdu(:, Vars%u(iVarPLexp)%iLoc(1)) = 0.0_R8Ki
-      dYdu(:, Vars%u(iVarPropagationDir)%iLoc(1)) = 0.0_R8Ki
+      if (iVarWaveElev0 > 0)      dYdu(:, Vars%u(iVarWaveElev0)%iLoc(1)) = 0.0_R8Ki
+      if (iVarHWindSpeed > 0)     dYdu(:, Vars%u(iVarHWindSpeed)%iLoc(1)) = 0.0_R8Ki
+      if (iVarPLexp > 0)          dYdu(:, Vars%u(iVarPLexp)%iLoc(1)) = 0.0_R8Ki
+      if (iVarPropagationDir > 0) dYdu(:, Vars%u(iVarPropagationDir)%iLoc(1)) = 0.0_R8Ki
       
    END IF
    
@@ -2098,6 +2111,34 @@ SUBROUTINE HD_JacobianPConstrState(Vars, t, u, p, x, xd, z, OtherState, y, m, Er
 
 END SUBROUTINE HD_JacobianPConstrState
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+subroutine HD_PackExtInputAry(Vars, u, ValAry)
+   type(ModVarsType), intent(in)          :: Vars        !< Module variables
+   type(HydroDyn_InputType), intent(in)   :: u           !< Inputs
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+
+   ! Loop through Input variables
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i))
+         ! Select based on data location number
+         select case (Var%DL%Num)
+         case (HydroDyn_u_WaveElev0)
+            ! Wave elevation from SeaState
+            ValAry(Vars%u(i)%iLoc(1):Vars%u(i)%iLoc(2)) = 0.0_R8Ki
+         case (HydroDyn_u_HWindSpeed)
+            ! Current velocity from SeaState
+            ValAry(Vars%u(i)%iLoc(1):Vars%u(i)%iLoc(2)) = 0.0_R8Ki
+         case (HydroDyn_u_PLexp)
+            ! Current shear coefficient from SeaState
+            ValAry(Vars%u(i)%iLoc(1):Vars%u(i)%iLoc(2)) = 0.0_R8Ki
+         case (HydroDyn_u_PropagationDir)
+            ! Current propagation direction from SeaState
+            ValAry(Vars%u(i)%iLoc(1):Vars%u(i)%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
+   end do
+end subroutine
 
 END MODULE HydroDyn
 !**********************************************************************************************************************************

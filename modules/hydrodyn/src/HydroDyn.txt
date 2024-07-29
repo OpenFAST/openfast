@@ -26,9 +26,9 @@ param     HydroDyn/HydroDyn            unused                        INTEGER    
 param     HydroDyn/HydroDyn            unused                        INTEGER                  MaxUserOutputs                  -         5150        -         " Total possible number of output channels:  SS_Excitation = 7 + SS_Radiation = 7 + Morison= 4626 + HydroDyn=510   =  5150" -
 
 param     ^                            ^                             IntKi                    HydroDyn_u_WaveElev0            -         -1          -         "WaveElev0 Extended input DatLoc number" -
-param     ^                            ^                             IntKi                    HydroDyn_u_HWindSpeed           -         -1          -         "HWindSpeed extended input DatLoc number" -
-param     ^                            ^                             IntKi                    HydroDyn_u_PLexp                -         -1          -         "PLexp extended input DatLoc number" -
-param     ^                            ^                             IntKi                    HydroDyn_u_PropagationDir       -         -1          -         "PropagationDir extended input DatLoc number" -
+param     ^                            ^                             IntKi                    HydroDyn_u_HWindSpeed           -         -2          -         "HWindSpeed extended input DatLoc number" -
+param     ^                            ^                             IntKi                    HydroDyn_u_PLexp                -         -3          -         "PLexp extended input DatLoc number" -
+param     ^                            ^                             IntKi                    HydroDyn_u_PropagationDir       -         -4          -         "PropagationDir extended input DatLoc number" -
 
 #########################
 # ..... Input file data ...........................................................................................................

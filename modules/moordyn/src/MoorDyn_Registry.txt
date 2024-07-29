@@ -305,7 +305,7 @@ typedef   ^            ^               LOGICAL                RotFrame_x   {:}  
 typedef   ^            ^               LOGICAL                RotFrame_u   {:}  -   -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
 typedef   ^            ^               LOGICAL                IsLoad_u     {:}  -   -   "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
 typedef   ^            ^               IntKi                  DerivOrder_x {:}  -   -   "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization" -
-typedef   ^            ^               ModVarsType           *Vars          -   -   -   "Module Variables"  -
+typedef   ^            ^               ModVarsType            Vars          -   -   -   "Module Variables"  -
 
 
 ## ============================== Define Continuous states here: =====================================================================================================================================
@@ -321,8 +321,7 @@ typedef   ^       ConstraintStateType  SiKi                dummy            -   
 typedef   ^       OtherStateType       SiKi                dummy             -  -  -   "Remove this variable if you have other states" -
 
 ## ============================== Parameters ============================================================================================================================================
-typedef   ^       ParameterType        ModVarsType        &Vars           -     -    -   "Module Variables"                           ""
-typedef   ^       ^                    IntKi               nLineTypes     -     0    -   "number of line types"                       ""
+typedef   ^       ParameterType        IntKi               nLineTypes     -     0    -   "number of line types"                       ""
 typedef   ^       ^                    IntKi               nRodTypes      -     0    -   "number of rod types"                        ""
 typedef   ^       ^                    IntKi               nPoints      -     0    -   "number of Point objects"               ""
 typedef   ^       ^                    IntKi               nPointsExtra -     0    -   "number of Point objects including space for extra ones that could arise from line failures"               ""

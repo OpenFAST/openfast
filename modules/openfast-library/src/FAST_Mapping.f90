@@ -282,87 +282,143 @@ subroutine FAST_OutputMeshPointer(ModData, Turbine, MeshLoc, Mesh, ErrStat, ErrM
    end if
 end subroutine
 
-function FAST_InputMeshName(ModData, DL) result(Name)
+function FAST_InputFieldName(ModData, DL) result(Name)
    type(ModDataType), intent(in) :: ModData
    type(DatLoc), intent(in)      :: DL
    character(32)                 :: Name, tmp
-   Name = "Unknown mesh in "//ModData%Abbr
    select case (ModData%ID)
    case (Module_AD)
-      tmp = AD_InputMeshName(DL)
-      Name = trim(ModData%Abbr)//"%y%rotors("//trim(Num2LStr(ModData%Ins))//")"//tmp(2:)
+      Name = trim(ModData%Abbr)//"%u%rotors("//trim(Num2LStr(ModData%Ins))//")"
+      select case (DL%Num)
+      case (1:)
+         tmp = AD_OutputFieldName(DL)
+         Name = trim(Name)//tmp(2:)
+      case (AD_u_HWindSpeed)
+         Name = 'AD%u%HWindSpeed (Ext)'
+      case (AD_u_PLExp)
+         Name = 'AD%u%PLExp (Ext)'
+      case (AD_u_PropagationDir)
+         Name = 'AD%u%PropagationDir (Ext)'
+      end select
    case (Module_BD)
-      Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//BD_InputMeshName(DL)
+      Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//BD_InputFieldName(DL)
    case (Module_ED)
-      Name = trim(ModData%Abbr)//"%"//ED_InputMeshName(DL)
+      select case (DL%Num)
+      case (1:)
+         Name = trim(ModData%Abbr)//"%"//ED_InputFieldName(DL)
+      case (ED_u_BlPitchComC)
+         Name = 'ED%u%BlPitchComC (Ext)'
+      end select
    case (Module_ExtInfw)
-      Name = trim(ModData%Abbr)//"%"//ExtInfw_InputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//ExtInfw_InputFieldName(DL)
    case (Module_ExtPtfm)
-      Name = trim(ModData%Abbr)//"%"//ExtPtfm_InputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//ExtPtfm_InputFieldName(DL)
    case (Module_FEAM)
-      Name = trim(ModData%Abbr)//"%"//FEAM_InputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//FEAM_InputFieldName(DL)
    case (Module_HD)
-      Name = trim(ModData%Abbr)//"%"//HydroDyn_InputMeshName(DL)
+      select case (DL%Num)
+      case (1:)
+         Name = trim(ModData%Abbr)//"%"//HydroDyn_InputFieldName(DL)
+      case (HydroDyn_u_WaveElev0)
+         Name = 'HD%u%WaveElev0 (Ext)'
+      case (HydroDyn_u_HWindSpeed)
+         Name = 'HD%u%HWindSpeed (Ext)'
+      case (HydroDyn_u_PLexp)
+         Name = 'HD%u%PLexp (Ext)'
+      case (HydroDyn_u_PropagationDir)
+         Name = 'HD%u%PropagationDir (Ext)'
+      end select
    case (Module_IceD)
-      Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//IceD_InputMeshName(DL)
+      Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//IceD_InputFieldName(DL)
    case (Module_IceF)
-      Name = trim(ModData%Abbr)//"%"//IceFloe_InputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//IceFloe_InputFieldName(DL)
    case (Module_IfW)
-      Name = trim(ModData%Abbr)//"%"//InflowWind_InputMeshName(DL)
+      select case (DL%Num)
+      case (1:)
+         Name = trim(ModData%Abbr)//"%"//InflowWind_InputFieldName(DL)
+      case (InflowWind_u_HWindSpeed)
+         Name = 'IfW%u%HWindSpeed (Ext)'
+      case (InflowWind_u_PLexp)
+         Name = 'IfW%u%PLexp (Ext)'
+      case (InflowWind_u_PropagationDir)
+         Name = 'IfW%u%PropagationDir (Ext)'
+      end select
    case (Module_MAP)
-      Name = trim(ModData%Abbr)//"%"//MAP_InputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//MAP_InputFieldName(DL)
    case (Module_MD)
-      Name = trim(ModData%Abbr)//"%"//MD_InputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//MD_InputFieldName(DL)
    case (Module_Orca)
-      Name = trim(ModData%Abbr)//"%"//Orca_InputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//Orca_InputFieldName(DL)
    case (Module_SD)
-      Name = trim(ModData%Abbr)//"%"//SD_InputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//SD_InputFieldName(DL)
    case (Module_SeaSt)
-      Name = trim(ModData%Abbr)//"%"//SeaSt_InputMeshName(DL)
+      select case (DL%Num)
+      case (1:)
+         Name = trim(ModData%Abbr)//"%"//SeaSt_InputFieldName(DL)
+      case (SeaSt_u_WaveElev0)
+         Name = 'SeaSt%u%WaveElev0 (Ext)'
+      end select
    case (Module_SrvD)
-      Name = trim(ModData%Abbr)//"%"//SrvD_InputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//SrvD_InputFieldName(DL)
+   case default
+      Name = "Unknown field "//Num2LStr(DL%Num)//" in "//ModData%Abbr
    end select
 end function
 
-function FAST_OutputMeshName(ModData, DL) result(Name)
+function FAST_OutputFieldName(ModData, DL) result(Name)
    type(ModDataType), intent(in)    :: ModData
    type(DatLoc), intent(in)         :: DL
    character(32)                    :: Name, tmp
-   Name = "Unknown mesh in "//ModData%Abbr
    select case (ModData%ID)
    case (Module_AD)
-      tmp = AD_OutputMeshName(DL)
+      tmp = AD_OutputFieldName(DL)
       Name = trim(ModData%Abbr)//"%y%rotors("//trim(Num2LStr(ModData%Ins))//")"//tmp(2:)
    case (Module_BD)
-      Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//BD_OutputMeshName(DL)
+      Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//BD_OutputFieldName(DL)
    case (Module_ED)
-      Name = trim(ModData%Abbr)//"%"//ED_OutputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//ED_OutputFieldName(DL)
    case (Module_ExtInfw)
-      Name = trim(ModData%Abbr)//"%"//ExtInfw_OutputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//ExtInfw_OutputFieldName(DL)
    case (Module_ExtPtfm)
-      Name = trim(ModData%Abbr)//"%"//ExtPtfm_OutputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//ExtPtfm_OutputFieldName(DL)
    case (Module_FEAM)
-      Name = trim(ModData%Abbr)//"%"//FEAM_OutputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//FEAM_OutputFieldName(DL)
    case (Module_HD)
-      Name = trim(ModData%Abbr)//"%"//HydroDyn_OutputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//HydroDyn_OutputFieldName(DL)
    case (Module_IceD)
-      Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//IceD_OutputMeshName(DL)
+      Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//IceD_OutputFieldName(DL)
    case (Module_IceF)
-      Name = trim(ModData%Abbr)//"%"//IceFloe_OutputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//IceFloe_OutputFieldName(DL)
    case (Module_IfW)
-      Name = trim(ModData%Abbr)//"%"//InflowWind_OutputMeshName(DL)
+      select case (DL%Num)
+      case (1:)
+         Name = trim(ModData%Abbr)//"%"//InflowWind_OutputFieldName(DL)
+      case (InflowWind_y_HWindSpeed)
+         Name = 'IfW%y%HWindSpeed (Ext)'
+      case (InflowWind_y_PLexp)
+         Name = 'IfW%y%PLexp (Ext)'
+      case (InflowWind_y_PropagationDir)
+         Name = 'IfW%y%PropagationDir (Ext)'
+      end select
    case (Module_MAP)
-      Name = trim(ModData%Abbr)//"%"//MAP_OutputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//MAP_OutputFieldName(DL)
    case (Module_MD)
-      Name = trim(ModData%Abbr)//"%"//MD_OutputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//MD_OutputFieldName(DL)
    case (Module_Orca)
-      Name = trim(ModData%Abbr)//"%"//Orca_OutputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//Orca_OutputFieldName(DL)
    case (Module_SD)
-      Name = trim(ModData%Abbr)//"%"//SD_OutputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//SD_OutputFieldName(DL)
    case (Module_SeaSt)
-      Name = trim(ModData%Abbr)//"%"//SeaSt_OutputMeshName(DL)
+      select case (DL%Num)
+      case (1:)
+         Name = trim(ModData%Abbr)//"%"//SeaSt_OutputFieldName(DL)
+      case (SeaSt_y_WaveElev0)
+         Name = 'SeaSt%y%WaveElev0 (Ext)'
+      end select
    case (Module_SrvD)
-      Name = trim(ModData%Abbr)//"%"//SrvD_OutputMeshName(DL)
+      Name = trim(ModData%Abbr)//"%"//SrvD_OutputFieldName(DL)
+   case default
+      Name = "Unknown field "//Num2LStr(DL%Num)//" in "//ModData%Abbr
    end select
 end function
 
@@ -560,21 +616,21 @@ subroutine InitMappings_AD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
    case (Module_IfW)
 
-      call MapVariable(Mappings, "IfW HWindSpeed -> AD HWindSpeed", &
+      call MapVariable(Mappings, &
                        SrcMod=SrcMod, DstMod=DstMod, &
                        SrcDL=DatLoc(InflowWind_y_HWindSpeed), &
                        DstDL=DatLoc(AD_u_HWindSpeed), &
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2)
       if (Failed()) return
 
-      call MapVariable(Mappings, "IfW PLExp -> AD PLExp", &
+      call MapVariable(Mappings, &
                        SrcMod=SrcMod, DstMod=DstMod, &
                        SrcDL=DatLoc(InflowWind_y_PLExp), &
                        DstDL=DatLoc(AD_u_PLExp), &
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2)
       if (Failed()) return
 
-      call MapVariable(Mappings, "IfW PropagationDir -> AD PropagationDir", &
+      call MapVariable(Mappings, &
                        SrcMod=SrcMod, DstMod=DstMod, &
                        SrcDL=DatLoc(InflowWind_y_PropagationDir), &
                        DstDL=DatLoc(AD_u_PropagationDir), &
@@ -873,17 +929,17 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
    case (Module_SrvD)
 
-      call MapVariable(Mappings, "SrvD BlPitchCom -> ED BlPitchCom", &
+      call MapVariable(Mappings, &
                        SrcMod=SrcMod, SrcDL=DatLoc(SrvD_y_BlPitchCom), &
                        DstMod=DstMod, DstDL=DatLoc(ED_u_BlPitchCom), &
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
-      call MapVariable(Mappings, "SrvD YawMom -> ED YawMom", &
+      call MapVariable(Mappings, &
                        SrcMod=SrcMod, SrcDL=DatLoc(SrvD_y_YawMom), &
                        DstMod=DstMod, DstDL=DatLoc(ED_u_YawMom), &
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
-      call MapVariable(Mappings, "SrvD GenTrq -> ED GenTrq", &
+      call MapVariable(Mappings, &
                        SrcMod=SrcMod, SrcDL=DatLoc(SrvD_y_GenTrq), &
                        DstMod=DstMod, DstDL=DatLoc(ED_u_GenTrq), &
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
@@ -1153,7 +1209,7 @@ subroutine InitMappings_HD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
    case (Module_SeaSt)
 
-      call MapVariable(Mappings, "SEA WaveElev0 -> HD WaveElev0", &
+      call MapVariable(Mappings, &
                        SrcMod=SrcMod, SrcDL=DatLoc(SeaSt_y_WaveElev0), &
                        DstMod=DstMod, DstDL=DatLoc(HydroDyn_u_WaveElev0), &
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
@@ -1569,17 +1625,17 @@ subroutine InitMappings_SrvD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
       call MapCustom(Mappings, Custom_ED_to_SrvD, SrcMod, DstMod)
 
-      call MapVariable(Mappings, "ED Yaw -> SrvD Yaw", &
+      call MapVariable(Mappings, &
                        SrcMod=SrcMod, SrcDL=DatLoc(ED_y_Yaw), &
                        DstMod=DstMod, DstDL=DatLoc(SrvD_u_Yaw), &
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
-      call MapVariable(Mappings, "ED YawRate -> SrvD YawRate", &
+      call MapVariable(Mappings, &
                        SrcMod=SrcMod, SrcDL=DatLoc(ED_y_YawRate), &
                        DstMod=DstMod, DstDL=DatLoc(SrvD_u_YawRate), &
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
-      call MapVariable(Mappings, "ED HSS_Spd -> SrvD HSS_Spd", &
+      call MapVariable(Mappings, &
                        SrcMod=SrcMod, SrcDL=DatLoc(ED_y_HSS_Spd), &
                        DstMod=DstMod, DstDL=DatLoc(SrvD_u_HSS_Spd), &
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
@@ -1681,19 +1737,19 @@ subroutine MapLoadMesh(Turbine, Mappings, SrcMod, SrcDL, SrcDispDL, &
 
    ! Check that all meshes in mapping have nonzero identifiers
    if (SrcMesh%ID == 0) then
-      call SetErrStat(ErrID_Fatal, 'SrcMesh "'//trim(FAST_OutputMeshName(SrcMod, SrcDL))//'" not in module variables', &
+      call SetErrStat(ErrID_Fatal, 'SrcMesh "'//trim(FAST_OutputFieldName(SrcMod, SrcDL))//'" not in module variables', &
                       ErrStat, ErrMsg, RoutineName)
       return
    else if (SrcDispMesh%ID == 0) then
-      call SetErrStat(ErrID_Fatal, 'SrcDispMesh "'//trim(FAST_InputMeshName(SrcMod, SrcDispDL))//'" not in module variables', &
+      call SetErrStat(ErrID_Fatal, 'SrcDispMesh "'//trim(FAST_InputFieldName(SrcMod, SrcDispDL))//'" not in module variables', &
                       ErrStat, ErrMsg, RoutineName)
       return
    else if (DstMesh%ID == 0) then
-      call SetErrStat(ErrID_Fatal, 'DstMesh "'//trim(FAST_InputMeshName(DstMod, DstDL))//'" not in module variables', &
+      call SetErrStat(ErrID_Fatal, 'DstMesh "'//trim(FAST_InputFieldName(DstMod, DstDL))//'" not in module variables', &
                       ErrStat, ErrMsg, RoutineName)
       return
    else if (DstDispMesh%ID == 0) then
-      call SetErrStat(ErrID_Fatal, 'DstDispMesh "'//trim(FAST_OutputMeshName(DstMod, DstDispDL))//'" not in module variables', &
+      call SetErrStat(ErrID_Fatal, 'DstDispMesh "'//trim(FAST_OutputFieldName(DstMod, DstDispDL))//'" not in module variables', &
                       ErrStat, ErrMsg, RoutineName)
       return
    end if
@@ -1702,10 +1758,10 @@ subroutine MapLoadMesh(Turbine, Mappings, SrcMod, SrcDL, SrcDispDL, &
    call FAST_OutputMeshPointer(DstMod, Turbine, DstDispDL, DstDispMesh, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Create mapping description
-   Mapping%Desc = trim(FAST_OutputMeshName(SrcMod, SrcDL))//" -> "// &
-                  trim(FAST_InputMeshName(DstMod, DstDL))// &
-                  " ["//trim(FAST_InputMeshName(SrcMod, SrcDispDL))// &
-                  " -> "//trim(FAST_OutputMeshName(DstMod, DstDispDL))//"]"
+   Mapping%Desc = trim(FAST_OutputFieldName(SrcMod, SrcDL))//" -> "// &
+                  trim(FAST_InputFieldName(DstMod, DstDL))// &
+                  " ["//trim(FAST_InputFieldName(SrcMod, SrcDispDL))// &
+                  " -> "//trim(FAST_OutputFieldName(DstMod, DstDispDL))//"]"
 
    ! Initialize mapping structure
    Mapping%MapType = Map_LoadMesh
@@ -1823,18 +1879,18 @@ subroutine MapMotionMesh(Turbine, Mappings, SrcMod, SrcDL, DstMod, DstDL, ErrSta
 
    ! Check that all meshes in mapping have nonzero identifiers
    if (SrcMesh%ID == 0) then
-      call SetErrStat(ErrID_Fatal, 'SrcMesh "'//trim(FAST_OutputMeshName(SrcMod, SrcDL))//'" not in module variables', &
+      call SetErrStat(ErrID_Fatal, 'SrcMesh "'//trim(FAST_OutputFieldName(SrcMod, SrcDL))//'" not in module variables', &
                       ErrStat, ErrMsg, RoutineName)
       return
    else if (DstMesh%ID == 0) then
-      call SetErrStat(ErrID_Fatal, 'DstMesh "'//trim(FAST_InputMeshName(DstMod, DstDL))//'" not in module variables', &
+      call SetErrStat(ErrID_Fatal, 'DstMesh "'//trim(FAST_InputFieldName(DstMod, DstDL))//'" not in module variables', &
                       ErrStat, ErrMsg, RoutineName)
       return
    end if
 
    ! Create mapping description
-   Mapping%Desc = trim(FAST_OutputMeshName(SrcMod, SrcDL))//" -> "// &
-                  trim(FAST_InputMeshName(DstMod, DstDL))
+   Mapping%Desc = trim(FAST_OutputFieldName(SrcMod, SrcDL))//" -> "// &
+                  trim(FAST_InputFieldName(DstMod, DstDL))
 
    ! Initialize mapping structure
    Mapping%MapType = Map_MotionMesh
@@ -1864,9 +1920,8 @@ contains
    end function
 end subroutine
 
-subroutine MapVariable(Maps, Key, SrcMod, SrcDL, DstMod, DstDL, ErrStat, ErrMsg, Active)
+subroutine MapVariable(Maps, SrcMod, SrcDL, DstMod, DstDL, ErrStat, ErrMsg, Active)
    type(MappingType), allocatable      :: Maps(:)
-   character(*), intent(in)            :: Key
    type(ModDataType), intent(in)       :: SrcMod, DstMod
    type(DatLoc), intent(in)            :: SrcDL, DstDL
    integer(IntKi), intent(out)         :: ErrStat
@@ -1889,25 +1944,28 @@ subroutine MapVariable(Maps, Key, SrcMod, SrcDL, DstMod, DstDL, ErrStat, ErrMsg,
    ! If either variable index is zero, return error
    if (iVarSrc == 0) then
       ErrStat = ErrID_Fatal
-      ErrMsg = "Source variable in mapping '"//Key//"' is not active"
+      ErrMsg = "Source variable "//trim(Num2LStr(SrcDL%Num))//" in module '"//trim(SrcMod%Abbr)//"' is not active"
       return
    else if (iVarDst == 0) then
       ErrStat = ErrID_Fatal
-      ErrMsg = "Destination variable in mapping '"//Key//"' is not active"
+      ErrMsg = "Destination variable "//trim(Num2LStr(DstDL%Num))//" in module '"//trim(DstMod%Abbr)//"' is not active"
       return
    end if
+
+   ! Create mapping description
+   Mapping%Desc = trim(FAST_OutputFieldName(SrcMod, SrcDL))//" -> "// &
+                  trim(FAST_InputFieldName(DstMod, DstDL))
 
    ! Verify that variables have compatible sizes
    ! If source variable has size 1, it can be mapped to multiple destination variables
    if ((SrcMod%Vars%y(iVarSrc)%Num > 1) .and. &
        (SrcMod%Vars%y(iVarSrc)%Num /= DstMod%Vars%u(iVarDst)%Num)) then
       ErrStat = ErrID_Fatal
-      ErrMsg = "Variables in mapping '"//Key//"' have different sizes"
+      ErrMsg = "Variables in mapping '"//trim(Mapping%Desc)//"' have incompatible sizes"
       return
    end if
 
    ! Initialize mapping structure
-   Mapping%Desc = Key
    Mapping%MapType = Map_Variable
    Mapping%iModSrc = SrcMod%iMod
    Mapping%iModDst = DstMod%iMod

@@ -60,6 +60,7 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_AeroMap                       = 1024      ! Variable for aeromap [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_DerivOrder1                   = 2048      ! Variable is derivative order 1 in linearization file [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_DerivOrder2                   = 4096      ! Variable is derivative order 2 in linearization file [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_Mapping                       = 8192      ! Variable is used in a module-to-module transfer mapping [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VC_None                          = 0      !  [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VC_Tight                         = 1      !  [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VC_Option1                       = 2      !  [-]

@@ -1719,24 +1719,6 @@ function ExtLd_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function ExtLd_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (ExtLd_u_TowerMotion)
-       Name = "u%TowerMotion"
-   case (ExtLd_u_HubMotion)
-       Name = "u%HubMotion"
-   case (ExtLd_u_NacelleMotion)
-       Name = "u%NacelleMotion"
-   case (ExtLd_u_BladeRootMotion)
-       Name = "u%BladeRootMotion("//trim(Num2LStr(DL%i1))//")"
-   case (ExtLd_u_BladeMotion)
-       Name = "u%BladeMotion("//trim(Num2LStr(DL%i1))//")"
-   end select
-end function
-
 function ExtLd_OutputMeshPointer(y, DL) result(Mesh)
    type(ExtLd_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
@@ -1751,22 +1733,6 @@ function ExtLd_OutputMeshPointer(y, DL) result(Mesh)
        Mesh => y%TowerLoadAD
    case (ExtLd_y_BladeLoadAD)
        Mesh => y%BladeLoadAD(DL%i1)
-   end select
-end function
-
-function ExtLd_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (ExtLd_y_TowerLoad)
-       Name = "y%TowerLoad"
-   case (ExtLd_y_BladeLoad)
-       Name = "y%BladeLoad("//trim(Num2LStr(DL%i1))//")"
-   case (ExtLd_y_TowerLoadAD)
-       Name = "y%TowerLoadAD"
-   case (ExtLd_y_BladeLoadAD)
-       Name = "y%BladeLoadAD("//trim(Num2LStr(DL%i1))//")"
    end select
 end function
 
@@ -1802,6 +1768,17 @@ subroutine ExtLd_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function ExtLd_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtLd_x_blah)
+       Name = "x%blah"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine ExtLd_PackContStateDerivAry(Vars, x, ValAry)
    type(ExtLd_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -1814,21 +1791,6 @@ subroutine ExtLd_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%blah, ValAry)                                     ! Scalar
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine ExtLd_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(ExtLd_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (ExtLd_x_blah)
-            call MV_Unpack(V, ValAry, x%blah)                                   ! Scalar
          end select
       end associate
    end do
@@ -1865,6 +1827,17 @@ subroutine ExtLd_UnpackConstrStateAry(Vars, ValAry, z)
       end associate
    end do
 end subroutine
+
+function ExtLd_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtLd_z_blah)
+       Name = "z%blah"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine ExtLd_PackInputAry(Vars, u, ValAry)
    type(ExtLd_InputType), intent(in)       :: u
@@ -1942,6 +1915,39 @@ subroutine ExtLd_UnpackInputAry(Vars, ValAry, u)
    end do
 end subroutine
 
+function ExtLd_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtLd_u_DX_u_twrDef)
+       Name = "u%DX_u%twrDef"
+   case (ExtLd_u_DX_u_bldDef)
+       Name = "u%DX_u%bldDef"
+   case (ExtLd_u_DX_u_hubDef)
+       Name = "u%DX_u%hubDef"
+   case (ExtLd_u_DX_u_nacDef)
+       Name = "u%DX_u%nacDef"
+   case (ExtLd_u_DX_u_bldRootDef)
+       Name = "u%DX_u%bldRootDef"
+   case (ExtLd_u_DX_u_bldPitch)
+       Name = "u%DX_u%bldPitch"
+   case (ExtLd_u_az)
+       Name = "u%az"
+   case (ExtLd_u_TowerMotion)
+       Name = "u%TowerMotion"
+   case (ExtLd_u_HubMotion)
+       Name = "u%HubMotion"
+   case (ExtLd_u_NacelleMotion)
+       Name = "u%NacelleMotion"
+   case (ExtLd_u_BladeRootMotion)
+       Name = "u%BladeRootMotion("//trim(Num2LStr(DL%i1))//")"
+   case (ExtLd_u_BladeMotion)
+       Name = "u%BladeMotion("//trim(Num2LStr(DL%i1))//")"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine ExtLd_PackOutputAry(Vars, y, ValAry)
    type(ExtLd_OutputType), intent(in)      :: y
    type(ModVarsType), intent(in)          :: Vars
@@ -1993,6 +1999,27 @@ subroutine ExtLd_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function ExtLd_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtLd_y_DX_y_twrLd)
+       Name = "y%DX_y%twrLd"
+   case (ExtLd_y_DX_y_bldLd)
+       Name = "y%DX_y%bldLd"
+   case (ExtLd_y_TowerLoad)
+       Name = "y%TowerLoad"
+   case (ExtLd_y_BladeLoad)
+       Name = "y%BladeLoad("//trim(Num2LStr(DL%i1))//")"
+   case (ExtLd_y_TowerLoadAD)
+       Name = "y%TowerLoadAD"
+   case (ExtLd_y_BladeLoadAD)
+       Name = "y%BladeLoadAD("//trim(Num2LStr(DL%i1))//")"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE ExtLoads_Types
 

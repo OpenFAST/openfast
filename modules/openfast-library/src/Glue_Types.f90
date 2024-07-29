@@ -74,16 +74,16 @@ IMPLICIT NONE
     TYPE(DatLoc)  :: DstDL      !< Destination mesh locator (number and indices) [-]
     TYPE(DatLoc)  :: SrcDispDL      !< Source displacement mesh locator (number and indices) [-]
     TYPE(DatLoc)  :: DstDispDL      !< Destination displacement mesh locator (number and indices) [-]
-    INTEGER(IntKi)  :: MapType = 0      !< Integer denoting mapping type (1=Load Mesh, 2=Motion Mesh, 3=Non-Mesh) [-]
+    INTEGER(IntKi)  :: MapType = 0      !< Integer denoting mapping type (1=Load Mesh, 2=Motion Mesh, 3=Variable, 4=Custom) [-]
     INTEGER(IntKi)  :: XfrType = 0      !< Integer denoting transfer type (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L) [-]
-    INTEGER(IntKi)  :: XfrTypeAux = 0      !< Integer denoting transfer type (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L) [-]
-    LOGICAL  :: Ready = .false.      !< Flag indicating Source has been ready to be transferred [-]
-    LOGICAL  :: DstUsesSibling = .false.      !< Flag indicating the destination displacement mesh is a sibling of the destination load mesh [-]
-    TYPE(MeshType)  :: TmpLoadMesh      !< Temporary load mesh for intermediate transfers [-]
-    TYPE(MeshType)  :: TmpMotionMesh      !< Temporary motion mesh for intermediate transfers [-]
+    INTEGER(IntKi)  :: XfrTypeAux = 0      !< Integer denoting transfer type to auxiliary mesh (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L) [-]
+    LOGICAL  :: Ready = .false.      !< Flag indicating source data is ready to be transferred [-]
+    LOGICAL  :: DstUsesSibling = .false.      !< Flag indicating the destination displacement mesh is a sibling of the source destination load mesh [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: TmpMatrix      !< Temporary matrix for performing transfer for destination load meshes without sibling motion meshes [-]
     TYPE(MeshMapType)  :: MeshMap      !< Mesh mapping from Source variable to Destination variable [-]
     TYPE(MeshMapType)  :: MeshMapAux      !< Auxiliary mesh mapping for destination load meshes without sibling motion mesh [-]
+    TYPE(MeshType)  :: TmpLoadMesh      !< Temporary load mesh for intermediate transfers [-]
+    TYPE(MeshType)  :: TmpMotionMesh      !< Temporary motion mesh for intermediate transfers [-]
   END TYPE MappingType
 ! =======================
 ! =========  Glue_LinParam  =======
@@ -494,12 +494,6 @@ subroutine Glue_CopyMappingType(SrcMappingTypeData, DstMappingTypeData, CtrlCode
    DstMappingTypeData%XfrTypeAux = SrcMappingTypeData%XfrTypeAux
    DstMappingTypeData%Ready = SrcMappingTypeData%Ready
    DstMappingTypeData%DstUsesSibling = SrcMappingTypeData%DstUsesSibling
-   call MeshCopy(SrcMappingTypeData%TmpLoadMesh, DstMappingTypeData%TmpLoadMesh, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcMappingTypeData%TmpMotionMesh, DstMappingTypeData%TmpMotionMesh, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcMappingTypeData%TmpMatrix)) then
       LB(1:2) = lbound(SrcMappingTypeData%TmpMatrix, kind=B8Ki)
       UB(1:2) = ubound(SrcMappingTypeData%TmpMatrix, kind=B8Ki)
@@ -516,6 +510,12 @@ subroutine Glue_CopyMappingType(SrcMappingTypeData, DstMappingTypeData, CtrlCode
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call NWTC_Library_CopyMeshMapType(SrcMappingTypeData%MeshMapAux, DstMappingTypeData%MeshMapAux, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call MeshCopy(SrcMappingTypeData%TmpLoadMesh, DstMappingTypeData%TmpLoadMesh, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call MeshCopy(SrcMappingTypeData%TmpMotionMesh, DstMappingTypeData%TmpMotionMesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 end subroutine
@@ -537,16 +537,16 @@ subroutine Glue_DestroyMappingType(MappingTypeData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call NWTC_Library_DestroyDatLoc(MappingTypeData%DstDispDL, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( MappingTypeData%TmpLoadMesh, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( MappingTypeData%TmpMotionMesh, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MappingTypeData%TmpMatrix)) then
       deallocate(MappingTypeData%TmpMatrix)
    end if
    call NWTC_Library_DestroyMeshMapType(MappingTypeData%MeshMap, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call NWTC_Library_DestroyMeshMapType(MappingTypeData%MeshMapAux, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( MappingTypeData%TmpLoadMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( MappingTypeData%TmpMotionMesh, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
@@ -575,11 +575,11 @@ subroutine Glue_PackMappingType(RF, Indata)
    call RegPack(RF, InData%XfrTypeAux)
    call RegPack(RF, InData%Ready)
    call RegPack(RF, InData%DstUsesSibling)
-   call MeshPack(RF, InData%TmpLoadMesh) 
-   call MeshPack(RF, InData%TmpMotionMesh) 
    call RegPackAlloc(RF, InData%TmpMatrix)
    call NWTC_Library_PackMeshMapType(RF, InData%MeshMap) 
    call NWTC_Library_PackMeshMapType(RF, InData%MeshMapAux) 
+   call MeshPack(RF, InData%TmpLoadMesh) 
+   call MeshPack(RF, InData%TmpMotionMesh) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -611,11 +611,11 @@ subroutine Glue_UnPackMappingType(RF, OutData)
    call RegUnpack(RF, OutData%XfrTypeAux); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Ready); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DstUsesSibling); if (RegCheckErr(RF, RoutineName)) return
-   call MeshUnpack(RF, OutData%TmpLoadMesh) ! TmpLoadMesh 
-   call MeshUnpack(RF, OutData%TmpMotionMesh) ! TmpMotionMesh 
    call RegUnpackAlloc(RF, OutData%TmpMatrix); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackMeshMapType(RF, OutData%MeshMap) ! MeshMap 
    call NWTC_Library_UnpackMeshMapType(RF, OutData%MeshMapAux) ! MeshMapAux 
+   call MeshUnpack(RF, OutData%TmpLoadMesh) ! TmpLoadMesh 
+   call MeshUnpack(RF, OutData%TmpMotionMesh) ! TmpMotionMesh 
 end subroutine
 
 subroutine Glue_CopyLinParam(SrcLinParamData, DstLinParamData, CtrlCode, ErrStat, ErrMsg)

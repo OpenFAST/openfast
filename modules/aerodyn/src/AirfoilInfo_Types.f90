@@ -1470,27 +1470,11 @@ function AFI_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function AFI_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   end select
-end function
-
 function AFI_OutputMeshPointer(y, DL) result(Mesh)
    type(AFI_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
    type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (DL%Num)
-   end select
-end function
-
-function AFI_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
    select case (DL%Num)
    end select
 end function
@@ -1534,6 +1518,21 @@ subroutine AFI_UnpackInputAry(Vars, ValAry, u)
       end associate
    end do
 end subroutine
+
+function AFI_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (AFI_u_AoA)
+       Name = "u%AoA"
+   case (AFI_u_UserProp)
+       Name = "u%UserProp"
+   case (AFI_u_Re)
+       Name = "u%Re"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine AFI_PackOutputAry(Vars, y, ValAry)
    type(AFI_OutputType), intent(in)        :: y
@@ -1598,6 +1597,33 @@ subroutine AFI_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function AFI_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (AFI_y_Cl)
+       Name = "y%Cl"
+   case (AFI_y_Cd)
+       Name = "y%Cd"
+   case (AFI_y_Cm)
+       Name = "y%Cm"
+   case (AFI_y_Cpmin)
+       Name = "y%Cpmin"
+   case (AFI_y_Cd0)
+       Name = "y%Cd0"
+   case (AFI_y_Cm0)
+       Name = "y%Cm0"
+   case (AFI_y_f_st)
+       Name = "y%f_st"
+   case (AFI_y_FullySeparate)
+       Name = "y%FullySeparate"
+   case (AFI_y_FullyAttached)
+       Name = "y%FullyAttached"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE AirfoilInfo_Types
 

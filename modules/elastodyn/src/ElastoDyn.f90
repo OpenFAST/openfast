@@ -10278,14 +10278,14 @@ SUBROUTINE ED_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
    CHARACTER(*), PARAMETER       :: RoutineName = 'ED_JacobianPInput'
    INTEGER(IntKi)                :: ErrStat2
    CHARACTER(ErrMsgLen)          :: ErrMsg2
-   integer(IntKi)                :: i, j, col
+   integer(IntKi)                :: i, j, iCol
    integer(IntKi)                :: iVarBlPitchCom, iVarBlPitchComC
    
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-
-   m%IgnoreMod = .true. ! to compute perturbations, we need to ignore the modulo function
+   ! To compute perturbations, we need to ignore the modulo function
+   m%IgnoreMod = .true. 
 
    ! Initialize pitch command variable indices
    iVarBlPitchCom = 0
@@ -10296,7 +10296,6 @@ SUBROUTINE ED_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
          iVarBlPitchCom = i
       case (ED_u_BlPitchComC)
          iVarBlPitchComC = i
-         cycle
       end select
    end do
 
@@ -10321,6 +10320,9 @@ SUBROUTINE ED_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
          ! Loop through number of linearization perturbations in variable
          do j = 1, Vars%u(i)%Num
 
+            ! Calculate column index
+            iCol = Vars%u(i)%iLoc(1) + j - 1
+
             ! Calculate positive perturbation
             call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
             call ED_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
@@ -10333,11 +10335,8 @@ SUBROUTINE ED_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
             call ED_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
             call ED_PackOutputAry(Vars, m%y_lin, m%Jac%y_neg)
 
-            ! Calculate column index
-            col = Vars%u(i)%iLoc(1) + j - 1
-
             ! Get partial derivative via central difference and store in full linearization array
-            call MV_ComputeCentralDiff(Vars%y, Vars%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,col))
+            call MV_ComputeCentralDiff(Vars%y, Vars%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,iCol))
          end do
       end do
 
@@ -10370,6 +10369,9 @@ SUBROUTINE ED_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
          ! Loop through number of linearization perturbations in variable
          do j = 1, Vars%u(i)%Num
 
+            ! Calculate column index
+            iCol = Vars%u(i)%iLoc(1) + j - 1
+
             ! Calculate positive perturbation
             call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
             call ED_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
@@ -10382,11 +10384,8 @@ SUBROUTINE ED_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
             call ED_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
             call ED_PackContStateAry(Vars, m%dxdt_lin, m%Jac%x_neg)
 
-            ! Calculate column index
-            col = Vars%u(i)%iLoc(1) + j - 1
-
             ! Get partial derivative via central difference and store in full linearization array
-            dXdu(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%u(i)%Perturb)
+            dXdu(:,iCol) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%u(i)%Perturb)
          end do
       end do
             
@@ -10451,9 +10450,7 @@ SUBROUTINE ED_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
    CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_JacobianPContState'
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
-   logical                                           :: IsFullLin
-   integer(IntKi)                                    :: FlagFilterLoc
-   INTEGER(IntKi)                                    :: i, j, col
+   INTEGER(IntKi)                                    :: i, j, iCol
    
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -10478,6 +10475,9 @@ SUBROUTINE ED_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
          ! Loop through number of linearization perturbations in variable
          do j = 1, Vars%x(i)%Num
 
+            ! Calculate column index
+            iCol = Vars%x(i)%iLoc(1) + j - 1
+
             ! Calculate positive perturbation
             call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
             call ED_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
@@ -10490,11 +10490,8 @@ SUBROUTINE ED_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
             call ED_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
             call ED_PackOutputAry(Vars, m%y_lin, m%Jac%y_neg)
 
-            ! Calculate column index
-            col = Vars%x(i)%iLoc(1) + j - 1
-
             ! Get partial derivative via central difference and store in full linearization array
-            call MV_ComputeCentralDiff(Vars%y, Vars%x(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdx(:,col))
+            call MV_ComputeCentralDiff(Vars%y, Vars%x(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdx(:,iCol))
          end do
       end do
             
@@ -10514,6 +10511,9 @@ SUBROUTINE ED_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
          ! Loop through number of linearization perturbations in variable
          do j = 1, Vars%x(i)%Num
 
+            ! Calculate column index
+            iCol = Vars%x(i)%iLoc(1) + j - 1
+
             ! Calculate positive perturbation
             call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
             call ED_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
@@ -10526,14 +10526,10 @@ SUBROUTINE ED_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
             call ED_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
             call ED_PackContStateAry(Vars, m%dxdt_lin, m%Jac%x_neg)
 
-            ! Calculate column index
-            col = Vars%x(i)%iLoc(1) + j - 1
-
             ! Get partial derivative via central difference and store in full linearization array
-            dXdx(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%x(i)%Perturb)
+            dXdx(:,iCol) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%x(i)%Perturb)
          end do
       end do
-
    end if
 
    if (present(dXddx)) then
@@ -10589,45 +10585,25 @@ SUBROUTINE ED_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
                                                                                !!   functions (Z) with respect to the
                                                                                !!   discrete states (xd) [intent in to avoid deallocation]
 
-
-      ! Initialize ErrStat
-
+   ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
 
+   ! Calculate the partial derivative of the output functions (Y) with respect to the discrete states (xd) here:
+   if (present(dYdxd)) then
+   end if
 
-   IF ( PRESENT( dYdxd ) ) THEN
+   ! Calculate the partial derivative of the continuous state functions (X) with respect to the discrete states (xd) here:
+   if (present(dXdxd)) then
+   end if
 
-      ! Calculate the partial derivative of the output functions (Y) with respect to the discrete states (xd) here:
-
-      ! allocate and set dYdxd
-
-   END IF
-
-   IF ( PRESENT( dXdxd ) ) THEN
-
-      ! Calculate the partial derivative of the continuous state functions (X) with respect to the discrete states (xd) here:
-
-      ! allocate and set dXdxd
-
-   END IF
-
-   IF ( PRESENT( dXddxd ) ) THEN
-
-      ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the discrete states (xd) here:
-
-      ! allocate and set dXddxd
-
-   END IF
-
-   IF ( PRESENT( dZdxd ) ) THEN
-
-      ! Calculate the partial derivative of the constraint state functions (Z) with respect to the discrete states (xd) here:
-
-      ! allocate and set dZdxd
-
-   END IF
-
+   ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the discrete states (xd) here:
+   if (present(dXddxd)) then
+   end if
+   
+   ! Calculate the partial derivative of the constraint state functions (Z) with respect to the discrete states (xd) here:
+   if (present(dZdxd)) then
+   end if
 
 END SUBROUTINE ED_JacobianPDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -10659,154 +10635,28 @@ SUBROUTINE ED_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdz(:,:)  !< Partial derivatives of constraint state functions (Z) with respect 
                                                                                !! to the constraint states (z) [intent in to avoid deallocation]
 
-
-      ! Initialize ErrStat
-
+   ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   IF ( PRESENT( dYdz ) ) THEN
+   ! Calculate the partial derivative of the output functions (Y) with respect to the constraint states (z) here:
+   if (present(dYdz)) then
+   end if
 
-         ! Calculate the partial derivative of the output functions (Y) with respect to the constraint states (z) here:
+   ! Calculate the partial derivative of the continuous state functions (X) with respect to the constraint states (z) here:
+   if (present(dXdz)) then
+   end if
 
-      ! allocate and set dYdz
+   ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the constraint states (z) here:
+   if (present(dXddz)) then
+   end if
 
-   END IF
-
-   IF ( PRESENT( dXdz ) ) THEN
-
-         ! Calculate the partial derivative of the continuous state functions (X) with respect to the constraint states (z) here:
-
-      ! allocate and set dXdz
-
-   END IF
-
-   IF ( PRESENT( dXddz ) ) THEN
-
-         ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the constraint states (z) here:
-
-      ! allocate and set dXddz
-
-   END IF
-
-   IF ( PRESENT( dZdz ) ) THEN
-
-         ! Calculate the partial derivative of the constraint state functions (Z) with respect to the constraint states (z) here:
-
-      ! allocate and set dZdz
-
-   END IF
-
+   ! Calculate the partial derivative of the constraint state functions (Z) with respect to the constraint states (z) here:
+   if (present(dZdz)) then
+   end if
 
 END SUBROUTINE ED_JacobianPConstrState
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE ED_GetOP(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedTrimOP )
-
-   type(ModVarsType),                    INTENT(IN   )           :: Vars    !< Module information
-   REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
-   TYPE(ED_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(ED_ParameterType),               INTENT(IN   )           :: p          !< Parameters
-   TYPE(ED_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
-   TYPE(ED_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
-   TYPE(ED_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
-   TYPE(ED_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
-   TYPE(ED_OutputType),                  INTENT(IN   )           :: y          !< Output at operating point
-   TYPE(ED_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
-   INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
-   CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: u_op(:)    !< values of linearized inputs
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: y_op(:)    !< values of linearized outputs
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: x_op(:)    !< values of linearized continuous states
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
-   LOGICAL,                 OPTIONAL,    INTENT(IN   )           :: NeedTrimOP !< whether a y_op values should contain values for trim solution (3-value representation instead of full orientation matrices, no rotation acc)
-
-   CHARACTER(*), PARAMETER          :: RoutineName = 'ED_GetOP'
-   INTEGER(IntKi)                   :: ErrStat2
-   CHARACTER(ErrMsgLen)             :: ErrMsg2
-   INTEGER(IntKi)                   :: i, k
-   
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-     
-   !..................................
-   if (present(u_op)) then
-
-      if (.not. allocated(u_op)) then   
-         call AllocAry(u_op, Vars%Nu, 'u_op', ErrStat2, ErrMsg2); if (Failed()) return      
-         u_op = 0.0_R8Ki
-      end if
-
-      ! Pack input type into array
-      call ED_PackInputAry(Vars, u, u_op)
-           
-      ! If full linearization, check extended inputs
-      if (MV_FindVarDatLoc(Vars%u, DatLoc(ED_u_BlPitchComC)) > 0) then
-         do k = 2,p%NumBl
-            if (.not. EqualRealNos(u%BlPitchCom(1), u%BlPitchCom(k)) ) then
-               call SetErrStat(ErrID_Info, "Operating point of collective pitch extended input is invalid because "// &
-                        "the commanded blade pitch angles are not the same for each blade.", ErrStat, ErrMsg, RoutineName)
-               exit
-            end if
-         end do
-      end if
-   end if
-
-   !..................................
-   if (present(y_op)) then
-      
-      if (.not. allocated(y_op)) then 
-         call AllocAry(y_op, Vars%Ny, 'y_op', ErrStat2, ErrMsg2); if (Failed()) return
-         y_op = 0.0_R8Ki
-      end if
-
-      call ED_PackOutputAry(Vars, y, y_op)
-
-   end if
-
-   !..................................
-   if (present(x_op)) then
-
-      if (.not. allocated(x_op)) then                           
-         call AllocAry(x_op, Vars%Nx, 'x_op', ErrStat2, ErrMsg2); if (Failed()) return
-         x_op = 0.0_R8Ki
-      end if
-
-      call ED_PackContStateAry(Vars, x, x_op)     
-
-   end if
-
-   !..................................
-   if (present(dx_op)) then
-
-      if (.not. allocated(dx_op)) then
-         call AllocAry(dx_op, Vars%Nx, 'dx_op', ErrStat2, ErrMsg2); if (Failed()) return
-         dx_op = 0.0_R8Ki
-      end if
-      
-      call ED_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-      call ED_PackContStateAry(Vars, m%dxdt_lin, dx_op)
-      
-   end if
-
-   !..................................
-   if (present(xd_op)) then
-   end if
-   
-   !..................................
-   if (present(z_op)) then
-   end if
-
-contains
-   logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      Failed = ErrStat >= AbortErrLev
-   end function
-END SUBROUTINE ED_GetOP
 
 subroutine ED_PackExtInputAry(Vars, u, ValAry, ErrStat, ErrMsg)
    type(ModVarsType), intent(in)    :: Vars

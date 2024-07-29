@@ -1088,27 +1088,11 @@ function SS_Rad_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function SS_Rad_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   end select
-end function
-
 function SS_Rad_OutputMeshPointer(y, DL) result(Mesh)
    type(SS_Rad_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
    type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (DL%Num)
-   end select
-end function
-
-function SS_Rad_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
    select case (DL%Num)
    end select
 end function
@@ -1145,6 +1129,17 @@ subroutine SS_Rad_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function SS_Rad_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SS_Rad_x_x)
+       Name = "x%x"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine SS_Rad_PackContStateDerivAry(Vars, x, ValAry)
    type(SS_Rad_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -1157,21 +1152,6 @@ subroutine SS_Rad_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%x(V%iAry(1):V%iAry(2)), ValAry)                   ! Rank 1 Array
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine SS_Rad_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(SS_Rad_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (SS_Rad_x_x)
-            call MV_Unpack(V, ValAry, x%x(V%iAry(1):V%iAry(2)))                 ! Rank 1 Array
          end select
       end associate
    end do
@@ -1209,6 +1189,17 @@ subroutine SS_Rad_UnpackConstrStateAry(Vars, ValAry, z)
    end do
 end subroutine
 
+function SS_Rad_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SS_Rad_z_DummyConstrState)
+       Name = "z%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine SS_Rad_PackInputAry(Vars, u, ValAry)
    type(SS_Rad_InputType), intent(in)      :: u
    type(ModVarsType), intent(in)          :: Vars
@@ -1240,6 +1231,17 @@ subroutine SS_Rad_UnpackInputAry(Vars, ValAry, u)
       end associate
    end do
 end subroutine
+
+function SS_Rad_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SS_Rad_u_dq)
+       Name = "u%dq"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine SS_Rad_PackOutputAry(Vars, y, ValAry)
    type(SS_Rad_OutputType), intent(in)     :: y
@@ -1276,6 +1278,19 @@ subroutine SS_Rad_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function SS_Rad_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SS_Rad_y_y)
+       Name = "y%y"
+   case (SS_Rad_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE SS_Radiation_Types
 

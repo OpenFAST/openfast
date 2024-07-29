@@ -2323,16 +2323,6 @@ function StC_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function StC_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (StC_u_Mesh)
-       Name = "u%Mesh("//trim(Num2LStr(DL%i1))//")"
-   end select
-end function
-
 function StC_OutputMeshPointer(y, DL) result(Mesh)
    type(StC_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
@@ -2341,16 +2331,6 @@ function StC_OutputMeshPointer(y, DL) result(Mesh)
    select case (DL%Num)
    case (StC_y_Mesh)
        Mesh => y%Mesh(DL%i1)
-   end select
-end function
-
-function StC_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (StC_y_Mesh)
-       Name = "y%Mesh("//trim(Num2LStr(DL%i1))//")"
    end select
 end function
 
@@ -2386,6 +2366,17 @@ subroutine StC_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function StC_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (StC_x_StC_x)
+       Name = "x%StC_x"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine StC_PackContStateDerivAry(Vars, x, ValAry)
    type(StC_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -2398,21 +2389,6 @@ subroutine StC_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%StC_x(V%iAry(1):V%iAry(2),V%jAry), ValAry)        ! Rank 2 Array
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine StC_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(StC_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (StC_x_StC_x)
-            call MV_Unpack(V, ValAry, x%StC_x(V%iAry(1):V%iAry(2),V%jAry))      ! Rank 2 Array
          end select
       end associate
    end do
@@ -2449,6 +2425,17 @@ subroutine StC_UnpackConstrStateAry(Vars, ValAry, z)
       end associate
    end do
 end subroutine
+
+function StC_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (StC_z_DummyConstrState)
+       Name = "z%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine StC_PackInputAry(Vars, u, ValAry)
    type(StC_InputType), intent(in)         :: u
@@ -2498,6 +2485,25 @@ subroutine StC_UnpackInputAry(Vars, ValAry, u)
    end do
 end subroutine
 
+function StC_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (StC_u_Mesh)
+       Name = "u%Mesh("//trim(Num2LStr(DL%i1))//")"
+   case (StC_u_CmdStiff)
+       Name = "u%CmdStiff"
+   case (StC_u_CmdDamp)
+       Name = "u%CmdDamp"
+   case (StC_u_CmdBrake)
+       Name = "u%CmdBrake"
+   case (StC_u_CmdForce)
+       Name = "u%CmdForce"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine StC_PackOutputAry(Vars, y, ValAry)
    type(StC_OutputType), intent(in)        :: y
    type(ModVarsType), intent(in)          :: Vars
@@ -2537,6 +2543,21 @@ subroutine StC_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function StC_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (StC_y_Mesh)
+       Name = "y%Mesh("//trim(Num2LStr(DL%i1))//")"
+   case (StC_y_MeasDisp)
+       Name = "y%MeasDisp"
+   case (StC_y_MeasVel)
+       Name = "y%MeasVel"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE StrucCtrl_Types
 

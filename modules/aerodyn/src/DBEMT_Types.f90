@@ -1434,27 +1434,11 @@ function DBEMT_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function DBEMT_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   end select
-end function
-
 function DBEMT_OutputMeshPointer(y, DL) result(Mesh)
    type(DBEMT_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
    type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (DL%Num)
-   end select
-end function
-
-function DBEMT_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
    select case (DL%Num)
    end select
 end function
@@ -1495,6 +1479,19 @@ subroutine DBEMT_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function DBEMT_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (DBEMT_x_element_vind)
+       Name = "x%element("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")%vind"
+   case (DBEMT_x_element_vind_1)
+       Name = "x%element("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")%vind_1"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine DBEMT_PackContStateDerivAry(Vars, x, ValAry)
    type(DBEMT_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -1509,23 +1506,6 @@ subroutine DBEMT_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%element(DL%i1, DL%i2)%vind_1(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine DBEMT_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(DBEMT_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (DBEMT_x_element_vind)
-            call MV_Unpack(V, ValAry, x%element(DL%i1, DL%i2)%vind(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (DBEMT_x_element_vind_1)
-            call MV_Unpack(V, ValAry, x%element(DL%i1, DL%i2)%vind_1(V%iAry(1):V%iAry(2))) ! Rank 1 Array
          end select
       end associate
    end do
@@ -1562,6 +1542,17 @@ subroutine DBEMT_UnpackConstrStateAry(Vars, ValAry, z)
       end associate
    end do
 end subroutine
+
+function DBEMT_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (DBEMT_z_DummyState)
+       Name = "z%DummyState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine DBEMT_PackInputAry(Vars, u, ValAry)
    type(DBEMT_InputType), intent(in)       :: u
@@ -1611,6 +1602,25 @@ subroutine DBEMT_UnpackInputAry(Vars, ValAry, u)
    end do
 end subroutine
 
+function DBEMT_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (DBEMT_u_AxInd_disk)
+       Name = "u%AxInd_disk"
+   case (DBEMT_u_Un_disk)
+       Name = "u%Un_disk"
+   case (DBEMT_u_R_disk)
+       Name = "u%R_disk"
+   case (DBEMT_u_element_vind_s)
+       Name = "u%element("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")%vind_s"
+   case (DBEMT_u_element_spanRatio)
+       Name = "u%element("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")%spanRatio"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine DBEMT_PackOutputAry(Vars, y, ValAry)
    type(DBEMT_OutputType), intent(in)      :: y
    type(ModVarsType), intent(in)          :: Vars
@@ -1642,6 +1652,17 @@ subroutine DBEMT_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function DBEMT_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (DBEMT_y_vind)
+       Name = "y%vind"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE DBEMT_Types
 

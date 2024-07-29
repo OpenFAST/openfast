@@ -6735,26 +6735,6 @@ function AD_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function AD_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (AD_u_NacelleMotion)
-       Name = "u%NacelleMotion"
-   case (AD_u_TowerMotion)
-       Name = "u%TowerMotion"
-   case (AD_u_HubMotion)
-       Name = "u%HubMotion"
-   case (AD_u_BladeRootMotion)
-       Name = "u%BladeRootMotion("//trim(Num2LStr(DL%i1))//")"
-   case (AD_u_BladeMotion)
-       Name = "u%BladeMotion("//trim(Num2LStr(DL%i1))//")"
-   case (AD_u_TFinMotion)
-       Name = "u%TFinMotion"
-   end select
-end function
-
 function AD_OutputMeshPointer(y, DL) result(Mesh)
    type(RotOutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
@@ -6771,24 +6751,6 @@ function AD_OutputMeshPointer(y, DL) result(Mesh)
        Mesh => y%BladeLoad(DL%i1)
    case (AD_y_TFinLoad)
        Mesh => y%TFinLoad
-   end select
-end function
-
-function AD_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (AD_y_NacelleLoad)
-       Name = "y%NacelleLoad"
-   case (AD_y_HubLoad)
-       Name = "y%HubLoad"
-   case (AD_y_TowerLoad)
-       Name = "y%TowerLoad"
-   case (AD_y_BladeLoad)
-       Name = "y%BladeLoad("//trim(Num2LStr(DL%i1))//")"
-   case (AD_y_TFinLoad)
-       Name = "y%TFinLoad"
    end select
 end function
 
@@ -6840,6 +6802,25 @@ subroutine AD_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function AD_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (AD_x_BEMT_UA_element_x)
+       Name = "x%BEMT%UA%element("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")%x"
+   case (AD_x_BEMT_DBEMT_element_vind)
+       Name = "x%BEMT%DBEMT%element("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")%vind"
+   case (AD_x_BEMT_DBEMT_element_vind_1)
+       Name = "x%BEMT%DBEMT%element("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")%vind_1"
+   case (AD_x_BEMT_V_w)
+       Name = "x%BEMT%V_w"
+   case (AD_x_AA_DummyContState)
+       Name = "x%AA%DummyContState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine AD_PackContStateDerivAry(Vars, x, ValAry)
    type(RotContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -6860,29 +6841,6 @@ subroutine AD_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%AA%DummyContState, ValAry)                        ! Scalar
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine AD_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(RotContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (AD_x_BEMT_UA_element_x)
-            call MV_Unpack(V, ValAry, x%BEMT%UA%element(DL%i1, DL%i2)%x(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (AD_x_BEMT_DBEMT_element_vind)
-            call MV_Unpack(V, ValAry, x%BEMT%DBEMT%element(DL%i1, DL%i2)%vind(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (AD_x_BEMT_DBEMT_element_vind_1)
-            call MV_Unpack(V, ValAry, x%BEMT%DBEMT%element(DL%i1, DL%i2)%vind_1(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (AD_x_BEMT_V_w)
-            call MV_Unpack(V, ValAry, x%BEMT%V_w(V%iAry(1):V%iAry(2)))          ! Rank 1 Array
-         case (AD_x_AA_DummyContState)
-            call MV_Unpack(V, ValAry, x%AA%DummyContState)                      ! Scalar
          end select
       end associate
    end do
@@ -6923,6 +6881,19 @@ subroutine AD_UnpackConstrStateAry(Vars, ValAry, z)
       end associate
    end do
 end subroutine
+
+function AD_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (AD_z_BEMT_phi)
+       Name = "z%BEMT%phi"
+   case (AD_z_AA_DummyConstrState)
+       Name = "z%AA%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine AD_PackInputAry(Vars, u, ValAry)
    type(RotInputType), intent(in)          :: u
@@ -6980,6 +6951,29 @@ subroutine AD_UnpackInputAry(Vars, ValAry, u)
    end do
 end subroutine
 
+function AD_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (AD_u_NacelleMotion)
+       Name = "u%NacelleMotion"
+   case (AD_u_TowerMotion)
+       Name = "u%TowerMotion"
+   case (AD_u_HubMotion)
+       Name = "u%HubMotion"
+   case (AD_u_BladeRootMotion)
+       Name = "u%BladeRootMotion("//trim(Num2LStr(DL%i1))//")"
+   case (AD_u_BladeMotion)
+       Name = "u%BladeMotion("//trim(Num2LStr(DL%i1))//")"
+   case (AD_u_TFinMotion)
+       Name = "u%TFinMotion"
+   case (AD_u_UserProp)
+       Name = "u%UserProp"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine AD_PackOutputAry(Vars, y, ValAry)
    type(RotOutputType), intent(in)         :: y
    type(ModVarsType), intent(in)          :: Vars
@@ -7031,6 +7025,27 @@ subroutine AD_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function AD_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (AD_y_NacelleLoad)
+       Name = "y%NacelleLoad"
+   case (AD_y_HubLoad)
+       Name = "y%HubLoad"
+   case (AD_y_TowerLoad)
+       Name = "y%TowerLoad"
+   case (AD_y_BladeLoad)
+       Name = "y%BladeLoad("//trim(Num2LStr(DL%i1))//")"
+   case (AD_y_TFinLoad)
+       Name = "y%TFinLoad"
+   case (AD_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE AeroDyn_Types
 

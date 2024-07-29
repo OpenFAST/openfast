@@ -2618,27 +2618,11 @@ function AWAE_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function AWAE_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   end select
-end function
-
 function AWAE_OutputMeshPointer(y, DL) result(Mesh)
    type(AWAE_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
    type(MeshType), pointer                :: Mesh
    nullify(Mesh)
-   select case (DL%Num)
-   end select
-end function
-
-function AWAE_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
    select case (DL%Num)
    end select
 end function
@@ -2675,6 +2659,17 @@ subroutine AWAE_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function AWAE_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (AWAE_x_IfW_DummyContState)
+       Name = "x%IfW("//trim(Num2LStr(DL%i1))//")%DummyContState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine AWAE_PackContStateDerivAry(Vars, x, ValAry)
    type(AWAE_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -2687,21 +2682,6 @@ subroutine AWAE_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%IfW(DL%i1)%DummyContState, ValAry)                ! Scalar
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine AWAE_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(AWAE_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (AWAE_x_IfW_DummyContState)
-            call MV_Unpack(V, ValAry, x%IfW(DL%i1)%DummyContState)              ! Scalar
          end select
       end associate
    end do
@@ -2738,6 +2718,17 @@ subroutine AWAE_UnpackConstrStateAry(Vars, ValAry, z)
       end associate
    end do
 end subroutine
+
+function AWAE_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (AWAE_z_IfW_DummyConstrState)
+       Name = "z%IfW("//trim(Num2LStr(DL%i1))//")%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine AWAE_PackInputAry(Vars, u, ValAry)
    type(AWAE_InputType), intent(in)        :: u
@@ -2795,6 +2786,29 @@ subroutine AWAE_UnpackInputAry(Vars, ValAry, u)
    end do
 end subroutine
 
+function AWAE_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (AWAE_u_xhat_plane)
+       Name = "u%xhat_plane"
+   case (AWAE_u_p_plane)
+       Name = "u%p_plane"
+   case (AWAE_u_Vx_wake)
+       Name = "u%Vx_wake"
+   case (AWAE_u_Vy_wake)
+       Name = "u%Vy_wake"
+   case (AWAE_u_Vz_wake)
+       Name = "u%Vz_wake"
+   case (AWAE_u_D_wake)
+       Name = "u%D_wake"
+   case (AWAE_u_WAT_k)
+       Name = "u%WAT_k"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine AWAE_PackOutputAry(Vars, y, ValAry)
    type(AWAE_OutputType), intent(in)       :: y
    type(ModVarsType), intent(in)          :: Vars
@@ -2838,6 +2852,23 @@ subroutine AWAE_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function AWAE_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (AWAE_y_Vdist_High_data)
+       Name = "y%Vdist_High("//trim(Num2LStr(DL%i1))//")%data"
+   case (AWAE_y_V_plane)
+       Name = "y%V_plane"
+   case (AWAE_y_TI_amb)
+       Name = "y%TI_amb"
+   case (AWAE_y_Vx_wind_disk)
+       Name = "y%Vx_wind_disk"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE AWAE_Types
 

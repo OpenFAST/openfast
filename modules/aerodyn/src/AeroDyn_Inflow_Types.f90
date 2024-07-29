@@ -1813,26 +1813,6 @@ function ADI_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function ADI_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (ADI_u_AD_rotors_NacelleMotion)
-       Name = "u%AD%rotors("//trim(Num2LStr(DL%i1))//")%NacelleMotion"
-   case (ADI_u_AD_rotors_TowerMotion)
-       Name = "u%AD%rotors("//trim(Num2LStr(DL%i1))//")%TowerMotion"
-   case (ADI_u_AD_rotors_HubMotion)
-       Name = "u%AD%rotors("//trim(Num2LStr(DL%i1))//")%HubMotion"
-   case (ADI_u_AD_rotors_BladeRootMotion)
-       Name = "u%AD%rotors("//trim(Num2LStr(DL%i1))//")%BladeRootMotion("//trim(Num2LStr(DL%i2))//")"
-   case (ADI_u_AD_rotors_BladeMotion)
-       Name = "u%AD%rotors("//trim(Num2LStr(DL%i1))//")%BladeMotion("//trim(Num2LStr(DL%i2))//")"
-   case (ADI_u_AD_rotors_TFinMotion)
-       Name = "u%AD%rotors("//trim(Num2LStr(DL%i1))//")%TFinMotion"
-   end select
-end function
-
 function ADI_OutputMeshPointer(y, DL) result(Mesh)
    type(ADI_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
@@ -1849,24 +1829,6 @@ function ADI_OutputMeshPointer(y, DL) result(Mesh)
        Mesh => y%AD%rotors(DL%i1)%BladeLoad(DL%i2)
    case (ADI_y_AD_rotors_TFinLoad)
        Mesh => y%AD%rotors(DL%i1)%TFinLoad
-   end select
-end function
-
-function ADI_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (ADI_y_AD_rotors_NacelleLoad)
-       Name = "y%AD%rotors("//trim(Num2LStr(DL%i1))//")%NacelleLoad"
-   case (ADI_y_AD_rotors_HubLoad)
-       Name = "y%AD%rotors("//trim(Num2LStr(DL%i1))//")%HubLoad"
-   case (ADI_y_AD_rotors_TowerLoad)
-       Name = "y%AD%rotors("//trim(Num2LStr(DL%i1))//")%TowerLoad"
-   case (ADI_y_AD_rotors_BladeLoad)
-       Name = "y%AD%rotors("//trim(Num2LStr(DL%i1))//")%BladeLoad("//trim(Num2LStr(DL%i2))//")"
-   case (ADI_y_AD_rotors_TFinLoad)
-       Name = "y%AD%rotors("//trim(Num2LStr(DL%i1))//")%TFinLoad"
    end select
 end function
 
@@ -1946,6 +1908,39 @@ subroutine ADI_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function ADI_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ADI_x_AD_rotors_BEMT_UA_element_x)
+       Name = "x%AD%rotors("//trim(Num2LStr(DL%i1))//")%BEMT%UA%element("//trim(Num2LStr(DL%i2))//", "//trim(Num2LStr(DL%i3))//")%x"
+   case (ADI_x_AD_rotors_BEMT_DBEMT_element_vind)
+       Name = "x%AD%rotors("//trim(Num2LStr(DL%i1))//")%BEMT%DBEMT%element("//trim(Num2LStr(DL%i2))//", "//trim(Num2LStr(DL%i3))//")%vind"
+   case (ADI_x_AD_rotors_BEMT_DBEMT_element_vind_1)
+       Name = "x%AD%rotors("//trim(Num2LStr(DL%i1))//")%BEMT%DBEMT%element("//trim(Num2LStr(DL%i2))//", "//trim(Num2LStr(DL%i3))//")%vind_1"
+   case (ADI_x_AD_rotors_BEMT_V_w)
+       Name = "x%AD%rotors("//trim(Num2LStr(DL%i1))//")%BEMT%V_w"
+   case (ADI_x_AD_rotors_AA_DummyContState)
+       Name = "x%AD%rotors("//trim(Num2LStr(DL%i1))//")%AA%DummyContState"
+   case (ADI_x_AD_FVW_W_Gamma_NW)
+       Name = "x%AD%FVW%W("//trim(Num2LStr(DL%i1))//")%Gamma_NW"
+   case (ADI_x_AD_FVW_W_Gamma_FW)
+       Name = "x%AD%FVW%W("//trim(Num2LStr(DL%i1))//")%Gamma_FW"
+   case (ADI_x_AD_FVW_W_Eps_NW)
+       Name = "x%AD%FVW%W("//trim(Num2LStr(DL%i1))//")%Eps_NW"
+   case (ADI_x_AD_FVW_W_Eps_FW)
+       Name = "x%AD%FVW%W("//trim(Num2LStr(DL%i1))//")%Eps_FW"
+   case (ADI_x_AD_FVW_W_r_NW)
+       Name = "x%AD%FVW%W("//trim(Num2LStr(DL%i1))//")%r_NW"
+   case (ADI_x_AD_FVW_W_r_FW)
+       Name = "x%AD%FVW%W("//trim(Num2LStr(DL%i1))//")%r_FW"
+   case (ADI_x_AD_FVW_UA_element_x)
+       Name = "x%AD%FVW%UA("//trim(Num2LStr(DL%i1))//")%element("//trim(Num2LStr(DL%i2))//", "//trim(Num2LStr(DL%i3))//")%x"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine ADI_PackContStateDerivAry(Vars, x, ValAry)
    type(ADI_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -1980,43 +1975,6 @@ subroutine ADI_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%AD%FVW%UA(DL%i1)%element(DL%i2, DL%i3)%x(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine ADI_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(ADI_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (ADI_x_AD_rotors_BEMT_UA_element_x)
-            call MV_Unpack(V, ValAry, x%AD%rotors(DL%i1)%BEMT%UA%element(DL%i2, DL%i3)%x(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (ADI_x_AD_rotors_BEMT_DBEMT_element_vind)
-            call MV_Unpack(V, ValAry, x%AD%rotors(DL%i1)%BEMT%DBEMT%element(DL%i2, DL%i3)%vind(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (ADI_x_AD_rotors_BEMT_DBEMT_element_vind_1)
-            call MV_Unpack(V, ValAry, x%AD%rotors(DL%i1)%BEMT%DBEMT%element(DL%i2, DL%i3)%vind_1(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (ADI_x_AD_rotors_BEMT_V_w)
-            call MV_Unpack(V, ValAry, x%AD%rotors(DL%i1)%BEMT%V_w(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (ADI_x_AD_rotors_AA_DummyContState)
-            call MV_Unpack(V, ValAry, x%AD%rotors(DL%i1)%AA%DummyContState)     ! Scalar
-         case (ADI_x_AD_FVW_W_Gamma_NW)
-            call MV_Unpack(V, ValAry, x%AD%FVW%W(DL%i1)%Gamma_NW(V%iAry(1):V%iAry(2),V%jAry)) ! Rank 2 Array
-         case (ADI_x_AD_FVW_W_Gamma_FW)
-            call MV_Unpack(V, ValAry, x%AD%FVW%W(DL%i1)%Gamma_FW(V%iAry(1):V%iAry(2),V%jAry)) ! Rank 2 Array
-         case (ADI_x_AD_FVW_W_Eps_NW)
-            call MV_Unpack(V, ValAry, x%AD%FVW%W(DL%i1)%Eps_NW(V%iAry(1):V%iAry(2), V%jAry, V%kAry)) ! Rank 3 Array
-         case (ADI_x_AD_FVW_W_Eps_FW)
-            call MV_Unpack(V, ValAry, x%AD%FVW%W(DL%i1)%Eps_FW(V%iAry(1):V%iAry(2), V%jAry, V%kAry)) ! Rank 3 Array
-         case (ADI_x_AD_FVW_W_r_NW)
-            call MV_Unpack(V, ValAry, x%AD%FVW%W(DL%i1)%r_NW(V%iAry(1):V%iAry(2), V%jAry, V%kAry)) ! Rank 3 Array
-         case (ADI_x_AD_FVW_W_r_FW)
-            call MV_Unpack(V, ValAry, x%AD%FVW%W(DL%i1)%r_FW(V%iAry(1):V%iAry(2), V%jAry, V%kAry)) ! Rank 3 Array
-         case (ADI_x_AD_FVW_UA_element_x)
-            call MV_Unpack(V, ValAry, x%AD%FVW%UA(DL%i1)%element(DL%i2, DL%i3)%x(V%iAry(1):V%iAry(2))) ! Rank 1 Array
          end select
       end associate
    end do
@@ -2065,6 +2023,23 @@ subroutine ADI_UnpackConstrStateAry(Vars, ValAry, z)
       end associate
    end do
 end subroutine
+
+function ADI_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ADI_z_AD_rotors_BEMT_phi)
+       Name = "z%AD%rotors("//trim(Num2LStr(DL%i1))//")%BEMT%phi"
+   case (ADI_z_AD_rotors_AA_DummyConstrState)
+       Name = "z%AD%rotors("//trim(Num2LStr(DL%i1))//")%AA%DummyConstrState"
+   case (ADI_z_AD_FVW_W_Gamma_LL)
+       Name = "z%AD%FVW%W("//trim(Num2LStr(DL%i1))//")%Gamma_LL"
+   case (ADI_z_AD_FVW_residual)
+       Name = "z%AD%FVW%residual"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine ADI_PackInputAry(Vars, u, ValAry)
    type(ADI_InputType), intent(in)         :: u
@@ -2121,6 +2096,29 @@ subroutine ADI_UnpackInputAry(Vars, ValAry, u)
       end associate
    end do
 end subroutine
+
+function ADI_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ADI_u_AD_rotors_NacelleMotion)
+       Name = "u%AD%rotors("//trim(Num2LStr(DL%i1))//")%NacelleMotion"
+   case (ADI_u_AD_rotors_TowerMotion)
+       Name = "u%AD%rotors("//trim(Num2LStr(DL%i1))//")%TowerMotion"
+   case (ADI_u_AD_rotors_HubMotion)
+       Name = "u%AD%rotors("//trim(Num2LStr(DL%i1))//")%HubMotion"
+   case (ADI_u_AD_rotors_BladeRootMotion)
+       Name = "u%AD%rotors("//trim(Num2LStr(DL%i1))//")%BladeRootMotion("//trim(Num2LStr(DL%i2))//")"
+   case (ADI_u_AD_rotors_BladeMotion)
+       Name = "u%AD%rotors("//trim(Num2LStr(DL%i1))//")%BladeMotion("//trim(Num2LStr(DL%i2))//")"
+   case (ADI_u_AD_rotors_TFinMotion)
+       Name = "u%AD%rotors("//trim(Num2LStr(DL%i1))//")%TFinMotion"
+   case (ADI_u_AD_rotors_UserProp)
+       Name = "u%AD%rotors("//trim(Num2LStr(DL%i1))//")%UserProp"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine ADI_PackOutputAry(Vars, y, ValAry)
    type(ADI_OutputType), intent(in)        :: y
@@ -2189,6 +2187,35 @@ subroutine ADI_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function ADI_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ADI_y_AD_rotors_NacelleLoad)
+       Name = "y%AD%rotors("//trim(Num2LStr(DL%i1))//")%NacelleLoad"
+   case (ADI_y_AD_rotors_HubLoad)
+       Name = "y%AD%rotors("//trim(Num2LStr(DL%i1))//")%HubLoad"
+   case (ADI_y_AD_rotors_TowerLoad)
+       Name = "y%AD%rotors("//trim(Num2LStr(DL%i1))//")%TowerLoad"
+   case (ADI_y_AD_rotors_BladeLoad)
+       Name = "y%AD%rotors("//trim(Num2LStr(DL%i1))//")%BladeLoad("//trim(Num2LStr(DL%i2))//")"
+   case (ADI_y_AD_rotors_TFinLoad)
+       Name = "y%AD%rotors("//trim(Num2LStr(DL%i1))//")%TFinLoad"
+   case (ADI_y_AD_rotors_WriteOutput)
+       Name = "y%AD%rotors("//trim(Num2LStr(DL%i1))//")%WriteOutput"
+   case (ADI_y_HHVel)
+       Name = "y%HHVel"
+   case (ADI_y_PLExp)
+       Name = "y%PLExp"
+   case (ADI_y_IW_WriteOutput)
+       Name = "y%IW_WriteOutput"
+   case (ADI_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE AeroDyn_Inflow_Types
 

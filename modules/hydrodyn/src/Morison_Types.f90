@@ -4676,16 +4676,6 @@ function Morison_InputMeshPointer(u, DL) result(Mesh)
    end select
 end function
 
-function Morison_InputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (Morison_u_Mesh)
-       Name = "u%Mesh"
-   end select
-end function
-
 function Morison_OutputMeshPointer(y, DL) result(Mesh)
    type(Morison_OutputType), target, intent(in) :: y
    type(DatLoc), intent(in)               :: DL
@@ -4696,18 +4686,6 @@ function Morison_OutputMeshPointer(y, DL) result(Mesh)
        Mesh => y%Mesh
    case (Morison_y_VisMesh)
        Mesh => y%VisMesh
-   end select
-end function
-
-function Morison_OutputMeshName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                      :: Name
-   Name = ""
-   select case (DL%Num)
-   case (Morison_y_Mesh)
-       Name = "y%Mesh"
-   case (Morison_y_VisMesh)
-       Name = "y%VisMesh"
    end select
 end function
 
@@ -4743,6 +4721,17 @@ subroutine Morison_UnpackContStateAry(Vars, ValAry, x)
    end do
 end subroutine
 
+function Morison_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Morison_x_DummyContState)
+       Name = "x%DummyContState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine Morison_PackContStateDerivAry(Vars, x, ValAry)
    type(Morison_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
@@ -4755,21 +4744,6 @@ subroutine Morison_PackContStateDerivAry(Vars, x, ValAry)
             call MV_Pack(V, x%DummyContState, ValAry)                           ! Scalar
          case default
             ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
-   end do
-end subroutine
-
-subroutine Morison_UnpackContStateDerivAry(Vars, ValAry, x)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(Morison_ContinuousStateType), intent(inout) :: x
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (Morison_x_DummyContState)
-            call MV_Unpack(V, ValAry, x%DummyContState)                         ! Scalar
          end select
       end associate
    end do
@@ -4807,6 +4781,17 @@ subroutine Morison_UnpackConstrStateAry(Vars, ValAry, z)
    end do
 end subroutine
 
+function Morison_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Morison_z_DummyConstrState)
+       Name = "z%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 subroutine Morison_PackInputAry(Vars, u, ValAry)
    type(Morison_InputType), intent(in)     :: u
    type(ModVarsType), intent(in)          :: Vars
@@ -4838,6 +4823,17 @@ subroutine Morison_UnpackInputAry(Vars, ValAry, u)
       end associate
    end do
 end subroutine
+
+function Morison_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Morison_u_Mesh)
+       Name = "u%Mesh"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 subroutine Morison_PackOutputAry(Vars, y, ValAry)
    type(Morison_OutputType), intent(in)    :: y
@@ -4878,6 +4874,21 @@ subroutine Morison_UnpackOutputAry(Vars, ValAry, y)
       end associate
    end do
 end subroutine
+
+function Morison_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Morison_y_Mesh)
+       Name = "y%Mesh"
+   case (Morison_y_VisMesh)
+       Name = "y%VisMesh"
+   case (Morison_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
 
 END MODULE Morison_Types
 
