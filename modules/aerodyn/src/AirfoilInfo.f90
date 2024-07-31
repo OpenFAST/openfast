@@ -1134,14 +1134,14 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
          end if ! not a circular polar
          
          if ( UA_f_cn ) then
-            iGuess = iLow2
+            iGuess = iLowLimit
             p%UA_BL%c_alphaLower = InterpStp(p%UA_BL%alphaLower, p%alpha, cn, iGuess, p%NumAlf)
-            iGuess = iHigh2
+            iGuess = iHighLimit
             p%UA_BL%c_alphaUpper = InterpStp(p%UA_BL%alphaUpper, p%alpha, cn, iGuess, p%NumAlf)
          else
-            iGuess = iLow2
+            iGuess = iLowLimit
             p%UA_BL%c_alphaLower = InterpStp(p%UA_BL%alphaLower, p%alpha, p%Coefs(:,ColCl), iGuess, p%NumAlf)
-            iGuess = iHigh2
+            iGuess = iHighLimit
             p%UA_BL%c_alphaUpper = InterpStp(p%UA_BL%alphaUpper, p%alpha, p%Coefs(:,ColCl), iGuess, p%NumAlf)
          end if
          

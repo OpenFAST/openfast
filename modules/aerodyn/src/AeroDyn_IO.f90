@@ -1203,7 +1203,15 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       if (FailedNodal()) return
       ! BldNd_BlOutNd - Allow selecting a portion of the nodes to output. (-)
    call ParseVar( FileInfo_In, CurLine, "BldNd_BlOutNd", InputFileData%BldNd_BlOutNd_Str, ErrStat2, ErrMsg2, UnEc )
-      if (FailedNodal()) return
+   if (ErrStat2 /= ErrID_None) then
+      ! ParseVar won't read a string of numbers in quotes since the quotes are a delimiter, so we'll just copy the whole line here and move on 
+      InputFileData%BldNd_BlOutNd_Str = FileInfo_In%Lines(CurLine)
+      if ( InputFileData%Echo )   WRITE(UnEc, '(A)') InputFileData%BldNd_BlOutNd_Str    ! Write BldNd_BlOutNd_Str to echo
+
+      CurLine = CurLine + 1
+      ErrStat2 = ErrID_None
+   end if
+      
       ! OutList - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
@@ -1962,9 +1970,29 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, NumBlades, BladeInputFileD
    else
       Msg = 'No, use best-fit exponential equations instead'
    end if   
-   WRITE (UnSu,Ec_LgFrmt) InputFileData%UA_Init%FLookup, 'FLookup', "Use a lookup for f'? "//TRIM(Msg)      
+   WRITE (UnSu,Ec_LgFrmt) InputFileData%UA_Init%FLookup, 'FLookup', "Use a lookup for f'? "//TRIM(Msg)
 
-      
+
+   ! IntegrationMethod
+   select case (InputFileData%UA_Init%IntegrationMethod)
+      case (UA_Method_RK4)
+         Msg = 'fourth-order Runge-Kutta Method (RK4)'
+      case (UA_Method_AB4)
+         Msg = 'fourth-order Adams-Bashforth Method (AB4)'
+      case (UA_Method_ABM4)
+         Msg = "fourth-order Adams-Bashforth-Moulton Method (ABM4)"
+      case (UA_Method_BDF2)
+         Msg = '2nd-order backward differentiation formula (BDF2)'
+      case default
+         Msg = 'unknown'
+   end select
+   WRITE (UnSu,Ec_IntFrmt) InputFileData%UA_Init%IntegrationMethod, 'IntegrationMethod', 'Integration method for continuous UA models: '//TRIM(Msg)
+
+
+   ! UAStartRad, UAEndRad
+   WRITE (UnSu,"( 2X, F11.5,2X,A,T30,' - ',A )") InputFileData%UAStartRad, 'UAStartRad', 'Starting blade radius fraction for UA models (-)'  ! compare with Ec_ReFrmt format statement
+   WRITE (UnSu,"( 2X, F11.5,2X,A,T30,' - ',A )") InputFileData%UAEndRad,    'UAEndRad', 'Ending blade radius fraction for UA models (-)'
+
    
    WRITE (UnSu,'(A)') '======  Outputs  ===================================================================================='
    

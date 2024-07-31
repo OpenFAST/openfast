@@ -3033,7 +3033,7 @@ SUBROUTINE UA_RK4( i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat, 
 
 END SUBROUTINE UA_RK4
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine implements the fourth-order Adams-Bashforth Method (RK4) for numerically integrating ordinary differential 
+!> This subroutine implements the fourth-order Adams-Bashforth Method (AB4) for numerically integrating ordinary differential 
 !! equations:
 !!
 !!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
@@ -3124,7 +3124,7 @@ SUBROUTINE UA_AB4( i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat, 
       
 END SUBROUTINE UA_AB4
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine implements the fourth-order Adams-Bashforth-Moulton Method (RK4) for numerically integrating ordinary 
+!> This subroutine implements the fourth-order Adams-Bashforth-Moulton Method (ABM4) for numerically integrating ordinary 
 !! differential equations:
 !!
 !!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
@@ -3204,7 +3204,7 @@ SUBROUTINE UA_ABM4( i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat,
 END SUBROUTINE UA_ABM4
 !----------------------------------------------------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine implements a Newton solve of the 2nd-order BDF system for numerically integrating ordinary differential equations:
+!> This subroutine implements a Newton solve of the 2nd-order backward differentiation formula (BDF2) system for numerically integrating ordinary differential equations:
 SUBROUTINE UA_BDF2( i, j, t, n, u_interp, p, x, OtherState, AFInfo, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
@@ -3593,9 +3593,6 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
       
       call AFI_ComputeAirfoilCoefs( alphaE,   u%Re, u%UserProp, AFInfo, AFI_interpE, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         
-      call AFI_ComputeAirfoilCoefs( u%alpha,   u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
        ! Constraining x4 between 0 and 1 increases numerical stability (should be done elsewhere, but we'll double check here in case there were perturbations on the state value)
       x4 = max( min( x_in%x(4), 1.0_R8Ki ), 0.0_R8Ki )
@@ -3611,11 +3608,11 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
          cl_fa = (alphaE - BL_p%alpha0) * BL_p%c_lalpha ! Cl fully attached
          
          y%Cl = x4 * cl_fa  + (1.0_ReKi - x4) * cl_fs   ! TODO consider adding simple corrections + pi * Tu * u%omega
-         y%Cd = AFI_interp%Cd                           ! TODO consider adding simple corrections 
+         y%Cd = AFI_interpE%Cd                          ! TODO consider adding simple corrections 
          if (AFInfo%ColCm == 0) then ! we don't have a cm column, so make everything 0
             y%Cm = 0.0_ReKi
          else
-            y%Cm = AFI_interp%Cm                        ! TODO consider adding simple corrections + y%Cl * delta_c_mf_primeprime - piBy2 * Tu * u%omega  
+            y%Cm = AFI_interpE%Cm                        ! TODO consider adding simple corrections + y%Cl * delta_c_mf_primeprime - piBy2 * Tu * u%omega  
          endif
          y%Cn = y%Cl*CosAlpha + y%Cd*SinAlpha
          y%Cc = y%Cl*SinAlpha - y%Cd*CosAlpha
@@ -3649,17 +3646,17 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
          delta_c_df_primeprime = 0.5_ReKi * (sqrt(fs_aE) - sqrt(x4)) - 0.25_ReKi * (fs_aE - x4)                   ! Eq. 20 [40]
       
    ! bjj: do we need to check that u%alpha is between -pi and + pi?
-         cl_circ = x4 * cl_fa  + (1.0_ReKi - x4) * AFI_interp%FullySeparate                                       ! Eq. 19 [40]
+         cl_circ = x4 * cl_fa  + (1.0_ReKi - x4) * AFI_interpE%FullySeparate                                      ! Eq. 19 [40]
          y%Cl = cl_circ  + pi * TuOmega                                                                           ! Eq. 16 [40]
 
          cd_tors = cl_circ * TuOmega
          call AddOrSub2Pi(alpha_34, alphaE)
-         y%Cd = AFI_interp%Cd + (alpha_34 - alphaE) * cl_circ + (AFI_interp%Cd - BL_p%Cd0) * delta_c_df_primeprime  + cd_tors  ! Eq. 17 [40]
+         y%Cd = AFI_interpE%Cd + (alpha_34 - alphaE) * cl_circ + (AFI_interpE%Cd - BL_p%Cd0) * delta_c_df_primeprime  + cd_tors  ! Eq. 17 [40]
       
          if (AFInfo%ColCm == 0) then ! we don't have a cm column, so make everything 0
             y%Cm          = 0.0_ReKi
          else
-            y%Cm = AFI_interp%Cm + y%Cl * delta_c_mf_primeprime - piBy2 * TuOmega                                ! Eq. 18 [40]
+            y%Cm = AFI_interpE%Cm + y%Cl * delta_c_mf_primeprime - piBy2 * TuOmega                                ! Eq. 18 [40]
          end if
 
          y%Cn = y%Cl*CosAlpha + y%Cd*SinAlpha

@@ -1332,6 +1332,7 @@ SUBROUTINE AllBldNdOuts_SetParameters( InputFileData, p, p_AD, ErrStat, ErrMsg )
 
    REAL(ReKi),PARAMETER                         :: WrongNo=-9999.   ! Placeholder value for bad(old) values in BldNd_BlOutNd
    CHARACTER(4)                                 :: NodeStr
+   CHARACTER(1024)                              :: LineStr
    INTEGER                                      :: IOS
    INTEGER                                      :: I
    
@@ -1384,12 +1385,20 @@ SUBROUTINE AllBldNdOuts_SetParameters( InputFileData, p, p_AD, ErrStat, ErrMsg )
       CASE DEFAULT
          p%BldNd_BlOutNd=WrongNo ! initialize to determine how many we node numbers we have read in
          p%BldNd_NumNodesOut = p%NumBlNds
-         READ (InputFileData%BldNd_BlOutNd_Str, *,IOSTAT=IOS) p%BldNd_BlOutNd
+         
+         if (InputFileData%BldNd_BlOutNd_Str(1:1) == '"') then
+            READ (InputFileData%BldNd_BlOutNd_Str, *,IOSTAT=IOS) LineStr  ! remove quotes if they exist
+         else
+            LineStr = InputFileData%BldNd_BlOutNd_Str
+         end if
+
+         READ (LineStr, *,IOSTAT=IOS) p%BldNd_BlOutNd
             IF (IOS /= 0) THEN
                DO I = 1, p%NumBlNds
                   IF ( p%BldNd_BlOutNd(I) .EQ. WrongNo ) THEN
                      p%BldNd_NumNodesOut = I - 1
                      IF (p%BldNd_NumNodesOut < 1) THEN
+                        
                         CALL SetErrStat( ErrID_Fatal,"Error reading numeric nodes from BldNd_BlOutNd.", ErrStat, ErrMsg, RoutineName )
                         RETURN
                      ELSE
