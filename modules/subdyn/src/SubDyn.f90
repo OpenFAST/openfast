@@ -634,10 +634,10 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             if (p%GuyanLoadCorrection) then
                m%U_full_NS    (DOFList(1:3)) = matmul(Rb2g, m%U_full_NS    (DOFList(1:3))) + duP(1:3)       
                CALL SmllRotTrans('Nodal rotation',m%U_full_NS(DOFList(4)),m%U_full_NS(DOFList(5)),m%U_full_NS(DOFList(6)),DCM,'',ErrStat2,ErrMsg2); if(Failed()) return
-               m%U_full_NS    (DOFList(4:6)) = EulerExtractZYX( matmul(Rb2g,DCM) )
+               m%U_full_NS    (DOFList(4:6)) = EulerExtractZYX( matmul(DCM,Rg2b) )
                m%U_full       (DOFList(1:3)) = matmul(Rb2g, m%U_full       (DOFList(1:3))) + duP(1:3)       
                CALL SmllRotTrans('Nodal rotation',m%U_full(DOFList(4)),m%U_full(DOFList(5)),m%U_full(DOFList(6)),DCM,'',ErrStat2,ErrMsg2); if(Failed()) return
-               m%U_full       (DOFList(4:6)) = EulerExtractZYX( matmul(Rb2g,DCM) )
+               m%U_full       (DOFList(4:6)) = EulerExtractZYX( matmul(DCM,Rg2b) )
                m%U_full_dot   (DOFList(1:3)) = matmul(Rb2g, m%U_full_dot   (DOFList(1:3))) + vP(1:3)
                m%U_full_dot   (DOFList(4:6)) = matmul(Rb2g, m%U_full_dot   (DOFList(4:6))) + Om(1:3)
                m%U_full_dotdot(DOFList(1:3)) = matmul(Rb2g, m%U_full_dotdot(DOFList(1:3))) + aP(1:3)
@@ -3226,7 +3226,7 @@ SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic)
          if (p%GuyanLoadCorrection) then
             DU_full(DOFList(1:3)) = matmul(Rb2g, DU_full(DOFList(1:3))) + duP(1:3)
             CALL SmllRotTrans('Nodal rotation',DU_full(DOFList(4)),DU_full(DOFList(5)),DU_full(DOFList(6)),DCM,'',ErrStat2,ErrMsg2);
-            DU_full(DOFList(4:6)) = EulerExtractZYX( matmul(Rb2g, DCM) )
+            DU_full(DOFList(4:6)) = EulerExtractZYX( matmul(DCM,transpose(Rb2g)) )
          else
             DU_full(DOFList(1:3)) = DU_full(DOFList(1:3)) + duP(1:3)       
             DU_full(DOFList(4:6)) = DU_full(DOFList(4:6)) + rotations(1:3)
@@ -3289,7 +3289,7 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
    if (RotateLoads) then ! Forces in body coordinates 
       Rg2b(1:3,1:3) = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
       do iNode = 1,p%nNodes
-         m%Fext( p%NodesDOF(iNode)%List(1:3) ) =  matmul(Rg2b, u%LMesh%Force(:,iNode) + p%FG(p%NodesDOF(iNode)%List(1:3)))
+         m%Fext( p%NodesDOF(iNode)%List(1:3) ) =  matmul(Rg2b, u%LMesh%Force(:,iNode) + p%FG(p%NodesDOF(iNode)%List(1:3)) - p%FC(p%NodesDOF(iNode)%List(1:3)) ) + p%FC(p%NodesDOF(iNode)%List(1:3))
       enddo
    else ! Forces in global
       do iNode = 1,p%nNodes
