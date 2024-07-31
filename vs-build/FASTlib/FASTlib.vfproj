@@ -998,7 +998,8 @@
 		<File RelativePath="..\..\modules\hydrodyn\src\SS_Radiation.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT2.f90"/>
-		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT_Interp.f90"/></Filter>
+		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT_Interp.f90"/>
+		<File RelativePath="..\..\modules\hydrodyn\src\YawOffset.f90"/></Filter>
 		<Filter Name="Ice">
 		<Filter Name="IceDyn">
 		<Filter Name="RegistryFiles">

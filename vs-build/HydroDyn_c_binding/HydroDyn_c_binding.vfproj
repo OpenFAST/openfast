@@ -223,7 +223,8 @@
 		<File RelativePath="..\..\modules\HydroDyn\src\SS_Radiation.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT2.f90"/>
-		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT_Interp.f90"/></Filter>
+		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT_Interp.f90"/>
+		<File RelativePath="..\..\modules\hydrodyn\src\YawOffset.f90"/></Filter>
 		<Filter Name="NWTC_Library">
 		<Filter Name="NetLib">
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\fftpack4.1.f">
