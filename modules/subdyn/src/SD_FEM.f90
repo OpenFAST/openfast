@@ -1243,7 +1243,7 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
       ! --- Assembly in global unconstrained system
       IDOF = p%ElemsDOF(1:12, i)
       p%FC     ( IDOF )  = p%FC( IDOF ) + FCe(1:12)             ! Note: Pretension cable forces only
-      p%FG     ( IDOF )  = p%FG( IDOF ) + FGe(1:12) + FCe(1:12) ! Note: gravity and pretension cable forces
+      p%FG     ( IDOF )  = p%FG( IDOF ) + FGe(1:12)             ! Note: Gravity forces only
       Init%K(IDOF, IDOF) = Init%K( IDOF, IDOF) + Ke(1:12,1:12)
       Init%M(IDOF, IDOF) = Init%M( IDOF, IDOF) + Me(1:12,1:12)
    ENDDO

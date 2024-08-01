@@ -3289,11 +3289,11 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
    if (RotateLoads) then ! Forces in body coordinates 
       Rg2b(1:3,1:3) = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
       do iNode = 1,p%nNodes
-         m%Fext( p%NodesDOF(iNode)%List(1:3) ) =  matmul(Rg2b, u%LMesh%Force(:,iNode) + p%FG(p%NodesDOF(iNode)%List(1:3)) - p%FC(p%NodesDOF(iNode)%List(1:3)) ) + p%FC(p%NodesDOF(iNode)%List(1:3))
+         m%Fext( p%NodesDOF(iNode)%List(1:3) ) =  matmul(Rg2b, u%LMesh%Force(:,iNode) + p%FG(p%NodesDOF(iNode)%List(1:3)) ) + p%FC(p%NodesDOF(iNode)%List(1:3))
       enddo
    else ! Forces in global
       do iNode = 1,p%nNodes
-         m%Fext( p%NodesDOF(iNode)%List(1:3) ) =               u%LMesh%Force(:,iNode) + p%FG(p%NodesDOF(iNode)%List(1:3))
+         m%Fext( p%NodesDOF(iNode)%List(1:3) ) =               u%LMesh%Force(:,iNode) + p%FG(p%NodesDOF(iNode)%List(1:3))   + p%FC(p%NodesDOF(iNode)%List(1:3))
       enddo
    endif
 
@@ -3348,12 +3348,12 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
    do iNode = 1,p%nNodes
       Force(1:3)  = m%Fext(p%NodesDOF(iNode)%List(1:3) ) ! Controllable cable + External Forces on LMesh
       Moment(1:3) = m%Fext(p%NodesDOF(iNode)%List(4:6) ) ! Controllable cable 
-      ! Moment ext + gravity
+      ! Moment ext + gravity (Cable pretension has no moment contribution)
       if (RotateLoads) then
          ! In body coordinates
-         Moment(1:3) = matmul(Rg2b, Moment(1:3)+ u%LMesh%Moment(1:3,iNode) ) + m%FG(p%NodesDOF(iNode)%List(4:6)) + p%FC(p%NodesDOF(iNode)%List(4:6)) ! Use updated m%FG instead with cable pretension p%FC
+         Moment(1:3) = matmul(Rg2b, Moment(1:3)+ u%LMesh%Moment(1:3,iNode) ) + m%FG(p%NodesDOF(iNode)%List(4:6)) ! Use updated m%FG instead of p%FG
       else
-         Moment(1:3) =              Moment(1:3)+ u%LMesh%Moment(1:3,iNode)   + p%FG(p%NodesDOF(iNode)%List(4:6)) ! p%FG contains both precomputed self-weight and cable pretension
+         Moment(1:3) =              Moment(1:3)+ u%LMesh%Moment(1:3,iNode)   + p%FG(p%NodesDOF(iNode)%List(4:6))
       endif
 
       ! Extra moment dm = Delta u x (fe + fg)
