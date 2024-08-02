@@ -7350,7 +7350,7 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
       !     Module/Mesh/Field: u%TowerMotion%TranslationVel  = 11;
       !     Module/Mesh/Field: u%TowerMotion%TranslationAcc  = 12;
       case( 9);   u%TowerMotion%TranslationDisp(fieldIndx,node) = u%TowerMotion%TranslationDisp( fieldIndx,node) + du * perturb_sign
-      case(10);   CALL PerturbOrientationMatrix( u%TowerMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
+      case(10);   CALL PerturbOrientationMatrix( u%TowerMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.false. )
       case(11);   u%TowerMotion%TranslationVel( fieldIndx,node) = u%TowerMotion%TranslationVel( fieldIndx,node) + du * perturb_sign
       case(12);   u%TowerMotion%TranslationAcc( fieldIndx,node) = u%TowerMotion%TranslationAcc(fieldIndx,node) + du * perturb_sign
 

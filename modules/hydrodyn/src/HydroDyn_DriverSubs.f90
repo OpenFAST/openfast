@@ -1064,7 +1064,7 @@ SUBROUTINE PRP_Perturb_u( n, perturb_sign, p, u, EDRPMotion, du, Motion_HDRP, ma
       CASE ( 1) !Module/Mesh/Field: u%PRPMesh%TranslationDisp = 1     
          pointMesh%TranslationDisp (fieldIndx,node) = pointMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
       CASE ( 2) !Module/Mesh/Field: u%PRPMesh%Orientation = 2
-         CALL PerturbOrientationMatrix( pointMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
+         CALL PerturbOrientationMatrix( pointMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.false. )
       CASE ( 3) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 3
          pointMesh%TranslationVel( fieldIndx,node) = pointMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
       CASE ( 4) !Module/Mesh/Field: u%PRPMesh%RotationVel = 4

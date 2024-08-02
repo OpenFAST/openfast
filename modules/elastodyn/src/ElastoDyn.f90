@@ -11570,8 +11570,8 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
    end if
    
    if (.not. p%CompAeroMaps) then
-      call PackMotionMesh_dY(y_p%PlatformPtMesh, y_m%PlatformPtMesh, dY, indx_first, UseSmlAngle=.true.)    ! all fields
-      call PackMotionMesh_dY(y_p%TowerLn2Mesh,   y_m%TowerLn2Mesh,   dY, indx_first, UseSmlAngle=.true.)    ! all fields
+      call PackMotionMesh_dY(y_p%PlatformPtMesh, y_m%PlatformPtMesh, dY, indx_first, UseSmlAngle=.false.)    ! all fields
+      call PackMotionMesh_dY(y_p%TowerLn2Mesh,   y_m%TowerLn2Mesh,   dY, indx_first, UseSmlAngle=.false.)    ! all fields
       
       Mask  = .false.
       Mask(MASKID_TRANSLATIONDISP) = .true.

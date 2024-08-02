@@ -4676,7 +4676,7 @@ SUBROUTINE MD_Perturb_u( p, n, perturb_sign, u, du )
    CASE ( 1)
       u%CoupledKinematics(1)%TranslationDisp( fieldIndx,node) = u%CoupledKinematics(1)%TranslationDisp( fieldIndx,node) + du * perturb_sign
    CASE ( 2)
-      CALL PerturbOrientationMatrix( u%CoupledKinematics(1)%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
+      CALL PerturbOrientationMatrix( u%CoupledKinematics(1)%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.false. )
    CASE ( 3)
       u%CoupledKinematics(1)%TranslationVel( fieldIndx,node) = u%CoupledKinematics(1)%TranslationVel( fieldIndx,node) + du * perturb_sign
    CASE ( 4)
