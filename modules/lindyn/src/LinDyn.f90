@@ -251,6 +251,7 @@ subroutine StateMatrices(MM, CC, KK, AA, BB, errStat, errMsg)
    integer(IntKi)                          :: errStat2    ! Status of error message
    character(1024)                         :: errMsg2     ! Error message if ErrStat /= ErrID_None
    integer                                 :: nx, nq, i
+   
    real(ReKi), dimension(:,:), allocatable :: MLU     ! LU factorization of M matrix
    real(ReKi), dimension(:,:), allocatable :: MinvX   ! Tmp array to store either: M^{-1} C, M^{-1} K , or M^{-1}
    real(ReKi), dimension(:) , allocatable  :: WORK    ! LAPACK variable
@@ -291,10 +292,12 @@ subroutine StateMatrices(MM, CC, KK, AA, BB, errStat, errMsg)
    ! Inverse of M
    MinvX = MLU
    LWORK=nx*nx ! Somehow LWORK = -1 does not work
-   allocate(WORK(LWORk))
+   call AllocAry(WORK, LWORk, 'WORK', errStat2, errMsg2); if(Failed()) return
    call LAPACK_getri(nx, MinvX, IPIV, WORK, LWORK, errStat2, errMsg2); if(Failed()) return
    BB(nx+1:nq, : ) = MinvX
 
+   call CleanUp()
+   
 contains
    logical function Failed()
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'StateMatrices' )
