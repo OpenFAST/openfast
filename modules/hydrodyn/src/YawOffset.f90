@@ -18,6 +18,16 @@ INTERFACE GetRotAngs
    MODULE PROCEDURE GetRotAngsD
 END INTERFACE GetRotAngs
 
+INTERFACE WrapToPi
+   MODULE PROCEDURE WrapToPiR
+   MODULE PROCEDURE WrapToPiD
+END INTERFACE WrapToPi
+
+INTERFACE WrapTo180
+   MODULE PROCEDURE WrapTo180R
+   MODULE PROCEDURE WrapTo180D
+END INTERFACE WrapTo180
+
 CONTAINS
 
 SUBROUTINE GetPtfmRefYOrient(PtfmRefY, Orient, ErrStat, ErrMsg)
@@ -224,20 +234,36 @@ SUBROUTINE hiFrameTransformMat(Mode,PtfmRefY,MatIn,MatOut,ErrStat,ErrMsg)
 
 END SUBROUTINE hiFrameTransformMat
 
-FUNCTION WrapTo180(angle)
+FUNCTION WrapTo180R(angle)
 
-   REAL(ReKi),    INTENT(IN) :: angle
-   REAL(ReKi)                :: WrapTo180
-   WrapTo180 = modulo(angle + 180.0, 360.0) - 180.0
+   REAL(SiKi),    INTENT(IN) :: angle
+   REAL(SiKi)                :: WrapTo180R
+   WrapTo180R = modulo(angle + 180.0, 360.0) - 180.0
 
-END FUNCTION WrapTo180
+END FUNCTION WrapTo180R
 
-FUNCTION WrapToPi(angle)
+FUNCTION WrapTo180D(angle)
 
-   REAL(ReKi),    INTENT(IN) :: angle
-   REAL(ReKi)                :: WrapToPi
-   WrapToPi = modulo(angle + PI, TwoPi) - PI
+   REAL(R8Ki),    INTENT(IN) :: angle
+   REAL(R8Ki)                :: WrapTo180D
+   WrapTo180D = modulo(angle + 180.0, 360.0) - 180.0
 
-END FUNCTION WrapToPi
+END FUNCTION WrapTo180D
+
+FUNCTION WrapToPiR(angle)
+
+   REAL(SiKi),    INTENT(IN) :: angle
+   REAL(SiKi)                :: WrapToPiR
+   WrapToPiR = modulo(angle + PI, TwoPi) - PI
+
+END FUNCTION WrapToPiR
+
+FUNCTION WrapToPiD(angle)
+
+   REAL(R8Ki),    INTENT(IN) :: angle
+   REAL(R8Ki)                :: WrapToPiD
+   WrapToPiD = modulo(angle + PI, TwoPi) - PI
+
+END FUNCTION WrapToPiD
 
 END MODULE YawOffset
