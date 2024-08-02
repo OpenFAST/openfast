@@ -293,7 +293,7 @@ subroutine StateMatrices(MM, CC, KK, AA, BB, errStat, errMsg)
    LWORK=nx*nx ! Somehow LWORK = -1 does not work
    allocate(WORK(LWORk))
    call LAPACK_getri(nx, MinvX, IPIV, WORK, LWORK, errStat2, errMsg2); if(Failed()) return
-   BB(nx+1:nq, : ) = -MinvX
+   BB(nx+1:nq, : ) = MinvX
 
 contains
    logical function Failed()
