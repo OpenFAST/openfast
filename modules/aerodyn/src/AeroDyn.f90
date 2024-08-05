@@ -1382,8 +1382,6 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
-   ! NOTE: p_AD%FlowField is set in the glue code (or ADI module); seems like FlowField should be an initialization input so that would be clearer for new developers...
-   
    p_AD%UA_Flag       = InputFileData%UA_Mod > UA_None
    p_AD%CompAeroMaps  = InitInp%CompAeroMaps
 

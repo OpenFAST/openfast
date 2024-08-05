@@ -903,13 +903,13 @@ subroutine Calc_WriteOutput( u, p, y, m, ErrStat, ErrMsg, CalcWriteOutput )
    m%AllOuts( ADSkew    ) = real(m%Chi * 180.0_ReKi / Pi, ReKi)
 
    ! Wind in local frame, inertial frame
-   Tmp3 = matmul(Rxyz(1:3,1:3), u%Vwind)
+   Tmp3 = matmul(Rxyz(1:3,1:3), m%DiskAvgVel)
    m%AllOuts( ADVWindx  ) = Tmp3(1)
    m%AllOuts( ADVWindy  ) = Tmp3(2)
    m%AllOuts( ADVWindz  ) = Tmp3(3)
-   m%AllOuts( ADVWindxi ) = u%VWind(1)
-   m%AllOuts( ADVWindyi ) = u%VWind(2)
-   m%AllOuts( ADVWindzi ) = u%VWind(3)
+   m%AllOuts( ADVWindxi ) = m%DiskAvgVel(1)
+   m%AllOuts( ADVWindyi ) = m%DiskAvgVel(2)
+   m%AllOuts( ADVWindzi ) = m%DiskAvgVel(3)
 
    ! Rotor velocity in local frame, inertial frame
    Tmp3 = matmul(Rxyz(1:3,1:3), u%HubMotion%TranslationVel(1:3,1))

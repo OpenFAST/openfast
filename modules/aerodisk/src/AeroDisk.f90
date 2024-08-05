@@ -27,6 +27,8 @@ MODULE AeroDisk
    USE AeroDisk_Types
    USE AeroDisk_IO
    USE NWTC_Library
+   use IfW_FlowField, only: IfW_FlowField_GetVelAcc   !, IfW_UniformWind_GetOP, IfW_UniformWind_Perturb, IfW_FlowField_CopyFlowFieldType
+
 
    implicit none
    private
@@ -103,6 +105,16 @@ SUBROUTINE ADsk_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! of the FileInfo_In data structure.
    !call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
 
+   ! Set pointer to FlowField data
+   if (associated(InitInp%FlowField)) then
+      p%FlowField => InitInp%FlowField
+      call SetDiskAvgPoints(ErrStat2,ErrMsg2);  if (Failed()) return
+   else
+      ErrStat2 = ErrID_Fatal
+      ErrMsg2  = "No flow field data available.  AeroDisk cannot continue."
+      if (Failed()) return
+   endif
+
    ! Parse all ADsk-related input and populate the InputFileData structure
    call ADsk_ParsePrimaryFileData( InitInp, p%RootName, Interval, FileInfo_In, InputFileData, UnEc, ErrStat2, ErrMsg2 )
    if (Failed()) return;
@@ -141,6 +153,29 @@ contains
    subroutine Cleanup()
       if (UnEc > 0_IntKi)  close (UnEc)
    end subroutine Cleanup
+
+   !> Setup points for disk average velocity calculations
+   subroutine SetDiskAvgPoints(ErrStat3,ErrMsg3)
+      integer(IntKi),   intent(  out)  :: ErrStat3
+      character(*),     intent(  out)  :: ErrMsg3
+      integer(IntKi) :: i
+      real(ReKi)     :: R,theta
+      ! positions relative to hub
+      call AllocAry(p%DiskWindPosRel,3,ADsk_NumPtsDiskAvg,'ADsk_NumPtsDiskAvg',ErrStat3,ErrMsg3);  if (errStat3 >= AbortErrLev) return
+      ! absolute point positions for call to GetWindVelAcc
+      call AllocAry(m%DiskWindPosAbs,3,ADsk_NumPtsDiskAvg,'ADsk_NumPtsDiskAvg',ErrStat3,ErrMsg3);  if (errStat3 >= AbortErrLev) return
+      ! wind velocity at all requested points
+      call AllocAry(m%DiskWindVel   ,3,ADsk_NumPtsDiskAvg,'DiskWindVel'       ,ErrStat3,ErrMsg3);  if (errStat3 >= AbortErrLev) return
+      ! Calculate relative points on disk (do this once up front to save computational time).
+      ! NOTE: this is in the XY plane, and will be multiplied by the hub orientation vector
+      R = real(p%RotorRad,ReKi) * 0.7_reKi !70% radius
+      do i=1,ADsk_NumPtsDiskAvg
+         theta = pi +(i-1)*TwoPi/ADsk_NumPtsDiskAvg
+         p%DiskWindPosRel(1,i) = R*cos(theta)
+         p%DiskWindPosRel(2,i) = R*sin(theta)
+         p%DiskWindPosRel(3,i) = 0.0_ReKi
+      end do
+   end subroutine SetDiskAvgPoints
 
    !> Initialize the inputs in u
    subroutine Init_U(ErrStat3,ErrMsg3)
@@ -299,10 +334,12 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    logical,             optional,   intent(in   )  :: NeedWriteOutput   !< Flag to determine if WriteOutput values need to be calculated in this call
 
    ! local variables
+   integer(IntKi), parameter                       :: StartNode = 1  ! index to start returning wind info from external flow field (this is hard coded in ExtInflow for hub)
+   real(ReKi), allocatable                         :: NoAcc(:,:)     ! Placeholder array not used when accelerations not required.
    real(SiKi)                                      :: x_hatDisk(3)   ! X direction unit vector of rotor disk (global)
    real(SiKi)                                      :: y_hatDisk(3)   ! Y direction unit vector of rotor disk (global)
    real(SiKi)                                      :: z_hatDisk(3)   ! Z direction unit vector of rotor disk (global)
-   real(SiKi)                                      :: VRel_vec(3)    ! VRel in global
+   real(SiKi)                                      :: VRel_vec(3)    ! relative velocity of wind in moving rotor disk frame
    real(SiKi)                                      :: tmp1,tmp3(3)   ! temporary variables for calculations
    integer(IntKi)                                  :: i              ! generic counter
    integer(IntKi)                                  :: ErrStat2       ! local error status
@@ -321,6 +358,10 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       CalcWriteOutput = .true. ! by default, calculate WriteOutput unless told that we do not need it
    end if
 
+
+   !--------------------------------
+   !> Disk average wind speed
+   call CalcDiskAvgVel(ErrStat2,ErrMsg2);  if (FAiled()) return
 
    !--------------------------------
    !> Disk vectors (in global frame)
@@ -342,11 +383,12 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    z_hatDisk(2) = real(-x_hatDisk(2)*x_hatDisk(3),SiKi)
    z_hatDisk(3) = real(x_hatDisk(1)*x_hatDisk(1) + x_hatDisk(2)*x_hatDisk(2),SiKi)
 
+
    !-------------
    ! Error checks
    !-------------
    ! Verify rotor and wind orientation are not pointed vertically
-   if ((EqualRealNos(u%VWind(1), 0.0_ReKi) .and. EqualRealNos(u%VWind(2), 0.0_ReKi)) .and. (.not. EqualRealNos(u%VWind(3), 0.0_ReKi))) then
+   if ((EqualRealNos(m%DiskAvgVel(1), 0.0_ReKi) .and. EqualRealNos(m%DiskAvgVel(2), 0.0_ReKi)) .and. (.not. EqualRealNos(m%DiskAvgVel(3), 0.0_ReKi))) then
       ErrStat2 = ErrID_Fatal;    ErrMsg2 = "AeroDisk cannot calculate aero loads with wind in the vertical direction. Nacelle yaw-error undefined."
       if (Failed())  return
    endif
@@ -362,7 +404,7 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    !!  - \f$V_\textrm{rel,x-disk} = \vec{V}_\textrm{rel_g} \bullet \hat{x}_\textrm{disk}\f$
    !-------------------------
    ! Calculate relative wind velocity (global)
-   VRel_vec(1:3) = real(u%VWind(1:3) - u%HubMotion%TranslationVel(1:3,1), SiKi)
+   VRel_vec(1:3) = real(m%DiskAvgVel(1:3) - u%HubMotion%TranslationVel(1:3,1), SiKi)
    ! Magnitude of relative wind velocity
    m%VRel = TwoNorm(VRel_vec)
    ! relative wind velocity along disk normal
@@ -486,6 +528,18 @@ contains
         Failed =  ErrStat >= AbortErrLev
         !if (Failed) call CleanUp()
    end function Failed
+   subroutine CalcDiskAvgVel(ErrStat3,ErrMsg3)
+      integer(IntKi),         intent(  out)  :: ErrStat3
+      character(ErrMsgLen),   intent(  out)  :: ErrMsg3
+      integer(IntKi) :: i
+      do i=1,ADsk_NumPtsDiskAvg
+         m%DiskWindPosAbs(:,i) = real(u%HubMotion%Position(1:3,1)+u%HubMotion%TranslationDisp(1:3,1),ReKi) + matmul(real(u%HubMotion%Orientation(1:3,1:3,1),ReKi),p%DiskWindPosRel(:,i))
+      end do
+      call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, m%DiskWindPosAbs, m%DiskWindVel, NoAcc, ErrStat3, ErrMsg3)
+      if (ErrStat2 >= AbortErrLev) return
+      ! calculate average
+      m%DiskAvgVel = sum(m%DiskWindVel, dim=2) / REAL(ADsk_NumPtsDiskAvg,SiKi)
+   end subroutine CalcDiskAvgVel
 END SUBROUTINE ADsk_CalcOutput
 
 subroutine ADskTableInterp(ATab, UseTSR, lambda, RotSpeed, VRel, BlPitch, Chi, idx_last, C_F, C_M, ErrStat, ErrMsg)

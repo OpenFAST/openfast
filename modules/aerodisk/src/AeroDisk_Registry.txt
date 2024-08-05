@@ -11,6 +11,10 @@
 ###################################################################################################################################
 # ...... Include files (definitions from NWTC Library) ............................................................................
 include   Registry_NWTC_Library.txt
+usefrom InflowWind.txt
+
+# ..... Static Param ..............................................................................................................
+param   AeroDisk/ADsk   -           IntKi                ADsk_NumPtsDiskAvg - 144 - "Number of points averaged for rotor-average wind speed" -
 
 
 # ..... Table storage .............................................................................................................
@@ -54,6 +58,7 @@ typedef  ^        InitInputType     ReKi                 defAirDens        -  - 
 typedef  ^        InitInputType     LOGICAL              Linearize         - .false. - "this module cannot be linearized at present" -
 typedef  ^        InitInputType     LOGICAL              UseInputFile      - .TRUE.  - "Supplied by Driver:  .TRUE. if using a input file, .FALSE. if all inputs are being passed in by the caller"    -
 typedef  ^        InitInputType     FileInfoType         PassedFileData    -  - -   "If we don't use the input file, pass everything through this"   -
+typedef  ^        InitInputType     FlowFieldType        *FlowField        -  - -   "Pointer of InflowWinds flow field data type" -
 
 
 # outputs from initialization:
@@ -68,7 +73,6 @@ typedef  ^        InitOutputType    ProgDesc             Ver               -  - 
 typedef  ^        InputType         MeshType             HubMotion         -  - -   "Hub motion"  -
 typedef  ^        InputType         ReKi                 RotSpeed          -  - -   "Rotor speed" "rad/s"
 typedef  ^        InputType         ReKi                 BlPitch           -  - 2pi "blade pitch" "rad"
-typedef  ^        InputType         ReKi                 VWind            {3} - -   "Rotor average wind speed" "m/s"
 
 
 
@@ -111,6 +115,8 @@ typedef  ^        ParameterType        ReKi              halfRhoA          -  - 
 typedef  ^        ParameterType        ADsk_AeroTable    AeroTable         -  - -   "Data table" -
 typedef  ^        ParameterType        LOGICAL           UseTSR            -  .false. -   "Use TSR values from table instead of VRel + RtSpd" -
 typedef  ^        ParameterType        OutParmType       OutParam         {:} - -   "Names and units (and other characteristics) of all requested output parameters"  -
+typedef  ^        ParameterType        FlowFieldType     *FlowField        -  - -   "Pointer of InflowWinds flow field data type" -
+typedef  ^        ParameterType        ReKi              DiskWindPosRel  {:}{:} - - "Disk locations for sampling to get disk avarage velocity (relative to hub)" m
 
 # ..... Misc/Optimization variables.................................................................................................
 typedef  ^        MiscVarType          IntKi             idx_last         {5} - -   "Last indices used in lookup search"               -
@@ -126,3 +132,7 @@ typedef  ^        MiscVarType          SiKi              C_F               3  - 
 typedef  ^        MiscVarType          SiKi              C_M               3  - -   "Moment coefficients from table"                   -
 typedef  ^        MiscVarType          SiKi              Force             3  - -   "Force  calculated in actuator disk coordinates"   N
 typedef  ^        MiscVarType          SiKi              Moment            3  - -   "Moment calculated in actuator disk coordinates"   N-m
+typedef  ^        MiscVarType          ReKi              DiskWindPosAbs  {:}{:} - - "Disk locations for sampling to get disk avarage velocity (absolute for getting wind)" m
+typedef  ^        MiscVarType          ReKi              DiskWindVel     {:}{:} - - "Wind speed at disk locations for disk velocity"   m/s
+typedef  ^        MiscVarType          ReKi              DiskAvgVel        3  - -   "Average wind speed across rotor disk"             m/s
+

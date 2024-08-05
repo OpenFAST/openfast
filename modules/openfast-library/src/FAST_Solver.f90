@@ -571,7 +571,7 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD, OtherSt_AD, y_ED,
       endif
    END IF
 
-!FIXME:ROM this may be wrong!!!!!!
+   !FIXME: is DiskVel still used?  The following is used in DiskVel calculations
    if (p_FAST%CompElast == Module_SED) then
       u_IfW%HubPosition    = y_SED%HubPtMotion%Position(:,1) + y_SED%HubPtMotion%TranslationDisp(:,1)
       u_IfW%HubOrientation = y_SED%HubPtMotion%Orientation(:,:,1)
@@ -581,7 +581,6 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD, OtherSt_AD, y_ED,
    endif
    
 
-!FIXME: is this necessary after the pointers???
    IF ( p_FAST%MHK /= MHK_None ) THEN
       u_IfW%PositionXYZ(3,:) = u_IfW%PositionXYZ(3,:) + p_FAST%WtrDpth
    ENDIF
@@ -869,34 +868,7 @@ SUBROUTINE ExtLd_InputSolve_NoIfW( p_FAST, u_ExtLd, p_ExtLd, y_ED, BD, MeshMapDa
 END SUBROUTINE ExtLd_InputSolve_NoIfW
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine sets all the AeroDisk wind inputs
-!  NOTE: ADsk is not currently allowed with OpenFOAM (it doesn't make much sense to do)
-!FIXME:ROM this may be incorrect
-subroutine ADsk_InputSolve_IfW( p_FAST, u_ADsk, y_IfW, ErrStat, ErrMsg )
-   TYPE(FAST_ParameterType),    INTENT(IN   )   :: p_FAST      !< FAST parameter data
-   TYPE(ADsk_InputType),        INTENT(INOUT)   :: u_ADsk      !< The inputs to AeroDyn
-   TYPE(InflowWind_OutputType), INTENT(IN   )   :: y_IfW       !< The outputs from InflowWind
-   INTEGER(IntKi),              intent(  out)   :: ErrStat     !< Error status of the operation
-   CHARACTER(*),                intent(  out)   :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-   !-------------------------------------------------------------------------------------------------
-   ! Set the inputs from inflow wind:
-   !-------------------------------------------------------------------------------------------------
-   IF (p_FAST%CompInflow == MODULE_IfW) THEN
-      u_ADsk%VWind = y_IfW%DiskVel
-   ELSEIF ( p_FAST%CompInflow == Module_ExtInfw )  THEN 
-      !FIXME: may need to write a routine to calculate disk average vel from OpFM
-      !u_ADsk%AvgInfVel = y_IfW%DiskVel
-      u_ADsk%VWind = 0.0_ReKi
-   END IF
- end subroutine ADsk_InputSolve_IfW
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets all the AeroDisk, except for the wind inflow values.
-!FIXME:ROM this may be incorrect
 SUBROUTINE ADsk_InputSolve_NoIfW( p_FAST, u_ADsk, y_ED, y_SED, MeshMapData, ErrStat, ErrMsg )
    TYPE(FAST_ParameterType),    INTENT(IN   )   :: p_FAST      !< parameter FAST data
    TYPE(ADsk_InputType),        INTENT(INOUT)   :: u_ADsk      !< The inputs to AeroDyn14
@@ -5662,15 +5634,10 @@ SUBROUTINE SolveOption2c_Inp2AD_SrvD(this_time, this_state, p_FAST, m_FAST, ED, 
    END IF
    
    IF (p_FAST%CompAero == Module_ExtLd ) THEN
-
       ! The outputs from ExternalInflow need to be transfered to the FlowField for use by AeroDyn, this seems like the right place
       call ExtLd_UpdateFlowField( p_FAST, AD%Input(1), AD%m, ExtLd, ErrStat2, ErrMsg2 )
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-         
-   ELSE IF ( p_FAST%CompAero == Module_ADsk ) THEN
-      CALL ADsk_InputSolve_IfW( p_FAST, ADsk%Input(1), IfW%y, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-    END IF
+   END IF
       
                        
    IF ( p_FAST%CompServo == Module_SrvD  ) THEN

@@ -24,7 +24,7 @@ add_library(aerodisklib
   src/AeroDisk_IO.f90
   src/AeroDisk.f90
 )
-target_link_libraries(aerodisklib nwtclibs)
+target_link_libraries(aerodisklib ifwlib nwtclibs)
 
 add_executable(aerodisk_driver
   src/driver/AeroDisk_Driver_Types.f90

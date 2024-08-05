@@ -26,6 +26,7 @@ PROGRAM AeroDisk_Driver
    USE AeroDisk_Types
    USE AeroDisk_Driver_Subs
    USE AeroDisk_Driver_Types
+   USE IfW_FLowField
 
    IMPLICIT NONE
 
@@ -68,7 +69,7 @@ PROGRAM AeroDisk_Driver
    TYPE(ADskDriver_Settings)                          :: Settings             ! Driver settings
    REAL(DbKi)                                         :: Timer(1:2)           ! Keep track of how long this takes to run
    type(FileInfoType)                                 :: DvrFileInfo          ! Input file stored in FileInfoType structure
-
+   type(FlowFieldType), target                        :: FlowField            ! FlowField data
 
       ! Data transfer
    real(ReKi)                                         :: Yaw                  ! Yaw angle from table
@@ -241,6 +242,14 @@ PROGRAM AeroDisk_Driver
    endif
 
 
+   !------------------------------------------
+   ! Save wind data and set pointer
+   !------------------------------------------
+
+   call StoreWindData(FlowField,ErrStat,ErrMsg)
+   call CheckErr('')
+
+
 
    ! Routines called in initialization
    !...............................................................................................................................
@@ -253,13 +262,13 @@ PROGRAM AeroDisk_Driver
    ! Set to include the shafttilt, but no other settings. This is an euler angle order
    Theta = (/ 0.0_R8Ki, real(Settings%ShftTilt, R8Ki), 0.0_R8Ki /)
    InitInData%HubOrientation  = EulerConstruct( Theta )
+   InitInData%FlowField => FlowField               ! pointer to wind data
 
 
       ! Initialize the module
    CALL ADsk_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, misc, TimeInterval, InitOutData, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-      CALL WrScr( 'After Init: '//ErrMsg )
-      if ( ErrStat >= AbortErrLev ) call ProgEnd()
+      call CheckErr('After Init: ')
    END IF
 
       ! Set the output file
@@ -287,10 +296,6 @@ PROGRAM AeroDisk_Driver
       !  NOTE: converting CaseTime into ReKi is going to slow things down, but this is a demo driver, not a production tool, so I'm not
       !        going to spend time fixing it.
 
-      ! WindSpeed
-      u(1)%VWind(1) = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(1,:), TmpIdx, size(CaseTime) )
-      u(1)%VWind(2) = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(2,:), TmpIdx, size(CaseTime) )
-      u(1)%VWind(3) = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(3,:), TmpIdx, size(CaseTime) )
       ! RotSpeed
       u(1)%RotSpeed = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(4,:), TmpIdx, size(CaseTime) )
       ! Pitch
@@ -329,6 +334,9 @@ PROGRAM AeroDisk_Driver
    if (DvrOut>0)  close(DvrOut)
    CALL ADsk_End( u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
 
+   ! Cleanup data
+   call Cleanup()
+
    IF ( ErrStat /= ErrID_None ) THEN
       CALL WrScr( 'ErrorsAfter End: '//ErrMsg )
    ELSE
@@ -342,11 +350,66 @@ CONTAINS
       character(*), intent(in) :: Text
        IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
          CALL WrScr( Text//ErrMsg )
-         if ( ErrStat >= AbortErrLev ) call ProgEnd()
+         if ( ErrStat >= AbortErrLev ) then
+            call Cleanup()
+            call ProgEnd()
+         endif
       END IF
    end subroutine CheckErr
+   subroutine Cleanup()
+      call IfW_FlowField_DestroyFlowFieldType(FlowField,ErrStat,ErrMsg)    ! ignore messages from here
+   end subroutine
    subroutine ProgEnd()
       ! Placeholder for moment
       Call ProgAbort('Fatal error encountered.  Ending.')
    end subroutine ProgEnd
+   subroutine StoreWindData(FlowField,ErrStat2,ErrMsg2)
+      type(FlowFieldType), target,  intent(  out)  :: FlowField
+      integer(IntKi),               intent(  out)  :: ErrStat2
+      character(ErrMsgLen),         intent(  out)  :: ErrMsg2
+      integer(IntKi)       :: i, NumTSteps
+
+      NumTSteps = size(CaseTime)
+
+      ! Setup flow field
+      FlowField%FieldType = Uniform_FieldType
+      FlowField%Uniform%DataSize = NumTSteps
+      ! The following either fail catastrophically, or pass just fine.  So no need for complex error handling.
+      call AllocAry(FlowField%Uniform%Time,     NumTSteps, '', ErrStat2, ErrMsg2); if (ErrStat2 >= AbortErrLev) return
+      call AllocAry(FlowField%Uniform%VelH,     NumTSteps, '', ErrStat2, ErrMsg2); if (ErrStat2 >= AbortErrLev) return
+      call AllocAry(FlowField%Uniform%VelV,     NumTSteps, '', ErrStat2, ErrMsg2); if (ErrStat2 >= AbortErrLev) return
+      call AllocAry(FlowField%Uniform%VelGust,  NumTSteps, '', ErrStat2, ErrMsg2); if (ErrStat2 >= AbortErrLev) return
+      call AllocAry(FlowField%Uniform%AngleH,   NumTSteps, '', ErrStat2, ErrMsg2); if (ErrStat2 >= AbortErrLev) return
+      call AllocAry(FlowField%Uniform%AngleV,   NumTSteps, '', ErrStat2, ErrMsg2); if (ErrStat2 >= AbortErrLev) return
+      call AllocAry(FlowField%Uniform%ShrH,     NumTSteps, '', ErrStat2, ErrMsg2); if (ErrStat2 >= AbortErrLev) return
+      call AllocAry(FlowField%Uniform%ShrV,     NumTSteps, '', ErrStat2, ErrMsg2); if (ErrStat2 >= AbortErrLev) return
+      call AllocAry(FlowField%Uniform%LinShrV,  NumTSteps, '', ErrStat2, ErrMsg2); if (ErrStat2 >= AbortErrLev) return
+
+      ! WindSpeed data
+      do i=1,NumTSteps
+         FlowField%Uniform%Time(i)     = CaseTime(i)
+         FlowField%Uniform%VelH(i)     = sqrt( CaseData(1,i)*CaseData(1,i) + CaseData(2,i)*CaseData(2,i) )
+         FlowField%Uniform%AngleH(i)   = atan2(CaseData(2,i),CaseData(1,i))      ! angle in horizontal plane
+         FlowField%Uniform%VelV(i)     = CaseData(3,i)
+      enddo
+
+      ! Set a few constants so calculations work
+      FlowField%Uniform%RefLength= 1.0_ReKi     ! set this or we get a divide by zero
+      FlowField%Uniform%RefHeight= 1.0_ReKi     ! set this or we get a divide by zero
+      ! Set other stuff to zero
+      FlowField%Uniform%ShrV     = 0.0_ReKi     ! no shear profile
+      FlowField%Uniform%VelGust  = 0.0_ReKi
+      FlowField%Uniform%AngleV   = 0.0_ReKi
+      FlowField%Uniform%ShrH     = 0.0_ReKi
+      FlowField%Uniform%LinShrV  = 0.0_ReKi
+      ! The following defaults are already set, but setting here in case somnething is later changed
+      FlowField%RefPosition    = 0.0_ReKi
+      FlowField%PropagationDir = 0.0_ReKi
+      FlowField%VFlowAngle     = 0.0_ReKi
+      FlowField%VelInterpCubic = .false.
+      FlowField%RotateWindBox  = .false.
+      FlowField%AccFieldValid  = .false.
+      FlowField%RotToWind      = 0.0_ReKi
+      FlowField%RotFromWind    = 0.0_ReKi
+   end subroutine StoreWindData
 END PROGRAM AeroDisk_Driver
