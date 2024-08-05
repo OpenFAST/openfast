@@ -7697,25 +7697,23 @@ SUBROUTINE computeNacelleDrag( u, p, m, y, RotInflow, ErrStat, ErrMsg )
    CHARACTER(*)                     , INTENT(  OUT) :: ErrMsg           !< Error message if ErrStat /= ErrID_None
    ! Local Vars
    REAL(ReKi)                                       :: totalAngle            ! Angle between incoming wind direction and nacelle, 
-   REAL(ReKi)                                       :: tiltAngle             ! Tilt Angle of the nacelle.
-   REAL(ReKi)                                       :: yawAngle              ! Current Yaw Bearing (Radians)
-   REAL(ReKi)                                       :: area                  ! Area of the nacelle projected in the wind direction
+   REAL(ReKi)                                       :: tiltAngle             ! Tilt angle of the nacelle.
+   REAL(ReKi)                                       :: yawAngle              ! Current Yaw Bearing.
+   REAL(ReKi)                                       :: areaCd                ! Area*Cd of the nacelle projected in the wind direction
    REAL(ReKi)                                       :: forceMag              ! Drag force aligned with wind direction
    Real(ReKi)                                       :: unitDiskVec(3)        ! unit vector aligned at an angle of "totalAngle" from yawed rotor disk    
-   Real(ReKi)                                       :: areaVec(3)            ! Vec containing areas of yz, xz and xy faces of the nacelle 
+   Real(ReKi)                                       :: areaCdVec(3)          ! Vec containing areas of yz, xz and xy faces of the nacelle * respective Cd's
    REAL(ReKi)                                       :: hubHeigthWindSpeed(3) ! hubHeigthWindSpeed(1), hubHeigthWindSpeed(2), and hubHeigthWindSpeed(3) and u, v, and w wind velocities at Hub height
-   REAL(ReKi)                                       :: nacelleDims(3)        ! nacelleDims(1), nacelleDims(2), and nacelleDims(3) and Length(x), Width(y), and Height(z) of the Nacelle   
-   REAL(ReKi)                                       :: force(3)              ! Forces in global c.s
-   REAL(ReKi)                                       :: moment(3)             ! Moments in global c.s
+   REAL(ReKi)                                       :: force(3)              ! Forces in nacelle c.s
+   REAL(ReKi)                                       :: moment(3)             ! Moments in nacelle c.s
 
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
-   ! ! Fetch nacelle inflow, and nacelle motion & Calculating the relative inflow velocity 
-   hubHeigthWindSpeed = RotInflow%InflowOnNacelle(:,1)
-   hubHeigthWindSpeed = hubHeigthWindSpeed - u%NacelleMotion%TranslationVel(:,1) 
+   ! ! Calculating the relative inflow velocity at nacelle
+   hubHeigthWindSpeed = RotInflow%InflowOnNacelle(:,1) - u%NacelleMotion%TranslationVel(:,1) 
 
-   ! Calculating angles for calculations.
+   ! Calculating required angles.
    yawAngle = atan2(u%NacelleMotion%Orientation(1,2,1), u%NacelleMotion%Orientation(1,1,1)) 
    call MPi2Pi(yawAngle)
 
@@ -7731,15 +7729,15 @@ SUBROUTINE computeNacelleDrag( u, p, m, y, RotInflow, ErrStat, ErrMsg )
    unitDiskVec(3) = abs(sin(tiltAngle)) 
    
    ! Calculating Area * Cd for the respective areas. Allows for multiple Cds
-   areaVec(1) =  p%NacArea(1) * p%NacCd(1)
-   areaVec(2) =  p%NacArea(2) * p%NacCd(2)
-   areaVec(3) =  p%NacArea(3) * p%NacCd(3)
+   areaCdVec(1) =  p%NacArea(1) * p%NacCd(1)
+   areaCdVec(2) =  p%NacArea(2) * p%NacCd(2)
+   areaCdVec(3) =  p%NacArea(3) * p%NacCd(3)
    
-   ! total nacelle area projected into incoming wind direction
-   area = dot_product(areaVec, unitDiskVec)
+   ! total nacelle area * Cd projected into incoming wind direction
+   areaCd = dot_product(areaCdVec, unitDiskVec)
 
    ! Find drag force (in global X direction) Assuming dominant direction of wind.
-   forceMag = 0.5 * p%AirDens * (hubHeigthWindSpeed(1)**2  + hubHeigthWindSpeed(2)**2) * area
+   forceMag = 0.5 * p%AirDens * (hubHeigthWindSpeed(1)**2  + hubHeigthWindSpeed(2)**2) * areaCd
    
    ! Decompose along the nacelle length, width and height 
    force = unitDiskVec*forceMag
