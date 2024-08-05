@@ -1,14 +1,14 @@
 [tool.poetry]
-name = "octue-openfast"
+name = "openfast_io"
 version = "3.5.4.beta-1"
 description = "Readers and writers for OpenFAST files."
 license = "Apache-2.0"
 authors = [
     "NREL WISDEM Team <systems.engineering@nrel.gov>",
-    "dzalkind",
+    "Daniel Zalkind <daniel.zalkind@nrel.gov>",
     "Garrett Barter <garrett.barter@nrel.gov>",
     "Pietro Bortolotti <ptrbortolotti@gmail.com>",
-    "Mayank Chetan",
+    "Mayank Chetan <mayank.chetan@nrel.gov>",
     "John Jasa",
 ]
 readme = "README.md"
