@@ -238,8 +238,8 @@ end subroutine LD_InitInputData
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Compute A and B state matrices for a linear mechanical system
 !! NOTE: Generic function (no derived types), keep it that way
-!! A = [   0        I       ]     B = [0      ]
-!!     [-M^{-1}K   -M^{-1}C ]       = [-M^{-1}]
+!! A = [   0        I       ]     B = [ 0      ]
+!!     [-M^{-1}K   -M^{-1}C ]       = [ M^{-1} ]
 subroutine StateMatrices(MM, CC, KK, AA, BB, errStat, errMsg)
    real(ReKi),              intent(in ) :: MM(:,:)
    real(ReKi),              intent(in ) :: CC(:,:)
