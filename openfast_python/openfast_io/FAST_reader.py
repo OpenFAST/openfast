@@ -156,7 +156,7 @@ class InputReader_OpenFAST(object):
         '''
         data = f.readline()
         while data.split()[0] != 'END':
-            pattern = r'"(.*?)"'    # grab only the text between quotes
+            pattern = r'"?(.*?)"?'    # grab only the text between quotes
             data = re.findall(pattern, data)[0]
             channels = data.split(',')  # split on commas
             channels = [c.strip() for c in channels]  # strip whitespace
@@ -2891,7 +2891,8 @@ class InputReader_OpenFAST(object):
         if not os.path.isabs(self.fst_vt['ElastoDyn']['TwrFile']):
             ed_tower_file = os.path.join(os.path.dirname(ed_file), self.fst_vt['ElastoDyn']['TwrFile'])
         self.read_ElastoDynTower(ed_tower_file)
-        self.read_InflowWind()
+        if self.fst_vt['Fst']['CompInflow'] == 1:
+            self.read_InflowWind()
         # AeroDyn version selection
         if self.fst_vt['Fst']['CompAero'] == 1:
             self.read_AeroDyn14()

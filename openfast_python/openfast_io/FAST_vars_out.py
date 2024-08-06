@@ -9574,6 +9574,33 @@ ElastoDyn_Nodes['FxL']        = False     # (kN); Flapwise shear force in local 
 ElastoDyn_Nodes['FlyNT']      = False     # (kN); Edgewise shear force in local coordinate system (initial structural twist removed); Directed along the local yb-axis
 ElastoDyn_Nodes['FyL']        = False     # (kN); Edgewise shear force in local coordinate system (initial structural twist removed); Directed along the local yb-axis
 
+""" MoorDyn """
+# THIS IS NOT A COMPLETE LIST!
+# the "flexible naming system" discussed on page 7-8 of the documentation is not included
+# http://www.matt-hall.ca/files/MoorDyn-Users-Guide-2017-08-16.pdf
+
+# also assuming that like other OpenFAST variables, it is limited to 9 output locations per veriable, i.e. FairTen1-FairTen9
+# TODO: Handle the flexible outputs for moordyn. This will require a different approach than the current dictionary structure.
+
+MoorDyn = {}
+MoorDyn['FairTen1']            = False     # (); ; 
+MoorDyn['FairTen2']            = False     # (); ; 
+MoorDyn['FairTen3']            = False     # (); ; 
+MoorDyn['FairTen4']            = False     # (); ; 
+MoorDyn['FairTen5']            = False     # (); ; 
+MoorDyn['FairTen6']            = False     # (); ; 
+MoorDyn['FairTen7']            = False     # (); ; 
+MoorDyn['FairTen8']            = False     # (); ; 
+MoorDyn['FairTen9']            = False     # (); ; 
+MoorDyn['AnchTen1']            = False     # (); ; 
+MoorDyn['AnchTen2']            = False     # (); ; 
+MoorDyn['AnchTen3']            = False     # (); ; 
+MoorDyn['AnchTen4']            = False     # (); ; 
+MoorDyn['AnchTen5']            = False     # (); ; 
+MoorDyn['AnchTen6']            = False     # (); ; 
+MoorDyn['AnchTen7']            = False     # (); ; 
+MoorDyn['AnchTen8']            = False     # (); ; 
+MoorDyn['AnchTen9']            = False     # (); ; 
 
 """ Final Output Dictionary """
 FstOutput = {}
@@ -9590,3 +9617,4 @@ FstOutput['WAMIT']            = WAMIT
 FstOutput['AeroDyn_Nodes']    = AeroDyn_Nodes
 FstOutput['BeamDyn_Nodes']    = BeamDyn_Nodes
 FstOutput['ElastoDyn_Nodes']  = ElastoDyn_Nodes
+FstOutput['MoorDyn']          = MoorDyn
