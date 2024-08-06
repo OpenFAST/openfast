@@ -269,3 +269,10 @@ def get_dlc_label(cases, include_seed=True):
 def load_file_list(fname_flist):
     # load list of filenames from file
     return np.genfromtxt(fname_flist, dtype='str')
+
+def check_rtest_cloned(rtest_dir):
+    # check if the rtest directory is cloned
+    if not os.path.isdir(rtest_dir):
+        raise FileNotFoundError(f"The directory {rtest_dir} does not exist. Please clone the r-test submodule. Try running `git submodule update --init --recursive`")
+
+    return True

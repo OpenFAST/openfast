@@ -6,7 +6,6 @@ import operator
 import numpy as np
 from functools import reduce
 
-from openfast_io.FAST_reader import InputReader_OpenFAST
 
 try:
     from rosco.toolbox import utilities as ROSCO_utilities
@@ -2433,6 +2432,8 @@ class InputWriter_OpenFAST(object):
 
 if __name__=="__main__":
 
+    from openfast_io.FAST_reader import InputReader_OpenFAST
+    from openfast_io.FileTools import check_rtest_cloned
     from pathlib import Path
 
     fst_update = {}
@@ -2449,6 +2450,9 @@ if __name__=="__main__":
     fast.FAST_directory = os.path.join(parent_dir, 'reg_tests', 'r-test', 
                                        'glue-codes', 'openfast', 
                                        '5MW_Land_BD_DLL_WTurb')   # Path to fst directory files
+    
+    check_rtest_cloned(os.path.join(fast.FAST_directory, fast.FAST_InputFile))
+    
     fast.execute()
     
     # Write out the model

@@ -2892,6 +2892,7 @@ class InputReader_OpenFAST(object):
             self.read_BeamDyn(bd_file)
 
 if __name__=="__main__":
+    from openfast_io.FileTools import check_rtest_cloned
     
     parent_dir = os.path.dirname( os.path.dirname( os.path.dirname( os.path.realpath(__file__) ) ) ) + os.sep
 
@@ -2901,4 +2902,7 @@ if __name__=="__main__":
     fast.FAST_directory = os.path.join(parent_dir, 'reg_tests', 'r-test', 
                                        'glue-codes', 'openfast', 
                                        '5MW_Land_BD_DLL_WTurb')   # Path to fst directory files
+
+    check_rtest_cloned(os.path.join(fast.FAST_directory, fast.FAST_InputFile))
+
     fast.execute()

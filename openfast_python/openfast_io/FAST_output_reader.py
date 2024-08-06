@@ -211,16 +211,20 @@ def load_binary_output(filename):
 
 
 if __name__=="__main__":
-    d,i = load_binary_output('Test18.T1.outb')
-    types = []
-    for j in range(39):
-        types.append('f8')
-    print(type(i['attribute_names']))
 
-    print(np.dtype({'names':tuple(i['attribute_names']), 'formats': tuple(types) }))
+    from openfast_io.FileTools import check_rtest_cloned
+
+    parent_dir = os.path.dirname( os.path.dirname( os.path.dirname( os.path.realpath(__file__) ) ) ) + os.sep
+
+    of_outputfile = os.path.join(parent_dir, 'reg_tests', 'r-test', 'glue-codes', 
+                                 'openfast', '5MW_Land_BD_DLL_WTurb', '5MW_Land_BD_DLL_WTurb.outb')
+
+    check_rtest_cloned(of_outputfile)
+
+    d,i,p = load_binary_output(of_outputfile)
+
+    print(tuple(i['attribute_names']))
     print(type(d))
-    print(np.array(d,dtype=np.dtype({'names':tuple(i['attribute_names']), 'formats': tuple(types) })))
-
     print(i)
     print(len(i['attribute_names']))
     print(np.shape(d))
