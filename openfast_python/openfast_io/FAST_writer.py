@@ -702,9 +702,9 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['VFlowAng'], 'VFlowAng', '- Upflow angle (degrees) (not used for native Bladed format WindType=7)\n'))
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['VelInterpCubic'], 'VelInterpCubic', '- Use cubic interpolation for velocity in time (false=linear, true=cubic) [Used with WindType=2,3,4,5,7]\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['NWindVel'], 'NWindVel', '- Number of points to output the wind velocity    (0 to 9)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['WindVxiList'], 'WindVxiList', '- List of coordinates in the inertial X direction (m)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['WindVyiList'], 'WindVyiList', '- List of coordinates in the inertial Y direction (m)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['WindVziList'], 'WindVziList', '- List of coordinates in the inertial Z direction (m)\n'))
+        f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['InflowWind']['WindVxiList']), 'WindVxiList', '- List of coordinates in the inertial X direction (m)\n'))        
+        f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['InflowWind']['WindVyiList']), 'WindVyiList', '- List of coordinates in the inertial Y direction (m)\n'))
+        f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['InflowWind']['WindVziList']), 'WindVziList', '- List of coordinates in the inertial Z direction (m)\n'))
         f.write('================== Parameters for Steady Wind Conditions [used only for WindType = 1] =========================\n')
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['HWindSpeed'], 'HWindSpeed', '- Horizontal windspeed                            (m/s)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['RefHt'], 'RefHt', '- Reference height for horizontal wind speed      (m)\n'))
@@ -782,12 +782,12 @@ class InputWriter_OpenFAST(object):
         self.write_AeroDyn15Polar()
         
         # Generate AeroDyn v15 airfoil coordinates
-        if self.fst_vt['AeroDyn15']['af_data'][1][0]['NumCoords'] != '0':
+        if self.fst_vt['AeroDyn15']['af_data'][0][0]['NumCoords'] != '0': # changing from ['af_data'][1] to ['af_data'][0] because we can have a single airfoil too. 
             self.write_AeroDyn15Coord()
         
         if self.fst_vt['AeroDyn15']['WakeMod'] == 3:
-            if self.fst_vt['AeroDyn15']['AFAeroMod'] == 2:
-                raise Exception('OLAF is called with unsteady airfoil aerodynamics, but OLAF currently only supports AFAeroMod == 1')
+            if self.fst_vt['AeroDyn15']['UAMod'] == 2:
+                raise Exception('OLAF is called with unsteady airfoil aerodynamics, but OLAF currently only supports UAMod == 1') #TODO: need to check if this holds true now
             self.write_OLAF()
 
         # Generate AeroDyn v15.03 input file
@@ -815,7 +815,7 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['Patm'], 'Patm', '- Atmospheric pressure (Pa) [used only when CavitCheck=True]\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['Pvap'], 'Pvap', '- Vapour pressure of fluid (Pa) [used only when CavitCheck=True]\n'))
         f.write('======  Blade-Element/Momentum Theory Options  ====================================================== [unused when WakeMod=0 or 3]\n')
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['WakeMod'], 'BEM_Mod', '- BEM model {1=legacy NoSweepPitchTwist, 2=polar} (switch) [used for all Wake_Mod to determine output coordinate system]\n'))
+        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['BEM_Mod'], 'BEM_Mod', '- BEM model {1=legacy NoSweepPitchTwist, 2=polar} (switch) [used for all Wake_Mod to determine output coordinate system]\n'))
         f.write('--- Skew correction\n')
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['SkewMod'], 'SkewMod', '- Type of skewed-wake correction model (switch) {1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0 or 3]\n'))
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['SkewMomCorr'], 'SkewMomCorr', '- Turn the skew momentum correction on or off [used only when Skew_Mod=1]\n'))
@@ -1276,9 +1276,9 @@ class InputWriter_OpenFAST(object):
         f.write('--------------------------- WAKE OPTIONS ------------------------------------------------------\n')
         f.write('------------------- WAKE EXTENT AND DISCRETIZATION --------------------------------------------\n')
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['OLAF']['nNWPanels'], 'nNWPanels','- Number of near-wake panels (-)\n'))
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['OLAF']['nNWPanelsFree'], 'nNWPanelsFree','- Number of free near-wake panels (-) {default: nNWPanels}\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['OLAF']['nNWPanelsFree'], 'nNWPanelsFree','- Number of free near-wake panels (-) {default: nNWPanels}\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['OLAF']['nFWPanels'], 'nFWPanels','- Number of far-wake panels (-) {default: 0}\n'))
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['OLAF']['nFWPanelsFree'], 'nFWPanelsFree','- Number of free far-wake panels (-) {default: nFWPanels}\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['OLAF']['nFWPanelsFree'], 'nFWPanelsFree','- Number of free far-wake panels (-) {default: nFWPanels}\n'))
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['OLAF']['FWShedVorticity'], 'FWShedVorticity','- Include shed vorticity in the far wake {default: False}\n'))
         f.write('------------------- WAKE REGULARIZATIONS AND DIFFUSION -----------------------------------------\n')
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['OLAF']['DiffusionMethod'], 'DiffusionMethod','- Diffusion method to account for viscous effects {0: None, 1: Core Spreading, "default": 0}\n'))

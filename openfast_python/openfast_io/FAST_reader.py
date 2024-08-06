@@ -774,9 +774,9 @@ class InputReader_OpenFAST(object):
         self.fst_vt['InflowWind']['VFlowAng']       = float_read(f.readline().split()[0])
         self.fst_vt['InflowWind']['VelInterpCubic'] = bool_read(f.readline().split()[0])
         self.fst_vt['InflowWind']['NWindVel']       = int(f.readline().split()[0])
-        self.fst_vt['InflowWind']['WindVxiList']    = float_read(f.readline().split()[0])
-        self.fst_vt['InflowWind']['WindVyiList']    = float_read(f.readline().split()[0])
-        self.fst_vt['InflowWind']['WindVziList']    = float_read(f.readline().split()[0])
+        self.fst_vt['InflowWind']['WindVxiList']    = [idx.strip() for idx in f.readline().split('WindVxiList')[0].split(',')]
+        self.fst_vt['InflowWind']['WindVyiList']    = [idx.strip() for idx in f.readline().split('WindVyiList')[0].split(',')]
+        self.fst_vt['InflowWind']['WindVziList']    = [idx.strip() for idx in f.readline().split('WindVziList')[0].split(',')]
 
         # Parameters for Steady Wind Conditions [used only for WindType = 1] (steady_wind_params)
         f.readline()
@@ -928,7 +928,7 @@ class InputReader_OpenFAST(object):
 
         # Olaf -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options
         f.readline()
-        self.fst_vt['AeroDyn15']['OLAFInputFileName']  = f.readline().split()[0]
+        self.fst_vt['AeroDyn15']['OLAFInputFileName']  = f.readline().split()[0][1:-1]
         
         # Beddoes-Leishman Unsteady Airfoil Aerodynamics Options
         f.readline()
@@ -1227,7 +1227,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['AeroDyn15']['OLAF']['CircSolvConvCrit']    = float_read(f.readline().split()[0])
         self.fst_vt['AeroDyn15']['OLAF']['CircSolvRelaxation']  = float_read(f.readline().split()[0])
         self.fst_vt['AeroDyn15']['OLAF']['CircSolvMaxIter']     = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['PrescribedCircFile']  = f.readline().split()[0]
+        self.fst_vt['AeroDyn15']['OLAF']['PrescribedCircFile']  = os.path.join(self.FAST_directory, f.readline().split()[0]) # unmodified by this script, hence pointing to absolute location
         f.readline()
         f.readline()
         f.readline()
