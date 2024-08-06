@@ -421,7 +421,7 @@ class InputWriter_OpenFAST(object):
             f.write('{:<22} {:<11} {:}'.format('', 'TwrGagNd', '- List of tower nodes that have strain gages [1 to TwrNodes] (-) [unused if NTwGages=0]\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDyn']['NBlGages'], 'NBlGages', '- Number of blade nodes that have strain gages for output [0 to 9] (-)\n'))
         if self.fst_vt['ElastoDyn']['BldGagNd'] != 0:
-            f.write('{:<22} {:<11} {:}'.format(', '.join(['%d'%i for i in self.fst_vt['ElastoDyn']['BldGagNd']]), 'BldGagNd', '- List of blade nodes that have strain gages [1 to BldNodes] (-) [unused if NBlGages=0]\n'))
+            f.write('{:<22} {:<11} {:}'.format(', '.join(['%d'%int(i) for i in self.fst_vt['ElastoDyn']['BldGagNd']]), 'BldGagNd', '- List of blade nodes that have strain gages [1 to BldNodes] (-) [unused if NBlGages=0]\n'))
         else:
             f.write('{:<22} {:<11} {:}'.format('', 'BldGagNd', '- List of blade nodes that have strain gages [1 to BldNodes] (-) [unused if NBlGages=0]\n'))
         f.write('                   OutList             - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)\n')

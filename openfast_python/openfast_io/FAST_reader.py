@@ -451,7 +451,9 @@ class InputReader_OpenFAST(object):
                 self.set_outlist(self.fst_vt['outlist']['ElastoDyn'], channel_list)
 
                 data = f.readline()
-            
+        else:
+            # there is a blank line between the outlist and the END of the file
+            f.readline()    
         # ElastoDyn optional outlist
         try:
             f.readline()
@@ -993,6 +995,11 @@ class InputReader_OpenFAST(object):
         # AeroDyn15 Outlist
         f.readline()
         data = f.readline()
+
+        # Handle the case if there are blank lines befroe the END statement, check if blank line
+        while data.split().__len__() == 0:
+            data = f.readline()
+
         while data.split()[0] != 'END':
             if data.find('"')>=0:
                 channels = data.split('"')
