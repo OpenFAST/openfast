@@ -2085,9 +2085,16 @@ class InputReader_OpenFAST(object):
         f.readline()
         data = f.readline()
         while data.split()[0] != 'END':
-            channels = data.split('"')
-            channel_list = channels[1].split(',')
-            self.set_outlist(self.fst_vt['outlist']['HydroDyn'], channel_list)
+            if data.find('"')>=0:
+                channels = data.split('"')
+                channel_list = channels[1].split(',')
+            else:
+                row_string = data.split(',')
+                if len(row_string)==1:
+                    channel_list = row_string[0].split('\n')[0]
+                else:
+                    channel_list = row_string
+            self.set_outlist(self.fst_vt['outlist']['AeroDyn'], channel_list)
             data = f.readline()
 
         f.close()
@@ -2516,26 +2523,35 @@ class InputReader_OpenFAST(object):
         f.readline()
         f.readline()
         f.readline()
+
+        # Init line dictionary
+        line_dict = ['LineType',     'Diam',     'MassDenInAir',    'EA',        'CB',   'CIntDamp',  'Ca',   'Cdn',  'Cdt']
+        for ld in line_dict:
+            self.fst_vt['MAP'][ld] = []
+
         data_line = f.readline().strip().split()
-        self.fst_vt['MAP']['LineType']     = [str(data_line[0])]
-        self.fst_vt['MAP']['Diam']         = [float(data_line[1])]
-        self.fst_vt['MAP']['MassDenInAir'] = [float(data_line[2])]
-        self.fst_vt['MAP']['EA']           = [float(data_line[3])]
-        self.fst_vt['MAP']['CB']           = [float(data_line[4])]
-        self.fst_vt['MAP']['CIntDamp']     = [float(data_line[5])]
-        self.fst_vt['MAP']['Ca']           = [float(data_line[6])]
-        self.fst_vt['MAP']['Cdn']          = [float(data_line[7])]
-        self.fst_vt['MAP']['Cdt']          = [float(data_line[8])]
+        while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
+            self.fst_vt['MAP']['LineType'].append(      str(data_line[0]))
+            self.fst_vt['MAP']['Diam'].append(          float_read(data_line[1]))
+            self.fst_vt['MAP']['MassDenInAir'].append(  float_read(data_line[2]))
+            self.fst_vt['MAP']['EA'].append(            float_read(data_line[3]))
+            self.fst_vt['MAP']['CB'].append(            float_read(data_line[4]))
+            self.fst_vt['MAP']['CIntDamp'].append(      float_read(data_line[5]))
+            self.fst_vt['MAP']['Ca'].append(            float_read(data_line[6]))
+            self.fst_vt['MAP']['Cdn'].append(           float_read(data_line[7]))
+            self.fst_vt['MAP']['Cdt'].append(           float_read(data_line[8]))
+            data_line = f.readline().strip().split()
+        #f.readline()
         f.readline()
         f.readline()
-        f.readline()
+
         # Init map nodes
         node_types = ['Node','Type','X','Y','Z','M','B','FX','FY','FZ']
         for nt in node_types:
             self.fst_vt['MAP'][nt] = []
 
-        for i in range(2):
-            data_node = f.readline().strip().split()
+        data_node = f.readline().strip().split()
+        while data_node[0] and data_node[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
             self.fst_vt['MAP']['Node'].append(int(data_node[0]))
             self.fst_vt['MAP']['Type'].append(str(data_node[1]))
             self.fst_vt['MAP']['X'].append(float_read(data_node[2]))
@@ -2546,20 +2562,38 @@ class InputReader_OpenFAST(object):
             self.fst_vt['MAP']['FX'].append(float_read(data_node[7]))
             self.fst_vt['MAP']['FY'].append(float_read(data_node[8]))
             self.fst_vt['MAP']['FZ'].append(float_read(data_node[9]))
+            data_node = f.readline().strip().split()
+        data_node = ''.join(data_node)  # re-join for reading next section uniformly
+        # f.readline()
         f.readline()
         f.readline()
-        f.readline()
+
+        # Init line properties
+        line_prop = ['Line',    'LineType',  'UnstrLen',    'NodeAnch',  'NodeFair',  'Flags']
+        for lp in line_prop:
+            self.fst_vt['MAP'][lp] = []
+
         data_line_prop = f.readline().strip().split()
-        self.fst_vt['MAP']['Line']     = [int(data_line_prop[0])]
-        self.fst_vt['MAP']['LineType'] = [str(data_line_prop[1])]
-        self.fst_vt['MAP']['UnstrLen'] = [float(data_line_prop[2])]
-        self.fst_vt['MAP']['NodeAnch'] = [int(data_line_prop[3])]
-        self.fst_vt['MAP']['NodeFair'] = [int(data_line_prop[4])]
-        self.fst_vt['MAP']['Flags']    = [[str(val) for val in data_line_prop[5:]]]
+        while data_line_prop[0] and data_line_prop[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
+            self.fst_vt['MAP']['Line']    .append(  int(data_line_prop[0]))
+            self.fst_vt['MAP']['LineType'].append(  str(data_line_prop[1]))
+            self.fst_vt['MAP']['UnstrLen'].append(  float_read(data_line_prop[2]))
+            self.fst_vt['MAP']['NodeAnch'].append(  int(data_line_prop[3]))
+            self.fst_vt['MAP']['NodeFair'].append(  int(data_line_prop[4]))
+            self.fst_vt['MAP']['Flags']   .append(  [str(val) for val in data_line_prop[5:]] )
+            data_line_prop = f.readline().strip().split()
+        data_line_prop = ''.join(data_line_prop)  # re-join for reading next section uniformly
+        # f.readline()
         f.readline()
         f.readline()
-        f.readline()
-        self.fst_vt['MAP']['Option']   = [str(val) for val in f.readline().strip().split()]
+
+        self.fst_vt['MAP']['Option'] = [] # Solver options
+        # need to check for EOF here since we can have any number of solver options
+        data_solver = f.readline().strip().split() # Solver options
+        while len(data_solver) > 0: # stopping if we hit blank lines
+            self.fst_vt['MAP']['Option'].append([str(val) for val in data_solver])
+            data_solver = f.readline().strip().split()
+        # self.fst_vt['MAP']['Option']   = [str(val) for val in f.readline().strip().split()]
         f.close()
 
     def read_MoorDyn(self, moordyn_file):

@@ -416,7 +416,7 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDyn']['DecFact'], 'DecFact', '- Decimation factor for tabular output {1: output every time step} (-) (currently unused)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDyn']['NTwGages'], 'NTwGages', '- Number of tower nodes that have strain gages for output [0 to 9] (-)\n'))  
         if self.fst_vt['ElastoDyn']['TwrGagNd'] != 0:
-            f.write('{:<22} {:<11} {:}'.format(', '.join(['%d'%i for i in self.fst_vt['ElastoDyn']['TwrGagNd']]), 'TwrGagNd', '- List of tower nodes that have strain gages [1 to TwrNodes] (-) [unused if NTwGages=0]\n'))
+            f.write('{:<22} {:<11} {:}'.format(', '.join(['%d'%int(i) for i in self.fst_vt['ElastoDyn']['TwrGagNd']]), 'TwrGagNd', '- List of tower nodes that have strain gages [1 to TwrNodes] (-) [unused if NTwGages=0]\n'))
         else:
             f.write('{:<22} {:<11} {:}'.format('', 'TwrGagNd', '- List of tower nodes that have strain gages [1 to TwrNodes] (-) [unused if NTwGages=0]\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDyn']['NBlGages'], 'NBlGages', '- Number of blade nodes that have strain gages for output [0 to 9] (-)\n'))
@@ -2135,14 +2135,18 @@ class InputWriter_OpenFAST(object):
             ln.append('{:^11d}'.format(self.fst_vt['MAP']['NodeFair'][i]))
             # ln.append('{:^11}'.format(self.fst_vt['MAP']['Outputs'][i]))
             # ln.append('{:^11}'.format(self.fst_vt['MAP']['CtrlChan'][i]))
-            # ln.append('{:<11}'.format(" ".join(self.fst_vt['MAP']['Flags'])))
+            ln.append('{:<11}'.format(" ".join(self.fst_vt['MAP']['Flags'][i])))
             f.write(" ".join(ln) + '\n')
         ln =[]
         f.write('---------------------- SOLVER OPTIONS-----------------------------------------\n')
         f.write('{:<11s}'.format('Option'+'\n'))
         f.write('{:<11s}'.format('(-)')+'\n')
-        f.write("\n".join(self.fst_vt['MAP']['Option']).strip() + '\n')
-
+        for i in range(len(self.fst_vt['MAP']['Option'])):
+            ln = []
+            ln.append('{:<11}'.format(" ".join(self.fst_vt['MAP']['Option'][i])))
+            f.write("\n".join(ln) + '\n')
+        ln = []
+        f.write('\n') # adding a blank line after all solver options
         f.flush()
         os.fsync(f)
         f.close()
