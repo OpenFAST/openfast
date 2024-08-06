@@ -157,7 +157,8 @@ class InputWriter_OpenFAST(object):
         self.write_ElastoDynTower()
         self.write_ElastoDyn()
         # self.write_WindWnd()
-        self.write_InflowWind()
+        if self.fst_vt['Fst']['CompInflow'] == 1:
+            self.write_InflowWind()
         if self.fst_vt['Fst']['CompAero'] == 1:
             self.write_AeroDyn14()
         elif self.fst_vt['Fst']['CompAero'] == 2:
@@ -2216,7 +2217,7 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['OutFile'], 'OutFile', '- Switch to determine where output will be placed: {1: in module output file only; 2: in glue code output file only; 3: both} (currently unused)\n'))
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['TabDelim'], 'TabDelim', '- Use tab delimiters in text tabular output file? (flag) (currently unused)\n'))
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['OutFmt'], 'OutFmt', '- Format used for text tabular output (except time).  Resulting field should be 10 characters. (quoted string) (currently unused)\n'))
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['TStart'], 'TStart', '- Time to begin tabular output (s) (currently unused)\n'))
+        f.write('{:<22f} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['TStart'], 'TStart', '- Time to begin tabular output (s) (currently unused)\n'))
         f.write('                    OutList      - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)\n')
         outlist = self.get_outlist(self.fst_vt['outlist'], ['ExtPtfm'])
 
@@ -2232,39 +2233,39 @@ class InputWriter_OpenFAST(object):
 
     def write_Superelement(self):
 
-        # Generate Superelement input file
-        self.fst_vt['ExtPtfm']['Red_FileName'] = self.FAST_namingOut + '_ExtPtfm_SE.dat'
-        se_file = os.path.join(self.FAST_runDirectory, self.fst_vt['ExtPtfm']['Red_FileName'])
-        f = open(se_file, 'w')
-
-        f.write(toString())
-
-        def toString(self):
+        def toString(SuperElement):
             # Function based on https://github.com/OpenFAST/openfast_toolbox/blob/353643ed917d113ec8dfd765813fef7d09752757/openfast_toolbox/io/fast_input_file.py#L2034
             # Developed by Emmanuel Branlard (https://github.com/ebranlard)
             s=''
             s+='!Comment\n'
             s+='!Comment Flex 5 Format\n'
-            s+='!Dimension: {}\n'.format(self.fst_vt['ExtPtfm']['FlexASCII']['nDOF'])
-            s+='!Time increment in simulation: {}\n'.format(self.fst_vt['ExtPtfm']['FlexASCII']['dt'])
-            s+='!Total simulation time in file: {}\n'.format(self.fst_vt['ExtPtfm']['FlexASCII']['T'])
+            s+='!Dimension: {}\n'.format(SuperElement['nDOF'])
+            s+='!Time increment in simulation: {}\n'.format(SuperElement['dt'])
+            s+='!Total simulation time in file: {}\n'.format(SuperElement['T'])
 
             s+='\n!Mass Matrix\n'
-            s+='!Dimension: {}\n'.format(self.fst_vt['ExtPtfm']['FlexASCII']['nDOF'])
-            s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in self.fst_vt['ExtPtfm']['FlexASCII']['MassMatrix'])
+            s+='!Dimension: {}\n'.format(SuperElement['nDOF'])
+            s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in SuperElement['MassMatrix'])
 
             s+='\n\n!Stiffness Matrix\n'
-            s+='!Dimension: {}\n'.format(self.fst_vt['ExtPtfm']['FlexASCII']['nDOF'])
-            s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in self.fst_vt['ExtPtfm']['FlexASCII']['StiffnessMatrix'])
+            s+='!Dimension: {}\n'.format(SuperElement['nDOF'])
+            s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in SuperElement['StiffnessMatrix'])
 
             s+='\n\n!Damping Matrix\n'
-            s+='!Dimension: {}\n'.format(self.fst_vt['ExtPtfm']['FlexASCII']['nDOF'])
-            s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in self.fst_vt['ExtPtfm']['FlexASCII']['DampingMatrix'])
+            s+='!Dimension: {}\n'.format(SuperElement['nDOF'])
+            s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in SuperElement['DampingMatrix'])
 
             s+='\n\n!Loading and Wave Elevation\n'
-            s+='!Dimension: 1 time column -  {} force columns\n'.format(self.fst_vt['ExtPtfm']['FlexASCII']['nDOF'])
-            s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in self.fst_vt['ExtPtfm']['FlexASCII']['Loading'])
+            s+='!Dimension: 1 time column -  {} force columns\n'.format(SuperElement['nDOF'])
+            s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in SuperElement['Loading'])
             return s
+
+        # Generate Superelement input file
+        self.fst_vt['ExtPtfm']['Red_FileName'] = self.FAST_namingOut + '_ExtPtfm_SE.dat'
+        se_file = os.path.join(self.FAST_runDirectory, self.fst_vt['ExtPtfm']['Red_FileName'])
+        f = open(se_file, 'w')
+
+        f.write(toString(self.fst_vt['ExtPtfm']['FlexASCII']))
 
         f.flush()
         os.fsync(f)

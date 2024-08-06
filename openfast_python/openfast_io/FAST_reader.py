@@ -2678,17 +2678,13 @@ class InputReader_OpenFAST(object):
             # self.read_Guyan(f) # TODO: need to impliment this. An example file not found to test
         elif self.fst_vt['ExtPtfm']['FileFormat'] == 1:
             self.fst_vt['ExtPtfm']['FlexASCII'] = {}
-            self.read_Superelement(f)
+            self.read_Superelement(self.fst_vt['ExtPtfm']['Red_FileName'])
 
         f.close()
 
 
     def read_Superelement(self, superelement_file):
-        f = open(superelement_file)
-
-        lines=f.read().splitlines()
-        if not detectAndReadExtPtfmSE(lines):
-            raise NameError('Could not read Superelement file')
+        
 
         def detectAndReadExtPtfmSE(lines):
         # Function based on https://github.com/OpenFAST/openfast_toolbox/blob/353643ed917d113ec8dfd765813fef7d09752757/openfast_toolbox/io/fast_input_file.py#L1932
@@ -2764,8 +2760,13 @@ class InputReader_OpenFAST(object):
                 raise
 
             return True
+        
 
-
+        f = open(superelement_file)
+        lines=f.read().splitlines()
+        if not detectAndReadExtPtfmSE(lines):
+            raise NameError('Could not read Superelement file')
+        f.close()
 
     def read_MAP(self, map_file):
         # MAP++
