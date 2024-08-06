@@ -182,6 +182,8 @@ class InputWriter_OpenFAST(object):
             self.write_SeaState()
         if self.fst_vt['Fst']['CompSub'] == 1:
             self.write_SubDyn()
+        elif self.fst_vt['Fst']['CompSub'] == 2:
+            self.write_ExtPtfm()
         if self.fst_vt['Fst']['CompMooring'] == 1:
             self.write_MAP()
         elif self.fst_vt['Fst']['CompMooring'] == 3:
@@ -2080,6 +2082,190 @@ class InputWriter_OpenFAST(object):
             for i in range(len(channel_list)):
                 f.write('"' + channel_list[i] + '"\n')
         f.write('END of output channels and end of file. (the word "END" must appear in the first 3 columns of this line)\n')
+        f.flush()
+        os.fsync(f)
+        f.close()
+
+    def write_ExtPtfm(self):
+        # Generate ExtPtfm input file
+        ''''
+        Input file for temp reference:
+        ---------------------- EXTPTFM INPUT FILE --------------------------------------
+        Comment describing the model
+        ---------------------- SIMULATION CONTROL --------------------------------------
+        False          Echo         - Echo input data to <RootName>.ech (flag)
+        "default"     DT           - Communication interval for controllers (s) (or "default")
+        3          IntMethod    - Integration Method {1:RK4; 2:AB4, 3:ABM4} (switch)
+        ---------------------- REDUCTION INPUTS ----------------------------------------
+        1          FileFormat    - File Format {0:Guyan; 1:FlexASCII} (switch)
+        "ExtPtfm_SE.dat"   Red_FileName    - Path of the file containing Guyan/Craig-Bampton inputs (-) 
+        "NA"         RedCst_FileName - Path of the file containing Guyan/Craig-Bampton constant inputs (-) (currently unused)
+        -1           NActiveDOFList - Number of active CB mode listed in ActiveDOFList, use -1 for all modes (integer)
+        1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25     ActiveDOFList  - List of CB modes index that are active, [unused if NActiveDOFList<=0]
+        0          NInitPosList   - Number of initial positions listed in InitPosList, using 0 implies all DOF initialized to 0  (integer)
+        0,         InitPosList    - List of initial positions for the CB modes  [unused if NInitPosList<=0 or EquilStart=True]
+        0          NInitVelList   - Number of initial positions listed in InitVelList, using 0 implies all DOF initialized to 0  (integer)
+        0,         InitVelList    - List of initial velocities for the CB modes  [unused if NInitVelPosList<=0 or EquilStart=True]
+        ---------------------- OUTPUT --------------------------------------------------
+        True          SumPrint      - Print summary data to <RootName>.sum (flag)
+                1    OutFile      - Switch to determine where output will be placed: {1: in module output file only; 2: in glue code output file only; 3: both} (currently unused)
+        True          TabDelim     - Use tab delimiters in text tabular output file? (flag) (currently unused)
+        "ES10.3E2"    OutFmt       - Format used for text tabular output (except time).  Resulting field should be 10 characters. (quoted string) (currently unused)
+                0   TStart       - Time to begin tabular output (s) (currently unused)
+                    OutList      - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
+        "IntrfFx"                  - Platform interface force  - Directed along the x-direction  (N)
+        "IntrfFy"                  - Platform interface force  - Directed along the y-direction  (N)
+        "IntrfFz"                  - Platform interface force  - Directed along the z-direction  (N)
+        "IntrfMx"                  - Platform interface moment - Directed along the x-direction  (Nm)
+        "IntrfMy"                  - Platform interface moment - Directed along the y-direction  (Nm)
+        "IntrfMz"                  - Platform interface moment - Directed along the z-direction  (Nm)
+        "InpF_Fx"                  - Reduced Input force at interface point - Directed along the x-direction  (N)
+        "InpF_Fy"                  - Reduced Input force at interface point - Directed along the y-direction  (N)
+        "InpF_Fz"                  - Reduced Input force at interface point - Directed along the z-direction  (N)
+        "InpF_Mx"                  - Reduced Input moment at interface point - Directed along the x-direction  (Nm)
+        "InpF_My"                  - Reduced Input moment at interface point - Directed along the y-direction  (Nm)
+        "InpF_Mz"                  - Reduced Input moment at interface point - Directed along the z-direction  (Nm)
+        "CBQ_001"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_002"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_003"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_004"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_005"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_006"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_007"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_010"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_011"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_012"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_013"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_014"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_015"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_016"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_017"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_020"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_021"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_022"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_023"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_024"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_025"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBF_001"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_002"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_003"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_004"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_005"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_006"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_007"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_010"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_011"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_012"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_013"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_014"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_015"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_016"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_017"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_020"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_021"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_022"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_023"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_024"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_025"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "WavElev"                  - Wave elevation                                                (m)
+        END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
+        ---------------------------------------------------------------------------------------
+        
+        '''
+
+        if self.fst_vt['ExtPtfm']['FileFormat'] == 0:
+            None
+            # self.write_Guyan() # TODO: need to impliment this. An example file not found to test
+        elif self.fst_vt['ExtPtfm']['FileFormat'] == 1:
+            self.write_Superelement()
+
+
+        self.fst_vt['Fst']['SubFile'] = self.FAST_namingOut + '_ExtPtfm.dat'
+        ep_file = os.path.join(self.FAST_runDirectory, self.fst_vt['Fst']['SubFile'])
+        f = open(ep_file, 'w')
+
+        f.write('---------------------- EXTPTFM INPUT FILE --------------------------------------\n')
+        f.write('Comment describing the model\n')
+        f.write('---------------------- SIMULATION CONTROL --------------------------------------\n')
+        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['Echo'], 'Echo', '- Echo input data to <RootName>.ech (flag)\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['DT'], 'DT', '- Communication interval for controllers (s) (or "default")\n'))
+        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['IntMethod'], 'IntMethod', '- Integration Method {1:RK4; 2:AB4, 3:ABM4} (switch)\n'))
+        f.write('---------------------- REDUCTION INPUTS ----------------------------------------\n')
+        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['FileFormat'], 'FileFormat', '- File Format {0:Guyan; 1:FlexASCII} (switch)\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['Red_FileName'], 'Red_FileName', '- Path of the file containing Guyan/Craig-Bampton inputs (-)\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['RedCst_FileName'], 'RedCst_FileName', '- Path of the file containing Guyan/Craig-Bampton constant inputs (-) (currently unused)\n'))
+        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['NActiveDOFList'], 'NActiveDOFList', '- Number of active CB mode listed in ActiveDOFList, use -1 for all modes (integer)\n'))
+        # f.write('{:<22} {:<11} {:}'.format(", ".join([str(i) for i in self.fst_vt['ExtPtfm']['ActiveDOFList']]), 'ActiveDOFList', '- List of CB modes index that are active, [unused if NActiveDOFList<=0]\n'))
+        if self.fst_vt['ExtPtfm']['NActiveDOFList'] > -1:
+            f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['ExtPtfm']['ActiveDOFList'][:self.fst_vt['ExtPtfm']['NActiveDOFList']]), 'ActiveDOFList', '- List of CB modes index that are active, [unused if NActiveDOFList<=0]\n'))
+        else:
+            f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['ExtPtfm']['ActiveDOFList']), 'ActiveDOFList', '- List of CB modes index that are active, [unused if NActiveDOFList<=0]\n'))
+        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['NInitPosList'], 'NInitPosList', '- Number of initial positions listed in InitPosList, using 0 implies all DOF initialized to 0  (integer)\n'))
+        if self.fst_vt['ExtPtfm']['NInitPosList'] > 0:
+            f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['ExtPtfm']['InitPosList'][:self.fst_vt['ExtPtfm']['NInitPosList']]), 'InitPosList', '- List of initial positions for the CB modes  [unused if NInitPosList<=0 or EquilStart=True]\n'))
+        else:
+            f.write('{:<22d} {:<11} {:}'.format(0, 'InitPosList', '- List of initial positions for the CB modes  [unused if NInitPosList<=0 or EquilStart=True]\n'))
+        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['NInitVelList'], 'NInitVelList', '- Number of initial positions listed in InitVelList, using 0 implies all DOF initialized to 0  (integer)\n'))
+        if self.fst_vt['ExtPtfm']['NInitVelList'] > 0:
+            f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['ExtPtfm']['InitVelList'][:self.fst_vt['ExtPtfm']['NInitVelList']]), 'InitVelList', '- List of initial velocities for the CB modes  [unused if NInitVelPosList<=0 or EquilStart=True]\n'))
+        else:
+            f.write('{:<22d} {:<11} {:}'.format(0, 'InitVelList', '- List of initial velocities for the CB modes  [unused if NInitVelPosList<=0 or EquilStart=True]\n'))
+
+        f.write('---------------------- OUTPUT --------------------------------------------------\n')
+        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['SumPrint'], 'SumPrint', '- Print summary data to <RootName>.sum (flag)\n'))
+        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['OutFile'], 'OutFile', '- Switch to determine where output will be placed: {1: in module output file only; 2: in glue code output file only; 3: both} (currently unused)\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['TabDelim'], 'TabDelim', '- Use tab delimiters in text tabular output file? (flag) (currently unused)\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['OutFmt'], 'OutFmt', '- Format used for text tabular output (except time).  Resulting field should be 10 characters. (quoted string) (currently unused)\n'))
+        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['TStart'], 'TStart', '- Time to begin tabular output (s) (currently unused)\n'))
+        f.write('                    OutList      - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)\n')
+        outlist = self.get_outlist(self.fst_vt['outlist'], ['ExtPtfm'])
+
+        for channel_list in outlist:
+            for i in range(len(channel_list)):
+                f.write('"' + channel_list[i] + '"\n')
+        f.write('END of input file (the word "END" must appear in the first 3 columns of this last OutList line)\n')
+        f.flush()
+        os.fsync(f)
+        f.close()
+
+
+
+    def write_Superelement(self):
+
+        # Generate Superelement input file
+        self.fst_vt['ExtPtfm']['Red_FileName'] = self.FAST_namingOut + '_ExtPtfm_SE.dat'
+        se_file = os.path.join(self.FAST_runDirectory, self.fst_vt['ExtPtfm']['Red_FileName'])
+        f = open(se_file, 'w')
+
+        f.write(toString())
+
+        def toString(self):
+            # Function based on https://github.com/OpenFAST/openfast_toolbox/blob/353643ed917d113ec8dfd765813fef7d09752757/openfast_toolbox/io/fast_input_file.py#L2034
+            # Developed by Emmanuel Branlard (https://github.com/ebranlard)
+            s=''
+            s+='!Comment\n'
+            s+='!Comment Flex 5 Format\n'
+            s+='!Dimension: {}\n'.format(self.fst_vt['ExtPtfm']['FlexASCII']['nDOF'])
+            s+='!Time increment in simulation: {}\n'.format(self.fst_vt['ExtPtfm']['FlexASCII']['dt'])
+            s+='!Total simulation time in file: {}\n'.format(self.fst_vt['ExtPtfm']['FlexASCII']['T'])
+
+            s+='\n!Mass Matrix\n'
+            s+='!Dimension: {}\n'.format(self.fst_vt['ExtPtfm']['FlexASCII']['nDOF'])
+            s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in self.fst_vt['ExtPtfm']['FlexASCII']['MassMatrix'])
+
+            s+='\n\n!Stiffness Matrix\n'
+            s+='!Dimension: {}\n'.format(self.fst_vt['ExtPtfm']['FlexASCII']['nDOF'])
+            s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in self.fst_vt['ExtPtfm']['FlexASCII']['StiffnessMatrix'])
+
+            s+='\n\n!Damping Matrix\n'
+            s+='!Dimension: {}\n'.format(self.fst_vt['ExtPtfm']['FlexASCII']['nDOF'])
+            s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in self.fst_vt['ExtPtfm']['FlexASCII']['DampingMatrix'])
+
+            s+='\n\n!Loading and Wave Elevation\n'
+            s+='!Dimension: 1 time column -  {} force columns\n'.format(self.fst_vt['ExtPtfm']['FlexASCII']['nDOF'])
+            s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in self.fst_vt['ExtPtfm']['FlexASCII']['Loading'])
+            return s
+
         f.flush()
         os.fsync(f)
         f.close()

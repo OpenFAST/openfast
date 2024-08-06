@@ -116,6 +116,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['SeaState'] = {}
         self.fst_vt['MoorDyn'] = {}
         self.fst_vt['SubDyn'] = {}
+        self.fst_vt['ExtPtfm'] = {}
         self.fst_vt['MAP'] = {}
         self.fst_vt['BeamDyn'] = {}
         self.fst_vt['BeamDynBlade'] = {}
@@ -444,16 +445,34 @@ class InputReader_OpenFAST(object):
         # Loop through output channel lines
         f.readline()
         data = f.readline()
-        if data != '':
-            while data.split()[0] != 'END':
+        # if data != '':
+        #     while data.split()[0] != 'END':
+        #         channels = data.split('"')
+        #         channel_list = channels[1].split(',')
+        #         self.set_outlist(self.fst_vt['outlist']['ElastoDyn'], channel_list)
+
+        #         data = f.readline()
+        # else:
+        #     # there is a blank line between the outlist and the END of the file
+        #     f.readline()   
+
+        # Handle the case if there are blank lines before the END statement, check if blank line
+        while data.split().__len__() == 0:
+            data = f.readline()
+
+        while data.split()[0] != 'END':
+            if data.find('"')>=0:
                 channels = data.split('"')
                 channel_list = channels[1].split(',')
-                self.set_outlist(self.fst_vt['outlist']['ElastoDyn'], channel_list)
+            else:
+                row_string = data.split(',')
+                if len(row_string)==1:
+                    channel_list = row_string[0].split('\n')[0]
+                else:
+                    channel_list = row_string
+            self.set_outlist(self.fst_vt['outlist']['ElastoDyn'], channel_list)
+            data = f.readline()
 
-                data = f.readline()
-        else:
-            # there is a blank line between the outlist and the END of the file
-            f.readline()    
         # ElastoDyn optional outlist
         try:
             f.readline()
@@ -996,9 +1015,10 @@ class InputReader_OpenFAST(object):
         f.readline()
         data = f.readline()
 
-        # Handle the case if there are blank lines befroe the END statement, check if blank line
+        # Handle the case if there are blank lines before the END statement, check if blank line
         while data.split().__len__() == 0:
             data = f.readline()
+
 
         while data.split()[0] != 'END':
             if data.find('"')>=0:
@@ -2513,11 +2533,242 @@ class InputReader_OpenFAST(object):
 
         f.close()
 
+
+    def read_ExtPtfm(self, ep_file):
+        # ExtPtfm file based on documentation here: https://openfast.readthedocs.io/en/main/source/user/extptfm/input_files.html
+
+
+        ''''
+        Input file for temp reference:
+        ---------------------- EXTPTFM INPUT FILE --------------------------------------
+        Comment describing the model
+        ---------------------- SIMULATION CONTROL --------------------------------------
+        False          Echo         - Echo input data to <RootName>.ech (flag)
+        "default"     DT           - Communication interval for controllers (s) (or "default")
+        3          IntMethod    - Integration Method {1:RK4; 2:AB4, 3:ABM4} (switch)
+        ---------------------- REDUCTION INPUTS ----------------------------------------
+        1          FileFormat    - File Format {0:Guyan; 1:FlexASCII} (switch)
+        "ExtPtfm_SE.dat"   Red_FileName    - Path of the file containing Guyan/Craig-Bampton inputs (-) 
+        "NA"         RedCst_FileName - Path of the file containing Guyan/Craig-Bampton constant inputs (-) (currently unused)
+        -1           NActiveDOFList - Number of active CB mode listed in ActiveDOFList, use -1 for all modes (integer)
+        1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25     ActiveDOFList  - List of CB modes index that are active, [unused if NActiveDOFList<=0]
+        0          NInitPosList   - Number of initial positions listed in InitPosList, using 0 implies all DOF initialized to 0  (integer)
+        0,         InitPosList    - List of initial positions for the CB modes  [unused if NInitPosList<=0 or EquilStart=True]
+        0          NInitVelList   - Number of initial positions listed in InitVelList, using 0 implies all DOF initialized to 0  (integer)
+        0,         InitVelList    - List of initial velocities for the CB modes  [unused if NInitVelPosList<=0 or EquilStart=True]
+        ---------------------- OUTPUT --------------------------------------------------
+        True          SumPrint      - Print summary data to <RootName>.sum (flag)
+                1    OutFile      - Switch to determine where output will be placed: {1: in module output file only; 2: in glue code output file only; 3: both} (currently unused)
+        True          TabDelim     - Use tab delimiters in text tabular output file? (flag) (currently unused)
+        "ES10.3E2"    OutFmt       - Format used for text tabular output (except time).  Resulting field should be 10 characters. (quoted string) (currently unused)
+                0   TStart       - Time to begin tabular output (s) (currently unused)
+                    OutList      - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
+        "IntrfFx"                  - Platform interface force  - Directed along the x-direction  (N)
+        "IntrfFy"                  - Platform interface force  - Directed along the y-direction  (N)
+        "IntrfFz"                  - Platform interface force  - Directed along the z-direction  (N)
+        "IntrfMx"                  - Platform interface moment - Directed along the x-direction  (Nm)
+        "IntrfMy"                  - Platform interface moment - Directed along the y-direction  (Nm)
+        "IntrfMz"                  - Platform interface moment - Directed along the z-direction  (Nm)
+        "InpF_Fx"                  - Reduced Input force at interface point - Directed along the x-direction  (N)
+        "InpF_Fy"                  - Reduced Input force at interface point - Directed along the y-direction  (N)
+        "InpF_Fz"                  - Reduced Input force at interface point - Directed along the z-direction  (N)
+        "InpF_Mx"                  - Reduced Input moment at interface point - Directed along the x-direction  (Nm)
+        "InpF_My"                  - Reduced Input moment at interface point - Directed along the y-direction  (Nm)
+        "InpF_Mz"                  - Reduced Input moment at interface point - Directed along the z-direction  (Nm)
+        "CBQ_001"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_002"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_003"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_004"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_005"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_006"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_007"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_010"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_011"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_012"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_013"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_014"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_015"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_016"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_017"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_020"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_021"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_022"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_023"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_024"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBQ_025"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+        "CBF_001"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_002"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_003"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_004"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_005"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_006"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_007"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_010"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_011"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_012"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_013"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_014"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_015"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_016"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_017"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_020"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_021"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_022"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_023"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_024"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "CBF_025"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+        "WavElev"                  - Wave elevation                                                (m)
+        END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
+        ---------------------------------------------------------------------------------------
+        
+        '''
+        f = open(ep_file)
+        f.readline()
+        f.readline()
+        f.readline()
+
+        # Simulation Control
+        self.fst_vt['ExtPtfm']['Echo'] = bool_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['DT'] = float_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['IntMethod'] = int_read(f.readline().split()[0])
+        f.readline()
+
+        # Reduction inputs
+        self.fst_vt['ExtPtfm']['FileFormat'] = int_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['Red_FileName'] = os.path.join(os.path.dirname(ep_file), f.readline().split()[0][1:-1])
+        self.fst_vt['ExtPtfm']['RedCst_FileName'] = os.path.join(os.path.dirname(ep_file), f.readline().split()[0][1:-1])
+        self.fst_vt['ExtPtfm']['NActiveDOFList'] = int_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['ActiveDOFList'] = [idx.strip() for idx in f.readline().split('ActiveDOFList')[0].split(',')]
+        self.fst_vt['ExtPtfm']['NInitPosList'] = int_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['InitPosList'] = [idx.strip() for idx in f.readline().split('InitPosList')[0].split(',')]
+        self.fst_vt['ExtPtfm']['NInitVelList'] = int_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['InitVelList'] = [idx.strip() for idx in f.readline().split('InitVelList')[0].split(',')]
+        f.readline()
+
+        # Output
+        self.fst_vt['ExtPtfm']['SumPrint'] = bool_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['OutFile'] = int_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['TabDelim'] = bool_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['OutFmt'] = f.readline().split()[0][1:-1]
+        self.fst_vt['ExtPtfm']['TStart'] = float_read(f.readline().split()[0])
+
+        # Loop through output channel lines
+        f.readline()
+        data = f.readline()
+
+        # Handle the case if there are blank lines before the END statement, check if blank line
+        while data.split().__len__() == 0:
+            data = f.readline()
+
+        while data.split()[0] != 'END':
+            if data.find('"')>=0:
+                channels = data.split('"')
+                channel_list = channels[1].split(',')
+            else:
+                row_string = data.split(',')
+                if len(row_string)==1:
+                    channel_list = row_string[0].split('\n')[0]
+                else:
+                    channel_list = row_string
+            self.set_outlist(self.fst_vt['outlist']['ExtPtfm'], channel_list) # TODO: Need to figure this out as we dont have a full outlist for now, similar to MoorDyn
+            data = f.readline()
+
+        if self.fst_vt['ExtPtfm']['FileFormat'] == 0:
+            self.fst_vt['ExtPtfm']['Guyan'] = {}
+            # self.read_Guyan(f) # TODO: need to impliment this. An example file not found to test
+        elif self.fst_vt['ExtPtfm']['FileFormat'] == 1:
+            self.fst_vt['ExtPtfm']['FlexASCII'] = {}
+            self.read_Superelement(f)
+
+        f.close()
+
+
+    def read_Superelement(self, superelement_file):
+        f = open(superelement_file)
+
+        lines=f.read().splitlines()
+        if not detectAndReadExtPtfmSE(lines):
+            raise NameError('Could not read Superelement file')
+
+        def detectAndReadExtPtfmSE(lines):
+        # Function based on https://github.com/OpenFAST/openfast_toolbox/blob/353643ed917d113ec8dfd765813fef7d09752757/openfast_toolbox/io/fast_input_file.py#L1932
+        # Developed by Emmanuel Branlard (https://github.com/ebranlard)
+            
+            def readmat(n,m,lines,iStart):
+                M=np.zeros((n,m))
+                for j in np.arange(n):
+                    i=iStart+j
+                    M[j,:]=np.array(lines[i].split()).astype(float)
+                return M
+            
+            if len(lines)<10:
+                return False
+            if not (lines[0][0]=='!' and lines[1][0]=='!'):
+                return False
+            if lines[1].lower().find('flex')<0:
+                return
+            if  lines[2].lower().find('!dimension')<0:
+                return
+            
+            # --- At this stage we assume it's in the proper format
+            nDOFCommon = -1
+            i=2
+            try:
+                while i<len(lines):
+                    l=lines[i].lower()
+                    if l.find('!mass')==0:
+                        l=lines[i+1]
+                        nDOF=int(l.split(':')[1])
+                        if nDOF<-1 or nDOF!=nDOFCommon:
+                            raise NameError('ExtPtfm stiffness matrix nDOF issue. nDOF common: {}, nDOF provided: {}'.format(nDOFCommon,nDOF))
+                        self.fst_vt['ExtPtfm']['FlexASCII']['MassMatrix'] = readmat(nDOF,nDOF,lines,i+2)
+                        i=i+1+nDOF
+                    elif l.find('!stiffness')==0:
+                        l=lines[i+1]
+                        nDOF=int(l.split(':')[1])
+                        if nDOF<-1 or nDOF!=nDOFCommon:
+                            raise NameError('ExtPtfm stiffness matrix nDOF issue nDOF common: {}, nDOF provided: {}'.format(nDOFCommon,nDOF))
+                        self.fst_vt['ExtPtfm']['FlexASCII']['StiffnessMatrix'] = readmat(nDOF,nDOF,lines,i+2)
+                        i=i+1+nDOF
+                    elif l.find('!damping')==0:
+                        l=lines[i+1]
+                        nDOF=int(l.split(':')[1])
+                        if nDOF<-1 or nDOF!=nDOFCommon:
+                            raise NameError('ExtPtfm damping matrix nDOF issue nDOF common: {}, nDOF provided: {}'.format(nDOFCommon,nDOF))
+                        self.fst_vt['ExtPtfm']['FlexASCII']['DampingMatrix'] = readmat(nDOF,nDOF,lines,i+2)
+                        i=i+1+nDOF
+                    elif l.find('!loading')==0:
+                        try: 
+                            nt=int(self.fst_vt['ExtPtfm']['FlexASCII']['T']/self.fst_vt['ExtPtfm']['FlexASCII']['dt'])+1
+                        except:
+                            raise NameError('Cannot read loading since time step and simulation time not properly set.')
+                        self.fst_vt['ExtPtfm']['FlexASCII']['Loading'] = readmat(nt,nDOFCommon+1,lines,i+2)
+                        i=i+nt+1
+                    elif len(l)>0:
+                        if l[0]=='!':
+                            if l.find('!dimension')==0:
+                                self.fst_vt['ExtPtfm']['FlexASCII']['nDOF'] = int(l.split(':')[1])
+                                nDOFCommon = self.fst_vt['ExtPtfm']['FlexASCII']['nDOF']
+                            elif l.find('!time increment')==0:
+                                self.fst_vt['ExtPtfm']['FlexASCII']['dt'] = float(l.split(':')[1])
+                            elif l.find('!total simulation time')==0:
+                                self.fst_vt['ExtPtfm']['FlexASCII']['T'] = float(l.split(':')[1])
+                        elif len(l.strip())==0:
+                            pass
+                        else:
+                            raise NameError('Unexcepted content found on line {}'.format(i))
+                    i+=1
+            except NameError as e:
+                raise e
+            except: 
+                raise
+
+            return True
+
+
+
     def read_MAP(self, map_file):
         # MAP++
-
-        # TODO: this is likely not robust enough, only tested on the Hywind Spar
-        # additional lines in these tables are likely
 
         f = open(map_file)
         f.readline()
@@ -2920,7 +3171,10 @@ class InputReader_OpenFAST(object):
             self.read_SeaState(ss_file)
         sd_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['SubFile']))
         if os.path.isfile(sd_file): 
-            self.read_SubDyn(sd_file)
+            if self.fst_vt['Fst']['CompSub'] == 1:
+                self.read_SubDyn(sd_file)
+            elif self.fst_vt['Fst']['CompSub'] == 2:
+                self.read_ExtPtfm(sd_file)
         if self.fst_vt['Fst']['CompMooring'] == 1: # only MAP++ implemented for mooring models
             map_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['MooringFile']))
             if os.path.isfile(map_file):

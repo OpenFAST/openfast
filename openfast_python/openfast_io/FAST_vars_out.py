@@ -9602,6 +9602,74 @@ MoorDyn['AnchTen7']            = False     # (); ;
 MoorDyn['AnchTen8']            = False     # (); ; 
 MoorDyn['AnchTen9']            = False     # (); ; 
 
+
+
+
+
+""" ExtPtfm """
+# THIS IS NOT A COMPLETE LIST!
+# Need to handle in different way based on documentaion here: https://openfast.readthedocs.io/en/main/source/user/extptfm/input_files.html#output-channels
+# TODO: Handle the flexible outputs for ExtPtfm. This will require a different approach than the current dictionary structure.
+
+ExtPtfm = {}
+ExtPtfm['IntrfFx']                = False #                  - Platform interface force  - Directed along the x-direction  (N)
+ExtPtfm['IntrfFy']                = False #                  - Platform interface force  - Directed along the y-direction  (N)
+ExtPtfm['IntrfFz']                = False #                  - Platform interface force  - Directed along the z-direction  (N)
+ExtPtfm['IntrfMx']                = False #                  - Platform interface moment - Directed along the x-direction  (Nm)
+ExtPtfm['IntrfMy']                = False #                  - Platform interface moment - Directed along the y-direction  (Nm)
+ExtPtfm['IntrfMz']                = False #                  - Platform interface moment - Directed along the z-direction  (Nm)
+ExtPtfm['InpF_Fx']                = False #                  - Reduced Input force at interface point - Directed along the x-direction  (N)
+ExtPtfm['InpF_Fy']                = False #                  - Reduced Input force at interface point - Directed along the y-direction  (N)
+ExtPtfm['InpF_Fz']                = False #                  - Reduced Input force at interface point - Directed along the z-direction  (N)
+ExtPtfm['InpF_Mx']                = False #                  - Reduced Input moment at interface point - Directed along the x-direction  (Nm)
+ExtPtfm['InpF_My']                = False #                  - Reduced Input moment at interface point - Directed along the y-direction  (Nm)
+ExtPtfm['InpF_Mz']                = False #                  - Reduced Input moment at interface point - Directed along the z-direction  (Nm)
+ExtPtfm['CBQ_001']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_002']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_003']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_004']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_005']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_006']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_007']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_010']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_011']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_012']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_013']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_014']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_015']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_016']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_017']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_020']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_021']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_022']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_023']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_024']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBQ_025']                = False #                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_001']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_002']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_003']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_004']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_005']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_006']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_007']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_010']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_011']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_012']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_013']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_014']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_015']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_016']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_017']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_020']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_021']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_022']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_023']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_024']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['CBF_025']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
+ExtPtfm['WavElev']                = False #                  - Wave elevation                                                (m)
+
+
+
 """ Final Output Dictionary """
 FstOutput = {}
 FstOutput['AeroDyn']          = AeroDyn
@@ -9618,3 +9686,4 @@ FstOutput['AeroDyn_Nodes']    = AeroDyn_Nodes
 FstOutput['BeamDyn_Nodes']    = BeamDyn_Nodes
 FstOutput['ElastoDyn_Nodes']  = ElastoDyn_Nodes
 FstOutput['MoorDyn']          = MoorDyn
+FstOutput['ExtPtfm']          = ExtPtfm
