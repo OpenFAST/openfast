@@ -1227,7 +1227,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['AeroDyn15']['OLAF']['CircSolvConvCrit']    = float_read(f.readline().split()[0])
         self.fst_vt['AeroDyn15']['OLAF']['CircSolvRelaxation']  = float_read(f.readline().split()[0])
         self.fst_vt['AeroDyn15']['OLAF']['CircSolvMaxIter']     = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['PrescribedCircFile']  = os.path.join(self.FAST_directory, f.readline().split()[0]) # unmodified by this script, hence pointing to absolute location
+        self.fst_vt['AeroDyn15']['OLAF']['PrescribedCircFile']  = os.path.join(self.FAST_directory, f.readline().split()[0][1:-1]) # unmodified by this script, hence pointing to absolute location
         f.readline()
         f.readline()
         f.readline()

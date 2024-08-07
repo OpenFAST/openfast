@@ -1271,7 +1271,7 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['OLAF']['CircSolvConvCrit'], 'CircSolvConvCrit', ' - Convergence criteria {default: 0.001} [only if CircSolvMethod=1] (-)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['OLAF']['CircSolvRelaxation'], 'CircSolvRelaxation', '- Relaxation factor {default: 0.1} [only if CircSolvMethod=1] (-)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['OLAF']['CircSolvMaxIter'], 'CircSolvMaxIter', ' - Maximum number of iterations for circulation solving {default: 30} (-)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['OLAF']['PrescribedCircFile'], 'PrescribedCircFile','- File containing prescribed circulation [only if CircSolvMethod=3] (quoted string)\n'))
+        f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['AeroDyn15']['OLAF']['PrescribedCircFile']+'"', 'PrescribedCircFile','- File containing prescribed circulation [only if CircSolvMethod=3] (quoted string)\n'))
         f.write('===============================================================================================\n')
         f.write('--------------------------- WAKE OPTIONS ------------------------------------------------------\n')
         f.write('------------------- WAKE EXTENT AND DISCRETIZATION --------------------------------------------\n')
