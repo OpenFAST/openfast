@@ -198,7 +198,7 @@ class InputWriter_OpenFAST(object):
         self.write_MainInput()
 
     def write_MainInput(self):
-        # Main FAST v8.16-v8.17 Input File
+        # Main FAST Input File
         # Currently no differences between FASTv8.16 and OpenFAST.
 
         self.FAST_InputFileOut = os.path.join(self.FAST_runDirectory, self.FAST_namingOut+'.fst')
@@ -292,7 +292,7 @@ class InputWriter_OpenFAST(object):
         ed_file = os.path.join(self.FAST_runDirectory,self.fst_vt['Fst']['EDFile'])
         f = open(ed_file, 'w')
 
-        f.write('------- ELASTODYN v1.03.* INPUT FILE -------------------------------------------\n')
+        f.write('------- ELASTODYN INPUT FILE -------------------------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
 
         # ElastoDyn Simulation Control (ed_sim_ctrl)
@@ -463,7 +463,7 @@ class InputWriter_OpenFAST(object):
         blade_file = os.path.join(self.FAST_runDirectory,self.fst_vt['ElastoDyn']['BldFile1'])
         f = open(blade_file, 'w')
 
-        f.write('------- ELASTODYN V1.00.* INDIVIDUAL BLADE INPUT FILE --------------------------\n')
+        f.write('------- ELASTODYN INDIVIDUAL BLADE INPUT FILE --------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
         f.write('---------------------- BLADE PARAMETERS ----------------------------------------\n')
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['NBlInpSt'], 'NBlInpSt', '- Number of blade input stations (-)\n'))
@@ -514,7 +514,7 @@ class InputWriter_OpenFAST(object):
         tower_file = os.path.join(self.FAST_runDirectory,self.fst_vt['ElastoDyn']['TwrFile'])
         f = open(tower_file, 'w')
 
-        f.write('------- ELASTODYN V1.00.* TOWER INPUT FILE -------------------------------------\n')
+        f.write('------- ELASTODYN TOWER INPUT FILE -------------------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
         f.write('---------------------- TOWER PARAMETERS ----------------------------------------\n')
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynTower']['NTwInpSt'],  'NTwInpSt', '- Number of input stations to specify tower geometry\n'))
@@ -665,7 +665,7 @@ class InputWriter_OpenFAST(object):
         bd_blade_file = os.path.abspath(os.path.join(self.FAST_runDirectory, self.fst_vt['BeamDyn']['BldFile']))
         f = open(bd_blade_file, 'w')
 
-        f.write('------- BEAMDYN V1.00.* INDIVIDUAL BLADE INPUT FILE --------------------------\n')
+        f.write('------- BEAMDYN INDIVIDUAL BLADE INPUT FILE --------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
         f.write('---------------------- BLADE PARAMETERS --------------------------------------\n')
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDynBlade']['station_total'], 'station_total', '- Number of blade input stations (-)\n'))
@@ -693,7 +693,7 @@ class InputWriter_OpenFAST(object):
         inflow_file = os.path.join(self.FAST_runDirectory,self.fst_vt['Fst']['InflowFile'])
         f = open(inflow_file, 'w')
 
-        f.write('------- InflowWind v3.01.* INPUT FILE -------------------------------------------------------------------------\n')
+        f.write('------- InflowWind INPUT FILE -------------------------------------------------------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
         f.write('---------------------------------------------------------------------------------------------------------------\n')
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['Echo'], 'Echo', '- Echo input data to <RootName>.ech (flag)\n'))
@@ -795,7 +795,7 @@ class InputWriter_OpenFAST(object):
         ad_file = os.path.join(self.FAST_runDirectory, self.fst_vt['Fst']['AeroFile'])
         f = open(ad_file, 'w')
 
-        f.write('------- AERODYN v15.03.* INPUT FILE ------------------------------------------------\n')
+        f.write('------- AERODYN15 INPUT FILE ------------------------------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
         f.write('======  General Options  ============================================================================\n')
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn15']['Echo'], 'Echo', '- Echo the input to "<rootname>.AD.ech"?  (flag)\n'))
@@ -925,7 +925,7 @@ class InputWriter_OpenFAST(object):
         filename = os.path.join(self.FAST_runDirectory, self.fst_vt['AeroDyn15']['ADBlFile1'])
         f = open(filename, 'w')
 
-        f.write('------- AERODYN v15.00.* BLADE DEFINITION INPUT FILE -------------------------------------\n')
+        f.write('------- AERODYN15 BLADE DEFINITION INPUT FILE -------------------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
         f.write('======  Blade Properties =================================================================\n')
         f.write('{:<11d} {:<11} {:}'.format(self.fst_vt['AeroDynBlade']['NumBlNds'], 'NumBlNds', '- Number of blade nodes used in the analysis (-)\n'))
@@ -969,7 +969,7 @@ class InputWriter_OpenFAST(object):
             af_file = os.path.join(self.FAST_runDirectory, self.fst_vt['AeroDyn15']['AFNames'][afi])
             f = open(af_file, 'w')
 
-            f.write('! ------------ AirfoilInfo v1.01.x Input File ----------------------------------\n')
+            f.write('! ------------ AirfoilInfo Input File ----------------------------------\n')
             f.write('! Generated with OpenFAST_IO\n')
             f.write('! line\n')
             f.write('! line\n')
@@ -1319,7 +1319,7 @@ class InputWriter_OpenFAST(object):
         sd_file = os.path.join(self.FAST_runDirectory,self.fst_vt['Fst']['ServoFile'])
         f = open(sd_file,'w')
 
-        f.write('------- SERVODYN v1.05.* INPUT FILE --------------------------------------------\n')
+        f.write('------- SERVODYN INPUT FILE --------------------------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
         f.write('---------------------- SIMULATION CONTROL --------------------------------------\n')
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ServoDyn']['Echo'], 'Echo', '- Echo input data to <RootName>.ech (flag)\n'))
@@ -1485,12 +1485,12 @@ class InputWriter_OpenFAST(object):
 
     def write_HydroDyn(self):
 
-        # Generate HydroDyn v2.03 input file
+        # Generate HydroDyn input file
         self.fst_vt['Fst']['HydroFile'] = self.FAST_namingOut + '_HydroDyn.dat'
         hd_file = os.path.join(self.FAST_runDirectory, self.fst_vt['Fst']['HydroFile'])
         f = open(hd_file, 'w')
 
-        f.write('------- HydroDyn v2.03.* Input File --------------------------------------------\n')
+        f.write('------- HydroDyn Input File --------------------------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['HydroDyn']['Echo'], 'Echo', '- Echo the input file data (flag)\n'))
         f.write('---------------------- FLOATING PLATFORM --------------------------------------- [unused with WaveMod=6]\n')
@@ -1749,12 +1749,12 @@ class InputWriter_OpenFAST(object):
 
     def write_SeaState(self):
 
-        # Generate HydroDyn v2.03 input file
+        # Generate SeaState input file
         self.fst_vt['Fst']['SeaState'] = self.FAST_namingOut + '_SeaState.dat'
         hd_file = os.path.join(self.FAST_runDirectory, self.fst_vt['Fst']['SeaState'])
         f = open(hd_file, 'w')
 
-        f.write('------- SeaState v1.00.* Input File --------------------------------------------\n')
+        f.write('------- SeaState Input File --------------------------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['SeaState']['Echo'], 'Echo', '- Echo the input file data (flag)\n'))
 
@@ -1858,12 +1858,12 @@ class InputWriter_OpenFAST(object):
         f.close()
 
     def write_SubDyn(self):
-        # Generate SubDyn v1.1 input file
+        # Generate SubDyn input file
         self.fst_vt['Fst']['SubFile'] = self.FAST_namingOut + '_SubDyn.dat'
         sd_file = os.path.join(self.FAST_runDirectory, self.fst_vt['Fst']['SubFile'])
         f = open(sd_file, 'w')
 
-        f.write('----------- SubDyn v1.01.x MultiMember Support Structure Input File ------------\n')
+        f.write('----------- SubDyn MultiMember Support Structure Input File ------------\n')
         f.write('Generated with OpenFAST_IO\n')
         f.write('-------------------------- SIMULATION CONTROL  ---------------------------------\n')
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['SubDyn']['Echo'], 'Echo', '- Echo input data to "<rootname>.SD.ech" (flag)\n'))
