@@ -105,16 +105,6 @@ SUBROUTINE ADsk_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! of the FileInfo_In data structure.
    !call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
 
-   ! Set pointer to FlowField data
-   if (associated(InitInp%FlowField)) then
-      p%FlowField => InitInp%FlowField
-      call SetDiskAvgPoints(ErrStat2,ErrMsg2);  if (Failed()) return
-   else
-      ErrStat2 = ErrID_Fatal
-      ErrMsg2  = "No flow field data available.  AeroDisk cannot continue."
-      if (Failed()) return
-   endif
-
    ! Parse all ADsk-related input and populate the InputFileData structure
    call ADsk_ParsePrimaryFileData( InitInp, p%RootName, Interval, FileInfo_In, InputFileData, UnEc, ErrStat2, ErrMsg2 )
    if (Failed()) return;
@@ -129,6 +119,17 @@ SUBROUTINE ADsk_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
    ! For diagnostic purposes.  If we add a summary file, use this to write table
    !call WriteAeroTab(p%AeroTable,Cu)
+
+
+   ! Set pointer to FlowField data
+   if (associated(InitInp%FlowField)) then
+      p%FlowField => InitInp%FlowField
+      call SetDiskAvgPoints(ErrStat2,ErrMsg2);  if (Failed()) return
+   else
+      ErrStat2 = ErrID_Fatal
+      ErrMsg2  = "No flow field data available.  AeroDisk cannot continue."
+      if (Failed()) return
+   endif
 
 
    ! Set inputs
@@ -334,7 +335,6 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    logical,             optional,   intent(in   )  :: NeedWriteOutput   !< Flag to determine if WriteOutput values need to be calculated in this call
 
    ! local variables
-   integer(IntKi), parameter                       :: StartNode = 1  ! index to start returning wind info from external flow field (this is hard coded in ExtInflow for hub)
    real(ReKi), allocatable                         :: NoAcc(:,:)     ! Placeholder array not used when accelerations not required.
    real(SiKi)                                      :: x_hatDisk(3)   ! X direction unit vector of rotor disk (global)
    real(SiKi)                                      :: y_hatDisk(3)   ! Y direction unit vector of rotor disk (global)
@@ -532,6 +532,7 @@ contains
       integer(IntKi),         intent(  out)  :: ErrStat3
       character(ErrMsgLen),   intent(  out)  :: ErrMsg3
       integer(IntKi) :: i
+      integer(IntKi), parameter :: StartNode = 1  ! index to start returning wind info from external flow field (note: this will not work with ExtInflow)
       do i=1,ADsk_NumPtsDiskAvg
          m%DiskWindPosAbs(:,i) = real(u%HubMotion%Position(1:3,1)+u%HubMotion%TranslationDisp(1:3,1),ReKi) + matmul(real(u%HubMotion%Orientation(1:3,1:3,1),ReKi),p%DiskWindPosRel(:,i))
       end do
