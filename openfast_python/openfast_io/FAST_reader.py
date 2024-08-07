@@ -54,7 +54,7 @@ def read_array(f,len,split_val=None,array_type=str):
 
 def fix_path(name):
     """ split a path, then reconstruct it using os.path.join """
-    name = re.split("\\\|/", name)
+    name = re.split("\\|/", name)
     new = name[0]
     for i in range(1,len(name)):
         new = os.path.join(new, name[i])
@@ -878,7 +878,7 @@ class InputReader_OpenFAST(object):
         f.readline()
         self.fst_vt['AeroDyn15']['Echo']          = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn15']['DTAero']        = float_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['WakeMod']       = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn15']['Wake_Mod']       = int(f.readline().split()[0])
         self.fst_vt['AeroDyn15']['TwrPotent']     = int(f.readline().split()[0])
         self.fst_vt['AeroDyn15']['TwrShadow']     = int(f.readline().split()[0])
         self.fst_vt['AeroDyn15']['TwrAero']       = bool_read(f.readline().split()[0])
@@ -901,7 +901,7 @@ class InputReader_OpenFAST(object):
 
         # Blade-Element/Momentum Theory Options
         f.readline()
-        self.fst_vt['AeroDyn15']['SkewMod']             = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn15']['Skew_Mod']             = int_read(f.readline().split()[0])
         self.fst_vt['AeroDyn15']['SkewMomCorr']         = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn15']['SkewRedistr_Mod']     = int_read(f.readline().split()[0])
         self.fst_vt['AeroDyn15']['SkewRedistrFactor']   = float_read(f.readline().split()[0])
@@ -930,10 +930,10 @@ class InputReader_OpenFAST(object):
         f.readline()
         self.fst_vt['AeroDyn15']['OLAFInputFileName']  = f.readline().split()[0][1:-1]
         
-        # Beddoes-Leishman Unsteady Airfoil Aerodynamics Options
+        # Unsteady Airfoil Aerodynamics Options
         f.readline()
         self.fst_vt['AeroDyn15']['AoA34']                  = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['UAMod']                  = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn15']['UA_Mod']                  = int(f.readline().split()[0])
         self.fst_vt['AeroDyn15']['FLookup']                = bool_read(f.readline().split()[0])
         
         file_pos = f.tell()
@@ -2538,91 +2538,6 @@ class InputReader_OpenFAST(object):
     def read_ExtPtfm(self, ep_file):
         # ExtPtfm file based on documentation here: https://openfast.readthedocs.io/en/main/source/user/extptfm/input_files.html
 
-
-        ''''
-        Input file for temp reference:
-        ---------------------- EXTPTFM INPUT FILE --------------------------------------
-        Comment describing the model
-        ---------------------- SIMULATION CONTROL --------------------------------------
-        False          Echo         - Echo input data to <RootName>.ech (flag)
-        "default"     DT           - Communication interval for controllers (s) (or "default")
-        3          IntMethod    - Integration Method {1:RK4; 2:AB4, 3:ABM4} (switch)
-        ---------------------- REDUCTION INPUTS ----------------------------------------
-        1          FileFormat    - File Format {0:Guyan; 1:FlexASCII} (switch)
-        "ExtPtfm_SE.dat"   Red_FileName    - Path of the file containing Guyan/Craig-Bampton inputs (-) 
-        "NA"         RedCst_FileName - Path of the file containing Guyan/Craig-Bampton constant inputs (-) (currently unused)
-        -1           NActiveDOFList - Number of active CB mode listed in ActiveDOFList, use -1 for all modes (integer)
-        1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25     ActiveDOFList  - List of CB modes index that are active, [unused if NActiveDOFList<=0]
-        0          NInitPosList   - Number of initial positions listed in InitPosList, using 0 implies all DOF initialized to 0  (integer)
-        0,         InitPosList    - List of initial positions for the CB modes  [unused if NInitPosList<=0 or EquilStart=True]
-        0          NInitVelList   - Number of initial positions listed in InitVelList, using 0 implies all DOF initialized to 0  (integer)
-        0,         InitVelList    - List of initial velocities for the CB modes  [unused if NInitVelPosList<=0 or EquilStart=True]
-        ---------------------- OUTPUT --------------------------------------------------
-        True          SumPrint      - Print summary data to <RootName>.sum (flag)
-                1    OutFile      - Switch to determine where output will be placed: {1: in module output file only; 2: in glue code output file only; 3: both} (currently unused)
-        True          TabDelim     - Use tab delimiters in text tabular output file? (flag) (currently unused)
-        "ES10.3E2"    OutFmt       - Format used for text tabular output (except time).  Resulting field should be 10 characters. (quoted string) (currently unused)
-                0   TStart       - Time to begin tabular output (s) (currently unused)
-                    OutList      - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
-        "IntrfFx"                  - Platform interface force  - Directed along the x-direction  (N)
-        "IntrfFy"                  - Platform interface force  - Directed along the y-direction  (N)
-        "IntrfFz"                  - Platform interface force  - Directed along the z-direction  (N)
-        "IntrfMx"                  - Platform interface moment - Directed along the x-direction  (Nm)
-        "IntrfMy"                  - Platform interface moment - Directed along the y-direction  (Nm)
-        "IntrfMz"                  - Platform interface moment - Directed along the z-direction  (Nm)
-        "InpF_Fx"                  - Reduced Input force at interface point - Directed along the x-direction  (N)
-        "InpF_Fy"                  - Reduced Input force at interface point - Directed along the y-direction  (N)
-        "InpF_Fz"                  - Reduced Input force at interface point - Directed along the z-direction  (N)
-        "InpF_Mx"                  - Reduced Input moment at interface point - Directed along the x-direction  (Nm)
-        "InpF_My"                  - Reduced Input moment at interface point - Directed along the y-direction  (Nm)
-        "InpF_Mz"                  - Reduced Input moment at interface point - Directed along the z-direction  (Nm)
-        "CBQ_001"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_002"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_003"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_004"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_005"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_006"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_007"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_010"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_011"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_012"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_013"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_014"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_015"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_016"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_017"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_020"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_021"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_022"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_023"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_024"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBQ_025"                  - Modal displacement of internal Craig-Bampton mode number XXX  (-)
-        "CBF_001"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_002"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_003"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_004"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_005"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_006"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_007"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_010"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_011"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_012"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_013"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_014"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_015"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_016"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_017"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_020"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_021"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_022"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_023"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_024"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "CBF_025"                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
-        "WavElev"                  - Wave elevation                                                (m)
-        END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
-        ---------------------------------------------------------------------------------------
-        
-        '''
         f = open(ep_file)
         f.readline()
         f.readline()
