@@ -414,7 +414,7 @@ class InputReader_OpenFAST(object):
         # Furling (furling)
         f.readline()
         self.fst_vt['ElastoDyn']['Furling'] = bool_read(f.readline().split()[0])
-        self.fst_vt['ElastoDyn']['FurlFile'] = f.readline().split()[0][1:-1]
+        self.fst_vt['ElastoDyn']['FurlFile'] = os.path.join(self.FAST_directory, f.readline().split()[0][1:-1]) # TODO: add furl file data to fst_vt, pointing to absolute path for now
 
         # Tower (tower)
         f.readline()
@@ -1717,7 +1717,8 @@ class InputReader_OpenFAST(object):
             StC_vt['rho_Y'] = float_read(f.readline().split()[0])  #       1000     rho_Y           - Y TLCD liquid density (kg/m^3)
             f.readline()    # PRESCRIBED TIME SERIES 
             StC_vt['PrescribedForcesCoord'] = int_read(f.readline().split()[0]) #        2   PrescribedForcesCoord- Prescribed forces are in global or local coordinates (switch) {1: global; 2: local}
-            StC_vt['PrescribedForcesFile'] = f.readline().split()[0] # "Bld-TimeForceSeries.dat"  PrescribedForcesFile   - Time series force and moment (7 columns of time, FX, FY, FZ, MX, MY, MZ)
+            # TODO: read in prescribed force time series, for now we just point to absolute path of input file
+            StC_vt['PrescribedForcesFile'] = os.path.join(self.FAST_directory, f.readline().split()[0][1:-1]) # "Bld-TimeForceSeries.dat"  PrescribedForcesFile   - Time series force and moment (7 columns of time, FX, FY, FZ, MX, MY, MZ)
             f.readline()
 
         return StC_vt
