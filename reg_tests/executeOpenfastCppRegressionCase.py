@@ -112,7 +112,18 @@ if not noExec:
     if returnCode != 0:
         sys.exit(returnCode*10)
     os.chdir(cwd)
-    
+
+
+### If this is a restart test case
+if caseName.endswith('_Restart'):
+    for caseInputFile in reversed(glob.glob(os.path.join(testBuildDirectory, '*chkp'))):
+        if not caseInputFile.endswith('dll.chkp'):
+            break
+    caseInputFile = os.path.abspath("cDriverRestart.yaml")
+    returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable, restart=True)
+    if returnCode != 0:
+        sys.exit(returnCode*10)
+
 ### Build the filesystem navigation variables for running the regression test
 localOutFile = os.path.join(testBuildDirectory, caseName + ".outb")
 baselineOutFile = os.path.join(targetOutputDirectory, caseName.replace('_cpp', '') + ".outb")
