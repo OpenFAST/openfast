@@ -1,8 +1,8 @@
 
-.. _hd-primary-input_example:
+.. _ss-primary-input_example:
 
 Appendix A: Example SeaState primary input file
-===========================================
+===============================================
 
 The following is a SeaState primary input file generating irregular (JONSWAP) waves internally
 structure::
@@ -88,7 +88,7 @@ structure::
       END
 
 Appendix B: Example SeaState driver input file
-===========================================
+==============================================
 The following is a SeaState driver input file
 structure::
 
