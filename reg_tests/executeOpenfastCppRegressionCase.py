@@ -126,7 +126,7 @@ if caseName.endswith('_Restart'):
 
 ### Build the filesystem navigation variables for running the regression test
 localOutFile = os.path.join(testBuildDirectory, caseName + ".outb")
-baselineOutFile = os.path.join(targetOutputDirectory, caseName.replace('_cpp', '') + ".outb")
+baselineOutFile = os.path.join(targetOutputDirectory, caseName.replace('_cpp', '') + ".outb.gold")
 
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
