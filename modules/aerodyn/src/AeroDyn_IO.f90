@@ -140,6 +140,7 @@ SUBROUTINE Calc_WriteOutput( p, p_AD, u, RotInflow, x, m, m_AD, y, OtherState, x
    endif
 
    
+   ! Common outputs to all AeroDyn submodules
    call Calc_WriteOutput_AD() ! need to call this before calling the BEMT vs FVW versions of outputs so that the integrated output quantities are known
    
    if (p_AD%Wake_Mod /= WakeMod_FVW) then
@@ -236,7 +237,7 @@ CONTAINS
             m%AllOuts( BNSTVy( beta,k) ) = tmp(2)
             m%AllOuts( BNSTVz( beta,k) ) = tmp(3)
          
-            m%AllOuts( BNCurve(beta,k) ) = m%Curve(j,k)*R2D
+            m%AllOuts( BNCurve(beta,k) ) = m%Cant(j,k)*R2D
                   
             m%AllOuts( BNSigCr(   beta,k) ) = m%SigmaCavitCrit(j,k)
             m%AllOuts( BNSgCav(   beta,k) ) = m%SigmaCavit(j,k)
@@ -422,8 +423,6 @@ CONTAINS
             m%AllOuts( BNTheta(beta,k) ) = m%BEMT_u(indx)%theta(j,k)*R2D
             m%AllOuts( BNPhi(  beta,k) ) = m%BEMT_y%phi(j,k)*R2D
 
-   !        m%AllOuts( BNCurve(beta,k) ) = m%Curve(j,k)*R2D
-
             m%AllOuts( BNCpmin(   beta,k) ) = m%BEMT_y%Cpmin(j,k)
    !         m%AllOuts( BNSigCr(   beta,k) ) = m%SigmaCavitCrit(j,k)
    !         m%AllOuts( BNSgCav(   beta,k) ) = m%SigmaCavit(j,k)
@@ -506,7 +505,6 @@ CONTAINS
             m%AllOuts( BNAlpha(beta,k) ) = m_AD%FVW%W(iW)%BN_alpha(j)*R2D
             m%AllOuts( BNTheta(beta,k) ) = m_AD%FVW%W(iW)%PitchAndTwist(j)*R2D
             m%AllOuts( BNPhi(  beta,k) ) = m_AD%FVW%W(iW)%BN_phi(j)*R2D
-!             m%AllOuts( BNCurve(beta,k) ) = m%Curve(j,k)*R2D ! TODO
 
             m%AllOuts( BNCpmin(beta,k) ) = m_AD%FVW%W(iW)%BN_Cpmin(j)
             m%AllOuts( BNCl(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cl(j)
@@ -1004,7 +1002,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       call ParseVar(FileInfo_In, CurLine, "TFinAero", InputFileData%rotors(iR)%TFinAero, ErrStat2, ErrMsg2, UnEc); 
       if (ErrStat2==ErrID_None) then
          call ParseVar(FileInfo_In, CurLine, "TFinFile", InputFileData%rotors(iR)%TFinFile, ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-         InputFileData%rotors(iR)%TFinFile = trim(PriPath) // trim(InputFileData%rotors(iR)%TFinFile)
+         IF ( PathIsRelative( InputFileData%rotors(iR)%TFinFile ) ) InputFileData%rotors(iR)%TFinFile = trim(PriPath) // trim(InputFileData%rotors(iR)%TFinFile)
       else
          call LegacyWarning('Tail Fin section (TFinAero, TFinFile) is missing from input file.')
          CurLine = CurLine - 1

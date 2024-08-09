@@ -329,7 +329,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: W_Twr      !< relative wind speed normal to the tower at node j [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: X_Twr      !< local x-component of force per unit length of the jth node in the tower [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y_Twr      !< local y-component of force per unit length of the jth node in the tower [m/s]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Curve      !< curvature angle, saved for possible output to file [rad]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Cant      !< curvature angle, saved for possible output to file [rad]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Toe      !< Toe angle, saved for possible output to file [rad]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TwrClrnc      !< Distance between tower (including tower radius) and blade node (not including blade width), saved for possible output to file [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: X      !< normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade [N/m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Y      !< tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade [N/m]
@@ -3175,17 +3176,29 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
       end if
       DstRotMiscVarTypeData%Y_Twr = SrcRotMiscVarTypeData%Y_Twr
    end if
-   if (allocated(SrcRotMiscVarTypeData%Curve)) then
-      LB(1:2) = lbound(SrcRotMiscVarTypeData%Curve, kind=B8Ki)
-      UB(1:2) = ubound(SrcRotMiscVarTypeData%Curve, kind=B8Ki)
-      if (.not. allocated(DstRotMiscVarTypeData%Curve)) then
-         allocate(DstRotMiscVarTypeData%Curve(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcRotMiscVarTypeData%Cant)) then
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%Cant, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%Cant, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%Cant)) then
+         allocate(DstRotMiscVarTypeData%Cant(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%Curve.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%Cant.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstRotMiscVarTypeData%Curve = SrcRotMiscVarTypeData%Curve
+      DstRotMiscVarTypeData%Cant = SrcRotMiscVarTypeData%Cant
+   end if
+   if (allocated(SrcRotMiscVarTypeData%Toe)) then
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%Toe, kind=B8Ki)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%Toe, kind=B8Ki)
+      if (.not. allocated(DstRotMiscVarTypeData%Toe)) then
+         allocate(DstRotMiscVarTypeData%Toe(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%Toe.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%Toe = SrcRotMiscVarTypeData%Toe
    end if
    if (allocated(SrcRotMiscVarTypeData%TwrClrnc)) then
       LB(1:2) = lbound(SrcRotMiscVarTypeData%TwrClrnc, kind=B8Ki)
@@ -3592,8 +3605,11 @@ subroutine AD_DestroyRotMiscVarType(RotMiscVarTypeData, ErrStat, ErrMsg)
    if (allocated(RotMiscVarTypeData%Y_Twr)) then
       deallocate(RotMiscVarTypeData%Y_Twr)
    end if
-   if (allocated(RotMiscVarTypeData%Curve)) then
-      deallocate(RotMiscVarTypeData%Curve)
+   if (allocated(RotMiscVarTypeData%Cant)) then
+      deallocate(RotMiscVarTypeData%Cant)
+   end if
+   if (allocated(RotMiscVarTypeData%Toe)) then
+      deallocate(RotMiscVarTypeData%Toe)
    end if
    if (allocated(RotMiscVarTypeData%TwrClrnc)) then
       deallocate(RotMiscVarTypeData%TwrClrnc)
@@ -3741,7 +3757,8 @@ subroutine AD_PackRotMiscVarType(RF, Indata)
    call RegPackAlloc(RF, InData%W_Twr)
    call RegPackAlloc(RF, InData%X_Twr)
    call RegPackAlloc(RF, InData%Y_Twr)
-   call RegPackAlloc(RF, InData%Curve)
+   call RegPackAlloc(RF, InData%Cant)
+   call RegPackAlloc(RF, InData%Toe)
    call RegPackAlloc(RF, InData%TwrClrnc)
    call RegPackAlloc(RF, InData%X)
    call RegPackAlloc(RF, InData%Y)
@@ -3865,7 +3882,8 @@ subroutine AD_UnPackRotMiscVarType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%W_Twr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%X_Twr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Y_Twr); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Curve); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Cant); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Toe); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TwrClrnc); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%X); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Y); if (RegCheckErr(RF, RoutineName)) return
